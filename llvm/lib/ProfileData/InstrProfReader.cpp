@@ -1026,10 +1026,10 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   return *Symtab;
 }
 
-Expected<InstrProfRecord>
-IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
-                                           uint64_t FuncHash) {
+Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
+    StringRef FuncName, uint64_t FuncHash, uint64_t *MismatchedFuncSum) {
   ArrayRef<NamedInstrProfRecord> Data;
+  uint64_t FuncSum = 0;
   Error Err = Remapper->getRecords(FuncName, Data);
   if (Err)
     return std::move(Err);
@@ -1038,6 +1038,19 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
   // A flag to indicate if the records are from the same type
   // of profile (i.e cs vs nocs).
   bool CSBitMatch = false;
+  auto getFuncSum = [](const std::vector<uint64_t> &Counts) {
+    uint64_t ValueSum = 0;
+    for (unsigned I = 0, S = Counts.size(); I < S; I++) {
+      uint64_t CountValue = Counts[I];
+      if (CountValue == (uint64_t)-1)
+        continue;
+      // Handle overflow -- if that happens, return max.
+      if (std::numeric_limits<uint64_t>::max() - CountValue <= ValueSum)
+        return std::numeric_limits<uint64_t>::max();
+      ValueSum += CountValue;
+    }
+    return ValueSum;
+  };
 
   for (const NamedInstrProfRecord &I : Data) {
     // Check for a match and fill the vector if there is one.
@@ -1046,9 +1059,14 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
     if (NamedInstrProfRecord::hasCSFlagInHash(I.Hash) ==
         NamedInstrProfRecord::hasCSFlagInHash(FuncHash)) {
       CSBitMatch = true;
+      if (MismatchedFuncSum == nullptr)
+        continue;
+      FuncSum = std::max(FuncSum, getFuncSum(I.Counts));
     }
   }
   if (CSBitMatch) {
+    if (MismatchedFuncSum != nullptr)
+      *MismatchedFuncSum = FuncSum;
     return error(instrprof_error::hash_mismatch);
   }
   return error(instrprof_error::unknown_function);
