@@ -196,6 +196,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_multiple_s(self):
         self.multiple_resume_test("s")
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_multiple_vCont(self):
         self.build()
@@ -286,10 +287,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              ], True)
         self.expect_gdbremote_sequence()
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_vCont_then_partial_stop(self):
         self.vCont_then_partial_stop_test(False)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_vCont_then_partial_stop_run_both(self):
         self.vCont_then_partial_stop_test(True)
