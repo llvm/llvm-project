@@ -18,33 +18,38 @@ set(MODULES
   "__fortran_type_info"
 )
 
-# Create module files directly from the top-level module source directory
-foreach(filename ${MODULES})
-  set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
-  if(${filename} STREQUAL "__fortran_builtins")
-    set(depends "")
-  else()
-    set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
-    if(NOT ${filename} STREQUAL "__fortran_type_info")
-      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
+# Create module files directly from the top-level module source directory.
+# If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
+# cross compiled, and thus can't be executed on the build system and thus
+# can't be used for generating module files.
+if (NOT CMAKE_CROSSCOMPILING)
+  foreach(filename ${MODULES})
+    set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
+    if(${filename} STREQUAL "__fortran_builtins")
+      set(depends "")
+    else()
+      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
+      if(NOT ${filename} STREQUAL "__fortran_type_info")
+        set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
+      endif()
+      if(${filename} STREQUAL "ieee_arithmetic" OR
+         ${filename} STREQUAL "ieee_exceptions")
+        set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ieee_exceptions.mod)
+      endif()
     endif()
-    if(${filename} STREQUAL "ieee_arithmetic" OR
-       ${filename} STREQUAL "ieee_exceptions")
-      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ieee_exceptions.mod)
-    endif()
-  endif()
-  add_custom_command(OUTPUT ${base}.mod
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-    COMMAND flang-new -fc1 -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
-      ${FLANG_SOURCE_DIR}/module/${filename}.f90
-    DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
-  )
-  add_custom_command(OUTPUT ${base}.f18.mod
-    DEPENDS ${base}.mod
-    COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-  list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
-  install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
-endforeach()
+    add_custom_command(OUTPUT ${base}.mod
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new -fc1 -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+        ${FLANG_SOURCE_DIR}/module/${filename}.f90
+      DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
+    )
+    add_custom_command(OUTPUT ${base}.f18.mod
+      DEPENDS ${base}.mod
+      COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
+    list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
+    install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+  endforeach()
+endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 
