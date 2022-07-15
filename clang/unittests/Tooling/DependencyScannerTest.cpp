@@ -25,8 +25,8 @@
 #include <algorithm>
 #include <string>
 
-namespace clang {
-namespace tooling {
+using namespace clang;
+using namespace tooling;
 
 namespace {
 
@@ -203,6 +203,3 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
   EXPECT_EQ(convert_to_slash(Deps[4]), "/root/header.h");
   EXPECT_EQ(convert_to_slash(Deps[5]), "/root/symlink.h");
 }
-
-} // end namespace tooling
-} // end namespace clang
