@@ -3333,24 +3333,14 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
 
         // x == y  -->  x - y == 0
         const SCEV *N = SE.getSCEV(NV);
-        if (!NV->getType()->isPointerTy() ||
-            SE.getPointerBase(N) == SE.getPointerBase(S)) {
-          if (SE.isLoopInvariant(N, L) && Rewriter.isSafeToExpand(N)) {
-            // S is normalized, so normalize N before folding it into S
-            // to keep the result normalized.
-            N = normalizeForPostIncUse(N, TmpPostIncLoops, SE);
-            Kind = LSRUse::ICmpZero;
-            S = SE.getMinusSCEV(N, S);
-          } else if (L->isLoopInvariant(NV)) {
-            // If we can't generally expand the expression (e.g. it contains
-            // a divide), but it is already at a loop invariant point, wrap it
-            // in an unknwon (to prevent the expander from trying to re-expand
-            // in a potentially unsafe way.)
-            N = SE.getUnknown(NV);
-            N = normalizeForPostIncUse(N, TmpPostIncLoops, SE);
-            Kind = LSRUse::ICmpZero;
-            S = SE.getMinusSCEV(N, S);
-          }
+        if (SE.isLoopInvariant(N, L) && Rewriter.isSafeToExpand(N) &&
+            (!NV->getType()->isPointerTy() ||
+             SE.getPointerBase(N) == SE.getPointerBase(S))) {
+          // S is normalized, so normalize N before folding it into S
+          // to keep the result normalized.
+          N = normalizeForPostIncUse(N, TmpPostIncLoops, SE);
+          Kind = LSRUse::ICmpZero;
+          S = SE.getMinusSCEV(N, S);
         }
 
         // -1 and the negations of all interesting strides (except the negation
