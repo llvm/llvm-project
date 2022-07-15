@@ -197,13 +197,25 @@ module m
   logical, parameter :: test_tiny10 = tiny10 == ztiny10
   logical, parameter :: test_tiny16 = tiny16 == ztiny16
 
+  real,    parameter :: nan = real(z'7fc12345')
+  integer, parameter :: nanInt = int(z'7fc12345')
+  real,    parameter :: inf = real(z'7f800000')
   logical, parameter :: test_exponent_0 = exponent(0.0) == 0
+  logical, parameter :: test_fraction_0 = fraction(0.) == 0.
   logical, parameter :: test_exponent_r8 = exponent(0.125) == -2
+  logical, parameter :: test_fraction_r8 = fraction(0.125) == 0.5
   logical, parameter :: test_exponent_r4 = exponent(0.25) == -1
+  logical, parameter :: test_fraction_mr4 = fraction(-0.25) == -0.5
   logical, parameter :: test_exponent_r2 = exponent(0.5) == 0
+  logical, parameter :: test_fraction_r2 = fraction(0.5) == 0.5
   logical, parameter :: test_exponent_1 = exponent(1.0) == 1
+  logical, parameter :: test_fraction_1 = fraction(1.) == 0.5
   logical, parameter :: test_exponent_4 = exponent(4.1) == 3
+  logical, parameter :: test_fraction_m4 = fraction(-4.5) == -0.5625
   logical, parameter :: test_exponent_12 = exponent(12.9) == 4
+  real,    parameter :: fraction_inf = fraction(inf)
+  logical, parameter :: test_fraction_inf = fraction_inf /= fraction_inf ! must be NaN
+  logical, parameter :: test_fraction_nan = transfer(fraction(nan),0) == nanInt
 
   integer, parameter :: &
     max2 = maxexponent(0._2), &
@@ -258,5 +270,15 @@ module m
   logical, parameter :: test_zrange8 = arange8 == 307 .and. zrange8 == 307
   logical, parameter :: test_zrange10 = arange10 == 4931 .and. zrange10 == 4931
   logical, parameter :: test_zrange16 = arange16 == 4931 .and. zrange16 == 4931
+
+  logical, parameter :: test_set_exponent_z = set_exponent(0., 999) == 0.
+  logical, parameter :: test_set_exponent_nan = transfer(set_exponent(nan, 0), 0) == nanInt
+  real,    parameter :: set_expo_inf = set_exponent(inf, 0)
+  integer, parameter :: set_expo_inf_int = transfer(set_expo_inf, 0)
+  logical, parameter :: test_set_exponent_inf = shiftr(set_expo_inf_int, 23) == 255 .and. &
+                                                shiftl(set_expo_inf_int, 9) /= 0 ! NaN
+  logical, parameter :: test_set_exponent_0 = set_exponent(1., 0) == 0.5
+  logical, parameter :: test_set_exponent_1 = set_exponent(1., 1) == 1.
+  logical, parameter :: test_set_exponent_2 = set_exponent(1., 2) == 2.
 
 end module
