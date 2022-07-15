@@ -3184,6 +3184,28 @@ define <2 x i8> @ne0_is_all_ones_swap_vec_poison(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
+define i64 @udiv_of_select_constexpr(i1 %c, i64 %x) {
+; CHECK-LABEL: @udiv_of_select_constexpr(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i64 [[X:%.*]], i64 ptrtoint (i32* @glbl to i64)
+; CHECK-NEXT:    [[OP:%.*]] = udiv i64 [[SEL]], 3
+; CHECK-NEXT:    ret i64 [[OP]]
+;
+  %sel = select i1 %c, i64 %x, i64 ptrtoint (i32* @glbl to i64)
+  %op = udiv i64 %sel, 3
+  ret i64 %op
+}
+
+define i64 @udiv_of_select_constexpr_commuted(i1 %c, i64 %x) {
+; CHECK-LABEL: @udiv_of_select_constexpr_commuted(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i64 ptrtoint (i32* @glbl to i64), i64 [[X:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = udiv i64 [[SEL]], 3
+; CHECK-NEXT:    ret i64 [[OP]]
+;
+  %sel = select i1 %c, i64 ptrtoint (i32* @glbl to i64), i64 %x
+  %op = udiv i64 %sel, 3
+  ret i64 %op
+}
+
 declare void @use(i1)
 declare void @use_i8(i8)
 declare void @use_i32(i32)
