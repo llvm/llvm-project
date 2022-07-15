@@ -131,10 +131,9 @@ namespace clang {
     void VisitCapturedDecl(CapturedDecl *D);
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
-
     void VisitDeclContext(DeclContext *DC);
     template <typename T> void VisitRedeclarable(Redeclarable<T> *D);
-
+    void VisitHLSLBufferDecl(HLSLBufferDecl *D);
 
     // FIXME: Put in the same order is DeclNodes.td?
     void VisitObjCMethodDecl(ObjCMethodDecl *D);
@@ -1862,6 +1861,17 @@ void ASTDeclWriter::VisitRedeclarable(Redeclarable<T> *D) {
     // We use the sentinel value 0 to indicate an only declaration.
     Record.push_back(0);
   }
+}
+
+void ASTDeclWriter::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
+  VisitNamedDecl(D);
+  VisitDeclContext(D);
+  Record.push_back(D->isCBuffer());
+  Record.AddSourceLocation(D->getLocStart());
+  Record.AddSourceLocation(D->getLBraceLoc());
+  Record.AddSourceLocation(D->getRBraceLoc());
+
+  Code = serialization::DECL_HLSL_BUFFER;
 }
 
 void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {

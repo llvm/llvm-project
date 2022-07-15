@@ -5962,6 +5962,12 @@ public:
                              SourceLocation BuiltinLoc,
                              SourceLocation RParenLoc);
 
+  //===---------------------------- HLSL Features -------------------------===//
+  Decl *ActOnStartHLSLBuffer(Scope *BufferScope, bool CBuffer,
+                             SourceLocation KwLoc, IdentifierInfo *Ident,
+                             SourceLocation IdentLoc, SourceLocation LBrace);
+  void ActOnFinishHLSLBuffer(Decl *Dcl, SourceLocation RBrace);
+
   //===---------------------------- C++ Features --------------------------===//
 
   // Act on C++ namespaces
