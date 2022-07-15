@@ -7,6 +7,7 @@ define <8 x i8> @load_factor2(<16 x i8>* %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlseg2e8.v v7, (a0)
+; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
     %1 = bitcast <16 x i8>* %ptr to i8*
     %2 = call { <8 x i8>, <8 x i8> } @llvm.riscv.seg2.load.v8i8.p0i8.i64(i8* %1, i64 8)
@@ -20,6 +21,7 @@ define <8 x i8> @load_factor3(<24 x i8>* %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v6_v7_v8
 ; CHECK-NEXT:    ret
     %1 = bitcast <24 x i8>* %ptr to i8*
     %2 = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg3.load.v8i8.p0i8.i64(i8* %1, i64 8)
@@ -34,6 +36,7 @@ define <8 x i8> @load_factor4(<32 x i8>* %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlseg4e8.v v5, (a0)
+; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v5_v6_v7_v8
 ; CHECK-NEXT:    ret
     %1 = bitcast <32 x i8>* %ptr to i8*
     %2 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg4.load.v8i8.p0i8.i64(i8* %1, i64 8)
@@ -49,6 +52,7 @@ define <8 x i8> @load_factor5(<40 x i8>* %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlseg5e8.v v4, (a0)
+; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret
     %1 = bitcast <40 x i8>* %ptr to i8*
     %2 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg5.load.v8i8.p0i8.i64(i8* %1, i64 8)
@@ -65,6 +69,7 @@ define <8 x i8> @load_factor6(<48 x i8>* %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlseg6e8.v v3, (a0)
+; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v3_v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret
     %1 = bitcast <48 x i8>* %ptr to i8*
     %2 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg6.load.v8i8.p0i8.i64(i8* %1, i64 8)
@@ -82,6 +87,7 @@ define <8 x i8> @load_factor7(<56 x i8>* %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlseg7e8.v v2, (a0)
+; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v2_v3_v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret
     %1 = bitcast <56 x i8>* %ptr to i8*
     %2 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg7.load.v8i8.p0i8.i64(i8* %1, i64 8)
@@ -100,6 +106,7 @@ define <8 x i8> @load_factor8(<64 x i8>* %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlseg8e8.v v1, (a0)
+; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v1_v2_v3_v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret
     %1 = bitcast <64 x i8>* %ptr to i8*
     %2 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg8.load.v8i8.p0i8.i64(i8* %1, i64 8)

@@ -1348,6 +1348,15 @@ def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Filename defining the list of functions/files to instrument">,
     MarshallingInfoStringVector<LangOpts<"ProfileListFiles">>;
+def fprofile_function_groups : Joined<["-"], "fprofile-function-groups=">,
+  Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<N>">,
+  HelpText<"Partition functions into N groups and select only functions in group i to be instrumented using -fprofile-selected-function-group">,
+  MarshallingInfoInt<CodeGenOpts<"ProfileTotalFunctionGroups">, "1">;
+def fprofile_selected_function_group :
+  Joined<["-"], "fprofile-selected-function-group=">, Group<f_Group>,
+  Flags<[CC1Option]>, MetaVarName<"<i>">,
+  HelpText<"Partition functions into N groups using -fprofile-function-groups and select only functions in group i to be instrumented. The valid range is 0 to N-1 inclusive">,
+  MarshallingInfoInt<CodeGenOpts<"ProfileSelectedFunctionGroup">>;
 def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>, MetaVarName<"<option>">,
     HelpText<"Control emission of Swift async extended frame info">,

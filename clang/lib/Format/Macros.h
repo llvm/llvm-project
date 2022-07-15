@@ -128,7 +128,7 @@ private:
   const FormatStyle &Style;
   llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator;
   IdentifierTable &IdentTable;
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
+  SmallVector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
   llvm::StringMap<Definition> Definitions;
 };
 

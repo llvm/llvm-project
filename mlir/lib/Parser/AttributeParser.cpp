@@ -525,8 +525,7 @@ ParseResult TensorLiteralParser::parse(bool allowHex) {
 
 /// Build a dense attribute instance with the parsed elements and the given
 /// shaped type.
-DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc,
-                                               ShapedType type) {
+DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
   Type eltType = type.getElementType();
 
   // Check to see if we parse the literal from a hex string.
@@ -676,11 +675,10 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 }
 
 /// Build a Dense String attribute for the given type.
-DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc,
-                                                     ShapedType type,
+DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
                                                      Type eltTy) {
   if (hexStorage.has_value()) {
-    auto stringValue = hexStorage.getValue().getStringValue();
+    auto stringValue = hexStorage.value().getStringValue();
     return DenseStringElementsAttr::get(type, {stringValue});
   }
 
@@ -698,8 +696,7 @@ DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc,
 }
 
 /// Build a Dense attribute with hex data for the given type.
-DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc,
-                                                  ShapedType type) {
+DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
   Type elementType = type.getElementType();
   if (!elementType.isIntOrIndexOrFloat() && !elementType.isa<ComplexType>()) {
     p.emitError(loc)

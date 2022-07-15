@@ -1291,7 +1291,7 @@ public:
     return const_cast<MDNode *>(this)->mutable_end();
   }
 
-  op_range operands() const { return op_range(op_begin(), op_end()); }
+  ArrayRef<MDOperand> operands() const { return getHeader().operands(); }
 
   const MDOperand &getOperand(unsigned I) const {
     assert(I < getNumOperands() && "Out of range");
@@ -1349,7 +1349,9 @@ class MDTuple : public MDNode {
                           StorageType Storage, bool ShouldCreate = true);
 
   TempMDTuple cloneImpl() const {
-    return getTemporary(getContext(), SmallVector<Metadata *, 4>(operands()));
+    ArrayRef<MDOperand> Operands = operands();
+    return getTemporary(getContext(), SmallVector<Metadata *, 4>(
+                                          Operands.begin(), Operands.end()));
   }
 
 public:

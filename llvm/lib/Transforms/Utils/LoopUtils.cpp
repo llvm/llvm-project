@@ -356,7 +356,7 @@ TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
   Optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
   if (Count)
-    return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+    return Count.value() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable"))
     return TM_ForcedByUser;
@@ -377,7 +377,7 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
   Optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll_and_jam.count");
   if (Count)
-    return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+    return Count.value() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll_and_jam.enable"))
     return TM_ForcedByUser;
@@ -1357,7 +1357,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         const SCEV *ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
         if (isa<SCEVCouldNotCompute>(ExitValue) ||
             !SE->isLoopInvariant(ExitValue, L) ||
-            !isSafeToExpand(ExitValue, *SE)) {
+            !Rewriter.isSafeToExpand(ExitValue)) {
           // TODO: This should probably be sunk into SCEV in some way; maybe a
           // getSCEVForExit(SCEV*, L, ExitingBB)?  It can be generalized for
           // most SCEV expressions and other recurrence types (e.g. shift
@@ -1370,7 +1370,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
               ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
           if (isa<SCEVCouldNotCompute>(ExitValue) ||
               !SE->isLoopInvariant(ExitValue, L) ||
-              !isSafeToExpand(ExitValue, *SE))
+              !Rewriter.isSafeToExpand(ExitValue))
             continue;
         }
 

@@ -2682,7 +2682,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Handle target specific intrinsics
     Optional<Instruction *> V = targetInstCombineIntrinsic(*II);
     if (V)
-      return V.getValue();
+      return V.value();
     break;
   }
   }

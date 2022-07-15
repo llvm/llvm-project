@@ -2345,6 +2345,10 @@ Use instrumentation data for profile-guided optimization
 
 Filename defining the list of functions/files to instrument
 
+.. option:: -fprofile-function-groups=<N>, -fprofile-selected-function-group=<i>
+
+Partition functions into <N> groups and select only functions in group <i> to be instrumented
+
 .. option:: -fprofile-remapping-file=<file>
 
 Use the remappings described in <file> to match the profile data against names in the program

@@ -226,7 +226,7 @@ An overview of all the command-line options:
                                      complete list of passes, use the
                                      :option:`--list-checks` and
                                      :option:`-load` options together.
-    -p=<string>                    - Build path
+    -p <string>                    - Build path
     --quiet                        -
                                      Run clang-tidy in quiet mode. This suppresses
                                      printing statistics about ignored warnings and

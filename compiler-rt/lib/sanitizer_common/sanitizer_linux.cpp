@@ -763,7 +763,14 @@ uptr internal_lseek(fd_t fd, OFF_T offset, int whence) {
 uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5) {
   return internal_syscall(SYSCALL(prctl), option, arg2, arg3, arg4, arg5);
 }
-#endif
+#      if defined(__x86_64__)
+#        include <asm/unistd_64.h>
+// Currently internal_arch_prctl() is only needed on x86_64.
+uptr internal_arch_prctl(int option, uptr arg2) {
+  return internal_syscall(__NR_arch_prctl, option, arg2);
+}
+#      endif
+#    endif
 
 uptr internal_sigaltstack(const void *ss, void *oss) {
   return internal_syscall(SYSCALL(sigaltstack), (uptr)ss, (uptr)oss);

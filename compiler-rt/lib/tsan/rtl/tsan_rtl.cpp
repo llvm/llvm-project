@@ -951,6 +951,15 @@ void TraceSwitchPartImpl(ThreadState* thr) {
       TraceMutexLock(thr, d.write ? EventType::kLock : EventType::kRLock, 0,
                      d.addr, d.stack_id);
   }
+  // Callers of TraceSwitchPart expect that TraceAcquire will always succeed
+  // after the call. It's possible that TryTraceFunc/TraceMutexLock above
+  // filled the trace part exactly up to the TracePart::kAlignment gap
+  // and the next TraceAcquire won't succeed. Skip the gap to avoid that.
+  EventFunc *ev;
+  if (!TraceAcquire(thr, &ev)) {
+    CHECK(TraceSkipGap(thr));
+    CHECK(TraceAcquire(thr, &ev));
+  }
   {
     Lock lock(&ctx->slot_mtx);
     // There is a small chance that the slot may be not queued at this point.

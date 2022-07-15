@@ -1895,26 +1895,31 @@ private:
   void removeBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
+    bool EndsWithComment = false;
     for (AnnotatedLine *Line : Lines) {
       removeBraces(Line->Children, Result);
-      if (!Line->Affected)
-        continue;
-      for (FormatToken *Token = Line->First; Token && !Token->Finalized;
-           Token = Token->Next) {
-        if (!Token->Optional)
-          continue;
-        assert(Token->isOneOf(tok::l_brace, tok::r_brace));
-        assert(Token->Next || Token == Line->Last);
-        const auto Start =
-            Token == Line->Last ||
-                    (Token->Next->isOneOf(tok::kw_else, tok::comment) &&
-                     Token->Next->NewlinesBefore > 0)
-                ? Token->WhitespaceRange.getBegin()
-                : Token->Tok.getLocation();
-        const auto Range =
-            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
-        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
+      if (Line->Affected) {
+        for (FormatToken *Token = Line->First; Token && !Token->Finalized;
+             Token = Token->Next) {
+          if (!Token->Optional)
+            continue;
+          assert(Token->isOneOf(tok::l_brace, tok::r_brace));
+          assert(Token->Previous || Token == Line->First);
+          const FormatToken *Next = Token->Next;
+          assert(Next || Token == Line->Last);
+          const auto Start =
+              (!Token->Previous && EndsWithComment) ||
+                      (Next && !(Next->isOneOf(tok::kw_else, tok::comment) &&
+                                 Next->NewlinesBefore > 0))
+                  ? Token->Tok.getLocation()
+                  : Token->WhitespaceRange.getBegin();
+          const auto Range =
+              CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
+          cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
+        }
       }
+      assert(Line->Last);
+      EndsWithComment = Line->Last->is(tok::comment);
     }
   }
 };
@@ -2386,7 +2391,7 @@ private:
 
   tooling::Replacements generateFixes() {
     tooling::Replacements Fixes;
-    std::vector<FormatToken *> Tokens;
+    SmallVector<FormatToken *> Tokens;
     std::copy(DeletedTokens.begin(), DeletedTokens.end(),
               std::back_inserter(Tokens));
 
@@ -2580,7 +2585,7 @@ struct JavaImportDirective {
   StringRef Identifier;
   StringRef Text;
   unsigned Offset;
-  std::vector<StringRef> AssociatedCommentLines;
+  SmallVector<StringRef> AssociatedCommentLines;
   bool IsStatic;
 };
 
@@ -2983,7 +2988,7 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
   llvm::Regex ImportRegex(JavaImportRegexPattern);
   SmallVector<StringRef, 4> Matches;
   SmallVector<JavaImportDirective, 16> ImportsInBlock;
-  std::vector<StringRef> AssociatedCommentLines;
+  SmallVector<StringRef> AssociatedCommentLines;
 
   bool FormattingOff = false;
 

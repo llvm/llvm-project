@@ -3335,7 +3335,8 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
 
         // x == y  -->  x - y == 0
         const SCEV *N = SE.getSCEV(NV);
-        if (SE.isLoopInvariant(N, L) && isSafeToExpand(N, SE) &&
+        if (SE.isLoopInvariant(N, L) &&
+            isSafeToExpand(N, SE, /* CanonicalMode */ false) &&
             (!NV->getType()->isPointerTy() ||
              SE.getPointerBase(N) == SE.getPointerBase(S))) {
           // S is normalized, so normalize N before folding it into S
@@ -6385,8 +6386,8 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
     // less DWARF ops than an iteration count-based expression.
     if (Optional<APInt> Offset =
             SE.computeConstantDifference(DVIRec.SCEVs[i], SCEVInductionVar)) {
-      if (Offset.getValue().getMinSignedBits() <= 64)
-        SalvageExpr->createOffsetExpr(Offset.getValue().getSExtValue(),
+      if (Offset.value().getMinSignedBits() <= 64)
+        SalvageExpr->createOffsetExpr(Offset.value().getSExtValue(),
                                       LSRInductionVar);
     } else if (!SalvageExpr->createIterCountExpr(DVIRec.SCEVs[i], IterCountExpr,
                                                  SE))

@@ -2557,6 +2557,10 @@ Value *SCEVExpander::fixupLCSSAFormFor(Instruction *User, unsigned OpIdx) {
   return User->getOperand(OpIdx);
 }
 
+bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
+  return llvm::isSafeToExpand(S, SE, CanonicalMode);
+}
+
 namespace {
 // Search for a SCEV subexpression that is not safe to expand.  Any expression
 // that may expand to a !isSafeToSpeculativelyExecute value is unsafe, namely
@@ -2568,9 +2572,7 @@ namespace {
 // only needed when the expression includes some subexpression that is not IV
 // derived.
 //
-// Currently, we only allow division by a nonzero constant here. If this is
-// inadequate, we could easily allow division by SCEVUnknown by using
-// ValueTracking to check isKnownNonZero().
+// Currently, we only allow division by a value provably non-zero here.
 //
 // We cannot generally expand recurrences unless the step dominates the loop
 // header. The expander handles the special case of affine recurrences by
@@ -2588,8 +2590,7 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      const SCEVConstant *SC = dyn_cast<SCEVConstant>(D->getRHS());
-      if (!SC || SC->getValue()->isZero()) {
+      if (!SE.isKnownNonZero(D->getRHS())) {
         IsUnsafe = true;
         return false;
       }
@@ -2613,7 +2614,7 @@ struct SCEVFindUnsafe {
   }
   bool isDone() const { return IsUnsafe; }
 };
-}
+} // namespace
 
 namespace llvm {
 bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE, bool CanonicalMode) {
@@ -2622,9 +2623,9 @@ bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE, bool CanonicalMode) {
   return !Search.IsUnsafe;
 }
 
-bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
-                      ScalarEvolution &SE) {
-  if (!isSafeToExpand(S, SE))
+bool SCEVExpander::isSafeToExpandAt(const SCEV *S,
+                                    const Instruction *InsertionPoint) const {
+  if (!isSafeToExpand(S))
     return false;
   // We have to prove that the expanded site of S dominates InsertionPoint.
   // This is easy when not in the same block, but hard when S is an instruction

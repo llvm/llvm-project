@@ -212,15 +212,14 @@ struct OneShotBufferizePass
       };
 
       // Configure op filter.
-      OpFilter::Entry::FilterFn filterFn =
-          [&](Operation *op) {
-            // Filter may be specified via options.
-            if (this->dialectFilter.hasValue())
-              return llvm::is_contained(this->dialectFilter,
-                                        op->getDialect()->getNamespace());
-            // No filter specified: All other ops are allowed.
-            return true;
-          };
+      OpFilter::Entry::FilterFn filterFn = [&](Operation *op) {
+        // Filter may be specified via options.
+        if (this->dialectFilter.hasValue())
+          return llvm::is_contained(this->dialectFilter,
+                                    op->getDialect()->getNamespace());
+        // No filter specified: All other ops are allowed.
+        return true;
+      };
       opt.opFilter.allowOperation(filterFn);
     } else {
       opt = *options;

@@ -2164,7 +2164,7 @@ void Generic_GCC::GCCInstallationDetector::print(raw_ostream &OS) const {
 
 bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
   if (BiarchSibling) {
-    M = BiarchSibling.getValue();
+    M = BiarchSibling.value();
     return true;
   }
   return false;

@@ -6,5 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This file is currently emtpy. In future, declaration of a self thread object
-// etc. will be added here.
+#include "thread.h"
+
+namespace __llvm_libc {
+
+thread_local Thread self;
+
+} // namespace __llvm_libc

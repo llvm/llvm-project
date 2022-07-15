@@ -314,8 +314,7 @@ private:
 
 } // namespace
 
-std::unique_ptr<Pass>
-mlir::createPrintOpGraphPass(raw_ostream &os) {
+std::unique_ptr<Pass> mlir::createPrintOpGraphPass(raw_ostream &os) {
   return std::make_unique<PrintOpPass>(os);
 }
 

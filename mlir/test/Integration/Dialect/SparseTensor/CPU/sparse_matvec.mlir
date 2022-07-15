@@ -44,8 +44,8 @@ module {
   // into a dense vector x.
   //
   func.func @kernel_matvec(%arga: tensor<?x?xi32, #SparseMatrix>,
-                      %argb: tensor<?xi32>,
-                      %argx: tensor<?xi32> {linalg.inplaceable = true})
+                           %argb: tensor<?xi32>,
+                           %argx: tensor<?xi32>)
 		      -> tensor<?xi32> {
     %0 = linalg.generic #matvec
       ins(%arga, %argb: tensor<?x?xi32, #SparseMatrix>, tensor<?xi32>)

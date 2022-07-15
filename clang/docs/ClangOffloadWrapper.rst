@@ -39,10 +39,8 @@ This tool can be used as follows:
     --version                          - Display the version of this program
 
   clang-offload-wrapper options:
-
-    -o=<filename>                      - Output filename
-    --offload-arch=<offload-arch-name> - Contains offload-arch of the following target binary.
-    --target=<triple>                  - Target triple for the output amdgpu-amdhsa-memory-model-code-sequences-gfx10-table
+    -o <filename>                      - Output filename
+    --target=<triple>                  - Target triple for the output module
 
 Example
 =======

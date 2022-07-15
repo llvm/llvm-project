@@ -1,69 +1,48 @@
 // REQUIRES: zlib
-// Check zlib-gnu style
-// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib-gnu -triple x86_64-pc-linux-gnu < %s -o %t
-// RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-GNU-STYLE %s
-// RUN: llvm-dwarfdump -debug-str %t | FileCheck --check-prefix=STR %s
-// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib-gnu -triple i386-pc-linux-gnu --defsym I386=1 %s \
-// RUN:     | llvm-readelf -s - | FileCheck --check-prefix=386-SYMBOLS-GNU %s
 
 // Check zlib style
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple x86_64-pc-linux-gnu < %s -o %t
-// RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-ZLIB-STYLE %s
+// RUN: llvm-objdump -s %t | FileCheck %s
 // RUN: llvm-dwarfdump -debug-str %t | FileCheck --check-prefix=STR %s
-// RUN: llvm-readelf --sections %t | FileCheck --check-prefixes=ZLIB-FLAGS,ZLIB-FLAGS64 %s
+// RUN: llvm-readelf --sections %t | FileCheck --check-prefixes=FLAGS,FLAGS64 %s
 
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple i386-pc-linux-gnu --defsym I386=1 %s -o %t
-// RUN: llvm-readelf -S -s %t | FileCheck --check-prefixes=386-SYMBOLS-ZLIB,ZLIB-FLAGS,ZLIB-FLAGS32 %s
-
-// Don't compress small sections, such as this simple debug_abbrev example
-// CHECK-GNU-STYLE: Contents of section .debug_abbrev:
-// CHECK-GNU-STYLE-NOT: ZLIB
-// CHECK-GNU-STYLE-NOT: Contents of
-
-// CHECK-GNU-STYLE: Contents of section .debug_info:
-
-// CHECK-GNU-STYLE: Contents of section .zdebug_str:
-// Check for the 'ZLIB' file magic at the start of the section only
-// CHECK-GNU-STYLE-NEXT: ZLIB
-// CHECK-GNU-STYLE-NOT: ZLIB
-// CHECK-GNU-STYLE: Contents of section
+// RUN: llvm-readelf -S -s %t | FileCheck --check-prefixes=386-SYMBOLS,FLAGS,FLAGS32 %s
 
 // Decompress one valid dwarf section just to check that this roundtrips,
-// we use .zdebug_str section for that
+// we use .debug_str section for that
 // STR: perfectly compressable data sample *****************************************
 
 
 // Now check the zlib style output:
 
 // Don't compress small sections, such as this simple debug_abbrev example
-// CHECK-ZLIB-STYLE: Contents of section .debug_abbrev:
-// CHECK-ZLIB-STYLE-NOT: ZLIB
-// CHECK-ZLIB-STYLE-NOT: Contents of
-// CHECK-ZLIB-STYLE: Contents of section .debug_info:
+// CHECK: Contents of section .debug_abbrev:
+// CHECK-NOT: ZLIB
+// CHECK-NOT: Contents of
+// CHECK: Contents of section .debug_info:
 // FIXME: Handle compressing alignment fragments to support compressing debug_frame
-// CHECK-ZLIB-STYLE: Contents of section .debug_frame:
-// CHECK-ZLIB-STYLE-NOT: ZLIB
-// CHECK-ZLIB-STYLE: Contents of
+// CHECK: Contents of section .debug_frame:
+// CHECK-NOT: ZLIB
+// CHECK: Contents of
 
-# ZLIB-FLAGS:   .text         PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00 AX 0 0  4
-# ZLIB-FLAGS:   .nonalloc     PROGBITS [[#%x,]] [[#%x,]] 000226   00    0 0  1
+# FLAGS:   .text         PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00 AX 0 0  4
+# FLAGS:   .nonalloc     PROGBITS [[#%x,]] [[#%x,]] 000226   00    0 0  1
 
 ## Check that the large .debug_line and .debug_frame have the SHF_COMPRESSED
 ## flag.
-# ZLIB-FLAGS32: .debug_line   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  4
-# ZLIB-FLAGS32: .debug_abbrev PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
-# ZLIB-FLAGS32: .debug_info   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
-# ZLIB-FLAGS32: .debug_frame  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  4
+# FLAGS32: .debug_line   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  4
+# FLAGS32: .debug_abbrev PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
+# FLAGS32: .debug_info   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
+# FLAGS32: .debug_frame  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  4
 
-# ZLIB-FLAGS64: .debug_line   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  8
-# ZLIB-FLAGS64: .debug_abbrev PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
-# ZLIB-FLAGS64: .debug_info   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
-# ZLIB-FLAGS64: .debug_frame  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  8
+# FLAGS64: .debug_line   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  8
+# FLAGS64: .debug_abbrev PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
+# FLAGS64: .debug_info   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00    0 0  1
+# FLAGS64: .debug_frame  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  C 0 0  8
 
-# 386-SYMBOLS-ZLIB: Symbol table '.symtab'
-# 386-SYMBOLS-ZLIB: .debug_str
-# 386-SYMBOLS-GNU:  Symbol table '.symtab'
-# 386-SYMBOLS-GNU:  .zdebug_str
+# 386-SYMBOLS: Symbol table '.symtab'
+# 386-SYMBOLS: .debug_str
 
 ## Don't compress a section not named .debug_*.
         .section .nonalloc,"",@progbits

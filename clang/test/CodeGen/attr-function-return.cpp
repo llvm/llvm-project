@@ -1,11 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - \
+// RUN:   -Werror=unknown-attributes \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NOM
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - \
-// RUN:   -mfunction-return=keep | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,CHECK-KEEP
+// RUN:   -Werror=unknown-attributes -mfunction-return=keep \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-KEEP
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - \
-// RUN:  -mfunction-return=thunk-extern | FileCheck %s \
-// RUN:  --check-prefixes=CHECK,CHECK-EXTERN
+// RUN:   -Werror=unknown-attributes -mfunction-return=thunk-extern \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-EXTERN
 
 int foo(void) {
   // CHECK: @"_ZZ3foovENK3$_0clEv"({{.*}}) [[NOATTR:#[0-9]+]]

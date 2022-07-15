@@ -443,13 +443,13 @@ public:
 
     if (firstSrcDepPos.has_value()) {
       if (lastDstDepPos.has_value()) {
-        if (firstSrcDepPos.getValue() <= lastDstDepPos.getValue()) {
+        if (firstSrcDepPos.value() <= lastDstDepPos.value()) {
           // No valid insertion point exists which preserves dependences.
           return nullptr;
         }
       }
       // Return the insertion point at 'firstSrcDepPos'.
-      return depInsts[firstSrcDepPos.getValue()];
+      return depInsts[firstSrcDepPos.value()];
     }
     // No dependence targets in range (or only dst deps in range), return
     // 'dstNodInst' insertion point.
@@ -942,10 +942,10 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   // Create 'newMemRefType' using 'newShape' from MemRefRegion accessed
   // by 'srcStoreOpInst'.
   uint64_t bufSize =
-      getMemRefEltSizeInBytes(oldMemRefType) * numElements.getValue();
+      getMemRefEltSizeInBytes(oldMemRefType) * numElements.value();
   unsigned newMemSpace;
   if (bufSize <= localBufSizeThreshold && fastMemorySpace.has_value()) {
-    newMemSpace = fastMemorySpace.getValue();
+    newMemSpace = fastMemorySpace.value();
   } else {
     newMemSpace = oldMemRefType.getMemorySpaceAsInt();
   }
@@ -1143,7 +1143,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
       srcWriteRegion.getRegionSize();
   if (!maybeSrcWriteRegionSizeBytes.has_value())
     return false;
-  int64_t srcWriteRegionSizeBytes = maybeSrcWriteRegionSizeBytes.getValue();
+  int64_t srcWriteRegionSizeBytes = maybeSrcWriteRegionSizeBytes.value();
 
   // Compute op instance count for the src loop nest.
   uint64_t dstLoopNestCost = getComputeCost(dstForOp, dstLoopNestStats);
@@ -1184,14 +1184,13 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     Optional<int64_t> maybeSliceWriteRegionSizeBytes =
         sliceWriteRegion.getRegionSize();
     if (!maybeSliceWriteRegionSizeBytes.has_value() ||
-        maybeSliceWriteRegionSizeBytes.getValue() == 0) {
+        maybeSliceWriteRegionSizeBytes.value() == 0) {
       LLVM_DEBUG(llvm::dbgs()
                  << "Failed to get slice write region size at loopDepth: " << i
                  << "\n");
       continue;
     }
-    int64_t sliceWriteRegionSizeBytes =
-        maybeSliceWriteRegionSizeBytes.getValue();
+    int64_t sliceWriteRegionSizeBytes = maybeSliceWriteRegionSizeBytes.value();
 
     // If we are fusing for reuse, check that write regions remain the same.
     // TODO: Write region check should check sizes and offsets in
@@ -1268,11 +1267,11 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     return false;
   }
 
-  auto srcMemSizeVal = srcMemSize.getValue();
-  auto dstMemSizeVal = dstMemSize.getValue();
+  auto srcMemSizeVal = srcMemSize.value();
+  auto dstMemSizeVal = dstMemSize.value();
 
   assert(sliceMemEstimate && "expected value");
-  auto fusedMem = dstMemSizeVal + sliceMemEstimate.getValue();
+  auto fusedMem = dstMemSizeVal + sliceMemEstimate.value();
 
   LLVM_DEBUG(llvm::dbgs() << "   src mem: " << srcMemSizeVal << "\n"
                           << "   dst mem: " << dstMemSizeVal << "\n"

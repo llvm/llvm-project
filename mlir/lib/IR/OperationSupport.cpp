@@ -292,8 +292,7 @@ void detail::OperandStorage::eraseOperands(unsigned start, unsigned length) {
     operands[numOperands + i].~OpOperand();
 }
 
-void detail::OperandStorage::eraseOperands(
-    const BitVector &eraseIndices) {
+void detail::OperandStorage::eraseOperands(const BitVector &eraseIndices) {
   MutableArrayRef<OpOperand> operands = getOperands();
   assert(eraseIndices.size() == operands.size());
 
