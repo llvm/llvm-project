@@ -201,6 +201,11 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_TRUNC:
     OperandsMapping = getValueMapping(PMI_GR32);
     break;
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
+    OperandsMapping = getValueMapping(PMI_GR32);
+    break;
   case TargetOpcode::G_SEXT_INREG:
     OperandsMapping = getOperandsMapping(
         {getValueMapping(PMI_GR32), getValueMapping(PMI_GR32), nullptr});

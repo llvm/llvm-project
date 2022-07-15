@@ -82,6 +82,8 @@ private:
                         MachineRegisterInfo &MRI) const;
   bool selectPtrAdd(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
+  bool selectExt(MachineInstr &I, MachineBasicBlock &MBB,
+                 MachineRegisterInfo &MRI) const;
   bool selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
                        MachineRegisterInfo &MRI) const;
   bool selectMergeUnmerge(MachineInstr &I, MachineBasicBlock &MBB,
@@ -580,6 +582,57 @@ bool M88kInstructionSelector::selectPtrAdd(MachineInstr &I,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
+                                        MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_ZEXT ||
+         I.getOpcode() == TargetOpcode::G_ANYEXT ||
+         I.getOpcode() == TargetOpcode::G_SEXT && "Unexpected G code");
+
+  // Matches xEXT of ICMP.
+  MachineInstr *MI = nullptr;
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+  const unsigned NewOpc =
+      I.getOpcode() == TargetOpcode::G_SEXT ? M88k::EXTrwo : M88k::EXTUrwo;
+  CmpInst::Predicate Pred;
+  Register LHS, RHS;
+  int64_t SImm16;
+  if (mi_match(SrcReg, MRI,
+               m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(SImm16))) &&
+      isInt<16>(SImm16)) {
+    Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+    ICC CCCode = getCCforICMP(Pred);
+    int64_t WO = (1 << 5) | int64_t(CCCode);
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPri))
+             .addReg(Temp, RegState::Define)
+             .addReg(LHS)
+             .addImm(SImm16);
+    if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+      return false;
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
+             .addReg(Temp, RegState::Kill)
+             .addImm(WO);
+  } else if (mi_match(SrcReg, MRI,
+                      m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
+    Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+    ICC CCCode = getCCforICMP(Pred);
+    int64_t WO = (1 << 5) | int64_t(CCCode);
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPrr))
+             .addReg(Temp, RegState::Define)
+             .addReg(LHS)
+             .addReg(RHS);
+    if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+      return false;
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
+             .addReg(Temp, RegState::Kill)
+             .addImm(WO);
+  } else
+    return false;
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 enum class LoadStore : unsigned {
   Imm = 0,
   RegUnscaled,
@@ -999,6 +1052,10 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectBrJT(I, MBB, MRI);
   case TargetOpcode::G_BRINDIRECT:
     return selectBrIndirect(I, MBB, MRI);
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ANYEXT: // TODO Can G_ANYEXT end up here?
+    return selectExt(I, MBB, MRI);
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:

@@ -46,9 +46,11 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{S32, P0}})
       .minScalar(0, S32);
-  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalIf([](const LegalityQuery &Query) { return false; })
-      .maxScalar(0, S32);
+
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
+      .legalFor({{S32, S16}, {S32, S8}, {S32, S1}})
+      .clampScalar(0, S32, S32)
+      .widenScalarToNextPow2(1, 32);
   getActionDefinitionsBuilder(G_SEXT_INREG).legalForTypeWithAnyImm({S32});
   getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
