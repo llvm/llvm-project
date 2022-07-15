@@ -2193,8 +2193,27 @@ void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {
                        N->getOperand(0));
 }
 
+void SelectionDAGISel::pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops,
+                                                SDValue OpVal, SDLoc DL) {
+  SDNode *OpNode = OpVal.getNode();
+
+  // FrameIndex nodes should have been directly emitted to TargetFrameIndex
+  // nodes at DAG-construction time.
+  assert(OpNode->getOpcode() != ISD::FrameIndex);
+
+  if (OpNode->getOpcode() == ISD::Constant) {
+    Ops.push_back(
+        CurDAG->getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
+    Ops.push_back(
+        CurDAG->getTargetConstant(cast<ConstantSDNode>(OpNode)->getZExtValue(),
+                                  DL, OpVal.getValueType()));
+  } else {
+    Ops.push_back(OpVal);
+  }
+}
+
 void SelectionDAGISel::Select_STACKMAP(SDNode *N) {
-  std::vector<SDValue> Ops;
+  SmallVector<SDValue, 32> Ops;
   auto *It = N->op_begin();
   SDLoc DL(N);
 
@@ -2213,30 +2232,65 @@ void SelectionDAGISel::Select_STACKMAP(SDNode *N) {
   Ops.push_back(Shad);
 
   // Live variable operands.
-  for (; It != N->op_end(); It++) {
-    SDNode *OpNode = It->getNode();
-    SDValue O;
-
-    // FrameIndex nodes should have been directly emitted to TargetFrameIndex
-    // nodes at DAG-construction time.
-    assert(OpNode->getOpcode() != ISD::FrameIndex);
-
-    if (OpNode->getOpcode() == ISD::Constant) {
-      Ops.push_back(
-          CurDAG->getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
-      O = CurDAG->getTargetConstant(
-          cast<ConstantSDNode>(OpNode)->getZExtValue(), DL, It->getValueType());
-    } else {
-      O = *It;
-    }
-    Ops.push_back(O);
-  }
+  for (; It != N->op_end(); It++)
+    pushStackMapLiveVariable(Ops, *It, DL);
 
   Ops.push_back(Chain);
   Ops.push_back(InFlag);
 
   SDVTList NodeTys = CurDAG->getVTList(MVT::Other, MVT::Glue);
   CurDAG->SelectNodeTo(N, TargetOpcode::STACKMAP, NodeTys, Ops);
+}
+
+void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
+  SmallVector<SDValue, 32> Ops;
+  auto *It = N->op_begin();
+  SDLoc DL(N);
+
+  // Cache arguments that will be moved to the end in the target node.
+  SDValue Chain = *It++;
+  Optional<SDValue> Glue;
+  if (It->getValueType() == MVT::Glue)
+    Glue = *It++;
+  SDValue RegMask = *It++;
+
+  // <id> operand.
+  SDValue ID = *It++;
+  assert(ID.getValueType() == MVT::i64);
+  Ops.push_back(ID);
+
+  // <numShadowBytes> operand.
+  SDValue Shad = *It++;
+  assert(Shad.getValueType() == MVT::i32);
+  Ops.push_back(Shad);
+
+  // Add the callee.
+  Ops.push_back(*It++);
+
+  // Add <numArgs>.
+  SDValue NumArgs = *It++;
+  assert(NumArgs.getValueType() == MVT::i32);
+  Ops.push_back(NumArgs);
+
+  // Calling convention.
+  Ops.push_back(*It++);
+
+  // Push the args for the call.
+  for (uint64_t I = cast<ConstantSDNode>(NumArgs)->getZExtValue(); I != 0; I--)
+    Ops.push_back(*It++);
+
+  // Now push the live variables.
+  for (; It != N->op_end(); It++)
+    pushStackMapLiveVariable(Ops, *It, DL);
+
+  // Finally, the regmask, chain and (if present) glue are moved to the end.
+  Ops.push_back(RegMask);
+  Ops.push_back(Chain);
+  if (Glue.hasValue())
+    Ops.push_back(Glue.getValue());
+
+  SDVTList NodeTys = N->getVTList();
+  CurDAG->SelectNodeTo(N, TargetOpcode::PATCHPOINT, NodeTys, Ops);
 }
 
 /// GetVBR - decode a vbr encoding whose top bit is set.
@@ -2795,6 +2849,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::STACKMAP:
     Select_STACKMAP(NodeToMatch);
+    return;
+  case ISD::PATCHPOINT:
+    Select_PATCHPOINT(NodeToMatch);
     return;
   }
 
