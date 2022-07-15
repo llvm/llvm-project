@@ -1224,8 +1224,9 @@ static void annotateFunctionWithHashMismatch(Function &F,
 bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
                               bool &AllMinusOnes) {
   auto &Ctx = M->getContext();
-  Expected<InstrProfRecord> Result =
-      PGOReader->getInstrProfRecord(FuncInfo.FuncName, FuncInfo.FunctionHash);
+  uint64_t MismatchedFuncSum = 0;
+  Expected<InstrProfRecord> Result = PGOReader->getInstrProfRecord(
+      FuncInfo.FuncName, FuncInfo.FunctionHash, &MismatchedFuncSum);
   if (Error E = Result.takeError()) {
     handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
       auto Err = IPE.get();
@@ -1254,9 +1255,11 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
       if (SkipWarning)
         return;
 
-      std::string Msg = IPE.message() + std::string(" ") + F.getName().str() +
-                        std::string(" Hash = ") +
-                        std::to_string(FuncInfo.FunctionHash);
+      std::string Msg =
+          IPE.message() + std::string(" ") + F.getName().str() +
+          std::string(" Hash = ") + std::to_string(FuncInfo.FunctionHash) +
+          std::string(" up to ") + std::to_string(MismatchedFuncSum) +
+          std::string(" count discarded");
 
       Ctx.diagnose(
           DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
