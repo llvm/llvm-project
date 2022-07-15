@@ -1,7 +1,7 @@
 #ifndef AMD_HOSTCALL_H
 #define AMD_HOSTCALL_H
 
-#include <hsa.h>
+#include <hsa/hsa.h>
 #include <stddef.h>
 #include <stdint.h>
 

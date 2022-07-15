@@ -8,7 +8,7 @@
 #ifndef AMDGPU_HSA_API_H_INCLUDED
 #define AMDGPU_HSA_API_H_INCLUDED
 
-#include "hsa.h"
-#include "hsa_ext_amd.h"
+#include "hsa/hsa.h"
+#include "hsa/hsa_ext_amd.h"
 
 #endif

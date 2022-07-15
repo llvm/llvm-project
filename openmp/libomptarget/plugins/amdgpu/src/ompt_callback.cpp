@@ -25,7 +25,7 @@
 // local includes
 //****************************************************************************
 
-#include <hsa_ext_amd.h>
+#include <hsa/hsa_ext_amd.h>
 
 #include <Debug.h>
 #include <internal.h>

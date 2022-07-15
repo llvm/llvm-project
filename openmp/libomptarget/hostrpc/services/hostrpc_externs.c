@@ -27,7 +27,7 @@ SOFTWARE.
 */
 
 #include "hostrpc_internal.h"
-#include "hsa_ext_amd.h"
+#include "hsa/hsa_ext_amd.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

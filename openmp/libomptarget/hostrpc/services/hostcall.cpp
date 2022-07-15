@@ -2,7 +2,7 @@
 #include "../plugins/amdgpu/src/utils.h"
 #include "../src/hostrpc.h"
 #include "hostrpc_internal.h"
-#include "hsa.h"
+#include "hsa/hsa.h"
 #include "urilocator.h"
 #include <assert.h>
 #include <atomic>

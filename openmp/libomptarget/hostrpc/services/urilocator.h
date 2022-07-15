@@ -30,7 +30,7 @@ Copyright (c) 2021 - 2021 Advanced Micro Devices, Inc.
 
 #ifndef URILOCATOR_H
 #define URILOCATOR_H
-#include "hsa_ven_amd_loader.h"
+#include "hsa/hsa_ven_amd_loader.h"
 #include <string>
 #include <vector>
 
