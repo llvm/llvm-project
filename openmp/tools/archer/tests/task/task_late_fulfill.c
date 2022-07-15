@@ -1,3 +1,5 @@
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 // REQUIRES: garbage
 // RUN: %libarcher-compile -fopenmp-version=50 && env OMP_NUM_THREADS='3' \
 // RUN:   %libarcher-run-race | FileCheck %s

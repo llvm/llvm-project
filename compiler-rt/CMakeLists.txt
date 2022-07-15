@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 # CMake build for CompilerRT.
 #
 # An important constraint of the build is that it only produces libraries

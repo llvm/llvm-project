@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 # If we don't need RTTI or EH, there's no reason to export anything
 # from the hello plugin.
 if( NOT LLVM_REQUIRES_RTTI )

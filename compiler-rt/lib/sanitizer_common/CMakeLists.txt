@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 # Build system for the common Sanitizer runtime support library components.
 # These components are shared between AddressSanitizer and ThreadSanitizer.
 

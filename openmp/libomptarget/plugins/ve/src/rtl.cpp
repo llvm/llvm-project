@@ -1,3 +1,5 @@
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //===-RTLs/nec-aurora/src/rtl.cpp - Target RTLs Implementation - C++ -*-======//
 //
 //                     The LLVM Compiler Infrastructure

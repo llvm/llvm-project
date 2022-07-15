@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 cmake_minimum_required(VERSION 3.13.4)
 
 # If we are not building as a part of LLVM, build Clang as an

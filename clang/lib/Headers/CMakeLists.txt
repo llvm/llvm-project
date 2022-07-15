@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 # core_files list contains the headers shared by all platforms.
 # Please consider adding new platform specific headers
 # to platform specific lists below.

@@ -1,3 +1,5 @@
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 .. Clang documentation master file, created by
    sphinx-quickstart on Sun Dec  9 20:01:55 2012.
    You can adapt this file completely to your liking, but it should at least

@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 if(LIBOMP_OMPT_SUPPORT)
   include_directories(${LIBOMP_INCLUDE_DIR})
 

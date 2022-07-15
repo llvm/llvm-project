@@ -1,3 +1,6 @@
+#  Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+#  Notified per clause 4(b) of the license.
+
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 
 cmake_minimum_required(VERSION 3.13.4)
