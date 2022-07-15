@@ -8669,12 +8669,13 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
       // of it will do.
       *Suggested = nullptr;
       for (auto *Redecl : ED->redecls()) {
-        if (isVisible(Redecl))
+        if (isAcceptable(Redecl, Kind))
           return true;
         if (Redecl->isThisDeclarationADefinition() ||
             (Redecl->isCanonicalDecl() && !*Suggested))
           *Suggested = Redecl;
       }
+
       return false;
     }
     D = ED->getDefinition();
