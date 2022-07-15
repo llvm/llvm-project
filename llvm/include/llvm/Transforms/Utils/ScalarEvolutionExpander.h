@@ -28,12 +28,6 @@
 namespace llvm {
 extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 
-/// Return true if the given expression is safe to expand in the sense that
-/// all materialized values are safe to speculate anywhere their operands are
-/// defined, and the expander is capable of expanding the expression.
-/// CanonicalMode indicates whether the expander will be used in canonical mode.
-bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE, bool CanonicalMode);
-
 /// struct for holding enough information to help calculate the cost of the
 /// given SCEV when expanded into IR.
 struct SCEVOperand {
