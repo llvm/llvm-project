@@ -324,7 +324,8 @@ class isFloatType<ValueType SrcVT> {
 
 // XXX - do v2i16 instructions?
 class isIntType<ValueType SrcVT> {
-  bit ret = !or(!eq(SrcVT.Value, i16.Value),
+  bit ret = !or(!eq(SrcVT.Value, i8.Value),
+                !eq(SrcVT.Value, i16.Value),
                 !eq(SrcVT.Value, i32.Value),
                 !eq(SrcVT.Value, i64.Value),
                 !eq(SrcVT.Value, v4i16.Value),
@@ -1411,6 +1412,10 @@ class IntSDWAInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def Int16SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<16>;
 def Int32SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<32>;
+def Bin32SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<32> {
+  let Name = "SDWAWithBin32InputMods";
+  let ParserMethod = "parseRegOrImm";
+}
 
 class IntSDWAInputMods <IntSDWAInputModsMatchClass matchClass> :
   InputMods <matchClass> {
@@ -1419,6 +1424,7 @@ class IntSDWAInputMods <IntSDWAInputModsMatchClass matchClass> :
 
 def Int16SDWAInputMods : IntSDWAInputMods<Int16SDWAInputModsMatchClass>;
 def Int32SDWAInputMods : IntSDWAInputMods<Int32SDWAInputModsMatchClass>;
+def Bin32SDWAInputMods : IntSDWAInputMods<Bin32SDWAInputModsMatchClass>;
 
 def IntVRegInputModsMatchClass : AsmOperandClass {
   let Name = "VRegWithIntInputMods";
