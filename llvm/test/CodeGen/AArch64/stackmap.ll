@@ -81,14 +81,14 @@
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  0
-; CHECK-NEXT:   .word   -1
+; CHECK-NEXT:   .word   65535
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  0
-; CHECK-NEXT:   .word   -1
+; CHECK-NEXT:   .word   65535
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0

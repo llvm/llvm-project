@@ -1727,6 +1727,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::STACKMAP:
     Res = PromoteIntOp_STACKMAP(N, OpNo);
     break;
+  case ISD::PATCHPOINT:
+    Res = PromoteIntOp_PATCHPOINT(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2334,6 +2337,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SET_ROUNDING(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
+  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SDValue Operand = N->getOperand(OpNo);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
+  NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
+  assert(OpNo >= 7);
   SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
   SDValue Operand = N->getOperand(OpNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
@@ -4693,6 +4705,9 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::STACKMAP:
     Res = ExpandIntOp_STACKMAP(N, OpNo);
     break;
+  case ISD::PATCHPOINT:
+    Res = ExpandIntOp_PATCHPOINT(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -5524,30 +5539,67 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1);
-
   SDValue Op = N->getOperand(OpNo);
-  SDLoc DL = SDLoc(N);
-  SmallVector<SDValue> NewOps;
+
+  // FIXME: Non-constant operands are not yet handled:
+  //  - https://github.com/llvm/llvm-project/issues/26431
+  //  - https://github.com/llvm/llvm-project/issues/55957
+  ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Op);
+  if (!CN)
+    return SDValue();
 
   // Copy operands before the one being expanded.
+  SmallVector<SDValue> NewOps;
   for (unsigned I = 0; I < OpNo; I++)
     NewOps.push_back(N->getOperand(I));
 
-  if (Op->getOpcode() == ISD::Constant) {
-    ConstantSDNode *CN = cast<ConstantSDNode>(Op);
-    EVT Ty = Op.getValueType();
-    if (CN->getConstantIntValue()->getValue().getActiveBits() < 64) {
-      NewOps.push_back(
-          DAG.getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
-      NewOps.push_back(DAG.getTargetConstant(CN->getZExtValue(), DL, Ty));
-    } else {
-      // FIXME: https://github.com/llvm/llvm-project/issues/55609
-      return SDValue();
-    }
+  EVT Ty = Op.getValueType();
+  SDLoc DL = SDLoc(N);
+  if (CN->getConstantIntValue()->getValue().getActiveBits() < 64) {
+    NewOps.push_back(
+        DAG.getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
+    NewOps.push_back(DAG.getTargetConstant(CN->getZExtValue(), DL, Ty));
   } else {
-    // FIXME: Non-constant operands are not yet handled:
-    //  - https://github.com/llvm/llvm-project/issues/26431
-    //  - https://github.com/llvm/llvm-project/issues/55957
+    // FIXME: https://github.com/llvm/llvm-project/issues/55609
+    return SDValue();
+  }
+
+  // Copy remaining operands.
+  for (unsigned I = OpNo + 1; I < N->getNumOperands(); I++)
+    NewOps.push_back(N->getOperand(I));
+
+  SDValue NewNode = DAG.getNode(N->getOpcode(), DL, N->getVTList(), NewOps);
+
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+    ReplaceValueWith(SDValue(N, ResNum), NewNode.getValue(ResNum));
+
+  return SDValue(); // Signal that we have replaced the node already.
+}
+
+SDValue DAGTypeLegalizer::ExpandIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
+  assert(OpNo >= 7);
+  SDValue Op = N->getOperand(OpNo);
+
+  // FIXME: Non-constant operands are not yet handled:
+  //  - https://github.com/llvm/llvm-project/issues/26431
+  //  - https://github.com/llvm/llvm-project/issues/55957
+  ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Op);
+  if (!CN)
+    return SDValue();
+
+  // Copy operands before the one being expanded.
+  SmallVector<SDValue> NewOps;
+  for (unsigned I = 0; I < OpNo; I++)
+    NewOps.push_back(N->getOperand(I));
+
+  EVT Ty = Op.getValueType();
+  SDLoc DL = SDLoc(N);
+  if (CN->getConstantIntValue()->getValue().getActiveBits() < 64) {
+    NewOps.push_back(
+        DAG.getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
+    NewOps.push_back(DAG.getTargetConstant(CN->getZExtValue(), DL, Ty));
+  } else {
+    // FIXME: https://github.com/llvm/llvm-project/issues/55609
     return SDValue();
   }
 
