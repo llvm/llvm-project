@@ -3475,10 +3475,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
   if (use_type_size_for_value && type_sp->GetType()) {
     DWARFExpression *location = location_list.GetMutableExpressionAtAddress();
-    location->UpdateValue(
-        const_value_form.Unsigned(),
-        type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
-        die.GetCU()->GetAddressByteSize());
+    location->UpdateValue(const_value_form.Unsigned(),
+                          type_sp->GetType()->GetByteSize(nullptr).value_or(0),
+                          die.GetCU()->GetAddressByteSize());
   }
 
   return std::make_shared<Variable>(
