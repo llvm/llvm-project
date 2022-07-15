@@ -619,9 +619,14 @@ public:
   /// Read a single record.
   Error readNextRecord(NamedInstrProfRecord &Record) override;
 
-  /// Return the NamedInstrProfRecord associated with FuncName and FuncHash
-  Expected<InstrProfRecord> getInstrProfRecord(StringRef FuncName,
-                                               uint64_t FuncHash);
+  /// Return the NamedInstrProfRecord associated with FuncName and FuncHash.
+  /// When return a hash_mismatch error and MismatchedFuncSum is not nullptr,
+  /// the sum of all counters in the mismatched function will be set to
+  /// MismatchedFuncSum. If there are multiple instances of mismatched
+  /// functions, MismatchedFuncSum returns the maximum.
+  Expected<InstrProfRecord>
+  getInstrProfRecord(StringRef FuncName, uint64_t FuncHash,
+                     uint64_t *MismatchedFuncSum = nullptr);
 
   /// Return the memprof record for the function identified by
   /// llvm::md5(Name).
