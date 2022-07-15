@@ -633,6 +633,26 @@ def Math_SqrtOp : Math_FloatUnaryOp<"sqrt"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TanOp
+//===----------------------------------------------------------------------===//
+
+def Math_TanOp : Math_FloatUnaryOp<"tan"> {
+  let summary = "tangent of the specified value";
+  let description = [{
+    The `tan` operation computes the tangent. It takes one operand
+    of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar tangent value.
+    %a = math.tan %b : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TanhOp
 //===----------------------------------------------------------------------===//
 

@@ -297,6 +297,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_vCont_then_partial_stop_run_both(self):
         self.vCont_then_partial_stop_test(True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_stdio(self):
         self.build()
@@ -337,6 +338,26 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
             ["read packet: $vStopped#00",
+             "send packet: $OK#00",
+             ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["llgs"])
+    def test_stop_reason_while_running(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["thread:new", "thread:new", "stop", "sleep:15"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             # stop is used to synchronize starting threads
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             {"direction": "send", "regex": "%Stop:T.*"},
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             "read packet: $?#00",
              "send packet: $OK#00",
              ], True)
         self.expect_gdbremote_sequence()
