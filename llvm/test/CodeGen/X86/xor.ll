@@ -464,16 +464,16 @@ define ptr @test12(ptr %op, i64 %osbot, i64 %intval) {
 ;
 ; X64-LIN-LABEL: test12:
 ; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    notl %edx
 ; X64-LIN-NEXT:    movslq %edx, %rax
-; X64-LIN-NEXT:    notq %rax
 ; X64-LIN-NEXT:    shlq $4, %rax
 ; X64-LIN-NEXT:    addq %rdi, %rax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test12:
 ; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    notl %r8d
 ; X64-WIN-NEXT:    movslq %r8d, %rax
-; X64-WIN-NEXT:    notq %rax
 ; X64-WIN-NEXT:    shlq $4, %rax
 ; X64-WIN-NEXT:    addq %rcx, %rax
 ; X64-WIN-NEXT:    retq
