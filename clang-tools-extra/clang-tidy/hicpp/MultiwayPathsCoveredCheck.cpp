@@ -36,7 +36,8 @@ void MultiwayPathsCoveredCheck::registerMatchers(MatchFinder *Finder) {
               // otherwise the matcher does not work correctly, because it
               // will not explicitly ignore enum conditions.
               unless(ignoringImpCasts(
-                  declRefExpr(hasType(enumType())).bind("enum-condition"))))))
+                  declRefExpr(hasType(hasCanonicalType(enumType())))
+                      .bind("enum-condition"))))))
           .bind("switch"),
       this);
 

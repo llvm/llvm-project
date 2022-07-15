@@ -12,8 +12,8 @@ struct Test {
 
 void helper() {
   Test t;
-  new Test;  // expected-warning {{type 'test1::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
-  new Test[10];  // expected-warning {{type 'test1::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test;  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test[10];  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
 }
 }
 
@@ -25,8 +25,8 @@ class Test {
 
 void helper() {
   Test t;
-  new Test;  // expected-warning {{type 'test2::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
-  new Test[10];  // expected-warning {{type 'test2::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test;  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test[10];  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
 }
 }
 
@@ -47,7 +47,7 @@ struct Test {
 void helper() {
   Test t;
   new Test;
-  new Test[10];  // expected-warning {{type 'test3::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test[10];  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
 }
 }
 
@@ -67,7 +67,7 @@ struct Test {
 
 void helper() {
   Test t;
-  new Test;  // expected-warning {{type 'test4::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test;  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
   new Test[10];
 }
 }

@@ -319,7 +319,10 @@ void foo(int x) {
   ASSERT_TRUE(LD.has_value());
   auto LDT = LD->getType(Context);
   ASSERT_FALSE(LDT.isNull());
-  const auto *DRecordType = dyn_cast<RecordType>(LDT);
+  const auto *DElaboratedType = dyn_cast<ElaboratedType>(LDT);
+  ASSERT_NE(DElaboratedType, nullptr);
+  const auto *DRecordType =
+      dyn_cast<RecordType>(DElaboratedType->getNamedType());
   ASSERT_NE(DRecordType, nullptr);
   EXPECT_EQ("TestStruct", DRecordType->getDecl()->getName());
 }

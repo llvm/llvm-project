@@ -14,8 +14,8 @@ class A2 : public Object2 { };
 class B2 : public virtual A2 { };
 class C2 : virtual public A2 { };
 class D2 : public B2, public C2 { };
-class E2 : public D2, public C2, public virtual A2 { }; // expected-warning{{direct base 'C2' is inaccessible due to ambiguity:\n    class E2 -> class D2 -> class C2\n    class E2 -> class C2}}
-class F2 : public E2, public A2 { }; // expected-warning{{direct base 'A2' is inaccessible due to ambiguity:\n    class F2 -> class E2 -> class D2 -> class B2 -> class A2\n    class F2 -> class A2}}
+class E2 : public D2, public C2, public virtual A2 { }; // expected-warning{{direct base 'C2' is inaccessible due to ambiguity:\n    class E2 -> D2 -> C2\n    class E2 -> C2}}
+class F2 : public E2, public A2 { }; // expected-warning{{direct base 'A2' is inaccessible due to ambiguity:\n    class F2 -> E2 -> D2 -> B2 -> A2\n    class F2 -> A2}}
 
 void g(E2* e2, F2* f2) {
   Object2* o2;
