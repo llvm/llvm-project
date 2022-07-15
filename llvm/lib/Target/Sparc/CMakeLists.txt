@@ -1,4 +1,4 @@
-add_llvm_component_group(Sparc HAS_JIT)
+add_llvm_component_group(Sparc)
 
 set(LLVM_TARGET_DEFINITIONS Sparc.td)
 
