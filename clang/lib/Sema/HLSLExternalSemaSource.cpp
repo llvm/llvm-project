@@ -11,13 +11,17 @@
 
 #include "clang/Sema/HLSLExternalSemaSource.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/HLSLRuntime.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
 #include <functional>
 
 using namespace clang;
+using namespace hlsl;
 
 namespace {
 
@@ -27,6 +31,7 @@ struct BuiltinTypeDeclBuilder {
   CXXRecordDecl *Record = nullptr;
   ClassTemplateDecl *Template = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
+  llvm::StringMap<FieldDecl *> Fields;
 
   BuiltinTypeDeclBuilder(CXXRecordDecl *R) : Record(R) {
     Record->startDefinition();
@@ -93,12 +98,78 @@ struct BuiltinTypeDeclBuilder {
     Field->setAccess(Access);
     Field->setImplicit(true);
     Record->addDecl(Field);
+    Fields[Name] = Field;
     return *this;
   }
 
   BuiltinTypeDeclBuilder &
   addHandleMember(AccessSpecifier Access = AccessSpecifier::AS_private) {
     return addMemberVariable("h", Record->getASTContext().VoidPtrTy, Access);
+  }
+
+  static DeclRefExpr *lookupBuiltinFunction(ASTContext &AST, Sema &S,
+                                            StringRef Name) {
+    CXXScopeSpec SS;
+    IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
+    DeclarationNameInfo NameInfo =
+        DeclarationNameInfo(DeclarationName(&II), SourceLocation());
+    LookupResult R(S, NameInfo, Sema::LookupOrdinaryName);
+    S.LookupParsedName(R, S.getCurScope(), &SS, false);
+    assert(R.isSingleResult() &&
+           "Since this is a builtin it should always resolve!");
+    auto *VD = cast<ValueDecl>(R.getFoundDecl());
+    QualType Ty = VD->getType();
+    return DeclRefExpr::Create(AST, NestedNameSpecifierLoc(), SourceLocation(),
+                               VD, false, NameInfo, Ty, VK_PRValue);
+  }
+
+  static Expr *emitResourceClassExpr(ASTContext &AST, ResourceClass RC) {
+    return IntegerLiteral::Create(
+        AST,
+        llvm::APInt(AST.getIntWidth(AST.UnsignedCharTy),
+                    static_cast<uint8_t>(RC)),
+        AST.UnsignedCharTy, SourceLocation());
+  }
+
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S,
+                                                      ResourceClass RC) {
+    ASTContext &AST = Record->getASTContext();
+
+    QualType ConstructorType =
+        AST.getFunctionType(AST.VoidTy, {}, FunctionProtoType::ExtProtoInfo());
+
+    CanQualType CanTy = Record->getTypeForDecl()->getCanonicalTypeUnqualified();
+    DeclarationName Name = AST.DeclarationNames.getCXXConstructorName(CanTy);
+    CXXConstructorDecl *Constructor = CXXConstructorDecl::Create(
+        AST, Record, SourceLocation(),
+        DeclarationNameInfo(Name, SourceLocation()), ConstructorType,
+        AST.getTrivialTypeSourceInfo(ConstructorType, SourceLocation()),
+        ExplicitSpecifier(), false, true, false,
+        ConstexprSpecKind::Unspecified);
+
+    DeclRefExpr *Fn =
+        lookupBuiltinFunction(AST, S, "__builtin_hlsl_create_handle");
+
+    Expr *RCExpr = emitResourceClassExpr(AST, RC);
+    CallExpr *Call =
+        CallExpr::Create(AST, Fn, {RCExpr}, AST.VoidPtrTy, VK_PRValue,
+                         SourceLocation(), FPOptionsOverride());
+
+    CXXThisExpr *This = new (AST)
+        CXXThisExpr(SourceLocation(), Constructor->getThisType(), true);
+    MemberExpr *Handle = MemberExpr::CreateImplicit(
+        AST, This, true, Fields["h"], Fields["h"]->getType(), VK_LValue,
+        OK_Ordinary);
+    BinaryOperator *Assign = BinaryOperator::Create(
+        AST, Handle, Call, BO_Assign, Handle->getType(), VK_LValue, OK_Ordinary,
+        SourceLocation(), FPOptionsOverride());
+
+    Constructor->setBody(
+        CompoundStmt::Create(AST, {Assign}, FPOptionsOverride(),
+                             SourceLocation(), SourceLocation()));
+    Constructor->setAccess(AccessSpecifier::AS_public);
+    Record->addDecl(Constructor);
+    return *this;
   }
 
   BuiltinTypeDeclBuilder &startDefinition() {
@@ -287,5 +358,8 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
 }
 
 void HLSLExternalSemaSource::completeBufferType(CXXRecordDecl *Record) {
-  BuiltinTypeDeclBuilder(Record).addHandleMember().completeDefinition();
+  BuiltinTypeDeclBuilder(Record)
+      .addHandleMember()
+      .addDefaultHandleConstructor(*SemaPtr, ResourceClass::UAV)
+      .completeDefinition();
 }
