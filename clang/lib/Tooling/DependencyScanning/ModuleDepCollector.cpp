@@ -12,6 +12,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/StringSaver.h"
 
 using namespace clang;
@@ -78,6 +79,19 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   /// so use the default values so they will be dropped from the command-line.
   CI.getHeaderSearchOpts().ModuleCachePruneInterval = 7 * 24 * 60 * 60;
   CI.getHeaderSearchOpts().ModuleCachePruneAfter = 31 * 24 * 60 * 60;
+
+  // Remove any macro definitions that are explicitly ignored.
+  if (!CI.getHeaderSearchOpts().ModulesIgnoreMacros.empty()) {
+    llvm::erase_if(
+        CI.getPreprocessorOpts().Macros,
+        [&CI](const std::pair<std::string, bool> &Def) {
+          StringRef MacroDef = Def.first;
+          return CI.getHeaderSearchOpts().ModulesIgnoreMacros.contains(
+              llvm::CachedHashString(MacroDef.split('=').first));
+        });
+    // Remove the now unused option.
+    CI.getHeaderSearchOpts().ModulesIgnoreMacros.clear();
+  }
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
@@ -156,6 +170,50 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
         LookupModuleOutput(MID, ModuleOutputKind::ModuleFile));
 
   return serializeCompilerInvocation(CI);
+}
+
+static std::string getModuleContextHash(const ModuleDeps &MD) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<16>,
+                    llvm::support::endianness::native>
+      HashBuilder;
+  SmallString<32> Scratch;
+
+  // Hash the compiler version and serialization version to ensure the module
+  // will be readable.
+  HashBuilder.add(getClangFullRepositoryVersion());
+  HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
+
+  // Hash the BuildInvocation without any input files.
+  SmallVector<const char *, 32> DummyArgs;
+  MD.BuildInvocation.generateCC1CommandLine(DummyArgs, [&](const Twine &Arg) {
+    Scratch.clear();
+    StringRef Str = Arg.toStringRef(Scratch);
+    HashBuilder.add(Str);
+    return "<unused>";
+  });
+
+  // Hash the input file paths and module dependencies. These paths may differ
+  // even if the invocation is identical if they depend on the contents of the
+  // files in the TU -- for example, case-insensitive paths to modulemap files.
+  // Usually such a case would indicate a missed optimization to canonicalize,
+  // but it may be difficult to canonicalize all cases when there is a VFS.
+  HashBuilder.add(MD.ClangModuleMapFile);
+  for (const auto &Dep : MD.PrebuiltModuleDeps)
+    HashBuilder.add(Dep.PCMFile);
+  for (const auto &ID : MD.ClangModuleDeps) {
+    HashBuilder.add(ID.ModuleName);
+    HashBuilder.add(ID.ContextHash);
+  }
+
+  // Hash options that affect which callbacks are made for outputs.
+  HashBuilder.add(MD.HadDependencyFile);
+  HashBuilder.add(MD.HadSerializedDiagnostics);
+
+  llvm::BLAKE3Result<16> Hash = HashBuilder.final();
+  std::array<uint64_t, 2> Words;
+  static_assert(sizeof(Hash) == sizeof(Words), "Hash must match Words");
+  std::memcpy(Words.data(), Hash.data(), sizeof(Hash));
+  return toString(llvm::APInt(sizeof(Words) * 8, Words), 36, /*Signed=*/false);
 }
 
 std::vector<std::string>
@@ -349,14 +407,12 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                      .DiagnosticSerializationFile.empty();
   MD.HadDependencyFile =
       !MDC.OriginalInvocation.getDependencyOutputOpts().OutputFile.empty();
-  // FIXME: HadSerializedDiagnostics and HadDependencyFile should be included in
-  // the context hash since it can affect the command-line.
-  MD.ID.ContextHash =
-      MD.BuildInvocation.getModuleHash(MDC.ScanInstance.getDiagnostics());
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
 
+  // Do this last since it requires the dependencies.
+  MD.ID.ContextHash = getModuleContextHash(MD);
   return MD.ID;
 }
 
