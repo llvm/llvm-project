@@ -273,3 +273,128 @@ DWARF:
   };
   ASSERT_EQ(found_function_types, expected_function_types);
 }
+
+struct ExtractIntFromFormValueTest : public testing::Test {
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
+  TypeSystemClang ts;
+  DWARFASTParserClang parser;
+  ExtractIntFromFormValueTest()
+      : ts("dummy ASTContext", HostInfoBase::GetTargetTriple()), parser(ts) {}
+
+  /// Takes the given integer value, stores it in a DWARFFormValue and then
+  /// tries to extract the value back via
+  /// DWARFASTParserClang::ExtractIntFromFormValue.
+  /// Returns the string representation of the extracted value or the error
+  /// that was returned from ExtractIntFromFormValue.
+  llvm::Expected<std::string> Extract(clang::QualType qt, uint64_t value) {
+    DWARFFormValue form_value;
+    form_value.SetUnsigned(value);
+    llvm::Expected<llvm::APInt> result =
+        parser.ExtractIntFromFormValue(ts.GetType(qt), form_value);
+    if (!result)
+      return result.takeError();
+    llvm::SmallString<16> result_str;
+    result->toStringUnsigned(result_str);
+    return std::string(result_str.str());
+  }
+
+  /// Same as ExtractIntFromFormValueTest::Extract but takes a signed integer
+  /// and treats the result as a signed integer.
+  llvm::Expected<std::string> ExtractS(clang::QualType qt, int64_t value) {
+    DWARFFormValue form_value;
+    form_value.SetSigned(value);
+    llvm::Expected<llvm::APInt> result =
+        parser.ExtractIntFromFormValue(ts.GetType(qt), form_value);
+    if (!result)
+      return result.takeError();
+    llvm::SmallString<16> result_str;
+    result->toStringSigned(result_str);
+    return std::string(result_str.str());
+  }
+};
+
+TEST_F(ExtractIntFromFormValueTest, TestBool) {
+  using namespace llvm;
+  clang::ASTContext &ast = ts.getASTContext();
+
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 0), HasValue("0"));
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 1), HasValue("1"));
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 2), Failed());
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 3), Failed());
+}
+
+TEST_F(ExtractIntFromFormValueTest, TestInt) {
+  using namespace llvm;
+
+  clang::ASTContext &ast = ts.getASTContext();
+
+  // Find the min/max values for 'int' on the current host target.
+  constexpr int64_t int_max = std::numeric_limits<int>::max();
+  constexpr int64_t int_min = std::numeric_limits<int>::min();
+
+  // Check that the bit width of int matches the int width in our type system.
+  ASSERT_EQ(sizeof(int) * 8, ast.getIntWidth(ast.IntTy));
+
+  // Check values around int_min.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min - 2), llvm::Failed());
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min - 1), llvm::Failed());
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min),
+                       HasValue(std::to_string(int_min)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min + 1),
+                       HasValue(std::to_string(int_min + 1)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min + 2),
+                       HasValue(std::to_string(int_min + 2)));
+
+  // Check values around 0.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, -128), HasValue("-128"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, -10), HasValue("-10"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, -1), HasValue("-1"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 0), HasValue("0"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 1), HasValue("1"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 10), HasValue("10"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 128), HasValue("128"));
+
+  // Check values around int_max.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max - 2),
+                       HasValue(std::to_string(int_max - 2)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max - 1),
+                       HasValue(std::to_string(int_max - 1)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max),
+                       HasValue(std::to_string(int_max)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max + 1), llvm::Failed());
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max + 5), llvm::Failed());
+
+  // Check some values not near an edge case.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max / 2),
+                       HasValue(std::to_string(int_max / 2)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min / 2),
+                       HasValue(std::to_string(int_min / 2)));
+}
+
+TEST_F(ExtractIntFromFormValueTest, TestUnsignedInt) {
+  using namespace llvm;
+
+  clang::ASTContext &ast = ts.getASTContext();
+  constexpr uint64_t uint_max = std::numeric_limits<uint32_t>::max();
+
+  // Check values around 0.
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, 0), HasValue("0"));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, 1), HasValue("1"));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, 1234), HasValue("1234"));
+
+  // Check some values not near an edge case.
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max / 2),
+                       HasValue(std::to_string(uint_max / 2)));
+
+  // Check values around uint_max.
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max - 2),
+                       HasValue(std::to_string(uint_max - 2)));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max - 1),
+                       HasValue(std::to_string(uint_max - 1)));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max),
+                       HasValue(std::to_string(uint_max)));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max + 1),
+                       llvm::Failed());
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max + 2),
+                       llvm::Failed());
+}
