@@ -4426,7 +4426,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_mfma_i32_16x16x32_i8:
     case Intrinsic::amdgcn_mfma_i32_32x32x16_i8:
     case Intrinsic::amdgcn_mfma_f32_16x16x8_xf32:
-    case Intrinsic::amdgcn_mfma_f32_32x32x4_xf32: {
+    case Intrinsic::amdgcn_mfma_f32_32x32x4_xf32:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_fp8:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_fp8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_fp8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_fp8: {
       // Default for MAI intrinsics.
       // srcC can also be an immediate which can be folded later.
       // FIXME: Should we eventually add an alternative mapping with AGPR src

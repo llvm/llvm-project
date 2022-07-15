@@ -493,6 +493,8 @@ def VOPProfileMAI_I32_I64_X16   : VOPProfileMAI<VOP_V4I32_I64_I64_V4I32,       A
 def VOPProfileMAI_I32_I64_X32   : VOPProfileMAI<VOP_V16I32_I64_I64_V16I32,     AISrc_512_b32,  ADst_512,  AVSrc_64>;
 def VOPProfileMAI_F32_V2F32_X16 : VOPProfileMAI<VOP_V4F32_V2F32_V2F32_V4F32,   AISrc_128_b32,  ADst_128,  AVSrc_64>;
 def VOPProfileMAI_F32_V2F32_X32 : VOPProfileMAI<VOP_V16F32_V2F32_V2F32_V16F32, AISrc_512_b32,  ADst_512,  AVSrc_64>;
+def VOPProfileMAI_F32_I64_X32   : VOPProfileMAI<VOP_V4F32_I64_I64_V4F32,       AISrc_128_b32,  ADst_128,  AVSrc_64>;
+def VOPProfileMAI_F32_I64_X16   : VOPProfileMAI<VOP_V16F32_I64_I64_V16F32,     AISrc_512_b32,  ADst_512,  AVSrc_64>;
 
 def VOPProfileMAI_F32_F32_X4_VCD     : VOPProfileMAI<VOP_V4F32_F32_F32_V4F32,       VISrc_128_f32,  VDst_128>;
 def VOPProfileMAI_F32_F32_X16_VCD    : VOPProfileMAI<VOP_V16F32_F32_F32_V16F32,     VISrc_512_f32,  VDst_512>;
@@ -515,6 +517,8 @@ def VOPProfileMAI_I32_I64_X16_VCD    : VOPProfileMAI<VOP_V4I32_I64_I64_V4I32,   
 def VOPProfileMAI_I32_I64_X32_VCD    : VOPProfileMAI<VOP_V16I32_I64_I64_V16I32,     VISrc_512_b32,  VDst_512,  AVSrc_64>;
 def VOPProfileMAI_F32_V2F32_X16_VCD  : VOPProfileMAI<VOP_V4F32_V2F32_V2F32_V4F32,   VISrc_128_b32,  VDst_128,  AVSrc_64>;
 def VOPProfileMAI_F32_V2F32_X32_VCD  : VOPProfileMAI<VOP_V16F32_V2F32_V2F32_V16F32, VISrc_512_b32,  VDst_512,  AVSrc_64>;
+def VOPProfileMAI_F32_I64_X32_VCD    : VOPProfileMAI<VOP_V4F32_I64_I64_V4F32,       VISrc_128_b32,  VDst_128,  AVSrc_64>;
+def VOPProfileMAI_F32_I64_X16_VCD    : VOPProfileMAI<VOP_V16F32_I64_I64_V16F32,     VISrc_512_b32,  VDst_512,  AVSrc_64>;
 
 def VOPProfileSMFMAC_F32_16X16X32_F16 : VOPProfileSMFMAC<VOP_V4F32_V4F16_V8F16_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
 def VOPProfileSMFMAC_F32_32X32X16_F16 : VOPProfileSMFMAC<VOP_V16F32_V4F16_V8F16_I32, AVDst_512, AVSrc_64, AVSrc_128>;
@@ -638,6 +642,14 @@ let Predicates = [isGFX940Plus], is_gfx940_xdl = 1 in {
   defm V_MFMA_I32_16X16X32I8       : MAIInst<"v_mfma_i32_16x16x32i8",       "I32_I64_X16",    int_amdgcn_mfma_i32_16x16x32_i8>;
   defm V_MFMA_F32_16X16X8XF32      : MAIInst<"v_mfma_f32_16x16x8xf32",      "F32_V2F32_X16",  int_amdgcn_mfma_f32_16x16x8_xf32>;
   defm V_MFMA_F32_32X32X4XF32      : MAIInst<"v_mfma_f32_32x32x4xf32",      "F32_V2F32_X32",  int_amdgcn_mfma_f32_32x32x4_xf32>;
+  defm V_MFMA_F32_16X16X32_BF8_BF8 : MAIInst<"v_mfma_f32_16x16x32_bf8_bf8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_bf8_bf8>;
+  defm V_MFMA_F32_16X16X32_BF8_FP8 : MAIInst<"v_mfma_f32_16x16x32_bf8_fp8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_bf8_fp8>;
+  defm V_MFMA_F32_16X16X32_FP8_BF8 : MAIInst<"v_mfma_f32_16x16x32_fp8_bf8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_fp8_bf8>;
+  defm V_MFMA_F32_16X16X32_FP8_FP8 : MAIInst<"v_mfma_f32_16x16x32_fp8_fp8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_fp8_fp8>;
+  defm V_MFMA_F32_32X32X16_BF8_BF8 : MAIInst<"v_mfma_f32_32x32x16_bf8_bf8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_bf8_bf8>;
+  defm V_MFMA_F32_32X32X16_BF8_FP8 : MAIInst<"v_mfma_f32_32x32x16_bf8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_bf8_fp8>;
+  defm V_MFMA_F32_32X32X16_FP8_BF8 : MAIInst<"v_mfma_f32_32x32x16_fp8_bf8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_bf8>;
+  defm V_MFMA_F32_32X32X16_FP8_FP8 : MAIInst<"v_mfma_f32_32x32x16_fp8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_fp8>;
 } // End Predicates = [isGFX940Plus], is_gfx940_xdl = 1
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
@@ -1121,6 +1133,14 @@ defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x
 defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;
 defm V_MFMA_F32_16X16X8XF32      : VOP3P_Real_MFMA_gfx940 <0x3e, "v_mfma_f32_16x16x8_xf32">;
 defm V_MFMA_F32_32X32X4XF32      : VOP3P_Real_MFMA_gfx940 <0x3f, "v_mfma_f32_32x32x4_xf32">;
+defm V_MFMA_F32_16X16X32_BF8_BF8 : VOP3P_Real_MFMA_gfx940 <0x70>;
+defm V_MFMA_F32_16X16X32_BF8_FP8 : VOP3P_Real_MFMA_gfx940 <0x71>;
+defm V_MFMA_F32_16X16X32_FP8_BF8 : VOP3P_Real_MFMA_gfx940 <0x72>;
+defm V_MFMA_F32_16X16X32_FP8_FP8 : VOP3P_Real_MFMA_gfx940 <0x73>;
+defm V_MFMA_F32_32X32X16_BF8_BF8 : VOP3P_Real_MFMA_gfx940 <0x74>;
+defm V_MFMA_F32_32X32X16_BF8_FP8 : VOP3P_Real_MFMA_gfx940 <0x75>;
+defm V_MFMA_F32_32X32X16_FP8_BF8 : VOP3P_Real_MFMA_gfx940 <0x76>;
+defm V_MFMA_F32_32X32X16_FP8_FP8 : VOP3P_Real_MFMA_gfx940 <0x77>;
 
 defm V_MFMA_F32_32X32X4BF16_1K   : VOP3P_Real_MFMA_gfx940 <0x5d, "v_mfma_f32_32x32x4_2b_bf16">;
 defm V_MFMA_F32_16X16X4BF16_1K   : VOP3P_Real_MFMA_gfx940 <0x5e, "v_mfma_f32_16x16x4_4b_bf16">;
