@@ -108,7 +108,7 @@ def main(builtin_params={}):
 
     record_test_times(selected_tests, lit_config)
 
-    selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
+    selected_tests, discovered_tests, has_failure = GoogleTest.post_process_shard_results(
         selected_tests, discovered_tests)
 
     if opts.time_tests:
@@ -127,7 +127,7 @@ def main(builtin_params={}):
     if lit_config.numWarnings:
         sys.stderr.write('\n%d warning(s) in tests\n' % lit_config.numWarnings)
 
-    has_failure = any(t.isFailure() for t in discovered_tests)
+    has_failure = has_failure or any(t.isFailure() for t in discovered_tests)
     if has_failure:
         if opts.ignoreFail:
             sys.stderr.write("\nExiting with status 0 instead of 1 because "
