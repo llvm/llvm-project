@@ -28,6 +28,8 @@ namespace syntax {
 /// Defines interfaces for operating "Token" in the clang syntax-tree.
 class TokenManager {
 public:
+  virtual ~TokenManager() = default;
+
   /// Describes what the exact class kind of the TokenManager is.
   virtual llvm::StringLiteral kind() const = 0;
 
