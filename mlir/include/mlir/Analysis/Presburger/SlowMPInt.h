@@ -66,6 +66,7 @@ public:
   friend SlowMPInt abs(const SlowMPInt &x);
   friend SlowMPInt ceilDiv(const SlowMPInt &lhs, const SlowMPInt &rhs);
   friend SlowMPInt floorDiv(const SlowMPInt &lhs, const SlowMPInt &rhs);
+  /// The operands must be non-negative for gcd.
   friend SlowMPInt gcd(const SlowMPInt &a, const SlowMPInt &b);
 
   /// Overload to compute a hash_code for a SlowMPInt value.
