@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
+#include "clang/CAS/IncludeTree.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 
@@ -201,6 +204,187 @@ DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
   //
   // FIXME: See FIXME in getDepencyTree().
   return FS.createTreeFromNewAccesses(RemapPath);
+}
+
+namespace {
+class IncludeTreePPConsumer : public PPIncludeActionsConsumer {
+public:
+  explicit IncludeTreePPConsumer(cas::CASDB &DB) : DB(DB) {}
+
+  Expected<cas::IncludeTreeRoot> getIncludeTree();
+
+private:
+  void enteredInclude(Preprocessor &PP, FileID FID) override;
+
+  void exitedInclude(Preprocessor &PP, FileID IncludedBy, FileID Include,
+                     SourceLocation ExitLoc) override;
+
+  void handleHasIncludeCheck(Preprocessor &PP, bool Result) override;
+
+  Expected<cas::ObjectRef> getObjectForFile(Preprocessor &PP, FileID FID);
+  Expected<cas::ObjectRef>
+  getObjectForFileNonCached(FileManager &FM, const SrcMgr::FileInfo &FI);
+  Expected<cas::ObjectRef> getObjectForBuffer(const SrcMgr::FileInfo &FI);
+
+  struct FilePPState {
+    SrcMgr::CharacteristicKind FileCharacteristic;
+    cas::ObjectRef File;
+    SmallVector<std::pair<cas::ObjectRef, uint32_t>, 6> Includes;
+    llvm::SmallBitVector HasIncludeChecks;
+  };
+
+  Expected<cas::IncludeTree> getCASTreeForFileIncludes(FilePPState &&PPState);
+
+  bool hasErrorOccurred() const { return ErrorToReport.has_value(); }
+
+  template <typename T> Optional<T> check(Expected<T> &&E) {
+    if (!E) {
+      ErrorToReport = E.takeError();
+      return None;
+    }
+    return *E;
+  }
+
+  cas::CASDB &DB;
+  Optional<cas::ObjectRef> PCHRef;
+  llvm::BitVector SeenIncludeFiles;
+  Optional<cas::ObjectRef> PredefinesBufferRef;
+  SmallVector<FilePPState> IncludeStack;
+  llvm::DenseMap<const FileEntry *, Optional<cas::ObjectRef>> ObjectForFile;
+  Optional<llvm::Error> ErrorToReport;
+};
+} // namespace
+
+void IncludeTreePPConsumer::enteredInclude(Preprocessor &PP, FileID FID) {
+  if (hasErrorOccurred())
+    return;
+
+  Optional<cas::ObjectRef> FileRef = check(getObjectForFile(PP, FID));
+  if (!FileRef)
+    return;
+  const SrcMgr::FileInfo &FI =
+      PP.getSourceManager().getSLocEntry(FID).getFile();
+  IncludeStack.push_back({FI.getFileCharacteristic(), *FileRef, {}, {}});
+}
+
+void IncludeTreePPConsumer::exitedInclude(Preprocessor &PP, FileID IncludedBy,
+                                          FileID Include,
+                                          SourceLocation ExitLoc) {
+  if (hasErrorOccurred())
+    return;
+
+  assert(*check(getObjectForFile(PP, Include)) == IncludeStack.back().File);
+  Optional<cas::IncludeTree> IncludeTree =
+      check(getCASTreeForFileIncludes(IncludeStack.pop_back_val()));
+  if (!IncludeTree)
+    return;
+  assert(*check(getObjectForFile(PP, IncludedBy)) == IncludeStack.back().File);
+  SourceManager &SM = PP.getSourceManager();
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedExpansionLoc(ExitLoc);
+  IncludeStack.back().Includes.push_back(
+      {IncludeTree->getRef(), LocInfo.second});
+}
+
+void IncludeTreePPConsumer::handleHasIncludeCheck(Preprocessor &PP,
+                                                  bool Result) {
+  if (hasErrorOccurred())
+    return;
+
+  IncludeStack.back().HasIncludeChecks.push_back(Result);
+}
+
+Expected<cas::ObjectRef>
+IncludeTreePPConsumer::getObjectForFile(Preprocessor &PP, FileID FID) {
+  SourceManager &SM = PP.getSourceManager();
+  const SrcMgr::FileInfo &FI = SM.getSLocEntry(FID).getFile();
+  if (PP.getPredefinesFileID() == FID) {
+    if (!PredefinesBufferRef) {
+      auto Ref = getObjectForBuffer(FI);
+      if (!Ref)
+        return Ref.takeError();
+      PredefinesBufferRef = *Ref;
+    }
+    return *PredefinesBufferRef;
+  }
+  assert(FI.getContentCache().OrigEntry);
+  auto &FileRef = ObjectForFile[FI.getContentCache().OrigEntry];
+  if (!FileRef.hasValue()) {
+    auto Ref = getObjectForFileNonCached(SM.getFileManager(), FI);
+    if (!Ref)
+      return Ref.takeError();
+    FileRef = *Ref;
+  }
+  return FileRef.getValue();
+}
+
+Expected<cas::ObjectRef>
+IncludeTreePPConsumer::getObjectForFileNonCached(FileManager &FM,
+                                                 const SrcMgr::FileInfo &FI) {
+  StringRef Filename = FI.getName();
+  llvm::ErrorOr<Optional<cas::ObjectRef>> CASContents =
+      FM.getObjectRefForFileContent(Filename);
+  if (!CASContents)
+    return llvm::errorCodeToError(CASContents.getError());
+  assert(*CASContents);
+  Expected<cas::IncludeFile> FileNode =
+      cas::IncludeFile::create(DB, Filename, **CASContents);
+  if (!FileNode)
+    return FileNode.takeError();
+  return FileNode->getRef();
+}
+
+Expected<cas::ObjectRef>
+IncludeTreePPConsumer::getObjectForBuffer(const SrcMgr::FileInfo &FI) {
+  // This is a non-file buffer, like the predefines.
+  auto Handle = DB.storeFromString(
+      {}, FI.getContentCache().getBufferIfLoaded()->getBuffer());
+  if (!Handle)
+    return Handle.takeError();
+  cas::ObjectRef CASContents = DB.getReference(*Handle);
+  Expected<cas::IncludeFile> FileNode =
+      cas::IncludeFile::create(DB, FI.getName(), CASContents);
+  if (!FileNode)
+    return FileNode.takeError();
+  return FileNode->getRef();
+}
+
+Expected<cas::IncludeTree>
+IncludeTreePPConsumer::getCASTreeForFileIncludes(FilePPState &&PPState) {
+  return cas::IncludeTree::create(DB, PPState.FileCharacteristic, PPState.File,
+                                  PPState.Includes, PPState.HasIncludeChecks);
+}
+
+Expected<cas::IncludeTreeRoot> IncludeTreePPConsumer::getIncludeTree() {
+  if (ErrorToReport)
+    return std::move(*ErrorToReport);
+
+  assert(IncludeStack.size() == 1);
+  Expected<cas::IncludeTree> MainIncludeTree =
+      getCASTreeForFileIncludes(IncludeStack.pop_back_val());
+  if (!MainIncludeTree)
+    return MainIncludeTree.takeError();
+
+  return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef());
+}
+
+Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
+    cas::CASDB &DB, const std::vector<std::string> &CommandLine,
+    StringRef CWD) {
+  IncludeTreePPConsumer Consumer(DB);
+  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
+  if (Result)
+    return std::move(Result);
+  return Consumer.getIncludeTree();
+}
+
+Expected<cas::IncludeTreeRoot>
+DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
+    cas::CASDB &DB, std::shared_ptr<CompilerInvocation> Invocation,
+    StringRef CWD, DiagnosticConsumer &DiagsConsumer) {
+  IncludeTreePPConsumer Consumer(DB);
+  Worker.computeDependenciesFromCompilerInvocation(std::move(Invocation), CWD,
+                                                   Consumer, DiagsConsumer);
+  return Consumer.getIncludeTree();
 }
 
 llvm::Expected<FullDependenciesResult>

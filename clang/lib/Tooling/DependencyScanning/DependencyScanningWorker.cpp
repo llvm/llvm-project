@@ -138,12 +138,64 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.Warnings.push_back("no-error");
 }
 
+struct IncludeTreePPCallbacks : public PPCallbacks {
+  PPIncludeActionsConsumer &Consumer;
+  Preprocessor &PP;
+
+public:
+  IncludeTreePPCallbacks(PPIncludeActionsConsumer &Consumer, Preprocessor &PP)
+      : Consumer(Consumer), PP(PP) {}
+
+  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
+                        SourceLocation Loc) override {
+    switch (Reason) {
+    case LexedFileChangeReason::EnterFile:
+      Consumer.enteredInclude(PP, FID);
+      break;
+    case LexedFileChangeReason::ExitFile: {
+      Consumer.exitedInclude(PP, FID, PrevFID, Loc);
+      break;
+    }
+    }
+  }
+
+  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                  Optional<FileEntryRef> File,
+                  SrcMgr::CharacteristicKind FileType) override {
+    Consumer.handleHasIncludeCheck(PP, File.hasValue());
+  }
+};
+
+class IncludeTreeCollector : public DependencyFileGenerator {
+  PPIncludeActionsConsumer &Consumer;
+  std::unique_ptr<DependencyOutputOptions> Opts;
+  bool EmitDependencyFile = false;
+
+public:
+  IncludeTreeCollector(PPIncludeActionsConsumer &Consumer,
+                       std::unique_ptr<DependencyOutputOptions> Opts,
+                       bool EmitDependencyFile)
+      : DependencyFileGenerator(*Opts), Consumer(Consumer),
+        Opts(std::move(Opts)), EmitDependencyFile(EmitDependencyFile) {}
+
+  void attachToPreprocessor(Preprocessor &PP) override {
+    PP.addPPCallbacks(std::make_unique<IncludeTreePPCallbacks>(Consumer, PP));
+    DependencyFileGenerator::attachToPreprocessor(PP);
+  }
+
+  void finishedMainFile(DiagnosticsEngine &Diags) override {
+    if (EmitDependencyFile)
+      DependencyFileGenerator::finishedMainFile(Diags);
+  }
+};
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
-      StringRef WorkingDirectory, DependencyConsumer &Consumer,
+      StringRef WorkingDirectory, DependencyScanningConsumerBase &Consumer,
       const CASOptions &CASOpts,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
@@ -254,12 +306,21 @@ public:
     case ScanningOutputFormat::Tree:
       ScanInstance.addDependencyCollector(
           std::make_shared<DependencyConsumerForwarder>(
-              std::move(Opts), WorkingDirectory, Consumer, EmitDependencyFile));
+              std::move(Opts), WorkingDirectory,
+              static_cast<DependencyConsumer &>(Consumer), EmitDependencyFile));
       break;
+    case ScanningOutputFormat::IncludeTree: {
+      ScanInstance.addDependencyCollector(
+          std::make_shared<IncludeTreeCollector>(
+              static_cast<PPIncludeActionsConsumer &>(Consumer),
+              std::move(Opts), EmitDependencyFile));
+      break;
+    }
     case ScanningOutputFormat::Full:
     case ScanningOutputFormat::FullTree:
       ScanInstance.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), ScanInstance, Consumer,
+          std::move(Opts), ScanInstance,
+          static_cast<DependencyConsumer &>(Consumer),
           std::move(OriginalInvocation), OptimizeArgs));
       break;
     }
@@ -298,7 +359,7 @@ public:
 
 private:
   StringRef WorkingDirectory;
-  DependencyConsumer &Consumer;
+  DependencyScanningConsumerBase &Consumer;
   const CASOptions &CASOpts;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
@@ -374,7 +435,8 @@ runWithDiags(DiagnosticOptions *DiagOpts,
 
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
+    DependencyScanningConsumerBase &Consumer,
+    llvm::Optional<StringRef> ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
   if (Files)
@@ -423,7 +485,8 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 
 void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef WorkingDirectory,
-    DependencyConsumer &DepsConsumer, DiagnosticConsumer &DiagsConsumer) {
+    DependencyScanningConsumerBase &DepsConsumer,
+    DiagnosticConsumer &DiagsConsumer) {
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
 
   // Adjust the invocation.

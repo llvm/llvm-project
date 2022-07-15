@@ -24,6 +24,9 @@ class ObjectProxy;
 } // namespace llvm
 
 namespace clang {
+namespace cas {
+class IncludeTreeRoot;
+}
 namespace tooling {
 namespace dependencies {
 
@@ -104,6 +107,14 @@ public:
       llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>
           RemapPath = nullptr);
 
+  Expected<cas::IncludeTreeRoot>
+  getIncludeTree(cas::CASDB &DB, const std::vector<std::string> &CommandLine,
+                 StringRef CWD);
+
+  Expected<cas::IncludeTreeRoot> getIncludeTreeFromCompilerInvocation(
+      cas::CASDB &DB, std::shared_ptr<CompilerInvocation> Invocation,
+      StringRef CWD, DiagnosticConsumer &DiagsConsumer);
+
   /// Collect the full module dependency graph for the input, ignoring any
   /// modules which have already been seen. If \p ModuleName isn't empty, this
   /// function returns the full dependency information of module \p ModuleName.
@@ -120,6 +131,10 @@ public:
   getFullDependencies(const std::vector<std::string> &CommandLine,
                       StringRef CWD, const llvm::StringSet<> &AlreadySeen,
                       llvm::Optional<StringRef> ModuleName = None);
+
+  ScanningOutputFormat getScanningFormat() const {
+    return Worker.getScanningFormat();
+  }
 
   const CASOptions &getCASOpts() const { return Worker.getCASOpts(); }
 
