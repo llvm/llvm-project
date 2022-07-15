@@ -544,6 +544,56 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [NoSideEffect, SameOperandsAndResultType]>,
+    Arguments<(ins AnyType:$x, AnyType:$y, AnyType:$identity)>,
+    Results<(outs AnyType:$output)> {
+  let summary = "Custom reduction operation utilized within linalg.generic";
+  let description = [{
+      Defines a computation with a `linalg.generic` operation that takes two
+      operands and an identity value and reduces all values down to a single
+      result based on the computation in the region.
+
+      The region must contain exactly one block taking two arguments. The block
+      must end with a sparse_tensor.yield and the output must match the input
+      argument types.
+
+      Note that this operation is only required for custom reductions beyond the
+
+      standard operations (add, mul, and, or, etc). The `linalg.generic`
+      `iterator_types` defines which indices are being reduced. When the associated
+      operands are used in an operation, a reduction will occur. The use of this
+      explicit `reduce` operation is not required in most cases.
+
+      Example of Matrix->Vector reduction using max(product(x_i), 100):
+
+      ```mlir
+      %cf1 = arith.constant 1.0 : f64
+      %cf100 = arith.constant 100.0 : f64
+      %C = bufferization.alloc_tensor...
+      %0 = linalg.generic #trait
+        ins(%A: tensor<?x?xf64, #SparseMatrix>)
+        outs(%C: tensor<?xf64, #SparseVec>) {
+        ^bb0(%a: f64, %c: f64) :
+          %result = sparse_tensor.reduce %c, %a, %cf1 : f64 {
+              ^bb0(%arg0: f64, %arg1: f64):
+                %0 = arith.mulf %arg0, %arg1 : f64
+                %cmp = arith.cmpf "ogt", %0, %cf100 : f64
+                %ret = arith.select %cmp, %cf100, %0 : f64
+                sparse_tensor.yield %ret : f64
+            }
+          linalg.yield %result : f64
+      } -> tensor<?xf64, #SparseVec>
+      ```
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = [{
+         $x `,` $y `,` $identity attr-dict `:` type($output) $region
+  }];
+  let hasVerifier = 1;
+}
+
 def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
     Arguments<(ins AnyType:$result)> {
   let summary = "Yield from sparse_tensor set-like operations";
