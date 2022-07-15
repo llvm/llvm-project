@@ -2410,7 +2410,7 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
     return false;
 
   QualType ParamType = getParamDecl(0)->getType();
-  if (!isa<RValueReferenceType>(ParamType))
+  if (!ParamType->isRValueReferenceType())
     return false;
   ParamType = ParamType->getPointeeType();
 

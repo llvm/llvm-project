@@ -239,6 +239,13 @@ module {
     sparse_tensor.release %7 : tensor<4x4xf64, #CSR>
     sparse_tensor.release %8 : tensor<4x4xf64, #DCSR>
 
+    // TODO(springerm): needed?
+    %m0 = bufferization.to_memref %0 : memref<4x4xf64>
+    memref.dealloc %m0 : memref<4x4xf64>
+    %m3 = bufferization.to_memref %3 : memref<4x4xf64>
+    memref.dealloc %m3 : memref<4x4xf64>
+    %m6 = bufferization.to_memref %6 : memref<4x4xf64>
+    memref.dealloc %m6 : memref<4x4xf64>
     return
   }
 }
