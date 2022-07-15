@@ -265,7 +265,7 @@ struct CastIsPossible {
 template <typename To, typename From>
 struct CastIsPossible<To, Optional<From>> {
   static inline bool isPossible(const Optional<From> &f) {
-    assert(f.hasValue() && "CastIsPossible::isPossible called on a nullopt!");
+    assert(f && "CastIsPossible::isPossible called on a nullopt!");
     return isa_impl_wrap<
         To, const From,
         typename simplify_type<const From>::SimpleType>::doit(*f);

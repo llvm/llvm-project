@@ -85,7 +85,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit VOPAsmPrefer32Bit = 0;
 
   // This bit indicates that this is a VOP3 opcode which supports op_sel
-  // modifier (gfx9 only).
+  // modifier.
   field bit VOP3_OPSEL = 0;
 
   // Is it possible for this instruction to be atomic?

@@ -47,7 +47,7 @@ define amdgpu_kernel void @test_sub_imm_i32(i32 addrspace(1)* %out, i32 addrspac
 
 ; GCN-LABEL: {{^}}test_sub_v2i32:
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
-; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
+; SI: v_subrev_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 
 ; GFX9: v_sub_u32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; GFX9: v_sub_u32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
@@ -61,7 +61,7 @@ define amdgpu_kernel void @test_sub_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32
 }
 
 ; GCN-LABEL: {{^}}test_sub_v4i32:
-; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
+; SI: v_subrev_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}

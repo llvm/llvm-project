@@ -117,6 +117,7 @@ protected:
   bool m_thread_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
   bool m_non_stop = false;
+  std::deque<std::string> m_stdio_notification_queue;
   std::deque<std::string> m_stop_notification_queue;
 
   NativeProcessProtocol::Extension m_extensions_supported = {};
@@ -154,6 +155,9 @@ protected:
   PacketResult Handle_QThreadSuffixSupported(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_QListThreadsInStopReply(StringExtractorGDBRemote &packet);
+
+  PacketResult ResumeProcess(NativeProcessProtocol &process,
+                             const ResumeActionList &actions);
 
   PacketResult Handle_C(StringExtractorGDBRemote &packet);
 
@@ -243,6 +247,10 @@ protected:
   PacketResult Handle_qSaveCore(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_QNonStop(StringExtractorGDBRemote &packet);
+
+  PacketResult HandleNotificationAck(std::deque<std::string> &queue);
+
+  PacketResult Handle_vStdio(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_vStopped(StringExtractorGDBRemote &packet);
 

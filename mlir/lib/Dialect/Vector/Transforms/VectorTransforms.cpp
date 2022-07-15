@@ -1878,14 +1878,14 @@ ContractionOpLowering::lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
       diag << "expected either lhsIndex=" << lhsIndex
            << " or rhsIndex=" << rhsIndex << " to be nonnegative";
     });
-  // getValueOr(-1) means that we tolerate a dimension not appearing
+  // value_or(-1) means that we tolerate a dimension not appearing
   // in the result map. That can't happen for actual parallel iterators, but
   // the caller ContractionOpLowering::matchAndRewrite is currently calling
   // lowerParallel also for the case of unit-size reduction dims appearing only
   // on one of LHS or RHS, not both. At the moment, such cases are created by
   // CastAwayContractionLeadingOneDim, so we need to either support that or
   // modify that pattern.
-  int64_t resIndex = getResultIndex(iMap[2], iterIndex).getValueOr(-1);
+  int64_t resIndex = getResultIndex(iMap[2], iterIndex).value_or(-1);
   if (resIndex == -1 && dimSize != 1)
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << "expected the dimension for iterIndex=" << iterIndex
@@ -1932,11 +1932,11 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
   Optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
   Optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
-  if (!lookupLhs.hasValue())
+  if (!lookupLhs.has_value())
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << "expected iterIndex=" << iterIndex << "to map to a LHS dimension";
     });
-  if (!lookupRhs.hasValue())
+  if (!lookupRhs.has_value())
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << "expected iterIndex=" << iterIndex << "to map to a RHS dimension";
     });

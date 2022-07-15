@@ -22,7 +22,7 @@ class TestCase(TestBase):
     @no_debug_info_test
     @skipIfWindows
     # uint128_t not available on arm.
-    @skipIf(archs=['arm', 'aarch64'])
+    @skipIf(archs=['arm'])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))

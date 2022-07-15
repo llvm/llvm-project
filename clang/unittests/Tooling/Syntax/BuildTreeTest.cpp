@@ -26,7 +26,7 @@ protected:
     auto ErrorOK = errorOK(Code);
     if (!ErrorOK)
       return ErrorOK;
-    auto Actual = StringRef(Root->dump(Arena->getSourceManager())).trim().str();
+    auto Actual = StringRef(Root->dump(*TM)).trim().str();
     // EXPECT_EQ shows the diff between the two strings if they are different.
     EXPECT_EQ(Tree.trim().str(), Actual);
     if (Actual != Tree.trim().str()) {
@@ -59,7 +59,7 @@ protected:
       auto *AnnotatedNode = nodeByRange(AnnotatedRanges[i], Root);
       assert(AnnotatedNode);
       auto AnnotatedNodeDump =
-          StringRef(AnnotatedNode->dump(Arena->getSourceManager()))
+          StringRef(AnnotatedNode->dump(*TM))
               .trim()
               .str();
       // EXPECT_EQ shows the diff between the two strings if they are different.

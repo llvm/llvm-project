@@ -4689,9 +4689,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     Error(IDLoc, "ABS not allowed in VOP3B instructions");
     return false;
   }
-  if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
-    return false;
-  }
   if (!validateExeczVcczOperands(Operands)) {
     return false;
   }

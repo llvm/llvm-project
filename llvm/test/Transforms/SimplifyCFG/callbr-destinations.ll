@@ -5,7 +5,7 @@
 
 define void @fun0() {
 entry:
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@fun0, %bb1))
+  callbr void asm sideeffect "", "!i"()
           to label %bb2 [label %bb1]
 
 bb1:                                              ; preds = %bb
@@ -17,7 +17,7 @@ bb2:                                             ; preds = %bb
 
 define void @fun1() {
 entry:
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@fun1, %bb1))
+  callbr void asm sideeffect "", "!i"()
           to label %bb2 [label %bb1]
 
 bb2:                                             ; preds = %bb

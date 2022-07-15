@@ -2947,11 +2947,17 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   // If tail is to be folded, vector loop takes care of all iterations.
   Type *CountTy = Count->getType();
   Value *CheckMinIters = Builder.getFalse();
-  auto CreateStep = [&]() {
+  auto CreateStep = [&]() -> Value * {
     // Create step with max(MinProTripCount, UF * VF).
-    if (UF * VF.getKnownMinValue() < MinProfitableTripCount.getKnownMinValue())
-      return createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
-    return createStepForVF(Builder, CountTy, VF, UF);
+    if (UF * VF.getKnownMinValue() >= MinProfitableTripCount.getKnownMinValue())
+      return createStepForVF(Builder, CountTy, VF, UF);
+
+    Value *MinProfTC =
+        createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
+    if (!VF.isScalable())
+      return MinProfTC;
+    return Builder.CreateBinaryIntrinsic(
+        Intrinsic::umax, MinProfTC, createStepForVF(Builder, CountTy, VF, UF));
   };
 
   if (!Cost->foldTailByMasking())
@@ -5406,7 +5412,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
   }
 
   LLVM_DEBUG(if (ForceVectorization && !ChosenFactor.Width.isScalar() &&
-                 ChosenFactor.Cost >= ScalarCost.Cost) dbgs()
+                 !isMoreProfitable(ChosenFactor, ScalarCost)) dbgs()
              << "LV: Vectorization seems to be not beneficial, "
              << "but was forced by a user.\n");
   LLVM_DEBUG(dbgs() << "LV: Selecting VF: " << ChosenFactor.Width << ".\n");

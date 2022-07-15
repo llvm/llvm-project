@@ -10,7 +10,7 @@ define i32 @test1() {
 ; CHECK: .Ltmp0:
 ; CHECK: .LBB0_2: // %indirect
 entry:
-  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "i"(i8* blockaddress(@test1, %indirect))
+  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "!i"()
           to label %cleanup [label %indirect]
 
 indirect:
@@ -34,7 +34,7 @@ if.then:
 ; CHECK-NEXT:  .word .Ltmp2
 ; CHECK:       .Ltmp2:
 ; CHECK-NEXT:  .LBB1_3: // %if.end6
-  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "i"(i8* blockaddress(@test2, %if.end6))
+  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "!i"()
           to label %if.then4 [label %if.end6]
 
 if.then4:
@@ -50,7 +50,7 @@ if.end6:
 if.then9:
 ; CHECK: .Ltmp4:
 ; CHECK-NEXT:  .LBB1_5: // %l_yes
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@test2, %l_yes))
+  callbr void asm sideeffect "", "!i"()
           to label %if.end10 [label %l_yes]
 
 if.end10:
