@@ -61,5 +61,32 @@ RUN:   --debuginfod %t/stripped 2> %t.err | \
 RUN:   FileCheck %s --check-prefix=NOTFOUND
 RUN: count 0 < %t.err
 
+# Use debuginfod to recover symbols.
+RUN: llvm-strip --strip-sections %t/stripped
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --debuginfod \
+RUN:   %t/stripped | \
+RUN:   FileCheck %s --check-prefix=SYMBOLS
+
+# Use debuginfod to recover section headers, but not symbols.
+RUN: mkdir %t/stripped-symbols
+RUN: cp %p/Inputs/embedded-source %t/stripped-symbols/llvmcache-7361776989772977641
+RUN: llvm-strip %t/stripped-symbols/llvmcache-7361776989772977641
+RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-symbols llvm-objdump -d \
+RUN:   --debuginfod %t/stripped | \
+RUN:   FileCheck %s --check-prefix=SECTIONS
+
+# Don't use debuginfod if neither section headers nor symbols can be recovered.
+RUN: mkdir %t/stripped-sections
+RUN: echo "" | llvm-mc -filetype=obj -triple x86_64 > \
+RUN:   %t/stripped-sections/llvmcache-7361776989772977641
+RUN: llvm-strip --strip-sections %t/stripped-sections/llvmcache-7361776989772977641
+RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-sections llvm-objdump -d \
+RUN:   --debuginfod %t/stripped | \
+RUN:   FileCheck %s --check-prefix=NOSECTIONS
+
 NOTFOUND-NOT: int main(int argc, char *argv[]) {
 FOUND: int main(int argc, char *argv[]) {
+
+SYMBOLS: <main>:
+SECTIONS: <.text>:
+NOSECTIONS: <PT_LOAD#{{[0-9]+}}>:
