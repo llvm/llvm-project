@@ -7,10 +7,8 @@
 define i32 @fcmpeq_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcmpeq_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    and p1.b, p0/z, p0.b, p1.b
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpeq.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
@@ -22,10 +20,8 @@ define i32 @fcmpeq_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vsca
 define i32 @fcmpne_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcmpne_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    and p1.b, p0/z, p0.b, p1.b
-; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    fcmne p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpne.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
@@ -37,10 +33,8 @@ define i32 @fcmpne_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vsca
 define i32 @fcmpge_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcmpge_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    and p1.b, p0/z, p0.b, p1.b
-; CHECK-NEXT:    fcmge p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    fcmge p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpge.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
@@ -52,10 +46,8 @@ define i32 @fcmpge_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vsca
 define i32 @fcmpgt_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcmpgt_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    and p1.b, p0/z, p0.b, p1.b
-; CHECK-NEXT:    fcmgt p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    fcmgt p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpgt.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
@@ -67,10 +59,8 @@ define i32 @fcmpgt_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vsca
 define i32 @fcmpuo_nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fcmpuo_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    and p1.b, p0/z, p0.b, p1.b
-; CHECK-NEXT:    fcmuo p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    fcmuo p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpuo.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
