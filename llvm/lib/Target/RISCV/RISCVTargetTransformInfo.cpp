@@ -198,6 +198,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       //   vid.v v9
       //   vrsub.vx v10, v9, a0
       //   vrgather.vv v9, v8, v10
+      if (Tp->getElementType()->isIntegerTy(1))
+        // Mask operation additionally required extend and truncate
+        return LT.first * 9;
       return LT.first * 6;
     }
   }
