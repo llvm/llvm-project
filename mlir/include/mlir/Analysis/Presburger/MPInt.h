@@ -362,6 +362,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt ceilDiv(const MPInt &lhs, const MPInt &rhs) {
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall())) {
     if (LLVM_UNLIKELY(detail::divWouldOverflow(lhs.getSmall(), rhs.getSmall())))
       return -lhs;
+    return MPInt(mlir::ceilDiv(lhs.getSmall(), rhs.getSmall()));
   }
   return MPInt(ceilDiv(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }
