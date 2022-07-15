@@ -11197,14 +11197,13 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
     if (ProveViaGuard(Pair.first))
       return true;
 
-    const BranchInst *LoopEntryPredicate =
+    const BranchInst *BlockEntryPredicate =
         dyn_cast<BranchInst>(Pair.first->getTerminator());
-    if (!LoopEntryPredicate ||
-        LoopEntryPredicate->isUnconditional())
+    if (!BlockEntryPredicate || BlockEntryPredicate->isUnconditional())
       continue;
 
-    if (ProveViaCond(LoopEntryPredicate->getCondition(),
-                     LoopEntryPredicate->getSuccessor(0) != Pair.second))
+    if (ProveViaCond(BlockEntryPredicate->getCondition(),
+                     BlockEntryPredicate->getSuccessor(0) != Pair.second))
       return true;
   }
 
