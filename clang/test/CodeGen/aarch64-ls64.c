@@ -26,7 +26,7 @@ uint64_t status;
 // CHECK-C-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
 // CHECK-C-NEXT:    [[VAL_I:%.*]] = getelementptr inbounds [[STRUCT_DATA512_T]], %struct.data512_t* [[TMP]], i32 0, i32 0
 // CHECK-C-NEXT:    [[ARRAYDECAY_I:%.*]] = getelementptr inbounds [8 x i64], [8 x i64]* [[VAL_I]], i64 0, i64 0
-// CHECK-C-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]) #[[ATTR2:[0-9]+]], !noalias !6
+// CHECK-C-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]), !noalias !6
 // CHECK-C-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 0
 // CHECK-C-NEXT:    store i64 [[TMP3]], i64* [[ARRAYDECAY_I]], align 8, !alias.scope !6
 // CHECK-C-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 1
@@ -64,7 +64,7 @@ uint64_t status;
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
 // CHECK-CXX-NEXT:    [[VAL_I:%.*]] = getelementptr inbounds [[STRUCT_DATA512_T]], %struct.data512_t* [[REF_TMP]], i32 0, i32 0
 // CHECK-CXX-NEXT:    [[ARRAYDECAY_I:%.*]] = getelementptr inbounds [8 x i64], [8 x i64]* [[VAL_I]], i64 0, i64 0
-// CHECK-CXX-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]) #[[ATTR2:[0-9]+]], !noalias !6
+// CHECK-CXX-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]), !noalias !6
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 0
 // CHECK-CXX-NEXT:    store i64 [[TMP3]], i64* [[ARRAYDECAY_I]], align 8, !alias.scope !6
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 1
@@ -123,7 +123,7 @@ EXTERN_C void test_ld64b(void)
 // CHECK-C-NEXT:    [[TMP15:%.*]] = load i64, i64* [[TMP14]], align 8
 // CHECK-C-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-C-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP16]], align 8
-// CHECK-C-NEXT:    call void @llvm.aarch64.st64b(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2]]
+// CHECK-C-NEXT:    call void @llvm.aarch64.st64b(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: @test_st64b(
@@ -152,7 +152,7 @@ EXTERN_C void test_ld64b(void)
 // CHECK-CXX-NEXT:    [[TMP15:%.*]] = load i64, i64* [[TMP14]], align 8
 // CHECK-CXX-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-CXX-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP16]], align 8
-// CHECK-CXX-NEXT:    call void @llvm.aarch64.st64b(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2]]
+// CHECK-CXX-NEXT:    call void @llvm.aarch64.st64b(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]])
 // CHECK-CXX-NEXT:    ret void
 //
 EXTERN_C void test_st64b(void)
@@ -186,7 +186,7 @@ EXTERN_C void test_st64b(void)
 // CHECK-C-NEXT:    [[TMP15:%.*]] = load i64, i64* [[TMP14]], align 8
 // CHECK-C-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-C-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP16]], align 8
-// CHECK-C-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2]]
+// CHECK-C-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]])
 // CHECK-C-NEXT:    store i64 [[TMP18]], i64* @status, align 8
 // CHECK-C-NEXT:    ret void
 //
@@ -216,7 +216,7 @@ EXTERN_C void test_st64b(void)
 // CHECK-CXX-NEXT:    [[TMP15:%.*]] = load i64, i64* [[TMP14]], align 8
 // CHECK-CXX-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-CXX-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP16]], align 8
-// CHECK-CXX-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2]]
+// CHECK-CXX-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]])
 // CHECK-CXX-NEXT:    store i64 [[TMP18]], i64* @status, align 8
 // CHECK-CXX-NEXT:    ret void
 //
@@ -251,7 +251,7 @@ EXTERN_C void test_st64bv(void)
 // CHECK-C-NEXT:    [[TMP15:%.*]] = load i64, i64* [[TMP14]], align 8
 // CHECK-C-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-C-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP16]], align 8
-// CHECK-C-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv0(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2]]
+// CHECK-C-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv0(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]])
 // CHECK-C-NEXT:    store i64 [[TMP18]], i64* @status, align 8
 // CHECK-C-NEXT:    ret void
 //
@@ -281,7 +281,7 @@ EXTERN_C void test_st64bv(void)
 // CHECK-CXX-NEXT:    [[TMP15:%.*]] = load i64, i64* [[TMP14]], align 8
 // CHECK-CXX-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-CXX-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP16]], align 8
-// CHECK-CXX-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv0(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2]]
+// CHECK-CXX-NEXT:    [[TMP18:%.*]] = call i64 @llvm.aarch64.st64bv0(i8* [[TMP2]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]])
 // CHECK-CXX-NEXT:    store i64 [[TMP18]], i64* @status, align 8
 // CHECK-CXX-NEXT:    ret void
 //
