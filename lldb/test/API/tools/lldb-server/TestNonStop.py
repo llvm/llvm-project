@@ -342,6 +342,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              ], True)
         self.expect_gdbremote_sequence()
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_stop_reason_while_running(self):
         self.build()
