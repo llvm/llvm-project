@@ -61,7 +61,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stof("", &idx);
+            (void)std::stof("", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -70,7 +70,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stof("  - 8", &idx);
+            (void)std::stof("  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -79,7 +79,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stof("a1", &idx);
+            (void)std::stof("a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -129,7 +129,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stof(L"", &idx);
+            (void)std::stof(L"", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -138,7 +138,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stof(L"  - 8", &idx);
+            (void)std::stof(L"  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -147,7 +147,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stof(L"a1", &idx);
+            (void)std::stof(L"a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
