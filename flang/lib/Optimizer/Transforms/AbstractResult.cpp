@@ -101,8 +101,8 @@ public:
       llvm::SmallVector<mlir::Value> newOperands = {arg};
       newOperands.append(callOp.getOperands().begin(),
                          callOp.getOperands().end());
-      rewriter.create<fir::CallOp>(loc, callOp.getCallee().getValue(),
-                                   newResultTypes, newOperands);
+      rewriter.create<fir::CallOp>(loc, *callOp.getCallee(), newResultTypes,
+                                   newOperands);
     } else {
       // Indirect calls.
       llvm::SmallVector<mlir::Type> newInputTypes = {argType};
