@@ -4238,11 +4238,8 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
     }
   }
   // Default-initialize all remaining fields.
-  for (auto It = Structure.Fields.begin() + FieldIndex;
-       It != Structure.Fields.end(); ++It) {
-    const FieldInfo &Field = *It;
+  for (const FieldInfo &Field : llvm::drop_begin(Structure.Fields, FieldIndex))
     FieldInitializers.push_back(Field.Contents);
-  }
 
   if (EndToken) {
     if (EndToken.value() == AsmToken::Greater)
@@ -4350,9 +4347,8 @@ bool MasmParser::emitFieldInitializer(const FieldInfo &Field,
       return true;
   }
   // Default-initialize all remaining values.
-  for (auto it = Contents.Values.begin() + Initializer.Values.size();
-       it != Contents.Values.end(); ++it) {
-    const auto &Value = *it;
+  for (const auto &Value :
+           llvm::drop_begin(Contents.Values, Initializer.Values.size())) {
     if (emitIntValue(Value, Field.Type))
       return true;
   }
@@ -4367,9 +4363,8 @@ bool MasmParser::emitFieldInitializer(const FieldInfo &Field,
                                AsInt.getBitWidth() / 8);
   }
   // Default-initialize all remaining values.
-  for (auto It = Contents.AsIntValues.begin() + Initializer.AsIntValues.size();
-       It != Contents.AsIntValues.end(); ++It) {
-    const auto &AsInt = *It;
+  for (const auto &AsInt :
+       llvm::drop_begin(Contents.AsIntValues, Initializer.AsIntValues.size())) {
     getStreamer().emitIntValue(AsInt.getLimitedValue(),
                                AsInt.getBitWidth() / 8);
   }
@@ -4384,10 +4379,8 @@ bool MasmParser::emitFieldInitializer(const FieldInfo &Field,
       return true;
   }
   // Default-initialize all remaining values.
-  for (auto It =
-           Contents.Initializers.begin() + Initializer.Initializers.size();
-       It != Contents.Initializers.end(); ++It) {
-    const auto &Init = *It;
+  for (const auto &Init : llvm::drop_begin(Contents.Initializers,
+                                           Initializer.Initializers.size())) {
     if (emitStructInitializer(Contents.Structure, Init))
       return true;
   }
@@ -4425,10 +4418,8 @@ bool MasmParser::emitStructInitializer(const StructInfo &Structure,
       return true;
   }
   // Default-initialize all remaining fields.
-  for (auto It =
-           Structure.Fields.begin() + Initializer.FieldInitializers.size();
-       It != Structure.Fields.end(); ++It) {
-    const auto &Field = *It;
+  for (const auto &Field : llvm::drop_begin(
+           Structure.Fields, Initializer.FieldInitializers.size())) {
     getStreamer().emitZeros(Field.Offset - Offset);
     Offset = Field.Offset + Field.SizeOf;
     if (emitFieldValue(Field))
@@ -4649,10 +4640,8 @@ bool MasmParser::parseDirectiveNestedEnds() {
     if (ParentStruct.IsUnion) {
       ParentStruct.Size = std::max(ParentStruct.Size, Structure.Size);
     } else {
-      for (auto FieldIter = ParentStruct.Fields.begin() + OldFields;
-           FieldIter != ParentStruct.Fields.end(); ++FieldIter) {
-        FieldIter->Offset += FirstFieldOffset;
-      }
+      for (auto &Field : llvm::drop_begin(ParentStruct.Fields, OldFields))
+        Field.Offset += FirstFieldOffset;
 
       const unsigned StructureEnd = FirstFieldOffset + Structure.Size;
       if (!ParentStruct.IsUnion) {
