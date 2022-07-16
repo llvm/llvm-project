@@ -93,7 +93,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_4:.*]] = load { ptr, i64 }, ptr %[[VAL_3]], align 8
 // CHECK:         %[[VAL_5:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 0
 // CHECK:         %[[VAL_6:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 1
-// CHECK:         %[[VAL_8:.*]] = icmp slt i64 10, %[[VAL_6]]
+// CHECK:         %[[VAL_8:.*]] = icmp sgt i64 %[[VAL_6]], 10
 // CHECK:         %[[VAL_9:.*]] = select i1 %[[VAL_8]], i64 10, i64 %[[VAL_6]]
 // CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_0]], ptr %[[VAL_5]], i64 %[[VAL_9]], i1 false)
 // CHECK:         %[[VAL_10:.*]] = sub i64 10, %[[VAL_9]]
@@ -129,7 +129,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_27:.*]] = load [1 x i8], ptr %[[VAL_26]], align 1
 // CHECK:         %[[VAL_29:.*]] = getelementptr [1 x i8], ptr %[[VAL_14]], i64 %[[VAL_18]]
 // CHECK:         store [1 x i8] %[[VAL_27]], ptr %[[VAL_29]], align 1
-// CHECK:         %[[VAL_30:.*]] = icmp slt i64 40, %[[VAL_13]]
+// CHECK:         %[[VAL_30:.*]] = icmp sgt i64 %[[VAL_13]], 40
 // CHECK:         %[[VAL_31:.*]] =  select i1 %[[VAL_30]], i64 40, i64 %[[VAL_13]]
 // CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_0]], ptr %[[VAL_14]], i64 %[[VAL_31]], i1 false)
 // CHECK:         %[[VAL_32:.*]] = sub i64 40, %[[VAL_31]]
