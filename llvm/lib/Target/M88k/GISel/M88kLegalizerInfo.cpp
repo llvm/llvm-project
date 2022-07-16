@@ -69,7 +69,9 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_ADD).legalFor({S32});
   getActionDefinitionsBuilder(G_SUB).legalFor({S32});
   getActionDefinitionsBuilder(G_MUL).legalFor({S32});
-  getActionDefinitionsBuilder(G_UDIV).legalFor({S32});
+  getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
+      .legalFor({S32})
+      .libcallFor({S64});
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({S32})
       .clampScalar(0, S32, S32);
