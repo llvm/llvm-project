@@ -151,6 +151,8 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 
   CurDAG->setRoot(Dummy.getValue());
 
+  MadeChange |= doPeepholeMergeVVMFold();
+
   if (MadeChange)
     CurDAG->RemoveDeadNodes();
 }
@@ -2596,6 +2598,118 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   ReplaceUses(N, Result);
 
   return true;
+}
+
+// Try to fold VMERGE_VVM with unmasked intrinsic to masked intrinsic. The
+// peephole only deals with VMERGE_VVM which is TU and has false operand same as
+// its true operand now. E.g. (VMERGE_VVM_M1_TU False, False, (VADD_M1 ...),
+// ...) -> (VADD_VV_M1_MASK)
+bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
+  bool MadeChange = false;
+  SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
+
+  while (Position != CurDAG->allnodes_begin()) {
+    SDNode *N = &*--Position;
+    if (N->use_empty() || !N->isMachineOpcode())
+      continue;
+
+    auto IsVMergeTU = [](unsigned Opcode) {
+      return Opcode == RISCV::PseudoVMERGE_VVM_MF8_TU ||
+             Opcode == RISCV::PseudoVMERGE_VVM_MF4_TU ||
+             Opcode == RISCV::PseudoVMERGE_VVM_MF2_TU ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M1_TU ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M2_TU ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M4_TU ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M8_TU;
+    };
+
+    unsigned Opc = N->getMachineOpcode();
+    // TODO: Also deal with TA VMerge nodes.
+    if (!IsVMergeTU(Opc))
+      continue;
+
+    SDValue Merge = N->getOperand(0);
+    SDValue False = N->getOperand(1);
+    SDValue True = N->getOperand(2);
+    SDValue Mask = N->getOperand(3);
+    SDValue VL = N->getOperand(4);
+
+    if (Merge != False)
+      continue;
+
+    assert(True.getResNo() == 0 &&
+           "Expect True is the first output of an instruction.");
+
+    // Need N is the exactly one using True.
+    if (!True.hasOneUse())
+      continue;
+
+    if (!True.isMachineOpcode())
+      continue;
+
+    unsigned TrueOpc = True.getMachineOpcode();
+
+    // Skip if True has merge operand.
+    // TODO: Deal with True having same merge operand with N.
+    if (RISCVII::hasMergeOp(TII->get(TrueOpc).TSFlags))
+      continue;
+
+    // Skip if True has side effect.
+    // TODO: Support velff and vlsegff.
+    if (TII->get(TrueOpc).hasUnmodeledSideEffects())
+      continue;
+
+    // Only deal with True when True is unmasked intrinsic now.
+    const RISCV::RISCVMaskedPseudoInfo *Info =
+        RISCV::lookupMaskedIntrinsicByUnmaskedTA(TrueOpc);
+
+    if (!Info)
+      continue;
+
+    // The last operand of unmasked intrinsic should be sew or chain.
+    bool HasChainOp =
+        True.getOperand(True.getNumOperands() - 1).getValueType() == MVT::Other;
+
+    // Need True has same VL with N.
+    unsigned TrueVLIndex = True.getNumOperands() - HasChainOp - 2;
+    SDValue TrueVL = True.getOperand(TrueVLIndex);
+    if (TrueVL != VL)
+      continue;
+
+    SDLoc DL(N);
+    unsigned MaskedOpc = Info->MaskedPseudo;
+    SmallVector<SDValue, 8> Ops;
+    Ops.push_back(Merge);
+    Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
+    Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
+
+    if (RISCVII::hasVecPolicyOp(TII->get(MaskedOpc).TSFlags))
+      Ops.push_back(
+          CurDAG->getTargetConstant(/* TUMU */ 0, DL, Subtarget->getXLenVT()));
+
+    // Result node should have chain operand of True.
+    if (HasChainOp)
+      Ops.push_back(True.getOperand(True.getNumOperands() - 1));
+
+    // Result node should take over glued node of N.
+    if (N->getGluedNode())
+      Ops.push_back(N->getOperand(N->getNumOperands() - 1));
+
+    SDNode *Result =
+        CurDAG->getMachineNode(MaskedOpc, DL, True->getVTList(), Ops);
+
+    // Replace vmerge.vvm node by Result.
+    ReplaceUses(SDValue(N, 0), SDValue(Result, 0));
+
+    // Replace another value of True. E.g. chain and VL.
+    for (unsigned Idx = 1; Idx < True->getNumValues(); ++Idx)
+      ReplaceUses(True.getValue(Idx), SDValue(Result, Idx));
+
+    // Try to transform Result to unmasked intrinsic.
+    doPeepholeMaskedRVV(Result);
+    MadeChange = true;
+  }
+  return MadeChange;
 }
 
 // This pass converts a legalized DAG into a RISCV-specific DAG, ready

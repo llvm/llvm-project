@@ -472,6 +472,11 @@ class RISCVVLE<bit M, bit TU, bit Str, bit F, bits<3> S, bits<3> L> {
   Pseudo Pseudo = !cast<Pseudo>(NAME);
 }
 
+def lookupMaskedIntrinsicByUnmaskedTA : SearchIndex {
+  let Table = RISCVMaskedPseudosTable;
+  let Key = ["UnmaskedPseudo"];
+}
+
 def RISCVVLETable : GenericTable {
   let FilterClass = "RISCVVLE";
   let CppTypeName = "VLEPseudo";
@@ -1591,6 +1596,7 @@ multiclass VPseudoUSLoad {
           VLESched<eew>;
         def "E" # eew # "_V_" # LInfo # "_MASK" :
           VPseudoUSLoadMask<vreg, eew>,
+          RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
           VLESched<eew>;
       }
     }
@@ -1611,6 +1617,7 @@ multiclass VPseudoFFLoad {
           VLFSched<eew>;
         def "E" # eew # "FF_V_" # LInfo # "_MASK":
           VPseudoUSLoadFFMask<vreg, eew>,
+          RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
           VLFSched<eew>;
       }
     }
@@ -1635,8 +1642,10 @@ multiclass VPseudoSLoad {
                                         VLSSched<eew>;
         def "E" # eew # "_V_" # LInfo # "_TU": VPseudoSLoadNoMaskTU<vreg, eew>,
                                         VLSSched<eew>;
-        def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSLoadMask<vreg, eew>,
-                                                  VLSSched<eew>;
+        def "E" # eew # "_V_" # LInfo # "_MASK" :
+          VPseudoSLoadMask<vreg, eew>,
+          RISCVMaskedPseudo</*MaskOpIdx*/ 3>,
+          VLSSched<eew>;
       }
     }
   }
@@ -1666,6 +1675,7 @@ multiclass VPseudoILoad<bit Ordered> {
               VLXSched<eew, Order>;
             def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
               VPseudoILoadMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>,
+              RISCVMaskedPseudo</*MaskOpIdx*/ 3>,
               VLXSched<eew, Order>;
           }
         }
@@ -1785,6 +1795,7 @@ multiclass VPseudoVID_V {
       def "_V_" # m.MX # "_TU": VPseudoNullaryNoMaskTU<m.vrclass>,
                                 Sched<[WriteVMIdxV, ReadVMask]>;
       def "_V_" # m.MX # "_MASK" : VPseudoNullaryMask<m.vrclass>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 1>,
                                    Sched<[WriteVMIdxV, ReadVMask]>;
     }
   }
@@ -1807,6 +1818,7 @@ multiclass VPseudoVIOT_M {
       def "_" # m.MX # "_TU" : VPseudoUnaryNoMaskTU<m.vrclass, VR, constraint>,
                                Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
       def "_" # m.MX # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, VR, constraint>,
+                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                  Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
     }
   }
@@ -2137,6 +2149,7 @@ multiclass VPseudoVCLS_V {
       def "_V_" # m.MX # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
                                 Sched<[WriteVFClassV, ReadVFClassV, ReadVMask]>;
       def "_V_" # m.MX # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                    Sched<[WriteVFClassV, ReadVFClassV, ReadVMask]>;
     }
   }
@@ -2150,6 +2163,7 @@ multiclass VPseudoVSQR_V {
       def "_V_" # m.MX # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
                                 Sched<[WriteVFSqrtV, ReadVFSqrtV, ReadVMask]>;
       def "_V_" # m.MX # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                    Sched<[WriteVFSqrtV, ReadVFSqrtV, ReadVMask]>;
     }
   }
@@ -2163,6 +2177,7 @@ multiclass VPseudoVRCP_V {
       def "_V_" # m.MX # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
                                 Sched<[WriteVFRecpV, ReadVFRecpV, ReadVMask]>;
       def "_V_" # m.MX # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                    Sched<[WriteVFRecpV, ReadVFRecpV, ReadVMask]>;
     }
   }
