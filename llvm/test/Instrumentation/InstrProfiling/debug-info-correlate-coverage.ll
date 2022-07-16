@@ -1,4 +1,4 @@
-; RUN: opt < %s -instrprof -debug-info-correlate -S | opt --O2 -S | FileCheck %s
+; RUN: opt < %s -passes=instrprof -debug-info-correlate -S | opt -O2 -S | FileCheck %s
 
 @__profn_foo = private constant [3 x i8] c"foo"
 ; CHECK:      @__profc_foo

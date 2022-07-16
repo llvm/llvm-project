@@ -1,6 +1,5 @@
 ;; Check that we don't emit the runtime hooks if the user provided them.
 
-; RUN: opt < %s -instrprof -S | FileCheck %s
 ; RUN: opt < %s -passes=instrprof -S | FileCheck %s
 ; CHECK-NOT: define {{.*}} @__llvm_profile_runtime_user()
 ; CHECK-NOT: load i32, i32* @__llvm_profile_runtime

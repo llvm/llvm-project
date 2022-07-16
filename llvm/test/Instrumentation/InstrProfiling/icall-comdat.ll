@@ -1,14 +1,14 @@
 ;; Check that static counters are allocated for value profiler
 
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
-; RUN: opt < %s -mtriple=powerpc-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
-; RUN: opt < %s -mtriple=sparc-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
-; RUN: opt < %s -mtriple=s390x-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-EXT
-; RUN: opt < %s -mtriple=powerpc64-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-EXT
-; RUN: opt < %s -mtriple=sparc64-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-EXT
-; RUN: opt < %s -mtriple=mips-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-SEXT
-; RUN: opt < %s -mtriple=mips64-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-SEXT
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
+; RUN: opt < %s -mtriple=powerpc-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
+; RUN: opt < %s -mtriple=sparc-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
+; RUN: opt < %s -mtriple=s390x-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-EXT
+; RUN: opt < %s -mtriple=powerpc64-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-EXT
+; RUN: opt < %s -mtriple=sparc64-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-EXT
+; RUN: opt < %s -mtriple=mips-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-SEXT
+; RUN: opt < %s -mtriple=mips64-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-SEXT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
 
 
 
