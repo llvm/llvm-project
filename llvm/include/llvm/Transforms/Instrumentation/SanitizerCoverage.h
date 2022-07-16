@@ -8,8 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the SanitizerCoverage class which is a port of the legacy
-// SanitizerCoverage pass to use the new PassManager infrastructure.
+// SanitizerCoverage is a simple code coverage implementation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -55,13 +54,6 @@ private:
   std::unique_ptr<SpecialCaseList> Allowlist;
   std::unique_ptr<SpecialCaseList> Blocklist;
 };
-
-// Insert SanitizerCoverage instrumentation.
-ModulePass *createModuleSanitizerCoverageLegacyPassPass(
-    const SanitizerCoverageOptions &Options = SanitizerCoverageOptions(),
-    const std::vector<std::string> &AllowlistFiles = std::vector<std::string>(),
-    const std::vector<std::string> &BlocklistFiles =
-        std::vector<std::string>());
 
 } // namespace llvm
 
