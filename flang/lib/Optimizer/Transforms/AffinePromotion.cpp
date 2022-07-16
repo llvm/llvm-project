@@ -189,7 +189,7 @@ private:
   MaybeAffineExpr affineBinaryOp(mlir::AffineExprKind kind, MaybeAffineExpr lhs,
                                  MaybeAffineExpr rhs) {
     if (lhs && rhs)
-      return mlir::getAffineBinaryOpExpr(kind, lhs.getValue(), rhs.getValue());
+      return mlir::getAffineBinaryOpExpr(kind, *lhs, *rhs);
     return {};
   }
 

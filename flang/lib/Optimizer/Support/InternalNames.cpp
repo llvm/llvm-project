@@ -52,7 +52,7 @@ inline llvm::Optional<llvm::StringRef>
 convertToStringRef(const llvm::Optional<std::string> &from) {
   llvm::Optional<llvm::StringRef> to;
   if (from)
-    to = from.getValue();
+    to = *from;
   return to;
 }
 

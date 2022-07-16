@@ -318,8 +318,8 @@ public:
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
-        newCall = rewriter->create<A>(loc, callOp.getCallee().getValue(),
-                                      newResTys, newOpers);
+        newCall =
+            rewriter->create<A>(loc, *callOp.getCallee(), newResTys, newOpers);
       } else {
         // Force new type on the input operand.
         newOpers[0].setType(mlir::FunctionType::get(
