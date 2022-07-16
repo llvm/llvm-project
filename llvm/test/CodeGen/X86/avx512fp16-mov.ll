@@ -963,13 +963,13 @@ define <16 x half> @movrrkz16f16(<16 x half> %a, i16 %msk) {
 define <8 x half> @load8f16(ptr %a) {
 ; X64-LABEL: load8f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: load8f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovaps (%eax), %xmm0
+; X86-NEXT:    movaps (%eax), %xmm0
 ; X86-NEXT:    retl
   %res = load <8 x half>, ptr %a
   ret <8 x half> %res
@@ -1016,13 +1016,13 @@ define <8 x half> @load8f16maskz(ptr %a, i8 %c) {
 define <8 x half> @loadu8f16(ptr %a) {
 ; X64-LABEL: loadu8f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovups (%rdi), %xmm0
+; X64-NEXT:    movups (%rdi), %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: loadu8f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovups (%eax), %xmm0
+; X86-NEXT:    movups (%eax), %xmm0
 ; X86-NEXT:    retl
   %res = load <8 x half>, ptr %a, align 8
   ret <8 x half> %res
@@ -1070,12 +1070,12 @@ define void @store8f16(<8 x half> %a) {
 ; X64-LABEL: store8f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq g8f16@GOTPCREL(%rip), %rax
-; X64-NEXT:    vmovaps %xmm0, (%rax)
+; X64-NEXT:    movaps %xmm0, (%rax)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: store8f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovaps %xmm0, g8f16
+; X86-NEXT:    movaps %xmm0, g8f16
 ; X86-NEXT:    retl
   store <8 x half> %a, ptr @g8f16
   ret void
@@ -1085,12 +1085,12 @@ define void @storeu8f16(<8 x half> %a) {
 ; X64-LABEL: storeu8f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq g8f16u@GOTPCREL(%rip), %rax
-; X64-NEXT:    vmovups %xmm0, (%rax)
+; X64-NEXT:    movups %xmm0, (%rax)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: storeu8f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovups %xmm0, g8f16u
+; X86-NEXT:    movups %xmm0, g8f16u
 ; X86-NEXT:    retl
   store <8 x half> %a, ptr @g8f16u, align 8
   ret void
