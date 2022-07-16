@@ -19,43 +19,43 @@
 extern "C" {
 #endif
 
-inline _LIBCPP_INLINE_VISIBILITY float strtof_l(const char *__nptr,
-                                                char **__endptr, locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI int float
+strtof_l(const char *__nptr, char **__endptr, locale_t) {
   return ::strtof(__nptr, __endptr);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY double strtod_l(const char *__nptr,
-                                                 char **__endptr, locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI int double
+strtod_l(const char *__nptr, char **__endptr, locale_t) {
   return ::strtod(__nptr, __endptr);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY long double strtold_l(const char *__nptr,
-                                                       char **__endptr, locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI int long double
+strtold_l(const char *__nptr, char **__endptr, locale_t) {
   return ::strtold(__nptr, __endptr);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY long long
+inline _LIBCPP_HIDE_FROM_ABI int long long
 strtoll_l(const char *__nptr, char **__endptr, int __base, locale_t) {
   return ::strtoll(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY unsigned long long
+inline _LIBCPP_HIDE_FROM_ABI int unsigned long long
 strtoull_l(const char *__nptr, char **__endptr, int __base, locale_t) {
   return ::strtoull(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY long long
+inline _LIBCPP_HIDE_FROM_ABI int long long
 wcstoll_l(const wchar_t *__nptr, wchar_t **__endptr, int __base, locale_t) {
   return ::wcstoll(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY unsigned long long
+inline _LIBCPP_HIDE_FROM_ABI int unsigned long long
 wcstoull_l(const wchar_t *__nptr, wchar_t **__endptr, int __base, locale_t) {
   return ::wcstoull(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY long double wcstold_l(const wchar_t *__nptr,
-                                                       wchar_t **__endptr, locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI int long double
+wcstold_l(const wchar_t *__nptr, wchar_t **__endptr, locale_t) {
   return ::wcstold(__nptr, __endptr);
 }
 
