@@ -124,6 +124,25 @@ struct type_caster<MlirContext> {
   }
 };
 
+/// Casts object <-> MlirDialectRegistry.
+template <>
+struct type_caster<MlirDialectRegistry> {
+  PYBIND11_TYPE_CASTER(MlirDialectRegistry, _("MlirDialectRegistry"));
+  bool load(handle src, bool) {
+    py::object capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToDialectRegistry(capsule.ptr());
+    return !mlirDialectRegistryIsNull(value);
+  }
+  static handle cast(MlirDialectRegistry v, return_value_policy, handle) {
+    py::object capsule = py::reinterpret_steal<py::object>(
+        mlirPythonDialectRegistryToCapsule(v));
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+        .attr("DialectRegistry")
+        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+        .release();
+  }
+};
+
 /// Casts object <-> MlirLocation.
 template <>
 struct type_caster<MlirLocation> {

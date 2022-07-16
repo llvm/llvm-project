@@ -1,4 +1,4 @@
-//===- Registration.cpp - C Interface for MLIR Registration ---------------===//
+//===- RegisterEverything.cpp - Register all MLIR entities ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/RegisterEverything.h"
 
 #include "mlir/CAPI/IR.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
-void mlirRegisterAllDialects(MlirContext context) {
-  mlir::registerAllDialects(*unwrap(context));
-  // TODO: we may not want to eagerly load here.
-  unwrap(context)->loadAllAvailableDialects();
+void mlirRegisterAllDialects(MlirDialectRegistry registry) {
+  mlir::registerAllDialects(*unwrap(registry));
 }
 
 void mlirRegisterAllLLVMTranslations(MlirContext context) {
