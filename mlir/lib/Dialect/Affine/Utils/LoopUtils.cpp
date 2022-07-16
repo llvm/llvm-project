@@ -196,10 +196,9 @@ static AffineForOp generateShiftedLoop(
   BlockAndValueMapping operandMap;
 
   auto bodyBuilder = OpBuilder::atBlockTerminator(loopChunk.getBody());
-  for (auto it = opGroupQueue.begin() + offset, e = opGroupQueue.end(); it != e;
-       ++it) {
-    uint64_t shift = it->first;
-    auto ops = it->second;
+  for (const auto &it : llvm::drop_begin(opGroupQueue, offset)) {
+    uint64_t shift = it.first;
+    auto ops = it.second;
     // All 'same shift' operations get added with their operands being
     // remapped to results of cloned operations, and their IV used remapped.
     // Generate the remapping if the shift is not zero: remappedIV = newIV -
