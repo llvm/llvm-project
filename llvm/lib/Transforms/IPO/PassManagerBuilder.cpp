@@ -470,10 +470,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // Clean up after everything.
   MPM.add(createInstructionCombiningPass());
   addExtensionsToPM(EP_Peephole, MPM);
-
-  if (EnableCHR && OptLevel >= 3 &&
-      (!PGOInstrUse.empty() || !PGOSampleUse.empty() || EnablePGOCSInstrGen))
-    MPM.add(createControlHeightReductionLegacyPass());
 }
 
 /// FIXME: Should LTO cause any differences to this set of passes?
