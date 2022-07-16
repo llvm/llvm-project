@@ -505,7 +505,6 @@ def reexported_symbols_list : Separate<["-"], "reexported_symbols_list">,
 def alias : MultiArg<["-"], "alias", 2>,
     MetaVarName<"<symbol_name> <alternate_name>">,
     HelpText<"Create a symbol alias with default global visibility">,
-    Flags<[HelpHidden]>,
     Group<grp_resolve>;
 def alias_list : Separate<["-"], "alias_list">,
     MetaVarName<"<file>">,
