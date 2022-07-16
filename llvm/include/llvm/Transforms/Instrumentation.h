@@ -124,11 +124,6 @@ struct InstrProfOptions {
   InstrProfOptions() = default;
 };
 
-/// Insert frontend instrumentation based profiling. Parameter IsCS indicates if
-// this is the context sensitive instrumentation.
-ModulePass *createInstrProfilingLegacyPass(
-    const InstrProfOptions &Options = InstrProfOptions(), bool IsCS = false);
-
 ModulePass *createInstrOrderFilePass();
 
 // Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
