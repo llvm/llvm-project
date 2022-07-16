@@ -4,8 +4,7 @@
 define <2 x i64> @extract0_i32_zext_insert0_i64_undef(<4 x i32> %x) {
 ; CHECK-LABEL: extract0_i32_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mov v0.s[1], wzr
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i32> %x, i32 0
   %z = zext i32 %e to i64

@@ -11811,6 +11811,12 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isConcatMask(M, VT, VT.getSizeInBits() == 128));
 }
 
+bool AArch64TargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
+                                                   EVT VT) const {
+  // Just delegate to the generic legality, clear masks aren't special.
+  return isShuffleMaskLegal(M, VT);
+}
+
 /// getVShiftImm - Check if this is a valid build_vector for the immediate
 /// operand of a vector shift operation, where all the elements of the
 /// build_vector must have the same constant integer value.

@@ -22641,6 +22641,56 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     }
   }
 
+  // If we're not performing a select/blend shuffle, see if we can convert the
+  // shuffle into a AND node, with all the out-of-lane elements are known zero.
+  if (Level < AfterLegalizeDAG && TLI.isTypeLegal(VT)) {
+    bool IsInLaneMask = true;
+    ArrayRef<int> Mask = SVN->getMask();
+    SmallVector<int, 16> ClearMask(NumElts, -1);
+    APInt DemandedLHS = APInt::getNullValue(NumElts);
+    APInt DemandedRHS = APInt::getNullValue(NumElts);
+    for (int I = 0; I != (int)NumElts; ++I) {
+      int M = Mask[I];
+      if (M < 0)
+        continue;
+      ClearMask[I] = M == I ? I : (I + NumElts);
+      IsInLaneMask &= (M == I) || (M == (I + NumElts));
+      if (M != I) {
+        APInt &Demanded = M < (int)NumElts ? DemandedLHS : DemandedRHS;
+        Demanded.setBit(M % NumElts);
+      }
+    }
+    // TODO: Should we try to mask with N1 as well?
+    if (!IsInLaneMask &&
+        (!DemandedLHS.isNullValue() || !DemandedRHS.isNullValue()) &&
+        (DemandedLHS.isNullValue() ||
+         DAG.MaskedVectorIsZero(N0, DemandedLHS)) &&
+        (DemandedRHS.isNullValue() ||
+         DAG.MaskedVectorIsZero(N1, DemandedRHS))) {
+      SDLoc DL(N);
+      EVT IntVT = VT.changeVectorElementTypeToInteger();
+      EVT IntSVT = VT.getVectorElementType().changeTypeToInteger();
+      SDValue ZeroElt = DAG.getConstant(0, DL, IntSVT);
+      SDValue AllOnesElt = DAG.getAllOnesConstant(DL, IntSVT);
+      SmallVector<SDValue, 16> AndMask(NumElts, DAG.getUNDEF(IntSVT));
+      for (int I = 0; I != (int)NumElts; ++I)
+        if (0 <= Mask[I])
+          AndMask[I] = Mask[I] == I ? AllOnesElt : ZeroElt;
+
+      // See if a clear mask is legal instead of going via
+      // XformToShuffleWithZero which loses UNDEF mask elements.
+      if (TLI.isVectorClearMaskLegal(ClearMask, IntVT))
+        return DAG.getBitcast(
+            VT, DAG.getVectorShuffle(IntVT, DL, DAG.getBitcast(IntVT, N0),
+                                     DAG.getConstant(0, DL, IntVT), ClearMask));
+
+      if (TLI.isOperationLegalOrCustom(ISD::AND, IntVT))
+        return DAG.getBitcast(
+            VT, DAG.getNode(ISD::AND, DL, IntVT, DAG.getBitcast(IntVT, N0),
+                            DAG.getBuildVector(IntVT, DL, AndMask)));
+    }
+  }
+
   // Attempt to combine a shuffle of 2 inputs of 'scalar sources' -
   // BUILD_VECTOR or SCALAR_TO_VECTOR into a single BUILD_VECTOR.
   if (Level < AfterLegalizeDAG && TLI.isTypeLegal(VT))

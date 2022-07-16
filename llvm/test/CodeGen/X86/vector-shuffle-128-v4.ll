@@ -1013,21 +1013,21 @@ define <4 x float> @shuffle_v4f32_0z2z(<4 x float> %v) {
 ; SSE2-LABEL: shuffle_v4f32_0z2z:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,3]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: shuffle_v4f32_0z2z:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    xorps %xmm1, %xmm1
-; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,0]
+; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,3]
 ; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v4f32_0z2z:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    xorps %xmm1, %xmm1
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,3]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; SSSE3-NEXT:    retq
 ;

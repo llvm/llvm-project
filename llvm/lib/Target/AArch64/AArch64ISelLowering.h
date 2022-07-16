@@ -549,6 +549,10 @@ public:
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
+  /// Similar to isShuffleMaskLegal. Return true is the given 'select with zero'
+  /// shuffle mask can be codegen'd directly.
+  bool isVectorClearMaskLegal(ArrayRef<int> M, EVT VT) const override;
+
   /// Return the ISD::SETCC ValueType.
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
