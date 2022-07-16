@@ -215,9 +215,6 @@ public:
   /// Returns true if the recurrence kind is a floating point kind.
   static bool isFloatingPointRecurrenceKind(RecurKind Kind);
 
-  /// Returns true if the recurrence kind is an arithmetic kind.
-  static bool isArithmeticRecurrenceKind(RecurKind Kind);
-
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::UMin || Kind == RecurKind::UMax ||
