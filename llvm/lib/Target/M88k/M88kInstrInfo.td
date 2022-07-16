@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 
-def IsMC881000 : Predicate<"Subtarget->getCPU() == \"mc88100\"">;
-def IsMC881100 : Predicate<"Subtarget->getCPU() == \"mc88110\"">;
-class MC881100 { list<Predicate> Predicates = [IsMC881100]; }
+def IsMC88100 : Predicate<"Subtarget->getCPU() == \"mc88100\"">;
+def IsMC88110 : Predicate<"Subtarget->getCPU() == \"mc88110\"">;
+class MC88110 { list<Predicate> Predicates = [IsMC88110]; }
 
 // ---------------------------------------------------------------------------//
 // Selection DAG Nodes.
@@ -420,7 +420,7 @@ defm SUB : ArithTriCarry<0b011101, "sub">;
 defm DIVS : ArithTri<0b011110, "divs">;
 defm CMP : ArithTri<0b011111, "cmp">;
 
-let Predicates = [IsMC881100] in {
+let Predicates = [IsMC88110] in {
   def DIVUrrd : F_IRCD<0b011010, "divu.d">;
   let isCommutable = 1 in
     def MULUrrd : F_IRCD<0b011011, "mulu.d">;
@@ -501,7 +501,7 @@ multiclass StoreIndexImm {
                   (outs), (ins GPR64:$rd, GPR:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".d"),
                   [(store (i64 GPR64:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
-  let Predicates = [IsMC881100] in {
+  let Predicates = [IsMC88110] in {
     def xis  : F_LS<0b0011, /*ty=*/ 0b01,
                     (outs), (ins XR:$rd, GPR:$rs1, imm32zx16:$si16),
                     OpcStr,
@@ -578,7 +578,7 @@ multiclass LoadUnscaled<bits<4> Func, string OpcStr> {
                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".h.usr")>;
   }
-  let regfile = 0, Predicates = [IsMC881100] in {
+  let regfile = 0, Predicates = [IsMC88110] in {
     def xxuw  : F_LSINDUSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
                     (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     OpcStr>;
@@ -627,7 +627,7 @@ multiclass LoadScaled<bits<4> Func, string OpcStr> {
                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".h.usr")>;
   }
-  let regfile = 0, Predicates = [IsMC881100] in {
+  let regfile = 0, Predicates = [IsMC88110] in {
     def xxsw  : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
                     (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     OpcStr>;
@@ -674,7 +674,7 @@ multiclass StoreUnscaled<bits<4> Func, string OpcStr> {
                                     !strconcat(OpcStr, ".h", Suffix)>;
         }
       }
-      let regfile = 0, Predicates = [IsMC881100] in {
+      let regfile = 0, Predicates = [IsMC88110] in {
         let through = T in {
           def xrus # s : F_LSINDUSC<Func, /*ty=*/ 0b01, /*user=*/ U,
                                     (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
@@ -716,7 +716,7 @@ multiclass StoreScaled<bits<4> Func, string OpcStr> {
                                    !strconcat(OpcStr, ".h", Suffix)>;
         }
       }
-      let regfile = 0, Predicates = [IsMC881100] in {
+      let regfile = 0, Predicates = [IsMC88110] in {
         let through = T in {
           def xrss # s : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ U,
                                    (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
@@ -741,17 +741,17 @@ multiclass LoadAddr {
   def h : F_LADDR</*ty=*/ 0b10, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                   "lda.h">;
 // TODO
-//  let Predicates = [IsMC881000] in
+//  let Predicates = [IsMC88100] in
 //    def b : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
 //                    "lda.b">;
-  let Predicates = [IsMC881100] in
+  let Predicates = [IsMC88110] in
     def x : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     "lda.x">;
 }
 
 multiclass Xmem {
 // TODO Same encoding as ld %x,%r,%i/ld.d %x,%r,%i
-//  let Predicates = [IsMC881000] in {
+//  let Predicates = [IsMC88100] in {
 //    def bi : F_XMEMIMM</*ty=*/ 0b00,
 //                        (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$imm16),
 //                        "xmem.bu">;
@@ -786,7 +786,7 @@ let mayLoad = 1 in {
 
   defm LDA : LoadAddr<>; // TODO Does inst touch memory?
 
-  let Predicates = [IsMC881100] in {
+  let Predicates = [IsMC88110] in {
     def LDxri : LoadXR<0b000001, "ld", f32>;
     def LDxrid : LoadXR<0b000000, "ld.d", f64>;
     def LDxrix : LoadXR<0b001111, "ld.x", f80>;
@@ -971,7 +971,7 @@ multiclass FArithX<bits<4> Func, string OpcStr> {
   foreach D = 0-2 in {
     foreach S1 = 0-2 in {
       foreach S2 = 0-2 in {
-        let regfile = 1, Predicates = [IsMC881100] in {
+        let regfile = 1, Predicates = [IsMC88110] in {
           defvar DPrec = getFT<D>.ret.prec;
           defvar S1Prec = getFT<S1>.ret.prec;
           defvar S2Prec = getFT<S2>.ret.prec;
@@ -1004,7 +1004,7 @@ multiclass FArith2G<bits<4> Func, string OpcStr> {
 
 multiclass FArith2X<bits<4> Func, string OpcStr> {
   foreach S2 = 0-2 in {
-    let regfile = 1, Predicates = [IsMC881100] in {
+    let regfile = 1, Predicates = [IsMC88110] in {
       defvar S2Prec = getFT<S2>.ret.prec;
       def xs # S2Prec :
               F_SFU1D<Func, /*td=*/ 0b00, /*t1=*/ 0b00, /*t2=*/ S2,
@@ -1043,7 +1043,7 @@ multiclass FUnaryX<bits<4> Func, string OpcStr, bit eq> {
     foreach S2 = 0-2 in {
       defvar IsLegal = !or(eq, !ne(D, S2));
       if IsLegal then {
-        let regfile = 1, Predicates = [IsMC881100] in {
+        let regfile = 1, Predicates = [IsMC88110] in {
           defvar DPrec = getFT<D>.ret.prec;
           defvar S2Prec = getFT<S2>.ret.prec;
           def x # DPrec # S2Prec :
@@ -1081,7 +1081,7 @@ multiclass FCmpG<bits<4> Func, bits<2> td, string OpcStr> {
 multiclass FCmpX<bits<4> Func, bits<2> td, string OpcStr> {
   foreach S1 = 0-2 in {
     foreach S2 = 0-2 in {
-      let regfile = 1, Predicates = [IsMC881100] in {
+      let regfile = 1, Predicates = [IsMC88110] in {
         defvar S1Prec = getFT<S1>.ret.prec;
         defvar S2Prec = getFT<S2>.ret.prec;
         def x # s # S1Prec # S2Prec :
@@ -1140,7 +1140,7 @@ defm INT : FArith2<0b1001, "int">;
 defm NINT : FArith2<0b1010, "nint">;
 defm TRNC : FArith2<0b1011, "trnc">;
 
-let Predicates = [IsMC881100] in {
+let Predicates = [IsMC88110] in {
   defm FCVT : FUnary<0b0001, "fcvt", false>;
   defm FSQRT : FUnary<0b1111, "fsqrt", true>;
 
@@ -1170,7 +1170,7 @@ def : Pat<(fpround (f64 GPR64:$rs1)),
 
 // Missing: fcmp, fcmpu
 defm FCMP : FCmp<0b0111, 0b00, "fcmp">;
-let Predicates = [IsMC881100] in
+let Predicates = [IsMC88110] in
   defm FCMPU : FCmp<0b0111, 0b01, "fcmpu">;
 
 let regfile = 0 in {
@@ -1183,7 +1183,7 @@ def FLTgds : F_SFU1FLT</*td=*/ 0b01,
                        "flt.ds",
                        [(set (f64 GPR64:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
 }
-let regfile = 1, Predicates = [IsMC881100] in {
+let regfile = 1, Predicates = [IsMC88110] in {
 def FLTxss : F_SFU1FLT</*td=*/ 0b00,
                        (outs XR:$rd), (ins GPR:$rs2),
                        "flt.ss",
@@ -1198,7 +1198,7 @@ def FLTxxs : F_SFU1FLT</*td=*/ 0b10,
                        [(set (f80 XR:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
 }
 
-let regfile = 1, isMoveReg = 1, Predicates = [IsMC881100] in {
+let regfile = 1, isMoveReg = 1, Predicates = [IsMC88110] in {
 def MOVrxs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b00,
                      (outs GPR:$rd), (ins XR:$rs2),
                      "mov.s",
@@ -1213,7 +1213,7 @@ def MOVxx : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b11,
 //                    [(set XR:$rd, XR:$rs2)]>;
 }
 
-let regfile = 0, isMoveReg = 1, Predicates = [IsMC881100] in {
+let regfile = 0, isMoveReg = 1, Predicates = [IsMC88110] in {
 def MOVxrs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b00,
                      (outs XR:$rd), (ins GPR:$rs2),
                      "mov.s",
@@ -1316,7 +1316,7 @@ multiclass PPack {
                        !strconcat(opc, ".8")>;
 }
 
-let Predicates = [IsMC881100] in {
+let Predicates = [IsMC88110] in {
 
 def PMUL : F_SFU2<0b00000, 0b00, 0b00,
                   (outs GPR64:$rd), (ins GPR:$rs1, GPR64:$rs2),
