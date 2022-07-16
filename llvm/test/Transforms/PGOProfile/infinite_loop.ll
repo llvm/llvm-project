@@ -1,4 +1,4 @@
-; RUN: opt < %s -instrprof -S -o - -do-counter-promotion=1  | FileCheck %s
+; RUN: opt < %s -passes=instrprof -S -do-counter-promotion=1 | FileCheck %s
 ; CHECK: store
 
 @__profn_foo = private constant [3 x i8] c"foo"
