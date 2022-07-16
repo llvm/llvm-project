@@ -55,8 +55,8 @@ Optional<ParsedName> CPlusPlusNameParser::ParseAsFullName() {
   if (HasMoreTokens())
     return None;
   ParsedName result;
-  result.basename = GetTextForRange(name_ranges.getValue().basename_range);
-  result.context = GetTextForRange(name_ranges.getValue().context_range);
+  result.basename = GetTextForRange(name_ranges.value().basename_range);
+  result.context = GetTextForRange(name_ranges.value().context_range);
   return result;
 }
 
@@ -125,8 +125,8 @@ CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
   size_t end_position = GetCurrentPosition();
 
   ParsedFunction result;
-  result.name.basename = GetTextForRange(maybe_name.getValue().basename_range);
-  result.name.context = GetTextForRange(maybe_name.getValue().context_range);
+  result.name.basename = GetTextForRange(maybe_name.value().basename_range);
+  result.name.context = GetTextForRange(maybe_name.value().context_range);
   result.arguments = GetTextForRange(Range(argument_start, qualifiers_start));
   result.qualifiers = GetTextForRange(Range(qualifiers_start, end_position));
   start_position.Remove();
@@ -617,9 +617,9 @@ CPlusPlusNameParser::ParseFullNameImpl() {
     ParsedNameRanges result;
     if (last_coloncolon_position) {
       result.context_range = Range(start_position.GetSavedPosition(),
-                                   last_coloncolon_position.getValue());
+                                   last_coloncolon_position.value());
       result.basename_range =
-          Range(last_coloncolon_position.getValue() + 1, GetCurrentPosition());
+          Range(last_coloncolon_position.value() + 1, GetCurrentPosition());
     } else {
       result.basename_range =
           Range(start_position.GetSavedPosition(), GetCurrentPosition());

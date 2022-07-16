@@ -144,10 +144,10 @@ protected:
             "`frame diagnose --address` is incompatible with other arguments.");
         return false;
       }
-      valobj_sp = frame_sp->GuessValueForAddress(m_options.address.getValue());
+      valobj_sp = frame_sp->GuessValueForAddress(m_options.address.value());
     } else if (m_options.reg) {
       valobj_sp = frame_sp->GuessValueForRegisterAndOffset(
-          m_options.reg.getValue(), m_options.offset.value_or(0));
+          m_options.reg.value(), m_options.offset.value_or(0));
     } else {
       StopInfoSP stop_info_sp = thread->GetStopInfo();
       if (!stop_info_sp) {

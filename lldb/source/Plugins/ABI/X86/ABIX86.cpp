@@ -100,8 +100,8 @@ addCombinedRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
     if (regdata1->subreg_name != regdata2->subreg_name)
       continue;
 
-    uint32_t base_index1 = regdata1->base_index.getValue();
-    uint32_t base_index2 = regdata2->base_index.getValue();
+    uint32_t base_index1 = regdata1->base_index.value();
+    uint32_t base_index2 = regdata2->base_index.value();
     if (regs[base_index1].byte_size != base_size ||
         regs[base_index2].byte_size != base_size)
       continue;

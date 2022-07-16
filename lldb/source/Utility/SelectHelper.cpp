@@ -197,8 +197,8 @@ lldb_private::Status SelectHelper::Select() {
     // Setup out relative timeout based on the end time if we have one
     if (m_end_time) {
       tv_ptr = &tv;
-      const auto remaining_dur = duration_cast<microseconds>(
-          m_end_time.getValue() - steady_clock::now());
+      const auto remaining_dur =
+          duration_cast<microseconds>(m_end_time.value() - steady_clock::now());
       if (remaining_dur.count() > 0) {
         // Wait for a specific amount of time
         const auto dur_secs = duration_cast<seconds>(remaining_dur);
