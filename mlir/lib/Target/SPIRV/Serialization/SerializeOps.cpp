@@ -420,7 +420,7 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   // properly. We don't need to assign for the entry block, which is just for
   // satisfying MLIR region's structural requirement.
   auto &body = loopOp.body();
-  for (Block &block : llvm::make_range(std::next(body.begin(), 1), body.end()))
+  for (Block &block : llvm::drop_begin(body))
     getOrCreateBlockID(&block);
 
   auto *headerBlock = loopOp.getHeaderBlock();

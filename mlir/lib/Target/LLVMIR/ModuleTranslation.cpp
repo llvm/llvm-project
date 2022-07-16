@@ -485,17 +485,15 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
                                          const ModuleTranslation &state) {
   // Skip the first block, it cannot be branched to and its arguments correspond
   // to the arguments of the LLVM function.
-  for (auto it = std::next(region.begin()), eit = region.end(); it != eit;
-       ++it) {
-    Block *bb = &*it;
-    llvm::BasicBlock *llvmBB = state.lookupBlock(bb);
+  for (Block &bb : llvm::drop_begin(region)) {
+    llvm::BasicBlock *llvmBB = state.lookupBlock(&bb);
     auto phis = llvmBB->phis();
-    auto numArguments = bb->getNumArguments();
+    auto numArguments = bb.getNumArguments();
     assert(numArguments == std::distance(phis.begin(), phis.end()));
     for (auto &numberedPhiNode : llvm::enumerate(phis)) {
       auto &phiNode = numberedPhiNode.value();
       unsigned index = numberedPhiNode.index();
-      for (auto *pred : bb->getPredecessors()) {
+      for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
         // instruction and use it in the PHI node. Note that this block is not
         // necessarily the same as state.lookupBlock(pred), some operations
@@ -504,9 +502,9 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
         llvm::Instruction *terminator =
             state.lookupBranch(pred->getTerminator());
         assert(terminator && "missing the mapping for a terminator");
-        phiNode.addIncoming(
-            state.lookupValue(getPHISourceValue(bb, pred, numArguments, index)),
-            terminator->getParent());
+        phiNode.addIncoming(state.lookupValue(getPHISourceValue(
+                                &bb, pred, numArguments, index)),
+                            terminator->getParent());
       }
     }
   }
