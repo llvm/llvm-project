@@ -2286,8 +2286,8 @@ void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
   // Finally, the regmask, chain and (if present) glue are moved to the end.
   Ops.push_back(RegMask);
   Ops.push_back(Chain);
-  if (Glue.hasValue())
-    Ops.push_back(Glue.getValue());
+  if (Glue.has_value())
+    Ops.push_back(Glue.value());
 
   SDVTList NodeTys = N->getVTList();
   CurDAG->SelectNodeTo(N, TargetOpcode::PATCHPOINT, NodeTys, Ops);
