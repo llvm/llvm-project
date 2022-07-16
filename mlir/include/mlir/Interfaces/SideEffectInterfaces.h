@@ -250,7 +250,8 @@ struct Write : public Effect::Base<Write> {};
 // SideEffect Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns true if this operation only has the given effect on `value`.
+/// Returns true if `op` has only an effect of type `EffectTy` (and of no other
+/// type) on `value`.
 template <typename EffectTy>
 bool hasSingleEffect(Operation *op, Value value);
 
