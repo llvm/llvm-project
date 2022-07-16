@@ -574,10 +574,9 @@ define i64 @is_upper_bit_clear_i64(i64 %x) {
 define i64 @is_upper_bit_clear_i64_not(i64 %x) {
 ; CHECK-LABEL: is_upper_bit_clear_i64_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    shrq $39, %rax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    btq $39, %rdi
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
   %n = xor i64 %x, -1
   %sh = lshr i64 %n, 39
@@ -601,10 +600,9 @@ define i64 @is_lower_bit_clear_i64(i64 %x) {
 define i64 @is_lower_bit_clear_i64_not(i64 %x) {
 ; CHECK-LABEL: is_lower_bit_clear_i64_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl $65536, %edi # imm = 0x10000
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %n = xor i64 %x, -1
   %sh = lshr i64 %n, 16
@@ -628,10 +626,9 @@ define i32 @is_bit_clear_i32(i32 %x) {
 define i32 @is_bit_clear_i32_not(i32 %x) {
 ; CHECK-LABEL: is_bit_clear_i32_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    shrl $27, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl $134217728, %edi # imm = 0x8000000
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %n = xor i32 %x, -1
   %sh = lshr i32 %n, 27
@@ -656,10 +653,9 @@ define i16 @is_bit_clear_i16(i16 %x) {
 define i16 @is_bit_clear_i16_not(i16 %x) {
 ; CHECK-LABEL: is_bit_clear_i16_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    shrl $2, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $4, %dil
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %n = xor i16 %x, -1
@@ -683,11 +679,8 @@ define i8 @is_bit_clear_i8(i8 %x) {
 define i8 @is_bit_clear_i8_not(i8 %x) {
 ; CHECK-LABEL: is_bit_clear_i8_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    shrb $2, %al
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    testb $4, %dil
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %n = xor i8 %x, -1
   %sh = lshr i8 %n, 2
