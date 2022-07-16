@@ -52,8 +52,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void M88kInstrInfo::anchor() {}
 
-M88kInstrInfo::M88kInstrInfo(M88kSubtarget &STI)
-    : M88kGenInstrInfo(M88k::ADJCALLSTACKDOWN, M88k::ADJCALLSTACKUP), RI() {}
+M88kInstrInfo::M88kInstrInfo(const M88kSubtarget &STI)
+    : M88kGenInstrInfo(M88k::ADJCALLSTACKDOWN, M88k::ADJCALLSTACKUP), STI(STI), RI() {}
 
 std::pair<unsigned, unsigned>
 M88kInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {

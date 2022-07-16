@@ -78,6 +78,9 @@ public:
   Optional<unsigned> getCacheAssociativity(unsigned Level) const override;
   Optional<unsigned> getCacheLineSize(unsigned Level) const override;
 
+  bool isMC88100() const { return M88kProc == MC88100; }
+  bool isMC88110() const { return M88kProc == MC88110; }
+
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }

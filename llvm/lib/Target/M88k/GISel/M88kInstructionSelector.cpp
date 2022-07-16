@@ -91,6 +91,10 @@ private:
   bool selectIntrinsic(MachineInstr &I, MachineBasicBlock &MBB,
                        MachineRegisterInfo &MRI);
 
+  bool isMC88110() const {
+    return TII.getSubtarget().isMC88110();
+  }
+
   //const M88kTargetMachine &TM;
   const M88kInstrInfo &TII;
   const M88kRegisterInfo &TRI;

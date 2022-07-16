@@ -37,13 +37,15 @@ int getOpcodeWithoutDelaySlot(uint16_t Opcode);
 } // namespace M88k
 
 class M88kInstrInfo : public M88kGenInstrInfo {
-  //M88kSubtarget &STI;
+  const M88kSubtarget &STI;
   const M88kRegisterInfo RI;
 
   virtual void anchor();
 
 public:
-  explicit M88kInstrInfo(M88kSubtarget &STI);
+  explicit M88kInstrInfo(const M88kSubtarget &STI);
+
+  const M88kSubtarget &getSubtarget() const { return STI; }
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;

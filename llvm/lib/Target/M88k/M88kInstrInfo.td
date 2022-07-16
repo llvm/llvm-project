@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 
-def IsMC88100 : Predicate<"Subtarget->getCPU() == \"mc88100\"">;
-def IsMC88110 : Predicate<"Subtarget->getCPU() == \"mc88110\"">;
+def IsMC88100 : Predicate<"Subtarget->isMC88100()">;
+def IsMC88110 : Predicate<"Subtarget->isMC88110()">;
 class MC88110 { list<Predicate> Predicates = [IsMC88110]; }
 
 // ---------------------------------------------------------------------------//
