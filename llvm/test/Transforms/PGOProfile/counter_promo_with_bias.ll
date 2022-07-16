@@ -1,4 +1,4 @@
-; RUN: opt < %s -instrprof -runtime-counter-relocation -do-counter-promotion=true -S | FileCheck %s
+; RUN: opt < %s -passes=instrprof -runtime-counter-relocation -do-counter-promotion=true -S | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 
