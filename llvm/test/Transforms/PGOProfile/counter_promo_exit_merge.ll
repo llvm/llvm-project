@@ -1,4 +1,3 @@
-; RUN: opt < %s -instrprof -do-counter-promotion=true -speculative-counter-promotion-max-exiting=3 -S | FileCheck --check-prefix=PROMO %s
 ; RUN: opt < %s --passes=instrprof -do-counter-promotion=true -speculative-counter-promotion-max-exiting=3 -S | FileCheck --check-prefix=PROMO %s
 
 $__llvm_profile_raw_version = comdat any

@@ -1,5 +1,5 @@
-; RUN: opt < %s -instrprof -S -o - -do-counter-promotion=1  -skip-ret-exit-block=1 | FileCheck %s --check-prefixes=CHECK,SKIP
-; RUN: opt < %s -instrprof -S -o - -do-counter-promotion=1  -skip-ret-exit-block=0 | FileCheck %s --check-prefixes=CHECK,NOTSKIP
+; RUN: opt < %s -passes=instrprof -S -do-counter-promotion=1 -skip-ret-exit-block=1 | FileCheck %s --check-prefixes=CHECK,SKIP
+; RUN: opt < %s -passes=instrprof -S -do-counter-promotion=1 -skip-ret-exit-block=0 | FileCheck %s --check-prefixes=CHECK,NOTSKIP
 
 $__llvm_profile_raw_version = comdat any
 
