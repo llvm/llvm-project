@@ -22654,7 +22654,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       if (M < 0)
         continue;
       ClearMask[I] = M == I ? I : (I + NumElts);
-      IsInLaneMask &= (M == I) || (M == (I + NumElts));
+      IsInLaneMask &= (M == I) || (M == (int)(I + NumElts));
       if (M != I) {
         APInt &Demanded = M < (int)NumElts ? DemandedLHS : DemandedRHS;
         Demanded.setBit(M % NumElts);
