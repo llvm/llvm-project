@@ -19504,80 +19504,77 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     }
   }
 
-  // Attempt to fold the insertion into a legal BUILD_VECTOR.
+  // Attempt to convert an insert_vector_elt chain into a legal build_vector.
   if (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)) {
-    auto UpdateBuildVector = [&](SmallVectorImpl<SDValue> &Ops) {
-      assert(Ops.size() == NumElts && "Unexpected vector size");
+    // vXi1 vector - we don't need to recurse.
+    if (NumElts == 1)
+      return DAG.getBuildVector(VT, DL, {InVal});
 
-      // Insert the element
-      if (Elt < Ops.size()) {
-        // All the operands of BUILD_VECTOR must have the same type;
-        // we enforce that here.
-        EVT OpVT = Ops[0].getValueType();
-        Ops[Elt] =
-            OpVT.isInteger() ? DAG.getAnyExtOrTrunc(InVal, DL, OpVT) : InVal;
+    // If we haven't already collected the element, insert into the op list.
+    EVT MaxEltVT = InVal.getValueType();
+    auto AddBuildVectorOp = [&](SmallVectorImpl<SDValue> &Ops, SDValue Elt,
+                                unsigned Idx) {
+      if (!Ops[Idx]) {
+        Ops[Idx] = Elt;
+        if (VT.isInteger()) {
+          EVT EltVT = Elt.getValueType();
+          MaxEltVT = MaxEltVT.bitsGE(EltVT) ? MaxEltVT : EltVT;
+        }
       }
+    };
 
-      // Return the new vector
+    // Ensure all the operands are the same value type, fill any missing
+    // operands with UNDEF and create the BUILD_VECTOR.
+    auto CanonicalizeBuildVector = [&](SmallVectorImpl<SDValue> &Ops) {
+      assert(Ops.size() == NumElts && "Unexpected vector size");
+      for (SDValue &Op : Ops) {
+        if (Op)
+          Op = VT.isInteger() ? DAG.getAnyExtOrTrunc(Op, DL, MaxEltVT) : Op;
+        else
+          Op = DAG.getUNDEF(MaxEltVT);
+      }
       return DAG.getBuildVector(VT, DL, Ops);
     };
 
-    // Check that the operand is a BUILD_VECTOR (or UNDEF, which can essentially
-    // be converted to a BUILD_VECTOR).  Fill in the Ops vector with the
-    // vector elements.
-    SmallVector<SDValue, 8> Ops;
+    SmallVector<SDValue, 8> Ops(NumElts, SDValue());
+    Ops[Elt] = InVal;
 
-    // Do not combine these two vectors if the output vector will not replace
-    // the input vector.
-    if (InVec.getOpcode() == ISD::BUILD_VECTOR && InVec.hasOneUse()) {
-      Ops.append(InVec->op_begin(), InVec->op_end());
-      return UpdateBuildVector(Ops);
-    }
+    // Recurse up a INSERT_VECTOR_ELT chain to build a BUILD_VECTOR.
+    for (SDValue CurVec = InVec; CurVec;) {
+      // UNDEF - build new BUILD_VECTOR from already inserted operands.
+      if (CurVec.isUndef())
+        return CanonicalizeBuildVector(Ops);
 
-    if (InVec.getOpcode() == ISD::SCALAR_TO_VECTOR && InVec.hasOneUse()) {
-      Ops.push_back(InVec.getOperand(0));
-      Ops.append(NumElts - 1, DAG.getUNDEF(InVec.getOperand(0).getValueType()));
-      return UpdateBuildVector(Ops);
-    }
-
-    if (InVec.isUndef()) {
-      Ops.append(NumElts, DAG.getUNDEF(InVal.getValueType()));
-      return UpdateBuildVector(Ops);
-    }
-
-    // If we're inserting into the end of a vector as part of an sequence, see
-    // if we can create a BUILD_VECTOR by following the sequence back up the
-    // chain.
-    if (Elt == (NumElts - 1)) {
-      SmallVector<SDValue> ReverseInsertions;
-      ReverseInsertions.push_back(InVal);
-
-      EVT MaxEltVT = InVal.getValueType();
-      SDValue CurVec = InVec;
-      for (unsigned I = 1; I != NumElts; ++I) {
-        if (CurVec.getOpcode() != ISD::INSERT_VECTOR_ELT || !CurVec.hasOneUse())
-          break;
-
-        auto *CurIdx = dyn_cast<ConstantSDNode>(CurVec.getOperand(2));
-        if (!CurIdx || CurIdx->getAPIntValue() != ((NumElts - 1) - I))
-          break;
-        SDValue CurVal = CurVec.getOperand(1);
-        ReverseInsertions.push_back(CurVal);
-        if (VT.isInteger()) {
-          EVT CurValVT = CurVal.getValueType();
-          MaxEltVT = MaxEltVT.bitsGE(CurValVT) ? MaxEltVT : CurValVT;
-        }
-        CurVec = CurVec.getOperand(0);
+      // BUILD_VECTOR - insert unused operands and build new BUILD_VECTOR.
+      if (CurVec.getOpcode() == ISD::BUILD_VECTOR && CurVec.hasOneUse()) {
+        for (unsigned I = 0; I != NumElts; ++I)
+          AddBuildVectorOp(Ops, CurVec.getOperand(I), I);
+        return CanonicalizeBuildVector(Ops);
       }
 
-      if (ReverseInsertions.size() == NumElts) {
-        for (unsigned I = 0; I != NumElts; ++I) {
-          SDValue Val = ReverseInsertions[(NumElts - 1) - I];
-          Val = VT.isInteger() ? DAG.getAnyExtOrTrunc(Val, DL, MaxEltVT) : Val;
-          Ops.push_back(Val);
-        }
-        return DAG.getBuildVector(VT, DL, Ops);
+      // SCALAR_TO_VECTOR - insert unused scalar and build new BUILD_VECTOR.
+      if (CurVec.getOpcode() == ISD::SCALAR_TO_VECTOR && CurVec.hasOneUse()) {
+        AddBuildVectorOp(Ops, CurVec.getOperand(0), 0);
+        return CanonicalizeBuildVector(Ops);
       }
+
+      // INSERT_VECTOR_ELT - insert operand and continue up the chain.
+      if (CurVec.getOpcode() == ISD::INSERT_VECTOR_ELT && CurVec.hasOneUse())
+        if (auto *CurIdx = dyn_cast<ConstantSDNode>(CurVec.getOperand(2)))
+          if (CurIdx->getAPIntValue().ult(NumElts)) {
+            unsigned Idx = CurIdx->getZExtValue();
+            AddBuildVectorOp(Ops, CurVec.getOperand(1), Idx);
+
+            // Found entire BUILD_VECTOR.
+            if (all_of(Ops, [](SDValue Op) { return !!Op; }))
+              return CanonicalizeBuildVector(Ops);
+
+            CurVec = CurVec->getOperand(0);
+            continue;
+          }
+
+      // Failed to find a match in the chain - bail.
+      break;
     }
   }
 
