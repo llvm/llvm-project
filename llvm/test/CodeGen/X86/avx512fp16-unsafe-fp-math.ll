@@ -78,7 +78,7 @@ define <8 x half> @test_max_v8f16(ptr %a_ptr, <8 x half> %b)  {
 ;
 ; CHECK-LABEL: test_max_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps (%rdi), %xmm1
+; CHECK-NEXT:    movaps (%rdi), %xmm1
 ; CHECK-NEXT:    vmaxph %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = load <8 x half>, ptr %a_ptr
@@ -95,7 +95,7 @@ define <8 x half> @test_min_v8f16(ptr %a_ptr, <8 x half> %b)  {
 ;
 ; CHECK-LABEL: test_min_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps (%rdi), %xmm1
+; CHECK-NEXT:    movaps (%rdi), %xmm1
 ; CHECK-NEXT:    vminph %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = load <8 x half>, ptr %a_ptr
