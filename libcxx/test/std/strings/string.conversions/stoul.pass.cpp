@@ -31,7 +31,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoul("", &idx);
+            (void)std::stoul("", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -40,7 +40,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoul("  - 8", &idx);
+            (void)std::stoul("  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -49,7 +49,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoul("a1", &idx);
+            (void)std::stoul("a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -59,7 +59,7 @@ int main(int, char**)
         size_t idx = 0;
         try {
             // LWG#2009 and PR14919
-            std::stoul("9999999999999999999999999999999999999999999999999", &idx);
+            (void)std::stoul("9999999999999999999999999999999999999999999999999", &idx);
             assert(false);
         } catch (const std::out_of_range&) {
             assert(idx == 0);
@@ -80,7 +80,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoul(L"", &idx);
+            (void)std::stoul(L"", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -89,7 +89,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoul(L"  - 8", &idx);
+            (void)std::stoul(L"  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -98,7 +98,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoul(L"a1", &idx);
+            (void)std::stoul(L"a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -108,7 +108,7 @@ int main(int, char**)
         size_t idx = 0;
         try {
             // LWG#2009 and PR14919
-            std::stoul(L"9999999999999999999999999999999999999999999999999", &idx);
+            (void)std::stoul(L"9999999999999999999999999999999999999999999999999", &idx);
             assert(false);
         } catch (const std::out_of_range&) {
             assert(idx == 0);
