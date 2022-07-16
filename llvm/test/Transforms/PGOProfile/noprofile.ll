@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @test1() {
 entry:
 ; CHECK: call void @llvm.instrprof.increment
-  %0 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @i, align 4
   %add = add i32 %0, 1
   ret i32 %add
 }
@@ -16,7 +16,7 @@ entry:
 define i32 @test2() #0 {
 entry:
 ; CHECK-NOT: call void @llvm.instrprof.increment
-  %0 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @i, align 4
   %sub = sub i32 %0, 1
   ret i32 %sub
 }

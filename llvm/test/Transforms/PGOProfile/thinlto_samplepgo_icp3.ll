@@ -19,12 +19,12 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@fptr = local_unnamed_addr global void ()* null, align 8
+@fptr = local_unnamed_addr global ptr null, align 8
 
 ; Function Attrs: norecurse uwtable
 define i32 @main() local_unnamed_addr #0 !prof !34 {
 entry:
-  %0 = load void ()*, void ()** @fptr, align 8
+  %0 = load ptr, ptr @fptr, align 8
   tail call void %0(), !prof !40
   ret i32 0
 }

@@ -20,11 +20,11 @@ entry:
   ret i32 %call
 }
 
-declare void @llvm.instrprof.increment(i8*, i64, i32, i32) #0
+declare void @llvm.instrprof.increment(ptr, i64, i32, i32) #0
 
 define available_externally i32 @foo() #1 {
 entry:
-  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 0, i32 1, i32 0)
+  call void @llvm.instrprof.increment(ptr @__profn_foo, i64 0, i32 1, i32 0)
   ret i32 0
 }
 
