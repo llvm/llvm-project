@@ -485,9 +485,19 @@ public:
 
   bool IsTID(lldb::tid_t tid) { return tid == m_tid; }
   bool HasTID() { return m_tid != LLDB_INVALID_THREAD_ID; }
-  void ClearTID() { m_tid = LLDB_INVALID_THREAD_ID; }
   lldb::tid_t GetTID() { return m_tid; }
-  void SetTID(lldb::tid_t tid) { m_tid = tid; }
+
+  void SetTID(lldb::tid_t tid) {
+    if (m_tid != tid) {
+      m_tid = tid;
+      ClearThreadCache();
+    }
+  }
+
+  void ClearTID() {
+    m_tid = LLDB_INVALID_THREAD_ID;
+    ClearThreadCache();
+  }
 
   friend lldb::ThreadPlanSP
   Process::DoesStackExplainStopNoLock(ThreadPlanStack &stack, Thread &thread,
