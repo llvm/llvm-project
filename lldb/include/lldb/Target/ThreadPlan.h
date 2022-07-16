@@ -490,7 +490,8 @@ public:
   void SetTID(lldb::tid_t tid) { m_tid = tid; }
 
   friend lldb::ThreadPlanSP
-  Process::FindDetachedPlanExplainingStop(Thread &thread, Event *event_ptr);
+  Process::DoesStackExplainStopNoLock(ThreadPlanStack &stack, Thread &thread,
+                                      Event *event_ptr);
 
 protected:
   // Constructors and Destructors

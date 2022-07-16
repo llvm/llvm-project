@@ -2257,7 +2257,15 @@ void PruneThreadPlans();
 
   void SynchronizeThreadPlans();
 
+  /// From the detached thread plan stacks, find the first stack that explains
+  /// the stop represented by the thread and the event.
   lldb::ThreadPlanSP FindDetachedPlanExplainingStop(Thread &thread, Event *event_ptr);
+
+  /// Helper function for FindDetachedPlanExplainingStop. Exists only to be
+  /// marked as a C++ friend of `ThreadPlan`.
+  lldb::ThreadPlanSP DoesStackExplainStopNoLock(ThreadPlanStack &stack,
+                                                Thread &thread,
+                                                Event *event_ptr);
 
   /// Find the thread plan stack associated with thread with \a tid.
   ///

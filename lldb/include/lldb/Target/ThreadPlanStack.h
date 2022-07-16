@@ -132,6 +132,7 @@ public:
               bool check_for_new = true);
 
   void AddThread(Thread &thread) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     lldb::tid_t tid = thread.GetID();
     // If we already have a ThreadPlanStack for this thread, use it.
     if (m_plans_list.find(tid) != m_plans_list.end())
@@ -143,6 +144,7 @@ public:
   }
 
   bool RemoveTID(lldb::tid_t tid) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     auto result = m_plans_list.find(tid);
     if (result == m_plans_list.end())
       return false;
@@ -165,6 +167,7 @@ public:
   }
 
   ThreadPlanStack *Find(lldb::tid_t tid) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     auto result = m_plans_list.find(tid);
     if (result == m_plans_list.end())
       return nullptr;
@@ -177,12 +180,14 @@ public:
   /// This is useful in situations like when a new Thread list is being
   /// generated.
   void ClearThreadCache() {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     for (auto &plan_list : m_plans_list)
       plan_list.second->ClearThreadCache();
   }
 
   // rename to Reactivate?
   void Activate(ThreadPlanStack &stack) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     // Remove this from the detached plan list:
     auto end = m_detached_plans.end();    
     auto iter = std::find_if(m_detached_plans.begin(), end, 
@@ -198,6 +203,7 @@ public:
   }
 
   void ScanForDetachedPlanStacks() {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     llvm::SmallVector<lldb::tid_t, 2> invalidated_tids;
     for (auto &pair : m_plans_list)
       if (pair.second->GetTID() != pair.first)
@@ -216,11 +222,17 @@ public:
   // plans that represent asynchronous operations waiting to be
   // scheduled.
   // The vector will never have null ThreadPlanStacks in it.
-  std::vector<ThreadPlanStack *> &GetDetachedPlanStacks() {
-    return m_detached_plans;
+  lldb::ThreadPlanSP FindThreadPlanInStack(
+      llvm::function_ref<lldb::ThreadPlanSP(ThreadPlanStack &)> fn) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
+    for (auto *stack : m_detached_plans)
+      if (auto plan = fn(*stack))
+        return plan;
+    return {};
   }
-  
+
   void Clear() {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     for (auto &plan : m_plans_list)
       plan.second->ThreadDestroyed(nullptr);
     m_plans_list.clear();
@@ -255,6 +267,7 @@ private:
   PlansStore m_plans_up_container;
   std::vector<ThreadPlanStack *> m_detached_plans;
   
+  mutable std::recursive_mutex m_stack_map_mutex;
   using PlansList = std::unordered_map<lldb::tid_t, ThreadPlanStack *>;
   PlansList m_plans_list;
 };
