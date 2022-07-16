@@ -10,7 +10,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/main.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/abs.s -o %t/abs.o
 # RUN: %lld -lSystem --icf=all -o %t/main %t/main.o %t/abs.o
-# RUN: llvm-objdump -d --syms %t/main | FileCheck %s
+# RUN: llvm-objdump -d --syms --dwarf=frames %t/main | FileCheck %s
 
 # CHECK-LABEL: SYMBOL TABLE:
 # CHECK: [[#%x,ABS1B_REF:]]                 l     F __TEXT,__text _abs1a_ref
@@ -37,6 +37,9 @@
 # CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_1
 # CHECK: [[#%x,HAS_UNWIND_2]]               l     F __TEXT,__text _has_unwind_2
 # CHECK: [[#%x,HAS_UNWIND_3:]]              l     F __TEXT,__text _has_unwind_3
+# CHECK: [[#%x,HAS_EH_FRAME_1:]]            l     F __TEXT,__text _has_eh_frame_1
+# CHECK: [[#%x,HAS_EH_FRAME_2:]]            l     F __TEXT,__text _has_eh_frame_2
+# CHECK: [[#%x,HAS_EH_FRAME_3:]]            l     F __TEXT,__text _has_eh_frame_3
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_1
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2]]        l     F __TEXT,__text _mutually_recursive_2
 # CHECK: [[#%x,INIT_2:]]                    l     F __TEXT,__text _init_1
@@ -45,6 +48,11 @@
 ### FIXME: Mutually-recursive functions with identical bodies (see below)
 # COM:   [[#%x,ASYMMETRIC_RECURSIVE_2:]]    l   F __TEXT,__text _asymmetric_recursive_1
 # COM:   [[#%x,ASYMMETRIC_RECURSIVE_2]]     l   F __TEXT,__text _asymmetric_recursive_2
+
+## Check that we don't accidentally dedup distinct EH frames.
+# CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_1]]
+# CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_2]]
+# CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_3]]
 
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
 # CHECK:        <_main>:
@@ -72,6 +80,9 @@
 # CHECK: callq 0x[[#%x,HAS_UNWIND_2]]              <_has_unwind_2>
 # CHECK: callq 0x[[#%x,HAS_UNWIND_2]]              <_has_unwind_2>
 # CHECK: callq 0x[[#%x,HAS_UNWIND_3]]              <_has_unwind_3>
+# CHECK: callq 0x[[#%x,HAS_EH_FRAME_1]]            <_has_eh_frame_1>
+# CHECK: callq 0x[[#%x,HAS_EH_FRAME_2]]            <_has_eh_frame_2>
+# CHECK: callq 0x[[#%x,HAS_EH_FRAME_3]]            <_has_eh_frame_3>
 # CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2]]       <_mutually_recursive_2>
 # CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2]]       <_mutually_recursive_2>
 ## FIXME Mutually-recursive functions with identical bodies (see below)
@@ -209,6 +220,35 @@ _has_unwind_3:
   ret
   .cfi_endproc
 
+## In theory _has_eh_frame_{1, 2} can be dedup'ed, but we don't support this
+## yet.
+_has_eh_frame_1:
+  .cfi_startproc
+  .cfi_def_cfa_offset 8
+  ## cfi_escape cannot be encoded in compact unwind
+  .cfi_escape 0x2e, 0x10
+  ret
+  .cfi_endproc
+
+_has_eh_frame_2:
+  .cfi_startproc
+  .cfi_def_cfa_offset 8
+  ## cfi_escape cannot be encoded in compact unwind
+  .cfi_escape 0x2e, 0x10
+  ret
+  .cfi_endproc
+
+## The nop in this function body means that it cannot be folded with the
+## previous two, even though the unwind info is otherwise identical.
+_has_eh_frame_3:
+  .cfi_startproc
+  .cfi_def_cfa_offset 8
+  ## cfi_escape cannot be encoded in compact unwind
+  .cfi_escape 0x2e, 0x10
+  nop
+  ret
+  .cfi_endproc
+
 ## Fold: Mutually-recursive functions with symmetric bodies
 _mutually_recursive_1:
   callq _mutually_recursive_1 # call myself
@@ -279,6 +319,9 @@ _main:
   callq _has_unwind_1
   callq _has_unwind_2
   callq _has_unwind_3
+  callq _has_eh_frame_1
+  callq _has_eh_frame_2
+  callq _has_eh_frame_3
   callq _mutually_recursive_1
   callq _mutually_recursive_2
   callq _asymmetric_recursive_1
