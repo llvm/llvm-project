@@ -7,8 +7,6 @@ import unittest2
 
 
 class TestSwiftXcodeSDK(lldbtest.TestBase):
-
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def check_log(self, log, expected_path):

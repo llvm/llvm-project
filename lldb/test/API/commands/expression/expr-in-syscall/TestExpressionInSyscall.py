@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class ExprSyscallTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")

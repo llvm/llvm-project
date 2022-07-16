@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class TestBenchmarkLibcxxList(BenchBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @benchmarks_test
     def test_run_command(self):
         """Benchmark the std::list data formatter (libc++)"""

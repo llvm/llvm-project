@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     # AArch64 Linux always enables the top byte ignore feature

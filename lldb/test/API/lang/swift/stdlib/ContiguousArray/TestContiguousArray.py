@@ -11,8 +11,6 @@ import unittest2
 
 class TestContiguousArray(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_frame_contiguous_array(self):
         """Test that contiguous array prints correctly"""

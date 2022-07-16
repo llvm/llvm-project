@@ -23,8 +23,6 @@ import json
 
 class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @decorators.swiftTest
     @decorators.skipIfLinux
     def test_swift_runtime_reporting(self):

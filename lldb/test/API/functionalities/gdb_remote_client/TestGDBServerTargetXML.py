@@ -8,8 +8,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")

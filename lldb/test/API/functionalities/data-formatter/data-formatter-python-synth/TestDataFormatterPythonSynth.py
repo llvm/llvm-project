@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class PythonSynthDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()

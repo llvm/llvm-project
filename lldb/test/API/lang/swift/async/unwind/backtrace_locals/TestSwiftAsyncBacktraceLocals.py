@@ -7,8 +7,6 @@ import unittest2
 
 class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         lldbtest.TestBase.setUp(self)

@@ -25,8 +25,6 @@ import unittest2
 
 class TestSwiftStringVariables(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
 

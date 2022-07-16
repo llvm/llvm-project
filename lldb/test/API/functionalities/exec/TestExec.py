@@ -14,8 +14,6 @@ class ExecTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(archs=['i386'],
                         oslist=no_match(["freebsd"]),
                         bugnumber="rdar://28656532")

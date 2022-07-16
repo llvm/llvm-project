@@ -8,8 +8,6 @@ USE_LIBCPP = "USE_LIBCPP"
 
 class GenericOptionalDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def do_test_with_run_command(self, stdlib_type):
         """Test that that file and class static variables display correctly."""
         # This is the function to remove the custom formats in order to have a

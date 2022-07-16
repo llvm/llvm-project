@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class QuitCommandTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_quit_exit_code_disallow(self):
         self.ci.AllowExitCodeOnQuit(False)

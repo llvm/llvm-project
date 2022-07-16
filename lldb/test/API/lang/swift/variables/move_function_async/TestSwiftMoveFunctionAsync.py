@@ -26,8 +26,6 @@ def stderr_print(line):
 
 class TestSwiftMoveFunctionAsyncType(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_move_function_async(self):
         """Check that we properly show variables at various points of the CFG while

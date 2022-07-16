@@ -13,8 +13,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def verify_completions(self, actual_list, expected_list, not_expected_list=[]):
         for expected_item in expected_list:
             self.assertIn(expected_item, actual_list)

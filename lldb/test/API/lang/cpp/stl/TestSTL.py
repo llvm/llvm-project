@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class STLTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf
     @expectedFailureAll(bugnumber="llvm.org/PR36713")
     def test(self):

@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class LimitDebugInfoTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def _check_type(self, target, name):
         exe = target.FindModule(lldb.SBFileSpec("a.out"))
         type_ = exe.FindFirstType(name)

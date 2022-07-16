@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class DisassembleRawDataTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIfRemote
     def test_disassemble_raw_data(self):

@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class ModulesInlineFunctionsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
     def test_expr(self):
         self.build()

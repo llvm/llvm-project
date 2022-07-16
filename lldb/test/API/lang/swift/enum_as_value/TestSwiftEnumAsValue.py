@@ -7,8 +7,6 @@ import unittest2
 
 class TestSwiftAnyType(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_any_type(self):
         self.build()

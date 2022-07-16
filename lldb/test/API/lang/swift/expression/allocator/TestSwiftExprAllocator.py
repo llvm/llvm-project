@@ -8,8 +8,6 @@ import unittest2
 
 class TestSwiftExprAllocator(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_allocator_self(self):
         """Test expressions involving self in a allocating constructor. In an

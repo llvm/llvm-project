@@ -6,8 +6,6 @@ from lldbsuite.test.decorators import *
 
 class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     @testSBAPIAndCommands
     def testStartMultipleLiveThreads(self):

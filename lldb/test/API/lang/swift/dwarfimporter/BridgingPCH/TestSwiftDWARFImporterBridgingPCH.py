@@ -19,8 +19,6 @@ import unittest2
 
 class TestSwiftDWARFImporterBridgingHeader(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     def build(self):
         include = self.getBuildArtifact('include')
         inputs = self.getSourcePath('Inputs')

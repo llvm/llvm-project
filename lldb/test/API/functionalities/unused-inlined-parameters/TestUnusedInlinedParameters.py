@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestUnusedInlinedParameters(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_unused_inlined_parameters(self):
         self.build()

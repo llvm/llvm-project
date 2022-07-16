@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])
     def test_access_from_main(self):

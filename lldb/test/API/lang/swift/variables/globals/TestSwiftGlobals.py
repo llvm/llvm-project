@@ -22,8 +22,6 @@ import unittest2
 
 class TestSwiftGlobals(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_globals(self):
         """Check that we can examine module globals in the expression parser"""

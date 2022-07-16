@@ -17,8 +17,6 @@ from lldbsuite.test import lldbutil
 class LinuxCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     _aarch64_pid = 37688
     _aarch64_pac_pid = 387
     _i386_pid = 32306

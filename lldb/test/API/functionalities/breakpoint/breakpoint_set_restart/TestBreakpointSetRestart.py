@@ -8,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class BreakpointSetRestart(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     BREAKPOINT_TEXT = 'Set a breakpoint here'
 
     @skipIfNetBSD

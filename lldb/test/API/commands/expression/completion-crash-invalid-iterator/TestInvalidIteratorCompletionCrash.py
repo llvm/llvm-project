@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf # rdar://problem/53931074
     def test(self):
         self.build()

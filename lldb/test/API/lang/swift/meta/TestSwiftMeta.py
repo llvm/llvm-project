@@ -18,8 +18,6 @@ import os
 
 class TestSwiftMeta(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swiftDecorator(self):
         self.assertTrue(self.getDebugInfo() != "gmodules")

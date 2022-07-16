@@ -16,8 +16,6 @@ so it's just a single ptrace call for lldb-server.
 
 class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_memtags_response(self, packet_name, body, expected):
         self.test_sequence.add_log_lines(["read packet: ${}:{}#00".format(packet_name, body),
                                           "send packet: ${}#00".format(expected),

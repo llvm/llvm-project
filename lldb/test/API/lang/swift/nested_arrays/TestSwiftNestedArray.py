@@ -34,8 +34,6 @@ def check_for_C(child, idx):
 
 class TestSwiftNestedArray(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"

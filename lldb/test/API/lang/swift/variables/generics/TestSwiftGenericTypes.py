@@ -22,8 +22,6 @@ import unittest2
 
 class TestSwiftGenericTypes(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_generic_types(self):
         """Test support for generic types"""

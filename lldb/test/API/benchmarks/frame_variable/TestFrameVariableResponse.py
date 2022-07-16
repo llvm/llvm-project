@@ -13,8 +13,6 @@ from lldbsuite.test.lldbbench import *
 
 class FrameVariableResponseBench(BenchBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         BenchBase.setUp(self)
         self.exe = lldbtest_config.lldbExec

@@ -9,8 +9,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     arrow_up = "\033[A"
     arrow_down = "\033[B"
 

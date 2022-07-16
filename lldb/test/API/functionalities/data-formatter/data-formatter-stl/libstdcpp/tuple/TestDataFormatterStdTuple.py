@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class StdTupleDataFormatterTestCase(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")

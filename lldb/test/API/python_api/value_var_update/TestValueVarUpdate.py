@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class ValueVarUpdateTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_process_launch_api(self):
         """Test SBValue::GetValueDidChange"""
         # Get the full path to our executable to be attached/debugged.

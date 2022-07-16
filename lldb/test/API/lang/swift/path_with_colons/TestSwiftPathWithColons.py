@@ -26,8 +26,6 @@ import unittest2
 # cause the failure to reproduce against clang, so put it here
 class TestSwiftPathWithColon(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(oslist=['windows'])
     @skipIfiOSSimulator
     @swiftTest

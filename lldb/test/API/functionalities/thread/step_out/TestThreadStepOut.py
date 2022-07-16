@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ThreadStepOutTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18066 inferior does not exit")

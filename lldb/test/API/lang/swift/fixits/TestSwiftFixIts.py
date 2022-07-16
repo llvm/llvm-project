@@ -21,8 +21,6 @@ import unittest2
 
 class TestSwiftFixIts(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_fixits(self):
         """Test applying fixits to expressions"""

@@ -15,8 +15,6 @@ import os
 
 
 class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     source = 'main.cpp'
 
     def disconnect_and_assert_no_output_printed(self):

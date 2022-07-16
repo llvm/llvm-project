@@ -6,8 +6,6 @@ import os
 
 class TestTargetSourceMap(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_source_map(self):
         """Test target.source-map' functionality."""

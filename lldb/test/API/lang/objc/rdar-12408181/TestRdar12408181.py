@@ -17,8 +17,6 @@ from lldbsuite.test import lldbutil
 # and gives a spurious failure.
 class Rdar12408181TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

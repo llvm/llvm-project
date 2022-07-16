@@ -9,8 +9,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestMultiprocess(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_qfThreadInfo(self):
         class MyResponder(MockGDBServerResponder):
             def qfThreadInfo(self):

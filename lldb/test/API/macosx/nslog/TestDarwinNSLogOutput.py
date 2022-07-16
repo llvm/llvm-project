@@ -18,7 +18,6 @@ from lldbsuite.test import lldbtest_config
 
 class DarwinNSLogOutputTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
     @skipIfRemote   # this test is currently written using lldb commands & assumes running on local system

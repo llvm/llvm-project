@@ -17,8 +17,6 @@ _COMP_DIR_SYM_LINK_PROP = 'symbols.debug-info-symlink-paths'
 
 class CompDirSymLinkTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

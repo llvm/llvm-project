@@ -8,8 +8,6 @@ import unittest2
 
 class TestSwiftSystemFramework(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIf(oslist=no_match(["macosx"]))
     def test_system_framework(self):

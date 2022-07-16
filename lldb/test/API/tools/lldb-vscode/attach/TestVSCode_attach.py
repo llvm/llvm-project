@@ -29,8 +29,6 @@ def spawn_and_wait(program, delay):
 
 class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def set_and_hit_breakpoint(self, continueToExit=True):
         source = 'main.c'
         breakpoint1_line = line_number(source, '// breakpoint 1')

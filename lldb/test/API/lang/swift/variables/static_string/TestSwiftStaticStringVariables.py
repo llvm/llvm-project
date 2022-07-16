@@ -25,8 +25,6 @@ import unittest2
 
 class TestSwiftStaticStringVariables(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_static_string_variables(self):
         """Test that Swift.String formats properly"""

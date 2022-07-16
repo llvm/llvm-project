@@ -14,8 +14,6 @@ import os
 
 class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")

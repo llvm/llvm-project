@@ -5,7 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
 class TestSwiftReflectionLoading(lldbtest.TestBase):
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
     def test(self):

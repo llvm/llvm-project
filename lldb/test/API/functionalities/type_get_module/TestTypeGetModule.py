@@ -11,8 +11,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestTypeGetModule(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def find_module(self, target, name):
         num_modules = target.GetNumModules()
         index = 0

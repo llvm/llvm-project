@@ -22,8 +22,6 @@ import unittest2
 
 class TestSwiftStepping(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIfLinux
     def test_swift_stepping(self):

@@ -11,8 +11,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class BreakpointCallbackCommandSource(PExpectTest):
-
-    mydir = TestBase.compute_mydir(__file__)
     file_to_source = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'source.lldb')
 
     # PExpect uses many timeouts internally and doesn't play well

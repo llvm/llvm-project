@@ -33,9 +33,7 @@ to the Python test suite under the current 'test' directory.
 
   ./command_source/TestCommandSource.py provides a simple example of test case
   which overrides lldbtest.TestBase to exercise the lldb's 'command source'
-  command.  The subclass should override the attribute 'mydir' in order for the
-  runtime to locate the individual test cases when running as part of a large
-  test suite or when running each test case as a separate Python invocation.
+  command.
 
   The doc string provides more details about the setup required for running a
   test case on its own.  To run the whole test suite, 'dotest.py' is all you

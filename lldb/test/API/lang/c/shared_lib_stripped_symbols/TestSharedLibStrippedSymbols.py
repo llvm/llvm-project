@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class SharedLibStrippedTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"])
     def test_expr(self):
         """Test that types work when defined in a shared library and forwa/d-declared in the main executable"""

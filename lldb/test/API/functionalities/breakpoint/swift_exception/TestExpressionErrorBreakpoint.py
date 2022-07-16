@@ -22,8 +22,6 @@ import unittest2
 
 class TestSwiftErrorBreakpoint(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @decorators.skipIfLinux  # <rdar://problem/30909618>
     @swiftTest
     def test_swift_error_no_typename(self):

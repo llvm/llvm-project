@@ -7,8 +7,6 @@ import unittest2
 
 class SwiftGenericClassTest(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test(self):
         """Tests that a generic class type can be resolved from the instance metadata alone"""

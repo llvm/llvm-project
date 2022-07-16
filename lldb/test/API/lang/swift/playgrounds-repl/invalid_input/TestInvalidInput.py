@@ -18,8 +18,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestInvalidInput(repl.PlaygroundREPLTest):
 
-    mydir = repl.PlaygroundREPLTest.compute_mydir(__file__)
-
     def do_test(self):
         """
         Test that we can handle user correcting errors, submitting valid

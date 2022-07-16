@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class BacktraceLimitSettingTest(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_backtrace_depth(self):

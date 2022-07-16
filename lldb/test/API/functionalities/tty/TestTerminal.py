@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class LaunchInTerminalTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # Darwin is the only platform that I know of that supports optionally launching
     # a program in a separate terminal window. It would be great if other platforms
     # added support for this.

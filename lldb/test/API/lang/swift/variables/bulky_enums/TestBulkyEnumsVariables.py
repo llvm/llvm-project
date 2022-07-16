@@ -22,8 +22,6 @@ import unittest2
 
 class TestBulkyEnumVariables(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_bulky_enum_variables(self):
         """Tests that large-size Enum variables display correctly"""

@@ -20,8 +20,6 @@ import unittest2
 
 class TestResilientObjectInOptional(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     def test_optional_of_resilient(self):

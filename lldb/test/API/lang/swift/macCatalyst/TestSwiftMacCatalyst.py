@@ -8,8 +8,6 @@ import unittest2
 
 class TestSwiftMacCatalyst(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # There's a bug that prevents the maccatalyst SDK overlays from being built.
     @expectedFailureAll(bugnumber='rdar://problem/62658576')
     @swiftTest

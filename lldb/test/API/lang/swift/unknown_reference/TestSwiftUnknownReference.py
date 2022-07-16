@@ -19,8 +19,6 @@ import unittest2
 
 class TestSwiftUnknownReference(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     def check_class(self, var_self):
         lldbutil.check_variable(self, var_self, num_children=2)
         m_base_string = var_self.GetChildMemberWithName("base_string")

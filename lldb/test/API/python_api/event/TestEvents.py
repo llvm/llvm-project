@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 @skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

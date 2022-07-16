@@ -31,8 +31,6 @@ def execute_command(command):
 
 class TestExclusivitySuppression(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # Test that we can evaluate w.s.i at Breakpoint 1 without triggering
     # a failure due to exclusivity
     @swiftTest

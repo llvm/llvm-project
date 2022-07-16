@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class DebuggerAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_debugger_api_boundary_condition(self):

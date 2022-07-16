@@ -10,8 +10,6 @@ import unittest2
 
 class TestSBValueUpdates(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @decorators.swiftTest
     def test_update_and_format_with_type_change(self):
         """Test that an SBValue can update and format itself as its type

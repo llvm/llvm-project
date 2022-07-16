@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class JITLoaderGDBTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipTestIfFn(
         lambda: "Skipped because the test crashes the test runner",
         bugnumber="llvm.org/pr24702")

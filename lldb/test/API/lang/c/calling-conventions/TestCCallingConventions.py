@@ -6,8 +6,6 @@ from lldbsuite.test_event.build_exception import BuildError
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def build_and_run(self, test_file):

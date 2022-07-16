@@ -12,8 +12,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def assertEvaluate(self, expression, regex):
         self.assertRegexpMatches(
             self.vscode.request_evaluate(expression, context=self.context)['body']['result'],

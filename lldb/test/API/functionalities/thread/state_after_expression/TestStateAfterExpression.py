@@ -12,8 +12,6 @@ from lldbsuite.test.decorators import *
 
 class TestStopReasonAfterExpression(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48415")
     @expectedFlakeyNetBSD

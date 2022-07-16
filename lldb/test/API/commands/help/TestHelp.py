@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class HelpCommandTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_simplehelp(self):
         """A simple test of 'help' command and its output."""

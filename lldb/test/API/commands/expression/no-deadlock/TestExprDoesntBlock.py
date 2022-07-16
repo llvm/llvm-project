@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class ExprDoesntDeadlockTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["basic_process"])
     def test_with_run_command(self):
         """Test that expr will time out and allow other threads to run if it blocks."""

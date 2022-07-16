@@ -7,8 +7,6 @@ import unittest2
 
 class TestSwiftAsyncExpressions(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIfWindows
     @skipIfLinux

@@ -24,8 +24,6 @@ import json
 
 class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIfLinux
     @skipUnlessSwiftThreadSanitizer

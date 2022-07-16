@@ -49,8 +49,6 @@ class RegisterCommandsTestCase(TestBase):
 
         self.expect("register read ffr", substrs=[p_regs_value])
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIf(archs=no_match(["aarch64"]))
     @skipIf(oslist=no_match(['linux']))

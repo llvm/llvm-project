@@ -22,8 +22,6 @@ import platform
 
 class TestSwiftTypes(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_types(self):
         """Test that we can inspect basic Swift types"""

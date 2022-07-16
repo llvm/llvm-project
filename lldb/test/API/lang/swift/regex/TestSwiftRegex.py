@@ -19,7 +19,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestSwiftRegex(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)

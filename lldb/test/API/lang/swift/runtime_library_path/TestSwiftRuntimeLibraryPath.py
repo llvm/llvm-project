@@ -7,8 +7,6 @@ import unittest2
 
 
 class TestSwiftRuntimeLibraryPath(lldbtest.TestBase):
-
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest

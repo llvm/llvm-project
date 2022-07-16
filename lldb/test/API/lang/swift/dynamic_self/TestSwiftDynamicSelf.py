@@ -7,8 +7,6 @@ import unittest2
 
 class TestSwiftDynamicSelf(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     def get_self_from_Base_method(self, frame):
         '''When stopped in a method in Base, get the 'self' with type Base.'''
         var_self = frame.FindVariable("self")

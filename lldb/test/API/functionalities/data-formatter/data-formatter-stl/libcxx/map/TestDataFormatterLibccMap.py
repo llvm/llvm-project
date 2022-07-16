@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class LibcxxMapDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         ns = 'ndk' if lldbplatformutil.target_is_android() else ''

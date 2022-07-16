@@ -10,7 +10,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class SaveJITObjectsTestCase(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def enumerateJITFiles(self):
         return [f for f in os.listdir(self.getBuildDir()) if f.startswith("jit")]

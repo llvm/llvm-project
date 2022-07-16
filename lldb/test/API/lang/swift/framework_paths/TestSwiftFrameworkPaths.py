@@ -9,7 +9,6 @@ import unittest2
 class TestSwiftSystemFramework(lldbtest.TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
     @skipIf(oslist=no_match(["macosx"]))

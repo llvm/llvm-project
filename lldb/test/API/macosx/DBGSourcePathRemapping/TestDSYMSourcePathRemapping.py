@@ -8,8 +8,6 @@ import unittest2
 
 class TestDSYMSourcePathRemapping(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     def build(self):
         botdir = self.getBuildArtifact('buildbot')
         userdir = self.getBuildArtifact('user')

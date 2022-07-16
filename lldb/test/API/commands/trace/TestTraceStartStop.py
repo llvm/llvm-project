@@ -6,8 +6,6 @@ from lldbsuite.test.decorators import *
 
 class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def expectGenericHelpMessageForStartCommand(self):
         self.expect("help thread trace start",
             substrs=["Syntax: thread trace start [<trace-options>]"])

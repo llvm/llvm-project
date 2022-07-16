@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class UbsanUserExpressionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessUndefinedBehaviorSanitizer
     def test(self):
         self.build()

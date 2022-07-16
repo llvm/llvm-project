@@ -9,8 +9,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestGDBRemoteClient(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     class gPacketResponder(MockGDBServerResponder):
         registers = [
             "name:rax;bitsize:64;offset:0;encoding:uint;format:hex;set:General Purpose Registers;ehframe:0;dwarf:0;",

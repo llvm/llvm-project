@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def testErrorMessages(self):
         # We first check the output when there are no targets

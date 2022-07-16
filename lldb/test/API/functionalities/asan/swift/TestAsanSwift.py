@@ -23,8 +23,6 @@ import json
 
 class AsanSwiftTestCase(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @decorators.swiftTest
     @decorators.skipIfLinux
     @decorators.skipUnlessSwiftAddressSanitizer

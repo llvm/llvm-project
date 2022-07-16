@@ -24,8 +24,6 @@ def execute_command(command):
 
 class TestSwiftResilience(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     # Because we rename the .swiftmodule files after building the

@@ -31,7 +31,6 @@ from lldbsuite.test import lldbutil
 
 
 class ZerothFrame(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def test(self):
         """

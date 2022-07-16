@@ -8,8 +8,6 @@ import re
 class TestSwiftReflectionOnly(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test(self):
         """Test debugging a program without swiftmodules is functional"""

@@ -15,8 +15,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftUnitTests(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     # The creation of the .xctest framework messes with the AST search path.

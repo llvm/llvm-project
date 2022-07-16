@@ -24,8 +24,6 @@ import unittest2
 
 class TestSwiftDebugPrefixMap(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_debug_prefix_map(self):
         self.do_test()

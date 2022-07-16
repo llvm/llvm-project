@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class LongjmpTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
     @expectedFailureAll(oslist=["freebsd", "linux"], bugnumber="llvm.org/pr20231")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")

@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 
 class UnwindFromExpressionTest(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     main_spec = lldb.SBFileSpec("main.cpp", False)
 
     def build_and_run_to_bkpt(self):

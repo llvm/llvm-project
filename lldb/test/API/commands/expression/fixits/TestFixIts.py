@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class ExprCommandWithFixits(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_dummy_target(self):
         """Test calling expressions in the dummy target with errors that can be fixed by the FixIts."""
 

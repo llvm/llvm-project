@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 @skipUnlessDarwin
 class AddDsymDownload(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     dwarfdump_uuid_regex = re.compile('UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*')
 
     def get_uuid(self):

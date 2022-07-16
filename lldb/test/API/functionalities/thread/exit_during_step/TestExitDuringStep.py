@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ExitDuringStepTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit during step handling."""

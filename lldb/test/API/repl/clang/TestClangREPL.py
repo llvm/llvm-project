@@ -5,8 +5,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def expect_repl(self, expr, substrs=[]):
         """ Evaluates the expression in the REPL and verifies that the list
         of substrs is in the REPL output."""

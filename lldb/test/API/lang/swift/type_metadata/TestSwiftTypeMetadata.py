@@ -21,8 +21,6 @@ import unittest2
 
 class SwiftTypeMetadataTest(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_type_metadata(self):
         """Test that LLDB can effectively use the type metadata to reconstruct dynamic types for Swift"""

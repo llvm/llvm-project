@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemoteAttachOrWait(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows # This test is flaky on Windows
     def test_launch_before_attach_with_vAttachOrWait(self):
         exe = '%s_%d' % (self.testMethodName, os.getpid())

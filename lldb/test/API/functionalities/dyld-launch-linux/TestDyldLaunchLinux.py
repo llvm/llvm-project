@@ -9,7 +9,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class TestLinux64LaunchingViaDynamicLoader(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(oslist=no_match(['linux']))
     @no_debug_info_test

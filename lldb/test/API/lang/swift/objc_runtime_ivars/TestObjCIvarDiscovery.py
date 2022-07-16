@@ -24,8 +24,6 @@ import shutil
 
 class TestObjCIVarDiscovery(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))
     @swiftTest

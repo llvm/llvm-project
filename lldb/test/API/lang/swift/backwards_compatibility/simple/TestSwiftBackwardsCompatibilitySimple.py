@@ -21,8 +21,6 @@ import unittest2
 
 class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIf(compiler="swiftc", compiler_version=['<', '5.0'])
     def test_simple(self):

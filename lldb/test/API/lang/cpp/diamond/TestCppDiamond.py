@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_with_sbvalue(self):
         """

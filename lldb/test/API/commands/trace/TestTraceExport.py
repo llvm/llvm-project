@@ -9,8 +9,6 @@ import os
 
 class TestTraceExport(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def testErrorMessages(self):
         ctf_test_file = self.getBuildArtifact("ctf-test.json")
         # We first check the output when there are no targets

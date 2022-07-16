@@ -4,8 +4,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftTypeAlias(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test(self):
         """Test type aliases are only searched in the debug info once"""

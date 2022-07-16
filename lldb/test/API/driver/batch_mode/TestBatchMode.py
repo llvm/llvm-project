@@ -12,8 +12,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class DriverBatchModeTest(PExpectTest):
-
-    mydir = TestBase.compute_mydir(__file__)
     source = 'main.c'
 
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot

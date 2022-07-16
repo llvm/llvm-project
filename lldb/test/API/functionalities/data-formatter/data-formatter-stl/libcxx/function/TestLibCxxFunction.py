@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class LibCxxFunctionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # Run frame var for a variable twice. Verify we do not hit the cache
     # the first time but do the second time.
     def run_frame_var_check_cache_use(self, variable, result_to_match, skip_find_function=False):

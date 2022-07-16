@@ -14,8 +14,6 @@ import lldbvscode_testcase
 
 class TestVSCode_console(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_lldb_command(self, lldb_command, contains_string, assert_msg):
         response = self.vscode.request_evaluate('`%s' % (lldb_command))
         output = response['body']['result']

@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class FoundationTestCase2(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_expr_commands(self):
         """More expression commands for objective-c."""
         self.build()

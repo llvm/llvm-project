@@ -6,8 +6,6 @@ import re
 
 class TestCase(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIf(oslist=['windows', 'linux'])
     def test(self):

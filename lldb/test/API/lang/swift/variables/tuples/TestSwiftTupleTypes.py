@@ -21,8 +21,6 @@ import unittest2
 
 class TestSwiftTupleTypes(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_tuple_types(self):
         """Test support for tuple types"""

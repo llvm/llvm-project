@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class LibcxxVectorDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_numbers(self, var_name):
         self.expect("frame variable " + var_name,
                     substrs=[var_name + ' = size=7',

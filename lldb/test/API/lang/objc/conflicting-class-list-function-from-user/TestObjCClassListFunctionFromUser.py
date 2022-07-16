@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     # LLDB ends up calling the user-defined function (but at least doesn't
     # crash).

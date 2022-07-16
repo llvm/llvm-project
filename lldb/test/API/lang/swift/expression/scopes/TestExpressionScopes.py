@@ -22,8 +22,6 @@ import unittest2
 
 class TestSwiftExpressionScopes(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_expression_scopes(self):
         """Tests that swift expressions resolve scoped variables correctly"""

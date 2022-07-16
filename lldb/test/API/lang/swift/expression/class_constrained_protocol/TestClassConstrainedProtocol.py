@@ -15,8 +15,6 @@ from lldbsuite.test.decorators import *
 
 class TestClassConstrainedProtocol(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_extension_weak_self(self):
         """Test that we can reconstruct weak self captured in a class constrained protocol."""

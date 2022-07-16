@@ -10,8 +10,6 @@ from lldbsuite.test.decorators import *
 
 class SettingSkipSanityTestCase(TestBase):
 
-  mydir = TestBase.compute_mydir(__file__)
-
   NO_DEBUG_INFO_TESTCASE = True
 
   @skipIf(setting=('target.prefer-dynamic-value', 'no-dynamic-values'))

@@ -7,8 +7,6 @@ import unittest2
 
 class TestObjCXXHideRuntimeSupportValues(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_hide_runtime_support_values(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(

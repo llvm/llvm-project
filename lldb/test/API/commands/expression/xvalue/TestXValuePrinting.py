@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class ExprXValuePrintingTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test(self):
         """Printing an xvalue should work."""

@@ -10,8 +10,6 @@ import binascii
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @staticmethod
     def filecheck_to_blob(fc):
         for l in fc.strip().splitlines():

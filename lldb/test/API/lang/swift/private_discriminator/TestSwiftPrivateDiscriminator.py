@@ -8,7 +8,6 @@ import unittest2
 class TestSwiftPrivateDiscriminator(lldbtest.TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
     # FIXME: The only reason this doesn't work on Linux is because the

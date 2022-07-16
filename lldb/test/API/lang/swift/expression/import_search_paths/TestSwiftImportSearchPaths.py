@@ -7,7 +7,6 @@ import unittest2
 class TestSwiftImportSearchPaths(lldbtest.TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
     def test_positive(self):

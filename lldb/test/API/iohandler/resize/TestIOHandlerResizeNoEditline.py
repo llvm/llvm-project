@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIfWindows
     def test_resize_no_editline(self):

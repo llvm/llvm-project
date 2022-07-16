@@ -8,8 +8,6 @@ import unittest2
 
 class TestMacCatalyst(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(macos_version=["<", "10.15"])
     @skipUnlessDarwin
     @skipIfDarwinEmbedded

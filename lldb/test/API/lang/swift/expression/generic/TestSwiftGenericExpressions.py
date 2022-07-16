@@ -22,8 +22,6 @@ import unittest2
 
 class TestSwiftGenericExpressions(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     def setUp(self):
         lldbtest.TestBase.setUp(self)
         self.main_source = "main.swift"

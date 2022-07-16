@@ -4,8 +4,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftLateDylibClangDeps(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     @skipIfDarwinEmbedded 

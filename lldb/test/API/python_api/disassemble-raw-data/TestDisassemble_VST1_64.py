@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class Disassemble_VST1_64(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIfLLVMTargetMissing("ARM")
     def test_disassemble_invalid_vst_1_64_raw_data(self):
