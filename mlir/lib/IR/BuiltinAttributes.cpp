@@ -17,7 +17,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Interfaces/DecodeAttributesInterfaces.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Endian.h"
@@ -1699,29 +1698,6 @@ template class DenseResourceElementsAttrBase<float>;
 template class DenseResourceElementsAttrBase<double>;
 } // namespace detail
 } // namespace mlir
-
-//===----------------------------------------------------------------------===//
-// OpaqueElementsAttr
-//===----------------------------------------------------------------------===//
-
-bool OpaqueElementsAttr::decode(ElementsAttr &result) {
-  Dialect *dialect = getContext()->getLoadedDialect(getDialect());
-  if (!dialect)
-    return true;
-  auto *interface = llvm::dyn_cast<DialectDecodeAttributesInterface>(dialect);
-  if (!interface)
-    return true;
-  return failed(interface->decode(*this, result));
-}
-
-LogicalResult
-OpaqueElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                           StringAttr dialect, StringRef value,
-                           ShapedType type) {
-  if (!Dialect::isValidNamespace(dialect.strref()))
-    return emitError() << "invalid dialect namespace '" << dialect << "'";
-  return success();
-}
 
 //===----------------------------------------------------------------------===//
 // SparseElementsAttr

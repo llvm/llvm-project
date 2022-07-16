@@ -42,8 +42,6 @@ using namespace mlir::detail;
 ///                      (tensor-type | vector-type)
 ///                    | `sparse` `<` attribute-value `,` attribute-value `>`
 ///                      `:` (tensor-type | vector-type)
-///                    | `opaque` `<` dialect-namespace  `,` hex-string-literal
-///                      `>` `:` (tensor-type | vector-type)
 ///                    | extended-attribute
 ///
 Attribute Parser::parseAttribute(Type type) {
@@ -142,10 +140,6 @@ Attribute Parser::parseAttribute(Type type) {
       return Attribute();
     return locAttr;
   }
-
-  // Parse an opaque elements attribute.
-  case Token::kw_opaque:
-    return parseOpaqueElementsAttr(type);
 
   // Parse a sparse elements attribute.
   case Token::kw_sparse:
@@ -249,7 +243,6 @@ OptionalParseResult Parser::parseOptionalAttribute(Attribute &attribute,
   case Token::kw_dense_resource:
   case Token::kw_false:
   case Token::kw_loc:
-  case Token::kw_opaque:
   case Token::kw_sparse:
   case Token::kw_true:
   case Token::kw_unit:
@@ -965,37 +958,6 @@ Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
   }
 
   return DenseResourceElementsAttr::get(shapedType, *handle);
-}
-
-/// Parse an opaque elements attribute.
-Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
-  SMLoc loc = getToken().getLoc();
-  consumeToken(Token::kw_opaque);
-  if (parseToken(Token::less, "expected '<' after 'opaque'"))
-    return nullptr;
-
-  if (getToken().isNot(Token::string))
-    return (emitError("expected dialect namespace"), nullptr);
-
-  std::string name = getToken().getStringValue();
-  consumeToken(Token::string);
-
-  if (parseToken(Token::comma, "expected ','"))
-    return nullptr;
-
-  Token hexTok = getToken();
-  if (parseToken(Token::string, "elements hex string should start with '0x'") ||
-      parseToken(Token::greater, "expected '>'"))
-    return nullptr;
-  auto type = parseElementsLiteralType(attrType);
-  if (!type)
-    return nullptr;
-
-  std::string data;
-  if (parseElementAttrHexValues(*this, hexTok, data))
-    return nullptr;
-  return getChecked<OpaqueElementsAttr>(loc, builder.getStringAttr(name), type,
-                                        data);
 }
 
 /// Shaped type for elements attribute.
