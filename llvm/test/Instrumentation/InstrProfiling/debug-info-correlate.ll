@@ -1,4 +1,4 @@
-; RUN: opt < %s -instrprof -debug-info-correlate -S > %t.ll
+; RUN: opt < %s -passes=instrprof -debug-info-correlate -S > %t.ll
 ; RUN: FileCheck < %t.ll --implicit-check-not "{{__llvm_prf_data|__llvm_prf_names}}" %s
 ; RUN: %llc_dwarf -O0 -filetype=obj < %t.ll | llvm-dwarfdump - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s --check-prefix CHECK-DWARF
 

@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -instrprof | FileCheck %s
-; RUN: opt < %s -S -instrprof -runtime-counter-relocation | FileCheck -check-prefixes=RELOC %s
+; RUN: opt < %s -S -passes=instrprof | FileCheck %s
+; RUN: opt < %s -S -passes=instrprof -runtime-counter-relocation | FileCheck -check-prefixes=RELOC %s
 
 target triple = "x86_64-unknown-linux-gnu"
 
