@@ -492,7 +492,11 @@ public:
     static const mask punct  = _ISPUNCT;
     static const mask xdigit = _ISXDIGIT;
     static const mask blank  = _ISBLANK;
+# if defined(_AIX)
+    static const mask __regex_word = 0x8000;
+# else
     static const mask __regex_word = 0x80;
+# endif
 #elif defined(_NEWLIB_VERSION)
     // Same type as Newlib's _ctype_ array in newlib/libc/include/ctype.h.
     typedef char mask;
@@ -545,11 +549,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY ctype_base() {}
 
-// TODO: Remove the ifndef when the assert no longer fails on AIX.
-#ifndef _AIX
     static_assert((__regex_word & ~(space | print | cntrl | upper | lower | alpha | digit | punct | xdigit | blank)) == __regex_word,
                   "__regex_word can't overlap other bits");
-#endif
 };
 
 template <class _CharT> class _LIBCPP_TEMPLATE_VIS ctype;
