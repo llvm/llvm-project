@@ -40,7 +40,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       }]
     >,
     InterfaceMethod<"Sets the name of this symbol.",
-      "void", "setName", (ins "StringAttr":$name), [{}],
+      "void", "setName", (ins "::mlir::StringAttr":$name), [{}],
       /*defaultImplementation=*/[{
         this->getOperation()->setAttr(
             mlir::SymbolTable::getSymbolAttrName(), name);
@@ -99,8 +99,8 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         given operation 'from'.
         Note: See mlir::SymbolTable::getSymbolUses for more details.
       }],
-      "Optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
-      (ins "Operation *":$from), [{}],
+      "::llvm::Optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
+      (ins "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::getSymbolUses(this->getOperation(), from);
       }]
@@ -110,7 +110,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         within the given operation 'from'.
         Note: See mlir::SymbolTable::symbolKnownUseEmpty for more details.
       }],
-      "bool", "symbolKnownUseEmpty", (ins "Operation *":$from), [{}],
+      "bool", "symbolKnownUseEmpty", (ins "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::symbolKnownUseEmpty(this->getOperation(),
                                                         from);
@@ -121,8 +121,8 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         symbol 'newSymbol' that are nested within the given operation 'from'.
         Note: See mlir::SymbolTable::replaceAllSymbolUses for more details.
       }],
-      "LogicalResult", "replaceAllSymbolUses", (ins "StringAttr":$newSymbol,
-                                                    "Operation *":$from), [{}],
+      "::mlir::LogicalResult", "replaceAllSymbolUses",
+      (ins "::mlir::StringAttr":$newSymbol, "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::replaceAllSymbolUses(this->getOperation(),
                                                          newSymbol, from);
