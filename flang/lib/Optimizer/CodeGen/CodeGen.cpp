@@ -2679,9 +2679,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     if (global.getType().isa<fir::BoxType>())
       tyAttr = tyAttr.cast<mlir::LLVM::LLVMPointerType>().getElementType();
     auto loc = global.getLoc();
-    mlir::Attribute initAttr;
-    if (global.getInitVal())
-      initAttr = global.getInitVal().getValue();
+    mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
     auto linkage = convertLinkage(global.getLinkName());
     auto isConst = global.getConstant().has_value();
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
