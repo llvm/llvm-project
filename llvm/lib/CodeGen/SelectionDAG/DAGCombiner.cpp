@@ -19476,7 +19476,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     return Shuf;
 
   // Handle <1 x ???> vector insertion special cases.
-  if (VT.getVectorNumElements() == 1) {
+  if (NumElts == 1) {
     // insert_vector_elt(x, extract_vector_elt(y, 0), 0) -> y
     if (InVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
         InVal.getOperand(0).getValueType() == VT &&
