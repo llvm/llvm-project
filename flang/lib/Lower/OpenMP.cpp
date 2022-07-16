@@ -1127,14 +1127,6 @@ static void genOmpAtomicUpdateStatement(
 
   mlir::Value address = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  const Fortran::semantics::Symbol *updateSymbol;
-  if (auto varDesignator = std::get_if<
-          Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &assignmentStmtVariable.u)) {
-    if (const auto *name = getDesignatorNameIfDataRef(varDesignator->value())) {
-      updateSymbol = name->symbol;
-    }
-  }
   // If no hint clause is specified, the effect is as if
   // hint(omp_sync_hint_none) had been specified.
   mlir::IntegerAttr hint = nullptr;
@@ -1161,7 +1153,15 @@ static void genOmpAtomicUpdateStatement(
   firOpBuilder.createBlock(&atomicUpdateOp.getRegion(), {}, varTys, locs);
   mlir::Value val =
       fir::getBase(atomicUpdateOp.getRegion().front().getArgument(0));
-  converter.bindSymbol(*updateSymbol, val);
+  auto varDesignator =
+      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
+          &assignmentStmtVariable.u);
+  assert(varDesignator && "Variable designator for atomic update assignment "
+                          "statement does not exist");
+  const auto *name = getDesignatorNameIfDataRef(varDesignator->value());
+  assert(name && name->symbol &&
+         "No symbol attached to atomic update variable");
+  converter.bindSymbol(*name->symbol, val);
   // Set the insert for the terminator operation to go at the end of the
   // block.
   mlir::Block &block = atomicUpdateOp.getRegion().back();
