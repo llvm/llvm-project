@@ -11,7 +11,7 @@ class TestSwiftHealthCheck(TestBase):
 
     @swiftTest
     @skipIfDarwinEmbedded
-    def test(self):
+    def test_run_healthcheck(self):
         """Test that an underspecified triple is upgraded with a version number.
         """
         self.build()
@@ -36,3 +36,9 @@ class TestSwiftHealthCheck(TestBase):
                 break
         self.assertGreater(good, 1)
         self.assertEquals(bad, 0)
+
+    @swiftTest
+    @skipIfDarwinEmbedded
+    def test_help_healthcheck(self):
+        self.expect("help swift-healthcheck",
+                    substrs=["logging related to the Swift expression evaluator"])
