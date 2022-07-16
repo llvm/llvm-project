@@ -68,7 +68,9 @@ struct FullDependenciesResult {
 class DependencyScanningTool {
 public:
   /// Construct a dependency scanning tool.
-  DependencyScanningTool(DependencyScanningService &Service);
+  DependencyScanningTool(DependencyScanningService &Service,
+                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+                             llvm::vfs::createPhysicalFileSystem());
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
