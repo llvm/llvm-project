@@ -1608,7 +1608,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
   assert(TargetTable && "Global data has not been mapped\n");
 
   // FIXME: Use legacy tripcount method if it is '-1'.
-  Tripcount = Tripcount == -1 ? getLoopTripCount(DeviceId) : Tripcount;
+  Tripcount = Tripcount == -1UL ? getLoopTripCount(DeviceId) : Tripcount;
   DP("loop trip count is %" PRIu64 ".\n", Tripcount);
 
   // We need to keep bases and offsets separate. Sometimes (e.g. in OpenCL) we

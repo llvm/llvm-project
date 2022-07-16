@@ -142,12 +142,21 @@ XorOpnd::XorOpnd(Value *V) {
   isOr = true;
 }
 
+/// Return true if I is an instruction with the FastMathFlags that are needed
+/// for general reassociation set.  This is not the same as testing
+/// Instruction::isAssociative() because it includes operations like fsub.
+/// (This routine is only intended to be called for floating-point operations.)
+static bool hasFPAssociativeFlags(Instruction *I) {
+  assert(I && I->getType()->isFPOrFPVectorTy() && "Should only check FP ops");
+  return I->hasAllowReassoc() && I->hasNoSignedZeros();
+}
+
 /// Return true if V is an instruction of the specified opcode and if it
 /// only has one use.
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode) {
   auto *I = dyn_cast<Instruction>(V);
   if (I && I->hasOneUse() && I->getOpcode() == Opcode)
-    if (!isa<FPMathOperator>(I) || I->isFast())
+    if (!isa<FPMathOperator>(I) || hasFPAssociativeFlags(I))
       return cast<BinaryOperator>(I);
   return nullptr;
 }
@@ -157,7 +166,7 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
   auto *I = dyn_cast<Instruction>(V);
   if (I && I->hasOneUse() &&
       (I->getOpcode() == Opcode1 || I->getOpcode() == Opcode2))
-    if (!isa<FPMathOperator>(I) || I->isFast())
+    if (!isa<FPMathOperator>(I) || hasFPAssociativeFlags(I))
       return cast<BinaryOperator>(I);
   return nullptr;
 }
@@ -573,7 +582,7 @@ static bool LinearizeExprTree(Instruction *I,
       assert((!isa<Instruction>(Op) ||
               cast<Instruction>(Op)->getOpcode() != Opcode
               || (isa<FPMathOperator>(Op) &&
-                  !cast<Instruction>(Op)->isFast())) &&
+                  !hasFPAssociativeFlags(cast<Instruction>(Op)))) &&
              "Should have been handled above!");
       assert(Op->hasOneUse() && "Has uses outside the expression tree!");
 
@@ -2216,8 +2225,9 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   if (Instruction *Res = canonicalizeNegFPConstants(I))
     I = Res;
 
-  // Don't optimize floating-point instructions unless they are 'fast'.
-  if (I->getType()->isFPOrFPVectorTy() && !I->isFast())
+  // Don't optimize floating-point instructions unless they have the
+  // appropriate FastMathFlags for reassociation enabled.
+  if (I->getType()->isFPOrFPVectorTy() && !hasFPAssociativeFlags(I))
     return;
 
   // Do not reassociate boolean (i1) expressions.  We want to preserve the

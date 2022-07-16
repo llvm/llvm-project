@@ -258,42 +258,42 @@ define void @sink_splat_mul_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_mul_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB7_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB7_5
 ; CHECK-NEXT:  .LBB7_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB7_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vmul.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB7_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB7_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB7_7
 ; CHECK-NEXT:  .LBB7_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB7_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    mulw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    mulw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB7_6
+; CHECK-NEXT:    bnez a3, .LBB7_6
 ; CHECK-NEXT:  .LBB7_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -351,42 +351,42 @@ define void @sink_splat_add_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_add_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB8_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB8_5
 ; CHECK-NEXT:  .LBB8_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB8_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vadd.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB8_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB8_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB8_7
 ; CHECK-NEXT:  .LBB8_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB8_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    addw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    addw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB8_6
+; CHECK-NEXT:    bnez a3, .LBB8_6
 ; CHECK-NEXT:  .LBB8_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -444,42 +444,42 @@ define void @sink_splat_sub_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_sub_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB9_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB9_5
 ; CHECK-NEXT:  .LBB9_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB9_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vsub.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB9_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB9_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB9_7
 ; CHECK-NEXT:  .LBB9_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB9_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    addw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    addw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB9_6
+; CHECK-NEXT:    bnez a3, .LBB9_6
 ; CHECK-NEXT:  .LBB9_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -537,42 +537,42 @@ define void @sink_splat_rsub_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_rsub_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB10_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB10_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB10_5
 ; CHECK-NEXT:  .LBB10_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB10_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vrsub.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB10_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB10_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB10_7
 ; CHECK-NEXT:  .LBB10_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB10_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    subw a3, a1, a3
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    subw a2, a1, a2
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB10_6
+; CHECK-NEXT:    bnez a3, .LBB10_6
 ; CHECK-NEXT:  .LBB10_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -630,42 +630,42 @@ define void @sink_splat_and_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_and_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB11_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB11_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB11_5
 ; CHECK-NEXT:  .LBB11_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB11_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB11_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB11_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB11_7
 ; CHECK-NEXT:  .LBB11_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB11_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    and a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    and a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB11_6
+; CHECK-NEXT:    bnez a3, .LBB11_6
 ; CHECK-NEXT:  .LBB11_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -723,42 +723,42 @@ define void @sink_splat_or_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_or_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB12_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB12_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB12_5
 ; CHECK-NEXT:  .LBB12_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB12_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vor.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB12_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB12_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB12_7
 ; CHECK-NEXT:  .LBB12_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB12_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    or a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    or a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB12_6
+; CHECK-NEXT:    bnez a3, .LBB12_6
 ; CHECK-NEXT:  .LBB12_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -816,42 +816,42 @@ define void @sink_splat_xor_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_xor_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB13_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB13_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB13_5
 ; CHECK-NEXT:  .LBB13_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB13_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vxor.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB13_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB13_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB13_7
 ; CHECK-NEXT:  .LBB13_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB13_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    xor a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    xor a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB13_6
+; CHECK-NEXT:    bnez a3, .LBB13_6
 ; CHECK-NEXT:  .LBB13_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1017,42 +1017,42 @@ define void @sink_splat_shl_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_shl_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB17_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB17_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB17_5
 ; CHECK-NEXT:  .LBB17_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB17_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vsll.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB17_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB17_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB17_7
 ; CHECK-NEXT:  .LBB17_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB17_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    sllw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    sllw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB17_6
+; CHECK-NEXT:    bnez a3, .LBB17_6
 ; CHECK-NEXT:  .LBB17_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1110,42 +1110,42 @@ define void @sink_splat_lshr_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_lshr_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB18_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB18_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB18_5
 ; CHECK-NEXT:  .LBB18_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB18_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB18_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB18_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB18_7
 ; CHECK-NEXT:  .LBB18_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB18_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    srlw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    srlw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB18_6
+; CHECK-NEXT:    bnez a3, .LBB18_6
 ; CHECK-NEXT:  .LBB18_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1203,42 +1203,42 @@ define void @sink_splat_ashr_scalable(i32* nocapture %a) {
 ; CHECK-LABEL: sink_splat_ashr_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a4, vlenb
-; CHECK-NEXT:    srli a1, a4, 1
-; CHECK-NEXT:    li a2, 1024
-; CHECK-NEXT:    bgeu a2, a1, .LBB19_2
+; CHECK-NEXT:    srli a2, a4, 1
+; CHECK-NEXT:    li a1, 1024
+; CHECK-NEXT:    bgeu a1, a2, .LBB19_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB19_5
 ; CHECK-NEXT:  .LBB19_2: # %vector.ph
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addiw a2, a1, -1
-; CHECK-NEXT:    andi a3, a2, 1024
-; CHECK-NEXT:    xori a2, a3, 1024
+; CHECK-NEXT:    addiw a1, a2, -1
+; CHECK-NEXT:    andi a3, a1, 1024
+; CHECK-NEXT:    xori a1, a3, 1024
 ; CHECK-NEXT:    slli a4, a4, 1
-; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    vsetvli a5, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a5, a0
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB19_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a6)
+; CHECK-NEXT:    vl2re32.v v8, (a5)
 ; CHECK-NEXT:    vsra.vi v8, v8, 2
-; CHECK-NEXT:    vs2r.v v8, (a6)
-; CHECK-NEXT:    add a5, a5, a1
-; CHECK-NEXT:    add a6, a6, a4
-; CHECK-NEXT:    bne a5, a2, .LBB19_3
+; CHECK-NEXT:    vs2r.v v8, (a5)
+; CHECK-NEXT:    sub a6, a6, a2
+; CHECK-NEXT:    add a5, a5, a4
+; CHECK-NEXT:    bnez a6, .LBB19_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a3, .LBB19_7
 ; CHECK-NEXT:  .LBB19_5: # %for.body.preheader
-; CHECK-NEXT:    addi a1, a2, -1024
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    addi a2, a1, -1024
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB19_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    srli a2, a2, 2
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    srli a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB19_6
+; CHECK-NEXT:    bnez a2, .LBB19_6
 ; CHECK-NEXT:  .LBB19_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1511,42 +1511,42 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @sink_splat_fmul_scalable(float* nocapture %a, float %x) {
 ; CHECK-LABEL: sink_splat_fmul_scalable:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB26_2
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a3, a2, 2
+; CHECK-NEXT:    li a1, 1024
+; CHECK-NEXT:    bgeu a1, a3, .LBB26_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB26_5
 ; CHECK-NEXT:  .LBB26_2: # %vector.ph
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
-; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, mu
-; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    addiw a1, a3, -1
+; CHECK-NEXT:    andi a4, a1, 1024
+; CHECK-NEXT:    xori a1, a4, 1024
+; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a5, a0
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB26_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a6)
+; CHECK-NEXT:    vl1re32.v v8, (a5)
 ; CHECK-NEXT:    vfmul.vf v8, v8, fa0
-; CHECK-NEXT:    vs1r.v v8, (a6)
+; CHECK-NEXT:    vs1r.v v8, (a5)
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    add a5, a5, a2
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    bne a5, a3, .LBB26_3
+; CHECK-NEXT:    bnez a6, .LBB26_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB26_7
 ; CHECK-NEXT:  .LBB26_5: # %for.body.preheader
-; CHECK-NEXT:    addi a1, a3, -1024
-; CHECK-NEXT:    slli a2, a3, 2
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    addi a2, a1, -1024
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB26_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    fmul.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB26_6
+; CHECK-NEXT:    bnez a2, .LBB26_6
 ; CHECK-NEXT:  .LBB26_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1603,42 +1603,42 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @sink_splat_fdiv_scalable(float* nocapture %a, float %x) {
 ; CHECK-LABEL: sink_splat_fdiv_scalable:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB27_2
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a3, a2, 2
+; CHECK-NEXT:    li a1, 1024
+; CHECK-NEXT:    bgeu a1, a3, .LBB27_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB27_5
 ; CHECK-NEXT:  .LBB27_2: # %vector.ph
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
-; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, mu
-; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    addiw a1, a3, -1
+; CHECK-NEXT:    andi a4, a1, 1024
+; CHECK-NEXT:    xori a1, a4, 1024
+; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a5, a0
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB27_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a6)
+; CHECK-NEXT:    vl1re32.v v8, (a5)
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
-; CHECK-NEXT:    vs1r.v v8, (a6)
+; CHECK-NEXT:    vs1r.v v8, (a5)
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    add a5, a5, a2
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    bne a5, a3, .LBB27_3
+; CHECK-NEXT:    bnez a6, .LBB27_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB27_7
 ; CHECK-NEXT:  .LBB27_5: # %for.body.preheader
-; CHECK-NEXT:    addi a1, a3, -1024
-; CHECK-NEXT:    slli a2, a3, 2
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    addi a2, a1, -1024
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB27_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    fdiv.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB27_6
+; CHECK-NEXT:    bnez a2, .LBB27_6
 ; CHECK-NEXT:  .LBB27_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1695,42 +1695,42 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @sink_splat_frdiv_scalable(float* nocapture %a, float %x) {
 ; CHECK-LABEL: sink_splat_frdiv_scalable:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB28_2
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a3, a2, 2
+; CHECK-NEXT:    li a1, 1024
+; CHECK-NEXT:    bgeu a1, a3, .LBB28_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB28_5
 ; CHECK-NEXT:  .LBB28_2: # %vector.ph
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
-; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, mu
-; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    addiw a1, a3, -1
+; CHECK-NEXT:    andi a4, a1, 1024
+; CHECK-NEXT:    xori a1, a4, 1024
+; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a5, a0
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB28_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a6)
+; CHECK-NEXT:    vl1re32.v v8, (a5)
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0
-; CHECK-NEXT:    vs1r.v v8, (a6)
+; CHECK-NEXT:    vs1r.v v8, (a5)
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    add a5, a5, a2
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    bne a5, a3, .LBB28_3
+; CHECK-NEXT:    bnez a6, .LBB28_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB28_7
 ; CHECK-NEXT:  .LBB28_5: # %for.body.preheader
-; CHECK-NEXT:    addi a1, a3, -1024
-; CHECK-NEXT:    slli a2, a3, 2
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    addi a2, a1, -1024
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB28_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    fdiv.s ft0, fa0, ft0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB28_6
+; CHECK-NEXT:    bnez a2, .LBB28_6
 ; CHECK-NEXT:  .LBB28_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1787,42 +1787,42 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @sink_splat_fadd_scalable(float* nocapture %a, float %x) {
 ; CHECK-LABEL: sink_splat_fadd_scalable:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB29_2
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a3, a2, 2
+; CHECK-NEXT:    li a1, 1024
+; CHECK-NEXT:    bgeu a1, a3, .LBB29_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB29_5
 ; CHECK-NEXT:  .LBB29_2: # %vector.ph
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
-; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, mu
-; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    addiw a1, a3, -1
+; CHECK-NEXT:    andi a4, a1, 1024
+; CHECK-NEXT:    xori a1, a4, 1024
+; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a5, a0
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB29_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a6)
+; CHECK-NEXT:    vl1re32.v v8, (a5)
 ; CHECK-NEXT:    vfadd.vf v8, v8, fa0
-; CHECK-NEXT:    vs1r.v v8, (a6)
+; CHECK-NEXT:    vs1r.v v8, (a5)
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    add a5, a5, a2
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    bne a5, a3, .LBB29_3
+; CHECK-NEXT:    bnez a6, .LBB29_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB29_7
 ; CHECK-NEXT:  .LBB29_5: # %for.body.preheader
-; CHECK-NEXT:    addi a1, a3, -1024
-; CHECK-NEXT:    slli a2, a3, 2
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    addi a2, a1, -1024
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB29_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    fadd.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB29_6
+; CHECK-NEXT:    bnez a2, .LBB29_6
 ; CHECK-NEXT:  .LBB29_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1879,42 +1879,42 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @sink_splat_fsub_scalable(float* nocapture %a, float %x) {
 ; CHECK-LABEL: sink_splat_fsub_scalable:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB30_2
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a3, a2, 2
+; CHECK-NEXT:    li a1, 1024
+; CHECK-NEXT:    bgeu a1, a3, .LBB30_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB30_5
 ; CHECK-NEXT:  .LBB30_2: # %vector.ph
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
-; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, mu
-; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    addiw a1, a3, -1
+; CHECK-NEXT:    andi a4, a1, 1024
+; CHECK-NEXT:    xori a1, a4, 1024
+; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a5, a0
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB30_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a6)
+; CHECK-NEXT:    vl1re32.v v8, (a5)
 ; CHECK-NEXT:    vfsub.vf v8, v8, fa0
-; CHECK-NEXT:    vs1r.v v8, (a6)
+; CHECK-NEXT:    vs1r.v v8, (a5)
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    add a5, a5, a2
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    bne a5, a3, .LBB30_3
+; CHECK-NEXT:    bnez a6, .LBB30_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB30_7
 ; CHECK-NEXT:  .LBB30_5: # %for.body.preheader
-; CHECK-NEXT:    addi a1, a3, -1024
-; CHECK-NEXT:    slli a2, a3, 2
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    addi a2, a1, -1024
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB30_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    fsub.s ft0, ft0, fa0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB30_6
+; CHECK-NEXT:    bnez a2, .LBB30_6
 ; CHECK-NEXT:  .LBB30_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -1971,42 +1971,42 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @sink_splat_frsub_scalable(float* nocapture %a, float %x) {
 ; CHECK-LABEL: sink_splat_frsub_scalable:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB31_2
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a3, a2, 2
+; CHECK-NEXT:    li a1, 1024
+; CHECK-NEXT:    bgeu a1, a3, .LBB31_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB31_5
 ; CHECK-NEXT:  .LBB31_2: # %vector.ph
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
-; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, mu
-; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    addiw a1, a3, -1
+; CHECK-NEXT:    andi a4, a1, 1024
+; CHECK-NEXT:    xori a1, a4, 1024
+; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a5, a0
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB31_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a6)
+; CHECK-NEXT:    vl1re32.v v8, (a5)
 ; CHECK-NEXT:    vfrsub.vf v8, v8, fa0
-; CHECK-NEXT:    vs1r.v v8, (a6)
+; CHECK-NEXT:    vs1r.v v8, (a5)
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    add a5, a5, a2
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    bne a5, a3, .LBB31_3
+; CHECK-NEXT:    bnez a6, .LBB31_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB31_7
 ; CHECK-NEXT:  .LBB31_5: # %for.body.preheader
-; CHECK-NEXT:    addi a1, a3, -1024
-; CHECK-NEXT:    slli a2, a3, 2
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    addi a2, a1, -1024
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB31_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
 ; CHECK-NEXT:    fsub.s ft0, fa0, ft0
 ; CHECK-NEXT:    fsw ft0, 0(a0)
-; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB31_6
+; CHECK-NEXT:    bnez a2, .LBB31_6
 ; CHECK-NEXT:  .LBB31_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2154,11 +2154,11 @@ define void @sink_splat_fma_scalable(float* noalias nocapture %a, float* noalias
 ; CHECK-NEXT:    j .LBB34_5
 ; CHECK-NEXT:  .LBB34_2: # %vector.ph
 ; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    li a7, 0
 ; CHECK-NEXT:    addiw a4, a3, -1
 ; CHECK-NEXT:    andi a5, a4, 1024
 ; CHECK-NEXT:    xori a4, a5, 1024
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a7, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a7, a4
 ; CHECK-NEXT:  .LBB34_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add t0, a0, a6
@@ -2167,9 +2167,9 @@ define void @sink_splat_fma_scalable(float* noalias nocapture %a, float* noalias
 ; CHECK-NEXT:    vl1re32.v v9, (t1)
 ; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vs1r.v v9, (t0)
-; CHECK-NEXT:    add a7, a7, a3
+; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    bne a7, a4, .LBB34_3
+; CHECK-NEXT:    bnez a7, .LBB34_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a5, .LBB34_7
 ; CHECK-NEXT:  .LBB34_5: # %for.body.preheader
@@ -2257,11 +2257,11 @@ define void @sink_splat_fma_commute_scalable(float* noalias nocapture %a, float*
 ; CHECK-NEXT:    j .LBB35_5
 ; CHECK-NEXT:  .LBB35_2: # %vector.ph
 ; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    li a7, 0
 ; CHECK-NEXT:    addiw a4, a3, -1
 ; CHECK-NEXT:    andi a5, a4, 1024
 ; CHECK-NEXT:    xori a4, a5, 1024
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a7, zero, e32, m1, ta, mu
+; CHECK-NEXT:    mv a7, a4
 ; CHECK-NEXT:  .LBB35_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add t0, a0, a6
@@ -2270,9 +2270,9 @@ define void @sink_splat_fma_commute_scalable(float* noalias nocapture %a, float*
 ; CHECK-NEXT:    vl1re32.v v9, (t1)
 ; CHECK-NEXT:    vfmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vs1r.v v9, (t0)
-; CHECK-NEXT:    add a7, a7, a3
+; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    bne a7, a4, .LBB35_3
+; CHECK-NEXT:    bnez a7, .LBB35_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a5, .LBB35_7
 ; CHECK-NEXT:  .LBB35_5: # %for.body.preheader
@@ -2577,42 +2577,42 @@ define void @sink_splat_udiv_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_udiv_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB42_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB42_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB42_5
 ; CHECK-NEXT:  .LBB42_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB42_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vdivu.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB42_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB42_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB42_7
 ; CHECK-NEXT:  .LBB42_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB42_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    divuw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    divuw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB42_6
+; CHECK-NEXT:    bnez a3, .LBB42_6
 ; CHECK-NEXT:  .LBB42_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2670,42 +2670,42 @@ define void @sink_splat_sdiv_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_sdiv_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB43_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB43_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB43_5
 ; CHECK-NEXT:  .LBB43_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB43_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vdiv.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB43_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB43_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB43_7
 ; CHECK-NEXT:  .LBB43_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB43_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    divw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    divw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB43_6
+; CHECK-NEXT:    bnez a3, .LBB43_6
 ; CHECK-NEXT:  .LBB43_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2763,42 +2763,42 @@ define void @sink_splat_urem_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_urem_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB44_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB44_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB44_5
 ; CHECK-NEXT:  .LBB44_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB44_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vremu.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB44_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB44_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB44_7
 ; CHECK-NEXT:  .LBB44_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB44_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    remuw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    remuw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB44_6
+; CHECK-NEXT:    bnez a3, .LBB44_6
 ; CHECK-NEXT:  .LBB44_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -2856,42 +2856,42 @@ define void @sink_splat_srem_scalable(i32* nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_srem_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    srli a2, a5, 1
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    bgeu a3, a2, .LBB45_2
+; CHECK-NEXT:    srli a3, a5, 1
+; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    bgeu a2, a3, .LBB45_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB45_5
 ; CHECK-NEXT:  .LBB45_2: # %vector.ph
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    addiw a3, a2, -1
-; CHECK-NEXT:    andi a4, a3, 1024
-; CHECK-NEXT:    xori a3, a4, 1024
+; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    andi a4, a2, 1024
+; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
-; CHECK-NEXT:    vsetvli a7, zero, e32, m2, ta, mu
-; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, mu
+; CHECK-NEXT:    mv a6, a0
+; CHECK-NEXT:    mv a7, a2
 ; CHECK-NEXT:  .LBB45_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a7)
+; CHECK-NEXT:    vl2re32.v v8, (a6)
 ; CHECK-NEXT:    vrem.vx v8, v8, a1
-; CHECK-NEXT:    vs2r.v v8, (a7)
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a7, a7, a5
-; CHECK-NEXT:    bne a6, a3, .LBB45_3
+; CHECK-NEXT:    vs2r.v v8, (a6)
+; CHECK-NEXT:    sub a7, a7, a3
+; CHECK-NEXT:    add a6, a6, a5
+; CHECK-NEXT:    bnez a7, .LBB45_3
 ; CHECK-NEXT:  # %bb.4: # %middle.block
 ; CHECK-NEXT:    beqz a4, .LBB45_7
 ; CHECK-NEXT:  .LBB45_5: # %for.body.preheader
-; CHECK-NEXT:    addi a2, a3, -1024
-; CHECK-NEXT:    slli a3, a3, 2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, a2, -1024
+; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB45_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    remw a3, a3, a1
-; CHECK-NEXT:    sw a3, 0(a0)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    remw a2, a2, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a2, .LBB45_6
+; CHECK-NEXT:    bnez a3, .LBB45_6
 ; CHECK-NEXT:  .LBB45_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:

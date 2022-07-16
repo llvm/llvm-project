@@ -132,7 +132,7 @@ public:
 
   void SetDirtyPageList(std::vector<lldb::addr_t> pagelist) {
     if (m_dirty_pages)
-      m_dirty_pages.getValue().clear();
+      m_dirty_pages.value().clear();
     m_dirty_pages = std::move(pagelist);
   }
 

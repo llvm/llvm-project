@@ -246,6 +246,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_QNonStop,
       &GDBRemoteCommunicationServerLLGS::Handle_QNonStop);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vStdio,
+      &GDBRemoteCommunicationServerLLGS::Handle_vStdio);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vStopped,
       &GDBRemoteCommunicationServerLLGS::Handle_vStopped);
   RegisterMemberFunctionHandler(
@@ -1022,9 +1025,11 @@ void GDBRemoteCommunicationServerLLGS::EnqueueStopReplyPackets(
     return;
 
   for (NativeThreadProtocol &listed_thread : m_current_process->Threads()) {
-    if (listed_thread.GetID() != thread_to_skip)
-      m_stop_notification_queue.push_back(
-          PrepareStopReplyPacketForThread(listed_thread).GetString().str());
+    if (listed_thread.GetID() != thread_to_skip) {
+      StreamString stop_reply = PrepareStopReplyPacketForThread(listed_thread);
+      if (!stop_reply.Empty())
+        m_stop_notification_queue.push_back(stop_reply.GetString().str());
+    }
   }
 }
 
@@ -1108,14 +1113,16 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     SendProcessOutput();
     // Then stop the forwarding, so that any late output (see llvm.org/pr25652)
     // does not interfere with our protocol.
-    StopSTDIOForwarding();
+    if (!m_non_stop)
+      StopSTDIOForwarding();
     HandleInferiorState_Stopped(process);
     break;
 
   case StateType::eStateExited:
     // Same as above
     SendProcessOutput();
-    StopSTDIOForwarding();
+    if (!m_non_stop)
+      StopSTDIOForwarding();
     HandleInferiorState_Exited(process);
     break;
 
@@ -1192,6 +1199,9 @@ GDBRemoteCommunicationServerLLGS::SendONotification(const char *buffer,
   response.PutChar('O');
   response.PutBytesAsRawHex8(buffer, len);
 
+  if (m_non_stop)
+    return SendNotificationPacketNoLock("Stdio", m_stdio_notification_queue,
+                                        response.GetString());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -1417,7 +1427,8 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Process);
 
-  StopSTDIOForwarding();
+  if (!m_non_stop)
+    StopSTDIOForwarding();
 
   if (m_debugged_processes.empty()) {
     LLDB_LOG(log, "No debugged process found.");
@@ -1443,7 +1454,8 @@ GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vKill(
     StringExtractorGDBRemote &packet) {
-  StopSTDIOForwarding();
+  if (!m_non_stop)
+    StopSTDIOForwarding();
 
   packet.SetFilePos(6); // vKill;
   uint32_t pid = packet.GetU32(LLDB_INVALID_PROCESS_ID, 16);
@@ -1879,9 +1891,11 @@ GDBRemoteCommunicationServerLLGS::Handle_stop_reason(
       // the current thread (for clients that don't actually support multiple
       // stop reasons).
       NativeThreadProtocol *thread = m_current_process->GetCurrentThread();
-      if (thread)
-        m_stop_notification_queue.push_back(
-            PrepareStopReplyPacketForThread(*thread).GetString().str());
+      if (thread) {
+        StreamString stop_reply = PrepareStopReplyPacketForThread(*thread);
+        if (!stop_reply.Empty())
+          m_stop_notification_queue.push_back(stop_reply.GetString().str());
+      }
       EnqueueStopReplyPackets(thread ? thread->GetID()
                                      : LLDB_INVALID_THREAD_ID);
     }
@@ -1908,6 +1922,20 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     NativeProcessProtocol &process, lldb::StateType process_state,
     bool force_synchronous) {
   Log *log = GetLog(LLDBLog::Process);
+
+  if (m_disabling_non_stop) {
+    // Check if we are waiting for any more processes to stop.  If we are,
+    // do not send the OK response yet.
+    for (const auto &it : m_debugged_processes) {
+      if (it.second.process_up->IsRunning())
+        return PacketResult::Success;
+    }
+
+    // If all expected processes were stopped after a QNonStop:0 request,
+    // send the OK response.
+    m_disabling_non_stop = false;
+    return SendOKResponse();
+  }
 
   switch (process_state) {
   case eStateAttaching:
@@ -3500,7 +3528,8 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Process);
-  StopSTDIOForwarding();
+  if (!m_non_stop)
+    StopSTDIOForwarding();
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
@@ -3893,13 +3922,38 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
     StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Process);
+
   StringRef packet_str{packet.GetStringRef()};
   assert(packet_str.startswith("QNonStop:"));
   packet_str.consume_front("QNonStop:");
   if (packet_str == "0") {
+    if (m_non_stop)
+      StopSTDIOForwarding();
+    for (auto &process_it : m_debugged_processes) {
+      if (process_it.second.process_up->IsRunning()) {
+        assert(m_non_stop);
+        Status error = process_it.second.process_up->Interrupt();
+        if (error.Fail()) {
+          LLDB_LOG(log,
+                   "while disabling nonstop, failed to halt process {0}: {1}",
+                   process_it.first, error);
+          return SendErrorResponse(0x41);
+        }
+        // we must not send stop reasons after QNonStop
+        m_disabling_non_stop = true;
+      }
+    }
+    m_stdio_notification_queue.clear();
+    m_stop_notification_queue.clear();
     m_non_stop = false;
-    // TODO: stop all threads
+    // If we are stopping anything, defer sending the OK response until we're
+    // done.
+    if (m_disabling_non_stop)
+      return PacketResult::Success;
   } else if (packet_str == "1") {
+    if (!m_non_stop)
+      StartSTDIOForwarding();
     m_non_stop = true;
   } else
     return SendErrorResponse(Status("Invalid QNonStop packet"));
@@ -3907,26 +3961,38 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::HandleNotificationAck(
+    std::deque<std::string> &queue) {
+  // Per the protocol, the first message put into the queue is sent
+  // immediately.  However, it remains the queue until the client ACKs it --
+  // then we pop it and send the next message.  The process repeats until
+  // the last message in the queue is ACK-ed, in which case the packet sends
+  // an OK response.
+  if (queue.empty())
+    return SendErrorResponse(Status("No pending notification to ack"));
+  queue.pop_front();
+  if (!queue.empty())
+    return SendPacketNoLock(queue.front());
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vStdio(
+    StringExtractorGDBRemote &packet) {
+  return HandleNotificationAck(m_stdio_notification_queue);
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vStopped(
     StringExtractorGDBRemote &packet) {
-  // Per the protocol, the first message put into the queue is sent
-  // immediately.  However, it remains the queue until the client ACKs
-  // it via vStopped -- then we pop it and send the next message.
-  // The process repeats until the last message in the queue is ACK-ed,
-  // in which case the vStopped packet sends an OK response.
-
-  if (m_stop_notification_queue.empty())
-    return SendErrorResponse(Status("No pending notification to ack"));
-  m_stop_notification_queue.pop_front();
-  if (!m_stop_notification_queue.empty())
-    return SendPacketNoLock(m_stop_notification_queue.front());
+  PacketResult ret = HandleNotificationAck(m_stop_notification_queue);
   // If this was the last notification and all the processes exited,
   // terminate the server.
-  if (m_debugged_processes.empty()) {
+  if (m_stop_notification_queue.empty() && m_debugged_processes.empty()) {
     m_exit_now = true;
     m_mainloop.RequestTermination();
   }
-  return SendOKResponse();
+  return ret;
 }
 
 GDBRemoteCommunication::PacketResult
@@ -4181,9 +4247,10 @@ void GDBRemoteCommunicationServerLLGS::SetEnabledExtensions(
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendContinueSuccessResponse() {
-  // TODO: how to handle forwarding in non-stop mode?
+  if (m_non_stop)
+    return SendOKResponse();
   StartSTDIOForwarding();
-  return m_non_stop ? SendOKResponse() : PacketResult::Success;
+  return PacketResult::Success;
 }
 
 void GDBRemoteCommunicationServerLLGS::AppendThreadIDToResponse(

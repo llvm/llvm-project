@@ -571,6 +571,19 @@ define i64 @is_upper_bit_clear_i64(i64 %x) {
   ret i64 %r
 }
 
+define i64 @is_upper_bit_clear_i64_not(i64 %x) {
+; CHECK-LABEL: is_upper_bit_clear_i64_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    btq $39, %rdi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    retq
+  %n = xor i64 %x, -1
+  %sh = lshr i64 %n, 39
+  %r = and i64 %sh, 1
+  ret i64 %r
+}
+
 define i64 @is_lower_bit_clear_i64(i64 %x) {
 ; CHECK-LABEL: is_lower_bit_clear_i64:
 ; CHECK:       # %bb.0:
@@ -584,6 +597,19 @@ define i64 @is_lower_bit_clear_i64(i64 %x) {
   ret i64 %r
 }
 
+define i64 @is_lower_bit_clear_i64_not(i64 %x) {
+; CHECK-LABEL: is_lower_bit_clear_i64_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl $65536, %edi # imm = 0x10000
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %n = xor i64 %x, -1
+  %sh = lshr i64 %n, 16
+  %r = and i64 %sh, 1
+  ret i64 %r
+}
+
 define i32 @is_bit_clear_i32(i32 %x) {
 ; CHECK-LABEL: is_bit_clear_i32:
 ; CHECK:       # %bb.0:
@@ -594,6 +620,19 @@ define i32 @is_bit_clear_i32(i32 %x) {
   %sh = lshr i32 %x, 27
   %n = xor i32 %sh, -1
   %r = and i32 %n, 1
+  ret i32 %r
+}
+
+define i32 @is_bit_clear_i32_not(i32 %x) {
+; CHECK-LABEL: is_bit_clear_i32_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl $134217728, %edi # imm = 0x8000000
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %n = xor i32 %x, -1
+  %sh = lshr i32 %n, 27
+  %r = and i32 %sh, 1
   ret i32 %r
 }
 
@@ -611,6 +650,20 @@ define i16 @is_bit_clear_i16(i16 %x) {
   ret i16 %r
 }
 
+define i16 @is_bit_clear_i16_not(i16 %x) {
+; CHECK-LABEL: is_bit_clear_i16_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $4, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %n = xor i16 %x, -1
+  %sh = lshr i16 %n, 2
+  %r = and i16 %sh, 1
+  ret i16 %r
+}
+
 define i8 @is_bit_clear_i8(i8 %x) {
 ; CHECK-LABEL: is_bit_clear_i8:
 ; CHECK:       # %bb.0:
@@ -620,6 +673,18 @@ define i8 @is_bit_clear_i8(i8 %x) {
   %sh = lshr i8 %x, 3
   %m = and i8 %sh, 1
   %r = xor i8 %m, 1
+  ret i8 %r
+}
+
+define i8 @is_bit_clear_i8_not(i8 %x) {
+; CHECK-LABEL: is_bit_clear_i8_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $4, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %n = xor i8 %x, -1
+  %sh = lshr i8 %n, 2
+  %r = and i8 %sh, 1
   ret i8 %r
 }
 

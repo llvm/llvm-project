@@ -4690,6 +4690,11 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     types::ID InputType = Input.first;
     const Arg *InputArg = Input.second;
 
+    // The toolchain can be active for unsupported file types.
+    if ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
+        (Kind == Action::OFK_HIP && !types::isHIP(InputType)))
+      continue;
+
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, StringRef>> TCAndArchs;
     for (const ToolChain *TC : ToolChains)
@@ -4743,6 +4748,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
 
   if (offloadDeviceOnly())
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
+
+  if (OffloadActions.empty())
+    return HostAction;
 
   OffloadAction::DeviceDependences DDep;
   if (C.isOffloadingHostKind(Action::OFK_Cuda) &&

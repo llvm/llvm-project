@@ -1213,8 +1213,8 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
     // Mark the FramePtr as live at the beginning of every block except
     // the entry block.  (We'll have marked R8 as live on entry when
     // saving the GPRs.)
-    for (auto I = std::next(MF.begin()), E = MF.end(); I != E; ++I)
-      I->addLiveIn(Regs.getFramePointerRegister());
+    for (MachineBasicBlock &B : llvm::drop_begin(MF))
+      B.addLiveIn(Regs.getFramePointerRegister());
   }
 }
 

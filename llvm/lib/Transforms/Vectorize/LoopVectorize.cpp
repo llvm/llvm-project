@@ -1919,10 +1919,13 @@ public:
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
       if (DiffChecks) {
+        Value *RuntimeVF = nullptr;
         MemRuntimeCheckCond = addDiffRuntimeChecks(
             MemCheckBlock->getTerminator(), L, *DiffChecks, MemCheckExp,
-            [VF](IRBuilderBase &B, unsigned Bits) {
-              return getRuntimeVF(B, B.getIntNTy(Bits), VF);
+            [VF, &RuntimeVF](IRBuilderBase &B, unsigned Bits) {
+              if (!RuntimeVF)
+                RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
+              return RuntimeVF;
             },
             IC);
       } else {
@@ -2947,11 +2950,17 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   // If tail is to be folded, vector loop takes care of all iterations.
   Type *CountTy = Count->getType();
   Value *CheckMinIters = Builder.getFalse();
-  auto CreateStep = [&]() {
+  auto CreateStep = [&]() -> Value * {
     // Create step with max(MinProTripCount, UF * VF).
-    if (UF * VF.getKnownMinValue() < MinProfitableTripCount.getKnownMinValue())
-      return createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
-    return createStepForVF(Builder, CountTy, VF, UF);
+    if (UF * VF.getKnownMinValue() >= MinProfitableTripCount.getKnownMinValue())
+      return createStepForVF(Builder, CountTy, VF, UF);
+
+    Value *MinProfTC =
+        createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
+    if (!VF.isScalable())
+      return MinProfTC;
+    return Builder.CreateBinaryIntrinsic(
+        Intrinsic::umax, MinProfTC, createStepForVF(Builder, CountTy, VF, UF));
   };
 
   if (!Cost->foldTailByMasking())

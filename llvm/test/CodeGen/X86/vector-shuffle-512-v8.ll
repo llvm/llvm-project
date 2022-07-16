@@ -2249,9 +2249,7 @@ define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
 define <8 x i64> @test_v8i64_insert_zero_128(<8 x i64> %a) {
 ; ALL-LABEL: test_v8i64_insert_zero_128:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movb $3, %al
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ALL-NEXT:    vmovaps %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %res = shufflevector <8 x i64> %a, <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9>
   ret <8 x i64> %res

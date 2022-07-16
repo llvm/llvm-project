@@ -157,9 +157,9 @@ struct DeviceDataTy {
 
   CUcontext Context = nullptr;
   // Device properties
-  int ThreadsPerBlock = 0;
-  int BlocksPerGrid = 0;
-  int WarpSize = 0;
+  unsigned int ThreadsPerBlock = 0;
+  unsigned int BlocksPerGrid = 0;
+  unsigned int WarpSize = 0;
   // OpenMP properties
   int NumTeams = 0;
   int NumThreads = 0;

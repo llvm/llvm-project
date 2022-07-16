@@ -31,9 +31,9 @@ include "mlir/IR/OpBase.td"
 // DEF-NEXT: .Case(::test::IndexAttr::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
 // DEF-NEXT:   return ::mlir::success(!!value);
-// DEF: .Default([&](llvm::StringRef keyword, 
+// DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
-// DEF-NEXT:   return llvm::None; 
+// DEF-NEXT:   return llvm::None;
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
@@ -148,3 +148,13 @@ def F_ParamWithAccessorTypeAttr : TestAttr<"ParamWithAccessorType"> {
 // DEF: ParamWithAccessorTypeAttrStorage
 // DEF: ParamWithAccessorTypeAttrStorage(std::string param)
 // DEF: StringRef ParamWithAccessorTypeAttr::getParam()
+
+def G_BuilderWithReturnTypeAttr : TestAttr<"BuilderWithReturnType"> {
+  let parameters = (ins "int":$a);
+  let genVerifyDecl = 1;
+  let builders = [AttrBuilder<(ins), [{ return {}; }], "::mlir::Attribute">];
+}
+
+// DECL-LABEL: class BuilderWithReturnTypeAttr
+// DECL: ::mlir::Attribute get(
+// DECL: ::mlir::Attribute getChecked(
