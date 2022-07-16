@@ -13,7 +13,7 @@
 #include "mlir-c/Pass.h"
 #include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IR.h"
-#include "mlir-c/Registration.h"
+#include "mlir-c/RegisterEverything.h"
 #include "mlir-c/Transforms.h"
 
 #include <assert.h>
@@ -22,9 +22,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void registerAllUpstreamDialects(MlirContext ctx) {
+  MlirDialectRegistry registry = mlirDialectRegistryCreate();
+  mlirRegisterAllDialects(registry);
+  mlirContextAppendDialectRegistry(ctx, registry);
+  mlirDialectRegistryDestroy(registry);
+}
+
 void testRunPassOnModule() {
   MlirContext ctx = mlirContextCreate();
-  mlirRegisterAllDialects(ctx);
+  registerAllUpstreamDialects(ctx);
 
   MlirModule module = mlirModuleCreateParse(
       ctx,
@@ -62,7 +69,7 @@ void testRunPassOnModule() {
 
 void testRunPassOnNestedModule() {
   MlirContext ctx = mlirContextCreate();
-  mlirRegisterAllDialects(ctx);
+  registerAllUpstreamDialects(ctx);
 
   MlirModule module = mlirModuleCreateParse(
       ctx,
@@ -264,7 +271,7 @@ MlirExternalPassCallbacks makeTestExternalPassCallbacks(
 
 void testExternalPass() {
   MlirContext ctx = mlirContextCreate();
-  mlirRegisterAllDialects(ctx);
+  registerAllUpstreamDialects(ctx);
 
   MlirModule module = mlirModuleCreateParse(
       ctx,

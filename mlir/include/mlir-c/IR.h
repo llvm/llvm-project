@@ -130,6 +130,11 @@ MLIR_CAPI_EXPORTED MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
 MLIR_CAPI_EXPORTED void mlirContextEnableMultithreading(MlirContext context,
                                                         bool enable);
 
+/// Eagerly loads all available dialects registered with a context, making
+/// them available for use for IR construction.
+MLIR_CAPI_EXPORTED void
+mlirContextLoadAllAvailableDialects(MlirContext context);
+
 /// Returns whether the given fully-qualified operation (i.e.
 /// 'dialect.operation') is registered with the context. This will return true
 /// if the dialect is loaded and the operation is registered within the
@@ -156,6 +161,47 @@ MLIR_CAPI_EXPORTED bool mlirDialectEqual(MlirDialect dialect1,
 
 /// Returns the namespace of the given dialect.
 MLIR_CAPI_EXPORTED MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
+
+//===----------------------------------------------------------------------===//
+// DialectHandle API.
+// Registration entry-points for each dialect are declared using the common
+// MLIR_DECLARE_DIALECT_REGISTRATION_CAPI macro, which takes the dialect
+// API name (i.e. "Func", "Tensor", "Linalg") and namespace (i.e. "func",
+// "tensor", "linalg"). The following declarations are produced:
+//
+//   /// Gets the above hook methods in struct form for a dialect by namespace.
+//   /// This is intended to facilitate dynamic lookup and registration of
+//   /// dialects via a plugin facility based on shared library symbol lookup.
+//   const MlirDialectHandle *mlirGetDialectHandle__{NAMESPACE}__();
+//
+// This is done via a common macro to facilitate future expansion to
+// registration schemes.
+//===----------------------------------------------------------------------===//
+
+struct MlirDialectHandle {
+  const void *ptr;
+};
+typedef struct MlirDialectHandle MlirDialectHandle;
+
+#define MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Name, Namespace)                \
+  MLIR_CAPI_EXPORTED MlirDialectHandle mlirGetDialectHandle__##Namespace##__()
+
+/// Returns the namespace associated with the provided dialect handle.
+MLIR_CAPI_EXPORTED
+MlirStringRef mlirDialectHandleGetNamespace(MlirDialectHandle);
+
+/// Inserts the dialect associated with the provided dialect handle into the
+/// provided dialect registry
+MLIR_CAPI_EXPORTED void mlirDialectHandleInsertDialect(MlirDialectHandle,
+                                                       MlirDialectRegistry);
+
+/// Registers the dialect associated with the provided dialect handle.
+MLIR_CAPI_EXPORTED void mlirDialectHandleRegisterDialect(MlirDialectHandle,
+                                                         MlirContext);
+
+/// Loads the dialect associated with the provided dialect handle.
+MLIR_CAPI_EXPORTED MlirDialect mlirDialectHandleLoadDialect(MlirDialectHandle,
+                                                            MlirContext);
 
 //===----------------------------------------------------------------------===//
 // DialectRegistry API.

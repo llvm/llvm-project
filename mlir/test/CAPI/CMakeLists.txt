@@ -26,8 +26,8 @@ if(TARGET ${LLVM_NATIVE_ARCH})
   LINK_LIBS PRIVATE
     MLIRCAPIConversion
     MLIRCAPIExecutionEngine
-    MLIRCAPIRegistration
-  )
+    MLIRCAPIRegisterEverything
+)
 endif()
 
 _add_capi_test_executable(mlir-capi-ir-test
@@ -35,7 +35,7 @@ _add_capi_test_executable(mlir-capi-ir-test
   LINK_LIBS PRIVATE
     MLIRCAPIIR
     MLIRCAPIFunc
-    MLIRCAPIRegistration
+    MLIRCAPIRegisterEverything
 )
 
 _add_capi_test_executable(mlir-capi-llvm-test
@@ -43,7 +43,7 @@ _add_capi_test_executable(mlir-capi-llvm-test
   LINK_LIBS PRIVATE
     MLIRCAPIIR
     MLIRCAPILLVM
-    MLIRCAPIRegistration
+    MLIRCAPIRegisterEverything
 )
 
 _add_capi_test_executable(mlir-capi-pass-test
@@ -51,7 +51,7 @@ _add_capi_test_executable(mlir-capi-pass-test
   LINK_LIBS PRIVATE
     MLIRCAPIFunc
     MLIRCAPIIR
-    MLIRCAPIRegistration
+    MLIRCAPIRegisterEverything
     MLIRCAPITransforms
 )
 
@@ -59,7 +59,7 @@ _add_capi_test_executable(mlir-capi-sparse-tensor-test
   sparse_tensor.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
-    MLIRCAPIRegistration
+    MLIRCAPIRegisterEverything
     MLIRCAPISparseTensor
 )
 
@@ -67,7 +67,7 @@ _add_capi_test_executable(mlir-capi-quant-test
   quant.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
-    MLIRCAPIRegistration
+    MLIRCAPIRegisterEverything
     MLIRCAPIQuant
 )
 
@@ -75,6 +75,6 @@ _add_capi_test_executable(mlir-capi-pdl-test
   pdl.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
-    MLIRCAPIRegistration
+    MLIRCAPIRegisterEverything
     MLIRCAPIPDL
 )
