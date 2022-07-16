@@ -8,16 +8,23 @@
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,NOOBJPATH
 
 ; RUN: %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps
-; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH -DDIR=%t/lto-temps
+; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-DIR -DDIR=%t/lto-temps
 
-; CHECK:          0000000000000000                - 00 0000    SO /tmp/test.cpp
-; NOOBJPATH-NEXT: 0000000000000000                - 03 0001   OSO /tmp/lto.tmp
+;; check that the object path can be an existing file
+; RUN: touch %t/lto-tmp.o
+; RUN: %lld %t/test.o -o %t/test -object_path_lto %t/lto-tmp.o
+; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-FILE -DFILE=%t/lto-tmp.o
+
+
+; CHECK:             0000000000000000                - 00 0000    SO /tmp/test.cpp
+; NOOBJPATH-NEXT:    0000000000000000                - 03 0001   OSO /tmp/lto.tmp
 ;; check that modTime is nonzero when `-object_path_lto` is provided
-; OBJPATH-NEXT:   {{[0-9a-f]*[1-9a-f]+[0-9a-f]*}} - 03 0001   OSO [[DIR]]/0.x86_64.lto.o
-; CHECK-NEXT:     {{[0-9a-f]+}}                   - 01 0000   FUN _main
-; CHECK-NEXT:     0000000000000001                - 00 0000   FUN
-; CHECK-NEXT:     0000000000000000                - 01 0000    SO
-; CHECK-NEXT:     {{[0-9a-f]+}}                   T _main
+; OBJPATH-DIR-NEXT:  {{[0-9a-f]*[1-9a-f]+[0-9a-f]*}} - 03 0001   OSO [[DIR]]/0.x86_64.lto.o
+; OBJPATH-FILE-NEXT: {{[0-9a-f]*[1-9a-f]+[0-9a-f]*}} - 03 0001   OSO [[FILE]]
+; CHECK-NEXT:        {{[0-9a-f]+}}                   - 01 0000   FUN _main
+; CHECK-NEXT:        0000000000000001                - 00 0000   FUN
+; CHECK-NEXT:        0000000000000000                - 01 0000    SO
+; CHECK-NEXT:        {{[0-9a-f]+}}                   T _main
 
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
