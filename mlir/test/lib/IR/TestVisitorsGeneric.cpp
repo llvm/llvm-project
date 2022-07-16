@@ -131,10 +131,8 @@ struct TestGenericIRBlockVisitorInterruptPass
 
     auto walker = [&](Block *block) {
       for (Operation &op : *block)
-        for (OpResult result : op.getResults())
-          if (Operation *definingOp = result.getDefiningOp())
-            if (definingOp->getAttrOfType<BoolAttr>("interrupt"))
-              return WalkResult::interrupt();
+        if (op.getAttrOfType<BoolAttr>("interrupt"))
+          return WalkResult::interrupt();
 
       llvm::outs() << "step " << stepNo++ << "\n";
       return WalkResult::advance();
@@ -163,12 +161,9 @@ struct TestGenericIRRegionVisitorInterruptPass
     int stepNo = 0;
 
     auto walker = [&](Region *region) {
-      for (Block &block : *region)
-        for (Operation &op : block)
-          for (OpResult result : op.getResults())
-            if (Operation *definingOp = result.getDefiningOp())
-              if (definingOp->getAttrOfType<BoolAttr>("interrupt"))
-                return WalkResult::interrupt();
+      for (Operation &op : region->getOps())
+        if (op.getAttrOfType<BoolAttr>("interrupt"))
+          return WalkResult::interrupt();
 
       llvm::outs() << "step " << stepNo++ << "\n";
       return WalkResult::advance();
