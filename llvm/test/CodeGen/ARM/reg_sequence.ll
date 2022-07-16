@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-a8 -arm-atomic-cfg-tidy=0 | FileCheck %s
-; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-a8 -arm-atomic-cfg-tidy=0 -regalloc=basic | FileCheck %s
+; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-a8 -arm-atomic-cfg-tidy=0 | FileCheck %s --check-prefixes=CHECK,DEFAULT
+; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-a8 -arm-atomic-cfg-tidy=0 -regalloc=basic | FileCheck %s --check-prefixes=CHECK,BASIC
 ; Implementing vld / vst as REG_SEQUENCE eliminates the extra vmov's.
 
 %struct.int16x8_t = type { <8 x i16> }
@@ -10,15 +10,34 @@
 %struct.__neon_int32x4x2_t = type { <4 x i32>, <4 x i32> }
 
 define void @t1(i16* %i_ptr, i16* %o_ptr, %struct.int32x4_t* nocapture %vT0ptr, %struct.int32x4_t* nocapture %vT1ptr) nounwind {
+; DEFAULT-LABEL: t1:
+; DEFAULT:       @ %bb.0: @ %entry
+; DEFAULT-NEXT:    vld1.16 {d16, d17}, [r0]
+; DEFAULT-NEXT:    vmovl.s16 q9, d17
+; DEFAULT-NEXT:    vld1.64 {d20, d21}, [r3:128]
+; DEFAULT-NEXT:    vmovl.s16 q8, d16
+; DEFAULT-NEXT:    vld1.64 {d22, d23}, [r2:128]
+; DEFAULT-NEXT:    vmul.i32 q9, q10, q9
+; DEFAULT-NEXT:    vmul.i32 q8, q11, q8
+; DEFAULT-NEXT:    vshrn.i32 d19, q9, #12
+; DEFAULT-NEXT:    vshrn.i32 d18, q8, #12
+; DEFAULT-NEXT:    vst1.16 {d18, d19}, [r1]
+; DEFAULT-NEXT:    bx lr
+;
+; BASIC-LABEL: t1:
+; BASIC:       @ %bb.0: @ %entry
+; BASIC-NEXT:    vld1.16 {d16, d17}, [r0]
+; BASIC-NEXT:    vmovl.s16 q12, d17
+; BASIC-NEXT:    vld1.64 {d22, d23}, [r3:128]
+; BASIC-NEXT:    vmovl.s16 q10, d16
+; BASIC-NEXT:    vld1.64 {d18, d19}, [r2:128]
+; BASIC-NEXT:    vmul.i32 q8, q11, q12
+; BASIC-NEXT:    vmul.i32 q9, q9, q10
+; BASIC-NEXT:    vshrn.i32 d17, q8, #12
+; BASIC-NEXT:    vshrn.i32 d16, q9, #12
+; BASIC-NEXT:    vst1.16 {d16, d17}, [r1]
+; BASIC-NEXT:    bx lr
 entry:
-; CHECK-LABEL:        t1:
-; CHECK:        vld1.16
-; CHECK-NOT:    vmov d
-; CHECK:        vmovl.s16
-; CHECK:        vshrn.i32
-; CHECK:        vshrn.i32
-; CHECK-NOT:    vmov d
-; CHECK-NEXT:   vst1.16
   %0 = getelementptr inbounds %struct.int32x4_t, %struct.int32x4_t* %vT0ptr, i32 0, i32 0 ; <<4 x i32>*> [#uses=1]
   %1 = load <4 x i32>, <4 x i32>* %0, align 16               ; <<4 x i32>> [#uses=1]
   %2 = getelementptr inbounds %struct.int32x4_t, %struct.int32x4_t* %vT1ptr, i32 0, i32 0 ; <<4 x i32>*> [#uses=1]
@@ -45,16 +64,30 @@ entry:
 }
 
 define void @t2(i16* %i_ptr, i16* %o_ptr, %struct.int16x8_t* nocapture %vT0ptr, %struct.int16x8_t* nocapture %vT1ptr) nounwind {
+; DEFAULT-LABEL: t2:
+; DEFAULT:       @ %bb.0: @ %entry
+; DEFAULT-NEXT:    vld1.16 {d16, d17}, [r0]!
+; DEFAULT-NEXT:    vld1.64 {d18, d19}, [r2:128]
+; DEFAULT-NEXT:    vmul.i16 q8, q9, q8
+; DEFAULT-NEXT:    vld1.64 {d18, d19}, [r3:128]
+; DEFAULT-NEXT:    vld1.16 {d20, d21}, [r0]
+; DEFAULT-NEXT:    vmul.i16 q9, q9, q10
+; DEFAULT-NEXT:    vst1.16 {d16, d17}, [r1]!
+; DEFAULT-NEXT:    vst1.16 {d18, d19}, [r1]
+; DEFAULT-NEXT:    bx lr
+;
+; BASIC-LABEL: t2:
+; BASIC:       @ %bb.0: @ %entry
+; BASIC-NEXT:    vld1.16 {d18, d19}, [r0]!
+; BASIC-NEXT:    vld1.64 {d16, d17}, [r2:128]
+; BASIC-NEXT:    vmul.i16 q10, q8, q9
+; BASIC-NEXT:    vld1.64 {d18, d19}, [r3:128]
+; BASIC-NEXT:    vld1.16 {d16, d17}, [r0]
+; BASIC-NEXT:    vmul.i16 q8, q9, q8
+; BASIC-NEXT:    vst1.16 {d20, d21}, [r1]!
+; BASIC-NEXT:    vst1.16 {d16, d17}, [r1]
+; BASIC-NEXT:    bx lr
 entry:
-; CHECK-LABEL:        t2:
-; CHECK:        vld1.16
-; CHECK-NOT:    vmov
-; CHECK:        vmul.i16
-; CHECK:        vld1.16
-; CHECK:        vmul.i16
-; CHECK-NOT:    vmov
-; CHECK:        vst1.16
-; CHECK:        vst1.16
   %0 = getelementptr inbounds %struct.int16x8_t, %struct.int16x8_t* %vT0ptr, i32 0, i32 0 ; <<8 x i16>*> [#uses=1]
   %1 = load <8 x i16>, <8 x i16>* %0, align 16               ; <<8 x i16>> [#uses=1]
   %2 = getelementptr inbounds %struct.int16x8_t, %struct.int16x8_t* %vT1ptr, i32 0, i32 0 ; <<8 x i16>*> [#uses=1]
@@ -75,12 +108,27 @@ entry:
 }
 
 define <8 x i8> @t3(i8* %A, i8* %B) nounwind {
-; CHECK-LABEL:        t3:
-; CHECK:        vld3.8
-; CHECK:        vmul.i8
-; CHECK:        vmov r
-; CHECK-NOT:    vmov d
-; CHECK:        vst3.8
+; DEFAULT-LABEL: t3:
+; DEFAULT:       @ %bb.0:
+; DEFAULT-NEXT:    vld3.8 {d16, d17, d18}, [r0]
+; DEFAULT-NEXT:    vmul.i8 d22, d17, d16
+; DEFAULT-NEXT:    vmov r0, r2, d17
+; DEFAULT-NEXT:    vadd.i8 d21, d16, d18
+; DEFAULT-NEXT:    vsub.i8 d20, d18, d17
+; DEFAULT-NEXT:    vst3.8 {d20, d21, d22}, [r1]
+; DEFAULT-NEXT:    mov r1, r2
+; DEFAULT-NEXT:    bx lr
+;
+; BASIC-LABEL: t3:
+; BASIC:       @ %bb.0:
+; BASIC-NEXT:    vld3.8 {d20, d21, d22}, [r0]
+; BASIC-NEXT:    mov r2, r1
+; BASIC-NEXT:    vmul.i8 d18, d21, d20
+; BASIC-NEXT:    vmov r0, r1, d21
+; BASIC-NEXT:    vadd.i8 d17, d20, d22
+; BASIC-NEXT:    vsub.i8 d16, d22, d21
+; BASIC-NEXT:    vst3.8 {d16, d17, d18}, [r2]
+; BASIC-NEXT:    bx lr
   %tmp1 = call %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3.v8i8.p0i8(i8* %A, i32 1) ; <%struct.__neon_int8x8x3_t> [#uses=2]
   %tmp2 = extractvalue %struct.__neon_int8x8x3_t %tmp1, 0 ; <<8 x i8>> [#uses=1]
   %tmp3 = extractvalue %struct.__neon_int8x8x3_t %tmp1, 2 ; <<8 x i8>> [#uses=1]
@@ -93,13 +141,40 @@ define <8 x i8> @t3(i8* %A, i8* %B) nounwind {
 }
 
 define void @t4(i32* %in, i32* %out) nounwind {
+; DEFAULT-LABEL: t4:
+; DEFAULT:       @ %bb.0: @ %entry
+; DEFAULT-NEXT:    vld2.32 {d20, d21, d22, d23}, [r0]!
+; DEFAULT-NEXT:    vld2.32 {d16, d17, d18, d19}, [r0]
+; DEFAULT-NEXT:    mov r0, #0
+; DEFAULT-NEXT:    cmp r0, #0
+; DEFAULT-NEXT:    bne LBB3_2
+; DEFAULT-NEXT:  @ %bb.1: @ %return1
+; DEFAULT-NEXT:    vadd.i32 q12, q10, q8
+; DEFAULT-NEXT:    vadd.i32 q13, q11, q9
+; DEFAULT-NEXT:    vst2.32 {d24, d25, d26, d27}, [r1]
+; DEFAULT-NEXT:    bx lr
+; DEFAULT-NEXT:  LBB3_2: @ %return2
+; DEFAULT-NEXT:    vadd.i32 q8, q10, q9
+; DEFAULT-NEXT:    vst2.32 {d16, d17, d18, d19}, [r1]
+; DEFAULT-NEXT:    trap
+;
+; BASIC-LABEL: t4:
+; BASIC:       @ %bb.0: @ %entry
+; BASIC-NEXT:    vld2.32 {d20, d21, d22, d23}, [r0]!
+; BASIC-NEXT:    vld2.32 {d24, d25, d26, d27}, [r0]
+; BASIC-NEXT:    mov r0, #0
+; BASIC-NEXT:    cmp r0, #0
+; BASIC-NEXT:    bne LBB3_2
+; BASIC-NEXT:  @ %bb.1: @ %return1
+; BASIC-NEXT:    vadd.i32 q8, q10, q12
+; BASIC-NEXT:    vadd.i32 q9, q11, q13
+; BASIC-NEXT:    vst2.32 {d16, d17, d18, d19}, [r1]
+; BASIC-NEXT:    bx lr
+; BASIC-NEXT:  LBB3_2: @ %return2
+; BASIC-NEXT:    vadd.i32 q12, q10, q13
+; BASIC-NEXT:    vst2.32 {d24, d25, d26, d27}, [r1]
+; BASIC-NEXT:    trap
 entry:
-; CHECK-LABEL:        t4:
-; CHECK:        vld2.32
-; CHECK-NOT:    vmov
-; CHECK:        vld2.32
-; CHECK-NOT:    vmov
-; CHECK:        bne
   %tmp1 = bitcast i32* %in to i8*                 ; <i8*> [#uses=1]
   %tmp2 = tail call %struct.__neon_int32x4x2_t @llvm.arm.neon.vld2.v4i32.p0i8(i8* %tmp1, i32 1) ; <%struct.__neon_int32x4x2_t> [#uses=2]
   %tmp3 = getelementptr inbounds i32, i32* %in, i32 8  ; <i32*> [#uses=1]
@@ -109,11 +184,6 @@ entry:
   br i1 undef, label %return1, label %return2
 
 return1:
-; CHECK:        %return1
-; CHECK-NOT:    vmov
-; CHECK-NEXT:   vadd.i32
-; CHECK-NEXT:   vadd.i32
-; CHECK-NEXT:   vst2.32
   %tmp52 = extractvalue %struct.__neon_int32x4x2_t %tmp2, 0 ; <<4 x i32>> [#uses=1]
   %tmp57 = extractvalue %struct.__neon_int32x4x2_t %tmp2, 1 ; <<4 x i32>> [#uses=1]
   %tmp = extractvalue %struct.__neon_int32x4x2_t %tmp5, 0 ; <<4 x i32>> [#uses=1]
@@ -124,10 +194,6 @@ return1:
   ret void
 
 return2:
-; CHECK:        %return2
-; CHECK:        vadd.i32
-; CHECK-NOT:    vmov
-; CHECK:        vst2.32 {d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}}
   %tmp100 = extractvalue %struct.__neon_int32x4x2_t %tmp2, 0 ; <<4 x i32>> [#uses=1]
   %tmp101 = extractvalue %struct.__neon_int32x4x2_t %tmp5, 1 ; <<4 x i32>> [#uses=1]
   %tmp102 = add <4 x i32> %tmp100, %tmp101              ; <<4 x i32>> [#uses=1]
@@ -137,14 +203,15 @@ return2:
 }
 
 define <8 x i16> @t5(i16* %A, <8 x i16>* %B) nounwind {
-; CHECK-LABEL:        t5:
-; CHECK:        vld1.32
-; How can FileCheck match Q and D registers? We need a lisp interpreter.
-; CHECK:        vorr {{q[0-9]+}}, {{q[0-9]+}}, {{q[0-9]+}}
-; CHECK-NOT:    vmov
-; CHECK:        vld2.16 {d{{[0-9]+}}[1], d{{[0-9]+}}[1]}, [r0]
-; CHECK-NOT:    vmov
-; CHECK:        vadd.i16
+; CHECK-LABEL: t5:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vld1.32 {d16, d17}, [r1]
+; CHECK-NEXT:    vorr q9, q8, q8
+; CHECK-NEXT:    vld2.16 {d16[1], d18[1]}, [r0]
+; CHECK-NEXT:    vadd.i16 q8, q8, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    bx lr
   %tmp0 = bitcast i16* %A to i8*                  ; <i8*> [#uses=1]
   %tmp1 = load <8 x i16>, <8 x i16>* %B                      ; <<8 x i16>> [#uses=2]
   %tmp2 = call %struct.__neon_int16x8x2_t @llvm.arm.neon.vld2lane.v8i16.p0i8(i8* %tmp0, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 1, i32 1) ; <%struct.__neon_int16x8x2_t> [#uses=2]
@@ -155,10 +222,14 @@ define <8 x i16> @t5(i16* %A, <8 x i16>* %B) nounwind {
 }
 
 define <8 x i8> @t6(i8* %A, <8 x i8>* %B) nounwind {
-; CHECK-LABEL:        t6:
-; CHECK:        vldr
-; CHECK:        vorr d[[D0:[0-9]+]], d[[D1:[0-9]+]]
-; CHECK-NEXT:   vld2.8 {d[[D1]][1], d[[D0]][1]}
+; CHECK-LABEL: t6:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vorr d17, d16, d16
+; CHECK-NEXT:    vld2.8 {d16[1], d17[1]}, [r0]
+; CHECK-NEXT:    vadd.i8 d16, d16, d17
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    bx lr
   %tmp1 = load <8 x i8>, <8 x i8>* %B                       ; <<8 x i8>> [#uses=2]
   %tmp2 = call %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0i8(i8* %A, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 1) ; <%struct.__neon_int8x8x2_t> [#uses=2]
   %tmp3 = extractvalue %struct.__neon_int8x8x2_t %tmp2, 0 ; <<8 x i8>> [#uses=1]
@@ -168,15 +239,26 @@ define <8 x i8> @t6(i8* %A, <8 x i8>* %B) nounwind {
 }
 
 define void @t7(i32* %iptr, i32* %optr) nounwind {
+; DEFAULT-LABEL: t7:
+; DEFAULT:       @ %bb.0: @ %entry
+; DEFAULT-NEXT:    vld2.32 {d16, d17, d18, d19}, [r0]
+; DEFAULT-NEXT:    vst2.32 {d16, d17, d18, d19}, [r1]
+; DEFAULT-NEXT:    vld1.32 {d16, d17}, [r0]
+; DEFAULT-NEXT:    vorr q9, q8, q8
+; DEFAULT-NEXT:    vuzp.32 q8, q9
+; DEFAULT-NEXT:    vst1.32 {d16, d17}, [r1]
+; DEFAULT-NEXT:    bx lr
+;
+; BASIC-LABEL: t7:
+; BASIC:       @ %bb.0: @ %entry
+; BASIC-NEXT:    vld2.32 {d16, d17, d18, d19}, [r0]
+; BASIC-NEXT:    vst2.32 {d16, d17, d18, d19}, [r1]
+; BASIC-NEXT:    vld1.32 {d18, d19}, [r0]
+; BASIC-NEXT:    vorr q8, q9, q9
+; BASIC-NEXT:    vuzp.32 q9, q8
+; BASIC-NEXT:    vst1.32 {d18, d19}, [r1]
+; BASIC-NEXT:    bx lr
 entry:
-; CHECK-LABEL:        t7:
-; CHECK:        vld2.32
-; CHECK:        vst2.32
-; CHECK:        vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}},
-; CHECK:        vorr q[[Q0:[0-9]+]], q[[Q1:[0-9]+]], q[[Q1:[0-9]+]]
-; CHECK-NOT:    vmov
-; CHECK:        vuzp.32 q[[Q1]], q[[Q0]]
-; CHECK:        vst1.32
   %0 = bitcast i32* %iptr to i8*                  ; <i8*> [#uses=2]
   %1 = tail call %struct.__neon_int32x4x2_t @llvm.arm.neon.vld2.v4i32.p0i8(i8* %0, i32 1) ; <%struct.__neon_int32x4x2_t> [#uses=2]
   %tmp57 = extractvalue %struct.__neon_int32x4x2_t %1, 0 ; <<4 x i32>> [#uses=1]
@@ -192,7 +274,16 @@ entry:
 ; PR7156
 define arm_aapcs_vfpcc i32 @t8() nounwind {
 ; CHECK-LABEL: t8:
-; CHECK: vrsqrte.f32 q8, q8
+; CHECK:       @ %bb.0: @ %bb.nph55.bb.nph55.split_crit_edge
+; CHECK-NEXT:    vrsqrte.f32 q8, q8
+; CHECK-NEXT:    vmul.f32 q8, q8, q8
+; CHECK-NEXT:    vmul.f32 q8, q8, q8
+; CHECK-NEXT:    vst1.32 {d16[1]}, [r0:32]
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    movne r0, #0
+; CHECK-NEXT:    bxne lr
+; CHECK-NEXT:  LBB7_1: @ %bb7
 bb.nph55.bb.nph55.split_crit_edge:
   br label %bb3
 
@@ -240,11 +331,14 @@ bb14:                                             ; preds = %bb6
 
 ; PR7157
 define arm_aapcs_vfpcc float @t9(%0* nocapture, %3* nocapture) nounwind {
-; CHECK-LABEL:        t9:
-; CHECK: vmov.i32 d16, #0x0
-; CHECK-NEXT:   vst1.64 {d16, d17}, [r0:128]
-; CHECK-NEXT:   vorr d17, d16, d16
-; CHECK-NEXT:   vst1.64 {d16, d17}, [r0:128]
+; CHECK-LABEL: t9:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i32 d16, #0x0
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]
+; CHECK-NEXT:    vorr d17, d16, d16
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]
+; CHECK-NEXT:  LBB8_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    b LBB8_1
   %3 = bitcast double 0.000000e+00 to <2 x float> ; <<2 x float>> [#uses=2]
   %4 = shufflevector <2 x float> %3, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3> ; <<4 x float>> [#uses=1]
   store <4 x float> %4, <4 x float>* undef, align 16
@@ -270,23 +364,49 @@ define arm_aapcs_vfpcc float @t9(%0* nocapture, %3* nocapture) nounwind {
 
 ; PR7162
 define arm_aapcs_vfpcc i32 @t10(float %x) nounwind {
-; CHECK-LABEL: t10:
-; CHECK:       vdup.32	[[Q0:q[0-9]+]], d0[0]
-; CHECK:       vmov.i32	[[Q9:q[0-9]+]], #0x3f000000
-; CHECK:       vmul.f32	[[Q8:q[0-9]+]], [[Q0]], [[Q0]]
-; CHECK-NEXT:  vadd.f32	[[Q8]], [[Q8]], [[Q8]]
-; CHECK-NEXT:  vadd.f32	[[Q1:q[0-9]+]], [[Q8]], [[Q8]]
-; CHECK-NEXT:  vmul.f32	[[Q8]], [[Q9]], d1[0]
-; CHECK-NEXT:  vmul.f32	[[Q8]], [[Q8]], [[Q8]]
-; CHECK-NEXT:  vadd.f32	[[Q8]], [[Q8]], [[Q8]]
-; CHECK-NEXT:  vmul.f32	[[Q8]], [[Q8]], [[Q8]]
-; CHECK-NEXT:  vst1.32	{d17[1]}, [r0:32]
-; CHECK-NEXT:  mov	r0, #0
-; CHECK-NEXT:  cmp	r0, #0
-; CHECK-NEXT:  movne	r0, #0
-; CHECK-NEXT:  bxne	lr
-; CHECK-NEXT:  LBB9_1:
-; CHECK-NEXT:  trap
+; DEFAULT-LABEL: t10:
+; DEFAULT:       @ %bb.0: @ %entry
+; DEFAULT-NEXT:    vmov.i32 d2, #0x0
+; DEFAULT-NEXT:    @ kill: def $s0 killed $s0 def $d0
+; DEFAULT-NEXT:    vdup.32 q0, d0[0]
+; DEFAULT-NEXT:    vmov.i32 q9, #0x3f000000
+; DEFAULT-NEXT:    vmov.f32 s0, s4
+; DEFAULT-NEXT:    vmul.f32 q8, q0, q0
+; DEFAULT-NEXT:    vadd.f32 q8, q8, q8
+; DEFAULT-NEXT:    vadd.f32 q0, q8, q8
+; DEFAULT-NEXT:    vmul.f32 q8, q9, d1[0]
+; DEFAULT-NEXT:    vmul.f32 q8, q8, q8
+; DEFAULT-NEXT:    vadd.f32 q8, q8, q8
+; DEFAULT-NEXT:    vmul.f32 q8, q8, q8
+; DEFAULT-NEXT:    vst1.32 {d17[1]}, [r0:32]
+; DEFAULT-NEXT:    mov r0, #0
+; DEFAULT-NEXT:    cmp r0, #0
+; DEFAULT-NEXT:    movne r0, #0
+; DEFAULT-NEXT:    bxne lr
+; DEFAULT-NEXT:  LBB9_1: @ %exit
+; DEFAULT-NEXT:    trap
+;
+; BASIC-LABEL: t10:
+; BASIC:       @ %bb.0: @ %entry
+; BASIC-NEXT:    @ kill: def $s0 killed $s0 def $d0
+; BASIC-NEXT:    vdup.32 q1, d0[0]
+; BASIC-NEXT:    vmov.i32 q9, #0x3f000000
+; BASIC-NEXT:    vmov.i32 d0, #0x0
+; BASIC-NEXT:    vmov.f32 s4, s0
+; BASIC-NEXT:    vmul.f32 q8, q1, q1
+; BASIC-NEXT:    vadd.f32 q8, q8, q8
+; BASIC-NEXT:    vadd.f32 q0, q8, q8
+; BASIC-NEXT:    vmul.f32 q8, q9, d1[0]
+; BASIC-NEXT:    vmul.f32 q8, q8, q8
+; BASIC-NEXT:    vadd.f32 q8, q8, q8
+; BASIC-NEXT:    vmul.f32 q8, q8, q8
+; BASIC-NEXT:    vst1.32 {d17[1]}, [r0:32]
+; BASIC-NEXT:    mov r0, #0
+; BASIC-NEXT:    cmp r0, #0
+; BASIC-NEXT:    movne r0, #0
+; BASIC-NEXT:    bxne lr
+; BASIC-NEXT:  LBB9_1: @ %exit
+; BASIC-NEXT:    trap
 entry:
   %0 = shufflevector <4 x float> zeroinitializer, <4 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]
   %1 = insertelement <4 x float> %0, float %x, i32 1 ; <<4 x float>> [#uses=1]
@@ -296,7 +416,7 @@ entry:
   %4 = extractelement <2 x double> %tmp54.i, i32 1 ; <double> [#uses=1]
   %5 = bitcast double %4 to <2 x float>           ; <<2 x float>> [#uses=1]
   %6 = shufflevector <2 x float> %5, <2 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]
-  %7 = fmul <4 x float> %6, %6 
+  %7 = fmul <4 x float> %6, %6
   %8 = fadd <4 x float> %7, %7
   %9 = fadd <4 x float> %8, %8
   %10 = shufflevector <4 x float> undef, <4 x float> %9, <4 x i32> <i32 0, i32 1, i32 2, i32 7> ; <<4 x float>> [#uses=1]
@@ -320,6 +440,15 @@ bb14:                                             ; preds = %bb6
 
 ; This test crashes the coalescer because live variables were not updated properly.
 define <8 x i8> @t11(i8* %A1, i8* %A2, i8* %A3, i8* %A4, i8* %A5, i8* %A6, i8* %A7, i8* %A8, i8* %B) nounwind {
+; CHECK-LABEL: t11:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov r0, r2, d16
+; CHECK-NEXT:    ldr r3, [sp, #16]
+; CHECK-NEXT:    vmov.i32 d18, #0x0
+; CHECK-NEXT:    vst3.8 {d16, d17, d18}, [r1]
+; CHECK-NEXT:    vst3.8 {d16, d17, d18}, [r3]
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    bx lr
   %tmp1d = call %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3.v8i8.p0i8(i8* %A4, i32 1) ; <%struct.__neon_int8x8x3_t> [#uses=1]
   %tmp2d = extractvalue %struct.__neon_int8x8x3_t %tmp1d, 0 ; <<8 x i8>> [#uses=1]
   %tmp1f = call %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3.v8i8.p0i8(i8* %A6, i32 1) ; <%struct.__neon_int8x8x3_t> [#uses=1]
