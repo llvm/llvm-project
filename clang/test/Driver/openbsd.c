@@ -37,6 +37,7 @@
 // RUN: %clang --target=mips64el-unknown-openbsd -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-LD %s
 // CHECK-LD-R:     "-r"
+// CHECK-LD-R-NOT: "-dynamic-linker"
 // CHECK-LD-R-NOT: "-l
 // CHECK-LD-R-NOT: crt{{[^./]+}}.o
 // CHECK-LD-S: "-cc1" "-triple" "i686-pc-openbsd"
