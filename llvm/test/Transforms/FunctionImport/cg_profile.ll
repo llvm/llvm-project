@@ -1,7 +1,7 @@
 ; Check that bitcast in "CG Profile" related metadata nodes (in this test case,
 ; generated during function importing in IRMover's RAUW operations) are accepted
 ; by verifier.
-; RUN: opt -cg-profile -module-summary %s -o %t.bc
+; RUN: opt -passes=cg-profile -module-summary %s -o %t.bc
 ; RUN: opt -module-summary %p/Inputs/cg_profile.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 ; RUN: opt -function-import -print-imports -summary-file %t3.thinlto.bc %t.bc \
