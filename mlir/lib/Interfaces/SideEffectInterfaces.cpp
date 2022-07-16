@@ -99,9 +99,10 @@ bool mlir::hasSingleEffect(Operation *op, Value value) {
   memOp.getEffects(effects);
   bool hasSingleEffectOnVal = false;
   // Iterate through `effects` and check if an effect of type `EffectTy` and
-  // only of that type is present.
+  // only of that type is present. A `value` to check the effect on may or may
+  // not have been provided.
   for (auto &effect : effects) {
-    if (effect.getValue() != value)
+    if (value && effect.getValue() != value)
       continue;
     hasSingleEffectOnVal = isa<EffectTy>(effect.getEffect());
     if (!hasSingleEffectOnVal)
