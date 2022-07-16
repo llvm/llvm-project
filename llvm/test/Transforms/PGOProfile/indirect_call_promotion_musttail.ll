@@ -3,67 +3,64 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo = common global i32* ()* null, align 8
+@foo = common global ptr null, align 8
 
-define i32* @func1() {
-  ret i32* null
+define ptr @func1() {
+  ret ptr null
 }
 
-define i32* @func2() {
-  ret i32* null
+define ptr @func2() {
+  ret ptr null
 }
 
-define i32* @func3() {
-  ret i32* null
+define ptr @func3() {
+  ret ptr null
 }
 
-define i32* @func4() {
-  ret i32* null
+define ptr @func4() {
+  ret ptr null
 }
 
-define i32* @bar() {
+define ptr @bar() {
 entry:
-  %tmp = load i32* ()*, i32* ()** @foo, align 8
-; ICALL-PROM:   [[CMP1:%[0-9]+]] = icmp eq i32* ()* %tmp, @func4
+  %tmp = load ptr, ptr @foo, align 8
+; ICALL-PROM:   [[CMP1:%[0-9]+]] = icmp eq ptr %tmp, @func4
 ; ICALL-PROM:   br i1 [[CMP1]], label %if.true.direct_targ, label %[[L1:[0-9]+]], !prof [[BRANCH_WEIGHT1:![0-9]+]]
 ; ICALL-PROM: if.true.direct_targ:
-; ICALL-PROM:   [[DIRCALL_RET1:%[0-9]+]] = musttail call i32* @func4()
-; ICALL-PROM:   ret i32* [[DIRCALL_RET1]]
+; ICALL-PROM:   [[DIRCALL_RET1:%[0-9]+]] = musttail call ptr @func4()
+; ICALL-PROM:   ret ptr [[DIRCALL_RET1]]
 ; ICALL-PROM: [[L1]]:
-; ICALL-PROM:   [[CMP2:%[0-9]+]] = icmp eq i32* ()* %tmp, @func2
+; ICALL-PROM:   [[CMP2:%[0-9]+]] = icmp eq ptr %tmp, @func2
 ; ICALL-PROM:   br i1 [[CMP2]], label %if.true.direct_targ1, label %[[L2:[0-9]+]], !prof [[BRANCH_WEIGHT2:![0-9]+]]
 ; ICALL-PROM: if.true.direct_targ1:
-; ICALL-PROM:   [[DIRCALL_RET2:%[0-9]+]] = musttail call i32* @func2()
-; ICALL-PROM:   ret i32* [[DIRCALL_RET2]]
+; ICALL-PROM:   [[DIRCALL_RET2:%[0-9]+]] = musttail call ptr @func2()
+; ICALL-PROM:   ret ptr [[DIRCALL_RET2]]
 ; ICALL-PROM: [[L2]]:
-; ICALL-PROM:   [[CMP3:%[0-9]+]] = icmp eq i32* ()* %tmp, @func3
+; ICALL-PROM:   [[CMP3:%[0-9]+]] = icmp eq ptr %tmp, @func3
 ; ICALL-PROM:   br i1 [[CMP3]], label %if.true.direct_targ2, label %[[L3:[0-9]+]], !prof [[BRANCH_WEIGHT3:![0-9]+]]
 ; ICALL-PROM: if.true.direct_targ2:
-; ICALL-PROM:   [[DIRCALL_RET3:%[0-9]+]] = musttail call i32* @func3()
-; ICALL-PROM:   ret i32* [[DIRCALL_RET3]]
+; ICALL-PROM:   [[DIRCALL_RET3:%[0-9]+]] = musttail call ptr @func3()
+; ICALL-PROM:   ret ptr [[DIRCALL_RET3]]
 ; ICALL-PROM: [[L3]]:
-; ICALL-PROM:   %call = musttail call i32* %tmp()
-; ICALL-PROM:   ret i32* %call
-  %call = musttail call i32* %tmp(), !prof !1
-  ret i32* %call
+; ICALL-PROM:   %call = musttail call ptr %tmp()
+; ICALL-PROM:   ret ptr %call
+  %call = musttail call ptr %tmp(), !prof !1
+  ret ptr %call
 }
 
-define i64* @bar2() {
+define ptr @bar2() {
 entry:
-  %tmp = load i32* ()*, i32* ()** @foo, align 8
-; ICALL-PROM:   [[CMP1:%[0-9]+]] = icmp eq i32* ()* %tmp, @func4
+  %tmp = load ptr, ptr @foo, align 8
+; ICALL-PROM:   [[CMP1:%[0-9]+]] = icmp eq ptr %tmp, @func4
 ; ICALL-PROM:   br i1 [[CMP1]], label %if.true.direct_targ, label %[[L4:[0-9]+]], !prof [[BRANCH_WEIGHT4:![0-9]+]]
 ; ICALL-PROM: if.true.direct_targ:
-; ICALL-PROM:   [[DIRCALL_RET1:%[0-9]+]] = musttail call i32* @func4()
-; ICALL-PROM:   [[DIRCALL_RET2:%[0-9]+]] = bitcast i32* [[DIRCALL_RET1]] to i64*
-; ICALL-PROM:   ret i64* [[DIRCALL_RET2]]
+; ICALL-PROM:   [[DIRCALL_RET1:%[0-9]+]] = musttail call ptr @func4()
+; ICALL-PROM:   ret ptr [[DIRCALL_RET1]]
 ; ICALL-PROM: [[L4]]:
-; ICALL-PROM:   %call = musttail call i32* %tmp()
-; ICALL-PROM:   %rv = bitcast i32* %call to i64*
-; ICALL-PROM:   ret i64* %rv
-  %call = musttail call i32* %tmp(), !prof !2
-  %rv = bitcast i32* %call to i64*
-  ret i64* %rv
+; ICALL-PROM:   %call = musttail call ptr %tmp()
+; ICALL-PROM:   ret ptr %call
+  %call = musttail call ptr %tmp(), !prof !2
+  ret ptr %call
 }
 
 !1 = !{!"VP", i32 0, i64 1600, i64 7651369219802541373, i64 1030, i64 -4377547752858689819, i64 410, i64 -6929281286627296573, i64 150, i64 -2545542355363006406, i64 10}

@@ -17,9 +17,9 @@ bb1:                                              ; preds = %bb11, %bb
   br i1 %tmp3, label %bb7, label %bb4
 
 bb4:                                              ; preds = %bb1
-  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 63969943867, i32 5, i32 1)
+  call void @llvm.instrprof.increment(ptr @__profn_foo, i64 63969943867, i32 5, i32 1)
   tail call void @bar(i32 1)
-  %tmp5 = load i32, i32* @g, align 4
+  %tmp5 = load i32, ptr @g, align 4
   %tmp6 = icmp sgt i32 %tmp5, 100
   br i1 %tmp6, label %bb14, label %bb11
 
@@ -28,12 +28,12 @@ bb7:                                              ; preds = %bb1
   br i1 %tmp8, label %bb9, label %bb10
 
 bb9:                                              ; preds = %bb7
-  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 63969943867, i32 5, i32 2)
+  call void @llvm.instrprof.increment(ptr @__profn_foo, i64 63969943867, i32 5, i32 2)
   tail call void @bar(i32 2)
   br label %bb11
 
 bb10:                                             ; preds = %bb7
-  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 63969943867, i32 5, i32 3)
+  call void @llvm.instrprof.increment(ptr @__profn_foo, i64 63969943867, i32 5, i32 3)
   tail call void @bar(i32 3)
   br label %bb11
 
@@ -60,7 +60,7 @@ bb14:                                             ; preds = %bb4.bb14_crit_edge,
 ; PROMO-NEXT: store{{.*}}@__profc_foo{{.*}}3)
 
 bb15:                                             ; preds = %bb14
-  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 63969943867, i32 5, i32 4)
+  call void @llvm.instrprof.increment(ptr @__profn_foo, i64 63969943867, i32 5, i32 4)
   tail call void @bar(i32 1)
   ret void
 }
@@ -68,6 +68,6 @@ bb15:                                             ; preds = %bb14
 declare void @bar(i32) local_unnamed_addr
 
 ; Function Attrs: nounwind
-declare void @llvm.instrprof.increment(i8*, i64, i32, i32) #0
+declare void @llvm.instrprof.increment(ptr, i64, i32, i32) #0
 
 attributes #0 = { nounwind }

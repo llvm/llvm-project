@@ -9,7 +9,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo.table = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@foo, %return), i8* blockaddress(@foo, %label2), i8* blockaddress(@foo, %label3)], align 16
+@foo.table = internal unnamed_addr constant [3 x ptr] [ptr blockaddress(@foo, %return), ptr blockaddress(@foo, %label2), ptr blockaddress(@foo, %label3)], align 16
 
 define i32 @foo(i32 %i) {
 entry:
@@ -18,10 +18,10 @@ entry:
 
 if.then:
   %idxprom = zext i32 %i to i64
-  %arrayidx = getelementptr inbounds [3 x i8*], [3 x i8*]* @foo.table, i64 0, i64 %idxprom
-  %0 = load i8*, i8** %arrayidx, align 8
-  indirectbr i8* %0, [label %return, label %label2, label %label3]
-; USE:  indirectbr i8* %0, [label %return, label %label2, label %label3]
+  %arrayidx = getelementptr inbounds [3 x ptr], ptr @foo.table, i64 0, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
+  indirectbr ptr %0, [label %return, label %label2, label %label3]
+; USE:  indirectbr ptr %0, [label %return, label %label2, label %label3]
 ; USE-SAME: !prof ![[BW_INDBR:[0-9]+]]
 ; USE: ![[BW_INDBR]] = !{!"branch_weights", i32 63, i32 20, i32 5}
 

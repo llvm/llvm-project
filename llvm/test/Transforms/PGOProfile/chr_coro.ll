@@ -4,38 +4,38 @@
 declare void @foo()
 declare void @bar()
 
-declare token @llvm.coro.id(i32, i8*, i8*, i8*)
+declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
-declare i8* @llvm.coro.begin(token, i8*)
-declare noalias i8* @malloc(i32)
+declare ptr @llvm.coro.begin(token, ptr)
+declare noalias ptr @malloc(i32)
 
-%f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i1 }
+%f.Frame = type { ptr, ptr, i1 }
 
 ; resume part of the coroutine
-define fastcc void @f.resume(%f.Frame* noalias nonnull align 8 dereferenceable(24) %FramePtr) {
+define fastcc void @f.resume(ptr noalias nonnull align 8 dereferenceable(24) %FramePtr) {
     tail call void @bar()
     ret void
 }
 
 ; destroy part of the coroutine
-define fastcc void @f.destroy(%f.Frame* noalias nonnull align 8 dereferenceable(24) %FramePtr) {
+define fastcc void @f.destroy(ptr noalias nonnull align 8 dereferenceable(24) %FramePtr) {
     tail call void @bar()
     ret void
 }
 
 ; cleanup part of the coroutine
-define fastcc void @f.cleanup(%f.Frame* noalias nonnull align 8 dereferenceable(24) %FramePtr) {
+define fastcc void @f.cleanup(ptr noalias nonnull align 8 dereferenceable(24) %FramePtr) {
     tail call void @bar()
     ret void
 }
 
-@f.resumers = private constant [3 x void (%f.Frame*)*] [void (%f.Frame*)* @f.resume, void (%f.Frame*)* @f.destroy, void (%f.Frame*)* @f.cleanup]
+@f.resumers = private constant [3 x ptr] [ptr @f.resume, ptr @f.destroy, ptr @f.cleanup]
 
 ; Test that chr will skip block containing llvm.coro.id.
-define i8* @test_chr_with_coro_id(i32* %i) !prof !14 {
+define ptr @test_chr_with_coro_id(ptr %i) !prof !14 {
 ; CHECK-LABEL: @test_chr_with_coro_id(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 3
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB0:.*]], label %[[ENTRY_SPLIT_NONCHR:.*]], !prof !15
@@ -54,11 +54,11 @@ define i8* @test_chr_with_coro_id(i32* %i) !prof !14 {
 ; CHECK-NEXT:    [[NEED_DYN_ALLOC:%.*]] = call i1 @llvm.coro.alloc(token [[ID]])
 ; CHECK-NEXT:    br i1 [[NEED_DYN_ALLOC]], label %[[BB_CORO_DYN_ALLOC:.*]], label %[[BB_CORO_BEGIN:.*]]
 ; CHECK:       [[BB_CORO_BEGIN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8* [ null, %[[BB_CORO_ID]] ], [ %alloc, %[[BB_CORO_DYN_ALLOC]] ]
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull i8* @llvm.coro.begin(token [[ID]], i8* [[PHI]])
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ null, %[[BB_CORO_ID]] ], [ %alloc, %[[BB_CORO_DYN_ALLOC]] ]
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[PHI]])
 ;
 entry:
-  %0 = load i32, i32* %i
+  %0 = load i32, ptr %i
   %1 = and i32 %0, 1
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %bb1, label %bb0, !prof !15
@@ -77,18 +77,18 @@ bb2:
   br label %bb.coro.id
 
 bb.coro.id:
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* bitcast ([3 x void (%f.Frame*)*]* @f.resumers to i8*))
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %bb.coro.dyn.alloc, label %bb.coro.begin
 
 bb.coro.dyn.alloc:
-  %alloc = call i8* @malloc(i32 24)
+  %alloc = call ptr @malloc(i32 24)
   br label %bb.coro.begin
 
 bb.coro.begin:
-  %phi = phi i8* [ null, %bb.coro.id ], [ %alloc, %bb.coro.dyn.alloc ]
-  %hdl = call noalias nonnull i8* @llvm.coro.begin(token %id, i8* %phi)
-  ret i8* %hdl
+  %phi = phi ptr [ null, %bb.coro.id ], [ %alloc, %bb.coro.dyn.alloc ]
+  %hdl = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %phi)
+  ret ptr %hdl
 }
 
 !llvm.module.flags = !{!0}
