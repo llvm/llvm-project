@@ -219,7 +219,7 @@ Streams:
                     llvm::Succeeded());
   llvm::Optional<lldb::pid_t> pid = parser->GetPid();
   ASSERT_TRUE(pid.has_value());
-  ASSERT_EQ(16001UL, pid.getValue());
+  ASSERT_EQ(16001UL, pid.value());
 }
 
 TEST_F(MinidumpParserTest, GetFilteredModuleList) {
@@ -545,14 +545,14 @@ TEST_F(MinidumpParserTest, GetMiscInfoWindows) {
   ASSERT_NE(nullptr, misc_info);
   llvm::Optional<lldb::pid_t> pid = misc_info->GetPid();
   ASSERT_TRUE(pid.has_value());
-  ASSERT_EQ(4440UL, pid.getValue());
+  ASSERT_EQ(4440UL, pid.value());
 }
 
 TEST_F(MinidumpParserTest, GetPidWindows) {
   SetUpData("fizzbuzz_no_heap.dmp");
   llvm::Optional<lldb::pid_t> pid = parser->GetPid();
   ASSERT_TRUE(pid.has_value());
-  ASSERT_EQ(4440UL, pid.getValue());
+  ASSERT_EQ(4440UL, pid.value());
 }
 
 // wow64
@@ -560,7 +560,7 @@ TEST_F(MinidumpParserTest, GetPidWow64) {
   SetUpData("fizzbuzz_wow64.dmp");
   llvm::Optional<lldb::pid_t> pid = parser->GetPid();
   ASSERT_TRUE(pid.has_value());
-  ASSERT_EQ(7836UL, pid.getValue());
+  ASSERT_EQ(7836UL, pid.value());
 }
 
 // Register tests

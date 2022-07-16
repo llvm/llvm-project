@@ -27,7 +27,7 @@ protected:
 
 public:
   StringRef getName() const { return name; }
-  uint32_t getAssignedIndex() const { return assignedIndex.getValue(); }
+  uint32_t getAssignedIndex() const { return assignedIndex.value(); }
   bool hasAssignedIndex() const { return assignedIndex.has_value(); }
   void assignIndex(uint32_t index) {
     assert(!hasAssignedIndex());
