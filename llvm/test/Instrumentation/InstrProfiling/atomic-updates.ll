@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -instrprof -instrprof-atomic-counter-update-all | FileCheck %s
+; RUN: opt < %s -S -passes=instrprof -instrprof-atomic-counter-update-all | FileCheck %s
 
 target triple = "x86_64-apple-macosx10.10.0"
 

@@ -1,8 +1,8 @@
 ;; Check that static counters are allocated for value profiler
 
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -vp-static-alloc=true -instrprof -S | FileCheck %s --check-prefix=STATIC
-; RUN: opt < %s -mtriple=powerpc-ibm-aix-xcoff -instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
-; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -vp-static-alloc=true -passes=instrprof -S | FileCheck %s --check-prefix=STATIC
+; RUN: opt < %s -mtriple=powerpc-ibm-aix-xcoff -passes=instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
+; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
 
 @__profn_foo = private constant [3 x i8] c"foo"
 @__profn_bar = private constant [3 x i8] c"bar"

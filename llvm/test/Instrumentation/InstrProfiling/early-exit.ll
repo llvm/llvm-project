@@ -1,4 +1,4 @@
-; RUN: opt < %s -instrprof -S | FileCheck %s
+; RUN: opt < %s -passes=instrprof -S | FileCheck %s
 
 target triple = "x86_64-apple-macosx10.10.0"
 
