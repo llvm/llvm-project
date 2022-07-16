@@ -12,6 +12,9 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+
     @no_debug_info_test
     @skipUnlessDarwin
     def test(self):
