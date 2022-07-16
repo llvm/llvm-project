@@ -5978,44 +5978,64 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
   if (!TLI.isTypeLegal(VT))
     return SDValue();
 
-  // Look through an optional extension and find a 'not'.
-  // TODO: Should we favor test+set even without the 'not' op?
-  SDValue Not = And->getOperand(0), And1 = And->getOperand(1);
-  if (Not.getOpcode() == ISD::ANY_EXTEND)
-    Not = Not.getOperand(0);
-  if (!isBitwiseNot(Not) || !Not.hasOneUse() || !isOneConstant(And1))
+  // Look through an optional extension.
+  SDValue And0 = And->getOperand(0), And1 = And->getOperand(1);
+  if (And0.getOpcode() == ISD::ANY_EXTEND && And0.hasOneUse())
+    And0 = And0.getOperand(0);
+  if (!isOneConstant(And1) || !And0.hasOneUse())
     return SDValue();
 
-  // Look though an optional truncation. The source operand may not be the same
-  // type as the original 'and', but that is ok because we are masking off
-  // everything but the low bit.
-  SDValue Srl = Not.getOperand(0);
-  if (Srl.getOpcode() == ISD::TRUNCATE)
-    Srl = Srl.getOperand(0);
+  SDValue Src = And0;
+
+  // Attempt to find a 'not' op.
+  // TODO: Should we favor test+set even without the 'not' op?
+  bool FoundNot = false;
+  if (isBitwiseNot(Src)) {
+    FoundNot = true;
+    Src = Src.getOperand(0);
+
+    // Look though an optional truncation. The source operand may not be the
+    // same type as the original 'and', but that is ok because we are masking
+    // off everything but the low bit.
+    if (Src.getOpcode() == ISD::TRUNCATE && Src.hasOneUse())
+      Src = Src.getOperand(0);
+  }
 
   // Match a shift-right by constant.
-  if (Srl.getOpcode() != ISD::SRL || !Srl.hasOneUse() ||
-      !isa<ConstantSDNode>(Srl.getOperand(1)))
+  if (Src.getOpcode() != ISD::SRL || !Src.hasOneUse())
     return SDValue();
 
   // We might have looked through casts that make this transform invalid.
   // TODO: If the source type is wider than the result type, do the mask and
   //       compare in the source type.
-  const APInt &ShiftAmt = Srl.getConstantOperandAPInt(1);
-  unsigned VTBitWidth = VT.getSizeInBits();
-  if (ShiftAmt.uge(VTBitWidth))
+  unsigned VTBitWidth = VT.getScalarSizeInBits();
+  SDValue ShiftAmt = Src.getOperand(1);
+  auto *ShiftAmtC = dyn_cast<ConstantSDNode>(ShiftAmt);
+  if (!ShiftAmtC || !ShiftAmtC->getAPIntValue().ult(VTBitWidth))
     return SDValue();
 
-  if (!TLI.hasBitTest(Srl.getOperand(0), Srl.getOperand(1)))
+  // Set source to shift source.
+  Src = Src.getOperand(0);
+
+  // Try again to find a 'not' op.
+  // TODO: Should we favor test+set even with two 'not' ops?
+  if (!FoundNot) {
+    if (!isBitwiseNot(Src))
+      return SDValue();
+    Src = Src.getOperand(0);
+  }
+
+  if (!TLI.hasBitTest(Src, ShiftAmt))
     return SDValue();
 
   // Turn this into a bit-test pattern using mask op + setcc:
   // and (not (srl X, C)), 1 --> (and X, 1<<C) == 0
+  // and (srl (not X), C)), 1 --> (and X, 1<<C) == 0
   SDLoc DL(And);
-  SDValue X = DAG.getZExtOrTrunc(Srl.getOperand(0), DL, VT);
+  SDValue X = DAG.getZExtOrTrunc(Src, DL, VT);
   EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   SDValue Mask = DAG.getConstant(
-      APInt::getOneBitSet(VTBitWidth, ShiftAmt.getZExtValue()), DL, VT);
+      APInt::getOneBitSet(VTBitWidth, ShiftAmtC->getZExtValue()), DL, VT);
   SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, X, Mask);
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue Setcc = DAG.getSetCC(DL, CCVT, NewAnd, Zero, ISD::SETEQ);
