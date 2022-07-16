@@ -486,8 +486,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   for (auto *A : Args)
     DAL->append(A);
 
-  auto *TranslatedArgs =
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  std::unique_ptr<llvm::opt::DerivedArgList> TranslatedArgs{
+      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None)};
   EXPECT_NE(TranslatedArgs, nullptr);
   if (TranslatedArgs) {
     auto *A = TranslatedArgs->getLastArg(
@@ -506,7 +506,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   for (auto *A : Args)
     DAL->append(A);
 
-  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  TranslatedArgs.reset(
+      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 1u);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
                "invalid validator version : 0.1\nIf validator major version is "
@@ -521,7 +522,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   for (auto *A : Args)
     DAL->append(A);
 
-  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  TranslatedArgs.reset(
+      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 2u);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
                "invalid validator version : 1\nFormat of validator version is "
@@ -536,7 +538,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   for (auto *A : Args)
     DAL->append(A);
 
-  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  TranslatedArgs.reset(
+      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 3u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
@@ -552,7 +555,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   for (auto *A : Args)
     DAL->append(A);
 
-  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  TranslatedArgs.reset(
+      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 4u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
