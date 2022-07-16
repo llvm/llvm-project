@@ -37,6 +37,9 @@ class AttrOrTypeBuilder : public Builder {
 public:
   using Builder::Builder;
 
+  /// Returns an optional builder return type.
+  Optional<StringRef> getReturnType() const;
+
   /// Returns true if this builder is able to infer the MLIRContext parameter.
   bool hasInferredContextParameter() const;
 };
