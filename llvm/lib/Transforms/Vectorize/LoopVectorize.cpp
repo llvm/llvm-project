@@ -1919,10 +1919,13 @@ public:
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
       if (DiffChecks) {
+        Value *RuntimeVF = nullptr;
         MemRuntimeCheckCond = addDiffRuntimeChecks(
             MemCheckBlock->getTerminator(), L, *DiffChecks, MemCheckExp,
-            [VF](IRBuilderBase &B, unsigned Bits) {
-              return getRuntimeVF(B, B.getIntNTy(Bits), VF);
+            [VF, &RuntimeVF](IRBuilderBase &B, unsigned Bits) {
+              if (!RuntimeVF)
+                RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
+              return RuntimeVF;
             },
             IC);
       } else {
