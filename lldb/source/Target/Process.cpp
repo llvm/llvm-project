@@ -1353,6 +1353,7 @@ ThreadPlanSP Process::DoesStackExplainStopNoLock(ThreadPlanStack &stack,
   ThreadPlanSP plan_sp = stack.GetCurrentPlan();
   plan_sp->SetTID(thread.GetID());
   if (plan_sp->DoPlanExplainsStop(event_ptr)) {
+    stack.SetTID(thread.GetID());
     m_thread_plans.Activate(stack);
     return plan_sp;
   }
