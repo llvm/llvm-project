@@ -1724,14 +1724,10 @@ static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
 // Print out a valid ElementsAttr that is succinct and can represent any
 // potential shape/type, for use when eliding a large ElementsAttr.
 //
-// We choose to use an opaque ElementsAttr literal with conspicuous content to
-// hopefully alert readers to the fact that this has been elided.
-//
-// Unfortunately, neither of the strings of an opaque ElementsAttr literal will
-// accept the string "elided". The first string must be a registered dialect
-// name and the latter must be a hex constant.
+// We choose to use a dense resource ElementsAttr literal with conspicuous
+// content to hopefully alert readers to the fact that this has been elided.
 static void printElidedElementsAttr(raw_ostream &os) {
-  os << R"(opaque<"elided_large_const", "0xDEADBEEF">)";
+  os << R"(dense_resource<__elided__>)";
 }
 
 LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
@@ -1828,15 +1824,6 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     for (FlatSymbolRefAttr nestedRef : refAttr.getNestedReferences()) {
       os << "::";
       printSymbolReference(nestedRef.getValue(), os);
-    }
-
-  } else if (auto opaqueAttr = attr.dyn_cast<OpaqueElementsAttr>()) {
-    if (printerFlags.shouldElideElementsAttr(opaqueAttr)) {
-      printElidedElementsAttr(os);
-    } else {
-      os << "opaque<" << opaqueAttr.getDialect() << ", ";
-      printHexString(opaqueAttr.getValue());
-      os << ">";
     }
 
   } else if (auto intOrFpEltAttr = attr.dyn_cast<DenseIntOrFPElementsAttr>()) {

@@ -802,68 +802,6 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
-// OpaqueElementsAttr
-//===----------------------------------------------------------------------===//
-
-def Builtin_OpaqueElementsAttr : Builtin_Attr<
-    "OpaqueElements", [ElementsAttrInterface, TypedAttrInterface]
-  > {
-  let summary = "An opaque representation of a multi-dimensional array";
-  let description = [{
-    Syntax:
-
-    ```
-    opaque-elements-attribute ::= `opaque` `<` dialect-namespace  `,`
-                                  hex-string-literal `>` `:`
-                                  ( tensor-type | vector-type )
-    ```
-
-    An opaque elements attribute is an elements attribute where the content of
-    the value is opaque. The representation of the constant stored by this
-    elements attribute is only understood, and thus decodable, by the dialect
-    that created it.
-
-    Note: The parsed string literal must be in hexadecimal form.
-
-    Examples:
-
-    ```mlir
-    opaque<"foo_dialect", "0xDEADBEEF"> : tensor<10xi32>
-    ```
-  }];
-
-  // TODO: Provide a way to avoid copying content of large opaque
-  // tensors This will likely require a new reference attribute kind.
-  let parameters = (ins "StringAttr":$dialect,
-                        StringRefParameter<"">:$value,
-                        AttributeSelfTypeParameter<"", "ShapedType">:$type);
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "StringAttr":$dialect,
-                                        "ShapedType":$type,
-                                        "StringRef":$value), [{
-      return $_get(dialect.getContext(), dialect, value, type);
-    }]>,
-    AttrBuilderWithInferredContext<(ins "Dialect *":$dialect,
-                                        "ShapedType":$type,
-                                        "StringRef":$value), [{
-      MLIRContext *ctxt = dialect->getContext();
-      StringAttr dialectName = StringAttr::get(ctxt, dialect->getNamespace());
-      return $_get(ctxt, dialectName, value, type);
-    }]>
-  ];
-  let extraClassDeclaration = [{
-    using ValueType = StringRef;
-
-    /// Decodes the attribute value using dialect-specific decoding hook.
-    /// Returns false if decoding is successful. If not, returns true and leaves
-    /// 'result' argument unspecified.
-    bool decode(ElementsAttr &result);
-  }];
-  let genVerifyDecl = 1;
-  let skipDefaultBuilders = 1;
-}
-
-//===----------------------------------------------------------------------===//
 // SparseElementsAttr
 //===----------------------------------------------------------------------===//
 

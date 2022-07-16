@@ -266,9 +266,6 @@ public:
   /// or a float attribute.
   Attribute parseDecOrHexAttr(Type type, bool isNegative);
 
-  /// Parse an opaque elements attribute.
-  Attribute parseOpaqueElementsAttr(Type attrType);
-
   /// Parse a dense elements attribute.
   Attribute parseDenseElementsAttr(Type attrType);
   ShapedType parseElementsLiteralType(Type type);
