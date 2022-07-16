@@ -278,53 +278,6 @@ private:
   const SpecialCaseList *Allowlist;
   const SpecialCaseList *Blocklist;
 };
-
-class ModuleSanitizerCoverageLegacyPass : public ModulePass {
-public:
-  ModuleSanitizerCoverageLegacyPass(
-      const SanitizerCoverageOptions &Options = SanitizerCoverageOptions(),
-      const std::vector<std::string> &AllowlistFiles =
-          std::vector<std::string>(),
-      const std::vector<std::string> &BlocklistFiles =
-          std::vector<std::string>())
-      : ModulePass(ID), Options(Options) {
-    if (AllowlistFiles.size() > 0)
-      Allowlist = SpecialCaseList::createOrDie(AllowlistFiles,
-                                               *vfs::getRealFileSystem());
-    if (BlocklistFiles.size() > 0)
-      Blocklist = SpecialCaseList::createOrDie(BlocklistFiles,
-                                               *vfs::getRealFileSystem());
-    initializeModuleSanitizerCoverageLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-  bool runOnModule(Module &M) override {
-    ModuleSanitizerCoverage ModuleSancov(Options, Allowlist.get(),
-                                         Blocklist.get());
-    auto DTCallback = [this](Function &F) -> const DominatorTree * {
-      return &this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-    };
-    auto PDTCallback = [this](Function &F) -> const PostDominatorTree * {
-      return &this->getAnalysis<PostDominatorTreeWrapperPass>(F)
-                  .getPostDomTree();
-    };
-    return ModuleSancov.instrumentModule(M, DTCallback, PDTCallback);
-  }
-
-  static char ID; // Pass identification, replacement for typeid
-  StringRef getPassName() const override { return "ModuleSanitizerCoverage"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-  }
-
-private:
-  SanitizerCoverageOptions Options;
-
-  std::unique_ptr<SpecialCaseList> Allowlist;
-  std::unique_ptr<SpecialCaseList> Blocklist;
-};
-
 } // namespace
 
 PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
@@ -1074,21 +1027,4 @@ ModuleSanitizerCoverage::getSectionEnd(const std::string &Section) const {
   if (TargetTriple.isOSBinFormatMachO())
     return "\1section$end$__DATA$__" + Section;
   return "__stop___" + Section;
-}
-
-char ModuleSanitizerCoverageLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(ModuleSanitizerCoverageLegacyPass, "sancov",
-                      "Pass for instrumenting coverage on functions", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ModuleSanitizerCoverageLegacyPass, "sancov",
-                    "Pass for instrumenting coverage on functions", false,
-                    false)
-ModulePass *llvm::createModuleSanitizerCoverageLegacyPassPass(
-    const SanitizerCoverageOptions &Options,
-    const std::vector<std::string> &AllowlistFiles,
-    const std::vector<std::string> &BlocklistFiles) {
-  return new ModuleSanitizerCoverageLegacyPass(Options, AllowlistFiles,
-                                               BlocklistFiles);
 }
