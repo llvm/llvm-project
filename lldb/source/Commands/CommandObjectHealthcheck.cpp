@@ -22,9 +22,13 @@ using namespace lldb_private;
 
 CommandObjectHealthcheck::CommandObjectHealthcheck(
     CommandInterpreter &interpreter)
-    : CommandObjectParsed(interpreter, "swift-healthcheck",
-                          "Show the LLDB debugger health check diagnostics.",
-                          "swift-healthcheck") {}
+    : CommandObjectParsed(
+          interpreter, "swift-healthcheck",
+          "Provides logging related to the Swift expression evaluator, "
+          "including Swift compiler diagnostics. This makes it easier to "
+          "identify project misconfigurations that result in module import "
+          "failures in the debugger. The command is meant to be run after a "
+          "expression evaluator failure has occurred.") {}
 
 bool CommandObjectHealthcheck::DoExecute(Args &args,
                                          CommandReturnObject &result) {
