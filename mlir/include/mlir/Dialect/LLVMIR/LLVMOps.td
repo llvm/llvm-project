@@ -435,6 +435,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
                "ArrayRef<int32_t>":$structIndices,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+               "ValueRange":$indices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+	OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+               "ValueRange":$indices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ValueRange":$indices, "ArrayRef<int32_t>":$structIndices,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
