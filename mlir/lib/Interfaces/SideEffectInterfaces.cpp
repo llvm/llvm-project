@@ -97,25 +97,24 @@ bool mlir::hasSingleEffect(Operation *op, Value value) {
     return false;
   SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
   memOp.getEffects(effects);
-  bool doesOpOnlyHaveSingleEffectOnVal = false;
-  // Iterate through `effects` and check if and only if effect of type
-  // `EffectTy` is present.
+  bool hasSingleEffectOnVal = false;
+  // Iterate through `effects` and check if an effect of type `EffectTy` and
+  // only of that type is present.
   for (auto &effect : effects) {
-    if (effect.getValue() == value && isa<EffectTy>(effect.getEffect()))
-      doesOpOnlyHaveSingleEffectOnVal = true;
-    if (effect.getValue() == value && !isa<EffectTy>(effect.getEffect())) {
-      doesOpOnlyHaveSingleEffectOnVal = false;
-      break;
-    }
+    if (effect.getValue() != value)
+      continue;
+    hasSingleEffectOnVal = isa<EffectTy>(effect.getEffect());
+    if (!hasSingleEffectOnVal)
+      return false;
   }
-  return doesOpOnlyHaveSingleEffectOnVal;
+  return hasSingleEffectOnVal;
 }
 
 template bool mlir::hasSingleEffect<MemoryEffects::Allocate>(Operation *,
                                                              Value);
 template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *, Value);
-template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *, Value);
 template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *, Value);
+template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *, Value);
 
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())
