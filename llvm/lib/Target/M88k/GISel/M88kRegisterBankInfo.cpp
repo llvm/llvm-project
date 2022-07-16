@@ -76,39 +76,47 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   return false;
 }
 
-const RegisterBankInfo::InstructionMapping &
-M88kRegisterBankInfo::getSameKindOfOperandsMapping(
-    const MachineInstr &MI) const {
+const RegisterBankInfo::ValueMapping *
+M88kRegisterBankInfo::getFPOperandsMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  unsigned NumOperands = MI.getNumOperands();
+  const unsigned NumOperands = MI.getNumOperands();
   assert(NumOperands <= 3 &&
          "This code is for instructions with 3 or less operands");
+  assert(isPreISelGenericFloatingPointOpcode(Opc) &&
+         "No floating point istruction");
 
-  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  unsigned Size = Ty.getSizeInBits();
-  bool IsFPR = Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
+  bool RequiresXPR = false;
+  for (unsigned I = 0; I < NumOperands; ++I)
+    if (MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits() == 80)
+      RequiresXPR = true;
 
+  //const RegisterBankInfo::ValueMapping *ValMap[3];
+  SmallVector<const RegisterBankInfo::ValueMapping *, 3> ValMap;
+  for (unsigned I = 0; I < NumOperands; ++I) {
   PartialMappingIdx RBIdx = PMI_None;
-  if (IsFPR && Size == 80) {
-    RBIdx = PMI_XR80;
-  } else {
-    switch (Size) {
+  LLT Ty = MRI.getType(MI.getOperand(I).getReg());
+    switch (Ty.getSizeInBits()) {
     case 32:
-      RBIdx = PMI_GR32;
+      RBIdx = RequiresXPR ? PMI_XR32 : PMI_GR32;
       break;
     case 64:
-      RBIdx = PMI_GR64;
+      RBIdx = RequiresXPR ? PMI_XR64 : PMI_GR64;
+      break;
+    case 80:
+      RBIdx = PMI_XR80;
       break;
     default:
       llvm_unreachable("Unsupport register size");
     }
+    //ValMap[I] = getValueMapping(RBIdx);
+    ValMap.push_back(getValueMapping(RBIdx));
   }
 
-  return getInstructionMapping(DefaultMappingID, 1, getValueMapping(RBIdx),
-                               NumOperands);
+  //return getOperandsMapping(&ValMap[0], &ValMap[NumOperands-1]);
+  return getOperandsMapping(ValMap);
 }
 
 const RegisterBankInfo::InstructionMapping &
@@ -157,7 +165,8 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
-    return getSameKindOfOperandsMapping(MI);
+    OperandsMapping = getFPOperandsMapping(MI);
+    break;
   case TargetOpcode::G_FCONSTANT: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 32)
@@ -167,6 +176,14 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         {getValueMapping(RBIdx), nullptr});
     break;
   }
+  case TargetOpcode::G_FPEXT:
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(PMI_GR64), getValueMapping(PMI_GR32)});
+    break;
+  case TargetOpcode::G_FPTRUNC:
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(PMI_GR32), getValueMapping(PMI_GR64)});
+    break;
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());

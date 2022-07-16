@@ -71,8 +71,8 @@ protected:
 /// This class provides the information for the target register banks.
 class M88kRegisterBankInfo final : public M88kGenRegisterBankInfo {
 
-  const InstructionMapping &
-  getSameKindOfOperandsMapping(const MachineInstr &MI) const;
+  const RegisterBankInfo::ValueMapping *
+  getFPOperandsMapping(const MachineInstr &MI) const;
 
 public:
   M88kRegisterBankInfo(const TargetRegisterInfo &TRI);

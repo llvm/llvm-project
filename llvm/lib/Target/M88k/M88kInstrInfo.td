@@ -1096,12 +1096,16 @@ multiclass FCmpX<bits<4> Func, bits<2> td, string OpcStr> {
 multiclass FCmp<bits<4> Func, bits<2> td, string OpcStr>
   : FCmpG<Func, td, OpcStr>, FCmpX<Func, td, OpcStr>;
 
-// TODO Why does ftrunc not work?
 multiclass FloatBinPat<string Inst, SDPatternOperator OpNode> {
   def : Pat<(OpNode GPR:$rs1, GPR:$rs2),
             (!cast<InstM88k>(Inst#"gsss") GPR:$rs1, GPR:$rs2)>;
-//  def : Pat<(ftrunc (OpNode (fpextend GPR:$rs1), GPR64:$rs2)),
-//            (!cast<InstM88k>(Inst#"ssd") GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(fpround (OpNode (fpextend GPR:$rs1), GPR64:$rs2)),
+            (!cast<InstM88k>(Inst#"gssd") GPR:$rs1, GPR64:$rs2)>;
+  def : Pat<(fpround (OpNode GPR64:$rs1, (fpextend GPR:$rs2))),
+            (!cast<InstM88k>(Inst#"gsds") GPR64:$rs1, GPR:$rs2)>;
+  def : Pat<(fpround (OpNode GPR64:$rs1, GPR64:$rs2)),
+            (!cast<InstM88k>(Inst#"gsdd") GPR64:$rs1, GPR64:$rs2)>;
+
   def : Pat<(fpextend (OpNode GPR:$rs1, GPR:$rs2)),
             (!cast<InstM88k>(Inst#"gdss") GPR:$rs1, GPR:$rs2)>;
   def : Pat<(OpNode (fpextend GPR:$rs1), GPR64:$rs2),
@@ -1111,10 +1115,11 @@ multiclass FloatBinPat<string Inst, SDPatternOperator OpNode> {
   def : Pat<(OpNode GPR64:$rs1, GPR64:$rs2),
             (!cast<InstM88k>(Inst#"gddd") GPR64:$rs1, GPR64:$rs2)>;
 
+  // TODO Extends patterns
   def : Pat<(OpNode (f32 XR:$rs1), (f32 XR:$rs2)),
             (!cast<InstM88k>(Inst#"xsss") XR:$rs1, XR:$rs2)>;
   def : Pat<(OpNode (f64 XR:$rs1), (fpextend (f32 XR:$rs2))),
-            (!cast<InstM88k>(Inst#"gdds") XR:$rs1, XR:$rs2)>;
+            (!cast<InstM88k>(Inst#"xdds") XR:$rs1, XR:$rs2)>;
   def : Pat<(OpNode (f64 XR:$rs1), (f64 XR:$rs2)),
             (!cast<InstM88k>(Inst#"xddd") XR:$rs1, XR:$rs2)>;
   def : Pat<(OpNode (f80 XR:$rs1), (f80 XR:$rs2)),
@@ -1136,9 +1141,32 @@ defm NINT : FArith2<0b1010, "nint">;
 defm TRNC : FArith2<0b1011, "trnc">;
 
 let Predicates = [IsMC881100] in {
-defm FCVT : FUnary<0b0001, "fcvt", false>;
-defm FSQRT : FUnary<0b1111, "fsqrt", true>;
+  defm FCVT : FUnary<0b0001, "fcvt", false>;
+  defm FSQRT : FUnary<0b1111, "fsqrt", true>;
+
+  def : Pat<(fpextend (f32 GPR:$rs1)),
+            (FCVTgds GPR:$rs1)>;
+  def : Pat<(fpround (f64 GPR64:$rs1)),
+            (FCVTgsd GPR64:$rs1)>;
+
+  def : Pat<(f64 (fpextend (f32 XR:$rs1))),
+            (FCVTxds XR:$rs1)>;
+  def : Pat<(f80 (fpextend (f32 XR:$rs1))),
+            (FCVTxxs XR:$rs1)>;
+  def : Pat<(f80 (fpextend (f64 XR:$rs1))),
+            (FCVTxxd XR:$rs1)>;
+  def : Pat<(f32 (fpround (f64 XR:$rs1))),
+            (FCVTxsd XR:$rs1)>;
+  def : Pat<(f32 (fpround (f80 XR:$rs1))),
+            (FCVTxsx XR:$rs1)>;
+  def : Pat<(f64 (fpround (f80 XR:$rs1))),
+            (FCVTxdx XR:$rs1)>;
 }
+
+def : Pat<(fpextend (f32 GPR:$rs1)),
+          (FSUBgdss GPR:$rs1, (f32 R0))>;
+def : Pat<(fpround (f64 GPR64:$rs1)),
+          (FSUBgsds GPR64:$rs1, (f32 R0))>;
 
 // Missing: fcmp, fcmpu
 defm FCMP : FCmp<0b0111, 0b00, "fcmp">;
