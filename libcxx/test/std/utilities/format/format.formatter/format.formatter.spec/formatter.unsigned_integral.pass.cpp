@@ -88,6 +88,8 @@ void test_unsigned_integral_type() {
     test_termination_condition(
         STR("340282366920938463463374607431768211455"), STR("}"), A(std::numeric_limits<__uint128_t>::max()));
 #endif
+  // Test __formatter::__transform (libc++ specific).
+  test_termination_condition(STR("FF"), STR("X}"), A(255));
 }
 
 template <class CharT>

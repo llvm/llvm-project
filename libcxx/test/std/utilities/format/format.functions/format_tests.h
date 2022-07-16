@@ -2557,6 +2557,68 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   format_test_pointer<const void*, CharT>(check, check_exception);
 }
 
+/// Tests special buffer functions with a "large" input.
+///
+/// This is a test specific for libc++, however the code should behave the same
+/// on all implementations.
+/// In \c __format::__output_buffer there are some special functions to optimize
+/// outputting multiple characters, \c __copy, \c __transform, \c __fill. This
+/// test validates whether the functions behave properly when the output size
+/// doesn't fit in its internal buffer.
+template <class CharT, class TestFunction>
+void format_test_buffer_optimizations(TestFunction check) {
+#ifdef _LIBCPP_VERSION
+  // Used to validate our test sets are the proper size.
+  // To test the chunked operations it needs to be larger than the internal
+  // buffer. Picked a nice looking number.
+  constexpr int minimum = 3 * std::__format::__internal_storage<CharT>::__buffer_size;
+#else
+  constexpr int minimum = 1;
+#endif
+
+  // Copy
+  std::basic_string<CharT> str = STR(
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog.");
+  assert(str.size() > minimum);
+  check.template operator()<"{}">(std::basic_string_view<CharT>{str}, str);
+
+  // Fill
+  std::basic_string<CharT> fill(minimum, CharT('*'));
+  check.template operator()<"{:*<{}}">(std::basic_string_view<CharT>{str + fill}, str, str.size() + minimum);
+  check.template operator()<"{:*^{}}">(
+      std::basic_string_view<CharT>{fill + str + fill}, str, minimum + str.size() + minimum);
+  check.template operator()<"{:*>{}}">(std::basic_string_view<CharT>{fill + str}, str, minimum + str.size());
+}
+
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
@@ -2671,6 +2733,9 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   // *** Test handle formatter argument ***
   format_test_handle<CharT>(check, check_exception);
+
+  // *** Test the interal buffer optimizations ***
+  format_test_buffer_optimizations<CharT>(check);
 }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
