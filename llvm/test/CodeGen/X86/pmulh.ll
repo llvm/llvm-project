@@ -261,12 +261,14 @@ define <8 x i16> @sextinreg_mulhw_v8i16(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; AVX512-LABEL: sextinreg_mulhw_v8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpslld $24, %ymm0, %ymm0
-; AVX512-NEXT:    vpsrad $24, %ymm0, %ymm0
-; AVX512-NEXT:    vpslld $25, %ymm1, %ymm1
-; AVX512-NEXT:    vpsrad $25, %ymm1, %ymm1
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vpmovdw %zmm1, %ymm1
+; AVX512-NEXT:    vpsllw $9, %xmm1, %xmm1
+; AVX512-NEXT:    vpsraw $9, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    vpsllw $8, %xmm0, %xmm0
+; AVX512-NEXT:    vpsraw $8, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
