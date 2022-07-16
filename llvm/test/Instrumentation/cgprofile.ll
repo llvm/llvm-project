@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes cg-profile -S | FileCheck %s
-; RUN: opt < %s -cg-profile -S | FileCheck %s
 
 declare void @b()
 
