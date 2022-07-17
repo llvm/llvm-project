@@ -1,5 +1,5 @@
-; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
-; RUN: opt < %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt %s -passes='function(instcombine),sample-profile' -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
 ;
 ; Original code:
 ;

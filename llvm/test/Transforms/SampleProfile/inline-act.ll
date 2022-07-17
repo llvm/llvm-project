@@ -1,4 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-act.prof
+; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-act.prof
 
 ; Sample profile should have non-empty ACT passed to inliner
 

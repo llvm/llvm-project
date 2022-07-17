@@ -1,4 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/indirect-call.afdo -S | FileCheck %s
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/indirect-call.afdo | FileCheck %s
 
 ; Checks if indirect call targets are read correctly when reading from gcc
 ; format profile.
