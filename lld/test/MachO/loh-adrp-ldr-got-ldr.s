@@ -179,7 +179,7 @@ L30: ldr  x2, [x1]
 # LOCAL-NEXT: ldr x2, [x1]
 
 
-### Transformation to ADRP + imediate LDR
+### Transformation to ADRP + immediate LDR
 ## Basic test: target is far
 L31: adrp x0, _far@GOTPAGE
 L32: ldr  x1, [x0, _far@GOTPAGEOFF]
