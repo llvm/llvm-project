@@ -147,10 +147,11 @@ private:
 
 template <class Pattern>
 static void
-addPatternForTiling(MLIRContext *context, ArrayRef<int64_t> tileSizes,
-                    StringRef filterName, RewritePatternSet &patterns) {
+addPatternForTiling(MLIRContext *context, RewritePatternSet &patterns,
+                    StringRef filterName, ArrayRef<int64_t> tileSizes,
+                    ArrayRef<unsigned> interchange = {}) {
   scf::SCFTilingOptions tilingOptions;
-  tilingOptions.setTileSizes(tileSizes);
+  tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
   linalg::LinalgTransformationFilter filter(
       StringAttr::get(context, filterName), StringAttr::get(context, "tiled"));
   patterns.add<Pattern>(context, tilingOptions, filter);
@@ -161,29 +162,35 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
   if (testTiling) {
     // 1. Tiling M and N dims of `linalg.matmul` on tensors.
     addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
-        context, {10, 20}, "simple_gemm", patterns);
+        context, patterns, "simple_gemm", {10, 20});
     // 2. Tiling M, N and K of `linalg.matmul` on buffers.
     addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
-        context, {10, 20, 30}, "simple_gemm_memref", patterns);
+        context, patterns, "simple_gemm_memref", {10, 20, 30});
     // 3. Tiling 3D parallel generic op which implements a transpose
     addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
-        context, {10, 0, 20}, "parallel_generic_transpose", patterns);
+        context, patterns, "parallel_generic_transpose", {10, 0, 20});
     // 4. Tiling 2D conv op.
     addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
-        context, {0, 0, 0, 0, 10, 20, 30}, "simple_conv", patterns);
+        context, patterns, "simple_conv", {0, 0, 0, 0, 10, 20, 30});
     // 5. Tiling a simple op with `linalg.index` inside.
     addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
-        context, {10, 20}, "indexed_semantics", patterns);
+        context, patterns, "indexed_semantics", {10, 20});
+    // 6. Tiling + interchange of an operation
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "gemm_interchange", {10, 20, 30}, {1, 2, 0});
     return;
   }
   if (testTileConsumerAndFuseProducer) {
     // 1. Tile and fuse of gemm with bias-add operation.
     addPatternForTiling<
         TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
-        context, {10, 20}, "fusion", patterns);
+        context, patterns, "fusion", {10, 20});
     addPatternForTiling<
         TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
-        context, {10}, "gemm_fusion", patterns);
+        context, patterns, "gemm_fusion", {10});
+    addPatternForTiling<
+        TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
+        context, patterns, "gemm_interchange_fusion", {10, 20}, {1, 0});
     return;
   }
 }
