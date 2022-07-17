@@ -6876,20 +6876,44 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
 }
 
 /// OR combines for which the commuted variant will be tried as well.
-static SDValue visitORCommutative(
-    SelectionDAG &DAG, SDValue N0, SDValue N1, SDNode *N) {
+static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
+                                  SDNode *N) {
   EVT VT = N0.getValueType();
   if (N0.getOpcode() == ISD::AND) {
+    SDValue N00 = N0.getOperand(0);
+    SDValue N01 = N0.getOperand(1);
+
     // fold (or (and X, (xor Y, -1)), Y) -> (or X, Y)
     // TODO: Set AllowUndefs = true.
-    if (getBitwiseNotOperand(N0.getOperand(1), N0.getOperand(0),
+    if (getBitwiseNotOperand(N01, N00,
                              /* AllowUndefs */ false) == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(0), N1);
+      return DAG.getNode(ISD::OR, SDLoc(N), VT, N00, N1);
 
     // fold (or (and (xor Y, -1), X), Y) -> (or X, Y)
-    if (getBitwiseNotOperand(N0.getOperand(0), N0.getOperand(1),
+    if (getBitwiseNotOperand(N00, N01,
                              /* AllowUndefs */ false) == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(1), N1);
+      return DAG.getNode(ISD::OR, SDLoc(N), VT, N01, N1);
+
+    // (or (and X, C1), (and (or X, Y), C2)) -> (or (and X, C1|C2), (and Y, C2))
+    if (N1.getOpcode() == ISD::AND) {
+      SDValue N10 = N1.getOperand(0);
+      if (N10.getOpcode() == ISD::OR) {
+        SDValue N11 = N1.getOperand(1);
+        SDValue N100 = N10.getOperand(0);
+        SDValue N101 = N10.getOperand(1);
+        if (((N00 == N100) || (N00 == N101)) && N0->hasOneUse() &&
+            N1->hasOneUse()) {
+          SDLoc DL(N);
+          if (SDValue C12 =
+                  DAG.FoldConstantArithmetic(ISD::OR, DL, VT, {N01, N11})) {
+            SDValue Y = (N00 == N100 ? N101 : N100);
+            return DAG.getNode(ISD::OR, DL, VT,
+                               DAG.getNode(ISD::AND, DL, VT, N00, C12),
+                               DAG.getNode(ISD::AND, DL, VT, Y, N11));
+          }
+        }
+      }
+    }
   }
 
   if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
