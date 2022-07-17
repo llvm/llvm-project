@@ -1,4 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -S -profile-sample-accurate | FileCheck %s
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -profile-sample-accurate | FileCheck %s
 ; ModuleID = 'temp.bc'
 ; This is a test similar to entry_counts_cold.ll. The key differences are:
 ; - we want profile-sample-accurate. Normally, that would trigger resetting function entry counts to 0, and then update

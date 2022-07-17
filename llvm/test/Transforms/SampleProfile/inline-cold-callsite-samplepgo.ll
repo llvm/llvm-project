@@ -1,8 +1,8 @@
 ; For SamplePGO, if -profile-sample-accurate is specified, cold callsite
 ; heuristics should be honored if the caller has no profile.
 
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -inline -S -inline-cold-callsite-threshold=0 | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -profile-sample-accurate -inline -S -inline-cold-callsite-threshold=0 | FileCheck %s --check-prefix ACCURATE
+; RUN: opt -S %s -passes='sample-profile,cgscc(inline)' -sample-profile-file=%S/Inputs/inline.prof -inline-cold-callsite-threshold=0 | FileCheck %s
+; RUN: opt -S %s -passes='sample-profile,cgscc(inline)' -sample-profile-file=%S/Inputs/inline.prof -profile-sample-accurate -inline-cold-callsite-threshold=0 | FileCheck %s --check-prefix ACCURATE
 
 declare void @extern()
 define void @callee() #1 {

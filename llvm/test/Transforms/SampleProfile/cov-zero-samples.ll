@@ -1,5 +1,5 @@
-; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/cov-zero-samples.prof -sample-profile-check-record-coverage=100 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
-; RUN: opt < %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/cov-zero-samples.prof -sample-profile-check-record-coverage=100 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt %s -passes='function(instcombine),sample-profile' -sample-profile-file=%S/Inputs/cov-zero-samples.prof -sample-profile-check-record-coverage=100 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/cov-zero-samples.prof -sample-profile-check-record-coverage=100 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
 ;
 ; CHECK: remark: cov-zero-samples.cc:9:29: Applied 404065 samples from profile (offset: 2.1)
 ; CHECK: remark: cov-zero-samples.cc:10:9: Applied 443089 samples from profile (offset: 3)
