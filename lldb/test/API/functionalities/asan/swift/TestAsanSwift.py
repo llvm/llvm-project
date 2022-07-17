@@ -26,6 +26,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
     @decorators.swiftTest
     @decorators.skipIfLinux
     @decorators.skipUnlessSwiftAddressSanitizer
+    @decorators.skipIf(bugnumber="rdar://97091621")
     def test_asan_swift(self):
         self.build()
         self.do_test()
