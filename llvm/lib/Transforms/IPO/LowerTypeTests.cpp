@@ -528,49 +528,7 @@ public:
   // arguments. For testing purposes only.
   static bool runForTesting(Module &M);
 };
-
-struct LowerTypeTests : public ModulePass {
-  static char ID;
-
-  bool UseCommandLine = false;
-
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
-  bool DropTypeTests;
-
-  LowerTypeTests() : ModulePass(ID), UseCommandLine(true) {
-    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
-  }
-
-  LowerTypeTests(ModuleSummaryIndex *ExportSummary,
-                 const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
-      : ModulePass(ID), ExportSummary(ExportSummary),
-        ImportSummary(ImportSummary),
-        DropTypeTests(DropTypeTests || ClDropTypeTests) {
-    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (UseCommandLine)
-      return LowerTypeTestsModule::runForTesting(M);
-    return LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
-        .lower();
-  }
-};
-
 } // end anonymous namespace
-
-char LowerTypeTests::ID = 0;
-
-INITIALIZE_PASS(LowerTypeTests, "lowertypetests", "Lower type metadata", false,
-                false)
-
-ModulePass *
-llvm::createLowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                               const ModuleSummaryIndex *ImportSummary,
-                               bool DropTypeTests) {
-  return new LowerTypeTests(ExportSummary, ImportSummary, DropTypeTests);
-}
 
 /// Build a bit set for TypeId using the object layouts in
 /// GlobalLayout.
