@@ -9586,52 +9586,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
                                       State);
 }
 
-void VPPredInstPHIRecipe::execute(VPTransformState &State) {
-  assert(State.Instance && "Predicated instruction PHI works per instance.");
-  Instruction *ScalarPredInst =
-      cast<Instruction>(State.get(getOperand(0), *State.Instance));
-  BasicBlock *PredicatedBB = ScalarPredInst->getParent();
-  BasicBlock *PredicatingBB = PredicatedBB->getSinglePredecessor();
-  assert(PredicatingBB && "Predicated block has no single predecessor.");
-  assert(isa<VPReplicateRecipe>(getOperand(0)) &&
-         "operand must be VPReplicateRecipe");
-
-  // By current pack/unpack logic we need to generate only a single phi node: if
-  // a vector value for the predicated instruction exists at this point it means
-  // the instruction has vector users only, and a phi for the vector value is
-  // needed. In this case the recipe of the predicated instruction is marked to
-  // also do that packing, thereby "hoisting" the insert-element sequence.
-  // Otherwise, a phi node for the scalar value is needed.
-  unsigned Part = State.Instance->Part;
-  if (State.hasVectorValue(getOperand(0), Part)) {
-    Value *VectorValue = State.get(getOperand(0), Part);
-    InsertElementInst *IEI = cast<InsertElementInst>(VectorValue);
-    PHINode *VPhi = State.Builder.CreatePHI(IEI->getType(), 2);
-    VPhi->addIncoming(IEI->getOperand(0), PredicatingBB); // Unmodified vector.
-    VPhi->addIncoming(IEI, PredicatedBB); // New vector with inserted element.
-    if (State.hasVectorValue(this, Part))
-      State.reset(this, VPhi, Part);
-    else
-      State.set(this, VPhi, Part);
-    // NOTE: Currently we need to update the value of the operand, so the next
-    // predicated iteration inserts its generated value in the correct vector.
-    State.reset(getOperand(0), VPhi, Part);
-  } else {
-    Type *PredInstType = getOperand(0)->getUnderlyingValue()->getType();
-    PHINode *Phi = State.Builder.CreatePHI(PredInstType, 2);
-    Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()),
-                     PredicatingBB);
-    Phi->addIncoming(ScalarPredInst, PredicatedBB);
-    if (State.hasScalarValue(this, *State.Instance))
-      State.reset(this, Phi, *State.Instance);
-    else
-      State.set(this, Phi, *State.Instance);
-    // NOTE: Currently we need to update the value of the operand, so the next
-    // predicated iteration inserts its generated value in the correct vector.
-    State.reset(getOperand(0), Phi, *State.Instance);
-  }
-}
-
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = isStore() ? getStoredValue() : nullptr;
 
