@@ -297,7 +297,7 @@ static bool hasInstrProfHashMismatch(MachineFunction &MF) {
   auto *Existing = MF.getFunction().getMetadata(LLVMContext::MD_annotation);
   if (Existing) {
     MDTuple *Tuple = cast<MDTuple>(Existing);
-    for (auto &N : Tuple->operands())
+    for (const auto &N : Tuple->operands())
       if (cast<MDString>(N.get())->getString() == MetadataName)
         return true;
   }
