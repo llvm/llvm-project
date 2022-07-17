@@ -32,6 +32,7 @@
 
 #include "internal.h"
 #include "rt.h"
+#include "small_pool.h"
 
 #include "DeviceEnvironment.h"
 #include "get_elf_mach_gfx_name.h"
@@ -75,6 +76,8 @@ std::mutex granted_teams_mtx;
 typedef void (*libomptarget_ompt_set_timestamp_t)(uint64_t start, uint64_t end);
 libomptarget_ompt_set_timestamp_t ompt_set_timestamp_fn = nullptr;
 std::mutex ompt_set_timestamp_mtx;
+
+SmallPoolMgrTy SmallPoolMgr;
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -1291,6 +1294,22 @@ public:
       return;
     }
 
+    // Cleanup by unlocking all the locked pointers from the small pools
+    SmallPoolTy::PtrVecTy AllPtrs = SmallPoolMgr.getAllPoolPtrs();
+    for (const auto &e : AllPtrs) {
+      hsa_status_t err = HSA_STATUS_SUCCESS;
+      assert(already_locked(e, &err, nullptr));
+
+      DP("Calling hsa_amd_memory_unlock in RTLDeviceInfoTy dtor for PoolPtr "
+         "%p\n",
+         e);
+
+      err = hsa_amd_memory_unlock(e);
+      if (err != HSA_STATUS_SUCCESS)
+        DP("PoolPtr memory_unlock returned %s, continuing\n",
+           get_error_string(err));
+    }
+
     for (int i = 0; i < NumberOfDevices; i++) {
       std::map<void *, Image_t>::iterator itr = ImageList.begin();
       if (itr != ImageList.end()) {
@@ -1409,17 +1428,22 @@ private:
 // and unlocking of host pointers used in the transfer
 class AMDGPUAsyncInfoDataTy {
 public:
-  AMDGPUAsyncInfoDataTy() : alreadyCompleted(false), userLocked(false){};
-  AMDGPUAsyncInfoDataTy(hsa_signal_t signal, void *hostPtr, bool userLocked)
-      : signal(signal), hostPtr(hostPtr), alreadyCompleted(false),
-        userLocked(userLocked) {}
+  AMDGPUAsyncInfoDataTy()
+      : HstPtr(nullptr), HstOrPoolPtr(nullptr), Size(0),
+        alreadyCompleted(false), userLocked(false){};
+  AMDGPUAsyncInfoDataTy(hsa_signal_t signal, void *HPtr, void *EitherPtr,
+                        size_t Sz, bool userLocked)
+      : signal(signal), HstPtr(HPtr), HstOrPoolPtr(EitherPtr), Size(Sz),
+        alreadyCompleted(false), userLocked(userLocked) {}
 
   AMDGPUAsyncInfoDataTy(const AMDGPUAsyncInfoDataTy &) = delete;
   AMDGPUAsyncInfoDataTy(AMDGPUAsyncInfoDataTy &&) = default; // assume noexcept
 
   AMDGPUAsyncInfoDataTy &operator=(const AMDGPUAsyncInfoDataTy &&tmp) {
     signal = tmp.signal;
-    hostPtr = tmp.hostPtr;
+    HstPtr = tmp.HstPtr;
+    HstOrPoolPtr = tmp.HstOrPoolPtr;
+    Size = tmp.Size;
     alreadyCompleted = tmp.alreadyCompleted;
     userLocked = tmp.userLocked;
     return *this;
@@ -1434,6 +1458,17 @@ public:
     hsa_signal_value_t success = 0;
     hsa_status_t err = wait_for_signal(signal, init, success);
     OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(signal););
+
+    // Now that the operation is complete, copy data from PoolPtr
+    // to HstPtr if applicable
+    if (HstPtr != HstOrPoolPtr) {
+      assert(HstPtr != nullptr && HstOrPoolPtr != nullptr &&
+             "HstPr and PoolPtr both must be non-null");
+      DP("Memcpy %lu bytes from PoolPtr %p to HstPtr %p\n", Size, HstOrPoolPtr,
+         HstPtr);
+      memcpy(HstPtr, HstOrPoolPtr, Size);
+    }
+
     DeviceInfo.FreeSignalPool.push(signal);
     alreadyCompleted = true;
     return err;
@@ -1443,12 +1478,27 @@ public:
     if (userLocked)
       return HSA_STATUS_SUCCESS;
 
-    return hsa_amd_memory_unlock(hostPtr);
+    // If allocated from the pool, just release the ptr to the pool without
+    // unlocking it
+    assert(HstPtr != nullptr && HstOrPoolPtr != nullptr &&
+           "Both HstPtr and HstOrPoolPtr must be non-null");
+    if (HstOrPoolPtr != HstPtr) {
+      DP("Releasing %p into pool without unlocking\n", HstOrPoolPtr);
+      SmallPoolMgr.releaseIntoPool(Size, HstPtr);
+      return HSA_STATUS_SUCCESS;
+    }
+    DP("Calling hsa_amd_memory_unlock %p\n", HstPtr);
+    return hsa_amd_memory_unlock(HstPtr);
   }
 
 private:
   hsa_signal_t signal;
-  void *hostPtr; // for delayed unlocking
+  /// HostPtr initially passed in from a higher layer
+  void *HstPtr;
+  /// HstOrPoolPtr could be what was initially passed in from a higher layer or
+  // it could be a pool pointer
+  void *HstOrPoolPtr;    // for delayed unlocking
+  size_t Size;           // size of data
   bool alreadyCompleted; // libomptarget might call synchronize multiple times:
                          // only serve once
   bool userLocked;       // skip unlocking when user provided locked pointer
@@ -1700,6 +1750,17 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
   return HSA_STATUS_SUCCESS;
 }
 
+/// Get a pointer from a small pool, given a host pointer
+void *prepareHstPtrForDataRetrieve(size_t Size, void *HstPtr) {
+  void *PoolPtr = SmallPoolMgr.allocateFromPool(Size, HstPtr);
+  if (PoolPtr != nullptr) {
+    DP("prepareHstPtrForDataRetrieve: HostPtr %p PoolPtr %p\n", HstPtr,
+       PoolPtr);
+    return PoolPtr;
+  }
+  return HstPtr;
+}
+
 int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
                      AMDGPUAsyncInfoDataTy &AsyncData) {
   assert(DeviceId < DeviceInfo.NumberOfDevices && "Device ID too large");
@@ -1711,23 +1772,43 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
 
+  void *HstOrPoolPtr = prepareHstPtrForDataRetrieve(Size, HstPtr);
+  assert(HstOrPoolPtr && "HstOrPoolPtr cannot be null");
+
   hsa_signal_t Signal;
   bool UserLocked;
-  Err = DeviceInfo.freesignalpoolMemcpyD2H(HstPtr, TgtPtr, (size_t)Size,
+  Err = DeviceInfo.freesignalpoolMemcpyD2H(HstOrPoolPtr, TgtPtr, (size_t)Size,
                                            DeviceId, Signal, UserLocked);
 
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from device to host. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
-       (Elf64_Addr)HstPtr, (Elf64_Addr)TgtPtr, (unsigned long long)Size);
+       (Elf64_Addr)HstOrPoolPtr, (Elf64_Addr)TgtPtr, (unsigned long long)Size);
     return OFFLOAD_FAIL;
   }
 
-  AsyncData = std::move(AMDGPUAsyncInfoDataTy(Signal, HstPtr, UserLocked));
+  DP("dataRetrieve: Creating AsyncData with HostPtr %p HstOrPoolPtr %p\n",
+     HstPtr, HstOrPoolPtr);
+
+  AsyncData = std::move(
+      AMDGPUAsyncInfoDataTy(Signal, HstPtr, HstOrPoolPtr, Size, UserLocked));
   DP("DONE Retrieve data %ld bytes, (tgt:%016llx) -> (hst:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
-     (long long unsigned)(Elf64_Addr)HstPtr);
+     (long long unsigned)(Elf64_Addr)HstOrPoolPtr);
   return Err;
+}
+
+/// Get a pointer from a small pool, given a HstPtr. Perform copy-in to the pool
+/// pointer since data transfer will use the pool pointer
+void *prepareHstPtrForDataSubmit(size_t Size, void *HstPtr) {
+  void *PoolPtr = SmallPoolMgr.allocateFromPool(Size, HstPtr);
+  if (PoolPtr != nullptr) {
+    DP("dataSubmit: memcpy %lu bytes from HstPtr %p to PoolPtr %p\n", Size,
+       HstPtr, PoolPtr);
+    memcpy(PoolPtr, HstPtr, Size);
+    return PoolPtr;
+  }
+  return HstPtr;
 }
 
 int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
@@ -1741,18 +1822,23 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   DP("Submit data %ld bytes, (hst:%016llx) -> (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
+
+  void *HstOrPoolPtr = prepareHstPtrForDataSubmit(Size, HstPtr);
+  assert(HstOrPoolPtr && "HstOrPoolPtr cannot be null");
+
   hsa_signal_t Signal;
   bool UserLocked;
-  Err = DeviceInfo.freesignalpoolMemcpyH2D(TgtPtr, HstPtr, (size_t)Size,
+  Err = DeviceInfo.freesignalpoolMemcpyH2D(TgtPtr, HstOrPoolPtr, (size_t)Size,
                                            DeviceId, Signal, UserLocked);
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
-       (Elf64_Addr)HstPtr, (Elf64_Addr)TgtPtr, (unsigned long long)Size);
+       (Elf64_Addr)HstOrPoolPtr, (Elf64_Addr)TgtPtr, (unsigned long long)Size);
     return OFFLOAD_FAIL;
   }
 
-  AsyncData = std::move(AMDGPUAsyncInfoDataTy(Signal, HstPtr, UserLocked));
+  AsyncData = std::move(
+      AMDGPUAsyncInfoDataTy(Signal, HstPtr, HstOrPoolPtr, Size, UserLocked));
   return Err;
 }
 
@@ -2479,7 +2565,8 @@ struct DeviceEnvironment {
                                                  Signal, UserLocked);
         if (Err == HSA_STATUS_ERROR)
           return Err;
-        AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &HostDeviceEnv, UserLocked);
+        AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &HostDeviceEnv, &HostDeviceEnv,
+                                        StatePtrSize, UserLocked);
         Err = AsyncInfo.waitToComplete();
         return Err;
       }
@@ -3007,7 +3094,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
           DP("memcpy install of state_ptr failed\n");
           return NULL;
         }
-        AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &Ptr, UserLocked);
+        AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &Ptr, &Ptr, sizeof(void *),
+                                        UserLocked);
         Err = AsyncInfo.waitToComplete();
         if (Err != HSA_STATUS_SUCCESS)
           return NULL;
@@ -3076,7 +3164,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
         if (Err != HSA_STATUS_SUCCESS)
           DP("Error when copying USM\n");
 
-        AMDGPUAsyncInfoDataTy AsyncInfo(Signal, E->addr, UserLocked);
+        AMDGPUAsyncInfoDataTy AsyncInfo(Signal, E->addr, E->addr,
+                                        sizeof(void *), UserLocked);
         AsyncInfo.waitToComplete();
 
         DP("Copy linked variable host address (" DPxMOD ")"
