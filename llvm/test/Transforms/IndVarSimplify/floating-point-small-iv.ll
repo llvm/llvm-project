@@ -3,8 +3,8 @@
 
 @array = dso_local global [16777219 x i32] zeroinitializer, align 4
 
-define void @small_const_bound() {
-; CHECK-LABEL: @small_const_bound(
+define void @sitofp_fptosi_range() {
+; CHECK-LABEL: @sitofp_fptosi_range(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -37,8 +37,8 @@ cleanup:                                          ; preds = %for.body
 }
 
 ; Negative test: The transform is *not* valid because there are too many significant bits
-define void @overflow_masked_const_bound() {
-; CHECK-LABEL: @overflow_masked_const_bound(
+define void @sitofp_fptosi_range_overflow() {
+; CHECK-LABEL: @sitofp_fptosi_range_overflow(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -73,9 +73,9 @@ cleanup:                                          ; preds = %for.body
 }
 
 ; Negative test: Type mismatch between the integer IV and the fptosi result
-define void @mismatch_type_const() {
+define void @sitofp_fptosi_range_mismatch_type() {
 ;
-; CHECK-LABEL: @mismatch_type_const(
+; CHECK-LABEL: @sitofp_fptosi_range_mismatch_type(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -111,8 +111,8 @@ cleanup:                                          ; preds = %for.body
   ret void
 }
 
-define void @unsigned_const_bound() {
-; CHECK-LABEL: @unsigned_const_bound(
+define void @sitofp_fptoui_range() {
+; CHECK-LABEL: @sitofp_fptoui_range(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -144,18 +144,16 @@ cleanup:                                          ; preds = %for.body
   ret void
 }
 
-; TODO: Range including negative value.
-define void @unsigned_const_bound_with_negative () {
-; CHECK-LABEL: @unsigned_const_bound_with_negative(
+; Range including negative value.
+define void @sitofp_fptoui_range_with_negative () {
+; CHECK-LABEL: @sitofp_fptoui_range_with_negative(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 100, [[ENTRY:%.*]] ], [ [[DEC_INT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to float
-; CHECK-NEXT:    [[CONV:%.*]] = fptoui float [[INDVAR_CONV]] to i32
-; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[CONV]] to i64
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[IV_INT]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], [16777219 x i32]* @array, i64 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[IV_INT]], i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[DEC_INT]], -100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
@@ -179,3 +177,127 @@ for.body:                                         ; preds = %for.body, %entry
 cleanup:                                          ; preds = %for.body
   ret void
 }
+
+; https://godbolt.org/z/51MrqYjEf
+define void @uitofp_fptoui_range () {
+; CHECK-LABEL: @uitofp_fptoui_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 100, [[ENTRY:%.*]] ], [ [[DEC_INT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[IV_INT]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], [16777219 x i32]* @array, i64 0, i64 [[IDXPROM]]
+; CHECK-NEXT:    store i32 [[IV_INT]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv.int = phi i32 [ 100, %entry ], [ %dec.int, %for.body ]
+  %indvar.conv = uitofp i32 %iv.int to float
+  %conv = fptoui float %indvar.conv to i32
+  %idxprom = zext i32 %conv to i64
+  %arrayidx = getelementptr inbounds [16777219 x i32], [16777219 x i32]* @array, i64 0, i64 %idxprom
+  store i32 %conv, i32* %arrayidx, align 4
+  %dec.int = add nsw i32 %iv.int, -1
+  %cmp = icmp ugt i32 %dec.int, 3
+  br i1 %cmp, label %for.body, label %cleanup
+
+cleanup:                                          ; preds = %for.body
+  ret void
+}
+
+define void @uitofp_fptoui_range_with_negative() {
+; CHECK-LABEL: @uitofp_fptoui_range_with_negative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store i32 100, i32* getelementptr inbounds ([16777219 x i32], [16777219 x i32]* @array, i64 0, i64 100), align 4
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[CLEANUP:%.*]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv.int = phi i32 [ 100, %entry ], [ %dec.int, %for.body ]
+  %indvar.conv = uitofp i32 %iv.int to float
+  %conv = fptoui float %indvar.conv to i32
+  %idxprom = zext i32 %conv to i64
+  %arrayidx = getelementptr inbounds [16777219 x i32], [16777219 x i32]* @array, i64 0, i64 %idxprom
+  store i32 %conv, i32* %arrayidx, align 4
+  %dec.int = add nsw i32 %iv.int, -1
+  %cmp = icmp ugt i32 %dec.int, -100
+  br i1 %cmp, label %for.body, label %cleanup
+
+cleanup:                                          ; preds = %for.body
+  ret void
+}
+
+define void @uitofp_fptosi_range () {
+; CHECK-LABEL: @uitofp_fptosi_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 100, [[ENTRY:%.*]] ], [ [[DEC_INT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IV_INT]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], [16777219 x i32]* @array, i64 0, i64 [[IDXPROM]]
+; CHECK-NEXT:    store i32 [[IV_INT]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv.int = phi i32 [ 100, %entry ], [ %dec.int, %for.body ]
+  %indvar.conv = uitofp i32 %iv.int to float
+  %conv = fptosi float %indvar.conv to i32
+  %idxprom = sext i32 %conv to i64
+  %arrayidx = getelementptr inbounds [16777219 x i32], [16777219 x i32]* @array, i64 0, i64 %idxprom
+  store i32 %conv, i32* %arrayidx, align 4
+  %dec.int = add nsw i32 %iv.int, -1
+  %cmp = icmp ugt i32 %dec.int, 3
+  br i1 %cmp, label %for.body, label %cleanup
+
+cleanup:                                          ; preds = %for.body
+  ret void
+}
+
+define void @uitofp_fptosi_range_with_negative () {
+; CHECK-LABEL: @uitofp_fptosi_range_with_negative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store i32 100, i32* getelementptr inbounds ([16777219 x i32], [16777219 x i32]* @array, i64 0, i64 100), align 4
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[CLEANUP:%.*]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv.int = phi i32 [ 100, %entry ], [ %dec.int, %for.body ]
+  %indvar.conv = uitofp i32 %iv.int to float
+  %conv = fptosi float %indvar.conv to i32
+  %idxprom = sext i32 %conv to i64
+  %arrayidx = getelementptr inbounds [16777219 x i32], [16777219 x i32]* @array, i64 0, i64 %idxprom
+  store i32 %conv, i32* %arrayidx, align 4
+  %dec.int = add nsw i32 %iv.int, -1
+  %cmp = icmp ugt i32 %dec.int, -100
+  br i1 %cmp, label %for.body, label %cleanup
+
+cleanup:                                          ; preds = %for.body
+  ret void
+}
+
