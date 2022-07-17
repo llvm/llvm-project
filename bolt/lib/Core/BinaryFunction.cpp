@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/edit_distance.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
@@ -331,34 +330,34 @@ void BinaryFunction::markUnreachableBlocks() {
 // Any unnecessary fallthrough jumps revealed after calling eraseInvalidBBs
 // will be cleaned up by fixBranches().
 std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
-  BasicBlockOrderType NewLayout;
+  DenseSet<const BinaryBasicBlock *> InvalidBBs;
   unsigned Count = 0;
   uint64_t Bytes = 0;
-  for (BinaryBasicBlock *BB : layout()) {
-    if (BB->isValid()) {
-      NewLayout.push_back(BB);
-    } else {
+  for (BinaryBasicBlock *const BB : BasicBlocks) {
+    if (!BB->isValid()) {
       assert(!isEntryPoint(*BB) && "all entry blocks must be valid");
+      InvalidBBs.insert(BB);
       ++Count;
       Bytes += BC.computeCodeSize(BB->begin(), BB->end());
     }
   }
-  BasicBlocksLayout = std::move(NewLayout);
+
+  Layout.eraseBasicBlocks(InvalidBBs);
 
   BasicBlockListType NewBasicBlocks;
   for (auto I = BasicBlocks.begin(), E = BasicBlocks.end(); I != E; ++I) {
     BinaryBasicBlock *BB = *I;
-    if (BB->isValid()) {
-      NewBasicBlocks.push_back(BB);
-    } else {
+    if (InvalidBBs.contains(BB)) {
       // Make sure the block is removed from the list of predecessors.
       BB->removeAllSuccessors();
       DeletedBasicBlocks.push_back(BB);
+    } else {
+      NewBasicBlocks.push_back(BB);
     }
   }
   BasicBlocks = std::move(NewBasicBlocks);
 
-  assert(BasicBlocks.size() == BasicBlocksLayout.size());
+  assert(BasicBlocks.size() == Layout.block_size());
 
   // Update CFG state if needed
   if (Count > 0)
@@ -458,10 +457,10 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
   }
   if (FrameInstructions.size())
     OS << "\n  CFI Instrs  : " << FrameInstructions.size();
-  if (BasicBlocksLayout.size()) {
+  if (!Layout.block_empty()) {
     OS << "\n  BB Layout   : ";
     ListSeparator LS;
-    for (BinaryBasicBlock *BB : BasicBlocksLayout)
+    for (const BinaryBasicBlock *BB : Layout.blocks())
       OS << LS << BB->getName();
   }
   if (ImageAddress)
@@ -471,7 +470,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
 
-  if (opts::PrintDynoStats && !BasicBlocksLayout.empty()) {
+  if (opts::PrintDynoStats && !getLayout().block_empty()) {
     OS << '\n';
     DynoStats dynoStats = getDynoStats(*this);
     OS << dynoStats;
@@ -503,105 +502,108 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
     }
   }
 
-  for (uint32_t I = 0, E = BasicBlocksLayout.size(); I != E; ++I) {
-    BinaryBasicBlock *BB = BasicBlocksLayout[I];
-    if (I != 0 && BB->isCold() != BasicBlocksLayout[I - 1]->isCold())
-      OS << "-------   HOT-COLD SPLIT POINT   -------\n\n";
+  StringRef SplitPointMsg = "";
+  for (const FunctionFragment F : Layout) {
+    OS << SplitPointMsg;
+    SplitPointMsg = "-------   HOT-COLD SPLIT POINT   -------\n\n";
+    for (const BinaryBasicBlock *BB : F) {
+      OS << BB->getName() << " (" << BB->size()
+         << " instructions, align : " << BB->getAlignment() << ")\n";
 
-    OS << BB->getName() << " (" << BB->size()
-       << " instructions, align : " << BB->getAlignment() << ")\n";
-
-    if (isEntryPoint(*BB)) {
-      if (MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB))
-        OS << "  Secondary Entry Point: " << EntrySymbol->getName() << '\n';
-      else
-        OS << "  Entry Point\n";
-    }
-
-    if (BB->isLandingPad())
-      OS << "  Landing Pad\n";
-
-    uint64_t BBExecCount = BB->getExecutionCount();
-    if (hasValidProfile()) {
-      OS << "  Exec Count : ";
-      if (BB->getExecutionCount() != BinaryBasicBlock::COUNT_NO_PROFILE)
-        OS << BBExecCount << '\n';
-      else
-        OS << "<unknown>\n";
-    }
-    if (BB->getCFIState() >= 0)
-      OS << "  CFI State : " << BB->getCFIState() << '\n';
-    if (opts::EnableBAT) {
-      OS << "  Input offset: " << Twine::utohexstr(BB->getInputOffset())
-         << "\n";
-    }
-    if (!BB->pred_empty()) {
-      OS << "  Predecessors: ";
-      ListSeparator LS;
-      for (BinaryBasicBlock *Pred : BB->predecessors())
-        OS << LS << Pred->getName();
-      OS << '\n';
-    }
-    if (!BB->throw_empty()) {
-      OS << "  Throwers: ";
-      ListSeparator LS;
-      for (BinaryBasicBlock *Throw : BB->throwers())
-        OS << LS << Throw->getName();
-      OS << '\n';
-    }
-
-    Offset = alignTo(Offset, BB->getAlignment());
-
-    // Note: offsets are imprecise since this is happening prior to relaxation.
-    Offset = BC.printInstructions(OS, BB->begin(), BB->end(), Offset, this);
-
-    if (!BB->succ_empty()) {
-      OS << "  Successors: ";
-      // For more than 2 successors, sort them based on frequency.
-      std::vector<uint64_t> Indices(BB->succ_size());
-      std::iota(Indices.begin(), Indices.end(), 0);
-      if (BB->succ_size() > 2 && BB->getKnownExecutionCount()) {
-        llvm::stable_sort(Indices, [&](const uint64_t A, const uint64_t B) {
-          return BB->BranchInfo[B] < BB->BranchInfo[A];
-        });
+      if (isEntryPoint(*BB)) {
+        if (MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB))
+          OS << "  Secondary Entry Point: " << EntrySymbol->getName() << '\n';
+        else
+          OS << "  Entry Point\n";
       }
-      ListSeparator LS;
-      for (unsigned I = 0; I < Indices.size(); ++I) {
-        BinaryBasicBlock *Succ = BB->Successors[Indices[I]];
-        BinaryBasicBlock::BinaryBranchInfo &BI = BB->BranchInfo[Indices[I]];
-        OS << LS << Succ->getName();
-        if (ExecutionCount != COUNT_NO_PROFILE &&
-            BI.MispredictedCount != BinaryBasicBlock::COUNT_INFERRED) {
-          OS << " (mispreds: " << BI.MispredictedCount
-             << ", count: " << BI.Count << ")";
-        } else if (ExecutionCount != COUNT_NO_PROFILE &&
-                   BI.Count != BinaryBasicBlock::COUNT_NO_PROFILE) {
-          OS << " (inferred count: " << BI.Count << ")";
+
+      if (BB->isLandingPad())
+        OS << "  Landing Pad\n";
+
+      uint64_t BBExecCount = BB->getExecutionCount();
+      if (hasValidProfile()) {
+        OS << "  Exec Count : ";
+        if (BB->getExecutionCount() != BinaryBasicBlock::COUNT_NO_PROFILE)
+          OS << BBExecCount << '\n';
+        else
+          OS << "<unknown>\n";
+      }
+      if (BB->getCFIState() >= 0)
+        OS << "  CFI State : " << BB->getCFIState() << '\n';
+      if (opts::EnableBAT) {
+        OS << "  Input offset: " << Twine::utohexstr(BB->getInputOffset())
+           << "\n";
+      }
+      if (!BB->pred_empty()) {
+        OS << "  Predecessors: ";
+        ListSeparator LS;
+        for (BinaryBasicBlock *Pred : BB->predecessors())
+          OS << LS << Pred->getName();
+        OS << '\n';
+      }
+      if (!BB->throw_empty()) {
+        OS << "  Throwers: ";
+        ListSeparator LS;
+        for (BinaryBasicBlock *Throw : BB->throwers())
+          OS << LS << Throw->getName();
+        OS << '\n';
+      }
+
+      Offset = alignTo(Offset, BB->getAlignment());
+
+      // Note: offsets are imprecise since this is happening prior to
+      // relaxation.
+      Offset = BC.printInstructions(OS, BB->begin(), BB->end(), Offset, this);
+
+      if (!BB->succ_empty()) {
+        OS << "  Successors: ";
+        // For more than 2 successors, sort them based on frequency.
+        std::vector<uint64_t> Indices(BB->succ_size());
+        std::iota(Indices.begin(), Indices.end(), 0);
+        if (BB->succ_size() > 2 && BB->getKnownExecutionCount()) {
+          llvm::stable_sort(Indices, [&](const uint64_t A, const uint64_t B) {
+            return BB->BranchInfo[B] < BB->BranchInfo[A];
+          });
         }
-      }
-      OS << '\n';
-    }
-
-    if (!BB->lp_empty()) {
-      OS << "  Landing Pads: ";
-      ListSeparator LS;
-      for (BinaryBasicBlock *LP : BB->landing_pads()) {
-        OS << LS << LP->getName();
-        if (ExecutionCount != COUNT_NO_PROFILE) {
-          OS << " (count: " << LP->getExecutionCount() << ")";
+        ListSeparator LS;
+        for (unsigned I = 0; I < Indices.size(); ++I) {
+          BinaryBasicBlock *Succ = BB->Successors[Indices[I]];
+          const BinaryBasicBlock::BinaryBranchInfo &BI =
+              BB->BranchInfo[Indices[I]];
+          OS << LS << Succ->getName();
+          if (ExecutionCount != COUNT_NO_PROFILE &&
+              BI.MispredictedCount != BinaryBasicBlock::COUNT_INFERRED) {
+            OS << " (mispreds: " << BI.MispredictedCount
+               << ", count: " << BI.Count << ")";
+          } else if (ExecutionCount != COUNT_NO_PROFILE &&
+                     BI.Count != BinaryBasicBlock::COUNT_NO_PROFILE) {
+            OS << " (inferred count: " << BI.Count << ")";
+          }
         }
+        OS << '\n';
       }
+
+      if (!BB->lp_empty()) {
+        OS << "  Landing Pads: ";
+        ListSeparator LS;
+        for (BinaryBasicBlock *LP : BB->landing_pads()) {
+          OS << LS << LP->getName();
+          if (ExecutionCount != COUNT_NO_PROFILE) {
+            OS << " (count: " << LP->getExecutionCount() << ")";
+          }
+        }
+        OS << '\n';
+      }
+
+      // In CFG_Finalized state we can miscalculate CFI state at exit.
+      if (CurrentState == State::CFG) {
+        const int32_t CFIStateAtExit = BB->getCFIStateAtExit();
+        if (CFIStateAtExit >= 0)
+          OS << "  CFI State: " << CFIStateAtExit << '\n';
+      }
+
       OS << '\n';
     }
-
-    // In CFG_Finalized state we can miscalculate CFI state at exit.
-    if (CurrentState == State::CFG) {
-      const int32_t CFIStateAtExit = BB->getCFIStateAtExit();
-      if (CFIStateAtExit >= 0)
-        OS << "  CFI State: " << CFIStateAtExit << '\n';
-    }
-
-    OS << '\n';
   }
 
   // Dump new exception ranges for the function.
@@ -2120,14 +2122,14 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   // Set the basic block layout to the original order and set end offsets.
   PrevBB = nullptr;
   for (BinaryBasicBlock *BB : BasicBlocks) {
-    BasicBlocksLayout.emplace_back(BB);
+    Layout.addBasicBlock(BB);
     if (PrevBB)
       PrevBB->setEndOffset(BB->getOffset());
     PrevBB = BB;
   }
   PrevBB->setEndOffset(getSize());
 
-  updateLayoutIndices();
+  Layout.updateLayoutIndices();
 
   normalizeCFIState();
 
@@ -2757,7 +2759,7 @@ void BinaryFunction::normalizeCFIState() {
   // equivalent unwindCFIState sequence required at that point to achieve the
   // same effect of the restore. All remember state are then just ignored.
   std::stack<int32_t> Stack;
-  for (BinaryBasicBlock *CurBB : BasicBlocksLayout) {
+  for (BinaryBasicBlock *CurBB : Layout.blocks()) {
     for (auto II = CurBB->begin(); II != CurBB->end(); ++II) {
       if (const MCCFIInstruction *CFI = getCFIFor(*II)) {
         if (CFI->getOperation() == MCCFIInstruction::OpRememberState) {
@@ -2782,39 +2784,36 @@ bool BinaryFunction::finalizeCFIState() {
   LLVM_DEBUG(dbgs() << "This is the list of CFI states for each BB of " << *this
                     << ": ");
 
-  int32_t State = 0;
-  bool SeenCold = false;
   const char *Sep = "";
   (void)Sep;
-  for (BinaryBasicBlock *BB : BasicBlocksLayout) {
-    const int32_t CFIStateAtExit = BB->getCFIStateAtExit();
+  for (const FunctionFragment F : Layout) {
+    // Hot-cold border: at start of each region (with a different FDE) we need
+    // to reset the CFI state.
+    int32_t State = 0;
 
-    // Hot-cold border: check if this is the first BB to be allocated in a cold
-    // region (with a different FDE). If yes, we need to reset the CFI state.
-    if (!SeenCold && BB->isCold()) {
-      State = 0;
-      SeenCold = true;
+    for (BinaryBasicBlock *BB : F) {
+      const int32_t CFIStateAtExit = BB->getCFIStateAtExit();
+
+      // We need to recover the correct state if it doesn't match expected
+      // state at BB entry point.
+      if (BB->getCFIState() < State) {
+        // In this case, State is currently higher than what this BB expect it
+        // to be. To solve this, we need to insert CFI instructions to undo
+        // the effect of all CFI from BB's state to current State.
+        auto InsertIt = BB->begin();
+        unwindCFIState(State, BB->getCFIState(), BB, InsertIt);
+      } else if (BB->getCFIState() > State) {
+        // If BB's CFI state is greater than State, it means we are behind in
+        // the state. Just emit all instructions to reach this state at the
+        // beginning of this BB. If this sequence of instructions involve
+        // remember state or restore state, bail out.
+        if (!replayCFIInstrs(State, BB->getCFIState(), BB, BB->begin()))
+          return false;
+      }
+
+      State = CFIStateAtExit;
+      LLVM_DEBUG(dbgs() << Sep << State; Sep = ", ");
     }
-
-    // We need to recover the correct state if it doesn't match expected
-    // state at BB entry point.
-    if (BB->getCFIState() < State) {
-      // In this case, State is currently higher than what this BB expect it
-      // to be. To solve this, we need to insert CFI instructions to undo
-      // the effect of all CFI from BB's state to current State.
-      auto InsertIt = BB->begin();
-      unwindCFIState(State, BB->getCFIState(), BB, InsertIt);
-    } else if (BB->getCFIState() > State) {
-      // If BB's CFI state is greater than State, it means we are behind in the
-      // state. Just emit all instructions to reach this state at the
-      // beginning of this BB. If this sequence of instructions involve
-      // remember state or restore state, bail out.
-      if (!replayCFIInstrs(State, BB->getCFIState(), BB, BB->begin()))
-        return false;
-    }
-
-    State = CFIStateAtExit;
-    LLVM_DEBUG(dbgs() << Sep << State; Sep = ", ");
   }
   LLVM_DEBUG(dbgs() << "\n");
 
@@ -2842,13 +2841,6 @@ uint64_t BinaryFunction::getInstructionCount() const {
   for (const BinaryBasicBlock &BB : blocks())
     Count += BB.getNumNonPseudos();
   return Count;
-}
-
-bool BinaryFunction::hasLayoutChanged() const { return ModifiedLayout; }
-
-uint64_t BinaryFunction::getEditDistance() const {
-  return ComputeEditDistance<BinaryBasicBlock *>(BasicBlocksPreviousLayout,
-                                                 BasicBlocksLayout);
 }
 
 void BinaryFunction::clearDisasmState() {
@@ -2906,8 +2898,7 @@ void BinaryFunction::setIgnored() {
       delete BB;
     clearList(DeletedBasicBlocks);
 
-    clearList(BasicBlocksLayout);
-    clearList(BasicBlocksPreviousLayout);
+    Layout.clear();
   }
 
   CurrentState = State::Empty;
@@ -2920,7 +2911,7 @@ void BinaryFunction::setIgnored() {
 void BinaryFunction::duplicateConstantIslands() {
   assert(Islands && "function expected to have constant islands");
 
-  for (BinaryBasicBlock *BB : layout()) {
+  for (BinaryBasicBlock *BB : getLayout().blocks()) {
     if (!BB->isCold())
       continue;
 
@@ -3014,8 +3005,8 @@ void BinaryFunction::dumpGraph(raw_ostream &OS) const {
      << "node [fontname=courier, shape=box, style=filled, colorscheme=brbg9]\n";
   uint64_t Offset = Address;
   for (BinaryBasicBlock *BB : BasicBlocks) {
-    auto LayoutPos = llvm::find(BasicBlocksLayout, BB);
-    unsigned Layout = LayoutPos - BasicBlocksLayout.begin();
+    auto LayoutPos = find(Layout.blocks(), BB);
+    unsigned LayoutIndex = LayoutPos - Layout.block_begin();
     const char *ColdStr = BB->isCold() ? " (cold)" : "";
     std::vector<std::string> Attrs;
     // Bold box for entry points
@@ -3039,7 +3030,7 @@ void BinaryFunction::dumpGraph(raw_ostream &OS) const {
     OS << format("\"%s\" [label=\"%s%s\\n(C:%lu,O:%lu,I:%u,L:%u,CFI:%u)\\n",
                  BB->getName().data(), BB->getName().data(), ColdStr,
                  BB->getKnownExecutionCount(), BB->getOffset(), getIndex(BB),
-                 Layout, BB->getCFIState());
+                 LayoutIndex, BB->getCFIState());
 
     if (opts::DotToolTipCode) {
       std::string Str;
@@ -3225,8 +3216,7 @@ void BinaryFunction::fixBranches() {
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 
-  for (unsigned I = 0, E = BasicBlocksLayout.size(); I != E; ++I) {
-    BinaryBasicBlock *BB = BasicBlocksLayout[I];
+  for (BinaryBasicBlock *BB : BasicBlocks) {
     const MCSymbol *TBB = nullptr;
     const MCSymbol *FBB = nullptr;
     MCInst *CondBranch = nullptr;
@@ -3239,9 +3229,8 @@ void BinaryFunction::fixBranches() {
       BB->eraseInstruction(BB->findInstruction(UncondBranch));
 
     // Basic block that follows the current one in the final layout.
-    const BinaryBasicBlock *NextBB = nullptr;
-    if (I + 1 != E && BB->isCold() == BasicBlocksLayout[I + 1]->isCold())
-      NextBB = BasicBlocksLayout[I + 1];
+    const BinaryBasicBlock *NextBB =
+        Layout.getBasicBlockAfter(BB, /*IgnoreSplits=*/false);
 
     if (BB->succ_size() == 1) {
       // __builtin_unreachable() could create a conditional branch that
@@ -3570,7 +3559,11 @@ size_t BinaryFunction::computeHash(bool UseDFS,
 
   assert(hasCFG() && "function is expected to have CFG");
 
-  const BasicBlockOrderType &Order = UseDFS ? dfs() : BasicBlocksLayout;
+  BasicBlockListType Order;
+  if (UseDFS)
+    Order = dfs();
+  else
+    llvm::copy(Layout.blocks(), std::back_inserter(Order));
 
   // The hash is computed by creating a string of all instruction opcodes and
   // possibly their operands and then hashing that string with std::hash.
@@ -3681,23 +3674,22 @@ void BinaryFunction::updateCFIState(BinaryBasicBlock *Start,
 
 void BinaryFunction::updateLayout(BinaryBasicBlock *Start,
                                   const unsigned NumNewBlocks) {
-  // If start not provided insert new blocks at the beginning
+  BasicBlockListType::iterator Begin;
+  BasicBlockListType::iterator End;
+
+  // If start not provided copy new blocks from the beginning of BasicBlocks
   if (!Start) {
-    BasicBlocksLayout.insert(layout_begin(), BasicBlocks.begin(),
-                             BasicBlocks.begin() + NumNewBlocks);
-    updateLayoutIndices();
-    return;
+    Begin = BasicBlocks.begin();
+    End = BasicBlocks.begin() + NumNewBlocks;
+  } else {
+    unsigned StartIndex = getIndex(Start);
+    Begin = std::next(BasicBlocks.begin(), StartIndex + 1);
+    End = std::next(BasicBlocks.begin(), StartIndex + NumNewBlocks + 1);
   }
 
   // Insert new blocks in the layout immediately after Start.
-  auto Pos = llvm::find(layout(), Start);
-  assert(Pos != layout_end());
-  BasicBlockListType::iterator Begin =
-      std::next(BasicBlocks.begin(), getIndex(Start) + 1);
-  BasicBlockListType::iterator End =
-      std::next(BasicBlocks.begin(), getIndex(Start) + NumNewBlocks + 1);
-  BasicBlocksLayout.insert(Pos + 1, Begin, End);
-  updateLayoutIndices();
+  Layout.insertBasicBlocks(Start, {Begin, End});
+  Layout.updateLayoutIndices();
 }
 
 bool BinaryFunction::checkForAmbiguousJumpTables() {
@@ -4097,12 +4089,11 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
     return;
 
   // AArch64 may have functions that only contains a constant island (no code).
-  if (layout_begin() == layout_end())
+  if (getLayout().block_empty())
     return;
 
   BinaryBasicBlock *PrevBB = nullptr;
-  for (auto BBI = layout_begin(), BBE = layout_end(); BBI != BBE; ++BBI) {
-    BinaryBasicBlock *BB = *BBI;
+  for (BinaryBasicBlock *BB : this->Layout.blocks()) {
     assert(BB->getLabel()->isDefined() && "symbol should be defined");
     const uint64_t BBBaseAddress = BB->isCold() ? ColdBaseAddress : BaseAddress;
     if (!BC.HasRelocations) {

@@ -1162,7 +1162,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
           !Function.hasProfile())
         continue;
 
-      const bool HasLayout = !Function.layout_empty();
+      const bool HasLayout = !Function.getLayout().block_empty();
 
       for (BinaryBasicBlock &BB : Function) {
         if (HasLayout && Function.isSplit() && BB.isCold())
@@ -1222,7 +1222,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
     if (!Function.isSimple() || Function.isIgnored() || !Function.hasProfile())
       continue;
 
-    const bool HasLayout = !Function.layout_empty();
+    const bool HasLayout = !Function.getLayout().block_empty();
 
     // Total number of indirect calls issued from the current Function.
     // (a fraction of TotalIndirectCalls)

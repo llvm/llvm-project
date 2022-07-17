@@ -413,7 +413,7 @@ bool FrameAnalysis::computeArgsAccessed(BinaryFunction &BF) {
   bool NoInfo = false;
   FrameAccessAnalysis FAA(BF, getSPT(BF));
 
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     FAA.enterNewBB();
 
     for (MCInst &Inst : *BB) {
@@ -474,7 +474,7 @@ bool FrameAnalysis::restoreFrameIndex(BinaryFunction &BF) {
 
   LLVM_DEBUG(dbgs() << "Restoring frame indices for \"" << BF.getPrintName()
                     << "\"\n");
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     LLVM_DEBUG(dbgs() << "\tNow at BB " << BB->getName() << "\n");
     FAA.enterNewBB();
 

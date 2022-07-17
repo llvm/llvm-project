@@ -334,7 +334,7 @@ void NormalizeCFG::runOnFunctions(BinaryContext &BC) {
 }
 
 void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
-  if (Function.layout_size() > 0) {
+  if (!Function.getLayout().block_empty()) {
     unsigned Count;
     uint64_t Bytes;
     Function.markUnreachableBlocks();
@@ -392,7 +392,7 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     modifyFunctionLayout(BF, opts::ReorderBlocks, opts::MinBranchClusters);
-    if (BF.hasLayoutChanged())
+    if (BF.getLayout().hasLayoutChanged())
       ++ModifiedFuncCount;
   };
 
@@ -439,7 +439,7 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
       OS << "             There are " << Function.getInstructionCount()
          << " number of instructions in this function.\n";
       OS << "             The edit distance for this function is: "
-         << Function.getEditDistance() << "\n\n";
+         << Function.getLayout().getEditDistance() << "\n\n";
     }
   }
 }
@@ -500,7 +500,7 @@ void ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 
   Algo->reorderBasicBlocks(BF, NewLayout);
 
-  BF.updateBasicBlockLayout(NewLayout);
+  BF.getLayout().update(NewLayout);
 }
 
 void FixupBranches::runOnFunctions(BinaryContext &BC) {
@@ -581,7 +581,7 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
     // Have we crossed hot/cold border for split functions?
     bool SeenCold = false;
 
-    for (BinaryBasicBlock *BB : BF.layout()) {
+    for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
       if (BB->isCold() && !SeenCold) {
         SeenCold = true;
         CurrentGnuArgsSize = 0;
@@ -677,7 +677,7 @@ uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
                    MIB->getTargetSymbol(*UncondBranch) == BB.getLabel()) {
           MIB->replaceBranchTarget(*UncondBranch, Succ->getLabel(), Ctx);
         } else if (!UncondBranch) {
-          assert(Function.getBasicBlockAfter(Pred, false) != Succ &&
+          assert(Function.getLayout().getBasicBlockAfter(Pred, false) != Succ &&
                  "Don't add an explicit jump to a fallthrough block.");
           Pred->addBranchInstruction(Succ);
         }
@@ -781,7 +781,7 @@ bool SimplifyConditionalTailCalls::shouldRewriteBranch(
 
 uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
   // Need updated indices to correctly detect branch' direction.
-  BF.updateLayoutIndices();
+  BF.getLayout().updateLayoutIndices();
   BF.markUnreachableBlocks();
 
   MCPlusBuilder *MIB = BF.getBinaryContext().MIB.get();
@@ -798,7 +798,7 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
     return (BB->pred_size() != 0 || BB->isLandingPad() || BB->isEntryPoint());
   };
 
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     // Locate BB with a single direct tail-call instruction.
     if (BB->getNumNonPseudos() != 1)
       continue;
@@ -915,9 +915,10 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
 
     // Find the next valid block.  Invalid blocks will be deleted
     // so they shouldn't be considered fallthrough targets.
-    const BinaryBasicBlock *NextBlock = BF.getBasicBlockAfter(PredBB, false);
+    const BinaryBasicBlock *NextBlock =
+        BF.getLayout().getBasicBlockAfter(PredBB, false);
     while (NextBlock && !isValid(NextBlock))
-      NextBlock = BF.getBasicBlockAfter(NextBlock, false);
+      NextBlock = BF.getLayout().getBasicBlockAfter(NextBlock, false);
 
     // Get the unconditional successor to this block.
     const BinaryBasicBlock *PredSucc = PredBB->getSuccessor();
@@ -1106,7 +1107,7 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
   uint64_t NumLocalLoadsFound = 0;
   uint64_t NumDynamicLocalLoadsFound = 0;
 
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     for (MCInst &Inst : *BB) {
       unsigned Opcode = Inst.getOpcode();
       const MCInstrDesc &Desc = BC.MII->get(Opcode);
@@ -1548,7 +1549,7 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
       const uint64_t HotThreshold =
           std::max<uint64_t>(BF.getKnownExecutionCount(), 1);
       bool HotSeen = false;
-      for (const BinaryBasicBlock *BB : BF.rlayout()) {
+      for (const BinaryBasicBlock *BB : BF.getLayout().rblocks()) {
         if (!HotSeen && BB->getKnownExecutionCount() > HotThreshold) {
           HotSeen = true;
           continue;

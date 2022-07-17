@@ -15,6 +15,7 @@
 #ifndef BOLT_CORE_BINARY_BASIC_BLOCK_H
 #define BOLT_CORE_BINARY_BASIC_BLOCK_H
 
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/MCPlus.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
@@ -670,6 +671,10 @@ public:
   bool isValid() const { return IsValid; }
 
   void markValid(const bool Valid) { IsValid = Valid; }
+
+  FragmentNum getFragmentNum() const {
+    return IsCold ? FragmentNum::cold() : FragmentNum::hot();
+  }
 
   bool isCold() const { return IsCold; }
 

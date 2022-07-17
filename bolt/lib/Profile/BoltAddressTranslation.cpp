@@ -70,7 +70,7 @@ void BoltAddressTranslation::write(raw_ostream &OS) {
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
     MapTy Map;
     const bool IsSplit = Function.isSplit();
-    for (BinaryBasicBlock *&BB : Function.layout()) {
+    for (const BinaryBasicBlock *BB : Function.getLayout().blocks()) {
       if (IsSplit && BB->isCold())
         break;
       writeEntriesForBB(Map, *BB, Function.getOutputAddress());
@@ -83,7 +83,7 @@ void BoltAddressTranslation::write(raw_ostream &OS) {
     // Cold map
     Map.clear();
     LLVM_DEBUG(dbgs() << " Cold part\n");
-    for (BinaryBasicBlock *&BB : Function.layout()) {
+    for (const BinaryBasicBlock *BB : Function.getLayout().blocks()) {
       if (!BB->isCold())
         continue;
       writeEntriesForBB(Map, *BB, Function.cold().getAddress());

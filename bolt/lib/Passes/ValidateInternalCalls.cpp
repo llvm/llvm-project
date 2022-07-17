@@ -161,7 +161,7 @@ bool ValidateInternalCalls::fixCFGForIC(BinaryFunction &Function) const {
       // Connect this block with the returning block of the caller
       BinaryBasicBlock *CallerBlock = Info.getInsnToBBMap()[&ReachingInst];
       BinaryBasicBlock *ReturnDestBlock =
-          Function.getBasicBlockAfter(CallerBlock);
+          Function.getLayout().getBasicBlockAfter(CallerBlock);
       BB.addSuccessor(ReturnDestBlock, BB.getExecutionCount(), 0);
     }
   };

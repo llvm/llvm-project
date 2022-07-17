@@ -381,7 +381,7 @@ void BinaryFunction::updateEHRanges() {
   // Sites to update - either regular or cold.
   CallSitesType *Sites = &CallSites;
 
-  for (BinaryBasicBlock *&BB : BasicBlocksLayout) {
+  for (BinaryBasicBlock *BB : getLayout().blocks()) {
 
     if (BB->isCold() && !SeenCold) {
       SeenCold = true;
