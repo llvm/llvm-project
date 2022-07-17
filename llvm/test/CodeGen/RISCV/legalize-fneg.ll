@@ -16,8 +16,7 @@ define void @test1(float* %a, float* %b) nounwind {
 ; RV64-LABEL: test1:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lw a1, 0(a1)
-; RV64-NEXT:    li a2, 1
-; RV64-NEXT:    slli a2, a2, 31
+; RV64-NEXT:    lui a2, 524288
 ; RV64-NEXT:    xor a1, a1, a2
 ; RV64-NEXT:    sw a1, 0(a0)
 ; RV64-NEXT:    ret
