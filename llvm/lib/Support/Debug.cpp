@@ -61,6 +61,12 @@ bool isCurrentDebugType(const char *DebugType) {
   return false;
 }
 
+/// Set the current debug type, as if the -debug-only=X
+/// option were specified.  Note that DebugFlag also needs to be set to true for
+/// debug output to be produced.
+///
+void setCurrentDebugTypes(const char **Types, unsigned Count);
+
 void setCurrentDebugType(const char *Type) {
   setCurrentDebugTypes(&Type, 1);
 }
