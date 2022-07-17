@@ -117,7 +117,7 @@ extractFunctionCalls(const std::vector<BinaryFunction *> &BinaryFunctions) {
 
   for (BinaryFunction *SrcFunction : BinaryFunctions) {
     const BinaryContext &BC = SrcFunction->getBinaryContext();
-    for (BinaryBasicBlock *BB : SrcFunction->layout()) {
+    for (BinaryBasicBlock *BB : SrcFunction->getLayout().blocks()) {
       // Find call instructions and extract target symbols from each one
       for (MCInst &Inst : *BB) {
         if (!BC.MIB->isCall(Inst))
@@ -132,7 +132,7 @@ extractFunctionCalls(const std::vector<BinaryFunction *> &BinaryFunctions) {
 
         const BinaryFunction *DstFunction = BC.getFunctionForSymbol(DstSym);
         // Ignore recursive calls
-        if (DstFunction == nullptr || DstFunction->layout_empty() ||
+        if (DstFunction == nullptr || DstFunction->getLayout().block_empty() ||
             DstFunction == SrcFunction)
           continue;
 
@@ -180,9 +180,9 @@ double expectedCacheHitRatio(
   // Compute 'hotness' of the pages
   std::unordered_map<uint64_t, double> PageSamples;
   for (BinaryFunction *BF : BinaryFunctions) {
-    if (BF->layout_empty())
+    if (BF->getLayout().block_empty())
       continue;
-    double Page = BBAddr.at(BF->layout_front()) / PageSize;
+    double Page = BBAddr.at(BF->getLayout().block_front()) / PageSize;
     PageSamples[Page] += FunctionSamples.at(BF);
   }
 
@@ -190,17 +190,18 @@ double expectedCacheHitRatio(
   double Misses = 0;
   for (BinaryFunction *BF : BinaryFunctions) {
     // Skip the function if it has no samples
-    if (BF->layout_empty() || FunctionSamples.at(BF) == 0.0)
+    if (BF->getLayout().block_empty() || FunctionSamples.at(BF) == 0.0)
       continue;
     double Samples = FunctionSamples.at(BF);
-    double Page = BBAddr.at(BF->layout_front()) / PageSize;
+    double Page = BBAddr.at(BF->getLayout().block_front()) / PageSize;
     // The probability that the page is not present in the cache
     double MissProb = pow(1.0 - PageSamples[Page] / TotalSamples, CacheEntries);
 
     // Processing all callers of the function
     for (std::pair<BinaryFunction *, uint64_t> Pair : Calls[BF]) {
       BinaryFunction *SrcFunction = Pair.first;
-      double SrcPage = BBAddr.at(SrcFunction->layout_front()) / PageSize;
+      double SrcPage =
+          BBAddr.at(SrcFunction->getLayout().block_front()) / PageSize;
       // Is this a 'long' or a 'short' call?
       if (Page != SrcPage) {
         // This is a miss
