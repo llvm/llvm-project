@@ -374,7 +374,7 @@ void DIEHash::computeHash(const DIE &Die) {
   addAttributes(Die);
 
   // Then hash each of the children of the DIE.
-  for (auto &C : Die.children()) {
+  for (const auto &C : Die.children()) {
     // 7.27 Step 7
     // If C is a nested type entry or a member function entry, ...
     if (isType(C.getTag()) || (C.getTag() == dwarf::DW_TAG_subprogram && isType(C.getParent()->getTag()))) {

@@ -305,7 +305,7 @@ public:
 
     // Initialized the preferred-location map with illegal locations, to be
     // filled in later.
-    for (auto &VLoc : VLocs)
+    for (const auto &VLoc : VLocs)
       if (VLoc.second.Kind == DbgValue::Def)
         ValueToLoc.insert({VLoc.second.ID, LocIdx::MakeIllegalLoc()});
 
@@ -537,7 +537,7 @@ public:
     // date. Wipe old tracking data for the location if it's been clobbered in
     // the meantime.
     if (MTracker->readMLoc(NewLoc) != VarLocs[NewLoc.asU64()]) {
-      for (auto &P : ActiveMLocs[NewLoc]) {
+      for (const auto &P : ActiveMLocs[NewLoc]) {
         ActiveVLocs.erase(P);
       }
       ActiveMLocs[NewLoc.asU64()].clear();
@@ -590,7 +590,7 @@ public:
     // explicitly undef, then stop here.
     if (!NewLoc && !MakeUndef) {
       // Try and recover a few more locations with entry values.
-      for (auto &Var : ActiveMLocIt->second) {
+      for (const auto &Var : ActiveMLocIt->second) {
         auto &Prop = ActiveVLocs.find(Var)->second.Properties;
         recoverAsEntryValue(Var, Prop, OldValue);
       }
@@ -600,7 +600,7 @@ public:
 
     // Examine all the variables based on this location.
     DenseSet<DebugVariable> NewMLocs;
-    for (auto &Var : ActiveMLocIt->second) {
+    for (const auto &Var : ActiveMLocIt->second) {
       auto ActiveVLocIt = ActiveVLocs.find(Var);
       // Re-state the variable location: if there's no replacement then NewLoc
       // is None and a $noreg DBG_VALUE will be created. Otherwise, a DBG_VALUE
@@ -660,7 +660,7 @@ public:
     VarLocs[Dst.asU64()] = VarLocs[Src.asU64()];
 
     // For each variable based on Src; create a location at Dst.
-    for (auto &Var : MovingVars) {
+    for (const auto &Var : MovingVars) {
       auto ActiveVLocIt = ActiveVLocs.find(Var);
       assert(ActiveVLocIt != ActiveVLocs.end());
       ActiveVLocIt->second.Loc = Dst;
@@ -1289,7 +1289,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
       // FIXME: no index for this?
       Register Reg = MTracker->LocIdxToLocID[L];
       const TargetRegisterClass *TRC = nullptr;
-      for (auto *TRCI : TRI->regclasses())
+      for (const auto *TRCI : TRI->regclasses())
         if (TRCI->contains(Reg))
           TRC = TRCI;
       assert(TRC && "Couldn't find target register class?");
@@ -1519,7 +1519,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
   for (uint32_t DeadReg : DeadRegs)
     MTracker->defReg(DeadReg, CurBB, CurInst);
 
-  for (auto *MO : RegMaskPtrs)
+  for (const auto *MO : RegMaskPtrs)
     MTracker->writeRegMask(MO, CurBB, CurInst);
 
   // If this instruction writes to a spill slot, def that slot.
@@ -1558,7 +1558,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
       if (IgnoreSPAlias(Reg))
         continue;
 
-      for (auto *MO : RegMaskPtrs)
+      for (const auto *MO : RegMaskPtrs)
         if (MO->clobbersPhysReg(Reg))
           TTracker->clobberMloc(L.Idx, MI.getIterator(), false);
     }
@@ -1887,7 +1887,7 @@ void InstrRefBasedLDV::accumulateFragmentMap(MachineInstr &MI) {
   // Otherwise, examine all other seen fragments for this variable, with "this"
   // fragment being a previously unseen fragment. Record any pair of
   // overlapping fragments.
-  for (auto &ASeenFragment : AllSeenFragments) {
+  for (const auto &ASeenFragment : AllSeenFragments) {
     // Does this previously seen fragment overlap?
     if (DIExpression::fragmentsOverlap(ThisFragment, ASeenFragment)) {
       // Yes: Mark the current fragment as being overlapped.
@@ -2058,7 +2058,7 @@ bool InstrRefBasedLDV::mlocJoin(
   // redundant PHI that we can eliminate.
 
   SmallVector<const MachineBasicBlock *, 8> BlockOrders;
-  for (auto Pred : MBB.predecessors())
+  for (auto *Pred : MBB.predecessors())
     BlockOrders.push_back(Pred);
 
   // Visit predecessors in RPOT order.
@@ -2378,7 +2378,7 @@ void InstrRefBasedLDV::buildMLocValueMap(
       // All successors should be visited: put any back-edges on the pending
       // list for the next pass-through, and any other successors to be
       // visited this pass, if they're not going to be already.
-      for (auto s : MBB->successors()) {
+      for (auto *s : MBB->successors()) {
         // Does branching to this successor represent a back-edge?
         if (BBToOrder[s] > BBToOrder[MBB]) {
           // No: visit it during this dataflow iteration.
@@ -2432,7 +2432,7 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
   if (BlockOrders.empty())
     return None;
 
-  for (auto p : BlockOrders) {
+  for (const auto *p : BlockOrders) {
     unsigned ThisBBNum = p->getNumber();
     auto OutValIt = LiveOuts.find(p);
     if (OutValIt == LiveOuts.end())
@@ -2487,7 +2487,7 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
   // Check that all properties are the same. We can't pick a location if they're
   // not.
   const DbgValueProperties *Properties0 = Properties[0];
-  for (auto *Prop : Properties)
+  for (const auto *Prop : Properties)
     if (*Prop != *Properties0)
       return None;
 
@@ -2537,7 +2537,7 @@ bool InstrRefBasedLDV::vlocJoin(
   SmallVector<InValueT, 8> Values;
   bool Bail = false;
   int BackEdgesStart = 0;
-  for (auto p : BlockOrders) {
+  for (auto *p : BlockOrders) {
     // If the predecessor isn't in scope / to be explored, we'll never be
     // able to join any locations.
     if (!BlocksToExplore.contains(p)) {
@@ -2642,7 +2642,7 @@ void InstrRefBasedLDV::getBlocksForScope(
   // instructions in scope at all. To accurately replicate VarLoc
   // LiveDebugValues, this means exploring all artificial successors too.
   // Perform a depth-first-search to enumerate those blocks.
-  for (auto *MBB : BlocksToExplore) {
+  for (const auto *MBB : BlocksToExplore) {
     // Depth-first-search state: each node is a block and which successor
     // we're currently exploring.
     SmallVector<std::pair<const MachineBasicBlock *,
@@ -2727,7 +2727,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
     MutBlocksToExplore.insert(const_cast<MachineBasicBlock *>(MBB));
 
   // Picks out relevants blocks RPO order and sort them.
-  for (auto *MBB : BlocksToExplore)
+  for (const auto *MBB : BlocksToExplore)
     BlockOrders.push_back(const_cast<MachineBasicBlock *>(MBB));
 
   llvm::sort(BlockOrders, Cmp);
@@ -2761,7 +2761,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
   // between blocks. This keeps the locality of working on one lexical scope at
   // at time, but avoids re-processing variable values because some other
   // variable has been assigned.
-  for (auto &Var : VarsWeCareAbout) {
+  for (const auto &Var : VarsWeCareAbout) {
     // Re-initialize live-ins and live-outs, to clear the remains of previous
     // variables live-ins / live-outs.
     for (unsigned int I = 0; I < NumBlocks; ++I) {
@@ -2888,7 +2888,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
         // We should visit all successors. Ensure we'll visit any non-backedge
         // successors during this dataflow iteration; book backedge successors
         // to be visited next time around.
-        for (auto s : MBB->successors()) {
+        for (auto *s : MBB->successors()) {
           // Ignore out of scope / not-to-be-explored successors.
           if (LiveInIdx.find(s) == LiveInIdx.end())
             continue;
@@ -2971,7 +2971,7 @@ void InstrRefBasedLDV::placePHIsForSingleVarDefinition(
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void InstrRefBasedLDV::dump_mloc_transfer(
     const MLocTransferMap &mloc_transfer) const {
-  for (auto &P : mloc_transfer) {
+  for (const auto &P : mloc_transfer) {
     std::string foo = MTracker->LocIdxToName(P.first);
     std::string bar = MTracker->IDAsString(P.second);
     dbgs() << "Loc " << foo << " --> " << bar << "\n";
@@ -3058,7 +3058,7 @@ void InstrRefBasedLDV::makeDepthFirstEjectionMap(
       if (DILocationIt != ScopeToDILocation.end()) {
         getBlocksForScope(DILocationIt->second, BlocksToExplore,
                           ScopeToAssignBlocks.find(WS)->second);
-        for (auto *MBB : BlocksToExplore) {
+        for (const auto *MBB : BlocksToExplore) {
           unsigned BBNum = MBB->getNumber();
           if (EjectionMap[BBNum] == 0)
             EjectionMap[BBNum] = WS->getDFSOut();
@@ -3168,7 +3168,7 @@ bool InstrRefBasedLDV::depthFirstVLocAndEmit(
 
       getBlocksForScope(DILocationIt->second, BlocksToExplore,
                         ScopeToAssignBlocks.find(WS)->second);
-      for (auto *MBB : BlocksToExplore)
+      for (const auto *MBB : BlocksToExplore)
         if (WS->getDFSOut() == EjectionMap[MBB->getNumber()])
           EjectBlock(const_cast<MachineBasicBlock &>(*MBB));
 

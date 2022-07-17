@@ -1698,7 +1698,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
                         << ", Width: " << Width << "\n");
     }
 #ifndef NDEBUG
-    for (auto *Op : BaseOps)
+    for (const auto *Op : BaseOps)
       assert(Op);
 #endif
   }

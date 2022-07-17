@@ -78,7 +78,7 @@ bool LowerEmuTLS::runOnModule(Module &M) {
     if (G.isThreadLocal())
       TlsVars.append({&G});
   }
-  for (const auto G : TlsVars)
+  for (const auto *const G : TlsVars)
     Changed |= addEmuTlsVar(M, G);
   return Changed;
 }

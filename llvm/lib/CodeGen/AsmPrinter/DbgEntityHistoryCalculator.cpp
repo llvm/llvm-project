@@ -340,11 +340,11 @@ static void clobberRegEntries(InlinedEntity Var, unsigned RegNo,
     if (Entry.getInstr()->hasDebugOperandForReg(RegNo)) {
       IndicesToErase.push_back(Index);
       Entry.endEntry(ClobberIndex);
-      for (auto &MO : Entry.getInstr()->debug_operands())
+      for (const auto &MO : Entry.getInstr()->debug_operands())
         if (MO.isReg() && MO.getReg() && MO.getReg() != RegNo)
           MaybeRemovedRegisters.insert(MO.getReg());
     } else {
-      for (auto &MO : Entry.getInstr()->debug_operands())
+      for (const auto &MO : Entry.getInstr()->debug_operands())
         if (MO.isReg() && MO.getReg())
           KeepRegisters.insert(MO.getReg());
     }

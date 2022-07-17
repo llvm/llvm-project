@@ -85,7 +85,7 @@ void FaultMaps::emitFunctionInfo(const MCSymbol *FnLabel,
 
   OS.emitInt32(0); // Reserved
 
-  for (auto &Fault : FFI) {
+  for (const auto &Fault : FFI) {
     LLVM_DEBUG(dbgs() << WFMP << "    fault type: "
                       << faultTypeToString(Fault.Kind) << "\n");
     OS.emitInt32(Fault.Kind);
