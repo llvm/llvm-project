@@ -9357,7 +9357,8 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
     return false;
 
   // Only handle AND for now.
-  if (Op.getOpcode() != ISD::AND)
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode != ISD::AND && Opcode != ISD::OR && Opcode != ISD::XOR)
     return false;
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
@@ -9376,12 +9377,13 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
   auto IsLegalMask = [ShrunkMask, ExpandedMask](const APInt &Mask) -> bool {
     return ShrunkMask.isSubsetOf(Mask) && Mask.isSubsetOf(ExpandedMask);
   };
-  auto UseMask = [Mask, Op, VT, &TLO](const APInt &NewMask) -> bool {
+  auto UseMask = [Mask, Op, &TLO](const APInt &NewMask) -> bool {
     if (NewMask == Mask)
       return true;
     SDLoc DL(Op);
-    SDValue NewC = TLO.DAG.getConstant(NewMask, DL, VT);
-    SDValue NewOp = TLO.DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), NewC);
+    SDValue NewC = TLO.DAG.getConstant(NewMask, DL, Op.getValueType());
+    SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
+                                    Op.getOperand(0), NewC);
     return TLO.CombineTo(Op, NewOp);
   };
 
@@ -9390,18 +9392,21 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
   if (ShrunkMask.isSignedIntN(12))
     return false;
 
-  // Preserve (and X, 0xffff) when zext.h is supported.
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp()) {
-    APInt NewMask = APInt(Mask.getBitWidth(), 0xffff);
-    if (IsLegalMask(NewMask))
-      return UseMask(NewMask);
-  }
+  // And has a few special cases for zext.
+  if (Opcode == ISD::AND) {
+    // Preserve (and X, 0xffff) when zext.h is supported.
+    if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp()) {
+      APInt NewMask = APInt(Mask.getBitWidth(), 0xffff);
+      if (IsLegalMask(NewMask))
+        return UseMask(NewMask);
+    }
 
-  // Try to preserve (and X, 0xffffffff), the (zext_inreg X, i32) pattern.
-  if (VT == MVT::i64) {
-    APInt NewMask = APInt(64, 0xffffffff);
-    if (IsLegalMask(NewMask))
-      return UseMask(NewMask);
+    // Try to preserve (and X, 0xffffffff), the (zext_inreg X, i32) pattern.
+    if (VT == MVT::i64) {
+      APInt NewMask = APInt(64, 0xffffffff);
+      if (IsLegalMask(NewMask))
+        return UseMask(NewMask);
+    }
   }
 
   // For the remaining optimizations, we need to be able to make a negative
@@ -9414,10 +9419,11 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
 
   // Try to make a 12 bit negative immediate. If that fails try to make a 32
   // bit negative immediate unless the shrunk immediate already fits in 32 bits.
+  // If we can't create a simm12, we shouldn't change opaque constants.
   APInt NewMask = ShrunkMask;
   if (MinSignedBits <= 12)
     NewMask.setBitsFrom(11);
-  else if (MinSignedBits <= 32 && !ShrunkMask.isSignedIntN(32))
+  else if (!C->isOpaque() && MinSignedBits <= 32 && !ShrunkMask.isSignedIntN(32))
     NewMask.setBitsFrom(31);
   else
     return false;
