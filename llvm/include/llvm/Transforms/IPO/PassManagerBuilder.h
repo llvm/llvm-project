@@ -171,19 +171,6 @@ public:
   unsigned LicmMssaOptCap;
   unsigned LicmMssaNoAccForPromotionCap;
 
-  /// Enable profile instrumentation pass.
-  bool EnablePGOInstrGen;
-  /// Enable profile context sensitive instrumentation pass.
-  bool EnablePGOCSInstrGen;
-  /// Enable profile context sensitive profile use pass.
-  bool EnablePGOCSInstrUse;
-  /// Profile data file name that the instrumentation will be written to.
-  std::string PGOInstrGen;
-  /// Path of the profile data file.
-  std::string PGOInstrUse;
-  /// Path of the sample Profile data file.
-  std::string PGOSampleUse;
-
 private:
   /// ExtensionList - This is list of all of the extensions that are registered.
   std::vector<std::pair<ExtensionPointTy, ExtensionFn>> Extensions;
