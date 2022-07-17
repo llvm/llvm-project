@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/einline.prof -S | FileCheck %s
+; RUN: opt -S %s -passes='function(instcombine),sample-profile' -sample-profile-file=%S/Inputs/einline.prof | FileCheck %s
 
 ; Checks if both call and invoke can be inlined early if their inlined
 ; instances are hot in profile.
