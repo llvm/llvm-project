@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_HTTP_SERVER_H
-#define LLVM_SUPPORT_HTTP_SERVER_H
+#ifndef LLVM_DEBUGINFOD_HTTPSERVER_H
+#define LLVM_DEBUGINFOD_HTTPSERVER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -120,4 +120,4 @@ public:
 };
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_HTTP_SERVER_H
+#endif // LLVM_DEBUGINFOD_HTTPSERVER_H

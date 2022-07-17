@@ -121,4 +121,4 @@ public:
 } // namespace object
 } // namespace llvm
 
-#endif // LLVM_OBJECT_DXCONTAINERFILE_H
+#endif // LLVM_OBJECT_DXCONTAINER_H
