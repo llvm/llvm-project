@@ -1161,6 +1161,11 @@ private:
           Value shapeOp = reshapeOp.getShape();
           Value index = createIndexConstant(rewriter, loc, i);
           dimSize = rewriter.create<memref::LoadOp>(loc, shapeOp, index);
+          Type indexType = getIndexType();
+          if (dimSize.getType() != indexType)
+            dimSize = typeConverter->materializeTargetConversion(
+                rewriter, loc, indexType, dimSize);
+          assert(dimSize && "Invalid memref element type");
         }
 
         desc.setSize(rewriter, loc, i, dimSize);
