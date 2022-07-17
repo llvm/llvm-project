@@ -530,6 +530,9 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
       Init = VD->getInit();
   }
 
+  if (auto LE = dyn_cast_or_null<LambdaExpr>(Item.getStmtOrNull()))
+    Init = *(LE->capture_init_begin() + Item.getIndex());
+
   if (!Init && !Item.getStmtOrNull())
     Init = Item.getCXXCtorInitializer()->getInit();
 
