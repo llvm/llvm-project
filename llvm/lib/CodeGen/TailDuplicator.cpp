@@ -653,7 +653,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // demonstrated by test/CodeGen/Hexagon/tail-dup-subreg-abort.ll.
   // Disable tail duplication for this case for now, until the problem is
   // fixed.
-  for (auto SB : TailBB.successors()) {
+  for (auto *SB : TailBB.successors()) {
     for (auto &I : *SB) {
       if (!I.isPHI())
         break;

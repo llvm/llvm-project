@@ -2802,8 +2802,8 @@ void MachineVerifier::visitMachineFunctionAfter() {
   // tracking numbers.
   if (MF->getFunction().getSubprogram()) {
     DenseSet<unsigned> SeenNumbers;
-    for (auto &MBB : *MF) {
-      for (auto &MI : MBB) {
+    for (const auto &MBB : *MF) {
+      for (const auto &MI : MBB) {
         if (auto Num = MI.peekDebugInstrNum()) {
           auto Result = SeenNumbers.insert((unsigned)Num);
           if (!Result.second)

@@ -581,7 +581,7 @@ void RegisterOperands::collect(const MachineInstr &MI,
 void RegisterOperands::detectDeadDefs(const MachineInstr &MI,
                                       const LiveIntervals &LIS) {
   SlotIndex SlotIdx = LIS.getInstructionIndex(MI);
-  for (auto RI = Defs.begin(); RI != Defs.end(); /*empty*/) {
+  for (auto *RI = Defs.begin(); RI != Defs.end(); /*empty*/) {
     Register Reg = RI->RegUnit;
     const LiveRange *LR = getLiveRange(LIS, Reg);
     if (LR != nullptr) {
@@ -602,7 +602,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
                                           const MachineRegisterInfo &MRI,
                                           SlotIndex Pos,
                                           MachineInstr *AddFlagsMI) {
-  for (auto I = Defs.begin(); I != Defs.end(); ) {
+  for (auto *I = Defs.begin(); I != Defs.end();) {
     LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
                                            Pos.getDeadSlot());
     // If the def is all that is live after the instruction, then in case
@@ -620,7 +620,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
       ++I;
     }
   }
-  for (auto I = Uses.begin(); I != Uses.end(); ) {
+  for (auto *I = Uses.begin(); I != Uses.end();) {
     LaneBitmask LiveBefore = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
                                             Pos.getBaseIndex());
     LaneBitmask LaneMask = I->LaneMask & LiveBefore;

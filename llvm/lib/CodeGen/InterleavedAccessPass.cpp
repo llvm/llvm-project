@@ -541,7 +541,7 @@ bool InterleavedAccess::runOnFunction(Function &F) {
       Changed |= lowerInterleavedStore(SI, DeadInsts);
   }
 
-  for (auto I : DeadInsts)
+  for (auto *I : DeadInsts)
     I->eraseFromParent();
 
   return Changed;

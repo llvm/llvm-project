@@ -446,7 +446,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
       MadeChange |= ProcessBlock(MBB);
 
     // If we have anything we marked as toSplit, split it now.
-    for (auto &Pair : ToSplit) {
+    for (const auto &Pair : ToSplit) {
       auto NewSucc = Pair.first->SplitCriticalEdge(Pair.second, *this);
       if (NewSucc != nullptr) {
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "

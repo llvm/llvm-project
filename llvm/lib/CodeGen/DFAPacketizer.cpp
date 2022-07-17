@@ -239,7 +239,7 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
     });
     if (ResourceAvail && shouldAddToPacket(MI)) {
       // Dependency check for MI with instructions in CurrentPacketMIs.
-      for (auto MJ : CurrentPacketMIs) {
+      for (auto *MJ : CurrentPacketMIs) {
         SUnit *SUJ = MIToSUnit[MJ];
         assert(SUJ && "Missing SUnit Info!");
 

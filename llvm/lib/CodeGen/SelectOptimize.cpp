@@ -433,7 +433,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
         DebugPseudoINS.push_back(&*DIt);
       DIt++;
     }
-    for (auto DI : DebugPseudoINS) {
+    for (auto *DI : DebugPseudoINS) {
       DI->moveBefore(&*EndBlock->getFirstInsertionPt());
     }
 

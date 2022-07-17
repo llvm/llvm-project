@@ -1298,7 +1298,7 @@ void HoistSpillHelper::rmRedundantSpills(
   // For each spill saw, check SpillBBToSpill[] and see if its BB already has
   // another spill inside. If a BB contains more than one spill, only keep the
   // earlier spill with smaller SlotIndex.
-  for (const auto CurrentSpill : Spills) {
+  for (auto *const CurrentSpill : Spills) {
     MachineBasicBlock *Block = CurrentSpill->getParent();
     MachineDomTreeNode *Node = MDT.getBase().getNode(Block);
     MachineInstr *PrevSpill = SpillBBToSpill[Node];
@@ -1313,7 +1313,7 @@ void HoistSpillHelper::rmRedundantSpills(
       SpillBBToSpill[MDT.getBase().getNode(Block)] = CurrentSpill;
     }
   }
-  for (const auto SpillToRm : SpillsToRm)
+  for (auto *const SpillToRm : SpillsToRm)
     Spills.erase(SpillToRm);
 }
 
@@ -1347,7 +1347,7 @@ void HoistSpillHelper::getVisitOrders(
   // the path starting from the first node with non-redundant spill to the Root
   // node will be added to the WorkSet, which will contain all the possible
   // locations where spills may be hoisted to after the loop below is done.
-  for (const auto Spill : Spills) {
+  for (auto *const Spill : Spills) {
     MachineBasicBlock *Block = Spill->getParent();
     MachineDomTreeNode *Node = MDT[Block];
     MachineInstr *SpillToRm = nullptr;
@@ -1492,7 +1492,7 @@ void HoistSpillHelper::runHoistSpills(
                                        : BranchProbability(1, 1);
     if (SubTreeCost > MBFI.getBlockFreq(Block) * MarginProb) {
       // Hoist: Move spills to current Block.
-      for (const auto SpillBB : SpillsInSubTree) {
+      for (auto *const SpillBB : SpillsInSubTree) {
         // When SpillBB is a BB contains original spill, insert the spill
         // to SpillsToRm.
         if (SpillsToKeep.find(SpillBB) != SpillsToKeep.end() &&
@@ -1609,7 +1609,7 @@ void HoistSpillHelper::hoistAllSpills() {
 
     // Remove redundant spills or change them to dead instructions.
     NumSpills -= SpillsToRm.size();
-    for (auto const RMEnt : SpillsToRm) {
+    for (auto *const RMEnt : SpillsToRm) {
       RMEnt->setDesc(TII.get(TargetOpcode::KILL));
       for (unsigned i = RMEnt->getNumOperands(); i; --i) {
         MachineOperand &MO = RMEnt->getOperand(i - 1);
