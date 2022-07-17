@@ -1915,53 +1915,43 @@ define amdgpu_kernel void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* 
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
-; EG-NEXT:    ALU 39, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 29, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_8 T1.X, T0.X, 6, #1
 ; EG-NEXT:     VTX_READ_16 T2.X, T0.X, 0, #1
-; EG-NEXT:     VTX_READ_8 T3.X, T0.X, 2, #1
-; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 4, #1
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 4, #1
+; EG-NEXT:     VTX_READ_8 T0.X, T0.X, 2, #1
 ; EG-NEXT:    ALU clause starting at 14:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 15:
 ; EG-NEXT:     BFE_INT * T0.W, T1.X, 0.0, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T0.X, PV.W,
-; EG-NEXT:     SETGT_INT * T1.W, 0.0, PV.W,
-; EG-NEXT:     BFE_INT T2.W, T3.X, 0.0, literal.x,
-; EG-NEXT:     ADD_INT * T0.W, T0.W, PV.W,
+; EG-NEXT:     BFE_INT T2.W, T0.X, 0.0, literal.x,
+; EG-NEXT:     OR_INT * T1.W, T3.X, PV.W,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHL T2.W, PV.W, literal.x,
-; EG-NEXT:     XOR_INT * T0.W, PS, T1.W,
+; EG-NEXT:     LSHL T3.W, PV.W, literal.x,
+; EG-NEXT:     INT_TO_FLT * T0.X, PS,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T0.Z, 0.0, PS,
-; EG-NEXT:     OR_INT T2.W, T2.X, PV.W,
-; EG-NEXT:     RECIP_UINT * T0.X, PS,
-; EG-NEXT:     SETGT_INT T3.W, 0.0, PV.W,
-; EG-NEXT:     MULLO_INT * T0.Y, PV.Z, PS,
-; EG-NEXT:     ADD_INT T2.W, T2.W, PV.W,
-; EG-NEXT:     MULHI * T0.Y, T0.X, PS,
-; EG-NEXT:     ADD_INT T4.W, T0.X, PS,
-; EG-NEXT:     XOR_INT * T2.W, PV.W, T3.W,
-; EG-NEXT:     MULHI * T0.X, PS, PV.W,
-; EG-NEXT:     MULLO_INT * T0.Y, PS, T0.W,
-; EG-NEXT:     SUB_INT * T2.W, T2.W, PS,
-; EG-NEXT:     ADD_INT T0.Z, T0.X, 1,
-; EG-NEXT:     SETGE_UINT T4.W, PV.W, T0.W,
-; EG-NEXT:     SUB_INT * T5.W, PV.W, T0.W,
-; EG-NEXT:     CNDE_INT T2.W, PV.W, T2.W, PS,
-; EG-NEXT:     CNDE_INT * T4.W, PV.W, T0.X, PV.Z,
-; EG-NEXT:     ADD_INT T5.W, PS, 1,
-; EG-NEXT:     SETGE_UINT * T0.W, PV.W, T0.W,
-; EG-NEXT:     CNDE_INT T0.W, PS, T4.W, PV.W, BS:VEC_102/SCL_221
-; EG-NEXT:     XOR_INT * T1.W, T3.W, T1.W,
-; EG-NEXT:     XOR_INT * T0.W, PV.W, PS,
-; EG-NEXT:     SUB_INT * T0.W, PV.W, T1.W,
+; EG-NEXT:     OR_INT T1.W, T2.X, PV.W,
+; EG-NEXT:     RECIP_IEEE * T0.Y, PS,
+; EG-NEXT:     INT_TO_FLT * T0.Z, PV.W,
+; EG-NEXT:     MUL_IEEE * T1.W, PS, T0.Y,
+; EG-NEXT:     TRUNC T1.W, PV.W,
+; EG-NEXT:     XOR_INT * T0.W, T2.W, T0.W,
+; EG-NEXT:     ASHR T0.W, PS, literal.x,
+; EG-NEXT:     MULADD_IEEE * T2.W, -PV.W, T0.X, T0.Z,
+; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
+; EG-NEXT:     TRUNC T0.Z, T1.W,
+; EG-NEXT:     SETGE T1.W, |PS|, |T0.X|,
+; EG-NEXT:     OR_INT * T0.W, PV.W, 1,
+; EG-NEXT:     CNDE T0.W, PV.W, 0.0, PS,
+; EG-NEXT:     FLT_TO_INT * T1.W, PV.Z,
+; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,

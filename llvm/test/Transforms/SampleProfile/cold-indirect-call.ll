@@ -1,4 +1,3 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/cold-indirect-call.prof -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/cold-indirect-call.prof -S | FileCheck %s
 
 define i32 @foo(i32 ()* %func) #0 !dbg !3 {

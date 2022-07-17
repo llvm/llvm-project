@@ -877,7 +877,7 @@ bool DataAggregator::recordTrace(
   // the previous block (that instruction should be a call).
   if (From == FromBB->getOffset() && !BF.containsAddress(FirstLBR.From) &&
       !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
-    BinaryBasicBlock *PrevBB = BF.BasicBlocksLayout[FromBB->getIndex() - 1];
+    BinaryBasicBlock *PrevBB = BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
       const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
       if (Instr && BC.MIB->isCall(*Instr))
@@ -897,10 +897,10 @@ bool DataAggregator::recordTrace(
     return true;
 
   // Process blocks in the original layout order.
-  BinaryBasicBlock *BB = BF.BasicBlocksLayout[FromBB->getIndex()];
+  BinaryBasicBlock *BB = BF.getLayout().getBlock(FromBB->getIndex());
   assert(BB == FromBB && "index mismatch");
   while (BB != ToBB) {
-    BinaryBasicBlock *NextBB = BF.BasicBlocksLayout[BB->getIndex() + 1];
+    BinaryBasicBlock *NextBB = BF.getLayout().getBlock(BB->getIndex() + 1);
     assert((NextBB && NextBB->getOffset() > BB->getOffset()) && "bad layout");
 
     // Check for bad LBRs.

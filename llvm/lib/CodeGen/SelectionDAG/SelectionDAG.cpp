@@ -604,7 +604,7 @@ static void AddNodeIDValueTypes(FoldingSetNodeID &ID, SDVTList VTList) {
 /// AddNodeIDOperands - Various routines for adding operands to the NodeID data.
 static void AddNodeIDOperands(FoldingSetNodeID &ID,
                               ArrayRef<SDValue> Ops) {
-  for (auto& Op : Ops) {
+  for (const auto &Op : Ops) {
     ID.AddPointer(Op.getNode());
     ID.AddInteger(Op.getResNo());
   }
@@ -613,7 +613,7 @@ static void AddNodeIDOperands(FoldingSetNodeID &ID,
 /// AddNodeIDOperands - Various routines for adding operands to the NodeID data.
 static void AddNodeIDOperands(FoldingSetNodeID &ID,
                               ArrayRef<SDUse> Ops) {
-  for (auto& Op : Ops) {
+  for (const auto &Op : Ops) {
     ID.AddPointer(Op.getNode());
     ID.AddInteger(Op.getResNo());
   }
@@ -2949,6 +2949,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
+  case ISD::MERGE_VALUES:
+    return computeKnownBits(Op.getOperand(Op.getResNo()), DemandedElts,
+                            Depth + 1);
   case ISD::BUILD_VECTOR:
     // Collect the known bits that are shared by every demanded vector element.
     Known.Zero.setAllBits(); Known.One.setAllBits();
@@ -3219,12 +3222,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = KnownBits::mul(Known, Known2, SelfMultiply);
     else
       Known = KnownBits::mulhs(Known, Known2);
-    break;
-  }
-  case ISD::UDIV: {
-    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::udiv(Known, Known2);
     break;
   }
   case ISD::AVGCEILU: {
@@ -3570,6 +3567,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+    break;
+  }
+  case ISD::UDIV: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::udiv(Known, Known2);
     break;
   }
   case ISD::SREM: {
@@ -3927,7 +3930,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertZext:
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getSizeInBits();
     return VTBits-Tmp;
-
+  case ISD::MERGE_VALUES:
+    return ComputeNumSignBits(Op.getOperand(Op.getResNo()), DemandedElts,
+                              Depth + 1);
   case ISD::BUILD_VECTOR:
     Tmp = VTBits;
     for (unsigned i = 0, e = Op.getNumOperands(); (i < e) && (Tmp > 1); ++i) {
@@ -8906,7 +8911,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
 #ifndef NDEBUG
-  for (auto &Op : Ops)
+  for (const auto &Op : Ops)
     assert(Op.getOpcode() != ISD::DELETED_NODE &&
            "Operand is DELETED_NODE!");
 #endif
@@ -9020,7 +9025,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     return getNode(Opcode, DL, VTList.VTs[0], Ops, Flags);
 
 #ifndef NDEBUG
-  for (auto &Op : Ops)
+  for (const auto &Op : Ops)
     assert(Op.getOpcode() != ISD::DELETED_NODE &&
            "Operand is DELETED_NODE!");
 #endif
@@ -9916,7 +9921,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     return;
 
   SmallVector<SDDbgValue *, 2> ClonedDVs;
-  for (auto DV : GetDbgValues(&N)) {
+  for (auto *DV : GetDbgValues(&N)) {
     if (DV->isInvalidated())
       continue;
     switch (N.getOpcode()) {
@@ -10281,7 +10286,7 @@ bool SelectionDAG::calculateDivergence(SDNode *N) {
   }
   if (TLI->isSDNodeSourceOfDivergence(N, FLI, DA))
     return true;
-  for (auto &Op : N->ops()) {
+  for (const auto &Op : N->ops()) {
     if (Op.Val.getValueType() != MVT::Other && Op.getNode()->isDivergent())
       return true;
   }
@@ -10311,7 +10316,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   }
   for (size_t I = 0; I != Order.size(); ++I) {
     SDNode *N = Order[I];
-    for (auto U : N->uses()) {
+    for (auto *U : N->uses()) {
       unsigned &UnsortedOps = Degree[U];
       if (0 == --UnsortedOps)
         Order.push_back(U);

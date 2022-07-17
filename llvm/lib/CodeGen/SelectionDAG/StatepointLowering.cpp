@@ -193,7 +193,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   if (const PHINode *Phi = dyn_cast<PHINode>(Val)) {
     Optional<int> MergedResult = None;
 
-    for (auto &IncomingValue : Phi->incoming_values()) {
+    for (const auto &IncomingValue : Phi->incoming_values()) {
       Optional<int> SpillSlot =
           findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth - 1);
       if (!SpillSlot)
@@ -569,9 +569,10 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // We cannot assing them to VRegs.
   SmallSet<SDValue, 8> LPadPointers;
   if (!UseRegistersForGCPointersInLandingPad)
-    if (auto *StInvoke = dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
+    if (const auto *StInvoke =
+            dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
       LandingPadInst *LPI = StInvoke->getLandingPadInst();
-      for (auto *Relocate : SI.GCRelocates)
+      for (const auto *Relocate : SI.GCRelocates)
         if (Relocate->getOperand(0) == LPI) {
           LPadPointers.insert(Builder.getValue(Relocate->getBasePtr()));
           LPadPointers.insert(Builder.getValue(Relocate->getDerivedPtr()));
@@ -739,7 +740,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
 
   LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
-  for (auto *Reloc : SI.GCRelocates)
+  for (const auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
       StatepointLowering.scheduleRelocCall(*Reloc);
 #endif
@@ -1017,7 +1018,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
 static std::pair<const GCResultInst*, const GCResultInst*>
 getGCResultLocality(const GCStatepointInst &S) {
   std::pair<const GCResultInst *, const GCResultInst*> Res(nullptr, nullptr);
-  for (auto *U : S.users()) {
+  for (const auto *U : S.users()) {
     auto *GRI = dyn_cast<GCResultInst>(U);
     if (!GRI)
       continue;

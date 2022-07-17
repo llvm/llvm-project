@@ -1,11 +1,3 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/syntax.prof 2>&1 | FileCheck -check-prefix=NO-DEBUG %s
-; RUN: not opt < %s -sample-profile -sample-profile-file=missing.prof 2>&1 | FileCheck -check-prefix=MISSING-FILE %s
-; RUN: not opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad_fn_header.prof 2>&1 | FileCheck -check-prefix=BAD-FN-HEADER %s
-; RUN: not opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad_sample_line.prof 2>&1 | FileCheck -check-prefix=BAD-SAMPLE-LINE %s
-; RUN: not opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad_line_values.prof 2>&1 | FileCheck -check-prefix=BAD-LINE-VALUES %s
-; RUN: not opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad_discriminator_value.prof 2>&1 | FileCheck -check-prefix=BAD-DISCRIMINATOR-VALUE %s
-; RUN: not opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad_samples.prof 2>&1 | FileCheck -check-prefix=BAD-SAMPLES %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad_mangle.prof 2>&1 >/dev/null
 
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/syntax.prof 2>&1 | FileCheck -check-prefix=NO-DEBUG %s
 ; RUN: not opt < %s -passes=sample-profile -sample-profile-file=missing.prof 2>&1 | FileCheck -check-prefix=MISSING-FILE %s

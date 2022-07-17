@@ -646,7 +646,7 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   SmallVector<SrcOp> TmpVec;
   TmpVec.reserve(Ops.size());
   LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
-  for (auto &Op : Ops)
+  for (const auto &Op : Ops)
     TmpVec.push_back(buildConstant(EltTy, Op));
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }

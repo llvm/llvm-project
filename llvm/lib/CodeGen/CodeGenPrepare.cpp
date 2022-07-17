@@ -730,7 +730,7 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
 
   // (Repeatedly) merging blocks into their predecessors can create redundant
   // debug intrinsics.
-  for (auto &Pred : Preds)
+  for (const auto &Pred : Preds)
     if (auto *BB = cast_or_null<BasicBlock>(Pred))
       RemoveRedundantDbgInstrs(BB);
 
@@ -3684,7 +3684,7 @@ private:
       // Phi we added (subject to match) and both of them is in the same basic
       // block then we can match our pair if values match. So we state that
       // these values match and add it to work list to verify that.
-      for (auto B : Item.first->blocks()) {
+      for (auto *B : Item.first->blocks()) {
         Value *FirstValue = Item.first->getIncomingValueForBlock(B);
         Value *SecondValue = Item.second->getIncomingValueForBlock(B);
         if (FirstValue == SecondValue)

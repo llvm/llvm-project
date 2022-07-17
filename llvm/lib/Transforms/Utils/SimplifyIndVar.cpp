@@ -679,14 +679,20 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
 
 /// Eliminate redundant type cast between integer and float.
 bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
-  if (UseInst->getOpcode() != CastInst::SIToFP)
+  if (UseInst->getOpcode() != CastInst::SIToFP &&
+      UseInst->getOpcode() != CastInst::UIToFP)
     return false;
 
   Value *IVOperand = UseInst->getOperand(0);
   // Get the symbolic expression for this instruction.
-  ConstantRange IVRange = SE->getSignedRange(SE->getSCEV(IVOperand));
+  const SCEV *IV = SE->getSCEV(IVOperand);
+  unsigned MaskBits;
+  if (UseInst->getOpcode() == CastInst::SIToFP)
+    MaskBits = SE->getSignedRange(IV).getMinSignedBits();
+  else
+    MaskBits = SE->getUnsignedRange(IV).getActiveBits();
   unsigned DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
-  if (IVRange.getActiveBits() <= DestNumSigBits) {
+  if (MaskBits <= DestNumSigBits) {
     for (User *U : UseInst->users()) {
       // Match for fptosi/fptoui of sitofp and with same type.
       auto *CI = dyn_cast<CastInst>(U);

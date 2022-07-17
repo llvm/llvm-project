@@ -184,6 +184,16 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   if (isDefBetween(*TRI, LIS, CCReg, *Sel, *And))
     return false;
 
+  // Cannot safely mirror live intervals with PHI nodes, so check for these
+  // before optimization.
+  SlotIndex SelIdx = LIS->getInstructionIndex(*Sel);
+  LiveInterval *SelLI = &LIS->getInterval(SelReg);
+  if (llvm::any_of(SelLI->vnis(),
+                    [](const VNInfo *VNI) {
+                      return VNI->isPHIDef();
+                    }))
+    return false;
+
   // TODO: Guard against implicit def operands?
   LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t' << *Cmp << '\t'
                     << *And);
@@ -204,31 +214,34 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
   LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
 
-  SlotIndex CmpIdx = LIS->getInstructionIndex(*Cmp);
-  SlotIndex SelIdx = LIS->getInstructionIndex(*Sel);
-
-  LiveInterval *CmpLI =
-      CmpReg.isVirtual() ? &LIS->getInterval(CmpReg) : nullptr;
-  LiveInterval *SelLI =
-      SelReg.isVirtual() ? &LIS->getInterval(SelReg) : nullptr;
-
   // Update live intervals for CCReg before potentially removing CmpReg/SelReg,
   // and their associated liveness information.
+  SlotIndex CmpIdx = LIS->getInstructionIndex(*Cmp);
   if (CCReg.isVirtual()) {
-    // Note: this ignores that SelLI might have multiple internal values
-    // or splits and simply extends the live range to cover all cases
-    // where the result of the v_cndmask_b32 was live (e.g. loops).
-    // This could yield worse register allocation in rare edge cases.
-    SlotIndex EndIdx = AndIdx.getRegSlot();
-    if (SelLI && SelLI->endIndex() > EndIdx && SelLI->endIndex().isBlock())
-      EndIdx = SelLI->endIndex();
+    // Apply live ranges from SelLI to CCReg potentially matching splits
+    // and extending to loop boundaries.
+
+    auto applyLiveRanges = [&](LiveRange &Dst, VNInfo *VNI) {
+      // Copy live ranges from SelLI, adjusting start and end as required
+      auto DefSegment = SelLI->FindSegmentContaining(SelIdx.getRegSlot());
+      assert(DefSegment != SelLI->end() &&
+             "No live interval segment covering definition?");
+      for (auto I = DefSegment; I != SelLI->end(); ++I) {
+        SlotIndex Start = I->start < SelIdx.getRegSlot() ?
+                          SelIdx.getRegSlot() : I->start;
+        SlotIndex End = I->end < AndIdx.getRegSlot() || I->end.isBlock() ?
+                        I->end : AndIdx.getRegSlot();
+        Dst.addSegment(LiveRange::Segment(Start, End, VNI));
+      }
+      // If SelLI does not cover AndIdx (because Cmp killed Sel) then extend.
+      if (!SelLI->getSegmentContaining(AndIdx.getRegSlot()))
+        Dst.addSegment(LiveRange::Segment(CmpIdx.getRegSlot(), AndIdx.getRegSlot(), VNI));
+    };
 
     LiveInterval &CCLI = LIS->getInterval(CCReg);
     auto CCQ = CCLI.Query(SelIdx.getRegSlot());
-    if (CCQ.valueIn()) {
-      CCLI.addSegment(LiveRange::Segment(SelIdx.getRegSlot(),
-                                         EndIdx, CCQ.valueIn()));
-    }
+    if (CCQ.valueIn())
+      applyLiveRanges(CCLI, CCQ.valueIn());
 
     if (CC->getSubReg()) {
       LaneBitmask Mask = TRI->getSubRegIndexLaneMask(CC->getSubReg());
@@ -237,10 +250,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
           Allocator, Mask,
           [=](LiveInterval::SubRange &SR) {
             auto CCQS = SR.Query(SelIdx.getRegSlot());
-            if (CCQS.valueIn()) {
-              SR.addSegment(LiveRange::Segment(
-                  SelIdx.getRegSlot(), EndIdx, CCQS.valueIn()));
-            }
+            if (CCQS.valueIn())
+              applyLiveRanges(SR, CCQS.valueIn());
           },
           *LIS->getSlotIndexes(), *TRI);
       CCLI.removeEmptySubRanges();
@@ -253,7 +264,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
   // Try to remove compare. Cmp value should not used in between of cmp
   // and s_and_b64 if VCC or just unused if any other register.
-  if ((CmpReg.isVirtual() && CmpLI && CmpLI->Query(AndIdx.getRegSlot()).isKill()) ||
+  LiveInterval *CmpLI = CmpReg.isVirtual() ? &LIS->getInterval(CmpReg) : nullptr;
+  if ((CmpLI && CmpLI->Query(AndIdx.getRegSlot()).isKill()) ||
       (CmpReg == Register(CondReg) &&
        std::none_of(std::next(Cmp->getIterator()), Andn2->getIterator(),
                     [&](const MachineInstr &MI) {
@@ -266,18 +278,16 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     Cmp->eraseFromParent();
 
     // Try to remove v_cndmask_b32.
-    if (SelLI) {
-      // Kill status must be checked before shrinking the live range.
-      bool IsKill = SelLI->Query(CmpIdx.getRegSlot()).isKill();
-      LIS->shrinkToUses(SelLI);
-      bool IsDead = SelLI->Query(SelIdx.getRegSlot()).isDeadDef();
-      if (MRI->use_nodbg_empty(SelReg) && (IsKill || IsDead)) {
-        LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
+    // Kill status must be checked before shrinking the live range.
+    bool IsKill = SelLI->Query(CmpIdx.getRegSlot()).isKill();
+    LIS->shrinkToUses(SelLI);
+    bool IsDead = SelLI->Query(SelIdx.getRegSlot()).isDeadDef();
+    if (MRI->use_nodbg_empty(SelReg) && (IsKill || IsDead)) {
+      LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
 
-        LIS->removeVRegDefAt(*SelLI, SelIdx.getRegSlot());
-        LIS->RemoveMachineInstrFromMaps(*Sel);
-        Sel->eraseFromParent();
-      }
+      LIS->removeVRegDefAt(*SelLI, SelIdx.getRegSlot());
+      LIS->RemoveMachineInstrFromMaps(*Sel);
+      Sel->eraseFromParent();
     }
   }
 

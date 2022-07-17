@@ -989,7 +989,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   Optional<unsigned> NVPTXAddressSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  for (auto &Fragment : DV.getFrameIndexExprs()) {
+  for (const auto &Fragment : DV.getFrameIndexExprs()) {
     Register FrameReg;
     const DIExpression *Expr = Fragment.Expr;
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
@@ -1111,7 +1111,7 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
   SmallDenseSet<DbgVariable *, 8> Visiting;
 
   // Initialize the worklist and the DIVariable lookup table.
-  for (auto Var : reverse(Input)) {
+  for (auto *Var : reverse(Input)) {
     DbgVar.insert({Var->getVariable(), Var});
     WorkList.push_back({Var, 0});
   }
@@ -1146,7 +1146,7 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
     // Push dependencies and this node onto the worklist, so that this node is
     // visited again after all of its dependencies are handled.
     WorkList.push_back({Var, 1});
-    for (auto *Dependency : dependencies(Var)) {
+    for (const auto *Dependency : dependencies(Var)) {
       // Don't add dependency if it is in a different lexical scope or a global.
       if (const auto *Dep = dyn_cast<const DILocalVariable>(Dependency))
         if (DbgVariable *Var = DbgVar.lookup(Dep))

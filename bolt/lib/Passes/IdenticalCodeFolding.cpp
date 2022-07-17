@@ -155,7 +155,7 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   // instruction sequences and the same index in their corresponding
   // functions. The latter is important for CFG equality.
 
-  if (A.layout_size() != B.layout_size())
+  if (A.getLayout().block_size() != B.getLayout().block_size())
     return false;
 
   // Comparing multi-entry functions could be non-trivial.
@@ -163,10 +163,16 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     return false;
 
   // Process both functions in either DFS or existing order.
-  const BinaryFunction::BasicBlockOrderType &OrderA =
-      opts::UseDFS ? A.dfs() : A.getLayout();
-  const BinaryFunction::BasicBlockOrderType &OrderB =
-      opts::UseDFS ? B.dfs() : B.getLayout();
+  const BinaryFunction::BasicBlockOrderType OrderA =
+      opts::UseDFS
+          ? A.dfs()
+          : BinaryFunction::BasicBlockOrderType(A.getLayout().block_begin(),
+                                                A.getLayout().block_end());
+  const BinaryFunction::BasicBlockOrderType OrderB =
+      opts::UseDFS
+          ? B.dfs()
+          : BinaryFunction::BasicBlockOrderType(B.getLayout().block_begin(),
+                                                B.getLayout().block_end());
 
   const BinaryContext &BC = A.getBinaryContext();
 
@@ -415,7 +421,7 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
                                         "ICF breakdown", opts::TimeICF);
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       // Make sure indices are in-order.
-      BF.updateLayoutIndices();
+      BF.getLayout().updateLayoutIndices();
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.

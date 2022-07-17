@@ -6876,20 +6876,44 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
 }
 
 /// OR combines for which the commuted variant will be tried as well.
-static SDValue visitORCommutative(
-    SelectionDAG &DAG, SDValue N0, SDValue N1, SDNode *N) {
+static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
+                                  SDNode *N) {
   EVT VT = N0.getValueType();
   if (N0.getOpcode() == ISD::AND) {
+    SDValue N00 = N0.getOperand(0);
+    SDValue N01 = N0.getOperand(1);
+
     // fold (or (and X, (xor Y, -1)), Y) -> (or X, Y)
     // TODO: Set AllowUndefs = true.
-    if (getBitwiseNotOperand(N0.getOperand(1), N0.getOperand(0),
+    if (getBitwiseNotOperand(N01, N00,
                              /* AllowUndefs */ false) == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(0), N1);
+      return DAG.getNode(ISD::OR, SDLoc(N), VT, N00, N1);
 
     // fold (or (and (xor Y, -1), X), Y) -> (or X, Y)
-    if (getBitwiseNotOperand(N0.getOperand(0), N0.getOperand(1),
+    if (getBitwiseNotOperand(N00, N01,
                              /* AllowUndefs */ false) == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(1), N1);
+      return DAG.getNode(ISD::OR, SDLoc(N), VT, N01, N1);
+
+    // (or (and X, C1), (and (or X, Y), C2)) -> (or (and X, C1|C2), (and Y, C2))
+    if (N1.getOpcode() == ISD::AND) {
+      SDValue N10 = N1.getOperand(0);
+      if (N10.getOpcode() == ISD::OR) {
+        SDValue N11 = N1.getOperand(1);
+        SDValue N100 = N10.getOperand(0);
+        SDValue N101 = N10.getOperand(1);
+        if (((N00 == N100) || (N00 == N101)) && N0->hasOneUse() &&
+            N1->hasOneUse()) {
+          SDLoc DL(N);
+          if (SDValue C12 =
+                  DAG.FoldConstantArithmetic(ISD::OR, DL, VT, {N01, N11})) {
+            SDValue Y = (N00 == N100 ? N101 : N100);
+            return DAG.getNode(ISD::OR, DL, VT,
+                               DAG.getNode(ISD::AND, DL, VT, N00, C12),
+                               DAG.getNode(ISD::AND, DL, VT, Y, N11));
+          }
+        }
+      }
+    }
   }
 
   if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
@@ -7935,7 +7959,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   int64_t FirstOffset = INT64_MAX;
   StoreSDNode *FirstStore = nullptr;
   Optional<BaseIndexOffset> Base;
-  for (auto Store : Stores) {
+  for (auto *Store : Stores) {
     // All the stores store different parts of the CombinedValue. A truncate is
     // required to get the partial value.
     SDValue Trunc = Store->getValue();
@@ -13151,6 +13175,19 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     // if the source and dest are the same type, we can drop both the extend
     // and the truncate.
     return N0.getOperand(0);
+  }
+
+  // Try to narrow a truncate-of-sext_in_reg to the destination type:
+  // trunc (sign_ext_inreg X, iM) to iN --> sign_ext_inreg (trunc X to iN), iM
+  if (!LegalTypes && N0.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+      N0.hasOneUse()) {
+    SDValue X = N0.getOperand(0);
+    SDValue ExtVal = N0.getOperand(1);
+    EVT ExtVT = cast<VTSDNode>(ExtVal)->getVT();
+    if (ExtVT.bitsLT(VT)) {
+      SDValue TrX = DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, X);
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, TrX, ExtVal);
+    }
   }
 
   // If this is anyext(trunc), don't fold it, allow ourselves to be folded.
