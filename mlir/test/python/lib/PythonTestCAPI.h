@@ -9,7 +9,7 @@
 #ifndef MLIR_TEST_PYTHON_LIB_PYTHONTESTCAPI_H
 #define MLIR_TEST_PYTHON_LIB_PYTHONTESTCAPI_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 
 #ifdef __cplusplus
 extern "C" {

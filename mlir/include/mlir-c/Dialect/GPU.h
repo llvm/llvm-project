@@ -10,7 +10,7 @@
 #ifndef MLIR_C_DIALECT_GPU_H
 #define MLIR_C_DIALECT_GPU_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
 #ifdef __cplusplus
