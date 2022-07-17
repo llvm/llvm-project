@@ -54,6 +54,7 @@ extern COFFOptTable optTable;
 struct ParsedDirectives {
   std::vector<StringRef> exports;
   std::vector<StringRef> includes;
+  std::vector<StringRef> excludes;
   llvm::opt::InputArgList args;
 };
 
@@ -160,6 +161,7 @@ private:
   std::vector<MemoryBufferRef> resources;
 
   llvm::DenseSet<StringRef> directivesExports;
+  llvm::DenseSet<StringRef> excludedSymbols;
 
   COFFLinkerContext &ctx;
 

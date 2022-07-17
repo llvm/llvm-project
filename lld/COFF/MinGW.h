@@ -13,6 +13,7 @@
 #include "Symbols.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Option/ArgList.h"
 #include <vector>
@@ -25,7 +26,7 @@ class COFFLinkerContext;
 // symbols for MinGW.
 class AutoExporter {
 public:
-  AutoExporter();
+  AutoExporter(const llvm::DenseSet<StringRef> &manualExcludeSymbols);
 
   void addWholeArchive(StringRef path);
   void addExcludedSymbol(StringRef symbol);
@@ -35,6 +36,8 @@ public:
   llvm::StringSet<> excludeSymbolSuffixes;
   llvm::StringSet<> excludeLibs;
   llvm::StringSet<> excludeObjects;
+
+  const llvm::DenseSet<StringRef> &manualExcludeSymbols;
 
   bool shouldExport(const COFFLinkerContext &ctx, Defined *sym) const;
 };
