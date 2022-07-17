@@ -1,14 +1,8 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.compactbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.compactbinary.afdo -S | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.extbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.extbinary.afdo -S | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.md5extbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.md5extbinary.afdo -S | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.fixlenmd5.extbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.fixlenmd5.extbinary.afdo -S | FileCheck %s
-; RUN: not opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad.extbinary.afdo -S 2>&1 | FileCheck %s -check-prefix=BAD-PROFILE
 ; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/bad.extbinary.afdo -S 2>&1 | FileCheck %s -check-prefix=BAD-PROFILE
 
 ; Original C++ test case

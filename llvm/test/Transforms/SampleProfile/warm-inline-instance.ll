@@ -1,4 +1,3 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/warm-inline-instance.prof -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/warm-inline-instance.prof -S | FileCheck %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
