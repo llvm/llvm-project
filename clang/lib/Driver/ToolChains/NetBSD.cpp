@@ -139,7 +139,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-export-dynamic");
     if (Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-Bshareable");
-    } else {
+    } else if (!Args.hasArg(options::OPT_r)) {
       Args.AddAllArgs(CmdArgs, options::OPT_pie);
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/libexec/ld.elf_so");
