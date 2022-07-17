@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEMANGLE_UTILITY_H
-#define DEMANGLE_UTILITY_H
+#ifndef LLVM_DEMANGLE_UTILITY_H
+#define LLVM_DEMANGLE_UTILITY_H
 
 #include "StringView.h"
 #include <array>

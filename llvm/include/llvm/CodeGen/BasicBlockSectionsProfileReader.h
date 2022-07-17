@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_BASICBLOCKSECTIONSINFO_H
-#define LLVM_ANALYSIS_BASICBLOCKSECTIONSINFO_H
+#ifndef LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H
+#define LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
@@ -106,4 +106,4 @@ ImmutablePass *
 createBasicBlockSectionsProfileReaderPass(const MemoryBuffer *Buf);
 
 } // namespace llvm
-#endif // LLVM_ANALYSIS_BASICBLOCKSECTIONSINFO_H
+#endif // LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H
