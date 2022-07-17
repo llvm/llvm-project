@@ -1,8 +1,6 @@
 """Common utilities that are useful for all the benchmarks."""
 import numpy as np
 
-import mlir.all_passes_registration
-
 from mlir import ir
 from mlir.dialects import arith
 from mlir.dialects import func

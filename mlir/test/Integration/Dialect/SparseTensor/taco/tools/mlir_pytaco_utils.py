@@ -11,7 +11,6 @@ import numpy as np
 import os
 
 # Import MLIR related modules.
-from mlir import all_passes_registration  # Register MLIR compiler passes.
 from mlir import execution_engine
 from mlir import ir
 from mlir import runtime
