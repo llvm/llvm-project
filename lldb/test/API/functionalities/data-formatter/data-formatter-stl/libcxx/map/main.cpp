@@ -24,7 +24,12 @@ int main()
     
     ii[0] = 0; // Set break point at this line.
     ii[1] = 1;
-	thefoo_rw(1);  // Set break point at this line.
+
+    intint_map::iterator it = ii.begin();
+    intint_map::const_iterator const_it = ii.cbegin();
+    std::printf("%d %d\n", it->second, const_it->second);
+
+    thefoo_rw(1); // Set break point at this line.
     ii[2] = 0;
     ii[3] = 1;
 	thefoo_rw(1);  // Set break point at this line.
