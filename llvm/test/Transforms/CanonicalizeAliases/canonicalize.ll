@@ -1,6 +1,4 @@
-; RUN: opt -S -canonicalize-aliases < %s | FileCheck %s
 ; RUN: opt -S -passes=canonicalize-aliases < %s | FileCheck %s
-; RUN: opt -prepare-for-thinlto -O0 -module-summary -o - < %s -enable-new-pm=0 | llvm-dis -o - | FileCheck %s
 ; RUN: opt -passes='thinlto-pre-link<O0>,require<module-summary>' -o - < %s | llvm-dis -o - | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
