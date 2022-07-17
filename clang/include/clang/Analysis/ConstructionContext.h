@@ -298,6 +298,11 @@ public:
                    const ConstructionContextLayer *TopLayer);
 
   Kind getKind() const { return K; }
+
+  virtual const ArrayInitLoopExpr *getArrayInitLoop() const { return nullptr; }
+
+  // Only declared to silence -Wnon-virtual-dtor warnings.
+  virtual ~ConstructionContext() = default;
 };
 
 /// An abstract base class for local variable constructors.
@@ -313,6 +318,12 @@ protected:
 
 public:
   const DeclStmt *getDeclStmt() const { return DS; }
+
+  const ArrayInitLoopExpr *getArrayInitLoop() const override {
+    const auto *Var = cast<VarDecl>(DS->getSingleDecl());
+
+    return dyn_cast<ArrayInitLoopExpr>(Var->getInit());
+  }
 
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() >= VARIABLE_BEGIN &&
@@ -380,6 +391,10 @@ protected:
 
 public:
   const CXXCtorInitializer *getCXXCtorInitializer() const { return I; }
+
+  const ArrayInitLoopExpr *getArrayInitLoop() const override {
+    return dyn_cast<ArrayInitLoopExpr>(I->getInit());
+  }
 
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() >= INITIALIZER_BEGIN &&
