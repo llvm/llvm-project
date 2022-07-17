@@ -290,6 +290,23 @@ SVal ExprEngine::computeObjectUnderConstruction(
 
       return loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
     }
+    case ConstructionContext::LambdaCaptureKind: {
+      CallOpts.IsTemporaryCtorOrDtor = true;
+
+      const auto *LCC = cast<LambdaCaptureConstructionContext>(CC);
+
+      SVal Base = loc::MemRegionVal(
+          MRMgr.getCXXTempObjectRegion(LCC->getInitializer(), LCtx));
+
+      const auto *CE = dyn_cast_or_null<CXXConstructExpr>(E);
+      if (getIndexOfElementToConstruct(State, CE, LCtx)) {
+        CallOpts.IsArrayCtorOrDtor = true;
+        Base = State->getLValue(E->getType(), svalBuilder.makeArrayIndex(Idx),
+                                Base);
+      }
+
+      return Base;
+    }
     case ConstructionContext::ArgumentKind: {
       // Arguments are technically temporaries.
       CallOpts.IsTemporaryCtorOrDtor = true;
@@ -449,6 +466,17 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
         State = addObjectUnderConstruction(State, MTE, LCtx, V);
 
       return State;
+    }
+    case ConstructionContext::LambdaCaptureKind: {
+      const auto *LCC = cast<LambdaCaptureConstructionContext>(CC);
+
+      // If we capture and array, we want to store the super region, not a
+      // sub-region.
+      if (const auto *EL = dyn_cast_or_null<ElementRegion>(V.getAsRegion()))
+        V = loc::MemRegionVal(EL->getSuperRegion());
+
+      return addObjectUnderConstruction(
+          State, {LCC->getLambdaExpr(), LCC->getIndex()}, LCtx, V);
     }
     case ConstructionContext::ArgumentKind: {
       const auto *ACC = cast<ArgumentConstructionContext>(CC);
@@ -1105,19 +1133,40 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
   // If we created a new MemRegion for the lambda, we should explicitly bind
   // the captures.
+  unsigned Idx = 0;
   CXXRecordDecl::field_iterator CurField = LE->getLambdaClass()->field_begin();
   for (LambdaExpr::const_capture_init_iterator i = LE->capture_init_begin(),
                                                e = LE->capture_init_end();
-       i != e; ++i, ++CurField) {
+       i != e; ++i, ++CurField, ++Idx) {
     FieldDecl *FieldForCapture = *CurField;
     SVal FieldLoc = State->getLValue(FieldForCapture, V);
 
     SVal InitVal;
     if (!FieldForCapture->hasCapturedVLAType()) {
       Expr *InitExpr = *i;
+
+      if (const auto AILE = dyn_cast<ArrayInitLoopExpr>(InitExpr)) {
+        // If the AILE initializes a POD array, we need to keep it as the
+        // InitExpr.
+        if (dyn_cast<CXXConstructExpr>(AILE->getSubExpr()))
+          InitExpr = AILE->getSubExpr();
+      }
+
       assert(InitExpr && "Capture missing initialization expression");
-      InitVal = State->getSVal(InitExpr, LocCtxt);
+
+      if (dyn_cast<CXXConstructExpr>(InitExpr)) {
+        InitVal = *getObjectUnderConstruction(State, {LE, Idx}, LocCtxt);
+        InitVal = State->getSVal(InitVal.getAsRegion());
+
+        State = finishObjectConstruction(State, {LE, Idx}, LocCtxt);
+      } else
+        InitVal = State->getSVal(InitExpr, LocCtxt);
+
     } else {
+
+      assert(!getObjectUnderConstruction(State, {LE, Idx}, LocCtxt) &&
+             "VLA capture by value is a compile time error!");
+
       // The field stores the length of a captured variable-length array.
       // These captures don't have initialization expressions; instead we
       // get the length from the VLAType size expression.

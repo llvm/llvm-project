@@ -160,6 +160,11 @@ struct S3 {
   int i;
 };
 
+// The duplicate is required to emit a warning at 2 different places. 
+struct S3_duplicate {
+  int i;
+};
+
 void array_uninit_non_pod() {
   S3 arr[1];
 
@@ -170,24 +175,23 @@ void lambda_init_non_pod() {
   S2::c = 0;
   S2 arr[4];
 
-  // FIXME: These should be TRUE, but we fail to capture the array properly.
   auto l = [arr] { return arr[0].i; }();
-  clang_analyzer_eval(l == 2); // expected-warning{{TRUE}} // expected-warning{{FALSE}}
+  clang_analyzer_eval(l == 2); // expected-warning{{TRUE}}
 
   l = [arr] { return arr[1].i; }();
-  clang_analyzer_eval(l == 3); // expected-warning{{TRUE}} // expected-warning{{FALSE}}
+  clang_analyzer_eval(l == 3); // expected-warning{{TRUE}}
 
   l = [arr] { return arr[2].i; }();
-  clang_analyzer_eval(l == 4); // expected-warning{{TRUE}} // expected-warning{{FALSE}}
+  clang_analyzer_eval(l == 4); // expected-warning{{TRUE}}
 
   l = [arr] { return arr[3].i; }();
-  clang_analyzer_eval(l == 5); // expected-warning{{TRUE}} // expected-warning{{FALSE}}
+  clang_analyzer_eval(l == 5); // expected-warning{{TRUE}}
 }
 
 void lambda_uninit_non_pod() {
-  S3 arr[4];
+  S3_duplicate arr[4];
 
-  int l = [arr] { return arr[3].i; }();
+  int l = [arr] { return arr[3].i; }(); // expected-warning@164{{ in implicit constructor is garbage or undefined }}
 }
 
 // If this struct is being copy/move constructed by the implicit ctors, ArrayInitLoopExpr
