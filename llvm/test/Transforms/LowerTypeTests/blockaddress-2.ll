@@ -1,4 +1,4 @@
-; RUN: opt -S %s -lowertypetests | FileCheck %s
+; RUN: opt -S %s -passes=lowertypetests | FileCheck %s
 
 ; CHECK: @badfileops = internal global %struct.f { void ()* @bad_f, void ()* @bad_f }
 ; CHECK: @bad_f = internal alias void (), void ()* @.cfi.jumptable

@@ -1,7 +1,7 @@
 ; Test that functions with "section" attribute are accepted, and jumptables are
 ; emitted in ".text".
 
-; RUN: opt -S -lowertypetests < %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -1,4 +1,4 @@
-; RUN: opt -S %s -lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import-alias.yaml | FileCheck %s
+; RUN: opt -S %s -passes=lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import-alias.yaml | FileCheck %s
 ;
 ; Check that the definitions for @f and @f_alias are removed from this module
 ; but @g_alias remains.

@@ -1,4 +1,4 @@
-; RUN: opt -S %s -lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/exported-funcs.yaml | FileCheck %s
+; RUN: opt -S %s -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/exported-funcs.yaml | FileCheck %s
 
 ; CHECK: define internal void @external_addrtaken.1()
 ; CHECK: declare {{.*}} void @external_addrtaken.cfi()

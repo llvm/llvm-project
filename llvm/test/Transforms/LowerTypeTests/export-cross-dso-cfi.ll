@@ -1,8 +1,8 @@
 ; Test that external functions have jumptable entries emitted even if they are
 ; not address-taken when Cross-DSO CFI is used, but not otherwise.
 
-; RUN: opt -S -lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/exported-funcs.yaml < %s | FileCheck --check-prefixes=CHECK,CROSSDSO %s
-; RUN: cat %s | grep -v "llvm.module.flags" | opt -S -lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/exported-funcs.yaml | FileCheck --check-prefixes=CHECK,NORMAL %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/exported-funcs.yaml %s | FileCheck --check-prefixes=CHECK,CROSSDSO %s
+; RUN: grep -v "llvm.module.flags" %s | opt -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/exported-funcs.yaml | FileCheck --check-prefixes=CHECK,NORMAL %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

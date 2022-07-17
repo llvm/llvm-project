@@ -1,5 +1,5 @@
 ; Ensure that LowerTypeTests control flow simplification correctly handle phi nodes.
-; RUN: opt -S -lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import.yaml < %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import.yaml %s | FileCheck %s
 
 target datalayout = "e-p:64:64"
 
