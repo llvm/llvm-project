@@ -5,7 +5,6 @@
 ; legalization. There are 2 opportunities on the chain feeding the LHS of the
 ; shl. And one opportunity on the shift amount. We previously weren't managing
 ; the DAGCombiner worklist correctly and failed to get the RHS.
-
 define i32 @foo(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
@@ -36,4 +35,66 @@ define i64 @mul_self_nsw_sign(i64 %x) {
   %a = mul nsw i64 %x, %x
   %b = and i64 %a, 9223372036854775800
   ret i64 %b
+}
+
+; Make sure we sign extend the constant after type legalization to allow the
+; use of ori.
+define void @ori(ptr nocapture noundef %0) {
+; CHECK-LABEL: ori:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    ori a1, a1, -2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 4
+  %3 = or i32 %2, -2
+  store i32 %3, ptr %0, align 4
+  ret void
+}
+
+; Make sure we sign extend the constant after type legalization to allow the
+; use of xori.
+define void @xori(ptr nocapture noundef %0) {
+; CHECK-LABEL: xori:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    xori a1, a1, -5
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 4
+  %3 = xor i32 %2, -5
+  store i32 %3, ptr %0, align 4
+  ret void
+}
+
+; Make sure we sign extend the constant after type legalization to allow the
+; shorter constant materialization.
+define void @or_signbit(ptr nocapture noundef %0) {
+; CHECK-LABEL: or_signbit:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 4
+  %3 = or i32 %2, -2147483648
+  store i32 %3, ptr %0, align 4
+  ret void
+}
+
+; Make sure we sign extend the constant after type legalization to allow the
+; shorter constant materialization.
+define void @xor_signbit(ptr nocapture noundef %0) {
+; CHECK-LABEL: xor_signbit:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 4
+  %3 = xor i32 %2, -2147483648
+  store i32 %3, ptr %0, align 4
+  ret void
 }
