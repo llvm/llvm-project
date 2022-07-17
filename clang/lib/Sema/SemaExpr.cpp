@@ -19721,7 +19721,6 @@ public:
   void VisitConstantExpr(ConstantExpr *E) {
     // Don't mark declarations within a ConstantExpression, as this expression
     // will be evaluated and folded to a value.
-    return;
   }
 
   void VisitDeclRefExpr(DeclRefExpr *E) {

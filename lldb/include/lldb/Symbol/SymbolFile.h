@@ -132,7 +132,7 @@ public:
   /// Specify debug info should be loaded.
   ///
   /// It will be no-op for most implementations except SymbolFileOnDemand.
-  virtual void SetLoadDebugInfoEnabled() { return; }
+  virtual void SetLoadDebugInfoEnabled() {}
 
   // Compile Unit function calls
   // Approach 1 - iterator
