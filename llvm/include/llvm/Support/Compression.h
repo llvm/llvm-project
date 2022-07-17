@@ -19,7 +19,6 @@
 namespace llvm {
 template <typename T> class SmallVectorImpl;
 class Error;
-class StringRef;
 
 namespace compression {
 namespace zlib {

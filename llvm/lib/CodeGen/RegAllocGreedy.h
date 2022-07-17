@@ -54,7 +54,6 @@ class MachineLoop;
 class MachineLoopInfo;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
-class SlotIndex;
 class SlotIndexes;
 class TargetInstrInfo;
 class VirtRegMap;
