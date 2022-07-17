@@ -17,7 +17,6 @@
 
 namespace llvm {
 class Function;
-class FunctionPass;
 class Module;
 
 /// A function pass for tsan instrumentation.

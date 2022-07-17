@@ -19,8 +19,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 
 namespace llvm {
-class MCAssembler;
-class MCExpr;
 class MCInst;
 class raw_ostream;
 
