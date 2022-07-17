@@ -906,7 +906,7 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
 
   // Iterate through all the arguments to the called function. If any argument
   // is based on GV, return the conservative result.
-  for (auto &A : Call->args()) {
+  for (const auto &A : Call->args()) {
     SmallVector<const Value*, 4> Objects;
     getUnderlyingObjects(A, Objects);
 

@@ -182,7 +182,7 @@ void StackLifetime::calculateLocalLiveness() {
 
       // Compute LiveIn by unioning together the LiveOut sets of all preds.
       BitVector LocalLiveIn;
-      for (auto *PredBB : predecessors(BB)) {
+      for (const auto *PredBB : predecessors(BB)) {
         LivenessMap::const_iterator I = BlockLiveness.find(PredBB);
         // If a predecessor is unreachable, ignore it.
         if (I == BlockLiveness.end())

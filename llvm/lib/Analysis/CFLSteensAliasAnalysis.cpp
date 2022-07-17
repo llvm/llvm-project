@@ -216,7 +216,7 @@ CFLSteensAAResult::FunctionInfo CFLSteensAAResult::buildSetsFrom(Function *Fn) {
 
     for (unsigned I = 0, E = ValueInfo.getNumLevels(); I < E; ++I) {
       auto Src = InstantiatedValue{Val, I};
-      for (auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges)
+      for (const auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges)
         SetBuilder.addWith(Src, Edge.Other);
     }
   }

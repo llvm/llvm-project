@@ -911,7 +911,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     }
 
     for (auto &Access : AccessInfos) {
-      for (auto &AccessTy : Accesses[Access]) {
+      for (const auto &AccessTy : Accesses[Access]) {
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                   DepSetId, TheLoop, RunningDepId, ASId,
                                   ShouldCheckWrap, false)) {
@@ -942,7 +942,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       // and add further checks if required (overflow checks).
       CanDoAliasSetRT = true;
       for (auto Access : Retries) {
-        for (auto &AccessTy : Accesses[Access]) {
+        for (const auto &AccessTy : Accesses[Access]) {
           if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                     DepSetId, TheLoop, RunningDepId, ASId,
                                     ShouldCheckWrap, /*Assume=*/true)) {
@@ -2461,7 +2461,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 
   if (auto *Dependences = DepChecker->getDependences()) {
     OS.indent(Depth) << "Dependences:\n";
-    for (auto &Dep : *Dependences) {
+    for (const auto &Dep : *Dependences) {
       Dep.print(OS, Depth + 2, DepChecker->getMemoryInstructions());
       OS << "\n";
     }

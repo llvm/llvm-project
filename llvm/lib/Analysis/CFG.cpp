@@ -149,7 +149,7 @@ bool llvm::isPotentiallyReachableFromMany(
   // untrue.
   SmallPtrSet<const Loop *, 8> LoopsWithHoles;
   if (LI && ExclusionSet) {
-    for (auto BB : *ExclusionSet) {
+    for (auto *BB : *ExclusionSet) {
       if (const Loop *L = getOutermostLoop(LI, BB))
         LoopsWithHoles.insert(L);
     }
