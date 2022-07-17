@@ -395,14 +395,14 @@ __attribute__((unused)) static void GetStaticTlsBoundary(uptr *addr, uptr *size,
     return;
   }
   // Find the maximum consecutive ranges. We consider two modules consecutive if
-  // the gap is smaller than the alignment. The dynamic loader places static TLS
-  // blocks this way not to waste space.
+  // the gap is smaller than the alignment of the latter range. The dynamic
+  // loader places static TLS blocks this way not to waste space.
   uptr l = one;
   *align = ranges[l].align;
-  while (l != 0 && ranges[l].begin < ranges[l - 1].end + ranges[l - 1].align)
+  while (l != 0 && ranges[l].begin < ranges[l - 1].end + ranges[l].align)
     *align = Max(*align, ranges[--l].align);
   uptr r = one + 1;
-  while (r != len && ranges[r].begin < ranges[r - 1].end + ranges[r - 1].align)
+  while (r != len && ranges[r].begin < ranges[r - 1].end + ranges[r].align)
     *align = Max(*align, ranges[r++].align);
   *addr = ranges[l].begin;
   *size = ranges[r - 1].end - ranges[l].begin;
