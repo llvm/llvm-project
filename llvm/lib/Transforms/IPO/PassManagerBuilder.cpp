@@ -194,12 +194,6 @@ PassManagerBuilder::PassManagerBuilder() {
     MergeFunctions = false;
     SplitColdCode = false;
     PrepareForLTO = false;
-    EnablePGOInstrGen = false;
-    EnablePGOCSInstrGen = false;
-    EnablePGOCSInstrUse = false;
-    PGOInstrGen = "";
-    PGOInstrUse = "";
-    PGOSampleUse = "";
     PrepareForThinLTO = EnablePrepareForThinLTO;
     PerformThinLTO = EnablePerformThinLTO;
     DivergentTarget = false;
@@ -656,14 +650,6 @@ void PassManagerBuilder::populateModulePassManager(
   if (PerformThinLTO) {
     MPM.add(createLowerTypeTestsPass(nullptr, nullptr, true));
   }
-
-  // For SamplePGO in ThinLTO compile phase, we do not want to unroll loops
-  // as it will change the CFG too much to make the 2nd profile annotation
-  // in backend more difficult.
-  bool PrepareForThinLTOUsingPGOSampleProfile =
-      PrepareForThinLTO && !PGOSampleUse.empty();
-  if (PrepareForThinLTOUsingPGOSampleProfile)
-    DisableUnrollLoops = true;
 
   // Infer attributes about declarations if possible.
   MPM.add(createInferFunctionAttrsLegacyPass());
