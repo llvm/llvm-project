@@ -183,3 +183,50 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
 // CHECK-SAME:           outs(%[[OUTS_TILE]] :
 //      CHECK:       %[[INSERT:.+]] = tensor.insert_slice %[[GENERIC_TILE]] into %[[ITERARG1]][%[[IV1]], %[[IV0]]]
 //      CHECK        scf.yield %[[INSERT]]
+
+// -----
+
+func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
+  %cst = arith.constant 0.0 : f32
+  %0 = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %2 = linalg.matmul
+      ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%1 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %3 = linalg.generic {
+      __internal_linalg_transform__ = "gemm_interchange_fusion",
+      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%2 : tensor<?x?xf32>) outs(%0 : tensor<?x?xf32>) {
+      ^bb0(%b0 : f32, %b1 : f32):
+        %4 = arith.addf %b0, %b0 : f32
+        linalg.yield %4 : f32
+      } -> tensor<?x?xf32>
+  return %3 : tensor<?x?xf32>
+}
+//      CHECK: func.func @interchange_matmul_fusion(
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+//      CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//      CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
+// CHECK-SAME:       iter_args(%[[ITERARG0:.+]] = %[[INIT]])
+//      CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
+// CHECK-SAME:         iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
+//  CHECK-DAG:       %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]][%[[IV1]], 0]
+//  CHECK-DAG:       %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]][0, %[[IV0]]]
+//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[INIT]][%[[IV1]], %[[IV0]]]
+//      CHECK:       %[[FILL_TILE:.+]] = linalg.fill
+// CHECK-SAME:           outs(%[[INIT_TILE]] :
+//      CHECK:       %[[GEMM_TILE:.+]] = linalg.matmul
+// CHECK-SAME:           ins(%[[LHS_TILE]], %[[RHS_TILE]] :
+// CHECK-SAME:           outs(%[[FILL_TILE]] :
+//      CHECK:       %[[INIT_TILE_2:.+]] = tensor.extract_slice %[[ITERARG1]][%[[IV1]], %[[IV0]]]
+//      CHECK:       %[[GENERIC_TILE:.+]] = linalg.generic
+// CHECK-SAME:           ins(%[[GEMM_TILE]] :
+// CHECK-SAME:           outs(%[[INIT_TILE_2]] :
+//      CHECK:       %[[INSERT:.+]] = tensor.insert_slice %[[GENERIC_TILE]] into %[[ITERARG1]][%[[IV1]], %[[IV0]]]
+//      CHECK        scf.yield %[[INSERT]]
