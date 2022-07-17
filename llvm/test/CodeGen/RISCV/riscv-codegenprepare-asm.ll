@@ -40,3 +40,88 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+; Make sure we convert the 4294967294 in for.body.preheader.new to -2 based on
+; the upper 33 bits being zero by the dominating condition %cmp3.
+define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
+; CHECK-LABEL: test2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    blez a1, .LBB1_7
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    andi a2, a1, 1
+; CHECK-NEXT:    bne a1, a3, .LBB1_3
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    j .LBB1_5
+; CHECK-NEXT:  .LBB1_3: # %for.body.preheader.new
+; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    andi a1, a1, -2
+; CHECK-NEXT:    addi a4, a0, 4
+; CHECK-NEXT:  .LBB1_4: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    lw a5, -4(a4)
+; CHECK-NEXT:    lw a6, 0(a4)
+; CHECK-NEXT:    addiw a5, a5, 4
+; CHECK-NEXT:    sw a5, -4(a4)
+; CHECK-NEXT:    addiw a5, a6, 4
+; CHECK-NEXT:    sw a5, 0(a4)
+; CHECK-NEXT:    addi a3, a3, 2
+; CHECK-NEXT:    addi a4, a4, 8
+; CHECK-NEXT:    bne a1, a3, .LBB1_4
+; CHECK-NEXT:  .LBB1_5: # %for.cond.cleanup.loopexit.unr-lcssa
+; CHECK-NEXT:    beqz a2, .LBB1_7
+; CHECK-NEXT:  # %bb.6: # %for.body.epil
+; CHECK-NEXT:    slli a1, a3, 2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    addiw a1, a1, 4
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:  .LBB1_7: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %cmp3 = icmp sgt i32 %n, 0
+  br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  %xtraiter = and i64 %wide.trip.count, 1
+  %0 = icmp eq i32 %n, 1
+  br i1 %0, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
+
+for.body.preheader.new:                           ; preds = %for.body.preheader
+  %unroll_iter = and i64 %wide.trip.count, 4294967294
+  br label %for.body
+
+for.cond.cleanup.loopexit.unr-lcssa:              ; preds = %for.body, %for.body.preheader
+  %indvars.iv.unr = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next.1, %for.body ]
+  %lcmp.mod.not = icmp eq i64 %xtraiter, 0
+  br i1 %lcmp.mod.not, label %for.cond.cleanup, label %for.body.epil
+
+for.body.epil:                                    ; preds = %for.cond.cleanup.loopexit.unr-lcssa
+  %arrayidx.epil = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.unr
+  %1 = load i32, ptr %arrayidx.epil, align 4
+  %add.epil = add nsw i32 %1, 4
+  store i32 %add.epil, ptr %arrayidx.epil, align 4
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body.epil, %for.cond.cleanup.loopexit.unr-lcssa, %entry
+  ret void
+
+for.body:                                         ; preds = %for.body, %for.body.preheader.new
+  %indvars.iv = phi i64 [ 0, %for.body.preheader.new ], [ %indvars.iv.next.1, %for.body ]
+  %niter = phi i64 [ 0, %for.body.preheader.new ], [ %niter.next.1, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %2, 4
+  store i32 %add, ptr %arrayidx, align 4
+  %indvars.iv.next = or i64 %indvars.iv, 1
+  %arrayidx.1 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.next
+  %3 = load i32, ptr %arrayidx.1, align 4
+  %add.1 = add nsw i32 %3, 4
+  store i32 %add.1, ptr %arrayidx.1, align 4
+  %indvars.iv.next.1 = add nuw nsw i64 %indvars.iv, 2
+  %niter.next.1 = add i64 %niter, 2
+  %niter.ncmp.1 = icmp eq i64 %niter.next.1, %unroll_iter
+  br i1 %niter.ncmp.1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body
+}

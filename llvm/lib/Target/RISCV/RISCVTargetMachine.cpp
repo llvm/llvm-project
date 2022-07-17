@@ -166,7 +166,6 @@ public:
   }
 
   void addIRPasses() override;
-  void addCodeGenPrepare() override;
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
@@ -192,13 +191,10 @@ void RISCVPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createRISCVGatherScatterLoweringPass());
 
-  TargetPassConfig::addIRPasses();
-}
-
-void RISCVPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createRISCVCodeGenPreparePass());
-  TargetPassConfig::addCodeGenPrepare();
+
+  TargetPassConfig::addIRPasses();
 }
 
 bool RISCVPassConfig::addPreISel() {
