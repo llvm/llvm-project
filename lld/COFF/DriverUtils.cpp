@@ -899,6 +899,9 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
     else if (tok.startswith_insensitive("/include:") ||
              tok.startswith_insensitive("-include:"))
       result.includes.push_back(tok.substr(strlen("/include:")));
+    else if (tok.startswith_insensitive("/exclude-symbols:") ||
+             tok.startswith_insensitive("-exclude-symbols:"))
+      result.excludes.push_back(tok.substr(strlen("/exclude-symbols:")));
     else {
       // Copy substrings that are not valid C strings. The tokenizer may have
       // already copied quoted arguments for us, so those do not need to be
