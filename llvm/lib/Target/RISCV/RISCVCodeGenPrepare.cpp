@@ -18,7 +18,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -71,9 +70,9 @@ bool RISCVCodeGenPrepare::optimizeZExt(ZExtInst *ZExt) {
   if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
                               Constant::getNullValue(Src->getType()), ZExt,
                               *DL)) {
-    IRBuilder<> Builder(ZExt);
-    Value *SExt = Builder.CreateSExt(Src, ZExt->getType());
+    auto *SExt = new SExtInst(Src, ZExt->getType(), "", ZExt);
     SExt->takeName(ZExt);
+    SExt->setDebugLoc(ZExt->getDebugLoc());
 
     ZExt->replaceAllUsesWith(SExt);
     ZExt->eraseFromParent();
