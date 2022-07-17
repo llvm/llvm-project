@@ -1,5 +1,4 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -stats -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -stats -S 2>&1 | FileCheck %s
 
 ; Original C++ test case

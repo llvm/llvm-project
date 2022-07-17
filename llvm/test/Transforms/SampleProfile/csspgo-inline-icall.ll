@@ -1,6 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1 -pass-remarks=sample-profile -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-ALL %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-ALL %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-HOT %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-HOT %s
 ; RUN: llvm-profdata merge --sample --extbinary --use-md5 %S/Inputs/indirect-call-csspgo.prof -o %t.md5
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.md5 -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-HOT %s

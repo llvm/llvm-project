@@ -1,8 +1,6 @@
 ; REQUIRES: zlib
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
 ; RUN: llvm-profdata merge -sample -extbinary -compress-all-sections %S/Inputs/inline.prof -o %t.compress.extbinary.afdo
-; RUN: opt < %s -sample-profile -sample-profile-file=%t.compress.extbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.compress.extbinary.afdo -S | FileCheck %s
 
 ; Original C++ test case

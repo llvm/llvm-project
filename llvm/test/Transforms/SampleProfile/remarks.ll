@@ -1,10 +1,6 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 
-; RUN: opt < %s -sample-profile -annotate-sample-profile-inline-phase -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t.opt.yaml
 ; RUN: opt < %s -passes=sample-profile -annotate-sample-profile-inline-phase -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t.opt.yaml
 

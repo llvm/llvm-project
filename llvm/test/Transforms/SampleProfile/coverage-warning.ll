@@ -1,4 +1,3 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/coverage-warning.prof -sample-profile-check-record-coverage=90 -sample-profile-check-sample-coverage=100 -o /dev/null 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/coverage-warning.prof -sample-profile-check-record-coverage=90 -sample-profile-check-sample-coverage=100 -o /dev/null 2>&1 | FileCheck %s
 define i32 @foo(i32 %i) #0 !dbg !4 {
 ; The profile has samples for line locations that are no longer present.

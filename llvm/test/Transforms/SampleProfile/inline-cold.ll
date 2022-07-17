@@ -1,11 +1,9 @@
 ; Let sample profile loader replay inlining of small/cold functions
 
 ; Make sure we don't inline the cold call sites by default
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-cold.prof -S | FileCheck -check-prefix=NOTINLINE %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-cold.prof -S | FileCheck -check-prefix=NOTINLINE %s
 
 ; Make sure we inline code call sites for size if requested
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-cold.prof -sample-profile-inline-size -S | FileCheck -check-prefix=INLINE %s
 
 ; Make sure we re-inline everything if requested 
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-cold.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=9999999 -S | FileCheck -check-prefix=INLINE %s
