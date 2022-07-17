@@ -95,7 +95,7 @@ static void printModuleDebugInfo(raw_ostream &O, const Module *M,
     O << '\n';
   }
 
-  for (auto GVU : Finder.global_variables()) {
+  for (auto *GVU : Finder.global_variables()) {
     const auto *GV = GVU->getVariable();
     O << "Global variable: " << GV->getName();
     printFile(O, GV->getFilename(), GV->getDirectory(), GV->getLine());

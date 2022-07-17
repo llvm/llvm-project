@@ -1156,7 +1156,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     ExpectedUses = 2;
 
   auto getNextInstruction = [&](Instruction *Cur) -> Instruction * {
-    for (auto User : Cur->users()) {
+    for (auto *User : Cur->users()) {
       Instruction *UI = cast<Instruction>(User);
       if (isa<PHINode>(UI))
         continue;

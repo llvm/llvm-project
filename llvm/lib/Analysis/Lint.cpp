@@ -229,7 +229,7 @@ void Lint::visitCallBase(CallBase &I) {
         if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
           AttributeList PAL = I.getAttributes();
           unsigned ArgNo = 0;
-          for (auto BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
+          for (auto *BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
             if (PAL.hasParamAttr(ArgNo, Attribute::ByVal))

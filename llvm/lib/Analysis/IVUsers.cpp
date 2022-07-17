@@ -274,7 +274,7 @@ void IVUsers::print(raw_ostream &OS, const Module *M) const {
     OS << "  ";
     IVUse.getOperandValToReplace()->printAsOperand(OS, false);
     OS << " = " << *getReplacementExpr(IVUse);
-    for (auto PostIncLoop : IVUse.PostIncLoops) {
+    for (const auto *PostIncLoop : IVUse.PostIncLoops) {
       OS << " (post-inc with loop ";
       PostIncLoop->getHeader()->printAsOperand(OS, false);
       OS << ")";

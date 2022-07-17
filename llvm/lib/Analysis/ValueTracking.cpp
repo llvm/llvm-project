@@ -2297,7 +2297,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     return false;
 
   unsigned NumUsesExplored = 0;
-  for (auto *U : V->users()) {
+  for (const auto *U : V->users()) {
     // Avoid massive lists
     if (NumUsesExplored >= DomConditionsMaxUses)
       break;
@@ -2338,7 +2338,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     SmallVector<const User *, 4> WorkList;
     SmallPtrSet<const User *, 4> Visited;
-    for (auto *CmpU : U->users()) {
+    for (const auto *CmpU : U->users()) {
       assert(WorkList.empty() && "Should be!");
       if (Visited.insert(CmpU).second)
         WorkList.push_back(CmpU);
@@ -2352,7 +2352,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
         // TODO: Support similar logic of OR and EQ predicate?
         if (NonNullIfTrue)
           if (match(Curr, m_LogicalAnd(m_Value(), m_Value()))) {
-            for (auto *CurrU : Curr->users())
+            for (const auto *CurrU : Curr->users())
               if (Visited.insert(CurrU).second)
                 WorkList.push_back(CurrU);
             continue;
@@ -5073,7 +5073,7 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
       if (DT.dominates(NoWrapEdge, Result->getParent()))
         continue;
 
-      for (auto &RU : Result->uses())
+      for (const auto &RU : Result->uses())
         if (!DT.dominates(NoWrapEdge, RU))
           return false;
     }
@@ -5645,7 +5645,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
     // whether a value is directly passed to an instruction that must take
     // well-defined operands.
 
-    for (auto &I : make_range(Begin, End)) {
+    for (const auto &I : make_range(Begin, End)) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       if (--ScanLimit == 0)
@@ -5676,7 +5676,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
   Visited.insert(BB);
 
   while (true) {
-    for (auto &I : make_range(Begin, End)) {
+    for (const auto &I : make_range(Begin, End)) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       if (--ScanLimit == 0)
