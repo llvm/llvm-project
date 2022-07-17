@@ -202,6 +202,10 @@ Bug Fixes
   considered to have one positive bit in order to represent the underlying
   value. This effects whether we consider the store of the value one to be well
   defined.
+- An operator introduced to the scope via a `using` statement now correctly references this
+  statement in clangd (hover over the symbol, jump to definition) as well as in the AST dump.
+  This also fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/#55095>`_ as a
+  side-effect.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
