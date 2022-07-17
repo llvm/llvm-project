@@ -46,7 +46,7 @@ void getRegNameFromBitVec(const BinaryContext &BC, const BitVector &RegV,
 void StokeInfo::checkInstr(const BinaryFunction &BF, StokeFuncInfo &FuncInfo) {
   MCPlusBuilder *MIB = BF.getBinaryContext().MIB.get();
   BitVector RegV(NumRegs, false);
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->empty())
       continue;
 
@@ -81,7 +81,7 @@ void StokeInfo::checkInstr(const BinaryFunction &BF, StokeFuncInfo &FuncInfo) {
       if (IsRipAddr)
         FuncInfo.HasRipAddr = true;
     } // end of for (auto &It : ...)
-  } // end of for (auto *BB : ...)
+  }   // end of for (auto *BB : ...)
 }
 
 bool StokeInfo::checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,

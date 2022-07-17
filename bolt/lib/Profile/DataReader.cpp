@@ -737,9 +737,9 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
     }
 
     // The real destination is the layout successor of the detected ToBB.
-    if (ToBB == BF.BasicBlocksLayout.back())
+    if (ToBB == BF.getLayout().block_back())
       return false;
-    BinaryBasicBlock *NextBB = BF.BasicBlocksLayout[ToBB->getIndex() + 1];
+    BinaryBasicBlock *NextBB = BF.getLayout().getBlock(ToBB->getIndex() + 1);
     assert((NextBB && NextBB->getOffset() > ToBB->getOffset()) && "bad layout");
     ToBB = NextBB;
   }

@@ -467,9 +467,9 @@ private:
       Emitter = BF.getBinaryContext().createIndependentMCCodeEmitter();
 
     // Initialize CFG nodes
-    AllBlocks.reserve(BF.layout_size());
+    AllBlocks.reserve(BF.getLayout().block_size());
     size_t LayoutIndex = 0;
-    for (BinaryBasicBlock *BB : BF.layout()) {
+    for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
       BB->setLayoutIndex(LayoutIndex++);
       uint64_t Size =
           std::max<uint64_t>(BB->estimateSize(Emitter.MCE.get()), 1);
@@ -508,8 +508,8 @@ private:
     }
 
     // Initialize chains
-    AllChains.reserve(BF.layout_size());
-    HotChains.reserve(BF.layout_size());
+    AllChains.reserve(BF.getLayout().block_size());
+    HotChains.reserve(BF.getLayout().block_size());
     for (Block &Block : AllBlocks) {
       AllChains.emplace_back(Block.Index, &Block);
       Block.CurChain = &AllChains.back();
@@ -646,7 +646,7 @@ private:
   /// consideration. This allows to maintain the original block order in the
   /// absense of profile data
   void mergeColdChains() {
-    for (BinaryBasicBlock *SrcBB : BF.layout()) {
+    for (BinaryBasicBlock *SrcBB : BF.getLayout().blocks()) {
       // Iterating in reverse order to make sure original fallthrough jumps are
       // merged first; this might be beneficial for code size.
       for (auto Itr = SrcBB->succ_rbegin(); Itr != SrcBB->succ_rend(); ++Itr) {
@@ -841,7 +841,7 @@ private:
     });
 
     // Collect the basic blocks in the order specified by their chains
-    Order.reserve(BF.layout_size());
+    Order.reserve(BF.getLayout().block_size());
     for (Chain *Chain : SortedChains)
       for (Block *Block : Chain->blocks())
         Order.push_back(Block->BB);
@@ -866,12 +866,12 @@ private:
 
 void ExtTSPReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
                                                 BasicBlockOrder &Order) const {
-  if (BF.layout_empty())
+  if (BF.getLayout().block_empty())
     return;
 
   // Do not change layout of functions w/o profile information
-  if (!BF.hasValidProfile() || BF.layout_size() <= 2) {
-    for (BinaryBasicBlock *BB : BF.layout())
+  if (!BF.hasValidProfile() || BF.getLayout().block_size() <= 2) {
+    for (BinaryBasicBlock *BB : BF.getLayout().blocks())
       Order.push_back(BB);
     return;
   }
@@ -881,7 +881,8 @@ void ExtTSPReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
 
   // Verify correctness
   assert(Order[0]->isEntryPoint() && "Original entry point is not preserved");
-  assert(Order.size() == BF.layout_size() && "Wrong size of reordered layout");
+  assert(Order.size() == BF.getLayout().block_size() &&
+         "Wrong size of reordered layout");
 }
 
 } // namespace bolt
