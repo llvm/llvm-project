@@ -91,14 +91,6 @@ cl::opt<bool> EnableDFAJumpThreading("enable-dfa-jump-thread",
                                      cl::desc("Enable DFA jump threading."),
                                      cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    EnablePrepareForThinLTO("prepare-for-thinlto", cl::init(false), cl::Hidden,
-                            cl::desc("Enable preparation for ThinLTO."));
-
-static cl::opt<bool>
-    EnablePerformThinLTO("perform-thinlto", cl::init(false), cl::Hidden,
-                         cl::desc("Enable performing ThinLTO."));
-
 cl::opt<bool> EnableHotColdSplit("hot-cold-split",
                                  cl::desc("Enable hot-cold splitting pass"));
 
@@ -192,9 +184,6 @@ PassManagerBuilder::PassManagerBuilder() {
     VerifyInput = false;
     VerifyOutput = false;
     MergeFunctions = false;
-    PrepareForLTO = false;
-    PrepareForThinLTO = EnablePrepareForThinLTO;
-    PerformThinLTO = EnablePerformThinLTO;
     DivergentTarget = false;
     CallGraphProfile = true;
 }
@@ -384,7 +373,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                          /*AllowSpeculation=*/false));
   // Rotate Loop - disable header duplication at -Oz
-  MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1, PrepareForLTO));
+  MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1, false));
   // TODO: Investigate promotion cap for O1.
   MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                          /*AllowSpeculation=*/true));
@@ -609,25 +598,7 @@ void PassManagerBuilder::populateModulePassManager(
     else if (GlobalExtensionsNotEmpty() || !Extensions.empty())
       MPM.add(createBarrierNoopPass());
 
-    if (PerformThinLTO) {
-      MPM.add(createLowerTypeTestsPass(nullptr, nullptr, true));
-      // Drop available_externally and unreferenced globals. This is necessary
-      // with ThinLTO in order to avoid leaving undefined references to dead
-      // globals in the object file.
-      MPM.add(createEliminateAvailableExternallyPass());
-      MPM.add(createGlobalDCEPass());
-    }
-
     addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
-
-    if (PrepareForLTO || PrepareForThinLTO) {
-      MPM.add(createCanonicalizeAliasesPass());
-      // Rename anon globals to be able to export them in the summary.
-      // This has to be done after we add the extensions to the pass manager
-      // as there could be passes (e.g. Adddress sanitizer) which introduce
-      // new unnamed globals.
-      MPM.add(createNameAnonGlobalPass());
-    }
 
     MPM.add(createAnnotationRemarksLegacyPass());
     return;
@@ -638,17 +609,6 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
 
   addInitialAliasAnalysisPasses(MPM);
-
-  // For ThinLTO there are two passes of indirect call promotion. The
-  // first is during the compile phase when PerformThinLTO=false and
-  // intra-module indirect call targets are promoted. The second is during
-  // the ThinLTO backend when PerformThinLTO=true, when we promote imported
-  // inter-module indirect calls. For that we perform indirect call promotion
-  // earlier in the pass pipeline, here before globalopt. Otherwise imported
-  // available_externally functions look unreferenced and are removed.
-  if (PerformThinLTO) {
-    MPM.add(createLowerTypeTestsPass(nullptr, nullptr, true));
-  }
 
   // Infer attributes about declarations if possible.
   MPM.add(createInferFunctionAttrsLegacyPass());
@@ -717,7 +677,7 @@ void PassManagerBuilder::populateModulePassManager(
   if (RunPartialInlining)
     MPM.add(createPartialInliningPass());
 
-  if (OptLevel > 1 && !PrepareForLTO && !PrepareForThinLTO)
+  if (OptLevel > 1)
     // Remove avail extern fns and globals definitions if we aren't
     // compiling an object file for later LTO. For LTO we want to preserve
     // these so they are eligible for inlining at link-time. Note if they
@@ -744,24 +704,6 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createGlobalOptimizerPass());
     MPM.add(createGlobalDCEPass());
   }
-
-  // If we are planning to perform ThinLTO later, let's not bloat the code with
-  // unrolling/vectorization/... now. We'll first run the inliner + CGSCC passes
-  // during ThinLTO and perform the rest of the optimizations afterward.
-  if (PrepareForThinLTO) {
-    // Ensure we perform any last passes, but do so before renaming anonymous
-    // globals in case the passes add any.
-    addExtensionsToPM(EP_OptimizerLast, MPM);
-    MPM.add(createCanonicalizeAliasesPass());
-    // Rename anon globals to be able to export them in the summary.
-    MPM.add(createNameAnonGlobalPass());
-    return;
-  }
-
-  if (PerformThinLTO)
-    // Optimize globals now when performing ThinLTO, this enables more
-    // optimizations later.
-    MPM.add(createGlobalOptimizerPass());
 
   // Scheduling LoopVersioningLICM when inlining is over, because after that
   // we may see more accurate aliasing. Reason to run this late is that too
@@ -807,7 +749,7 @@ void PassManagerBuilder::populateModulePassManager(
   // Re-rotate loops in all our loop nests. These may have fallout out of
   // rotated form due to GVN or other transformations, and the vectorizer relies
   // on the rotated form. Disable header duplication at -Oz.
-  MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1, PrepareForLTO));
+  MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1, false));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
@@ -829,7 +771,7 @@ void PassManagerBuilder::populateModulePassManager(
 
   // See comment in the new PM for justification of scheduling splitting at
   // this stage (\ref buildModuleSimplificationPipeline).
-  if (EnableHotColdSplit && !(PrepareForLTO || PrepareForThinLTO))
+  if (EnableHotColdSplit)
     MPM.add(createHotColdSplittingPass());
 
   if (EnableIROutliner)
@@ -857,12 +799,6 @@ void PassManagerBuilder::populateModulePassManager(
       SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
   addExtensionsToPM(EP_OptimizerLast, MPM);
-
-  if (PrepareForLTO) {
-    MPM.add(createCanonicalizeAliasesPass());
-    // Rename anon globals to be able to handle them in the summary
-    MPM.add(createNameAnonGlobalPass());
-  }
 
   MPM.add(createAnnotationRemarksLegacyPass());
 }
