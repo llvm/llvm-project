@@ -328,6 +328,21 @@ define void @large_stack() {
   ret void
 }
 
+; CHECK-LABEL: leaf_func
+; CHECK-NOT: aghi  4,
+; CHECK-NOT: stmg
+; CHECK: agr	1, 2
+; CHECK: msgr	1, 3
+; CHECK: aghik	3, 1, -4
+; CHECK-NOT: aghi  4,
+; CHECK-NOT: lmg
+define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
+  %n = add i64 %a, %b
+  %m = mul i64 %n, %c
+  %o = sub i64 %m, 4
+  ret i64 %o
+}
+
 declare i64 @fun(i64 %arg0)
 declare i64 @fun1(i8* %ptr)
 declare i64 @fun2(i64 %n, i64* %arr0, i64* %arr1)
