@@ -210,3 +210,14 @@ template <typename T, template <typename> class U> class Bar {};
 // We used to report Q unsued, because we only checked the first template
 // argument.
 Bar<int, Q> *bar;
+
+namespace internal { 
+  struct S {};
+  int operator+(S s1, S s2);
+} 
+
+// Make sure this statement is not reported as unused.
+using internal::operator+; 
+using internal::S;
+
+int j() { return S() + S(); }
