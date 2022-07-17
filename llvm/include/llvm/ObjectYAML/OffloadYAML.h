@@ -76,4 +76,4 @@ template <> struct MappingTraits<OffloadYAML::Binary::Member> {
 } // end namespace yaml
 } // end namespace llvm
 
-#endif // LLVM_OBJECTYAML_ARCHIVEYAML_H
+#endif // LLVM_OBJECTYAML_OFFLOADYAML_H
