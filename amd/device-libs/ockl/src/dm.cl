@@ -121,7 +121,7 @@ typedef struct sdata_s {
 #define GROW_TICKS 30000
 
 // The number of ulong per cache line used to separate atomics
-#define ULONG_PER_CACHE_LINE 4
+#define ULONG_PER_CACHE_LINE 16
 #define ATOMIC_PAD (ULONG_PER_CACHE_LINE-1)
 
 // Type used to hold a search start index
@@ -165,7 +165,12 @@ typedef struct heap_s {
     rtcsample_t salloc_time[NUM_KINDS];            // The time the most recent slab allocation was started
     rtcsample_t grow_time[NUM_KINDS];              // The time the most recent grow recordable was started
     sdata_t sdata[NUM_KINDS][NUM_SDATA];           // Information about all allocated slabs
+    atomic_ulong initial_slabs;                    // Slabs provided to delay first hostcall
+    ulong initial_slabs_end;                       // Limit of inititial slabs
 #if defined NON_SLAB_TRACKING
+#if ATOMIC_PAD > 1
+    ulong pad[ATOMIC_PAD-1];
+#endif
     atomic_ulong num_nonslab_allocations;          // Count of number of non-slab allocations that have not been freed
 #endif
 } heap_t;
@@ -596,8 +601,15 @@ try_grow_num_recordable_slabs(__global heap_t *hp, kind_t k)
 // Obtain a new slab
 // Only expect one lane active here
 static ulong
-obtain_new_slab(void)
+obtain_new_slab(__global heap_t *hp)
 {
+    ulong is = AL(&hp->initial_slabs, memory_order_relaxed);
+    ulong se = hp->initial_slabs_end;
+    if (is < se) {
+        is = AFA(&hp->initial_slabs, 1UL << 21, memory_order_relaxed);
+        if (is < se)
+            return is;
+    }
     ulong ret = __ockl_devmem_request(0, 1UL << 21);
     return ret;
 }
@@ -618,7 +630,7 @@ initialize_slab(__global slab_t *s, kind_t k)
     if (g > 32) {
         for (uint i = aid; i < n; i += nactive)
             p[i] = 0;
-        
+
         uint di = g * nactive;
         for (uint i = first_unusable(k) + aid*g; i < m; i += di)
             p[i >> 5] = 1 << (i & 0x1f);
@@ -694,7 +706,7 @@ try_allocate_new_slab(__global heap_t *hp, kind_t k)
 
         ulong saddr = 0;
         if (aid == 0)
-            saddr = obtain_new_slab();
+            saddr = obtain_new_slab(hp);
         saddr = first(saddr);
 
         if (!saddr)
@@ -948,6 +960,30 @@ __ockl_dm_alloc(ulong sz)
         return non_slab_malloc(sz);
 
     return slab_malloc(sz);
+}
+
+// Initialize the heap
+//   This is intended to be called by a kernel launched by the language runtime
+//   at device initialization time, having one workgroup consisting of 256 workitems.
+void
+__ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
+{
+    uint lid = __ockl_get_local_id(0);
+
+    // 0 is used to indicate no clearing needed
+    if (hb) {
+        __global int4 *p = (__global int4 *)(hp + lid*16);
+        for (int i=0; i<131072/16/256; ++i) {
+            *p = (int4)0;
+            p += 256;
+        }
+    }
+
+    if (lid == 0) {
+        __global heap_t *thp = (__global heap_t *)hp;
+        AS(&thp->initial_slabs, sp, memory_order_relaxed);
+        thp->initial_slabs_end = sp + ((ulong)nis << 21);
+    }
 }
 
 #if defined NON_SLAB_TRACKING
