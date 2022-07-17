@@ -196,6 +196,14 @@ typedef llvm::ImmutableMap<
     IndexOfElementToConstructMap;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(IndexOfElementToConstruct,
                                  IndexOfElementToConstructMap)
+
+// This trait is responsible for holding our pending ArrayInitLoopExprs.
+// It pairs the LocationContext and the initializer CXXConstructExpr with
+// the size of the array that's being copy initialized.
+typedef llvm::ImmutableMap<
+    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>
+    PendingInitLoopMap;
+REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingInitLoop, PendingInitLoopMap)
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
 //===----------------------------------------------------------------------===//
@@ -462,6 +470,34 @@ ProgramStateRef ExprEngine::setIndexOfElementToConstruct(
   return State->set<IndexOfElementToConstruct>(Key, Idx);
 }
 
+Optional<unsigned> ExprEngine::getPendingInitLoop(ProgramStateRef State,
+                                                  const CXXConstructExpr *E,
+                                                  const LocationContext *LCtx) {
+
+  return Optional<unsigned>::create(
+      State->get<PendingInitLoop>({E, LCtx->getStackFrame()}));
+}
+
+ProgramStateRef ExprEngine::removePendingInitLoop(ProgramStateRef State,
+                                                  const CXXConstructExpr *E,
+                                                  const LocationContext *LCtx) {
+  auto Key = std::make_pair(E, LCtx->getStackFrame());
+
+  assert(E && State->contains<PendingInitLoop>(Key));
+  return State->remove<PendingInitLoop>(Key);
+}
+
+ProgramStateRef ExprEngine::setPendingInitLoop(ProgramStateRef State,
+                                               const CXXConstructExpr *E,
+                                               const LocationContext *LCtx,
+                                               unsigned Size) {
+  auto Key = std::make_pair(E, LCtx->getStackFrame());
+
+  assert(!State->contains<PendingInitLoop>(Key) && Size > 0);
+
+  return State->set<PendingInitLoop>(Key, Size);
+}
+
 Optional<unsigned>
 ExprEngine::getIndexOfElementToConstruct(ProgramStateRef State,
                                          const CXXConstructExpr *E,
@@ -487,17 +523,22 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
                                        const LocationContext *LC, SVal V) {
   ConstructedObjectKey Key(Item, LC->getStackFrame());
 
-  const CXXConstructExpr *E = nullptr;
+  const Expr *Init = nullptr;
 
   if (auto DS = dyn_cast_or_null<DeclStmt>(Item.getStmtOrNull())) {
     if (auto VD = dyn_cast_or_null<VarDecl>(DS->getSingleDecl()))
-      E = dyn_cast<CXXConstructExpr>(VD->getInit());
+      Init = VD->getInit();
   }
 
-  if (!E && !Item.getStmtOrNull()) {
-    auto CtorInit = Item.getCXXCtorInitializer();
-    E = dyn_cast<CXXConstructExpr>(CtorInit->getInit());
-  }
+  if (!Init && !Item.getStmtOrNull())
+    Init = Item.getCXXCtorInitializer()->getInit();
+
+  // In an ArrayInitLoopExpr the real initializer is returned by
+  // getSubExpr().
+  if (const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init))
+    Init = AILE->getSubExpr();
+
+  const auto *E = dyn_cast_or_null<CXXConstructExpr>(Init);
 
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
@@ -2797,6 +2838,11 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
   for (auto *Node : CheckerPreStmt) {
+
+    // The constructor visitior has already taken care of everything.
+    if (auto *CE = dyn_cast<CXXConstructExpr>(Ex->getSubExpr()))
+      break;
+
     const LocationContext *LCtx = Node->getLocationContext();
     ProgramStateRef state = Node->getState();
 
