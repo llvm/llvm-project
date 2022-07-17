@@ -4,7 +4,6 @@
 
 #  This file contains the sparse compiler class.
 
-from mlir import all_passes_registration
 from mlir import execution_engine
 from mlir import ir
 from mlir import passmanager
