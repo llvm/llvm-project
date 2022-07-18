@@ -1444,8 +1444,8 @@ llvm::json::Value toJSON(const FoldingRange &Range) {
     Result["startCharacter"] = Range.startCharacter;
   if (Range.endCharacter)
     Result["endCharacter"] = Range.endCharacter;
-  if (Range.kind)
-    Result["kind"] = *Range.kind;
+  if (!Range.kind.empty())
+    Result["kind"] = Range.kind;
   return Result;
 }
 
