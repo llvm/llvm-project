@@ -77,7 +77,6 @@ public:
   bool hasImageHandles() const;
   bool hasFP16Math() const { return SmVersion >= 53; }
   bool allowFP16Math() const;
-  bool hasMaskOperator() const { return PTXVersion >= 71; }
   unsigned int getSmVersion() const { return SmVersion; }
   std::string getTargetName() const { return TargetName; }
 

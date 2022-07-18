@@ -61,30 +61,25 @@ class MCOperand;
 class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
   class AggBuffer {
-    // Used to buffer the emitted string for initializing global aggregates.
+    // Used to buffer the emitted string for initializing global
+    // aggregates.
     //
-    // Normally an aggregate (array, vector, or structure) is emitted as a u8[].
-    // However, if either element/field of the aggregate is a non-NULL address,
-    // and all such addresses are properly aligned, then the aggregate is
-    // emitted as u32[] or u64[]. In the case of unaligned addresses, the
-    // aggregate is emitted as u8[], and the mask() operator is used for all
-    // pointers.
+    // Normally an aggregate (array, vector or structure) is emitted
+    // as a u8[]. However, if one element/field of the aggregate
+    // is a non-NULL address, then the aggregate is emitted as u32[]
+    // or u64[].
     //
-    // We first layout the aggregate in 'buffer' in bytes, except for those
-    // symbol addresses. For the i-th symbol address in the aggregate, its
-    // corresponding 4-byte or 8-byte elements in 'buffer' are filled with 0s.
-    // symbolPosInBuffer[i-1] records its position in 'buffer', and Symbols[i-1]
-    // records the Value*.
+    // We first layout the aggregate in 'buffer' in bytes, except for
+    // those symbol addresses. For the i-th symbol address in the
+    //aggregate, its corresponding 4-byte or 8-byte elements in 'buffer'
+    // are filled with 0s. symbolPosInBuffer[i-1] records its position
+    // in 'buffer', and Symbols[i-1] records the Value*.
     //
-    // Once we have this AggBuffer setup, we can choose how to print it out.
+    // Once we have this AggBuffer setup, we can choose how to print
+    // it out.
   public:
     // number of symbol addresses
     unsigned numSymbols() const { return Symbols.size(); }
-
-    bool allSymbolsAligned(unsigned ptrSize) const {
-      return llvm::all_of(symbolPosInBuffer,
-                          [=](unsigned pos) { return pos % ptrSize == 0; });
-    }
 
   private:
     const unsigned size;   // size of the buffer in bytes

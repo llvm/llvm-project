@@ -75,7 +75,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -1173,26 +1172,11 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           bufferAggregateConstant(Initializer, &aggBuffer);
           if (aggBuffer.numSymbols()) {
             unsigned int ptrSize = MAI->getCodePointerSize();
-            if (ElementSize % ptrSize ||
-                !aggBuffer.allSymbolsAligned(ptrSize)) {
-              // Print in bytes and use the mask() operator for pointers.
-              if (!STI.hasMaskOperator())
-                report_fatal_error(
-                    "initialized packed aggregate with pointers '" +
-                    GVar->getName() +
-                    "' requires at least PTX ISA version 7.1");
-              O << " .u8 ";
-              getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize << "] = {";
-              aggBuffer.printBytes(O);
-              O << "}";
-            } else {
-              O << " .u" << ptrSize * 8 << " ";
-              getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize / ptrSize << "] = {";
-              aggBuffer.printWords(O);
-              O << "}";
-            }
+            O << " .u" << ptrSize * 8 << " ";
+            getSymbol(GVar)->print(O, MAI);
+            O << "[" << ElementSize / ptrSize << "] = {";
+            aggBuffer.printWords(O);
+            O << "}";
           } else {
             O << " .b8 ";
             getSymbol(GVar)->print(O, MAI);
@@ -1249,33 +1233,10 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
-  unsigned int nSym = 0;
-  unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
-  for (unsigned int pos = 0; pos < size;) {
+  for (unsigned int pos = 0; pos < size; ++pos) {
     if (pos)
       os << ", ";
-    if (pos != nextSymbolPos) {
-      os << (unsigned int)buffer[pos];
-      ++pos;
-      continue;
-    }
-    // Generate a per-byte mask() operator for the symbol, which looks like:
-    //   .global .u8 addr[] = {0xFF(foo), 0xFF00(foo), 0xFF0000(foo), ...};
-    // See https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#initializers
-    std::string symText;
-    llvm::raw_string_ostream oss(symText);
-    printSymbol(nSym, oss);
-    for (unsigned i = 0; i < ptrSize; ++i) {
-      if (i)
-        os << ", ";
-      llvm::write_hex(os, 0xFFULL << i * 8, HexPrintStyle::PrefixUpper);
-      os << "(" << symText << ")";
-    }
-    pos += ptrSize;
-    nextSymbolPos = symbolPosInBuffer[++nSym];
-    assert(nextSymbolPos >= pos);
+    os << (unsigned int)buffer[pos];
   }
 }
 
