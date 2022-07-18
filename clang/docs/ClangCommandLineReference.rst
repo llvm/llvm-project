@@ -2647,6 +2647,12 @@ Enable unstable and experimental features
 
 .. option:: -fuse-init-array, -fno-use-init-array
 
+.. option:: -fstrict-flex-arrays=<arg>, -fno-strict-flex-arrays
+
+Control which arrays are considered as flexible arrays members. <arg>
+can be 1 (array of size 0, 1 and undefined are considered) or 2 (array of size 0
+and undefined are considered).
+
 .. option:: -fuse-ld=<arg>
 
 .. option:: -fuse-line-directives, -fno-use-line-directives
