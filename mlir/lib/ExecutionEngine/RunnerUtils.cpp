@@ -16,7 +16,31 @@
 #include "mlir/ExecutionEngine/RunnerUtils.h"
 #include <chrono>
 
+#ifdef _MSC_VER
+#include "malloc.h"
+#endif
+
 // NOLINTBEGIN(*-identifier-naming)
+
+extern "C" void *_mlir_alloc(uint64_t size) { return malloc(size); }
+
+extern "C" void *_mlir_aligned_alloc(uint64_t alignment, uint64_t size) {
+#ifdef _MSC_VER
+  return _aligned_malloc(size, alignment);
+#else
+  return aligned_alloc(alignment, size);
+#endif
+}
+
+extern "C" void _mlir_free(void *ptr) { free(ptr); }
+
+extern "C" void _mlir_aligned_free(void *ptr) {
+#ifdef _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
 
 extern "C" void _mlir_ciface_printMemrefShapeI8(UnrankedMemRefType<int8_t> *M) {
   std::cout << "Unranked Memref ";

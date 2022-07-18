@@ -29,6 +29,10 @@ std::unique_ptr<mlir::Pass> createLowerToAffinePass();
 /// well as `Affine` and `Std`, to the LLVM dialect for codegen.
 std::unique_ptr<mlir::Pass> createLowerToLLVMPass();
 
+/// Create a pass to rename the '_mlir_alloc' and '_mlir_free' functions to
+/// 'malloc' and 'free'.
+std::unique_ptr<mlir::Pass> createAllocRenamingPass();
+
 } // namespace toy
 } // namespace mlir
 
