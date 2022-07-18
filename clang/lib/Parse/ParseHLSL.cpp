@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Attr.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
@@ -60,6 +61,9 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   IdentifierInfo *Identifier = Tok.getIdentifierInfo();
   SourceLocation IdentifierLoc = ConsumeToken();
 
+  ParsedAttributes Attrs(AttrFactory);
+  MaybeParseHLSLSemantics(Attrs, nullptr);
+
   ParseScope BufferScope(this, Scope::DeclScope);
   BalancedDelimiterTracker T(*this, tok::l_brace);
   if (T.consumeOpen()) {
@@ -71,7 +75,6 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
                                          Identifier, IdentifierLoc,
                                          T.getOpenLocation());
 
-  // FIXME: support attribute on cbuffer/tbuffer.
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
     ParsedAttributes Attrs(AttrFactory);
@@ -92,30 +95,103 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   BufferScope.Exit();
   Actions.ActOnFinishHLSLBuffer(D, DeclEnd);
 
+  Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
   return D;
+}
+
+static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
+                                        Token Tok, ArgsVector &ArgExprs,
+                                        Parser &P, ASTContext &Ctx,
+                                        Preprocessor &PP) {
+  StringRef Num = StringRef(Tok.getLiteralData(), Tok.getLength());
+  SourceLocation EndNumLoc = Tok.getEndLoc();
+
+  P.ConsumeToken(); // consume constant.
+  std::string FixedArg = ArgStr.str() + Num.str();
+  P.Diag(ArgLoc, diag::err_hlsl_separate_attr_arg_and_number)
+      << FixedArg
+      << FixItHint::CreateReplacement(SourceRange(ArgLoc, EndNumLoc), FixedArg);
+  ArgsUnion &Slot = ArgExprs.back();
+  Slot = IdentifierLoc::create(Ctx, ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
 void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
                                 SourceLocation *EndLoc) {
+  // FIXME: HLSLSemantic is shared for Semantic and resource binding which is
+  // confusing. Need a better name to avoid misunderstanding. Issue
+  // https://github.com/llvm/llvm-project/issues/57882
   assert(Tok.is(tok::colon) && "Not a HLSL Semantic");
   ConsumeToken();
 
-  if (!Tok.is(tok::identifier)) {
+  IdentifierInfo *II = nullptr;
+  if (Tok.is(tok::kw_register))
+    II = PP.getIdentifierInfo("register");
+  else if (Tok.is(tok::identifier))
+    II = Tok.getIdentifierInfo();
+
+  if (!II) {
     Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
     return;
   }
 
-  IdentifierInfo *II = Tok.getIdentifierInfo();
   SourceLocation Loc = ConsumeToken();
   if (EndLoc)
     *EndLoc = Tok.getLocation();
   ParsedAttr::Kind AttrKind =
       ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLSemantic);
 
-  if (AttrKind == ParsedAttr::UnknownAttribute) {
+  ArgsVector ArgExprs;
+  switch (AttrKind) {
+  case ParsedAttr::AT_HLSLResourceBinding: {
+    if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after)) {
+      SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+      return;
+    }
+    if (!Tok.is(tok::identifier)) {
+      Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
+      SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+      return;
+    }
+    StringRef SlotStr = Tok.getIdentifierInfo()->getName();
+    SourceLocation SlotLoc = Tok.getLocation();
+    ArgExprs.push_back(ParseIdentifierLoc());
+
+    // Add numeric_constant for fix-it.
+    if (SlotStr.size() == 1 && Tok.is(tok::numeric_constant))
+      fixSeparateAttrArgAndNumber(SlotStr, SlotLoc, Tok, ArgExprs, *this,
+                                  Actions.Context, PP);
+
+    if (Tok.is(tok::comma)) {
+      ConsumeToken(); // consume comma
+      if (!Tok.is(tok::identifier)) {
+        Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
+      }
+      StringRef SpaceStr = Tok.getIdentifierInfo()->getName();
+      SourceLocation SpaceLoc = Tok.getLocation();
+      ArgExprs.push_back(ParseIdentifierLoc());
+
+      // Add numeric_constant for fix-it.
+      if (SpaceStr.equals("space") && Tok.is(tok::numeric_constant))
+        fixSeparateAttrArgAndNumber(SpaceStr, SpaceLoc, Tok, ArgExprs, *this,
+                                    Actions.Context, PP);
+    }
+    if (ExpectAndConsume(tok::r_paren, diag::err_expected)) {
+      SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+      return;
+    }
+  } break;
+  case ParsedAttr::UnknownAttribute:
     Diag(Loc, diag::err_unknown_hlsl_semantic) << II;
     return;
+  case ParsedAttr::AT_HLSLSV_GroupIndex:
+    break;
+  default:
+    llvm_unreachable("invalid HLSL Semantic");
+    break;
   }
-  Attrs.addNew(II, Loc, nullptr, SourceLocation(), nullptr, 0,
-               ParsedAttr::AS_HLSLSemantic);
+
+  Attrs.addNew(II, Loc, nullptr, SourceLocation(), ArgExprs.data(),
+               ArgExprs.size(), ParsedAttr::AS_HLSLSemantic);
 }
