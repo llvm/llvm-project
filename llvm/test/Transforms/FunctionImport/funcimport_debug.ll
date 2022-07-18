@@ -4,7 +4,7 @@
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Do the import now and confirm that metadata is linked for imported function.
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -S | FileCheck %s
+; RUN: opt -passes=function-import -summary-file %t3.thinlto.bc %t.bc -S | FileCheck %s
 
 ; CHECK: define available_externally void @func()
 
