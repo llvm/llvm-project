@@ -13,10 +13,9 @@
 #include "AllocationOrder.h"
 #include "RegAllocEvictionAdvisor.h"
 #include "RegAllocGreedy.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
-#if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TF_API) 
+#if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TF_API)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #endif
@@ -91,7 +90,6 @@ public:
     AU.setPreservesAll();
     AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
     AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<AAResultsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -891,9 +889,7 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
           &getAnalysis<RegAllocEvictionAdvisorAnalysis>()))
     if (auto *Log = DevModeAnalysis->getLogger(MF))
       Log->logFloatFinalReward(static_cast<float>(
-          calculateRegAllocScore(
-              MF, getAnalysis<MachineBlockFrequencyInfo>(),
-              getAnalysis<AAResultsWrapperPass>().getAAResults())
+          calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
               .getScore()));
 
   return false;

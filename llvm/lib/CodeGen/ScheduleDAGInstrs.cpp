@@ -530,9 +530,9 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
 
 /// Returns true if MI is an instruction we are unable to reason about
 /// (like a call or something with unmodeled side effects).
-static inline bool isGlobalMemoryObject(AAResults *AA, MachineInstr *MI) {
+static inline bool isGlobalMemoryObject(MachineInstr *MI) {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
-         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad(AA));
+         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
 }
 
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
@@ -880,7 +880,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     // actual addresses).
 
     // This is a barrier event that acts as a pivotal node in the DAG.
-    if (isGlobalMemoryObject(AA, &MI)) {
+    if (isGlobalMemoryObject(&MI)) {
 
       // Become the barrier chain.
       if (BarrierChain)
@@ -917,7 +917,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
 
     // If it's not a store or a variant load, we're done.
     if (!MI.mayStore() &&
-        !(MI.mayLoad() && !MI.isDereferenceableInvariantLoad(AA)))
+        !(MI.mayLoad() && !MI.isDereferenceableInvariantLoad()))
       continue;
 
     // Always add dependecy edge to BarrierChain if present.
