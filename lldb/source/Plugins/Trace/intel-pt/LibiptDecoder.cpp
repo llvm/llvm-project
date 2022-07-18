@@ -285,9 +285,23 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
   for (size_t i = 0; i < executions.size(); i++) {
     const IntelPTThreadContinousExecution &execution = executions[i];
 
-    decoded_thread.NotifyCPU(execution.thread_execution.cpu_id);
 
     auto variant = execution.thread_execution.variant;
+    // We report the TSCs we are sure of
+    switch (variant) {
+    case ThreadContinuousExecution::Variant::Complete:
+      decoded_thread.NotifyTsc(execution.thread_execution.tscs.complete.start);
+      break;
+    case ThreadContinuousExecution::Variant::OnlyStart:
+      decoded_thread.NotifyTsc(
+          execution.thread_execution.tscs.only_start.start);
+      break;
+    default:
+      break;
+    }
+
+    decoded_thread.NotifyCPU(execution.thread_execution.cpu_id);
+
     // If we haven't seen a PSB yet, then it's fine not to show errors
     if (has_seen_psbs) {
       if (execution.intelpt_subtraces.empty()) {
@@ -299,12 +313,12 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
       }
 
       // If the first execution is incomplete because it doesn't have a previous
-      // context switch in its cpu, all good.
+      // context switch in its cpu, all good, otherwise we report the error.
       if (variant == ThreadContinuousExecution::Variant::OnlyEnd ||
           variant == ThreadContinuousExecution::Variant::HintedStart) {
         decoded_thread.AppendCustomError(
-            formatv("Thread execution starting on cpu id = {0} doesn't "
-                    "have a matching context switch in.",
+            formatv("Unable to find the context switch in for the thread "
+                    "execution starting on cpu id = {0}",
                     execution.thread_execution.cpu_id)
                 .str());
       }
@@ -318,6 +332,18 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
       decoder.DecodePSB(intel_pt_execution.psb_offset);
     }
 
+    // We report the TSCs we are sure of
+    switch (variant) {
+    case ThreadContinuousExecution::Variant::Complete:
+      decoded_thread.NotifyTsc(execution.thread_execution.tscs.complete.end);
+      break;
+    case ThreadContinuousExecution::Variant::OnlyEnd:
+      decoded_thread.NotifyTsc(execution.thread_execution.tscs.only_end.end);
+      break;
+    default:
+      break;
+    }
+
     // If we haven't seen a PSB yet, then it's fine not to show errors
     if (has_seen_psbs) {
       // If the last execution is incomplete because it doesn't have a following
@@ -326,8 +352,8 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
            i + 1 != executions.size()) ||
           variant == ThreadContinuousExecution::Variant::HintedEnd) {
         decoded_thread.AppendCustomError(
-            formatv("Thread execution on cpu id = {0} doesn't have a "
-                    "matching context switch out",
+            formatv("Unable to find the context switch out for the thread "
+                    "execution on cpu id = {0}",
                     execution.thread_execution.cpu_id)
                 .str());
       }
@@ -379,4 +405,23 @@ lldb_private::trace_intel_pt::SplitTraceInContinuousExecutions(
     });
   }
   return executions;
+}
+
+Expected<Optional<uint64_t>>
+lldb_private::trace_intel_pt::FindLowestTSCInTrace(TraceIntelPT &trace_intel_pt,
+                                                   ArrayRef<uint8_t> buffer) {
+  Expected<PtInsnDecoderUP> decoder_up =
+      CreateInstructionDecoder(trace_intel_pt, buffer);
+  if (!decoder_up)
+    return decoder_up.takeError();
+
+  pt_insn_decoder *decoder = decoder_up.get().get();
+  int status = pte_ok;
+  if (IsLibiptError(status = pt_insn_sync_forward(decoder)))
+    return None;
+
+  uint64_t tsc;
+  if (IsLibiptError(pt_insn_time(decoder, &tsc, nullptr, nullptr)))
+    return None;
+  return tsc;
 }

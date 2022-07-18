@@ -17,28 +17,55 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-TraceCursorIntelPT::TraceCursorIntelPT(ThreadSP thread_sp,
-                                       DecodedThreadSP decoded_thread_sp)
-    : TraceCursor(thread_sp), m_decoded_thread_sp(decoded_thread_sp) {
+TraceCursorIntelPT::TraceCursorIntelPT(
+    ThreadSP thread_sp, DecodedThreadSP decoded_thread_sp,
+    const Optional<LinuxPerfZeroTscConversion> &tsc_conversion,
+    Optional<uint64_t> beginning_of_time_nanos)
+    : TraceCursor(thread_sp), m_decoded_thread_sp(decoded_thread_sp),
+      m_tsc_conversion(tsc_conversion),
+      m_beginning_of_time_nanos(beginning_of_time_nanos) {
   Seek(0, SeekType::End);
-}
-
-void TraceCursorIntelPT::CalculateTscRange() {
-  // If we failed, then we look for the exact range
-  if (!m_tsc_range || !m_tsc_range->InRange(m_pos))
-    m_tsc_range = m_decoded_thread_sp->CalculateTscRange(
-        m_pos, /*hit_range=*/m_tsc_range);
 }
 
 void TraceCursorIntelPT::Next() {
   m_pos += IsForwards() ? 1 : -1;
+  ClearTimingRangesIfInvalid();
+}
 
-  // We try to go to a neighbor tsc range that might contain the current pos
-  if (m_tsc_range && !m_tsc_range->InRange(m_pos))
-    m_tsc_range = IsForwards() ? m_tsc_range->Next() : m_tsc_range->Prev();
+void TraceCursorIntelPT::ClearTimingRangesIfInvalid() {
+  if (m_tsc_range_calculated) {
+    if (!m_tsc_range || m_pos < 0 || !m_tsc_range->InRange(m_pos)) {
+      m_tsc_range = None;
+      m_tsc_range_calculated = false;
+    }
+  }
 
-  // If we failed, this call will fix it
-  CalculateTscRange();
+  if (m_nanoseconds_range_calculated) {
+    if (!m_nanoseconds_range || m_pos < 0 ||
+        !m_nanoseconds_range->InRange(m_pos)) {
+      m_nanoseconds_range = None;
+      m_nanoseconds_range_calculated = false;
+    }
+  }
+}
+
+const Optional<DecodedThread::TSCRange> &
+TraceCursorIntelPT::GetTSCRange() const {
+  if (!m_tsc_range_calculated) {
+    m_tsc_range_calculated = true;
+    m_tsc_range = m_decoded_thread_sp->GetTSCRangeByIndex(m_pos);
+  }
+  return m_tsc_range;
+}
+
+const Optional<DecodedThread::NanosecondsRange> &
+TraceCursorIntelPT::GetNanosecondsRange() const {
+  if (!m_nanoseconds_range_calculated) {
+    m_nanoseconds_range_calculated = true;
+    m_nanoseconds_range =
+        m_decoded_thread_sp->GetNanosecondsRangeByIndex(m_pos);
+  }
+  return m_nanoseconds_range;
 }
 
 bool TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
@@ -52,13 +79,15 @@ bool TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
   case TraceCursor::SeekType::Current:
     m_pos += offset;
   }
-  CalculateTscRange();
+
+  ClearTimingRangesIfInvalid();
 
   return HasValue();
 }
 
 bool TraceCursorIntelPT::HasValue() const {
-  return m_pos >= 0 && m_pos < m_decoded_thread_sp->GetItemsCount();
+  return m_pos >= 0 &&
+         static_cast<uint64_t>(m_pos) < m_decoded_thread_sp->GetItemsCount();
 }
 
 lldb::TraceItemKind TraceCursorIntelPT::GetItemKind() const {
@@ -73,15 +102,18 @@ lldb::addr_t TraceCursorIntelPT::GetLoadAddress() const {
   return m_decoded_thread_sp->GetInstructionLoadAddress(m_pos);
 }
 
-Optional<uint64_t>
-TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) const {
-  switch (counter_type) {
-  case lldb::eTraceCounterTSC:
-    if (m_tsc_range)
-      return m_tsc_range->GetTsc();
-    else
-      return llvm::None;
-  }
+Optional<uint64_t> TraceCursorIntelPT::GetHWClock() const {
+  if (const Optional<DecodedThread::TSCRange> &range = GetTSCRange())
+    return range->tsc;
+  return None;
+}
+
+Optional<double> TraceCursorIntelPT::GetWallClockTime() const {
+  if (const Optional<DecodedThread::NanosecondsRange> &range =
+          GetNanosecondsRange())
+    return range->GetInterpolatedTime(m_pos, *m_beginning_of_time_nanos,
+                                      *m_tsc_conversion);
+  return None;
 }
 
 Optional<lldb::cpu_id_t> TraceCursorIntelPT::GetCPU() const {
@@ -96,13 +128,12 @@ bool TraceCursorIntelPT::GoToId(user_id_t id) {
   if (!HasId(id))
     return false;
   m_pos = id;
-  m_tsc_range = m_decoded_thread_sp->CalculateTscRange(m_pos, m_tsc_range);
-
+  ClearTimingRangesIfInvalid();
   return true;
 }
 
 bool TraceCursorIntelPT::HasId(lldb::user_id_t id) const {
-  return static_cast<int64_t>(id) < m_decoded_thread_sp->GetItemsCount();
+  return id < m_decoded_thread_sp->GetItemsCount();
 }
 
 user_id_t TraceCursorIntelPT::GetId() const { return m_pos; }

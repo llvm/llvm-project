@@ -94,6 +94,16 @@ llvm::Expected<std::vector<IntelPTThreadSubtrace>>
 SplitTraceInContinuousExecutions(TraceIntelPT &trace_intel_pt,
                                  llvm::ArrayRef<uint8_t> buffer);
 
+/// Find the lowest TSC in the given trace.
+///
+/// \return
+///     The lowest TSC value in this trace if available, \a llvm::None if the
+///     trace is empty or the trace contains no timing information, or an \a
+///     llvm::Error if it was not possible to set up the decoder.
+llvm::Expected<llvm::Optional<uint64_t>>
+FindLowestTSCInTrace(TraceIntelPT &trace_intel_pt,
+                     llvm::ArrayRef<uint8_t> buffer);
+
 } // namespace trace_intel_pt
 } // namespace lldb_private
 

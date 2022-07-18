@@ -8,6 +8,8 @@
 
 #include "TraceIntelPT.h"
 
+#include "TraceCursorIntelPT.h"
+
 #include "../common/ThreadPostMortemTrace.h"
 #include "CommandObjectTraceStartIntelPT.h"
 #include "DecodedThread.h"
@@ -138,11 +140,53 @@ Expected<DecodedThreadSP> TraceIntelPT::Decode(Thread &thread) {
   return it->second->Decode();
 }
 
+Expected<Optional<uint64_t>> TraceIntelPT::FindBeginningOfTimeNanos() {
+  Storage &storage = GetUpdatedStorage();
+  if (storage.beginning_of_time_nanos_calculated)
+    return storage.beginning_of_time_nanos;
+  storage.beginning_of_time_nanos_calculated = true;
+
+  if (!storage.tsc_conversion)
+    return None;
+
+  Optional<uint64_t> lowest_tsc;
+
+  if (storage.multicpu_decoder) {
+    if (Expected<Optional<uint64_t>> tsc =
+            storage.multicpu_decoder->FindLowestTSC()) {
+      lowest_tsc = *tsc;
+    } else {
+      return tsc.takeError();
+    }
+  }
+
+  for (auto &decoder : storage.thread_decoders) {
+    Expected<Optional<uint64_t>> tsc = decoder.second->FindLowestTSC();
+    if (!tsc)
+      return tsc.takeError();
+
+    if (*tsc && (!lowest_tsc || *lowest_tsc > **tsc))
+      lowest_tsc = **tsc;
+  }
+
+  if (lowest_tsc) {
+    storage.beginning_of_time_nanos =
+        storage.tsc_conversion->ToNanos(*lowest_tsc);
+  }
+  return storage.beginning_of_time_nanos;
+}
+
 llvm::Expected<lldb::TraceCursorUP>
 TraceIntelPT::CreateNewCursor(Thread &thread) {
-  if (Expected<DecodedThreadSP> decoded_thread = Decode(thread))
-    return decoded_thread.get()->CreateNewCursor();
-  else
+  if (Expected<DecodedThreadSP> decoded_thread = Decode(thread)) {
+    if (Expected<Optional<uint64_t>> beginning_of_time =
+            FindBeginningOfTimeNanos())
+      return std::make_unique<TraceCursorIntelPT>(
+          thread.shared_from_this(), *decoded_thread, m_storage.tsc_conversion,
+          *beginning_of_time);
+    else
+      return beginning_of_time.takeError();
+  } else
     return decoded_thread.takeError();
 }
 

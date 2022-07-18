@@ -91,8 +91,8 @@ struct LinuxPerfZeroTscConversion {
   /// nanoseconds) is defined by the kernel at boot time and has no particularly
   /// useful meaning. On the other hand, this value is constant for an entire
   /// trace session.
-  //  See 'time_zero' section of
-  //  https://man7.org/linux/man-pages/man2/perf_event_open.2.html
+  /// See 'time_zero' section of
+  /// https://man7.org/linux/man-pages/man2/perf_event_open.2.html
   ///
   /// \param[in] tsc
   ///   The TSC value to be converted.
