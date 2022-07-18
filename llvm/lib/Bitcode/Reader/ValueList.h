@@ -21,7 +21,6 @@
 
 namespace llvm {
 
-class Constant;
 class Error;
 class Type;
 class Value;
