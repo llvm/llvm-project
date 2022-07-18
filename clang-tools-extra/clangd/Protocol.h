@@ -1093,6 +1093,10 @@ struct SymbolDetails {
   std::string USR;
 
   SymbolID ID;
+
+  llvm::Optional<Location> declarationRange;
+
+  llvm::Optional<Location> definitionRange;
 };
 llvm::json::Value toJSON(const SymbolDetails &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
