@@ -11,7 +11,7 @@
 #define MLIR_C_DIALECT_SPARSETENSOR_H
 
 #include "mlir-c/AffineMap.h"
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -37,7 +37,7 @@ static bool shouldIndentWrappedSelectorName(const FormatStyle &Style,
 // Returns the length of everything up to the first possible line break after
 // the ), ], } or > matching \c Tok.
 static unsigned getLengthToMatchingParen(const FormatToken &Tok,
-                                         const SmallVector<ParenState> &Stack) {
+                                         ArrayRef<ParenState> Stack) {
   // Normally whether or not a break before T is possible is calculated and
   // stored in T.CanBreakBefore. Braces, array initializers and text proto
   // messages like `key: < ... >` are an exception: a break is possible
@@ -1190,6 +1190,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       break;
     }
   }
+  if (NextNonComment->isOneOf(TT_CtorInitializerColon, TT_InheritanceColon,
+                              TT_InheritanceComma)) {
+    return State.FirstIndent + Style.ConstructorInitializerIndentWidth;
+  }
   if ((PreviousNonComment &&
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
@@ -1263,10 +1267,6 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (PreviousNonComment && PreviousNonComment->is(TT_InheritanceColon) &&
       Style.BreakInheritanceList == FormatStyle::BILS_AfterColon) {
     return CurrentState.Indent;
-  }
-  if (NextNonComment->isOneOf(TT_CtorInitializerColon, TT_InheritanceColon,
-                              TT_InheritanceComma)) {
-    return State.FirstIndent + Style.ConstructorInitializerIndentWidth;
   }
   if (Previous.is(tok::r_paren) && !Current.isBinaryOperator() &&
       !Current.isOneOf(tok::colon, tok::comment)) {

@@ -5,8 +5,10 @@ func.func @func_empty() {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut:{{ *$}}
-  // CHECK-NEXT: BeginLiveness
-  // CHECK-NEXT: EndLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
+  // CHECK-NEXT: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK-NEXT: EndCurrentlyLive
   return
 }
 
@@ -17,18 +19,28 @@ func.func @func_simpleBranch(%arg0: i32, %arg1 : i32) -> i32 {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg0@0 arg1@0
-  // CHECK-NEXT: BeginLiveness
-  // CHECK-NEXT: EndLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
+  // CHECK-NEXT: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: cf.br
+  // CHECK-SAME:   arg0@0 arg1@0
+  // CHECK-NEXT: EndCurrentlyLive
   cf.br ^exit
 ^exit:
   // CHECK: Block: 1
   // CHECK-NEXT: LiveIn: arg0@0 arg1@0
   // CHECK-NEXT: LiveOut:{{ *$}}
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK: val_2
   // CHECK-NEXT:     %0 = arith.addi
   // CHECK-NEXT:     return
-  // CHECK-NEXT: EndLiveness
+  // CHECK-NEXT: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: arith.addi
+  // CHECK-SAME:    arg0@0 arg1@0 val_2
+  // CHECK: return
+  // CHECK-SAME:    val_2
+  // CHECK-NEXT EndCurrentlyLive
   %result = arith.addi %arg0, %arg1 : i32
   return %result : i32
 }
@@ -40,28 +52,47 @@ func.func @func_condBranch(%cond : i1, %arg1: i32, %arg2 : i32) -> i32 {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg1@0 arg2@0
-  // CHECK-NEXT: BeginLiveness
-  // CHECK-NEXT: EndLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
+  // CHECK-NEXT: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: cf.cond_br
+  // CHECK-SAME:   arg0@0 arg1@0 arg2@0
+  // CHECK-NEXT: EndCurrentlyLive
   cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
   // CHECK: Block: 1
   // CHECK-NEXT: LiveIn: arg1@0 arg2@0
   // CHECK-NEXT: LiveOut: arg1@0 arg2@0
+  // CHECK: BeginCurrentlyLive
+  // CHECK: cf.br
+  // COM: arg0@0 had its last user in the previous block.
+  // CHECK-SAME:   arg1@0 arg2@0
+  // CHECK-NEXT: EndCurrentlyLive
   cf.br ^exit
 ^bb2:
   // CHECK: Block: 2
   // CHECK-NEXT: LiveIn: arg1@0 arg2@0
   // CHECK-NEXT: LiveOut: arg1@0 arg2@0
+  // CHECK: BeginCurrentlyLive
+  // CHECK: cf.br
+  // CHECK-SAME:   arg1@0 arg2@0
+  // CHECK-NEXT: EndCurrentlyLive
   cf.br ^exit
 ^exit:
   // CHECK: Block: 3
   // CHECK-NEXT: LiveIn: arg1@0 arg2@0
   // CHECK-NEXT: LiveOut:{{ *$}}
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK: val_3
   // CHECK-NEXT:     %0 = arith.addi
   // CHECK-NEXT:     return
-  // CHECK-NEXT: EndLiveness
+  // CHECK-NEXT: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: arith.addi
+  // CHECK-SAME:   arg1@0 arg2@0 val_3
+  // CHECK: return
+  // CHECK-SAME:  val_3
+  // CHECK-NEXT: EndCurrentlyLive
   %result = arith.addi %arg1, %arg2 : i32
   return %result : i32
 }
@@ -73,24 +104,36 @@ func.func @func_loop(%arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg1@0
+  // CHECK: BeginCurrentlyLive
+  // CHECK: arith.constant
+  // CHECK-SAME:  arg0@0 arg1@0 val_2
+  // CHECK: cf.br
+  // CHECK-SAME:  arg0@0 arg1@0 val_2
+  // CHECK-NEXT: EndCurrentlyLive
   %const0 = arith.constant 0 : i32
   cf.br ^loopHeader(%const0, %arg0 : i32, i32)
 ^loopHeader(%counter : i32, %i : i32):
   // CHECK: Block: 1
   // CHECK-NEXT: LiveIn: arg1@0
   // CHECK-NEXT: LiveOut: arg1@0 arg0@1
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK-NEXT: val_5
   // CHECK-NEXT:     %2 = arith.cmpi
   // CHECK-NEXT:     cf.cond_br
-  // CHECK-NEXT: EndLiveness
+  // CHECK-NEXT: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: arith.cmpi
+  // CHECK-SAME:  arg1@0 arg0@1 arg1@1 val_5
+  // CHECK: cf.cond_br
+  // CHECK-SAME:  arg1@0 arg0@1 arg1@1 val_5
+  // CHECK-NEXT: EndCurrentlyLive
   %lessThan = arith.cmpi slt, %counter, %arg1 : i32
   cf.cond_br %lessThan, ^loopBody(%i : i32), ^exit(%i : i32)
 ^loopBody(%val : i32):
   // CHECK: Block: 2
   // CHECK-NEXT: LiveIn: arg1@0 arg0@1
   // CHECK-NEXT: LiveOut: arg1@0
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK-NEXT: val_7
   // CHECK-NEXT:     %c
   // CHECK-NEXT:     %4 = arith.addi
@@ -99,7 +142,17 @@ func.func @func_loop(%arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK-NEXT:     %4 = arith.addi
   // CHECK-NEXT:     %5 = arith.addi
   // CHECK-NEXT:     cf.br
-  // CHECK: EndLiveness
+  // CHECK: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: arith.constant
+  // CHECK-SAME:  arg1@0 arg0@1 arg0@2 val_7
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg1@0 arg0@1 arg0@2 val_7 val_8
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg1@0 arg0@1 val_7 val_8 val_9
+  // CHECK: cf.br
+  // CHECK-SAME:  arg1@0 val_8 val_9
+  // CHECK-NEXT: EndCurrentlyLive
   %const1 = arith.constant 1 : i32
   %inc = arith.addi %val, %const1 : i32
   %inc2 = arith.addi %counter, %const1 : i32
@@ -108,6 +161,12 @@ func.func @func_loop(%arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK: Block: 3
   // CHECK-NEXT: LiveIn: arg1@0
   // CHECK-NEXT: LiveOut:{{ *$}}
+  // CHECK: BeginCurrentlyLive
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg1@0 arg0@3 val_11
+  // CHECK: return
+  // CHECK-SAME:  val_11
+  // CHECK-NEXT: EndCurrentlyLive
   %result = arith.addi %sum, %arg1 : i32
   return %result : i32
 }
@@ -119,7 +178,7 @@ func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg2@0 val_9 val_10
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK-NEXT: val_4
   // CHECK-NEXT:    %0 = arith.addi
   // CHECK-NEXT:    %c
@@ -156,7 +215,25 @@ func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32
   // CHECK-NEXT:    %5 = arith.addi
   // CHECK-NEXT:    cf.cond_br
   // CHECK-NEXT:    %7
-  // CHECK: EndLiveness
+  // CHECK: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg0@0 arg1@0 arg2@0 arg3@0 val_4
+  // CHECK: arith.constant
+  // CHECK-SAME:  arg0@0 arg2@0 arg3@0 val_4 val_5
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg0@0 arg2@0 arg3@0 val_4 val_5 val_6
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg0@0 arg2@0 arg3@0 val_4 val_5 val_6 val_7
+  // CHECK: arith.muli
+  // CHECK-SAME:  arg0@0 arg2@0 val_4 val_5 val_6 val_7 val_8
+  // CHECK: arith.muli
+  // CHECK-SAME:  arg0@0 arg2@0 val_5 val_7 val_8 val_9
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg0@0 arg2@0 val_5 val_9 val_10
+  // CHECK: cf.cond_br
+  // CHECK-SAME:  arg0@0 arg2@0 val_9 val_10
+  // CHECK-NEXT: EndCurrentlyLive
   %0 = arith.addi %arg1, %arg2 : i32
   %const1 = arith.constant 1 : i32
   %1 = arith.addi %const1, %arg2 : i32
@@ -170,6 +247,14 @@ func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32
   // CHECK: Block: 1
   // CHECK-NEXT: LiveIn: arg2@0 val_9
   // CHECK-NEXT: LiveOut: arg2@0
+  // CHECK: BeginCurrentlyLive
+  // CHECK: arith.constant
+  // CHECK-SAME:  arg2@0 val_9
+  // CHECK: arith.muli
+  // CHECK-SAME:  arg2@0 val_9
+  // CHECK: cf.br
+  // CHECK-SAME:  arg2@0
+  // CHECK-NEXT: EndCurrentlyLive
   %const4 = arith.constant 4 : i32
   %6 = arith.muli %4, %const4 : i32
   cf.br ^exit(%6 : i32)
@@ -178,6 +263,14 @@ func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32
   // CHECK: Block: 2
   // CHECK-NEXT: LiveIn: arg2@0 val_9 val_10
   // CHECK-NEXT: LiveOut: arg2@0
+  // CHECK: BeginCurrentlyLive
+  // CHECK: arith.muli
+  // CHECK-SAME:  arg2@0 val_9 val_10
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg2@0
+  // CHECK: cf.br
+  // CHECK-SAME:  arg2@0
+  // CHECK: EndCurrentlyLive
   %7 = arith.muli %4, %5 : i32
   %8 = arith.addi %4, %arg2 : i32
   cf.br ^exit(%8 : i32)
@@ -186,6 +279,12 @@ func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32
   // CHECK: Block: 3
   // CHECK-NEXT: LiveIn: arg2@0
   // CHECK-NEXT: LiveOut:{{ *$}}
+  // CHECK: BeginCurrentlyLive
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg2@0
+  // CHECK: return
+  // CHECK-NOT: arg2@0
+  // CHECK: EndCurrentlyLive
   %result = arith.addi %sum, %arg2 : i32
   return %result : i32
 }
@@ -201,7 +300,7 @@ func.func @nested_region(
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut:{{ *$}}
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK-NEXT: val_7
   // CHECK-NEXT:    %0 = arith.addi
   // CHECK-NEXT:    %1 = arith.addi
@@ -212,13 +311,34 @@ func.func @nested_region(
   // CHECK-NEXT:    %1 = arith.addi
   // CHECK-NEXT:    scf.for
   // CHECK:         // func.return %1
-  // CHECK: EndLiveness
+  // CHECK: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg0@0 arg1@0 arg2@0 arg3@0 arg4@0 arg5@0 arg6@0 val_7
+  // CHECK: arith.addi
+  // CHECK-SAME:  arg0@0 arg1@0 arg2@0 arg4@0 arg5@0 arg6@0 val_7 val_8
+  // CHECK: scf.for
+  // CHECK-NEXT: arith.addi
+  // CHECK-NEXT: arith.addi
+  // CHECK-NEXT: memref.store
+  // CHECK-NEXT:  arg5@0 arg6@0 val_7 val_8
+  // CHECK: return
+  // CHECK-SAME:  val_8
+  // CHECK-NEXT: EndCurrentlyLive
   %0 = arith.addi %arg3, %arg4 : i32
   %1 = arith.addi %arg4, %arg5 : i32
   scf.for %arg6 = %arg0 to %arg1 step %arg2 {
     // CHECK: Block: 1
     // CHECK-NEXT: LiveIn: arg5@0 arg6@0 val_7
     // CHECK-NEXT: LiveOut:{{ *$}}
+    // CHECK: BeginCurrentlyLive
+    // CHECK-NEXT: arith.addi
+    // CHECK-SAME:   arg5@0 arg6@0 val_7 arg0@1 val_10
+    // CHECK-NEXT: arith.addi
+    // CHECK-SAME:   arg6@0 val_7 val_10 val_11
+    // CHECK-NEXT: memref.store
+    // CHECK-SAME:   arg6@0 val_11
+    // CHECK-NEXT: EndCurrentlyLive
     %2 = arith.addi %0, %arg5 : i32
     %3 = arith.addi %2, %0 : i32
     memref.store %3, %buffer[] : memref<i32>
@@ -234,7 +354,7 @@ func.func @nested_region2(
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut:{{ *$}}
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK-NEXT: val_7
   // CHECK-NEXT:    %0 = arith.addi
   // CHECK-NEXT:    %1 = arith.addi
@@ -246,7 +366,21 @@ func.func @nested_region2(
   // CHECK-NEXT:    %1 = arith.addi
   // CHECK-NEXT:    scf.for
   // CHECK:         // func.return %1
-  // CHECK: EndLiveness
+  // CHECK: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK-NEXT: arith.addi
+  // CHECK-SAME:   arg0@0 arg1@0 arg2@0 arg3@0 arg4@0 arg5@0 arg6@0 val_7
+  // CHECK-NEXT: arith.addi
+  // CHECK-SAME:   arg0@0 arg1@0 arg2@0 arg4@0 arg5@0 arg6@0 val_7 val_8
+  // CHECK-NEXT: scf.for {{.*}}
+  // CHECK-NEXT:   arith.addi
+  // CHECK-NEXT:   scf.for {{.*}} {
+  // CHECK-NEXT:     arith.addi
+  // CHECK-NEXT:     memref.store
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: arg0@0 arg1@0 arg2@0 arg5@0 arg6@0 val_7 val_8
+  // CHECK-NEXT: return
+  // CHECK-SAME:  val_8
   %arg0 : index, %arg1 : index, %arg2 : index,
   %arg3 : i32, %arg4 : i32, %arg5 : i32,
   %buffer : memref<i32>) -> i32 {
@@ -256,14 +390,28 @@ func.func @nested_region2(
     // CHECK: Block: 1
     // CHECK-NEXT: LiveIn: arg0@0 arg1@0 arg2@0 arg5@0 arg6@0 val_7
     // CHECK-NEXT: LiveOut:{{ *$}}
-    // CHECK-NEXT: BeginLiveness
+    // CHECK-NEXT: BeginLivenessIntervals
     // CHECK-NEXT: val_10
     // CHECK-NEXT:    %2 = arith.addi
     // CHECK-NEXT:    scf.for
     // CHECK:         // %3 = arith.addi
-    // CHECK: EndLiveness
+    // CHECK: EndLivenessIntervals
+    // CHECK-NEXT: BeginCurrentlyLive
+    // CHECK-NEXT: arith.addi
+    // CHECK-SAME:   arg0@0 arg1@0 arg2@0 arg5@0 arg6@0 val_7 arg0@1 val_10
+    // CHECK-NEXT: scf.for {{.*}}
+    // CHECK-NEXT:   arith.addi
+    // CHECK-NEXT:   memref.store
+    // CHECK-NEXT: arg0@0 arg1@0 arg2@0 arg6@0 val_7
     %2 = arith.addi %0, %arg5 : i32
     scf.for %arg7 = %arg0 to %arg1 step %arg2 {
+      // CHECK: Block: 2
+      // CHECK: BeginCurrentlyLive
+      // CHECK-NEXT: arith.addi
+      // CHECK-SAME:   arg6@0 val_7 val_10 arg0@2 val_12
+      // CHECK-NEXT: memref.store
+      // CHECK-SAME:   arg6@0 val_12
+      // CHECK: EndCurrentlyLive
       %3 = arith.addi %2, %0 : i32
       memref.store %3, %buffer[] : memref<i32>
     }
@@ -279,7 +427,7 @@ func.func @nested_region3(
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg0@0 arg1@0 arg2@0 arg6@0 val_7 val_8
-  // CHECK-NEXT: BeginLiveness
+  // CHECK-NEXT: BeginLivenessIntervals
   // CHECK-NEXT: val_7
   // CHECK-NEXT:    %0 = arith.addi
   // CHECK-NEXT:    %1 = arith.addi
@@ -288,7 +436,18 @@ func.func @nested_region3(
   // CHECK-NEXT:    %2 = arith.addi
   // CHECK-NEXT:    scf.for
   // CHECK:         // %2 = arith.addi
-  // CHECK: EndLiveness
+  // CHECK: EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK-NEXT: arith.addi
+  // CHECK-SAME:   arg0@0 arg1@0 arg2@0 arg3@0 arg4@0 arg5@0 arg6@0 val_7
+  // CHECK-NEXT: arith.addi
+  // CHECK-SAME:   arg0@0 arg1@0 arg2@0 arg4@0 arg5@0 arg6@0 val_7 val_8
+  // CHECK-NEXT: scf.for
+  // COM: Skipping the body of the scf.for...
+  // CHECK: arg0@0 arg1@0 arg2@0 arg5@0 arg6@0 val_7 val_8
+  // CHECK-NEXT: cf.br
+  // CHECK-SAME:   arg0@0 arg1@0 arg2@0 arg6@0 val_7 val_8
+  // CHECK-NEXT: EndCurrentlyLive
   %arg0 : index, %arg1 : index, %arg2 : index,
   %arg3 : i32, %arg4 : i32, %arg5 : i32,
   %buffer : memref<i32>) -> i32 {
@@ -298,6 +457,12 @@ func.func @nested_region3(
     // CHECK: Block: 1
     // CHECK-NEXT: LiveIn: arg5@0 arg6@0 val_7
     // CHECK-NEXT: LiveOut:{{ *$}}
+    // CHECK: BeginCurrentlyLive
+    // CHECK-NEXT: arith.addi
+    // CHECK-SAME:   arg5@0 arg6@0 val_7 arg0@1 val_10
+    // CHECK-NEXT: memref.store
+    // CHECK-SAME:   arg6@0 val_10
+    // CHECK-NEXT: EndCurrentlyLive
     %2 = arith.addi %0, %arg5 : i32
     memref.store %2, %buffer[] : memref<i32>
   }
@@ -307,10 +472,22 @@ func.func @nested_region3(
   // CHECK: Block: 2
   // CHECK-NEXT: LiveIn: arg0@0 arg1@0 arg2@0 arg6@0 val_7 val_8
   // CHECK-NEXT: LiveOut:{{ *$}}
+  // CHECK: BeginCurrentlyLive
+  // CHECK: scf.for
+  // CHECK: arg0@0 arg1@0 arg2@0 arg6@0 val_7 val_8
+  // CHECK-NEXT: return
+  // CHECK-SAME:   val_8
+  // CHECK-NEXT: EndCurrentlyLive
   scf.for %arg7 = %arg0 to %arg1 step %arg2 {
     // CHECK: Block: 3
     // CHECK-NEXT: LiveIn: arg6@0 val_7 val_8
     // CHECK-NEXT: LiveOut:{{ *$}}
+    // CHECK: BeginCurrentlyLive
+    // CHECK-NEXT: arith.addi
+    // CHECK-SAME:   arg6@0 val_7 val_8 arg0@3 val_12
+    // CHECK-NEXT: memref.store
+    // CHECK-SAME:   arg6@0 val_12
+    // CHECK-NEXT: EndCurrentlyLive
     %2 = arith.addi %0, %1 : i32
     memref.store %2, %buffer[] : memref<i32>
   }

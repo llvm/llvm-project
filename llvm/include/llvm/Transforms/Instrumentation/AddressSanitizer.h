@@ -17,12 +17,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 
 namespace llvm {
-class Function;
-class FunctionPass;
-class GlobalVariable;
-class MDNode;
 class Module;
-class ModulePass;
 class raw_ostream;
 
 struct AddressSanitizerOptions {

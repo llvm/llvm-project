@@ -122,14 +122,10 @@ define float @test15_unary_fneg(float %b, float %a) {
   ret float %4
 }
 
-; TODO: check if it is possible to perform the optimization without 'fast'
-; with 'reassoc' and 'nsz' only.
 define float @test15_reassoc_nsz(float %b, float %a) {
 ; CHECK-LABEL: @test15_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], 1.234000e+03
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz float [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc nsz float [[TMP2]], [[A]]
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[B:%.*]], 1.234000e+03
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %1 = fadd reassoc nsz float %a, 1234.0
   %2 = fadd reassoc nsz float %b, %1
@@ -197,15 +193,18 @@ define float @test16_unary_fneg(float %a, float %b, float %z) {
   ret float %g
 }
 
-; TODO: check if it is possible to perform the optimization without 'fast'
-; with 'reassoc' and 'nsz' only.
 define float @test16_reassoc_nsz(float %a, float %b, float %z) {
-; CHECK-LABEL: @test16_reassoc_nsz(
-; CHECK-NEXT:    [[C:%.*]] = fneg reassoc nsz float [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fmul reassoc nsz float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[E:%.*]] = fmul reassoc nsz float [[D]], [[C]]
-; CHECK-NEXT:    [[G:%.*]] = fmul reassoc nsz float [[E]], -1.234500e+04
-; CHECK-NEXT:    ret float [[G]]
+; REASSOC_AND_IC-LABEL: @test16_reassoc_nsz(
+; REASSOC_AND_IC-NEXT:    [[C:%.*]] = fmul reassoc nsz float [[A:%.*]], 1.234500e+04
+; REASSOC_AND_IC-NEXT:    [[E:%.*]] = fmul reassoc nsz float [[C]], [[B:%.*]]
+; REASSOC_AND_IC-NEXT:    [[F:%.*]] = fmul reassoc nsz float [[E]], [[Z:%.*]]
+; REASSOC_AND_IC-NEXT:    ret float [[F]]
+;
+; O2-LABEL: @test16_reassoc_nsz(
+; O2-NEXT:    [[D:%.*]] = fmul reassoc nsz float [[A:%.*]], 1.234500e+04
+; O2-NEXT:    [[E:%.*]] = fmul reassoc nsz float [[D]], [[B:%.*]]
+; O2-NEXT:    [[G:%.*]] = fmul reassoc nsz float [[E]], [[Z:%.*]]
+; O2-NEXT:    ret float [[G]]
 ;
   %c = fsub reassoc nsz float 0.000000e+00, %z
   %d = fmul reassoc nsz float %a, %b
@@ -282,7 +281,7 @@ define float @test19(float %a, float %b, float %c) nounwind  {
 
 define float @test19_reassoc_nsz(float %a, float %b, float %c) nounwind  {
 ; CHECK-LABEL: @test19_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[C:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[T7:%.*]] = fneg reassoc nsz float [[TMP1]]
 ; CHECK-NEXT:    ret float [[T7]]
 ;

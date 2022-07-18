@@ -585,6 +585,12 @@ def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "Has mAI instructions"
 >;
 
+def FeatureFP8Insts : SubtargetFeature<"fp8-insts",
+  "HasFP8Insts",
+  "true",
+  "Has fp8 and bf8 instructions"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -1130,6 +1136,7 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    Feature64BitDPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
+   FeatureFP8Insts,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1710,6 +1717,9 @@ def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
 
 def HasShaderCyclesRegister : Predicate<"Subtarget->hasShaderCyclesRegister()">,
   AssemblerPredicate<(all_of FeatureShaderCyclesRegister)>;
+
+def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
+  AssemblerPredicate<(all_of FeatureFP8Insts)>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;

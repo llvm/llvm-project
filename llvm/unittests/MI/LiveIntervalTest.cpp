@@ -662,6 +662,27 @@ TEST(LiveIntervalTest, SplitAtMultiInstruction) {
   });
 }
 
+TEST(LiveIntervalTest, RepairIntervals) {
+  liveIntervalTest(R"MIR(
+  %1:sgpr_32 = IMPLICIT_DEF
+  dead %2:sgpr_32 = COPY undef %3.sub0:sgpr_128
+  undef %4.sub2:sgpr_128 = COPY %1:sgpr_32
+  %5:sgpr_32 = COPY %4.sub2:sgpr_128
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+    MachineInstr &Instr1 = getMI(MF, 1, 0);
+    MachineInstr &Instr2 = getMI(MF, 2, 0);
+    MachineInstr &Instr3 = getMI(MF, 3, 0);
+    LIS.RemoveMachineInstrFromMaps(Instr2);
+    MachineBasicBlock *MBB = Instr1.getParent();
+    SmallVector<Register> OrigRegs{
+      Instr1.getOperand(0).getReg(),
+      Instr2.getOperand(0).getReg(),
+      Instr2.getOperand(1).getReg(),
+    };
+    LIS.repairIntervalsInRange(MBB, Instr2, Instr3, OrigRegs);
+  });
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   initLLVM();

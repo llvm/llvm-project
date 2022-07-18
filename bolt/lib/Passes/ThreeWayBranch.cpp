@@ -31,7 +31,8 @@ void ThreeWayBranch::runOnFunction(BinaryFunction &Function) {
   MCContext *Ctx = BC.Ctx.get();
   // New blocks will be added and layout will change,
   // so make a copy here to iterate over the original layout
-  BinaryFunction::BasicBlockOrderType BlockLayout = Function.getLayout();
+  BinaryFunction::BasicBlockOrderType BlockLayout(
+      Function.getLayout().block_begin(), Function.getLayout().block_end());
   for (BinaryBasicBlock *BB : BlockLayout) {
     // The block must be hot
     if (BB->getExecutionCount() == 0 ||

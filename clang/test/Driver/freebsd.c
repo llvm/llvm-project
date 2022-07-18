@@ -206,9 +206,10 @@
 // RUN: FileCheck -check-prefix=PPC64-MUNWIND %s
 // PPC64-MUNWIND: "-funwind-tables=2"
 
-/// -r suppresses default -l and crt*.o like -nostdlib.
+/// -r suppresses -dynamic-linker, default -l and crt*.o like -nostdlib.
 // RUN: %clang -### %s --target=aarch64-pc-freebsd11 -r \
 // RUN:   --sysroot=%S/Inputs/basic_freebsd64_tree 2>&1 | FileCheck %s --check-prefix=RELOCATABLE
 // RELOCATABLE:     "-r"
+// RELOCATABLE-NOT: "-dynamic-linker"
 // RELOCATABLE-NOT: "-l
 // RELOCATABLE-NOT: crt{{[^./]+}}.o

@@ -16,8 +16,6 @@
 namespace llvm {
 namespace object {
 
-class SectionRef;
-
 /// Decompressor helps to handle decompression of compressed sections.
 class Decompressor {
 public:

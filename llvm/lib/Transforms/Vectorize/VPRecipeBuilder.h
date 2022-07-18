@@ -157,10 +157,8 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Create a replicating region for instruction \p I that requires
-  /// predication. \p PredRecipe is a VPReplicateRecipe holding \p I.
-  VPRegionBlock *createReplicateRegion(Instruction *I,
-                                       VPReplicateRecipe *PredRecipe,
+  /// Create a replicating region for \p PredRecipe.
+  VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
                                        VPlanPtr &Plan);
 
   /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it

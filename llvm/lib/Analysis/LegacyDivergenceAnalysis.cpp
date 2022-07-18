@@ -393,14 +393,14 @@ void LegacyDivergenceAnalysis::print(raw_ostream &OS, const Module *) const {
     return;
 
   // Dumps all divergent values in F, arguments and then instructions.
-  for (auto &Arg : F->args()) {
+  for (const auto &Arg : F->args()) {
     OS << (isDivergent(&Arg) ? "DIVERGENT: " : "           ");
     OS << Arg << "\n";
   }
   // Iterate instructions using instructions() to ensure a deterministic order.
   for (const BasicBlock &BB : *F) {
     OS << "\n           " << BB.getName() << ":\n";
-    for (auto &I : BB.instructionsWithoutDebug()) {
+    for (const auto &I : BB.instructionsWithoutDebug()) {
       OS << (isDivergent(&I) ? "DIVERGENT:     " : "               ");
       OS << I << "\n";
     }

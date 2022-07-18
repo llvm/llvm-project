@@ -919,8 +919,6 @@ struct YieldOpInterface
   }
 };
 
-using tensor::ExtractSliceOp;
-
 /// Return the destinations that an ForeachThreadOp is inserting into. One per
 /// ParallelInsertSliceOp.
 static SmallVector<OpOperand *>

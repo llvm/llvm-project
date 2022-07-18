@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_STABLE_SORT_H
 #define _LIBCPP___ALGORITHM_RANGES_STABLE_SORT_H
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/make_projected.h>
 #include <__algorithm/stable_sort.h>
 #include <__config>
@@ -44,7 +45,7 @@ struct __fn {
     auto __last_iter = ranges::next(__first, __last);
 
     auto&& __projected_comp = ranges::__make_projected_comp(__comp, __proj);
-    std::__stable_sort_impl(std::move(__first), __last_iter, __projected_comp);
+    std::__stable_sort_impl<_RangeAlgPolicy>(std::move(__first), __last_iter, __projected_comp);
 
     return __last_iter;
   }

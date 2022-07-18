@@ -219,7 +219,7 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
   TII = MF->getSubtarget().getInstrInfo();
   RegClassInfo.runOnMachineFunction(*MF);
 
-  for (auto &L : *MLI)
+  for (const auto &L : *MLI)
     scheduleLoop(*L);
 
   return false;
@@ -231,7 +231,7 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
 /// the loop.
 bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
-  for (auto &InnerLoop : L)
+  for (const auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
 
 #ifndef NDEBUG
@@ -689,7 +689,7 @@ static bool isSuccOrder(SUnit *SUa, SUnit *SUb) {
   Worklist.push_back(SUa);
   while (!Worklist.empty()) {
     const SUnit *SU = Worklist.pop_back_val();
-    for (auto &SI : SU->Succs) {
+    for (const auto &SI : SU->Succs) {
       SUnit *SuccSU = SI.getSUnit();
       if (SI.getKind() == SDep::Order) {
         if (Visited.count(SuccSU))
@@ -750,7 +750,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
       ::getUnderlyingObjects(&MI, Objs);
       if (Objs.empty())
         Objs.push_back(UnknownValue);
-      for (auto V : Objs) {
+      for (const auto *V : Objs) {
         SmallVector<SUnit *, 4> &SUs = PendingLoads[V];
         SUs.push_back(&SU);
       }
@@ -759,12 +759,12 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
       ::getUnderlyingObjects(&MI, Objs);
       if (Objs.empty())
         Objs.push_back(UnknownValue);
-      for (auto V : Objs) {
+      for (const auto *V : Objs) {
         MapVector<const Value *, SmallVector<SUnit *, 4>>::iterator I =
             PendingLoads.find(V);
         if (I == PendingLoads.end())
           continue;
-        for (auto Load : I->second) {
+        for (auto *Load : I->second) {
           if (isSuccOrder(Load, &SU))
             continue;
           MachineInstr &LdMI = *Load->getInstr();
@@ -1407,8 +1407,8 @@ void SwingSchedulerDAG::CopyToPhiMutation::apply(ScheduleDAGInstrs *DAG) {
 
     SwingSchedulerDAG *SDAG = cast<SwingSchedulerDAG>(DAG);
     // Add the artificial dependencies if it does not form a cycle.
-    for (auto I : UseSUs) {
-      for (auto Src : SrcSUs) {
+    for (auto *I : UseSUs) {
+      for (auto *Src : SrcSUs) {
         if (!SDAG->Topo.IsReachable(I, Src) && Src != I) {
           Src->addPred(SDep(I, SDep::Artificial));
           SDAG->Topo.AddPred(Src, I);
@@ -1878,7 +1878,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
       Order = TopDown;
       LLVM_DEBUG(dbgs() << "  Top down (intersect) ");
     } else if (NodeSets.size() == 1) {
-      for (auto &N : Nodes)
+      for (const auto &N : Nodes)
         if (N->Succs.size() == 0)
           R.insert(N);
       Order = BottomUp;

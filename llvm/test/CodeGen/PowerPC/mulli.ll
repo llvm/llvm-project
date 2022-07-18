@@ -116,3 +116,12 @@ define i64 @test10(i64 %x) {
   ret i64 %res
 }
 
+define i32 @test11(i32 %x) {
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulli 3, 3, 21845
+; CHECK-NEXT:    slwi 3, 3, 5
+; CHECK-NEXT:    blr
+  %y = mul nsw i32 %x, 699040
+  ret i32 %y
+}

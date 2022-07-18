@@ -101,42 +101,6 @@ static bool runCGProfilePass(
   return addModuleFlags(M, Counts);
 }
 
-namespace {
-struct CGProfileLegacyPass final : public ModulePass {
-  static char ID;
-  CGProfileLegacyPass() : ModulePass(ID) {
-    initializeCGProfileLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<LazyBlockFrequencyInfoPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    auto GetBFI = [this](Function &F) -> BlockFrequencyInfo & {
-      return this->getAnalysis<LazyBlockFrequencyInfoPass>(F).getBFI();
-    };
-    auto GetTTI = [this](Function &F) -> TargetTransformInfo & {
-      return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    };
-
-    return runCGProfilePass(M, GetBFI, GetTTI, true);
-  }
-};
-
-} // namespace
-
-char CGProfileLegacyPass::ID = 0;
-
-INITIALIZE_PASS(CGProfileLegacyPass, "cg-profile", "Call Graph Profile", false,
-                false)
-
-ModulePass *llvm::createCGProfileLegacyPass() {
-  return new CGProfileLegacyPass();
-}
-
 PreservedAnalyses CGProfilePass::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

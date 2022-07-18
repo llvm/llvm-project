@@ -74,10 +74,10 @@ public:
 
 private:
   struct MemAccessInfo {
-    const Value *V;
-    const Value *Base;
-    int64_t Offset;
-    MemAccessInfo() : V(nullptr), Base(nullptr), Offset(0) {}
+    const Value *V = nullptr;
+    const Value *Base = nullptr;
+    int64_t Offset = 0;
+    MemAccessInfo() = default;
     bool isLargeStride(MemAccessInfo &Reference) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     Printable print() const {

@@ -223,15 +223,13 @@ decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l );
 _LIBCPP_FUNC_VIS float strtof_l(const char*, char**, locale_t);
 _LIBCPP_FUNC_VIS long double strtold_l(const char*, char**, locale_t);
 #endif
-inline _LIBCPP_INLINE_VISIBILITY
-int
+inline _LIBCPP_HIDE_FROM_ABI int
 islower_l(int __c, _locale_t __loc)
 {
  return _islower_l((int)__c, __loc);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
-int
+inline _LIBCPP_HIDE_FROM_ABI int
 isupper_l(int __c, _locale_t __loc)
 {
  return _isupper_l((int)__c, __loc);

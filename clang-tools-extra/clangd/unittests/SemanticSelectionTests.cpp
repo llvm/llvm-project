@@ -265,6 +265,86 @@ TEST(FoldingRanges, All) {
   }
 }
 
+TEST(FoldingRangesPseudoParser, All) {
+  const char *Tests[] = {
+      R"cpp(
+        #define FOO int foo() {\
+          int Variable = 42; \
+        }
+
+        // Do not generate folding range for braces within macro expansion.
+        FOO
+
+        // Do not generate folding range within macro arguments.
+        #define FUNCTOR(functor) functor
+        void func() {[[
+          FUNCTOR([](){});
+        ]]}
+
+        // Do not generate folding range with a brace coming from macro.
+        #define LBRACE {
+        void bar() LBRACE
+          int X = 42;
+        }
+      )cpp",
+      R"cpp(
+        void func() {[[
+          int Variable = 100;
+
+          if (Variable > 5) {[[
+            Variable += 42;
+          ]]} else if (Variable++)
+            ++Variable;
+          else {[[
+            Variable--;
+          ]]}
+
+          // Do not generate FoldingRange for empty CompoundStmts.
+          for (;;) {}
+
+          // If there are newlines between {}, we should generate one.
+          for (;;) {[[
+
+          ]]}
+        ]]}
+      )cpp",
+      R"cpp(
+        class Foo {[[
+        public:
+          Foo() {[[
+            int X = 1;
+          ]]}
+
+        private:
+          int getBar() {[[
+            return 42;
+          ]]}
+
+          // Braces are located at the same line: no folding range here.
+          void getFooBar() { }
+        ]]};
+      )cpp",
+      R"cpp(
+        // Range boundaries on escaped newlines.
+        class Foo \
+        \
+        {[[  \
+        public:
+          Foo() {[[\
+            int X = 1;
+          ]]}   \
+        ]]};
+      )cpp",
+  };
+  for (const char *Test : Tests) {
+    auto T = Annotations(Test);
+    EXPECT_THAT(
+        gatherFoldingRanges(llvm::cantFail(getFoldingRanges(T.code().str()))),
+        UnorderedElementsAreArray(T.ranges()))
+        << Test;
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

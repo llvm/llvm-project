@@ -617,10 +617,13 @@ static void checkDivisionRepresentation(
   // Check that the `dividends` and `expectedDividends` match. If the
   // denominator for a division is zero, we ignore its dividend.
   EXPECT_TRUE(divs.getNumDivs() == expectedDividends.size());
-  for (unsigned i = 0, e = divs.getNumDivs(); i < e; ++i)
-    if (divs.hasRepr(i))
-      for (unsigned j = 0, f = divs.getNumVars() + 1; j < f; ++j)
+  for (unsigned i = 0, e = divs.getNumDivs(); i < e; ++i) {
+    if (divs.hasRepr(i)) {
+      for (unsigned j = 0, f = divs.getNumVars() + 1; j < f; ++j) {
         EXPECT_TRUE(expectedDividends[i][j] == divs.getDividend(i)[j]);
+      }
+    }
+  }
 }
 
 TEST(IntegerPolyhedronTest, computeLocalReprSimple) {

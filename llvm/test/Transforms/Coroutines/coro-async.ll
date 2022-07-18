@@ -566,7 +566,7 @@ entry:
 ; CHECK-LABEL: define swiftcc void @undefined_coro_async_resume
 ; CHECK-NOT: @llvm.coro.async.resume
 ; CHECK: call void @use(i8* null)
-; CHECK: unreachable
+; CHECK: ret
 
 declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, i8*, i8*, ...)
 declare i8* @llvm.coro.prepare.async(i8*)
