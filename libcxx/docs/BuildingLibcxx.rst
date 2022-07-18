@@ -99,7 +99,8 @@ it is the simplest way to build.
           -T "ClangCL"                                    ^
           -DLLVM_ENABLE_RUNTIMES=libcxx                   ^
           -DLIBCXX_ENABLE_SHARED=YES                      ^
-          -DLIBCXX_ENABLE_STATIC=NO
+          -DLIBCXX_ENABLE_STATIC=NO                       ^
+          -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
   > cmake --build build
 
 CMake + ninja (MSVC)
@@ -130,7 +131,8 @@ In either case, then run:
   > cmake -G Ninja -S runtimes -B build                                               ^
           -DCMAKE_C_COMPILER=clang-cl                                                 ^
           -DCMAKE_CXX_COMPILER=clang-cl                                               ^
-          -DLLVM_ENABLE_RUNTIMES=libcxx
+          -DLLVM_ENABLE_RUNTIMES=libcxx                                               ^
+          -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
   > ninja -C build cxx
   > ninja -C build check-cxx
 
@@ -295,6 +297,23 @@ libc++ specific options
 
   Path where target-specific libc++ headers should be installed. If a relative
   path, relative to ``CMAKE_INSTALL_PREFIX``.
+
+.. _libc++experimental options:
+
+libc++experimental Specific Options
+------------------------------------
+
+.. option:: LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL
+
+  **Default**: ``ON``
+
+  Build and test libc++experimental.a.
+
+.. option:: LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY:BOOL
+
+  **Default**: ``LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY AND LIBCXX_INSTALL_LIBRARY``
+
+  Install libc++experimental.a alongside libc++.
 
 
 .. _ABI Library Specific Options:
