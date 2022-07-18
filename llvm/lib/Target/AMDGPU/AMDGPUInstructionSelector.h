@@ -63,11 +63,9 @@ public:
 
 private:
   struct GEPInfo {
-    const MachineInstr &GEP;
     SmallVector<unsigned, 2> SgprParts;
     SmallVector<unsigned, 2> VgprParts;
-    int64_t Imm;
-    GEPInfo(const MachineInstr &GEP) : GEP(GEP), Imm(0) { }
+    int64_t Imm = 0;
   };
 
   bool isSGPR(Register Reg) const;
@@ -200,12 +198,16 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
+  bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
+                        int64_t *Offset) const;
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSmrdImm32(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSmrdSgpr(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSmrdSgprImm(MachineOperand &Root) const;
 
   std::pair<Register, int> selectFlatOffsetImpl(MachineOperand &Root,
                                                 uint64_t FlatVariant) const;
