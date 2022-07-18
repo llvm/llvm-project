@@ -754,15 +754,22 @@ protected:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // If we are running our step-over the watchpoint plan, stop if it's done
     // and continue if it's not:
+    if (m_should_stop_is_valid)
+      return m_should_stop;
+
+    // If we are running our step over plan, then stop here and let the regular
+    // ShouldStop figure out what we should do:  Otherwise, give our plan
+    // more time to get run:
     if (m_using_step_over_plan)
       return m_step_over_plan_complete;
 
+    Log *log = GetLog(LLDBLog::Process);
     ThreadSP thread_sp(m_thread_wp.lock());
     assert(thread_sp);
     WatchpointSP wp_sp(
         thread_sp->CalculateTarget()->GetWatchpointList().FindByID(GetValue()));
+    // If we can no longer find the watchpoint, we just have to stop:
     if (!wp_sp) {
-      Log *log = GetLog(LLDBLog::Process);
 
       LLDB_LOGF(log,
                 "Process::%s could not find watchpoint location id: %" PRId64
@@ -796,23 +803,42 @@ protected:
     uint32_t num;
     bool wp_triggers_after;
 
-    if (process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
+    if (!process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
             .Success()) {
-      if (wp_triggers_after)
-        return true;
-      
+      m_should_stop_is_valid = true;
+      m_should_stop = true;
+      return m_should_stop;
+    }
+            
+    if (!wp_triggers_after) {
+      // We have to step over the breakpoint before we know what to do:   
       StopInfoWatchpointSP me_as_siwp_sp 
           = std::static_pointer_cast<StopInfoWatchpoint>(shared_from_this());
       ThreadPlanSP step_over_wp_sp(new ThreadPlanStepOverWatchpoint(
           *(thread_sp.get()), me_as_siwp_sp, wp_sp));
       Status error;
       error = thread_sp->QueueThreadPlan(step_over_wp_sp, false);
-      m_using_step_over_plan = true;
-      return !error.Success();
+      // If we couldn't push the thread plan, just stop here:
+      if (!error.Success()) {
+        LLDB_LOGF(log, "Could not push our step over watchpoint plan: %s", 
+            error.AsCString());
+
+        m_should_stop = true;
+        m_should_stop_is_valid = true;
+        return true;
+      } else {
+      // Otherwise, don't set m_should_stop, we don't know that yet.  Just 
+      // say we should continue:
+        m_using_step_over_plan = true;
+        return false;
+      }
+    } else {
+      // We didn't have to do anything special here, so just return our value:
+      m_should_stop_is_valid = true;
+      return m_should_stop;
     }
-    // If we don't have to step over the watchpoint, just let the PerformAction
-    // determine what we should do.
-    return true;
+    
+    return m_should_stop;
   }
 
   bool ShouldStop(Event *event_ptr) override {
