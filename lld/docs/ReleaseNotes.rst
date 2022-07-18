@@ -87,6 +87,8 @@ MinGW Improvements
 
 * The ``--disable-reloc-section`` option is now supported.
   (`D127478 <https://reviews.llvm.org/D127478>`_)
+* The ``--exclude-symbols`` option is now supported.
+  (`D130118 <https://reviews.llvm.org/D130118>`_)
 
 MachO Improvements
 ------------------

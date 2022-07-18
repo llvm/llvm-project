@@ -28,6 +28,7 @@ public:
   AutoExporter();
 
   void addWholeArchive(StringRef path);
+  void addExcludedSymbol(StringRef symbol);
 
   llvm::StringSet<> excludeSymbols;
   llvm::StringSet<> excludeSymbolPrefixes;
