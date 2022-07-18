@@ -147,9 +147,9 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 // inserted before other functions in the module.
 //
 
-// CHECK: declare ptr @malloc(i64)
-llvm.func @malloc(i64) -> !llvm.ptr<i8>
-// CHECK: declare void @free(ptr)
+// CHECK: declare ptr @_mlir_alloc(i64)
+llvm.func @_mlir_alloc(i64) -> !llvm.ptr<i8>
+// CHECK: declare void @_mlir_free(ptr)
 
 
 //
@@ -499,7 +499,7 @@ llvm.func @dso_local_func() attributes {dso_local} {
 
 // CHECK-LABEL: define void @memref_alloc()
 llvm.func @memref_alloc() {
-// CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 400)
+// CHECK-NEXT: %{{[0-9]+}} = call ptr @_mlir_alloc(i64 400)
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr } undef, ptr %{{[0-9]+}}, 0
   %0 = llvm.mlir.constant(10 : index) : i64
   %1 = llvm.mlir.constant(10 : index) : i64
@@ -507,7 +507,7 @@ llvm.func @memref_alloc() {
   %3 = llvm.mlir.undef : !llvm.struct<(ptr<f32>)>
   %4 = llvm.mlir.constant(4 : index) : i64
   %5 = llvm.mul %2, %4 : i64
-  %6 = llvm.call @malloc(%5) : (i64) -> !llvm.ptr<i8>
+  %6 = llvm.call @_mlir_alloc(%5) : (i64) -> !llvm.ptr<i8>
   %7 = llvm.bitcast %6 : !llvm.ptr<i8> to !llvm.ptr<f32>
   %8 = llvm.insertvalue %7, %3[0] : !llvm.struct<(ptr<f32>)>
 // CHECK-NEXT: ret void
@@ -520,13 +520,13 @@ llvm.func @get_index() -> i64
 // CHECK-LABEL: define void @store_load_static()
 llvm.func @store_load_static() {
 ^bb0:
-// CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 40)
+// CHECK-NEXT: %{{[0-9]+}} = call ptr @_mlir_alloc(i64 40)
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr } undef, ptr %{{[0-9]+}}, 0
   %0 = llvm.mlir.constant(10 : index) : i64
   %1 = llvm.mlir.undef : !llvm.struct<(ptr<f32>)>
   %2 = llvm.mlir.constant(4 : index) : i64
   %3 = llvm.mul %0, %2 : i64
-  %4 = llvm.call @malloc(%3) : (i64) -> !llvm.ptr<i8>
+  %4 = llvm.call @_mlir_alloc(%3) : (i64) -> !llvm.ptr<i8>
   %5 = llvm.bitcast %4 : !llvm.ptr<i8> to !llvm.ptr<f32>
   %6 = llvm.insertvalue %5, %1[0] : !llvm.struct<(ptr<f32>)>
   %7 = llvm.mlir.constant(1.000000e+00 : f32) : f32
@@ -587,13 +587,13 @@ llvm.func @store_load_static() {
 // CHECK-LABEL: define void @store_load_dynamic(i64 {{%.*}})
 llvm.func @store_load_dynamic(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 4
-// CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 %{{[0-9]+}})
+// CHECK-NEXT: %{{[0-9]+}} = call ptr @_mlir_alloc(i64 %{{[0-9]+}})
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } undef, ptr %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
   %0 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, i64)>
   %1 = llvm.mlir.constant(4 : index) : i64
   %2 = llvm.mul %arg0, %1 : i64
-  %3 = llvm.call @malloc(%2) : (i64) -> !llvm.ptr<i8>
+  %3 = llvm.call @_mlir_alloc(%2) : (i64) -> !llvm.ptr<i8>
   %4 = llvm.bitcast %3 : !llvm.ptr<i8> to !llvm.ptr<f32>
   %5 = llvm.insertvalue %4, %0[0] : !llvm.struct<(ptr<f32>, i64)>
   %6 = llvm.insertvalue %arg0, %5[1] : !llvm.struct<(ptr<f32>, i64)>
@@ -660,7 +660,7 @@ llvm.func @store_load_mixed(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 4
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 10
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 4
-// CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 %{{[0-9]+}})
+// CHECK-NEXT: %{{[0-9]+}} = call ptr @_mlir_alloc(i64 %{{[0-9]+}})
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64, i64 } undef, ptr %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64, i64 } %{{[0-9]+}}, i64 10, 2
@@ -672,7 +672,7 @@ llvm.func @store_load_mixed(%arg0: i64) {
   %6 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, i64, i64)>
   %7 = llvm.mlir.constant(4 : index) : i64
   %8 = llvm.mul %5, %7 : i64
-  %9 = llvm.call @malloc(%8) : (i64) -> !llvm.ptr<i8>
+  %9 = llvm.call @_mlir_alloc(%8) : (i64) -> !llvm.ptr<i8>
   %10 = llvm.bitcast %9 : !llvm.ptr<i8> to !llvm.ptr<f32>
   %11 = llvm.insertvalue %10, %6[0] : !llvm.struct<(ptr<f32>, i64, i64)>
   %12 = llvm.insertvalue %arg0, %11[1] : !llvm.struct<(ptr<f32>, i64, i64)>
@@ -773,7 +773,7 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr<f32>)>, %arg1: !llvm.struct
   llvm.store %2, %14 : !llvm.ptr<f32>
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 10, %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 4
-// CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 %{{[0-9]+}})
+// CHECK-NEXT: %{{[0-9]+}} = call ptr @_mlir_alloc(i64 %{{[0-9]+}})
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } undef, ptr %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
   %15 = llvm.mlir.constant(10 : index) : i64
@@ -781,7 +781,7 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr<f32>)>, %arg1: !llvm.struct
   %17 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, i64)>
   %18 = llvm.mlir.constant(4 : index) : i64
   %19 = llvm.mul %16, %18 : i64
-  %20 = llvm.call @malloc(%19) : (i64) -> !llvm.ptr<i8>
+  %20 = llvm.call @_mlir_alloc(%19) : (i64) -> !llvm.ptr<i8>
   %21 = llvm.bitcast %20 : !llvm.ptr<i8> to !llvm.ptr<f32>
   %22 = llvm.insertvalue %21, %17[0] : !llvm.struct<(ptr<f32>, i64)>
   %23 = llvm.insertvalue %1, %22[1] : !llvm.struct<(ptr<f32>, i64)>
