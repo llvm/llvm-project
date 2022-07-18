@@ -5919,8 +5919,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       assert(!magics.IsAdd && "Should use cheap fixup now");
     }
 
-    APInt Magic = magics.Magic;
-
     unsigned SelNPQ;
     if (!magics.IsAdd || Divisor.isOne()) {
       assert(magics.ShiftAmount < Divisor.getBitWidth() &&
@@ -5933,7 +5931,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     }
 
     PreShifts.push_back(DAG.getConstant(PreShift, dl, ShSVT));
-    MagicFactors.push_back(DAG.getConstant(Magic, dl, SVT));
+    MagicFactors.push_back(DAG.getConstant(magics.Magic, dl, SVT));
     NPQFactors.push_back(
         DAG.getConstant(SelNPQ ? APInt::getOneBitSet(EltBits, EltBits - 1)
                                : APInt::getZero(EltBits),
