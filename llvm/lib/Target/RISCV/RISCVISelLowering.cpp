@@ -294,7 +294,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, XLenVT, Custom);
   }
 
-  static constexpr ISD::NodeType FPLegalNodeTypes[] = {
+  static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
       ISD::LLRINT,         ISD::LROUND,        ISD::LLROUND,
       ISD::STRICT_LRINT,   ISD::STRICT_LLRINT, ISD::STRICT_LROUND,
@@ -307,7 +307,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE, ISD::SETGT,
       ISD::SETGE,  ISD::SETNE,  ISD::SETO,   ISD::SETUO};
 
-  static const ISD::NodeType FPOpToExpand[] = {
+  static const unsigned FPOpToExpand[] = {
       ISD::FSIN, ISD::FCOS,       ISD::FSINCOS,   ISD::FPOW,
       ISD::FREM, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
@@ -315,8 +315,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   if (Subtarget.hasStdExtZfh()) {
-    for (auto NT : FPLegalNodeTypes)
-      setOperationAction(NT, MVT::f16, Legal);
+    setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f16, Expand);
@@ -340,14 +339,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtF()) {
-    for (auto NT : FPLegalNodeTypes)
-      setOperationAction(NT, MVT::f32, Legal);
+    setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT, MVT::f32, Custom);
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
-    for (auto Op : FPOpToExpand)
-      setOperationAction(Op, MVT::f32, Expand);
+    setOperationAction(FPOpToExpand, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   }
@@ -356,8 +353,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtD()) {
-    for (auto NT : FPLegalNodeTypes)
-      setOperationAction(NT, MVT::f64, Legal);
+    setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
@@ -366,8 +362,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
-    for (auto Op : FPOpToExpand)
-      setOperationAction(Op, MVT::f64, Expand);
+    setOperationAction(FPOpToExpand, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   }
@@ -458,17 +453,22 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,
         ISD::VP_FP_EXTEND};
 
+    static const unsigned IntegerVecReduceOps[] = {
+        ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
+        ISD::VECREDUCE_XOR,  ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN,
+        ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN};
+
+    static const unsigned FloatingPointVecReduceOps[] = {
+        ISD::VECREDUCE_FADD, ISD::VECREDUCE_SEQ_FADD, ISD::VECREDUCE_FMIN,
+        ISD::VECREDUCE_FMAX};
+
     if (!Subtarget.is64Bit()) {
       // We must custom-lower certain vXi64 operations on RV32 due to the vector
       // element type being illegal.
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                          MVT::i64, Custom);
 
-      setOperationAction({ISD::VECREDUCE_ADD, ISD::VECREDUCE_AND,
-                          ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR,
-                          ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN,
-                          ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN},
-                         MVT::i64, Custom);
+      setOperationAction(IntegerVecReduceOps, MVT::i64, Custom);
 
       setOperationAction({ISD::VP_REDUCE_ADD, ISD::VP_REDUCE_AND,
                           ISD::VP_REDUCE_OR, ISD::VP_REDUCE_XOR,
@@ -581,11 +581,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Custom-lower reduction operations to set up the corresponding custom
       // nodes' operands.
-      setOperationAction({ISD::VECREDUCE_ADD, ISD::VECREDUCE_AND,
-                          ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR,
-                          ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN,
-                          ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN},
-                         VT, Custom);
+      setOperationAction(IntegerVecReduceOps, VT, Custom);
 
       setOperationAction(IntegerVPOps, VT, Custom);
 
@@ -661,9 +657,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
                          VT, Custom);
 
-      setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_SEQ_FADD,
-                          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX},
-                         VT, Custom);
+      setOperationAction(FloatingPointVecReduceOps, VT, Custom);
 
       // Expand FP operations that need libcalls.
       setOperationAction(ISD::FREM, VT, Expand);
@@ -905,17 +899,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
                            VT, Custom);
 
-        for (auto CC : VFPCCToExpand)
-          setCondCodeAction(CC, VT, Expand);
+        setCondCodeAction(VFPCCToExpand, VT, Expand);
 
         setOperationAction({ISD::VSELECT, ISD::SELECT}, VT, Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
-        setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_SEQ_FADD,
-                            ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX},
-                           VT, Custom);
+        setOperationAction(FloatingPointVecReduceOps, VT, Custom);
 
         setOperationAction(FloatingPointVPOps, VT, Custom);
       }
