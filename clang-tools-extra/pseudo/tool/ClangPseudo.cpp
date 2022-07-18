@@ -8,6 +8,7 @@
 
 #include "clang-pseudo/Bracket.h"
 #include "clang-pseudo/DirectiveTree.h"
+#include "clang-pseudo/Forest.h"
 #include "clang-pseudo/GLR.h"
 #include "clang-pseudo/Language.h"
 #include "clang-pseudo/Token.h"
@@ -18,7 +19,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -45,6 +45,8 @@ static opt<bool>
                     desc("Strip directives and select conditional sections"));
 static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
+static opt<std::string> HTMLForest("html-forest",
+                                   desc("output file for HTML forest"));
 static opt<std::string> StartSymbol("start-symbol",
                                     desc("specify the start symbol to parse"),
                                     init("translation-unit"));
@@ -62,6 +64,9 @@ static std::string readOrDie(llvm::StringRef Path) {
 
 namespace clang {
 namespace pseudo {
+// Defined in HTMLForest.cpp
+void writeHTMLForest(llvm::raw_ostream &OS, const Grammar &,
+                     const ForestNode &Root, const TokenStream &);
 namespace {
 
 struct NodeStats {
@@ -149,6 +154,17 @@ int main(int argc, char *argv[]) {
                  *StartSymID, Lang);
     if (PrintForest)
       llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/true);
+
+    if (HTMLForest.getNumOccurrences()) {
+      std::error_code EC;
+      llvm::raw_fd_ostream HTMLOut(HTMLForest, EC);
+      if (EC) {
+        llvm::errs() << "Couldn't write " << HTMLForest << ": " << EC.message()
+                     << "\n";
+        return 2;
+      }
+      clang::pseudo::writeHTMLForest(HTMLOut, Lang.G, Root, *ParseableStream);
+    }
 
     if (PrintStatistics) {
       llvm::outs() << "Forest bytes: " << Arena.bytes()
