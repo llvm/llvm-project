@@ -50,7 +50,7 @@
 define dso_local i32 @yyparse_1() #0 {
 b1:
   call void @llvm.pseudoprobe(i64 -7702751003264189226, i64 1, i32 0, i64 -1)
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   br label %b2
 ; CHECK: - b1: float = {{.*}}, int = {{.*}}, count = 1
@@ -96,7 +96,7 @@ b8:
 
 b9:
   call void @llvm.pseudoprobe(i64 -7702751003264189226, i64 9, i32 0, i64 -1)
-  %1 = load i32, i32* @yydebug, align 4
+  %1 = load i32, ptr @yydebug, align 4
   ret i32 %1
 ; CHECK: - b9: float = {{.*}}, int = {{.*}}, count = 1
 
@@ -138,14 +138,14 @@ b9:
 define dso_local i32 @foo1() #0 !prof !132 {
 b1:
   call void @llvm.pseudoprobe(i64 7682762345278052905, i64 1, i32 0, i64 -1)
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   br label %b2
 ; CHECK3: - b1: float = {{.*}}, int = {{.*}}, count = 1
 
 b2:
   call void @llvm.pseudoprobe(i64 7682762345278052905, i64 2, i32 0, i64 -1)
-  %1 = load i32, i32* @yydebug, align 4
+  %1 = load i32, ptr @yydebug, align 4
   switch i32 %1, label %b4 [
     i32 1, label %indirectgoto
     i32 2, label %b3
@@ -159,14 +159,14 @@ b3:
 
 b4:
   call void @llvm.pseudoprobe(i64 7682762345278052905, i64 4, i32 0, i64 -1)
-  %2 = load i32, i32* @yydebug, align 4
+  %2 = load i32, ptr @yydebug, align 4
   ret i32 %2
 ; CHECK3: - b4: float = {{.*}}, int = {{.*}}, count = 1
 
 indirectgoto:
   %indirect.goto.dest = alloca i8, align 4
   call void @llvm.pseudoprobe(i64 7682762345278052905, i64 5, i32 0, i64 -1)
-  indirectbr i8* %indirect.goto.dest, [label %b2, label %indirectgoto, label %b4, label %b3], !prof !134
+  indirectbr ptr %indirect.goto.dest, [label %b2, label %indirectgoto, label %b4, label %b3], !prof !134
 ; CHECK3: - indirectgoto: float = {{.*}}, int = {{.*}}, count = 17747
 
 }

@@ -6,7 +6,7 @@
 %"class.llvm::SmallVectorImpl.base" = type { %"class.llvm::SmallVectorTemplateBase.base" }
 %"class.llvm::SmallVectorTemplateBase.base" = type { %"class.llvm::SmallVectorTemplateCommon.base" }
 %"class.llvm::SmallVectorTemplateCommon.base" = type <{ %"class.llvm::SmallVectorBase", %"struct.llvm::AlignedCharArrayUnion" }>
-%"class.llvm::SmallVectorBase" = type { i8*, i8*, i8* }
+%"class.llvm::SmallVectorBase" = type { ptr, ptr, ptr }
 %"struct.llvm::AlignedCharArrayUnion" = type { %"struct.llvm::AlignedCharArray" }
 %"struct.llvm::AlignedCharArray" = type { [4 x i8] }
 %"struct.llvm::SmallVectorStorage" = type { [31 x %"struct.llvm::AlignedCharArrayUnion"] }
@@ -16,18 +16,17 @@ $foo = comdat any
 
 $bar = comdat any
 
-define void @foo(%"class.llvm::FoldingSetNodeID"* %this) #0 align 2 !dbg !3 {
-  %1 = alloca %"class.llvm::FoldingSetNodeID"*, align 8
-  store %"class.llvm::FoldingSetNodeID"* %this, %"class.llvm::FoldingSetNodeID"** %1, align 8
-  %2 = load %"class.llvm::FoldingSetNodeID"*, %"class.llvm::FoldingSetNodeID"** %1, align 8
-  %3 = getelementptr inbounds %"class.llvm::FoldingSetNodeID", %"class.llvm::FoldingSetNodeID"* %2, i32 0, i32 0
+define void @foo(ptr %this) #0 align 2 !dbg !3 {
+  %1 = alloca ptr, align 8
+  store ptr %this, ptr %1, align 8
+  %2 = load ptr, ptr %1, align 8
 ; the call should have been inlined after sample-profile pass
 ; CHECK-NOT: call
-  call void bitcast (void (%"class.llvm::SmallVectorImpl"*)* @bar to void (%"class.llvm::SmallVector"*)*)(%"class.llvm::SmallVector"* %3), !dbg !7
+  call void @bar(ptr %2), !dbg !7
   ret void
 }
 
-define void @bar(%"class.llvm::SmallVectorImpl"* %this) #0 align 2 !dbg !8 {
+define void @bar(ptr %this) #0 align 2 !dbg !8 {
   ret void
 }
 

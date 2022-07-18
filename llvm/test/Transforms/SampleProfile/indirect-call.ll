@@ -2,10 +2,10 @@
 ; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/indirect-call.compact.afdo | FileCheck %s
 
 ; CHECK-LABEL: @test
-define void @test(void ()*) #0 !dbg !3 {
-  %2 = alloca void ()*
-  store void ()* %0, void ()** %2
-  %3 = load void ()*, void ()** %2
+define void @test(ptr) #0 !dbg !3 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
   ; CHECK: call {{.*}}, !prof ![[PROF:[0-9]+]]
   call void %3(), !dbg !4
   ret void
@@ -13,10 +13,10 @@ define void @test(void ()*) #0 !dbg !3 {
 
 ; CHECK-LABEL: @test_inline
 ; If the indirect call is promoted and inlined in profile, we should promote and inline it.
-define void @test_inline(i64* (i32*)*, i32* %x) #0 !dbg !6 {
-  %2 = alloca i64* (i32*)*
-  store i64* (i32*)* %0, i64* (i32*)** %2
-  %3 = load i64* (i32*)*, i64* (i32*)** %2
+define void @test_inline(ptr, ptr %x) #0 !dbg !6 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
 ; CHECK: icmp {{.*}} @foo_inline2
 ; CHECK: br {{.*}} !prof ![[BR1:[0-9]+]]
 ; CHECK: if.true.direct_targ:
@@ -28,44 +28,44 @@ define void @test_inline(i64* (i32*)*, i32* %x) #0 !dbg !6 {
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect2:
 ; CHECK: call {{.*}} !prof ![[VP:[0-9]+]]
-  call i64* %3(i32* %x), !dbg !7
+  call ptr %3(ptr %x), !dbg !7
   ret void
 }
 
 ; CHECK-LABEL: @test_inline_strip
 ; If the indirect call is promoted and inlined in profile, and the callee name
 ; is stripped we should promote and inline it.
-define void @test_inline_strip(i64* (i32*)*, i32* %x) #0 !dbg !8 {
-  %2 = alloca i64* (i32*)*
-  store i64* (i32*)* %0, i64* (i32*)** %2
-  %3 = load i64* (i32*)*, i64* (i32*)** %2
+define void @test_inline_strip(ptr, ptr %x) #0 !dbg !8 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
 ; CHECK: icmp {{.*}} @foo_inline_strip.suffix
 ; CHECK: if.true.direct_targ:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect:
 ; CHECK: call
-  call i64* %3(i32* %x), !dbg !9
+  call ptr %3(ptr %x), !dbg !9
   ret void
 }
 
 ; CHECK-LABEL: @test_inline_strip_conflict
 ; If the indirect call is promoted and inlined in profile, and the callee name
 ; is stripped, but have more than 1 potential match, we should not promote.
-define void @test_inline_strip_conflict(i64* (i32*)*, i32* %x) #0 !dbg !10 {
-  %2 = alloca i64* (i32*)*
-  store i64* (i32*)* %0, i64* (i32*)** %2
-  %3 = load i64* (i32*)*, i64* (i32*)** %2
+define void @test_inline_strip_conflict(ptr, ptr %x) #0 !dbg !10 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
 ; CHECK-NOT: if.true.direct_targ:
-  call i64* %3(i32* %x), !dbg !11
+  call ptr %3(ptr %x), !dbg !11
   ret void
 }
 
 ; CHECK-LABEL: @test_noinline
 ; If the indirect call target is not available, we should not promote it.
-define void @test_noinline(void ()*) #0 !dbg !12 {
-  %2 = alloca void ()*
-  store void ()* %0, void ()** %2
-  %3 = load void ()*, void ()** %2
+define void @test_noinline(ptr) #0 !dbg !12 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
 ; CHECK-NOT: icmp
 ; CHECK: call
   call void %3(), !dbg !13
@@ -75,12 +75,12 @@ define void @test_noinline(void ()*) #0 !dbg !12 {
 ; CHECK-LABEL: @test_noinline_bitcast
 ; If the indirect call has been promoted to a direct call with bitcast,
 ; do not inline it.
-define float @test_noinline_bitcast(float ()*) #0 !dbg !26 {
-  %2 = alloca float ()*
-  store float ()* %0, float ()** %2
+define float @test_noinline_bitcast(ptr) #0 !dbg !26 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
 ; CHECK: icmp
 ; CHECK: call
-  %3 = load float ()*, float ()** %2
+  %3 = load ptr, ptr %2
   %4 = call float %3(), !dbg !27
   ret float %4
 }
@@ -90,44 +90,44 @@ define float @test_noinline_bitcast(float ()*) #0 !dbg !26 {
 define void @test_norecursive_inline() #0 !dbg !24 {
 ; CHECK-NOT: icmp
 ; CHECK: call
-  %1 = load void ()*, void ()** @y, align 8
+  %1 = load ptr, ptr @y, align 8
   call void %1(), !dbg !25
   ret void
 }
 
-define i32* @return_arg(i32* readnone returned) #0 !dbg !29{
-  ret i32* %0
+define ptr @return_arg(ptr readnone returned) #0 !dbg !29{
+  ret ptr %0
 }
 
 ; CHECK-LABEL: @return_arg_caller
 ; When the promoted indirect call returns a parameter that was defined by the
 ; return value of a previous direct call. Checks both direct call and promoted
 ; indirect call are inlined.
-define i32* @return_arg_caller(i32* (i32*)* nocapture) #0 !dbg !30{
-; CHECK-NOT: call i32* @foo_inline1
+define ptr @return_arg_caller(ptr nocapture) #0 !dbg !30{
+; CHECK-NOT: call ptr @foo_inline1
 ; CHECK: if.true.direct_targ:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect:
 ; CHECK: call
-  %2 = call i32* @foo_inline1(i32* null), !dbg !31
-  %cmp = icmp ne i32* %2, null
+  %2 = call ptr @foo_inline1(ptr null), !dbg !31
+  %cmp = icmp ne ptr %2, null
   br i1 %cmp, label %then, label %else
 
 then:
-  %3 = tail call i32* %0(i32* %2), !dbg !32
-  ret i32* %3
+  %3 = tail call ptr %0(ptr %2), !dbg !32
+  ret ptr %3
 
 else:
-  ret i32* null
+  ret ptr null
 }
 
 ; CHECK-LABEL: @branch_prof_valid
 ; Check the conditional branch generated by indirect call promotion won't
 ; have invalid profile like !{!"branch_weights", i32 0, i32 0}.
-define void @branch_prof_valid(void ()* %t0) #0 !dbg !33 {
-  %t1 = alloca void ()*
-  store void ()* %t0, void ()** %t1
-  %t2 = load void ()*, void ()** %t1
+define void @branch_prof_valid(ptr %t0) #0 !dbg !33 {
+  %t1 = alloca ptr
+  store ptr %t0, ptr %t1
+  %t2 = load ptr, ptr %t1
   ; CHECK-NOT: call {{.*}}
   ; CHECK: br i1 {{.*}}, label %if.true.direct_targ, label %if.false.orig_indirect, {{.*}}, !prof ![[BR3:[0-9]+]]
   call void %t2(), !dbg !34
@@ -135,30 +135,30 @@ define void @branch_prof_valid(void ()* %t0) #0 !dbg !33 {
 }
 
 @x = global i32 0, align 4
-@y = global void ()* null, align 8
+@y = global ptr null, align 8
 
-define i32* @foo_inline1(i32* %x) #0 !dbg !14 {
-  ret i32* %x
+define ptr @foo_inline1(ptr %x) #0 !dbg !14 {
+  ret ptr %x
 }
 
-define i32* @foo_inline_strip.suffix(i32* %x) #0 !dbg !15 {
-  ret i32* %x
+define ptr @foo_inline_strip.suffix(ptr %x) #0 !dbg !15 {
+  ret ptr %x
 }
 
-define i32* @foo_inline_strip_conflict.suffix1(i32* %x) #0 !dbg !16 {
-  ret i32* %x
+define ptr @foo_inline_strip_conflict.suffix1(ptr %x) #0 !dbg !16 {
+  ret ptr %x
 }
 
-define i32* @foo_inline_strip_conflict.suffix2(i32* %x) #0 !dbg !17 {
-  ret i32* %x
+define ptr @foo_inline_strip_conflict.suffix2(ptr %x) #0 !dbg !17 {
+  ret ptr %x
 }
 
-define i32* @foo_inline_strip_conflict.suffix3(i32* %x) #0 !dbg !18 {
-  ret i32* %x
+define ptr @foo_inline_strip_conflict.suffix3(ptr %x) #0 !dbg !18 {
+  ret ptr %x
 }
 
-define i32* @foo_inline2(i32* %x) #0 !dbg !19 {
-  ret i32* %x
+define ptr @foo_inline2(ptr %x) #0 !dbg !19 {
+  ret ptr %x
 }
 
 define void @foo_inline3() #0 !dbg !35 {
@@ -186,7 +186,7 @@ define void @test_direct() #0 !dbg !22 {
   ret void
 }
 
-@foo_alias = alias void (), void ()* @foo_direct
+@foo_alias = alias void (), ptr @foo_direct
 
 attributes #0 = {"use-sample-profile"}
 

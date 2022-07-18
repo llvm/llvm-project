@@ -1,12 +1,12 @@
 ; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -sample-profile-use-profi=0 -S | FileCheck %s
 ; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
 
-define dso_local i32 @foo(i32 %x, void (i32)* %f) #0 !dbg !4 {
+define dso_local i32 @foo(i32 %x, ptr %f) #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   %cmp = icmp eq i32 %0, 0
   ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1)
   br i1 %cmp, label %if.then, label %if.else
@@ -16,19 +16,19 @@ if.then:
   ; CHECK: call {{.*}}, !dbg ![[#PROBE1:]], !prof ![[PROF1:[0-9]+]]
   call void %f(i32 1)
   ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0, i64 -1)
-  store i32 1, i32* %retval, align 4
+  store i32 1, ptr %retval, align 4
   br label %return
 
 if.else:
   ; CHECK: call {{.*}}, !dbg ![[#PROBE2:]], !prof ![[PROF2:[0-9]+]]
   call void %f(i32 2)
   ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0, i64 -1)
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 return:
   ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
 

@@ -19,12 +19,12 @@ entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
   %i = alloca i32, align 4
-  %tmp = load i32, i32* %i, align 4, !dbg !8
-  %tmp1 = load i32, i32* %s, align 4, !dbg !8
+  %tmp = load i32, ptr %i, align 4, !dbg !8
+  %tmp1 = load i32, ptr %s, align 4, !dbg !8
   %call = call i32 @_Z3sumii(i32 %tmp, i32 %tmp1), !dbg !8
 ; SCALE: call i32 @_Z3sumii
 ; MERGE: call i32 @_Z3sumii
-  store i32 %call, i32* %s, align 4, !dbg !8
+  store i32 %call, ptr %s, align 4, !dbg !8
   ret i32 0, !dbg !11
 }
 
@@ -32,13 +32,13 @@ define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !12 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %tmp = load i32, i32* %x.addr, align 4, !dbg !13
-  %tmp1 = load i32, i32* %y.addr, align 4, !dbg !13
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %tmp = load i32, ptr %x.addr, align 4, !dbg !13
+  %tmp1 = load i32, ptr %y.addr, align 4, !dbg !13
   %add = add nsw i32 %tmp, %tmp1, !dbg !13
-  %tmp2 = load i32, i32* %x.addr, align 4, !dbg !13
-  %tmp3 = load i32, i32* %y.addr, align 4, !dbg !13
+  %tmp2 = load i32, ptr %x.addr, align 4, !dbg !13
+  %tmp3 = load i32, ptr %y.addr, align 4, !dbg !13
   %cmp1 = icmp ne i32 %tmp3, 100, !dbg !13
   br i1 %cmp1, label %if.then, label %if.else, !dbg !13
 
@@ -54,17 +54,17 @@ define i32 @_Z3subii(i32 %x, i32 %y) #0 !dbg !16 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %tmp = load i32, i32* %x.addr, align 4, !dbg !17
-  %tmp1 = load i32, i32* %y.addr, align 4, !dbg !17
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %tmp = load i32, ptr %x.addr, align 4, !dbg !17
+  %tmp1 = load i32, ptr %y.addr, align 4, !dbg !17
   %add = sub nsw i32 %tmp, %tmp1, !dbg !17
   ret i32 %add, !dbg !18
 }
 
 attributes #0 = { "use-sample-profile" }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
