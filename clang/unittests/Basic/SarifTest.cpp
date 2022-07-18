@@ -20,9 +20,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gmock/gmock-matchers.h"
-#include "gtest/gtest-death-test.h"
-#include "gtest/gtest-matchers.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <algorithm>
