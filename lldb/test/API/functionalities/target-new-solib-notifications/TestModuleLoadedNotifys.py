@@ -78,14 +78,16 @@ class ModuleLoadedNotifysTestCase(TestBase):
                     total_modules_added_events += 1
                     total_solibs_added += solib_count
                     added_files = []
-                    i = 0
-                    while i < solib_count:
+                    for i in range (solib_count):
                         module = lldb.SBTarget.GetModuleAtIndexFromEvent(i, event)
-                        self.assertTrue(module not in already_loaded_modules)
+                        # On macOS Ventura and later, dyld and the main binary
+                        # will be loaded again when dyld moves itself into the
+                        # shared cache.
+                        if module.file.fullpath not in ['/usr/lib/dyld', exe]:
+                            self.assertTrue(module not in already_loaded_modules, '{} is already loaded'.format(module))
                         already_loaded_modules.append(module)
                         if self.TraceOn():
                             added_files.append(module.GetFileSpec().GetFilename())
-                        i = i + 1
                     if self.TraceOn():
                         # print all of the binaries that have been added
                         print("Loaded files: %s" % (', '.join(added_files)))
@@ -103,11 +105,11 @@ class ModuleLoadedNotifysTestCase(TestBase):
                             removed_files.append(module.GetFileSpec().GetFilename())
                             i = i + 1
                         print("Unloaded files: %s" % (', '.join(removed_files)))
-        
 
-        # This is testing that we get back a small number of events with the loaded 
-        # binaries in batches.  Check that we got back more than 1 solib per event.  
-        # In practice on Darwin today, we get back two events for a do-nothing c 
+
+        # This is testing that we get back a small number of events with the loaded
+        # binaries in batches.  Check that we got back more than 1 solib per event.
+        # In practice on Darwin today, we get back two events for a do-nothing c
         # program: a.out and dyld, and then all the rest of the system libraries.
         # On Linux we get events for ld.so, [vdso], the binary and then all libraries.
 
