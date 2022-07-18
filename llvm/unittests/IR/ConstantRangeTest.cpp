@@ -206,6 +206,22 @@ static bool CheckSingleElementsOnly(const ConstantRange &CR1,
   return CR1.isSingleElement() && CR2.isSingleElement();
 }
 
+static bool CheckNonWrappedOnly(const ConstantRange &CR1,
+                                const ConstantRange &CR2) {
+  return !CR1.isWrappedSet() && !CR2.isWrappedSet();
+}
+
+static bool CheckNonSignWrappedOnly(const ConstantRange &CR1,
+                                    const ConstantRange &CR2) {
+  return !CR1.isSignWrappedSet() && !CR2.isSignWrappedSet();
+}
+
+static bool CheckNonWrappedOrSignWrappedOnly(const ConstantRange &CR1,
+                                             const ConstantRange &CR2) {
+  return !CR1.isWrappedSet() && !CR1.isSignWrappedSet() &&
+         !CR2.isWrappedSet() && !CR2.isSignWrappedSet();
+}
+
 // CheckFn determines whether optimality is checked for a given range pair.
 // Correctness is always checked.
 static void TestBinaryOpExhaustive(BinaryRangeFn RangeFn, BinaryIntFn IntFn,
@@ -752,110 +768,6 @@ TEST_F(ConstantRangeTest, Add) {
       });
 }
 
-template <typename Fn1, typename Fn2>
-static void TestAddWithNoSignedWrapExhaustive(Fn1 RangeFn, Fn2 IntFn) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
-                                       const ConstantRange &CR2) {
-    ConstantRange CR = RangeFn(CR1, CR2);
-    SignedOpRangeGatherer R(CR.getBitWidth());
-    bool AllOverflow = true;
-    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
-        bool IsOverflow = false;
-        APInt N = IntFn(IsOverflow, N1, N2);
-        if (!IsOverflow) {
-          AllOverflow = false;
-          R.account(N);
-          EXPECT_TRUE(CR.contains(N));
-        }
-      });
-    });
-
-    EXPECT_EQ(CR.isEmptySet(), AllOverflow);
-
-    if (CR1.isSignWrappedSet() || CR2.isSignWrappedSet())
-      return;
-
-    ConstantRange Exact = R.getRange();
-    EXPECT_EQ(Exact, CR);
-  });
-}
-
-template <typename Fn1, typename Fn2>
-static void TestAddWithNoUnsignedWrapExhaustive(Fn1 RangeFn, Fn2 IntFn) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
-                                       const ConstantRange &CR2) {
-    ConstantRange CR = RangeFn(CR1, CR2);
-    UnsignedOpRangeGatherer R(CR.getBitWidth());
-    bool AllOverflow = true;
-    ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-      ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
-        bool IsOverflow = false;
-        APInt N = IntFn(IsOverflow, N1, N2);
-        if (!IsOverflow) {
-          AllOverflow = false;
-          R.account(N);
-          EXPECT_TRUE(CR.contains(N));
-        }
-      });
-    });
-
-    EXPECT_EQ(CR.isEmptySet(), AllOverflow);
-
-    if (CR1.isWrappedSet() || CR2.isWrappedSet())
-      return;
-
-    ConstantRange Exact = R.getRange();
-    EXPECT_EQ(Exact, CR);
-  });
-}
-
-template <typename Fn1, typename Fn2, typename Fn3>
-static void TestAddWithNoSignedUnsignedWrapExhaustive(Fn1 RangeFn,
-                                                      Fn2 IntFnSigned,
-                                                      Fn3 IntFnUnsigned) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(
-      Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
-        ConstantRange CR = RangeFn(CR1, CR2);
-        UnsignedOpRangeGatherer UR(CR.getBitWidth());
-        SignedOpRangeGatherer SR(CR.getBitWidth());
-        bool AllOverflow = true;
-        ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-          ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
-            bool IsOverflow = false, IsSignedOverflow = false;
-            APInt N = IntFnSigned(IsSignedOverflow, N1, N2);
-            (void) IntFnUnsigned(IsOverflow, N1, N2);
-            if (!IsSignedOverflow && !IsOverflow) {
-              AllOverflow = false;
-              UR.account(N);
-              SR.account(N);
-              EXPECT_TRUE(CR.contains(N));
-            }
-          });
-        });
-
-        EXPECT_EQ(CR.isEmptySet(), AllOverflow);
-
-        if (CR1.isWrappedSet() || CR2.isWrappedSet() ||
-            CR1.isSignWrappedSet() || CR2.isSignWrappedSet())
-          return;
-
-        ConstantRange ExactUnsignedCR = UR.getRange();
-        ConstantRange ExactSignedCR = SR.getRange();
-
-        if (ExactUnsignedCR.isEmptySet() || ExactSignedCR.isEmptySet()) {
-          EXPECT_TRUE(CR.isEmptySet());
-          return;
-        }
-
-        ConstantRange Exact = ExactSignedCR.intersectWith(ExactUnsignedCR);
-        EXPECT_EQ(Exact, CR);
-      });
-}
-
 TEST_F(ConstantRangeTest, AddWithNoWrap) {
   typedef OverflowingBinaryOperator OBO;
   EXPECT_EQ(Empty.addWithNoWrap(Some, OBO::NoSignedWrap), Empty);
@@ -905,13 +817,19 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
                                OBO::NoSignedWrap),
             ConstantRange(APInt(8, 125), APInt(8, 9)));
 
-  TestAddWithNoSignedWrapExhaustive(
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.addWithNoWrap(CR2, OBO::NoSignedWrap);
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.sadd_ov(N2, IsOverflow);
-      });
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.sadd_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return None;
+        return Res;
+      },
+      PreferSmallest,
+      CheckNonSignWrappedOnly);
 
   EXPECT_EQ(Empty.addWithNoWrap(Some, OBO::NoUnsignedWrap), Empty);
   EXPECT_EQ(Some.addWithNoWrap(Empty, OBO::NoUnsignedWrap), Empty);
@@ -953,13 +871,19 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
                                OBO::NoUnsignedWrap),
             ConstantRange(APInt(8, 25), APInt(8, -11)));
 
-  TestAddWithNoUnsignedWrapExhaustive(
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.addWithNoWrap(CR2, OBO::NoUnsignedWrap);
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.uadd_ov(N2, IsOverflow);
-      });
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.uadd_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return None;
+        return Res;
+      },
+      PreferSmallest,
+      CheckNonWrappedOnly);
 
   EXPECT_EQ(ConstantRange(APInt(8, 50), APInt(8, 100))
                 .addWithNoWrap(ConstantRange(APInt(8, 20), APInt(8, 70)),
@@ -987,16 +911,21 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
                                OBO::NoUnsignedWrap | OBO::NoSignedWrap),
             ConstantRange(APInt(8, 176), APInt(8, 235)));
 
-  TestAddWithNoSignedUnsignedWrapExhaustive(
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.addWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.sadd_ov(N2, IsOverflow);
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        bool IsOverflow1, IsOverflow2;
+        APInt Res1 = N1.uadd_ov(N2, IsOverflow1);
+        APInt Res2 = N1.sadd_ov(N2, IsOverflow2);
+        if (IsOverflow1 || IsOverflow2)
+          return None;
+        assert(Res1 == Res2 && "Addition results differ?");
+        return Res1;
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.uadd_ov(N2, IsOverflow);
-      });
+      PreferSmallest,
+      CheckNonWrappedOrSignWrappedOnly);
 }
 
 TEST_F(ConstantRangeTest, Sub) {
@@ -1031,30 +960,47 @@ TEST_F(ConstantRangeTest, Sub) {
 
 TEST_F(ConstantRangeTest, SubWithNoWrap) {
   typedef OverflowingBinaryOperator OBO;
-  TestAddWithNoSignedWrapExhaustive(
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.subWithNoWrap(CR2, OBO::NoSignedWrap);
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.ssub_ov(N2, IsOverflow);
-      });
-  TestAddWithNoUnsignedWrapExhaustive(
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.ssub_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return None;
+        return Res;
+      },
+      PreferSmallest,
+      CheckNonSignWrappedOnly);
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap);
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.usub_ov(N2, IsOverflow);
-      });
-  TestAddWithNoSignedUnsignedWrapExhaustive(
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.usub_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return None;
+        return Res;
+      },
+      PreferSmallest,
+      CheckNonWrappedOnly);
+  TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.ssub_ov(N2, IsOverflow);
+      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+        bool IsOverflow1, IsOverflow2;
+        APInt Res1 = N1.usub_ov(N2, IsOverflow1);
+        APInt Res2 = N1.ssub_ov(N2, IsOverflow2);
+        if (IsOverflow1 || IsOverflow2)
+          return None;
+        assert(Res1 == Res2 && "Subtraction results differ?");
+        return Res1;
       },
-      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
-        return N1.usub_ov(N2, IsOverflow);
-      });
+      PreferSmallest,
+      CheckNonWrappedOrSignWrappedOnly);
 }
 
 TEST_F(ConstantRangeTest, Multiply) {
