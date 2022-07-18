@@ -4202,7 +4202,6 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
   State.setDebugLocFromInst(&I);
 
-  Module *M = I.getParent()->getParent()->getParent();
   auto *CI = cast<CallInst>(&I);
 
   SmallVector<Type *, 4> Tys;
@@ -4245,6 +4244,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
       // Use vector version of the intrinsic.
       if (VF.isVector())
         TysForDecl[0] = VectorType::get(CI->getType()->getScalarType(), VF);
+      Module *M = State.Builder.GetInsertBlock()->getModule();
       VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
       assert(VectorF && "Can't retrieve vector intrinsic.");
     } else {
