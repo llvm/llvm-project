@@ -108,6 +108,14 @@ Changes to the WebAssembly Backend
 
 * ...
 
+Changes to the Windows Target
+-----------------------------
+
+* For MinGW, generate embedded ``-exclude-symbols:`` directives for symbols
+  with hidden visibility, omitting them from automatic export of all symbols.
+  This roughly makes hidden visibility work like it does for other object
+  file formats.
+
 Changes to the X86 Backend
 --------------------------
 
