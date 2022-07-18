@@ -128,8 +128,8 @@ static bool declaresCoroCleanupIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
       M, {"llvm.coro.alloc", "llvm.coro.begin", "llvm.coro.subfn.addr",
           "llvm.coro.free", "llvm.coro.id", "llvm.coro.id.retcon",
-          "llvm.coro.id.retcon.once", "llvm.coro.async.size.replace",
-          "llvm.coro.async.resume"});
+          "llvm.coro.id.async", "llvm.coro.id.retcon.once",
+          "llvm.coro.async.size.replace", "llvm.coro.async.resume"});
 }
 
 PreservedAnalyses CoroCleanupPass::run(Function &F,
