@@ -346,5 +346,14 @@ TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_32x32x16_bf16, "V16fV4sV8sV16fiIiIi",
 TARGET_BUILTIN(__builtin_amdgcn_smfmac_i32_16x16x64_i8, "V4iV2iV4iV4iiIiIi", "nc", "mai-insts")
 TARGET_BUILTIN(__builtin_amdgcn_smfmac_i32_32x32x32_i8, "V16iV2iV4iV16iiIiIi", "nc", "mai-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_cvt_f32_bf8, "fiIi", "nc", "fp8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_f32_fp8, "fiIi", "nc", "fp8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f32_bf8, "V2fiIb", "nc", "fp8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f32_fp8, "V2fiIb", "nc", "fp8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_bf8_f32, "iffiIb", "nc", "fp8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_fp8_f32, "iffiIb", "nc", "fp8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_bf8_f32, "ifiiIi", "nc", "fp8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_fp8_f32, "ifiiIi", "nc", "fp8-insts")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

@@ -401,3 +401,211 @@ buffer_atomic_max_f64 v[4:5], off, s[8:11], s3 sc1
 // GFX10:  error: instruction not supported on this GPU
 // GFX940: buffer_atomic_min_f64 v[4:5], off, s[8:11], s3 sc1 ; encoding: [0x00,0x80,0x40,0xe1,0x00,0x04,0x02,0x03]
 buffer_atomic_min_f64 v[4:5], off, s[8:11], s3 sc1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_e32 v1, s3                ; encoding: [0x03,0xaa,0x02,0x7e]
+v_cvt_f32_bf8 v1, s3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_e32 v1, 3                 ; encoding: [0x83,0xaa,0x02,0x7e]
+v_cvt_f32_bf8 v1, 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_e32 v1, v3                ; encoding: [0x03,0xab,0x02,0x7e]
+v_cvt_f32_bf8 v1, v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_sdwa v1, s3 src0_sel:BYTE_1 ; encoding: [0xf9,0xaa,0x02,0x7e,0x03,0x06,0x81,0x00]
+v_cvt_f32_bf8 v1, s3 src0_sel:BYTE_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_dpp v1, v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xaa,0x02,0x7e,0x03,0x58,0x00,0xff]
+v_cvt_f32_bf8 v1, v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_e64 v1, s3 mul:2          ; encoding: [0x01,0x00,0x95,0xd1,0x03,0x00,0x00,0x08]
+v_cvt_f32_bf8 v1, s3 mul:2
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_sdwa v1, s3 clamp mul:2 src0_sel:BYTE_1 ; encoding: [0xf9,0xaa,0x02,0x7e,0x03,0x66,0x81,0x00]
+v_cvt_f32_bf8 v1, s3 clamp mul:2 src0_sel:BYTE_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_bf8_e64 v1, s3 clamp          ; encoding: [0x01,0x80,0x95,0xd1,0x03,0x00,0x00,0x00]
+v_cvt_f32_bf8 v1, s3 clamp
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_e32 v1, s3                ; encoding: [0x03,0xa8,0x02,0x7e]
+v_cvt_f32_fp8 v1, s3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_e32 v1, 3                 ; encoding: [0x83,0xa8,0x02,0x7e]
+v_cvt_f32_fp8 v1, 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_e32 v1, v3                ; encoding: [0x03,0xa9,0x02,0x7e]
+v_cvt_f32_fp8 v1, v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_sdwa v1, s3 src0_sel:BYTE_1 ; encoding: [0xf9,0xa8,0x02,0x7e,0x03,0x06,0x81,0x00]
+v_cvt_f32_fp8 v1, s3 src0_sel:BYTE_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_dpp v1, v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xa8,0x02,0x7e,0x03,0x58,0x00,0xff]
+v_cvt_f32_fp8 v1, v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_e64 v1, s3 mul:2          ; encoding: [0x01,0x00,0x94,0xd1,0x03,0x00,0x00,0x08]
+v_cvt_f32_fp8 v1, s3 mul:2
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_sdwa v1, s3 clamp mul:2 src0_sel:BYTE_1 ; encoding: [0xf9,0xa8,0x02,0x7e,0x03,0x66,0x81,0x00]
+v_cvt_f32_fp8 v1, s3 clamp mul:2 src0_sel:BYTE_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_e64 v1, s3 clamp          ; encoding: [0x01,0x80,0x94,0xd1,0x03,0x00,0x00,0x00]
+v_cvt_f32_fp8 v1, s3 clamp
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_f32_fp8_sdwa v1, 3 src0_sel:BYTE_1 ; encoding: [0xf9,0xa8,0x02,0x7e,0x83,0x06,0x81,0x00]
+v_cvt_f32_fp8 v1, 3 src0_sel:BYTE_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_e32 v[2:3], s3         ; encoding: [0x03,0xae,0x04,0x7e]
+v_cvt_pk_f32_bf8 v[2:3], s3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_e32 v[2:3], 3          ; encoding: [0x83,0xae,0x04,0x7e]
+v_cvt_pk_f32_bf8 v[2:3], 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_e32 v[2:3], v3         ; encoding: [0x03,0xaf,0x04,0x7e]
+v_cvt_pk_f32_bf8 v[2:3], v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_sdwa v[2:3], s3 src0_sel:WORD_1 ; encoding: [0xf9,0xae,0x04,0x7e,0x03,0x06,0x85,0x00]
+v_cvt_pk_f32_bf8 v[2:3], s3 src0_sel:WORD_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_dpp v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xae,0x00,0x7e,0x03,0x58,0x00,0xff]
+v_cvt_pk_f32_bf8 v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_e64 v[2:3], s3 mul:2   ; encoding: [0x02,0x00,0x97,0xd1,0x03,0x00,0x00,0x08]
+v_cvt_pk_f32_bf8 v[2:3], s3 mul:2
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_sdwa v[2:3], s3 clamp mul:2 src0_sel:WORD_1 ; encoding: [0xf9,0xae,0x04,0x7e,0x03,0x66,0x85,0x00]
+v_cvt_pk_f32_bf8 v[2:3], s3 clamp mul:2 src0_sel:WORD_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_bf8_e64 v[2:3], s3 clamp   ; encoding: [0x02,0x80,0x97,0xd1,0x03,0x00,0x00,0x00]
+v_cvt_pk_f32_bf8 v[2:3], s3 clamp
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_e32 v[2:3], s3         ; encoding: [0x03,0xac,0x04,0x7e]
+v_cvt_pk_f32_fp8 v[2:3], s3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_e32 v[2:3], 3          ; encoding: [0x83,0xac,0x04,0x7e]
+v_cvt_pk_f32_fp8 v[2:3], 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_e32 v[2:3], v3         ; encoding: [0x03,0xad,0x04,0x7e]
+v_cvt_pk_f32_fp8 v[2:3], v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_sdwa v[2:3], s3 src0_sel:WORD_1 ; encoding: [0xf9,0xac,0x04,0x7e,0x03,0x06,0x85,0x00]
+v_cvt_pk_f32_fp8 v[2:3], s3 src0_sel:WORD_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_sdwa v[2:3], 3 src0_sel:WORD_1 ; encoding: [0xf9,0xac,0x04,0x7e,0x83,0x06,0x85,0x00]
+v_cvt_pk_f32_fp8 v[2:3], 3 src0_sel:WORD_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_dpp v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xac,0x00,0x7e,0x03,0x58,0x00,0xff]
+v_cvt_pk_f32_fp8 v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_e64 v[2:3], s3 mul:2   ; encoding: [0x02,0x00,0x96,0xd1,0x03,0x00,0x00,0x08]
+v_cvt_pk_f32_fp8 v[2:3], s3 mul:2
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_sdwa v[2:3], s3 clamp mul:2 src0_sel:WORD_1 ; encoding: [0xf9,0xac,0x04,0x7e,0x03,0x66,0x85,0x00]
+v_cvt_pk_f32_fp8 v[2:3], s3 clamp mul:2 src0_sel:WORD_1
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_f32_fp8_e64 v[2:3], s3 clamp   ; encoding: [0x02,0x80,0x96,0xd1,0x03,0x00,0x00,0x00]
+v_cvt_pk_f32_fp8 v[2:3], s3 clamp
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_bf8_f32 v1, v2, v3             ; encoding: [0x01,0x00,0xa3,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_pk_bf8_f32 v1, v2, v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_bf8_f32 v1, -v2, |v3|          ; encoding: [0x01,0x02,0xa3,0xd2,0x02,0x07,0x02,0x20]
+v_cvt_pk_bf8_f32 v1, -v2, |v3|
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_bf8_f32 v1, s2, 3              ; encoding: [0x01,0x00,0xa3,0xd2,0x02,0x06,0x01,0x00]
+v_cvt_pk_bf8_f32 v1, s2, 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_bf8_f32 v1, v2, v3 op_sel:[0,0,1] ; encoding: [0x01,0x40,0xa3,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_pk_bf8_f32 v1, v2, v3 op_sel:[0,0,1]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_fp8_f32 v1, v2, v3             ; encoding: [0x01,0x00,0xa2,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_pk_fp8_f32 v1, v2, v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_fp8_f32 v1, -v2, |v3|          ; encoding: [0x01,0x02,0xa2,0xd2,0x02,0x07,0x02,0x20]
+v_cvt_pk_fp8_f32 v1, -v2, |v3|
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_fp8_f32 v1, s2, 3              ; encoding: [0x01,0x00,0xa2,0xd2,0x02,0x06,0x01,0x00]
+v_cvt_pk_fp8_f32 v1, s2, 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_pk_fp8_f32 v1, v2, v3 op_sel:[0,0,1] ; encoding: [0x01,0x40,0xa2,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_pk_fp8_f32 v1, v2, v3 op_sel:[0,0,1]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_bf8_f32 v1, v2, v3             ; encoding: [0x01,0x00,0xa5,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_sr_bf8_f32 v1, v2, v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_bf8_f32 v1, s2, 3              ; encoding: [0x01,0x00,0xa5,0xd2,0x02,0x06,0x01,0x00]
+v_cvt_sr_bf8_f32 v1, s2, 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_bf8_f32 v1, v2, v3 op_sel:[0,0,1,1] ; encoding: [0x01,0x60,0xa5,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_sr_bf8_f32 v1, v2, v3 op_sel:[0,0,1,1]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_bf8_f32 v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x01,0x40,0xa5,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_sr_bf8_f32 v1, v2, v3 op_sel:[0,0,0,1]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_bf8_f32 v1, -|s2|, v3          ; encoding: [0x01,0x01,0xa5,0xd2,0x02,0x06,0x02,0x20]
+v_cvt_sr_bf8_f32 v1, -|s2|, v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_fp8_f32 v1, v2, v3             ; encoding: [0x01,0x00,0xa4,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_sr_fp8_f32 v1, v2, v3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_fp8_f32 v1, s2, 3              ; encoding: [0x01,0x00,0xa4,0xd2,0x02,0x06,0x01,0x00]
+v_cvt_sr_fp8_f32 v1, s2, 3
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_fp8_f32 v1, v2, v3 op_sel:[0,0,1,1] ; encoding: [0x01,0x60,0xa4,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_sr_fp8_f32 v1, v2, v3 op_sel:[0,0,1,1]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_fp8_f32 v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x01,0x40,0xa4,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_sr_fp8_f32 v1, v2, v3 op_sel:[0,0,0,1]
+
+// NOT-GFX940: error: instruction not supported on this GPU
+// GFX940: v_cvt_sr_fp8_f32 v1, -|s2|, v3          ; encoding: [0x01,0x01,0xa4,0xd2,0x02,0x06,0x02,0x20]
+v_cvt_sr_fp8_f32 v1, -|s2|, v3
