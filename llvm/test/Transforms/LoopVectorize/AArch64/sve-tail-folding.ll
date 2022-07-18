@@ -1,4 +1,3 @@
-; RUN: opt -S -hints-allow-reordering=false -loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -prefer-inloop-reductions < %s | FileCheck %s
 ; RUN: opt -S -hints-allow-reordering=false -loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -prefer-inloop-reductions < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
