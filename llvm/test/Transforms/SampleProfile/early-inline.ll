@@ -5,11 +5,11 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
 ; Function Attrs: uwtable
-define void @_Z3foov() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !6 {
-  %1 = alloca i8*
+define void @_Z3foov() #0 personality ptr @__gxx_personality_v0 !dbg !6 {
+  %1 = alloca ptr
   %2 = alloca i32
   %3 = alloca i32, align 4
 ; CHECK: call void @no_inline
@@ -24,8 +24,8 @@ define void @_Z3foov() #0 personality i8* bitcast (i32 (...)* @__gxx_personality
   ret void
 
 ; <label>:5:
-  %6 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
+  %6 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
   ret void
 }
 

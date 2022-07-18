@@ -8,21 +8,21 @@ define i32 @foo(i32 %i) #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4, !dbg !9
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4, !dbg !9
   %cmp = icmp sgt i32 %0, 1000, !dbg !10
   br i1 %cmp, label %if.then, label %if.end, !dbg !9
 
 if.then:                                          ; preds = %entry
-  store i32 30, i32* %retval, align 4, !dbg !11
+  store i32 30, ptr %retval, align 4, !dbg !11
   br label %return, !dbg !11
 
 if.end:                                           ; preds = %entry
-  store i32 3, i32* %retval, align 4, !dbg !12
+  store i32 3, ptr %retval, align 4, !dbg !12
   br label %return, !dbg !12
 
 return:                                           ; preds = %if.end, %if.then
-  %1 = load i32, i32* %retval, align 4, !dbg !13
+  %1 = load i32, ptr %retval, align 4, !dbg !13
   ret i32 %1, !dbg !13
 }
 

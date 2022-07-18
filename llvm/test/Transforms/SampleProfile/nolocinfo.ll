@@ -3,7 +3,7 @@
 define i32 @foo(i32 %i) #0 !dbg !4 {
 entry:
   %i.addr = alloca i32, align 4
-  %0 = load i32, i32* %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   %cmp = icmp sgt i32 %0, 1000
 
 ; Remarks for conditional branches need debug location information for the

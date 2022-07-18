@@ -5,7 +5,7 @@
 
 define internal i32 @arc_compare() {
 entry:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   br i1 undef, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
@@ -14,7 +14,7 @@ if.end:                                           ; preds = %entry
 ; IR: call void @llvm.pseudoprobe(i64 5116412291814990879, i64 1, i32 0, i64 -1)
 ; IR: call void @llvm.pseudoprobe(i64 5116412291814990879, i64 3, i32 0, i64 -1)
   call void @llvm.pseudoprobe(i64 5116412291814990879, i64 1, i32 0, i64 -1)
-  %1          = load i16, i16* undef, align 8
+  %1          = load i16, ptr undef, align 8
   call void @llvm.pseudoprobe(i64 5116412291814990879, i64 3, i32 0, i64 -1)
   %2          = and i16 %1, 16
   %3          = icmp eq i16 %2, 0
