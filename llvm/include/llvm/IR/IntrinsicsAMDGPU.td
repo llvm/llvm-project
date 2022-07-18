@@ -2304,6 +2304,17 @@ def int_amdgcn_mfma_i32_32x32x16_i8     : AMDGPUMfmaIntrinsic<llvm_v16i32_ty, ll
 def int_amdgcn_mfma_f32_16x16x8_xf32    : AMDGPUMfmaIntrinsic<llvm_v4f32_ty,  llvm_v2f32_ty>;
 def int_amdgcn_mfma_f32_32x32x4_xf32    : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v2f32_ty>;
 
+class AMDGPUMFp8MfmaIntrinsic<LLVMType DestTy> :
+  AMDGPUMfmaIntrinsic<DestTy, llvm_i64_ty>;
+
+multiclass AMDGPUMFp8MfmaIntrinsic<LLVMType DestTy> {
+  foreach kind = ["bf8_bf8", "bf8_fp8", "fp8_bf8", "fp8_fp8"] in
+    def NAME#"_"#kind : AMDGPUMFp8MfmaIntrinsic<DestTy>;
+}
+
+defm int_amdgcn_mfma_f32_16x16x32 : AMDGPUMFp8MfmaIntrinsic<llvm_v4f32_ty>;
+defm int_amdgcn_mfma_f32_32x32x16 : AMDGPUMFp8MfmaIntrinsic<llvm_v16f32_ty>;
+
 // llvm.amdgcn.smfmac.?32.* vdst, srcA, srcB, srcC, index, cbsz, abid
 class AMDGPUMSmfmacIntrinsic<LLVMType DestTy, LLVMType SrcA, LLVMType SrcB> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
