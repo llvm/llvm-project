@@ -3231,9 +3231,8 @@ TEST(CompletionTest, CursorInSnippets) {
 
   // Last placeholder in code patterns should be $0 to put the cursor there.
   EXPECT_THAT(Results.Completions,
-              Contains(AllOf(
-                  named("while"),
-                  snippetSuffix(" (${1:condition}) {\n${0:statements}\n}"))));
+              Contains(AllOf(named("while"),
+                             snippetSuffix(" (${1:condition}) {\n$0\n}"))));
   // However, snippets for functions must *not* end with $0.
   EXPECT_THAT(Results.Completions,
               Contains(AllOf(named("while_foo"),
