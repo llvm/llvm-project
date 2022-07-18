@@ -1238,4 +1238,35 @@ define half @fcopysign(half %x, half %y) {
 declare half @llvm.fabs.f16(half)
 declare half @llvm.copysign.f16(half, half)
 
+define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
+; CHECK-LIBCALL-LABEL: select:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    testb $1, %dil
+; CHECK-LIBCALL-NEXT:    jne .LBB23_2
+; CHECK-LIBCALL-NEXT:  # %bb.1:
+; CHECK-LIBCALL-NEXT:    movaps %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:  .LBB23_2:
+; CHECK-LIBCALL-NEXT:    retq
+;
+; BWON-F16C-LABEL: select:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    testb $1, %dil
+; BWON-F16C-NEXT:    jne .LBB23_2
+; BWON-F16C-NEXT:  # %bb.1:
+; BWON-F16C-NEXT:    vmovaps %xmm1, %xmm0
+; BWON-F16C-NEXT:  .LBB23_2:
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: select:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    jne .LBB23_2
+; CHECK-I686-NEXT:  # %bb.1:
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm0
+; CHECK-I686-NEXT:  .LBB23_2:
+; CHECK-I686-NEXT:    retl
+  %s = select i1 %c, <8 x half> %x, <8 x half> %y
+  ret <8 x half> %s
+}
+
 attributes #0 = { nounwind }

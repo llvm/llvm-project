@@ -2115,6 +2115,7 @@ cc_library(
         ":SparseTensorDialect",
         ":SparseTensorPassIncGen",
         ":SparseTensorUtils",
+        ":Support",
         ":TensorDialect",
         ":Transforms",
         ":VectorDialect",

@@ -1717,11 +1717,7 @@ struct LinalgElementwiseOpFusionPass
 
     // Add elementwise op fusion patterns.
     populateElementwiseOpsFusionPatterns(patterns, defaultControlFn);
-
     populateFoldReshapeOpsByExpansionPatterns(patterns, defaultControlFn);
-
-    // Add the sparse tensor rewriting patterns.
-    populateSparseTensorRewriting(patterns);
 
     // General canonicalization patterns.
     AffineApplyOp::getCanonicalizationPatterns(patterns, context);

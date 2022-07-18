@@ -75,7 +75,8 @@ void clang_experimental_FileDependencies_dispose(CXFileDependencies *ID) {
 
 CXDependencyScannerWorker clang_experimental_DependencyScannerWorker_create_v0(
     CXDependencyScannerService Service) {
-  return wrap(new DependencyScanningWorker(*unwrap(Service)));
+  return wrap(new DependencyScanningWorker(
+      *unwrap(Service), llvm::vfs::createPhysicalFileSystem()));
 }
 
 void clang_experimental_DependencyScannerWorker_dispose_v0(

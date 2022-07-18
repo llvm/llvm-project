@@ -134,21 +134,65 @@ TYPED_TEST(IntTest, overflows) {
   y += y;
   y /= 8;
   EXPECT_EQ(y, 1ll << 62);
-  int64_t min = std::numeric_limits<int64_t>::min();
-  int64_t max = std::numeric_limits<int64_t>::max();
-  TypeParam z(min);
+
+  TypeParam min(std::numeric_limits<int64_t>::min());
+  TypeParam one(1);
+  EXPECT_EQ(floorDiv(min, -one), -min);
+  EXPECT_EQ(ceilDiv(min, -one), -min);
+  EXPECT_EQ(abs(min), -min);
+
+  TypeParam z = min;
   z /= -1;
-  EXPECT_EQ(z, -TypeParam(min));
+  EXPECT_EQ(z, -min);
   TypeParam w(min);
   --w;
   EXPECT_EQ(w, TypeParam(min) - 1);
   TypeParam u(min);
   u -= 1;
   EXPECT_EQ(u, w);
-  TypeParam v(max);
+
+  TypeParam max(std::numeric_limits<int64_t>::max());
+  TypeParam v = max;
   ++v;
-  EXPECT_EQ(v, TypeParam(max) + 1);
-  TypeParam t(max);
+  EXPECT_EQ(v, max + 1);
+  TypeParam t = max;
   t += 1;
   EXPECT_EQ(t, v);
+}
+
+TYPED_TEST(IntTest, floorCeilModAbsLcmGcd) {
+  TypeParam x(1ll << 50), one(1), two(2), three(3);
+
+  // Run on small values and large values.
+  for (const TypeParam &y : {x, x * x}) {
+    EXPECT_EQ(floorDiv(3 * y, three), y);
+    EXPECT_EQ(ceilDiv(3 * y, three), y);
+    EXPECT_EQ(floorDiv(3 * y - 1, three), y - 1);
+    EXPECT_EQ(ceilDiv(3 * y - 1, three), y);
+    EXPECT_EQ(floorDiv(3 * y - 2, three), y - 1);
+    EXPECT_EQ(ceilDiv(3 * y - 2, three), y);
+
+    EXPECT_EQ(mod(3 * y, three), 0);
+    EXPECT_EQ(mod(3 * y + 1, three), one);
+    EXPECT_EQ(mod(3 * y + 2, three), two);
+
+    EXPECT_EQ(floorDiv(3 * y, y), 3);
+    EXPECT_EQ(ceilDiv(3 * y, y), 3);
+    EXPECT_EQ(floorDiv(3 * y - 1, y), 2);
+    EXPECT_EQ(ceilDiv(3 * y - 1, y), 3);
+    EXPECT_EQ(floorDiv(3 * y - 2, y), 2);
+    EXPECT_EQ(ceilDiv(3 * y - 2, y), 3);
+
+    EXPECT_EQ(mod(3 * y, y), 0);
+    EXPECT_EQ(mod(3 * y + 1, y), 1);
+    EXPECT_EQ(mod(3 * y + 2, y), 2);
+
+    EXPECT_EQ(abs(y), y);
+    EXPECT_EQ(abs(-y), y);
+
+    EXPECT_EQ(gcd(2 * y, 3 * y), y);
+    EXPECT_EQ(lcm(2 * y, 3 * y), 6 * y);
+    EXPECT_EQ(gcd(15 * y, 6 * y), 3 * y);
+    EXPECT_EQ(lcm(15 * y, 6 * y), 30 * y);
+  }
 }

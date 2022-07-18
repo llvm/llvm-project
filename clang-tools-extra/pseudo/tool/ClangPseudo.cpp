@@ -53,7 +53,7 @@ static std::string readOrDie(llvm::StringRef Path) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       llvm::MemoryBuffer::getFile(Path);
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Error: can't read grammar file '" << Path
+    llvm::errs() << "Error: can't read file '" << Path
                  << "': " << EC.message() << "\n";
     ::exit(1);
   }

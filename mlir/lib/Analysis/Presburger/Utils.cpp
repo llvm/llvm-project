@@ -412,3 +412,15 @@ void DivisionRepr::print(raw_ostream &os) const {
 }
 
 void DivisionRepr::dump() const { print(llvm::errs()); }
+
+SmallVector<MPInt, 8> presburger::getMPIntVec(ArrayRef<int64_t> range) {
+  SmallVector<MPInt, 8> result(range.size());
+  std::transform(range.begin(), range.end(), result.begin(), mpintFromInt64);
+  return result;
+}
+
+SmallVector<int64_t, 8> presburger::getInt64Vec(ArrayRef<MPInt> range) {
+  SmallVector<int64_t, 8> result(range.size());
+  std::transform(range.begin(), range.end(), result.begin(), int64FromMPInt);
+  return result;
+}

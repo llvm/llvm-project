@@ -794,7 +794,11 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
         if (Size.isZero())
           return true;
 
+        if (getContext().getLangOpts().StrictFlexArrays >= 2)
+          return false;
+
         const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();
+        // FIXME: this option is probably redundant with -fstrict-flex-arrays=1.
         if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
             Size.isOne())
           return true;

@@ -1,4 +1,5 @@
 ; RUN: opt -disable-output -passes='print-access-info' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -passes='print-access-info' -max-forked-scev-depth=2 %s 2>&1 | FileCheck -check-prefix=RECURSE %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -59,16 +60,58 @@ exit:
 }
 
 ; CHECK-LABEL: function 'forked_ptrs_different_base_same_offset':
-; CHECK-NEXT: for.body:
-; CHECK-NEXT:   Report: cannot identify array bounds
-; CHECK-NEXT:   Dependences:
-; CHECK-NEXT:   Run-time memory checks:
-; CHECK-NEXT:   Grouped accesses:
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G4:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: %Base2 High: (400 + %Base2))
+; CHECK-NEXT:          Member: {%Base2,+,4}<nw><%for.body>
+; CHECK-NEXT:      Group [[G4]]:
+; CHECK-NEXT:        (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:          Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:   SCEV assumptions:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Expressions re-written:
+
+;; We have a limit on the recursion depth for finding a loop invariant or
+;; addrec term; confirm we won't exceed that depth by forcing a lower
+;; limit via -max-forked-scev-depth=2
+; RECURSE-LABEL: Loop access info in function 'forked_ptrs_same_base_different_offset':
+; RECURSE-NEXT:   for.body:
+; RECURSE-NEXT:     Report: cannot identify array bounds
+; RECURSE-NEXT:     Dependences:
+; RECURSE-NEXT:     Run-time memory checks:
+; RECURSE-NEXT:     Grouped accesses:
+; RECURSE-EMPTY:
+; RECURSE-NEXT:     Non vectorizable stores to invariant address were not found in loop.
+; RECURSE-NEXT:     SCEV assumptions:
+; RECURSE-EMPTY:
+; RECURSE-NEXT:     Expressions re-written:
 
 ;;;; Derived from the following C code
 ;; void forked_ptrs_different_base_same_offset(float *A, float *B, float *C, int *D) {
@@ -104,11 +147,38 @@ for.body:
 }
 
 ; CHECK-LABEL: function 'forked_ptrs_different_base_same_offset_possible_poison':
-; CHECK-NEXT: for.body:
-; CHECK-NEXT:   Report: cannot identify array bounds
-; CHECK-NEXT:   Dependences:
-; CHECK-NEXT:   Run-time memory checks:
-; CHECK-NEXT:   Grouped accesses:
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G4:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,4}<nw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: %Base2 High: (400 + %Base2))
+; CHECK-NEXT:          Member: {%Base2,+,4}<nw><%for.body>
+; CHECK-NEXT:      Group [[G4]]:
+; CHECK-NEXT:        (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:          Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:   SCEV assumptions:

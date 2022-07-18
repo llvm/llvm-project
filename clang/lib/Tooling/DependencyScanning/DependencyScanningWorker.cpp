@@ -310,7 +310,8 @@ private:
 } // end anonymous namespace
 
 DependencyScanningWorker::DependencyScanningWorker(
-    DependencyScanningService &Service)
+    DependencyScanningService &Service,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
       CASOpts(Service.getCASOpts()), UseCAS(Service.useCASScanning()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
@@ -322,8 +323,8 @@ DependencyScanningWorker::DependencyScanningWorker(
       std::make_unique<ObjectFilePCHContainerWriter>());
 
   if (!Service.useCASScanning()) {
-    auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
-        llvm::vfs::createPhysicalFileSystem());
+    auto OverlayFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(std::move(FS));
     InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     OverlayFS->pushOverlay(InMemoryFS);
     RealFS = OverlayFS;
