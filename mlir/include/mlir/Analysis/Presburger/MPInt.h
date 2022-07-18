@@ -260,6 +260,9 @@ llvm::hash_code hash_value(const MPInt &x); // NOLINT
 LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t int64FromMPInt(const MPInt &x) {
   return int64_t(x);
 }
+LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mpintFromInt64(int64_t x) {
+  return MPInt(x);
+}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MPInt &x);
 
