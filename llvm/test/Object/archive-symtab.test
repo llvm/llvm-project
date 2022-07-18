@@ -65,6 +65,10 @@ Symbols:
 # RUN: llvm-nm --print-armap %t.a | FileCheck %s
 # RUN: not grep '/SYM64/' %t.a
 
+# RUN: rm -f %t.a
+# RUN: llvm-ar rcsU --format=bigarchive %t.a %t.elf-x86-64 %t2.elf-x86-64
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s
+
 # CHECK: Archive map
 # CHECK-NEXT: main in {{.*}}.elf-x86-64
 # CHECK-NEXT: foo in {{.*}}2.elf-x86-64
