@@ -48,7 +48,7 @@
 // CPU_LINK: ld.lld{{.*}}-m elf_x86_64 -shared -Bsymbolic -o {{.*}}.out {{.*}}.o {{.*}}.o
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
-// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -mllvm -abc \
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -mllvm -openmp-opt-disable \
 // RUN:   --linker-path=/usr/bin/ld.lld -- -a -b -c %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=HOST_LINK
 
 // HOST_LINK: ld.lld{{.*}}-a -b -c {{.*}}.o -o a.out

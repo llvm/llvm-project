@@ -56,15 +56,6 @@ using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
 
-/// We use the command line parser only to forward options like `-pass-remarks`
-/// to the LLVM tools.
-static cl::OptionCategory
-    ClangLinkerWrapperCategory("clang-linker-wrapper options");
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                          cl::cat(ClangLinkerWrapperCategory));
-static cl::list<std::string>
-    DummyArguments(cl::Sink, cl::Hidden, cl::cat(ClangLinkerWrapperCategory));
-
 /// Path of the current binary.
 static const char *LinkerExecutable;
 
@@ -1513,9 +1504,13 @@ int main(int Argc, char **Argv) {
     return EXIT_SUCCESS;
   }
 
-  // This forwards '-pass-remarks=' to the LTO backend if present.
-  cl::HideUnrelatedOptions(ClangLinkerWrapperCategory);
-  cl::ParseCommandLineOptions(Argc, Argv);
+  // This forwards '-mllvm' arguments to LLVM if present.
+  SmallVector<const char *> NewArgv = {Argv[0]};
+  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
+    NewArgv.push_back(Arg->getValue());
+  for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
+    NewArgv.push_back(Args.MakeArgString(StringRef("-") + Arg->getValue()));
+  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
