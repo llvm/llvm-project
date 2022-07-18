@@ -34,7 +34,6 @@ struct ARM64 : ARM64Common {
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
-  const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
   void applyOptimizationHints(uint8_t *, const ConcatInputSection *,
                               ArrayRef<uint64_t>) const override;
@@ -48,31 +47,24 @@ struct ARM64 : ARM64Common {
 // absolute version of this relocation. The semantics of the absolute relocation
 // are weird -- it results in the value of the GOT slot being written, instead
 // of the address. Let's not support it unless we find a real-world use case.
-
-const RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
-  static const std::array<RelocAttrs, 11> relocAttrsArray{{
+static constexpr std::array<RelocAttrs, 11> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-      {"UNSIGNED",
-       B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
-      {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
-      {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
-      {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
-      {"PAGEOFF12", B(ABSOLUTE) | B(EXTERN) | B(BYTE4)},
-      {"GOT_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(GOT) | B(BYTE4)},
-      {"GOT_LOAD_PAGEOFF12",
-       B(ABSOLUTE) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
-      {"POINTER_TO_GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
-      {"TLVP_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(TLV) | B(BYTE4)},
-      {"TLVP_LOAD_PAGEOFF12",
-       B(ABSOLUTE) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
-      {"ADDEND", B(ADDEND)},
+    {"UNSIGNED",
+     B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
+    {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
+    {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
+    {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
+    {"PAGEOFF12", B(ABSOLUTE) | B(EXTERN) | B(BYTE4)},
+    {"GOT_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(GOT) | B(BYTE4)},
+    {"GOT_LOAD_PAGEOFF12",
+     B(ABSOLUTE) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
+    {"POINTER_TO_GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
+    {"TLVP_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(TLV) | B(BYTE4)},
+    {"TLVP_LOAD_PAGEOFF12",
+     B(ABSOLUTE) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
+    {"ADDEND", B(ADDEND)},
 #undef B
-  }};
-  assert(type < relocAttrsArray.size() && "invalid relocation type");
-  if (type >= relocAttrsArray.size())
-    return invalidRelocAttrs;
-  return relocAttrsArray[type];
-}
+}};
 
 static constexpr uint32_t stubCode[] = {
     0x90000010, // 00: adrp  x16, __la_symbol_ptr@page
@@ -150,6 +142,8 @@ ARM64::ARM64() : ARM64Common(LP64()) {
 
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
   stubHelperEntrySize = sizeof(stubHelperEntryCode);
+
+  relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }
 
 namespace {
