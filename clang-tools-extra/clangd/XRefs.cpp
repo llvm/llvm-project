@@ -1481,7 +1481,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     llvm::consumeError(CurLoc.takeError());
     return {};
   }
-
+  auto MainFilePath = AST.tuPath();
   std::vector<SymbolDetails> Results;
 
   // We also want the targets of using-decls, so we include
@@ -1489,6 +1489,8 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   DeclRelationSet Relations = DeclRelation::TemplatePattern |
                               DeclRelation::Alias | DeclRelation::Underlying;
   for (const NamedDecl *D : getDeclAtPosition(AST, *CurLoc, Relations)) {
+    D = getPreferredDecl(D);
+
     SymbolDetails NewSymbol;
     std::string QName = printQualifiedName(*D);
     auto SplitQName = splitQualifiedName(QName);
@@ -1505,6 +1507,12 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
       NewSymbol.USR = std::string(USR.str());
       NewSymbol.ID = SymbolID(NewSymbol.USR);
     }
+    if (const NamedDecl *Def = getDefinition(D))
+      NewSymbol.definitionRange = makeLocation(
+          AST.getASTContext(), nameLocation(*Def, SM), MainFilePath);
+    NewSymbol.declarationRange =
+        makeLocation(AST.getASTContext(), nameLocation(*D, SM), MainFilePath);
+
     Results.push_back(std::move(NewSymbol));
   }
 
