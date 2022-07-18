@@ -170,6 +170,10 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
 }
 
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
+  AggValueSlot Slot = EnsureSlot(E->getType());
+  LLVM_ATTRIBUTE_UNUSED LValue SlotLV =
+      CGF.makeAddrLValue(Slot.getAddress(), E->getType());
+
   // We'll need to enter cleanup scopes in case any of the element initializers
   // throws an exception.
   if (UnimplementedFeature::cleanups())
