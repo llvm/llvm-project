@@ -1044,6 +1044,11 @@ static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t}, {t});
 }
 
+static mlir::FunctionType genF128F128FuncType(mlir::MLIRContext *context) {
+  mlir::Type t = mlir::FloatType::getF128(context);
+  return mlir::FunctionType::get(context, {t}, {t});
+}
+
 static mlir::FunctionType genF32F32F32FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF32(context);
   return mlir::FunctionType::get(context, {t, t}, {t});
@@ -1179,6 +1184,8 @@ static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 static constexpr MathOperation mathOperations[] = {
     {"abs", "fabsf", genF32F32FuncType, genMathOp<mlir::math::AbsOp>},
     {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsOp>},
+    {"abs", "llvm.fabs.f128", genF128F128FuncType,
+     genMathOp<mlir::math::AbsOp>},
     // llvm.trunc behaves the same way as libm's trunc.
     {"aint", "llvm.trunc.f32", genF32F32FuncType, genLibCall},
     {"aint", "llvm.trunc.f64", genF64F64FuncType, genLibCall},
@@ -1196,6 +1203,8 @@ static constexpr MathOperation mathOperations[] = {
     {"ceil", "ceil", genF64F64FuncType, genMathOp<mlir::math::CeilOp>},
     {"cos", "cosf", genF32F32FuncType, genMathOp<mlir::math::CosOp>},
     {"cos", "cos", genF64F64FuncType, genMathOp<mlir::math::CosOp>},
+    {"cosh", "coshf", genF32F32FuncType, genLibCall},
+    {"cosh", "cosh", genF64F64FuncType, genLibCall},
     {"erf", "erff", genF32F32FuncType, genMathOp<mlir::math::ErfOp>},
     {"erf", "erf", genF64F64FuncType, genMathOp<mlir::math::ErfOp>},
     {"exp", "expf", genF32F32FuncType, genMathOp<mlir::math::ExpOp>},
@@ -1223,10 +1232,18 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::CopySignOp>},
     {"sign", "copysign", genF64F64F64FuncType,
      genMathOp<mlir::math::CopySignOp>},
+    {"sign", "copysignl", genF80F80F80FuncType,
+     genMathOp<mlir::math::CopySignOp>},
+    {"sign", "llvm.copysign.f128", genF128F128F128FuncType,
+     genMathOp<mlir::math::CopySignOp>},
     {"sin", "sinf", genF32F32FuncType, genMathOp<mlir::math::SinOp>},
     {"sin", "sin", genF64F64FuncType, genMathOp<mlir::math::SinOp>},
+    {"sinh", "sinhf", genF32F32FuncType, genLibCall},
+    {"sinh", "sinh", genF64F64FuncType, genLibCall},
     {"sqrt", "sqrtf", genF32F32FuncType, genMathOp<mlir::math::SqrtOp>},
     {"sqrt", "sqrt", genF64F64FuncType, genMathOp<mlir::math::SqrtOp>},
+    {"tan", "tanf", genF32F32FuncType, genMathOp<mlir::math::TanOp>},
+    {"tan", "tan", genF64F64FuncType, genMathOp<mlir::math::TanOp>},
     {"tanh", "tanhf", genF32F32FuncType, genMathOp<mlir::math::TanhOp>},
     {"tanh", "tanh", genF64F64FuncType, genMathOp<mlir::math::TanhOp>},
 };
@@ -1243,6 +1260,7 @@ static constexpr MathOperation mathOperations[] = {
 static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"abs", "llvm.fabs.f32", genF32F32FuncType},
     {"abs", "llvm.fabs.f64", genF64F64FuncType},
+    {"abs", "llvm.fabs.f128", genF128F128FuncType},
     {"aint", "llvm.trunc.f32", genF32F32FuncType},
     {"aint", "llvm.trunc.f64", genF64F64FuncType},
     {"anint", "llvm.round.f32", genF32F32FuncType},
