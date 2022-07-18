@@ -27,7 +27,7 @@
 ; static (!11 and !13), whereas the coroutine funclet will have its own new
 ; ones with identical line and column numbers.
 ;
-; CHECK-LABEL: define void @f() {
+; CHECK-LABEL: define void @f() {{.*}} {
 ; CHECK:       entry:
 ; CHECK:         %j = alloca i32, align 4
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* %j, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
@@ -36,7 +36,7 @@
 ; CHECK:         call void @llvm.dbg.declare(metadata i8* %[[MEMORY]], metadata ![[IVAR:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC]]
 ; CHECK:       await.ready:
 ;
-; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {
+; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {{.*}} {
 ; CHECK:       entry.resume:
 ; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca %f.Frame*
 ; CHECK-NEXT:    call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[XVAR_RESUME:[0-9]+]],   metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg
@@ -48,7 +48,7 @@
 ; CHECK:       await.ready:
 ;
 ; CHECK-DAG: ![[IVAR]] = !DILocalVariable(name: "i"
-; CHECK-DAG: ![[SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
+; CHECK-DAG: ![[SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !6, file: !1, line: 23, column: 12)
 ; CHECK-DAG: ![[IDBGLOC]] = !DILocation(line: 24, column: 7, scope: ![[SCOPE]])
 ; CHECK-DAG: ![[XVAR]] = !DILocalVariable(name: "x"
 ; CHECK-DAG: ![[JVAR]] = !DILocalVariable(name: "j"
@@ -56,11 +56,11 @@
 
 ; CHECK-DAG: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
 ; CHECK-DAG: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_SCOPE:[0-9]+]])
-; CHECK-DAG: ![[RESUME_SCOPE]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
+; CHECK-DAG: ![[RESUME_SCOPE]] = distinct !DILexicalBlock(scope: !23, file: !1, line: 23, column: 12)
 ; CHECK-DAG: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK-DAG: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"
 ; CHECK-DAG: ![[JDBGLOC_RESUME]] = !DILocation(line: 32, column: 7, scope: ![[RESUME_SCOPE]])
-define void @f() presplitcoroutine {
+define void @f() presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
   %i = alloca i32, align 4
