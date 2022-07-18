@@ -827,12 +827,12 @@ class Iterator {
 // ======================================================================
 // Proxy that can wrap a value or a reference. It simulates C++23's tuple
 // but simplified to just hold one argument.
-// Note that unlike tuple, this class deliberately doesn't have special handling 
-// of swap to cause a compilation error if it's used in an algorithm that relies 
+// Note that unlike tuple, this class deliberately doesn't have special handling
+// of swap to cause a compilation error if it's used in an algorithm that relies
 // on plain swap instead of ranges::iter_swap.
 // This class is useful for testing that if algorithms support proxy iterator
 // properly, i.e. calling ranges::iter_swap and ranges::iter_move instead of
-// plain swap and std::move 
+// plain swap and std::move
 template <class T>
 struct Proxy;
 
@@ -878,17 +878,40 @@ struct Proxy {
     return *this;
   }
 
+  // If `T` is a reference type, the implicitly-generated assignment operator will be deleted (and would take precedence
+  // over the templated `operator=` above because it's a better match).
+  constexpr Proxy& operator=(const Proxy& rhs) {
+    data = rhs.data;
+    return *this;
+  }
+
   // no specialised swap function that takes const Proxy& and no specialised const member swap
   // Calling swap(Proxy<T>{}, Proxy<T>{}) would fail (pass prvalues)
 
   // Compare operators are defined for the convenience of the tests
   friend constexpr bool operator==(const Proxy&, const Proxy&)
-    requires std::equality_comparable<T>
+    requires (std::equality_comparable<T> && !std::is_reference_v<T>)
   = default;
 
+  // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default equality comparison operator is deleted
+  // when `T` is a reference type.
+  template <class U>
+  friend constexpr bool operator==(const Proxy& lhs, const Proxy<U>& rhs)
+    requires std::equality_comparable_with<std::decay_t<T>, std::decay_t<U>> {
+    return lhs.data == rhs.data;
+  }
+
   friend constexpr auto operator<=>(const Proxy&, const Proxy&)
-    requires std::three_way_comparable<T>
+    requires (std::three_way_comparable<T> && !std::is_reference_v<T>)
   = default;
+
+  // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default 3-way comparison operator is deleted when
+  // `T` is a reference type.
+  template <class U>
+  friend constexpr auto operator<=>(const Proxy& lhs, const Proxy<U>& rhs)
+    requires std::three_way_comparable_with<std::decay_t<T>, std::decay_t<U>> {
+    return lhs.data <=> rhs.data;
+  }
 };
 
 // This is to make ProxyIterator model `std::indirectly_readable`
@@ -920,7 +943,7 @@ struct ProxyIteratorBase {};
 template <class Base>
   requires std::derived_from<
       typename std::iterator_traits<Base>::iterator_category,
-      std::input_iterator_tag> 
+      std::input_iterator_tag>
 struct ProxyIteratorBase<Base> {
   using iterator_category = std::input_iterator_tag;
 };
@@ -951,8 +974,8 @@ struct ProxyIterator : ProxyIteratorBase<Base> {
   = default;
 
   constexpr ProxyIterator(Base base) : base_{std::move(base)} {}
-  
-  template <class T> 
+
+  template <class T>
     requires std::constructible_from<Base, T&&>
   constexpr ProxyIterator(T&& t) : base_{std::forward<T>(t)} {}
 
@@ -1076,6 +1099,7 @@ struct ProxyIterator : ProxyIteratorBase<Base> {
 
 static_assert(std::indirectly_readable<ProxyIterator<int*>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int>>);
+static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int&>>);
 
 template <class BaseSent>
 struct ProxySentinel {
