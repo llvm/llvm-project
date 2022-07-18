@@ -71,8 +71,8 @@ define void @foo2(float* nocapture %a, float* nocapture %b, float* nocapture rea
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META5:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8:![0-9]+]])
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META10:![0-9]+]])
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META13:![0-9]+]])
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META10:![0-9]+]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META13:![0-9]+]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !15, !noalias !16
 ; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
 ; CHECK-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I_I]], align 4, !alias.scope !16, !noalias !15
