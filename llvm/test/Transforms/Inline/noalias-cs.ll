@@ -65,8 +65,8 @@ define void @caller(float* nocapture %a, float* nocapture %b, float** nocapture 
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = load float*, float** [[C_PTR:%.*]], align 8, !alias.scope !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META9:![0-9]+]]) #[[ATTR2:[0-9]+]], !noalias !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META12:![0-9]+]]) #[[ATTR2]], !noalias !6
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META9:![0-9]+]]), !noalias !6
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META12:![0-9]+]]), !noalias !6
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !noalias !14
 ; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 5
 ; CHECK-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I_I]], align 4, !alias.scope !9, !noalias !15
@@ -75,8 +75,8 @@ define void @caller(float* nocapture %a, float* nocapture %b, float** nocapture 
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4, !noalias !6
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
 ; CHECK-NEXT:    store float [[TMP1]], float* [[ARRAYIDX_I]], align 4, !noalias !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META17:![0-9]+]]) #[[ATTR2]], !alias.scope !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META20:![0-9]+]]) #[[ATTR2]], !alias.scope !6
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META17:![0-9]+]]), !alias.scope !6
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META20:![0-9]+]]), !alias.scope !6
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[A]], align 4, !alias.scope !6, !noalias !22
 ; CHECK-NEXT:    [[ARRAYIDX_I_I1:%.*]] = getelementptr inbounds float, float* [[B]], i64 5
 ; CHECK-NEXT:    store float [[TMP2]], float* [[ARRAYIDX_I_I1]], align 4, !alias.scope !23, !noalias !20
