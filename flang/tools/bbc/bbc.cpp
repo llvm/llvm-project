@@ -106,6 +106,10 @@ static llvm::cl::opt<bool> warnIsError("Werror",
                                        llvm::cl::desc("warnings are errors"),
                                        llvm::cl::init(false));
 
+static llvm::cl::opt<bool> dumpSymbols("dump-symbols",
+                                       llvm::cl::desc("dump the symbol table"),
+                                       llvm::cl::init(false));
+
 static llvm::cl::opt<bool> pftDumpTest(
     "pft-test",
     llvm::cl::desc("parse the input, create a PFT, dump it, and exit"),
@@ -187,6 +191,11 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     if (!tables.schemata)
       llvm::errs() << programPrefix
                    << "could not find module file for __fortran_type_info\n";
+  }
+
+  if (dumpSymbols) {
+    semantics.DumpSymbols(llvm::outs());
+    return mlir::success();
   }
 
   if (pftDumpTest) {
