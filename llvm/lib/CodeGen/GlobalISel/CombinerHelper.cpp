@@ -4814,8 +4814,6 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
       assert(!magics.IsAdd && "Should use cheap fixup now");
     }
 
-    APInt Magic = magics.Magic;
-
     unsigned SelNPQ;
     if (!magics.IsAdd || Divisor.isOneValue()) {
       assert(magics.ShiftAmount < Divisor.getBitWidth() &&
@@ -4829,7 +4827,7 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
 
     PreShifts.push_back(
         MIB.buildConstant(ScalarShiftAmtTy, PreShift).getReg(0));
-    MagicFactors.push_back(MIB.buildConstant(ScalarTy, Magic).getReg(0));
+    MagicFactors.push_back(MIB.buildConstant(ScalarTy, magics.Magic).getReg(0));
     NPQFactors.push_back(
         MIB.buildConstant(ScalarTy,
                           SelNPQ ? APInt::getOneBitSet(EltBits, EltBits - 1)
