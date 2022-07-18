@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
 
   Pool.async([&]() { ExitOnErr(Server.Server.listen()); });
   Pool.async([&]() {
-    while (1) {
+    while (true) {
       DebuginfodLogEntry Entry = Log.pop();
       if (VerboseLogging) {
         outs() << Entry.Message << "\n";
