@@ -1,13 +1,13 @@
-; RUN: opt -S -lowertypetests -mtriple=i686-unknown-linux-gnu < %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=i686-pc-win32 < %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=x86_64-pc-win32 < %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=arm-unknown-linux-gnu < %s | FileCheck --check-prefixes=ARM,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=thumb-unknown-linux-gnu < %s | FileCheck --check-prefixes=THUMB,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck --check-prefixes=ARM,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=riscv32-unknown-linux-gnu < %s | FileCheck --check-prefixes=RISCV,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=riscv64-unknown-linux-gnu < %s | FileCheck --check-prefixes=RISCV,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=wasm32-unknown-unknown < %s | FileCheck --check-prefix=WASM32 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=arm-unknown-linux-gnu %s | FileCheck --check-prefixes=ARM,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=thumb-unknown-linux-gnu %s | FileCheck --check-prefixes=THUMB,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=aarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=ARM,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE %s
+; RUN: opt -S -passes=lowertypetests -mtriple=wasm32-unknown-unknown %s | FileCheck --check-prefix=WASM32 %s
 
 ; Tests that we correctly handle bitsets containing 2 or more functions.
 

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=arm-unknown-linux-gnu -lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t < %s | FileCheck %s
+; RUN: opt -S -mtriple=arm-unknown-linux-gnu -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t %s | FileCheck %s
 
 target datalayout = "e-p:64:64"
 

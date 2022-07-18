@@ -1,4 +1,4 @@
-; RUN: opt -S -lowertypetests < %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests %s | FileCheck %s
 
 ; Tests that non-string metadata nodes may be used as bitset identifiers.
 

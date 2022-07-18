@@ -1,5 +1,5 @@
-; RUN: opt -lowertypetests -S %s | FileCheck --check-prefix=FULL %s
-; RUN: opt -lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%p/Inputs/cfi-direct-call1.yaml -S %s | FileCheck --check-prefix=THIN %s
+; RUN: opt -passes=lowertypetests -S %s | FileCheck --check-prefix=FULL %s
+; RUN: opt -passes=lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%p/Inputs/cfi-direct-call1.yaml -S %s | FileCheck --check-prefix=THIN %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"

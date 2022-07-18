@@ -1,7 +1,6 @@
-; RUN: opt -S -passes=lowertypetests < %s | FileCheck %s
-; RUN: opt -S -lowertypetests < %s | FileCheck %s
-; RUN: opt -S -lowertypetests -mtriple=x86_64-apple-macosx10.8.0 < %s | FileCheck %s
-; RUN: opt -S -O3 < %s | FileCheck -check-prefix=CHECK-NODISCARD %s
+; RUN: opt -S -passes=lowertypetests %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-apple-macosx10.8.0 %s | FileCheck %s
+; RUN: opt -S -O3 %s | FileCheck -check-prefix=CHECK-NODISCARD %s
 
 target datalayout = "e-p:32:32"
 
