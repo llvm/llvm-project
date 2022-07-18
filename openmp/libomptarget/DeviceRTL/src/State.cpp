@@ -203,17 +203,20 @@ void state::TeamStateTy::init(bool IsSPMD) {
   ICVState.RunSchedVar = omp_sched_static;
   ICVState.RunSchedChunkVar = 1;
   ParallelTeamSize = 1;
+  HasThreadState = false;
   ParallelRegionFnVar = nullptr;
 }
 
 bool state::TeamStateTy::operator==(const TeamStateTy &Other) const {
   return (ICVState == Other.ICVState) &
+         (HasThreadState == Other.HasThreadState) &
          (ParallelTeamSize == Other.ParallelTeamSize);
 }
 
 void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ICVState.assertEqual(Other.ICVState);
   ASSERT(ParallelTeamSize == Other.ParallelTeamSize);
+  ASSERT(HasThreadState == Other.HasThreadState);
 }
 
 namespace {
@@ -257,6 +260,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
   NewThreadState->init(ThreadStates[TId]);
+  TeamState.HasThreadState = true;
   ThreadStates[TId] = NewThreadState;
 }
 
@@ -269,7 +273,7 @@ void state::exitDataEnvironment() {
 }
 
 void state::resetStateForThread(uint32_t TId) {
-  if (OMP_LIKELY(!ThreadStates[TId]))
+  if (OMP_LIKELY(!TeamState.HasThreadState || !ThreadStates[TId]))
     return;
 
   ThreadStateTy *PreviousThreadState = ThreadStates[TId]->PreviousThreadState;
