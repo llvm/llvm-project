@@ -3202,25 +3202,23 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // TODO: This can be generalized to compares of non-signbits using
   // decomposeBitTestICmp(). It could be enhanced more by using (something like)
   // foldLogOpOfMaskedICmps().
-  if ((LHS->hasOneUse() || RHS->hasOneUse()) &&
+  const APInt *LC, *RC;
+  if (match(LHS1, m_APInt(LC)) && match(RHS1, m_APInt(RC)) &&
       LHS0->getType() == RHS0->getType() &&
-      LHS0->getType()->isIntOrIntVectorTy()) {
+      LHS0->getType()->isIntOrIntVectorTy() &&
+      (LHS->hasOneUse() || RHS->hasOneUse())) {
+    // Convert xor of signbit tests to signbit test of xor'd values:
     // (X > -1) ^ (Y > -1) --> (X ^ Y) < 0
     // (X <  0) ^ (Y <  0) --> (X ^ Y) < 0
-    if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_AllOnes()) &&
-         PredR == CmpInst::ICMP_SGT && match(RHS1, m_AllOnes())) ||
-        (PredL == CmpInst::ICMP_SLT && match(LHS1, m_Zero()) &&
-         PredR == CmpInst::ICMP_SLT && match(RHS1, m_Zero())))
-      return Builder.CreateIsNeg(Builder.CreateXor(LHS0, RHS0));
-
     // (X > -1) ^ (Y <  0) --> (X ^ Y) > -1
     // (X <  0) ^ (Y > -1) --> (X ^ Y) > -1
-    if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_AllOnes()) &&
-         PredR == CmpInst::ICMP_SLT && match(RHS1, m_Zero())) ||
-        (PredL == CmpInst::ICMP_SLT && match(LHS1, m_Zero()) &&
-         PredR == CmpInst::ICMP_SGT && match(RHS1, m_AllOnes())))
-      return Builder.CreateIsNotNeg(Builder.CreateXor(LHS0, RHS0));
-
+    bool TrueIfSignedL, TrueIfSignedR;
+    if (isSignBitCheck(PredL, *LC, TrueIfSignedL) &&
+        isSignBitCheck(PredR, *RC, TrueIfSignedR)) {
+      Value *XorLR = Builder.CreateXor(LHS0, RHS0);
+      return TrueIfSignedL == TrueIfSignedR ? Builder.CreateIsNeg(XorLR) :
+                                              Builder.CreateIsNotNeg(XorLR);
+    }
   }
 
   // Instead of trying to imitate the folds for and/or, decompose this 'xor'
