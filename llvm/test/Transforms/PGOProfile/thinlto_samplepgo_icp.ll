@@ -5,7 +5,7 @@
 
 ; Checks if calls to static target functions are properly imported and promoted
 ; by ICP. Note that the GUID in the profile is from the oroginal name.
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -o %t4.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
+; RUN: opt -passes=function-import -summary-file %t3.thinlto.bc %t.bc -o %t4.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
 ; IMPORTS: Import _ZL3foov.llvm.0
 ; RUN: opt %t4.bc -icp-lto -passes=pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
 
