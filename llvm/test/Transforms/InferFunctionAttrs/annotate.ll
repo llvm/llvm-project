@@ -314,6 +314,11 @@ declare float @ceilf(float)
 ; CHECK: declare x86_fp80 @ceill(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @ceill(x86_fp80)
 
+; The second argument of int chmod(FILE*, mode_t) is a 32-bit int on most
+; targets but it's a 16-bit short on Apple Darwin.  Use i16 here to verify
+; the function is still recognized.
+; FIXME: this should be tightened up to verify that only the type with
+; the right size for the target matches.
 ; CHECK: declare noundef i32 @chmod(i8* nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
 declare i32 @chmod(i8*, i16 zeroext)
 

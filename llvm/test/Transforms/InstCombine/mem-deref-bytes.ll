@@ -4,7 +4,7 @@
 declare i32 @memcmp(i8* nocapture, i8* nocapture, i64)
 declare i8* @memcpy(i8* nocapture, i8* nocapture, i64)
 declare i8* @memmove(i8* nocapture, i8* nocapture, i64)
-declare i8* @memset(i8* nocapture, i8, i64)
+declare i8* @memset(i8* nocapture, i32, i64)
 declare i8* @memchr(i8* nocapture, i32, i64)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
 declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
@@ -118,12 +118,13 @@ define i8* @memmove_const_size_set_deref(i8* nocapture readonly %d, i8* nocaptur
   ret i8* %call
 }
 
-define i8* @memset_const_size_set_deref(i8* nocapture readonly %s, i8 %c) {
+define i8* @memset_const_size_set_deref(i8* nocapture readonly %s, i32 %c) {
 ; CHECK-LABEL: @memset_const_size_set_deref(
-; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i8 [[C:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i8 [[TMP1]], i64 64, i1 false)
 ; CHECK-NEXT:    ret i8* [[S]]
 ;
-  %call = tail call i8* @memset(i8* %s, i8 %c, i64 64)
+  %call = tail call i8* @memset(i8* %s, i32 %c, i64 64)
   ret i8* %call
 }
 

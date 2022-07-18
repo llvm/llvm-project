@@ -13,9 +13,9 @@ define void @test_no_simplify() {
   %dst = getelementptr inbounds [60 x i16], [60 x i16]* @a, i32 0, i32 0
   %src = getelementptr inbounds [8 x i8], [8 x i8]* @.str, i32 0, i32 0
 
-; CHECK-NEXT: call i16* @__strcpy_chk
-  call i16* @__strcpy_chk(i16* %dst, i8* %src, i32 8)
+; CHECK-NEXT: call i16 @__strcpy_chk
+  call i16 @__strcpy_chk(i16* %dst, i8* %src, i32 8)
   ret void
 }
 
-declare i16* @__strcpy_chk(i16*, i8*, i32)
+declare i16 @__strcpy_chk(i16*, i8*, i32)

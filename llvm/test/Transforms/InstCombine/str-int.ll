@@ -13,8 +13,8 @@
 declare i32 @strtol(i8*, i8**, i32)
 declare i32 @atoi(i8*)
 declare i32 @atol(i8*)
-declare i32 @atoll(i8*)
-declare i32 @strtoll(i8*, i8**, i32)
+declare i64 @atoll(i8*)
+declare i64 @strtoll(i8*, i8**, i32)
 
 define i32 @strtol_dec() #0 {
 ; CHECK-LABEL: @strtol_dec(
@@ -128,21 +128,19 @@ define i32 @atol_test() #0 {
   ret i32 %call
 }
 
-define i32 @atoll_test() #0 {
+define i64 @atoll_test() #0 {
 ; CHECK-LABEL: @atoll_test(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @atoll(i8* nocapture getelementptr inbounds ([11 x i8], [11 x i8]* @.str.5, i64 0, i64 0))
-; CHECK-NEXT:    ret i32 [[CALL]]
+; CHECK-NEXT:    ret i64 4994967295
 ;
-  %call = call i32 @atoll(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.5, i32 0, i32 0)) #3
-  ret i32 %call
+  %call = call i64 @atoll(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.5, i32 0, i32 0)) #3
+  ret i64 %call
 }
 
-define i32 @strtoll_test() #0 {
+define i64 @strtoll_test() #0 {
 ; CHECK-LABEL: @strtoll_test(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strtoll(i8* nocapture getelementptr inbounds ([11 x i8], [11 x i8]* @.str.7, i64 0, i64 0), i8** null, i32 10)
-; CHECK-NEXT:    ret i32 [[CALL]]
+; CHECK-NEXT:    ret i64 4994967295
 ;
 ; CHECK-NEXT
-  %call = call i32 @strtoll(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.7, i32 0, i32 0), i8** null, i32 10) #5
-  ret i32 %call
+  %call = call i64 @strtoll(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.7, i32 0, i32 0), i8** null, i32 10) #5
+  ret i64 %call
 }

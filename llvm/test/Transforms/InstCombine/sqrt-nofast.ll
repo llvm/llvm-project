@@ -25,19 +25,20 @@ entry:
 
 declare float @llvm.sqrt.f32(float) #1
 
-; FIXME:
-; This is a function called "sqrtf", but its type is double.
-; Assume it is a user function rather than a libm function,
-; so don't transform it.
+; The call below is to a function called "sqrtf", but its type is double.
+; Assume it is a user function rather than a libm function, and so don't
+; transform it.
 
 define double @fake_sqrt(double %a, double %b) {
 ; CHECK-LABEL: @fake_sqrt(
-; CHECK-NEXT:    [[FABS:%.*]] = call fast double @llvm.fabs.f64(double [[A:%.*]])
-; CHECK-NEXT:    ret double [[FABS]]
+; CHECK-NEXT:    [[C:%.*]] = fmul fast double [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[E:%.*]] = call fast double @sqrtf(double [[C]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    ret double [[E]]
 ;
   %c = fmul fast double %a, %a
   %e = call fast double @sqrtf(double %c) readnone
   ret double %e
 }
 
-declare double @sqrtf(double) readnone ; This is not the 'sqrt' you're looking for.
+; Standard sqrtf takes and returns float.  The following is not it.
+declare double @sqrtf(double) readnone
