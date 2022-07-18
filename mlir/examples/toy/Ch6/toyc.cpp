@@ -171,7 +171,6 @@ int loadAndProcessMLIR(mlir::MLIRContext &context,
   if (isLoweringToLLVM) {
     // Finish lowering the toy IR to the LLVM dialect.
     pm.addPass(mlir::toy::createLowerToLLVMPass());
-    pm.addPass(mlir::toy::createAllocRenamingPass());
   }
 
   if (mlir::failed(pm.run(*module)))

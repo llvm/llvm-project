@@ -315,29 +315,6 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
   }
 };
 
-struct AlignedDeallocOpLowering
-    : public ConvertOpToLLVMPattern<memref::DeallocOp> {
-  using ConvertOpToLLVMPattern<memref::DeallocOp>::ConvertOpToLLVMPattern;
-
-  explicit AlignedDeallocOpLowering(LLVMTypeConverter &converter)
-      : ConvertOpToLLVMPattern<memref::DeallocOp>(converter) {}
-
-  LogicalResult
-  matchAndRewrite(memref::DeallocOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Insert the `free` declaration if it is not already present.
-    auto freeFunc =
-        LLVM::lookupOrCreateAlignedFreeFn(op->getParentOfType<ModuleOp>());
-    MemRefDescriptor memref(adaptor.memref());
-    Value casted = rewriter.create<LLVM::BitcastOp>(
-        op.getLoc(), getVoidPtrType(),
-        memref.allocatedPtr(rewriter, op.getLoc()));
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, TypeRange(), SymbolRefAttr::get(freeFunc), casted);
-    return success();
-  }
-};
-
 // A `dim` is converted to a constant for static sizes and to an access to the
 // size stored in the memref descriptor for dynamic sizes.
 struct DimOpLowering : public ConvertOpToLLVMPattern<memref::DimOp> {
@@ -2049,7 +2026,7 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
   // clang-format on
   auto allocLowering = converter.getOptions().allocLowering;
   if (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc)
-    patterns.add<AlignedAllocOpLowering, AlignedDeallocOpLowering>(converter);
+    patterns.add<AlignedAllocOpLowering, DeallocOpLowering>(converter);
   else if (allocLowering == LowerToLLVMOptions::AllocLowering::Malloc)
     patterns.add<AllocOpLowering, DeallocOpLowering>(converter);
 }

@@ -6,7 +6,7 @@ func.func @zero_d_alloc() -> memref<f32> {
 // CHECK: %[[null:.*]] = llvm.mlir.null : !llvm.ptr<f32>
 // CHECK: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<f32> to i64
-// CHECK: llvm.call @_mlir_alloc(%[[size_bytes]]) : (i64) -> !llvm.ptr<i8>
+// CHECK: llvm.call @malloc(%[[size_bytes]]) : (i64) -> !llvm.ptr<i8>
 // CHECK: %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<f32>
 // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
 // CHECK: llvm.insertvalue %[[ptr]], %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
@@ -26,7 +26,7 @@ func.func @zero_d_dealloc(%arg0: memref<f32>) {
 // CHECK: unrealized_conversion_cast
 // CHECK: %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
 // CHECK: %[[bc:.*]] = llvm.bitcast %[[ptr]] : !llvm.ptr<f32> to !llvm.ptr<i8>
-// CHECK: llvm.call @_mlir_free(%[[bc]]) : (!llvm.ptr<i8>) -> ()
+// CHECK: llvm.call @free(%[[bc]]) : (!llvm.ptr<i8>) -> ()
 
   memref.dealloc %arg0 : memref<f32>
   return
@@ -43,7 +43,7 @@ func.func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<f32> to i64
 // CHECK: %[[alignment:.*]] = llvm.mlir.constant(8 : index) : i64
 // CHECK: %[[allocsize:.*]] = llvm.add %[[size_bytes]], %[[alignment]] : i64
-// CHECK: %[[allocated:.*]] = llvm.call @_mlir_alloc(%[[allocsize]]) : (i64) -> !llvm.ptr<i8>
+// CHECK: %[[allocated:.*]] = llvm.call @malloc(%[[allocsize]]) : (i64) -> !llvm.ptr<i8>
 // CHECK: %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<f32>
 // CHECK: %[[allocatedAsInt:.*]] = llvm.ptrtoint %[[ptr]] : !llvm.ptr<f32> to i64
 // CHECK: %[[one_1:.*]] = llvm.mlir.constant(1 : index) : i64
@@ -69,7 +69,7 @@ func.func @static_alloc() -> memref<32x18xf32> {
 // CHECK: %[[null:.*]] = llvm.mlir.null : !llvm.ptr<f32>
 // CHECK: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<f32> to i64
-// CHECK: %[[allocated:.*]] = llvm.call @_mlir_alloc(%[[size_bytes]]) : (i64) -> !llvm.ptr<i8>
+// CHECK: %[[allocated:.*]] = llvm.call @malloc(%[[size_bytes]]) : (i64) -> !llvm.ptr<i8>
 // CHECK: llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<f32>
  %0 = memref.alloc() : memref<32x18xf32>
  return %0 : memref<32x18xf32>
@@ -106,7 +106,7 @@ func.func @static_alloca() -> memref<32x18xf32> {
 func.func @static_dealloc(%static: memref<10x8xf32>) {
 // CHECK: %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[bc:.*]] = llvm.bitcast %[[ptr]] : !llvm.ptr<f32> to !llvm.ptr<i8>
-// CHECK: llvm.call @_mlir_free(%[[bc]]) : (!llvm.ptr<i8>) -> ()
+// CHECK: llvm.call @free(%[[bc]]) : (!llvm.ptr<i8>) -> ()
   memref.dealloc %static : memref<10x8xf32>
   return
 }
@@ -206,7 +206,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
     // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr<{{.*}}> to i32
     // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr<{{.*}}> to i32
     // CHECK: llvm.add %{{.*}} : i32
-    // CHECK: llvm.call @_mlir_alloc(%{{.*}}) : (i32) -> !llvm.ptr
+    // CHECK: llvm.call @malloc(%{{.*}}) : (i32) -> !llvm.ptr
     // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr<{{.*}}> to i32
     // CHECK: llvm.sub {{.*}} : i32
     // CHECK: llvm.add {{.*}} : i32
