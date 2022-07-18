@@ -1116,17 +1116,12 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
           m->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
     llvmModule->setTargetTriple(targetTripleAttr.cast<StringAttr>().getValue());
 
-  // Inject declarations for `_mlir_alloc`, `_mlir_aligned_alloc` and
-  // `_mlir_free` functions that can be used in memref allocation / deallocation
-  // coming from standard ops lowering.
+  // Inject declarations for `malloc` and `free` functions that can be used in
+  // memref allocation/deallocation coming from standard ops lowering.
   llvm::IRBuilder<> builder(llvmContext);
-  llvmModule->getOrInsertFunction("_mlir_alloc", builder.getInt8PtrTy(),
+  llvmModule->getOrInsertFunction("malloc", builder.getInt8PtrTy(),
                                   builder.getInt64Ty());
-  llvmModule->getOrInsertFunction("_mlir_aligned_alloc", builder.getInt8PtrTy(),
-                                  builder.getInt64Ty(), builder.getInt64Ty());
-  llvmModule->getOrInsertFunction("_mlir_free", builder.getVoidTy(),
-                                  builder.getInt8PtrTy());
-  llvmModule->getOrInsertFunction("_mlir_aligned_free", builder.getVoidTy(),
+  llvmModule->getOrInsertFunction("free", builder.getVoidTy(),
                                   builder.getInt8PtrTy());
 
   return llvmModule;

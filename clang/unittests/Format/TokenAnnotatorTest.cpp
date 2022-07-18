@@ -802,6 +802,70 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
           << I;
     }
   }
+
+  BaseTokens = annotate("constexpr Foo(Foo const &other)\n"
+                        "    : value{other.value} {\n"
+                        "  do_magic();\n"
+                        "  do_more_magic();\n"
+                        "}");
+
+  ConstrainedTokens = annotate("constexpr Foo(Foo const &other)\n"
+                               "  requires std::is_copy_constructible<T>\n"
+                               "    : value{other.value} {\n"
+                               "  do_magic();\n"
+                               "  do_more_magic();\n"
+                               "}");
+
+  NumberOfBaseTokens = 26u;
+  NumberOfAdditionalRequiresClauseTokens = 7u;
+  NumberOfTokensBeforeRequires = 8u;
+
+  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
+  ASSERT_EQ(ConstrainedTokens.size(),
+            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
+      << ConstrainedTokens;
+
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
+      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
+    } else {
+      EXPECT_EQ(*BaseTokens[I],
+                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
+          << I;
+    }
+  }
+
+  BaseTokens = annotate("constexpr Foo(Foo const &other)\n"
+                        "    : value{other.value} {\n"
+                        "  do_magic();\n"
+                        "  do_more_magic();\n"
+                        "}");
+
+  ConstrainedTokens = annotate("constexpr Foo(Foo const &other)\n"
+                               "  requires (std::is_copy_constructible<T>)\n"
+                               "    : value{other.value} {\n"
+                               "  do_magic();\n"
+                               "  do_more_magic();\n"
+                               "}");
+
+  NumberOfBaseTokens = 26u;
+  NumberOfAdditionalRequiresClauseTokens = 9u;
+  NumberOfTokensBeforeRequires = 8u;
+
+  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
+  ASSERT_EQ(ConstrainedTokens.size(),
+            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
+      << ConstrainedTokens;
+
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
+      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
+    } else {
+      EXPECT_EQ(*BaseTokens[I],
+                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
+          << I;
+    }
+  }
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
@@ -828,6 +892,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
                     "}();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_ObjCBlockLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
+  auto Tokens = annotate("[]() constexpr {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
 }
 
 } // namespace

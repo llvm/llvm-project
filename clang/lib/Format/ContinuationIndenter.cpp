@@ -1190,6 +1190,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       break;
     }
   }
+  if (NextNonComment->isOneOf(TT_CtorInitializerColon, TT_InheritanceColon,
+                              TT_InheritanceComma)) {
+    return State.FirstIndent + Style.ConstructorInitializerIndentWidth;
+  }
   if ((PreviousNonComment &&
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
@@ -1263,10 +1267,6 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (PreviousNonComment && PreviousNonComment->is(TT_InheritanceColon) &&
       Style.BreakInheritanceList == FormatStyle::BILS_AfterColon) {
     return CurrentState.Indent;
-  }
-  if (NextNonComment->isOneOf(TT_CtorInitializerColon, TT_InheritanceColon,
-                              TT_InheritanceComma)) {
-    return State.FirstIndent + Style.ConstructorInitializerIndentWidth;
   }
   if (Previous.is(tok::r_paren) && !Current.isBinaryOperator() &&
       !Current.isOneOf(tok::colon, tok::comment)) {

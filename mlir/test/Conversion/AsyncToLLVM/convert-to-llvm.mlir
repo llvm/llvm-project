@@ -61,7 +61,7 @@ func.func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 // Delete coroutine.
 // CHECK: ^[[CLEANUP]]:
 // CHECK: %[[MEM:.*]] = llvm.intr.coro.free
-// CHECK: llvm.call @_mlir_aligned_free(%[[MEM]])
+// CHECK: llvm.call @free(%[[MEM]])
 
 // Suspend coroutine, and also a return statement for ramp function.
 // CHECK: ^[[SUSPEND]]:

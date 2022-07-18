@@ -16,7 +16,6 @@ add_public_tablegen_target(ToyCh7CombineIncGen)
 add_toy_chapter(toyc-ch7
   toyc.cpp
   parser/AST.cpp
-  mlir/AllocRenamingPass.cpp
   mlir/MLIRGen.cpp
   mlir/Dialect.cpp
   mlir/LowerToAffineLoops.cpp

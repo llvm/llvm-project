@@ -399,7 +399,7 @@ public:
 
     // Free the memory.
     auto freeFuncOp =
-        LLVM::lookupOrCreateAlignedFreeFn(op->getParentOfType<ModuleOp>());
+        LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, TypeRange(),
                                               SymbolRefAttr::get(freeFuncOp),
                                               ValueRange(coroMem.getResult()));
