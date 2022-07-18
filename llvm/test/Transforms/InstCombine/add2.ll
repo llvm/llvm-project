@@ -477,8 +477,7 @@ define i32 @add_of_selects(i1 %A, i32 %B) {
 
 define i32 @add_undemanded_low_bits(i32 %x) {
 ; CHECK-LABEL: @add_undemanded_low_bits(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], 1616
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1616
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 4
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
@@ -490,8 +489,7 @@ define i32 @add_undemanded_low_bits(i32 %x) {
 
 define i32 @sub_undemanded_low_bits(i32 %x) {
 ; CHECK-LABEL: @sub_undemanded_low_bits(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[OR]], -1616
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1616
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 4
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;

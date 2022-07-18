@@ -154,6 +154,20 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   if (Depth == 0 && !V->hasOneUse())
     DemandedMask.setAllBits();
 
+  // Update flags after simplifying an operand based on the fact that some high
+  // order bits are not demanded.
+  auto disableWrapFlagsBasedOnUnusedHighBits = [](Instruction *I,
+                                                  unsigned NLZ) {
+    if (NLZ > 0) {
+      // Disable the nsw and nuw flags here: We can no longer guarantee that
+      // we won't wrap after simplification. Removing the nsw/nuw flags is
+      // legal here because the top bit is not demanded.
+      I->setHasNoSignedWrap(false);
+      I->setHasNoUnsignedWrap(false);
+    }
+    return I;
+  };
+
   // If the high-bits of an ADD/SUB/MUL are not demanded, then we do not care
   // about the high bits of the operands.
   auto simplifyOperandsBasedOnUnusedHighBits = [&](APInt &DemandedFromOps) {
@@ -165,13 +179,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1) ||
         ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
         SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1)) {
-      if (NLZ > 0) {
-        // Disable the nsw and nuw flags here: We can no longer guarantee that
-        // we won't wrap after simplification. Removing the nsw/nuw flags is
-        // legal here because the top bit is not demanded.
-        I->setHasNoSignedWrap(false);
-        I->setHasNoUnsignedWrap(false);
-      }
+      disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
       return true;
     }
     return false;
@@ -461,7 +469,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
-  case Instruction::Add:
+  case Instruction::Add: {
     if ((DemandedMask & 1) == 0) {
       // If we do not need the low bit, try to convert bool math to logic:
       // add iN (zext i1 X), (sext i1 Y) --> sext (~X & Y) to iN
@@ -498,11 +506,48 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return Builder.CreateSExt(Or, VTy);
       }
     }
-    [[fallthrough]];
+
+    // Right fill the mask of bits for the operands to demand the most
+    // significant bit and all those below it.
+    unsigned NLZ = DemandedMask.countLeadingZeros();
+    APInt DemandedFromOps = APInt::getLowBitsSet(BitWidth, BitWidth - NLZ);
+    if (ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1))
+      return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
+
+    // If low order bits are not demanded and known to be zero in one operand,
+    // then we don't need to demand them from the other operand, since they
+    // can't cause overflow into any bits that are demanded in the result.
+    unsigned NTZ = (~DemandedMask & RHSKnown.Zero).countTrailingOnes();
+    APInt DemandedFromLHS = DemandedFromOps;
+    DemandedFromLHS.clearLowBits(NTZ);
+    if (ShrinkDemandedConstant(I, 0, DemandedFromLHS) ||
+        SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Depth + 1))
+      return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
+
+    // If we are known to be adding/subtracting zeros to every bit below
+    // the highest demanded bit, we just return the other side.
+    if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
+      return I->getOperand(0);
+    if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
+      return I->getOperand(1);
+
+    // Otherwise just compute the known bits of the result.
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    Known = KnownBits::computeForAddSub(true, NSW, LHSKnown, RHSKnown);
+    break;
+  }
   case Instruction::Sub: {
-    APInt DemandedFromOps;
-    if (simplifyOperandsBasedOnUnusedHighBits(DemandedFromOps))
-      return I;
+    // Right fill the mask of bits for the operands to demand the most
+    // significant bit and all those below it.
+    unsigned NLZ = DemandedMask.countLeadingZeros();
+    APInt DemandedFromOps = APInt::getLowBitsSet(BitWidth, BitWidth - NLZ);
+    if (ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1))
+      return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
+    if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1))
+      return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
     // If we are known to be adding/subtracting zeros to every bit below
     // the highest demanded bit, we just return the other side.
@@ -510,14 +555,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I->getOperand(0);
     // We can't do this with the LHS for subtraction, unless we are only
     // demanding the LSB.
-    if ((I->getOpcode() == Instruction::Add || DemandedFromOps.isOne()) &&
-        DemandedFromOps.isSubsetOf(LHSKnown.Zero))
+    if (DemandedFromOps.isOne() && DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(I->getOpcode() == Instruction::Add,
-                                        NSW, LHSKnown, RHSKnown);
+    Known = KnownBits::computeForAddSub(false, NSW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Mul: {
