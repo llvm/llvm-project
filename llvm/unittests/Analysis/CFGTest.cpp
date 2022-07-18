@@ -79,7 +79,7 @@ protected:
        static int initialize() {
          PassInfo *PI = new PassInfo("isPotentiallyReachable testing pass", "",
                                      &ID, nullptr, true, true);
-         PassRegistry::getPassRegistry()->registerPass(*PI, false);
+         PassRegistry::getPassRegistry()->registerPass(*PI, true);
          initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
          initializeDominatorTreeWrapperPassPass(
              *PassRegistry::getPassRegistry());

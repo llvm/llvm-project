@@ -415,7 +415,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     if (SpecFuzzyFind && SpecFuzzyFind->NewReq) {
       std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
       CachedCompletionFuzzyFindRequestByFile[File] =
-          SpecFuzzyFind->NewReq.getValue();
+          SpecFuzzyFind->NewReq.value();
     }
     // SpecFuzzyFind is only destroyed after speculative fuzzy find finishes.
     // We don't want `codeComplete` to wait for the async call if it doesn't use

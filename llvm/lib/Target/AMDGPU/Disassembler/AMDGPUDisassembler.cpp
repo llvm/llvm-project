@@ -2115,6 +2115,9 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
 
+    PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
+                    KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
+
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED1)
       return MCDisassembler::Fail;
 

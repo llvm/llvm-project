@@ -288,7 +288,6 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
     Vec = &CurrentLoop->getSubLoops();
   }
   LoopList.push_back(CurrentLoop);
-  return;
 }
 
 namespace {

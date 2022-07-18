@@ -384,7 +384,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/IntegerSet.h",
         "include/mlir-c/Interfaces.h",
         "include/mlir-c/Pass.h",
-        "include/mlir-c/Registration.h",
+        "include/mlir-c/RegisterEverything.h",
         "include/mlir-c/Support.h",
         "include/mlir/CAPI/AffineExpr.h",
         "include/mlir/CAPI/AffineMap.h",
@@ -644,9 +644,9 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
-    name = "CAPIRegistration",
-    srcs = ["lib/CAPI/Registration/Registration.cpp"],
-    hdrs = ["include/mlir-c/Registration.h"],
+    name = "CAPIRegisterEverything",
+    srcs = ["lib/CAPI/RegisterEverything/RegisterEverything.cpp"],
+    hdrs = ["include/mlir-c/RegisterEverything.h"],
     capi_deps = [
         ":CAPIIR",
     ],
@@ -744,7 +744,6 @@ cc_library(
         ":CAPIGPU",
         ":CAPIIR",
         ":CAPIInterfaces",
-        ":CAPIRegistration",
         ":MLIRBindingsPythonHeadersAndDeps",
         "//llvm:Support",
         "@pybind11",
@@ -2116,6 +2115,7 @@ cc_library(
         ":SparseTensorDialect",
         ":SparseTensorPassIncGen",
         ":SparseTensorUtils",
+        ":Support",
         ":TensorDialect",
         ":Transforms",
         ":VectorDialect",

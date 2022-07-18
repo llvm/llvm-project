@@ -55,7 +55,9 @@ BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
     return nullptr;
 
   assert(!(*Func.begin()).isCold() && "Entry cannot be cold");
-  for (auto I = Func.layout_begin(), E = Func.layout_end(); I != E; ++I) {
+  for (auto I = Func.getLayout().block_begin(),
+            E = Func.getLayout().block_end();
+       I != E; ++I) {
     auto Next = std::next(I);
     if (Next != E && (*Next)->isCold())
       return *I;
@@ -272,7 +274,7 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
   uint64_t HotDot = HotAddresses[&Func];
   uint64_t ColdDot = ColdAddresses[&Func];
   bool Cold = false;
-  for (BinaryBasicBlock *BB : Func.layout()) {
+  for (const BinaryBasicBlock *BB : Func.getLayout().blocks()) {
     if (Cold || BB->isCold()) {
       Cold = true;
       BBAddresses[BB] = ColdDot;

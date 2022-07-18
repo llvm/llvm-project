@@ -3131,7 +3131,7 @@ bool ARMDAGToDAGISel::tryInsertVectorElt(SDNode *N) {
 
     // Else v8i16 pattern of an extract and an insert, with a optional vmovx for
     // extracting odd lanes.
-    if (VT == MVT::v8i16) {
+    if (VT == MVT::v8i16 && Subtarget->hasFullFP16()) {
       SDValue Inp1 = CurDAG->getTargetExtractSubreg(
           ARM::ssub_0 + ExtractLane1 / 2, dl, MVT::f32, Val1.getOperand(0));
       SDValue Inp2 = CurDAG->getTargetExtractSubreg(
@@ -3151,7 +3151,7 @@ bool ARMDAGToDAGISel::tryInsertVectorElt(SDNode *N) {
 
   // The inserted values are not extracted - if they are f16 then insert them
   // directly using a VINS.
-  if (VT == MVT::v8f16) {
+  if (VT == MVT::v8f16 && Subtarget->hasFullFP16()) {
     SDNode *VINS = CurDAG->getMachineNode(ARM::VINSH, dl, MVT::f32, Val2, Val1);
     SDValue NewIns =
         CurDAG->getTargetInsertSubreg(ARM::ssub_0 + Lane2 / 2, dl, MVT::v4f32,

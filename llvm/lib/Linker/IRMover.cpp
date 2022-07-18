@@ -1273,14 +1273,19 @@ Error IRLinker::linkModuleFlagsMetadata() {
   // First build a map of the existing module flags and requirements.
   DenseMap<MDString *, std::pair<MDNode *, unsigned>> Flags;
   SmallSetVector<MDNode *, 16> Requirements;
+  SmallVector<unsigned, 0> Mins;
+  DenseSet<MDString *> SeenMin;
   for (unsigned I = 0, E = DstModFlags->getNumOperands(); I != E; ++I) {
     MDNode *Op = DstModFlags->getOperand(I);
-    ConstantInt *Behavior = mdconst::extract<ConstantInt>(Op->getOperand(0));
+    uint64_t Behavior =
+        mdconst::extract<ConstantInt>(Op->getOperand(0))->getZExtValue();
     MDString *ID = cast<MDString>(Op->getOperand(1));
 
-    if (Behavior->getZExtValue() == Module::Require) {
+    if (Behavior == Module::Require) {
       Requirements.insert(cast<MDNode>(Op->getOperand(2)));
     } else {
+      if (Behavior == Module::Min)
+        Mins.push_back(I);
       Flags[ID] = std::make_pair(Op, I);
     }
   }
@@ -1296,6 +1301,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
     unsigned DstIndex;
     std::tie(DstOp, DstIndex) = Flags.lookup(ID);
     unsigned SrcBehaviorValue = SrcBehavior->getZExtValue();
+    SeenMin.insert(ID);
 
     // If this is a requirement, add it and continue.
     if (SrcBehaviorValue == Module::Require) {
@@ -1309,6 +1315,10 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
     // If there is no existing flag with this ID, just add it.
     if (!DstOp) {
+      if (SrcBehaviorValue == Module::Min) {
+        Mins.push_back(DstModFlags->getNumOperands());
+        SeenMin.erase(ID);
+      }
       Flags[ID] = std::make_pair(SrcOp, DstModFlags->getNumOperands());
       DstModFlags->addOperand(SrcOp);
       continue;
@@ -1465,6 +1475,20 @@ Error IRLinker::linkModuleFlagsMetadata() {
     }
     }
 
+  }
+
+  // For the Min behavior, set the value to 0 if either module does not have the
+  // flag.
+  for (auto Idx : Mins) {
+    MDNode *Op = DstModFlags->getOperand(Idx);
+    MDString *ID = cast<MDString>(Op->getOperand(1));
+    if (!SeenMin.count(ID)) {
+      ConstantInt *V = mdconst::extract<ConstantInt>(Op->getOperand(2));
+      Metadata *FlagOps[] = {
+          Op->getOperand(0), ID,
+          ConstantAsMetadata::get(ConstantInt::get(V->getType(), 0))};
+      DstModFlags->setOperand(Idx, MDNode::get(DstM.getContext(), FlagOps));
+    }
   }
 
   // Check all of the requirements.

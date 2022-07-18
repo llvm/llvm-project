@@ -11,6 +11,7 @@
 
 #include "bolt/Passes/FrameAnalysis.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include <atomic>
 
 namespace llvm {
 namespace bolt {

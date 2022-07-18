@@ -449,7 +449,7 @@ void Writer::populateTargetFeatures() {
   bool inferFeatures = !config->features.has_value();
 
   if (!inferFeatures) {
-    auto &explicitFeatures = config->features.getValue();
+    auto &explicitFeatures = config->features.value();
     allowed.insert(explicitFeatures.begin(), explicitFeatures.end());
     if (!config->checkFeatures)
       goto done;

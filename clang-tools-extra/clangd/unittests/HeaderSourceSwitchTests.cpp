@@ -34,11 +34,11 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   Optional<Path> PathResult =
       getCorrespondingHeaderOrSource(FooCpp, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.getValue(), FooH);
+  ASSERT_EQ(PathResult.value(), FooH);
 
   PathResult = getCorrespondingHeaderOrSource(FooH, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.getValue(), FooCpp);
+  ASSERT_EQ(PathResult.value(), FooCpp);
 
   // Test with header file in capital letters and different extension, source
   // file with different extension
@@ -49,7 +49,7 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   FS.Files[FooHH];
   PathResult = getCorrespondingHeaderOrSource(FooC, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.getValue(), FooHH);
+  ASSERT_EQ(PathResult.value(), FooHH);
 
   // Test with both capital letters
   auto Foo2C = testPath("foo2.C");
@@ -58,7 +58,7 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   FS.Files[Foo2HH];
   PathResult = getCorrespondingHeaderOrSource(Foo2C, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.getValue(), Foo2HH);
+  ASSERT_EQ(PathResult.value(), Foo2HH);
 
   // Test with source file as capital letter and .hxx header file
   auto Foo3C = testPath("foo3.C");
@@ -68,7 +68,7 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   FS.Files[Foo3HXX];
   PathResult = getCorrespondingHeaderOrSource(Foo3C, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.getValue(), Foo3HXX);
+  ASSERT_EQ(PathResult.value(), Foo3HXX);
 
   // Test if asking for a corresponding file that doesn't exist returns an empty
   // string.

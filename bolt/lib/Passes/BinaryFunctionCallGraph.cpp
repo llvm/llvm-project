@@ -215,7 +215,7 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
           ++NotProcessed;
       }
     } else {
-      for (BinaryBasicBlock *BB : Function->layout()) {
+      for (BinaryBasicBlock *BB : Function->getLayout().blocks()) {
         // Don't count calls from cold blocks unless requested.
         if (BB->isCold() && !IncludeColdCalls)
           continue;

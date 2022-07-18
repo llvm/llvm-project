@@ -3226,6 +3226,9 @@ same *vendor-name*.
                                                                   arguments in the
                                                                   kernarg segment. Must
                                                                   be a power of 2.
+     ".uses_dynamic_stack"               boolean                  Indicates if the generated
+                                                                  machine code is using a
+                                                                  dynamically sized stack.
      ".wavefront_size"                   integer        Required  Wavefront size. Must
                                                                   be a power of 2.
      ".sgpr_count"                       integer        Required  Number of scalar
@@ -4004,7 +4007,10 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        - If 1 execute in
                                                          native wavefront size
                                                          32 mode.
-     463:459 1 bit                                   Reserved, must be 0.
+     459     1 bit   USES_DYNAMIC_STACK              Indicates if the generated
+                                                     machine code is using a
+                                                     dynamically sized stack.
+     463:460 1 bit                                   Reserved, must be 0.
      464     1 bit   RESERVED_464                    Deprecated, must be 0.
      467:465 3 bits                                  Reserved, must be 0.
      468     1 bit   RESERVED_468                    Deprecated, must be 0.
@@ -14854,6 +14860,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (wavefrontsize64)
+     ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX11   Controls USES_DYNAMIC_STACK in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
                                                                                   GFX940)

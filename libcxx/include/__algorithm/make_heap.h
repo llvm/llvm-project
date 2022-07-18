@@ -11,6 +11,7 @@
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/sift_down.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
@@ -22,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Compare, class _RandomAccessIterator>
+template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare& __comp) {
   using _CompRef = typename __comp_ref_type<_Compare>::type;
@@ -33,7 +34,7 @@ void __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
   if (__n > 1) {
     // start from the first parent, there is no need to consider children
     for (difference_type __start = (__n - 2) / 2; __start >= 0; --__start) {
-        std::__sift_down<_CompRef>(__first, __comp_ref, __n, __first + __start);
+        std::__sift_down<_AlgPolicy, _CompRef>(__first, __comp_ref, __n, __first + __start);
     }
   }
 }
@@ -41,7 +42,7 @@ void __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
 template <class _RandomAccessIterator, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
-  std::__make_heap(std::move(__first), std::move(__last), __comp);
+  std::__make_heap<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
 }
 
 template <class _RandomAccessIterator>

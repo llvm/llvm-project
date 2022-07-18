@@ -1,6 +1,5 @@
 ;; Emit the runtime hook even if there are no counter increments.
 
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s -check-prefixes=ALL,DARWIN
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s -check-prefixes=ALL,DARWIN
 ; RUN: opt < %s -mtriple=x86_64-linux-unknown -passes=instrprof -S | FileCheck %s -check-prefixes=ALL,LINUX
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=instrprof -S | FileCheck %s -check-prefixes=ALL,DARWIN

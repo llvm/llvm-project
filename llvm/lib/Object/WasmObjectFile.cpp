@@ -204,7 +204,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
 
   if (Expr.Extended) {
     Ctx.Ptr = Start;
-    while (1) {
+    while (true) {
       uint8_t Opcode = readOpcode(Ctx);
       switch (Opcode) {
       case wasm::WASM_OPCODE_I32_CONST:

@@ -65,12 +65,17 @@ public:
   // on a level of address indirection.
   virtual void relaxGotLoad(uint8_t *loc, uint8_t type) const = 0;
 
-  virtual const RelocAttrs &getRelocAttrs(uint8_t type) const = 0;
-
   virtual uint64_t getPageSize() const = 0;
 
   virtual void populateThunk(InputSection *thunk, Symbol *funcSym) {
     llvm_unreachable("target does not use thunks");
+  }
+
+  const RelocAttrs &getRelocAttrs(uint8_t type) const {
+    assert(type < relocAttrs.size() && "invalid relocation type");
+    if (type >= relocAttrs.size())
+      return invalidRelocAttrs;
+    return relocAttrs[type];
   }
 
   bool hasAttr(uint8_t type, RelocAttrBits bit) const {
@@ -110,6 +115,8 @@ public:
   uint32_t modeDwarfEncoding;
   uint8_t subtractorRelocType;
   uint8_t unsignedRelocType;
+
+  llvm::ArrayRef<RelocAttrs> relocAttrs;
 
   // We contrive this value as sufficiently far from any valid address that it
   // will always be out-of-range for any architecture. UINT64_MAX is not a

@@ -23,12 +23,10 @@
 
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Syntax/TokenManager.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include <cstdint>
-#include <iterator>
+#include <vector>
 
 namespace clang {
 namespace syntax {

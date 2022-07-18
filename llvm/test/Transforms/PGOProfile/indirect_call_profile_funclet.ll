@@ -33,8 +33,8 @@
 ;    }
 ;  }
 
-%class.base = type { i32 (...)**, i32 }
-define dso_local void @"?run@@YAXPEAVbase@@H@Z"(%class.base* %b, i32 %count) personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+%class.base = type { ptr, i32 }
+define dso_local void @"?run@@YAXPEAVbase@@H@Z"(ptr %b, i32 %count) personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @"?may_throw@@YAXH@Z"(i32 %count)
           to label %try.cont unwind label %catch.dispatch
@@ -43,11 +43,10 @@ catch.dispatch:                                   ; preds = %entry
   %tmp = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %tmp1 = catchpad within %tmp [i8* null, i32 64, i8* null]
-  %tmp2 = bitcast %class.base* %b to void (%class.base*)***
-  %vtable = load void (%class.base*)**, void (%class.base*)*** %tmp2, align 8
-  %tmp3 = load void (%class.base*)*, void (%class.base*)** %vtable, align 8
-  call void %tmp3(%class.base* %b) [ "funclet"(token %tmp1) ]
+  %tmp1 = catchpad within %tmp [ptr null, i32 64, ptr null]
+  %vtable = load ptr, ptr %b, align 8
+  %tmp3 = load ptr, ptr %vtable, align 8
+  call void %tmp3(ptr %b) [ "funclet"(token %tmp1) ]
   catchret from %tmp1 to label %try.cont
 
 try.cont:                                         ; preds = %catch, %entry

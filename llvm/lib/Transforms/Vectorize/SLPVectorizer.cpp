@@ -3744,7 +3744,7 @@ void BoUpSLP::reorderTopToBottom() {
       unsigned Opcode0 = TE->getOpcode();
       unsigned Opcode1 = TE->getAltOpcode();
       // The opcode mask selects between the two opcodes.
-      SmallBitVector OpcodeMask(TE->Scalars.size(), 0);
+      SmallBitVector OpcodeMask(TE->Scalars.size(), false);
       for (unsigned Lane : seq<unsigned>(0, TE->Scalars.size()))
         if (cast<Instruction>(TE->Scalars[Lane])->getOpcode() == Opcode1)
           OpcodeMask.set(Lane);
