@@ -111,7 +111,7 @@ _Z6helperi:                             # @_Z6helperi
 	.byte	1                               # DW_AT_name
 	.byte	1                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	53                              # DW_AT_type
+	.long	48                              # DW_AT_type
                                         # DW_AT_external
 	.byte	3                               # Abbrev [3] 0x29:0xb DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -120,7 +120,7 @@ _Z6helperi:                             # @_Z6helperi
 	.byte	3                               # DW_AT_name
 	.byte	1                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	53                              # DW_AT_type
+	.long	48                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	4                               # Abbrev [4] 0x35:0x4 DW_TAG_base_type
 	.byte	2                               # DW_AT_name
