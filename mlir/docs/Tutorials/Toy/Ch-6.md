@@ -171,16 +171,6 @@ llvm.func @main() {
 }
 ```
 
-Even though not visible from the generated LLVM dialect, it must be noted that
-the conversion of the Memref dialect into the LLVM one does not produce calls
-to the `malloc` and `free` functions, but rather to the `_mlir_alloc` and
-`_mlir_free` functions. Their names have been intentionally kept different so
-that users can provide their own implementation by means of external libraries,
-thus allowing for different behaviour or profiling. For the sake of simplicity,
-this tutorial also includes  a transformation pass converting them back to the
-well known `malloc` and `free` functions, thus partially hiding this complexity
-to newcomers.
-
 See [Conversion to the LLVM IR Dialect](../../ConversionToLLVMDialect.md) for
 more in-depth details on lowering to the LLVM dialect.
 
