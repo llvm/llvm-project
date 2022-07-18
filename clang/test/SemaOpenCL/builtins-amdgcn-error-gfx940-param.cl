@@ -130,3 +130,51 @@ void test_smfmac_i32_32x32x32_i8(global v16i* out, v2i a, v4i b, v16i c, int idx
   *out = __builtin_amdgcn_smfmac_i32_32x32x32_i8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_i32_32x32x32_i8' must be a constant integer}}
   *out = __builtin_amdgcn_smfmac_i32_32x32x32_i8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_i32_32x32x32_i8' must be a constant integer}}
 }
+
+void test_smfmac_f32_16x16x64_bf8_bf8(global v4f* out, v2i a, v4i b, v4f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf8_bf8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf8_bf8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf8_bf8' must be a constant integer}}
+}
+
+void test_smfmac_f32_16x16x64_bf8_fp8(global v4f* out, v2i a, v4i b, v4f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf8_fp8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf8_fp8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_bf8_fp8' must be a constant integer}}
+}
+
+void test_smfmac_f32_16x16x64_fp8_bf8(global v4f* out, v2i a, v4i b, v4f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_fp8_bf8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_fp8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_fp8_bf8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_fp8_bf8' must be a constant integer}}
+}
+
+void test_smfmac_f32_16x16x64_fp8_fp8(global v4f* out, v2i a, v4i b, v4f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_fp8_fp8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_fp8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_fp8_fp8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_16x16x64_fp8_fp8' must be a constant integer}}
+}
+
+void test_smfmac_f32_32x32x32_bf8_bf8(global v16f* out, v2i a, v4i b, v16f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_bf8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_bf8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_bf8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_bf8_bf8' must be a constant integer}}
+}
+
+void test_smfmac_f32_32x32x32_bf8_fp8(global v16f* out, v2i a, v4i b, v16f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8' must be a constant integer}}
+}
+
+void test_smfmac_f32_32x32x32_fp8_bf8(global v16f* out, v2i a, v4i b, v16f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8' must be a constant integer}}
+}
+
+void test_smfmac_f32_32x32x32_fp8_fp8(global v16f* out, v2i a, v4i b, v16f c, int idx, int d)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8' must be a constant integer}}
+}
