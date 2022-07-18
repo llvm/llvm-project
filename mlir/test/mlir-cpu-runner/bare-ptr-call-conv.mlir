@@ -1,4 +1,6 @@
-// RUN: mlir-opt %s -pass-pipeline="func.func(convert-scf-to-cf,convert-arith-to-llvm),convert-memref-to-llvm,convert-func-to-llvm{use-bare-ptr-memref-call-conv=1}" -reconcile-unrealized-casts | mlir-cpu-runner -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext -entry-point-result=void | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-scf-to-cf,convert-arith-to-llvm),convert-memref-to-llvm,convert-func-to-llvm{use-bare-ptr-memref-call-conv=1}" -reconcile-unrealized-casts \
+// RUN: | mlir-cpu-runner -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext -entry-point-result=void \
+// RUN: | FileCheck %s
 
 // Verify bare pointer memref calling convention. `simple_add1_add2_test`
 // gets two 2xf32 memrefs, adds 1.0f to the first one and 2.0f to the second
@@ -26,8 +28,8 @@ func.func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
 }
 
 // External declarations.
-llvm.func @malloc(i64) -> !llvm.ptr<i8>
-llvm.func @free(!llvm.ptr<i8>)
+llvm.func @_mlir_alloc(i64) -> !llvm.ptr<i8>
+llvm.func @_mlir_free(!llvm.ptr<i8>)
 func.func private @printF32(%arg0: f32)
 func.func private @printComma()
 func.func private @printNewline()
