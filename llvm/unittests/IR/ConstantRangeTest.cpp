@@ -242,54 +242,6 @@ static void TestBinaryOpExhaustive(BinaryRangeFn RangeFn, BinaryIntFn IntFn,
       });
 }
 
-struct OpRangeGathererBase {
-  void account(const APInt &N);
-  ConstantRange getRange();
-};
-
-struct UnsignedOpRangeGatherer : public OpRangeGathererBase {
-  APInt Min;
-  APInt Max;
-
-  UnsignedOpRangeGatherer(unsigned Bits)
-      : Min(APInt::getMaxValue(Bits)), Max(APInt::getMinValue(Bits)) {}
-
-  void account(const APInt &N) {
-    if (N.ult(Min))
-      Min = N;
-    if (N.ugt(Max))
-      Max = N;
-  }
-
-  ConstantRange getRange() {
-    if (Min.ugt(Max))
-      return ConstantRange::getEmpty(Min.getBitWidth());
-    return ConstantRange::getNonEmpty(Min, Max + 1);
-  }
-};
-
-struct SignedOpRangeGatherer : public OpRangeGathererBase {
-  APInt Min;
-  APInt Max;
-
-  SignedOpRangeGatherer(unsigned Bits)
-      : Min(APInt::getSignedMaxValue(Bits)),
-        Max(APInt::getSignedMinValue(Bits)) {}
-
-  void account(const APInt &N) {
-    if (N.slt(Min))
-      Min = N;
-    if (N.sgt(Max))
-      Max = N;
-  }
-
-  ConstantRange getRange() {
-    if (Min.sgt(Max))
-      return ConstantRange::getEmpty(Min.getBitWidth());
-    return ConstantRange::getNonEmpty(Min, Max + 1);
-  }
-};
-
 ConstantRange ConstantRangeTest::Full(16, true);
 ConstantRange ConstantRangeTest::Empty(16, false);
 ConstantRange ConstantRangeTest::One(APInt(16, 0xa));
@@ -2296,21 +2248,18 @@ TEST_F(ConstantRangeTest, FromKnownBitsExhaustive) {
       if (Known.hasConflict() || Known.isUnknown())
         continue;
 
-      UnsignedOpRangeGatherer UR(Bits);
-      SignedOpRangeGatherer SR(Bits);
+      SmallBitVector Elems(1 << Bits);
       for (unsigned N = 0; N < Max; ++N) {
         APInt Num(Bits, N);
         if ((Num & Known.Zero) != 0 || (~Num & Known.One) != 0)
           continue;
-
-        UR.account(Num);
-        SR.account(Num);
+        Elems.set(Num.getZExtValue());
       }
 
-      ConstantRange UnsignedCR = UR.getRange();
-      ConstantRange SignedCR = SR.getRange();
-      EXPECT_EQ(UnsignedCR, ConstantRange::fromKnownBits(Known, false));
-      EXPECT_EQ(SignedCR, ConstantRange::fromKnownBits(Known, true));
+      TestRange(ConstantRange::fromKnownBits(Known, false),
+                Elems, PreferSmallestUnsigned, {});
+      TestRange(ConstantRange::fromKnownBits(Known, true),
+                Elems, PreferSmallestSigned, {});
     }
   }
 }
