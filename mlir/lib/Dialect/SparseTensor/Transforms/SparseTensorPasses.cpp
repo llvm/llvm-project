@@ -49,13 +49,17 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
 
   void runOnOperation() override {
     auto *ctx = &getContext();
-    RewritePatternSet patterns(ctx);
+    // Apply pre-rewriting.
+    RewritePatternSet prePatterns(ctx);
+    populateSparseTensorRewriting(prePatterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(prePatterns));
     // Translate strategy flags to strategy options.
     SparsificationOptions options(
         sparseParallelizationStrategy(parallelization),
         sparseVectorizationStrategy(vectorization), vectorLength,
         enableSIMDIndex32, enableVLAVectorization);
-    // Apply rewriting.
+    // Apply sparsification and vector cleanup rewriting.
+    RewritePatternSet patterns(ctx);
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
