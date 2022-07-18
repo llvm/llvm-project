@@ -13593,6 +13593,10 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
 bool
 AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                      CombineLevel Level) const {
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
   N = N->getOperand(0).getNode();
   EVT VT = N->getValueType(0);
     // If N is unsigned bit extraction: ((x >> C) & mask), then do not combine
