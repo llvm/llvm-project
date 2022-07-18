@@ -443,8 +443,7 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr *MI = &*I++;
 
       // We're looking for the sext.w pattern ADDIW rd, rs1, 0.
-      if (MI->getOpcode() != RISCV::ADDIW || !MI->getOperand(2).isImm() ||
-          MI->getOperand(2).getImm() != 0 || !MI->getOperand(1).isReg())
+      if (!RISCV::isSEXT_W(*MI))
         continue;
 
       // Input should be a virtual register.

@@ -69,6 +69,14 @@ public:
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
+  using TargetInstrInfo::foldMemoryOperandImpl;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
+
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
               const DebugLoc &DL, Register DstReg, uint64_t Val,
@@ -182,6 +190,9 @@ protected:
 };
 
 namespace RISCV {
+
+// Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
+bool isSEXT_W(const MachineInstr &MI);
 
 // Returns true if the given MI is an RVV instruction opcode for which we may
 // expect to see a FrameIndex operand.
