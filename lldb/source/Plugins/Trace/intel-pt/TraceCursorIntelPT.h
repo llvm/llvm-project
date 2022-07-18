@@ -16,8 +16,10 @@ namespace trace_intel_pt {
 
 class TraceCursorIntelPT : public TraceCursor {
 public:
-  TraceCursorIntelPT(lldb::ThreadSP thread_sp,
-                     DecodedThreadSP decoded_thread_sp);
+  TraceCursorIntelPT(
+      lldb::ThreadSP thread_sp, DecodedThreadSP decoded_thread_sp,
+      const llvm::Optional<LinuxPerfZeroTscConversion> &tsc_conversion,
+      llvm::Optional<uint64_t> beginning_of_time_nanos);
 
   bool Seek(int64_t offset, SeekType origin) override;
 
@@ -29,12 +31,11 @@ public:
 
   lldb::addr_t GetLoadAddress() const override;
 
-  llvm::Optional<uint64_t>
-  GetCounter(lldb::TraceCounter counter_type) const override;
-
   lldb::TraceEvent GetEventType() const override;
 
   llvm::Optional<lldb::cpu_id_t> GetCPU() const override;
+
+  llvm::Optional<uint64_t> GetHWClock() const override;
 
   lldb::TraceItemKind GetItemKind() const override;
 
@@ -44,16 +45,43 @@ public:
 
   bool HasId(lldb::user_id_t id) const override;
 
+  llvm::Optional<double> GetWallClockTime() const override;
+
 private:
-  /// Calculate the tsc range for the current position if needed.
-  void CalculateTscRange();
+  /// Clear the current TSC and nanoseconds ranges if after moving they are not
+  /// valid anymore.
+  void ClearTimingRangesIfInvalid();
+
+  /// Get or calculate the TSC range that includes the current trace item.
+  const llvm::Optional<DecodedThread::TSCRange> &GetTSCRange() const;
+
+  /// Get or calculate the TSC range that includes the current trace item.
+  const llvm::Optional<DecodedThread::NanosecondsRange> &
+  GetNanosecondsRange() const;
 
   /// Storage of the actual instructions
   DecodedThreadSP m_decoded_thread_sp;
   /// Internal instruction index currently pointing at.
   int64_t m_pos;
-  /// Tsc range covering the current instruction.
-  llvm::Optional<DecodedThread::TscRange> m_tsc_range;
+
+  /// Timing information and cached values.
+  /// \{
+
+  /// TSC -> nanos conversion utility. \a None if not available at all.
+  llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
+  /// Lowest nanoseconds timestamp seen in any thread trace, \a None if not
+  /// available at all.
+  llvm::Optional<uint64_t> m_beginning_of_time_nanos;
+  /// Range of trace items with the same TSC that includes the current trace
+  /// item, \a None if not calculated or not available.
+  llvm::Optional<DecodedThread::TSCRange> mutable m_tsc_range;
+  bool mutable m_tsc_range_calculated = false;
+  /// Range of trace items with the same non-interpolated timestamps in
+  /// nanoseconds that includes the current trace item, \a None if not
+  /// calculated or not available.
+  llvm::Optional<DecodedThread::NanosecondsRange> mutable m_nanoseconds_range;
+  bool mutable m_nanoseconds_range_calculated = false;
+  /// \}
 };
 
 } // namespace trace_intel_pt
