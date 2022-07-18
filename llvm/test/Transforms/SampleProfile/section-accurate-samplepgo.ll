@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -S | FileCheck %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -profile-unknown-in-special-section -partial-profile -S | FileCheck %s --check-prefix UNKNOWN
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -profile-sample-accurate -S | FileCheck %s --check-prefix ACCURATE
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof | opt -S -codegenprepare | FileCheck %s
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof | opt -S -codegenprepare -profile-unknown-in-special-section -partial-profile | FileCheck %s --check-prefix=UNKNOWN
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -profile-sample-accurate -S | opt -S -codegenprepare | FileCheck %s --check-prefix=ACCURATE
 
 target triple = "x86_64-pc-linux-gnu"
 

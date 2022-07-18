@@ -285,6 +285,56 @@
     print*, n
   end subroutine
 
+  ! CHECK-LABEL: func @_QPswhere
+  subroutine swhere(num)
+    implicit none
+
+    integer, intent(in) :: num
+    real, dimension(1) :: array
+
+    array = 0.0
+
+    select case (num)
+    ! CHECK: ^bb1:  // pred: ^bb0
+    case (1)
+      where (array >= 0.0)
+        array = 42
+      end where
+    ! CHECK: cf.br ^bb3
+    ! CHECK: ^bb2:  // pred: ^bb0
+    case default
+      array = -1
+    end select
+    ! CHECK: cf.br ^bb3
+    ! CHECK: ^bb3:  // 2 preds: ^bb1, ^bb2
+    print*, array(1)
+  end subroutine swhere
+
+  ! CHECK-LABEL: func @_QPsforall
+  subroutine sforall(num)
+    implicit none
+
+    integer, intent(in) :: num
+    real, dimension(1) :: array
+
+    array = 0.0
+
+    select case (num)
+    ! CHECK: ^bb1:  // pred: ^bb0
+    case (1)
+      where (array >= 0.0)
+        array = 42
+      end where
+    ! CHECK: cf.br ^bb3
+    ! CHECK: ^bb2:  // pred: ^bb0
+    case default
+      array = -1
+    end select
+    ! CHECK: cf.br ^bb3
+    ! CHECK: ^bb3:  // 2 preds: ^bb1, ^bb2
+    print*, array(1)
+  end subroutine sforall
+
   ! CHECK-LABEL: main
   program p
     integer sinteger, v(10)
@@ -342,4 +392,8 @@
     call scharacter2('22 ')   ! expected output:  9 -2
     call scharacter2('.  ')   ! expected output:  9 -2
     call scharacter2('   ')   ! expected output:  9 -2
+
+    print*
+    call swhere(1)            ! expected output: 42.
+    call sforall(1)           ! expected output: 42.
   end

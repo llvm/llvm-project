@@ -976,4 +976,27 @@ define <16 x i32> @testoutofbounds(<16 x i32> %x, <16 x i32> %y) {
   ret <16 x i32> %add
 }
 
+define <64 x i32> @testlargerextrashuffle2(i32 %call.i, <16 x i32> %0) {
+; CHECK-LABEL: @testlargerextrashuffle2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[TMP0:%.*]], i32 [[CALL_I:%.*]], i32 15
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> [[TMP0]], i32 [[CALL_I]], i32 15
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <16 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <16 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i32> [[TMP3]], <16 x i32> [[TMP4]], <16 x i32> <i32 0, i32 17, i32 2, i32 3, i32 20, i32 5, i32 6, i32 23, i32 8, i32 9, i32 26, i32 11, i32 12, i32 29, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i32> [[TMP5]], <16 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <64 x i32> [[TMP6]]
+;
+entry:
+  %1 = insertelement <16 x i32> %0, i32 %call.i, i32 15
+  %2 = insertelement <16 x i32> %0, i32 %call.i, i32 15
+  %3 = sub <16 x i32> %1, %2
+  %4 = add <16 x i32> %1, %2
+  %5 = shufflevector <16 x i32> %3, <16 x i32> %4, <16 x i32> <i32 0, i32 17, i32 2, i32 3, i32 20, i32 5, i32 6, i32 23, i32 8, i32 9, i32 26, i32 11, i32 12, i32 29, i32 14, i32 15>
+  %6 = shufflevector <16 x i32> %5, <16 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <64 x i32> %6
+}
+
+
+
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

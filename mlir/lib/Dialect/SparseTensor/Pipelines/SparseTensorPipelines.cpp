@@ -52,11 +52,6 @@ void mlir::sparse_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
   // TODO(wrengr): ensure the original `pm` is for ModuleOp
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
-  // TODO(springerm): Reactivate element-wise op fusion pass. This pass does not
-  // fit well with bufferization because it replaces unused "out" operands of
-  // LinalgOps with InitTensorOps. This would result in additional buffer
-  // allocations during bufferization.
-  // pm.addPass(createLinalgElementwiseOpFusionPass());
   pm.addPass(
       bufferization::createTensorCopyInsertionPass(getBufferizationOptions(
           /*analysisOnly=*/options.testBufferizationAnalysisOnly)));

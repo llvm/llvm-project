@@ -83,7 +83,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool bufferizesToAllocation(OpResult opResult) { return true; }
 
     FailureOr<unsigned> getMemorySpace(OpResult opResult) {
-      if (getMemorySpace().hasValue())
+      if (getMemorySpace().has_value())
         return static_cast<unsigned>(*getMemorySpace());
       return failure();
     }

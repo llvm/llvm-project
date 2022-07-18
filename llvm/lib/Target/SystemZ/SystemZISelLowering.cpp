@@ -1404,8 +1404,12 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Value);
   case CCValAssign::BCvt: {
     assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128);
-    assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f64 ||
-           VA.getValVT() == MVT::f128);
+    assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f32 ||
+           VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::f128);
+    // For an f32 vararg we need to first promote it to an f64 and then
+    // bitcast it to an i64.
+    if (VA.getValVT() == MVT::f32 && VA.getLocVT() == MVT::i64)
+      Value = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f64, Value);
     MVT BitCastToType = VA.getValVT().isVector() && VA.getLocVT() == MVT::i64
                             ? MVT::v2i64
                             : VA.getLocVT();

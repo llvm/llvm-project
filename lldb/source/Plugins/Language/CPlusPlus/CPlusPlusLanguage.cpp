@@ -218,10 +218,10 @@ void CPlusPlusLanguage::MethodName::Parse() {
     } else {
       CPlusPlusNameParser parser(m_full.GetStringRef());
       if (auto function = parser.ParseAsFunctionDefinition()) {
-        m_basename = function.getValue().name.basename;
-        m_context = function.getValue().name.context;
-        m_arguments = function.getValue().arguments;
-        m_qualifiers = function.getValue().qualifiers;
+        m_basename = function.value().name.basename;
+        m_context = function.value().name.context;
+        m_arguments = function.value().arguments;
+        m_qualifiers = function.value().qualifiers;
         m_parse_error = false;
       } else {
         m_parse_error = true;
@@ -329,8 +329,8 @@ bool CPlusPlusLanguage::ExtractContextAndIdentifier(
 
   CPlusPlusNameParser parser(name);
   if (auto full_name = parser.ParseAsFullName()) {
-    identifier = full_name.getValue().basename;
-    context = full_name.getValue().context;
+    identifier = full_name.value().basename;
+    context = full_name.value().context;
     return true;
   }
   return false;

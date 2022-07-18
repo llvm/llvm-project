@@ -6265,6 +6265,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_funroll_loops,
                   options::OPT_fno_unroll_loops);
 
+  Args.AddLastArg(CmdArgs, options::OPT_fstrict_flex_arrays_EQ);
+
   Args.AddLastArg(CmdArgs, options::OPT_pthread);
 
   if (Args.hasFlag(options::OPT_mspeculative_load_hardening,
@@ -8470,14 +8472,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward remarks passes to the LLVM backend in the wrapper.
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("--pass-remarks=") + A->getValue()));
+    CmdArgs.push_back(Args.MakeArgString(Twine("--offload-opt=-pass-remarks=") +
+                                         A->getValue()));
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("--pass-remarks-missed=") + A->getValue()));
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--offload-opt=-pass-remarks-missed=") + A->getValue()));
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("--pass-remarks-analysis=") + A->getValue()));
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--offload-opt=-pass-remarks-analysis=") + A->getValue()));
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     CmdArgs.push_back("--save-temps");
 

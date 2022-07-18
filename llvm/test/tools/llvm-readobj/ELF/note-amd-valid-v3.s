@@ -10,10 +10,10 @@
 #LLVM-NEXT:    NoteSection {
 #LLVM-NEXT:      Name: .note
 #LLVM-NEXT:      Offset: 0x40
-#LLVM-NEXT:      Size: 0x110
+#LLVM-NEXT:      Size: 0x128
 #LLVM-NEXT:      Note {
 #LLVM-NEXT:        Owner: AMDGPU
-#LLVM-NEXT:        Data size: 0xFC
+#LLVM-NEXT:        Data size: 0x111
 #LLVM-NEXT:        Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
 #LLVM-NEXT:        AMDGPU Metadata: ---
 #LLVM-NEXT:  amdhsa.kernels:
@@ -25,6 +25,7 @@
 #LLVM-NEXT:      .private_segment_fixed_size: 32
 #LLVM-NEXT:      .sgpr_count:     14
 #LLVM-NEXT:      .symbol:         'test_kernel@kd'
+#LLVM-NEXT:      .uses_dynamic_stack: true
 #LLVM-NEXT:      .vgpr_count:     40
 #LLVM-NEXT:      .wavefront_size: 128
 #LLVM-NEXT:  amdhsa.version:
@@ -38,7 +39,7 @@
 
 # GNU:      Displaying notes found in: .note
 # GNU-NEXT:   Owner                Data size        Description
-# GNU-NEXT:   AMDGPU               0x000000fc       NT_AMDGPU_METADATA (AMDGPU Metadata)
+# GNU-NEXT:   AMDGPU               0x00000111       NT_AMDGPU_METADATA (AMDGPU Metadata)
 # GNU-NEXT:     AMDGPU Metadata:
 # GNU-NEXT:         ---
 # GNU-NEXT: amdhsa.kernels:
@@ -50,6 +51,7 @@
 # GNU-NEXT:     .private_segment_fixed_size: 32
 # GNU-NEXT:     .sgpr_count:     14
 # GNU-NEXT:     .symbol:         'test_kernel@kd'
+# GNU-NEXT:     .uses_dynamic_stack: true
 # GNU-NEXT:     .vgpr_count:     40
 # GNU-NEXT:     .wavefront_size: 128
 # GNU-NEXT: amdhsa.version:
@@ -69,6 +71,7 @@
       .kernarg_segment_size:       8
       .max_flat_workgroup_size:    256
       .private_segment_fixed_size: 32
+      .uses_dynamic_stack: true
       .sgpr_count:                 14
       .vgpr_count:                 40
       .wavefront_size:             128

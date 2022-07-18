@@ -579,7 +579,7 @@ static inline bool isSingleUnscheduledSucc(SUnit *SU, SUnit *SU2) {
 /// pressure, then return 0.
 int ConvergingVLIWScheduler::pressureChange(const SUnit *SU, bool isBotUp) {
   PressureDiff &PD = DAG->getPressureDiff(SU);
-  for (auto &P : PD) {
+  for (const auto &P : PD) {
     if (!P.isValid())
       continue;
     // The pressure differences are computed bottom-up, so the comparision for

@@ -645,8 +645,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   }
 
   // Declare variables for basic block arguments.
-  for (auto it = std::next(blocks.begin()); it != blocks.end(); ++it) {
-    Block &block = *it;
+  for (Block &block : llvm::drop_begin(blocks)) {
     for (BlockArgument &arg : block.getArguments()) {
       if (emitter.hasValueInScope(arg))
         return functionOp.emitOpError(" block argument #")

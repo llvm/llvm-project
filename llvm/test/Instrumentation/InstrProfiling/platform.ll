@@ -1,18 +1,11 @@
 ;; Checks for platform specific section names and initialization code.
 
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s -check-prefix=MACHO
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s -check-prefix=MACHO
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s -check-prefixes=LINUX,ELF
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s -check-prefixes=LINUX,ELF
-; RUN: opt < %s -mtriple=x86_64-unknown-freebsd -instrprof -S | FileCheck %s -check-prefixes=FREEBSD,ELF
 ; RUN: opt < %s -mtriple=x86_64-unknown-freebsd -passes=instrprof -S | FileCheck %s -check-prefixes=FREEBSD,ELF
-; RUN: opt < %s -mtriple=x86_64-scei-ps4 -instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
 ; RUN: opt < %s -mtriple=x86_64-scei-ps4 -passes=instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
-; RUN: opt < %s -mtriple=x86_64-sie-ps5 -instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
 ; RUN: opt < %s -mtriple=x86_64-sie-ps5 -passes=instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
-; RUN: opt < %s -mtriple=x86_64-pc-solaris -instrprof -S | FileCheck %s -check-prefixes=SOLARIS,ELF
 ; RUN: opt < %s -mtriple=x86_64-pc-solaris -passes=instrprof -S | FileCheck %s -check-prefixes=SOLARIS,ELF
-; RUN: opt < %s -mtriple=x86_64-pc-windows -instrprof -S | FileCheck %s -check-prefix=WINDOWS
 ; RUN: opt < %s -mtriple=x86_64-pc-windows -passes=instrprof -S | FileCheck %s -check-prefix=WINDOWS
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=instrprof -S | FileCheck %s -check-prefix=AIX
 
@@ -37,11 +30,11 @@
 ; AIX: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names", align 1
 
 define void @foo() {
-  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 0, i32 1, i32 0)
+  call void @llvm.instrprof.increment(ptr @__profn_foo, i64 0, i32 1, i32 0)
   ret void
 }
 
-declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
+declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 
 ;; Emit registration functions for platforms that don't find the
 ;; symbols by their sections.

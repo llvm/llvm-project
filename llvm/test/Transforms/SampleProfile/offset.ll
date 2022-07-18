@@ -23,24 +23,24 @@ define i32 @_Z3fooi(i32 %a) #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !11, metadata !12), !dbg !13
-  %0 = load i32, i32* %a.addr, align 4, !dbg !14
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !11, metadata !12), !dbg !13
+  %0 = load i32, ptr %a.addr, align 4, !dbg !14
   %cmp = icmp sgt i32 %0, 0, !dbg !18
   br i1 %cmp, label %if.then, label %if.else, !dbg !19
 ; CHECK: edge entry -> if.then probability is 0x0167ba82 / 0x80000000 = 1.10%
 ; CHECK: edge entry -> if.else probability is 0x7e98457e / 0x80000000 = 98.90% [HOT edge]
 
 if.then:                                          ; preds = %entry
-  store i32 10, i32* %retval, align 4, !dbg !20
+  store i32 10, ptr %retval, align 4, !dbg !20
   br label %return, !dbg !20
 
 if.else:                                          ; preds = %entry
-  store i32 20, i32* %retval, align 4, !dbg !22
+  store i32 20, ptr %retval, align 4, !dbg !22
   br label %return, !dbg !22
 
 return:                                           ; preds = %if.else, %if.then
-  %1 = load i32, i32* %retval, align 4, !dbg !24
+  %1 = load i32, ptr %retval, align 4, !dbg !24
   ret i32 %1, !dbg !24
 }
 

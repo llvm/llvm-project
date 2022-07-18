@@ -325,7 +325,8 @@ class isFloatType<ValueType SrcVT> {
 
 // XXX - do v2i16 instructions?
 class isIntType<ValueType SrcVT> {
-  bit ret = !or(!eq(SrcVT.Value, i16.Value),
+  bit ret = !or(!eq(SrcVT.Value, i8.Value),
+                !eq(SrcVT.Value, i16.Value),
                 !eq(SrcVT.Value, i32.Value),
                 !eq(SrcVT.Value, i64.Value),
                 !eq(SrcVT.Value, v4i16.Value),
@@ -1421,6 +1422,10 @@ class IntSDWAInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def Int16SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<16>;
 def Int32SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<32>;
+def Bin32SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<32> {
+  let Name = "SDWAWithBin32InputMods";
+  let ParserMethod = "parseRegOrImm";
+}
 
 class IntSDWAInputMods <IntSDWAInputModsMatchClass matchClass> :
   InputMods <matchClass> {
@@ -1429,6 +1434,7 @@ class IntSDWAInputMods <IntSDWAInputModsMatchClass matchClass> :
 
 def Int16SDWAInputMods : IntSDWAInputMods<Int16SDWAInputModsMatchClass>;
 def Int32SDWAInputMods : IntSDWAInputMods<Int32SDWAInputModsMatchClass>;
+def Bin32SDWAInputMods : IntSDWAInputMods<Bin32SDWAInputModsMatchClass>;
 
 def IntVRegInputModsMatchClass : AsmOperandClass {
   let Name = "VRegWithIntInputMods";
@@ -2691,6 +2697,8 @@ def VOP_V4I32_I64_I64_V4I32       : VOPProfile <[v4i32,  i64,   i64,   v4i32]>;
 def VOP_V16I32_I64_I64_V16I32     : VOPProfile <[v16i32, i64,   i64,   v16i32]>;
 def VOP_V4F32_V2F32_V2F32_V4F32   : VOPProfile <[v4f32,  v2f32, v2f32, v4f32]>;
 def VOP_V16F32_V2F32_V2F32_V16F32 : VOPProfile <[v16f32, v2f32, v2f32, v16f32]>;
+def VOP_V4F32_I64_I64_V4F32       : VOPProfile <[v4f32,  i64,   i64,   v4f32]>;
+def VOP_V16F32_I64_I64_V16F32     : VOPProfile <[v16f32, i64,   i64,   v16f32]>;
 
 def VOP_V4F32_V4F16_V8F16_I32     : VOPProfile <[v4f32,  v4f16, v8f16, i32]>;
 def VOP_V16F32_V4F16_V8F16_I32    : VOPProfile <[v16f32, v4f16, v8f16, i32]>;
@@ -2698,6 +2706,8 @@ def VOP_V4F32_V4I16_V8I16_I32     : VOPProfile <[v4f32,  v4i16, v8i16, i32]>;
 def VOP_V16F32_V4I16_V8I16_I32    : VOPProfile <[v16f32, v4i16, v8i16, i32]>;
 def VOP_V4I32_V2I32_V4I32_I32     : VOPProfile <[v4i32,  v2i32, v4i32, i32]>;
 def VOP_V16I32_V2I32_V4I32_I32    : VOPProfile <[v16i32, v2i32, v4i32, i32]>;
+def VOP_V4F32_V2I32_V4I32_I32     : VOPProfile <[v4f32,  v2i32, v4i32, i32]>;
+def VOP_V16F32_V2I32_V4I32_I32    : VOPProfile <[v16f32, v2i32, v4i32, i32]>;
 
 class Commutable_REV <string revOp, bit isOrig> {
   string RevOp = revOp;

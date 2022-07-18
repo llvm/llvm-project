@@ -17,8 +17,6 @@
 namespace llvm {
 
 class CallGraph;
-class CallGraphSCC;
-class PassRegistry;
 
 namespace coro {
 

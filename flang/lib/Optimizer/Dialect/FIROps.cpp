@@ -650,7 +650,7 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
   bool isDirect = getCallee().has_value();
   p << ' ';
   if (isDirect)
-    p << getCallee().getValue();
+    p << *getCallee();
   else
     p << getOperand(0);
   p << '(' << (*this)->getOperands().drop_front(isDirect ? 0 : 1) << ')';
@@ -1295,7 +1295,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
 
 void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
   if (getLinkName())
-    p << ' ' << getLinkName().getValue();
+    p << ' ' << *getLinkName();
   p << ' ';
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())

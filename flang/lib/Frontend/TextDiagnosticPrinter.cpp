@@ -56,5 +56,4 @@ void TextDiagnosticPrinter::HandleDiagnostic(
       diagMessageStream.str(), diagOpts->ShowColors);
 
   os.flush();
-  return;
 }

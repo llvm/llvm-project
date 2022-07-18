@@ -35,7 +35,7 @@ public:
     auto Hint = Aliaser->createAlias(*Result.Context, *Call, "::foo::bar",
                                      {"b", "some_alias"});
     if (Hint)
-      diag(Call->getBeginLoc(), "Fix for testing") << Hint.getValue();
+      diag(Call->getBeginLoc(), "Fix for testing") << Hint.value();
 
     diag(Call->getBeginLoc(), "insert call") << FixItHint::CreateInsertion(
         Call->getBeginLoc(),

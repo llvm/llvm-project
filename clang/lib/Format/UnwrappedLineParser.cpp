@@ -539,7 +539,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       break;
     case tok::r_brace:
       if (OpeningBrace) {
-        if (!Style.RemoveBracesLLVM ||
+        if (!Style.RemoveBracesLLVM || Line->InPPDirective ||
             !OpeningBrace->isOneOf(TT_ControlStatementLBrace, TT_ElseLBrace)) {
           return false;
         }
@@ -2119,6 +2119,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::amp:
     case tok::star:
     case tok::kw_const:
+    case tok::kw_constexpr:
     case tok::comma:
     case tok::less:
     case tok::greater:

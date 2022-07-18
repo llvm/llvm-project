@@ -417,9 +417,9 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
 CanBeVOPD getCanBeVOPD(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info)
-    return {Info->CanBeVOPDX, 1};
+    return {Info->CanBeVOPDX, true};
   else
-    return {0, 0};
+    return {false, false};
 }
 
 unsigned getVOPDOpcode(unsigned Opc) {

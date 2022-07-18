@@ -344,14 +344,14 @@ class RewriteInstanceDiff {
       const BinaryFunction *const &Func1 = MapEntry.second;
       const BinaryFunction *const &Func2 = MapEntry.first;
 
-      auto Iter1 = Func1->layout_begin();
-      auto Iter2 = Func2->layout_begin();
+      auto Iter1 = Func1->getLayout().block_begin();
+      auto Iter2 = Func2->getLayout().block_begin();
 
       bool Match = true;
       std::map<const BinaryBasicBlock *, const BinaryBasicBlock *> Map;
       std::map<double, std::pair<EdgeTy, EdgeTy>> EMap;
-      while (Iter1 != Func1->layout_end()) {
-        if (Iter2 == Func2->layout_end()) {
+      while (Iter1 != Func1->getLayout().block_end()) {
+        if (Iter2 == Func2->getLayout().block_end()) {
           Match = false;
           break;
         }
@@ -393,7 +393,7 @@ class RewriteInstanceDiff {
         ++Iter1;
         ++Iter2;
       }
-      if (!Match || Iter2 != Func2->layout_end())
+      if (!Match || Iter2 != Func2->getLayout().block_end())
         continue;
 
       BBMap.insert(Map.begin(), Map.end());

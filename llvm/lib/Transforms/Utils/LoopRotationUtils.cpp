@@ -622,7 +622,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         // We only need to split loop exit edges.
         Loop *PredLoop = LI->getLoopFor(ExitPred);
         if (!PredLoop || PredLoop->contains(Exit) ||
-            ExitPred->getTerminator()->isIndirectTerminator())
+            isa<IndirectBrInst>(ExitPred->getTerminator()))
           continue;
         SplitLatchEdge |= L->getLoopLatch() == ExitPred;
         BasicBlock *ExitSplit = SplitCriticalEdge(

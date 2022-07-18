@@ -437,7 +437,7 @@ void MIRParserImpl::setupDebugValueTracking(
   MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Load any substitutions.
-  for (auto &Sub : YamlMF.DebugValueSubstitutions) {
+  for (const auto &Sub : YamlMF.DebugValueSubstitutions) {
     MF.makeDebugValueSubstitution({Sub.SrcInst, Sub.SrcOp},
                                   {Sub.DstInst, Sub.DstOp}, Sub.Subreg);
   }
@@ -975,7 +975,7 @@ bool MIRParserImpl::parseMachineMetadata(PerFunctionMIParsingState &PFS,
 bool MIRParserImpl::parseMachineMetadataNodes(
     PerFunctionMIParsingState &PFS, MachineFunction &MF,
     const yaml::MachineFunction &YMF) {
-  for (auto &MDS : YMF.MachineMetadataNodes) {
+  for (const auto &MDS : YMF.MachineMetadataNodes) {
     if (parseMachineMetadata(PFS, MDS))
       return true;
   }

@@ -390,6 +390,32 @@ private:
   pybind11::object descriptor;
 };
 
+/// Wrapper around an MlirDialectRegistry.
+/// Upon construction, the Python wrapper takes ownership of the
+/// underlying MlirDialectRegistry.
+class PyDialectRegistry {
+public:
+  PyDialectRegistry() : registry(mlirDialectRegistryCreate()) {}
+  PyDialectRegistry(MlirDialectRegistry registry) : registry(registry) {}
+  ~PyDialectRegistry() {
+    if (!mlirDialectRegistryIsNull(registry))
+      mlirDialectRegistryDestroy(registry);
+  }
+  PyDialectRegistry(PyDialectRegistry &) = delete;
+  PyDialectRegistry(PyDialectRegistry &&other) : registry(other.registry) {
+    other.registry = {nullptr};
+  }
+
+  operator MlirDialectRegistry() const { return registry; }
+  MlirDialectRegistry get() const { return registry; }
+
+  pybind11::object getCapsule();
+  static PyDialectRegistry createFromCapsule(pybind11::object capsule);
+
+private:
+  MlirDialectRegistry registry;
+};
+
 /// Wrapper around an MlirLocation.
 class PyLocation : public BaseContextObject {
 public:

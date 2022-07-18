@@ -78,43 +78,35 @@ TEST(LlvmLibcStringViewTest, endsWith) {
 }
 
 TEST(LlvmLibcStringViewTest, RemovePrefix) {
-  StringView v("123456789");
+  StringView a("123456789");
+  a.remove_prefix(0);
+  ASSERT_EQ(a.size(), size_t(9));
+  ASSERT_TRUE(a.equals(StringView("123456789")));
 
-  auto p = v.remove_prefix(0);
-  ASSERT_EQ(p.size(), size_t(9));
-  ASSERT_TRUE(p.equals(StringView("123456789")));
+  StringView b("123456789");
+  b.remove_prefix(4);
+  ASSERT_EQ(b.size(), size_t(5));
+  ASSERT_TRUE(b.equals(StringView("56789")));
 
-  p = v.remove_prefix(4);
-  ASSERT_EQ(p.size(), size_t(5));
-  ASSERT_TRUE(p.equals(StringView("56789")));
-
-  p = v.remove_prefix(9);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
-
-  p = v.remove_prefix(10);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
+  StringView c("123456789");
+  c.remove_prefix(9);
+  ASSERT_EQ(c.size(), size_t(0));
 }
 
 TEST(LlvmLibcStringViewTest, RemoveSuffix) {
-  StringView v("123456789");
+  StringView a("123456789");
+  a.remove_suffix(0);
+  ASSERT_EQ(a.size(), size_t(9));
+  ASSERT_TRUE(a.equals(StringView("123456789")));
 
-  auto p = v.remove_suffix(0);
-  ASSERT_EQ(p.size(), size_t(9));
-  ASSERT_TRUE(p.equals(StringView("123456789")));
+  StringView b("123456789");
+  b.remove_suffix(4);
+  ASSERT_EQ(b.size(), size_t(5));
+  ASSERT_TRUE(b.equals(StringView("12345")));
 
-  p = v.remove_suffix(4);
-  ASSERT_EQ(p.size(), size_t(5));
-  ASSERT_TRUE(p.equals(StringView("12345")));
-
-  p = v.remove_suffix(9);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
-
-  p = v.remove_suffix(10);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
+  StringView c("123456789");
+  c.remove_suffix(9);
+  ASSERT_EQ(c.size(), size_t(0));
 }
 
 TEST(LlvmLibcStringViewTest, TrimSingleChar) {

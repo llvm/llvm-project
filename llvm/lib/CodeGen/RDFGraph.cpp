@@ -1395,7 +1395,7 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM,
 
   // Finally, add the set of defs to each block in the iterated dominance
   // frontier.
-  for (auto DB : IDF) {
+  for (auto *DB : IDF) {
     NodeAddr<BlockNode*> DBA = findBlock(DB);
     PhiM[DBA.Id].insert(Defs.begin(), Defs.end());
   }
@@ -1657,7 +1657,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
 
   // Recursively process all children in the dominator tree.
   MachineDomTreeNode *N = MDT.getNode(BA.Addr->getCode());
-  for (auto I : *N) {
+  for (auto *I : *N) {
     MachineBasicBlock *SB = I->getBlock();
     NodeAddr<BlockNode*> SBA = findBlock(SB);
     linkBlockRefs(DefM, SBA);

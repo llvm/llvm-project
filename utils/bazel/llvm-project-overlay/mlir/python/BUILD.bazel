@@ -20,13 +20,6 @@ package(
 ##---------------------------------------------------------------------------##
 
 filegroup(
-    name = "ConversionsPyFiles",
-    srcs = glob([
-        "mlir/conversions/*.py",
-    ]),
-)
-
-filegroup(
     name = "DialectCorePyFiles",
     srcs = [
         "mlir/dialects/_ods_common.py",
@@ -63,6 +56,13 @@ filegroup(
 )
 
 filegroup(
+    name = "MlirLibsPyFiles",
+    srcs = [
+        "mlir/_mlir_libs/__init__.py",
+    ],
+)
+
+filegroup(
     name = "PassManagerPyFiles",
     srcs = [
         "mlir/passmanager.py",
@@ -80,20 +80,6 @@ filegroup(
     name = "RuntimePyFiles",
     srcs = glob([
         "mlir/runtime/*.py",
-    ]),
-)
-
-filegroup(
-    name = "TransformsPyFiles",
-    srcs = glob([
-        "mlir/transforms/*.py",
-    ]),
-)
-
-filegroup(
-    name = "AllPassesRegistrationPyFiles",
-    srcs = glob([
-        "mlir/all_passes_registration/*.py",
     ]),
 )
 

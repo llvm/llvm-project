@@ -6,7 +6,6 @@
 #  test/Integration/Dialect/SparseTensor/python/ until we have a better
 #  solution.
 
-from mlir import all_passes_registration
 from mlir import execution_engine
 from mlir import ir
 from mlir import passmanager

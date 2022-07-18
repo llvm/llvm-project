@@ -1,12 +1,12 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -overwrite-existing-weights=1 -S | FileCheck %s -check-prefix=OVW
 
-define dso_local i32 @foo(i32 %x, void (i32)* %f) #0 !dbg !4 !prof !10 {
+define dso_local i32 @foo(i32 %x, ptr %f) #0 !dbg !4 !prof !10 {
 entry:
   %retval = alloca i32, align 4
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   %cmp = icmp eq i32 %0, 0
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1)
   br i1 %cmp, label %if.then, label %if.else, !prof !11
@@ -16,7 +16,7 @@ if.then:
   ; CHECK: call {{.*}}, !dbg ![[#]], !prof ![[#PROF:]]
   ; OVW: call {{.*}}, !dbg ![[#]], !prof ![[#PROF:]]
   call void %f(i32 1), !dbg !13, !prof !16
-  store i32 1, i32* %retval, align 4
+  store i32 1, ptr %retval, align 4
   br label %return
 
 if.else:
@@ -25,12 +25,12 @@ if.else:
   ;; The block should have a 0 weight. Check the profile metadata is dropped.
   ; OVW-NOT: call {{.*}}, !dbg ![[#]], !prof
   call void %f(i32 2), !dbg !15, !prof !16
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 return:
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 4, i32 0, i64 -1)
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
 

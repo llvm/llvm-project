@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_POP_HEAP_H
 #define _LIBCPP___ALGORITHM_RANGES_POP_HEAP_H
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/make_projected.h>
 #include <__algorithm/pop_heap.h>
 #include <__concepts/same_as.h>
@@ -46,7 +47,7 @@ struct __fn {
     auto __len = __last_iter - __first;
 
     auto&& __projected_comp = ranges::__make_projected_comp(__comp, __proj);
-    std::__pop_heap(std::move(__first), __last_iter, __projected_comp, __len);
+    std::__pop_heap<_RangeAlgPolicy>(std::move(__first), __last_iter, __projected_comp, __len);
 
     return __last_iter;
   }

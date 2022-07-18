@@ -357,15 +357,31 @@ LogicalResult UnaryOp::verify() {
   return success();
 }
 
+LogicalResult ReduceOp::verify() {
+  Type inputType = x().getType();
+  LogicalResult regionResult = success();
+
+  // Check correct number of block arguments and return type.
+  Region &formula = region();
+  if (!formula.empty()) {
+    regionResult = verifyNumBlockArgs(
+        this, formula, "reduce", TypeRange{inputType, inputType}, inputType);
+    if (failed(regionResult))
+      return regionResult;
+  }
+
+  return success();
+}
+
 LogicalResult YieldOp::verify() {
   // Check for compatible parent.
   auto *parentOp = (*this)->getParentOp();
-  if (auto binaryOp = dyn_cast<BinaryOp>(parentOp))
-    return success();
-  if (auto unaryOp = dyn_cast<UnaryOp>(parentOp))
+  if (isa<BinaryOp>(parentOp) || isa<UnaryOp>(parentOp) ||
+      isa<ReduceOp>(parentOp))
     return success();
 
-  return emitOpError("expected parent op to be sparse_tensor binary or unary");
+  return emitOpError(
+      "expected parent op to be sparse_tensor unary, binary, or reduce");
 }
 
 //===----------------------------------------------------------------------===//

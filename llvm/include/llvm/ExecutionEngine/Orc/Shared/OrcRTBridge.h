@@ -31,12 +31,6 @@ extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
 extern const char *SimpleExecutorMemoryManagerFinalizeWrapperName;
 extern const char *SimpleExecutorMemoryManagerDeallocateWrapperName;
 
-extern const char *ExecutorSharedMemoryMapperServiceInstanceName;
-extern const char *ExecutorSharedMemoryMapperServiceReserveWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceInitializeWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName;
-
 extern const char *MemoryWriteUInt8sWrapperName;
 extern const char *MemoryWriteUInt16sWrapperName;
 extern const char *MemoryWriteUInt32sWrapperName;
@@ -62,21 +56,6 @@ using SPSSimpleExecutorMemoryManagerReserveSignature =
 using SPSSimpleExecutorMemoryManagerFinalizeSignature =
     shared::SPSError(shared::SPSExecutorAddr, shared::SPSFinalizeRequest);
 using SPSSimpleExecutorMemoryManagerDeallocateSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-
-// ExecutorSharedMemoryMapperService
-using SPSExecutorSharedMemoryMapperServiceReserveSignature =
-    shared::SPSExpected<
-        shared::SPSTuple<shared::SPSExecutorAddr, shared::SPSString>>(
-        shared::SPSExecutorAddr, uint64_t);
-using SPSExecutorSharedMemoryMapperServiceInitializeSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSExecutorAddr,
-                                                 shared::SPSFinalizeRequest);
-using SPSExecutorSharedMemoryMapperServiceDeinitializeSignature =
-    shared::SPSError(shared::SPSExecutorAddr,
-                     shared::SPSSequence<shared::SPSExecutorAddr>);
-using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
     shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,

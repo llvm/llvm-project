@@ -269,6 +269,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       break;
     case GK_GFX940:
       Features["gfx940-insts"] = true;
+      Features["fp8-insts"] = true;
       LLVM_FALLTHROUGH;
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;

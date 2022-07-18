@@ -11811,6 +11811,12 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isConcatMask(M, VT, VT.getSizeInBits() == 128));
 }
 
+bool AArch64TargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
+                                                   EVT VT) const {
+  // Just delegate to the generic legality, clear masks aren't special.
+  return isShuffleMaskLegal(M, VT);
+}
+
 /// getVShiftImm - Check if this is a valid build_vector for the immediate
 /// operand of a vector shift operation, where all the elements of the
 /// build_vector must have the same constant integer value.
@@ -13587,16 +13593,21 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
 bool
 AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                      CombineLevel Level) const {
-  N = N->getOperand(0).getNode();
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
+  SDValue ShiftLHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
-    // If N is unsigned bit extraction: ((x >> C) & mask), then do not combine
-    // it with shift to let it be lowered to UBFX.
-  if (N->getOpcode() == ISD::AND && (VT == MVT::i32 || VT == MVT::i64) &&
-      isa<ConstantSDNode>(N->getOperand(1))) {
-    uint64_t TruncMask = N->getConstantOperandVal(1);
+
+  // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not combine
+  // it with shift 'N' to let it be lowered to UBFX.
+  if (ShiftLHS.getOpcode() == ISD::AND && (VT == MVT::i32 || VT == MVT::i64) &&
+      isa<ConstantSDNode>(ShiftLHS.getOperand(1))) {
+    uint64_t TruncMask = ShiftLHS.getConstantOperandVal(1);
     if (isMask_64(TruncMask) &&
-      N->getOperand(0).getOpcode() == ISD::SRL &&
-      isa<ConstantSDNode>(N->getOperand(0)->getOperand(1)))
+        ShiftLHS.getOperand(0).getOpcode() == ISD::SRL &&
+        isa<ConstantSDNode>(ShiftLHS.getOperand(0).getOperand(1)))
       return false;
   }
   return true;

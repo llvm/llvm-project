@@ -42,6 +42,7 @@ static_library("clangd") {
     "//clang-tools-extra/clang-tidy:all-checks",
     "//clang-tools-extra/clang-tidy:clang-tidy-config",
     "//clang-tools-extra/clangd/support",
+    "//clang-tools-extra/pseudo/lib",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
@@ -63,6 +64,9 @@ static_library("clangd") {
   ]
   include_dirs = [
     ".",
+
+    # For "clang-pseudo/..." includes.
+    "//clang-tools-extra/pseudo/include",
 
     # To pick up the generated inc files.
     "$target_gen_dir/tool",

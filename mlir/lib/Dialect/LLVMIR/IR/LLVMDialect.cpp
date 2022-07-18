@@ -568,6 +568,13 @@ static Type extractVectorElementType(Type type) {
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Type elementType, Value basePtr, ValueRange indices,
+                  ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, resultType, elementType, basePtr, indices,
+        SmallVector<int32_t>(indices.size(), kDynamicIndex), attributes);
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Value basePtr, ValueRange indices,
                   ArrayRef<int32_t> structIndices,
                   ArrayRef<NamedAttribute> attributes) {
