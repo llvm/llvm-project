@@ -4,7 +4,7 @@
 @hello = constant [6 x i8] c"hello\00"
 @null = constant [1 x i8] zeroinitializer
 
-declare i8* @strndup(i8*, i32)
+declare i8* @strndup(i8*, i64)
 
 define i8* @test1() {
 ; CHECK-LABEL: @test1(
@@ -12,17 +12,17 @@ define i8* @test1() {
 ; CHECK-NEXT:    ret i8* [[STRDUP]]
 ;
   %src = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %ret = call i8* @strndup(i8* %src, i32 0)
+  %ret = call i8* @strndup(i8* %src, i64 0)
   ret i8* %ret
 }
 
 define i8* @test2() {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[RET:%.*]] = call dereferenceable_or_null(5) i8* @strndup(i8* dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i64 0, i64 0), i32 4)
+; CHECK-NEXT:    [[RET:%.*]] = call dereferenceable_or_null(5) i8* @strndup(i8* dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i64 0, i64 0), i64 4)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %ret = call i8* @strndup(i8* %src, i32 4)
+  %ret = call i8* @strndup(i8* %src, i64 4)
   ret i8* %ret
 }
 
@@ -32,7 +32,7 @@ define i8* @test3() {
 ; CHECK-NEXT:    ret i8* [[STRDUP]]
 ;
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %ret = call i8* @strndup(i8* %src, i32 5)
+  %ret = call i8* @strndup(i8* %src, i64 5)
   ret i8* %ret
 }
 
@@ -42,7 +42,7 @@ define i8* @test4() {
 ; CHECK-NEXT:    ret i8* [[STRDUP]]
 ;
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %ret = call i8* @strndup(i8* %src, i32 6)
+  %ret = call i8* @strndup(i8* %src, i64 6)
   ret i8* %ret
 }
 
@@ -52,16 +52,16 @@ define i8* @test5() {
 ; CHECK-NEXT:    ret i8* [[STRDUP]]
 ;
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %ret = call i8* @strndup(i8* %src, i32 7)
+  %ret = call i8* @strndup(i8* %src, i64 7)
   ret i8* %ret
 }
 
-define i8* @test6(i32 %n) {
+define i8* @test6(i64 %n) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strndup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i64 0, i64 0), i32 [[N:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strndup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i64 0, i64 0), i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %ret = call i8* @strndup(i8* %src, i32 %n)
+  %ret = call i8* @strndup(i8* %src, i64 %n)
   ret i8* %ret
 }
