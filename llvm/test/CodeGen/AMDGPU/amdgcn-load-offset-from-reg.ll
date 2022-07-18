@@ -1,15 +1,16 @@
+; RUN: llc -march=amdgcn -global-isel=0 -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -march=amdgcn -global-isel=1 -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefixes=GCN,GISEL %s
+
+@0 = external dso_local addrspace(4) constant [4 x <2 x float>]
+@1 = external dso_local addrspace(4) constant i32
+
 ; Test that DAG->DAG ISel is able to pick up the S_LOAD_DWORDX4_SGPR instruction that fetches the offset
 ; from a register.
-
-; RUN: llc -march=amdgcn -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -global-isel -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GISEL %s
-
-; GCN: %[[OFFSET:[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @DescriptorBuffer
-; GCN: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR killed %{{[0-9]+}}, killed %[[OFFSET]], 0 :: (invariant load (s128) from %ir.13, addrspace 4)
-
+; GCN-LABEL: name: test_load_zext
+; SDAG: %[[OFFSET:[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @DescriptorBuffer
+; SDAG: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR killed %{{[0-9]+}}, killed %[[OFFSET]], 0 :: (invariant load (s128) from %ir.13, addrspace 4)
 ; GISEL: $[[OFFSET:.*]] = S_MOV_B32 target-flags(amdgpu-abs32-lo) @DescriptorBuffer
 ; GISEL: S_LOAD_DWORDX4_SGPR killed renamable {{.*}}, killed renamable $[[OFFSET]], 0 :: (invariant load (<4 x s32>) from {{.*}}, addrspace 4)
-
 define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %resNode0, i32 inreg %resNode1, <3 x i32> inreg %2, i32 inreg %3, <3 x i32> %4) local_unnamed_addr #2 {
 .entry:
   %5 = call i64 @llvm.amdgcn.s.getpc() #3
@@ -24,6 +25,27 @@ define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %res
   %14 = load <4 x i32>, <4 x i32> addrspace(4)* %13, align 16, !invariant.load !5
   %15 = call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %14, i32 0, i32 0)
   call void @llvm.amdgcn.raw.buffer.store.v4i32(<4 x i32> %15, <4 x i32> %14, i32 0, i32 0, i32 0)
+  ret void
+}
+
+; Make sure we match constant bases with register offests, in which case
+; the base may be the RHS operand of the load in SDAG.
+; GCN-LABEL: name: test_complex_reg_offset
+; SDAG-DAG: %[[BASE:.*]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @0 + 4,
+; SDAG-DAG: %[[OFFSET:.*]]:sreg_32 = S_LSHL_B32
+; SDAG: S_LOAD_DWORD_SGPR killed %[[BASE]], killed %[[OFFSET]],
+; GISEL-DAG: $[[BASE0:.*]] = S_ADD_U32 internal $sgpr0, target-flags(amdgpu-rel32-lo) @0 + 4,
+; GISEL-DAG: $[[BASE1:.*]] = S_ADDC_U32 internal $sgpr1, target-flags(amdgpu-rel32-hi) @0 + 12,
+; GISEL-DAG: $[[OFFSET:.*]] = S_LSHL_B32
+; GISEL-NOT: [[OFFSET]] =
+; GISEL: S_LOAD_DWORD_SGPR killed renamable $[[BASE0]]_[[BASE1]], killed renamable $[[OFFSET]],
+define amdgpu_ps void @test_complex_reg_offset(float addrspace(1)* %out) {
+  %i = load i32, i32 addrspace(4)* @1
+  %i1 = and i32 %i, 3
+  %i2 = zext i32 %i1 to i64
+  %i3 = getelementptr [4 x <2 x float>], [4 x <2 x float>] addrspace(4)* @0, i64 0, i64 %i2, i64 0
+  %i4 = load float, float addrspace(4)* %i3, align 4
+  store float %i4, float addrspace(1)* %out
   ret void
 }
 

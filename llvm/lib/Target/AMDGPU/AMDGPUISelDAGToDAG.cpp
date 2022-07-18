@@ -1991,6 +1991,10 @@ bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
         SBase = Expand32BitAddress(N0);
         return true;
       }
+      if (SelectSMRDOffset(N0, Offset, Imm, Imm32Only)) {
+        SBase = Expand32BitAddress(N1);
+        return true;
+      }
     }
     return false;
   }
