@@ -34,7 +34,7 @@ std::vector<MyType> deterministic() {
   for (int i = 0; i < kSize; ++i) {
     v[i].value = (i % 2 ? 1 : kSize / 2 + i);
   }
-  std::__partial_sort(v.begin(), v.begin() + kSize / 2, v.end(), std::less<MyType>());
+  std::__partial_sort<std::_ClassicAlgPolicy>(v.begin(), v.begin() + kSize / 2, v.end(), std::less<MyType>());
   return v;
 }
 

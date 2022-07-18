@@ -11,6 +11,7 @@
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/push_heap.h>
 #include <__algorithm/sift_down.h>
 #include <__assert>
@@ -24,7 +25,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Compare, class _RandomAccessIterator>
+template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare& __comp,
     typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
@@ -35,17 +36,17 @@ void __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Co
 
   using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
   if (__len > 1) {
-    value_type __top = std::move(*__first);  // create a hole at __first
-    _RandomAccessIterator __hole = std::__floyd_sift_down<_CompRef>(__first, __comp_ref, __len);
+    value_type __top = _IterOps<_AlgPolicy>::__iter_move(__first);  // create a hole at __first
+    _RandomAccessIterator __hole = std::__floyd_sift_down<_AlgPolicy, _CompRef>(__first, __comp_ref, __len);
     --__last;
 
     if (__hole == __last) {
       *__hole = std::move(__top);
     } else {
-      *__hole = std::move(*__last);
+      *__hole = _IterOps<_AlgPolicy>::__iter_move(__last);
       ++__hole;
       *__last = std::move(__top);
-      std::__sift_up<_CompRef>(__first, __hole, __comp_ref, __hole - __first);
+      std::__sift_up<_AlgPolicy, _CompRef>(__first, __hole, __comp_ref, __hole - __first);
     }
   }
 }
@@ -54,7 +55,7 @@ template <class _RandomAccessIterator, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   typename iterator_traits<_RandomAccessIterator>::difference_type __len = __last - __first;
-  std::__pop_heap(std::move(__first), std::move(__last), __comp, __len);
+  std::__pop_heap<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp, __len);
 }
 
 template <class _RandomAccessIterator>
