@@ -446,7 +446,7 @@ void IRPromoter::ExtendSources() {
 
   // Now, insert extending instructions between the sources and their users.
   LLVM_DEBUG(dbgs() << "IR Promotion: Promoting sources:\n");
-  for (auto V : Sources) {
+  for (auto *V : Sources) {
     LLVM_DEBUG(dbgs() << " - " << *V << "\n");
     if (auto *I = dyn_cast<Instruction>(V))
       InsertZExt(I, I);
@@ -524,7 +524,7 @@ void IRPromoter::TruncateSinks() {
 
   // Fix up any stores or returns that use the results of the promoted
   // chain.
-  for (auto I : Sinks) {
+  for (auto *I : Sinks) {
     LLVM_DEBUG(dbgs() << "IR Promotion: For Sink: " << *I << "\n");
 
     // Handle calls separately as we need to iterate over arg operands.
@@ -570,7 +570,7 @@ void IRPromoter::Cleanup() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
   // Some zexts will now have become redundant, along with their trunc
   // operands, so remove them
-  for (auto V : Visited) {
+  for (auto *V : Visited) {
     if (!isa<ZExtInst>(V))
       continue;
 

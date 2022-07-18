@@ -11,6 +11,7 @@
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/move.h>
@@ -21,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Compare, class _RandomAccessIterator>
+template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __sift_up(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
         typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
@@ -32,9 +33,9 @@ void __sift_up(_RandomAccessIterator __first, _RandomAccessIterator __last, _Com
     _RandomAccessIterator __ptr = __first + __len;
 
     if (__comp(*__ptr, *--__last)) {
-      value_type __t(std::move(*__last));
+      value_type __t(_IterOps<_AlgPolicy>::__iter_move(__last));
       do {
-        *__last = std::move(*__ptr);
+        *__last = _IterOps<_AlgPolicy>::__iter_move(__ptr);
         __last = __ptr;
         if (__len == 0)
           break;
@@ -47,18 +48,18 @@ void __sift_up(_RandomAccessIterator __first, _RandomAccessIterator __last, _Com
   }
 }
 
-template <class _RandomAccessIterator, class _Compare>
+template <class _AlgPolicy, class _RandomAccessIterator, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare& __comp) {
   using _CompRef = typename __comp_ref_type<_Compare>::type;
   typename iterator_traits<_RandomAccessIterator>::difference_type __len = __last - __first;
-  std::__sift_up<_CompRef>(std::move(__first), std::move(__last), __comp, __len);
+  std::__sift_up<_AlgPolicy, _CompRef>(std::move(__first), std::move(__last), __comp, __len);
 }
 
 template <class _RandomAccessIterator, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
-  std::__push_heap(std::move(__first), std::move(__last), __comp);
+  std::__push_heap<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
 }
 
 template <class _RandomAccessIterator>

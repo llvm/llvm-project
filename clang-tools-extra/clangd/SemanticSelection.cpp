@@ -11,6 +11,9 @@
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
+#include "clang-pseudo/Bracket.h"
+#include "clang-pseudo/DirectiveTree.h"
+#include "clang-pseudo/Token.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -168,6 +171,47 @@ llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
                                      AST.getSourceManager());
   const auto *SyntaxTree = syntax::buildSyntaxTree(A, TM, AST.getASTContext());
   return collectFoldingRanges(SyntaxTree, TM);
+}
+
+// FIXME(kirillbobyrev): Collect comments, PP conditional regions, includes and
+// other code regions (e.g. public/private/protected sections of classes,
+// control flow statement bodies).
+// Related issue: https://github.com/clangd/clangd/issues/310
+llvm::Expected<std::vector<FoldingRange>>
+getFoldingRanges(const std::string &Code) {
+  auto OrigStream = clang::pseudo::lex(Code, clang::pseudo::genericLangOpts());
+
+  auto DirectiveStructure = clang::pseudo::DirectiveTree::parse(OrigStream);
+  clang::pseudo::chooseConditionalBranches(DirectiveStructure, OrigStream);
+
+  // FIXME: Provide ranges in the disabled-PP regions as well.
+  auto Preprocessed = DirectiveStructure.stripDirectives(OrigStream);
+
+  auto ParseableStream = cook(Preprocessed, clang::pseudo::genericLangOpts());
+  pseudo::pairBrackets(ParseableStream);
+
+  std::vector<FoldingRange> Result;
+  for (const auto &Tok : ParseableStream.tokens()) {
+    if (auto *Paired = Tok.pair()) {
+      // Process only token at the start of the range. Avoid ranges on a single
+      // line.
+      if (Tok.Line < Paired->Line) {
+        Position Start = offsetToPosition(
+            Code,
+            OrigStream.tokens()[Tok.OriginalIndex].text().data() - Code.data());
+        Position End = offsetToPosition(
+            Code, OrigStream.tokens()[Paired->OriginalIndex].text().data() -
+                      Code.data());
+        FoldingRange FR;
+        FR.startLine = Start.line;
+        FR.startCharacter = Start.character + 1;
+        FR.endLine = End.line;
+        FR.endCharacter = End.character;
+        Result.push_back(FR);
+      }
+    }
+  }
+  return Result;
 }
 
 } // namespace clangd

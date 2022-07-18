@@ -395,8 +395,8 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
 
 bool Inliner::inlineCallsInFunction(BinaryFunction &Function) {
   BinaryContext &BC = Function.getBinaryContext();
-  std::vector<BinaryBasicBlock *> Blocks(Function.layout().begin(),
-                                         Function.layout().end());
+  std::vector<BinaryBasicBlock *> Blocks(Function.getLayout().block_begin(),
+                                         Function.getLayout().block_end());
   llvm::sort(
       Blocks, [](const BinaryBasicBlock *BB1, const BinaryBasicBlock *BB2) {
         return BB1->getKnownExecutionCount() > BB2->getKnownExecutionCount();

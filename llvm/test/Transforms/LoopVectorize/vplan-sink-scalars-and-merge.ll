@@ -851,7 +851,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, ir<%lv.a>
+; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[PRED:%.+]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, vp<[[STEPS]]>
@@ -867,13 +867,13 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.a>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED]]> = ir<%lv.a>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
-; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for> ir<%lv.a>
+; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for> vp<[[PRED]]>
 ; CHECK-NEXT: Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1:

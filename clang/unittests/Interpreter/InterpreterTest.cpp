@@ -234,8 +234,10 @@ static void *AllocateObject(TypeDecl *TD, Interpreter &Interp) {
      << std::hex << std::showbase << (size_t)Addr << ")" << Name << "();";
 
   auto R = Interp.ParseAndExecute(SS.str());
-  if (!R)
+  if (!R) {
+    free(Addr);
     return nullptr;
+  }
 
   return Addr;
 }
@@ -291,6 +293,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   typedef int (*TemplateSpecFn)(void *);
   auto fn = (TemplateSpecFn)cantFail(Interp->getSymbolAddress(MangledName));
   EXPECT_EQ(42, fn(NewA));
+  free(NewA);
 }
 
 } // end anonymous namespace

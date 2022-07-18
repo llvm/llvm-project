@@ -29,10 +29,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-namespace llvm {
-class DwarfContext;
-}
-
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 
 namespace {

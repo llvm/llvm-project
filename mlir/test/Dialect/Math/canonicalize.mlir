@@ -174,3 +174,21 @@ func.func @ctpop_fold() -> i32 {
   %r = math.ctpop %c : i32
   return %r : i32
 }
+
+// CHECK-LABEL: @log10_fold
+// CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK: return %[[cst]]
+func.func @log10_fold() -> f32 {
+  %c = arith.constant 100.0 : f32
+  %r = math.log10 %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @log10_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00, 2.000000e+00, 2.301030e+00]> : vector<4xf32>
+// CHECK: return %[[cst]]
+func.func @log10_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[1.0, 10.0, 100.0, 200.0]> : vector<4xf32>
+  %0 = math.log10 %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}

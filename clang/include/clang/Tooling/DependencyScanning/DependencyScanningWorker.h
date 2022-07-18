@@ -52,7 +52,8 @@ public:
 /// using the regular processing run.
 class DependencyScanningWorker {
 public:
-  DependencyScanningWorker(DependencyScanningService &Service);
+  DependencyScanningWorker(DependencyScanningService &Service,
+                           llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   /// Run the dependency scanning tool for a given clang driver command-line,
   /// and report the discovered dependencies to the provided consumer. If \p

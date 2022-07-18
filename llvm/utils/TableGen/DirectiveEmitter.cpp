@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -668,6 +669,85 @@ void GenerateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
      << " Parser clause\");\n";
 }
 
+bool compareClauseName(Record *R1, Record *R2) {
+  Clause C1{R1};
+  Clause C2{R2};
+  return (C1.getName() > C2.getName());
+}
+
+// Generate the parser for the clauses.
+void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
+                                raw_ostream &OS) {
+  std::vector<Record *> Clauses = DirLang.getClauses();
+  // Sort clauses in reverse alphabetical order so with clauses with same
+  // beginning, the longer option is tried before.
+  std::sort(Clauses.begin(), Clauses.end(), compareClauseName);
+  IfDefScope Scope("GEN_FLANG_CLAUSES_PARSER", OS);
+  OS << "\n";
+  unsigned index = 0;
+  unsigned lastClauseIndex = DirLang.getClauses().size() - 1;
+  OS << "TYPE_PARSER(\n";
+  for (const auto &C : Clauses) {
+    Clause Clause{C};
+    if (Clause.getAliases().empty()) {
+      OS << "  \"" << Clause.getName() << "\"";
+    } else {
+      OS << "  ("
+         << "\"" << Clause.getName() << "\"_tok";
+      for (StringRef alias : Clause.getAliases()) {
+        OS << " || \"" << alias << "\"_tok";
+      }
+      OS << ")";
+    }
+
+    OS << " >> construct<" << DirLang.getFlangClauseBaseClass()
+       << ">(construct<" << DirLang.getFlangClauseBaseClass()
+       << "::" << Clause.getFormattedParserClassName() << ">(";
+    if (Clause.getFlangClass().empty()) {
+      OS << "))";
+      if (index != lastClauseIndex)
+        OS << " ||";
+      OS << "\n";
+      ++index;
+      continue;
+    }
+
+    if (Clause.isValueOptional())
+      OS << "maybe(";
+    OS << "parenthesized(";
+
+    if (!Clause.getPrefix().empty())
+      OS << "\"" << Clause.getPrefix() << ":\" >> ";
+
+    // The common Flang parser are used directly. Their name is identical to
+    // the Flang class with first letter as lowercase. If the Flang class is
+    // not a common class, we assume there is a specific Parser<>{} with the
+    // Flang class name provided.
+    llvm::SmallString<128> Scratch;
+    StringRef Parser =
+        llvm::StringSwitch<StringRef>(Clause.getFlangClass())
+            .Case("Name", "name")
+            .Case("ScalarIntConstantExpr", "scalarIntConstantExpr")
+            .Case("ScalarIntExpr", "scalarIntExpr")
+            .Case("ScalarLogicalExpr", "scalarLogicalExpr")
+            .Default(("Parser<" + Clause.getFlangClass() + ">{}")
+                         .toStringRef(Scratch));
+    OS << Parser;
+    if (!Clause.getPrefix().empty() && Clause.isPrefixOptional())
+      OS << " || " << Parser;
+    OS << ")"; // close parenthesized(.
+
+    if (Clause.isValueOptional()) // close maybe(.
+      OS << ")";
+    OS << "))";
+    if (index != lastClauseIndex)
+      OS << " ||";
+    OS << "\n";
+    ++index;
+  }
+  OS << ")\n";
+}
+
 // Generate the implementation section for the enumeration in the directive
 // language
 void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
@@ -688,6 +768,8 @@ void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
   GenerateFlangClauseCheckPrototypes(DirLang, OS);
 
   GenerateFlangClauseParserKindMap(DirLang, OS);
+
+  GenerateFlangClausesParser(DirLang, OS);
 }
 
 void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,

@@ -661,16 +661,8 @@ define i16 @cvt_f64_to_i16(double %a0) nounwind {
 define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; ALL-LABEL: cvt_2f64_to_2i16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; ALL-NEXT:    vcvtpd2ps %xmm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %1 = fptrunc <2 x double> %a0 to <2 x half>
   %2 = bitcast <2 x half> %1 to <2 x i16>
@@ -680,26 +672,8 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; ALL-LABEL: cvt_4f64_to_4i16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; ALL-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -710,26 +684,8 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; ALL-LABEL: cvt_4f64_to_8i16_undef:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; ALL-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -741,26 +697,8 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; ALL-LABEL: cvt_4f64_to_8i16_zero:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -772,164 +710,28 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-LABEL: cvt_8f64_to_8i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX1-NEXT:    vmovd %xmm2, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
-; AVX1-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX1-NEXT:    vmovd %xmm2, %ecx
-; AVX1-NEXT:    movzwl %cx, %ecx
-; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX1-NEXT:    vmovd %xmm2, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    movzwl %ax, %eax
-; AVX1-NEXT:    orl %edx, %eax
-; AVX1-NEXT:    shlq $32, %rax
-; AVX1-NEXT:    orq %rcx, %rax
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm1[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %ecx
-; AVX1-NEXT:    shll $16, %ecx
-; AVX1-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %edx
-; AVX1-NEXT:    movzwl %dx, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %ecx
-; AVX1-NEXT:    shll $16, %ecx
-; AVX1-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %esi
-; AVX1-NEXT:    movzwl %si, %esi
-; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    shlq $32, %rsi
-; AVX1-NEXT:    orq %rdx, %rsi
-; AVX1-NEXT:    vmovq %rsi, %xmm0
-; AVX1-NEXT:    vmovq %rax, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vcvtpd2ps %ymm1, %xmm1
+; AVX1-NEXT:    vcvtps2ph $0, %xmm1, %xmm1
+; AVX1-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; AVX1-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_8f64_to_8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX2-NEXT:    vmovd %xmm2, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
-; AVX2-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX2-NEXT:    vmovd %xmm2, %ecx
-; AVX2-NEXT:    movzwl %cx, %ecx
-; AVX2-NEXT:    orl %eax, %ecx
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX2-NEXT:    vmovd %xmm2, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    movzwl %ax, %eax
-; AVX2-NEXT:    orl %edx, %eax
-; AVX2-NEXT:    shlq $32, %rax
-; AVX2-NEXT:    orq %rcx, %rax
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm1[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %edx
-; AVX2-NEXT:    movzwl %dx, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %esi
-; AVX2-NEXT:    movzwl %si, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    shlq $32, %rsi
-; AVX2-NEXT:    orq %rdx, %rsi
-; AVX2-NEXT:    vmovq %rsi, %xmm0
-; AVX2-NEXT:    vmovq %rax, %xmm1
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vcvtpd2ps %ymm1, %xmm1
+; AVX2-NEXT:    vcvtps2ph $0, %xmm1, %xmm1
+; AVX2-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; AVX2-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
+; AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_8f64_to_8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %xmm1, %eax
-; AVX512-NEXT:    shll $16, %eax
-; AVX512-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %xmm1, %ecx
-; AVX512-NEXT:    movzwl %cx, %ecx
-; AVX512-NEXT:    orl %eax, %ecx
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX512-NEXT:    vmovd %xmm2, %edx
-; AVX512-NEXT:    shll $16, %edx
-; AVX512-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %xmm1, %eax
-; AVX512-NEXT:    movzwl %ax, %eax
-; AVX512-NEXT:    orl %edx, %eax
-; AVX512-NEXT:    shlq $32, %rax
-; AVX512-NEXT:    orq %rcx, %rax
-; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %xmm1, %ecx
-; AVX512-NEXT:    shll $16, %ecx
-; AVX512-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %xmm1, %edx
-; AVX512-NEXT:    movzwl %dx, %edx
-; AVX512-NEXT:    orl %ecx, %edx
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %xmm1, %ecx
-; AVX512-NEXT:    shll $16, %ecx
-; AVX512-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %esi
-; AVX512-NEXT:    movzwl %si, %esi
-; AVX512-NEXT:    orl %ecx, %esi
-; AVX512-NEXT:    shlq $32, %rsi
-; AVX512-NEXT:    orq %rdx, %rsi
-; AVX512-NEXT:    vmovq %rsi, %xmm0
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vcvtpd2ps %zmm0, %ymm0
+; AVX512-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = fptrunc <8 x double> %a0 to <8 x half>
@@ -958,15 +760,9 @@ define void @store_cvt_f64_to_i16(double %a0, ptr %a1) nounwind {
 define void @store_cvt_2f64_to_2i16(<2 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_2f64_to_2i16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %ecx
-; ALL-NEXT:    movw %cx, (%rdi)
-; ALL-NEXT:    movw %ax, 2(%rdi)
+; ALL-NEXT:    vcvtpd2ps %xmm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
+; ALL-NEXT:    vmovss %xmm0, (%rdi)
 ; ALL-NEXT:    retq
   %1 = fptrunc <2 x double> %a0 to <2 x half>
   %2 = bitcast <2 x half> %1 to <2 x i16>
@@ -977,25 +773,8 @@ define void @store_cvt_2f64_to_2i16(<2 x double> %a0, ptr %a1) nounwind {
 define void @store_cvt_4f64_to_4i16(<4 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f64_to_4i16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %ecx
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %edx
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %esi
-; ALL-NEXT:    movw %si, 4(%rdi)
-; ALL-NEXT:    movw %dx, (%rdi)
-; ALL-NEXT:    movw %cx, 6(%rdi)
-; ALL-NEXT:    movw %ax, 2(%rdi)
+; ALL-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -1007,26 +786,8 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, ptr %a1) nounwind {
 define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f64_to_8i16_undef:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; ALL-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; ALL-NEXT:    vmovaps %xmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
@@ -1040,26 +801,8 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, ptr %a1) nounwind {
 define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f64_to_8i16_zero:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
-; ALL-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; ALL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; ALL-NEXT:    vmovaps %xmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
@@ -1073,131 +816,30 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, ptr %a1) nounwind {
 define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; AVX1-LABEL: store_cvt_8f64_to_8i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX1-NEXT:    vmovd %xmm2, %r8d
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; AVX1-NEXT:    vmovd %xmm3, %r9d
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; AVX1-NEXT:    vmovd %xmm3, %r10d
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm3[1,0]
-; AVX1-NEXT:    vcvtsd2ss %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; AVX1-NEXT:    vmovd %xmm4, %r11d
-; AVX1-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %ecx
-; AVX1-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %edx
-; AVX1-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm0
-; AVX1-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %esi
-; AVX1-NEXT:    movw %si, 12(%rdi)
-; AVX1-NEXT:    movw %dx, 8(%rdi)
-; AVX1-NEXT:    movw %cx, 4(%rdi)
-; AVX1-NEXT:    movw %ax, (%rdi)
-; AVX1-NEXT:    movw %r11w, 14(%rdi)
-; AVX1-NEXT:    movw %r10w, 10(%rdi)
-; AVX1-NEXT:    movw %r9w, 6(%rdi)
-; AVX1-NEXT:    movw %r8w, 2(%rdi)
+; AVX1-NEXT:    vcvtpd2ps %ymm1, %xmm1
+; AVX1-NEXT:    vcvtps2ph $0, %xmm1, %xmm1
+; AVX1-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; AVX1-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_8f64_to_8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX2-NEXT:    vmovd %xmm2, %r8d
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; AVX2-NEXT:    vmovd %xmm3, %r9d
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; AVX2-NEXT:    vmovd %xmm3, %r10d
-; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm3[1,0]
-; AVX2-NEXT:    vcvtsd2ss %xmm4, %xmm4, %xmm4
-; AVX2-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; AVX2-NEXT:    vmovd %xmm4, %r11d
-; AVX2-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %ecx
-; AVX2-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %edx
-; AVX2-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm0
-; AVX2-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %esi
-; AVX2-NEXT:    movw %si, 12(%rdi)
-; AVX2-NEXT:    movw %dx, 8(%rdi)
-; AVX2-NEXT:    movw %cx, 4(%rdi)
-; AVX2-NEXT:    movw %ax, (%rdi)
-; AVX2-NEXT:    movw %r11w, 14(%rdi)
-; AVX2-NEXT:    movw %r10w, 10(%rdi)
-; AVX2-NEXT:    movw %r9w, 6(%rdi)
-; AVX2-NEXT:    movw %r8w, 2(%rdi)
+; AVX2-NEXT:    vcvtpd2ps %ymm1, %xmm1
+; AVX2-NEXT:    vcvtps2ph $0, %xmm1, %xmm1
+; AVX2-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; AVX2-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
+; AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: store_cvt_8f64_to_8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vmovd %xmm1, %r8d
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX512-NEXT:    vmovd %xmm2, %r9d
-; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; AVX512-NEXT:    vmovd %xmm3, %r10d
-; AVX512-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm3[1,0]
-; AVX512-NEXT:    vcvtsd2ss %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; AVX512-NEXT:    vmovd %xmm4, %r11d
-; AVX512-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm0
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %ecx
-; AVX512-NEXT:    vcvtsd2ss %xmm2, %xmm2, %xmm0
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %edx
-; AVX512-NEXT:    vcvtsd2ss %xmm3, %xmm3, %xmm0
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %esi
-; AVX512-NEXT:    movw %si, 12(%rdi)
-; AVX512-NEXT:    movw %dx, 8(%rdi)
-; AVX512-NEXT:    movw %cx, 4(%rdi)
-; AVX512-NEXT:    movw %ax, (%rdi)
-; AVX512-NEXT:    movw %r11w, 14(%rdi)
-; AVX512-NEXT:    movw %r10w, 10(%rdi)
-; AVX512-NEXT:    movw %r9w, 6(%rdi)
-; AVX512-NEXT:    movw %r8w, 2(%rdi)
+; AVX512-NEXT:    vcvtpd2ps %zmm0, %ymm0
+; AVX512-NEXT:    vcvtps2ph $4, %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = fptrunc <8 x double> %a0 to <8 x half>
@@ -1234,4 +876,28 @@ define void @store_cvt_32f32_to_32f16(<32 x float> %a0, ptr %a1) nounwind {
   %1 = fptrunc <32 x float> %a0 to <32 x half>
   store <32 x half> %1, ptr %a1
   ret void
+}
+
+define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
+; ALL-LABEL: fptosi_2f16_to_4i32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; ALL-NEXT:    vpextrw $0, %xmm1, %eax
+; ALL-NEXT:    movzwl %ax, %eax
+; ALL-NEXT:    vmovd %eax, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    vcvttss2si %xmm1, %eax
+; ALL-NEXT:    vpextrw $0, %xmm0, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vcvttss2si %xmm0, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm0
+; ALL-NEXT:    vmovd %eax, %xmm1
+; ALL-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; ALL-NEXT:    retq
+  %cvt = fptosi <2 x half> %a to <2 x i32>
+  %ext = shufflevector <2 x i32> %cvt, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %ext
 }

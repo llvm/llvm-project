@@ -347,7 +347,7 @@ def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
 // of LLVM ops that accept such an attribute.
 class MemoryOpWithAlignmentBase {
   code setAlignmentCode = [{
-    if ($alignment.hasValue()) {
+    if ($alignment.has_value()) {
       auto align = $alignment.value();
       if (align != 0)
         inst->setAlignment(llvm::Align(align));
@@ -433,6 +433,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ValueRange":$indices,
                "ArrayRef<int32_t>":$structIndices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+               "ValueRange":$indices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+	OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+               "ValueRange":$indices,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ValueRange":$indices, "ArrayRef<int32_t>":$structIndices,

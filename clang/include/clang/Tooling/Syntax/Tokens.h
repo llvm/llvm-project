@@ -27,13 +27,11 @@
 #ifndef LLVM_CLANG_TOOLING_SYNTAX_TOKENS_H
 #define LLVM_CLANG_TOOLING_SYNTAX_TOKENS_H
 
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Token.h"
-#include "clang/Tooling/Syntax/TokenManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"

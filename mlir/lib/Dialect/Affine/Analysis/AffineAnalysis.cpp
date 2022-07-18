@@ -21,6 +21,7 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -114,12 +115,6 @@ bool mlir::isLoopParallel(AffineForOp forOp,
   return isLoopMemoryParallel(forOp);
 }
 
-/// Returns true if `op` is an alloc-like op, i.e., one allocating memrefs.
-static bool isAllocLikeOp(Operation *op) {
-  auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
-  return memEffects && memEffects.hasEffect<MemoryEffects::Allocate>();
-}
-
 /// Returns true if `v` is allocated locally to `enclosingOp` -- i.e., it is
 /// allocated by an operation nested within `enclosingOp`.
 static bool isLocallyDefined(Value v, Operation *enclosingOp) {
@@ -127,7 +122,8 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   if (!defOp)
     return false;
 
-  if (isAllocLikeOp(defOp) && enclosingOp->isProperAncestor(defOp))
+  if (hasSingleEffect<MemoryEffects::Allocate>(defOp, v) &&
+      enclosingOp->isProperAncestor(defOp))
     return true;
 
   // Aliasing ops.
@@ -153,7 +149,7 @@ bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
       if (!isLocallyDefined(writeOp.getMemRef(), forOp))
         loadAndStoreOps.push_back(op);
     } else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
-               !isAllocLikeOp(op) &&
+               !hasSingleEffect<MemoryEffects::Allocate>(op) &&
                !MemoryEffectOpInterface::hasNoEffect(op)) {
       // Alloc-like ops inside `forOp` are fine (they don't impact parallelism)
       // as long as they don't escape the loop (which has been checked above).

@@ -344,7 +344,7 @@ std::pair<unsigned, unsigned> MachineCombiner::getLatenciesForInstrSequences(
   NewRootLatency += getLatency(&MI, NewRoot, BlockTrace);
 
   unsigned RootLatency = 0;
-  for (auto I : DelInstrs)
+  for (auto *I : DelInstrs)
     RootLatency += TSchedModel.computeInstrLatency(I);
 
   return {NewRootLatency, RootLatency};
@@ -527,7 +527,7 @@ static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
   for (auto *InstrPtr : DelInstrs) {
     InstrPtr->eraseFromParent();
     // Erase all LiveRegs defined by the removed instruction
-    for (auto I = RegUnits.begin(); I != RegUnits.end(); ) {
+    for (auto *I = RegUnits.begin(); I != RegUnits.end();) {
       if (I->MI == InstrPtr)
         I = RegUnits.erase(I);
       else

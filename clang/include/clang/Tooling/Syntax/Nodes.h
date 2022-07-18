@@ -23,9 +23,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Syntax/Tree.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 namespace clang {
 namespace syntax {
 

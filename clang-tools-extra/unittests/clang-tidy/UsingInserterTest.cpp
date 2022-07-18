@@ -38,7 +38,7 @@ public:
         Inserter->createUsingDeclaration(*Result.Context, *Call, "::foo::func");
 
     if (Hint)
-      diag(Call->getBeginLoc(), "Fix for testing") << Hint.getValue();
+      diag(Call->getBeginLoc(), "Fix for testing") << Hint.value();
 
     diag(Call->getBeginLoc(), "insert call")
         << clang::FixItHint::CreateReplacement(

@@ -793,7 +793,7 @@ private:
     }
     auto OptPackLocation = findPack(Args);
     if (OptPackLocation) {
-      size_t PackLocation = OptPackLocation.getValue();
+      size_t PackLocation = OptPackLocation.value();
       ArrayRef<ParmVarDecl *> MatchingParams =
           Callee->parameters().slice(PackLocation, Parameters.size());
       // Check whether the function has a parameter pack as the last template
@@ -937,7 +937,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
         break;
       }
       // If we found something: Fill in non-pack parameters
-      auto Info = V.Info.getValue();
+      auto Info = V.Info.value();
       HeadIt = std::copy(Info.Head.begin(), Info.Head.end(), HeadIt);
       TailIt = std::copy(Info.Tail.rbegin(), Info.Tail.rend(), TailIt);
       // Prepare next recursion level

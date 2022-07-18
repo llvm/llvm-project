@@ -2679,9 +2679,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     if (global.getType().isa<fir::BoxType>())
       tyAttr = tyAttr.cast<mlir::LLVM::LLVMPointerType>().getElementType();
     auto loc = global.getLoc();
-    mlir::Attribute initAttr;
-    if (global.getInitVal())
-      initAttr = global.getInitVal().getValue();
+    mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
     auto linkage = convertLinkage(global.getLinkName());
     auto isConst = global.getConstant().has_value();
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
@@ -2738,7 +2736,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
   mlir::LLVM::Linkage
   convertLinkage(llvm::Optional<llvm::StringRef> optLinkage) const {
     if (optLinkage) {
-      auto name = optLinkage.getValue();
+      auto name = *optLinkage;
       if (name == "internal")
         return mlir::LLVM::Linkage::Internal;
       if (name == "linkonce")
@@ -2795,8 +2793,8 @@ static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
                         mlir::ConversionPatternRewriter &rewriter,
                         mlir::Block *newBlock) {
   if (destOps)
-    rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, destOps.getValue(),
-                                          newBlock, mlir::ValueRange());
+    rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, *destOps, newBlock,
+                                          mlir::ValueRange());
   else
     rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, newBlock);
 }
@@ -2805,8 +2803,7 @@ template <typename A, typename B>
 static void genBrOp(A caseOp, mlir::Block *dest, llvm::Optional<B> destOps,
                     mlir::ConversionPatternRewriter &rewriter) {
   if (destOps)
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, destOps.getValue(),
-                                                  dest);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, *destOps, dest);
   else
     rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, llvm::None, dest);
 }

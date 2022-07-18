@@ -14,6 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TRANSFORMS_UTILS_MISEXPECT_H
+#define LLVM_TRANSFORMS_UTILS_MISEXPECT_H
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -75,3 +78,5 @@ void checkExpectAnnotations(Instruction &I,
 
 } // namespace misexpect
 } // namespace llvm
+
+#endif

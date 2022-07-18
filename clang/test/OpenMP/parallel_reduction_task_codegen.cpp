@@ -440,7 +440,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP36:%.*]] = sdiv exact i64 [[TMP35]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP37:%.*]] = add nuw i64 [[TMP36]], 1
 // CHECK1-NEXT:    [[TMP38:%.*]] = mul nuw i64 [[TMP37]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
-// CHECK1-NEXT:    store i64 [[TMP37]], i64* @{{reduction_size[.].+[.]}}, align 8
+// CHECK1-NEXT:    store i64 [[TMP37]], i64* @{{reduction_size[.].+[.]}}, align 8, !noalias !12
 // CHECK1-NEXT:    [[TMP39:%.*]] = load i8*, i8** [[TMP16]], align 8
 // CHECK1-NEXT:    [[TMP40:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP20]], i8* [[TMP39]], i8* [[TMP25]]) #[[ATTR5]]
 // CHECK1-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2

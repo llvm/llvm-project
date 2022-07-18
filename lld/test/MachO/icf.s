@@ -10,76 +10,87 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/main.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/abs.s -o %t/abs.o
 # RUN: %lld -lSystem --icf=all -o %t/main %t/main.o %t/abs.o
-# RUN: llvm-objdump -d --syms %t/main | FileCheck %s
+# RUN: llvm-objdump -d --syms --dwarf=frames %t/main | FileCheck %s
 
 # CHECK-LABEL: SYMBOL TABLE:
 # CHECK: [[#%x,ABS1B_REF:]]                 l     F __TEXT,__text _abs1a_ref
-# CHECK: [[#%x,ABS1B_REF:]]                 l     F __TEXT,__text _abs1b_ref
+# CHECK: [[#%x,ABS1B_REF]]                  l     F __TEXT,__text _abs1b_ref
 # CHECK: [[#%x,ABS1B_REF_WITH_ADDEND:]]     l     F __TEXT,__text _abs1a_ref_with_addend
-# CHECK: [[#%x,ABS1B_REF_WITH_ADDEND:]]     l     F __TEXT,__text _abs1b_ref_with_addend
+# CHECK: [[#%x,ABS1B_REF_WITH_ADDEND]]      l     F __TEXT,__text _abs1b_ref_with_addend
 # CHECK: [[#%x,ABS2_REF:]]                  l     F __TEXT,__text _abs2_ref
 # CHECK: [[#%x,NOT_ABS_REF:]]               l     F __TEXT,__text _not_abs_ref
 # CHECK: [[#%x,DYLIB_REF_2:]]               l     F __TEXT,__text _dylib_ref_1
-# CHECK: [[#%x,DYLIB_REF_2:]]               l     F __TEXT,__text _dylib_ref_2
+# CHECK: [[#%x,DYLIB_REF_2]]                l     F __TEXT,__text _dylib_ref_2
 # CHECK: [[#%x,DYLIB_REF_3:]]               l     F __TEXT,__text _dylib_ref_3
 # CHECK: [[#%x,DYLIB_REF_4:]]               l     F __TEXT,__text _dylib_ref_4
 # CHECK: [[#%x,ALT:]]                       l     F __TEXT,__text _alt
 # CHECK: [[#%x,WITH_ALT_ENTRY:]]            l     F __TEXT,__text _with_alt_entry
-# CHECK: [[#%x,WITH_ALT_ENTRY:]]            l     F __TEXT,__text _no_alt_entry
+# CHECK: [[#%x,WITH_ALT_ENTRY]]             l     F __TEXT,__text _no_alt_entry
 # CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_2:]] l     F __TEXT,__text _defined_ref_with_addend_1
-# CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_2:]] l     F __TEXT,__text _defined_ref_with_addend_2
+# CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_2]]  l     F __TEXT,__text _defined_ref_with_addend_2
 # CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_3:]] l     F __TEXT,__text _defined_ref_with_addend_3
 # CHECK: [[#%x,RECURSIVE:]]                 l     F __TEXT,__text _recursive
 # CHECK: [[#%x,CALL_RECURSIVE_2:]]          l     F __TEXT,__text _call_recursive_1
-# CHECK: [[#%x,CALL_RECURSIVE_2:]]          l     F __TEXT,__text _call_recursive_2
+# CHECK: [[#%x,CALL_RECURSIVE_2]]           l     F __TEXT,__text _call_recursive_2
 # CHECK: [[#%x,CHECK_LENGTH_1:]]            l     F __TEXT,__text _check_length_1
 # CHECK: [[#%x,CHECK_LENGTH_2:]]            l     F __TEXT,__text _check_length_2
 # CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_1
-# CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_2
+# CHECK: [[#%x,HAS_UNWIND_2]]               l     F __TEXT,__text _has_unwind_2
 # CHECK: [[#%x,HAS_UNWIND_3:]]              l     F __TEXT,__text _has_unwind_3
+# CHECK: [[#%x,HAS_EH_FRAME_1:]]            l     F __TEXT,__text _has_eh_frame_1
+# CHECK: [[#%x,HAS_EH_FRAME_2:]]            l     F __TEXT,__text _has_eh_frame_2
+# CHECK: [[#%x,HAS_EH_FRAME_3:]]            l     F __TEXT,__text _has_eh_frame_3
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_1
-# CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_2
+# CHECK: [[#%x,MUTALLY_RECURSIVE_2]]        l     F __TEXT,__text _mutually_recursive_2
 # CHECK: [[#%x,INIT_2:]]                    l     F __TEXT,__text _init_1
-# CHECK: [[#%x,INIT_2:]]                    l     F __TEXT,__text _init_2
+# CHECK: [[#%x,INIT_2]]                     l     F __TEXT,__text _init_2
 # CHECK: [[#%x,INIT_3:]]                    l     O __TEXT,__foo  _init_3
 ### FIXME: Mutually-recursive functions with identical bodies (see below)
 # COM:   [[#%x,ASYMMETRIC_RECURSIVE_2:]]    l   F __TEXT,__text _asymmetric_recursive_1
 # COM:   [[#%x,ASYMMETRIC_RECURSIVE_2]]     l   F __TEXT,__text _asymmetric_recursive_2
 
+## Check that we don't accidentally dedup distinct EH frames.
+# CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_1]]
+# CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_2]]
+# CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_3]]
+
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
 # CHECK:        <_main>:
-# CHECK: callq 0x[[#%x,ABS1B_REF:]]                 <_abs1b_ref>
-# CHECK: callq 0x[[#%x,ABS1B_REF:]]                 <_abs1b_ref>
-# CHECK: callq 0x[[#%x,ABS1B_REF_WITH_ADDEND:]]     <_abs1b_ref_with_addend>
-# CHECK: callq 0x[[#%x,ABS1B_REF_WITH_ADDEND:]]     <_abs1b_ref_with_addend>
-# CHECK: callq 0x[[#%x,ABS2_REF:]]                  <_abs2_ref>
-# CHECK: callq 0x[[#%x,NOT_ABS_REF:]]               <_not_abs_ref>
-# CHECK: callq 0x[[#%x,DYLIB_REF_2:]]               <_dylib_ref_2>
-# CHECK: callq 0x[[#%x,DYLIB_REF_2:]]               <_dylib_ref_2>
-# CHECK: callq 0x[[#%x,DYLIB_REF_3:]]               <_dylib_ref_3>
-# CHECK: callq 0x[[#%x,DYLIB_REF_4:]]               <_dylib_ref_4>
-# CHECK: callq 0x[[#%x,ALT:]]                       <_alt>
-# CHECK: callq 0x[[#%x,WITH_ALT_ENTRY:]]            <_with_alt_entry>
-# CHECK: callq 0x[[#%x,WITH_ALT_ENTRY:]]            <_with_alt_entry>
-# CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2:]] <_defined_ref_with_addend_2>
-# CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2:]] <_defined_ref_with_addend_2>
-# CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_3:]] <_defined_ref_with_addend_3>
-# CHECK: callq 0x[[#%x,RECURSIVE:]]                 <_recursive>
-# CHECK: callq 0x[[#%x,CALL_RECURSIVE_2:]]          <_call_recursive_2>
-# CHECK: callq 0x[[#%x,CALL_RECURSIVE_2:]]          <_call_recursive_2>
-# CHECK: callq 0x[[#%x,CHECK_LENGTH_1:]]            <_check_length_1>
-# CHECK: callq 0x[[#%x,CHECK_LENGTH_2:]]            <_check_length_2>
-# CHECK: callq 0x[[#%x,HAS_UNWIND_2:]]              <_has_unwind_2>
-# CHECK: callq 0x[[#%x,HAS_UNWIND_2:]]              <_has_unwind_2>
-# CHECK: callq 0x[[#%x,HAS_UNWIND_3:]]              <_has_unwind_3>
-# CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2:]]       <_mutually_recursive_2>
-# CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2:]]       <_mutually_recursive_2>
-## FIXME: Mutually-recursive functions with identical bodies (see below)
-# COM:   callq 0x[[#%x,ASYMMETRIC_RECURSIVE_2]]     <_asymmetric_recursive_2>
-# COM:   callq 0x[[#%x,ASYMMETRIC_RECURSIVE_2]]     <_asymmetric_recursive_2>
-# CHECK: callq 0x[[#%x,INIT_2:]]                    <_init_2>
-# CHECK: callq 0x[[#%x,INIT_2:]]                    <_init_2>
-# CHECK: callq 0x[[#%x,INIT_3:]]                    <_init_3>
+# CHECK: callq 0x[[#%x,ABS1B_REF]]                 <_abs1b_ref>
+# CHECK: callq 0x[[#%x,ABS1B_REF]]                 <_abs1b_ref>
+# CHECK: callq 0x[[#%x,ABS1B_REF_WITH_ADDEND]]     <_abs1b_ref_with_addend>
+# CHECK: callq 0x[[#%x,ABS1B_REF_WITH_ADDEND]]     <_abs1b_ref_with_addend>
+# CHECK: callq 0x[[#%x,ABS2_REF]]                  <_abs2_ref>
+# CHECK: callq 0x[[#%x,NOT_ABS_REF]]               <_not_abs_ref>
+# CHECK: callq 0x[[#%x,DYLIB_REF_2]]               <_dylib_ref_2>
+# CHECK: callq 0x[[#%x,DYLIB_REF_2]]               <_dylib_ref_2>
+# CHECK: callq 0x[[#%x,DYLIB_REF_3]]               <_dylib_ref_3>
+# CHECK: callq 0x[[#%x,DYLIB_REF_4]]               <_dylib_ref_4>
+# CHECK: callq 0x[[#%x,ALT]]                       <_alt>
+# CHECK: callq 0x[[#%x,WITH_ALT_ENTRY]]            <_with_alt_entry>
+# CHECK: callq 0x[[#%x,WITH_ALT_ENTRY]]            <_with_alt_entry>
+# CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2]] <_defined_ref_with_addend_2>
+# CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2]] <_defined_ref_with_addend_2>
+# CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_3]] <_defined_ref_with_addend_3>
+# CHECK: callq 0x[[#%x,RECURSIVE]]                 <_recursive>
+# CHECK: callq 0x[[#%x,CALL_RECURSIVE_2]]          <_call_recursive_2>
+# CHECK: callq 0x[[#%x,CALL_RECURSIVE_2]]          <_call_recursive_2>
+# CHECK: callq 0x[[#%x,CHECK_LENGTH_1]]            <_check_length_1>
+# CHECK: callq 0x[[#%x,CHECK_LENGTH_2]]            <_check_length_2>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_2]]              <_has_unwind_2>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_2]]              <_has_unwind_2>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_3]]              <_has_unwind_3>
+# CHECK: callq 0x[[#%x,HAS_EH_FRAME_1]]            <_has_eh_frame_1>
+# CHECK: callq 0x[[#%x,HAS_EH_FRAME_2]]            <_has_eh_frame_2>
+# CHECK: callq 0x[[#%x,HAS_EH_FRAME_3]]            <_has_eh_frame_3>
+# CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2]]       <_mutually_recursive_2>
+# CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2]]       <_mutually_recursive_2>
+## FIXME Mutually-recursive functions with identical bodies (see below)
+# COM:   callq 0x[[#%x,ASYMMETRIC_RECURSIVE_2]]    <_asymmetric_recursive_2>
+# COM:   callq 0x[[#%x,ASYMMETRIC_RECURSIVE_2]]    <_asymmetric_recursive_2>
+# CHECK: callq 0x[[#%x,INIT_2]]                    <_init_2>
+# CHECK: callq 0x[[#%x,INIT_2]]                    <_init_2>
+# CHECK: callq 0x[[#%x,INIT_3]]                    <_init_3>
 
 ### TODO:
 ### * Fold: funcs only differ in alignment
@@ -209,6 +220,35 @@ _has_unwind_3:
   ret
   .cfi_endproc
 
+## In theory _has_eh_frame_{1, 2} can be dedup'ed, but we don't support this
+## yet.
+_has_eh_frame_1:
+  .cfi_startproc
+  .cfi_def_cfa_offset 8
+  ## cfi_escape cannot be encoded in compact unwind
+  .cfi_escape 0x2e, 0x10
+  ret
+  .cfi_endproc
+
+_has_eh_frame_2:
+  .cfi_startproc
+  .cfi_def_cfa_offset 8
+  ## cfi_escape cannot be encoded in compact unwind
+  .cfi_escape 0x2e, 0x10
+  ret
+  .cfi_endproc
+
+## The nop in this function body means that it cannot be folded with the
+## previous two, even though the unwind info is otherwise identical.
+_has_eh_frame_3:
+  .cfi_startproc
+  .cfi_def_cfa_offset 8
+  ## cfi_escape cannot be encoded in compact unwind
+  .cfi_escape 0x2e, 0x10
+  nop
+  ret
+  .cfi_endproc
+
 ## Fold: Mutually-recursive functions with symmetric bodies
 _mutually_recursive_1:
   callq _mutually_recursive_1 # call myself
@@ -279,6 +319,9 @@ _main:
   callq _has_unwind_1
   callq _has_unwind_2
   callq _has_unwind_3
+  callq _has_eh_frame_1
+  callq _has_eh_frame_2
+  callq _has_eh_frame_3
   callq _mutually_recursive_1
   callq _mutually_recursive_2
   callq _asymmetric_recursive_1

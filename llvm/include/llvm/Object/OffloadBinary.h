@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BINARYFORMAT_OFFLOADING_H
-#define LLVM_BINARYFORMAT_OFFLOADING_H
+#ifndef LLVM_OBJECT_OFFLOADBINARY_H
+#define LLVM_OBJECT_OFFLOADBINARY_H
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"

@@ -322,8 +322,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   std::unordered_map<const BinaryBasicBlock *,
                      std::set<const BinaryBasicBlock *>>
       STOutSet;
-  for (auto BBI = Function.layout_rbegin(); BBI != Function.layout_rend();
-       ++BBI) {
+  for (auto BBI = Function.getLayout().block_rbegin();
+       BBI != Function.getLayout().block_rend(); ++BBI) {
     if ((*BBI)->isEntryPoint() || (*BBI)->isLandingPad()) {
       Stack.push(std::make_pair(nullptr, *BBI));
       if (opts::InstrumentCalls && (*BBI)->isEntryPoint()) {

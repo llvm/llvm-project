@@ -637,6 +637,37 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   }
 }
 
+MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
+    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // The below optimizations narrow the load so they are only valid for little
+  // endian.
+  // TODO: Support big endian by adding an offset into the frame object?
+  if (MF.getDataLayout().isBigEndian())
+    return nullptr;
+
+  // Fold load from stack followed by sext.w into lw.
+  // TODO: Fold with sext.b, sext.h, zext.b, zext.h, zext.w?
+  if (Ops.size() == 1 && Ops[0] == 1 && RISCV::isSEXT_W(MI)) {
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(MF, FrameIndex),
+        MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
+        MFI.getObjectAlign(FrameIndex));
+
+    Register DstReg = MI.getOperand(0).getReg();
+    return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(RISCV::LW),
+                   DstReg)
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
+        .addMemOperand(MMO);
+  }
+
+  return nullptr;
+}
+
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register DstReg, uint64_t Val,
@@ -1799,17 +1830,30 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(VL, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
-  } else if ((NumOfVReg == 3 || NumOfVReg == 5 || NumOfVReg == 9) &&
-             STI.hasStdExtZba()) {
-    // We can use Zba SHXADD instructions for multiply in some cases.
-    // TODO: Generalize to SHXADD+SLLI.
+  } else if (STI.hasStdExtZba() &&
+             ((NumOfVReg % 3 == 0 && isPowerOf2_64(NumOfVReg / 3)) ||
+              (NumOfVReg % 5 == 0 && isPowerOf2_64(NumOfVReg / 5)) ||
+              (NumOfVReg % 9 == 0 && isPowerOf2_64(NumOfVReg / 9)))) {
+    // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;
-    switch (NumOfVReg) {
-    default: llvm_unreachable("Unexpected number of vregs");
-    case 3: Opc = RISCV::SH1ADD; break;
-    case 5: Opc = RISCV::SH2ADD; break;
-    case 9: Opc = RISCV::SH3ADD; break;
+    uint32_t ShiftAmount;
+    if (NumOfVReg % 9 == 0) {
+      Opc = RISCV::SH3ADD;
+      ShiftAmount = Log2_64(NumOfVReg / 9);
+    } else if (NumOfVReg % 5 == 0) {
+      Opc = RISCV::SH2ADD;
+      ShiftAmount = Log2_64(NumOfVReg / 5);
+    } else if (NumOfVReg % 3 == 0) {
+      Opc = RISCV::SH1ADD;
+      ShiftAmount = Log2_64(NumOfVReg / 3);
+    } else {
+      llvm_unreachable("Unexpected number of vregs");
     }
+    if (ShiftAmount)
+      BuildMI(MBB, II, DL, get(RISCV::SLLI), VL)
+          .addReg(VL, RegState::Kill)
+          .addImm(ShiftAmount)
+          .setMIFlag(Flag);
     BuildMI(MBB, II, DL, get(Opc), VL)
         .addReg(VL, RegState::Kill)
         .addReg(VL)
@@ -1850,6 +1894,12 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
   }
 
   return VL;
+}
+
+// Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
+bool RISCV::isSEXT_W(const MachineInstr &MI) {
+  return MI.getOpcode() == RISCV::ADDIW && MI.getOperand(1).isReg() &&
+         MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0;
 }
 
 static bool isRVVWholeLoadStore(unsigned Opcode) {

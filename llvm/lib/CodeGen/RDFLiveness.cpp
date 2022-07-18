@@ -61,7 +61,7 @@ namespace rdf {
 
   raw_ostream &operator<< (raw_ostream &OS, const Print<Liveness::RefMap> &P) {
     OS << '{';
-    for (auto &I : P.Obj) {
+    for (const auto &I : P.Obj) {
       OS << ' ' << printReg(I.first, &P.G.getTRI()) << '{';
       for (auto J = I.second.begin(), E = I.second.end(); J != E; ) {
         OS << Print<NodeId>(J->first, P.G) << PrintLaneMaskOpt(J->second);
@@ -767,7 +767,7 @@ void Liveness::computeLiveIns() {
   }
 
   for (auto I : IDF)
-    for (auto S : I.second)
+    for (auto *S : I.second)
       IIDF[S].insert(I.first);
 
   computePhiInfo();
@@ -926,7 +926,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
 
   BitVector LiveIn(TRI.getNumRegs()), Live(TRI.getNumRegs());
   CopyLiveIns(B, LiveIn);
-  for (auto SI : B->successors())
+  for (auto *SI : B->successors())
     CopyLiveIns(SI, Live);
 
   for (MachineInstr &MI : llvm::reverse(*B)) {
@@ -1003,7 +1003,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
 
   // Go up the dominator tree (depth-first).
   MachineDomTreeNode *N = MDT.getNode(B);
-  for (auto I : *N) {
+  for (auto *I : *N) {
     RefMap L;
     MachineBasicBlock *SB = I->getBlock();
     traverse(SB, L);
@@ -1015,7 +1015,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
   if (Trace) {
     dbgs() << "\n-- " << printMBBReference(*B) << ": " << __func__
            << " after recursion into: {";
-    for (auto I : *N)
+    for (auto *I : *N)
       dbgs() << ' ' << I->getBlock()->getNumber();
     dbgs() << " }\n";
     dbgs() << "  LiveIn: " << Print<RefMap>(LiveIn, DFG) << '\n';
@@ -1155,7 +1155,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
     dbgs() << "  Local:  " << Print<RegisterAggr>(Local, DFG) << '\n';
   }
 
-  for (auto C : IIDF[B]) {
+  for (auto *C : IIDF[B]) {
     RegisterAggr &LiveC = LiveMap[C];
     for (const std::pair<const RegisterId, NodeRefSet> &S : LiveIn)
       for (auto R : S.second)

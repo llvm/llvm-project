@@ -379,7 +379,7 @@ void StackLayoutModifier::classifyCFIs() {
     }
   };
 
-  for (BinaryBasicBlock *&BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     for (MCInst &Inst : *BB) {
       if (!BC.MIB->isCFI(Inst))
         continue;
@@ -1021,7 +1021,7 @@ ShrinkWrapping::doRestorePlacement(MCInst *BestPosSave, unsigned CSR,
   // (PredictiveStackPointerTracking). Detect now for empty BBs and add a
   // dummy nop that is scheduled to be removed later.
   bool InvalidateRequired = false;
-  for (BinaryBasicBlock *&BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->size() != 0)
       continue;
     MCInst NewInst;
@@ -1149,7 +1149,7 @@ SmallVector<ProgramPoint, 4> ShrinkWrapping::fixPopsPlacements(
 void ShrinkWrapping::scheduleOldSaveRestoresRemoval(unsigned CSR,
                                                     bool UsePushPops) {
 
-  for (BinaryBasicBlock *&BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     std::vector<MCInst *> CFIs;
     for (auto I = BB->rbegin(), E = BB->rend(); I != E; ++I) {
       MCInst &Inst = *I;
@@ -1574,7 +1574,7 @@ void ShrinkWrapping::insertUpdatedCFI(unsigned CSR, int SPValPush,
   bool PrevAffectedZone = false;
   BinaryBasicBlock *PrevBB = nullptr;
   DominatorAnalysis<false> &DA = Info.getDominatorAnalysis();
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->size() == 0)
       continue;
     const bool InAffectedZoneAtEnd = DA.count(*BB->rbegin(), *SavePoint);
@@ -1625,7 +1625,7 @@ void ShrinkWrapping::rebuildCFIForSP() {
   int PrevSPVal = -8;
   BinaryBasicBlock *PrevBB = nullptr;
   StackPointerTracking &SPT = Info.getStackPointerTracking();
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->size() == 0)
       continue;
     const int SPValAtEnd = SPT.getStateAt(*BB->rbegin())->first;
@@ -1973,7 +1973,7 @@ bool ShrinkWrapping::perform(bool HotOnly) {
   // Update pass statistics
   uint64_t TotalInstrs = 0ULL;
   uint64_t TotalStoreInstrs = 0ULL;
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     uint64_t BBExecCount = BB->getExecutionCount();
     if (!BBExecCount || BBExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
       continue;
