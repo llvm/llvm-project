@@ -1783,6 +1783,10 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
     AddLoongArchTargetArgs(Args, CmdArgs);
     break;
 
+  case llvm::Triple::m88k:
+    AddM88kTargetArgs(Args, CmdArgs);
+    break;
+
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -1928,6 +1932,30 @@ void Clang::AddLoongArchTargetArgs(const ArgList &Args,
   CmdArgs.push_back(loongarch::getLoongArchABI(getToolChain().getDriver(), Args,
                                                getToolChain().getTriple())
                         .data());
+}
+
+void Clang::AddM88kTargetArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    CmdArgs.push_back("-tune-cpu");
+    if (strcmp(A->getValue(), "native") == 0)
+      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
+    else
+      CmdArgs.push_back(A->getValue());
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mcheck_zero_division,
+                               options::OPT_mno_check_zero_division)) {
+    if (A->getOption().matches(options::OPT_mno_check_zero_division)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-m88k-no-check-zero-division");
+    }
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_muse_div_instruction)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-m88k-use-div-instruction");
+  }
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,

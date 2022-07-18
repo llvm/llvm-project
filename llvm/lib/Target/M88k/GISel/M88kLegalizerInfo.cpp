@@ -10,10 +10,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "M88kLegalizerInfo.h"
+#include "M88kSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constants.h"
@@ -21,6 +24,7 @@
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace LegalityPredicates;
 
 M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   using namespace TargetOpcode;
@@ -69,8 +73,23 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_ADD).legalFor({S32});
   getActionDefinitionsBuilder(G_SUB).legalFor({S32});
   getActionDefinitionsBuilder(G_MUL).legalFor({S32});
-  getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
+  getActionDefinitionsBuilder(G_UDIV).legalFor({S32}).libcallFor({S64});
+  getActionDefinitionsBuilder(G_SDIV)
+#if 0
+      // The only problem with these 2 rules is that the custom code requires
+      // inserting new basic blocks. This is currently not supported by the
+      // Legalizer.
+      .legalIf(all(typeInSet(0, {S32}),
+                   LegalityPredicate(([=, &ST](const LegalityQuery &Query) {
+                     return ST.useDivInstr() || ST.isMC88110();
+                   }))))
+      .customIf(all(typeInSet(0, {S32}),
+                    LegalityPredicate(([=, &ST](const LegalityQuery &Query) {
+                      return !ST.useDivInstr();
+                    }))))
+#else
       .legalFor({S32})
+#endif
       .libcallFor({S64});
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({S32})
@@ -197,6 +216,103 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     MI.eraseFromParent();
     break;
   }
+#if 0
+  // This is a first attempt to lower G_SDIV to G_UDIV.
+  // It does not work because the Legalizer currently does not support inserting
+  // new basic blocks.
+  case G_SDIV: {
+    // The instruction
+    //   %3:_ = G_SDIV %1:_, %2:_
+    // is lowered to G_UDIV. This is done by making both operands non-negative,
+    // and correcting the sign of the result. All 4 cases need to be
+    // considered. The code is a bit lengthy, but not complicated.
+    Register Dst = MI.getOperand(0).getReg();
+    Register Dividend = MI.getOperand(1).getReg();
+    Register Divisor = MI.getOperand(2).getReg();
+
+    if (MRI.getType(Dst) != S32 || MRI.getType(Dividend) != S32 ||
+        MRI.getType(Divisor) != S32)
+      return false;
+
+    MachineBasicBlock *CurBB = MI.getParent();
+    MachineFunction *MF = CurBB->getParent();
+
+    // First split the current basic block. Move all instructions after MI into
+    // the new block.
+    MachineFunction::iterator BBI(CurBB);
+    MachineBasicBlock *TailBB =
+        MF->CreateMachineBasicBlock(CurBB->getBasicBlock());
+    MF->insert(++BBI, TailBB);
+    MachineBasicBlock::iterator MII(&MI);
+    TailBB->splice(TailBB->begin(), CurBB, ++MII, CurBB->end());
+
+    // Create basic blocks.
+    MachineBasicBlock *DivisorNotPosBB =
+        MF->CreateMachineBasicBlock(CurBB->getBasicBlock());
+    MachineBasicBlock *DividendNegDivisorPosBB =
+        MF->CreateMachineBasicBlock(CurBB->getBasicBlock());
+    MachineBasicBlock *DividendNegDivisorNotPosBB =
+        MF->CreateMachineBasicBlock(CurBB->getBasicBlock());
+
+    MF->insert(--BBI, DivisorNotPosBB);
+    MF->insert(BBI, DividendNegDivisorPosBB);
+    MF->insert(BBI, DividendNegDivisorNotPosBB);
+
+    // Compare dividend and divisor against zero, and branch accordingly.
+    // Handle case 1: dividend zero or positiv, divisor positiv.
+    auto Zero = MIRBuilder.buildConstant(S32, 0);
+    auto Cmp1 = MIRBuilder.buildICmp(CmpInst::ICMP_SLE, S1, Divisor, Zero);
+    MIRBuilder.buildBrCond(Cmp1, *DivisorNotPosBB);
+    auto Cmp2 = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, S1, Dividend, Zero);
+    MIRBuilder.buildBrCond(Cmp2, *DividendNegDivisorPosBB);
+    auto Div1 =
+        MIRBuilder.buildInstr(TargetOpcode::G_UDIV, {S32}, {Dividend, Divisor});
+    MIRBuilder.buildBr(*TailBB);
+
+    // Handle case 2: dividend zero or positiv, divisor negativ.
+    // Result is negativ.
+    MIRBuilder.setMBB(*DivisorNotPosBB);
+    auto AbsDivisor = MIRBuilder.buildNeg(S32, Divisor);
+    auto Cmp3 = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, S1, Dividend, Zero);
+    MIRBuilder.buildBrCond(Cmp2, *DividendNegDivisorNotPosBB);
+    auto Div2 = MIRBuilder.buildNeg(
+        S32, MIRBuilder.buildInstr(TargetOpcode::G_UDIV, {S32},
+                                   {Dividend, AbsDivisor}));
+    MIRBuilder.buildBr(*TailBB);
+
+    // Handle case 3: dividend negativ, divisor negativ.
+    // Result is positiv.
+    MIRBuilder.setMBB(*DividendNegDivisorNotPosBB);
+    auto AbsDividend = MIRBuilder.buildNeg(S32, Dividend);
+    auto Cmp4 = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, S1, Dividend, Zero);
+    MIRBuilder.buildBrCond(Cmp4, *DividendNegDivisorNotPosBB);
+    auto Div3 = MIRBuilder.buildInstr(TargetOpcode::G_UDIV, {S32},
+                                      {AbsDividend, AbsDivisor});
+    MIRBuilder.buildBr(*TailBB);
+
+    // Handle case 4: dividend negativ, divisor zero or positiv.
+    // Result is negativ.
+    MIRBuilder.setMBB(*DividendNegDivisorPosBB);
+    auto AbsDividend2 = MIRBuilder.buildNeg(S32, Dividend);
+    auto Cmp5 = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, S1, Dividend, Zero);
+    MIRBuilder.buildBrCond(Cmp5, *DividendNegDivisorNotPosBB);
+    auto Div4 = MIRBuilder.buildNeg(
+        S32, MIRBuilder.buildInstr(TargetOpcode::G_UDIV, {S32},
+                                   {AbsDividend, Divisor}));
+    MIRBuilder.buildBr(*TailBB);
+
+    // Collect the results.
+    MIRBuilder.setInsertPt(*TailBB, TailBB->begin());
+    auto Phi = MIRBuilder.buildInstr(TargetOpcode::G_PHI, {Dst}, {});
+    Phi.addUse(Div1.getReg(0)).addMBB(CurBB);
+    Phi.addUse(Div2.getReg(0)).addMBB(DivisorNotPosBB);
+    Phi.addUse(Div3.getReg(0)).addMBB(DividendNegDivisorNotPosBB);
+    Phi.addUse(Div4.getReg(0)).addMBB(DividendNegDivisorPosBB);
+
+    MI.eraseFromParent();
+    break;
+  }
+#endif
   default:
     return false;
   }

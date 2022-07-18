@@ -430,7 +430,10 @@ let Predicates = [IsMC88110] in {
 defm : BinaryOpPat<"ADDU", add>;
 defm : BinaryOpPat<"SUBU", sub>;
 defm : BinaryOpPat<"MULU", mul>;
-defm : BinaryOpPat<"DIVS", sdiv>; // TODO Correct?
+// DIVU and DIVS require some special handling.
+// For now, don#t add patterns for both instructions.
+// TODO The trap could be inserted in a later path.
+//defm : BinaryOpPat<"DIVS", sdiv>;
 //def : Pat<(umullohi GPR:$rs1, GPR:$rs2), (MULUrrd GPR:$rs1, GPR:$rs2)>;
 
 

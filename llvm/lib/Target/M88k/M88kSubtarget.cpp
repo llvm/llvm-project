@@ -23,6 +23,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "m88k-subtarget"
 
+static cl::opt<bool>
+    NoZeroDivCheck("m88k-no-check-zero-division", cl::Hidden,
+                   cl::desc("M88k: Don't trap on integer division by zero."),
+                   cl::init(false));
+
+static cl::opt<bool> UseDivInstr(
+    "m88k-use-div-instruction", cl::Hidden,
+    cl::desc("M88k: Use the div instruction for signed integer division."),
+    cl::init(false));
+
+
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "M88kGenSubtargetInfo.inc"
@@ -93,3 +104,6 @@ Optional<unsigned> M88kSubtarget::getCacheLineSize(unsigned Level) const {
     return Optional<unsigned>();
   }
 }
+
+bool M88kSubtarget::useDivInstr() const { return UseDivInstr; }
+bool M88kSubtarget::noZeroDivCheck() const { return NoZeroDivCheck; }

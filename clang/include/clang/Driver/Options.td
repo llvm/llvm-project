@@ -4531,6 +4531,12 @@ foreach i = {0-7} in
 def m88000 : Flag<["-"], "m88000">, Group<m_m88k_Features_Group>;
 def m88100 : Flag<["-"], "m88100">, Group<m_m88k_Features_Group>;
 def m88110 : Flag<["-"], "m88110">, Group<m_m88k_Features_Group>;
+// TODO This flag is already in the MIPS group.
+//def mcheck_zero_division : Flag<["-"], "mcheck-zero-division">, Group<m_m88k_Features_Group>;
+//def mno_check_zero_division : Flag<["-"], "mno-check-zero-division">, Group<m_m88k_Features_Group>;
+def muse_div_instruction : Flag<["-"], "muse-div-instruction">,
+  Group<m_m88k_Features_Group>,
+  HelpText<"Use div instruction for signed integer division (MC88100 only)">;
 
 // X86 feature flags
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;

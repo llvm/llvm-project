@@ -81,6 +81,9 @@ public:
   bool isMC88100() const { return M88kProc == MC88100; }
   bool isMC88110() const { return M88kProc == MC88110; }
 
+  bool useDivInstr() const;
+  bool noZeroDivCheck() const;
+
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
