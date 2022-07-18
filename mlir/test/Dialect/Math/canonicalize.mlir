@@ -192,3 +192,21 @@ func.func @log10_fold_vec() -> (vector<4xf32>) {
   %0 = math.log10 %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// CHECK-LABEL: @log1p_fold
+// CHECK: %[[cst:.+]] = arith.constant 2.8903718 : f32
+  // CHECK: return %[[cst]]
+func.func @log1p_fold() -> f32 {
+  %c = arith.constant 17.0 : f32
+  %r = math.log1p %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @log1p_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[1.38629436, 1.79175949, 2.07944155, 2.48490667]> : vector<4xf32>
+// CHECK: return %[[cst]]
+func.func @log1p_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[3.0, 5.0, 7.0, 11.0]> : vector<4xf32>
+  %0 = math.log1p %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
