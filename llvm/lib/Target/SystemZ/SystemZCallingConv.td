@@ -221,9 +221,10 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // XPLINK64 ABI compliant code widens integral types smaller than i64
   // to i64 before placing the parameters either on the stack or in registers.
   CCIfType<[i32], CCIfExtend<CCPromoteToType<i64>>>,
-  // Promote f32 to f64 and bitcast to i64, if it needs to be passed in GPRS.
-  CCIfType<[f32], CCIfNotFixed<CCPromoteToType<f64>>>,
-  CCIfType<[f64], CCIfNotFixed<CCBitConvertToType<i64>>>,
+  // Promote f32 to f64 and bitcast to i64, if it needs to be passed in GPRs.
+  // Although we assign the f32 vararg to be bitcast, it will first be promoted
+  // to an f64 within convertValVTToLocVT().
+  CCIfType<[f32, f64], CCIfNotFixed<CCBitConvertToType<i64>>>,
   // long double, can only be passed in GPR2 and GPR3, if available,
   // hence R2Q
   CCIfType<[f128], CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,
