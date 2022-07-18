@@ -142,7 +142,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // and single use outside the defining block into RematerializableInsts.
   void collectRematerializableInstructions();
 
-  bool isTriviallyReMaterializable(const MachineInstr &MI, AAResults *AA);
+  bool isTriviallyReMaterializable(const MachineInstr &MI);
 
   // TODO: Should also attempt to reduce RP of SGPRs and AGPRs
   // Attempt to reduce RP of VGPR by sinking trivially rematerializable
