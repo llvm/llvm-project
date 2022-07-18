@@ -159,6 +159,17 @@ public:
 };
 } // namespace
 
+// TODO(cir): remove the attribute once this gets used.
+LLVM_ATTRIBUTE_UNUSED
+static bool classifyReturnType(const CIRGenCXXABI &CXXABI,
+                               CIRGenFunctionInfo &FI, const ABIInfo &Info) {
+  QualType Ty = FI.getReturnType();
+
+  assert(!Ty->getAs<RecordType>() && "RecordType returns NYI");
+
+  return CXXABI.classifyReturnType(FI);
+}
+
 CIRGenCXXABI &ABIInfo::getCXXABI() const { return CGT.getCXXABI(); }
 
 clang::ASTContext &ABIInfo::getContext() const { return CGT.getContext(); }
