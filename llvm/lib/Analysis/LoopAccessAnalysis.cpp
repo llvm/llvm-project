@@ -908,7 +908,7 @@ findForkedPointer(PredicatedScalarEvolution &PSE,
                   const Loop *L) {
   ScalarEvolution *SE = PSE.getSE();
   assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
-  SmallVector<std::pair<const SCEV *, bool>, 2> Scevs;
+  SmallVector<std::pair<const SCEV *, bool>> Scevs;
   findForkedSCEVs(SE, L, Ptr, Scevs, MaxForkedSCEVDepth);
 
   // For now, we will only accept a forked pointer with two possible SCEVs.
