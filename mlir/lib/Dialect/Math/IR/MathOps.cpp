@@ -108,6 +108,27 @@ OpFoldResult math::Log2Op::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// Log10Op folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::Log10Op::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        if (a.isNegative())
+          return {};
+
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(log10(a.convertToDouble()));
+        case 32:
+          return APFloat(log10f(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // PowFOp folder
 //===----------------------------------------------------------------------===//
 
