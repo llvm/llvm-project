@@ -47,6 +47,7 @@ class Function;
 class GlobalValue;
 class InstCombiner;
 class OptimizationRemarkEmitter;
+class InterleavedAccessInfo;
 class IntrinsicInst;
 class LoadInst;
 class Loop;
@@ -531,7 +532,8 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL) const;
+                                   LoopVectorizationLegality *LVL,
+                                   InterleavedAccessInfo *IAI) const;
 
   /// Query the target whether lowering of the llvm.get.active.lane.mask
   /// intrinsic is supported and how the mask should be used. A return value
@@ -1567,12 +1569,11 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
-  virtual bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
-                                           ScalarEvolution &SE,
-                                           AssumptionCache &AC,
-                                           TargetLibraryInfo *TLI,
-                                           DominatorTree *DT,
-                                           LoopVectorizationLegality *LVL) = 0;
+  virtual bool
+  preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                              AssumptionCache &AC, TargetLibraryInfo *TLI,
+                              DominatorTree *DT, LoopVectorizationLegality *LVL,
+                              InterleavedAccessInfo *IAI) = 0;
   virtual PredicationStyle emitGetActiveLaneMask() = 0;
   virtual Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                        IntrinsicInst &II) = 0;
@@ -1956,8 +1957,9 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL) override {
-    return Impl.preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL);
+                                   LoopVectorizationLegality *LVL,
+                                   InterleavedAccessInfo *IAI) override {
+    return Impl.preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
   }
   PredicationStyle emitGetActiveLaneMask() override {
     return Impl.emitGetActiveLaneMask();

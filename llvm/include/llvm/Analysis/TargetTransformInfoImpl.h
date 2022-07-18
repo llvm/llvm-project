@@ -163,7 +163,8 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL) const {
+                                   LoopVectorizationLegality *LVL,
+                                   InterleavedAccessInfo *IAI) const {
     return false;
   }
 

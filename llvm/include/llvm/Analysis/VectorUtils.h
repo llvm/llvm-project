@@ -811,6 +811,9 @@ public:
   /// cannot be filtered by masking the load/store.
   void invalidateGroupsRequiringScalarEpilogue();
 
+  /// Returns true if we have any interleave groups.
+  bool hasGroups() const { return !InterleaveGroups.empty(); }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
