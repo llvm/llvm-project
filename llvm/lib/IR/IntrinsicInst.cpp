@@ -694,8 +694,10 @@ unsigned BinaryOpIntrinsic::getNoWrapKind() const {
     return OverflowingBinaryOperator::NoUnsignedWrap;
 }
 
-const GCStatepointInst *GCProjectionInst::getStatepoint() const {
+const Value *GCProjectionInst::getStatepoint() const {
   const Value *Token = getArgOperand(0);
+  if (isa<UndefValue>(Token))
+    return Token;
 
   // This takes care both of relocates for call statepoints and relocates
   // on normal path of invoke statepoint.
@@ -714,13 +716,23 @@ const GCStatepointInst *GCProjectionInst::getStatepoint() const {
 }
 
 Value *GCRelocateInst::getBasePtr() const {
-  if (auto Opt = getStatepoint()->getOperandBundle(LLVMContext::OB_gc_live))
+  auto Statepoint = getStatepoint();
+  if (isa<UndefValue>(Statepoint))
+    return UndefValue::get(Statepoint->getType());
+
+  auto *GCInst = cast<GCStatepointInst>(Statepoint);
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
     return *(Opt->Inputs.begin() + getBasePtrIndex());
-  return *(getStatepoint()->arg_begin() + getBasePtrIndex());
+  return *(GCInst->arg_begin() + getBasePtrIndex());
 }
 
 Value *GCRelocateInst::getDerivedPtr() const {
-  if (auto Opt = getStatepoint()->getOperandBundle(LLVMContext::OB_gc_live))
+  auto *Statepoint = getStatepoint();
+  if (isa<UndefValue>(Statepoint))
+    return UndefValue::get(Statepoint->getType());
+
+  auto *GCInst = cast<GCStatepointInst>(Statepoint);
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
     return *(Opt->Inputs.begin() + getDerivedPtrIndex());
-  return *(getStatepoint()->arg_begin() + getDerivedPtrIndex());
+  return *(GCInst->arg_begin() + getDerivedPtrIndex());
 }
