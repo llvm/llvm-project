@@ -1,4 +1,4 @@
-//===----- DivisonByConstantInfo.cpp - division by constant -*- C++ -*-----===//
+//===----- DivisionByConstantInfo.cpp - division by constant -*- C++ -*----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,11 +62,11 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 /// S. Warren, Jr., chapter 10.
 /// LeadingZeros can be used to simplify the calculation if the upper bits
 /// of the divided value are known zero.
-UnsignedDivisonByConstantInfo
-UnsignedDivisonByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
+UnsignedDivisionByConstantInfo
+UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
   unsigned P;
   APInt NC, Delta, Q1, R1, Q2, R2;
-  struct UnsignedDivisonByConstantInfo Retval;
+  struct UnsignedDivisionByConstantInfo Retval;
   Retval.IsAdd = false; // initialize "add" indicator
   APInt AllOnes = APInt::getAllOnes(D.getBitWidth()).lshr(LeadingZeros);
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
