@@ -32,9 +32,10 @@ static constexpr llvm::StringRef kPrintOpen = "printOpen";
 static constexpr llvm::StringRef kPrintClose = "printClose";
 static constexpr llvm::StringRef kPrintComma = "printComma";
 static constexpr llvm::StringRef kPrintNewline = "printNewline";
-static constexpr llvm::StringRef kMalloc = "malloc";
-static constexpr llvm::StringRef kAlignedAlloc = "aligned_alloc";
-static constexpr llvm::StringRef kFree = "free";
+static constexpr llvm::StringRef kMalloc = "_mlir_alloc";
+static constexpr llvm::StringRef kAlignedAlloc = "_mlir_aligned_alloc";
+static constexpr llvm::StringRef kFree = "_mlir_free";
+static constexpr llvm::StringRef kAlignedFree = "_mlir_aligned_free";
 static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 
 /// Generic print function lookupOrCreate helper.
@@ -111,6 +112,13 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateAlignedAllocFn(ModuleOp moduleOp,
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFreeFn(ModuleOp moduleOp) {
   return LLVM::lookupOrCreateFn(
       moduleOp, kFree,
+      LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateAlignedFreeFn(ModuleOp moduleOp) {
+  return LLVM::lookupOrCreateFn(
+      moduleOp, kAlignedFree,
       LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)),
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }

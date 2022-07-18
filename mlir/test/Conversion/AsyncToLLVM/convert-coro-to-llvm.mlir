@@ -21,7 +21,7 @@ func.func @coro_begin() {
   // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
   // CHECK: %[[NEGATED_ALIGN:.*]] = llvm.sub %[[C0]], %[[ALIGN]]  : i64
   // CHECK: %[[ROUNDED_SIZE:.*]] = llvm.and %[[SIZE_PLUS_ALIGN_MINUS_ONE]], %[[NEGATED_ALIGN]] : i64
-  // CHECK: %[[ALLOC:.*]] = llvm.call @aligned_alloc(%[[ALIGN]], %[[ROUNDED_SIZE]])
+  // CHECK: %[[ALLOC:.*]] = llvm.call @_mlir_aligned_alloc(%[[ALIGN]], %[[ROUNDED_SIZE]])
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin %[[ID]], %[[ALLOC]]
   %1 = async.coro.begin %0
   return
@@ -34,7 +34,7 @@ func.func @coro_free() {
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
   // CHECK: %[[MEM:.*]] = llvm.intr.coro.free %[[ID]], %[[HDL]]
-  // CHECK: llvm.call @free(%[[MEM]])
+  // CHECK: llvm.call @_mlir_aligned_free(%[[MEM]])
   async.coro.free %0, %1
   return
 }

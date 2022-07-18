@@ -45,6 +45,7 @@ LLVM::LLVMFuncOp lookupOrCreateMallocFn(ModuleOp moduleOp, Type indexType);
 LLVM::LLVMFuncOp lookupOrCreateAlignedAllocFn(ModuleOp moduleOp,
                                               Type indexType);
 LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp);
+LLVM::LLVMFuncOp lookupOrCreateAlignedFreeFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
                                             Type unrankedDescriptorType);
 

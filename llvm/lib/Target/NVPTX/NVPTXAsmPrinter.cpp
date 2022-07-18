@@ -73,6 +73,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/NativeFormatting.h"
@@ -1294,9 +1295,9 @@ void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
       assert(nextSymbolPos % ptrSize == 0);
       assert(nextSymbolPos >= pos + ptrSize);
     } else if (ptrSize == 4)
-      os << *(uint32_t *)(&buffer[pos]);
+      os << support::endian::read32le(&buffer[pos]);
     else
-      os << *(uint64_t *)(&buffer[pos]);
+      os << support::endian::read64le(&buffer[pos]);
   }
 }
 

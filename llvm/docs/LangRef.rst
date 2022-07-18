@@ -7320,6 +7320,11 @@ The following behaviors are supported:
      - **Max**
            Takes the max of the two values, which are required to be integers.
 
+   * - 8
+     - **Min**
+           Takes the min of the two values, which are required to be non-negative integers.
+           An absent module flag is treated as having the value 0.
+
 It is an error for a particular unique flag ID to have multiple behaviors,
 except in the case of **Require** (which adds restrictions on another metadata
 value) or **Override**.
