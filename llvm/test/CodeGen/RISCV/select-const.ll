@@ -321,3 +321,549 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
   %1 = select i1 %a, float 3.0, float 4.0
   ret float %1
 }
+
+define signext i32 @select_eq_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_eq_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_eq_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    xor a0, a0, a1
+; RV32IF-NEXT:    seqz a0, a0
+; RV32IF-NEXT:    neg a0, a0
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_eq_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    xor a0, a0, a1
+; RV32IBT-NEXT:    seqz a0, a0
+; RV32IBT-NEXT:    neg a0, a0
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_eq_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    xor a0, a0, a1
+; RV32IFBT-NEXT:    seqz a0, a0
+; RV32IFBT-NEXT:    neg a0, a0
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_eq_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_eq_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    xor a0, a0, a1
+; RV64IFD-NEXT:    seqz a0, a0
+; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_eq_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    xor a0, a0, a1
+; RV64IBT-NEXT:    seqz a0, a0
+; RV64IBT-NEXT:    neg a0, a0
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_eq_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    xor a0, a0, a1
+; RV64IFDBT-NEXT:    seqz a0, a0
+; RV64IFDBT-NEXT:    neg a0, a0
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp eq i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_ne_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_ne_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_ne_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    xor a0, a0, a1
+; RV32IF-NEXT:    snez a0, a0
+; RV32IF-NEXT:    neg a0, a0
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_ne_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    xor a0, a0, a1
+; RV32IBT-NEXT:    snez a0, a0
+; RV32IBT-NEXT:    neg a0, a0
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_ne_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    xor a0, a0, a1
+; RV32IFBT-NEXT:    snez a0, a0
+; RV32IFBT-NEXT:    neg a0, a0
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_ne_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_ne_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    xor a0, a0, a1
+; RV64IFD-NEXT:    snez a0, a0
+; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_ne_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    xor a0, a0, a1
+; RV64IBT-NEXT:    snez a0, a0
+; RV64IBT-NEXT:    neg a0, a0
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_ne_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    xor a0, a0, a1
+; RV64IFDBT-NEXT:    snez a0, a0
+; RV64IFDBT-NEXT:    neg a0, a0
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp ne i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_sgt_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_sgt_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_sgt_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    slt a0, a1, a0
+; RV32IF-NEXT:    neg a0, a0
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_sgt_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    slt a0, a1, a0
+; RV32IBT-NEXT:    neg a0, a0
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_sgt_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    slt a0, a1, a0
+; RV32IFBT-NEXT:    neg a0, a0
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_sgt_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slt a0, a1, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_sgt_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    slt a0, a1, a0
+; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_sgt_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    slt a0, a1, a0
+; RV64IBT-NEXT:    neg a0, a0
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_sgt_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    slt a0, a1, a0
+; RV64IFDBT-NEXT:    neg a0, a0
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp sgt i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_slt_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_slt_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slt a0, a0, a1
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_slt_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    slt a0, a0, a1
+; RV32IF-NEXT:    neg a0, a0
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_slt_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    slt a0, a0, a1
+; RV32IBT-NEXT:    neg a0, a0
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_slt_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    slt a0, a0, a1
+; RV32IFBT-NEXT:    neg a0, a0
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_slt_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slt a0, a0, a1
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_slt_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    slt a0, a0, a1
+; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_slt_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    slt a0, a0, a1
+; RV64IBT-NEXT:    neg a0, a0
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_slt_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    slt a0, a0, a1
+; RV64IFDBT-NEXT:    neg a0, a0
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp slt i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_sge_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_sge_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slt a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_sge_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    slt a0, a0, a1
+; RV32IF-NEXT:    addi a0, a0, -1
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_sge_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    slt a0, a0, a1
+; RV32IBT-NEXT:    addi a0, a0, -1
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_sge_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    slt a0, a0, a1
+; RV32IFBT-NEXT:    addi a0, a0, -1
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_sge_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slt a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_sge_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    slt a0, a0, a1
+; RV64IFD-NEXT:    addi a0, a0, -1
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_sge_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    slt a0, a0, a1
+; RV64IBT-NEXT:    addi a0, a0, -1
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_sge_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    slt a0, a0, a1
+; RV64IFDBT-NEXT:    addi a0, a0, -1
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp sge i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_sle_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_sle_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_sle_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    slt a0, a1, a0
+; RV32IF-NEXT:    addi a0, a0, -1
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_sle_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    slt a0, a1, a0
+; RV32IBT-NEXT:    addi a0, a0, -1
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_sle_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    slt a0, a1, a0
+; RV32IFBT-NEXT:    addi a0, a0, -1
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_sle_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slt a0, a1, a0
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_sle_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    slt a0, a1, a0
+; RV64IFD-NEXT:    addi a0, a0, -1
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_sle_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    slt a0, a1, a0
+; RV64IBT-NEXT:    addi a0, a0, -1
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_sle_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    slt a0, a1, a0
+; RV64IFDBT-NEXT:    addi a0, a0, -1
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp sle i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_ugt_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_ugt_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_ugt_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    sltu a0, a1, a0
+; RV32IF-NEXT:    neg a0, a0
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_ugt_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    sltu a0, a1, a0
+; RV32IBT-NEXT:    neg a0, a0
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_ugt_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    sltu a0, a1, a0
+; RV32IFBT-NEXT:    neg a0, a0
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_ugt_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_ugt_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    sltu a0, a1, a0
+; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_ugt_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    sltu a0, a1, a0
+; RV64IBT-NEXT:    neg a0, a0
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_ugt_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    sltu a0, a1, a0
+; RV64IFDBT-NEXT:    neg a0, a0
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp ugt i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_ult_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_ult_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a0, a0, a1
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_ult_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    sltu a0, a0, a1
+; RV32IF-NEXT:    neg a0, a0
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_ult_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    sltu a0, a0, a1
+; RV32IBT-NEXT:    neg a0, a0
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_ult_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    sltu a0, a0, a1
+; RV32IFBT-NEXT:    neg a0, a0
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_ult_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a0, a0, a1
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_ult_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    sltu a0, a0, a1
+; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_ult_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    sltu a0, a0, a1
+; RV64IBT-NEXT:    neg a0, a0
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_ult_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    sltu a0, a0, a1
+; RV64IFDBT-NEXT:    neg a0, a0
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp ult i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_uge_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_uge_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a0, a0, a1
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_uge_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    sltu a0, a0, a1
+; RV32IF-NEXT:    addi a0, a0, -1
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_uge_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    sltu a0, a0, a1
+; RV32IBT-NEXT:    addi a0, a0, -1
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_uge_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    sltu a0, a0, a1
+; RV32IFBT-NEXT:    addi a0, a0, -1
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_uge_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a0, a0, a1
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_uge_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    sltu a0, a0, a1
+; RV64IFD-NEXT:    addi a0, a0, -1
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_uge_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    sltu a0, a0, a1
+; RV64IBT-NEXT:    addi a0, a0, -1
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_uge_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    sltu a0, a0, a1
+; RV64IFDBT-NEXT:    addi a0, a0, -1
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp uge i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
+
+define signext i32 @select_ule_zero_negone(i32 signext %a, i32 signext %b) nounwind {
+; RV32I-LABEL: select_ule_zero_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_ule_zero_negone:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    sltu a0, a1, a0
+; RV32IF-NEXT:    addi a0, a0, -1
+; RV32IF-NEXT:    ret
+;
+; RV32IBT-LABEL: select_ule_zero_negone:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    sltu a0, a1, a0
+; RV32IBT-NEXT:    addi a0, a0, -1
+; RV32IBT-NEXT:    ret
+;
+; RV32IFBT-LABEL: select_ule_zero_negone:
+; RV32IFBT:       # %bb.0:
+; RV32IFBT-NEXT:    sltu a0, a1, a0
+; RV32IFBT-NEXT:    addi a0, a0, -1
+; RV32IFBT-NEXT:    ret
+;
+; RV64I-LABEL: select_ule_zero_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_ule_zero_negone:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    sltu a0, a1, a0
+; RV64IFD-NEXT:    addi a0, a0, -1
+; RV64IFD-NEXT:    ret
+;
+; RV64IBT-LABEL: select_ule_zero_negone:
+; RV64IBT:       # %bb.0:
+; RV64IBT-NEXT:    sltu a0, a1, a0
+; RV64IBT-NEXT:    addi a0, a0, -1
+; RV64IBT-NEXT:    ret
+;
+; RV64IFDBT-LABEL: select_ule_zero_negone:
+; RV64IFDBT:       # %bb.0:
+; RV64IFDBT-NEXT:    sltu a0, a1, a0
+; RV64IFDBT-NEXT:    addi a0, a0, -1
+; RV64IFDBT-NEXT:    ret
+  %1 = icmp ule i32 %a, %b
+  %2 = select i1 %1, i32 -1, i32 0
+  ret i32 %2
+}
