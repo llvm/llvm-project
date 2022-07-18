@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Iterator>
+template <class _AlgPolicy, class _Iterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 void __debug_randomize_range(_Iterator __first, _Iterator __last) {
 #ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
 #  ifdef _LIBCPP_CXX03_LANG
@@ -30,7 +30,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 void __debug_randomize_range
 #  endif
 
   if (!__libcpp_is_constant_evaluated())
-    std::shuffle(__first, __last, __libcpp_debug_randomizer());
+    std::__shuffle<_AlgPolicy>(__first, __last, __libcpp_debug_randomizer());
 #else
   (void)__first;
   (void)__last;

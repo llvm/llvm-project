@@ -429,6 +429,7 @@ LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
 LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
 
 LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
+LANGOPT(StrictFlexArrays, 2, 0, "Rely on strict definition of flexible arrays")
 
 COMPATIBLE_VALUE_LANGOPT(MaxTokens, 32, 0, "Max number of tokens per TU or 0")
 

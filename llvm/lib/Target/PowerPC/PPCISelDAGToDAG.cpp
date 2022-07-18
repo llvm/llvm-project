@@ -5473,7 +5473,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::MUL: {
     SDValue Op1 = N->getOperand(1);
-    if (Op1.getOpcode() != ISD::Constant || Op1.getValueType() != MVT::i64)
+    if (Op1.getOpcode() != ISD::Constant ||
+        (Op1.getValueType() != MVT::i64 && Op1.getValueType() != MVT::i32))
       break;
 
     // If the multiplier fits int16, we can handle it with mulli.
@@ -5486,13 +5487,27 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // (mul X, c1 << c2) -> (rldicr (mulli X, c1) c2). We do this in ISEL due to
     // DAGCombiner prefers (shl (mul X, c1), c2) -> (mul X, c1 << c2).
     uint64_t ImmSh = Imm >> Shift;
-    if (isInt<16>(ImmSh)) {
-      uint64_t SextImm = SignExtend64(ImmSh & 0xFFFF, 16);
+    if (!isInt<16>(ImmSh))
+      break;
+
+    uint64_t SextImm = SignExtend64(ImmSh & 0xFFFF, 16);
+    if (Op1.getValueType() == MVT::i64) {
       SDValue SDImm = CurDAG->getTargetConstant(SextImm, dl, MVT::i64);
       SDNode *MulNode = CurDAG->getMachineNode(PPC::MULLI8, dl, MVT::i64,
                                                N->getOperand(0), SDImm);
-      CurDAG->SelectNodeTo(N, PPC::RLDICR, MVT::i64, SDValue(MulNode, 0),
-                           getI32Imm(Shift, dl), getI32Imm(63 - Shift, dl));
+
+      SDValue Ops[] = {SDValue(MulNode, 0), getI32Imm(Shift, dl),
+                       getI32Imm(63 - Shift, dl)};
+      CurDAG->SelectNodeTo(N, PPC::RLDICR, MVT::i64, Ops);
+      return;
+    } else {
+      SDValue SDImm = CurDAG->getTargetConstant(SextImm, dl, MVT::i32);
+      SDNode *MulNode = CurDAG->getMachineNode(PPC::MULLI, dl, MVT::i32,
+                                              N->getOperand(0), SDImm);
+
+      SDValue Ops[] = {SDValue(MulNode, 0), getI32Imm(Shift, dl),
+                       getI32Imm(0, dl), getI32Imm(31 - Shift, dl)};
+      CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);
       return;
     }
     break;

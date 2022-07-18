@@ -22,7 +22,6 @@
 
 namespace llvm {
 class Module;
-class ModulePass;
 
 /// This is the ModuleSanitizerCoverage pass used in the new pass manager. The
 /// pass instruments functions for coverage, adds initialization calls to the

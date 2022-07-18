@@ -242,7 +242,6 @@ private:
     integerSet = mlir::IntegerSet::get(dimCount, symCount,
                                        {constraintPair.getValue().first},
                                        {constraintPair.getValue().second});
-    return;
   }
 
   llvm::Optional<std::pair<AffineExpr, bool>>
@@ -392,7 +391,6 @@ static void populateIndexArgs(fir::ArrayCoorOp acoOp,
     return populateIndexArgs(acoOp, shapeShift, indexArgs, rewriter);
   if (auto slice = acoOp.getShape().getDefiningOp<SliceOp>())
     return populateIndexArgs(acoOp, slice, indexArgs, rewriter);
-  return;
 }
 
 /// Returns affine.apply and fir.convert from array_coor and gendims

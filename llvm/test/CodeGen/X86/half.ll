@@ -1230,4 +1230,164 @@ entry:
 
 declare half @llvm.fabs.f16(half)
 
+define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
+; BWON-LABEL: select:
+; BWON:       # %bb.0:
+; BWON-NEXT:    pushq %rbx
+; BWON-NEXT:    .cfi_def_cfa_offset 16
+; BWON-NEXT:    .cfi_offset %rbx, -16
+; BWON-NEXT:    movq %rdi, %rax
+; BWON-NEXT:    testb $1, %sil
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; BWON-NEXT:    cmovneq %rsi, %rdi
+; BWON-NEXT:    movzwl (%rdi), %r10d
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; BWON-NEXT:    cmovneq %rdi, %rsi
+; BWON-NEXT:    movzwl (%rsi), %esi
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; BWON-NEXT:    cmovneq %r11, %rdi
+; BWON-NEXT:    movzwl (%rdi), %edi
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rbx
+; BWON-NEXT:    cmovneq %r11, %rbx
+; BWON-NEXT:    movzwl (%rbx), %ebx
+; BWON-NEXT:    cmovew {{[0-9]+}}(%rsp), %dx
+; BWON-NEXT:    cmovew {{[0-9]+}}(%rsp), %cx
+; BWON-NEXT:    cmovew {{[0-9]+}}(%rsp), %r8w
+; BWON-NEXT:    cmovew {{[0-9]+}}(%rsp), %r9w
+; BWON-NEXT:    movw %r9w, 6(%rax)
+; BWON-NEXT:    movw %r8w, 4(%rax)
+; BWON-NEXT:    movw %cx, 2(%rax)
+; BWON-NEXT:    movw %dx, (%rax)
+; BWON-NEXT:    movw %bx, 14(%rax)
+; BWON-NEXT:    movw %di, 12(%rax)
+; BWON-NEXT:    movw %si, 10(%rax)
+; BWON-NEXT:    movw %r10w, 8(%rax)
+; BWON-NEXT:    popq %rbx
+; BWON-NEXT:    .cfi_def_cfa_offset 8
+; BWON-NEXT:    retq
+;
+; BWOFF-LABEL: select:
+; BWOFF:       # %bb.0:
+; BWOFF-NEXT:    pushq %rbx
+; BWOFF-NEXT:    .cfi_def_cfa_offset 16
+; BWOFF-NEXT:    .cfi_offset %rbx, -16
+; BWOFF-NEXT:    movq %rdi, %rax
+; BWOFF-NEXT:    testb $1, %sil
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; BWOFF-NEXT:    cmovneq %rsi, %rdi
+; BWOFF-NEXT:    movw (%rdi), %r10w
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; BWOFF-NEXT:    cmovneq %rdi, %rsi
+; BWOFF-NEXT:    movw (%rsi), %si
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; BWOFF-NEXT:    cmovneq %r11, %rdi
+; BWOFF-NEXT:    movw (%rdi), %di
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rbx
+; BWOFF-NEXT:    cmovneq %r11, %rbx
+; BWOFF-NEXT:    movw (%rbx), %bx
+; BWOFF-NEXT:    cmovew {{[0-9]+}}(%rsp), %dx
+; BWOFF-NEXT:    cmovew {{[0-9]+}}(%rsp), %cx
+; BWOFF-NEXT:    cmovew {{[0-9]+}}(%rsp), %r8w
+; BWOFF-NEXT:    cmovew {{[0-9]+}}(%rsp), %r9w
+; BWOFF-NEXT:    movw %r9w, 6(%rax)
+; BWOFF-NEXT:    movw %r8w, 4(%rax)
+; BWOFF-NEXT:    movw %cx, 2(%rax)
+; BWOFF-NEXT:    movw %dx, (%rax)
+; BWOFF-NEXT:    movw %bx, 14(%rax)
+; BWOFF-NEXT:    movw %di, 12(%rax)
+; BWOFF-NEXT:    movw %si, 10(%rax)
+; BWOFF-NEXT:    movw %r10w, 8(%rax)
+; BWOFF-NEXT:    popq %rbx
+; BWOFF-NEXT:    .cfi_def_cfa_offset 8
+; BWOFF-NEXT:    retq
+;
+; CHECK-I686-LABEL: select:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    pushl %ebp
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-I686-NEXT:    pushl %ebx
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-I686-NEXT:    pushl %edi
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-I686-NEXT:    pushl %esi
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 20
+; CHECK-I686-NEXT:    subl $8, %esp
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 28
+; CHECK-I686-NEXT:    .cfi_offset %esi, -20
+; CHECK-I686-NEXT:    .cfi_offset %edi, -16
+; CHECK-I686-NEXT:    .cfi_offset %ebx, -12
+; CHECK-I686-NEXT:    .cfi_offset %ebp, -8
+; CHECK-I686-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    cmovnel %ecx, %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    cmovnel %edx, %eax
+; CHECK-I686-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; CHECK-I686-NEXT:    cmovnel %esi, %edx
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %edi
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    cmovnel %edi, %esi
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %ebx
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %edi
+; CHECK-I686-NEXT:    cmovnel %ebx, %edi
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %ebx
+; CHECK-I686-NEXT:    cmovnel %eax, %ebx
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    cmovnel %eax, %ecx
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %ebp
+; CHECK-I686-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    cmovnel %ebp, %eax
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; CHECK-I686-NEXT:    movw (%ebp), %bp
+; CHECK-I686-NEXT:    movw %bp, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK-I686-NEXT:    movl (%esp), %ebp # 4-byte Reload
+; CHECK-I686-NEXT:    movw (%ebp), %bp
+; CHECK-I686-NEXT:    movw %bp, (%esp) # 2-byte Spill
+; CHECK-I686-NEXT:    movw (%edx), %bp
+; CHECK-I686-NEXT:    movw (%esi), %si
+; CHECK-I686-NEXT:    movw (%edi), %di
+; CHECK-I686-NEXT:    movw (%ebx), %bx
+; CHECK-I686-NEXT:    movw (%ecx), %dx
+; CHECK-I686-NEXT:    movw (%eax), %cx
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movw %cx, 14(%eax)
+; CHECK-I686-NEXT:    movw %dx, 12(%eax)
+; CHECK-I686-NEXT:    movw %bx, 10(%eax)
+; CHECK-I686-NEXT:    movw %di, 8(%eax)
+; CHECK-I686-NEXT:    movw %si, 6(%eax)
+; CHECK-I686-NEXT:    movw %bp, 4(%eax)
+; CHECK-I686-NEXT:    movw (%esp), %cx # 2-byte Reload
+; CHECK-I686-NEXT:    movw %cx, 2(%eax)
+; CHECK-I686-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %cx # 2-byte Reload
+; CHECK-I686-NEXT:    movw %cx, (%eax)
+; CHECK-I686-NEXT:    addl $8, %esp
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 20
+; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-I686-NEXT:    popl %edi
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-I686-NEXT:    popl %ebx
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-I686-NEXT:    popl %ebp
+; CHECK-I686-NEXT:    .cfi_def_cfa_offset 4
+; CHECK-I686-NEXT:    retl $4
+  %s = select i1 %c, <8 x half> %x, <8 x half> %y
+  ret <8 x half> %s
+}
+
 attributes #0 = { nounwind }

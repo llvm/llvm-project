@@ -27,7 +27,7 @@ bb1:
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 3 0 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
-  store i32 6, i32* @a, align 4
+  store i32 6, ptr @a, align 4
   br label %bb3
 
 bb2:
@@ -36,7 +36,7 @@ bb2:
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 2 0 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
-  store i32 8, i32* @a, align 4
+  store i32 8, ptr @a, align 4
   br label %bb3
 
 bb3:
@@ -46,7 +46,7 @@ bb3:
 
 declare void @bar(i32 %x) 
 
-define internal void @foo2(void (i32)* %f) !dbg !4 {
+define internal void @foo2(ptr %f) !dbg !4 {
 entry:
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0, i64 -1)
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID2:]], 1, 0, 0

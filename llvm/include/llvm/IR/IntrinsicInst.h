@@ -1445,7 +1445,7 @@ public:
   }
 
   /// The statepoint with which this gc.relocate is associated.
-  const GCStatepointInst *getStatepoint() const;
+  const Value *getStatepoint() const;
 };
 
 /// Represents calls to the gc.relocate intrinsic.

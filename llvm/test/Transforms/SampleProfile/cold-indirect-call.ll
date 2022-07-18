@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/cold-indirect-call.prof -S | FileCheck %s
 
-define i32 @foo(i32 ()* %func) #0 !dbg !3 {
+define i32 @foo(ptr %func) #0 !dbg !3 {
 ; CHECK: icmp {{.*}} @bar
 ; CHECK-NOT: icmp {{.*}} @baz
   %call = call i32 %func(), !dbg !4

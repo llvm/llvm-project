@@ -29,8 +29,8 @@ define i64 @_Z3fool(i64 %i) #0 !dbg !4 {
 entry:
   %retval = alloca i64, align 8
   %i.addr = alloca i64, align 8
-  store i64 %i, i64* %i.addr, align 8
-  call void @llvm.dbg.declare(metadata i64* %i.addr, metadata !16, metadata !17), !dbg !18
+  store i64 %i, ptr %i.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !16, metadata !17), !dbg !18
   %call = call i32 @rand() #3, !dbg !19
 ; CHECK: !prof ![[PROF1:[0-9]+]]
   %cmp = icmp slt i32 %call, 500, !dbg !21
@@ -38,7 +38,7 @@ entry:
 ; CHECK: !prof ![[PROF2:[0-9]+]]
 
 if.then:                                          ; preds = %entry
-  store i64 2, i64* %retval, align 8, !dbg !23
+  store i64 2, ptr %retval, align 8, !dbg !23
   br label %return, !dbg !23
 
 if.else:                                          ; preds = %entry
@@ -49,15 +49,15 @@ if.else:                                          ; preds = %entry
 ; CHECK: !prof ![[PROF4:[0-9]+]]
 
 if.then.3:                                        ; preds = %if.else
-  store i64 10, i64* %retval, align 8, !dbg !30
+  store i64 10, ptr %retval, align 8, !dbg !30
   br label %return, !dbg !30
 
 if.else.4:                                        ; preds = %if.else
-  store i64 90, i64* %retval, align 8, !dbg !32
+  store i64 90, ptr %retval, align 8, !dbg !32
   br label %return, !dbg !32
 
 return:                                           ; preds = %if.else.4, %if.then.3, %if.then
-  %0 = load i64, i64* %retval, align 8, !dbg !34
+  %0 = load i64, ptr %retval, align 8, !dbg !34
   ret i64 %0, !dbg !34
 }
 
@@ -75,57 +75,57 @@ entry:
   %sum = alloca i64, align 8
   %k = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i64* %sum, metadata !35, metadata !17), !dbg !36
-  store i64 0, i64* %sum, align 8, !dbg !36
-  call void @llvm.dbg.declare(metadata i32* %k, metadata !37, metadata !17), !dbg !39
-  store i32 0, i32* %k, align 4, !dbg !39
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %sum, metadata !35, metadata !17), !dbg !36
+  store i64 0, ptr %sum, align 8, !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %k, metadata !37, metadata !17), !dbg !39
+  store i32 0, ptr %k, align 4, !dbg !39
   br label %for.cond, !dbg !40
 
 for.cond:                                         ; preds = %for.inc.4, %entry
-  %0 = load i32, i32* %k, align 4, !dbg !41
+  %0 = load i32, ptr %k, align 4, !dbg !41
   %cmp = icmp slt i32 %0, 3000, !dbg !45
   br i1 %cmp, label %for.body, label %for.end.6, !dbg !46
 ; CHECK: !prof ![[PROF6:[0-9]+]]
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !47, metadata !17), !dbg !49
-  store i32 0, i32* %i, align 4, !dbg !49
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !47, metadata !17), !dbg !49
+  store i32 0, ptr %i, align 4, !dbg !49
   br label %for.cond.1, !dbg !50
 
 for.cond.1:                                       ; preds = %for.inc, %for.body
-  %1 = load i32, i32* %i, align 4, !dbg !51
+  %1 = load i32, ptr %i, align 4, !dbg !51
   %cmp2 = icmp slt i32 %1, 200000, !dbg !55
   br i1 %cmp2, label %for.body.3, label %for.end, !dbg !56
 ; CHECK: !prof ![[PROF7:[0-9]+]]
 
 for.body.3:                                       ; preds = %for.cond.1
-  %2 = load i32, i32* %i, align 4, !dbg !57
+  %2 = load i32, ptr %i, align 4, !dbg !57
   %conv = sext i32 %2 to i64, !dbg !57
   %call = call i64 @_Z3fool(i64 %conv), !dbg !59
 ; CHECK: !prof ![[PROF8:[0-9]+]]
-  %3 = load i64, i64* %sum, align 8, !dbg !60
+  %3 = load i64, ptr %sum, align 8, !dbg !60
   %add = add nsw i64 %3, %call, !dbg !60
-  store i64 %add, i64* %sum, align 8, !dbg !60
+  store i64 %add, ptr %sum, align 8, !dbg !60
   br label %for.inc, !dbg !61
 
 for.inc:                                          ; preds = %for.body.3
-  %4 = load i32, i32* %i, align 4, !dbg !62
+  %4 = load i32, ptr %i, align 4, !dbg !62
   %inc = add nsw i32 %4, 1, !dbg !62
-  store i32 %inc, i32* %i, align 4, !dbg !62
+  store i32 %inc, ptr %i, align 4, !dbg !62
   br label %for.cond.1, !dbg !64
 
 for.end:                                          ; preds = %for.cond.1
   br label %for.inc.4, !dbg !65
 
 for.inc.4:                                        ; preds = %for.end
-  %5 = load i32, i32* %k, align 4, !dbg !67
+  %5 = load i32, ptr %k, align 4, !dbg !67
   %inc5 = add nsw i32 %5, 1, !dbg !67
-  store i32 %inc5, i32* %k, align 4, !dbg !67
+  store i32 %inc5, ptr %k, align 4, !dbg !67
   br label %for.cond, !dbg !68
 
 for.end.6:                                        ; preds = %for.cond
-  %6 = load i64, i64* %sum, align 8, !dbg !69
+  %6 = load i64, ptr %sum, align 8, !dbg !69
   %cmp7 = icmp sgt i64 %6, 0, !dbg !70
   %cond = select i1 %cmp7, i32 0, i32 1, !dbg !69
   ret i32 %cond, !dbg !71

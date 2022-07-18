@@ -2361,7 +2361,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
   if (PtrMI->getOpcode() != TargetOpcode::G_PTR_ADD)
     return;
 
-  GEPInfo GEPInfo(*PtrMI);
+  GEPInfo GEPInfo;
 
   for (unsigned i = 1; i != 3; ++i) {
     const MachineOperand &GEPOp = PtrMI->getOperand(i);
@@ -3800,25 +3800,82 @@ AMDGPUInstructionSelector::selectVINTERPModsHi(MachineOperand &Root) const {
   }};
 }
 
+bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
+                                                 Register &Base,
+                                                 Register *SOffset,
+                                                 int64_t *Offset) const {
+  MachineInstr *MI = Root.getParent();
+  MachineBasicBlock *MBB = MI->getParent();
+
+  // FIXME: We should shrink the GEP if the offset is known to be <= 32-bits,
+  // then we can select all ptr + 32-bit offsets.
+  SmallVector<GEPInfo, 4> AddrInfo;
+  getAddrModeInfo(*MI, *MRI, AddrInfo);
+
+  if (AddrInfo.empty())
+    return false;
+
+  const GEPInfo &GEPI = AddrInfo[0];
+  Optional<int64_t> EncodedImm =
+      AMDGPU::getSMRDEncodedOffset(STI, GEPI.Imm, false);
+
+  if (SOffset && Offset) {
+    if (GEPI.SgprParts.size() == 1 && GEPI.Imm != 0 && EncodedImm &&
+        AddrInfo.size() > 1) {
+      const GEPInfo &GEPI2 = AddrInfo[1];
+      if (GEPI2.SgprParts.size() == 2 && GEPI2.Imm == 0) {
+        if (Register OffsetReg =
+                matchZeroExtendFromS32(*MRI, GEPI2.SgprParts[1])) {
+          Base = GEPI2.SgprParts[0];
+          *SOffset = OffsetReg;
+          *Offset = *EncodedImm;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  if (Offset && GEPI.SgprParts.size() == 1 && EncodedImm) {
+    Base = GEPI.SgprParts[0];
+    *Offset = *EncodedImm;
+    return true;
+  }
+
+  // SGPR offset is unsigned.
+  if (SOffset && GEPI.SgprParts.size() == 1 && isUInt<32>(GEPI.Imm) &&
+      GEPI.Imm != 0) {
+    // If we make it this far we have a load with an 32-bit immediate offset.
+    // It is OK to select this using a sgpr offset, because we have already
+    // failed trying to select this load into one of the _IMM variants since
+    // the _IMM Patterns are considered before the _SGPR patterns.
+    Base = GEPI.SgprParts[0];
+    *SOffset = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), *SOffset)
+        .addImm(GEPI.Imm);
+    return true;
+  }
+
+  if (SOffset && GEPI.SgprParts.size() && GEPI.Imm == 0) {
+    if (Register OffsetReg = matchZeroExtendFromS32(*MRI, GEPI.SgprParts[1])) {
+      Base = GEPI.SgprParts[0];
+      *SOffset = OffsetReg;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectSmrdImm(MachineOperand &Root) const {
-  SmallVector<GEPInfo, 4> AddrInfo;
-  getAddrModeInfo(*Root.getParent(), *MRI, AddrInfo);
-
-  if (AddrInfo.empty() || AddrInfo[0].SgprParts.size() != 1)
+  Register Base;
+  int64_t Offset;
+  if (!selectSmrdOffset(Root, Base, /* SOffset= */ nullptr, &Offset))
     return None;
 
-  const GEPInfo &GEPInfo = AddrInfo[0];
-  Optional<int64_t> EncodedImm =
-      AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm, false);
-  if (!EncodedImm)
-    return None;
-
-  unsigned PtrReg = GEPInfo.SgprParts[0];
-  return {{
-    [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-    [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedImm); }
-  }};
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }}};
 }
 
 InstructionSelector::ComplexRendererFns
@@ -3844,43 +3901,24 @@ AMDGPUInstructionSelector::selectSmrdImm32(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
-  MachineInstr *MI = Root.getParent();
-  MachineBasicBlock *MBB = MI->getParent();
-
-  SmallVector<GEPInfo, 4> AddrInfo;
-  getAddrModeInfo(*MI, *MRI, AddrInfo);
-
-  // FIXME: We should shrink the GEP if the offset is known to be <= 32-bits,
-  // then we can select all ptr + 32-bit offsets.
-  if (AddrInfo.empty())
+  Register Base, SOffset;
+  if (!selectSmrdOffset(Root, Base, &SOffset, /* Offset= */ nullptr))
     return None;
 
-  const GEPInfo &GEPInfo = AddrInfo[0];
-  Register PtrReg = GEPInfo.SgprParts[0];
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
+           [=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); }}};
+}
 
-  // SGPR offset is unsigned.
-  if (AddrInfo[0].SgprParts.size() == 1 && isUInt<32>(GEPInfo.Imm) &&
-      GEPInfo.Imm != 0) {
-    // If we make it this far we have a load with an 32-bit immediate offset.
-    // It is OK to select this using a sgpr offset, because we have already
-    // failed trying to select this load into one of the _IMM variants since
-    // the _IMM Patterns are considered before the _SGPR patterns.
-    Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), OffsetReg)
-        .addImm(GEPInfo.Imm);
-    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-             [=](MachineInstrBuilder &MIB) { MIB.addReg(OffsetReg); }}};
-  }
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectSmrdSgprImm(MachineOperand &Root) const {
+  Register Base, SOffset;
+  int64_t Offset;
+  if (!selectSmrdOffset(Root, Base, &SOffset, &Offset))
+    return None;
 
-  if (AddrInfo[0].SgprParts.size() == 2 && GEPInfo.Imm == 0) {
-    if (Register OffsetReg =
-            matchZeroExtendFromS32(*MRI, GEPInfo.SgprParts[1])) {
-      return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-               [=](MachineInstrBuilder &MIB) { MIB.addReg(OffsetReg); }}};
-    }
-  }
-
-  return None;
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
+           [=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }}};
 }
 
 std::pair<Register, int>

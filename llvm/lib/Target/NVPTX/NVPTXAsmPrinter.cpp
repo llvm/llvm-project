@@ -75,6 +75,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
+#include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -1168,31 +1169,37 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           GVar->hasInitializer()) {
         const Constant *Initializer = GVar->getInitializer();
         if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue()) {
-          AggBuffer aggBuffer(ElementSize, O, *this);
+          AggBuffer aggBuffer(ElementSize, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
-          if (aggBuffer.numSymbols) {
-            if (static_cast<const NVPTXTargetMachine &>(TM).is64Bit()) {
-              O << " .u64 ";
+          if (aggBuffer.numSymbols()) {
+            unsigned int ptrSize = MAI->getCodePointerSize();
+            if (ElementSize % ptrSize ||
+                !aggBuffer.allSymbolsAligned(ptrSize)) {
+              // Print in bytes and use the mask() operator for pointers.
+              if (!STI.hasMaskOperator())
+                report_fatal_error(
+                    "initialized packed aggregate with pointers '" +
+                    GVar->getName() +
+                    "' requires at least PTX ISA version 7.1");
+              O << " .u8 ";
               getSymbol(GVar)->print(O, MAI);
-              O << "[";
-              O << ElementSize / 8;
+              O << "[" << ElementSize << "] = {";
+              aggBuffer.printBytes(O);
+              O << "}";
             } else {
-              O << " .u32 ";
+              O << " .u" << ptrSize * 8 << " ";
               getSymbol(GVar)->print(O, MAI);
-              O << "[";
-              O << ElementSize / 4;
+              O << "[" << ElementSize / ptrSize << "] = {";
+              aggBuffer.printWords(O);
+              O << "}";
             }
-            O << "]";
           } else {
             O << " .b8 ";
             getSymbol(GVar)->print(O, MAI);
-            O << "[";
-            O << ElementSize;
-            O << "]";
+            O << "[" << ElementSize << "] = {";
+            aggBuffer.printBytes(O);
+            O << "}";
           }
-          O << " = {";
-          aggBuffer.print();
-          O << "}";
         } else {
           O << " .b8 ";
           getSymbol(GVar)->print(O, MAI);
@@ -1217,6 +1224,80 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     }
   }
   O << ";\n";
+}
+
+void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
+  const Value *v = Symbols[nSym];
+  const Value *v0 = SymbolsBeforeStripping[nSym];
+  if (const GlobalValue *GVar = dyn_cast<GlobalValue>(v)) {
+    MCSymbol *Name = AP.getSymbol(GVar);
+    PointerType *PTy = dyn_cast<PointerType>(v0->getType());
+    // Is v0 a generic pointer?
+    bool isGenericPointer = PTy && PTy->getAddressSpace() == 0;
+    if (EmitGeneric && isGenericPointer && !isa<Function>(v)) {
+      os << "generic(";
+      Name->print(os, AP.MAI);
+      os << ")";
+    } else {
+      Name->print(os, AP.MAI);
+    }
+  } else if (const ConstantExpr *CExpr = dyn_cast<ConstantExpr>(v0)) {
+    const MCExpr *Expr = AP.lowerConstantForGV(cast<Constant>(CExpr), false);
+    AP.printMCExpr(*Expr, os);
+  } else
+    llvm_unreachable("symbol type unknown");
+}
+
+void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
+  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  symbolPosInBuffer.push_back(size);
+  unsigned int nSym = 0;
+  unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
+  for (unsigned int pos = 0; pos < size;) {
+    if (pos)
+      os << ", ";
+    if (pos != nextSymbolPos) {
+      os << (unsigned int)buffer[pos];
+      ++pos;
+      continue;
+    }
+    // Generate a per-byte mask() operator for the symbol, which looks like:
+    //   .global .u8 addr[] = {0xFF(foo), 0xFF00(foo), 0xFF0000(foo), ...};
+    // See https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#initializers
+    std::string symText;
+    llvm::raw_string_ostream oss(symText);
+    printSymbol(nSym, oss);
+    for (unsigned i = 0; i < ptrSize; ++i) {
+      if (i)
+        os << ", ";
+      llvm::write_hex(os, 0xFFULL << i * 8, HexPrintStyle::PrefixUpper);
+      os << "(" << symText << ")";
+    }
+    pos += ptrSize;
+    nextSymbolPos = symbolPosInBuffer[++nSym];
+    assert(nextSymbolPos >= pos);
+  }
+}
+
+void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
+  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  symbolPosInBuffer.push_back(size);
+  unsigned int nSym = 0;
+  unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
+  assert(nextSymbolPos % ptrSize == 0);
+  for (unsigned int pos = 0; pos < size; pos += ptrSize) {
+    if (pos)
+      os << ", ";
+    if (pos == nextSymbolPos) {
+      printSymbol(nSym, os);
+      nextSymbolPos = symbolPosInBuffer[++nSym];
+      assert(nextSymbolPos % ptrSize == 0);
+      assert(nextSymbolPos >= pos + ptrSize);
+    } else if (ptrSize == 4)
+      os << *(uint32_t *)(&buffer[pos]);
+    else
+      os << *(uint64_t *)(&buffer[pos]);
+  }
 }
 
 void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {

@@ -5234,14 +5234,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       // In all other cases relocate should be tied to the statepoint directly.
       // This covers relocates on a normal return path of invoke statepoint and
       // relocates of a call statepoint.
-      auto Token = Call.getArgOperand(0);
-      Check(isa<GCStatepointInst>(Token),
+      auto *Token = Call.getArgOperand(0);
+      Check(isa<GCStatepointInst>(Token) || isa<UndefValue>(Token),
             "gc relocate is incorrectly tied to the statepoint", Call, Token);
     }
 
     // Verify rest of the relocate arguments.
-    const CallBase &StatepointCall =
-      *cast<GCRelocateInst>(Call).getStatepoint();
+    const Value &StatepointCall = *cast<GCRelocateInst>(Call).getStatepoint();
 
     // Both the base and derived must be piped through the safepoint.
     Value *Base = Call.getArgOperand(1);
@@ -5256,7 +5255,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     const uint64_t DerivedIndex = cast<ConstantInt>(Derived)->getZExtValue();
 
     // Check the bounds
-    if (auto Opt = StatepointCall.getOperandBundle(LLVMContext::OB_gc_live)) {
+    if (isa<UndefValue>(StatepointCall))
+      break;
+    if (auto Opt = cast<GCStatepointInst>(StatepointCall)
+                       .getOperandBundle(LLVMContext::OB_gc_live)) {
       Check(BaseIndex < Opt->Inputs.size(),
             "gc.relocate: statepoint base index out of bounds", Call);
       Check(DerivedIndex < Opt->Inputs.size(),
