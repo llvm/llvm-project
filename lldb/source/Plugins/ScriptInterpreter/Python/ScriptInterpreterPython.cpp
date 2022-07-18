@@ -2637,7 +2637,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                                          .SetSetLLDBGlobals(false);
 
   if (!pathname || !pathname[0]) {
-    error.SetErrorString("invalid pathname");
+    error.SetErrorString("empty path");
     return false;
   }
 
@@ -2707,14 +2707,14 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       // if not a valid file of any sort, check if it might be a filename still
       // dot can't be used but / and \ can, and if either is found, reject
       if (strchr(pathname, '\\') || strchr(pathname, '/')) {
-        error.SetErrorString("invalid pathname");
+        error.SetErrorStringWithFormatv("invalid pathname '{0}'", pathname);
         return false;
       }
       // Not a filename, probably a package of some sort, let it go through.
       possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
       if (module_file.GetDirectory().IsEmpty()) {
-        error.SetErrorString("invalid directory name");
+        error.SetErrorStringWithFormatv("invalid directory name '{0}'", pathname);
         return false;
       }
       if (llvm::Error e =

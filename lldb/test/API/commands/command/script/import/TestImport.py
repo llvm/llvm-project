@@ -38,12 +38,13 @@ class ImportTestCase(TestBase):
         self.runCmd("command script import ./foo/bar/foobar.py --allow-reload")
         self.runCmd("command script import ./bar/bar.py --allow-reload")
 
+        self.expect("command script import ''",
+                    error=True, startstr="error: module importing failed: empty path")
         self.expect("command script import ./nosuchfile.py",
-                    error=True, startstr='error: module importing failed')
+                    error=True, startstr="error: module importing failed: invalid pathname './nosuchfile.py'")
         self.expect("command script import ./nosuchfolder/",
-                    error=True, startstr='error: module importing failed')
+                    error=True, startstr="error: module importing failed: invalid pathname './nosuchfolder/'")
         self.expect("command script import ./foo/foo.py", error=False)
-
         self.runCmd("command script import --allow-reload ./thepackage")
         self.expect("TPcommandA", substrs=["hello world A"])
         self.expect("TPcommandB", substrs=["hello world B"])
