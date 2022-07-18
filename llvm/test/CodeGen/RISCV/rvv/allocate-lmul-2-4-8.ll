@@ -373,3 +373,57 @@ define void @masks() nounwind {
   %v8 = alloca <vscale x 8 x i1>
   ret void
 }
+
+define void @lmul_8_x5() nounwind {
+; CHECK-LABEL: lmul_8_x5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a1, 40
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    ret
+  %v1 = alloca <vscale x 8 x i64>
+  %v2 = alloca <vscale x 8 x i64>
+  %v3 = alloca <vscale x 8 x i64>
+  %v4 = alloca <vscale x 8 x i64>
+  %v5 = alloca <vscale x 8 x i64>
+  ret void
+}
+
+define void @lmul_8_x9() nounwind {
+; CHECK-LABEL: lmul_8_x9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a1, 72
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    ret
+  %v1 = alloca <vscale x 8 x i64>
+  %v2 = alloca <vscale x 8 x i64>
+  %v3 = alloca <vscale x 8 x i64>
+  %v4 = alloca <vscale x 8 x i64>
+  %v5 = alloca <vscale x 8 x i64>
+  %v6 = alloca <vscale x 8 x i64>
+  %v7 = alloca <vscale x 8 x i64>
+  %v8 = alloca <vscale x 8 x i64>
+  %v9 = alloca <vscale x 8 x i64>
+  ret void
+}
