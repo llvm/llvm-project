@@ -20,7 +20,7 @@
 define dso_local i32 @test_1() #0 {
 b1:
   call void @llvm.pseudoprobe(i64 7964825052912775246, i64 1, i32 0, i64 -1)
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   br i1 %cmp, label %b2, label %b3
 ; CHECK:  edge b1 -> b2 probability is 0x4ccccccd / 0x80000000 = 60.00%
@@ -57,7 +57,7 @@ b3:
 define dso_local i32 @test_2() #0 {
 b1:
   call void @llvm.pseudoprobe(i64 -6216829535442445639, i64 1, i32 0, i64 -1)
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   br i1 %cmp, label %b2, label %b3
 ; CHECK:  edge b1 -> b2 probability is 0x73333333 / 0x80000000 = 90.00%
@@ -98,7 +98,7 @@ b3:
 define dso_local i32 @test_3() #0 {
 b1:
   call void @llvm.pseudoprobe(i64 1649282507922421973, i64 1, i32 0, i64 -1)
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   br i1 %cmp, label %b2, label %b4
 ; CHECK:  edge b1 -> b2 probability is 0x10505050 / 0x80000000 = 12.75%
@@ -176,7 +176,7 @@ b5:
 define dso_local i32 @sum_of_squares() #0 {
 b1:
   call void @llvm.pseudoprobe(i64 -907520326213521421, i64 1, i32 0, i64 -1)
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   br label %b2
 ; CHECK:  edge b1 -> b2 probability is 0x80000000 / 0x80000000 = 100.00%

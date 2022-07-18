@@ -21,9 +21,9 @@ bb1:
   ret void, !dbg !13
 
 bb2:
-; DEBUG:  store i32 8, i32* @a, align 4, !dbg ![[INST:[0-9]+]]
-; PROBE:  store i32 8, i32* @a, align 4, !dbg ![[INST:[0-9]+]]
-  store i32 8, i32* @a, align 4, !dbg !12
+; DEBUG:  store i32 8, ptr @a, align 4, !dbg ![[INST:[0-9]+]]
+; PROBE:  store i32 8, ptr @a, align 4, !dbg ![[INST:[0-9]+]]
+  store i32 8, ptr @a, align 4, !dbg !12
   br label %bb3
 
 bb3:
@@ -31,8 +31,8 @@ bb3:
 }
 
 declare void @_Z3barv() #1
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind argmemonly
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind argmemonly
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind argmemonly
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind argmemonly
 
 attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

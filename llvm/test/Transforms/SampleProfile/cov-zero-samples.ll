@@ -31,58 +31,58 @@ entry:
   %retval = alloca i32, align 4
   %sum = alloca i32, align 4
   %i = alloca i64, align 8
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i32* %sum, metadata !20, metadata !21), !dbg !22
-  store i32 0, i32* %sum, align 4, !dbg !22
-  call void @llvm.dbg.declare(metadata i64* %i, metadata !23, metadata !21), !dbg !25
-  store i64 0, i64* %i, align 8, !dbg !25
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %sum, metadata !20, metadata !21), !dbg !22
+  store i32 0, ptr %sum, align 4, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !23, metadata !21), !dbg !25
+  store i64 0, ptr %i, align 8, !dbg !25
   br label %for.cond, !dbg !26
 
 for.cond:                                         ; preds = %for.inc, %entry
 
-  %0 = load i64, i64* %i, align 8, !dbg !27
-  %1 = load volatile i64, i64* @N, align 8, !dbg !30
+  %0 = load i64, ptr %i, align 8, !dbg !27
+  %1 = load volatile i64, ptr @N, align 8, !dbg !30
   %cmp = icmp slt i64 %0, %1, !dbg !31
   br i1 %cmp, label %for.body, label %for.end, !dbg !32
 
 for.body:                                         ; preds = %for.cond
-  %2 = load i64, i64* %i, align 8, !dbg !33
-  %3 = load volatile i64, i64* @N, align 8, !dbg !36
+  %2 = load i64, ptr %i, align 8, !dbg !33
+  %3 = load volatile i64, ptr @N, align 8, !dbg !36
   %cmp1 = icmp sgt i64 %2, %3, !dbg !37
   br i1 %cmp1, label %if.then, label %if.end, !dbg !38
 
 if.then:                                          ; preds = %for.body
-  %4 = load i64, i64* %i, align 8, !dbg !39
+  %4 = load i64, ptr %i, align 8, !dbg !39
   %conv = trunc i64 %4 to i32, !dbg !39
   %call = call i32 @_Z12never_calledi(i32 %conv), !dbg !41
-  %5 = load i32, i32* %sum, align 4, !dbg !42
+  %5 = load i32, ptr %sum, align 4, !dbg !42
   %add = add nsw i32 %5, %call, !dbg !42
-  store i32 %add, i32* %sum, align 4, !dbg !42
+  store i32 %add, ptr %sum, align 4, !dbg !42
   br label %if.end, !dbg !43
 
 if.end:                                           ; preds = %if.then, %for.body
-  %6 = load i64, i64* %i, align 8, !dbg !44
+  %6 = load i64, ptr %i, align 8, !dbg !44
   %div = sdiv i64 %6, 239, !dbg !45
-  %7 = load i32, i32* %sum, align 4, !dbg !46
+  %7 = load i32, ptr %sum, align 4, !dbg !46
   %conv2 = sext i32 %7 to i64, !dbg !46
   %mul = mul nsw i64 %conv2, %div, !dbg !46
   %conv3 = trunc i64 %mul to i32, !dbg !46
-  store i32 %conv3, i32* %sum, align 4, !dbg !46
+  store i32 %conv3, ptr %sum, align 4, !dbg !46
   br label %for.inc, !dbg !47
 
 for.inc:                                          ; preds = %if.end
-  %8 = load i64, i64* %i, align 8, !dbg !48
+  %8 = load i64, ptr %i, align 8, !dbg !48
   %inc = add nsw i64 %8, 1, !dbg !48
-  store i64 %inc, i64* %i, align 8, !dbg !48
+  store i64 %inc, ptr %i, align 8, !dbg !48
   br label %for.cond, !dbg !50
 
 for.end:                                          ; preds = %for.cond
-  %9 = load i32, i32* %sum, align 4, !dbg !51
-  %call4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 %9), !dbg !52
+  %9 = load i32, ptr %sum, align 4, !dbg !51
+  %call4 = call i32 (ptr, ...) @printf(ptr @.str, i32 %9), !dbg !52
   ret i32 0, !dbg !53
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 attributes #0 = { nounwind readnone }
 attributes #1 = {"use-sample-profile"}
