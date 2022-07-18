@@ -2695,8 +2695,14 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // own restorer function, though, or user-mode QEMU might write a trampoline
   // onto the stack.
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
-  const uint16_t inst = _addressSpace.get16(pc);
-  if (inst == 0x0a77 || inst == 0x0aad) {
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a segfault. Use process_vm_readv to
+  // read the memory safely instead.
+  uint16_t inst;
+  struct iovec local_iov = {&inst, sizeof inst};
+  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof inst};
+  long bytesRead = process_vm_readv(getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  if (bytesRead == sizeof inst && (inst == 0x0a77 || inst == 0x0aad)) {
     _info = {};
     _info.start_ip = pc;
     _info.end_ip = pc + 2;
