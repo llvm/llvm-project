@@ -13572,6 +13572,10 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
 bool
 ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                  CombineLevel Level) const {
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
   if (Level == BeforeLegalizeTypes)
     return true;
 
