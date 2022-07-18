@@ -894,6 +894,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_ObjCBlockLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
+  auto Tokens = annotate("[]() constexpr {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
