@@ -2194,11 +2194,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         CI->setTailCallKind(ChildTCK);
         InlinedMustTailCalls |= CI->isMustTailCall();
 
-        // Call sites inlined through a 'nounwind' call site should be
-        // 'nounwind' as well. However, avoid marking call sites explicitly
-        // where possible. This helps expose more opportunities for CSE after
-        // inlining, commonly when the callee is an intrinsic.
-        if (MarkNoUnwind && !CI->doesNotThrow())
+        // Calls inlined through a 'nounwind' call site should be marked
+        // 'nounwind'.
+        if (MarkNoUnwind)
           CI->setDoesNotThrow();
       }
     }
