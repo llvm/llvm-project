@@ -113,8 +113,9 @@
 /// LLVM_EXTERNAL_VISIBILITY - classes, functions, and variables marked with
 /// this attribute will be made public and visible outside of any shared library
 /// they are linked in to.
-#if __has_attribute(visibility) && !defined(__MINGW32__) &&                    \
-    !defined(__CYGWIN__) && !defined(_WIN32)
+#if __has_attribute(visibility) &&                                             \
+    (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
+     (defined(__MINGW32__) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
 #if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
 #define LLVM_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
