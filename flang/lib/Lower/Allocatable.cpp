@@ -500,7 +500,6 @@ void Fortran::lower::genAllocateStmt(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::AllocateStmt &stmt, mlir::Location loc) {
   AllocateStmtHelper{converter, stmt, loc}.lower();
-  return;
 }
 
 //===----------------------------------------------------------------------===//
