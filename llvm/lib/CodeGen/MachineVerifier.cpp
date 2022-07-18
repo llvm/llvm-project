@@ -92,9 +92,15 @@ namespace {
   struct MachineVerifier {
     MachineVerifier(Pass *pass, const char *b) : PASS(pass), Banner(b) {}
 
+    MachineVerifier(const char *b, LiveVariables *LiveVars,
+                    LiveIntervals *LiveInts, LiveStacks *LiveStks,
+                    SlotIndexes *Indexes)
+        : Banner(b), LiveVars(LiveVars), LiveInts(LiveInts), LiveStks(LiveStks),
+          Indexes(Indexes) {}
+
     unsigned verify(const MachineFunction &MF);
 
-    Pass *const PASS;
+    Pass *const PASS = nullptr;
     const char *Banner;
     const MachineFunction *MF = nullptr;
     const TargetMachine *TM = nullptr;
@@ -355,6 +361,16 @@ bool MachineFunction::verify(Pass *p, const char *Banner, bool AbortOnErrors)
   return FoundErrors == 0;
 }
 
+bool MachineFunction::verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
+                             const char *Banner, bool AbortOnErrors) const {
+  MachineFunction &MF = const_cast<MachineFunction &>(*this);
+  unsigned FoundErrors =
+      MachineVerifier(Banner, nullptr, LiveInts, nullptr, Indexes).verify(MF);
+  if (AbortOnErrors && FoundErrors)
+    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  return FoundErrors == 0;
+}
+
 void MachineVerifier::verifySlotIndexes() const {
   if (Indexes == nullptr)
     return;
@@ -404,10 +420,6 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
   isFunctionTracksDebugUserValues = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::TracksDebugUserValues);
 
-  LiveVars = nullptr;
-  LiveInts = nullptr;
-  LiveStks = nullptr;
-  Indexes = nullptr;
   if (PASS) {
     LiveInts = PASS->getAnalysisIfAvailable<LiveIntervals>();
     // We don't want to verify LiveVariables if LiveIntervals is available.
