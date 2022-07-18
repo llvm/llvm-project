@@ -5910,17 +5910,17 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
     // If the divisor is even, we can avoid using the expensive fixup by
     // shifting the divided value upfront.
-    if (magics.IsAdd != 0 && !Divisor[0]) {
+    if (magics.IsAdd && !Divisor[0]) {
       PreShift = Divisor.countTrailingZeros();
       // Get magic number for the shifted divisor.
       magics = UnsignedDivisonByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
-      assert(magics.IsAdd == 0 && "Should use cheap fixup now");
+      assert(!magics.IsAdd && "Should use cheap fixup now");
     }
 
     APInt Magic = magics.Magic;
 
     unsigned SelNPQ;
-    if (magics.IsAdd == 0 || Divisor.isOne()) {
+    if (!magics.IsAdd || Divisor.isOne()) {
       assert(magics.ShiftAmount < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
       PostShift = magics.ShiftAmount;
