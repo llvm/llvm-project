@@ -402,6 +402,8 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                                       VPIntrinsic &VPI) {
   assert(VPI.canIgnoreVectorLengthParam());
 
+  const auto &DL = F.getParent()->getDataLayout();
+
   Value *MaskParam = VPI.getMaskParam();
   Value *PtrParam = VPI.getMemoryPointerParam();
   Value *DataParam = VPI.getMemoryDataParam();
@@ -437,6 +439,22 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
           VPI.getType(), PtrParam, AlignOpt.valueOrOne(), MaskParam);
 
     break;
+  case Intrinsic::vp_scatter: {
+    auto *ElementType =
+        cast<VectorType>(DataParam->getType())->getElementType();
+    NewMemoryInst = Builder.CreateMaskedScatter(
+        DataParam, PtrParam,
+        AlignOpt.getValueOr(DL.getPrefTypeAlign(ElementType)), MaskParam);
+    break;
+  }
+  case Intrinsic::vp_gather: {
+    auto *ElementType = cast<VectorType>(VPI.getType())->getElementType();
+    NewMemoryInst = Builder.CreateMaskedGather(
+        VPI.getType(), PtrParam,
+        AlignOpt.getValueOr(DL.getPrefTypeAlign(ElementType)), MaskParam,
+        nullptr, VPI.getName());
+    break;
+  }
   }
 
   assert(NewMemoryInst);
@@ -525,6 +543,8 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
     break;
   case Intrinsic::vp_load:
   case Intrinsic::vp_store:
+  case Intrinsic::vp_gather:
+  case Intrinsic::vp_scatter:
     return expandPredicationInMemoryIntrinsic(Builder, VPI);
   }
 
