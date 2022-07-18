@@ -33,8 +33,36 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
   // How we extend i1 boolean values.
   setBooleanContents(ZeroOrOneBooleanContent);
 
+  // Architecture has bit extract instruction.
+  setHasExtractBitsInsn();
+
   setMinFunctionAlignment(Align(4));
   setPrefFunctionAlignment(Align(4));
+}
+
+bool M88kTargetLowering::isSelectSupported(SelectSupportKind /*kind*/) const {
+  // No kind of select is supported.
+  return false;
+}
+
+bool M88kTargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
+                                         Register Offset, bool IsPre,
+                                         MachineRegisterInfo &MRI) const {
+  // Combination 32bit Base+Offset is supported, but preincrement not.
+  return !IsPre && MRI.getType(Base).getScalarSizeInBits() == 32 &&
+         MRI.getType(Offset).getScalarSizeInBits() == 32;
+}
+
+#define GET_REGISTER_MATCHER
+#include "M88kGenAsmMatcher.inc"
+
+Register
+M88kTargetLowering::getRegisterByName(const char *RegName, LLT Ty,
+                                      const MachineFunction &MF) const {
+  if (Register Reg = MatchRegisterName(RegName))
+    return Reg;
+  report_fatal_error(
+      Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
 }
 
 bool M88kTargetLowering::isConstantUnsignedBitfieldExtractLegal(unsigned Opc,

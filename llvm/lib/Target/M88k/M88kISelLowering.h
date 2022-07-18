@@ -59,6 +59,11 @@ public:
   explicit M88kTargetLowering(const TargetMachine &TM,
                               const M88kSubtarget &STI);
 
+  bool isSelectSupported(SelectSupportKind /*kind*/) const override;
+  bool isIndexingLegal(MachineInstr &MI, Register Base, Register Offset,
+                       bool IsPre, MachineRegisterInfo &MRI) const override;
+  Register getRegisterByName(const char *RegName, LLT Ty,
+                             const MachineFunction &MF) const override;
   bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
                                               LLT Ty2) const override;
 };
