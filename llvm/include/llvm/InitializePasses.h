@@ -269,7 +269,6 @@ void initializeLowerWidenableConditionLegacyPassPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokeLegacyPassPass(PassRegistry&);
 void initializeLowerSwitchLegacyPassPass(PassRegistry &);
-void initializeLowerTypeTestsPass(PassRegistry&);
 void initializeLowerMatrixIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeLowerMatrixIntrinsicsMinimalLegacyPassPass(PassRegistry &);
 void initializeMIRAddFSDiscriminatorsPass(PassRegistry &);
