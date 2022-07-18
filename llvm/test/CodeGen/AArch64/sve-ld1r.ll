@@ -726,8 +726,8 @@ define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_down(double* %valp) 
 define <vscale x 2 x double> @dupq_ld1rqd_f64(<2 x double>* %a) {
 ; CHECK-LABEL: dupq_ld1rqd_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <2 x double>, <2 x double>* %a
   %2 = tail call fast <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %1, i64 0)
@@ -738,8 +738,8 @@ define <vscale x 2 x double> @dupq_ld1rqd_f64(<2 x double>* %a) {
 define <vscale x 4 x float> @dupq_ld1rqw_f32(<4 x float>* %a) {
 ; CHECK-LABEL: dupq_ld1rqw_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <4 x float>, <4 x float>* %a
   %2 = tail call fast <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %1, i64 0)
@@ -750,8 +750,8 @@ define <vscale x 4 x float> @dupq_ld1rqw_f32(<4 x float>* %a) {
 define <vscale x 8 x half> @dupq_ld1rqh_f16(<8 x half>* %a) {
 ; CHECK-LABEL: dupq_ld1rqh_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x half>, <8 x half>* %a
   %2 = tail call fast <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %1, i64 0)
@@ -762,8 +762,8 @@ define <vscale x 8 x half> @dupq_ld1rqh_f16(<8 x half>* %a) {
 define <vscale x 8 x bfloat> @dupq_ld1rqh_bf16(<8 x bfloat>* %a) #0 {
 ; CHECK-LABEL: dupq_ld1rqh_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x bfloat>, <8 x bfloat>* %a
   %2 = tail call fast <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %1, i64 0)
