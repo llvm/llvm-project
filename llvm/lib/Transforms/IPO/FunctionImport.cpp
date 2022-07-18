@@ -1413,29 +1413,6 @@ static bool doImportingForModule(Module &M) {
   return *Result;
 }
 
-namespace {
-
-/// Pass that performs cross-module function import provided a summary file.
-class FunctionImportLegacyPass : public ModulePass {
-public:
-  /// Pass identification, replacement for typeid
-  static char ID;
-
-  explicit FunctionImportLegacyPass() : ModulePass(ID) {}
-
-  /// Specify pass name for debug output
-  StringRef getPassName() const override { return "Function Importing"; }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    return doImportingForModule(M);
-  }
-};
-
-} // end anonymous namespace
-
 PreservedAnalyses FunctionImportPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
   if (!doImportingForModule(M))
@@ -1443,15 +1420,3 @@ PreservedAnalyses FunctionImportPass::run(Module &M,
 
   return PreservedAnalyses::none();
 }
-
-char FunctionImportLegacyPass::ID = 0;
-INITIALIZE_PASS(FunctionImportLegacyPass, "function-import",
-                "Summary Based Function Import", false, false)
-
-namespace llvm {
-
-Pass *createFunctionImportPass() {
-  return new FunctionImportLegacyPass();
-}
-
-} // end namespace llvm
