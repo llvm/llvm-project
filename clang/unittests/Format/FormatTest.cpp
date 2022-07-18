@@ -24714,6 +24714,18 @@ TEST_F(FormatTest, RequiresClauses) {
       "struct S {};",
       Style);
 
+  Style = getLLVMStyle();
+  Style.ConstructorInitializerIndentWidth = 4;
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
+  Style.PackConstructorInitializers = FormatStyle::PCIS_Never;
+  verifyFormat("constexpr Foo(Foo const &other)\n"
+               "  requires std::is_copy_constructible<T>\n"
+               "    : value{other.value} {\n"
+               "  do_magic();\n"
+               "  do_more_magic();\n"
+               "}",
+               Style);
+
   // Not a clause, but we once hit an assert.
   verifyFormat("#if 0\n"
                "#else\n"
