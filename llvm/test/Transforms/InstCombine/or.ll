@@ -154,10 +154,14 @@ define i32 @test20(i32 %x) {
   ret i32 %z
 }
 
+; TODO: This should combine to t1 + 2.
 define i32 @test21(i32 %t1) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[T1_MASK1:%.*]] = add i32 [[T1:%.*]], 2
-; CHECK-NEXT:    ret i32 [[T1_MASK1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T1:%.*]], -2
+; CHECK-NEXT:    [[T3:%.*]] = add i32 [[TMP1]], 2
+; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T1]], 1
+; CHECK-NEXT:    [[T6:%.*]] = or i32 [[T5]], [[T3]]
+; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t1.mask1 = add i32 %t1, 2
   %t3 = and i32 %t1.mask1, -2
