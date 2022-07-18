@@ -1,4 +1,5 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -early-live-intervals -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK: mpy
 ; CHECK-NOT: call
