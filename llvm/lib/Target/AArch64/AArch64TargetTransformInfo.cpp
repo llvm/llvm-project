@@ -3031,8 +3031,15 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(
     Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
-    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL) {
+    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
+    InterleavedAccessInfo *IAI) {
   if (!ST->hasSVE() || TailFoldingKindLoc == TailFoldingKind::TFDisabled)
+    return false;
+
+  // We don't currently support vectorisation with interleaving for SVE - with
+  // such loops we're better off not using tail-folding. This gives us a chance
+  // to fall back on fixed-width vectorisation using NEON's ld2/st2/etc.
+  if (IAI->hasGroups())
     return false;
 
   TailFoldingKind Required; // Defaults to 0.
