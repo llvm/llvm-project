@@ -33,11 +33,26 @@ bool guardFinal(llvm::ArrayRef<const ForestNode *> RHS,
          RHS.front()->symbol() == tokenSymbol(clang::tok::identifier));
   return Tokens.tokens()[RHS.front()->startTokenIndex()].text() == "final";
 }
+bool guardModule(llvm::ArrayRef<const ForestNode *> RHS,
+                 const TokenStream &Tokens) {
+  return Tokens.tokens()[RHS.front()->startTokenIndex()].text() == "module";
+}
+bool guardImport(llvm::ArrayRef<const ForestNode *> RHS,
+                 const TokenStream &Tokens) {
+  return Tokens.tokens()[RHS.front()->startTokenIndex()].text() == "import";
+}
+bool guardExport(llvm::ArrayRef<const ForestNode *> RHS,
+                 const TokenStream &Tokens) {
+  return Tokens.tokens()[RHS.front()->startTokenIndex()].text() == "export";
+}
 
 llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
   return {
       {(ExtensionID)Extension::Override, guardOverride},
       {(ExtensionID)Extension::Final, guardFinal},
+      {(ExtensionID)Extension::Import, guardImport},
+      {(ExtensionID)Extension::Export, guardExport},
+      {(ExtensionID)Extension::Module, guardModule},
   };
 }
 

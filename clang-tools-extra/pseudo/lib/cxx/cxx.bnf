@@ -748,10 +748,10 @@ pointer-literal := NULLPTR
 #! Placeholders for literal text in the grammar that lex as other things.
 contextual-override := IDENTIFIER [guard=Override]
 contextual-final := IDENTIFIER [guard=Final]
-contextual-zero := NUMERIC_CONSTANT
-module-keyword := IDENTIFIER
-import-keyword := IDENTIFIER
-export-keyword := IDENTIFIER
+contextual-zero := NUMERIC_CONSTANT [guard=Zero]
+module-keyword := IDENTIFIER [guard=Module]
+import-keyword := IDENTIFIER [guard=Import]
+export-keyword := IDENTIFIER [guard=Export]
 
 #! greatergreater token -- clang lexer always lexes it as a single token, we
 #! split it into two tokens to make the GLR parser aware of the nested-template
