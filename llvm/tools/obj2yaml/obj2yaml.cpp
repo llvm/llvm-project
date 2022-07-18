@@ -20,16 +20,20 @@
 using namespace llvm;
 using namespace llvm::object;
 
+static cl::OptionCategory Cat("obj2yaml Options");
+
 static cl::opt<std::string>
     InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
-                                           cl::init("-"), cl::Prefix);
+                                           cl::init("-"), cl::Prefix,
+                                           cl::cat(Cat));
 static cl::bits<RawSegments> RawSegment(
     "raw-segment",
     cl::desc("Mach-O: dump the raw contents of the listed segments instead of "
              "parsing them:"),
-    cl::values(clEnumVal(data, "__DATA"), clEnumVal(linkedit, "__LINKEDIT")));
+    cl::values(clEnumVal(data, "__DATA"), clEnumVal(linkedit, "__LINKEDIT")),
+    cl::cat(Cat));
 
 static Error dumpObject(const ObjectFile &Obj, raw_ostream &OS) {
   if (Obj.isCOFF())
@@ -97,7 +101,10 @@ static void reportError(StringRef Input, Error Err) {
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
-  cl::ParseCommandLineOptions(argc, argv);
+  cl::HideUnrelatedOptions(Cat);
+  cl::ParseCommandLineOptions(
+      argc, argv, "Dump a YAML description from an object file", nullptr,
+      nullptr, /*LongOptionsUseDoubleDash=*/true);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> Out(
