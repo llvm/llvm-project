@@ -1,0 +1,33 @@
+## Test malformed global symbal table of big archive.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: yaml2obj %s -o t.o
+# RUN: llvm-ar q t.a t.o
+# RUN: cp t.a t2.a
+
+## Truncate the file to end before the global symbol table header ends.
+# RUN: %python -c "with open('t.a', 'r+b') as input: input.truncate(560)"
+## Truncate the file to end before the global symbol table ends.
+# RUN: %python -c "with open('t2.a', 'r+b') as input: input.truncate(656)"
+
+# RUN: not llvm-ar t t.a 2>&1 | FileCheck -DFILE=t.a %s
+# RUN: not llvm-ar t t2.a 2>&1 | FileCheck -DFILE=t2.a --check-prefixes=CHECK2 %s
+
+# CHECK:  error: unable to load '[[FILE]]': truncated or malformed archive (global symbol table header at offset 0x20e and size 0x72 goes past the end of file)
+# CHECK2: error: unable to load '[[FILE]]': truncated or malformed archive (global symbol table content at offset 0x280 and size 0x25 goes past the end of file)
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+Symbols:
+  - Name:            export_protected_var
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
