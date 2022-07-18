@@ -4800,8 +4800,8 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   auto BuildUDIVPattern = [&](const Constant *C) {
     auto *CI = cast<ConstantInt>(C);
     const APInt &Divisor = CI->getValue();
-    UnsignedDivisonByConstantInfo magics =
-        UnsignedDivisonByConstantInfo::get(Divisor);
+    UnsignedDivisionByConstantInfo magics =
+        UnsignedDivisionByConstantInfo::get(Divisor);
     unsigned PreShift = 0, PostShift = 0;
 
     // If the divisor is even, we can avoid using the expensive fixup by
@@ -4810,7 +4810,7 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
       PreShift = Divisor.countTrailingZeros();
       // Get magic number for the shifted divisor.
       magics =
-          UnsignedDivisonByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
+          UnsignedDivisionByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
       assert(!magics.IsAdd && "Should use cheap fixup now");
     }
 
