@@ -122,6 +122,10 @@ void AutoExporter::addWholeArchive(StringRef path) {
   excludeLibs.erase(libName);
 }
 
+void AutoExporter::addExcludedSymbol(StringRef symbol) {
+  excludeSymbols.insert(symbol);
+}
+
 bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
                                 Defined *sym) const {
   if (!sym || !sym->getChunk())
