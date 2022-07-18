@@ -747,77 +747,7 @@ struct DevirtIndex {
 
   void run();
 };
-
-struct WholeProgramDevirt : public ModulePass {
-  static char ID;
-
-  bool UseCommandLine = false;
-
-  ModuleSummaryIndex *ExportSummary = nullptr;
-  const ModuleSummaryIndex *ImportSummary = nullptr;
-
-  WholeProgramDevirt() : ModulePass(ID), UseCommandLine(true) {
-    initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
-  }
-
-  WholeProgramDevirt(ModuleSummaryIndex *ExportSummary,
-                     const ModuleSummaryIndex *ImportSummary)
-      : ModulePass(ID), ExportSummary(ExportSummary),
-        ImportSummary(ImportSummary) {
-    initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    // In the new pass manager, we can request the optimization
-    // remark emitter pass on a per-function-basis, which the
-    // OREGetter will do for us.
-    // In the old pass manager, this is harder, so we just build
-    // an optimization remark emitter on the fly, when we need it.
-    std::unique_ptr<OptimizationRemarkEmitter> ORE;
-    auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
-      ORE = std::make_unique<OptimizationRemarkEmitter>(F);
-      return *ORE;
-    };
-
-    auto LookupDomTree = [this](Function &F) -> DominatorTree & {
-      return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-    };
-
-    if (UseCommandLine)
-      return DevirtModule::runForTesting(M, LegacyAARGetter(*this), OREGetter,
-                                         LookupDomTree);
-
-    return DevirtModule(M, LegacyAARGetter(*this), OREGetter, LookupDomTree,
-                        ExportSummary, ImportSummary)
-        .run();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-};
-
 } // end anonymous namespace
-
-INITIALIZE_PASS_BEGIN(WholeProgramDevirt, "wholeprogramdevirt",
-                      "Whole program devirtualization", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(WholeProgramDevirt, "wholeprogramdevirt",
-                    "Whole program devirtualization", false, false)
-char WholeProgramDevirt::ID = 0;
-
-ModulePass *
-llvm::createWholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
-                                   const ModuleSummaryIndex *ImportSummary) {
-  return new WholeProgramDevirt(ExportSummary, ImportSummary);
-}
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
