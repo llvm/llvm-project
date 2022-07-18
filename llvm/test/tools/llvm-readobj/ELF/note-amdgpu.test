@@ -4,7 +4,7 @@
 
 # GNU:      Displaying notes found in: .note.foo
 # GNU-NEXT:   Owner                Data size        Description
-# GNU-NEXT:   AMDGPU               0x000000e6       NT_AMDGPU_METADATA (AMDGPU Metadata)
+# GNU-NEXT:   AMDGPU               0x000000fb       NT_AMDGPU_METADATA (AMDGPU Metadata)
 # GNU-NEXT:     AMDGPU Metadata:
 # GNU-NEXT:         ---
 # GNU-NEXT: amdhsa.kernels:
@@ -16,6 +16,7 @@
 # GNU-NEXT:     .private_segment_fixed_size: 3
 # GNU-NEXT:     .sgpr_count:     6
 # GNU-NEXT:     .symbol:         foo
+# GNU-NEXT:     .uses_dynamic_stack: true
 # GNU-NEXT:     .vgpr_count:     7
 # GNU-NEXT:     .wavefront_size: 5
 # GNU-NEXT: amdhsa.version:
@@ -37,7 +38,7 @@
 # LLVM-NEXT:     Size:
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: AMDGPU
-# LLVM-NEXT:       Data size: 0xE6
+# LLVM-NEXT:       Data size: 0xFB
 # LLVM-NEXT:       Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
 # LLVM-NEXT:       AMDGPU Metadata: ---
 # LLVM-NEXT: amdhsa.kernels:
@@ -49,6 +50,7 @@
 # LLVM-NEXT:     .private_segment_fixed_size: 3
 # LLVM-NEXT:     .sgpr_count:     6
 # LLVM-NEXT:     .symbol:         foo
+# LLVM-NEXT:     .uses_dynamic_stack: true
 # LLVM-NEXT:     .vgpr_count:     7
 # LLVM-NEXT:     .wavefront_size: 5
 # LLVM-NEXT: amdhsa.version:
@@ -60,7 +62,7 @@
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.unknown
-# LLVM-NEXT:     Offset: 0x13C
+# LLVM-NEXT:     Offset: 0x150
 # LLVM-NEXT:     Size: 0x18
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: AMDGPU
@@ -87,12 +89,17 @@
 #       .kernarg_segment_size: 1
 #       .group_segment_fixed_size: 2
 #       .private_segment_fixed_size: 3
+#       .uses_dynamic_stack: true
 #       .kernarg_segment_align: 4
 #       .wavefront_size: 5
 #       .sgpr_count: 6
 #       .vgpr_count: 7
 #       .max_flat_workgroup_size: 8
 # .end_amdgpu_metadata
+#
+## Here's one way to get the contents of .note.foo in the test input from %t.o:
+# $ llvm-objcopy -O binary --only-section=.note %t.o note.out
+# $ xxd -p note.out | tr -d '\n' | tr a-z A-Z
 
 --- !ELF
 FileHeader:
@@ -102,7 +109,7 @@ FileHeader:
 Sections:
   - Name:        .note.foo
     Type:        SHT_NOTE
-    Content:     07000000E600000020000000414D44475055000082AE616D646873612E6B65726E656C73918AB92E67726F75705F7365676D656E745F66697865645F73697A6502B62E6B65726E6172675F7365676D656E745F616C69676E04B52E6B65726E6172675F7365676D656E745F73697A6501B82E6D61785F666C61745F776F726B67726F75705F73697A6508A52E6E616D65A3666F6FBB2E707269766174655F7365676D656E745F66697865645F73697A6503AB2E736770725F636F756E7406A72E73796D626F6CA3666F6FAB2E766770725F636F756E7407AF2E7761766566726F6E745F73697A6505AE616D646873612E76657273696F6E9201000000
+    Content:     07000000FB00000020000000414D44475055000082AE616D646873612E6B65726E656C73918BB92E67726F75705F7365676D656E745F66697865645F73697A6502B62E6B65726E6172675F7365676D656E745F616C69676E04B52E6B65726E6172675F7365676D656E745F73697A6501B82E6D61785F666C61745F776F726B67726F75705F73697A6508A52E6E616D65A3666F6FBB2E707269766174655F7365676D656E745F66697865645F73697A6503AB2E736770725F636F756E7406A72E73796D626F6CA3666F6FB32E757365735F64796E616D69635F737461636BC3AB2E766770725F636F756E7407AF2E7761766566726F6E745F73697A6505AE616D646873612E76657273696F6E92010000
   - Name:        .note.unknown
     Type:        SHT_NOTE
     Notes:
