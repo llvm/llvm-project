@@ -9287,6 +9287,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
 bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     const SDNode *N, CombineLevel Level) const {
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
   // The following folds are only desirable if `(OP _, c1 << c2)` can be
   // materialised in fewer instructions than `(OP _, c1)`:
   //
