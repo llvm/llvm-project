@@ -347,9 +347,15 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc, "no function matching <id> ") << fnID;
   }
   if (parsedFunc.getName() != fnName) {
-    return emitError(unknownLoc, "function name mismatch between OpEntryPoint "
-                                 "and OpFunction with <id> ")
-           << fnID << ": " << fnName << " vs. " << parsedFunc.getName();
+    // The deserializer uses "spirv_fn_<id>" as the function name if the input
+    // SPIR-V blob does not contain a name for it. We should use a more clear
+    // indication for such case rather than relying on naming details.
+    if (!parsedFunc.getName().startswith("spirv_fn_"))
+      return emitError(unknownLoc,
+                       "function name mismatch between OpEntryPoint "
+                       "and OpFunction with <id> ")
+             << fnID << ": " << fnName << " vs. " << parsedFunc.getName();
+    parsedFunc.setName(fnName);
   }
   SmallVector<Attribute, 4> interface;
   while (wordIndex < words.size()) {
