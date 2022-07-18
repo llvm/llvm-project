@@ -31,8 +31,6 @@
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
-using mlir::bufferization::BufferizableOpInterface;
-using mlir::bufferization::BufferizationDialect;
 
 namespace {
 
