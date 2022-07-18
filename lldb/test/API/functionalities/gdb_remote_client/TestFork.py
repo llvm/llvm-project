@@ -9,7 +9,7 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestMultiprocess(GDBRemoteTestBase):
 
-    def base_test(self, variant):
+    def base_test(self, variant, follow_child=False):
         class MyResponder(MockGDBServerResponder):
             def __init__(self):
                 super().__init__()
@@ -43,12 +43,24 @@ class TestMultiprocess(GDBRemoteTestBase):
           self.runCmd("log enable gdb-remote packets")
           self.addTearDownHook(
                 lambda: self.runCmd("log disable gdb-remote packets"))
+        if follow_child:
+            self.runCmd("settings set target.process.follow-fork-mode child")
         process = self.connect(target)
+        self.assertEqual(process.GetProcessID(), 1024)
         process.Continue()
-        self.assertRegex(self.server.responder.detached, r"D;0*401")
+        self.assertRegex(self.server.responder.detached,
+                         r"D;0*400" if follow_child else r"D;0*401")
+        self.assertEqual(process.GetProcessID(),
+                         1025 if follow_child else 1024)
 
     def test_fork(self):
         self.base_test("fork")
 
     def test_vfork(self):
         self.base_test("vfork")
+
+    def test_fork_follow_child(self):
+        self.base_test("fork", follow_child=True)
+
+    def test_vfork_follow_child(self):
+        self.base_test("vfork", follow_child=True)
