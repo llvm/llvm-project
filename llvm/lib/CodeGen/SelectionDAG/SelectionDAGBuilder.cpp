@@ -27,6 +27,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -4134,15 +4135,14 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     Root = DAG.getEntryNode();
     ConstantMemory = true;
     MMOFlags |= MachineMemOperand::MOInvariant;
-
-    // FIXME: pointsToConstantMemory probably does not imply dereferenceable,
-    // but the previous usage implied it did. Probably should check
-    // isDereferenceableAndAlignedPointer.
-    MMOFlags |= MachineMemOperand::MODereferenceable;
   } else {
     // Do not serialize non-volatile loads against each other.
     Root = DAG.getRoot();
   }
+
+  if (isDereferenceableAndAlignedPointer(SV, Ty, Alignment, DAG.getDataLayout(),
+                                         &I, nullptr, LibInfo))
+    MMOFlags |= MachineMemOperand::MODereferenceable;
 
   SDLoc dl = getCurSDLoc();
 
