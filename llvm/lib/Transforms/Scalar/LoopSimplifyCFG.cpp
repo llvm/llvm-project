@@ -344,7 +344,6 @@ private:
   /// Doing so, we preserve static reachibility of all dead exits and can later
   /// remove edges from the loop to these blocks.
   void handleDeadExits() {
-    return;
     // If no dead exits, nothing to do.
     if (DeadExitBlocks.empty())
       return;
