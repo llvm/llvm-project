@@ -25803,6 +25803,13 @@ TEST_F(FormatTest, RemoveBraces) {
 
   Style.ColumnLimit = 20;
 
+  verifyFormat("int i;\n"
+               "#define FOO(a, b)  \\\n"
+               "  while (a) {      \\\n"
+               "    b;             \\\n"
+               "  }",
+               Style);
+
   verifyFormat("int ab = [](int i) {\n"
                "  if (i > 0) {\n"
                "    i = 12345678 -\n"

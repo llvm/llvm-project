@@ -200,7 +200,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
 stable_hash llvm::stableHashValue(const MachineBasicBlock &MBB) {
   SmallVector<stable_hash> HashComponents;
   // TODO: Hash more stuff like block alignment and branch probabilities.
-  for (auto &MI : MBB)
+  for (const auto &MI : MBB)
     HashComponents.push_back(stableHashValue(MI));
   return stable_hash_combine_range(HashComponents.begin(),
                                    HashComponents.end());
@@ -209,7 +209,7 @@ stable_hash llvm::stableHashValue(const MachineBasicBlock &MBB) {
 stable_hash llvm::stableHashValue(const MachineFunction &MF) {
   SmallVector<stable_hash> HashComponents;
   // TODO: Hash lots more stuff like function alignment and stack objects.
-  for (auto &MBB : MF)
+  for (const auto &MBB : MF)
     HashComponents.push_back(stableHashValue(MBB));
   return stable_hash_combine_range(HashComponents.begin(),
                                    HashComponents.end());

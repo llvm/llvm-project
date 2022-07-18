@@ -48,7 +48,6 @@ class TargetRegisterInfo;
 class TargetRegisterClass;
 class ConstantFP;
 class APFloat;
-class MachineIRBuilder;
 
 // Convenience macros for dealing with vector reduction opcodes.
 #define GISEL_VECREDUCE_CASES_ALL                                              \

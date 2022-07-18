@@ -443,7 +443,7 @@ transform::PromoteOp::applyToOne(linalg::LinalgOp target,
   if (!getUseFullTileBuffers().empty())
     promotionOptions = promotionOptions.setUseFullTileBuffers(
         llvm::to_vector(getUseFullTileBuffers().getAsValueRange<BoolAttr>()));
-  if (getAlignment().hasValue())
+  if (getAlignment().has_value())
     promotionOptions = promotionOptions.setAlignment(*getAlignment());
 
   if (failed(promoteSubviewsPrecondition(target, promotionOptions)))

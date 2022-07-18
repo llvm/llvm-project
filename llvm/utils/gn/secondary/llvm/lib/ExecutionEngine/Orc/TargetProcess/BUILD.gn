@@ -5,7 +5,6 @@ static_library("TargetProcess") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "ExecutorSharedMemoryMapperService.cpp",
     "JITLoaderGDB.cpp",
     "OrcRTBootstrap.cpp",
     "RegisterEHFrames.cpp",

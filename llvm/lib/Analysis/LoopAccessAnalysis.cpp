@@ -130,6 +130,11 @@ static cl::opt<bool> EnableForwardingConflictDetection(
     cl::desc("Enable conflict detection in loop-access analysis"),
     cl::init(true));
 
+static cl::opt<unsigned> MaxForkedSCEVDepth(
+    "max-forked-scev-depth", cl::Hidden,
+    cl::desc("Maximum recursion depth when finding forked SCEVs (default = 5)"),
+    cl::init(5));
+
 bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
@@ -778,6 +783,142 @@ static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
   }
 }
 
+// Walk back through the IR for a pointer, looking for a select like the
+// following:
+//
+//  %offset = select i1 %cmp, i64 %a, i64 %b
+//  %addr = getelementptr double, double* %base, i64 %offset
+//  %ld = load double, double* %addr, align 8
+//
+// We won't be able to form a single SCEVAddRecExpr from this since the
+// address for each loop iteration depends on %cmp. We could potentially
+// produce multiple valid SCEVAddRecExprs, though, and check all of them for
+// memory safety/aliasing if needed.
+//
+// If we encounter some IR we don't yet handle, or something obviously fine
+// like a constant, then we just add the SCEV for that term to the list passed
+// in by the caller. If we have a node that may potentially yield a valid
+// SCEVAddRecExpr then we decompose it into parts and build the SCEV terms
+// ourselves before adding to the list.
+static void
+findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
+                SmallVectorImpl<std::pair<const SCEV *, bool>> &ScevList,
+                unsigned Depth) {
+  // If our Value is a SCEVAddRecExpr, loop invariant, not an instruction, or
+  // we've exceeded our limit on recursion, just return whatever we have
+  // regardless of whether it can be used for a forked pointer or not, along
+  // with an indication of whether it might be a poison or undef value.
+  const SCEV *Scev = SE->getSCEV(Ptr);
+  if (isa<SCEVAddRecExpr>(Scev) || L->isLoopInvariant(Ptr) ||
+      !isa<Instruction>(Ptr) || Depth == 0) {
+    ScevList.push_back(
+        std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr)));
+    return;
+  }
+
+  Depth--;
+
+  auto UndefPoisonCheck = [](std::pair<const SCEV *, bool> S) -> bool {
+    return S.second;
+  };
+
+  Instruction *I = cast<Instruction>(Ptr);
+  unsigned Opcode = I->getOpcode();
+  switch (Opcode) {
+  case Instruction::GetElementPtr: {
+    GetElementPtrInst *GEP = cast<GetElementPtrInst>(I);
+    Type *SourceTy = GEP->getSourceElementType();
+    // We only handle base + single offset GEPs here for now.
+    // Not dealing with preexisting gathers yet, so no vectors.
+    if (I->getNumOperands() != 2 || SourceTy->isVectorTy()) {
+      ScevList.push_back(
+          std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(GEP)));
+      break;
+    }
+    SmallVector<std::pair<const SCEV *, bool>, 2> BaseScevs;
+    SmallVector<std::pair<const SCEV *, bool>, 2> OffsetScevs;
+    findForkedSCEVs(SE, L, I->getOperand(0), BaseScevs, Depth);
+    findForkedSCEVs(SE, L, I->getOperand(1), OffsetScevs, Depth);
+
+    // See if we need to freeze our fork...
+    bool NeedsFreeze = any_of(BaseScevs, UndefPoisonCheck) ||
+                       any_of(OffsetScevs, UndefPoisonCheck);
+
+    // Check that we only have a single fork, on either the base or the offset.
+    // Copy the SCEV across for the one without a fork in order to generate
+    // the full SCEV for both sides of the GEP.
+    if (OffsetScevs.size() == 2 && BaseScevs.size() == 1)
+      BaseScevs.push_back(BaseScevs[0]);
+    else if (BaseScevs.size() == 2 && OffsetScevs.size() == 1)
+      OffsetScevs.push_back(OffsetScevs[0]);
+    else {
+      ScevList.push_back(std::make_pair(Scev, NeedsFreeze));
+      break;
+    }
+
+    // Find the pointer type we need to extend to.
+    Type *IntPtrTy = SE->getEffectiveSCEVType(
+        SE->getSCEV(GEP->getPointerOperand())->getType());
+
+    // Find the size of the type being pointed to. We only have a single
+    // index term (guarded above) so we don't need to index into arrays or
+    // structures, just get the size of the scalar value.
+    const SCEV *Size = SE->getSizeOfExpr(IntPtrTy, SourceTy);
+
+    // Scale up the offsets by the size of the type, then add to the bases.
+    const SCEV *Scaled1 = SE->getMulExpr(
+        Size, SE->getTruncateOrSignExtend(OffsetScevs[0].first, IntPtrTy));
+    const SCEV *Scaled2 = SE->getMulExpr(
+        Size, SE->getTruncateOrSignExtend(OffsetScevs[1].first, IntPtrTy));
+    ScevList.push_back(std::make_pair(
+        SE->getAddExpr(BaseScevs[0].first, Scaled1), NeedsFreeze));
+    ScevList.push_back(std::make_pair(
+        SE->getAddExpr(BaseScevs[1].first, Scaled2), NeedsFreeze));
+    break;
+  }
+  case Instruction::Select: {
+    SmallVector<std::pair<const SCEV *, bool>, 2> ChildScevs;
+    // A select means we've found a forked pointer, but we currently only
+    // support a single select per pointer so if there's another behind this
+    // then we just bail out and return the generic SCEV.
+    findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
+    findForkedSCEVs(SE, L, I->getOperand(2), ChildScevs, Depth);
+    if (ChildScevs.size() == 2) {
+      ScevList.push_back(ChildScevs[0]);
+      ScevList.push_back(ChildScevs[1]);
+    } else
+      ScevList.push_back(
+          std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr)));
+    break;
+  }
+  default:
+    // Just return the current SCEV if we haven't handled the instruction yet.
+    LLVM_DEBUG(dbgs() << "ForkedPtr unhandled instruction: " << *I << "\n");
+    ScevList.push_back(
+        std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr)));
+    break;
+  }
+
+  return;
+}
+
+static SmallVector<std::pair<const SCEV *, bool>>
+findForkedPointer(PredicatedScalarEvolution &PSE,
+                  const ValueToValueMap &StridesMap, Value *Ptr,
+                  const Loop *L) {
+  ScalarEvolution *SE = PSE.getSE();
+  assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
+  SmallVector<std::pair<const SCEV *, bool>> Scevs;
+  findForkedSCEVs(SE, L, Ptr, Scevs, MaxForkedSCEVDepth);
+
+  // For now, we will only accept a forked pointer with two possible SCEVs.
+  if (Scevs.size() == 2)
+    return Scevs;
+
+  return {
+      std::make_pair(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false)};
+}
+
 bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                                           MemAccessInfo Access, Type *AccessTy,
                                           const ValueToValueMap &StridesMap,
@@ -787,19 +928,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                                           bool Assume) {
   Value *Ptr = Access.getPointer();
 
-  ScalarEvolution &SE = *PSE.getSE();
-  SmallVector<std::pair<const SCEV *, bool>> TranslatedPtrs;
-  auto *SI = dyn_cast<SelectInst>(Ptr);
-  // Look through selects in the current loop.
-  if (SI && !TheLoop->isLoopInvariant(SI)) {
-    TranslatedPtrs = {
-        std::make_pair(SE.getSCEV(SI->getOperand(1)),
-                       !isGuaranteedNotToBeUndefOrPoison(SI->getOperand(1))),
-        std::make_pair(SE.getSCEV(SI->getOperand(2)),
-                       !isGuaranteedNotToBeUndefOrPoison(SI->getOperand(2)))};
-  } else
-    TranslatedPtrs = {
-        std::make_pair(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false)};
+  SmallVector<std::pair<const SCEV *, bool>> TranslatedPtrs =
+      findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
 
   for (auto &P : TranslatedPtrs) {
     const SCEV *PtrExpr = P.first;
@@ -911,7 +1041,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     }
 
     for (auto &Access : AccessInfos) {
-      for (auto &AccessTy : Accesses[Access]) {
+      for (const auto &AccessTy : Accesses[Access]) {
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                   DepSetId, TheLoop, RunningDepId, ASId,
                                   ShouldCheckWrap, false)) {
@@ -942,7 +1072,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       // and add further checks if required (overflow checks).
       CanDoAliasSetRT = true;
       for (auto Access : Retries) {
-        for (auto &AccessTy : Accesses[Access]) {
+        for (const auto &AccessTy : Accesses[Access]) {
           if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                     DepSetId, TheLoop, RunningDepId, ASId,
                                     ShouldCheckWrap, /*Assume=*/true)) {
@@ -2461,7 +2591,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 
   if (auto *Dependences = DepChecker->getDependences()) {
     OS.indent(Depth) << "Dependences:\n";
-    for (auto &Dep : *Dependences) {
+    for (const auto &Dep : *Dependences) {
       Dep.print(OS, Depth + 2, DepChecker->getMemoryInstructions());
       OS << "\n";
     }

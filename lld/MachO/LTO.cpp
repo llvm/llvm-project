@@ -138,8 +138,22 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       saveBuffer(buf[i], config->outputFile + Twine(i) + ".lto.o");
   }
 
-  if (!config->ltoObjPath.empty())
-    fs::create_directories(config->ltoObjPath);
+  // In ThinLTO mode, Clang passes a temporary directory in -object_path_lto,
+  // while the argument is a single file in FullLTO mode.
+  bool objPathIsDir = true;
+  if (!config->ltoObjPath.empty()) {
+    if (std::error_code ec = fs::create_directories(config->ltoObjPath))
+      fatal("cannot create LTO object path " + config->ltoObjPath + ": " +
+            ec.message());
+
+    if (!fs::is_directory(config->ltoObjPath)) {
+      objPathIsDir = false;
+      unsigned objCount =
+          count_if(buf, [](const SmallString<0> &b) { return !b.empty(); });
+      if (objCount > 1)
+        fatal("-object_path_lto must specify a directory when using ThinLTO");
+    }
+  }
 
   std::vector<ObjFile *> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {
@@ -149,9 +163,10 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     uint32_t modTime = 0;
     if (!config->ltoObjPath.empty()) {
       filePath = config->ltoObjPath;
-      path::append(filePath, Twine(i) + "." +
-                                 getArchitectureName(config->arch()) +
-                                 ".lto.o");
+      if (objPathIsDir)
+        path::append(filePath, Twine(i) + "." +
+                                   getArchitectureName(config->arch()) +
+                                   ".lto.o");
       saveBuffer(buf[i], filePath);
       modTime = getModTime(filePath);
     }

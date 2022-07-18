@@ -9,7 +9,7 @@
 
 ; RUN: llvm-lto2 run %t.bc %t2.bc -o %t.out -thinlto-distributed-indexes \
 ; RUN: -r=%t.bc,H,px -r=%t.bc,G, -r=%t2.bc,G,px
-; RUN: opt -function-import -import-all-index -summary-file %t.bc.thinlto.bc %t.bc -o %t.out
+; RUN: opt -passes=function-import -import-all-index -summary-file %t.bc.thinlto.bc %t.bc -o %t.out
 ; RUN: llvm-dis -o - %t.out | FileCheck %s
 
 ; Validate that G was imported

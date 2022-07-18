@@ -186,10 +186,6 @@ func.func @main() -> i32 attributes {llvm.emit_c_interface} {
 
 
 def transform(module, boilerplate):
-  import mlir.conversions
-  import mlir.all_passes_registration
-  import mlir.transforms
-
   # TODO: Allow cloning functions from one module to another.
   # Atm we have to resort to string concatenation.
   ops = module.operation.regions[0].blocks[0].operations

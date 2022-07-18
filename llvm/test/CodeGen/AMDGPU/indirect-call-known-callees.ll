@@ -65,6 +65,7 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_flat_scratch_init 1
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
+; CHECK-NEXT: .amdhsa_uses_dynamic_stack 1
 ; CHECK-NEXT: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
 ; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_y 0

@@ -21,15 +21,13 @@ define i32 @bar() #0 {
 entry:
   %rando = alloca i32, align 4
   %x = alloca i32, align 4
-  %0 = bitcast i32* %rando to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0(i64 4, ptr %rando) #3
   %call = call i32 (...) @buzz()
-  store i32 %call, i32* %rando, align 4, !tbaa !2
-  %1 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %1) #3
-  store i32 0, i32* %x, align 4, !tbaa !2
-  %2 = load i32, i32* %rando, align 4, !tbaa !2
-  %rem = srem i32 %2, 200000
+  store i32 %call, ptr %rando, align 4, !tbaa !2
+  call void @llvm.lifetime.start.p0(i64 4, ptr %x) #3
+  store i32 0, ptr %x, align 4, !tbaa !2
+  %0 = load i32, ptr %rando, align 4, !tbaa !2
+  %rem = srem i32 %0, 200000
   %cmp = icmp eq i32 %rem, 0
   %lnot = xor i1 %cmp, true
   %lnot1 = xor i1 %lnot, true
@@ -39,27 +37,25 @@ entry:
   br i1 %tobool, label %if.then, label %if.else, !unpredictable !6
 
 if.then:                                          ; preds = %entry
-  %3 = load i32, i32* %rando, align 4, !tbaa !2
-  %call2 = call i32 @baz(i32 %3)
-  store i32 %call2, i32* %x, align 4, !tbaa !2
+  %1 = load i32, ptr %rando, align 4, !tbaa !2
+  %call2 = call i32 @baz(i32 %1)
+  store i32 %call2, ptr %x, align 4, !tbaa !2
   br label %if.end
 
 if.else:                                          ; preds = %entry
   %call3 = call i32 @foo(i32 50)
-  store i32 %call3, i32* %x, align 4, !tbaa !2
+  store i32 %call3, ptr %x, align 4, !tbaa !2
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %4 = load i32, i32* %x, align 4, !tbaa !2
-  %5 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %5) #3
-  %6 = bitcast i32* %rando to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %6) #3
-  ret i32 %4
+  %2 = load i32, ptr %x, align 4, !tbaa !2
+  call void @llvm.lifetime.end.p0(i64 4, ptr %x) #3
+  call void @llvm.lifetime.end.p0(i64 4, ptr %rando) #3
+  ret i32 %2
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 declare i32 @buzz(...) #2
 
@@ -68,7 +64,7 @@ declare i32 @baz(i32) #2
 declare i32 @foo(i32) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }

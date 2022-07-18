@@ -105,8 +105,7 @@ struct SplitCold {
     return BB.getExecutionCount() == 0;
   }
 
-  void partition(BinaryFunction::reverse_order_iterator Start,
-                 BinaryFunction::reverse_order_iterator End) const {
+  template <typename It> void partition(const It Start, const It End) const {
     for (auto I = Start; I != End; ++I) {
       BinaryBasicBlock *BB = *I;
       if (!BB->canOutline())
@@ -124,24 +123,22 @@ struct SplitRandom {
   bool canSplit(const BinaryFunction &BF) { return true; }
   bool canOutline(const BinaryBasicBlock &BB) { return true; }
 
-  void partition(BinaryFunction::reverse_order_iterator Start,
-                 BinaryFunction::reverse_order_iterator End) const {
-    using It = decltype(Start);
+  template <typename It> void partition(It Start, It End) const {
+    using DiffT = typename It::difference_type;
 
     const It OutlineableBegin = Start;
     const It OutlineableEnd =
-        std::find_if(OutlineableBegin, End,
-                     [](BinaryBasicBlock *BB) { return !BB->canOutline(); });
-    const It::difference_type NumOutlineableBlocks =
-        OutlineableEnd - OutlineableBegin;
+        std::find_if(OutlineableBegin, End, [](const BinaryBasicBlock *BB) {
+          return !BB->canOutline();
+        });
+    const DiffT NumOutlineableBlocks = OutlineableEnd - OutlineableBegin;
 
     // We want to split at least one block unless there are not blocks that can
     // be outlined
-    const auto MinimumSplit =
-        std::min<It::difference_type>(NumOutlineableBlocks, 1);
-    std::uniform_int_distribution<It::difference_type> Dist(
-        MinimumSplit, NumOutlineableBlocks);
-    const It::difference_type NumColdBlocks = Dist(*Gen);
+    const auto MinimumSplit = std::min<DiffT>(NumOutlineableBlocks, 1);
+    std::uniform_int_distribution<DiffT> Dist(MinimumSplit,
+                                              NumOutlineableBlocks);
+    const DiffT NumColdBlocks = Dist(*Gen);
     const It ColdEnd = OutlineableBegin + NumColdBlocks;
 
     LLVM_DEBUG(dbgs() << formatv("BOLT-DEBUG: randomly chose last {0} (out of "
@@ -206,7 +203,9 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
   if (!Strategy.canSplit(BF))
     return;
 
-  BinaryFunction::BasicBlockOrderType PreSplitLayout = BF.getLayout();
+  FunctionLayout &Layout = BF.getLayout();
+  BinaryFunction::BasicBlockOrderType PreSplitLayout(Layout.block_begin(),
+                                                     Layout.block_end());
 
   BinaryContext &BC = BF.getBinaryContext();
   size_t OriginalHotSize;
@@ -220,9 +219,11 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
                       << Twine::utohexstr(ColdSize) << ">\n");
   }
 
+  BinaryFunction::BasicBlockOrderType NewLayout(Layout.block_begin(),
+                                                Layout.block_end());
   // Never outline the first basic block.
-  BF.layout_front()->setCanOutline(false);
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  NewLayout.front()->setCanOutline(false);
+  for (BinaryBasicBlock *const BB : NewLayout) {
     if (!BB->canOutline())
       continue;
     if (!Strategy.canOutline(*BB)) {
@@ -260,26 +261,26 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
     // All blocks with 0 count that we can move go to the end of the function.
     // Even if they were natural to cluster formation and were seen in-between
     // hot basic blocks.
-    llvm::stable_sort(BF.layout(),
-                      [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
-                        return A->canOutline() < B->canOutline();
-                      });
+    stable_sort(NewLayout, [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
+      return A->canOutline() < B->canOutline();
+    });
   } else if (BF.hasEHRanges() && !opts::SplitEH) {
     // Typically functions with exception handling have landing pads at the end.
     // We cannot move beginning of landing pads, but we can move 0-count blocks
     // comprising landing pads to the end and thus facilitate splitting.
-    auto FirstLP = BF.layout_begin();
+    auto FirstLP = NewLayout.begin();
     while ((*FirstLP)->isLandingPad())
       ++FirstLP;
 
-    std::stable_sort(FirstLP, BF.layout_end(),
+    std::stable_sort(FirstLP, NewLayout.end(),
                      [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
                        return A->canOutline() < B->canOutline();
                      });
   }
 
   // Separate hot from cold starting from the bottom.
-  Strategy.partition(BF.layout_rbegin(), BF.layout_rend());
+  Strategy.partition(NewLayout.rbegin(), NewLayout.rend());
+  BF.getLayout().update(NewLayout);
 
   // For shared objects, invoke instructions and corresponding landing pads
   // have to be placed in the same fragment. When we split them, create
@@ -307,9 +308,9 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
       if (PreSplitLayout.size() != BF.size())
         PreSplitLayout = mergeEHTrampolines(BF, PreSplitLayout, Trampolines);
 
-      BF.updateBasicBlockLayout(PreSplitLayout);
       for (BinaryBasicBlock &BB : BF)
         BB.setIsCold(false);
+      BF.getLayout().update(PreSplitLayout);
     } else {
       SplitBytesHot += HotSize;
       SplitBytesCold += ColdSize;
@@ -366,10 +367,12 @@ SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
 
   // All trampoline blocks were added to the end of the function. Place them at
   // the end of corresponding fragments.
-  std::stable_sort(BF.layout_begin(), BF.layout_end(),
-                   [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
-                     return A->isCold() < B->isCold();
-                   });
+  BinaryFunction::BasicBlockOrderType NewLayout(BF.getLayout().block_begin(),
+                                                BF.getLayout().block_end());
+  stable_sort(NewLayout, [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
+    return A->isCold() < B->isCold();
+  });
+  BF.getLayout().update(NewLayout);
 
   // Conservatively introduce branch instructions.
   BF.fixBranches();

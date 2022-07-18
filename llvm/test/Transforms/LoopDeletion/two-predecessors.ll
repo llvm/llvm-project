@@ -8,11 +8,13 @@ define dso_local i32 @hoge() local_unnamed_addr #0 {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i"()
-; CHECK-NEXT:    to label [[BB1:%.*]] [label %bb2]
+; CHECK-NEXT:    to label [[BB1:%.*]] [label %bb2.preheader]
 ; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB2_PREHEADER:%.*]]
+; CHECK:       bb2.preheader:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB1]] ], [ [[TMP3:%.*]], [[BB2]] ], [ undef, [[BB:%.*]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[TMP3:%.*]], [[BB2]] ], [ undef, [[BB2_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP3]] = tail call i32 bitcast (i32 (...)* @widget to i32 (i32)*)(i32 [[TMP]])
 ; CHECK-NEXT:    br label [[BB2]]
 ;

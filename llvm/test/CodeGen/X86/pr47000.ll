@@ -7,26 +7,22 @@ target triple = "i386-unknown-linux-unknown"
 define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 ; CHECK-LABEL: doTheTestMod:
 ; CHECK:       # %bb.0: # %Entry
-; CHECK-NEXT:    subl $124, %esp
-; CHECK-NEXT:    # implicit-def: $xmm3
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm3
-; CHECK-NEXT:    # implicit-def: $xmm2
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm2
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    # implicit-def: $xmm0
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    # implicit-def: $xmm4
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm4
-; CHECK-NEXT:    # implicit-def: $xmm5
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm5
-; CHECK-NEXT:    # implicit-def: $xmm6
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm6
-; CHECK-NEXT:    # implicit-def: $xmm7
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm7
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    subl $140, %esp
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, %xmm6
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm0, %xmm3
+; CHECK-NEXT:    psrlq $48, %xmm3
+; CHECK-NEXT:    movaps %xmm0, %xmm2
+; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; CHECK-NEXT:    psrld $16, %xmm0
+; CHECK-NEXT:    movaps %xmm6, %xmm7
+; CHECK-NEXT:    movaps %xmm6, %xmm4
+; CHECK-NEXT:    psrlq $48, %xmm4
+; CHECK-NEXT:    movaps %xmm6, %xmm5
+; CHECK-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1,1,1]
+; CHECK-NEXT:    psrld $16, %xmm6
 ; CHECK-NEXT:    pextrw $0, %xmm7, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
@@ -45,12 +41,12 @@ define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 ; CHECK-NEXT:    pextrw $0, %xmm2, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pextrw $0, %xmm1, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    # implicit-def: $xmm0
 ; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -174,29 +170,18 @@ define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    fstps (%eax)
 ; CHECK-NEXT:    calll __truncsfhf2
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 # 4-byte Reload
-; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 4-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 # 4-byte Reload
+; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    pextrw $0, %xmm3, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-NEXT:    movw %dx, 6(%ecx)
-; CHECK-NEXT:    pextrw $0, %xmm2, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-NEXT:    movw %dx, 4(%ecx)
-; CHECK-NEXT:    pextrw $0, %xmm1, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-NEXT:    movw %dx, 2(%ecx)
-; CHECK-NEXT:    pextrw $0, %xmm0, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-NEXT:    movw %dx, (%ecx)
-; CHECK-NEXT:    addl $124, %esp
-; CHECK-NEXT:    retl $4
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    addl $140, %esp
+; CHECK-NEXT:    retl
 Entry:
   %x = alloca <4 x half>, align 8
   %y = alloca <4 x half>, align 8

@@ -1,10 +1,6 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 
-; RUN: opt < %s -sample-profile -annotate-sample-profile-inline-phase -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t.opt.yaml
 ; RUN: opt < %s -passes=sample-profile -annotate-sample-profile-inline-phase -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t.opt.yaml
 
@@ -100,7 +96,7 @@
 ;YAML:  --- !Analysis
 ;YAML-NEXT:  Pass:            sample-profile
 ;YAML-NEXT:  Name:            AppliedSamples
-;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 5, Column: 8 }
+;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 5, Column: 12 }
 ;YAML-NEXT:  Function:        main
 ;YAML-NEXT:  Args:
 ;YAML-NEXT:    - String:          'Applied '
@@ -125,68 +121,64 @@ define i64 @_Z3foov() #0 !dbg !4 {
 entry:
   %sum = alloca i64, align 8
   %i = alloca i32, align 4
-  %0 = bitcast i64* %sum to i8*, !dbg !19
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %0) #4, !dbg !19
-  call void @llvm.dbg.declare(metadata i64* %sum, metadata !9, metadata !20), !dbg !21
-  store i64 0, i64* %sum, align 8, !dbg !21, !tbaa !22
-  %1 = bitcast i32* %i to i8*, !dbg !26
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %1) #4, !dbg !26
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !10, metadata !20), !dbg !27
-  store i32 0, i32* %i, align 4, !dbg !27, !tbaa !28
+  call void @llvm.lifetime.start.p0(i64 8, ptr %sum) #4, !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %sum, metadata !9, metadata !20), !dbg !21
+  store i64 0, ptr %sum, align 8, !dbg !21, !tbaa !22
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #4, !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !10, metadata !20), !dbg !27
+  store i32 0, ptr %i, align 4, !dbg !27, !tbaa !28
   br label %for.cond, !dbg !26
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %2 = load i32, i32* %i, align 4, !dbg !30, !tbaa !28
-  %cmp = icmp slt i32 %2, 500000000, !dbg !34
+  %0 = load i32, ptr %i, align 4, !dbg !30, !tbaa !28
+  %cmp = icmp slt i32 %0, 500000000, !dbg !34
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !35
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  %3 = bitcast i32* %i to i8*, !dbg !36
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %3) #4, !dbg !36
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #4, !dbg !36
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %4 = load i32, i32* %i, align 4, !dbg !38, !tbaa !28
-  %cmp1 = icmp slt i32 %4, 1000, !dbg !40
+  %1 = load i32, ptr %i, align 4, !dbg !38, !tbaa !28
+  %cmp1 = icmp slt i32 %1, 1000, !dbg !40
   br i1 %cmp1, label %if.then, label %if.else, !dbg !41
 
 if.then:                                          ; preds = %for.body
-  %5 = load i32, i32* %i, align 4, !dbg !42, !tbaa !28
-  %conv = sext i32 %5 to i64, !dbg !42
-  %6 = load i64, i64* %sum, align 8, !dbg !43, !tbaa !22
-  %sub = sub nsw i64 %6, %conv, !dbg !43
-  store i64 %sub, i64* %sum, align 8, !dbg !43, !tbaa !22
+  %2 = load i32, ptr %i, align 4, !dbg !42, !tbaa !28
+  %conv = sext i32 %2 to i64, !dbg !42
+  %3 = load i64, ptr %sum, align 8, !dbg !43, !tbaa !22
+  %sub = sub nsw i64 %3, %conv, !dbg !43
+  store i64 %sub, ptr %sum, align 8, !dbg !43, !tbaa !22
   br label %if.end, !dbg !44
 
 if.else:                                          ; preds = %for.body
-  %7 = load i32, i32* %i, align 4, !dbg !45, !tbaa !28
-  %sub2 = sub nsw i32 0, %7, !dbg !46
+  %4 = load i32, ptr %i, align 4, !dbg !45, !tbaa !28
+  %sub2 = sub nsw i32 0, %4, !dbg !46
   %call = call i32 @rand() #4, !dbg !47
   %mul = mul nsw i32 %sub2, %call, !dbg !48
   %conv3 = sext i32 %mul to i64, !dbg !46
-  %8 = load i64, i64* %sum, align 8, !dbg !49, !tbaa !22
-  %add = add nsw i64 %8, %conv3, !dbg !49
-  store i64 %add, i64* %sum, align 8, !dbg !49, !tbaa !22
+  %5 = load i64, ptr %sum, align 8, !dbg !49, !tbaa !22
+  %add = add nsw i64 %5, %conv3, !dbg !49
+  store i64 %add, ptr %sum, align 8, !dbg !49, !tbaa !22
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   br label %for.inc, !dbg !50
 
 for.inc:                                          ; preds = %if.end
-  %9 = load i32, i32* %i, align 4, !dbg !51, !tbaa !28
-  %inc = add nsw i32 %9, 1, !dbg !51
-  store i32 %inc, i32* %i, align 4, !dbg !51, !tbaa !28
+  %6 = load i32, ptr %i, align 4, !dbg !51, !tbaa !28
+  %inc = add nsw i32 %6, 1, !dbg !51
+  store i32 %inc, ptr %i, align 4, !dbg !51, !tbaa !28
   br label %for.cond, !dbg !52
 
 for.end:                                          ; preds = %for.cond.cleanup
-  %10 = load i64, i64* %sum, align 8, !dbg !53, !tbaa !22
-  %11 = bitcast i64* %sum to i8*, !dbg !54
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %11) #4, !dbg !54
-  ret i64 %10, !dbg !55
+  %7 = load i64, ptr %sum, align 8, !dbg !53, !tbaa !22
+  call void @llvm.lifetime.end.p0(i64 8, ptr %sum) #4, !dbg !54
+  ret i64 %7, !dbg !55
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -197,13 +189,13 @@ define i32 @rand() #3 !dbg !59 {
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define i32 @main() #0 !dbg !13 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   %call = call i64 @_Z3foov(), !dbg !56
   %cmp = icmp sgt i64 %call, 0, !dbg !57
   %conv = zext i1 %cmp to i32, !dbg !56
