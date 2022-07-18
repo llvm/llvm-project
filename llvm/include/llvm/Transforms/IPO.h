@@ -98,10 +98,6 @@ ModulePass *createGVExtractionPass(std::vector<GlobalValue*>& GVs, bool
                                   deleteFn = false, bool keepConstInit = false);
 
 //===----------------------------------------------------------------------===//
-/// This pass performs iterative function importing from other modules.
-Pass *createFunctionImportPass();
-
-//===----------------------------------------------------------------------===//
 /// createFunctionInliningPass - Return a new pass object that uses a heuristic
 /// to inline direct function calls to small functions.
 ///
