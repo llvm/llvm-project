@@ -1920,7 +1920,10 @@ for this region.
 //       The libcompression APIs on darwin systems call this COMPRESSION_LZ4_RAW.
 //
 //    lzfse
-//       An Apple proprietary compression algorithm implemented in libcompression.
+//       Compression algorithm added in macOS 10.11, with open source C reference
+//       implementation on github.
+//       https://en.wikipedia.org/wiki/LZFSE
+//       https://github.com/lzfse/lzfse
 //
 //    lzma
 //       libcompression implements "LZMA level 6", the default compression for the
