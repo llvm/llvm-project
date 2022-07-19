@@ -455,6 +455,16 @@ let Predicates = [HasSVEorSME] in {
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg", AArch64fneg_mt>;
 
+  // zext(cmpeq(x, splat(0))) -> cnot(x)
+  def : Pat<(nxv16i8 (zext (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive):$Pg), nxv16i8:$Op2, (SVEDup0), SETEQ)))),
+            (CNOT_ZPmZ_B $Op2, $Pg, $Op2)>;
+  def : Pat<(nxv8i16 (zext (nxv8i1 (AArch64setcc_z (nxv8i1 (SVEAllActive):$Pg), nxv8i16:$Op2, (SVEDup0), SETEQ)))),
+            (CNOT_ZPmZ_H $Op2, $Pg, $Op2)>;
+  def : Pat<(nxv4i32 (zext (nxv4i1 (AArch64setcc_z (nxv4i1 (SVEAllActive):$Pg), nxv4i32:$Op2, (SVEDup0), SETEQ)))),
+            (CNOT_ZPmZ_S $Op2, $Pg, $Op2)>;
+  def : Pat<(nxv2i64 (zext (nxv2i1 (AArch64setcc_z (nxv2i1 (SVEAllActive):$Pg), nxv2i64:$Op2, (SVEDup0), SETEQ)))),
+            (CNOT_ZPmZ_D $Op2, $Pg, $Op2)>;
+
   defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax", "SMAX_ZPZZ", int_aarch64_sve_smax, DestructiveBinaryComm>;
   defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax", "UMAX_ZPZZ", int_aarch64_sve_umax, DestructiveBinaryComm>;
   defm SMIN_ZPmZ : sve_int_bin_pred_arit_1<0b010, "smin", "SMIN_ZPZZ", int_aarch64_sve_smin, DestructiveBinaryComm>;
