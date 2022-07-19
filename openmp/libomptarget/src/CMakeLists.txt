@@ -51,6 +51,15 @@ find_library(LLVM_OFFLOAD_ARCH LLVMOffloadArch HINTS ${LLVM_LIBRARY_DIR} REQUIRE
 
 target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR})
+
+# If LLVM DYLIB is off we need to link in libclang-cpp.
+find_library(LLVM_DYLIB LLVM HINTS ${LLVM_LIBRARY_DIR})
+if(NOT LLVM_DYLIB)
+  libomptarget_say("LLVM_DYLIB off: linking libclang-cpp with libomptarget.so")
+  find_library(CLANG_CPP clang-cpp HINTS ${LLVM_LIBRARY_DIR} REQUIRED)
+  target_link_libraries(omptarget PRIVATE ${CLANG_CPP})
+endif()
+
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
   ${LLVM_OFFLOAD_ARCH}
