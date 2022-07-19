@@ -291,6 +291,51 @@ for.end:
   ret void
 }
 
+define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
+; CHECK-LABEL: @predicated_sdiv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[V:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[DO_OP:%.*]], label [[LATCH]]
+; CHECK:       do_op:
+; CHECK-NEXT:    [[DIVREM:%.*]] = sdiv i64 [[ELEM]], [[V]]
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ELEM]], [[FOR_BODY]] ], [ [[DIVREM]], [[DO_OP]] ]
+; CHECK-NEXT:    store i64 [[PHI]], ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  %elem = load i64, ptr %arrayidx
+  %c = icmp ne i64 %v, 0
+  br i1 %c, label %do_op, label %latch
+do_op:
+  %divrem = sdiv i64 %elem, %v
+  br label %latch
+latch:
+  %phi = phi i64 [%elem, %for.body], [%divrem, %do_op]
+  store i64 %phi, ptr %arrayidx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-LABEL: @predicated_udiv_by_constant(
 ; CHECK-NEXT:  entry:
