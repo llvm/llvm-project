@@ -21,8 +21,8 @@ define internal void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounw
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS________OPM-NEXT:    store i32 99, i32* [[TMP0]], align 4
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS________OPM-NEXT:    store i8 97, i8* [[TMP1]], align 8
-; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP1]], align 8
+; IS________OPM-NEXT:    store i8 97, i8* [[TMP1]], align 4
+; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP1]], align 4
 ; IS________OPM-NEXT:    call void @use(i8 [[L]])
 ; IS________OPM-NEXT:    br label [[RETURN:%.*]]
 ; IS________OPM:       return:
@@ -40,8 +40,8 @@ define internal void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounw
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS________NPM-NEXT:    store i32 99, i32* [[TMP2]], align 4
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS________NPM-NEXT:    store i8 97, i8* [[TMP3]], align 8
-; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP3]], align 8
+; IS________NPM-NEXT:    store i8 97, i8* [[TMP3]], align 4
+; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP3]], align 4
 ; IS________NPM-NEXT:    call void @use(i8 [[L]])
 ; IS________NPM-NEXT:    br label [[RETURN:%.*]]
 ; IS________NPM:       return:
@@ -68,7 +68,7 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS________OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
+; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 4
 ; IS________OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; IS________OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
 ; IS________OPM-NEXT:    ret i32 [[TMP5]]
@@ -85,7 +85,7 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS________NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 8
+; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 4
 ; IS________NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; IS________NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
 ; IS________NPM-NEXT:    ret i32 [[TMP7]]
@@ -163,7 +163,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nou
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS________OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
+; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 4
 ; IS________OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; IS________OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
 ; IS________OPM-NEXT:    ret i32 [[TMP5]]
@@ -182,7 +182,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nou
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS________NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 8
+; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 4
 ; IS________NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; IS________NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
 ; IS________NPM-NEXT:    ret i32 [[TMP7]]
