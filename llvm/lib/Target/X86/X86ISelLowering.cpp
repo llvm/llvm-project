@@ -1563,8 +1563,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_EXTEND,          VT, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,   VT, Custom);
     }
-    for (unsigned Opc : { ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV })
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
       setOperationPromotedToType(Opc, MVT::v8f16, MVT::v8f32);
+      setOperationPromotedToType(Opc, MVT::v16f16, MVT::v16f32);
+    }
 
     setOperationAction(ISD::FP_EXTEND, MVT::v8f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v8f32, Legal);
@@ -1875,8 +1877,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::v16f16, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::v16f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v16f32, Legal);
-    for (unsigned Opc : { ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV })
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
       setOperationPromotedToType(Opc, MVT::v16f16, MVT::v16f32);
+      setOperationPromotedToType(Opc, MVT::v32f16, MVT::v32f32);
+    }
 
     for (auto VT : { MVT::v16i32, MVT::v8i64, MVT::v16f32, MVT::v8f64 }) {
       setOperationAction(ISD::MLOAD,               VT, Legal);
