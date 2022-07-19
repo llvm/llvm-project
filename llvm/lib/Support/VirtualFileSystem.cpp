@@ -135,6 +135,14 @@ FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
   return (*F)->getBuffer(Name, FileSize, RequiresNullTerminator, IsVolatile);
 }
 
+llvm::ErrorOr<Optional<cas::ObjectRef>>
+FileSystem::getCASContentsForFile(const Twine &Name) {
+  auto F = openFileForRead(Name);
+  if (!F)
+    return F.getError();
+  return (*F)->getCASContents();
+}
+
 std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   if (llvm::sys::path::is_absolute(Path))
     return {};

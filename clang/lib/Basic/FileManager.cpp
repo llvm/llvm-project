@@ -584,6 +584,17 @@ FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
                               isVolatile, CASContents);
 }
 
+llvm::ErrorOr<Optional<cas::ObjectRef>>
+FileManager::getCASContentsForFile(const Twine &Filename) {
+  if (FileSystemOpts.WorkingDir.empty())
+    return FS->getCASContentsForFile(Filename);
+
+  SmallString<128> FilePath;
+  Filename.toVector(FilePath);
+  FixupRelativePath(FilePath);
+  return FS->getCASContentsForFile(FilePath);
+}
+
 /// getStatValue - Get the 'stat' information for the specified path,
 /// using the cache to accelerate it if possible.  This returns true
 /// if the path points to a virtual file or does not exist, or returns

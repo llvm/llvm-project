@@ -294,6 +294,13 @@ public:
                    bool RequiresNullTerminator = true, bool IsVolatile = false,
                    Optional<cas::ObjectRef> *CASContents = nullptr);
 
+  /// This is a convenience method that opens a file, gets the \p cas::ObjectRef
+  /// for its contents if supported by the file system, and then closes the
+  /// file. If both the buffer and its `cas::ObjectRef` are needed use \p
+  /// getBufferForFile to avoid the extra file lookup.
+  llvm::ErrorOr<Optional<cas::ObjectRef>>
+  getCASContentsForFile(const Twine &Name);
+
   /// Get a directory_iterator for \p Dir.
   /// \note The 'end' iterator is directory_iterator().
   virtual directory_iterator dir_begin(const Twine &Dir,

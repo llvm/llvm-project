@@ -39,6 +39,14 @@ TEST(CASProvidingFileSystemTest, Basic) {
     EXPECT_EQ(BlobContents->getData(), Contents1);
   }
   {
+    ErrorOr<Optional<cas::ObjectRef>> Ref = CASFS->getCASContentsForFile(Path1);
+    ASSERT_TRUE(Ref);
+    ASSERT_TRUE(*Ref);
+    Optional<ObjectProxy> BlobContents;
+    ASSERT_THAT_ERROR(DB->getProxy(**Ref).moveInto(BlobContents), Succeeded());
+    EXPECT_EQ(BlobContents->getData(), Contents1);
+  }
+  {
     Optional<cas::ObjectRef> CASContents;
     auto Buf = CASFS->getBufferForFile(Path2, /*FileSize*/ -1,
                                        /*RequiresNullTerminator*/ false,

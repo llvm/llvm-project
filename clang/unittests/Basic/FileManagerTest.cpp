@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -564,7 +565,8 @@ TEST_F(FileManagerTest, getBypassFile) {
 TEST_F(FileManagerTest, CASProvider) {
   std::shared_ptr<CASDB> DB = llvm::cas::createInMemoryCAS();
   auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
-  StringRef Path = "a.txt";
+  auto Sept = llvm::sys::path::get_separator();
+  std::string Path = std::string(llvm::formatv("{0}root{0}a.txt", Sept));
   StringRef Contents = "a";
   FS->addFile(Path, 0, MemoryBuffer::getMemBuffer(Contents));
   llvm::IntrusiveRefCntPtr<vfs::FileSystem> CASFS =
@@ -600,6 +602,31 @@ TEST_F(FileManagerTest, CASProvider) {
     ASSERT_TRUE(CASContents);
     Optional<ObjectProxy> BlobContents;
     ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
+                      llvm::Succeeded());
+    EXPECT_EQ(BlobContents->getData(), Contents);
+  }
+  {
+    FileSystemOptions Opts;
+    FileManager Manager(Opts, CASFS);
+    llvm::ErrorOr<Optional<ObjectRef>> CASContents =
+        Manager.getCASContentsForFile(Path);
+    ASSERT_TRUE(CASContents);
+    ASSERT_TRUE(*CASContents);
+    Optional<ObjectProxy> BlobContents;
+    ASSERT_THAT_ERROR(DB->getProxy(**CASContents).moveInto(BlobContents),
+                      llvm::Succeeded());
+    EXPECT_EQ(BlobContents->getData(), Contents);
+  }
+  {
+    FileSystemOptions Opts;
+    Opts.WorkingDir = "/root";
+    FileManager Manager(Opts, CASFS);
+    llvm::ErrorOr<Optional<ObjectRef>> CASContents =
+        Manager.getCASContentsForFile("a.txt");
+    ASSERT_TRUE(CASContents);
+    ASSERT_TRUE(*CASContents);
+    Optional<ObjectProxy> BlobContents;
+    ASSERT_THAT_ERROR(DB->getProxy(**CASContents).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);
   }
