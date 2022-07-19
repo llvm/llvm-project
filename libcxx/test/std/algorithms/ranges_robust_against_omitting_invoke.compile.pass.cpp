@@ -201,8 +201,8 @@ void test_all() {
   // `rotate` has neither a projection nor a predicate.
   // `shuffle` has neither a projection nor a predicate.
   //in_pred(std::ranges::unique, in, &Foo::binary_pred, &Bar::val);
-  //in_pred(std::ranges::partition, in, &Foo::binary_pred, &Bar::val);
-  //in_pred(std::ranges::stable_partition, in, &Foo::binary_pred, &Bar::val);
+  in_pred(std::ranges::partition, in, &Foo::unary_pred, &Bar::val);
+  in_pred(std::ranges::stable_partition, in, &Foo::unary_pred, &Bar::val);
   in_pred(std::ranges::sort, in, &Foo::binary_pred, &Bar::val);
   in_pred(std::ranges::stable_sort, in, &Foo::binary_pred, &Bar::val);
   //in_mid_pred(std::ranges::partial_sort, in, mid, binary_pred);
