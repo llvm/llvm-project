@@ -213,6 +213,38 @@ func.func @contract_broadcast_dimension_would_go_unused_in_lhs_rhs(%arg0 : vecto
   return  %result : vector<1xi32>
 }
 
+// -----
+
+// Test that CombineContractBroadcast is not combining this case, as that would
+// result in a vector.contract without a reduction dimention pair, as the only
+// reduction dimension would be used by only one side among LHS, RHS.
+// This is arguably a convoluted edge case (the affine_maps here look weird!)
+// but it is something that we actually ran into from linalg.matmul tests that
+// were exercising 1x1 shapes, and using various drop-unit-dims patterns.
+
+#map0 = affine_map<(d0, d1) -> (d1)>
+#map1 = affine_map<(d0, d1) -> (d1, d0)>
+#map2 = affine_map<(d0, d1) -> (d0)>
+
+// CHECK-LABEL: contract_broadcast_would_have_no_reduction_dim_pair
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<1xf32>, %[[ARG1:.+]]: vector<1xf32>, %[[ARG2:.+]]: vector<1xf32>)
+//  CHECK: %[[BROADCAST1:.+]] = vector.broadcast %[[ARG1]] : vector<1xf32> to vector<1x1xf32>
+//  CHECK: vector.contract
+//  CHECK-SAME: indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]]
+//  CHECK-SAME: iterator_types = ["parallel", "reduction"]
+//  CHECK-SAME: %[[ARG0]], %[[BROADCAST1]], %[[ARG2]] : vector<1xf32>, vector<1x1xf32> into vector<1xf32>
+
+func.func @contract_broadcast_would_have_no_reduction_dim_pair(%arg0 : vector<1xf32>, %arg1 : vector<1xf32>, %arg2 : vector<1xf32>) -> vector<1xf32> {
+  %1 = vector.broadcast %arg1 : vector<1xf32> to vector<1x1xf32>
+  %result = vector.contract {
+    indexing_maps = [#map0, #map1, #map2],
+    iterator_types = ["parallel", "reduction"],
+    kind = #vector.kind<add>
+  } %arg0, %1, %arg2 : vector<1xf32>, vector<1x1xf32> into vector<1xf32>
+  return %result : vector<1xf32>
+}
+
+
 //===----------------------------------------------------------------------===//
 // Reorder casting ops and vector ops. The casting ops have almost identical
 // pattern, so only arith.extsi op is tested.
