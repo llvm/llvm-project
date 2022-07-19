@@ -50,10 +50,11 @@ add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 
 # This flang shell script will only work in a POSIX shell.
 if (NOT WIN32)
-  add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc ${CMAKE_BINARY_DIR}/bin)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc.in
+    ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc
+    @ONLY
+  )
   add_custom_target(flang-to-external-fc ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc)
   install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
