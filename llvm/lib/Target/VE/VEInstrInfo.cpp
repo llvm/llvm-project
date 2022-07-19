@@ -418,7 +418,9 @@ unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   if (MI.getOpcode() == VE::LDrii ||    // I64
       MI.getOpcode() == VE::LDLSXrii || // I32
       MI.getOpcode() == VE::LDUrii ||   // F32
-      MI.getOpcode() == VE::LDQrii      // F128 (pseudo)
+      MI.getOpcode() == VE::LDQrii ||   // F128 (pseudo)
+      MI.getOpcode() == VE::LDVMrii ||  // VM (pseudo)
+      MI.getOpcode() == VE::LDVM512rii  // VM512 (pseudo)
   ) {
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0 && MI.getOperand(3).isImm() &&
@@ -437,10 +439,12 @@ unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// any side effects other than storing to the stack slot.
 unsigned VEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex) const {
-  if (MI.getOpcode() == VE::STrii ||  // I64
-      MI.getOpcode() == VE::STLrii || // I32
-      MI.getOpcode() == VE::STUrii || // F32
-      MI.getOpcode() == VE::STQrii    // F128 (pseudo)
+  if (MI.getOpcode() == VE::STrii ||   // I64
+      MI.getOpcode() == VE::STLrii ||  // I32
+      MI.getOpcode() == VE::STUrii ||  // F32
+      MI.getOpcode() == VE::STQrii ||  // F128 (pseudo)
+      MI.getOpcode() == VE::STVMrii || // VM (pseudo)
+      MI.getOpcode() == VE::STVM512rii // VM512 (pseudo)
   ) {
     if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
         MI.getOperand(1).getImm() == 0 && MI.getOperand(2).isImm() &&
@@ -496,6 +500,20 @@ void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addImm(0)
         .addReg(SrcReg, getKillRegState(isKill))
         .addMemOperand(MMO);
+  } else if (RC == &VE::VMRegClass) {
+    BuildMI(MBB, I, DL, get(VE::STVMrii))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
+  } else if (VE::VM512RegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(VE::STVM512rii))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   } else
     report_fatal_error("Can't store this register to stack slot");
 }
@@ -535,6 +553,18 @@ void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         .addMemOperand(MMO);
   } else if (VE::F128RegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(VE::LDQrii), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (RC == &VE::VMRegClass) {
+    BuildMI(MBB, I, DL, get(VE::LDVMrii), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (VE::VM512RegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(VE::LDVM512rii), DestReg)
         .addFrameIndex(FI)
         .addImm(0)
         .addImm(0)
