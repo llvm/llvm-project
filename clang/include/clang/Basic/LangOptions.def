@@ -162,6 +162,7 @@ LANGOPT(PointerAuthIndirectGotos, 1, 0, "indirect gotos pointer authentication")
 LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
 LANGOPT(SoftPointerAuth   , 1, 0, "software emulation of pointer authentication")
 LANGOPT(Unstable          , 1, 0, "Enable unstable and experimental features")
+LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 
