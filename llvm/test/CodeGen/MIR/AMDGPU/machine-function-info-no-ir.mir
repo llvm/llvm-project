@@ -30,6 +30,7 @@
 # FULL-NEXT: workGroupIDX:    { reg: '$sgpr6' }
 # FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 # FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr0' }
@@ -67,6 +68,7 @@
 # SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr6' }
 # SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 # SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # SIMPLE-NEXT: workItemIDX: { reg: '$vgpr0' }
@@ -127,6 +129,7 @@ body:             |
 # FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 # FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
@@ -153,6 +156,7 @@ body:             |
 # SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 # SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
@@ -194,6 +198,7 @@ body:             |
 # FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 # FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
@@ -220,6 +225,7 @@ body:             |
 # SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 # SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
@@ -262,6 +268,7 @@ body:             |
 # FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 # FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
@@ -289,6 +296,7 @@ body:             |
 # SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 # SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
@@ -341,6 +349,7 @@ body:             |
 # SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 # SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 # SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr0', mask: 65280 }

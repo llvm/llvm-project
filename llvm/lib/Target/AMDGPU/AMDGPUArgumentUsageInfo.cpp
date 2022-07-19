@@ -74,6 +74,7 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
        << "  WorkGroupIDY: " << FI.second.WorkGroupIDY
        << "  WorkGroupIDZ: " << FI.second.WorkGroupIDZ
        << "  WorkGroupInfo: " << FI.second.WorkGroupInfo
+       << "  LDSKernelId: " << FI.second.LDSKernelId
        << "  PrivateSegmentWaveByteOffset: "
           << FI.second.PrivateSegmentWaveByteOffset
        << "  ImplicitBufferPtr: " << FI.second.ImplicitBufferPtr
@@ -106,6 +107,9 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
                            &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
     return std::make_tuple(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
+                           &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::LDS_KERNEL_ID:
+    return std::make_tuple(LDSKernelId ? &LDSKernelId : nullptr,
                            &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET:
     return std::make_tuple(
@@ -162,6 +166,7 @@ constexpr AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
   AI.WorkGroupIDX = ArgDescriptor::createRegister(AMDGPU::SGPR12);
   AI.WorkGroupIDY = ArgDescriptor::createRegister(AMDGPU::SGPR13);
   AI.WorkGroupIDZ = ArgDescriptor::createRegister(AMDGPU::SGPR14);
+  AI.LDSKernelId = ArgDescriptor::createRegister(AMDGPU::SGPR15);
 
   const unsigned Mask = 0x3ff;
   AI.WorkItemIDX = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask);

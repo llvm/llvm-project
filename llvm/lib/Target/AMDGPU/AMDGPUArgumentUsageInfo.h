@@ -103,6 +103,7 @@ struct AMDGPUFunctionArgInfo {
     KERNARG_SEGMENT_PTR =  3,
     DISPATCH_ID         =  4,
     FLAT_SCRATCH_INIT   =  5,
+    LDS_KERNEL_ID       =  6, // LLVM internal, not part of the ABI
     WORKGROUP_ID_X      = 10,
     WORKGROUP_ID_Y      = 11,
     WORKGROUP_ID_Z      = 12,
@@ -128,6 +129,7 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor DispatchID;
   ArgDescriptor FlatScratchInit;
   ArgDescriptor PrivateSegmentSize;
+  ArgDescriptor LDSKernelId;
 
   // System SGPRs in kernels.
   ArgDescriptor WorkGroupIDX;
