@@ -169,44 +169,36 @@ public:
       emplace_back(V);
   }
 
-  Value &operator[](size_t I) { return V[I]; }
-  const Value &operator[](size_t I) const { return V[I]; }
-  Value &front() { return V.front(); }
-  const Value &front() const { return V.front(); }
-  Value &back() { return V.back(); }
-  const Value &back() const { return V.back(); }
-  Value *data() { return V.data(); }
-  const Value *data() const { return V.data(); }
+  Value &operator[](size_t I);
+  const Value &operator[](size_t I) const;
+  Value &front();
+  const Value &front() const;
+  Value &back();
+  const Value &back() const;
+  Value *data();
+  const Value *data() const;
 
-  iterator begin() { return V.begin(); }
-  const_iterator begin() const { return V.begin(); }
-  iterator end() { return V.end(); }
-  const_iterator end() const { return V.end(); }
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
 
-  bool empty() const { return V.empty(); }
-  size_t size() const { return V.size(); }
-  void reserve(size_t S) { V.reserve(S); }
+  bool empty() const;
+  size_t size() const;
+  void reserve(size_t S);
 
-  void clear() { V.clear(); }
-  void push_back(const Value &E) { V.push_back(E); }
-  void push_back(Value &&E) { V.push_back(std::move(E)); }
-  template <typename... Args> void emplace_back(Args &&... A) {
-    V.emplace_back(std::forward<Args>(A)...);
-  }
-  void pop_back() { V.pop_back(); }
+  void clear();
+  void push_back(const Value &E);
+  void push_back(Value &&E);
+  template <typename... Args> void emplace_back(Args &&...A);
+  void pop_back();
   // FIXME: insert() takes const_iterator since C++11, old libstdc++ disagrees.
-  iterator insert(iterator P, const Value &E) { return V.insert(P, E); }
-  iterator insert(iterator P, Value &&E) {
-    return V.insert(P, std::move(E));
-  }
-  template <typename It> iterator insert(iterator P, It A, It Z) {
-    return V.insert(P, A, Z);
-  }
-  template <typename... Args> iterator emplace(const_iterator P, Args &&... A) {
-    return V.emplace(P, std::forward<Args>(A)...);
-  }
+  iterator insert(iterator P, const Value &E);
+  iterator insert(iterator P, Value &&E);
+  template <typename It> iterator insert(iterator P, It A, It Z);
+  template <typename... Args> iterator emplace(const_iterator P, Args &&...A);
 
-  friend bool operator==(const Array &L, const Array &R) { return L.V == R.V; }
+  friend bool operator==(const Array &L, const Array &R);
 };
 inline bool operator!=(const Array &L, const Array &R) { return !(L == R); }
 
@@ -514,6 +506,48 @@ private:
 
 bool operator==(const Value &, const Value &);
 inline bool operator!=(const Value &L, const Value &R) { return !(L == R); }
+
+// Array Methods
+inline Value &Array::operator[](size_t I) { return V[I]; }
+inline const Value &Array::operator[](size_t I) const { return V[I]; }
+inline Value &Array::front() { return V.front(); }
+inline const Value &Array::front() const { return V.front(); }
+inline Value &Array::back() { return V.back(); }
+inline const Value &Array::back() const { return V.back(); }
+inline Value *Array::data() { return V.data(); }
+inline const Value *Array::data() const { return V.data(); }
+
+inline typename Array::iterator Array::begin() { return V.begin(); }
+inline typename Array::const_iterator Array::begin() const { return V.begin(); }
+inline typename Array::iterator Array::end() { return V.end(); }
+inline typename Array::const_iterator Array::end() const { return V.end(); }
+
+inline bool Array::empty() const { return V.empty(); }
+inline size_t Array::size() const { return V.size(); }
+inline void Array::reserve(size_t S) { V.reserve(S); }
+
+inline void Array::clear() { V.clear(); }
+inline void Array::push_back(const Value &E) { V.push_back(E); }
+inline void Array::push_back(Value &&E) { V.push_back(std::move(E)); }
+template <typename... Args> inline void Array::emplace_back(Args &&...A) {
+  V.emplace_back(std::forward<Args>(A)...);
+}
+inline void Array::pop_back() { V.pop_back(); }
+inline typename Array::iterator Array::insert(iterator P, const Value &E) {
+  return V.insert(P, E);
+}
+inline typename Array::iterator Array::insert(iterator P, Value &&E) {
+  return V.insert(P, std::move(E));
+}
+template <typename It>
+inline typename Array::iterator Array::insert(iterator P, It A, It Z) {
+  return V.insert(P, A, Z);
+}
+template <typename... Args>
+inline typename Array::iterator Array::emplace(const_iterator P, Args &&...A) {
+  return V.emplace(P, std::forward<Args>(A)...);
+}
+inline bool operator==(const Array &L, const Array &R) { return L.V == R.V; }
 
 /// ObjectKey is a used to capture keys in Object. Like Value but:
 ///   - only strings are allowed
