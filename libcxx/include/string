@@ -13,6 +13,9 @@
 /*
     string synopsis
 
+#include <compare>
+#include <initializer_list>
+
 namespace std
 {
 
@@ -43,11 +46,13 @@ template <class stateT> bool operator!=(const fpos<stateT>& x, const fpos<stateT
 template <class charT>
 struct char_traits
 {
-    typedef charT     char_type;
-    typedef ...       int_type;
-    typedef streamoff off_type;
-    typedef streampos pos_type;
-    typedef mbstate_t state_type;
+    using char_type           = charT;
+    using int_type            = ...;
+    using off_type            = streamoff;
+    using pos_type            = streampos;
+    using state_type          = mbstate_t;
+    using comparison_category = strong_ordering; // Since C++20 only for the specializations
+                                                 // char, wchar_t, char8_t, char16_t, and char32_t.
 
     static void assign(char_type& c1, const char_type& c2) noexcept;
     static constexpr bool eq(char_type c1, char_type c2) noexcept;
@@ -370,60 +375,68 @@ bool operator==(const basic_string<charT, traits, Allocator>& lhs,
                 const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20
 
 template<class charT, class traits, class Allocator>
-bool operator==(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20
+bool operator==(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator==(const basic_string<charT,traits,Allocator>& lhs, const charT* rhs) noexcept;    // constexpr since C++20
 
 template<class charT, class traits, class Allocator>
 bool operator!=(const basic_string<charT,traits,Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator!=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20
+bool operator!=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator!=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20
+bool operator!=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator< (const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator< (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20
+bool operator< (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator< (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20
+bool operator< (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator> (const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator> (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20
+bool operator> (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator> (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20
+bool operator> (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator<=(const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator<=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20
+bool operator<=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator<=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20
+bool operator<=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator>=(const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator>=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20
+bool operator>=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator>=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20
+bool operator>=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
+
+template<class charT, class traits, class Allocator>                                            // since C++20
+constexpr see below operator<=>(const basic_string<charT, traits, Allocator>& lhs,
+                                const basic_string<charT, traits, Allocator>& rhs) noexcept;
+
+template<class charT, class traits, class Allocator>                                            // since C++20
+constexpr see below operator<=>(const basic_string<charT, traits, Allocator>& lhs,
+                                const charT* rhs) noexcept;
 
 template<class charT, class traits, class Allocator>
 void swap(basic_string<charT, traits, Allocator>& lhs,
@@ -4149,10 +4162,14 @@ bool
 operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
 {
+#if _LIBCPP_STD_VER > 17
+    return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
+#else
     size_t __lhs_sz = __lhs.size();
     return __lhs_sz == __rhs.size() && _Traits::compare(__lhs.data(),
                                                         __rhs.data(),
                                                         __lhs_sz) == 0;
+#endif
 }
 
 template<class _Allocator>
@@ -4174,6 +4191,7 @@ operator==(const basic_string<char, char_traits<char>, _Allocator>& __lhs,
     return true;
 }
 
+#if _LIBCPP_STD_VER <= 17
 template<class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
 bool
@@ -4186,6 +4204,7 @@ operator==(const _CharT* __lhs,
     if (__lhs_len != __rhs.size()) return false;
     return __rhs.compare(0, _String::npos, __lhs, __lhs_len) == 0;
 }
+#endif // _LIBCPP_STD_VER <= 17
 
 template<class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
@@ -4193,12 +4212,33 @@ bool
 operator==(const basic_string<_CharT,_Traits,_Allocator>& __lhs,
            const _CharT* __rhs) _NOEXCEPT
 {
+#if _LIBCPP_STD_VER > 17
+    return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
+#else
     typedef basic_string<_CharT, _Traits, _Allocator> _String;
     _LIBCPP_ASSERT(__rhs != nullptr, "operator==(basic_string, char*): received nullptr");
     size_t __rhs_len = _Traits::length(__rhs);
     if (__rhs_len != __lhs.size()) return false;
     return __lhs.compare(0, _String::npos, __rhs, __rhs_len) == 0;
+#endif
 }
+
+#if _LIBCPP_STD_VER > 17
+
+template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
+    const basic_string<_CharT, _Traits, _Allocator>& __lhs,
+    const basic_string<_CharT, _Traits, _Allocator>& __rhs) noexcept {
+    return basic_string_view<_CharT, _Traits>(__lhs) <=> basic_string_view<_CharT, _Traits>(__rhs);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+operator<=>(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs) {
+    return basic_string_view<_CharT, _Traits>(__lhs) <=> basic_string_view<_CharT, _Traits>(__rhs);
+}
+
+#else // _LIBCPP_STD_VER > 17
 
 template<class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
@@ -4342,6 +4382,7 @@ operator>=(const _CharT* __lhs,
 {
     return !(__lhs < __rhs);
 }
+#endif // _LIBCPP_STD_VER > 17
 
 // operator +
 
