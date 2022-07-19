@@ -135,6 +135,7 @@ END-SCRIPT
 #include <__algorithm/ranges_is_partitioned.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_partitioned.h'}}
 #include <__algorithm/ranges_is_sorted.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_sorted.h'}}
 #include <__algorithm/ranges_is_sorted_until.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_sorted_until.h'}}
+#include <__algorithm/ranges_iterator_concept.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_iterator_concept.h'}}
 #include <__algorithm/ranges_lexicographical_compare.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_lexicographical_compare.h'}}
 #include <__algorithm/ranges_lower_bound.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_lower_bound.h'}}
 #include <__algorithm/ranges_make_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_make_heap.h'}}

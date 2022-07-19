@@ -156,8 +156,8 @@ void test_all() {
   in2_out_pred(std::ranges::set_union, in, in2, out, binary_pred);
   in_pred(std::ranges::remove_if, in, unary_pred);
   //in_pred(std::ranges::unique, in, binary_pred);
-  //in_pred(std::ranges::partition, in, binary_pred);
-  //in_pred(std::ranges::stable_partition, in, binary_pred);
+  in_pred(std::ranges::partition, in, unary_pred);
+  in_pred(std::ranges::stable_partition, in, unary_pred);
   in_pred(std::ranges::sort, in, binary_pred);
   in_pred(std::ranges::stable_sort, in, binary_pred);
   //in_mid_pred(std::ranges::partial_sort, in, mid, binary_pred);
