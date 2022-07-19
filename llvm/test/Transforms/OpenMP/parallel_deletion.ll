@@ -547,7 +547,7 @@ define internal void @.omp_outlined..6(i32* noalias %.global_tid., i32* noalias 
 ; CHECK-NEXT:    store i32* [[A1]], i32** [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* noundef nonnull @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 noundef 1, i64 noundef 8, i8* noundef nonnull align 8 [[TMP3]], void (i8*, i8*)* noundef nonnull @.omp.reduction.reduction_func, [8 x i32]* noundef nonnull @.gomp_critical_user_.reduction.var)
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* noundef nonnull @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 noundef 1, i64 noundef 8, i8* noundef nonnull [[TMP3]], void (i8*, i8*)* noundef nonnull @.omp.reduction.reduction_func, [8 x i32]* noundef nonnull @.gomp_critical_user_.reduction.var)
 ; CHECK-NEXT:    switch i32 [[TMP4]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 ; CHECK-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
