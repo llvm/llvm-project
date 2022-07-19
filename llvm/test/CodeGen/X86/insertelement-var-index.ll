@@ -638,7 +638,7 @@ define <32 x i8> @load_i8_v32i8_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i8_v32i8_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    andl $31, %esi
 ; SSE-NEXT:    movb %al, -40(%rsp,%rsi)
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
@@ -865,7 +865,7 @@ define <16 x i8> @arg_i8_v16i8(<16 x i8> %v, i8 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
-; X86AVX2-NEXT:    movb 8(%ebp), %cl
+; X86AVX2-NEXT:    movzbl 8(%ebp), %ecx
 ; X86AVX2-NEXT:    vmovaps %xmm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %xmm0
@@ -1160,7 +1160,7 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i8_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $15, %esi
 ; SSE-NEXT:    movb %al, -24(%rsp,%rsi)
@@ -1170,7 +1170,7 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, ptr %p, i32 %y) nounwind {
 ; AVX1OR2-LABEL: load_i8_v16i8:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    movb (%rdi), %al
+; AVX1OR2-NEXT:    movzbl (%rdi), %eax
 ; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX1OR2-NEXT:    andl $15, %esi
 ; AVX1OR2-NEXT:    movb %al, -24(%rsp,%rsi)
@@ -1180,7 +1180,7 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, ptr %p, i32 %y) nounwind {
 ; AVX512F-LABEL: load_i8_v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX512F-NEXT:    movb (%rdi), %al
+; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    andl $15, %esi
 ; AVX512F-NEXT:    movb %al, -24(%rsp,%rsi)
@@ -1203,7 +1203,7 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
-; X86AVX2-NEXT:    movb (%ecx), %cl
+; X86AVX2-NEXT:    movzbl (%ecx), %ecx
 ; X86AVX2-NEXT:    vmovaps %xmm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %xmm0
@@ -1572,7 +1572,7 @@ define <32 x i8> @arg_i8_v32i8(<32 x i8> %v, i8 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    subl $64, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $31, %eax
-; X86AVX2-NEXT:    movb 8(%ebp), %cl
+; X86AVX2-NEXT:    movzbl 8(%ebp), %ecx
 ; X86AVX2-NEXT:    vmovaps %ymm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %ymm0
@@ -1884,7 +1884,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i8_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $31, %esi
@@ -1900,7 +1900,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    andq $-32, %rsp
 ; AVX1OR2-NEXT:    subq $64, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    movb (%rdi), %al
+; AVX1OR2-NEXT:    movzbl (%rdi), %eax
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX1OR2-NEXT:    andl $31, %esi
 ; AVX1OR2-NEXT:    movb %al, (%rsp,%rsi)
@@ -1916,7 +1916,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $64, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX512F-NEXT:    movb (%rdi), %al
+; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512F-NEXT:    andl $31, %esi
 ; AVX512F-NEXT:    movb %al, (%rsp,%rsi)
@@ -1941,7 +1941,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $31, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
-; X86AVX2-NEXT:    movb (%ecx), %cl
+; X86AVX2-NEXT:    movzbl (%ecx), %ecx
 ; X86AVX2-NEXT:    vmovaps %ymm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %ymm0

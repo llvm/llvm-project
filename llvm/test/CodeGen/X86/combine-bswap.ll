@@ -176,13 +176,13 @@ define void @demand_one_loaded_byte(ptr %xp, ptr %yp) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb 4(%ecx), %cl
+; X86-NEXT:    movzbl 4(%ecx), %ecx
 ; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: demand_one_loaded_byte:
 ; X64:       # %bb.0:
-; X64-NEXT:    movb 4(%rdi), %al
+; X64-NEXT:    movzbl 4(%rdi), %eax
 ; X64-NEXT:    movb %al, (%rsi)
 ; X64-NEXT:    retq
   %x = load i64, ptr %xp, align 8

@@ -10,17 +10,17 @@ define i8 @test_offset(ptr %base) {
 ; CHECK-NEXT:    movl $0, 1(%rdi)
 ; CHECK-NEXT:    movl -4(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl 1(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl 5(%rdi), %eax
 ; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb 7(%rdi), %al
+; CHECK-NEXT:    movzbl 7(%rdi), %eax
 ; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl 8(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

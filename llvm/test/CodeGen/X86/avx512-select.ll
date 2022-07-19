@@ -131,7 +131,7 @@ define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 define i8 @select05(i8 %a.0, i8 %m) {
 ; X86-LABEL: select05:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
 ;
@@ -206,7 +206,7 @@ define i8 @select05_mem(ptr %a.0, ptr %m) {
 define i8 @select06(i8 %a.0, i8 %m) {
 ; X86-LABEL: select06:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
 ;

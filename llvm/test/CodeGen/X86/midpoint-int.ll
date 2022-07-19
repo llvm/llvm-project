@@ -967,8 +967,8 @@ define i8 @scalar_i8_signed_reg_reg(i8 %a1, i8 %a2) nounwind {
 ;
 ; X86-LABEL: scalar_i8_signed_reg_reg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB15_1
@@ -1017,8 +1017,8 @@ define i8 @scalar_i8_unsigned_reg_reg(i8 %a1, i8 %a2) nounwind {
 ;
 ; X86-LABEL: scalar_i8_unsigned_reg_reg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setbe %dl
 ; X86-NEXT:    ja .LBB16_1
@@ -1070,9 +1070,9 @@ define i8 @scalar_i8_signed_mem_reg(ptr %a1_addr, i8 %a2) nounwind {
 ;
 ; X86-LABEL: scalar_i8_signed_mem_reg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb (%ecx), %cl
+; X86-NEXT:    movzbl (%ecx), %ecx
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB17_1
@@ -1122,9 +1122,9 @@ define i8 @scalar_i8_signed_reg_mem(i8 %a1, ptr %a2_addr) nounwind {
 ;
 ; X86-LABEL: scalar_i8_signed_reg_mem:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB18_1
@@ -1177,8 +1177,8 @@ define i8 @scalar_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb (%ecx), %cl
-; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl (%ecx), %ecx
+; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB19_1

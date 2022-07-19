@@ -7,10 +7,10 @@
 
 ; X86-LABEL: {{^}}merge_store_partial_overlap_load:
 ; X86-DAG: movzwl ([[BASEREG:%[a-z]+]]), %e[[LO2:[a-z]+]]
-; X86-DAG: movb 2([[BASEREG]]), [[HI1:%[a-z]+]]
+; X86-DAG: movzbl 2([[BASEREG]]), %e[[HI1:[a-z]]]
 
 ; X86-NEXT: movw %[[LO2]], 1([[BASEREG]])
-; X86-NEXT: movb [[HI1]], 3([[BASEREG]])
+; X86-NEXT: movb %[[HI1]]l, 3([[BASEREG]])
 ; X86-NEXT: retq
 
 ; DBGDAG-LABEL: Optimized legalized selection DAG: %bb.0 'merge_store_partial_overlap_load:'

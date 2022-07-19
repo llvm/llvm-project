@@ -15,7 +15,7 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    xorl %ecx, %ecx
 ; SOURCE-SCHED-NEXT:    cmpl $2, %eax
 ; SOURCE-SCHED-NEXT:    setge %cl
-; SOURCE-SCHED-NEXT:    movb g_73, %dl
+; SOURCE-SCHED-NEXT:    movzbl g_73, %edx
 ; SOURCE-SCHED-NEXT:    xorl %eax, %eax
 ; SOURCE-SCHED-NEXT:    subb {{[0-9]+}}(%esp), %al
 ; SOURCE-SCHED-NEXT:    testb %dl, %dl

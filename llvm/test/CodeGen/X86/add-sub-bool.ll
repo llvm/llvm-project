@@ -390,7 +390,7 @@ define i64 @test_i64_add_add_var(i64 %x, i64 %y, i64 %z, i64 %w) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -529,7 +529,7 @@ define i32 @test_i32_sub_add_sext_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_add_sext_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    sarl $31, %edx

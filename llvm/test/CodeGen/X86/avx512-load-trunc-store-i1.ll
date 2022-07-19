@@ -13,7 +13,7 @@ define void @load_v1i2_trunc_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512-ONLY-LABEL: load_v1i2_trunc_v1i1_store:
 ; AVX512-ONLY:       # %bb.0:
-; AVX512-ONLY-NEXT:    movb (%rdi), %al
+; AVX512-ONLY-NEXT:    movzbl (%rdi), %eax
 ; AVX512-ONLY-NEXT:    andl $1, %eax
 ; AVX512-ONLY-NEXT:    kmovw %eax, %k0
 ; AVX512-ONLY-NEXT:    kmovw %k0, %eax
@@ -35,7 +35,7 @@ define void @load_v1i3_trunc_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512-ONLY-LABEL: load_v1i3_trunc_v1i1_store:
 ; AVX512-ONLY:       # %bb.0:
-; AVX512-ONLY-NEXT:    movb (%rdi), %al
+; AVX512-ONLY-NEXT:    movzbl (%rdi), %eax
 ; AVX512-ONLY-NEXT:    andl $1, %eax
 ; AVX512-ONLY-NEXT:    kmovw %eax, %k0
 ; AVX512-ONLY-NEXT:    kmovw %k0, %eax
@@ -57,7 +57,7 @@ define void @load_v1i4_trunc_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512-ONLY-LABEL: load_v1i4_trunc_v1i1_store:
 ; AVX512-ONLY:       # %bb.0:
-; AVX512-ONLY-NEXT:    movb (%rdi), %al
+; AVX512-ONLY-NEXT:    movzbl (%rdi), %eax
 ; AVX512-ONLY-NEXT:    andl $1, %eax
 ; AVX512-ONLY-NEXT:    kmovw %eax, %k0
 ; AVX512-ONLY-NEXT:    kmovw %k0, %eax
@@ -79,7 +79,7 @@ define void @load_v1i8_trunc_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512-ONLY-LABEL: load_v1i8_trunc_v1i1_store:
 ; AVX512-ONLY:       # %bb.0:
-; AVX512-ONLY-NEXT:    movb (%rdi), %al
+; AVX512-ONLY-NEXT:    movzbl (%rdi), %eax
 ; AVX512-ONLY-NEXT:    andl $1, %eax
 ; AVX512-ONLY-NEXT:    kmovw %eax, %k0
 ; AVX512-ONLY-NEXT:    kmovw %k0, %eax
@@ -101,7 +101,7 @@ define void @load_v1i16_trunc_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512-ONLY-LABEL: load_v1i16_trunc_v1i1_store:
 ; AVX512-ONLY:       # %bb.0:
-; AVX512-ONLY-NEXT:    movb (%rdi), %al
+; AVX512-ONLY-NEXT:    movzbl (%rdi), %eax
 ; AVX512-ONLY-NEXT:    andl $1, %eax
 ; AVX512-ONLY-NEXT:    kmovw %eax, %k0
 ; AVX512-ONLY-NEXT:    kmovw %k0, %eax
@@ -123,7 +123,7 @@ define void @load_v1i32_trunc_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512-ONLY-LABEL: load_v1i32_trunc_v1i1_store:
 ; AVX512-ONLY:       # %bb.0:
-; AVX512-ONLY-NEXT:    movb (%rdi), %al
+; AVX512-ONLY-NEXT:    movzbl (%rdi), %eax
 ; AVX512-ONLY-NEXT:    andl $1, %eax
 ; AVX512-ONLY-NEXT:    kmovw %eax, %k0
 ; AVX512-ONLY-NEXT:    kmovw %k0, %eax
@@ -145,7 +145,7 @@ define void @load_v1i64_trunc_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512-ONLY-LABEL: load_v1i64_trunc_v1i1_store:
 ; AVX512-ONLY:       # %bb.0:
-; AVX512-ONLY-NEXT:    movb (%rdi), %al
+; AVX512-ONLY-NEXT:    movzbl (%rdi), %eax
 ; AVX512-ONLY-NEXT:    andl $1, %eax
 ; AVX512-ONLY-NEXT:    kmovw %eax, %k0
 ; AVX512-ONLY-NEXT:    kmovw %k0, %eax
