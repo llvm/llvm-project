@@ -34,7 +34,7 @@ define float @sitofp_i1tof32(i1 %x) #0 {
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    pushl %eax
 ; SSE-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE-X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; SSE-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    andb $1, %al
 ; SSE-X86-NEXT:    negb %al
 ; SSE-X86-NEXT:    movsbl %al, %eax
@@ -58,7 +58,7 @@ define float @sitofp_i1tof32(i1 %x) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; AVX-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; AVX-X86-NEXT:    andb $1, %al
 ; AVX-X86-NEXT:    negb %al
 ; AVX-X86-NEXT:    movsbl %al, %eax
@@ -82,7 +82,7 @@ define float @sitofp_i1tof32(i1 %x) #0 {
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %eax
 ; X87-NEXT:    .cfi_def_cfa_offset 8
-; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    andb $1, %al
 ; X87-NEXT:    negb %al
 ; X87-NEXT:    movsbl %al, %eax
@@ -313,7 +313,7 @@ define float @uitofp_i1tof32(i1 %x) #0 {
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    pushl %eax
 ; SSE-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE-X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; SSE-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    andb $1, %al
 ; SSE-X86-NEXT:    movzbl %al, %eax
 ; SSE-X86-NEXT:    cvtsi2ss %eax, %xmm0
@@ -334,7 +334,7 @@ define float @uitofp_i1tof32(i1 %x) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; AVX-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; AVX-X86-NEXT:    andb $1, %al
 ; AVX-X86-NEXT:    movzbl %al, %eax
 ; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
@@ -355,7 +355,7 @@ define float @uitofp_i1tof32(i1 %x) #0 {
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %eax
 ; X87-NEXT:    .cfi_def_cfa_offset 8
-; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    andb $1, %al
 ; X87-NEXT:    movzbl %al, %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
@@ -965,7 +965,7 @@ define double @uitofp_i1tof64(i1 %x) #0 {
 ; SSE-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE-X86-NEXT:    andl $-8, %esp
 ; SSE-X86-NEXT:    subl $8, %esp
-; SSE-X86-NEXT:    movb 8(%ebp), %al
+; SSE-X86-NEXT:    movzbl 8(%ebp), %eax
 ; SSE-X86-NEXT:    andb $1, %al
 ; SSE-X86-NEXT:    movzbl %al, %eax
 ; SSE-X86-NEXT:    cvtsi2sd %eax, %xmm0
@@ -992,7 +992,7 @@ define double @uitofp_i1tof64(i1 %x) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    movb 8(%ebp), %al
+; AVX-X86-NEXT:    movzbl 8(%ebp), %eax
 ; AVX-X86-NEXT:    andb $1, %al
 ; AVX-X86-NEXT:    movzbl %al, %eax
 ; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
@@ -1014,7 +1014,7 @@ define double @uitofp_i1tof64(i1 %x) #0 {
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %eax
 ; X87-NEXT:    .cfi_def_cfa_offset 8
-; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    andb $1, %al
 ; X87-NEXT:    movzbl %al, %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)

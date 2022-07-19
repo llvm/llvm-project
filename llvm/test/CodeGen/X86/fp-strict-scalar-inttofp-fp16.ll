@@ -43,7 +43,7 @@ define half @sitofp_i1tof16(i1 %x) #0 {
 ;
 ; X86-LABEL: sitofp_i1tof16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    negb %al
 ; X86-NEXT:    movsbl %al, %eax
@@ -231,7 +231,7 @@ define half @uitofp_i1tof16(i1 %x) #0 {
 ;
 ; X86-LABEL: uitofp_i1tof16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0

@@ -4,7 +4,7 @@
 define zeroext i1 @f1(ptr %x) {
 ; CHECK-LABEL: f1:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    retq
 
 entry:
@@ -16,7 +16,7 @@ entry:
 define zeroext i1 @f2(ptr %x) {
 ; CHECK-LABEL: f2:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    retq
 
 entry:

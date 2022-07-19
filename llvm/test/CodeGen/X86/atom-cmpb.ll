@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mcpu=atom | FileCheck %s
 ; CHECK:        movl
-; CHECK:        movb
-; CHECK:        movb
+; CHECK:        movzbl
+; CHECK:        movzbl
 ; CHECK:        cmpb
 ; CHECK:        notb
 ; CHECK:        notb

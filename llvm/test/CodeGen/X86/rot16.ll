@@ -7,7 +7,7 @@
 define i16 @foo(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw %cl, %ax
 ; X86-NEXT:    retl
@@ -32,7 +32,7 @@ define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shldw %cl, %dx, %ax
 ; X86-NEXT:    retl
@@ -56,7 +56,7 @@ define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 define i16 @un(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-LABEL: un:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rorw %cl, %ax
 ; X86-NEXT:    retl
@@ -81,7 +81,7 @@ define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shrdw %cl, %dx, %ax
 ; X86-NEXT:    retl
