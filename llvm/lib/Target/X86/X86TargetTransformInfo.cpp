@@ -5734,6 +5734,10 @@ bool X86TTIImpl::isExpensiveToSpeculativelyExecute(const Instruction* I) {
   return BaseT::isExpensiveToSpeculativelyExecute(I);
 }
 
+unsigned X86TTIImpl::maxLegalDivRemBitWidth() const {
+  return ST->is64Bit() ? 128 : 64;
+}
+
 bool X86TTIImpl::isFCmpOrdCheaperThanFCmpZero(Type *Ty) {
   return false;
 }
