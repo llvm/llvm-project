@@ -9,6 +9,7 @@
 #ifndef LLVM_DWARFLINKER_DWARFLINKER_H
 #define LLVM_DWARFLINKER_DWARFLINKER_H
 
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
@@ -36,25 +37,6 @@ enum class DwarfLinkerAccelTableKind : uint8_t {
   Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
   Pub,     ///< .debug_pubnames, .debug_pubtypes
 };
-
-/// Partial address range. Besides an offset, only the
-/// HighPC is stored. The structure is stored in a map where the LowPC is the
-/// key.
-struct ObjFileAddressRange {
-  /// Function HighPC.
-  uint64_t HighPC;
-  /// Offset to apply to the linked address.
-  /// should be 0 for not-linked object file.
-  int64_t Offset;
-
-  ObjFileAddressRange(uint64_t EndPC, int64_t Offset)
-      : HighPC(EndPC), Offset(Offset) {}
-
-  ObjFileAddressRange() : HighPC(0), Offset(0) {}
-};
-
-/// Map LowPC to ObjFileAddressRange.
-using RangesTy = std::map<uint64_t, ObjFileAddressRange>;
 
 /// AddressesMap represents information about valid addresses used
 /// by debug information. Valid addresses are those which points to
@@ -142,7 +124,7 @@ public:
   /// original \p Entries.
   virtual void emitRangesEntries(
       int64_t UnitPcOffset, uint64_t OrigLowPc,
-      const FunctionIntervals::const_iterator &FuncRange,
+      Optional<std::pair<AddressRange, int64_t>> FuncRange,
       const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
       unsigned AddressSize) = 0;
 
