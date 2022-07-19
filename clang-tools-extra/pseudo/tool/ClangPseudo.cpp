@@ -45,6 +45,8 @@ static opt<bool>
                     desc("Strip directives and select conditional sections"));
 static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
+static opt<bool> ForestAbbrev("forest-abbrev", desc("Abbreviate parse forest"),
+                              init(true));
 static opt<std::string> HTMLForest("html-forest",
                                    desc("output file for HTML forest"));
 static opt<std::string> StartSymbol("start-symbol",
@@ -153,7 +155,7 @@ int main(int argc, char *argv[]) {
         glrParse(clang::pseudo::ParseParams{*ParseableStream, Arena, GSS},
                  *StartSymID, Lang);
     if (PrintForest)
-      llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/true);
+      llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/ForestAbbrev);
 
     if (HTMLForest.getNumOccurrences()) {
       std::error_code EC;

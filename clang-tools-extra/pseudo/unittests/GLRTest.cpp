@@ -631,10 +631,10 @@ TEST_F(GLRTest, GuardExtension) {
   build(R"bnf(
     _ := start
 
-    start := IDENTIFIER [guard=TestOnly]
+    start := IDENTIFIER [guard]
   )bnf");
   TestLang.Guards.try_emplace(
-      extensionID("TestOnly"),
+      ruleFor("start"),
       [&](llvm::ArrayRef<const ForestNode *> RHS, const TokenStream &Tokens) {
         assert(RHS.size() == 1 &&
                RHS.front()->symbol() == tokenSymbol(clang::tok::identifier));
@@ -647,7 +647,7 @@ TEST_F(GLRTest, GuardExtension) {
   const TokenStream &Succeeded = cook(lex(Input, LOptions), LOptions);
   EXPECT_EQ(glrParse({Succeeded, Arena, GSStack}, id("start"), TestLang)
                 .dumpRecursive(TestLang.G),
-            "[  0, end) start := IDENTIFIER [guard=TestOnly]\n"
+            "[  0, end) start := IDENTIFIER [guard]\n"
             "[  0, end) └─IDENTIFIER := tok[0]\n");
 
   Input = "notest";
