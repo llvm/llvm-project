@@ -46,7 +46,7 @@ struct Language {
   LRTable Table;
 
   // Binding extension ids to corresponding implementations.
-  llvm::DenseMap<ExtensionID, RuleGuard> Guards;
+  llvm::DenseMap<RuleID, RuleGuard> Guards;
   llvm::DenseMap<ExtensionID, RecoveryStrategy> RecoveryStrategies;
 
   // FIXME: add clang::LangOptions.
