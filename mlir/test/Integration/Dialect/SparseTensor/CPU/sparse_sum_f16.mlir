@@ -52,9 +52,7 @@ module {
     %d0 = arith.constant 0.0 : f16
     // Setup memory for a single reduction scalar,
     // initialized to zero.
-    %xdata = memref.alloc() : memref<f16>
-    memref.store %d0, %xdata[] : memref<f16>
-    %x = bufferization.to_tensor %xdata : memref<f16>
+    %x = tensor.from_elements %d0 : tensor<f16>
 
     // Call the kernel.
     %0 = call @kernel_sum_reduce(%a, %x)
@@ -64,13 +62,11 @@ module {
     //
     // CHECK: 13.5
     //
-    %m = bufferization.to_memref %0 : memref<f16>
-    %v = memref.load %m[] : memref<f16>
+    %v = tensor.extract %0[] : tensor<f16>
     %vf = arith.extf %v: f16 to f32
     vector.print %vf : f32
 
     // Release the resources.
-    memref.dealloc %xdata : memref<f16>
     bufferization.dealloc_tensor %a : tensor<?x?xf16, #SparseMatrix>
 
     return

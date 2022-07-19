@@ -219,8 +219,7 @@ module {
     %m4 = sparse_tensor.values %4 : tensor<?xf64, #DenseVector> to memref<?xf64>
     %v4 = vector.load %m4[%c0]: memref<?xf64>, vector<32xf64>
     vector.print %v4 : vector<32xf64>
-    %m5 = bufferization.to_memref %5 : memref<f64>
-    %v5 = memref.load %m5[] : memref<f64>
+    %v5 = tensor.extract %5[] : tensor<f64>
     vector.print %v5 : f64
 
     // Release the resources.
