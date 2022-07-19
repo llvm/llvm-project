@@ -1306,6 +1306,11 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
 
+  for (const Arg *arg : args.filtered(OPT_alias)) {
+    config->aliasedSymbols.push_back(
+        std::make_pair(arg->getValue(0), arg->getValue(1)));
+  }
+
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
 
@@ -1557,6 +1562,18 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     createSyntheticSections();
     createSyntheticSymbols();
+
+    for (const auto &pair : config->aliasedSymbols) {
+      if (const auto &sym = symtab->find(pair.first)) {
+        if (const auto &defined = dyn_cast<Defined>(sym)) {
+          symtab->aliasDefined(defined, pair.second);
+          continue;
+        }
+      }
+
+      warn("undefined base symbol '" + pair.first + "' for alias '" +
+           pair.second + "'\n");
+    }
 
     if (config->hasExplicitExports) {
       parallelForEach(symtab->getSymbols(), [](Symbol *sym) {

@@ -188,6 +188,8 @@ struct Configuration {
   SymbolPatterns unexportedSymbols;
   SymbolPatterns whyLive;
 
+  std::vector<std::pair<llvm::StringRef, llvm::StringRef>> aliasedSymbols;
+
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
 

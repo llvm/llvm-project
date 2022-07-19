@@ -43,6 +43,8 @@ public:
                       bool isReferencedDynamically, bool noDeadStrip,
                       bool isWeakDefCanBeHidden);
 
+  Defined *aliasDefined(Defined *src, StringRef target);
+
   Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
 
   Symbol *addCommon(StringRef name, InputFile *, uint64_t size, uint32_t align,
