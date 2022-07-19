@@ -121,6 +121,9 @@ static volatile bool SHARED(__is_last_team);
 
 extern "C" {
 void __kmpc_xteam_sum_d(double inval, double *result_value) {
+  if (inval == 0)
+    return;
+
   double val;
 #pragma omp allocate(val) allocator(omp_thread_mem_alloc)
   val = inval;
@@ -190,6 +193,9 @@ void __kmpc_xteam_sum_d(double inval, double *result_value) {
   }
 }
 void __kmpc_xteam_sum_f(float inval, float *result_value) {
+  if (inval == 0)
+    return;
+
   float val;
 #pragma omp allocate(val) allocator(omp_thread_mem_alloc)
   val = inval;
