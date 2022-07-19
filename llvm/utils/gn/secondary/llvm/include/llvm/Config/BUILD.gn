@@ -322,6 +322,7 @@ write_cmake_config("llvm-config") {
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
+    "LLVM_ENABLE_ZSTD=",
     "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
