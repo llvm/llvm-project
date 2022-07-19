@@ -302,7 +302,7 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
   }
 
   llvm::StringRef MangledName = getMangledName(GD);
-  if (GetGlobalValue(MangledName) != nullptr) {
+  if (getGlobalValue(MangledName) != nullptr) {
     // The value has already been used and should therefore be emitted.
     addDeferredDeclToEmit(GD);
   } else if (MustBeEmitted(Global)) {
@@ -355,12 +355,16 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   assert(!D->getAttr<AnnotateAttr>() && "NYI");
 }
 
-mlir::cir::GlobalOp CIRGenModule::getGlobalValue(StringRef Name) {
+mlir::Operation *CIRGenModule::getGlobalValue(StringRef Name) {
   auto global = mlir::SymbolTable::lookupSymbolIn(theModule, Name);
   if (!global)
     return {};
-  assert(isa<mlir::cir::GlobalOp>(global) && "not supported");
-  return cast<mlir::cir::GlobalOp>(global);
+  return global;
+}
+
+mlir::Value CIRGenModule::getGlobalValue(const Decl *D) {
+  assert(CurCGF);
+  return CurCGF->symbolTable.lookup(D);
 }
 
 static mlir::cir::GlobalOp createGlobalOp(CIRGenModule &CGM, mlir::Location loc,
@@ -405,7 +409,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
                                    LangAS AddrSpace, const VarDecl *D,
                                    ForDefinition_t IsForDefinition) {
   // Lookup the entry, lazily creating it if necessary.
-  mlir::cir::GlobalOp Entry = getGlobalValue(MangledName);
+  mlir::cir::GlobalOp Entry;
+  if (auto *V = getGlobalValue(MangledName)) {
+    assert(isa<mlir::cir::GlobalOp>(V) && "only supports GlobalOp for now");
+    Entry = dyn_cast_or_null<mlir::cir::GlobalOp>(V);
+  }
 
   // unsigned TargetAS = astCtx.getTargetAddressSpace(AddrSpace);
   if (Entry) {
@@ -1442,8 +1450,11 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   }
 
   // Lookup the entry, lazily creating it if necessary.
-  mlir::Operation *Entry = GetGlobalValue(MangledName);
+  mlir::Operation *Entry = getGlobalValue(MangledName);
   if (Entry) {
+    assert(isa<mlir::FuncOp>(Entry) &&
+           "not implemented, only supports FuncOp for now");
+
     if (WeakRefReferences.erase(Entry)) {
       llvm_unreachable("NYI");
     }
@@ -1568,11 +1579,6 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   assert(false && "Incompmlete functions NYI");
 }
 
-mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
-  assert(CurCGF);
-  return CurCGF->symbolTable.lookup(D);
-}
-
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {
   const SourceManager &SM = astCtx.getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
@@ -1635,11 +1641,13 @@ void CIRGenModule::buildDeferred() {
     // IsForDefinition equal to true. Query mangled names table to get
     // GlobalValue.
     if (!Op) {
-      Op = GetGlobalValue(getMangledName(D));
+      Op = getGlobalValue(getMangledName(D));
     }
 
-    // Make sure GetGlobalValue returned non-null.
+    // Make sure getGlobalValue returned non-null.
     assert(Op);
+    assert(isa<mlir::FuncOp>(Op) &&
+           "not implemented, only supports FuncOp for now");
 
     // Check to see if we've already emitted this. This is necessary for a
     // couple of reasons: first, decls can end up in deferred-decls queue
@@ -1672,18 +1680,6 @@ void CIRGenModule::buildDeferred() {
 mlir::IntegerAttr CIRGenModule::getSize(CharUnits size) {
   return mlir::IntegerAttr::get(
       mlir::IntegerType::get(builder.getContext(), 64), size.getQuantity());
-}
-
-// TODO: this is gross, make a map
-mlir::Operation *CIRGenModule::GetGlobalValue(StringRef Name) {
-  for (auto const &op :
-       theModule.getBodyRegion().front().getOps<mlir::FuncOp>())
-    if (auto Fn = llvm::cast<mlir::FuncOp>(op)) {
-      if (Name == Fn.getName())
-        return Fn;
-    }
-
-  return nullptr;
 }
 
 mlir::Operation *

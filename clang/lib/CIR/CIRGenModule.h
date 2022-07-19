@@ -152,7 +152,8 @@ public:
   void maybeHandleStaticInExternC(const SomeDecl *D, mlir::cir::GlobalOp GV);
 
   llvm::DenseMap<StringRef, mlir::Value> Globals;
-  mlir::cir::GlobalOp getGlobalValue(StringRef Ref);
+  mlir::Operation *getGlobalValue(StringRef Ref);
+  mlir::Value getGlobalValue(const clang::Decl *D);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
@@ -309,10 +310,6 @@ public:
                   ForDefinition_t IsForDefinition = NotForDefinition);
 
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
-
-  mlir::Value GetGlobalValue(const clang::Decl *D);
-
-  mlir::Operation *GetGlobalValue(llvm::StringRef Ref);
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const clang::TagDecl *TD);
