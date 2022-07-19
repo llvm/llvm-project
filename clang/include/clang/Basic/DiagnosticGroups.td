@@ -35,7 +35,7 @@ def ArrayParameter : DiagGroup<"array-parameter">;
 def AutoDisableVptrSanitizer : DiagGroup<"auto-disable-vptr-sanitizer">;
 def Availability : DiagGroup<"availability">;
 def Section : DiagGroup<"section">;
-def AutoImport : DiagGroup<"auto-import">;
+def : DiagGroup<"auto-import">;
 def FrameworkHdrQuotedInclude : DiagGroup<"quoted-include-in-framework-header">;
 def FrameworkIncludePrivateFromPublic :
   DiagGroup<"framework-include-private-from-public">;
@@ -490,6 +490,7 @@ def ModuleBuild : DiagGroup<"module-build">;
 def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
+def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;

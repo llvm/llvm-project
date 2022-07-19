@@ -851,9 +851,9 @@ def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
   >, InGroup<FrameworkIncludePrivateFromPublic>;
 
-def warn_auto_module_import : Warning<
+def remark_pp_include_directive_modular_translation : Remark<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
-  "import of module '%1'">, InGroup<AutoImport>, DefaultIgnore;
+  "import of module '%1'">, InGroup<ModuleIncludeDirectiveTranslation>;
 def note_implicit_top_level_module_import_here : Note<
   "submodule of top-level module '%0' implicitly imported here">;
 def warn_uncovered_module_header : Warning<

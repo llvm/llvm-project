@@ -10,7 +10,7 @@
 
 // RUN: %clang_cc1 -std=c++20 Xlate.cpp -emit-module-interface -o Xlate.pcm \
 // RUN: -fmodule-file=h1.pcm -fmodule-file=h2.pcm -fmodule-file=h3.pcm \
-// RUN: -fmodule-file=h4.pcm -fsyntax-only -Wauto-import -verify
+// RUN: -fmodule-file=h4.pcm -fsyntax-only -Rmodule-include-translation -verify
 
 // Check that we do the intended translation and not more.
 // RUN: %clang_cc1 -std=c++20 Xlate.cpp \
@@ -80,7 +80,7 @@ void five();
 module /*nothing here*/;
 
 // This should be include-translated, when the header unit for h1 is available.
-#include "h1.h" // expected-warning {{treating #include as an import of module './h1.h'}}
+#include "h1.h" // expected-remark {{treating #include as an import of module './h1.h'}}
 // Import of a header unit is allowed, named modules are not.
 import "h2.h";
 // A regular, untranslated, header
