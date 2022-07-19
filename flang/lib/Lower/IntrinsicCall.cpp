@@ -461,6 +461,12 @@ struct IntrinsicLibrary {
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
+
+  /// Lower a bitwise comparison intrinsic using the given comparator.
+  template <mlir::arith::CmpIPredicate pred>
+  mlir::Value genBitwiseCompare(mlir::Type resultType,
+                                llvm::ArrayRef<mlir::Value> args);
+
   mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -692,6 +698,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"bge", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::uge>},
+    {"bgt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ugt>},
+    {"ble", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ule>},
+    {"blt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ult>},
     {"btest", &I::genBtest},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
@@ -2337,6 +2347,39 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
   return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+// BGE, BGT, BLE, BLT
+template <mlir::arith::CmpIPredicate pred>
+mlir::Value
+IntrinsicLibrary::genBitwiseCompare(mlir::Type resultType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value arg0 = args[0];
+  mlir::Value arg1 = args[1];
+  mlir::Type arg0Ty = arg0.getType();
+  mlir::Type arg1Ty = arg1.getType();
+  unsigned bits0 = arg0Ty.getIntOrFloatBitWidth();
+  unsigned bits1 = arg1Ty.getIntOrFloatBitWidth();
+
+  // Arguments do not have to be of the same integer type. However, if neither
+  // of the arguments is a BOZ literal, then the shorter of the two needs
+  // to be converted to the longer by zero-extending (not sign-extending)
+  // to the left [Fortran 2008, 13.3.2].
+  //
+  // In the case of BOZ literals, the standard describes zero-extension or
+  // truncation depending on the kind of the result [Fortran 2008, 13.3.3].
+  // However, that seems to be relevant for the case where the type of the
+  // result must match the type of the BOZ literal. That is not the case for
+  // these intrinsics, so, again, zero-extend to the larger type.
+  //
+  if (bits0 > bits1)
+    arg1 = builder.create<mlir::arith::ExtUIOp>(loc, arg0Ty, arg1);
+  else if (bits0 < bits1)
+    arg0 = builder.create<mlir::arith::ExtUIOp>(loc, arg1Ty, arg0);
+
+  return builder.create<mlir::arith::CmpIOp>(loc, pred, arg0, arg1);
 }
 
 // BTEST
