@@ -120,7 +120,7 @@ static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
     return MatchContractionResult::NotLinalgOp;
   if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
     return MatchContractionResult::WrongNumOperands;
-  auto mapRange = linalgOp.indexing_maps().getAsValueRange<AffineMapAttr>();
+  auto mapRange = linalgOp.getIndexingMapsArray();
   if (linalgOp.getNumReductionLoops() == 0)
     return MatchContractionResult::NoReduction;
   if (llvm::any_of(mapRange,
@@ -280,7 +280,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
   if (linalgOp.getNumInputs() < 2 || linalgOp.getNumOutputs() != 1)
     return MatchConvolutionResult::WrongNumOperands;
 
-  auto indexingMaps = linalgOp.getIndexingMaps();
+  auto indexingMaps = linalgOp.getIndexingMapsArray();
 
   // Check the input indexing map has the right form.
   ConvAccessExprWalker inputExprWalker;
@@ -645,10 +645,10 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
       return failure();
 
   // All input/output operands must be indexed.
-  if (static_cast<int64_t>(linalgOp.indexing_maps().size()) !=
+  if (static_cast<int64_t>(linalgOp.getIndexingMapsArray().size()) !=
       linalgOp.getNumInputsAndOutputs())
     return op->emitOpError("expected the number of indexing_map (")
-           << linalgOp.indexing_maps().size()
+           << linalgOp.getIndexingMapsArray().size()
            << ") to be equal to the number of input/output operands ("
            << linalgOp.getNumInputsAndOutputs() << ")";
 

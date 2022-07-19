@@ -163,7 +163,8 @@ public:
 
   StructuredGenerator(OpBuilder &builder, StructuredOpInterface op)
       : builder(builder), ctx(op.getContext()), loc(op.getLoc()),
-        iterators(op.getIteratorTypes()), maps(op.getIndexingMaps()), op(op) {}
+        iterators(op.getIteratorTypes()), maps(op.getIndexingMapsArray()),
+        op(op) {}
 
   bool iters(ArrayRef<IteratorType> its) {
     if (its.size() != iterators.size())

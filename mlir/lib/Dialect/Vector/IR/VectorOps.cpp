@@ -677,8 +677,8 @@ static LogicalResult verifyOutputShape(
     // types fully define the result vector type. This assumes the affine maps
     // are well-formed, which must have been verified already.
     MLIRContext *ctx = op.getContext();
-    AffineMap lhsMap = op.getIndexingMaps()[0];
-    AffineMap rhsMap = op.getIndexingMaps()[1];
+    AffineMap lhsMap = op.getIndexingMapsArray()[0];
+    AffineMap rhsMap = op.getIndexingMapsArray()[1];
     if (getUnusedDimsBitVector({lhsMap, rhsMap}).any())
       return op.emitOpError(
           "expected all dimensions to be either a LHS or a RHS dimension");
@@ -697,7 +697,7 @@ static LogicalResult verifyOutputShape(
       return op.emitOpError("expected all dimensions to get an extent as "
                             "either a LHS or a RHS dimension");
 
-    AffineMap resMap = op.getIndexingMaps()[2];
+    AffineMap resMap = op.getIndexingMapsArray()[2];
     auto extentsMap = AffineMap::get(/*dimCount=*/extents.size(),
                                      /*symCount=*/0, extents, ctx);
     // Compose the resMap with the extentsMap, which is a constant map.
@@ -728,14 +728,14 @@ LogicalResult ContractionOp::verify() {
   auto resType = getResultType();
 
   // Verify that an indexing map was specified for each vector operand.
-  if (getIndexingMaps().size() != 3)
+  if (getIndexingMapsArray().size() != 3)
     return emitOpError("expected an indexing map for each vector operand");
 
   // Verify that each index map has 'numIterators' inputs, no symbols, and
   // that the number of map outputs equals the rank of its associated
   // vector operand.
   unsigned numIterators = getIteratorTypes().getValue().size();
-  for (const auto &it : llvm::enumerate(getIndexingMaps())) {
+  for (const auto &it : llvm::enumerate(getIndexingMapsArray())) {
     auto index = it.index();
     auto map = it.value();
     if (map.getNumSymbols() != 0)
@@ -833,7 +833,7 @@ void ContractionOp::getIterationBounds(
     SmallVectorImpl<int64_t> &iterationBounds) {
   auto lhsShape = getLhsType().getShape();
   auto resVectorType = getResultType().dyn_cast<VectorType>();
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
+  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
   SmallVector<int64_t, 2> iterationShape;
   for (const auto &it : llvm::enumerate(getIteratorTypes())) {
     // Search lhs/rhs map results for 'targetExpr'.
@@ -856,9 +856,9 @@ void ContractionOp::getIterationBounds(
 
 void ContractionOp::getIterationIndexMap(
     std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap) {
-  unsigned numMaps = getIndexingMaps().size();
+  unsigned numMaps = getIndexingMapsArray().size();
   iterationIndexMap.resize(numMaps);
-  for (const auto &it : llvm::enumerate(getIndexingMaps())) {
+  for (const auto &it : llvm::enumerate(getIndexingMapsArray())) {
     auto index = it.index();
     auto map = it.value();
     for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
@@ -869,13 +869,13 @@ void ContractionOp::getIterationIndexMap(
 }
 
 std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
+  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
   return getDimMap(indexingMaps, getIteratorTypes(),
                    getReductionIteratorTypeName(), getContext());
 }
 
 std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
+  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
   return getDimMap(indexingMaps, getIteratorTypes(),
                    getParallelIteratorTypeName(), getContext());
 }

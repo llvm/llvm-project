@@ -2750,7 +2750,7 @@ def TestLinalgConvOp :
       return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
     }
 
-    mlir::ArrayAttr indexing_maps() {
+    mlir::ArrayAttr getIndexingMaps() {
       return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
     }
 
@@ -2808,7 +2808,7 @@ def TestLinalgFillOp :
       return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
     }
 
-    mlir::ArrayAttr indexing_maps() {
+    mlir::ArrayAttr getIndexingMaps() {
       return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
     }
 

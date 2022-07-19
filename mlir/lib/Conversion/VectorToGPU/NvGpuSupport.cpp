@@ -290,7 +290,7 @@ PrepareContractToGPUMMASync::matchAndRewrite(vector::ContractionOp op,
   bindDims(rewriter.getContext(), m, n, k);
   static constexpr std::array<int64_t, 2> perm = {1, 0};
   auto iteratorTypes = op.getIteratorTypes().getValue();
-  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
   if (iteratorTypes.size() != 3)
     return failure();
   if (!(isParallelIterator(iteratorTypes[0]) &&

@@ -50,7 +50,7 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
   }];
 
   let extraClassDeclaration = [{
-    static StringRef getStaticSizesAttrName() {
+    static StringRef getStaticSizesAttrStrName() {
       return "static_sizes";
     }
 
