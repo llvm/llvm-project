@@ -390,3 +390,98 @@ func.func @result_number() {
   }
   return
 }
+
+// -----
+
+func.func @malformed_for_percent() {
+  affine.for i = 1 to 10 { // expected-error {{expected SSA operand}}
+
+// -----
+
+func.func @malformed_for_equal() {
+  affine.for %i 1 to 10 { // expected-error {{expected '='}}
+
+// -----
+
+func.func @malformed_for_to() {
+  affine.for %i = 1 too 10 { // expected-error {{expected 'to' between bounds}}
+  }
+}
+
+// -----
+
+func.func @incomplete_for() {
+  affine.for %i = 1 to 10 step 2
+}        // expected-error @-1 {{expected '{' to begin a region}}
+
+// -----
+
+#map0 = affine_map<(d0) -> (d0 floordiv 4)>
+
+func.func @reference_to_iv_in_bound() {
+  // expected-error@+2 {{region entry argument '%i0' is already in use}}
+  // expected-note@+1 {{previously referenced here}}
+  affine.for %i0 = #map0(%i0) to 10 {
+  }
+}
+
+// -----
+
+func.func @nonconstant_step(%1 : i32) {
+  affine.for %2 = 1 to 5 step %1 { // expected-error {{expected attribute value}}
+
+// -----
+
+func.func @for_negative_stride() {
+  affine.for %i = 1 to 10 step -1
+}        // expected-error@-1 {{expected step to be representable as a positive signed integer}}
+
+// -----
+
+func.func @invalid_if_conditional2() {
+  affine.for %i = 1 to 10 {
+    affine.if affine_set<(i)[N] : (i >= )>  // expected-error {{expected affine expression}}
+  }
+}
+
+// -----
+
+func.func @invalid_if_conditional3() {
+  affine.for %i = 1 to 10 {
+    affine.if affine_set<(i)[N] : (i == )>  // expected-error {{expected affine expression}}
+  }
+}
+
+// -----
+
+func.func @invalid_if_conditional6() {
+  affine.for %i = 1 to 10 {
+    affine.if affine_set<(i) : (i)> // expected-error {{expected '== affine-expr' or '>= affine-expr' at end of affine constraint}}
+  }
+}
+
+// -----
+// TODO: support affine.if (1)?
+func.func @invalid_if_conditional7() {
+  affine.for %i = 1 to 10 {
+    affine.if affine_set<(i) : (1)> // expected-error {{expected '== affine-expr' or '>= affine-expr' at end of affine constraint}}
+  }
+}
+
+// -----
+
+func.func @missing_for_max(%arg0: index, %arg1: index, %arg2: memref<100xf32>) {
+  // expected-error @+1 {{lower loop bound affine map with multiple results requires 'max' prefix}}
+  affine.for %i0 = affine_map<()[s]->(0,s-1)>()[%arg0] to %arg1 {
+  }
+  return
+}
+
+// -----
+
+func.func @missing_for_min(%arg0: index, %arg1: index, %arg2: memref<100xf32>) {
+  // expected-error @+1 {{upper loop bound affine map with multiple results requires 'min' prefix}}
+  affine.for %i0 = %arg0 to affine_map<()[s]->(100,s+1)>()[%arg1] {
+  }
+  return
+}
