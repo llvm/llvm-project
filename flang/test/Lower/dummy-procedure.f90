@@ -161,7 +161,7 @@ end subroutine
 ! CHECK-SAME: %[[x:.*]]: !fir.ref<f32>, %[[y:.*]]: !fir.ref<f32>) -> f32
   ! CHECK-DAG: %[[xload:.*]] = fir.load %[[x]] : !fir.ref<f32>
   ! CHECK-DAG: %[[yload:.*]] = fir.load %[[y]] : !fir.ref<f32>
-  ! CHECK: %[[atan2:.*]] = fir.call @__fs_atan2_1(%[[xload]], %[[yload]]) : (f32, f32) -> f32
+  ! CHECK: %[[atan2:.*]] = math.atan2 %[[xload]], %[[yload]] : f32
   ! CHECK: return %[[atan2]] : f32
 
 !CHECK-LABEL: func private @fir.aimag.f32.ref_z4(%arg0: !fir.ref<!fir.complex<4>>)
