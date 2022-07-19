@@ -353,11 +353,13 @@ public:
   void emitError(const llvm::Twine &message) { theModule.emitError(message); }
 
   /// -------
-  /// Linkage
+  /// Visibility and Linkage
   /// -------
 
-  mlir::SymbolTable::Visibility getFunctionLinkage(GlobalDecl GD);
-  mlir::SymbolTable::Visibility
+  static mlir::SymbolTable::Visibility
+  getMLIRVisibilityFromCIRLinkage(mlir::cir::GlobalLinkageKind GLK);
+  mlir::cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl GD);
+  mlir::cir::GlobalLinkageKind
   getCIRLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,
                              bool IsConstantVariable);
 

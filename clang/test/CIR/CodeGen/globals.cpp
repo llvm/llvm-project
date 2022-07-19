@@ -24,21 +24,21 @@ void use_global_string() {
 }
 
 // CHECK: module  {
-// CHECK-NEXT: cir.global @a = 3 : i32
-// CHECK-NEXT: cir.global @c = 2 : i64
-// CHECK-NEXT: cir.global @y = 3.400000e+00 : f32
-// CHECK-NEXT: cir.global @w = 4.300000e+00 : f64
-// CHECK-NEXT: cir.global @x = 51 : i8
-// CHECK-NEXT: cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
-// CHECK-NEXT: cir.global @alpha = #cir.cst_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8] : !cir.array<i8 x 4>>
+// CHECK-NEXT: cir.global external @a = 3 : i32
+// CHECK-NEXT: cir.global external @c = 2 : i64
+// CHECK-NEXT: cir.global external @y = 3.400000e+00 : f32
+// CHECK-NEXT: cir.global external @w = 4.300000e+00 : f64
+// CHECK-NEXT: cir.global external @x = 51 : i8
+// CHECK-NEXT: cir.global external @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+// CHECK-NEXT: cir.global external @alpha = #cir.cst_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8] : !cir.array<i8 x 4>>
 
-// CHECK-NEXT: cir.global "private" constant @".str" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
-// CHECK-NEXT: cir.global @s = @".str": !cir.ptr<i8>
+// CHECK-NEXT: cir.global "private" constant internal @".str" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
+// CHECK-NEXT: cir.global external @s = @".str": !cir.ptr<i8>
 
-// CHECK-NEXT: cir.global "private" constant @".str1" = #cir.cst_array<"example1\00" : !cir.array<i8 x 9>> : !cir.array<i8 x 9> {alignment = 1 : i64}
-// CHECK-NEXT: cir.global @s1 = @".str1": !cir.ptr<i8>
+// CHECK-NEXT: cir.global "private" constant internal @".str1" = #cir.cst_array<"example1\00" : !cir.array<i8 x 9>> : !cir.array<i8 x 9> {alignment = 1 : i64}
+// CHECK-NEXT: cir.global external @s1 = @".str1": !cir.ptr<i8>
 
-// CHECK-NEXT: cir.global @s2 = @".str": !cir.ptr<i8>
+// CHECK-NEXT: cir.global external @s2 = @".str": !cir.ptr<i8>
 
 // CHECK: func @_Z10use_globalv() {
 // CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["li", cinit] {alignment = 4 : i64}

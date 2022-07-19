@@ -913,6 +913,58 @@ def LoopOp : CIR_Op<"loop",
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
+// Linkage types. This is currently a replay of llvm/IR/GlobalValue.h, this is
+// currently handy as part of forwarding appropriate linkage types for LLVM
+// lowering, specially useful for C++ support.
+
+// Externally visible function
+def Global_ExternalLinkage :
+  I32EnumAttrCase<"ExternalLinkage", 0, "external">;
+// Available for inspection, not emission.
+def Global_AvailableExternallyLinkage :
+  I32EnumAttrCase<"AvailableExternallyLinkage", 1, "available_externally">;
+// Keep one copy of function when linking (inline)
+def Global_LinkOnceAnyLinkage :
+  I32EnumAttrCase<"LinkOnceAnyLinkage", 2, "linkonce">;
+// Same, but only replaced by something equivalent.
+def Global_LinkOnceODRLinkage :
+  I32EnumAttrCase<"LinkOnceODRLinkage", 3, "linkonce_odr">;
+// Keep one copy of named function when linking (weak)
+def Global_WeakAnyLinkage :
+  I32EnumAttrCase<"WeakAnyLinkage", 4, "weak">;
+// Same, but only replaced by something equivalent.
+def Global_WeakODRLinkage :
+  I32EnumAttrCase<"WeakODRLinkage", 5, "weak_odr">;
+// TODO: should we add something like appending linkage too?
+// Special purpose, only applies to global arrays
+// def Global_AppendingLinkage :
+//   I32EnumAttrCase<"AppendingLinkage", 6, "appending">;
+// Rename collisions when linking (static functions).
+def Global_InternalLinkage :
+  I32EnumAttrCase<"InternalLinkage", 7, "internal">;
+// Like Internal, but omit from symbol table.
+def Global_PrivateLinkage :
+  I32EnumAttrCase<"PrivateLinkage", 8, "private">;
+// ExternalWeak linkage description.
+def Global_ExternalWeakLinkage :
+  I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">;
+// Tentative definitions.
+def Global_CommonLinkage :
+  I32EnumAttrCase<"CommonLinkage", 10, "common">;
+
+/// An enumeration for the kinds of linkage for global values.
+def GlobalLinkageKind : I32EnumAttr<
+    "GlobalLinkageKind",
+    "Linkage type/kind",
+    [Global_ExternalLinkage, Global_AvailableExternallyLinkage,
+     Global_LinkOnceAnyLinkage, Global_LinkOnceODRLinkage,
+     Global_WeakAnyLinkage, Global_WeakODRLinkage,
+     Global_InternalLinkage, Global_PrivateLinkage,
+     Global_ExternalWeakLinkage, Global_CommonLinkage
+     ]> {
+  let cppNamespace = "::mlir::cir";
+}
+
 def GlobalOp : CIR_Op<"global", [Symbol]> {
   let summary = "Declares or defines a global variable";
   let description = [{
@@ -928,8 +980,9 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
     `constant` unit attribute. Writing to such constant global variables is
     undefined.
 
-    Symbol visibility is defined in terms of MLIR's visibility, and C/C++
-    linkage types are still TBD.
+    The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
+    Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
+    and verified to be in accordance to `linkage`.
 
     Example:
 
@@ -940,9 +993,12 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
+  // TODO: sym_visibility can possibly be represented by implementing the
+  // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
+                       Arg<GlobalLinkageKind, "linkage type">:$linkage,
                        // Note this can also be a FlatSymbolRefAttr
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
@@ -951,6 +1007,7 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
   let assemblyFormat = [{
        ($sym_visibility^)?
        (`constant` $constant^)?
+       $linkage
        $sym_name
        custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
        attr-dict
@@ -965,9 +1022,13 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins
+      // MLIR's default visibility is public.
       "StringRef":$sym_name,
       "Type":$sym_type,
-      CArg<"bool", "false">:$isConstant
+      CArg<"bool", "false">:$isConstant,
+      // CIR defaults to external linkage.
+      CArg<"cir::GlobalLinkageKind",
+            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage
       )>
   ];
 

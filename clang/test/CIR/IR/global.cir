@@ -1,26 +1,26 @@
 // RUN: cir-tool %s | FileCheck %s
 
 module {
-  cir.global @a = 3 : i32
-  cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
-  cir.global @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
-  cir.global "private" constant @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
-  cir.global "private" @c : i32
-  cir.global "private" constant @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
-  cir.global @s = @".str2": !cir.ptr<i8>
+  cir.global external @a = 3 : i32
+  cir.global external @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+  cir.global external @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
+  cir.global "private" constant internal @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
+  cir.global "private" internal @c : i32
+  cir.global "private" constant internal @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
+  cir.global external @s = @".str2": !cir.ptr<i8>
   func.func @use_global() {
     %0 = cir.get_global @a : cir.ptr <i32>
     cir.return
   }
 }
 
-// CHECK: cir.global @a = 3 : i32
-// CHECK: cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
-// CHECK: cir.global @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
-// CHECK: cir.global "private" constant @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
-// CHECK: cir.global "private" @c : i32
-// CHECK: cir.global "private" constant @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
-// CHECK: cir.global @s = @".str2": !cir.ptr<i8>
+// CHECK: cir.global external @a = 3 : i32
+// CHECK: cir.global external @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+// CHECK: cir.global external @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
+// CHECK: cir.global "private" constant internal @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
+// CHECK: cir.global "private" internal @c : i32
+// CHECK: cir.global "private" constant internal @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
+// CHECK: cir.global external @s = @".str2": !cir.ptr<i8>
 
 // CHECK: func @use_global()
 // CHECK-NEXT: %0 = cir.get_global @a : cir.ptr <i32>
