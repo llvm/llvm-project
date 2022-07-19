@@ -82,6 +82,17 @@ struct FinalizeRequest {
   shared::AllocActions Actions;
 };
 
+struct SharedMemorySegFinalizeRequest {
+  WireProtectionFlags Prot;
+  ExecutorAddr Addr;
+  uint64_t Size;
+};
+
+struct SharedMemoryFinalizeRequest {
+  std::vector<SharedMemorySegFinalizeRequest> Segments;
+  shared::AllocActions Actions;
+};
+
 template <typename T> struct UIntWrite {
   UIntWrite() = default;
   UIntWrite(ExecutorAddr Addr, T Value) : Addr(Addr), Value(Value) {}
@@ -130,6 +141,13 @@ using SPSSegFinalizeRequest =
 
 using SPSFinalizeRequest = SPSTuple<SPSSequence<SPSSegFinalizeRequest>,
                                     SPSSequence<SPSAllocActionCallPair>>;
+
+using SPSSharedMemorySegFinalizeRequest =
+    SPSTuple<SPSMemoryProtectionFlags, SPSExecutorAddr, uint64_t>;
+
+using SPSSharedMemoryFinalizeRequest =
+    SPSTuple<SPSSequence<SPSSharedMemorySegFinalizeRequest>,
+             SPSSequence<SPSAllocActionCallPair>>;
 
 template <typename T>
 using SPSMemoryAccessUIntWrite = SPSTuple<SPSExecutorAddr, T>;
@@ -204,6 +222,48 @@ public:
   }
 };
 
+template <>
+class SPSSerializationTraits<SPSSharedMemorySegFinalizeRequest,
+                             tpctypes::SharedMemorySegFinalizeRequest> {
+  using SFRAL = SPSSharedMemorySegFinalizeRequest::AsArgList;
+
+public:
+  static size_t size(const tpctypes::SharedMemorySegFinalizeRequest &SFR) {
+    return SFRAL::size(SFR.Prot, SFR.Addr, SFR.Size);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const tpctypes::SharedMemorySegFinalizeRequest &SFR) {
+    return SFRAL::serialize(OB, SFR.Prot, SFR.Addr, SFR.Size);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB,
+                          tpctypes::SharedMemorySegFinalizeRequest &SFR) {
+    return SFRAL::deserialize(IB, SFR.Prot, SFR.Addr, SFR.Size);
+  }
+};
+
+template <>
+class SPSSerializationTraits<SPSSharedMemoryFinalizeRequest,
+                             tpctypes::SharedMemoryFinalizeRequest> {
+  using FRAL = SPSSharedMemoryFinalizeRequest::AsArgList;
+
+public:
+  static size_t size(const tpctypes::SharedMemoryFinalizeRequest &FR) {
+    return FRAL::size(FR.Segments, FR.Actions);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const tpctypes::SharedMemoryFinalizeRequest &FR) {
+    return FRAL::serialize(OB, FR.Segments, FR.Actions);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB,
+                          tpctypes::SharedMemoryFinalizeRequest &FR) {
+    return FRAL::deserialize(IB, FR.Segments, FR.Actions);
+  }
+};
+
 template <typename T>
 class SPSSerializationTraits<SPSMemoryAccessUIntWrite<T>,
                              tpctypes::UIntWrite<T>> {
@@ -243,7 +303,6 @@ public:
                                                                 W.Buffer);
   }
 };
-
 
 } // end namespace shared
 } // end namespace orc
