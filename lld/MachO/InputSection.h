@@ -281,6 +281,7 @@ bool isCodeSection(const InputSection *);
 bool isCfStringSection(const InputSection *);
 bool isClassRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
+bool isGccExceptTabSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
 

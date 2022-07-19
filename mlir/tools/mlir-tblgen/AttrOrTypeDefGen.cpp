@@ -214,14 +214,26 @@ void DefGen::createParentWithTraits() {
   defCls.addParent(std::move(defParent));
 }
 
+/// Extra class definitions have a `$cppClass` substitution that is to be
+/// replaced by the C++ class name.
+static std::string formatExtraDefinitions(const AttrOrTypeDef &def) {
+  if (Optional<StringRef> extraDef = def.getExtraDefs()) {
+    FmtContext ctx = FmtContext().addSubst("cppClass", def.getCppClassName());
+    return tgfmt(*extraDef, &ctx).str();
+  }
+  return "";
+}
+
 void DefGen::emitTopLevelDeclarations() {
   // Inherit constructors from the attribute or type class.
   defCls.declare<VisibilityDeclaration>(Visibility::Public);
   defCls.declare<UsingDeclaration>("Base::Base");
 
   // Emit the extra declarations first in case there's a definition in there.
-  if (Optional<StringRef> extraDecl = def.getExtraDecls())
-    defCls.declare<ExtraClassDeclaration>(*extraDecl);
+  Optional<StringRef> extraDecl = def.getExtraDecls();
+  std::string extraDef = formatExtraDefinitions(def);
+  defCls.declare<ExtraClassDeclaration>(extraDecl ? *extraDecl : "",
+                                        std::move(extraDef));
 }
 
 void DefGen::emitBuilders() {

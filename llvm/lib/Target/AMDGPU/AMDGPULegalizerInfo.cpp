@@ -4197,6 +4197,35 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B) const {
+  Function &F = B.getMF().getFunction();
+  Optional<uint32_t> KnownSize =
+      AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+  if (KnownSize.hasValue())
+    B.buildConstant(DstReg, KnownSize.getValue());
+  return false;
+}
+
+bool AMDGPULegalizerInfo::legalizeLDSKernelId(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  if (!MFI->isEntryFunction()) {
+    return legalizePreloadedArgIntrin(MI, MRI, B,
+                                      AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!getLDSKernelId(DstReg, MRI, B))
+    return false;
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B,
@@ -5636,6 +5665,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_workgroup_id_z:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_lds_kernel_id:
+    return legalizePreloadedArgIntrin(MI, MRI, B,
+                                      AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
   case Intrinsic::amdgcn_dispatch_ptr:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::DISPATCH_PTR);

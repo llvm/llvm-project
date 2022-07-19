@@ -37,6 +37,9 @@
 # CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_1
 # CHECK: [[#%x,HAS_UNWIND_2]]               l     F __TEXT,__text _has_unwind_2
 # CHECK: [[#%x,HAS_UNWIND_3:]]              l     F __TEXT,__text _has_unwind_3
+# CHECK: [[#%x,HAS_UNWIND_4:]]              l     F __TEXT,__text _has_unwind_4
+# CHECK: [[#%x,HAS_ABS_PERSONALITY_1:]]     l     F __TEXT,__text _has_abs_personality_1
+# CHECK: [[#%x,HAS_ABS_PERSONALITY_2:]]     l     F __TEXT,__text _has_abs_personality_2
 # CHECK: [[#%x,HAS_EH_FRAME_1:]]            l     F __TEXT,__text _has_eh_frame_1
 # CHECK: [[#%x,HAS_EH_FRAME_2:]]            l     F __TEXT,__text _has_eh_frame_2
 # CHECK: [[#%x,HAS_EH_FRAME_3:]]            l     F __TEXT,__text _has_eh_frame_3
@@ -48,6 +51,9 @@
 ### FIXME: Mutually-recursive functions with identical bodies (see below)
 # COM:   [[#%x,ASYMMETRIC_RECURSIVE_2:]]    l   F __TEXT,__text _asymmetric_recursive_1
 # COM:   [[#%x,ASYMMETRIC_RECURSIVE_2]]     l   F __TEXT,__text _asymmetric_recursive_2
+# CHECK: [[#%x,GCC_EXCEPT_0:]]              l     O __TEXT,__gcc_except_tab GCC_except_table0
+# CHECK: [[#%x,GCC_EXCEPT_0]]               l     O __TEXT,__gcc_except_tab GCC_except_table1
+# CHECK: [[#%x,GCC_EXCEPT_2:]]              l     O __TEXT,__gcc_except_tab GCC_except_table2
 
 ## Check that we don't accidentally dedup distinct EH frames.
 # CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_1]]
@@ -80,6 +86,9 @@
 # CHECK: callq 0x[[#%x,HAS_UNWIND_2]]              <_has_unwind_2>
 # CHECK: callq 0x[[#%x,HAS_UNWIND_2]]              <_has_unwind_2>
 # CHECK: callq 0x[[#%x,HAS_UNWIND_3]]              <_has_unwind_3>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_4]]              <_has_unwind_4>
+# CHECK: callq 0x[[#%x,HAS_ABS_PERSONALITY_1]]     <_has_abs_personality_1>
+# CHECK: callq 0x[[#%x,HAS_ABS_PERSONALITY_2]]     <_has_abs_personality_2>
 # CHECK: callq 0x[[#%x,HAS_EH_FRAME_1]]            <_has_eh_frame_1>
 # CHECK: callq 0x[[#%x,HAS_EH_FRAME_2]]            <_has_eh_frame_2>
 # CHECK: callq 0x[[#%x,HAS_EH_FRAME_3]]            <_has_eh_frame_3>
@@ -200,6 +209,7 @@ _my_personality:
 _has_unwind_1:
   .cfi_startproc
   .cfi_personality 155, _my_personality
+  .cfi_lsda 16, Lexception0
   .cfi_def_cfa_offset 16
   ret
   .cfi_endproc
@@ -207,18 +217,50 @@ _has_unwind_1:
 _has_unwind_2:
   .cfi_startproc
   .cfi_personality 155, _my_personality
+  .cfi_lsda 16, Lexception1
   .cfi_def_cfa_offset 16
   ret
   .cfi_endproc
 
-## This function has different unwind info from the preceding two, and therefore
+## This function has a different cfa_offset from the first two, and therefore
 ## should not be folded.
 _has_unwind_3:
   .cfi_startproc
   .cfi_personality 155, _my_personality
+  .cfi_lsda 16, Lexception1
   .cfi_def_cfa_offset 8
   ret
   .cfi_endproc
+
+## This function has a different LSDA from the first two, and therefore should
+## not be folded.
+_has_unwind_4:
+  .cfi_startproc
+  .cfi_personality 155, _my_personality
+  .cfi_lsda 16, Lexception2
+  .cfi_def_cfa_offset 16
+  ret
+  .cfi_endproc
+
+## The next two functions should not be folded as they refer to personalities
+## at different absolute addresses. This verifies that we are doing the right
+## thing in our "data slicing hack" for compact unwind.
+_has_abs_personality_1:
+  .cfi_startproc
+  .cfi_personality 155, _abs_personality_1
+  .cfi_def_cfa_offset 16
+  ret
+  .cfi_endproc
+
+_has_abs_personality_2:
+  .cfi_startproc
+  .cfi_personality 155, _abs_personality_2
+  .cfi_def_cfa_offset 16
+  ret
+  .cfi_endproc
+
+_abs_personality_1 = 0x1
+_abs_personality_2 = 0x2
 
 ## In theory _has_eh_frame_{1, 2} can be dedup'ed, but we don't support this
 ## yet.
@@ -319,6 +361,9 @@ _main:
   callq _has_unwind_1
   callq _has_unwind_2
   callq _has_unwind_3
+  callq _has_unwind_4
+  callq _has_abs_personality_1
+  callq _has_abs_personality_2
   callq _has_eh_frame_1
   callq _has_eh_frame_2
   callq _has_eh_frame_3
@@ -329,3 +374,16 @@ _main:
   callq _init_1
   callq _init_2
   callq _init_3
+
+.section __TEXT,__gcc_except_tab
+GCC_except_table0:
+Lexception0:
+  .byte 255
+
+GCC_except_table1:
+Lexception1:
+  .byte 255
+
+GCC_except_table2:
+Lexception2:
+  .byte 254
