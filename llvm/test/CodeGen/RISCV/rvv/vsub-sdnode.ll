@@ -857,9 +857,9 @@ define <vscale x 8 x i64> @vsub_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: vsub_xx_nxv8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
 ; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vsub.vx v8, v8, a1
 ; RV64-NEXT:    ret
   %head1 = insertelement <vscale x 8 x i64> poison, i64 %a, i32 0
   %splat1 = shufflevector <vscale x 8 x i64> %head1, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
