@@ -35,7 +35,7 @@ define amdgpu_vs void @test_ptr2_inreg(i32 addrspace(4)* inreg %arg0) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile load (s32) from %ir.arg0, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile dereferenceable invariant load (s32) from %ir.arg0, addrspace 4)
   ; CHECK-NEXT:   S_ENDPGM 0
   %tmp0 = load volatile i32, i32 addrspace(4)* %arg0
   ret void
@@ -51,7 +51,7 @@ define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, i32 addrspace(4)*
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile load (s32) from %ir.arg1, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile dereferenceable invariant load (s32) from %ir.arg1, addrspace 4)
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   %tmp0 = load volatile i32, i32 addrspace(4)* %arg1

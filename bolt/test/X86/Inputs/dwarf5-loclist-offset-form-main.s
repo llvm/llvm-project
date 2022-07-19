@@ -267,14 +267,14 @@ main:                                   # @main
 	.byte	7                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	130                             # DW_AT_type
+	.long	132                             # DW_AT_type
 	.byte	3                               # Abbrev [3] 0x3d:0xa DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
 	.byte	84
 	.byte	8                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	130                             # DW_AT_type
+	.long	132                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	4                               # Abbrev [4] 0x48:0x36 DW_TAG_subprogram
 	.byte	1                               # DW_AT_low_pc
@@ -285,7 +285,7 @@ main:                                   # @main
 	.byte	5                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-	.long	126                             # DW_AT_type
+	.long	128                             # DW_AT_type
                                         # DW_AT_external
 	.byte	3                               # Abbrev [3] 0x57:0xa DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
@@ -293,37 +293,37 @@ main:                                   # @main
 	.byte	9                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-	.long	126                             # DW_AT_type
+	.long	128                             # DW_AT_type
 	.byte	3                               # Abbrev [3] 0x61:0xa DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
 	.byte	84
 	.byte	10                              # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-	.long	135                             # DW_AT_type
+	.long	137                             # DW_AT_type
 	.byte	5                               # Abbrev [5] 0x6b:0x9 DW_TAG_variable
 	.long	.Ldebug_loc0                    # DW_AT_location
 	.byte	7                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	8                               # DW_AT_decl_line
-	.long	126                             # DW_AT_type
+	.long	128                             # DW_AT_type
 	.byte	5                               # Abbrev [5] 0x74:0x9 DW_TAG_variable
 	.long	.Ldebug_loc1                    # DW_AT_location
 	.byte	8                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	9                               # DW_AT_decl_line
-	.long	126                             # DW_AT_type
+	.long	128                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	6                               # Abbrev [6] 0x7e:0x4 DW_TAG_base_type
 	.byte	6                               # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	4                               # DW_AT_byte_size
 	.byte	7                               # Abbrev [7] 0x82:0x5 DW_TAG_pointer_type
-	.long	126                             # DW_AT_type
+	.long	128                             # DW_AT_type
 	.byte	7                               # Abbrev [7] 0x87:0x5 DW_TAG_pointer_type
-	.long	140                             # DW_AT_type
+	.long	142                             # DW_AT_type
 	.byte	7                               # Abbrev [7] 0x8c:0x5 DW_TAG_pointer_type
-	.long	145                             # DW_AT_type
+	.long	147                             # DW_AT_type
 	.byte	6                               # Abbrev [6] 0x91:0x4 DW_TAG_base_type
 	.byte	11                              # DW_AT_name
 	.byte	6                               # DW_AT_encoding

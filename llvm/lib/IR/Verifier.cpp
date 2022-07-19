@@ -1696,8 +1696,10 @@ Verifier::visitModuleFlag(const MDNode *Op,
     break;
 
   case Module::Min: {
-    Check(mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2)),
-          "invalid value for 'min' module flag (expected constant integer)",
+    auto *V = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(V && V->getValue().isNonNegative(),
+          "invalid value for 'min' module flag (expected constant non-negative "
+          "integer)",
           Op->getOperand(2));
     break;
   }

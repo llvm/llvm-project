@@ -11,8 +11,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(<3 x i32> addrspace(4)*
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY killed $sgpr1
   ; CHECK-NEXT:   undef %0.sub0:sreg_64 = COPY killed [[COPY]]
   ; CHECK-NEXT:   %0.sub1:sreg_64 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (load (<2 x s32>) from %ir.ptr, align 4, addrspace 4)
-  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0, 8, 0 :: (load (s32) from %ir.ptr + 8, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (dereferenceable invariant load (<2 x s32>) from %ir.ptr, align 4, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0, 8, 0 :: (dereferenceable invariant load (s32) from %ir.ptr + 8, addrspace 4)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
   ; CHECK-NEXT:   $sgpr0 = COPY killed [[COPY2]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY killed [[S_LOAD_DWORDX2_IMM]].sub1

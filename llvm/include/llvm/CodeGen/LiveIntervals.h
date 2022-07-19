@@ -55,8 +55,7 @@ class VirtRegMap;
     MachineFunction* MF;
     MachineRegisterInfo* MRI;
     const TargetRegisterInfo* TRI;
-    const TargetInstrInfo* TII;
-    AAResults *AA;
+    const TargetInstrInfo *TII;
     SlotIndexes* Indexes;
     MachineDominatorTree *DomTree = nullptr;
     LiveIntervalCalc *LICalc = nullptr;
@@ -210,10 +209,6 @@ class VirtRegMap;
 
     SlotIndexes *getSlotIndexes() const {
       return Indexes;
-    }
-
-    AAResults *getAliasAnalysis() const {
-      return AA;
     }
 
     /// Returns true if the specified machine instr has been removed or was
