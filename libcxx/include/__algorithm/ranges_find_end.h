@@ -11,6 +11,7 @@
 
 #include <__algorithm/find_end.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/ranges_iterator_concept.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/ranges_operations.h>
@@ -28,23 +29,6 @@
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Iter>
-consteval auto __get_iterator_concept() {
-  if constexpr (contiguous_iterator<_Iter>)
-    return contiguous_iterator_tag();
-  else if constexpr (random_access_iterator<_Iter>)
-    return random_access_iterator_tag();
-  else if constexpr (bidirectional_iterator<_Iter>)
-    return bidirectional_iterator_tag();
-  else if constexpr (forward_iterator<_Iter>)
-    return forward_iterator_tag();
-  else if constexpr (input_iterator<_Iter>)
-    return input_iterator_tag();
-}
-
-template <class _Iter>
-using __iterator_concept = decltype(__get_iterator_concept<_Iter>());
 
 namespace ranges {
 namespace __find_end {

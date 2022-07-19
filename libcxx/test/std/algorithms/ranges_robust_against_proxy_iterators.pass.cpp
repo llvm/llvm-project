@@ -138,9 +138,9 @@ constexpr bool test_all() {
   //test_mid(std::ranges::rotate, in, mid);
   //test(std::ranges::shuffle, in, rand_gen);
   //test(std::ranges::unique, in);
-  //test(std::ranges::partition, in, binary_pred);
-  //if (!std::is_constant_evaluated())
-  //  test(std::ranges::stable_partition, in, binary_pred);
+  test(std::ranges::partition, in, unary_pred);
+  if (!std::is_constant_evaluated())
+    test(std::ranges::stable_partition, in, unary_pred);
   test(std::ranges::sort, in);
   // TODO: `stable_sort` requires `ranges::rotate` to be implemented.
   //if (!std::is_constant_evaluated())
