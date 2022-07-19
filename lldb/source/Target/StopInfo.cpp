@@ -20,7 +20,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
-#include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -691,128 +690,40 @@ public:
   }
 
 protected:
-  using StopInfoWatchpointSP = std::shared_ptr<StopInfoWatchpoint>;
-  // This plan is used to orchestrate stepping over the watchpoint for
-  // architectures (e.g. ARM) that report the watch before running the watched
-  // access.  This is the sort of job you have to defer to the thread plans,
-  // if you try to do it directly in the stop info and there are other threads
-  // that needed to process this stop you will have yanked control away from
-  // them and they won't behave correctly.
-  class ThreadPlanStepOverWatchpoint : public ThreadPlanStepInstruction {
-  public:
-    ThreadPlanStepOverWatchpoint(Thread &thread, 
-                                 StopInfoWatchpointSP stop_info_sp,
-                                 WatchpointSP watch_sp)
-        : ThreadPlanStepInstruction(thread, false, true, eVoteNoOpinion,
-                                    eVoteNoOpinion),
-          m_stop_info_sp(stop_info_sp), m_watch_sp(watch_sp) {
-      assert(watch_sp);
-      m_watch_index = watch_sp->GetHardwareIndex();
-    }
-
-    bool DoWillResume(lldb::StateType resume_state,
-                      bool current_plan) override {
-      if (m_did_reset_watchpoint) {
-        GetThread().GetProcess()->DisableWatchpoint(m_watch_sp.get(), false);
-        m_did_reset_watchpoint = false;
-      }
-      return true;
-    }
-
-    void DidPop() override {
-      // Don't artifically keep the watchpoint alive.
-      m_watch_sp.reset();
-    }
-    
-    bool ShouldStop(Event *event_ptr) override {
-      bool should_stop = ThreadPlanStepInstruction::ShouldStop(event_ptr);
-      bool plan_done = MischiefManaged();
-      if (plan_done) {
-        m_stop_info_sp->SetStepOverPlanComplete();
-        GetThread().SetStopInfo(m_stop_info_sp);
-        ResetWatchpoint();
-      }
-      return should_stop;
-    }
-
-  protected:
-    void ResetWatchpoint() {
-      if (m_did_reset_watchpoint)
-        return;
-      m_did_reset_watchpoint = true;
-      GetThread().GetProcess()->EnableWatchpoint(m_watch_sp.get(), false);
-      m_watch_sp->SetHardwareIndex(m_watch_index);
-    }
-
-  private:
-    StopInfoWatchpointSP m_stop_info_sp;
-    WatchpointSP m_watch_sp;
-    uint32_t m_watch_index = LLDB_INVALID_INDEX32;
-    bool m_did_reset_watchpoint = false;
-  };
-
   bool ShouldStopSynchronous(Event *event_ptr) override {
-    // If we are running our step-over the watchpoint plan, stop if it's done
-    // and continue if it's not:
-    if (m_using_step_over_plan)
-      return m_step_over_plan_complete;
+    // ShouldStop() method is idempotent and should not affect hit count. See
+    // Process::RunPrivateStateThread()->Process()->HandlePrivateEvent()
+    // -->Process()::ShouldBroadcastEvent()->ThreadList::ShouldStop()->
+    // Thread::ShouldStop()->ThreadPlanBase::ShouldStop()->
+    // StopInfoWatchpoint::ShouldStop() and
+    // Event::DoOnRemoval()->Process::ProcessEventData::DoOnRemoval()->
+    // StopInfoWatchpoint::PerformAction().
+    if (m_should_stop_is_valid)
+      return m_should_stop;
 
     ThreadSP thread_sp(m_thread_wp.lock());
-    assert(thread_sp);
-    WatchpointSP wp_sp(
-        thread_sp->CalculateTarget()->GetWatchpointList().FindByID(GetValue()));
-    if (!wp_sp) {
-      Log *log = GetLog(LLDBLog::Process);
+    if (thread_sp) {
+      WatchpointSP wp_sp(
+          thread_sp->CalculateTarget()->GetWatchpointList().FindByID(
+              GetValue()));
+      if (wp_sp) {
+        // Check if we should stop at a watchpoint.
+        ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
+        StoppointCallbackContext context(event_ptr, exe_ctx, true);
+        m_should_stop = wp_sp->ShouldStop(&context);
+      } else {
+        Log *log = GetLog(LLDBLog::Process);
 
-      LLDB_LOGF(log,
-                "Process::%s could not find watchpoint location id: %" PRId64
-                "...",
-                __FUNCTION__, GetValue());
+        LLDB_LOGF(log,
+                  "Process::%s could not find watchpoint location id: %" PRId64
+                  "...",
+                  __FUNCTION__, GetValue());
 
-      m_should_stop = true;
-      m_should_stop_is_valid = true;
-      return true;
+        m_should_stop = true;
+      }
     }
-
-    ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
-    StoppointCallbackContext context(event_ptr, exe_ctx, true);
-    m_should_stop = wp_sp->ShouldStop(&context);
-    if (!m_should_stop) {
-      // This won't happen at present because we only allow one watchpoint per
-      // watched range.  So we won't stop at a watched address with a disabled
-      // watchpoint.  If we start allowing overlapping watchpoints, then we
-      // will have to make watchpoints be real "WatchpointSite" and delegate to
-      // all the watchpoints sharing the site.  In that case, the code below
-      // would be the right thing to do.
-      m_should_stop_is_valid = true;
-      return m_should_stop;
-    }
-    // If this is a system where we need to execute the watchpoint by hand
-    // after the hit, queue a thread plan to do that, and then say not to stop.
-    // Otherwise, let the async action figure out whether the watchpoint should
-    // stop
-
-    ProcessSP process_sp = exe_ctx.GetProcessSP();
-    uint32_t num;
-    bool wp_triggers_after;
-
-    if (process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
-            .Success()) {
-      if (wp_triggers_after)
-        return true;
-      
-      StopInfoWatchpointSP me_as_siwp_sp 
-          = std::static_pointer_cast<StopInfoWatchpoint>(shared_from_this());
-      ThreadPlanSP step_over_wp_sp(new ThreadPlanStepOverWatchpoint(
-          *(thread_sp.get()), me_as_siwp_sp, wp_sp));
-      Status error;
-      error = thread_sp->QueueThreadPlan(step_over_wp_sp, false);
-      m_using_step_over_plan = true;
-      return !error.Success();
-    }
-    // If we don't have to step over the watchpoint, just let the PerformAction
-    // determine what we should do.
-    return true;
+    m_should_stop_is_valid = true;
+    return m_should_stop;
   }
 
   bool ShouldStop(Event *event_ptr) override {
@@ -838,12 +749,57 @@ protected:
           thread_sp->CalculateTarget()->GetWatchpointList().FindByID(
               GetValue()));
       if (wp_sp) {
-        // This sentry object makes sure the current watchpoint is disabled
-        // while performing watchpoint actions, and it is then enabled after we
-        // are finished.
         ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
         ProcessSP process_sp = exe_ctx.GetProcessSP();
 
+        {
+          // check if this process is running on an architecture where
+          // watchpoints trigger before the associated instruction runs. if so,
+          // disable the WP, single-step and then re-enable the watchpoint
+          if (process_sp) {
+            uint32_t num;
+            bool wp_triggers_after;
+
+            if (process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
+                    .Success()) {
+              if (!wp_triggers_after) {
+                // We need to preserve the watch_index before watchpoint  is
+                // disable. Since Watchpoint::SetEnabled will clear the watch
+                // index. This will fix TestWatchpointIter failure
+                Watchpoint *wp = wp_sp.get();
+                uint32_t watch_index = wp->GetHardwareIndex();
+                process_sp->DisableWatchpoint(wp, false);
+                StopInfoSP stored_stop_info_sp = thread_sp->GetStopInfo();
+                assert(stored_stop_info_sp.get() == this);
+
+                Status new_plan_status;
+                ThreadPlanSP new_plan_sp(
+                    thread_sp->QueueThreadPlanForStepSingleInstruction(
+                        false, // step-over
+                        false, // abort_other_plans
+                        true,  // stop_other_threads
+                        new_plan_status));
+                if (new_plan_sp && new_plan_status.Success()) {
+                  new_plan_sp->SetIsControllingPlan(true);
+                  new_plan_sp->SetOkayToDiscard(false);
+                  new_plan_sp->SetPrivate(true);
+                }
+                process_sp->GetThreadList().SetSelectedThreadByID(
+                    thread_sp->GetID());
+                process_sp->ResumeSynchronous(nullptr);
+                process_sp->GetThreadList().SetSelectedThreadByID(
+                    thread_sp->GetID());
+                thread_sp->SetStopInfo(stored_stop_info_sp);
+                process_sp->EnableWatchpoint(wp, false);
+                wp->SetHardwareIndex(watch_index);
+              }
+            }
+          }
+        }
+
+        // This sentry object makes sure the current watchpoint is disabled
+        // while performing watchpoint actions, and it is then enabled after we
+        // are finished.
         WatchpointSentry sentry(process_sp, wp_sp);
 
         /*
@@ -869,10 +825,18 @@ protected:
           }
         }
 
-        if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount()) {
+        // TODO: This condition should be checked in the synchronous part of the
+        // watchpoint code
+        // (Watchpoint::ShouldStop), so that we avoid pulling an event even if
+        // the watchpoint fails the ignore count condition. It is moved here
+        // temporarily, because for archs with
+        // watchpoint_exceptions_received=before, the code in the previous
+        // lines takes care of moving the inferior to next PC. We have to check
+        // the ignore count condition after this is done, otherwise we will hit
+        // same watchpoint multiple times until we pass ignore condition, but
+        // we won't actually be ignoring them.
+        if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount())
           m_should_stop = false;
-          m_should_stop_is_valid = true;
-        }
 
         Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
 
@@ -895,9 +859,10 @@ protected:
               Scalar scalar_value;
               if (result_value_sp->ResolveValue(scalar_value)) {
                 if (scalar_value.ULongLong(1) == 0) {
-                  // The condition failed, which we consider "not having hit
-                  // the watchpoint" so undo the hit count here.
-                  wp_sp->UndoHitCount();
+                  // We have been vetoed.  This takes precedence over querying
+                  // the watchpoint whether it should stop (aka ignore count
+                  // and friends).  See also StopInfoWatchpoint::ShouldStop()
+                  // as well as Process::ProcessEventData::DoOnRemoval().
                   m_should_stop = false;
                 } else
                   m_should_stop = true;
@@ -981,16 +946,9 @@ protected:
   }
 
 private:
-  void SetStepOverPlanComplete() {
-    assert(m_using_step_over_plan);
-    m_step_over_plan_complete = true;
-  }
-  
   bool m_should_stop = false;
   bool m_should_stop_is_valid = false;
   lldb::addr_t m_watch_hit_addr;
-  bool m_step_over_plan_complete = false;
-  bool m_using_step_over_plan = false;
 };
 
 // StopInfoUnixSignal

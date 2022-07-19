@@ -82,4 +82,4 @@ class WatchpointConditionCmdTestCase(TestBase):
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be 2.
         self.expect("watchpoint list -v",
-                    substrs=['hit_count = 1'])
+                    substrs=['hit_count = 5'])
