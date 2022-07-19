@@ -5,14 +5,17 @@
 // LIST: Pass statistics report
 // LIST: TestStatisticPass
 // LIST-NEXT:  (S) {{0|8}} num-ops - Number of operations counted
+// LIST-NEXT:  (S) {{0|8}} num-ops2 - Number of operations counted one more time
 // LIST-NOT: Verifier
 
 // PIPELINE: Pass statistics report
 // PIPELINE: 'func.func' Pipeline
 // PIPELINE-NEXT:   TestStatisticPass
 // PIPELINE-NEXT:     (S) {{0|4}} num-ops - Number of operations counted
+// PIPELINE-NEXT:     (S) {{0|4}} num-ops2 - Number of operations counted one more time
 // PIPELINE-NEXT:   TestStatisticPass
 // PIPELINE-NEXT:     (S) {{0|4}} num-ops - Number of operations counted
+// PIPELINE-NEXT:     (S) {{0|4}} num-ops2 - Number of operations counted one more time
 
 func.func @foo() {
   return
