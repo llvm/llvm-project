@@ -265,15 +265,6 @@ libc++ specific options
    support for ``wchar_t``. This is especially useful in embedded settings where
    C Standard Libraries don't always provide all the usual bells and whistles.
 
-.. option:: LIBCXX_ENABLE_INCOMPLETE_FEATURES:BOOL
-
-  **Default**: ``ON``
-
-  Whether to enable support for incomplete library features. Incomplete features
-  are new library features under development. These features don't guarantee
-  ABI stability nor the quality of completed library features. Vendors
-  shipping the library may want to disable this option.
-
 .. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
 
   **Default**: ``lib${LIBCXX_LIBDIR_SUFFIX}``

@@ -89,12 +89,6 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     )
 endif()
 
-if(LIBCXX_ENABLE_INCOMPLETE_FEATURES)
-  list(APPEND LIBCXX_SOURCES
-    format.cpp
-  )
-endif()
-
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
     support/win32/locale_win32.cpp
@@ -317,6 +311,7 @@ add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/memory_resource.cpp
+  format.cpp
   )
 
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
@@ -339,6 +334,7 @@ set_target_properties(cxx_experimental
     OUTPUT_NAME   "c++experimental"
 )
 cxx_add_common_build_flags(cxx_experimental)
+target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
 
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)

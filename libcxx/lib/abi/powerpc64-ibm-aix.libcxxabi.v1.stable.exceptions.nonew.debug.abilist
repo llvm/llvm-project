@@ -370,9 +370,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112ctype_bynameIwED0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112ctype_bynameIwED1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112ctype_bynameIwED2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112format_errorD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112format_errorD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112format_errorD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112future_errorC1ENS_10error_codeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112future_errorC2ENS_10error_codeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112future_errorD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -902,7 +899,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__112bad_weak_ptrE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__112ctype_bynameIcEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__112ctype_bynameIwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__112format_errorE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__112future_errorE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__112strstreambufE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__112system_errorE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
@@ -959,7 +955,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__112bad_weak_ptrE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__112ctype_bynameIcEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__112ctype_bynameIwEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__112format_errorE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__112future_errorE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__112strstreambufE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__112system_errorE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
@@ -1019,7 +1014,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__112bad_weak_ptrE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__112ctype_bynameIcEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__112ctype_bynameIwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__112format_errorE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__112future_errorE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__112strstreambufE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__112system_errorE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}

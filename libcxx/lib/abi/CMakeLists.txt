@@ -7,7 +7,7 @@
 # Right now, this is done by using the ABI identifier as the filename containing
 # the list of symbols exported by libc++ for that configuration, however we could
 # make it more sophisticated if the number of ABI-affecting parameters grew.
-function(cxx_abi_list_identifier result triple abi_library abi_version unstable exceptions new_delete_in_libcxx debug_mode_enabled allow_incomplete)
+function(cxx_abi_list_identifier result triple abi_library abi_version unstable exceptions new_delete_in_libcxx debug_mode_enabled)
   set(abi_properties)
 
   if ("${triple}" MATCHES "darwin")
@@ -40,11 +40,6 @@ function(cxx_abi_list_identifier result triple abi_library abi_version unstable 
   else()
     list(APPEND abi_properties "nodebug")
   endif()
-  if (${allow_incomplete})
-    list(APPEND abi_properties "incomplete")
-  else()
-    list(APPEND abi_properties "noincomplete")
-  endif()
 
   list(JOIN abi_properties "." tmp)
   set(${result} "${tmp}" PARENT_SCOPE)
@@ -68,7 +63,6 @@ cxx_abi_list_identifier(abi_list_identifier
   "${LIBCXX_ENABLE_EXCEPTIONS}"
   "${LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS}"
   "${has_debug_symbols}"
-  "${LIBCXX_ENABLE_INCOMPLETE_FEATURES}"
 )
 
 if (TARGET cxx_shared)
