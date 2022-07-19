@@ -1404,17 +1404,21 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
   }
 
   SDValue NewLoad;
+  Align ElementAlignment =
+      std::min(cast<StoreSDNode>(Ch)->getAlign(),
+               DAG.getDataLayout().getPrefTypeAlign(
+                   Op.getValueType().getTypeForEVT(*DAG.getContext())));
 
   if (Op.getValueType().isVector()) {
     StackPtr = TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT,
                                           Op.getValueType(), Idx);
-    NewLoad =
-        DAG.getLoad(Op.getValueType(), dl, Ch, StackPtr, MachinePointerInfo());
+    NewLoad = DAG.getLoad(Op.getValueType(), dl, Ch, StackPtr,
+                          MachinePointerInfo(), ElementAlignment);
   } else {
     StackPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
     NewLoad = DAG.getExtLoad(ISD::EXTLOAD, dl, Op.getValueType(), Ch, StackPtr,
-                             MachinePointerInfo(),
-                             VecVT.getVectorElementType());
+                             MachinePointerInfo(), VecVT.getVectorElementType(),
+                             ElementAlignment);
   }
 
   // Replace the chain going out of the store, by the one out of the load.
