@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 15.0
 ------------
 
-* xxxxxxxxxxx - [libc++] Drop the legacy debug mode symbols by default
+* f1c30135417f - [libc++] Drop the legacy debug mode symbols by default
 
   This commit removed symbols implementing debug mode in the non-debug
   configuration of the library. Using the debug mode now requires a
