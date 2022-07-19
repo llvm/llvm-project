@@ -3099,11 +3099,8 @@ define arm_aapcs_vfpcc void @usatmul_16_q7(i8* nocapture readonly %pSrcA, i8* no
 ; CHECK-NEXT:    vldrb.u8 q1, [r1], #16
 ; CHECK-NEXT:    vmullt.u8 q2, q1, q0
 ; CHECK-NEXT:    vmullb.u8 q0, q1, q0
-; CHECK-NEXT:    vqshrnb.u16 q2, q2, #7
 ; CHECK-NEXT:    vqshrnb.u16 q0, q0, #7
-; CHECK-NEXT:    vmovlb.u8 q2, q2
-; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vmovnt.i16 q0, q2
+; CHECK-NEXT:    vqshrnt.u16 q0, q2, #7
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB21_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
