@@ -18,6 +18,7 @@ const char *SimpleExecutorDylibManagerOpenWrapperName =
     "__llvm_orc_SimpleExecutorDylibManager_open_wrapper";
 const char *SimpleExecutorDylibManagerLookupWrapperName =
     "__llvm_orc_SimpleExecutorDylibManager_lookup_wrapper";
+
 const char *SimpleExecutorMemoryManagerInstanceName =
     "__llvm_orc_SimpleExecutorMemoryManager_Instance";
 const char *SimpleExecutorMemoryManagerReserveWrapperName =
@@ -26,6 +27,18 @@ const char *SimpleExecutorMemoryManagerFinalizeWrapperName =
     "__llvm_orc_SimpleExecutorMemoryManager_finalize_wrapper";
 const char *SimpleExecutorMemoryManagerDeallocateWrapperName =
     "__llvm_orc_SimpleExecutorMemoryManager_deallocate_wrapper";
+
+const char *ExecutorSharedMemoryMapperServiceInstanceName =
+    "__llvm_orc_ExecutorSharedMemoryMapperService_Instance";
+const char *ExecutorSharedMemoryMapperServiceReserveWrapperName =
+    "__llvm_orc_ExecutorSharedMemoryMapperService_Reserve";
+const char *ExecutorSharedMemoryMapperServiceInitializeWrapperName =
+    "__llvm_orc_ExecutorSharedMemoryMapperService_Initialize";
+const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName =
+    "__llvm_orc_ExecutorSharedMemoryMapperService_Deinitialize";
+const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName =
+    "__llvm_orc_ExecutorSharedMemoryMapperService_Release";
+
 const char *MemoryWriteUInt8sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint8s_wrapper";
 const char *MemoryWriteUInt16sWrapperName =
@@ -36,10 +49,12 @@ const char *MemoryWriteUInt64sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint64s_wrapper";
 const char *MemoryWriteBuffersWrapperName =
     "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
+
 const char *RegisterEHFrameSectionWrapperName =
     "__llvm_orc_bootstrap_register_ehframe_section_wrapper";
 const char *DeregisterEHFrameSectionWrapperName =
     "__llvm_orc_bootstrap_deregister_ehframe_section_wrapper";
+
 const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
 
 } // end namespace rt

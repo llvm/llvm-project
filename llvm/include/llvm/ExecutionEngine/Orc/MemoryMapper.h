@@ -109,6 +109,47 @@ private:
   AllocationMap Allocations;
 };
 
+class SharedMemoryMapper final : public MemoryMapper {
+public:
+  struct SymbolAddrs {
+    ExecutorAddr Instance;
+    ExecutorAddr Reserve;
+    ExecutorAddr Initialize;
+    ExecutorAddr Deinitialize;
+    ExecutorAddr Release;
+  };
+
+  SharedMemoryMapper(ExecutorProcessControl &EPC, SymbolAddrs SAs)
+      : EPC(EPC), SAs(SAs) {}
+
+  void reserve(size_t NumBytes, OnReservedFunction OnReserved) override;
+
+  char *prepare(ExecutorAddr Addr, size_t ContentSize) override;
+
+  void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
+
+  void deinitialize(ArrayRef<ExecutorAddr> Allocations,
+                    OnDeinitializedFunction OnDeInitialized) override;
+
+  void release(ArrayRef<ExecutorAddr> Reservations,
+               OnReleasedFunction OnRelease) override;
+
+  ~SharedMemoryMapper() override;
+
+private:
+  struct Reservation {
+    void *LocalAddr;
+    size_t Size;
+  };
+
+  ExecutorProcessControl &EPC;
+  SymbolAddrs SAs;
+
+  std::mutex Mutex;
+
+  std::map<ExecutorAddr, Reservation> Reservations;
+};
+
 } // namespace orc
 } // end namespace llvm
 
