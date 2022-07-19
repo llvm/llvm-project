@@ -3447,6 +3447,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Args, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP), SA);
   }
 
+  if (Opts.OpenMPTargetNewRuntime)
+    GenerateArg(Args, OPT_fopenmp_target_new_runtime, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_target_new_runtime, SA);
+
   if (Opts.OpenMPTargetIgnoreEnvVars)
     GenerateArg(Args, OPT_fopenmp_target_ignore_env_vars, SA);
   else
@@ -3886,6 +3891,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPGPUThreadsPerTeam =
       getLastArgIntValue(Args, options::OPT_fopenmp_gpu_threads_per_team_EQ,
                          Opts.OpenMPGPUThreadsPerTeam, Diags);
+
+  Opts.OpenMPTargetNewRuntime =
+      Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                   options::OPT_fno_openmp_target_new_runtime, true);
 
   // Turn ON at -O3 (and above) and -Ofast
   Opts.OpenMPTargetIgnoreEnvVars =

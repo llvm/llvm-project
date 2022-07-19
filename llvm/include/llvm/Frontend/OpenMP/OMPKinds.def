@@ -41,6 +41,8 @@ __OMP_TYPE(Int32Ptr)
 __OMP_TYPE(Int64Ptr)
 __OMP_TYPE(FloatPtr)
 __OMP_TYPE(Float)
+__OMP_TYPE(DoublePtr)
+__OMP_TYPE(Double)
 
 OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
 
@@ -482,6 +484,10 @@ __OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
 __OMP_RTL(__kmpc_is_generic_main_thread_id, false, Int8, Int32)
 
 __OMP_RTL(__kmpc_unsafeAtomicAdd, false, Float, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_xteam_sum_f, false, Void, Float, FloatPtr)
+
+__OMP_RTL(__kmpc_xteam_sum_d, false, Void, Double, DoublePtr)
 
 __OMP_RTL(__last, false, Void, )
 

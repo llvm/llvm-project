@@ -7074,6 +7074,31 @@ bool CodeGenModule::isForStmtNoLoopConforming(const Stmt *OMPStmt) {
   return true;
 }
 
+bool CodeGenModule::isForStmtSpecRedConforming(const Stmt *OMPStmt) {
+  if (!isForStmtNoLoopConforming(OMPStmt))
+    return false;
+  const ForStmt *FStmt = getSingleForStmt(OMPStmt);
+  const Stmt *BodyStmt = FStmt->getBody();
+  if (BodyStmt->getStmtClass() == Stmt::CompoundStmtClass) {
+    const CompoundStmt &CompStmt = cast<CompoundStmt>(*BodyStmt);
+    // Handle only one statement in the loop for now
+    if (CompStmt.size() != 1)
+      return false;
+    BodyStmt = CompStmt.body_front();
+  }
+  // Handle only sum reduction for now
+  if (BodyStmt->getStmtClass() != Stmt::CompoundAssignOperatorClass)
+    return false;
+  const CompoundAssignOperator *BodyAssignStmt =
+      cast<CompoundAssignOperator>(BodyStmt);
+  if (BodyAssignStmt->getOpcode() != BO_AddAssign)
+    return false;
+  // Make sure the reduction target is a scalar
+  if (!isa<DeclRefExpr>(BodyAssignStmt->getLHS()))
+    return false;
+  return true;
+}
+
 bool CodeGenModule::areCombinedClausesNoLoopCompatible(
     const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
@@ -7096,6 +7121,53 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
       D.hasClausesOfKind<OMPScheduleClause>())
     return false;
   return true;
+}
+
+bool CodeGenModule::areCombinedClausesSpecRedCompatible(
+    const OMPExecutableDirective &D) {
+  if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
+      D.hasClausesOfKind<OMPDependClause>() ||
+      D.hasClausesOfKind<OMPDeviceClause>() ||
+      D.hasClausesOfKind<OMPIfClause>() ||
+      D.hasClausesOfKind<OMPInReductionClause>() ||
+      D.hasClausesOfKind<OMPThreadLimitClause>() ||
+      D.hasClausesOfKind<OMPDefaultClause>() ||
+      D.hasClausesOfKind<OMPNumTeamsClause>() ||
+      D.hasClausesOfKind<OMPSharedClause>() ||
+      D.hasClausesOfKind<OMPCollapseClause>() ||
+      D.hasClausesOfKind<OMPDistScheduleClause>() ||
+      D.hasClausesOfKind<OMPLastprivateClause>() ||
+      D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
+      D.hasClausesOfKind<OMPCopyinClause>() ||
+      D.hasClausesOfKind<OMPProcBindClause>() ||
+      D.hasClausesOfKind<OMPOrderedClause>() ||
+      D.hasClausesOfKind<OMPScheduleClause>())
+    return false;
+  return true;
+}
+
+bool CodeGenModule::canHandleReductionClause(const OMPExecutableDirective &D) {
+  bool hasReductionClause = false;
+  for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
+    // We don't handle multiple reduction clauses today
+    if (hasReductionClause)
+      return false;
+    hasReductionClause = true;
+
+    if (C->reduction_ops().empty())
+      return false;
+
+    const Expr *Ops = *C->reduction_ops().begin();
+    if (!isa<BinaryOperator>(Ops))
+      return false;
+    const Expr *OpsLHS = cast<BinaryOperator>(Ops)->getLHS();
+    llvm::Type *LHSType = getTypes().ConvertTypeForMem(OpsLHS->getType());
+    if (!LHSType->isFloatTy() && !LHSType->isDoubleTy())
+      return false;
+  }
+  if (hasReductionClause)
+    return true;
+  return false;
 }
 
 // If a no-loop kernel is found, then a non-empty map is returned,
@@ -7197,4 +7269,43 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
     // All checks passed
     return true;
   }
+}
+
+bool CodeGenModule::checkAndSetSpecialRedKernel(
+    const OMPExecutableDirective &D) {
+  if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
+      !getLangOpts().OpenMPTargetNewRuntime)
+    return false;
+
+  // Allowing only a combined construct for now
+  if (D.getDirectiveKind() !=
+          llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for &&
+      D.getDirectiveKind() !=
+          llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for_simd)
+    return false;
+
+  if (!D.hasAssociatedStmt())
+    return false;
+  const Stmt *AssocStmt = D.getAssociatedStmt();
+
+  // For now, keep the reduction helpers separate. Revisit merging with noloop
+  // later
+  if (!areCombinedClausesSpecRedCompatible(D))
+    return false;
+  if (!canHandleReductionClause(D))
+    return false;
+  if (!isForStmtSpecRedConforming(AssocStmt))
+    return false;
+
+  // We don't yet handle intermediate statements but will soon, so keep it ready
+  NoLoopIntermediateStmts IntermediateStmts;
+  SpecRedKernelMetadata SpecRedKernelMD;
+  // Create a map from the ForStmt, the corresponding info will be populated
+  // later
+  const ForStmt *FStmt = getSingleForStmt(AssocStmt);
+  assert(FStmt && "For stmt cannot be null");
+  setSpecRedKernel(FStmt, std::make_pair(IntermediateStmts, SpecRedKernelMD));
+
+  // All checks passed
+  return true;
 }

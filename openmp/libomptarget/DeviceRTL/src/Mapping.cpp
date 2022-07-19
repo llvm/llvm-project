@@ -303,5 +303,10 @@ __attribute__((noinline)) uint32_t __kmpc_get_warp_size() {
   FunctionTracingRAII();
   return impl::getWarpSize();
 }
+
+__attribute__((noinline)) uint32_t __kmpc_get_hardware_num_blocks() {
+  FunctionTracingRAII();
+  return impl::getNumberOfBlocks();
+}
 }
 #pragma omp end declare target

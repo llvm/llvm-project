@@ -298,6 +298,16 @@ public:
   /// Map top-level construct to the intermediate ones for no-loop codegen
   using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
 
+  /// Kernel specific metadata used for communicating between CodeGen phases
+  /// while generating an optimized reduction kernel
+  struct SpecRedKernelMetadata {
+    const Stmt *SpecRedStmt = nullptr;
+    Address SpecRedLocalAddr = Address::invalid();
+  };
+  using SpecRedKernelInfo =
+      std::pair<NoLoopIntermediateStmts, SpecRedKernelMetadata>;
+  using SpecRedKernelMap = llvm::DenseMap<const Stmt *, SpecRedKernelInfo>;
+
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
@@ -337,6 +347,7 @@ private:
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
 
   NoLoopKernelMap NoLoopKernels;
+  SpecRedKernelMap SpecRedKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -1558,6 +1569,31 @@ public:
     return NoLoopKernels.find(S) != NoLoopKernels.end();
   }
 
+  bool checkAndSetSpecialRedKernel(const OMPExecutableDirective &D);
+
+  const NoLoopIntermediateStmts &getSpecRedStmts(const Stmt *S) {
+    assert(isSpecRedKernel(S));
+    return SpecRedKernels.find(S)->second.first;
+  }
+
+  const SpecRedKernelMetadata &getSpecRedKernelMetadata(const Stmt *S) {
+    assert(isSpecRedKernel(S));
+    return SpecRedKernels.find(S)->second.second;
+  }
+
+  void setSpecRedKernelMetadata(const Stmt *S,
+                                const SpecRedKernelMetadata &MD) {
+    assert(isSpecRedKernel(S));
+    SpecRedKernels.find(S)->second.second = MD;
+  }
+
+  /// Erase spec-red related metadata for the input statement
+  void resetSpecRedKernel(const Stmt *S) { SpecRedKernels.erase(S); }
+  /// Are we generating special reduction kernel for the statement
+  bool isSpecRedKernel(const Stmt *S) {
+    return SpecRedKernels.find(S) != SpecRedKernels.end();
+  }
+
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
@@ -1777,6 +1813,9 @@ private:
   /// Top level checker for no-loop on the for statement
   bool isForStmtNoLoopConforming(const Stmt *);
 
+  /// Top level checker for special reduction of the loop
+  bool isForStmtSpecRedConforming(const Stmt *);
+
   /// Used for a target construct
   bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
 
@@ -1784,10 +1823,22 @@ private:
   /// codegen?
   bool areCombinedClausesNoLoopCompatible(const OMPExecutableDirective &D);
 
+  /// Are clauses on a combined OpenMP construct compatible with special
+  /// reduction codegen?
+  bool areCombinedClausesSpecRedCompatible(const OMPExecutableDirective &D);
+
+  /// Is the reduction clause compatible with special reduction codegen?
+  bool canHandleReductionClause(const OMPExecutableDirective &D);
+
   /// Populate the map used for no-loop codegen
   void setNoLoopKernel(const Stmt *S,
                        NoLoopIntermediateStmts IntermediateStmts) {
     NoLoopKernels[S] = IntermediateStmts;
+  }
+
+  /// Populate the map used for special reduction codegen
+  void setSpecRedKernel(const Stmt *S, SpecRedKernelInfo KI) {
+    SpecRedKernels[S] = KI;
   }
 };
 

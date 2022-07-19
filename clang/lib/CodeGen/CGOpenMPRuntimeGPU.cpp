@@ -1074,7 +1074,8 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   // If constant ThreadLimit(), set reqd_work_group_size metadata
   if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
       isOpenMPParallelDirective(D.getDirectiveKind()) ||
-      CmdLineWorkGroupSz != DefaultWorkGroupSz) {
+      CmdLineWorkGroupSz != DefaultWorkGroupSz ||
+      CGM.isSpecRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
     const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
     int compileTimeThreadLimit = 0;
@@ -1089,9 +1090,15 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       clang::Expr::EvalResult Result;
       if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext()))
         compileTimeThreadLimit = Result.Val.getInt().getExtValue();
+    } else if (CGM.isSpecRedKernel(
+                   CGM.getSingleForStmt(D.getAssociatedStmt()))) {
+      // Special reduction overrides the command-line option for now
+      // Special reduction blocksize hardcoded to 1024 for now
+      compileTimeThreadLimit = 1024;
     } else if (CmdLineWorkGroupSz != DefaultWorkGroupSz) {
       compileTimeThreadLimit = CmdLineWorkGroupSz;
     }
+
     // printf("========= WARNING CONSTANT Compile-Time TL: %d\n",
     //       compileTimeThreadLimit);
     // Add kernel metadata if ThreadLimit Clause is compile time constant > 0
@@ -1275,10 +1282,13 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   const Stmt *DirectiveStmt = D.getAssociatedStmt();
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
   if (Mode) {
-    // For AMDGPU, check if a no-loop kernel should be generated and if so,
-    // set metadata that can be used by codegen
-    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN())
-      CGM.checkAndSetNoLoopKernel(D);
+    // For AMDGPU, check if a no-loop or a special reduction kernel should
+    // be generated and if so, set metadata that can be used by codegen.
+    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN()) {
+      if (!CGM.checkAndSetNoLoopKernel(D))
+        CGM.checkAndSetSpecialRedKernel(D);
+    }
+
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
   } else
@@ -1289,13 +1299,21 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
       CGM, OutlinedFn->getName(),
       Mode ? (DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt)
                   ? OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
-                  : OMP_TGT_EXEC_MODE_SPMD)
+                  : (DirectiveStmt && CGM.isSpecRedKernel(
+                                          CGM.getSingleForStmt(DirectiveStmt))
+                         ? OMP_TGT_EXEC_MODE_SPECIAL_RED
+                         : OMP_TGT_EXEC_MODE_SPMD))
            : OMP_TGT_EXEC_MODE_GENERIC);
-  // Reset no-loop kernel metadata if it exists
+  // Reset no-loop or special reduction kernel metadata if it exists
   if (Mode && DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt))
     CGM.resetNoLoopKernel(DirectiveStmt);
+  else if (Mode && DirectiveStmt &&
+           CGM.isSpecRedKernel(CGM.getSingleForStmt(DirectiveStmt)))
+    CGM.resetSpecRedKernel(CGM.getSingleForStmt(DirectiveStmt));
   assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
          "No-loop attribute not reset after emit");
+  assert(!CGM.isSpecRedKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
+         "Special reduction attribute not reset after emit");
 }
 
 namespace {
@@ -4192,6 +4210,38 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF) {
     CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
 
   return llvm::ConstantInt::get(CGF.Int32Ty, CmdLineWorkGroupSz);
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getSpecRedGUPBlockSize(CodeGenFunction &CGF) {
+  // For now, this is hardcoded to 1024
+  return llvm::ConstantInt::get(CGF.Int32Ty, 1024);
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUNumBlocks(CodeGenFunction &CGF) {
+  ArrayRef<llvm::Value *> Args{};
+  return CGF.EmitRuntimeCall(
+      OMPBuilder.getOrCreateRuntimeFunction(
+          CGM.getModule(), OMPRTL___kmpc_get_hardware_num_blocks),
+      Args);
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUXteamSum(CodeGenFunction &CGF,
+                                                llvm::Value *Val,
+                                                llvm::Value *SumPtr) {
+  // TODO handle more types
+  llvm::Type *SumType = Val->getType();
+  assert((SumType->isFloatTy() || SumType->isDoubleTy()) && "Unhandled type");
+  llvm::Value *Args[] = {Val, SumPtr};
+  if (SumType->isFloatTy()) {
+    return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                   CGM.getModule(), OMPRTL___kmpc_xteam_sum_f),
+                               Args);
+  } else if (SumType->isDoubleTy()) {
+    return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                   CGM.getModule(), OMPRTL___kmpc_xteam_sum_d),
+                               Args);
+  }
+  llvm_unreachable("No support for other types currently.");
 }
 
 bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {

@@ -1865,10 +1865,12 @@ void finiAsyncInfo(__tgt_async_info *AsyncInfo) {
 void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
                    EnvironmentVariables Env, int ConstWGSize, int ExecutionMode,
                    int NumTeams, int ThreadLimit, uint64_t LoopTripcount,
-                   int DeviceNumTeams) {
+                   int DeviceNumTeams, int DeviceNumCUs) {
   if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD ||
       ExecutionMode ==
-          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP ||
+      ExecutionMode ==
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPECIAL_RED) {
     // ConstWGSize is used for communicating any command-line value to
     // the plugin. ConstWGSize will either be the default workgroup
     // size or a value set by CodeGen. If the kernel is SPMD, it means
@@ -1887,6 +1889,16 @@ void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
     assert(LoopTripcount &&
            "No loop exec mode needs a non-zero loop tripcount");
     NumGroups = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
+    return;
+  }
+
+  // For optimized reduction, we use as many teams as the number of CUs. This
+  // must be kept in sync with CodeGen and DeviceRTL.
+  if (ExecutionMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPECIAL_RED) {
+    assert(LoopTripcount &&
+           "No loop exec mode needs a non-zero loop tripcount");
+    NumGroups = DeviceNumCUs;
     return;
   }
 
@@ -2108,10 +2120,11 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
   getLaunchVals(ThreadsPerGroup, NumGroups, DeviceInfo.WarpSize[DeviceId],
                 DeviceInfo.Env, KernelInfo->ConstWGSize,
                 KernelInfo->ExecutionMode,
-                NumTeams,       // From run_region arg
-                ThreadLimit,    // From run_region arg
-                LoopTripcount,  // From run_region arg
-                DeviceInfo.NumTeams[KernelInfo->DeviceId]);
+                NumTeams,      // From run_region arg
+                ThreadLimit,   // From run_region arg
+                LoopTripcount, // From run_region arg
+                DeviceInfo.NumTeams[KernelInfo->DeviceId],
+                DeviceInfo.ComputeUnits[KernelInfo->DeviceId]);
 
   if (print_kernel_trace >= LAUNCH) {
     // enum modes are SPMD, GENERIC, NONE 0,1,2
@@ -3311,7 +3324,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
          ExecModeVal);
 
       if (ExecModeVal < llvm::omp::OMP_TGT_EXEC_MODE_GENERIC ||
-          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
+          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_SPECIAL_RED) {
         DP("Error wrong exec_mode value specified in HSA code object file: "
            "%d\n",
            ExecModeVal);

@@ -196,6 +196,16 @@ public:
   /// partial block, that information is not returned.
   llvm::Value *getGPUCompleteBlockSize(CodeGenFunction &CGF);
 
+  /// Get the number of blocks on the GPU
+  llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
+
+  /// Get the number of blocks on the GPU for special reduction
+  llvm::Value *getSpecRedGUPBlockSize(CodeGenFunction &CGF);
+
+  /// Call cross-team sum
+  llvm::Value *getGPUXteamSum(CodeGenFunction &CGF, llvm::Value *Val,
+                              llvm::Value *SumPtr);
+
   /// Returns whether the current architecture supports fast FP atomics
   bool supportFastFPAtomics() override;
 

@@ -6157,6 +6157,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-optimistic-collapse");
 
+      if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                       options::OPT_fno_openmp_target_new_runtime, true))
+        CmdArgs.push_back("-fopenmp-target-new-runtime");
+      else
+        CmdArgs.push_back("-fno-openmp-target-new-runtime");
+
       if (Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
                        options::OPT_fno_openmp_target_ignore_env_vars,
                        shouldIgnoreEnvVars(Args)))
