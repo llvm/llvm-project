@@ -28,6 +28,15 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.abs {{%[A-Za-z0-9._]+}} : f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @fabs({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
+function test_real16(x)
+  real(16) :: x, test_real16
+  test_real16 = abs(x)
+end function
+! ALL-LABEL: @_QPtest_real16
+! FAST: {{%[A-Za-z0-9._]+}} = math.abs {{%[A-Za-z0-9._]+}} : f128
+! RELAXED: {{%[A-Za-z0-9._]+}} = math.abs {{%[A-Za-z0-9._]+}} : f128
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.fabs.f128({{%[A-Za-z0-9._]+}}) : (f128) -> f128
+
 function test_complex4(c)
   complex(4) :: c, test_complex4
   test_complex4 = abs(c)
@@ -207,6 +216,30 @@ end function
 ! FAST: {{%[A-Za-z0-9._]+}} = math.cos {{%[A-Za-z0-9._]+}} : f64
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.cos {{%[A-Za-z0-9._]+}} : f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @cos({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+
+//--- cosh.f90
+! RUN: bbc -emit-fir %t/cosh.f90 -o - --lower-math-early=false --math-runtime=fast | FileCheck --check-prefixes=ALL %t/cosh.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=fast %t/cosh.f90 -o - | FileCheck --check-prefixes=ALL %t/cosh.f90
+! RUN: bbc -emit-fir %t/cosh.f90 -o - --lower-math-early=false --math-runtime=relaxed | FileCheck --check-prefixes=ALL %t/cosh.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=relaxed %t/cosh.f90 -o - | FileCheck --check-prefixes=ALL %t/cosh.f90
+! RUN: bbc -emit-fir %t/cosh.f90 -o - --lower-math-early=false --math-runtime=precise | FileCheck --check-prefixes=ALL %t/cosh.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=precise %t/cosh.f90 -o - | FileCheck --check-prefixes=ALL %t/cosh.f90
+
+function test_real4(x)
+  real :: x, test_real4
+  test_real4 = cosh(x)
+end function
+
+! ALL-LABEL: @_QPtest_real4
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @coshf({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+
+function test_real8(x)
+  real(8) :: x, test_real8
+  test_real8 = cosh(x)
+end function
+
+! ALL-LABEL: @_QPtest_real8
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cosh({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 //--- erf.f90
 ! RUN: bbc -emit-fir %t/erf.f90 -o - --lower-math-early=false --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/erf.f90
@@ -440,6 +473,26 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.copysign {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} : f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
 
+function test_real10(x, y)
+  real(10) :: x, y, test_real10
+  test_real10 = sign(x, y)
+end function
+
+! ALL-LABEL: @_QPtest_real10
+! FAST: {{%[A-Za-z0-9._]+}} = math.copysign {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} : f80
+! RELAXED: {{%[A-Za-z0-9._]+}} = math.copysign {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} : f80
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @copysignl({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f80, f80) -> f80
+
+function test_real16(x, y)
+  real(16) :: x, y, test_real16
+  test_real16 = sign(x, y)
+end function
+
+! ALL-LABEL: @_QPtest_real16
+! FAST: {{%[A-Za-z0-9._]+}} = math.copysign {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} : f128
+! RELAXED: {{%[A-Za-z0-9._]+}} = math.copysign {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} : f128
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.copysign.f128({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f128, f128) -> f128
+
 //--- sin.f90
 ! RUN: bbc -emit-fir %t/sin.f90 -o - --lower-math-early=false --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/sin.f90
 ! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=fast %t/sin.f90 -o - | FileCheck --check-prefixes=ALL,FAST %t/sin.f90
@@ -468,6 +521,30 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.sin {{%[A-Za-z0-9._]+}} : f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @sin({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
+//--- sinh.f90
+! RUN: bbc -emit-fir %t/sinh.f90 -o - --lower-math-early=false --math-runtime=fast | FileCheck --check-prefixes=ALL %t/sinh.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=fast %t/sinh.f90 -o - | FileCheck --check-prefixes=ALL %t/sinh.f90
+! RUN: bbc -emit-fir %t/sinh.f90 -o - --lower-math-early=false --math-runtime=relaxed | FileCheck --check-prefixes=ALL %t/sinh.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=relaxed %t/sinh.f90 -o - | FileCheck --check-prefixes=ALL %t/sinh.f90
+! RUN: bbc -emit-fir %t/sinh.f90 -o - --lower-math-early=false --math-runtime=precise | FileCheck --check-prefixes=ALL %t/sinh.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=precise %t/sinh.f90 -o - | FileCheck --check-prefixes=ALL %t/sinh.f90
+
+function test_real4(x)
+  real :: x, test_real4
+  test_real4 = sinh(x)
+end function
+
+! ALL-LABEL: @_QPtest_real4
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @sinhf({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+
+function test_real8(x)
+  real(8) :: x, test_real8
+  test_real8 = sinh(x)
+end function
+
+! ALL-LABEL: @_QPtest_real8
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @sinh({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+
 //--- tanh.f90
 ! RUN: bbc -emit-fir %t/tanh.f90 -o - --lower-math-early=false --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/tanh.f90
 ! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=fast %t/tanh.f90 -o - | FileCheck --check-prefixes=ALL,FAST %t/tanh.f90
@@ -495,3 +572,31 @@ end function
 ! FAST: {{%[A-Za-z0-9._]+}} = math.tanh {{%[A-Za-z0-9._]+}} : f64
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.tanh {{%[A-Za-z0-9._]+}} : f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @tanh({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+
+//--- tan.f90
+! RUN: bbc -emit-fir %t/tan.f90 -o - --lower-math-early=false --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/tan.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=fast %t/tan.f90 -o - | FileCheck --check-prefixes=ALL,FAST %t/tan.f90
+! RUN: bbc -emit-fir %t/tan.f90 -o - --lower-math-early=false --math-runtime=relaxed | FileCheck --check-prefixes=ALL,RELAXED %t/tan.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=relaxed %t/tan.f90 -o - | FileCheck --check-prefixes=ALL,RELAXED %t/tan.f90
+! RUN: bbc -emit-fir %t/tan.f90 -o - --lower-math-early=false --math-runtime=precise | FileCheck --check-prefixes=ALL,PRECISE %t/tan.f90
+! RUN: %flang_fc1 -emit-fir -mllvm -lower-math-early=false -mllvm -math-runtime=precise %t/tan.f90 -o - | FileCheck --check-prefixes=ALL,PRECISE %t/tan.f90
+
+function test_real4(x)
+  real :: x, test_real4
+  test_real4 = tan(x)
+end function
+
+! ALL-LABEL: @_QPtest_real4
+! FAST: {{%[A-Za-z0-9._]+}} = math.tan {{%[A-Za-z0-9._]+}} : f32
+! RELAXED: {{%[A-Za-z0-9._]+}} = math.tan {{%[A-Za-z0-9._]+}} : f32
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @tanf({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+
+function test_real8(x)
+  real(8) :: x, test_real8
+  test_real8 = tan(x)
+end function
+
+! ALL-LABEL: @_QPtest_real8
+! FAST: {{%[A-Za-z0-9._]+}} = math.tan {{%[A-Za-z0-9._]+}} : f64
+! RELAXED: {{%[A-Za-z0-9._]+}} = math.tan {{%[A-Za-z0-9._]+}} : f64
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @tan({{%[A-Za-z0-9._]+}}) : (f64) -> f64

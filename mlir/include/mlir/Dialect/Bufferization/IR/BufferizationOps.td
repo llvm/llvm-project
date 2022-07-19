@@ -186,6 +186,64 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// DeallocTensorOp
+//===----------------------------------------------------------------------===//
+
+def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
+    [BufferizableOpInterface]> {
+  string summary = "Releases underlying sparse storage format of given tensor";
+  string description = [{
+    `bufferization.dealloc_tensor` is a buffer deallocation in tensor land. This
+    op can be used for manual buffer deallocation. Some bufferizations (such as
+    One-Shot Bufferize) take care of buffer deallocation, in which case this op
+    is usually not needed. Details can be found in the documentation of the
+    respective bufferization passes.
+
+    In case of a dense tensor, this op lowers to a `memref.dealloc` op during
+    bufferization.
+
+    In case of a sparse tensor, this op releases the underlying sparse storage
+    format for a tensor that materialized earlier through a `new` operation, a
+    `convert` operation with annotated destination tensor type (unless the
+    convert is folded away), or a `bufferization.alloc_tensor` operation. The
+    release operation should only be called once for any materialized tensor.
+    After this operation, any subsequent `memref` querying operation on the
+    tensor returns undefined results.
+
+    Example:
+
+    ```mlir
+    bufferization.dealloc_tensor %tensor : tensor<1024x1024xf64, #CSR>
+    ```
+  }];
+
+  let arguments = (ins AnyTensor:$tensor);
+  let results = (outs);
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+
+  let extraClassDeclaration = [{
+    bool bufferizesToMemoryRead(OpOperand &opOperand,
+                                const AnalysisState &state) const {
+      return false;
+    }
+
+    bool bufferizesToMemoryWrite(OpOperand &opOperand,
+                                 const AnalysisState &state) const {
+      return false;
+    }
+
+    SmallVector<OpResult> getAliasingOpResult(
+        OpOperand &opOperand, const AnalysisState &state) const {
+      return {};
+    }
+
+    LogicalResult bufferize(RewriterBase &rewriter,
+                            const BufferizationOptions &options);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ToTensorOp
 //===----------------------------------------------------------------------===//

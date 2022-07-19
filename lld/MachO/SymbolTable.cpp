@@ -117,6 +117,13 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   return defined;
 }
 
+Defined *SymbolTable::aliasDefined(Defined *src, StringRef target) {
+  return addDefined(target, src->getFile(), src->isec, src->value, src->size,
+                    src->isWeakDef(), src->privateExtern, src->thumb,
+                    src->referencedDynamically, src->noDeadStrip,
+                    src->weakDefCanBeHidden);
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
                                   bool isWeakRef) {
   Symbol *s;

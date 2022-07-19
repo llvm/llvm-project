@@ -247,11 +247,16 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
   return CHECK(parseCachePruningPolicy(ltoPolicy), "invalid LTO cache policy");
 }
 
-static DenseMap<StringRef, ArchiveFile *> loadedArchives;
+struct ArchiveFileInfo {
+  ArchiveFile *file;
+  bool isCommandLineLoad;
+};
+
+static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
 static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
-                          bool isLazy = false, bool isExplicit = true,
-                          bool isBundleLoader = false) {
+                          bool isCommandLineLoad, bool isLazy = false,
+                          bool isExplicit = true, bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -268,17 +273,27 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     // loadArchiveMember() call below may recursively call addFile() and
     // invalidate this reference.
     auto entry = loadedArchives.find(path);
-    if (entry != loadedArchives.end())
-      return entry->second;
 
-    std::unique_ptr<object::Archive> archive = CHECK(
-        object::Archive::create(mbref), path + ": failed to parse archive");
+    ArchiveFile *file;
+    if (entry == loadedArchives.end()) {
+      // No cached archive, we need to create a new one
+      std::unique_ptr<object::Archive> archive = CHECK(
+          object::Archive::create(mbref), path + ": failed to parse archive");
 
-    if (!archive->isEmpty() && !archive->hasSymbolTable())
-      error(path + ": archive has no index; run ranlib to add one");
+      if (!archive->isEmpty() && !archive->hasSymbolTable())
+        error(path + ": archive has no index; run ranlib to add one");
+      file = make<ArchiveFile>(std::move(archive));
+    } else {
+      file = entry->second.file;
+      // If file is previously loaded via command line, or is loaded via
+      // LC_LINKER_OPTION and being loaded via LC_LINKER_OPTION again,
+      // using the cached archive should be enough
+      if (entry->second.isCommandLineLoad ||
+          entry->second.isCommandLineLoad == isCommandLineLoad)
+        return file;
+    }
 
-    auto *file = make<ArchiveFile>(std::move(archive));
-    if ((forceLoadArchive == ForceLoad::Default && config->allLoad) ||
+    if ((isCommandLineLoad && config->allLoad) ||
         forceLoadArchive == ForceLoad::Yes) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         Error e = Error::success();
@@ -293,8 +308,7 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
           error(toString(file) +
                 ": Archive::children failed: " + toString(std::move(e)));
       }
-    } else if (forceLoadArchive == ForceLoad::Default &&
-               config->forceLoadObjC) {
+    } else if (isCommandLineLoad && config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->getArchive().symbols())
         if (sym.getName().startswith(objc::klass))
           file->fetch(sym);
@@ -318,7 +332,8 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     }
 
     file->addLazySymbols();
-    newFile = loadedArchives[path] = file;
+    loadedArchives[path] = ArchiveFileInfo{file, isCommandLineLoad};
+    newFile = file;
     break;
   }
   case file_magic::macho_object:
@@ -369,10 +384,12 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
 
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isExplicit,
-                       ForceLoad forceLoadArchive) {
+                       ForceLoad forceLoadArchive,
+                       bool isCommandLineLoad = true) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
+            addFile(*path, forceLoadArchive, isCommandLineLoad,
+                    /*isLazy=*/false, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -390,13 +407,14 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
 static DenseSet<StringRef> loadedObjectFrameworks;
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
                          bool isReexport, bool isExplicit,
-                         ForceLoad forceLoadArchive) {
+                         ForceLoad forceLoadArchive,
+                         bool isCommandLineLoad = true) {
   if (Optional<StringRef> path = findFramework(name)) {
     if (loadedObjectFrameworks.contains(*path))
       return;
 
-    InputFile *file =
-        addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit);
+    InputFile *file = addFile(*path, forceLoadArchive, isCommandLineLoad,
+                              /*isLazy=*/false, isExplicit, false);
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(file)) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
@@ -440,11 +458,13 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
         config->forceLoadSwift && arg.startswith("swift") ? ForceLoad::Yes
                                                           : ForceLoad::No;
     addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-               /*isReexport=*/false, /*isExplicit=*/false, forceLoadArchive);
+               /*isReexport=*/false, /*isExplicit=*/false, forceLoadArchive,
+               /*isCommandLineLoad=*/false);
   } else if (arg == "-framework") {
     StringRef name = argv[++i];
     addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
-                 /*isReexport=*/false, /*isExplicit=*/false, ForceLoad::No);
+                 /*isReexport=*/false, /*isExplicit=*/false, ForceLoad::No,
+                 /*isCommandLineLoad=*/false);
   } else {
     error(arg + " is not allowed in LC_LINKER_OPTION");
   }
@@ -456,7 +476,7 @@ static void addFileList(StringRef path, bool isLazy) {
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), ForceLoad::Default, isLazy);
+    addFile(rerootPath(path), ForceLoad::Default, true, isLazy);
 }
 
 // We expect sub-library names of the form "libfoo", which will match a dylib
@@ -976,30 +996,30 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), ForceLoad::Default, isLazy);
+      addFile(rerootPath(arg->getValue()), ForceLoad::Default, true, isLazy);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), ForceLoad::Default)))
+              addFile(rerootPath(arg->getValue()), ForceLoad::Default, true)))
         dylibFile->forceNeeded = true;
       break;
     case OPT_reexport_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), ForceLoad::Default))) {
+              addFile(rerootPath(arg->getValue()), ForceLoad::Default, true))) {
         config->hasReexports = true;
         dylibFile->reexport = true;
       }
       break;
     case OPT_weak_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), ForceLoad::Default)))
+              addFile(rerootPath(arg->getValue()), ForceLoad::Default, true)))
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
       addFileList(arg->getValue(), isLazy);
       break;
     case OPT_force_load:
-      addFile(rerootPath(arg->getValue()), ForceLoad::Yes);
+      addFile(rerootPath(arg->getValue()), ForceLoad::Yes, true);
       break;
     case OPT_l:
     case OPT_needed_l:
@@ -1264,7 +1284,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
-    addFile(arg->getValue(), ForceLoad::Default, /*isLazy=*/false,
+    addFile(arg->getValue(), ForceLoad::Default, true, /*isLazy=*/false,
             /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
@@ -1305,6 +1325,11 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->callGraphProfileSort = args.hasFlag(
       OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
+
+  for (const Arg *arg : args.filtered(OPT_alias)) {
+    config->aliasedSymbols.push_back(
+        std::make_pair(arg->getValue(0), arg->getValue(1)));
+  }
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1557,6 +1582,18 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     createSyntheticSections();
     createSyntheticSymbols();
+
+    for (const auto &pair : config->aliasedSymbols) {
+      if (const auto &sym = symtab->find(pair.first)) {
+        if (const auto &defined = dyn_cast<Defined>(sym)) {
+          symtab->aliasDefined(defined, pair.second);
+          continue;
+        }
+      }
+
+      warn("undefined base symbol '" + pair.first + "' for alias '" +
+           pair.second + "'\n");
+    }
 
     if (config->hasExplicitExports) {
       parallelForEach(symtab->getSymbols(), [](Symbol *sym) {

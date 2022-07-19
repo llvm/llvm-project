@@ -765,7 +765,6 @@ cc_library(
         ":CAPIDebugHeaders",
         ":CAPIGPUHeaders",
         ":CAPIIRHeaders",
-        ":CAPIRegistrationHeaders",
         ":MLIRBindingsPythonHeaders",
         "//llvm:Support",
         "@pybind11",
@@ -787,7 +786,6 @@ cc_library(
         ":CAPIGPUObjects",
         ":CAPIIRObjects",
         ":CAPIInterfacesObjects",
-        ":CAPIRegistrationObjects",
     ],
 )
 
@@ -824,7 +822,6 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
-        ":CAPIRegistration",
         ":MLIRBindingsPythonHeadersAndDeps",
     ],
 )
@@ -843,7 +840,6 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPIQuant",
-        ":CAPIRegistration",
         ":MLIRBindingsPythonHeadersAndDeps",
     ],
 )
@@ -861,29 +857,8 @@ cc_binary(
     ],
     deps = [
         ":CAPIIR",
-        ":CAPIRegistration",
         ":CAPISparseTensor",
         ":MLIRBindingsPythonHeadersAndDeps",
-    ],
-)
-
-# Dynamic library with the MLIR Conversions Python extension.
-cc_binary(
-    name = "_mlirConversions.so",
-    srcs = ["lib/Bindings/Python/Conversions/Conversions.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
-    deps = [
-        ":CAPIConversion",
-        ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
-        "@python_runtime//:headers",
     ],
 )
 
@@ -901,26 +876,6 @@ cc_binary(
     ],
     deps = [
         ":CAPIExecutionEngine",
-        ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
-        "@python_runtime//:headers",
-    ],
-)
-
-# Dynamic library with the MLIR Transforms Python extension.
-cc_binary(
-    name = "_mlirTransforms.so",
-    srcs = ["lib/Bindings/Python/Transforms/Transforms.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
-    deps = [
-        ":CAPITransforms",
         ":MLIRBindingsPythonHeadersAndDeps",
         "@pybind11",
         "@python_runtime//:headers",
@@ -7444,6 +7399,7 @@ cc_library(
         ":PDLDialect",
         ":Parser",
         ":SideEffectInterfaces",
+        ":TilingInterface",
         ":TransformDialect",
         ":TransformUtils",
         "//llvm:Support",

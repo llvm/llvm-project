@@ -61,6 +61,7 @@ write_lit_config("lit_site_cfg") {
 
     "LLVM_ENABLE_FFI=0",
     "LLVM_ENABLE_HTTPLIB=0",
+    "LLVM_ENABLE_ZSTD=0",
     "LLVM_HAVE_OPT_VIEWER_MODULES=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_DXIL_TESTS=0",
@@ -262,6 +263,7 @@ group("test") {
     "//llvm/tools/llvm-diff",
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
+    "//llvm/tools/llvm-dwarfutil",
     "//llvm/tools/llvm-dwp",
     "//llvm/tools/llvm-exegesis",
     "//llvm/tools/llvm-extract",

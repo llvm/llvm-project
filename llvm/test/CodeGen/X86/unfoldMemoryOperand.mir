@@ -88,7 +88,7 @@ body:             |
   ; CHECK-NEXT:   renamable $eax = MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   renamable $rcx = MOV64ri32 -4096
   ; CHECK-NEXT:   [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 -4096
-  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, @y, $noreg :: (dereferenceable load (s64) from @y, !tbaa !3)
+  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, @y, $noreg :: (dereferenceable invariant load (s64) from @y, !tbaa !3)
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.4):
@@ -115,7 +115,7 @@ body:             |
     successors: %bb.1(0x04000000), %bb.2(0x7c000000)
     liveins: $eax, $rcx
     %2:gr64 = MOV64ri32 -4096
-    CMP64mi32 $rip, 1, $noreg, @y, $noreg, @x, implicit-def $eflags :: (dereferenceable load (s64) from @y, !tbaa !3)
+    CMP64mi32 $rip, 1, $noreg, @y, $noreg, @x, implicit-def $eflags :: (dereferenceable invariant load (s64) from @y, !tbaa !3)
     renamable $al = SETCCr 4, implicit killed $eflags, implicit killed $eax, implicit-def $eax
     MOV32mr renamable $rcx, 1, $noreg, @z + 4096, $noreg, renamable $eax :: (store (s32) into %ir.scevgep, !tbaa !7)
     renamable $rcx = ADD64ri8 killed renamable $rcx, 4, implicit-def $eflags

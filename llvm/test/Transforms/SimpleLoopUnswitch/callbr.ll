@@ -6,12 +6,20 @@ declare i1 @foo()
 define i32 @mem_cgroup_node_nr_lru_pages(i1 %tree) {
 ; CHECK-LABEL: @mem_cgroup_node_nr_lru_pages(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[TREE:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label [[FOR_COND_US:%.*]]
+; CHECK:       for.cond.us:
+; CHECK-NEXT:    br label [[IF_END8_US:%.*]]
+; CHECK:       if.end8.us:
+; CHECK-NEXT:    br label [[FOR_COND_US]]
+; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    br i1 [[TREE:%.*]], label [[IF_END8:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    callbr void asm sideeffect ".pushsection __jump_table, \22aw\22 \0A\09.popsection \0A\09", "!i,~{dirflag},~{fpsr},~{flags}"()
-; CHECK-NEXT:    to label [[IF_END8]] [label %for.cond5.preheader]
+; CHECK-NEXT:    to label [[IF_END8:%.*]] [label %for.cond5.preheader]
 ; CHECK:       for.cond5.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND5:%.*]]
 ; CHECK:       for.cond5:

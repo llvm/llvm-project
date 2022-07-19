@@ -1065,13 +1065,16 @@ public:
 
 The declarative Attribute and Type definitions try to auto-generate as much
 logic and methods as possible. With that said, there will always be long-tail
-cases that won't be covered. For such cases, `extraClassDeclaration` can be
-used. Code within the `extraClassDeclaration` field will be copied literally to
-the generated C++ Attribute or Type class.
+cases that won't be covered. For such cases, `extraClassDeclaration` and
+`extraClassDefinition` can be used. Code within the `extraClassDeclaration`
+field will be copied literally to the generated C++ Attribute or Type class.
+Code within `extraClassDefinition` will be added to the generated source file
+inside the class's C++ namespace. The substitution `$cppClass` will be replaced
+by the Attribute or Type's C++ class name.
 
-Note that `extraClassDeclaration` is a mechanism intended for long-tail cases by
-power users; for not-yet-implemented widely-applicable cases, improving the
-infrastructure is preferable.
+Note that these are mechanisms intended for long-tail cases by power users; for
+not-yet-implemented widely-applicable cases, improving the infrastructure is
+preferable.
 
 ### Registering with the Dialect
 

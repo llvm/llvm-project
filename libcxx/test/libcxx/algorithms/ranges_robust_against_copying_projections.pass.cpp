@@ -158,8 +158,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::partial_sort(a, mid, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort_copy(first, last, first2, mid2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort_copy(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partition(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partition_copy(first, last, first2, last2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partition_copy(a, first2, last2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partition_point(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
@@ -202,8 +202,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::sort(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(a, Less(), Proj(&copies)); assert(copies == 0);
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0); }
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(a, UnaryTrue(), Proj(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(a, UnaryTrue(), Proj(&copies)); assert(copies == 0); }
     if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(first, last, Less(), Proj(&copies)); assert(copies == 0); }
     if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(a, Less(), Proj(&copies)); assert(copies == 0); }
 #if TEST_STD_VER > 20

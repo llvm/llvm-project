@@ -68,17 +68,16 @@ Register LiveRangeEdit::createFrom(Register OldReg) {
 }
 
 bool LiveRangeEdit::checkRematerializable(VNInfo *VNI,
-                                          const MachineInstr *DefMI,
-                                          AAResults *aa) {
+                                          const MachineInstr *DefMI) {
   assert(DefMI && "Missing instruction");
   ScannedRemattable = true;
-  if (!TII.isTriviallyReMaterializable(*DefMI, aa))
+  if (!TII.isTriviallyReMaterializable(*DefMI))
     return false;
   Remattable.insert(VNI);
   return true;
 }
 
-void LiveRangeEdit::scanRemattable(AAResults *aa) {
+void LiveRangeEdit::scanRemattable() {
   for (VNInfo *VNI : getParent().valnos) {
     if (VNI->isUnused())
       continue;
@@ -90,14 +89,14 @@ void LiveRangeEdit::scanRemattable(AAResults *aa) {
     MachineInstr *DefMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (!DefMI)
       continue;
-    checkRematerializable(OrigVNI, DefMI, aa);
+    checkRematerializable(OrigVNI, DefMI);
   }
   ScannedRemattable = true;
 }
 
-bool LiveRangeEdit::anyRematerializable(AAResults *aa) {
+bool LiveRangeEdit::anyRematerializable() {
   if (!ScannedRemattable)
-    scanRemattable(aa);
+    scanRemattable();
   return !Remattable.empty();
 }
 
@@ -274,8 +273,7 @@ bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
 }
 
 /// Find all live intervals that need to shrink, then remove the instruction.
-void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
-                                     AAResults *AA) {
+void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
   assert(MI->allDefsAreDead() && "Def isn't really dead");
   SlotIndex Idx = LIS.getInstructionIndex(*MI).getRegSlot();
 
@@ -384,7 +382,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
     // register uses. That may provoke RA to split an interval at the KILL
     // and later result in an invalid live segment end.
     if (isOrigDef && DeadRemats && !HasLiveVRegUses &&
-        TII.isTriviallyReMaterializable(*MI, AA)) {
+        TII.isTriviallyReMaterializable(*MI)) {
       LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
       VNInfo *VNI = NewLI.getNextValue(Idx, LIS.getVNInfoAllocator());
       NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
@@ -414,14 +412,13 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
 }
 
 void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                                      ArrayRef<Register> RegsBeingSpilled,
-                                      AAResults *AA) {
+                                      ArrayRef<Register> RegsBeingSpilled) {
   ToShrinkSet ToShrink;
 
   for (;;) {
     // Erase all dead defs.
     while (!Dead.empty())
-      eliminateDeadDef(Dead.pop_back_val(), ToShrink, AA);
+      eliminateDeadDef(Dead.pop_back_val(), ToShrink);
 
     if (ToShrink.empty())
       break;

@@ -145,7 +145,7 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
   Block *body = genericOp.getBody();
   Operation *peeledScalarOperation = &(*body->begin());
   SmallVector<AffineMap> peeledGenericOpIndexingMaps =
-      genericOp.getIndexingMaps();
+      genericOp.getIndexingMapsArray();
 
   /// Compute the loop ranges for operation. This is the shape of the result of
   /// the generic op for the peeled operation.

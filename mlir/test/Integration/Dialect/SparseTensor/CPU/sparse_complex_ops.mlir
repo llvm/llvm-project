@@ -241,15 +241,15 @@ module {
     call @dumpf(%6) : (tensor<?xf64, #SparseVector>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %sv2 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %0 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %1 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %2 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %3 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %4 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %5 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %6 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv1 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %sv2 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %1 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %2 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %3 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %4 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %5 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %6 : tensor<?xf64, #SparseVector>
     return
   }
 }

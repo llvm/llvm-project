@@ -189,6 +189,11 @@ ABI Changes
   as a return type instead of relying on the type of ``valarray``-expressions, which is
   not guaranteed by the Standard anyway.
 
+- By default, the legacy debug mode symbols are not provided with the library anymore. If
+  you are a vendor and need to re-enable them, please use the ``LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS``
+  CMake flag, and contact the libc++ developers as this will be removed in LLVM 16.
+  Furthermore, please note that ``LIBCXX_ENABLE_DEBUG_MODE_SUPPORT`` is not honored anymore.
+
 Build System Changes
 --------------------
 
@@ -220,10 +225,6 @@ Build System Changes
   configuration and isn't supported by one of the configurations in ``libcxx/test/configs``,
   ``libcxxabi/test/configs`` or ``libunwind/test/configs``, please move to one of those
   configurations or define your own.
-
-- The ``LIBCXX_ENABLE_DEBUG_MODE_SUPPORT`` CMake configuration is not supported anymore. If you
-  were disabling support for the debug mode with that flag, please use ``LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=OFF``
-  instead.
 
 - MinGW DLL builds of libc++ no longer use dllimport in their headers, which
   means that the same set of installed headers works for both DLL and static

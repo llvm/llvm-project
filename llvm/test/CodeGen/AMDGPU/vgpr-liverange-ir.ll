@@ -579,18 +579,18 @@ define protected amdgpu_kernel void @nested_waterfalls(%tex* addrspace(1)* %tex.
   ; SI-NEXT:   %69:vgpr_32, dead %71:sreg_32_xm0_xexec = V_ADDC_U32_e64 killed [[S_LOAD_DWORDX2_IMM]].sub1, killed [[V_LSHLREV_B64_e64_]].sub1, killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_ADD_CO_U32_e64_]], %subreg.sub0, killed %69, %subreg.sub1
   ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (load (s64) from %ir.idx, addrspace 1)
-  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[GLOBAL_LOAD_DWORDX2_]], 16, 0, implicit $exec :: (load (s128) from %ir.6 + 16, addrspace 4)
+  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[GLOBAL_LOAD_DWORDX2_]], 16, 0, implicit $exec :: (dereferenceable invariant load (s128) from %ir.6 + 16, addrspace 4)
   ; SI-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub3
   ; SI-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub2
   ; SI-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub1
   ; SI-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_]].sub0
-  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[GLOBAL_LOAD_DWORDX2_]], 0, 0, implicit $exec :: (load (s128) from %ir.6, align 32, addrspace 4)
+  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[GLOBAL_LOAD_DWORDX2_]], 0, 0, implicit $exec :: (dereferenceable invariant load (s128) from %ir.6, align 32, addrspace 4)
   ; SI-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_1]].sub3
   ; SI-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_1]].sub2
   ; SI-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_1]].sub1
   ; SI-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_1]].sub0
   ; SI-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_256 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3, killed [[COPY5]], %subreg.sub4, killed [[COPY4]], %subreg.sub5, killed [[COPY3]], %subreg.sub6, killed [[COPY2]], %subreg.sub7
-  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 killed [[GLOBAL_LOAD_DWORDX2_]], 48, 0, implicit $exec :: (load (s128) from %ir.8, addrspace 4)
+  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 killed [[GLOBAL_LOAD_DWORDX2_]], 48, 0, implicit $exec :: (dereferenceable invariant load (s128) from %ir.8, addrspace 4)
   ; SI-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.2:

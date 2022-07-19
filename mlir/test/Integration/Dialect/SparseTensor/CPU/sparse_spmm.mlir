@@ -71,25 +71,27 @@ module {
     %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
 
     // Initialize dense vectors.
-    %bdata = memref.alloc(%c256, %c4) : memref<?x?xf64>
-    %xdata = memref.alloc(%c4, %c4) : memref<?x?xf64>
-    scf.for %i = %c0 to %c256 step %c1 {
-      scf.for %j = %c0 to %c4 step %c1 {
+    %init_256_4 = bufferization.alloc_tensor(%c256, %c4) : tensor<?x?xf64>
+    %b = scf.for %i = %c0 to %c256 step %c1 iter_args(%t = %init_256_4) -> tensor<?x?xf64> {
+      %b2 = scf.for %j = %c0 to %c4 step %c1 iter_args(%t2 = %t) -> tensor<?x?xf64> {
         %k0 = arith.muli %i, %c4 : index
         %k1 = arith.addi %j, %k0 : index
         %k2 = arith.index_cast %k1 : index to i32
         %k = arith.sitofp %k2 : i32 to f64
-        memref.store %k, %bdata[%i, %j] : memref<?x?xf64>
+        %t3 = tensor.insert %k into %t2[%i, %j] : tensor<?x?xf64>
+        scf.yield %t3 : tensor<?x?xf64>
       }
+      scf.yield %b2 : tensor<?x?xf64>
     }
-    scf.for %i = %c0 to %c4 step %c1 {
-      scf.for %j = %c0 to %c4 step %c1 {
-        memref.store %i0, %xdata[%i, %j] : memref<?x?xf64>
+    %init_4_4 = bufferization.alloc_tensor(%c4, %c4) : tensor<?x?xf64>
+    %x = scf.for %i = %c0 to %c4 step %c1 iter_args(%t = %init_4_4) -> tensor<?x?xf64> {
+      %x2 = scf.for %j = %c0 to %c4 step %c1 iter_args(%t2 = %t) -> tensor<?x?xf64> {
+        %t3 = tensor.insert %i0 into %t2[%i, %j] : tensor<?x?xf64>
+        scf.yield %t3 : tensor<?x?xf64>
       }
+      scf.yield %x2 : tensor<?x?xf64>
     }
-    %b = bufferization.to_tensor %bdata : memref<?x?xf64>
-    %x = bufferization.to_tensor %xdata : memref<?x?xf64>
-
+  
     // Call kernel.
     %0 = call @kernel_spmm(%a, %b, %x)
       : (tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>, tensor<?x?xf64>) -> tensor<?x?xf64>
@@ -98,14 +100,11 @@ module {
     //
     // CHECK: ( ( 3548, 3550, 3552, 3554 ), ( 6052, 6053, 6054, 6055 ), ( -56, -63, -70, -77 ), ( -13704, -13709, -13714, -13719 ) )
     //
-    %m = bufferization.to_memref %0 : memref<?x?xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %i0: memref<?x?xf64>, vector<4x4xf64>
+    %v = vector.transfer_read %0[%c0, %c0], %i0: tensor<?x?xf64>, vector<4x4xf64>
     vector.print %v : vector<4x4xf64>
 
     // Release the resources.
-    memref.dealloc %bdata : memref<?x?xf64>
-    memref.dealloc %xdata : memref<?x?xf64>
-    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xf64, #SparseMatrix>
 
     return
   }

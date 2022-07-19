@@ -576,7 +576,7 @@ static bool hasSameValue(const MachineRegisterInfo &MRI,
 
   // If the instruction could modify memory, or there may be some intervening
   // store between the two, we can't consider them to be equal.
-  if (TDef->mayLoadOrStore() && !TDef->isDereferenceableInvariantLoad(nullptr))
+  if (TDef->mayLoadOrStore() && !TDef->isDereferenceableInvariantLoad())
     return false;
 
   // We also can't guarantee that they are the same if, for example, the
