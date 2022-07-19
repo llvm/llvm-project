@@ -1128,6 +1128,36 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
   return success();
 }
 
+// TODO: We should be able to only define either inferReturnType or
+// refineReturnType, currently only refineReturnType can be omitted.
+LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &returnTypes) {
+  returnTypes.clear();
+  return OpWithRefineTypeInterfaceOp::refineReturnTypes(
+      context, location, operands, attributes, regions, returnTypes);
+}
+
+LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
+    MLIRContext *, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &returnTypes) {
+  if (operands[0].getType() != operands[1].getType()) {
+    return emitOptionalError(location, "operand type mismatch ",
+                             operands[0].getType(), " vs ",
+                             operands[1].getType());
+  }
+  // TODO: Add helper to make this more concise to write.
+  if (returnTypes.empty())
+    returnTypes.resize(1, nullptr);
+  if (returnTypes[0] && returnTypes[0] != operands[0].getType())
+    return emitOptionalError(location,
+                             "required first operand and result to match");
+  returnTypes[0] = operands[0].getType();
+  return success();
+}
+
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, Optional<Location> location, ValueShapeRange operands,
     DictionaryAttr attributes, RegionRange regions,
