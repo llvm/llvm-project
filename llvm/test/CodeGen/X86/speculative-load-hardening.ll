@@ -911,8 +911,8 @@ define void @test_deferred_hardening(ptr %ptr1, ptr %ptr2, i32 %x) nounwind spec
 ; X64-NEXT:    cmpq $.Lslh_ret_addr23, %rcx
 ; X64-NEXT:    cmovneq %r15, %rax
 ; X64-NEXT:    movswl (%rbx), %edi
-; X64-NEXT:    shrl $7, %edi
 ; X64-NEXT:    notl %edi
+; X64-NEXT:    shrl $7, %edi
 ; X64-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
@@ -964,8 +964,8 @@ define void @test_deferred_hardening(ptr %ptr1, ptr %ptr2, i32 %x) nounwind spec
 ; X64-LFENCE-NEXT:    shll $7, %edi
 ; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movswl (%rbx), %edi
-; X64-LFENCE-NEXT:    shrl $7, %edi
 ; X64-LFENCE-NEXT:    notl %edi
+; X64-LFENCE-NEXT:    shrl $7, %edi
 ; X64-LFENCE-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
 ; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movzwl (%rbx), %eax

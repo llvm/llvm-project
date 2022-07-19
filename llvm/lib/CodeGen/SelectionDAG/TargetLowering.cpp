@@ -1533,8 +1533,10 @@ bool TargetLowering::SimplifyDemandedBits(
             APInt Ones = APInt::getAllOnes(BitWidth);
             Ones = Op0Opcode == ISD::SHL ? Ones.shl(ShiftAmt)
                                          : Ones.lshr(ShiftAmt);
-            if (C->getAPIntValue() == Ones) {
-              // If the xor constant is a shifted -1, do a 'not' before the
+            const TargetLowering &TLI = TLO.DAG.getTargetLoweringInfo();
+            if ((DemandedBits & C->getAPIntValue()) == (DemandedBits & Ones) &&
+                TLI.isDesirableToCommuteXorWithShift(Op.getNode())) {
+              // If the xor constant is a demanded mask, do a 'not' before the
               // shift:
               // xor (X << ShiftC), XorC --> (not X) << ShiftC
               // xor (X >> ShiftC), XorC --> (not X) >> ShiftC

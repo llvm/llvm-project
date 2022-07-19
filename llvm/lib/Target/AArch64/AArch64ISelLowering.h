@@ -657,6 +657,9 @@ public:
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
 
+  /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
+  bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
+
   /// Return true if it is profitable to fold a pair of shifts into a mask.
   bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                          CombineLevel Level) const override;
