@@ -1562,6 +1562,18 @@ use, then ``RetCC_X86_32_SSE`` is invoked.
     CCDelegateTo<RetCC_X86_32_C>
   ]>;
 
+``CCAssignToRegAndStack`` is the same as ``CCAssignToReg``, but also allocates
+a stack slot, when some register is used. Basically, it works like:
+``CCIf<CCAssignToReg<regList>, CCAssignToStack<size, align>>``.
+
+.. code-block:: text
+
+  class CCAssignToRegAndStack<list<Register> regList, int size, int align>
+      : CCAssignToReg<regList> {
+    int Size = size;
+    int Align = align;
+  }
+
 Other calling convention interfaces include:
 
 * ``CCIf <predicate, action>`` --- If the predicate matches, apply the action.
