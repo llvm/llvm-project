@@ -90,6 +90,20 @@ static bool isPermutation(ArrayRef<unsigned> interchange) {
 // TileUsingSCFForOp pattern implementation.
 //===----------------------------------------------------------------------===//
 
+// Check if `stride` evenly divides the trip count `size - offset`.
+static bool tileDividesIterationDomain(Range loopRange) {
+  Optional<int64_t> offsetAsInt = getConstantIntValue(loopRange.offset);
+  if (!offsetAsInt)
+    return false;
+  Optional<int64_t> sizeAsInt = getConstantIntValue(loopRange.size);
+  if (!sizeAsInt)
+    return false;
+  Optional<int64_t> strideAsInt = getConstantIntValue(loopRange.stride);
+  if (!strideAsInt)
+    return false;
+  return ((sizeAsInt.value() - offsetAsInt.value()) % strideAsInt.value() == 0);
+}
+
 /// Generate an empty loop nest that represents the tiled loop nest shell.
 /// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
 /// - `tileSizeVals` is the tile sizes to use. Zero represent untiled loops.
@@ -134,9 +148,15 @@ generateTileLoopNest(OpBuilder &builder, Location loc,
         loc, offset, size, tileSizeVals[loopRange.index()], ValueRange{},
         [&](OpBuilder &bodyBuilder, Location bodyLoc, Value iv,
             ValueRange /*iterArgs*/) {
-          Value boundedTileSize = builder.create<AffineMinOp>(
-              bodyLoc, minMap,
-              ValueRange{iv, tileSizeVals[loopRange.index()], size});
+          bool canAvoidMap = tileDividesIterationDomain(
+              Range{loopRange.value().offset, loopRange.value().size,
+                    tileSizeVals[loopRange.index()]});
+          Value boundedTileSize =
+              (canAvoidMap)
+                  ? tileSizeVals[loopRange.index()]
+                  : builder.create<AffineMinOp>(
+                        bodyLoc, minMap,
+                        ValueRange{iv, tileSizeVals[loopRange.index()], size});
           sizes[loopRange.index()] = boundedTileSize;
           builder.create<scf::YieldOp>(loc);
         });
