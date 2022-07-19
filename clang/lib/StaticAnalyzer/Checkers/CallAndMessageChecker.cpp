@@ -73,7 +73,7 @@ public:
     CK_NumCheckKinds
   };
 
-  DefaultBool ChecksEnabled[CK_NumCheckKinds];
+  bool ChecksEnabled[CK_NumCheckKinds] = {false};
   // The original core.CallAndMessage checker name. This should rather be an
   // array, as seen in MallocChecker and CStringChecker.
   CheckerNameRef OriginalName;

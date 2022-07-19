@@ -111,7 +111,13 @@ public:
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
   /// the state of a program.
-  explicit Environment(DataflowAnalysisContext &DACtx) : DACtx(&DACtx) {}
+  explicit Environment(DataflowAnalysisContext &DACtx);
+
+  Environment(const Environment &Other);
+  Environment &operator=(const Environment &Other);
+
+  Environment(Environment &&Other) = default;
+  Environment &operator=(Environment &&Other) = default;
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
   /// the state of a program.
@@ -297,9 +303,8 @@ public:
                : makeAnd(makeImplication(LHS, RHS), makeImplication(RHS, LHS));
   }
 
-  const llvm::DenseSet<BoolValue *> &getFlowConditionConstraints() const {
-    return FlowConditionConstraints;
-  }
+  /// Returns the token that identifies the flow condition of the environment.
+  AtomicBoolValue &getFlowConditionToken() const { return *FlowConditionToken; }
 
   /// Adds `Val` to the set of clauses that constitute the flow condition.
   void addToFlowCondition(BoolValue &Val);
@@ -345,7 +350,7 @@ private:
                  std::pair<StructValue *, const ValueDecl *>>
       MemberLocToStruct;
 
-  llvm::DenseSet<BoolValue *> FlowConditionConstraints;
+  AtomicBoolValue *FlowConditionToken;
 };
 
 } // namespace dataflow

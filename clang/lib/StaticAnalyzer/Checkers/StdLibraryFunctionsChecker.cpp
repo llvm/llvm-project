@@ -38,15 +38,6 @@
 // Non-pure functions, for which only partial improvement over the default
 // behavior is expected, are modeled via check::PostCall, non-intrusively.
 //
-// The following standard C functions are currently supported:
-//
-//   fgetc      getline   isdigit   isupper     toascii
-//   fread      isalnum   isgraph   isxdigit
-//   fwrite     isalpha   islower   read
-//   getc       isascii   isprint   write
-//   getchar    isblank   ispunct   toupper
-//   getdelim   iscntrl   isspace   tolower
-//
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -384,7 +375,43 @@ class StdLibraryFunctionsChecker
   };
 
   /// The complete list of constraints that defines a single branch.
-  typedef std::vector<ValueConstraintPtr> ConstraintSet;
+  using ConstraintSet = std::vector<ValueConstraintPtr>;
+
+  /// A single branch of a function summary.
+  ///
+  /// A branch is defined by a series of constraints - "assumptions" -
+  /// that together form a single possible outcome of invoking the function.
+  /// When static analyzer considers a branch, it tries to introduce
+  /// a child node in the Exploded Graph. The child node has to include
+  /// constraints that define the branch. If the constraints contradict
+  /// existing constraints in the state, the node is not created and the branch
+  /// is dropped; otherwise it's queued for future exploration.
+  /// The branch is accompanied by a note text that may be displayed
+  /// to the user when a bug is found on a path that takes this branch.
+  ///
+  /// For example, consider the branches in `isalpha(x)`:
+  ///   Branch 1)
+  ///     x is in range ['A', 'Z'] or in ['a', 'z']
+  ///     then the return value is not 0. (I.e. out-of-range [0, 0])
+  ///     and the note may say "Assuming the character is alphabetical"
+  ///   Branch 2)
+  ///     x is out-of-range ['A', 'Z'] and out-of-range ['a', 'z']
+  ///     then the return value is 0
+  ///     and the note may say "Assuming the character is non-alphabetical".
+  class SummaryCase {
+    ConstraintSet Constraints;
+    StringRef Note;
+
+  public:
+    SummaryCase(ConstraintSet &&Constraints, StringRef Note)
+        : Constraints(std::move(Constraints)), Note(Note) {}
+
+    SummaryCase(const ConstraintSet &Constraints, StringRef Note)
+        : Constraints(Constraints), Note(Note) {}
+
+    const ConstraintSet &getConstraints() const { return Constraints; }
+    StringRef getNote() const { return Note; }
+  };
 
   using ArgTypes = std::vector<Optional<QualType>>;
   using RetType = Optional<QualType>;
@@ -451,23 +478,12 @@ class StdLibraryFunctionsChecker
     return T;
   }
 
-  using Cases = std::vector<ConstraintSet>;
+  using SummaryCases = std::vector<SummaryCase>;
 
   /// A summary includes information about
   ///   * function prototype (signature)
   ///   * approach to invalidation,
-  ///   * a list of branches - a list of list of ranges -
-  ///     A branch represents a path in the exploded graph of a function (which
-  ///     is a tree). So, a branch is a series of assumptions. In other words,
-  ///     branches represent split states and additional assumptions on top of
-  ///     the splitting assumption.
-  ///     For example, consider the branches in `isalpha(x)`
-  ///       Branch 1)
-  ///         x is in range ['A', 'Z'] or in ['a', 'z']
-  ///         then the return value is not 0. (I.e. out-of-range [0, 0])
-  ///       Branch 2)
-  ///         x is out-of-range ['A', 'Z'] and out-of-range ['a', 'z']
-  ///         then the return value is 0.
+  ///   * a list of branches - so, a list of list of ranges,
   ///   * a list of argument constraints, that must be true on every branch.
   ///     If these constraints are not satisfied that means a fatal error
   ///     usually resulting in undefined behaviour.
@@ -482,7 +498,7 @@ class StdLibraryFunctionsChecker
   ///   signature is matched.
   class Summary {
     const InvalidationKind InvalidationKd;
-    Cases CaseConstraints;
+    SummaryCases Cases;
     ConstraintSet ArgConstraints;
 
     // The function to which the summary applies. This is set after lookup and
@@ -492,12 +508,12 @@ class StdLibraryFunctionsChecker
   public:
     Summary(InvalidationKind InvalidationKd) : InvalidationKd(InvalidationKd) {}
 
-    Summary &Case(ConstraintSet &&CS) {
-      CaseConstraints.push_back(std::move(CS));
+    Summary &Case(ConstraintSet &&CS, StringRef Note = "") {
+      Cases.push_back(SummaryCase(std::move(CS), Note));
       return *this;
     }
-    Summary &Case(const ConstraintSet &CS) {
-      CaseConstraints.push_back(CS);
+    Summary &Case(const ConstraintSet &CS, StringRef Note = "") {
+      Cases.push_back(SummaryCase(CS, Note));
       return *this;
     }
     Summary &ArgConstraint(ValueConstraintPtr VC) {
@@ -508,7 +524,7 @@ class StdLibraryFunctionsChecker
     }
 
     InvalidationKind getInvalidationKd() const { return InvalidationKd; }
-    const Cases &getCaseConstraints() const { return CaseConstraints; }
+    const SummaryCases &getCases() const { return Cases; }
     const ConstraintSet &getArgConstraints() const { return ArgConstraints; }
 
     QualType getArgType(ArgNo ArgN) const {
@@ -530,8 +546,8 @@ class StdLibraryFunctionsChecker
     // Once we know the exact type of the function then do validation check on
     // all the given constraints.
     bool validateByConstraints(const FunctionDecl *FD) const {
-      for (const ConstraintSet &Case : CaseConstraints)
-        for (const ValueConstraintPtr &Constraint : Case)
+      for (const SummaryCase &Case : Cases)
+        for (const ValueConstraintPtr &Constraint : Case.getConstraints())
           if (!Constraint->checkValidity(FD))
             return false;
       for (const ValueConstraintPtr &Constraint : ArgConstraints)
@@ -563,7 +579,7 @@ public:
     CK_StdCLibraryFunctionsTesterChecker,
     CK_NumCheckKinds
   };
-  DefaultBool ChecksEnabled[CK_NumCheckKinds];
+  bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
   bool DisplayLoadedSummaries = false;
@@ -842,18 +858,29 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
   // Now apply the constraints.
   const Summary &Summary = *FoundSummary;
   ProgramStateRef State = C.getState();
+  const ExplodedNode *Node = C.getPredecessor();
 
   // Apply case/branch specifications.
-  for (const ConstraintSet &Case : Summary.getCaseConstraints()) {
+  for (const SummaryCase &Case : Summary.getCases()) {
     ProgramStateRef NewState = State;
-    for (const ValueConstraintPtr &Constraint : Case) {
+    for (const ValueConstraintPtr &Constraint : Case.getConstraints()) {
       NewState = Constraint->apply(NewState, Call, Summary, C);
       if (!NewState)
         break;
     }
 
-    if (NewState && NewState != State)
-      C.addTransition(NewState);
+    if (NewState && NewState != State) {
+      StringRef Note = Case.getNote();
+      const NoteTag *Tag = C.getNoteTag(
+          // Sorry couldn't help myself.
+          [Node, Note]() {
+            // Don't emit "Assuming..." note when we ended up
+            // knowing in advance which branch is taken.
+            return (Node->succ_size() > 1) ? Note.str() : "";
+          },
+          /*IsPrunable=*/true);
+      C.addTransition(NewState, Tag);
+    }
   }
 }
 
@@ -1211,7 +1238,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           // Boils down to isupper() or islower() or isdigit().
           .Case({ArgumentCondition(0U, WithinRange,
                                    {{'0', '9'}, {'A', 'Z'}, {'a', 'z'}}),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is alphanumeric")
           // The locale-specific range.
           // No post-condition. We are completely unaware of
           // locale-specific return values.
@@ -1220,65 +1248,81 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
               {ArgumentCondition(
                    0U, OutOfRange,
                    {{'0', '9'}, {'A', 'Z'}, {'a', 'z'}, {128, UCharRangeMax}}),
-               ReturnValueCondition(WithinRange, SingleValue(0))})
+               ReturnValueCondition(WithinRange, SingleValue(0))},
+              "Assuming the character is non-alphanumeric")
           .ArgConstraint(ArgumentCondition(
               0U, WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})));
   addToFunctionSummaryMap(
       "isalpha", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange, {{'A', 'Z'}, {'a', 'z'}}),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is alphabetical")
           // The locale-specific range.
           .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
           .Case({ArgumentCondition(
                      0U, OutOfRange,
                      {{'A', 'Z'}, {'a', 'z'}, {128, UCharRangeMax}}),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is non-alphabetical"));
   addToFunctionSummaryMap(
       "isascii", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange, Range(0, 127)),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is an ASCII character")
           .Case({ArgumentCondition(0U, OutOfRange, Range(0, 127)),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not an ASCII character"));
   addToFunctionSummaryMap(
       "isblank", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange, {{'\t', '\t'}, {' ', ' '}}),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is a blank character")
           .Case({ArgumentCondition(0U, OutOfRange, {{'\t', '\t'}, {' ', ' '}}),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not a blank character"));
   addToFunctionSummaryMap(
       "iscntrl", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange, {{0, 32}, {127, 127}}),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is a control character")
           .Case({ArgumentCondition(0U, OutOfRange, {{0, 32}, {127, 127}}),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not a control character"));
   addToFunctionSummaryMap(
       "isdigit", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange, Range('0', '9')),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is a digit")
           .Case({ArgumentCondition(0U, OutOfRange, Range('0', '9')),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not a digit"));
   addToFunctionSummaryMap(
       "isgraph", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange, Range(33, 126)),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
-          .Case({ArgumentCondition(0U, OutOfRange, Range(33, 126)),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character has graphical representation")
+          .Case(
+              {ArgumentCondition(0U, OutOfRange, Range(33, 126)),
+               ReturnValueCondition(WithinRange, SingleValue(0))},
+              "Assuming the character does not have graphical representation"));
   addToFunctionSummaryMap(
       "islower", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           // Is certainly lowercase.
           .Case({ArgumentCondition(0U, WithinRange, Range('a', 'z')),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is a lowercase letter")
           // Is ascii but not lowercase.
           .Case({ArgumentCondition(0U, WithinRange, Range(0, 127)),
                  ArgumentCondition(0U, OutOfRange, Range('a', 'z')),
-                 ReturnValueCondition(WithinRange, SingleValue(0))})
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not a lowercase letter")
           // The locale-specific range.
           .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
           // Is not an unsigned char.
@@ -1288,52 +1332,62 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       "isprint", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange, Range(32, 126)),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is printable")
           .Case({ArgumentCondition(0U, OutOfRange, Range(32, 126)),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is non-printable"));
   addToFunctionSummaryMap(
       "ispunct", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(
                      0U, WithinRange,
                      {{'!', '/'}, {':', '@'}, {'[', '`'}, {'{', '~'}}),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is a punctuation mark")
           .Case({ArgumentCondition(
                      0U, OutOfRange,
                      {{'!', '/'}, {':', '@'}, {'[', '`'}, {'{', '~'}}),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not a punctuation mark"));
   addToFunctionSummaryMap(
       "isspace", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           // Space, '\f', '\n', '\r', '\t', '\v'.
           .Case({ArgumentCondition(0U, WithinRange, {{9, 13}, {' ', ' '}}),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is a whitespace character")
           // The locale-specific range.
           .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
           .Case({ArgumentCondition(0U, OutOfRange,
                                    {{9, 13}, {' ', ' '}, {128, UCharRangeMax}}),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not a whitespace character"));
   addToFunctionSummaryMap(
       "isupper", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           // Is certainly uppercase.
           .Case({ArgumentCondition(0U, WithinRange, Range('A', 'Z')),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is an uppercase letter")
           // The locale-specific range.
           .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
           // Other.
           .Case({ArgumentCondition(0U, OutOfRange,
                                    {{'A', 'Z'}, {128, UCharRangeMax}}),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not an uppercase letter"));
   addToFunctionSummaryMap(
       "isxdigit", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
           .Case({ArgumentCondition(0U, WithinRange,
                                    {{'0', '9'}, {'A', 'F'}, {'a', 'f'}}),
-                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+                 ReturnValueCondition(OutOfRange, SingleValue(0))},
+                "Assuming the character is a hexadecimal digit")
           .Case({ArgumentCondition(0U, OutOfRange,
                                    {{'0', '9'}, {'A', 'F'}, {'a', 'f'}}),
-                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+                 ReturnValueCondition(WithinRange, SingleValue(0))},
+                "Assuming the character is not a hexadecimal digit"));
   addToFunctionSummaryMap(
       "toupper", Signature(ArgTypes{IntTy}, RetType{IntTy}),
       Summary(EvalCallAsPure)
@@ -1435,12 +1489,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       GetLineSummary);
 
   {
-    Summary GetenvSummary = Summary(NoEvalCall)
-                                .ArgConstraint(NotNull(ArgNo(0)))
-                                .Case({NotNull(Ret)});
+    Summary GetenvSummary =
+        Summary(NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .Case({NotNull(Ret)}, "Assuming the environment variable exists");
     // In untrusted environments the envvar might not exist.
     if (!ShouldAssumeControlledEnvironment)
-      GetenvSummary.Case({NotNull(Ret)->negate()});
+      GetenvSummary.Case({NotNull(Ret)->negate()},
+                         "Assuming the environment variable does not exist");
 
     // char *getenv(const char *name);
     addToFunctionSummaryMap(
