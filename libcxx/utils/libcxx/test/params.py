@@ -159,15 +159,19 @@ DEFAULT_PARAMETERS = [
             ])),
 
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=True,
-            help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
+            help="Whether to enable tests for experimental C++ Library features.",
             actions=lambda experimental: [] if not experimental else [
-              AddFeature('c++experimental'),
               # When linking in MSVC mode via the Clang driver, a -l<foo>
               # maps to <foo>.lib, so we need to use -llibc++experimental here
               # to make it link against the static libc++experimental.lib.
               # We can't check for the feature 'msvc' in available_features
               # as those features are added after processing parameters.
-              PrependLinkFlag(lambda config: '-llibc++experimental' if _isMSVC(config) else '-lc++experimental')
+              #
+              # TODO: Switch to using the appropriate experimental compiler flag once
+              #       all compilers we support implement that flag.
+              AddFeature('c++experimental'),
+              PrependLinkFlag(lambda cfg: '-llibc++experimental' if _isMSVC(cfg) else '-lc++experimental'),
+              AddCompileFlag('-D_LIBCPP_ENABLE_EXPERIMENTAL'),
             ]),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,
