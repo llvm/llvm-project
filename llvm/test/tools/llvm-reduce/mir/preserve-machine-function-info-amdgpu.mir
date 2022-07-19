@@ -38,6 +38,7 @@
 # RESULT-NEXT: workGroupIDX:    { reg: '$sgpr20' }
 # RESULT-NEXT: workGroupIDY:    { reg: '$sgpr19' }
 # RESULT-NEXT: workGroupIDZ:    { reg: '$sgpr18' }
+# RESULT-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 # RESULT-NEXT: implicitArgPtr:  { reg: '$sgpr10_sgpr11' }
 # RESULT-NEXT: workItemIDX:     { reg: '$vgpr34', mask: 1023 }
 # RESULT-NEXT: workItemIDY:     { reg: '$vgpr34', mask: 1047552 }

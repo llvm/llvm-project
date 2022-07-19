@@ -40,6 +40,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GCN-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -64,8 +65,9 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   $sgpr12 = COPY [[COPY15]](s32)
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY17]](s32)
+  ; GCN-NEXT:   $sgpr15 = COPY [[DEF1]](s32)
   ; GCN-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 8, implicit-def $scc
   ; GCN-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p5) :: (dereferenceable load (s8) from %ir.out.gep02, addrspace 5)
