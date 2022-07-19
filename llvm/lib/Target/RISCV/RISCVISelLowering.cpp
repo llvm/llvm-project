@@ -215,18 +215,23 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::MULO_I64, nullptr);
   }
 
-  if (!Subtarget.hasStdExtM()) {
-    setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU, ISD::SDIV, ISD::UDIV,
-                        ISD::SREM, ISD::UREM},
-                       XLenVT, Expand);
+  if (!Subtarget.hasStdExtM() && !Subtarget.hasStdExtZmmul()) {
+    setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
   } else {
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::MUL, {MVT::i32, MVT::i128}, Custom);
-
-      setOperationAction({ISD::SDIV, ISD::UDIV, ISD::UREM},
-                         {MVT::i8, MVT::i16, MVT::i32}, Custom);
     } else {
       setOperationAction(ISD::MUL, MVT::i64, Custom);
+    }
+  }
+
+  if (!Subtarget.hasStdExtM()) {
+    setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM},
+                       XLenVT, Expand);
+  } else {
+    if (Subtarget.is64Bit()) {
+      setOperationAction({ISD::SDIV, ISD::UDIV, ISD::UREM},
+                          {MVT::i8, MVT::i16, MVT::i32}, Custom);
     }
   }
 
@@ -12258,10 +12263,12 @@ bool RISCVTargetLowering::shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned)
 bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                                  SDValue C) const {
   // Check integral scalar types.
+  const bool HasExtMOrZmmul =
+      Subtarget.hasStdExtM() || Subtarget.hasStdExtZmmul();
   if (VT.isScalarInteger()) {
     // Omit the optimization if the sub target has the M extension and the data
     // size exceeds XLen.
-    if (Subtarget.hasStdExtM() && VT.getSizeInBits() > Subtarget.getXLen())
+    if (HasExtMOrZmmul && VT.getSizeInBits() > Subtarget.getXLen())
       return false;
     if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
       // Break the MUL to a SLLI and an ADD/SUB.
@@ -12276,7 +12283,7 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
         return true;
       // Omit the following optimization if the sub target has the M extension
       // and the data size >= XLen.
-      if (Subtarget.hasStdExtM() && VT.getSizeInBits() >= Subtarget.getXLen())
+      if (HasExtMOrZmmul && VT.getSizeInBits() >= Subtarget.getXLen())
         return false;
       // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
       // a pair of LUI/ADDI.

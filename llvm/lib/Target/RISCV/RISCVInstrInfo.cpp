@@ -1883,10 +1883,11 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
   } else {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     movImm(MBB, II, DL, N, NumOfVReg, Flag);
-    if (!STI.hasStdExtM())
+    if (!STI.hasStdExtM() && !STI.hasStdExtZmmul())
       MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
           MF.getFunction(),
-          "M-extension must be enabled to calculate the vscaled size/offset."});
+          "M- or Zmmul-extension must be enabled to calculate the vscaled size/"
+          "offset."});
     BuildMI(MBB, II, DL, get(RISCV::MUL), VL)
         .addReg(VL, RegState::Kill)
         .addReg(N, RegState::Kill)

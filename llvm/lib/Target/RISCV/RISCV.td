@@ -19,6 +19,19 @@ def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
                            AssemblerPredicate<(all_of FeatureStdExtM),
                            "'M' (Integer Multiplication and Division)">;
 
+def FeatureStdExtZmmul
+    : SubtargetFeature<"zmmul", "HasStdExtZmmul", "true",
+                       "'Zmmul' (Integer Multiplication)">;
+def HasStdExtZmmul : Predicate<"Subtarget->hasStdExtZmmul()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZmmul),
+                               "'Zmmul' (Integer Multiplication)">;
+
+def HasStdExtMOrZmmul
+    : Predicate<"Subtarget->hasStdExtM() || Subtarget->hasStdExtZmmul()">,
+                AssemblerPredicate<(any_of FeatureStdExtM, FeatureStdExtZmmul),
+                                   "'M' (Integer Multiplication and Division) or "
+                                   "'Zmmul' (Integer Multiplication)">;
+
 def FeatureStdExtA
     : SubtargetFeature<"a", "HasStdExtA", "true",
                        "'A' (Atomic Instructions)">;
