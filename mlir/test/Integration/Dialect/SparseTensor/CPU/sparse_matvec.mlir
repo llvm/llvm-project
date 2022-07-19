@@ -103,7 +103,7 @@ module {
     // Release the resources.
     memref.dealloc %bdata : memref<?xi32>
     memref.dealloc %xdata : memref<?xi32>
-    sparse_tensor.release %a : tensor<?x?xi32, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xi32, #SparseMatrix>
 
     return
   }

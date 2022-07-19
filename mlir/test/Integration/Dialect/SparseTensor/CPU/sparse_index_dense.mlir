@@ -190,10 +190,10 @@ module {
     vector.print %vv7 : vector<3x4xi64>
 
     // Release resources.
-    sparse_tensor.release %sv : tensor<8xi64, #SparseVector>
-    sparse_tensor.release %dv : tensor<8xi64, #SparseVector>
-    sparse_tensor.release %sm : tensor<3x4xi64, #SparseMatrix>
-    sparse_tensor.release %dm : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %sv : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %dv : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %sm : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %dm : tensor<3x4xi64, #SparseMatrix>
     memref.dealloc %mem0 : memref<8xi64>
     memref.dealloc %mem1 : memref<8xi64>
     memref.dealloc %mem2 : memref<8xi64>

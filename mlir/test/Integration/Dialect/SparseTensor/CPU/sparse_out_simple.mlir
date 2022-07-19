@@ -77,7 +77,7 @@ module {
     vector.print %v : vector<9xf64>
 
     // Release the resources.
-    sparse_tensor.release %x : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %x : tensor<?x?xf64, #DCSR>
 
     return
   }

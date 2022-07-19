@@ -119,7 +119,7 @@ module {
     memref.dealloc %adata : memref<?x?xf32>
     memref.dealloc %bdata : memref<?x?xf32>
     memref.dealloc %xdata : memref<?x?xf32>
-    sparse_tensor.release %s : tensor<?x?xf32, #SparseMatrix>
+    bufferization.dealloc_tensor %s : tensor<?x?xf32, #SparseMatrix>
 
     return
   }

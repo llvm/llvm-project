@@ -67,7 +67,7 @@ module {
     call @dump_vec_f64(%0) : (tensor<?xf64, #SparseVector>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>
     return
   }
 }

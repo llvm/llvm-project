@@ -71,7 +71,7 @@ module {
 
     // Release the resources.
     memref.dealloc %xdata : memref<bf16>
-    sparse_tensor.release %a : tensor<?x?xbf16, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xbf16, #SparseMatrix>
 
     return
   }

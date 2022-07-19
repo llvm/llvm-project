@@ -94,25 +94,6 @@ struct NewOpInterface
   }
 };
 
-struct ReleaseOpInterface
-    : public BufferizableOpInterface::ExternalModel<ReleaseOpInterface,
-                                                    sparse_tensor::ReleaseOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    return false;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    return false;
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    return {};
-  }
-};
-
 } // namespace
 } // namespace sparse_tensor
 } // namespace mlir
@@ -124,6 +105,5 @@ void mlir::sparse_tensor::registerBufferizableOpInterfaceExternalModels(
         sparse_tensor::ConvertOp::attachInterface<ConvertOpInterface>(*ctx);
         sparse_tensor::LoadOp::attachInterface<LoadOpInterface>(*ctx);
         sparse_tensor::NewOp::attachInterface<NewOpInterface>(*ctx);
-        sparse_tensor::ReleaseOp::attachInterface<ReleaseOpInterface>(*ctx);
       });
 }

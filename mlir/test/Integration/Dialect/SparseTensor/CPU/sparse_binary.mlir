@@ -531,23 +531,23 @@ module {
     call @dump_mat_4x4(%11) : (tensor<4x4xf64, #DCSR>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %sv2 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %sm1 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %sm2 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %sm3 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %sm4 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %0 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %1 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %2 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %3 : tensor<?xi32, #SparseVector>
-    sparse_tensor.release %5 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %6 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %7 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %8 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %9 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %10 : tensor<4x4xi8, #DCSR>
-    sparse_tensor.release %11 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sm1 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %sm2 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %sm3 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %sm4 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %0 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %1 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %3 : tensor<?xi32, #SparseVector>
+    bufferization.dealloc_tensor %5 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %6 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %7 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %8 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %9 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %10 : tensor<4x4xi8, #DCSR>
+    bufferization.dealloc_tensor %11 : tensor<4x4xf64, #DCSR>
     return
   }
 }

@@ -135,7 +135,7 @@ module {
     memref.dealloc %adata : memref<?x?xf64>
     memref.dealloc %cdata : memref<?x?xf64>
     memref.dealloc %ddata : memref<?x?xf64>
-    sparse_tensor.release %b : tensor<?x?x?xf64, #SparseTensor>
+    bufferization.dealloc_tensor %b : tensor<?x?x?xf64, #SparseTensor>
 
     return
   }
