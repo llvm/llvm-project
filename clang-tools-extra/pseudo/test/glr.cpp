@@ -1,4 +1,4 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest -print-statistics | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest -print-statistics | FileCheck %s
 
 void foo() {
   T* a; // a multiply expression or a pointer declaration?
