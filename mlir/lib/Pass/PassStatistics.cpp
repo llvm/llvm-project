@@ -33,11 +33,10 @@ static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
     return;
 
   // Make sure to sort the statistics by name.
-  llvm::array_pod_sort(stats.begin(), stats.end(),
-                       [](const auto *lhs, const auto *rhs) {
-                         return llvm::array_pod_sort_comparator<const char *>(
-                             &lhs->name, &rhs->name);
-                       });
+  llvm::array_pod_sort(
+      stats.begin(), stats.end(), [](const auto *lhs, const auto *rhs) {
+        return StringRef{lhs->name}.compare(StringRef{rhs->name});
+      });
 
   // Collect the largest name and value length from each of the statistics.
   size_t largestName = 0, largestValue = 0;
