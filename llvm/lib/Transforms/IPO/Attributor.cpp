@@ -343,6 +343,7 @@ static bool getPotentialCopiesOfMemoryValue(
 
   const auto *TLI =
       A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
+  LLVM_DEBUG(dbgs() << "Visit " << Objects.size() << " objects:\n");
   for (Value *Obj : Objects) {
     LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
     if (isa<UndefValue>(Obj))
@@ -390,8 +391,10 @@ static bool getPotentialCopiesOfMemoryValue(
 
     if (IsLoad) {
       Value *InitialValue = AA::getInitialValueForObj(*Obj, *I.getType(), TLI);
-      if (!InitialValue)
+      if (!InitialValue) {
+        LLVM_DEBUG(dbgs() << "Failed to get initial value: " << *Obj << "\n");
         return false;
+      }
       CheckForNullOnlyAndUndef(InitialValue);
       NewCopies.push_back(InitialValue);
       NewCopyOrigins.push_back(nullptr);
