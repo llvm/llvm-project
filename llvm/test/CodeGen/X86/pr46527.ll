@@ -12,7 +12,7 @@ define void @f(ptr %out, <16 x i8> %in, i1 %flag) {
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; CHECK-NEXT:    notb %dl
 ; CHECK-NEXT:    andb $1, %dl
 ; CHECK-NEXT:    movzbl %dl, %edx

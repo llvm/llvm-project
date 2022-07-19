@@ -8,7 +8,7 @@
 define i32 @t0_shl(i32 %x, i8 %shamt) nounwind {
 ; X86-LABEL: t0_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -23,7 +23,7 @@ define i32 @t0_shl(i32 %x, i8 %shamt) nounwind {
 define i32 @t1_lshr(i32 %x, i8 %shamt) nounwind {
 ; X86-LABEL: t1_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shrxl %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -38,7 +38,7 @@ define i32 @t1_lshr(i32 %x, i8 %shamt) nounwind {
 define i32 @t2_ashr(i32 %x, i8 %shamt) nounwind {
 ; X86-LABEL: t2_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    sarxl %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -90,7 +90,7 @@ define i32 @n6_fshl(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;
@@ -110,7 +110,7 @@ define i32 @n7_fshr(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shrdl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;

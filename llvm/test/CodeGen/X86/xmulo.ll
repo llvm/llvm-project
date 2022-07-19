@@ -91,7 +91,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; WIN32-LABEL: smuloi8:
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; WIN32-NEXT:    imulb {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    seto %cl
 ; WIN32-NEXT:    movb %al, (%edx)
@@ -322,7 +322,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; WIN32-LABEL: umuloi8:
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; WIN32-NEXT:    mulb {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    seto %cl
 ; WIN32-NEXT:    movb %al, (%edx)
@@ -806,7 +806,7 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ;
 ; WIN32-LABEL: smulobri8:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; WIN32-NEXT:    imulb {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    jo LBB15_1
 ; WIN32-NEXT:  # %bb.2: # %continue
@@ -1122,7 +1122,7 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ;
 ; WIN32-LABEL: umulobri8:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; WIN32-NEXT:    mulb {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    jo LBB19_1
 ; WIN32-NEXT:  # %bb.2: # %continue
@@ -1425,7 +1425,7 @@ define zeroext i1 @smuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ;
 ; FAST-LABEL: smuloi8_load:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    movzbl (%rdi), %eax
+; FAST-NEXT:    movb (%rdi), %al
 ; FAST-NEXT:    imulb %sil
 ; FAST-NEXT:    seto %cl
 ; FAST-NEXT:    movb %al, (%rdx)
@@ -1446,7 +1446,7 @@ define zeroext i1 @smuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    movzbl (%eax), %eax
+; WIN32-NEXT:    movb (%eax), %al
 ; WIN32-NEXT:    imulb {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    seto %cl
 ; WIN32-NEXT:    movb %al, (%edx)
@@ -1494,7 +1494,7 @@ define zeroext i1 @smuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-LABEL: smuloi8_load2:
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    imulb (%ecx)
 ; WIN32-NEXT:    seto %cl
@@ -1899,7 +1899,7 @@ define zeroext i1 @umuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ;
 ; FAST-LABEL: umuloi8_load:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    movzbl (%rdi), %eax
+; FAST-NEXT:    movb (%rdi), %al
 ; FAST-NEXT:    mulb %sil
 ; FAST-NEXT:    seto %cl
 ; FAST-NEXT:    movb %al, (%rdx)
@@ -1920,7 +1920,7 @@ define zeroext i1 @umuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    movzbl (%eax), %eax
+; WIN32-NEXT:    movb (%eax), %al
 ; WIN32-NEXT:    mulb {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    seto %cl
 ; WIN32-NEXT:    movb %al, (%edx)
@@ -1968,7 +1968,7 @@ define zeroext i1 @umuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-LABEL: umuloi8_load2:
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    mulb (%ecx)
 ; WIN32-NEXT:    seto %cl

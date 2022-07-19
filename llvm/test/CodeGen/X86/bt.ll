@@ -1148,7 +1148,7 @@ define void @demanded_i32(ptr nocapture readonly, ptr nocapture, i32) nounwind {
 define zeroext i1 @demanded_with_known_zeroes(i32 %bit, i32 %bits) {
 ; X86-LABEL: demanded_with_known_zeroes:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shlb $2, %al
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl %al, %eax

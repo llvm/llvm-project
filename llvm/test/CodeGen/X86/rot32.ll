@@ -9,7 +9,7 @@
 define i32 @foo(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: foo:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    roll %cl, %eax
 ; CHECK32-NEXT:    retl
@@ -32,7 +32,7 @@ entry:
 define i32 @bar(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: bar:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    shldl %cl, %edx, %eax
@@ -56,7 +56,7 @@ entry:
 define i32 @un(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: un:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    rorl %cl, %eax
 ; CHECK32-NEXT:    retl
@@ -79,7 +79,7 @@ entry:
 define i32 @bu(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: bu:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    shrdl %cl, %edx, %eax

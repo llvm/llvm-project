@@ -7,7 +7,7 @@
 define zeroext i1 @test1(i32 %X)  nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    retl
     %Y = trunc i32 %X to i1

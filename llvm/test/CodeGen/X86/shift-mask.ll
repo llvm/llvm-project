@@ -20,7 +20,7 @@
 define i8 @test_i8_shl_lshr_0(i8 %a0) {
 ; X86-LABEL: test_i8_shl_lshr_0:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    andb $-8, %al
 ; X86-NEXT:    retl
 ;
@@ -38,7 +38,7 @@ define i8 @test_i8_shl_lshr_0(i8 %a0) {
 define i8 @test_i8_shl_lshr_1(i8 %a0) {
 ; X86-LABEL: test_i8_shl_lshr_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shlb $2, %al
 ; X86-NEXT:    andb $-32, %al
 ; X86-NEXT:    retl
@@ -66,7 +66,7 @@ define i8 @test_i8_shl_lshr_1(i8 %a0) {
 define i8 @test_i8_shl_lshr_2(i8 %a0) {
 ; X86-LABEL: test_i8_shl_lshr_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shrb $2, %al
 ; X86-NEXT:    andb $56, %al
 ; X86-NEXT:    retl
@@ -318,7 +318,7 @@ define i64 @test_i64_shl_lshr_2(i64 %a0) {
 define i8 @test_i8_lshr_lshr_0(i8 %a0) {
 ; X86-LABEL: test_i8_lshr_lshr_0:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    andb $31, %al
 ; X86-NEXT:    retl
 ;
@@ -336,7 +336,7 @@ define i8 @test_i8_lshr_lshr_0(i8 %a0) {
 define i8 @test_i8_lshr_lshr_1(i8 %a0) {
 ; X86-LABEL: test_i8_lshr_lshr_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shrb $2, %al
 ; X86-NEXT:    andb $7, %al
 ; X86-NEXT:    retl
@@ -364,7 +364,7 @@ define i8 @test_i8_lshr_lshr_1(i8 %a0) {
 define i8 @test_i8_lshr_lshr_2(i8 %a0) {
 ; X86-LABEL: test_i8_lshr_lshr_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shlb $2, %al
 ; X86-NEXT:    andb $28, %al
 ; X86-NEXT:    retl

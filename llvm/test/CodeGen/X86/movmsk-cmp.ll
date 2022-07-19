@@ -4293,7 +4293,7 @@ define i1 @movmsk_v16i8_var(<16 x i8> %x, <16 x i8> %y, i32 %z) {
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $15, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi), %eax
+; SKX-NEXT:    movb -24(%rsp,%rdi), %al
 ; SKX-NEXT:    retq
   %cmp = icmp eq <16 x i8> %x, %y
   %val = extractelement <16 x i1> %cmp, i32 %z
@@ -4329,7 +4329,7 @@ define i1 @movmsk_v8i16_var(<8 x i16> %x, <8 x i16> %y, i32 %z) {
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $7, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,2), %eax
+; KNL-NEXT:    movb -24(%rsp,%rdi,2), %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -4340,7 +4340,7 @@ define i1 @movmsk_v8i16_var(<8 x i16> %x, <8 x i16> %y, i32 %z) {
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $7, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,2), %eax
+; SKX-NEXT:    movb -24(%rsp,%rdi,2), %al
 ; SKX-NEXT:    retq
   %cmp = icmp sgt <8 x i16> %x, %y
   %val = extractelement <8 x i1> %cmp, i32 %z
@@ -4373,7 +4373,7 @@ define i1 @movmsk_v4i32_var(<4 x i32> %x, <4 x i32> %y, i32 %z) {
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $3, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; KNL-NEXT:    movb -24(%rsp,%rdi,4), %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -4384,7 +4384,7 @@ define i1 @movmsk_v4i32_var(<4 x i32> %x, <4 x i32> %y, i32 %z) {
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $3, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; SKX-NEXT:    movb -24(%rsp,%rdi,4), %al
 ; SKX-NEXT:    retq
   %cmp = icmp slt <4 x i32> %x, %y
   %val = extractelement <4 x i1> %cmp, i32 %z
@@ -4430,7 +4430,7 @@ define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 ; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $1, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; KNL-NEXT:    movb -24(%rsp,%rdi,8), %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -4441,7 +4441,7 @@ define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $1, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; SKX-NEXT:    movb -24(%rsp,%rdi,8), %al
 ; SKX-NEXT:    retq
   %cmp = icmp ne <2 x i64> %x, %y
   %val = extractelement <2 x i1> %cmp, i32 %z
@@ -4477,7 +4477,7 @@ define i1 @movmsk_v4f32_var(<4 x float> %x, <4 x float> %y, i32 %z) {
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $3, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; KNL-NEXT:    movb -24(%rsp,%rdi,4), %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -4488,7 +4488,7 @@ define i1 @movmsk_v4f32_var(<4 x float> %x, <4 x float> %y, i32 %z) {
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $3, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; SKX-NEXT:    movb -24(%rsp,%rdi,4), %al
 ; SKX-NEXT:    retq
   %cmp = fcmp ueq <4 x float> %x, %y
   %val = extractelement <4 x i1> %cmp, i32 %z
@@ -4521,7 +4521,7 @@ define i1 @movmsk_v2f64_var(<2 x double> %x, <2 x double> %y, i32 %z) {
 ; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $1, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; KNL-NEXT:    movb -24(%rsp,%rdi,8), %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -4532,7 +4532,7 @@ define i1 @movmsk_v2f64_var(<2 x double> %x, <2 x double> %y, i32 %z) {
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $1, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; SKX-NEXT:    movb -24(%rsp,%rdi,8), %al
 ; SKX-NEXT:    retq
   %cmp = fcmp oge <2 x double> %x, %y
   %val = extractelement <2 x i1> %cmp, i32 %z

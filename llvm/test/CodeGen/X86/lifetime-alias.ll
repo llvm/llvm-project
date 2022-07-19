@@ -55,9 +55,9 @@ define i8 @main() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
@@ -81,7 +81,7 @@ define i8 @main() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:  .LBB0_3: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
-; CHECK-NEXT:    movzbl 16(%rax), %eax
+; CHECK-NEXT:    movb 16(%rax), %al
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

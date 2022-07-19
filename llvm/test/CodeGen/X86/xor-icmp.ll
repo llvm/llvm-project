@@ -6,7 +6,7 @@
 define i32 @t(i32 %a, i32 %b) nounwind ssp {
 ; X86-LABEL: t:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    testb $64, %al
 ; X86-NEXT:    je .LBB0_1
@@ -94,7 +94,7 @@ return:                                           ; preds = %entry
 define i1 @xor_not_bools(i1 zeroext %x, i1 zeroext %y) nounwind {
 ; X86-LABEL: xor_not_bools:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    xorb $1, %al
 ; X86-NEXT:    retl

@@ -7,7 +7,7 @@
 define void @sum_unroll(ptr nocapture readonly, ptr nocapture) {
 ; CHECK-LABEL: sum_unroll:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl _ZL1c(%rip), %eax
+; CHECK-NEXT:    movb _ZL1c(%rip), %al
 ; CHECK-NEXT:    movq (%rdi), %rcx
 ; CHECK-NEXT:    addb $-1, %al
 ; CHECK-NEXT:    adcq %rcx, (%rsi)

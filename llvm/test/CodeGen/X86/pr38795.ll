@@ -51,7 +51,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl a
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
 ; CHECK-NEXT:    movb %cl, %dh
 ; CHECK-NEXT:    movl $0, h
 ; CHECK-NEXT:    cmpb $8, %dl
@@ -76,7 +76,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $.str, (%esp)
 ; CHECK-NEXT:    calll printf
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:  .LBB0_6: # %for.cond35
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1

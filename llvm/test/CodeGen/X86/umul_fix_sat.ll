@@ -113,9 +113,9 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ;
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    andb $15, %al
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movzbl %al, %edx
 ; X86-NEXT:    shlb $4, %cl
 ; X86-NEXT:    movzbl %cl, %eax
@@ -335,9 +335,9 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ;
 ; X86-LABEL: func6:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    andb $15, %cl
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    mulb %cl
 ; X86-NEXT:    movzbl %al, %ecx

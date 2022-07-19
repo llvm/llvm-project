@@ -180,7 +180,7 @@ define i64 @ashr_add_shl_i32(i64 %r) nounwind {
 define i64 @ashr_add_shl_i8(i64 %r) nounwind {
 ; X32-LABEL: ashr_add_shl_i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    addb $2, %al
 ; X32-NEXT:    movsbl %al, %eax
 ; X32-NEXT:    movl %eax, %edx
@@ -204,8 +204,8 @@ define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X32-NEXT:    incb %dh

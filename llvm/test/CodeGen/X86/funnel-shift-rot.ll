@@ -19,7 +19,7 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i8 @rotl_i8_const_shift(i8 %x) nounwind {
 ; X86-SSE2-LABEL: rotl_i8_const_shift:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-SSE2-NEXT:    rolb $3, %al
 ; X86-SSE2-NEXT:    retl
 ;
@@ -36,7 +36,7 @@ define i8 @rotl_i8_const_shift(i8 %x) nounwind {
 define i8 @rotl_i8_const_shift1(i8 %x) nounwind {
 ; X86-SSE2-LABEL: rotl_i8_const_shift1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-SSE2-NEXT:    rolb %al
 ; X86-SSE2-NEXT:    retl
 ;
@@ -53,7 +53,7 @@ define i8 @rotl_i8_const_shift1(i8 %x) nounwind {
 define i8 @rotl_i8_const_shift7(i8 %x) nounwind {
 ; X86-SSE2-LABEL: rotl_i8_const_shift7:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-SSE2-NEXT:    rorb %al
 ; X86-SSE2-NEXT:    retl
 ;
@@ -89,7 +89,7 @@ define i64 @rotl_i64_const_shift(i64 %x) nounwind {
 define i16 @rotl_i16(i16 %x, i16 %z) nounwind {
 ; X86-SSE2-LABEL: rotl_i16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    rolw %cl, %ax
 ; X86-SSE2-NEXT:    retl
@@ -109,7 +109,7 @@ define i16 @rotl_i16(i16 %x, i16 %z) nounwind {
 define i32 @rotl_i32(i32 %x, i32 %z) nounwind {
 ; X86-SSE2-LABEL: rotl_i32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    roll %cl, %eax
 ; X86-SSE2-NEXT:    retl
@@ -187,7 +187,7 @@ define <4 x i32> @rotl_v4i32_const_shift(<4 x i32> %x) nounwind {
 define i8 @rotr_i8_const_shift(i8 %x) nounwind {
 ; X86-SSE2-LABEL: rotr_i8_const_shift:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-SSE2-NEXT:    rorb $3, %al
 ; X86-SSE2-NEXT:    retl
 ;
@@ -204,7 +204,7 @@ define i8 @rotr_i8_const_shift(i8 %x) nounwind {
 define i8 @rotr_i8_const_shift1(i8 %x) nounwind {
 ; X86-SSE2-LABEL: rotr_i8_const_shift1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-SSE2-NEXT:    rorb %al
 ; X86-SSE2-NEXT:    retl
 ;
@@ -221,7 +221,7 @@ define i8 @rotr_i8_const_shift1(i8 %x) nounwind {
 define i8 @rotr_i8_const_shift7(i8 %x) nounwind {
 ; X86-SSE2-LABEL: rotr_i8_const_shift7:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-SSE2-NEXT:    rolb %al
 ; X86-SSE2-NEXT:    retl
 ;
@@ -256,7 +256,7 @@ define i32 @rotr_i32_const_shift(i32 %x) nounwind {
 define i16 @rotr_i16(i16 %x, i16 %z) nounwind {
 ; X86-SSE2-LABEL: rotr_i16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    rorw %cl, %ax
 ; X86-SSE2-NEXT:    retl
