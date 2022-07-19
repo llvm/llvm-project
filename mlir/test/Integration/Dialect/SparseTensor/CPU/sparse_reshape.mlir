@@ -121,12 +121,12 @@ module {
     vector.print %v3 : vector<16xf64>
 
     // Release sparse resources.
-    sparse_tensor.release %sv : tensor<12xf64, #SparseVector>
-    sparse_tensor.release %sm : tensor<3x4xf64, #SparseMatrix>
-    sparse_tensor.release %expand2 : tensor<3x4xf64, #SparseMatrix>
-    sparse_tensor.release %expand3 : tensor<3x4xf64, #SparseMatrix>
-    sparse_tensor.release %collapse2 : tensor<12xf64, #SparseVector>
-    sparse_tensor.release %collapse3 : tensor<12xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv : tensor<12xf64, #SparseVector>
+    bufferization.dealloc_tensor %sm : tensor<3x4xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %expand2 : tensor<3x4xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %expand3 : tensor<3x4xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %collapse2 : tensor<12xf64, #SparseVector>
+    bufferization.dealloc_tensor %collapse3 : tensor<12xf64, #SparseVector>
 
     // Release dense resources.
     // TODO(springerm): Replace these with a bufferization.release op (operating

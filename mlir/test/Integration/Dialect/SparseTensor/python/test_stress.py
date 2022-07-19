@@ -14,6 +14,7 @@ import numpy as np
 from mlir import ir
 from mlir import runtime as rt
 
+from mlir.dialects import bufferization
 from mlir.dialects import builtin
 from mlir.dialects import func
 from mlir.dialects import sparse_tensor as st
@@ -118,7 +119,7 @@ class StressTest:
         for tp in types:
           w = st.ConvertOp(tp, v)
           # Release intermediate tensors before they fall out of scope.
-          st.ReleaseOp(v.result)
+          bufferization.DeallocTensorOp(v.result)
           v = w
         self._assertEqualsRoundtripTp(v.result.type)
         func.ReturnOp(v)

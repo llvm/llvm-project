@@ -104,7 +104,7 @@ module {
 
     // Release the resources.
     memref.dealloc %xdata : memref<7x3xf64>
-    sparse_tensor.release %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
+    bufferization.dealloc_tensor %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
 
     return
   }

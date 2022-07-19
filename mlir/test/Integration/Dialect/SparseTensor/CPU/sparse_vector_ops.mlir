@@ -224,13 +224,13 @@ module {
     vector.print %v5 : f64
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %sv1_dup : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %sv2 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %0 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %2 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %3 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %4 : tensor<?xf64, #DenseVector>
+    bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv1_dup : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %3 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %4 : tensor<?xf64, #DenseVector>
     return
   }
 }

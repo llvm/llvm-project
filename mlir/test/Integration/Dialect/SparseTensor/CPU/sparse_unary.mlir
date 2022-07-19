@@ -255,13 +255,13 @@ module {
     call @dump_mat(%4) : (tensor<?x?xf64, #DCSR>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %sm1 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %0 : tensor<?xi32, #SparseVector>
-    sparse_tensor.release %1 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %2 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %3 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %4 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sm1 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %0 : tensor<?xi32, #SparseVector>
+    bufferization.dealloc_tensor %1 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %3 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %4 : tensor<?x?xf64, #DCSR>
     return
   }
 }

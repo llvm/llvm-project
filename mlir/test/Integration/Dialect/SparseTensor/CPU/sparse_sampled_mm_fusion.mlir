@@ -206,11 +206,11 @@ module {
     vector.print %v3 : vector<4xf64>
 
     // Release the resources.
-    sparse_tensor.release %s : tensor<8x8xf64, #SM>
+    bufferization.dealloc_tensor %s : tensor<8x8xf64, #SM>
     memref.dealloc %m0 : memref<8x8xf64>
     memref.dealloc %m1 : memref<8x8xf64>
-    sparse_tensor.release %2 : tensor<8x8xf64, #SM>
-    sparse_tensor.release %3 : tensor<8x8xf64, #SM>
+    bufferization.dealloc_tensor %2 : tensor<8x8xf64, #SM>
+    bufferization.dealloc_tensor %3 : tensor<8x8xf64, #SM>
 
     return
   }

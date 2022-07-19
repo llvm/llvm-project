@@ -82,9 +82,9 @@ module {
     call @dump_vec(%0) : (tensor<?xbf16, #DenseVector>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xbf16, #SparseVector>
-    sparse_tensor.release %sv2 : tensor<?xbf16, #SparseVector>
-    sparse_tensor.release %0 : tensor<?xbf16, #DenseVector>
+    bufferization.dealloc_tensor %sv1 : tensor<?xbf16, #SparseVector>
+    bufferization.dealloc_tensor %sv2 : tensor<?xbf16, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<?xbf16, #DenseVector>
     return
   }
 }

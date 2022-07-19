@@ -1790,7 +1790,7 @@ private:
       auto convert = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);
       op->setOperand(tensor, convert);
       rewriter.setInsertionPointAfter(op);
-      rewriter.create<ReleaseOp>(tval.getLoc(), convert);
+      rewriter.create<bufferization::DeallocTensorOp>(tval.getLoc(), convert);
       return success();
     }
     // Cannot be resolved with a single conversion.

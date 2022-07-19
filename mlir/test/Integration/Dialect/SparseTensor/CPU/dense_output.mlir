@@ -88,8 +88,8 @@ module {
     vector.print %v : vector<25xf64>
 
     // Release the resources.
-    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
-    sparse_tensor.release %0 : tensor<?x?xf64, #DenseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %0 : tensor<?x?xf64, #DenseMatrix>
 
     return
   }

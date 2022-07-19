@@ -81,9 +81,9 @@ module {
     vector.print %vm : vector<3x3xi32>
 
     // Release the resources.
-    sparse_tensor.release %st1 : tensor<?x?x?xi32, #SparseTensor>
-    sparse_tensor.release %st2 : tensor<?x?x?xi32, #SparseTensor>
-    sparse_tensor.release %0 : tensor<?x?xi32, #SparseMatrix>
+    bufferization.dealloc_tensor %st1 : tensor<?x?x?xi32, #SparseTensor>
+    bufferization.dealloc_tensor %st2 : tensor<?x?x?xi32, #SparseTensor>
+    bufferization.dealloc_tensor %0 : tensor<?x?xi32, #SparseMatrix>
     return
   }
 }

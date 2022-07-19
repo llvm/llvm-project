@@ -68,7 +68,7 @@ module {
     vector.print %v : vector<6x6xi32>
 
     // Release the resources.
-    sparse_tensor.release %sparse_filter : tensor<3x3xi32, #DCSR>
+    bufferization.dealloc_tensor %sparse_filter : tensor<3x3xi32, #DCSR>
 
     return
   }
