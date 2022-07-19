@@ -50,6 +50,9 @@ OpFoldResult getAsOpFoldResult(Value val);
 /// value. If this fails, return the original value.
 SmallVector<OpFoldResult> getAsOpFoldResult(ArrayRef<Value> values);
 
+/// Convert `arrayAttr` to a vector of OpFoldResult.
+SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr);
+
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 Optional<int64_t> getConstantIntValue(OpFoldResult ofr);
 
