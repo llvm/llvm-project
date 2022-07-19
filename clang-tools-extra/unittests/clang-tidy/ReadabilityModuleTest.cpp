@@ -1,4 +1,3 @@
-#include "../../clang/unittests/ASTMatchers/ASTMatchersTest.h"
 #include "ClangTidyTest.h"
 #include "readability/BracesAroundStatementsCheck.h"
 #include "readability/NamespaceCommentCheck.h"
@@ -12,38 +11,6 @@ namespace test {
 using readability::BracesAroundStatementsCheck;
 using readability::NamespaceCommentCheck;
 using readability::SimplifyBooleanExprCheck;
-using namespace ast_matchers;
-
-// Copied from ASTMatchersTests
-static std::vector<TestClangConfig> allTestClangConfigs() {
-  std::vector<TestClangConfig> all_configs;
-  for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
-                            Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
-    TestClangConfig config;
-    config.Language = lang;
-
-    // Use an unknown-unknown triple so we don't instantiate the full system
-    // toolchain.  On Linux, instantiating the toolchain involves stat'ing
-    // large portions of /usr/lib, and this slows down not only this test, but
-    // all other tests, via contention in the kernel.
-    //
-    // FIXME: This is a hack to work around the fact that there's no way to do
-    // the equivalent of runToolOnCodeWithArgs without instantiating a full
-    // Driver.  We should consider having a function, at least for tests, that
-    // invokes cc1.
-    config.Target = "i386-unknown-unknown";
-    all_configs.push_back(config);
-
-    // Windows target is interesting to test because it enables
-    // `-fdelayed-template-parsing`.
-    config.Target = "x86_64-pc-win32-msvc";
-    all_configs.push_back(config);
-  }
-  return all_configs;
-}
-
-INSTANTIATE_TEST_SUITE_P(ASTMatchersTests, ASTMatchersTest,
-                         testing::ValuesIn(allTestClangConfigs()));
 
 TEST(NamespaceCommentCheckTest, Basic) {
   EXPECT_EQ("namespace i {\n} // namespace i",
