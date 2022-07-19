@@ -517,6 +517,24 @@ computeMultiTileSizes(OpBuilder &builder, LinalgOp op, unsigned dimension,
                       OpFoldResult targetSize, OpFoldResult divisor,
                       bool emitAssertions = true);
 
+/// Rewrite a TilingInterface `op` to a tiled `scf.foreach_thread`, applying
+/// tiling by `numThreads`.
+/// If non-empty, the `threadDimMapping` is added as an attribute to the
+/// resulting `scf.foreach_thread`.
+/// Zero tile sizes indicate that the dimension is not tiled, and can be thought
+/// of as tiling by the full size of data.
+/// It is the user's responsibility to ensure that `numThreads` is a
+/// valid tiling specification (i.e. that only tiles parallel
+/// dimensions, e.g. in the Linalg case).
+struct ForeachThreadTilingResult {
+  Operation *tileOp;
+  Operation *tiledOp;
+};
+FailureOr<ForeachThreadTilingResult>
+tileToForeachThreadOp(OpBuilder &builder, TilingInterface op,
+                      ArrayRef<OpFoldResult> numThreads,
+                      ArrayRef<int64_t> threadDimMapping = {});
+
 /// All indices returned by IndexOp should be invariant with respect to tiling.
 /// Therefore, if an operation is tiled, we have to transform the indices
 /// accordingly, i.e. offset them by the values of the corresponding induction

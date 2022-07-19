@@ -14,6 +14,7 @@
 #include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
+class TilingInterface;
 namespace linalg {
 class GenericOp;
 class LinalgOp;
