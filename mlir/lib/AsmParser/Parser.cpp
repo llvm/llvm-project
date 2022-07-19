@@ -2090,6 +2090,10 @@ ParseResult OperationParser::parseBlock(Block *&block) {
   // only in the case of a successful parse. This ensures that the Block
   // allocated is released if the parse fails and control returns early.
   std::unique_ptr<Block> inflightBlock;
+  auto cleanupOnFailure = llvm::make_scope_exit([&] {
+    if (inflightBlock)
+      inflightBlock->dropAllDefinedValueUses();
+  });
 
   // If a block has yet to be set, this is a new definition. If the caller
   // provided a block, use it. Otherwise create a new one.
@@ -2107,25 +2111,31 @@ ParseResult OperationParser::parseBlock(Block *&block) {
     // was already defined.
   } else if (!eraseForwardRef(blockAndLoc.block)) {
     return emitError(nameLoc, "redefinition of block '") << name << "'";
+  } else {
+    // This was a forward reference block that is now floating. Keep track of it
+    // as inflight in case of error, so that it gets cleaned up properly.
+    inflightBlock.reset(blockAndLoc.block);
   }
 
   // Populate the high level assembly state if necessary.
   if (state.asmState)
     state.asmState->addDefinition(blockAndLoc.block, nameLoc);
-
   block = blockAndLoc.block;
 
   // If an argument list is present, parse it.
   if (getToken().is(Token::l_paren))
     if (parseOptionalBlockArgList(block))
       return failure();
-
   if (parseToken(Token::colon, "expected ':' after block name"))
     return failure();
 
+  // Parse the body of the block.
   ParseResult res = parseBlockBody(block);
+
+  // If parsing was successful, drop the inflight block. We relinquish ownership
+  // back up to the caller.
   if (succeeded(res))
-    inflightBlock.release();
+    (void)inflightBlock.release();
   return res;
 }
 
