@@ -8,14 +8,6 @@ func.func @invalid_new_dense(%arg0: !llvm.ptr<i8>) -> tensor<32xf32> {
 
 // -----
 
-func.func @invalid_release_dense(%arg0: tensor<4xi32>) {
-  // expected-error@+1 {{'sparse_tensor.release' op operand #0 must be sparse tensor of any type values, but got 'tensor<4xi32>'}}
-  sparse_tensor.release %arg0 : tensor<4xi32>
-  return
-}
-
-// -----
-
 func.func @invalid_pointers_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
   %c = arith.constant 0 : index
   // expected-error@+1 {{'sparse_tensor.pointers' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}

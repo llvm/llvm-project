@@ -2385,7 +2385,7 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
   // loading from. To be safe, let's just assume that all loads and stores
   // are different (unless we have something which is guaranteed to not
   // change.)
-  if (I1->mayLoadOrStore() && !I1->isDereferenceableInvariantLoad(nullptr))
+  if (I1->mayLoadOrStore() && !I1->isDereferenceableInvariantLoad())
     return false;
 
   // If both instructions are loads or stores, they are equal only if both
@@ -2396,7 +2396,7 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
     if (!LS1 || !LS2)
       return false;
 
-    if (!I2->isDereferenceableInvariantLoad(nullptr) ||
+    if (!I2->isDereferenceableInvariantLoad() ||
         (LS1->getMemSizeInBits() != LS2->getMemSizeInBits()))
       return false;
   }

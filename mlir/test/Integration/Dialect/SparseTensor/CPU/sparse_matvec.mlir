@@ -75,18 +75,18 @@ module {
     %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xi32, #SparseMatrix>
 
     // Initialize dense vectors.
-    %bdata = memref.alloc(%c256) : memref<?xi32>
-    %xdata = memref.alloc(%c4) : memref<?xi32>
-    scf.for %i = %c0 to %c256 step %c1 {
+    %init_256 = bufferization.alloc_tensor(%c256) : tensor<?xi32>
+    %b = scf.for %i = %c0 to %c256 step %c1 iter_args(%t = %init_256) -> tensor<?xi32> {
       %k = arith.addi %i, %c1 : index
       %j = arith.index_cast %k : index to i32
-      memref.store %j, %bdata[%i] : memref<?xi32>
+      %t2 = tensor.insert %j into %t[%i] : tensor<?xi32>
+      scf.yield %t2 : tensor<?xi32>
     }
-    scf.for %i = %c0 to %c4 step %c1 {
-      memref.store %i0, %xdata[%i] : memref<?xi32>
+    %init_4 = bufferization.alloc_tensor(%c4) : tensor<?xi32>
+    %x = scf.for %i = %c0 to %c4 step %c1 iter_args(%t = %init_4) -> tensor<?xi32> {
+      %t2 = tensor.insert %i0 into %t[%i] : tensor<?xi32>
+      scf.yield %t2 : tensor<?xi32>
     }
-    %b = bufferization.to_tensor %bdata : memref<?xi32>
-    %x = bufferization.to_tensor %xdata : memref<?xi32>
 
     // Call kernel.
     %0 = call @kernel_matvec(%a, %b, %x)
@@ -96,14 +96,11 @@ module {
     //
     // CHECK: ( 889, 1514, -21, -3431 )
     //
-    %m = bufferization.to_memref %0 : memref<?xi32>
-    %v = vector.transfer_read %m[%c0], %i0: memref<?xi32>, vector<4xi32>
+    %v = vector.transfer_read %0[%c0], %i0: tensor<?xi32>, vector<4xi32>
     vector.print %v : vector<4xi32>
 
     // Release the resources.
-    memref.dealloc %bdata : memref<?xi32>
-    memref.dealloc %xdata : memref<?xi32>
-    sparse_tensor.release %a : tensor<?x?xi32, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xi32, #SparseMatrix>
 
     return
   }

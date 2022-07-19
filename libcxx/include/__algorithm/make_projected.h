@@ -27,6 +27,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
+template <class _Pred, class _Proj>
+_LIBCPP_HIDE_FROM_ABI constexpr static
+decltype(auto) __make_projected_pred(_Pred& __pred, _Proj& __proj) {
+  if constexpr (same_as<decay_t<_Proj>, identity> && !is_member_pointer_v<decay_t<_Pred>>) {
+    // Avoid creating the lambda and just use the pristine predicate -- for certain algorithms, this would enable
+    // optimizations that rely on the type of the predicate.
+    return __pred;
+
+  } else {
+    return [&](auto&& __x) {
+      return std::invoke(__pred, std::invoke(__proj, std::forward<decltype(__x)>(__x)));
+    };
+  }
+}
+
 template <class _Comp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI constexpr static
 decltype(auto) __make_projected_comp(_Comp& __comp, _Proj& __proj) {

@@ -28,7 +28,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         `targetShape`. Return `None` if the op cannot be unrolled to the target
         vector shape.
       }],
-      /*retTy=*/"::mlir::Optional<::llvm::SmallVector<int64_t, 4>>",
+      /*retTy=*/"::llvm::Optional<::llvm::SmallVector<int64_t, 4>>",
       /*methodName=*/"getShapeForUnroll",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -143,7 +143,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the `in_bounds` boolean ArrayAttr.",
-      /*retTy=*/"::mlir::Optional<::mlir::ArrayAttr>",
+      /*retTy=*/"::llvm::Optional<::mlir::ArrayAttr>",
       /*methodName=*/"in_bounds",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.getInBounds();"

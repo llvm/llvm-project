@@ -69,15 +69,6 @@ def Vector_CombiningKindAttr : DialectAttr<
           "::mlir::vector::CombiningKindAttr::get($0, $_builder.getContext())";
 }
 
-def Vector_AffineMapArrayAttr : TypedArrayAttrBase<AffineMapAttr,
-                                      "AffineMap array attribute"> {
-  let returnType = [{ ::llvm::SmallVector<::mlir::AffineMap, 4> }];
-  let convertFromStorage = [{
-    llvm::to_vector<4>($_self.getAsValueRange<::mlir::AffineMapAttr>());
-  }];
-  let constBuilderCall = "$_builder.getAffineMapArrayAttr($0)";
-}
-
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
 def Vector_ContractionOp :
@@ -90,7 +81,7 @@ def Vector_ContractionOp :
     ]>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
-               Vector_AffineMapArrayAttr:$indexing_maps,
+               ArrayAttr:$indexing_maps,
                ArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
                                  "CombiningKind::ADD">:$kind)>,
@@ -240,6 +231,10 @@ def Vector_ContractionOp :
     Type getResultType() { return getResult().getType(); }
     ArrayRef<StringRef> getTraitAttrNames();
     static unsigned getAccOperandIndex() { return 2; }
+
+    llvm::SmallVector<::mlir::AffineMap, 4> getIndexingMapsArray() {
+      return llvm::to_vector<4>(getIndexingMaps().getAsValueRange<::mlir::AffineMapAttr>());
+    }
 
     // Returns the bounds of each dimension in the iteration space spanned
     // by the iterator types of this operation.

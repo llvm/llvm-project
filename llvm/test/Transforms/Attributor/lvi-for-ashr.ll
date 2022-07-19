@@ -7,45 +7,26 @@
 ; FIXME: DOT should be replaced with 3
 
 define i32 @test-ashr(i32 %c) {
-; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS________OPM-LABEL: define {{[^@]+}}@test-ashr
-; IS________OPM-SAME: (i32 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS________OPM-NEXT:  chk65:
-; IS________OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C]], 65
-; IS________OPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[CHK0:%.*]]
-; IS________OPM:       chk0:
-; IS________OPM-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[C]], 0
-; IS________OPM-NEXT:    br i1 [[CMP]], label [[RETURN]], label [[BB_IF:%.*]]
-; IS________OPM:       bb_if:
-; IS________OPM-NEXT:    [[ASHR_VAL:%.*]] = ashr exact i32 [[C]], 2
-; IS________OPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[ASHR_VAL]], 15
-; IS________OPM-NEXT:    br i1 [[CMP2]], label [[BB_THEN:%.*]], label [[RETURN]]
-; IS________OPM:       bb_then:
-; IS________OPM-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[ASHR_VAL]], 16
-; IS________OPM-NEXT:    [[DOT:%.*]] = select i1 [[CMP3]], i32 3, i32 2
-; IS________OPM-NEXT:    br label [[RETURN]]
-; IS________OPM:       return:
-; IS________OPM-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[CHK65:%.*]] ], [ 1, [[CHK0]] ], [ [[DOT]], [[BB_THEN]] ], [ 4, [[BB_IF]] ]
-; IS________OPM-NEXT:    ret i32 [[RETVAL]]
-;
-; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@test-ashr
-; IS________NPM-SAME: (i32 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS________NPM-NEXT:  chk65:
-; IS________NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C]], 65
-; IS________NPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[CHK0:%.*]]
-; IS________NPM:       chk0:
-; IS________NPM-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[C]], 0
-; IS________NPM-NEXT:    br i1 [[CMP]], label [[RETURN]], label [[BB_IF:%.*]]
-; IS________NPM:       bb_if:
-; IS________NPM-NEXT:    [[ASHR_VAL:%.*]] = ashr exact i32 [[C]], 2
-; IS________NPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[ASHR_VAL]], 15
-; IS________NPM-NEXT:    br i1 [[CMP2]], label [[BB_THEN:%.*]], label [[RETURN]]
-; IS________NPM:       bb_then:
-; IS________NPM-NEXT:    br label [[RETURN]]
-; IS________NPM:       return:
-; IS________NPM-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[CHK65:%.*]] ], [ 1, [[CHK0]] ], [ 3, [[BB_THEN]] ], [ 4, [[BB_IF]] ]
-; IS________NPM-NEXT:    ret i32 [[RETVAL]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@test-ashr
+; CHECK-SAME: (i32 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  chk65:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C]], 65
+; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[CHK0:%.*]]
+; CHECK:       chk0:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[C]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN]], label [[BB_IF:%.*]]
+; CHECK:       bb_if:
+; CHECK-NEXT:    [[ASHR_VAL:%.*]] = ashr exact i32 [[C]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[ASHR_VAL]], 15
+; CHECK-NEXT:    br i1 [[CMP2]], label [[BB_THEN:%.*]], label [[RETURN]]
+; CHECK:       bb_then:
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[ASHR_VAL]], 16
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP3]], i32 3, i32 2
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[CHK65:%.*]] ], [ 1, [[CHK0]] ], [ [[DOT]], [[BB_THEN]] ], [ 4, [[BB_IF]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 chk65:
   %cmp = icmp sgt i32 %c, 65
@@ -70,5 +51,5 @@ return:
   ret i32 %retval
 }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

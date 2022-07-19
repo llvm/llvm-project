@@ -557,7 +557,7 @@ private:
   StringRef extraClassDeclaration;
   /// The string of the extra class definitions. It is re-indented before
   /// printed.
-  StringRef extraClassDefinition;
+  std::string extraClassDefinition;
 };
 
 /// A class used to emit C++ classes from Tablegen.  Contains a list of public

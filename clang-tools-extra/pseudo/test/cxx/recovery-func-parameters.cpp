@@ -1,8 +1,8 @@
 // RUN: clang-pseudo -grammar=cxx -source=%s --print-forest | FileCheck %s
 void foo(complete garbage???) {}
-// CHECK:      translation-unit~function-definition := decl-specifier-seq declarator function-body
+// CHECK:      translation-unit~function-definition := decl-specifier-seq function-declarator function-body
 // CHECK-NEXT: ├─decl-specifier-seq~VOID := tok[0]
-// CHECK-NEXT: ├─declarator~noptr-declarator := noptr-declarator parameters-and-qualifiers
+// CHECK-NEXT: ├─function-declarator~noptr-declarator := noptr-declarator parameters-and-qualifiers
 // CHECK-NEXT: │ ├─noptr-declarator~IDENTIFIER := tok[1]
 // CHECK-NEXT: │ └─parameters-and-qualifiers := ( parameter-declaration-clause [recover=Brackets] )
 // CHECK-NEXT: │   ├─( := tok[2]

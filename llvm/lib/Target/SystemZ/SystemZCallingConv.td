@@ -247,34 +247,29 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // The first 3 integer arguments are passed in registers R1D-R3D.
   // The rest will be passed in the user area. The address offset of the user
   // area can be found in register R4D.
-  CCIfType<[i64], CCCustom<"CC_XPLINK64_Shadow_Stack">>,
-  CCIfType<[i64], CCAssignToReg<[R1D, R2D, R3D]>>,
+  CCIfType<[i64], CCAssignToRegAndStack<[R1D, R2D, R3D], 8, 8>>,
 
-  // The first 8 named vector arguments are passed in V24-V31.  Sub-128 vectors
+  // The first 8 named vector arguments are passed in V24-V31. Sub-128 vectors
   // are passed in the same way, but they're widened to one of these types
   // during type legalization.
   CCIfSubtarget<"hasVector()",
     CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-             CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>>,
+      CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>>,
   CCIfSubtarget<"hasVector()",
     CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-             CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Stack">>>>,
-  CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-             CCIfFixed<CCAssignToReg<[V24, V25, V26, V27,
-                                      V28, V29, V30, V31]>>>>,
+              CCIfFixed<CCAssignToRegAndStack<[V24, V25, V26, V27,
+                                               V28, V29, V30, V31], 16, 8>>>>,
 
-  // The first 4 named  float and double arguments are passed in registers FPR0-FPR6.
-  // The rest will be passed in the user area.
+  // The first 4 named float and double arguments are passed in registers
+  // FPR0-FPR6. The rest will be passed in the user area.
   CCIfType<[f32, f64], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>,
-  CCIfType<[f32, f64], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Stack">>>,
-  CCIfType<[f32], CCIfFixed<CCAssignToReg<[F0S, F2S, F4S, F6S]>>>,
-  CCIfType<[f64], CCIfFixed<CCAssignToReg<[F0D, F2D, F4D, F6D]>>>,
+  CCIfType<[f32], CCIfFixed<CCAssignToRegAndStack<[F0S, F2S, F4S, F6S], 4, 8>>>,
+  CCIfType<[f64], CCIfFixed<CCAssignToRegAndStack<[F0D, F2D, F4D, F6D], 8, 8>>>,
+
   // The first 2 long double arguments are passed in register FPR0/FPR2
   // and FPR4/FPR6. The rest will be passed in the user area.
   CCIfType<[f128], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>,
-  CCIfType<[f128], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Stack">>>,
-  CCIfType<[f128], CCIfFixed<CCAssignToReg<[F0Q, F4Q]>>>,
+  CCIfType<[f128], CCIfFixed<CCAssignToRegAndStack<[F0Q, F4Q], 16, 8>>>,
 
   // Other arguments are passed in 8-byte-aligned 8-byte stack slots.
   CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>,

@@ -171,7 +171,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<AffineMap, 4> indexingMaps = genericOp.getIndexingMaps();
+    SmallVector<AffineMap, 4> indexingMaps = genericOp.getIndexingMapsArray();
     if (indexingMaps.empty())
       return failure();
 

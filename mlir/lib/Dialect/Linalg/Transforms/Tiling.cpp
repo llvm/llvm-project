@@ -169,6 +169,135 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
   return spec;
 }
 
+/// Given a `subsetExtractOp`, a `source` and a `dest`, create a new
+/// `ParallelInsertSlice` op of `source` into `dest` at the same subset location
+/// as `subsetExtractOp`.
+static void
+createMatchingParallelSubsetInsertOp(OpBuilder &b, Location loc,
+                                     tensor::ExtractSliceOp subsetExtractOp,
+                                     Value source, Value dest) {
+  b.create<tensor::ParallelInsertSliceOp>(
+      loc, source, dest, subsetExtractOp.getMixedOffsets(),
+      subsetExtractOp.getMixedSizes(), subsetExtractOp.getMixedStrides());
+}
+
+/// Build an `affine_max` of all the `vals`.
+static Value buildMax(OpBuilder &b, Location loc, ValueRange vals) {
+  return b.createOrFold<AffineMaxOp>(
+      loc, AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()),
+      vals);
+}
+
+/// Build an `affine_min` of all the `vals`.
+static Value buildMin(OpBuilder &b, Location loc, ValueRange vals) {
+  return b.createOrFold<AffineMinOp>(
+      loc, AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()),
+      vals);
+}
+
+FailureOr<ForeachThreadTilingResult>
+linalg::tileToForeachThreadOp(OpBuilder &b, TilingInterface op,
+                              ArrayRef<OpFoldResult> numThreads,
+                              ArrayRef<int64_t> threadDimMapping) {
+  Location loc = op->getLoc();
+  OpBuilder::InsertionGuard g(b);
+  SmallVector<Range> loopRanges = op.getIterationDomain(b);
+  if (loopRanges.empty())
+    return op->emitOpError("expected non-empty loop ranges");
+  auto hasStrideOne = [](Range r) { return !isConstantIntValue(r.stride, 1); };
+  if (llvm::any_of(loopRanges, hasStrideOne))
+    return op->emitOpError("only stride-1 supported atm");
+  // TODO: support `getTiledImplementation` with >1 produced tiled ops.
+  auto destOperands = op.getDestinationOperands(b);
+  if (destOperands.size() != 1)
+    return op->emitOpError("only single dest operand supported atm");
+
+  SmallVector<OpFoldResult> nonZeroNumThreads =
+      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
+        return !isConstantIntValue(ofr, 0);
+      }));
+  SmallVector<Value> materializedNonZeroNumThreads =
+      llvm::to_vector(llvm::map_range(nonZeroNumThreads, [&](OpFoldResult ofr) {
+        ImplicitLocOpBuilder ilocb(loc, b);
+        return materializeOpFoldResult(ilocb, ofr);
+      }));
+
+  Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
+  Operation *tiledOp = nullptr;
+  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
+      loc, materializedNonZeroNumThreads, threadDimMapping,
+      [&](OpBuilder &b, Location loc, ValueRange threadIds) {
+        int64_t nLoops = loopRanges.size();
+        SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
+        tiledOffsets.reserve(nLoops);
+        tiledSizes.reserve(nLoops);
+        for (unsigned loopIdx = 0, threadIdIdx = 0; loopIdx < nLoops;
+             ++loopIdx) {
+          bool overflow = loopIdx >= numThreads.size();
+          bool isZero = !overflow && isConstantIntValue(numThreads[loopIdx], 0);
+          // Degenerate case: take the whole domain.
+          if (overflow || isZero) {
+            tiledOffsets.push_back(loopRanges[loopIdx].offset);
+            tiledSizes.push_back(loopRanges[loopIdx].size);
+            continue;
+          }
+
+          // Tiled case: compute the offset and size.
+          AffineExpr i, j, M, N, O;
+          bindDims(b.getContext(), i, j);
+          bindSymbols(b.getContext(), M, N, O);
+          Value size = loopRanges[loopIdx].size;
+          Value offset = loopRanges[loopIdx].offset;
+          Value threadId = threadIds[threadIdIdx];
+          // TODO: more aggressive foldings.
+          // Symbolic fixed max size per thread.
+          // TODO: floor + 0/1 depending on case for better load-balancing.
+          Value maxSizePerThread = b.createOrFold<AffineApplyOp>(
+              loc, M.ceilDiv(N),
+              ValueRange{size, materializedNonZeroNumThreads[threadIdIdx]});
+          // Dynamic offset shifted by threadId * maxSizePerThread.
+          Value offsetPerThread = b.createOrFold<AffineApplyOp>(
+              loc, i + j * M, ValueRange{offset, threadId, maxSizePerThread});
+          // Dynamic upper-bound depending on the threadId.
+          Value sizeMinusOffsetPerThread = b.createOrFold<AffineApplyOp>(
+              loc, -i + M, ValueRange{offsetPerThread, size});
+          Value tileSizePerThread = buildMin(
+              b, loc, ValueRange{sizeMinusOffsetPerThread, maxSizePerThread});
+          tiledOffsets.push_back(offsetPerThread);
+          // TODO: if tileSizePerThread <= 0 early exit.
+          tiledSizes.push_back(
+              buildMax(b, loc, ValueRange{zero, tileSizePerThread}));
+          ++threadIdIdx;
+        }
+
+        SmallVector<Operation *> tiledOps =
+            op.getTiledImplementation(b, destOperands, tiledOffsets, tiledSizes,
+                                      /*tileDestOperands=*/true);
+        assert(tiledOps.size() == 1 && "expected a single produced tiled op");
+        tiledOp = tiledOps.front();
+
+        auto tilingInterfaceOp = dyn_cast<TilingInterface>(tiledOp);
+        assert(tilingInterfaceOp &&
+               "Tiled op does not implement TilingInterface");
+
+        auto tiledDestOperands = tilingInterfaceOp.getDestinationOperands(b);
+
+        // Create terminator with parallel subset insert operations.
+        auto performConcurrentlyOp = b.create<scf::PerformConcurrentlyOp>(loc);
+        OpBuilder::InsertionGuard g(b);
+        b.setInsertionPointToStart(performConcurrentlyOp.getBody());
+        for (auto it :
+             llvm::zip(tiledDestOperands, tilingInterfaceOp->getResults(),
+                       destOperands)) {
+          createMatchingParallelSubsetInsertOp(
+              b, loc,
+              cast<tensor::ExtractSliceOp>(std::get<0>(it).getDefiningOp()),
+              std::get<1>(it), std::get<2>(it));
+        }
+      });
+  return ForeachThreadTilingResult{foreachThreadOp, tiledOp};
+}
+
 // Insert a tile `source` into the destination tensor `dest`. The position at
 // which the tile is inserted (as well as size of tile) is taken from a given
 // ExtractSliceOp `sliceOp`.

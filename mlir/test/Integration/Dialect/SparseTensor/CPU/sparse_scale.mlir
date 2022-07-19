@@ -77,7 +77,7 @@ module {
     vector.print %v : vector<16xf32>
 
     // Release the resources.
-    sparse_tensor.release %1 : tensor<8x8xf32, #CSR>
+    bufferization.dealloc_tensor %1 : tensor<8x8xf32, #CSR>
 
     return
   }

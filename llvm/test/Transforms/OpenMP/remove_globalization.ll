@@ -183,7 +183,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
 ; CHECK: attributes #[[ATTR1]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR2]] = { nounwind readnone }
-; CHECK: attributes #[[ATTR3]] = { nofree nosync nounwind writeonly }
+; CHECK: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind writeonly }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR6]] = { nosync nounwind writeonly }
@@ -191,7 +191,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nosync nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR2]] = { nounwind readnone }
-; CHECK-DISABLED: attributes #[[ATTR3]] = { nofree nosync nounwind writeonly }
+; CHECK-DISABLED: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind writeonly }
 ; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
 ; CHECK-DISABLED: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nosync nounwind writeonly }

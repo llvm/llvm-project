@@ -628,7 +628,7 @@ void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
 
 bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,
                                         unsigned OpNo) const {
-  return OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) &&
+  return OpNo == 0 && (Desc.TSFlags & SIInstrFlags::DPP) &&
          (Desc.TSFlags & SIInstrFlags::VOPC) &&
          (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
           Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO));
@@ -645,8 +645,7 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   // If there are printed modifiers, printOperandAndFPInputMods or
   // printOperandAndIntInputMods will be called instead
   if ((OpNo == 0 ||
-       (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP)) ||
-       (OpNo == 2 && (Desc.TSFlags & SIInstrFlags::DPP) && ModIdx != -1)) &&
+       (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) && ModIdx != -1)) &&
       (Desc.TSFlags & SIInstrFlags::VOPC) &&
       (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
        Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO)))
