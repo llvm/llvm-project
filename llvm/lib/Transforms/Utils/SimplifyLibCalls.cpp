@@ -1948,14 +1948,16 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
     return Sqrt;
 
+  // If we can approximate pow:
   // pow(x, n) -> powi(x, n) * sqrt(x) if n has exactly a 0.5 fraction
+  // pow(x, n) -> powi(x, n) if n is a constant signed integer value
   const APFloat *ExpoF;
-  if (match(Expo, m_APFloat(ExpoF)) && !ExpoF->isExactlyValue(0.5) &&
-      !ExpoF->isExactlyValue(-0.5)) {
+  if (AllowApprox && match(Expo, m_APFloat(ExpoF)) &&
+      !ExpoF->isExactlyValue(0.5) && !ExpoF->isExactlyValue(-0.5)) {
     APFloat ExpoA(abs(*ExpoF));
     APFloat ExpoI(*ExpoF);
     Value *Sqrt = nullptr;
-    if (AllowApprox && !ExpoA.isInteger()) {
+    if (!ExpoA.isInteger()) {
       APFloat Expo2 = ExpoA;
       // To check if ExpoA is an integer + 0.5, we add it to itself. If there
       // is no floating point exception and the result is an integer, then
@@ -1979,7 +1981,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
         return nullptr;
     }
 
-    // pow(x, n) -> powi(x, n) if n is a constant signed integer value
+    // 0.5 fraction is now optionally handled.
+    // Do pow -> powi for remaining integer exponent
     APSInt IntExpo(TLI->getIntSize(), /*isUnsigned=*/false);
     if (ExpoF->isInteger() &&
         ExpoF->convertToInteger(IntExpo, APFloat::rmTowardZero, &Ignored) ==
