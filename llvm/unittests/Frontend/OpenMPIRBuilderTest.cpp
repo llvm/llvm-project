@@ -5072,7 +5072,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroupWithTasks) {
 
   Function *TaskAllocFn =
       OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc);
-  ASSERT_EQ(TaskAllocFn->getNumUses(), 2);
+  ASSERT_EQ(TaskAllocFn->getNumUses(), 2u);
 
   CallInst *FirstTaskAllocCall =
       dyn_cast_or_null<CallInst>(*TaskAllocFn->users().begin());
