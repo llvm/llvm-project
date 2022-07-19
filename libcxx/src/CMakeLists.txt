@@ -320,6 +320,7 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
     experimental/memory_resource.cpp
     )
   add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
+  target_link_libraries(cxx_experimental PUBLIC cxx-headers)
   if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_experimental PRIVATE cxx_shared)
   else()
