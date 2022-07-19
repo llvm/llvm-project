@@ -19996,6 +19996,14 @@ bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     break;
   }
+  case ARMISD::VBICIMM: {
+    SDValue Op0 = Op.getOperand(0);
+    unsigned ModImm = Op.getConstantOperandVal(1);
+    unsigned EltBits = 0;
+    uint64_t Mask = ARM_AM::decodeVMOVModImm(ModImm, EltBits);
+    if ((OriginalDemandedBits & Mask) == 0)
+      return TLO.CombineTo(Op, Op0);
+  }
   }
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
