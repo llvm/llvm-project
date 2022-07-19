@@ -79,6 +79,17 @@ subroutine abs_testd(a, b)
   b = abs(a)
 end subroutine
 
+! CHECK-LABEL: func @_QPabs_testr16(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<f128>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f128>{{.*}}) {
+subroutine abs_testr16(a, b)
+! CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f128>
+! CHECK: %[[VAL_3:.*]] = fir.call @llvm.fabs.f128(%[[VAL_2]]) : (f128) -> f128
+! CHECK: fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f128>
+! CHECK: return
+  real(kind=16) :: a, b
+  b = abs(a)
+end subroutine
+
 ! CHECK-LABEL: func @_QPabs_testzr(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.complex<4>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
 subroutine abs_testzr(a, b)
