@@ -7399,6 +7399,7 @@ cc_library(
         ":PDLDialect",
         ":Parser",
         ":SideEffectInterfaces",
+        ":TilingInterface",
         ":TransformDialect",
         ":TransformUtils",
         "//llvm:Support",
