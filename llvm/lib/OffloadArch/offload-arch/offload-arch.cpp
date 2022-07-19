@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
             xinfo = std::move(caps);
             printf("%s\n", xinfo.c_str());
           } else {
-            printf("%s %s\n", offload_arch.c_str(), xinfo.c_str());
+            printf("%s%s\n", offload_arch.c_str(), xinfo.c_str());
           }
           first_device_printed = true;
         }
