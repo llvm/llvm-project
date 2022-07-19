@@ -335,6 +335,27 @@ TEST(FoldingRangesPseudoParser, All) {
           ]]}   \
         ]]};
       )cpp",
+      R"cpp(
+        [[/* Multi 
+          * line
+          *  comment 
+          */]]
+      )cpp",
+      R"cpp(
+        [[// Comment
+        // 1]]
+        
+        [[// Comment
+        // 2]]
+        
+        // No folding for single line comment.
+
+        [[/* comment 3
+        */]]
+
+        [[/* comment 4
+        */]]
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
