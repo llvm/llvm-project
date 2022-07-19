@@ -1107,7 +1107,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
     // Check all indexing maps are identity.
-    if (llvm::any_of(genericOp.getIndexingMaps(),
+    if (llvm::any_of(genericOp.getIndexingMapsArray(),
                      [](AffineMap map) { return !map.isIdentity(); }))
       return failure();
 
@@ -1854,7 +1854,7 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
       return failure();
 
     // Maps must be projected permutations.
-    if (llvm::any_of(linalgOp.getIndexingMaps(), [](AffineMap map) {
+    if (llvm::any_of(linalgOp.getIndexingMapsArray(), [](AffineMap map) {
           return !map.isProjectedPermutation();
         }))
       return failure();

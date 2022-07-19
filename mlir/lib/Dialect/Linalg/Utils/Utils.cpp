@@ -143,7 +143,7 @@ namespace mlir {
 namespace linalg {
 
 bool allIndexingsAreProjectedPermutation(LinalgOp op) {
-  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
+  return llvm::all_of(op.getIndexingMapsArray(), [](AffineMap m) {
     return m.isProjectedPermutation(/*allowZeroInResults=*/true);
   });
 }
