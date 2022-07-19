@@ -262,6 +262,7 @@ group("test") {
     "//llvm/tools/llvm-diff",
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
+    "//llvm/tools/llvm-dwarfutil",
     "//llvm/tools/llvm-dwp",
     "//llvm/tools/llvm-exegesis",
     "//llvm/tools/llvm-extract",
