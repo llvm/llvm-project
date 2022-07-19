@@ -6,7 +6,7 @@
 define void @f() {
 ; X64-LABEL: f:
 ; X64:       # %bb.0: # %BB
-; X64-NEXT:    movzbl (%rax), %eax
+; X64-NEXT:    movb (%rax), %al
 ; X64-NEXT:    cmpb $0, (%rax)
 ; X64-NEXT:    setne (%rax)
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
@@ -23,7 +23,7 @@ define void @f() {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movzbl (%eax), %eax
+; X86-NEXT:    movb (%eax), %al
 ; X86-NEXT:    cmpb $0, (%eax)
 ; X86-NEXT:    setne (%eax)
 ; X86-NEXT:    leal -{{[0-9]+}}(%esp), %eax
@@ -61,7 +61,7 @@ BB:
 define void @g() {
 ; X64-LABEL: g:
 ; X64:       # %bb.0: # %BB
-; X64-NEXT:    movzbl (%rax), %eax
+; X64-NEXT:    movb (%rax), %al
 ; X64-NEXT:    cmpb $0, (%rax)
 ; X64-NEXT:    setne (%rax)
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
@@ -78,7 +78,7 @@ define void @g() {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movzbl (%eax), %eax
+; X86-NEXT:    movb (%eax), %al
 ; X86-NEXT:    cmpb $0, (%eax)
 ; X86-NEXT:    setne (%eax)
 ; X86-NEXT:    leal -{{[0-9]+}}(%esp), %eax

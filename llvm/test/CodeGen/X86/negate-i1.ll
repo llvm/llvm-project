@@ -13,7 +13,7 @@ define i8 @select_i8_neg1_or_0(i1 %a) {
 ;
 ; X32-LABEL: select_i8_neg1_or_0:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    negb %al
 ; X32-NEXT:    retl
@@ -31,7 +31,7 @@ define i8 @select_i8_neg1_or_0_zeroext(i1 zeroext %a) {
 ;
 ; X32-LABEL: select_i8_neg1_or_0_zeroext:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    negb %al
 ; X32-NEXT:    retl
   %b = sext i1 %a to i8

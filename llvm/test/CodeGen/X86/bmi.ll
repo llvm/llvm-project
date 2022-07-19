@@ -291,7 +291,7 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ; X86-LABEL: andn_cmp_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    notb %al
 ; X86-NEXT:    testb %al, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %al

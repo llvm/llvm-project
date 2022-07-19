@@ -17,7 +17,7 @@ define dso_local void @copy_7_bytes(ptr noalias nocapture, ptr noalias nocapture
 define dso_local void @copy_7_bytes_volatile(ptr noalias nocapture, ptr noalias nocapture readonly) nounwind #0 {
 ; CHECK-LABEL: copy_7_bytes_volatile:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl 6(%rsi), %eax
+; CHECK-NEXT:    movb 6(%rsi), %al
 ; CHECK-NEXT:    movb %al, 6(%rdi)
 ; CHECK-NEXT:    movzwl 4(%rsi), %eax
 ; CHECK-NEXT:    movw %ax, 4(%rdi)
@@ -35,7 +35,7 @@ define dso_local void @move_7_bytes(ptr nocapture, ptr nocapture readonly) nounw
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    movzwl 4(%rsi), %ecx
-; CHECK-NEXT:    movzbl 6(%rsi), %edx
+; CHECK-NEXT:    movb 6(%rsi), %dl
 ; CHECK-NEXT:    movb %dl, 6(%rdi)
 ; CHECK-NEXT:    movw %cx, 4(%rdi)
 ; CHECK-NEXT:    movl %eax, (%rdi)
@@ -48,7 +48,7 @@ define dso_local void @move_7_bytes_volatile(ptr nocapture, ptr nocapture readon
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    movzwl 4(%rsi), %ecx
-; CHECK-NEXT:    movzbl 6(%rsi), %edx
+; CHECK-NEXT:    movb 6(%rsi), %dl
 ; CHECK-NEXT:    movb %dl, 6(%rdi)
 ; CHECK-NEXT:    movw %cx, 4(%rdi)
 ; CHECK-NEXT:    movl %eax, (%rdi)

@@ -237,7 +237,7 @@ define void @v7i8(<4 x i8> %a, <4 x i8> %b, ptr %p) nounwind {
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    pandn %xmm0, %xmm2
 ; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; SSE2-NEXT:    movb %al, 6(%rdi)
 ; SSE2-NEXT:    movd %xmm2, (%rdi)
 ; SSE2-NEXT:    pextrw $2, %xmm2, %eax

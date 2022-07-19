@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl A, %eax
 ; CHECK-NEXT:    movzwl 2(%eax), %eax
-; CHECK-NEXT:    movzbl B, %ecx
+; CHECK-NEXT:    movb B, %cl
 ; CHECK-NEXT:    movl C, %edx
 ; CHECK-NEXT:    andb $16, %cl
 ; CHECK-NEXT:    shll %cl, %edx

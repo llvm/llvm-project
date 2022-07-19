@@ -69,11 +69,11 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movq _PyUFunc_API@GOTPCREL(%rip), %rbp
 ; CHECK-NEXT:    movq (%rbp), %rax
 ; CHECK-NEXT:    callq *216(%rax)
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    movb {{[0-9]+}}(%rsp), %dl
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    je LBB0_11
 ; CHECK-NEXT:  ## %bb.7: ## %cond_false.i
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebx
+; CHECK-NEXT:    movb {{[0-9]+}}(%rsp), %bl
 ; CHECK-NEXT:    movzbl %bl, %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    divb %dl
@@ -98,8 +98,8 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:  LBB0_11: ## %cond_true.i
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    callq _feraiseexcept
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %edx
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebx
+; CHECK-NEXT:    movb {{[0-9]+}}(%rsp), %dl
+; CHECK-NEXT:    movb {{[0-9]+}}(%rsp), %bl
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    je LBB0_14

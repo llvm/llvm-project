@@ -339,7 +339,7 @@ define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwi
 ; NOCMOV-NEXT:    movb %al, g8
 ; NOCMOV-NEXT:    retl
 ; NOCMOV-NEXT:  .LBB7_1: # %entry
-; NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; NOCMOV-NEXT:    jg .LBB7_4
 ; NOCMOV-NEXT:  .LBB7_3: # %entry
 ; NOCMOV-NEXT:    movl %ecx, %eax

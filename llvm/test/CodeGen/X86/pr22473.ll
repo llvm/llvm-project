@@ -6,7 +6,7 @@ define zeroext i1 @PR22473(ptr, i8) {
 ; X86-LABEL: PR22473:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl (%eax), %eax
+; X86-NEXT:    movb (%eax), %al
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl

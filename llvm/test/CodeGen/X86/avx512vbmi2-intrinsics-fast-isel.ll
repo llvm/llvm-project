@@ -303,7 +303,7 @@ entry:
 define <8 x i64> @test_mm512_mask_shldi_epi64(<8 x i64> %__S, i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_mask_shldi_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshldq $47, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -325,7 +325,7 @@ declare <8 x i64> @llvm.fshl.v8i64(<8 x i64>, <8 x i64>, <8 x i64>)
 define <8 x i64> @test_mm512_maskz_shldi_epi64(i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shldi_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshldq $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -475,7 +475,7 @@ entry:
 define <8 x i64> @test_mm512_mask_shrdi_epi64(<8 x i64> %__S, i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_mask_shrdi_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshrdq $47, %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -497,7 +497,7 @@ declare <8 x i64> @llvm.fshr.v8i64(<8 x i64>, <8 x i64>, <8 x i64>)
 define <8 x i64> @test_mm512_maskz_shrdi_epi64(i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shrdi_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshrdq $63, %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -647,7 +647,7 @@ entry:
 define <8 x i64> @test_mm512_mask_shldv_epi64(<8 x i64> %__S, i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_mask_shldv_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshldvq %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -667,7 +667,7 @@ entry:
 define <8 x i64> @test_mm512_maskz_shldv_epi64(i8 zeroext %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shldv_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshldvq %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -817,7 +817,7 @@ entry:
 define <8 x i64> @test_mm512_mask_shrdv_epi64(<8 x i64> %__S, i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_mask_shrdv_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshrdvq %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -837,7 +837,7 @@ entry:
 define <8 x i64> @test_mm512_maskz_shrdv_epi64(i8 zeroext %__U, <8 x i64> %__S, <8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_maskz_shrdv_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpshrdvq %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl

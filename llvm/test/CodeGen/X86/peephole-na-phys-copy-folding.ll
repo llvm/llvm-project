@@ -14,7 +14,7 @@ declare i32 @bar(i64)
 define i1 @plus_one() nounwind {
 ; CHECK32-LABEL: plus_one:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl M, %eax
+; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    incl L
 ; CHECK32-NEXT:    jne .LBB0_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -29,7 +29,7 @@ define i1 @plus_one() nounwind {
 ;
 ; CHECK64-LABEL: plus_one:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    movb M(%rip), %al
 ; CHECK64-NEXT:    incl L(%rip)
 ; CHECK64-NEXT:    jne .LBB0_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
@@ -62,7 +62,7 @@ exit2:
 define i1 @plus_forty_two() nounwind {
 ; CHECK32-LABEL: plus_forty_two:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl M, %eax
+; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    addl $42, L
 ; CHECK32-NEXT:    jne .LBB1_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -77,7 +77,7 @@ define i1 @plus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: plus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    movb M(%rip), %al
 ; CHECK64-NEXT:    addl $42, L(%rip)
 ; CHECK64-NEXT:    jne .LBB1_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
@@ -110,7 +110,7 @@ exit2:
 define i1 @minus_one() nounwind {
 ; CHECK32-LABEL: minus_one:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl M, %eax
+; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    decl L
 ; CHECK32-NEXT:    jne .LBB2_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -125,7 +125,7 @@ define i1 @minus_one() nounwind {
 ;
 ; CHECK64-LABEL: minus_one:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    movb M(%rip), %al
 ; CHECK64-NEXT:    decl L(%rip)
 ; CHECK64-NEXT:    jne .LBB2_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
@@ -158,7 +158,7 @@ exit2:
 define i1 @minus_forty_two() nounwind {
 ; CHECK32-LABEL: minus_forty_two:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl M, %eax
+; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    addl $-42, L
 ; CHECK32-NEXT:    jne .LBB3_2
 ; CHECK32-NEXT:  # %bb.1: # %entry
@@ -173,7 +173,7 @@ define i1 @minus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: minus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movzbl M(%rip), %eax
+; CHECK64-NEXT:    movb M(%rip), %al
 ; CHECK64-NEXT:    addl $-42, L(%rip)
 ; CHECK64-NEXT:    jne .LBB3_2
 ; CHECK64-NEXT:  # %bb.1: # %entry

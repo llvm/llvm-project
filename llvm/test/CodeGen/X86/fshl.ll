@@ -17,7 +17,7 @@ declare i128 @llvm.fshl.i128(i128, i128, i128) nounwind readnone
 define i8 @var_shift_i8(i8 %x, i8 %y, i8 %z) nounwind {
 ; X86-LABEL: var_shift_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
@@ -48,14 +48,14 @@ define i16 @var_shift_i16(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-FAST:       # %bb.0:
 ; X86-FAST-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-FAST-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-FAST-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-FAST-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-FAST-NEXT:    andb $15, %cl
 ; X86-FAST-NEXT:    shldw %cl, %dx, %ax
 ; X86-FAST-NEXT:    retl
 ;
 ; X86-SLOW-LABEL: var_shift_i16:
 ; X86-SLOW:       # %bb.0:
-; X86-SLOW-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SLOW-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SLOW-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    shll $16, %eax
@@ -95,7 +95,7 @@ define i16 @var_shift_i16(i16 %x, i16 %y, i16 %z) nounwind {
 define i32 @var_shift_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-FAST-LABEL: var_shift_i32:
 ; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-FAST-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-FAST-NEXT:    shldl %cl, %edx, %eax
@@ -104,7 +104,7 @@ define i32 @var_shift_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-SLOW-LABEL: var_shift_i32:
 ; X86-SLOW:       # %bb.0:
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLOW-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SLOW-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    shll %cl, %edx
 ; X86-SLOW-NEXT:    notb %cl
@@ -446,8 +446,8 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 define i8 @const_shift_i8(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: const_shift_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shrb %cl
 ; X86-NEXT:    shlb $7, %al
 ; X86-NEXT:    orb %cl, %al
@@ -588,12 +588,12 @@ define i8 @combine_fshl_load_i8(ptr %p) nounwind {
 ; X86-LABEL: combine_fshl_load_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl 1(%eax), %eax
+; X86-NEXT:    movb 1(%eax), %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_fshl_load_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl 1(%rdi), %eax
+; X64-NEXT:    movb 1(%rdi), %al
 ; X64-NEXT:    retq
   %p1 = getelementptr i8, ptr %p, i32 1
   %ld0 = load i8, ptr%p

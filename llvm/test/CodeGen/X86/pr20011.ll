@@ -8,8 +8,8 @@ define void @crash(i64 %x0, i64 %y0, ptr nocapture %dest) nounwind {
 ; X86-LABEL: crash:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    shlb $2, %dl
 ; X86-NEXT:    andb $3, %cl
 ; X86-NEXT:    orb %dl, %cl

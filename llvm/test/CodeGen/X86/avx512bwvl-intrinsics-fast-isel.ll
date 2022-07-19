@@ -104,7 +104,7 @@ entry:
 define zeroext i8 @test_mm_mask_test_epi16_mask(i8 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B) {
 ; X86-LABEL: test_mm_mask_test_epi16_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vptestmw %xmm0, %xmm1, %k0 {%k1}
 ; X86-NEXT:    kmovd %k0, %eax
@@ -272,7 +272,7 @@ entry:
 define zeroext i8 @test_mm_mask_testn_epi16_mask(i8 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B) {
 ; X86-LABEL: test_mm_mask_testn_epi16_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vptestnmw %xmm0, %xmm1, %k0 {%k1}
 ; X86-NEXT:    kmovd %k0, %eax
@@ -343,7 +343,7 @@ entry:
 define <2 x i64> @test_mm_mask_set1_epi8(<2 x i64> %__O, i16 zeroext %__M, i8 signext %__A) local_unnamed_addr #0 {
 ; X86-LABEL: test_mm_mask_set1_epi8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpbroadcastb %eax, %xmm0 {%k1}
 ; X86-NEXT:    retl
@@ -366,7 +366,7 @@ entry:
 define <2 x i64> @test_mm_maskz_set1_epi8(i16 zeroext %__M, i8 signext %__A)  {
 ; X86-LABEL: test_mm_maskz_set1_epi8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpbroadcastb %eax, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -388,7 +388,7 @@ entry:
 define <4 x i64> @test_mm256_mask_set1_epi8(<4 x i64> %__O, i32 %__M, i8 signext %__A){
 ; X86-LABEL: test_mm256_mask_set1_epi8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpbroadcastb %eax, %ymm0 {%k1}
 ; X86-NEXT:    retl
@@ -411,7 +411,7 @@ entry:
 define <4 x i64> @test_mm256_maskz_set1_epi8(i32 %__M, i8 signext %__A)  {
 ; X86-LABEL: test_mm256_maskz_set1_epi8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpbroadcastb %eax, %ymm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -479,7 +479,7 @@ define <2 x i64> @test_mm_mask_set1_epi16(<2 x i64> %__O, i8 zeroext %__M, i16 s
 ; X86-LABEL: test_mm_mask_set1_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    kmovd %ecx, %k1
 ; X86-NEXT:    vpbroadcastw %eax, %xmm0 {%k1}
 ; X86-NEXT:    retl
@@ -503,7 +503,7 @@ define <2 x i64> @test_mm_maskz_set1_epi16(i8 zeroext %__M, i16 signext %__A) {
 ; X86-LABEL: test_mm_maskz_set1_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    kmovd %ecx, %k1
 ; X86-NEXT:    vpbroadcastw %eax, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -641,7 +641,7 @@ define <2 x i64> @test_mm_broadcastw_epi16(<2 x i64> %a0) {
 define <2 x i64> @test_mm_mask_broadcastw_epi16(<2 x i64> %a0, i8 %a1, <2 x i64> %a2) {
 ; X86-LABEL: test_mm_mask_broadcastw_epi16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpbroadcastw %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    retl
@@ -663,7 +663,7 @@ define <2 x i64> @test_mm_mask_broadcastw_epi16(<2 x i64> %a0, i8 %a1, <2 x i64>
 define <2 x i64> @test_mm_maskz_broadcastw_epi16(i8 %a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_maskz_broadcastw_epi16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpbroadcastw %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -809,7 +809,7 @@ entry:
 define <2 x i64> @test_mm_mask2_permutex2var_epi16(<2 x i64> %__A, <2 x i64> %__I, i8 zeroext %__U, <2 x i64> %__B) {
 ; X86-LABEL: test_mm_mask2_permutex2var_epi16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpermi2w %xmm2, %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovdqa %xmm1, %xmm0
@@ -874,7 +874,7 @@ entry:
 define <2 x i64> @test_mm_mask_permutex2var_epi16(<2 x i64> %__A, i8 zeroext %__U, <2 x i64> %__I, <2 x i64> %__B) {
 ; X86-LABEL: test_mm_mask_permutex2var_epi16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpermt2w %xmm2, %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    retl
@@ -898,7 +898,7 @@ entry:
 define <2 x i64> @test_mm_maskz_permutex2var_epi16(i8 zeroext %__U, <2 x i64> %__A, <2 x i64> %__I, <2 x i64> %__B) {
 ; X86-LABEL: test_mm_maskz_permutex2var_epi16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpermt2w %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl

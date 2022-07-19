@@ -158,9 +158,9 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; SSE2-NEXT:    andps %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %dl
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_urem_vec:

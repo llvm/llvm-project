@@ -12,7 +12,7 @@ define i64 @foo(i64 %x, ptr %X) {
 ; CHECK-NEXT:    mov esi, dword ptr [esp + 8]
 ; CHECK-NEXT:    mov edx, dword ptr [esp + 12]
 ; CHECK-NEXT:    mov eax, dword ptr [esp + 16]
-; CHECK-NEXT:    movzx ecx, byte ptr [eax]
+; CHECK-NEXT:    mov cl, byte ptr [eax]
 ; CHECK-NEXT:    mov eax, esi
 ; CHECK-NEXT:    shl eax, cl
 ; CHECK-NEXT:    shld edx, esi, cl

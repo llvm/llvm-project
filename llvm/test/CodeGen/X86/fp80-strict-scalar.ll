@@ -242,7 +242,7 @@ define i1 @fp80_to_sint1(x86_fp80 %x) #0 {
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -258,7 +258,7 @@ define i1 @fp80_to_sint1(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
   %result = call i1 @llvm.experimental.constrained.fptosi.i1.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
@@ -279,7 +279,7 @@ define i8 @fp80_to_sint8(x86_fp80 %x) #0 {
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -295,7 +295,7 @@ define i8 @fp80_to_sint8(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
   %result = call i8 @llvm.experimental.constrained.fptosi.i8.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
@@ -435,7 +435,7 @@ define i1 @fp80_to_uint1(x86_fp80 %x) #0 {
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -451,7 +451,7 @@ define i1 @fp80_to_uint1(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
   %result = call i1 @llvm.experimental.constrained.fptoui.i1.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
@@ -472,7 +472,7 @@ define i8 @fp80_to_uint8(x86_fp80 %x) #0 {
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -488,7 +488,7 @@ define i8 @fp80_to_uint8(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
   %result = call i8 @llvm.experimental.constrained.fptoui.i8.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
@@ -655,7 +655,7 @@ define x86_fp80 @sint1_to_fp80(i1 %x) #0 {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    negb %al
 ; X86-NEXT:    movsbl %al, %eax
@@ -781,7 +781,7 @@ define x86_fp80 @uint1_to_fp80(i1 %x) #0 {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)

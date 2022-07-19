@@ -13,19 +13,12 @@ define void @test1(ptr nocapture %a0, i8 zeroext %a1) nounwind ssp {
 ; X64-NEXT:    movb %sil, (%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-BWON-LABEL: test1:
-; X86-BWON:       ## %bb.0: ## %entry
-; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWON-NEXT:    movb %al, (%ecx)
-; X86-BWON-NEXT:    retl
-;
-; X86-BWOFF-LABEL: test1:
-; X86-BWOFF:       ## %bb.0: ## %entry
-; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWOFF-NEXT:    movb %al, (%ecx)
-; X86-BWOFF-NEXT:    retl
+; X86-LABEL: test1:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb %al, (%ecx)
+; X86-NEXT:    retl
 entry:
   %A = load i32, ptr %a0, align 4
   %B = and i32 %A, -256     ; 0xFFFFFF00
@@ -41,19 +34,12 @@ define void @test2(ptr nocapture %a0, i8 zeroext %a1) nounwind ssp {
 ; X64-NEXT:    movb %sil, 1(%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-BWON-LABEL: test2:
-; X86-BWON:       ## %bb.0: ## %entry
-; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWON-NEXT:    movb %al, 1(%ecx)
-; X86-BWON-NEXT:    retl
-;
-; X86-BWOFF-LABEL: test2:
-; X86-BWOFF:       ## %bb.0: ## %entry
-; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWOFF-NEXT:    movb %al, 1(%ecx)
-; X86-BWOFF-NEXT:    retl
+; X86-LABEL: test2:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb %al, 1(%ecx)
+; X86-NEXT:    retl
 entry:
   %A = load i32, ptr %a0, align 4
   %B = and i32 %A, -65281    ; 0xFFFF00FF
@@ -156,19 +142,12 @@ define void @test6(ptr nocapture %a0, i8 zeroext %a1) nounwind ssp {
 ; X64-NEXT:    movb %sil, 5(%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-BWON-LABEL: test6:
-; X86-BWON:       ## %bb.0: ## %entry
-; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWON-NEXT:    movb %al, 5(%ecx)
-; X86-BWON-NEXT:    retl
-;
-; X86-BWOFF-LABEL: test6:
-; X86-BWOFF:       ## %bb.0: ## %entry
-; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWOFF-NEXT:    movb %al, 5(%ecx)
-; X86-BWOFF-NEXT:    retl
+; X86-LABEL: test6:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb %al, 5(%ecx)
+; X86-NEXT:    retl
 entry:
   %A = load i64, ptr %a0, align 4
   %B = and i64 %A, -280375465082881    ; 0xFFFF00FFFFFFFFFF
@@ -186,23 +165,14 @@ define i32 @test7(ptr nocapture %a0, i8 zeroext %a1, ptr %P2) nounwind {
 ; X64-NEXT:    movb %sil, 5(%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-BWON-LABEL: test7:
-; X86-BWON:       ## %bb.0: ## %entry
-; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-BWON-NEXT:    movl (%eax), %eax
-; X86-BWON-NEXT:    movb %cl, 5(%edx)
-; X86-BWON-NEXT:    retl
-;
-; X86-BWOFF-LABEL: test7:
-; X86-BWOFF:       ## %bb.0: ## %entry
-; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-BWOFF-NEXT:    movl (%eax), %eax
-; X86-BWOFF-NEXT:    movb %cl, 5(%edx)
-; X86-BWOFF-NEXT:    retl
+; X86-LABEL: test7:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    movb %cl, 5(%edx)
+; X86-NEXT:    retl
 entry:
   %OtherLoad = load i32 , ptr%P2
   %A = load i64, ptr %a0, align 4

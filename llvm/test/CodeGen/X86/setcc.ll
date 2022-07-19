@@ -280,7 +280,7 @@ define i32 @t12(i32 %0, i32 %1) {
 define i16 @shift_and(i16 %a) {
 ; X86-LABEL: shift_and:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    andb $4, %al
 ; X86-NEXT:    shrb $2, %al
 ; X86-NEXT:    movzbl %al, %eax
