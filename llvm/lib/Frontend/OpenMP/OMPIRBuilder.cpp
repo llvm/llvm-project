@@ -1453,7 +1453,36 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       InsertPointTy(TaskAllocaBB, TaskAllocaBB->begin());
   InsertPointTy TaskBodyIP = InsertPointTy(TaskBodyBB, TaskBodyBB->begin());
   BodyGenCB(TaskAllocaIP, TaskBodyIP);
-  Builder.SetInsertPoint(TaskExitBB);
+  Builder.SetInsertPoint(TaskExitBB, TaskExitBB->begin());
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createTaskgroup(const LocationDescription &Loc,
+                                 InsertPointTy AllocaIP,
+                                 BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *ThreadID = getOrCreateThreadID(Ident);
+
+  // Emit the @__kmpc_taskgroup runtime call to start the taskgroup
+  Function *TaskgroupFn =
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
+  Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
+
+  BasicBlock *TaskgroupExitBB = splitBB(Builder, true, "taskgroup.exit");
+  BodyGenCB(AllocaIP, Builder.saveIP());
+
+  Builder.SetInsertPoint(TaskgroupExitBB);
+  // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup
+  Function *EndTaskgroupFn =
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
+  Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
 
   return Builder.saveIP();
 }
