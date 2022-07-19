@@ -6281,8 +6281,9 @@ bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
   assert(ArgInfo && "invalid TypeSourceInfo");
   QualType Arg = ArgInfo->getType();
   SourceRange SR = ArgInfo->getTypeLoc().getSourceRange();
+  QualType CanonArg = Context.getCanonicalType(Arg);
 
-  if (Arg->isVariablyModifiedType()) {
+  if (CanonArg->isVariablyModifiedType()) {
     return Diag(SR.getBegin(), diag::err_variably_modified_template_arg) << Arg;
   } else if (Context.hasSameUnqualifiedType(Arg, Context.OverloadTy)) {
     return Diag(SR.getBegin(), diag::err_template_arg_overload_type) << SR;
@@ -6295,9 +6296,9 @@ bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
   //
   // C++11 allows these, and even in C++03 we allow them as an extension with
   // a warning.
-  if (LangOpts.CPlusPlus11 || Arg->hasUnnamedOrLocalType()) {
+  if (LangOpts.CPlusPlus11 || CanonArg->hasUnnamedOrLocalType()) {
     UnnamedLocalNoLinkageFinder Finder(*this, SR);
-    (void)Finder.Visit(Context.getCanonicalType(Arg));
+    (void)Finder.Visit(CanonArg);
   }
 
   return false;
