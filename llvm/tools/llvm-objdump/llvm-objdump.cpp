@@ -1278,6 +1278,25 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
 
   LLVM_DEBUG(LVP.dump());
 
+  std::unordered_map<uint64_t, BBAddrMap> AddrToBBAddrMap;
+  auto ReadBBAddrMap = [&](Optional<unsigned> SectionIndex = None) {
+    AddrToBBAddrMap.clear();
+    if (const auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj)) {
+      auto BBAddrMapsOrErr = Elf->readBBAddrMap(SectionIndex);
+      if (!BBAddrMapsOrErr)
+          reportWarning(toString(BBAddrMapsOrErr.takeError()),
+                        Obj.getFileName());
+      for (auto &FunctionBBAddrMap : *BBAddrMapsOrErr)
+        AddrToBBAddrMap.emplace(FunctionBBAddrMap.Addr,
+                                std::move(FunctionBBAddrMap));
+    }
+  };
+
+  // For non-relocatable objects, Read all LLVM_BB_ADDR_MAP sections into a
+  // single mapping, since they don't have any conflicts.
+  if (SymbolizeOperands && !Obj.isRelocatableObject())
+    ReadBBAddrMap();
+
   for (const SectionRef &Section : ToolSectionFilter(Obj)) {
     if (FilterSections.empty() && !DisassembleAll &&
         (!Section.isText() || Section.isVirtual()))
@@ -1288,19 +1307,10 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
     if (!SectSize)
       continue;
 
-    std::unordered_map<uint64_t, BBAddrMap> AddrToBBAddrMap;
-    if (SymbolizeOperands) {
-      if (auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj)) {
-        // Read the BB-address-map corresponding to this section, if present.
-        auto SectionBBAddrMapsOrErr = Elf->readBBAddrMap(Section.getIndex());
-        if (!SectionBBAddrMapsOrErr)
-          reportWarning(toString(SectionBBAddrMapsOrErr.takeError()),
-                        Obj.getFileName());
-        for (auto &FunctionBBAddrMap : *SectionBBAddrMapsOrErr)
-          AddrToBBAddrMap.emplace(FunctionBBAddrMap.Addr,
-                                  std::move(FunctionBBAddrMap));
-      }
-    }
+    // For relocatable object files, read the LLVM_BB_ADDR_MAP section
+    // corresponding to this section, if present.
+    if (SymbolizeOperands && Obj.isRelocatableObject())
+      ReadBBAddrMap(Section.getIndex());
 
     // Get the list of all the symbols in this section.
     SectionSymbolsTy &Symbols = AllSymbols[Section];
