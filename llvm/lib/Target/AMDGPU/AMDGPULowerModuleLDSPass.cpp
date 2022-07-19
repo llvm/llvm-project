@@ -148,7 +148,9 @@ public:
   bool runOnModule(Module &M) override {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
-    Changed |= processUsedLDS(CG, M);
+    std::vector<GlobalVariable *> ModuleScopeVariables =
+        AMDGPU::findVariablesToLower(M, nullptr);
+    Changed |= processUsedLDS(CG, M, ModuleScopeVariables);
 
     for (Function &F : M.functions()) {
       if (F.isDeclaration())
@@ -157,7 +159,9 @@ public:
       // Only lower compute kernels' LDS.
       if (!AMDGPU::isKernel(F.getCallingConv()))
         continue;
-      Changed |= processUsedLDS(CG, M, &F);
+      std::vector<GlobalVariable *> KernelUsedVariables =
+          AMDGPU::findVariablesToLower(M, &F);
+      Changed |= processUsedLDS(CG, M, KernelUsedVariables, &F);
     }
 
     return Changed;
@@ -208,22 +212,20 @@ private:
     return Changed;
   }
 
-  bool processUsedLDS(CallGraph const &CG, Module &M, Function *F = nullptr) {
+  bool processUsedLDS(CallGraph const &CG, Module &M,
+                      std::vector<GlobalVariable *> const &LDSVarsToTransform,
+                      Function *F = nullptr) {
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
 
-    // Find variables to move into new struct instance
-    std::vector<GlobalVariable *> FoundLocalVars =
-        AMDGPU::findVariablesToLower(M, F);
-
-    if (FoundLocalVars.empty()) {
+    if (LDSVarsToTransform.empty()) {
       // No variables to rewrite, no changes made.
       return false;
     }
 
     SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
-    LayoutFields.reserve(FoundLocalVars.size());
-    for (GlobalVariable *GV : FoundLocalVars) {
+    LayoutFields.reserve(LDSVarsToTransform.size());
+    for (GlobalVariable *GV : LDSVarsToTransform) {
       OptimizedStructLayoutField F(GV, DL.getTypeAllocSize(GV->getValueType()),
                                    AMDGPU::getAlign(DL, GV));
       LayoutFields.emplace_back(F);
@@ -232,7 +234,7 @@ private:
     performOptimizedStructLayout(LayoutFields);
 
     std::vector<GlobalVariable *> LocalVars;
-    LocalVars.reserve(FoundLocalVars.size()); // will be at least this large
+    LocalVars.reserve(LDSVarsToTransform.size()); // will be at least this large
     {
       // This usually won't need to insert any padding, perhaps avoid the alloc
       uint64_t CurrentOffset = 0;
