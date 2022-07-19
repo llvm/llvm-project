@@ -148,7 +148,7 @@ public:
     Location loc = prod.getLoc();
     SmallVector<Value> inputOps = prod.getInputOperands();
     SmallVector<Value> outputOps = op.getOutputOperands();
-    SmallVector<AffineMap> fusedIndexMaps = prod.getIndexingMaps();
+    SmallVector<AffineMap> fusedIndexMaps = prod.getIndexingMapsArray();
     inputOps.push_back(op.getInputOperand(1 - other)->get());
     fusedIndexMaps.push_back(fusedIndexMaps.back()); // mimic other
     // Fuse producer and consumer into a new generic op.

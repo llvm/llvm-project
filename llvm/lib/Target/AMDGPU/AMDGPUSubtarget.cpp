@@ -736,13 +736,18 @@ static unsigned getMaxNumPreloadedSGPRs() {
                           2 + // dispatch ID
                           2 + // flat scratch init
                           2;  // Implicit buffer ptr
+
   // Max number of system SGPRs
   unsigned MaxSystemSGPRs = 1 + // WorkGroupIDX
                             1 + // WorkGroupIDY
                             1 + // WorkGroupIDZ
                             1 + // WorkGroupInfo
                             1;  // private segment wave byte offset
-  return MaxUserSGPRs + MaxSystemSGPRs;
+
+  // Max number of synthetic SGPRs
+  unsigned SyntheticSGPRs = 1; // LDSKernelId
+
+  return MaxUserSGPRs + MaxSystemSGPRs + SyntheticSGPRs;
 }
 
 unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {

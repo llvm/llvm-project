@@ -10,7 +10,7 @@ Search,adjacent_find,Nikolas Klauser,`D126610 <https://llvm.org/D126610>`_,✅
 Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`_,✅
 Search,equal,Nikolas Klauser,`D123681 <https://llvm.org/D123681>`_,✅
 Search,lexicographical_compare,Nikolas Klauser,`D127130 <https://llvm.org/D127130>`_,✅
-Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
+Search,partition_point,Konstantin Varlamov,n/a,In progress
 Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,upper_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,equal_range,Christopher Di Bella,n/a,Not started
@@ -58,7 +58,7 @@ Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,sample,Not assigned,n/a,Not started
 Write,unique_copy,Not assigned,n/a,Not started
-Write,partition_copy,Not assigned,n/a,Not started
+Write,partition_copy,Konstantin Varlamov,n/a,In progress
 Write,partial_sort_copy,Not assigned,n/a,Not started
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
 Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`_,✅
@@ -71,8 +71,8 @@ Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅
 Permutation,rotate,Nikolas Klauser,`D124122 <https://llvm.org/D124122>`_,Under review
 Permutation,shuffle,Not assigned,n/a,Not started
 Permutation,unique,Not assigned,n/a,Not started
-Permutation,partition,Not assigned,n/a,Not started
-Permutation,stable_partition,Not assigned,n/a,Not started
+Permutation,partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
+Permutation,stable_partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
 Permutation,sort,Konstantin Varlamov,`D127557 <https://llvm.org/D127557>`_,✅
 Permutation,stable_sort,Konstantin Varlamov,`D127834 <https://llvm.org/D127834>`_,✅
 Permutation,partial_sort,Konstantin Varlamov,n/a,In progress

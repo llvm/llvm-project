@@ -306,31 +306,6 @@ def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
   let assemblyFormat = "$tensor (`hasInserts` $hasInserts^)? attr-dict `:` type($tensor)";
 }
 
-def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
-    Arguments<(ins AnySparseTensor:$tensor)> {
-  string summary = "Releases underlying sparse storage format of given tensor";
-  string description = [{
-    Releases the underlying sparse storage format for a tensor that
-    materialized earlier through a `new` operation, a `convert` operation
-    with annotated destination tensor type (unless the convert is folded
-    away), or a `bufferization.alloc_tensor` operation. The release operation
-    should only be called once for any materialized tensor. After this
-    operation, any subsequent `memref` querying operation on the tensor
-    returns undefined results.
-
-    Note that this operation is "impure" in the sense that its behavior
-    is solely defined by side-effects and not SSA values. The semantics
-    may be refined over time as our sparse abstractions evolve.
-
-    Example:
-
-    ```mlir
-    sparse_tensor.release %tensor : tensor<1024x1024xf64, #CSR>
-    ```
-  }];
-  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
-}
-
 def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
     Arguments<(ins AnySparseTensor:$tensor, AnyType:$dest)> {
   string summary = "Outputs a sparse tensor to the given destination";

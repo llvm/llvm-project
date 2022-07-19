@@ -91,7 +91,7 @@ public:
     // entirely in the compiler, without needing to turn all indices into
     // Values, and then do affine apply on them, and then match back the
     // constant again.
-    if (!llvm::all_of(genericOp.getIndexingMaps(),
+    if (!llvm::all_of(genericOp.getIndexingMapsArray(),
                       [](AffineMap map) { return map.isPermutation(); }))
       return failure();
 
@@ -155,8 +155,8 @@ public:
 
     SmallVector<SmallVector<unsigned>> inputDims;
     for (int i = 0; i < numInputs; ++i)
-      inputDims.push_back(getDimPositions(genericOp.getIndexingMaps()[i]));
-    auto outputDims = getDimPositions(genericOp.getIndexingMaps().back());
+      inputDims.push_back(getDimPositions(genericOp.getIndexingMapsArray()[i]));
+    auto outputDims = getDimPositions(genericOp.getIndexingMapsArray().back());
     auto outputShape = outputType.getShape();
 
     // Allocate small vectors for index delinearization. Initial values do not
@@ -268,7 +268,7 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
 
   bool matchIndexingMaps(GenericOp genericOp) const {
     // We should have one input and one output.
-    return genericOp.getIndexingMaps().size() == 2;
+    return genericOp.getIndexingMapsArray().size() == 2;
   }
 
   RegionComputationFn getRegionComputeFn(GenericOp genericOp) const {

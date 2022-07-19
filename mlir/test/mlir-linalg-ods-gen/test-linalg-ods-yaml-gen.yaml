@@ -172,7 +172,7 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  cst3 = self.strides().getValues<int64_t>()[1];
 #  IMPL-NEXT:  getAffineConstantExpr(cst3, context)
 
-#       IMPL:  Test2Op::indexing_maps()
+#       IMPL:  Test2Op::getIndexingMaps()
 #       IMPL:  = getSymbolBindings(*this);
 #       IMPL:  "affine_map<(d0, d1)[s0, s1, s2, s3] -> (d1 * s2, d0 * s3)>"
 #       IMPL:  "affine_map<(d0, d1)[s0, s1, s2, s3] -> (d0, d1)>"
@@ -238,7 +238,7 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  Test3Op::iterator_types() {
 #  IMPL-NEXT:    int64_t rank = getRank(getOutputOperand(0));
 
-#       IMPL:  Test3Op::indexing_maps() {
+#       IMPL:  Test3Op::getIndexingMaps() {
 #  IMPL-NEXT:    MLIRContext *context = getContext();
 #  IMPL-NEXT:    AffineMap scalarMap = AffineMap::get(getNumParallelLoops(), 0, context);
 #  IMPL-NEXT:    AffineMap tensorMap = AffineMap::getMultiDimIdentityMap(

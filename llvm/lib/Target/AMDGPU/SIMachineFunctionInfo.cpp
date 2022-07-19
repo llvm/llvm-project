@@ -44,6 +44,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkGroupIDY(false),
     WorkGroupIDZ(false),
     WorkGroupInfo(false),
+    LDSKernelId(false),
     PrivateSegmentWaveByteOffset(false),
     WorkItemIDX(false),
     WorkItemIDY(false),
@@ -143,6 +144,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (!F.hasFnAttribute("amdgpu-no-dispatch-id"))
       DispatchID = true;
+
+    if (!IsKernel && !F.hasFnAttribute("amdgpu-no-lds-kernel-id"))
+      LDSKernelId = true;
   }
 
   // FIXME: This attribute is a hack, we just need an analysis on the function
@@ -259,6 +263,12 @@ Register SIMachineFunctionInfo::addImplicitBufferPtr(const SIRegisterInfo &TRI) 
     getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass));
   NumUserSGPRs += 2;
   return ArgInfo.ImplicitBufferPtr.getRegister();
+}
+
+Register SIMachineFunctionInfo::addLDSKernelId() {
+  ArgInfo.LDSKernelId = ArgDescriptor::createRegister(getNextUserSGPR());
+  NumUserSGPRs += 1;
+  return ArgInfo.LDSKernelId.getRegister();
 }
 
 bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
@@ -561,6 +571,7 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
   Any |= convertArg(AI.KernargSegmentPtr, ArgInfo.KernargSegmentPtr);
   Any |= convertArg(AI.DispatchID, ArgInfo.DispatchID);
   Any |= convertArg(AI.FlatScratchInit, ArgInfo.FlatScratchInit);
+  Any |= convertArg(AI.LDSKernelId, ArgInfo.LDSKernelId);
   Any |= convertArg(AI.PrivateSegmentSize, ArgInfo.PrivateSegmentSize);
   Any |= convertArg(AI.WorkGroupIDX, ArgInfo.WorkGroupIDX);
   Any |= convertArg(AI.WorkGroupIDY, ArgInfo.WorkGroupIDY);

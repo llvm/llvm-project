@@ -87,20 +87,19 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
   if (!genericOp.hasSingleReductionLoop())
     return llvm::None;
 
-  if (genericOp.indexing_maps().getValue().size() != 2)
+  auto indexingMaps = genericOp.getIndexingMapsArray();
+  if (indexingMaps.size() != 2)
     return llvm::None;
 
   // TODO: create utility functions for these checks in Linalg
   // and use them.
-  auto inputMap = genericOp.indexing_maps().getValue()[0].cast<AffineMapAttr>();
-  auto outputMap =
-      genericOp.indexing_maps().getValue()[1].cast<AffineMapAttr>();
+  auto inputMap = indexingMaps[0];
+  auto outputMap = indexingMaps[1];
   // The indexing map for the input should be `(i) -> (i)`.
-  if (inputMap.getValue() !=
-      AffineMap::get(1, 0, getAffineDimExpr(0, op->getContext())))
+  if (inputMap != AffineMap::get(1, 0, getAffineDimExpr(0, op->getContext())))
     return llvm::None;
   // The indexing map for the input should be `(i) -> (0)`.
-  if (outputMap.getValue() !=
+  if (outputMap !=
       AffineMap::get(1, 0, getAffineConstantExpr(0, op->getContext())))
     return llvm::None;
 

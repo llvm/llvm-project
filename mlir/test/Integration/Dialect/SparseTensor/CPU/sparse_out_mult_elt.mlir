@@ -65,9 +65,9 @@ module {
     vector.print %vv : vector<4xf32>
 
     // Release the resources.
-    sparse_tensor.release %sta : tensor<32x16xf32, #DCSR>
-    sparse_tensor.release %stb : tensor<32x16xf32, #DCSR>
-    sparse_tensor.release %0   : tensor<32x16xf32, #DCSR>
+    bufferization.dealloc_tensor %sta : tensor<32x16xf32, #DCSR>
+    bufferization.dealloc_tensor %stb : tensor<32x16xf32, #DCSR>
+    bufferization.dealloc_tensor %0   : tensor<32x16xf32, #DCSR>
     return
   }
 }

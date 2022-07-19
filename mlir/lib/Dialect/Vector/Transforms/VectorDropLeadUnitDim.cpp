@@ -301,7 +301,7 @@ struct CastAwayContractionLeadingOneDim
     // greedily to drop more.
     int64_t dropDim = 1;
 
-    auto oldIndexingMaps = contractOp.getIndexingMaps();
+    auto oldIndexingMaps = contractOp.getIndexingMapsArray();
     SmallVector<AffineMap> newIndexingMaps;
 
     auto oldIteratorTypes = contractOp.getIteratorTypes();

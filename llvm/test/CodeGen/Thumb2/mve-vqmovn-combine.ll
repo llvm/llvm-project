@@ -198,9 +198,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vqmovni16_uminmax_t1(<8 x i16> %s0, <16 x i8> %src1) {
 ; CHECK-LABEL: vqmovni16_uminmax_t1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqmovnb.u16 q0, q0
-; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vmovnt.i16 q1, q0
+; CHECK-NEXT:    vqmovnt.u16 q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -215,7 +213,6 @@ define arm_aapcs_vfpcc <16 x i8> @vqmovni16_uminmax_t2(<8 x i16> %s0, <16 x i8> 
 ; CHECK-LABEL: vqmovni16_uminmax_t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vqmovnb.u16 q0, q0
-; CHECK-NEXT:    vmovlb.u8 q0, q0
 ; CHECK-NEXT:    vmovnt.i16 q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -229,9 +226,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vqmovni16_uminmax_b1(<8 x i16> %s0, <16 x i8> %src1) {
 ; CHECK-LABEL: vqmovni16_uminmax_b1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqmovnb.u16 q0, q0
-; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vmovnb.i16 q1, q0
+; CHECK-NEXT:    vqmovnb.u16 q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

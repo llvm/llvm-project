@@ -55,7 +55,6 @@ option(LIBCXX_ENABLE_ASSERTIONS
    by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
-option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
 set(ENABLE_FILESYSTEM_DEFAULT ON)
 if (WIN32 AND NOT MINGW)
   # Filesystem is buildable for windows, but it requires __int128 helper
@@ -102,11 +101,6 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
-option(LIBCXX_ENABLE_INCOMPLETE_FEATURES
-    "Whether to enable support for incomplete library features. Incomplete features
-    are new library features under development. These features don't guarantee
-    ABI stability nor the quality of completed library features. Vendors
-    shipping the library may want to disable this option." ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -167,9 +161,6 @@ cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBCXX_INSTALL_SHARED_LIBRARY
   "Install the shared libc++ library." ON
   "LIBCXX_ENABLE_SHARED;LIBCXX_INSTALL_LIBRARY" OFF)
-cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
-        "Install libc++experimental.a" ON
-        "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
 
 option(LIBCXX_ABI_UNSTABLE "Use the unstable ABI of libc++. This is equivalent to specifying LIBCXX_ABI_VERSION=n, where n is the not-yet-stable version." OFF)
 if (LIBCXX_ABI_UNSTABLE)
@@ -209,12 +200,12 @@ set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros
 option(LIBCXX_EXTRA_SITE_DEFINES "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
-cmake_dependent_option(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS
+option(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS
   "Whether to include the old Debug mode symbols in the compiled library. This
    is provided for backwards compatibility since the compiled library used to
    always contain those symbols, regardless of whether the library was built
-   with the debug mode enabled." ON
-   "LIBCXX_ABI_VERSION EQUAL 1" OFF) # Always OFF in ABI version != 1
+   with the debug mode enabled. This is OFF by default, please contact the libc++
+   developers if you need to turn this on, as this will be removed in LLVM 16." OFF)
 
 # ABI Library options ---------------------------------------------------------
 if (LIBCXX_TARGETING_MSVC)
@@ -870,10 +861,6 @@ if (LIBCXX_ENABLE_ASSERTIONS)
 else()
   config_define(0 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
 endif()
-# Incomplete features get their own specific disabling flags. This makes it
-# easier to grep for target specific flags once the feature is complete.
-config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
-config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 if (LIBCXX_ABI_DEFINES)
   set(abi_defines)
@@ -930,11 +917,7 @@ add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 
-set(LIBCXX_TEST_DEPS "")
-
-if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-  list(APPEND LIBCXX_TEST_DEPS cxx_experimental)
-endif()
+set(LIBCXX_TEST_DEPS "cxx_experimental")
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)

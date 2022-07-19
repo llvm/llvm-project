@@ -728,8 +728,8 @@ define i8 @test34(i8 %A) {
 
 define i8 @masked_add(i8 %x) {
 ; CHECK-LABEL: @masked_add(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 96
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 96
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %x, 240 ; 0xf0
@@ -739,8 +739,8 @@ define i8 @masked_add(i8 %x) {
 
 define <2 x i8> @masked_add_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @masked_add_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 64, i8 64>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[AND]], <i8 64, i8 64>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %and = and <2 x i8> %x, <i8 192, i8 192> ; 0xc0
@@ -761,8 +761,8 @@ define i8 @not_masked_add(i8 %x) {
 
 define i8 @masked_add_multi_use(i8 %x) {
 ; CHECK-LABEL: @masked_add_multi_use(
-; CHECK-NEXT:    [[TMP:%.*]] = add i8 [[X:%.*]], 96
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP:%.*]], -16
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[AND]], 96
 ; CHECK-NEXT:    call void @use(i8 [[X]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;

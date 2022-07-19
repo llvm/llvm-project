@@ -175,8 +175,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::partial_sort(a, mid, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort_copy(first, last, first2, mid2, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort_copy(a, b, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition(first, last, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition(a, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::partition(first, last, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::partition(a, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::partition_copy(first, last, first2, last2, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::partition_copy(a, first2, last2, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::partition_point(first, last, UnaryTrue(&copies)); assert(copies == 0);
@@ -211,8 +211,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::sort(a, Less(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(first, last, Less(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(a, Less(&copies)); assert(copies == 0);
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(first, last, UnaryTrue(&copies)); assert(copies == 0); }
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(a, UnaryTrue(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(first, last, UnaryTrue(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(a, UnaryTrue(&copies)); assert(copies == 0); }
     if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(first, last, Less(&copies)); assert(copies == 0); }
     if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(a, Less(&copies)); assert(copies == 0); }
 #if TEST_STD_VER > 20

@@ -299,6 +299,7 @@ and any affinity API calls.
 * ``respect`` (default) and ``norespect`` - determine whether to respect the original process affinity mask.
 * ``verbose`` and ``noverbose`` (default) - determine whether to display affinity information.
 * ``warnings`` (default) and ``nowarnings`` - determine whether to display warnings during affinity detection.
+* ``reset`` and ``noreset`` (default) - determine whether to reset primary thread's affinity after outermost parallel region(s)
 * ``granularity=<specifier>`` - takes the following specifiers ``thread``, ``core`` (default), ``tile``,
   ``socket``, ``die``, ``group`` (Windows only).
   The granularity describes the lowest topology levels that OpenMP threads are allowed to float within a topology map.
