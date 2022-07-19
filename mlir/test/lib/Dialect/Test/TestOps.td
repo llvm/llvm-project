@@ -2867,6 +2867,10 @@ def TestEffectsRead : TEST_Op<"op_with_memread",
 def TestEffectsWrite : TEST_Op<"op_with_memwrite",
     [MemoryEffects<[MemWrite]>]>;
 
+def TestEffectsResult : TEST_Op<"test_effects_result"> {
+  let results = (outs Res<I32, "", [MemAlloc, MemWrite]>);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Ops with verifiers
 //===----------------------------------------------------------------------===//
