@@ -612,8 +612,8 @@ struct ContractOpToElementwise
       return failure();
     ArrayRef<int64_t> lhsShape = contractOp.getLhsType().getShape();
     ArrayRef<int64_t> rhsShape = contractOp.getRhsType().getShape();
-    AffineMap lhsMap = contractOp.getIndexingMaps()[0];
-    AffineMap rhsMap = contractOp.getIndexingMaps()[1];
+    AffineMap lhsMap = contractOp.getIndexingMapsArray()[0];
+    AffineMap rhsMap = contractOp.getIndexingMapsArray()[1];
     SmallVector<int64_t> lhsReductionDims =
         getReductionIndex(lhsMap, contractOp.getIteratorTypes());
     SmallVector<int64_t> rhsReductionDims =
@@ -627,7 +627,7 @@ struct ContractOpToElementwise
       if (rhsShape[dim] != 1)
         return failure();
     }
-    AffineMap accMap = contractOp.getIndexingMaps()[2];
+    AffineMap accMap = contractOp.getIndexingMapsArray()[2];
     unsigned numParallelDims = accMap.getNumResults();
     unsigned numLhsDimToBroadcast =
         numParallelDims - (lhsMap.getNumResults() - lhsReductionDims.size());
@@ -1035,7 +1035,7 @@ struct CombineContractTranspose
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<AffineMap, 4> maps =
-        llvm::to_vector<4>(contractOp.getIndexingMaps());
+        llvm::to_vector<4>(contractOp.getIndexingMapsArray());
     Value lhs = contractOp.getLhs();
     Value rhs = contractOp.getRhs();
     size_t index = 0;
@@ -1092,7 +1092,7 @@ struct CombineContractBroadcast
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<AffineMap, 4> maps =
-        llvm::to_vector<4>(contractOp.getIndexingMaps());
+        llvm::to_vector<4>(contractOp.getIndexingMapsArray());
     Value lhs = contractOp.getLhs();
     Value rhs = contractOp.getRhs();
     size_t index = 0;
@@ -1385,7 +1385,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
   bindDims(rew.getContext(), m, n, k);
   // LHS must be A(m, k) or A(k, m).
   Value lhs = op.getLhs();
-  auto lhsMap = op.getIndexingMaps()[0];
+  auto lhsMap = op.getIndexingMapsArray()[0];
   if (lhsMap == AffineMap::get(3, 0, {k, m}, ctx))
     lhs = rew.create<vector::TransposeOp>(loc, lhs, ArrayRef<int64_t>{1, 0});
   else if (lhsMap != AffineMap::get(3, 0, {m, k}, ctx))
@@ -1393,7 +1393,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
 
   // RHS must be B(k, n) or B(n, k).
   Value rhs = op.getRhs();
-  auto rhsMap = op.getIndexingMaps()[1];
+  auto rhsMap = op.getIndexingMapsArray()[1];
   if (rhsMap == AffineMap::get(3, 0, {n, k}, ctx))
     rhs = rew.create<vector::TransposeOp>(loc, rhs, ArrayRef<int64_t>{1, 0});
   else if (rhsMap != AffineMap::get(3, 0, {k, n}, ctx))
@@ -1423,7 +1423,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
       mul);
 
   // ACC must be C(m, n) or C(n, m).
-  auto accMap = op.getIndexingMaps()[2];
+  auto accMap = op.getIndexingMapsArray()[2];
   if (accMap == AffineMap::get(3, 0, {n, m}, ctx))
     mul = rew.create<vector::TransposeOp>(loc, mul, ArrayRef<int64_t>{1, 0});
   else if (accMap != AffineMap::get(3, 0, {m, n}, ctx))
@@ -1659,7 +1659,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
   AffineExpr m, n, k;
   bindDims(rewriter.getContext(), m, n, k);
-  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
   //
   // In the following we wish to make the reduction dimension innermost so we
   // can load vectors and just fmul + reduce into a scalar.
@@ -1868,7 +1868,7 @@ ContractionOpLowering::lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
   VectorType rhsType = op.getRhsType();
   VectorType resType = op.getResultType().cast<VectorType>();
   // Find the iterator type index and result index.
-  SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> iMap = op.getIndexingMapsArray();
   int64_t iterIndex = -1;
   int64_t dimSize = -1;
   if (lhsIndex >= 0) {
@@ -1939,7 +1939,7 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   bool isInt = resType.isa<IntegerType>();
   // Use iterator index 0.
   int64_t iterIndex = 0;
-  SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> iMap = op.getIndexingMapsArray();
   Optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
   Optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
   if (!lookupLhs.has_value())

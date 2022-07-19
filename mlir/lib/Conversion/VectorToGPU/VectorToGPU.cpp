@@ -78,9 +78,10 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
   // The contract needs to represent a matmul to be able to convert to
   // MMAMatrix matmul.
   if (!useNvGpu &&
-      contract.getIndexingMaps() != infer({{m, k}, {k, n}, {m, n}}))
+      contract.getIndexingMapsArray() != infer({{m, k}, {k, n}, {m, n}}))
     return false;
-  if (useNvGpu && contract.getIndexingMaps() != infer({{m, k}, {n, k}, {m, n}}))
+  if (useNvGpu &&
+      contract.getIndexingMapsArray() != infer({{m, k}, {n, k}, {m, n}}))
     return false;
 
   return true;
@@ -290,7 +291,7 @@ struct PrepareContractToGPUMMA
     bindDims(rewriter.getContext(), m, n, k);
     static constexpr std::array<int64_t, 2> perm = {1, 0};
     auto iteratorTypes = op.getIteratorTypes().getValue();
-    SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
+    SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
     if (!(isParallelIterator(iteratorTypes[0]) &&
           isParallelIterator(iteratorTypes[1]) &&
           isReductionIterator(iteratorTypes[2])))
