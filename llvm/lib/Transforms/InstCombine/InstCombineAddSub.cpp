@@ -968,7 +968,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
       return BinaryOperator::CreateAnd(NotX, ConstantInt::get(Ty, 1));
     }
   }
-
+/*
   // If all bits affected by the add are included in a high-bit-mask, do the
   // add before the mask op:
   // (X & 0xFF00) + xx00 --> (X + xx00) & 0xFF00
@@ -977,7 +977,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     Value *NewAdd = Builder.CreateAdd(X, ConstantInt::get(Ty, *C));
     return BinaryOperator::CreateAnd(NewAdd, ConstantInt::get(Ty, *C2));
   }
-
+*/
   return nullptr;
 }
 
