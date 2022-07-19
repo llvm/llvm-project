@@ -116,6 +116,7 @@ private:
 
   bool isGlobalAddr(const Value *V) const;
   bool isLocalAddr(const Value *V) const;
+  bool isGlobalLoadUsedInBB(const Instruction &) const;
 };
 
 static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
@@ -196,6 +197,24 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
   return false;
 }
 
+// Returns true if the global load `I` is used in its own basic block.
+bool AMDGPUPerfHint::isGlobalLoadUsedInBB(const Instruction &I) const {
+  const auto *Ld = dyn_cast<LoadInst>(&I);
+  if (!Ld)
+    return false;
+  if (!isGlobalAddr(Ld->getPointerOperand()))
+    return false;
+
+  for (const User *Usr : Ld->users()) {
+    if (const Instruction *UsrInst = dyn_cast<Instruction>(Usr)) {
+      if (UsrInst->getParent() == I.getParent())
+        return true;
+    }
+  }
+
+  return false;
+}
+
 AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
   AMDGPUPerfHintAnalysis::FuncInfo &FI = FIM[&F];
 
@@ -203,9 +222,14 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
 
   for (auto &B : F) {
     LastAccess = MemAccessInfo();
+    unsigned UsedGlobalLoadsInBB = 0;
     for (auto &I : B) {
       if (const Type *Ty = getMemoryInstrPtrAndType(&I).second) {
         unsigned Size = divideCeil(Ty->getPrimitiveSizeInBits(), 32);
+        // TODO: Check if the global load and its user are close to each other
+        // instead (Or do this analysis in GCNSchedStrategy?).
+        if (isGlobalLoadUsedInBB(I))
+          UsedGlobalLoadsInBB += Size;
         if (isIndirectAccess(&I))
           FI.IAMInstCost += Size;
         if (isLargeStride(&I))
@@ -243,6 +267,16 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
         ++FI.InstCost;
       } else {
         ++FI.InstCost;
+      }
+    }
+
+    if (!FI.HasDenseGlobalMemAcc) {
+      unsigned GlobalMemAccPercentage = UsedGlobalLoadsInBB * 100 / B.size();
+      if (GlobalMemAccPercentage > 50) {
+        LLVM_DEBUG(dbgs() << "[HasDenseGlobalMemAcc] Set to true since "
+                          << B.getName() << " has " << GlobalMemAccPercentage
+                          << "% global memory access\n");
+        FI.HasDenseGlobalMemAcc = true;
       }
     }
   }
@@ -286,6 +320,11 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
 }
 
 bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
+  // Reverting optimal scheduling in favour of occupancy with basic block(s)
+  // having dense global memory access can potentially hurt performance.
+  if (FI.HasDenseGlobalMemAcc)
+    return true;
+
   return FI.MemInstCost * 100 / FI.InstCost > MemBoundThresh;
 }
 

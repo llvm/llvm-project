@@ -332,7 +332,7 @@ block-declaration := using-directive
 block-declaration := static_assert-declaration
 block-declaration := alias-declaration
 block-declaration := opaque-enum-declaration
-nodeclspec-function-declaration := declarator ;
+nodeclspec-function-declaration := function-declarator ;
 alias-declaration := USING IDENTIFIER = defining-type-id ;
 simple-declaration := decl-specifier-seq init-declarator-list_opt ;
 simple-declaration := decl-specifier-seq ref-qualifier_opt [ identifier-list ] initializer ;
@@ -402,8 +402,19 @@ placeholder-type-specifier := type-constraint_opt AUTO
 placeholder-type-specifier := type-constraint_opt DECLTYPE ( AUTO )
 init-declarator-list := init-declarator
 init-declarator-list := init-declarator-list , init-declarator
-init-declarator := declarator initializer_opt
-init-declarator := declarator requires-clause
+#! The standard grammar allows:
+#!   1) an initializer with any declarator, including a function declarator, this
+#!      creates an ambiguity where a function definition is misparsed as a simple
+#!      declaration;
+#!   2) an function-body with any declarator, includeing a non-function
+#!      declarator, this creates an ambiguity whwere a simple-declaration is
+#!      misparsed as a function-definition;
+#! We extend the standard declarator to function-declarator and non-function-declarator
+#! to eliminate these false parses.
+init-declarator := non-function-declarator initializer_opt
+init-declarator := function-declarator requires-clause_opt
+function-declarator := declarator [guard=FunctionDeclarator]
+non-function-declarator := declarator [guard=NonFunctionDeclarator]
 declarator := ptr-declarator
 declarator := noptr-declarator parameters-and-qualifiers trailing-return-type
 ptr-declarator := noptr-declarator
@@ -472,8 +483,8 @@ designator := [ expression ]
 expr-or-braced-init-list := expression
 expr-or-braced-init-list := braced-init-list
 # dcl.fct
-function-definition := decl-specifier-seq_opt declarator virt-specifier-seq_opt function-body
-function-definition := decl-specifier-seq_opt declarator requires-clause function-body
+function-definition := decl-specifier-seq_opt function-declarator virt-specifier-seq_opt function-body
+function-definition := decl-specifier-seq_opt function-declarator requires-clause function-body
 function-body := ctor-initializer_opt compound-statement
 function-body := function-try-block
 function-body := = DEFAULT ;
