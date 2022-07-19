@@ -222,6 +222,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       // If we shrunk a 64bit vop3b to 32bits, just ignore the sdst
     }
 
+    int OrigOpE32 = AMDGPU::getVOPe32(OrigOp);
     const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
@@ -234,6 +235,10 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.addReg(CombOldVGPR.Reg, Def ? 0 : RegState::Undef,
                      CombOldVGPR.SubReg);
       ++NumOperands;
+    } else if (TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&
+                                      TII->isVOPC(OrigOpE32))) {
+      // VOPC DPP and VOPC promoted to VOP3 DPP do not have an old operand
+      // because they write to SGPRs not VGPRs
     } else {
       // TODO: this discards MAC/FMA instructions for now, let's add it later
       LLVM_DEBUG(dbgs() << "  failed: no old operand in DPP instruction,"

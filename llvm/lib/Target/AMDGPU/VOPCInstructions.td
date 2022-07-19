@@ -59,15 +59,17 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
                     "$src0, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl");
   let AsmDPP8 = "$src0, $src1 $dpp8$fi";
   let AsmDPP16 = AsmDPP#"$fi";
+  // VOPC DPP Instructions do not need an old operand
+  let TieRegDPP = "";
   let InsDPP = getInsDPP<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
                          NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
-                         Src2ModDPP>.ret;
+                         Src2ModDPP, 0/*HasOld*/>.ret;
   let InsDPP16 = getInsDPP16<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
                              NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
-                             Src2ModDPP>.ret;
+                             Src2ModDPP, 0/*HasOld*/>.ret;
   let InsDPP8 = getInsDPP8<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
                            NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
-                           Src2ModDPP>.ret;
+                           Src2ModDPP, 0/*HasOld*/>.ret;
 
   // The destination for 32-bit encoding is implicit.
   let HasDst32 = 0;
@@ -76,9 +78,9 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
   let Outs64 = (outs VOPDstS64orS32:$sdst);
   let OutsVOP3DPP = Outs64;
   let OutsVOP3DPP8 = Outs64;
-  let InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, Src0VOP3DPP, NumSrcArgs>.ret;
-  let InsVOP3DPP16 = getInsVOP3DPP16<InsVOP3Base, Src0VOP3DPP, NumSrcArgs>.ret;
-  let InsVOP3DPP8 = getInsVOP3DPP8<InsVOP3Base, Src0VOP3DPP, NumSrcArgs>.ret;
+  let InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, Src0VOP3DPP, NumSrcArgs, 0/*HasOld*/>.ret;
+  let InsVOP3DPP16 = getInsVOP3DPP16<InsVOP3Base, Src0VOP3DPP, NumSrcArgs, 0/*HasOld*/>.ret;
+  let InsVOP3DPP8 = getInsVOP3DPP8<InsVOP3Base, Src0VOP3DPP, NumSrcArgs, 0/*HasOld*/>.ret;
   list<SchedReadWrite> Schedule = sched;
 }
 
@@ -293,7 +295,7 @@ multiclass VOPC_Pseudos <string opName,
         let Defs = !if(DefExec, [EXEC], []);
         let SchedRW = P.Schedule;
         let isCompare = 1;
-        let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $sdst", "");
+        let Constraints = "";
     }
   } // end SubtargetPredicate = isGFX11Plus
 
@@ -711,7 +713,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType vt> :
   VOPC_Profile<sched, vt, i32> {
   let AsmDPP = "$src0_modifiers, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP16 = AsmDPP#"$fi";
-  let InsDPP = (ins VGPR_32:$old, FPVRegInputMods:$src0_modifiers, VGPR_32:$src0, VGPR_32:$src1, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+  let InsDPP = (ins FPVRegInputMods:$src0_modifiers, VGPR_32:$src0, VGPR_32:$src1, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins FI:$fi));
   // DPP8 forbids modifiers and can inherit from VOPC_Profile
 
@@ -793,7 +795,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
       def _e64_dpp : VOP3_DPP_Pseudo<opName, p> {
         let Defs = !if(DefExec, [EXEC], []);
         let SchedRW = p.Schedule;
-        let Constraints = !if(p.NumSrcArgs, p.TieRegDPP # " = $sdst", "");
+        let Constraints = "";
     }
   } // end SubtargetPredicate = isGFX11Plus
 }
@@ -1068,7 +1070,6 @@ class VOPC_DPP16<bits<8> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let Constraints = ps.Constraints;
-  let AsmMatchConverter = "cvtVOPCNoDstDPP";
 }
 
 class VOPC_DPP16_SIMC<bits<8> op, VOP_DPP_Pseudo ps, int subtarget,
@@ -1084,7 +1085,6 @@ class VOPC_DPP8<bits<8> op, VOPC_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let Constraints = "";
-  let AsmMatchConverter = "cvtVOPCNoDstDPP8";
 }
 
 // VOPC64
@@ -1133,7 +1133,6 @@ class VOPC64_DPP16_NoDst<bits<10> op, VOP_DPP_Pseudo ps,
                          string opName = ps.OpName>
     : VOPC64_DPP16<op, ps, opName> {
   let Inst{7-0} = ? ;
-  let AsmMatchConverter = "cvtVOPC64NoDstDPP";
 }
 
 class VOPC64_DPP8_Base<bits<10> op, string OpName, VOPProfile P>
@@ -1163,13 +1162,12 @@ class VOPC64_DPP8_Dst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
     : VOPC64_DPP8<op, ps, opName> {
   bits<8> sdst;
   let Inst{7-0} = sdst;
-  let Constraints = "$old = $sdst";
+  let Constraints = "";
 }
 
 class VOPC64_DPP8_NoDst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
     : VOPC64_DPP8<op, ps, opName> {
   let Inst{7-0} = ? ;
-  let AsmMatchConverter = "cvtVOPC64NoDstDPP8";
   let Constraints = "";
 }
 
