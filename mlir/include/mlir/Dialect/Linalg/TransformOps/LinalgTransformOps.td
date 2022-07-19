@@ -554,6 +554,60 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
   }];
 }
 
+def TileToForeachThreadOp :
+    Op<Transform_Dialect, "structured.tile_to_foreach_thread_op",
+      [FunctionalStyleTransformOpTrait,
+       MemoryEffectsOpInterface,
+       TransformEachOpTrait,
+       TransformOpInterface]> {
+  let description = [{
+    Tile a TilingInterface `op` to a tiled `scf.foreach_thread`, applying
+    tiling by `num_threads`.
+    If non-empty, the `thread_dim_mapping` is added as an attribute to the 
+    resulting `scf.foreach_thread`.
+    Zero tile sizes indicate that the dimension is not tiled, and can be thought
+    of as tiling by the full size of data.
+    It is the user's responsibility to ensure that `num_threads` is a valid 
+    tiling specification (i.e. that only tiles parallel dimensions, e.g. in the 
+    Linalg case).
+    
+    #### Return modes
+    
+    This operation ignores ops that do not implement the TilingInterface and
+    drops them in the return.
+
+    If all the operations referred to by the `target` PDLOperation tile
+    successfully, the transform succeeds.
+    Otherwise the transform silently fails.
+    
+    The 2 returned handles point to only the subset of successfully produced 
+    tiled operations, which can all be empty.
+    
+    These 2 returned handles point to:
+      - the new scf.foreach_thread op,
+      - the tiled op that implements TilingInterface.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                   // TODO: dynamic number of threads.
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$num_threads,
+                   OptionalAttr<I64ArrayAttr>:$thread_dim_mapping);
+  let results = (outs PDL_Operation:$foreach_thread_op,
+                      PDL_Operation:$tiled_op);
+
+  let assemblyFormat = [{
+    $target $num_threads (`(` `mapped` `to` `dims` $thread_dim_mapping^ `)`)? 
+      attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::TilingInterface target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformEachOpTrait, TransformOpInterface]> {

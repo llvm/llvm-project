@@ -107,10 +107,10 @@ module {
     call @dump(%1, %d2) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %sv2 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %0 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %1 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %sv1 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %sv2 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<?xcomplex<f64>, #SparseVector>
+    bufferization.dealloc_tensor %1 : tensor<?xcomplex<f64>, #SparseVector>
     return
   }
 }

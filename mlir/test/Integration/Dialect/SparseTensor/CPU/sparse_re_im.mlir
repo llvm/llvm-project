@@ -85,9 +85,9 @@ module {
     call @dump(%1) : (tensor<?xf32, #SparseVector>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xcomplex<f32>, #SparseVector>
-    sparse_tensor.release %0 : tensor<?xf32, #SparseVector>
-    sparse_tensor.release %1 : tensor<?xf32, #SparseVector>
+    bufferization.dealloc_tensor %sv1 : tensor<?xcomplex<f32>, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<?xf32, #SparseVector>
+    bufferization.dealloc_tensor %1 : tensor<?xf32, #SparseVector>
     return
   }
 }
