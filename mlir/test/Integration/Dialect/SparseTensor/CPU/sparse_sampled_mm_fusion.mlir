@@ -190,14 +190,12 @@ module {
     //
     // CHECK-NEXT: ( 96, 192, 0, 0 )
     //
-    %m0 = bufferization.to_memref %0 : memref<8x8xf64>
-    %m1 = bufferization.to_memref %1 : memref<8x8xf64>
     %m2 = sparse_tensor.values %2 : tensor<8x8xf64, #SM> to memref<?xf64>
     %m3 = sparse_tensor.values %3 : tensor<8x8xf64, #SM> to memref<?xf64>
-    %v0 = vector.transfer_read %m0[%c0, %c0], %d0
-        : memref<8x8xf64>, vector<8x8xf64>
-    %v1 = vector.transfer_read %m1[%c0, %c0], %d0
-        : memref<8x8xf64>, vector<8x8xf64>
+    %v0 = vector.transfer_read %0[%c0, %c0], %d0
+        : tensor<8x8xf64>, vector<8x8xf64>
+    %v1 = vector.transfer_read %1[%c0, %c0], %d0
+        : tensor<8x8xf64>, vector<8x8xf64>
     %v2 = vector.transfer_read %m2[%c0], %d0 : memref<?xf64>, vector<4xf64>
     %v3 = vector.transfer_read %m3[%c0], %d0 : memref<?xf64>, vector<4xf64>
     vector.print %v0 : vector<8x8xf64>
@@ -207,8 +205,8 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %s : tensor<8x8xf64, #SM>
-    memref.dealloc %m0 : memref<8x8xf64>
-    memref.dealloc %m1 : memref<8x8xf64>
+    bufferization.dealloc_tensor %0 : tensor<8x8xf64>
+    bufferization.dealloc_tensor %1 : tensor<8x8xf64>
     bufferization.dealloc_tensor %2 : tensor<8x8xf64, #SM>
     bufferization.dealloc_tensor %3 : tensor<8x8xf64, #SM>
 

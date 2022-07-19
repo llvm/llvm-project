@@ -44,11 +44,11 @@ module {
   //
   // Kernel that uses index in the index notation (conjunction).
   //
-  func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
-    %init = linalg.init_tensor [8] : tensor<8xi64>
+  func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>,
+                                  %out: tensor<8xi64>) -> tensor<8xi64> {
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
-       outs(%init: tensor<8xi64>) {
+       outs(%out: tensor<8xi64>) {
         ^bb(%a: i64, %x: i64):
           %i = linalg.index 0 : index
           %ii = arith.index_cast %i : index to i64
@@ -61,11 +61,11 @@ module {
   //
   // Kernel that uses index in the index notation (disjunction).
   //
-  func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
-    %init = linalg.init_tensor [8] : tensor<8xi64>
+  func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>,
+                                  %out: tensor<8xi64>) -> tensor<8xi64> {
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
-       outs(%init: tensor<8xi64>) {
+       outs(%out: tensor<8xi64>) {
         ^bb(%a: i64, %x: i64):
           %i = linalg.index 0 : index
           %ii = arith.index_cast %i : index to i64
@@ -78,11 +78,11 @@ module {
   //
   // Kernel that uses indices in the index notation (conjunction).
   //
-  func.func @sparse_index_2d_conj(%arga: tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64> {
-    %init = linalg.init_tensor [3,4] : tensor<3x4xi64>
+  func.func @sparse_index_2d_conj(%arga: tensor<3x4xi64, #SparseMatrix>,
+                                  %out: tensor<3x4xi64>) -> tensor<3x4xi64> {
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
-       outs(%init: tensor<3x4xi64>) {
+       outs(%out: tensor<3x4xi64>) {
         ^bb(%a: i64, %x: i64):
           %i = linalg.index 0 : index
           %j = linalg.index 1 : index
@@ -98,11 +98,11 @@ module {
   //
   // Kernel that uses indices in the index notation (disjunction).
   //
-  func.func @sparse_index_2d_disj(%arga: tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64> {
-    %init = linalg.init_tensor [3,4] : tensor<3x4xi64>
+  func.func @sparse_index_2d_disj(%arga: tensor<3x4xi64, #SparseMatrix>,
+                                  %out: tensor<3x4xi64>) -> tensor<3x4xi64> {
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
-       outs(%init: tensor<3x4xi64>) {
+       outs(%out: tensor<3x4xi64>) {
         ^bb(%a: i64, %x: i64):
           %i = linalg.index 0 : index
           %j = linalg.index 1 : index
@@ -140,25 +140,19 @@ module {
                                   [ 1,  1,  3,  4 ] ]> : tensor<3x4xi64>
     %dm = sparse_tensor.convert %m2 : tensor<3x4xi64> to tensor<3x4xi64, #SparseMatrix>
 
-    // Call the kernels.
-    %0 = call @sparse_index_1d_conj(%sv) : (tensor<8xi64, #SparseVector>) -> tensor<8xi64>
-    %1 = call @sparse_index_1d_disj(%sv) : (tensor<8xi64, #SparseVector>) -> tensor<8xi64>
-    %2 = call @sparse_index_1d_conj(%dv) : (tensor<8xi64, #SparseVector>) -> tensor<8xi64>
-    %3 = call @sparse_index_1d_disj(%dv) : (tensor<8xi64, #SparseVector>) -> tensor<8xi64>
-    %4 = call @sparse_index_2d_conj(%sm) : (tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64>
-    %5 = call @sparse_index_2d_disj(%sm) : (tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64>
-    %6 = call @sparse_index_2d_conj(%dm) : (tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64>
-    %7 = call @sparse_index_2d_disj(%dm) : (tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64>
+    // Setup out tensors.
+    %init_8 = bufferization.alloc_tensor() : tensor<8xi64>
+    %init_3_4 = bufferization.alloc_tensor() : tensor<3x4xi64>
 
-    // Get the backing buffers.
-    %mem0 = bufferization.to_memref %0 : memref<8xi64>
-    %mem1 = bufferization.to_memref %1 : memref<8xi64>
-    %mem2 = bufferization.to_memref %2 : memref<8xi64>
-    %mem3 = bufferization.to_memref %3 : memref<8xi64>
-    %mem4 = bufferization.to_memref %4 : memref<3x4xi64>
-    %mem5 = bufferization.to_memref %5 : memref<3x4xi64>
-    %mem6 = bufferization.to_memref %6 : memref<3x4xi64>
-    %mem7 = bufferization.to_memref %7 : memref<3x4xi64>
+    // Call the kernels.
+    %0 = call @sparse_index_1d_conj(%sv, %init_8) : (tensor<8xi64, #SparseVector>, tensor<8xi64>) -> tensor<8xi64>
+    %1 = call @sparse_index_1d_disj(%sv, %init_8) : (tensor<8xi64, #SparseVector>, tensor<8xi64>) -> tensor<8xi64>
+    %2 = call @sparse_index_1d_conj(%dv, %init_8) : (tensor<8xi64, #SparseVector>, tensor<8xi64>) -> tensor<8xi64>
+    %3 = call @sparse_index_1d_disj(%dv, %init_8) : (tensor<8xi64, #SparseVector>, tensor<8xi64>) -> tensor<8xi64>
+    %4 = call @sparse_index_2d_conj(%sm, %init_3_4) : (tensor<3x4xi64, #SparseMatrix>, tensor<3x4xi64>) -> tensor<3x4xi64>
+    %5 = call @sparse_index_2d_disj(%sm, %init_3_4) : (tensor<3x4xi64, #SparseMatrix>, tensor<3x4xi64>) -> tensor<3x4xi64>
+    %6 = call @sparse_index_2d_conj(%dm, %init_3_4) : (tensor<3x4xi64, #SparseMatrix>, tensor<3x4xi64>) -> tensor<3x4xi64>
+    %7 = call @sparse_index_2d_disj(%dm, %init_3_4) : (tensor<3x4xi64, #SparseMatrix>, tensor<3x4xi64>) -> tensor<3x4xi64>
 
     //
     // Verify result.
@@ -172,14 +166,14 @@ module {
     // CHECK-NEXT: ( ( 0, 0, 0, 0 ), ( 0, 2, 2, 3 ), ( 0, 2, 12, 24 ) )
     // CHECK-NEXT: ( ( 1, 2, 3, 4 ), ( 2, 4, 4, 5 ), ( 3, 4, 7, 9 ) )
     //
-    %vv0 = vector.transfer_read %mem0[%c0], %du: memref<8xi64>, vector<8xi64>
-    %vv1 = vector.transfer_read %mem1[%c0], %du: memref<8xi64>, vector<8xi64>
-    %vv2 = vector.transfer_read %mem2[%c0], %du: memref<8xi64>, vector<8xi64>
-    %vv3 = vector.transfer_read %mem3[%c0], %du: memref<8xi64>, vector<8xi64>
-    %vv4 = vector.transfer_read %mem4[%c0,%c0], %du: memref<3x4xi64>, vector<3x4xi64>
-    %vv5 = vector.transfer_read %mem5[%c0,%c0], %du: memref<3x4xi64>, vector<3x4xi64>
-    %vv6 = vector.transfer_read %mem6[%c0,%c0], %du: memref<3x4xi64>, vector<3x4xi64>
-    %vv7 = vector.transfer_read %mem7[%c0,%c0], %du: memref<3x4xi64>, vector<3x4xi64>
+    %vv0 = vector.transfer_read %0[%c0], %du: tensor<8xi64>, vector<8xi64>
+    %vv1 = vector.transfer_read %1[%c0], %du: tensor<8xi64>, vector<8xi64>
+    %vv2 = vector.transfer_read %2[%c0], %du: tensor<8xi64>, vector<8xi64>
+    %vv3 = vector.transfer_read %3[%c0], %du: tensor<8xi64>, vector<8xi64>
+    %vv4 = vector.transfer_read %4[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
+    %vv5 = vector.transfer_read %5[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
+    %vv6 = vector.transfer_read %6[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
+    %vv7 = vector.transfer_read %7[%c0,%c0], %du: tensor<3x4xi64>, vector<3x4xi64>
     vector.print %vv0 : vector<8xi64>
     vector.print %vv1 : vector<8xi64>
     vector.print %vv2 : vector<8xi64>
@@ -194,14 +188,6 @@ module {
     bufferization.dealloc_tensor %dv : tensor<8xi64, #SparseVector>
     bufferization.dealloc_tensor %sm : tensor<3x4xi64, #SparseMatrix>
     bufferization.dealloc_tensor %dm : tensor<3x4xi64, #SparseMatrix>
-    memref.dealloc %mem0 : memref<8xi64>
-    memref.dealloc %mem1 : memref<8xi64>
-    memref.dealloc %mem2 : memref<8xi64>
-    memref.dealloc %mem3 : memref<8xi64>
-    memref.dealloc %mem4 : memref<3x4xi64>
-    memref.dealloc %mem5 : memref<3x4xi64>
-    memref.dealloc %mem6 : memref<3x4xi64>
-    memref.dealloc %mem7 : memref<3x4xi64>
 
     return
   }
