@@ -14,8 +14,6 @@
 
 namespace llvm {
 namespace cas {
-class NodeProxy;
-
 /// A base class for schemas built on top of CAS nodes.
 ///
 /// TODO: Build a FilesystemSchema on top of this for reimplementing Trees on
@@ -29,9 +27,9 @@ public:
   /// Check if \a Node is a root (entry node) for the schema. This is a strong
   /// check, since it requires that the first reference matches a complete
   /// type-id DAG.
-  virtual bool isRootNode(const cas::NodeHandle &Node) const = 0;
+  virtual bool isRootNode(const cas::ObjectHandle &Node) const = 0;
 
-  virtual bool isNode(const cas::NodeHandle &Node) const = 0;
+  virtual bool isNode(const cas::ObjectHandle &Node) const = 0;
 
   cas::CASDB &CAS;
 
@@ -53,7 +51,7 @@ public:
   /// cannot be used beyond the \p SchemaPool instance's lifetime.
   ///
   /// Thread-safe.
-  NodeSchema *getSchemaForRoot(cas::NodeHandle Node) const;
+  NodeSchema *getSchemaForRoot(cas::ObjectHandle Node) const;
 
   /// Add a schema to the pool.
   void addSchema(std::unique_ptr<NodeSchema> S) {

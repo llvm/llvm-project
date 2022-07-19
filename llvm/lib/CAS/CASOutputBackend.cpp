@@ -47,7 +47,7 @@ CASOutputBackend::~CASOutputBackend() = default;
 
 struct CASOutputBackend::PrivateImpl {
   // FIXME: Use a NodeBuilder here once it exists.
-  SmallVector<CASID> IDs;
+  SmallVector<ObjectRef> Refs;
 };
 
 Expected<std::unique_ptr<vfs::OutputFileImpl>>
@@ -63,39 +63,40 @@ CASOutputBackend::createFileImpl(StringRef ResolvedPath,
   // The opened file can be kept inside \a CASOutputFile and forwarded.
   return std::make_unique<CASOutputFile>(
       ResolvedPath, [&](StringRef Path, StringRef Bytes) -> Error {
-        Optional<BlobProxy> PathBlob;
-        Optional<BlobProxy> BytesBlob;
-        if (Error E = CAS.createBlob(Path).moveInto(PathBlob))
+        Optional<ObjectProxy> PathBlob;
+        Optional<ObjectProxy> BytesBlob;
+        if (Error E = CAS.createProxy(None, Path).moveInto(PathBlob))
           return E;
-        if (Error E = CAS.createBlob(Bytes).moveInto(BytesBlob))
+        if (Error E = CAS.createProxy(None, Bytes).moveInto(BytesBlob))
           return E;
 
         // FIXME: Should there be a lock taken before accessing PrivateImpl?
-        Impl->IDs.push_back(PathBlob->getID());
-        Impl->IDs.push_back(BytesBlob->getID());
+        Impl->Refs.push_back(PathBlob->getRef());
+        Impl->Refs.push_back(BytesBlob->getRef());
         return Error::success();
       });
 }
 
-Expected<NodeProxy> CASOutputBackend::createNode() {
+Expected<ObjectProxy> CASOutputBackend::getCASProxy() {
   // FIXME: Should there be a lock taken before accessing PrivateImpl?
   if (!Impl)
-    return CAS.createNode(None, "");
+    return CAS.createProxy(None, "");
 
-  SmallVector<CASID> MovedIDs;
-  std::swap(MovedIDs, Impl->IDs);
-  return CAS.createNode(MovedIDs, "");
+  SmallVector<ObjectRef> MovedRefs;
+  std::swap(MovedRefs, Impl->Refs);
+
+  return CAS.createProxy(MovedRefs, "");
 }
 
-Error CASOutputBackend::addObject(StringRef Path, const CASID &Object) {
+Error CASOutputBackend::addObject(StringRef Path, ObjectRef Object) {
   if (!Impl)
     Impl = std::make_unique<PrivateImpl>();
 
-  Optional<BlobProxy> PathBlob;
-  if (Error E = CAS.createBlob(Path).moveInto(PathBlob))
+  Optional<ObjectProxy> PathBlob;
+  if (Error E = CAS.createProxy(None, Path).moveInto(PathBlob))
     return E;
 
-  Impl->IDs.push_back(PathBlob->getID());
-  Impl->IDs.push_back(Object);
+  Impl->Refs.push_back(PathBlob->getRef());
+  Impl->Refs.push_back(Object);
   return Error::success();
 }

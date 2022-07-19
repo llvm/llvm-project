@@ -64,6 +64,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASFileSystem.h"
+#include "llvm/CAS/TreeSchema.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Linker/Linker.h"
@@ -4918,9 +4919,10 @@ createBaseFS(const CompilerInvocation &Invocation, DiagnosticsEngine &Diags,
     // Try to use the configured CAS, if any.
     Optional<llvm::cas::CASID> EmptyRootID;
     if (CAS) {
+      llvm::cas::TreeSchema Schema(*CAS);
       // If we cannot create an empty tree, fall back to creating an empty
       // in-memory CAS.
-      if (llvm::Error E = CAS->createTree(None).moveInto(EmptyRootID)) {
+      if (llvm::Error E = Schema.create(None).moveInto(EmptyRootID)) {
         consumeError(std::move(E));
         CAS = nullptr;
       }
@@ -4928,7 +4930,8 @@ createBaseFS(const CompilerInvocation &Invocation, DiagnosticsEngine &Diags,
     // Create an empty in-memory CAS with an empty tree.
     if (!CAS) {
       CAS = llvm::cas::createInMemoryCAS();
-      EmptyRootID = llvm::cantFail(CAS->createTree(None));
+      llvm::cas::TreeSchema Schema(*CAS);
+      EmptyRootID = llvm::cantFail(Schema.create(None));
     }
     return llvm::cantFail(
         llvm::cas::createCASFileSystem(std::move(CAS), *EmptyRootID));

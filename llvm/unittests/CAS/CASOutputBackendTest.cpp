@@ -30,29 +30,33 @@ TEST(CASOutputBackendTest, createFiles) {
 
   auto Outputs = makeIntrusiveRefCnt<CASOutputBackend>(*CAS);
 
-  Optional<BlobProxy> Content1;
-  Optional<BlobProxy> Content2;
-  Optional<BlobProxy> AbsolutePath1;
-  Optional<BlobProxy> AbsolutePath2;
-  Optional<BlobProxy> RelativePath;
-  Optional<BlobProxy> WindowsPath;
-  ASSERT_THAT_ERROR(CAS->createBlob("content1").moveInto(Content1),
+  Optional<ObjectProxy> Content1;
+  Optional<ObjectProxy> Content2;
+  Optional<ObjectProxy> AbsolutePath1;
+  Optional<ObjectProxy> AbsolutePath2;
+  Optional<ObjectProxy> RelativePath;
+  Optional<ObjectProxy> WindowsPath;
+  ASSERT_THAT_ERROR(CAS->createProxy(None, "content1").moveInto(Content1),
                     Succeeded());
-  ASSERT_THAT_ERROR(CAS->createBlob("content2").moveInto(Content2),
+  ASSERT_THAT_ERROR(CAS->createProxy(None, "content2").moveInto(Content2),
                     Succeeded());
-  ASSERT_THAT_ERROR(CAS->createBlob("/absolute/path/1").moveInto(AbsolutePath1),
-                    Succeeded());
-  ASSERT_THAT_ERROR(CAS->createBlob("/absolute/path/2").moveInto(AbsolutePath2),
-                    Succeeded());
-  ASSERT_THAT_ERROR(CAS->createBlob("relative/path/./2").moveInto(RelativePath),
-                    Succeeded());
-  ASSERT_THAT_ERROR(CAS->createBlob("c:\\windows/path").moveInto(WindowsPath),
-                    Succeeded());
+  ASSERT_THAT_ERROR(
+      CAS->createProxy(None, "/absolute/path/1").moveInto(AbsolutePath1),
+      Succeeded());
+  ASSERT_THAT_ERROR(
+      CAS->createProxy(None, "/absolute/path/2").moveInto(AbsolutePath2),
+      Succeeded());
+  ASSERT_THAT_ERROR(
+      CAS->createProxy(None, "relative/path/./2").moveInto(RelativePath),
+      Succeeded());
+  ASSERT_THAT_ERROR(
+      CAS->createProxy(None, "c:\\windows/path").moveInto(WindowsPath),
+      Succeeded());
 
   // FIXME: Add test of duplicate paths. Maybe could error at createFile()...
   struct OutputDescription {
-    BlobProxy Content;
-    BlobProxy Path;
+    ObjectProxy Content;
+    ObjectProxy Path;
   };
   OutputDescription OutputDescriptions[] = {
       {*Content1, *AbsolutePath1}, {*Content2, *AbsolutePath2},
@@ -71,8 +75,8 @@ TEST(CASOutputBackendTest, createFiles) {
     ASSERT_THAT_ERROR(O->keep(), Succeeded());
   }
 
-  Optional<NodeProxy> Root;
-  ASSERT_THAT_ERROR(Outputs->createNode().moveInto(Root), Succeeded());
+  Optional<ObjectProxy> Root;
+  ASSERT_THAT_ERROR(Outputs->getCASProxy().moveInto(Root), Succeeded());
 
   auto Array = makeArrayRef(OutputDescriptions);
   ASSERT_EQ(Array.size() * 2, Root->getNumReferences());

@@ -17,7 +17,7 @@ namespace llvm {
 namespace cas {
 class CASDB;
 class CASID;
-class NodeProxy;
+class ObjectProxy;
 
 /// Handle the cas
 class CASOutputBackend : public vfs::OutputBackend {
@@ -25,10 +25,10 @@ class CASOutputBackend : public vfs::OutputBackend {
 
 public:
   /// Create a top-level tree for all created files. This will contain all files
-  Expected<NodeProxy> createNode();
+  Expected<ObjectProxy> getCASProxy();
 
   /// Add a CAS object to the path in the output backend.
-  Error addObject(StringRef Path, const CASID &Object);
+  Error addObject(StringRef Path, ObjectRef Object);
 
 private:
   Expected<std::unique_ptr<vfs::OutputFileImpl>>
