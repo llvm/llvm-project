@@ -194,10 +194,10 @@ module {
     call @dump_i32(%6) : (tensor<i32>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sparse_input_i32 : tensor<32xi32, #SV>
-    sparse_tensor.release %sparse_input_f32 : tensor<32xf32, #SV>
-    sparse_tensor.release %dense_input_i32  : tensor<32xi32, #DV>
-    sparse_tensor.release %dense_input_f32  : tensor<32xf32, #DV>
+    bufferization.dealloc_tensor %sparse_input_i32 : tensor<32xi32, #SV>
+    bufferization.dealloc_tensor %sparse_input_f32 : tensor<32xf32, #SV>
+    bufferization.dealloc_tensor %dense_input_i32  : tensor<32xi32, #DV>
+    bufferization.dealloc_tensor %dense_input_f32  : tensor<32xf32, #DV>
 
     return
   }

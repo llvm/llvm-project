@@ -224,20 +224,20 @@ module {
     vector.print %nz8 : vector<8xf64>
 
     // Release the resources.
-    sparse_tensor.release %a1 : tensor<4x8xf64, #CSR>
-    sparse_tensor.release %a2 : tensor<4x8xf64, #DCSR>
-    sparse_tensor.release %a3 : tensor<4x8xf64, #CSR>
-    sparse_tensor.release %a4 : tensor<4x8xf64, #DCSR>
-    sparse_tensor.release %b1 : tensor<8x4xf64, #CSR>
-    sparse_tensor.release %b2 : tensor<8x4xf64, #DCSR>
-    sparse_tensor.release %b3 : tensor<8x4xf64, #CSR>
-    sparse_tensor.release %b4 : tensor<8x4xf64, #DCSR>
-    sparse_tensor.release %1 : tensor<4x4xf64, #CSR>
-    sparse_tensor.release %2 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %4 : tensor<4x4xf64, #CSR>
-    sparse_tensor.release %5 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %7 : tensor<4x4xf64, #CSR>
-    sparse_tensor.release %8 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %a1 : tensor<4x8xf64, #CSR>
+    bufferization.dealloc_tensor %a2 : tensor<4x8xf64, #DCSR>
+    bufferization.dealloc_tensor %a3 : tensor<4x8xf64, #CSR>
+    bufferization.dealloc_tensor %a4 : tensor<4x8xf64, #DCSR>
+    bufferization.dealloc_tensor %b1 : tensor<8x4xf64, #CSR>
+    bufferization.dealloc_tensor %b2 : tensor<8x4xf64, #DCSR>
+    bufferization.dealloc_tensor %b3 : tensor<8x4xf64, #CSR>
+    bufferization.dealloc_tensor %b4 : tensor<8x4xf64, #DCSR>
+    bufferization.dealloc_tensor %1 : tensor<4x4xf64, #CSR>
+    bufferization.dealloc_tensor %2 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %4 : tensor<4x4xf64, #CSR>
+    bufferization.dealloc_tensor %5 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %7 : tensor<4x4xf64, #CSR>
+    bufferization.dealloc_tensor %8 : tensor<4x4xf64, #DCSR>
 
     return
   }

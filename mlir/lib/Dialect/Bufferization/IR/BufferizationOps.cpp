@@ -525,6 +525,21 @@ void CloneOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// DeallocTensorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
+                                         const BufferizationOptions &options) {
+  FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options);
+  if (failed(buffer))
+    return failure();
+  if (failed(options.createDealloc(rewriter, getLoc(), *buffer)))
+    return failure();
+  rewriter.eraseOp(getOperation());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ToTensorOp
 //===----------------------------------------------------------------------===//
 

@@ -145,7 +145,7 @@ func.func @sparse_init(%arg0: index, %arg1: index) -> tensor<?x?xf64, #SparseMat
 //       CHECK: call @delSparseTensor(%[[A]]) : (!llvm.ptr<i8>) -> ()
 //       CHECK: return
 func.func @sparse_release(%arg0: tensor<128xf64, #SparseVector>) {
-  sparse_tensor.release %arg0 : tensor<128xf64, #SparseVector>
+  bufferization.dealloc_tensor %arg0 : tensor<128xf64, #SparseVector>
   return
 }
 

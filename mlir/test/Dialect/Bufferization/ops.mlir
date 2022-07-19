@@ -41,3 +41,10 @@ func.func @test_alloc_tensor_op(%t: tensor<?x5xf32>, %sz: index)
   %5 = bufferization.alloc_tensor() copy(%t) {escape = false} : tensor<?x5xf32>
   return %1 : tensor<?x5xf32>
 }
+
+// CHECK-LABEL: func @test_dealloc_tensor_op
+func.func @test_dealloc_tensor_op(%arg0: tensor<4xi32>) {
+  // CHECK: bufferization.dealloc_tensor {{.*}} : tensor<4xi32>
+  bufferization.dealloc_tensor %arg0 : tensor<4xi32>
+  return
+}

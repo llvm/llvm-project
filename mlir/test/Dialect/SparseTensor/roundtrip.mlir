@@ -15,12 +15,12 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
-// CHECK-LABEL: func @sparse_release(
+// CHECK-LABEL: func @sparse_dealloc(
 // CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>
-//       CHECK: sparse_tensor.release %[[A]] : tensor<128xf64, #{{.*}}>
+//       CHECK: bufferization.dealloc_tensor %[[A]] : tensor<128xf64, #{{.*}}>
 //       CHECK: return
-func.func @sparse_release(%arg0: tensor<128xf64, #SparseVector>) {
-  sparse_tensor.release %arg0 : tensor<128xf64, #SparseVector>
+func.func @sparse_dealloc(%arg0: tensor<128xf64, #SparseVector>) {
+  bufferization.dealloc_tensor %arg0 : tensor<128xf64, #SparseVector>
   return
 }
 

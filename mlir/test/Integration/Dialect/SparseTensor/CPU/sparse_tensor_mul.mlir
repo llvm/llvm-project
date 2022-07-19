@@ -94,9 +94,9 @@ module {
     vector.print %v2 : vector<3x3x5xf64>
 
     // Release the resources.
-    sparse_tensor.release %sta : tensor<?x?x?xf64, #ST>
-    sparse_tensor.release %stb : tensor<?x?x?xf64, #ST>
-    sparse_tensor.release %0  : tensor<?x?x?xf64, #ST>
+    bufferization.dealloc_tensor %sta : tensor<?x?x?xf64, #ST>
+    bufferization.dealloc_tensor %stb : tensor<?x?x?xf64, #ST>
+    bufferization.dealloc_tensor %0  : tensor<?x?x?xf64, #ST>
     return
   }
 }

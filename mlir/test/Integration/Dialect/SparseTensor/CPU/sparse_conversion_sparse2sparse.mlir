@@ -87,13 +87,13 @@ module {
     //
     // Release sparse tensors.
     //
-    sparse_tensor.release %t13 : tensor<2x3x4xf64, #Tensor3>
-    sparse_tensor.release %t21 : tensor<2x3x4xf64, #Tensor1>
-    sparse_tensor.release %t23 : tensor<2x3x4xf64, #Tensor3>
-    sparse_tensor.release %t31 : tensor<2x3x4xf64, #Tensor1>
-    sparse_tensor.release %s1 : tensor<2x3x4xf64, #Tensor1>
-    sparse_tensor.release %s2 : tensor<2x3x4xf64, #Tensor2>
-    sparse_tensor.release %s3 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %t13 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %t21 : tensor<2x3x4xf64, #Tensor1>
+    bufferization.dealloc_tensor %t23 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %t31 : tensor<2x3x4xf64, #Tensor1>
+    bufferization.dealloc_tensor %s1 : tensor<2x3x4xf64, #Tensor1>
+    bufferization.dealloc_tensor %s2 : tensor<2x3x4xf64, #Tensor2>
+    bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #Tensor3>
 
     return
   }

@@ -129,6 +129,10 @@ struct SparseTensorConversionPass
         [&](bufferization::AllocTensorOp op) {
           return converter.isLegal(op.getType());
         });
+    target.addDynamicallyLegalOp<bufferization::DeallocTensorOp>(
+        [&](bufferization::DeallocTensorOp op) {
+          return converter.isLegal(op.getTensor().getType());
+        });
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
     target.addLegalOp<bufferization::ToMemrefOp, bufferization::ToTensorOp,
@@ -137,11 +141,6 @@ struct SparseTensorConversionPass
     target.addLegalDialect<
         arith::ArithmeticDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
-    target.addDynamicallyLegalOp<bufferization::AllocTensorOp>(
-        [&](bufferization::AllocTensorOp op) {
-          // Dense tensors are legal, sparse tensors are not.
-          return !static_cast<bool>(op.getType().getEncoding());
-        });
     // Translate strategy flags to strategy options.
     SparseTensorConversionOptions options(
         sparseToSparseConversionStrategy(sparseToSparse));

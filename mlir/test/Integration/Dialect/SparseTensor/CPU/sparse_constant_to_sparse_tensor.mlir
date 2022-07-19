@@ -41,7 +41,7 @@ module {
     vector.print %vr : vector<8xf64>
 
     // Release the resources.
-    sparse_tensor.release %ts : tensor<10x8xf64, #Tensor1>
+    bufferization.dealloc_tensor %ts : tensor<10x8xf64, #Tensor1>
 
     return
   }
