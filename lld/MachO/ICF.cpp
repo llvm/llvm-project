@@ -420,10 +420,11 @@ void macho::foldIdenticalSections() {
   uint64_t icfUniqueID = inputSections.size();
   for (ConcatInputSection *isec : inputSections) {
     // FIXME: consider non-code __text sections as hashable?
-    bool isHashable = (isCodeSection(isec) || isCfStringSection(isec) ||
-                       isClassRefsSection(isec)) &&
-                      !isec->keepUnique && !isec->shouldOmitFromOutput() &&
-                      sectionType(isec->getFlags()) == MachO::S_REGULAR;
+    bool isHashable =
+        (isCodeSection(isec) || isCfStringSection(isec) ||
+         isClassRefsSection(isec) || isGccExceptTabSection(isec)) &&
+        !isec->keepUnique && !isec->shouldOmitFromOutput() &&
+        sectionType(isec->getFlags()) == MachO::S_REGULAR;
     if (isHashable) {
       hashable.push_back(isec);
       for (Defined *d : isec->symbols)
