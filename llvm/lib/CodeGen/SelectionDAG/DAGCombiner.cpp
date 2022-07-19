@@ -23466,10 +23466,14 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   int Index0, Index1;
   SDValue Src0 = DAG.getSplatSourceVector(N0, Index0);
   SDValue Src1 = DAG.getSplatSourceVector(N1, Index1);
+  // Extract element from splat_vector should be free.
+  // TODO: use DAG.isSplatValue instead?
+  bool IsBothSplatVector = N0.getOpcode() == ISD::SPLAT_VECTOR &&
+                           N1.getOpcode() == ISD::SPLAT_VECTOR;
   if (!Src0 || !Src1 || Index0 != Index1 ||
       Src0.getValueType().getVectorElementType() != EltVT ||
       Src1.getValueType().getVectorElementType() != EltVT ||
-      !TLI.isExtractVecEltCheap(VT, Index0) ||
+      !(IsBothSplatVector || TLI.isExtractVecEltCheap(VT, Index0)) ||
       !TLI.isOperationLegalOrCustom(Opcode, EltVT))
     return SDValue();
 
@@ -23491,6 +23495,8 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   }
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
+  if (VT.isScalableVector())
+    return DAG.getSplatVector(VT, DL, ScalarBO);
   SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), ScalarBO);
   return DAG.getBuildVector(VT, DL, Ops);
 }
