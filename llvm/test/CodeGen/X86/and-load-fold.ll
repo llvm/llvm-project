@@ -6,7 +6,7 @@
 define i8 @foo(ptr %V) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb 2(%rdi), %al
+; CHECK-NEXT:    movzbl 2(%rdi), %eax
 ; CHECK-NEXT:    andb $95, %al
 ; CHECK-NEXT:    retq
   %V3i8 = load <3 x i8>, ptr %V, align 4

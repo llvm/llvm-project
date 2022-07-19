@@ -55,7 +55,7 @@ define i64 @test3(ptr %data) {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    shlb $2, %al
 ; X86-NEXT:    xorb $60, %al
 ; X86-NEXT:    movzbl %al, %eax
@@ -64,7 +64,7 @@ define i64 @test3(ptr %data) {
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movb (%rdi), %al
+; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    shlb $2, %al
 ; X64-NEXT:    xorb $60, %al
 ; X64-NEXT:    movzbl %al, %eax

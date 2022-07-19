@@ -119,7 +119,7 @@ define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -211,7 +211,7 @@ define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -384,7 +384,7 @@ define i8 @bitcast_v16i32_to_v2i8(<16 x i32> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
 ; SSE2-SSSE3-NEXT:    retq
 ;
