@@ -129,12 +129,8 @@ module {
     bufferization.dealloc_tensor %collapse3 : tensor<12xf64, #SparseVector>
 
     // Release dense resources.
-    // TODO(springerm): Replace these with a bufferization.release op (operating
-    // on tensors).
-    %meme1 = bufferization.to_memref %expand1 : memref<3x4xf64>
-    memref.dealloc %meme1 : memref<3x4xf64>
-    %memc1 = bufferization.to_memref %collapse1 : memref<12xf64>
-    memref.dealloc %memc1 : memref<12xf64>
+    bufferization.dealloc_tensor %expand1 : tensor<3x4xf64>
+    bufferization.dealloc_tensor %collapse1 : tensor<12xf64>
 
     return
   }
