@@ -86,7 +86,7 @@ static_assert(test(std::ranges::for_each, a, odd));
 static_assert(test(std::ranges::for_each_n, a, 10, odd));
 //static_assert(test(std::ranges::generate, a, gen));
 //static_assert(test(std::ranges::generate_n, a, 10, gen));
-//static_assert(test(std::ranges::includes, a, a));
+static_assert(test(std::ranges::includes, a, a));
 //static_assert(test(std::ranges::inplace_merge, a, a+5));
 //static_assert(test(std::ranges::is_heap, a));
 //static_assert(test(std::ranges::is_heap_until, a));

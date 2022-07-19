@@ -99,7 +99,7 @@ constexpr void run_tests() {
   test(std::ranges::is_partitioned, in, unary_pred);
   test(std::ranges::is_sorted, in);
   test(std::ranges::is_sorted_until, in);
-  //test(std::ranges::includes, in, in2);
+  test(std::ranges::includes, in, in2);
   //test(std::ranges::is_heap, in);
   //test(std::ranges::is_heap_until, in);
   //test(std::ranges::is_permutation, in, in2);
