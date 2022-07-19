@@ -816,6 +816,40 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
     clang::QualType class_type = GetOrCreateType(mpi.ContainingType);
     if (class_type.isNull())
       return {};
+    if (clang::TagDecl *tag = class_type->getAsTagDecl()) {
+      clang::MSInheritanceAttr::Spelling spelling;
+      switch (mpi.Representation) {
+      case llvm::codeview::PointerToMemberRepresentation::SingleInheritanceData:
+      case llvm::codeview::PointerToMemberRepresentation::
+          SingleInheritanceFunction:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_single_inheritance;
+        break;
+      case llvm::codeview::PointerToMemberRepresentation::
+          MultipleInheritanceData:
+      case llvm::codeview::PointerToMemberRepresentation::
+          MultipleInheritanceFunction:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_multiple_inheritance;
+        break;
+      case llvm::codeview::PointerToMemberRepresentation::
+          VirtualInheritanceData:
+      case llvm::codeview::PointerToMemberRepresentation::
+          VirtualInheritanceFunction:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_virtual_inheritance;
+        break;
+      case llvm::codeview::PointerToMemberRepresentation::Unknown:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_unspecified_inheritance;
+        break;
+      default:
+        spelling = clang::MSInheritanceAttr::Spelling::SpellingNotCalculated;
+        break;
+      }
+      tag->addAttr(clang::MSInheritanceAttr::CreateImplicit(
+          m_clang.getASTContext(), spelling));
+    }
     return m_clang.getASTContext().getMemberPointerType(
         pointee_type, class_type.getTypePtr());
   }
