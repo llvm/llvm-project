@@ -1,8 +1,0 @@
-## This test checks the error message displayed if an incorrect
-## number of positional arguments is specified.
-
-# RUN: not llvm-dwarfutil - 2>&1 | FileCheck --check-prefix CHECK1 %s
-# RUN: not llvm-dwarfutil - - - 2>&1 | FileCheck --check-prefix CHECK3 %s
-
-# CHECK1: error: exactly two positional arguments expected, 1 provided
-# CHECK3: error: exactly two positional arguments expected, 3 provided

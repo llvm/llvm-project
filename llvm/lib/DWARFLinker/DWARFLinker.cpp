@@ -505,19 +505,6 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     return Flags;
   }
 
-  // TODO: Following check is a workaround for overlapping address ranges.
-  //       ELF binaries built with LTO might contain overlapping address
-  //       ranges. The better fix would be to combine such ranges. Following
-  //       is a workaround that should be removed when a good fix is done.
-  if (Unit.overlapsWithFunctionRanges(*LowPc, *HighPc)) {
-    reportWarning(
-        formatv("Overlapping address range [{0:X}, {1:X}]. Range will "
-                "be discarded.\n",
-                *LowPc, *HighPc),
-        File, &DIE);
-    return Flags;
-  }
-
   // Replace the debug map range with a more accurate one.
   Ranges[*LowPc] = ObjFileAddressRange(*HighPc, MyInfo.AddrAdjust);
   Unit.addFunctionRange(*LowPc, *HighPc, MyInfo.AddrAdjust);
