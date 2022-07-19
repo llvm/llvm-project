@@ -79,7 +79,7 @@ module {
     vector.print %v : f64
 
     // Release the resources.
-    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xf64, #SparseMatrix>
 
     return
   }

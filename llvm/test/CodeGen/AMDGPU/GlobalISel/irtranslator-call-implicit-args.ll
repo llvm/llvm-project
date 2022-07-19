@@ -36,6 +36,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GFX900-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX900-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -55,8 +56,9 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_call_external_void_func_i32
@@ -86,6 +88,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GFX908-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX908-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -105,8 +108,9 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -116,76 +120,82 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
 define void @test_func_call_external_void_func_i32() #0 {
   ; GFX900-LABEL: name: test_func_call_external_void_func_i32
   ; GFX900: bb.1 (%ir-block.0):
-  ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GFX900-NEXT: {{  $}}
   ; GFX900-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
-  ; GFX900-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
-  ; GFX900-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
-  ; GFX900-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; GFX900-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; GFX900-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; GFX900-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
+  ; GFX900-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
+  ; GFX900-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
+  ; GFX900-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
+  ; GFX900-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
+  ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+  ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
+  ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 99
   ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
-  ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY7]]
-  ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY6]]
-  ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY5]]
-  ; GFX900-NEXT:   [[COPY11:%[0-9]+]]:_(s64) = COPY [[COPY4]]
-  ; GFX900-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
-  ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
-  ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
+  ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
+  ; GFX900-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY6]]
+  ; GFX900-NEXT:   [[COPY12:%[0-9]+]]:_(s64) = COPY [[COPY5]]
+  ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
+  ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX900-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   $vgpr0 = COPY [[C]](s32)
-  ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GFX900-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY16]](<4 x s32>)
-  ; GFX900-NEXT:   $sgpr4_sgpr5 = COPY [[COPY8]](p4)
-  ; GFX900-NEXT:   $sgpr6_sgpr7 = COPY [[COPY9]](p4)
-  ; GFX900-NEXT:   $sgpr8_sgpr9 = COPY [[COPY10]](p4)
-  ; GFX900-NEXT:   $sgpr10_sgpr11 = COPY [[COPY11]](s64)
-  ; GFX900-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
-  ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
-  ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
-  ; GFX900-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX900-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
+  ; GFX900-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
+  ; GFX900-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
+  ; GFX900-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
+  ; GFX900-NEXT:   $sgpr10_sgpr11 = COPY [[COPY12]](s64)
+  ; GFX900-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
+  ; GFX900-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
+  ; GFX900-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
+  ; GFX900-NEXT:   $vgpr31 = COPY [[COPY17]](s32)
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   SI_RETURN
   ; GFX908-LABEL: name: test_func_call_external_void_func_i32
   ; GFX908: bb.1 (%ir-block.0):
-  ; GFX908-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; GFX908-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
-  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
-  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
-  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 99
   ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
-  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY7]]
-  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY6]]
-  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY5]]
-  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:_(s64) = COPY [[COPY4]]
-  ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
-  ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
-  ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
+  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY6]]
+  ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:_(s64) = COPY [[COPY5]]
+  ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
+  ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX908-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   $vgpr0 = COPY [[C]](s32)
-  ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GFX908-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY16]](<4 x s32>)
-  ; GFX908-NEXT:   $sgpr4_sgpr5 = COPY [[COPY8]](p4)
-  ; GFX908-NEXT:   $sgpr6_sgpr7 = COPY [[COPY9]](p4)
-  ; GFX908-NEXT:   $sgpr8_sgpr9 = COPY [[COPY10]](p4)
-  ; GFX908-NEXT:   $sgpr10_sgpr11 = COPY [[COPY11]](s64)
-  ; GFX908-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
-  ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
-  ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
-  ; GFX908-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX908-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
+  ; GFX908-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
+  ; GFX908-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
+  ; GFX908-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
+  ; GFX908-NEXT:   $sgpr10_sgpr11 = COPY [[COPY12]](s64)
+  ; GFX908-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
+  ; GFX908-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
+  ; GFX908-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
+  ; GFX908-NEXT:   $vgpr31 = COPY [[COPY17]](s32)
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   SI_RETURN
   call void @external_void_func_i32(i32 99)
@@ -223,6 +233,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GFX900-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX900-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -277,8 +288,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_call_external_void_func_v32i32
@@ -309,6 +321,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GFX908-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX908-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -363,8 +376,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_v32i32(<32 x i32> zeroinitializer)
@@ -374,79 +388,81 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
 define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-LABEL: name: test_func_call_external_void_func_v32i32
   ; GFX900: bb.1 (%ir-block.1):
-  ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; GFX900-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GFX900-NEXT: {{  $}}
   ; GFX900-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
-  ; GFX900-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
-  ; GFX900-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
-  ; GFX900-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; GFX900-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; GFX900-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-  ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX900-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY8]](s32)
+  ; GFX900-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
+  ; GFX900-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
+  ; GFX900-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
+  ; GFX900-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
+  ; GFX900-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
+  ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+  ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
+  ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX900-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
   ; GFX900-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-  ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX900-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
+  ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX900-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX900-NEXT:   [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC2]](s16)
-  ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX900-NEXT:   [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
+  ; GFX900-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX900-NEXT:   [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[COPY11]](s32)
   ; GFX900-NEXT:   [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC4]](s16)
-  ; GFX900-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX900-NEXT:   [[TRUNC6:%[0-9]+]]:_(s16) = G_TRUNC [[COPY11]](s32)
+  ; GFX900-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX900-NEXT:   [[TRUNC6:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
   ; GFX900-NEXT:   [[TRUNC7:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC6]](s16)
-  ; GFX900-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX900-NEXT:   [[TRUNC8:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
+  ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX900-NEXT:   [[TRUNC8:%[0-9]+]]:_(s16) = G_TRUNC [[COPY13]](s32)
   ; GFX900-NEXT:   [[TRUNC9:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC8]](s16)
-  ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX900-NEXT:   [[TRUNC10:%[0-9]+]]:_(s16) = G_TRUNC [[COPY13]](s32)
+  ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX900-NEXT:   [[TRUNC10:%[0-9]+]]:_(s16) = G_TRUNC [[COPY14]](s32)
   ; GFX900-NEXT:   [[TRUNC11:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC10]](s16)
-  ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX900-NEXT:   [[TRUNC12:%[0-9]+]]:_(s16) = G_TRUNC [[COPY14]](s32)
+  ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX900-NEXT:   [[TRUNC12:%[0-9]+]]:_(s16) = G_TRUNC [[COPY15]](s32)
   ; GFX900-NEXT:   [[TRUNC13:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC12]](s16)
-  ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX900-NEXT:   [[TRUNC14:%[0-9]+]]:_(s16) = G_TRUNC [[COPY15]](s32)
+  ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX900-NEXT:   [[TRUNC14:%[0-9]+]]:_(s16) = G_TRUNC [[COPY16]](s32)
   ; GFX900-NEXT:   [[TRUNC15:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC14]](s16)
-  ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX900-NEXT:   [[TRUNC16:%[0-9]+]]:_(s16) = G_TRUNC [[COPY16]](s32)
+  ; GFX900-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX900-NEXT:   [[TRUNC16:%[0-9]+]]:_(s16) = G_TRUNC [[COPY17]](s32)
   ; GFX900-NEXT:   [[TRUNC17:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC16]](s16)
-  ; GFX900-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr9
-  ; GFX900-NEXT:   [[TRUNC18:%[0-9]+]]:_(s16) = G_TRUNC [[COPY17]](s32)
+  ; GFX900-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr9
+  ; GFX900-NEXT:   [[TRUNC18:%[0-9]+]]:_(s16) = G_TRUNC [[COPY18]](s32)
   ; GFX900-NEXT:   [[TRUNC19:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC18]](s16)
-  ; GFX900-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr10
-  ; GFX900-NEXT:   [[TRUNC20:%[0-9]+]]:_(s16) = G_TRUNC [[COPY18]](s32)
+  ; GFX900-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr10
+  ; GFX900-NEXT:   [[TRUNC20:%[0-9]+]]:_(s16) = G_TRUNC [[COPY19]](s32)
   ; GFX900-NEXT:   [[TRUNC21:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC20]](s16)
-  ; GFX900-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr11
-  ; GFX900-NEXT:   [[TRUNC22:%[0-9]+]]:_(s16) = G_TRUNC [[COPY19]](s32)
+  ; GFX900-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr11
+  ; GFX900-NEXT:   [[TRUNC22:%[0-9]+]]:_(s16) = G_TRUNC [[COPY20]](s32)
   ; GFX900-NEXT:   [[TRUNC23:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC22]](s16)
-  ; GFX900-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr12
-  ; GFX900-NEXT:   [[TRUNC24:%[0-9]+]]:_(s16) = G_TRUNC [[COPY20]](s32)
+  ; GFX900-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr12
+  ; GFX900-NEXT:   [[TRUNC24:%[0-9]+]]:_(s16) = G_TRUNC [[COPY21]](s32)
   ; GFX900-NEXT:   [[TRUNC25:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC24]](s16)
-  ; GFX900-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr13
-  ; GFX900-NEXT:   [[TRUNC26:%[0-9]+]]:_(s16) = G_TRUNC [[COPY21]](s32)
+  ; GFX900-NEXT:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr13
+  ; GFX900-NEXT:   [[TRUNC26:%[0-9]+]]:_(s16) = G_TRUNC [[COPY22]](s32)
   ; GFX900-NEXT:   [[TRUNC27:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC26]](s16)
-  ; GFX900-NEXT:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr14
-  ; GFX900-NEXT:   [[TRUNC28:%[0-9]+]]:_(s16) = G_TRUNC [[COPY22]](s32)
+  ; GFX900-NEXT:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr14
+  ; GFX900-NEXT:   [[TRUNC28:%[0-9]+]]:_(s16) = G_TRUNC [[COPY23]](s32)
   ; GFX900-NEXT:   [[TRUNC29:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC28]](s16)
-  ; GFX900-NEXT:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr15
-  ; GFX900-NEXT:   [[TRUNC30:%[0-9]+]]:_(s16) = G_TRUNC [[COPY23]](s32)
+  ; GFX900-NEXT:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr15
+  ; GFX900-NEXT:   [[TRUNC30:%[0-9]+]]:_(s16) = G_TRUNC [[COPY24]](s32)
   ; GFX900-NEXT:   [[TRUNC31:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC30]](s16)
-  ; GFX900-NEXT:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr16
-  ; GFX900-NEXT:   [[TRUNC32:%[0-9]+]]:_(s16) = G_TRUNC [[COPY24]](s32)
+  ; GFX900-NEXT:   [[COPY25:%[0-9]+]]:_(s32) = COPY $vgpr16
+  ; GFX900-NEXT:   [[TRUNC32:%[0-9]+]]:_(s16) = G_TRUNC [[COPY25]](s32)
   ; GFX900-NEXT:   [[TRUNC33:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC32]](s16)
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX900-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
   ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
-  ; GFX900-NEXT:   [[COPY25:%[0-9]+]]:_(p4) = COPY [[COPY7]]
-  ; GFX900-NEXT:   [[COPY26:%[0-9]+]]:_(p4) = COPY [[COPY6]]
-  ; GFX900-NEXT:   [[COPY27:%[0-9]+]]:_(p4) = COPY [[COPY5]]
-  ; GFX900-NEXT:   [[COPY28:%[0-9]+]]:_(s64) = COPY [[COPY4]]
-  ; GFX900-NEXT:   [[COPY29:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; GFX900-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY [[COPY2]]
-  ; GFX900-NEXT:   [[COPY31:%[0-9]+]]:_(s32) = COPY [[COPY1]]
-  ; GFX900-NEXT:   [[COPY32:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GFX900-NEXT:   [[COPY26:%[0-9]+]]:_(p4) = COPY [[COPY8]]
+  ; GFX900-NEXT:   [[COPY27:%[0-9]+]]:_(p4) = COPY [[COPY7]]
+  ; GFX900-NEXT:   [[COPY28:%[0-9]+]]:_(p4) = COPY [[COPY6]]
+  ; GFX900-NEXT:   [[COPY29:%[0-9]+]]:_(s64) = COPY [[COPY5]]
+  ; GFX900-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY [[COPY4]]
+  ; GFX900-NEXT:   [[COPY31:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX900-NEXT:   [[COPY32:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX900-NEXT:   [[COPY33:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX900-NEXT:   [[COPY34:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<32 x s32>)
   ; GFX900-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; GFX900-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -483,94 +499,97 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; GFX900-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; GFX900-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; GFX900-NEXT:   [[COPY33:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GFX900-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY33]](<4 x s32>)
-  ; GFX900-NEXT:   $sgpr4_sgpr5 = COPY [[COPY25]](p4)
-  ; GFX900-NEXT:   $sgpr6_sgpr7 = COPY [[COPY26]](p4)
-  ; GFX900-NEXT:   $sgpr8_sgpr9 = COPY [[COPY27]](p4)
-  ; GFX900-NEXT:   $sgpr10_sgpr11 = COPY [[COPY28]](s64)
-  ; GFX900-NEXT:   $sgpr12 = COPY [[COPY29]](s32)
-  ; GFX900-NEXT:   $sgpr13 = COPY [[COPY30]](s32)
-  ; GFX900-NEXT:   $sgpr14 = COPY [[COPY31]](s32)
-  ; GFX900-NEXT:   $vgpr31 = COPY [[COPY32]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   [[COPY35:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX900-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY35]](<4 x s32>)
+  ; GFX900-NEXT:   $sgpr4_sgpr5 = COPY [[COPY26]](p4)
+  ; GFX900-NEXT:   $sgpr6_sgpr7 = COPY [[COPY27]](p4)
+  ; GFX900-NEXT:   $sgpr8_sgpr9 = COPY [[COPY28]](p4)
+  ; GFX900-NEXT:   $sgpr10_sgpr11 = COPY [[COPY29]](s64)
+  ; GFX900-NEXT:   $sgpr12 = COPY [[COPY30]](s32)
+  ; GFX900-NEXT:   $sgpr13 = COPY [[COPY31]](s32)
+  ; GFX900-NEXT:   $sgpr14 = COPY [[COPY32]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[COPY33]](s32)
+  ; GFX900-NEXT:   $vgpr31 = COPY [[COPY34]](s32)
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX900-NEXT:   SI_RETURN
   ; GFX908-LABEL: name: test_func_call_external_void_func_v32i32
   ; GFX908: bb.1 (%ir-block.1):
-  ; GFX908-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; GFX908-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
-  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
-  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
-  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX908-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY8]](s32)
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX908-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
   ; GFX908-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX908-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX908-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX908-NEXT:   [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC2]](s16)
-  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX908-NEXT:   [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
+  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX908-NEXT:   [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[COPY11]](s32)
   ; GFX908-NEXT:   [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC4]](s16)
-  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX908-NEXT:   [[TRUNC6:%[0-9]+]]:_(s16) = G_TRUNC [[COPY11]](s32)
+  ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX908-NEXT:   [[TRUNC6:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
   ; GFX908-NEXT:   [[TRUNC7:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC6]](s16)
-  ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX908-NEXT:   [[TRUNC8:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
+  ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX908-NEXT:   [[TRUNC8:%[0-9]+]]:_(s16) = G_TRUNC [[COPY13]](s32)
   ; GFX908-NEXT:   [[TRUNC9:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC8]](s16)
-  ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX908-NEXT:   [[TRUNC10:%[0-9]+]]:_(s16) = G_TRUNC [[COPY13]](s32)
+  ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX908-NEXT:   [[TRUNC10:%[0-9]+]]:_(s16) = G_TRUNC [[COPY14]](s32)
   ; GFX908-NEXT:   [[TRUNC11:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC10]](s16)
-  ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX908-NEXT:   [[TRUNC12:%[0-9]+]]:_(s16) = G_TRUNC [[COPY14]](s32)
+  ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX908-NEXT:   [[TRUNC12:%[0-9]+]]:_(s16) = G_TRUNC [[COPY15]](s32)
   ; GFX908-NEXT:   [[TRUNC13:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC12]](s16)
-  ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX908-NEXT:   [[TRUNC14:%[0-9]+]]:_(s16) = G_TRUNC [[COPY15]](s32)
+  ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX908-NEXT:   [[TRUNC14:%[0-9]+]]:_(s16) = G_TRUNC [[COPY16]](s32)
   ; GFX908-NEXT:   [[TRUNC15:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC14]](s16)
-  ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX908-NEXT:   [[TRUNC16:%[0-9]+]]:_(s16) = G_TRUNC [[COPY16]](s32)
+  ; GFX908-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX908-NEXT:   [[TRUNC16:%[0-9]+]]:_(s16) = G_TRUNC [[COPY17]](s32)
   ; GFX908-NEXT:   [[TRUNC17:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC16]](s16)
-  ; GFX908-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr9
-  ; GFX908-NEXT:   [[TRUNC18:%[0-9]+]]:_(s16) = G_TRUNC [[COPY17]](s32)
+  ; GFX908-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr9
+  ; GFX908-NEXT:   [[TRUNC18:%[0-9]+]]:_(s16) = G_TRUNC [[COPY18]](s32)
   ; GFX908-NEXT:   [[TRUNC19:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC18]](s16)
-  ; GFX908-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr10
-  ; GFX908-NEXT:   [[TRUNC20:%[0-9]+]]:_(s16) = G_TRUNC [[COPY18]](s32)
+  ; GFX908-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr10
+  ; GFX908-NEXT:   [[TRUNC20:%[0-9]+]]:_(s16) = G_TRUNC [[COPY19]](s32)
   ; GFX908-NEXT:   [[TRUNC21:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC20]](s16)
-  ; GFX908-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr11
-  ; GFX908-NEXT:   [[TRUNC22:%[0-9]+]]:_(s16) = G_TRUNC [[COPY19]](s32)
+  ; GFX908-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr11
+  ; GFX908-NEXT:   [[TRUNC22:%[0-9]+]]:_(s16) = G_TRUNC [[COPY20]](s32)
   ; GFX908-NEXT:   [[TRUNC23:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC22]](s16)
-  ; GFX908-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr12
-  ; GFX908-NEXT:   [[TRUNC24:%[0-9]+]]:_(s16) = G_TRUNC [[COPY20]](s32)
+  ; GFX908-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr12
+  ; GFX908-NEXT:   [[TRUNC24:%[0-9]+]]:_(s16) = G_TRUNC [[COPY21]](s32)
   ; GFX908-NEXT:   [[TRUNC25:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC24]](s16)
-  ; GFX908-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr13
-  ; GFX908-NEXT:   [[TRUNC26:%[0-9]+]]:_(s16) = G_TRUNC [[COPY21]](s32)
+  ; GFX908-NEXT:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr13
+  ; GFX908-NEXT:   [[TRUNC26:%[0-9]+]]:_(s16) = G_TRUNC [[COPY22]](s32)
   ; GFX908-NEXT:   [[TRUNC27:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC26]](s16)
-  ; GFX908-NEXT:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr14
-  ; GFX908-NEXT:   [[TRUNC28:%[0-9]+]]:_(s16) = G_TRUNC [[COPY22]](s32)
+  ; GFX908-NEXT:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr14
+  ; GFX908-NEXT:   [[TRUNC28:%[0-9]+]]:_(s16) = G_TRUNC [[COPY23]](s32)
   ; GFX908-NEXT:   [[TRUNC29:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC28]](s16)
-  ; GFX908-NEXT:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr15
-  ; GFX908-NEXT:   [[TRUNC30:%[0-9]+]]:_(s16) = G_TRUNC [[COPY23]](s32)
+  ; GFX908-NEXT:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr15
+  ; GFX908-NEXT:   [[TRUNC30:%[0-9]+]]:_(s16) = G_TRUNC [[COPY24]](s32)
   ; GFX908-NEXT:   [[TRUNC31:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC30]](s16)
-  ; GFX908-NEXT:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr16
-  ; GFX908-NEXT:   [[TRUNC32:%[0-9]+]]:_(s16) = G_TRUNC [[COPY24]](s32)
+  ; GFX908-NEXT:   [[COPY25:%[0-9]+]]:_(s32) = COPY $vgpr16
+  ; GFX908-NEXT:   [[TRUNC32:%[0-9]+]]:_(s16) = G_TRUNC [[COPY25]](s32)
   ; GFX908-NEXT:   [[TRUNC33:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC32]](s16)
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
   ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
-  ; GFX908-NEXT:   [[COPY25:%[0-9]+]]:_(p4) = COPY [[COPY7]]
-  ; GFX908-NEXT:   [[COPY26:%[0-9]+]]:_(p4) = COPY [[COPY6]]
-  ; GFX908-NEXT:   [[COPY27:%[0-9]+]]:_(p4) = COPY [[COPY5]]
-  ; GFX908-NEXT:   [[COPY28:%[0-9]+]]:_(s64) = COPY [[COPY4]]
-  ; GFX908-NEXT:   [[COPY29:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; GFX908-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY [[COPY2]]
-  ; GFX908-NEXT:   [[COPY31:%[0-9]+]]:_(s32) = COPY [[COPY1]]
-  ; GFX908-NEXT:   [[COPY32:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GFX908-NEXT:   [[COPY26:%[0-9]+]]:_(p4) = COPY [[COPY8]]
+  ; GFX908-NEXT:   [[COPY27:%[0-9]+]]:_(p4) = COPY [[COPY7]]
+  ; GFX908-NEXT:   [[COPY28:%[0-9]+]]:_(p4) = COPY [[COPY6]]
+  ; GFX908-NEXT:   [[COPY29:%[0-9]+]]:_(s64) = COPY [[COPY5]]
+  ; GFX908-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY [[COPY4]]
+  ; GFX908-NEXT:   [[COPY31:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; GFX908-NEXT:   [[COPY32:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX908-NEXT:   [[COPY33:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX908-NEXT:   [[COPY34:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<32 x s32>)
   ; GFX908-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; GFX908-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -607,17 +626,18 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; GFX908-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; GFX908-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; GFX908-NEXT:   [[COPY33:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GFX908-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY33]](<4 x s32>)
-  ; GFX908-NEXT:   $sgpr4_sgpr5 = COPY [[COPY25]](p4)
-  ; GFX908-NEXT:   $sgpr6_sgpr7 = COPY [[COPY26]](p4)
-  ; GFX908-NEXT:   $sgpr8_sgpr9 = COPY [[COPY27]](p4)
-  ; GFX908-NEXT:   $sgpr10_sgpr11 = COPY [[COPY28]](s64)
-  ; GFX908-NEXT:   $sgpr12 = COPY [[COPY29]](s32)
-  ; GFX908-NEXT:   $sgpr13 = COPY [[COPY30]](s32)
-  ; GFX908-NEXT:   $sgpr14 = COPY [[COPY31]](s32)
-  ; GFX908-NEXT:   $vgpr31 = COPY [[COPY32]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   [[COPY35:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX908-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY35]](<4 x s32>)
+  ; GFX908-NEXT:   $sgpr4_sgpr5 = COPY [[COPY26]](p4)
+  ; GFX908-NEXT:   $sgpr6_sgpr7 = COPY [[COPY27]](p4)
+  ; GFX908-NEXT:   $sgpr8_sgpr9 = COPY [[COPY28]](p4)
+  ; GFX908-NEXT:   $sgpr10_sgpr11 = COPY [[COPY29]](s64)
+  ; GFX908-NEXT:   $sgpr12 = COPY [[COPY30]](s32)
+  ; GFX908-NEXT:   $sgpr13 = COPY [[COPY31]](s32)
+  ; GFX908-NEXT:   $sgpr14 = COPY [[COPY32]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[COPY33]](s32)
+  ; GFX908-NEXT:   $vgpr31 = COPY [[COPY34]](s32)
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX908-NEXT:   SI_RETURN
   call void @external_void_func_v32i32(<32 x i32> zeroinitializer)
@@ -649,6 +669,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX900-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   $vgpr0 = COPY [[C]](s32)
   ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -660,8 +681,9 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_x
@@ -688,6 +710,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   $vgpr0 = COPY [[C]](s32)
   ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -699,8 +722,9 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -732,6 +756,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX900-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -747,8 +772,9 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_y
@@ -775,6 +801,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -790,8 +817,9 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -823,6 +851,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX900-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
@@ -838,8 +867,9 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_z
@@ -866,6 +896,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY1]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
@@ -881,8 +912,9 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY12]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -915,6 +947,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX900-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -930,8 +963,9 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_xy
@@ -959,6 +993,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX908-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -974,8 +1009,9 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -1008,6 +1044,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX900-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1027,8 +1064,9 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_yz
@@ -1056,6 +1094,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX908-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1075,8 +1114,9 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -1109,6 +1149,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX900-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX900-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX900-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX900-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX900-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX900-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
@@ -1124,8 +1165,9 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_xz
@@ -1153,6 +1195,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GFX908-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GFX908-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
+  ; GFX908-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX908-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX908-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GFX908-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
@@ -1168,8 +1211,9 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
+  ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)

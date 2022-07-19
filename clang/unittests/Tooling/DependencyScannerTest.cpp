@@ -207,7 +207,11 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
 }
 
 TEST(DependencyScanner, ScanDepsWithFS) {
-  std::vector<std::string> CommandLine = {"clang", "-c", "test.cpp",
+  std::vector<std::string> CommandLine = {"clang",
+                                          "-target",
+                                          "x86_64-apple-macosx10.7",
+                                          "-c",
+                                          "test.cpp",
                                           "-o"
                                           "test.cpp.o"};
   StringRef CWD = "/root";

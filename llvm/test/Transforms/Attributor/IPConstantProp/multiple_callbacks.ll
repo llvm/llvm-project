@@ -53,7 +53,7 @@ entry:
 define internal i32 @cb1(i32 %unknown) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@cb1
-; CHECK-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 [[UNKNOWN]]
 ;
@@ -64,13 +64,13 @@ entry:
 define internal i32 @cb2(i32 %unknown) {
 ; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cb2
-; IS__TUNIT____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i32 [[UNKNOWN]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cb2
-; IS__CGSCC____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i32 [[UNKNOWN]]
 ;
@@ -82,7 +82,7 @@ entry:
 define internal i32 @cb3(i32 %unknown) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@cb3
-; CHECK-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 [[UNKNOWN]]
 ;
@@ -93,7 +93,7 @@ entry:
 define internal i32 @cb4(i32 %unknown) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@cb4
-; CHECK-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 [[UNKNOWN]]
 ;

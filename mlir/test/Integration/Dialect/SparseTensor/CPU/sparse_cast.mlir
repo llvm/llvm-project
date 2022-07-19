@@ -257,10 +257,10 @@ module {
     vector.print %v9 : vector<10xi32>
 
     // Release the resources.
-    sparse_tensor.release %1 : tensor<10xi32, #SV>
-    sparse_tensor.release %3 : tensor<10xf32, #SV>
-    sparse_tensor.release %5 : tensor<10xf64, #SV>
-    sparse_tensor.release %7 : tensor<10xf64, #SV>
+    bufferization.dealloc_tensor %1 : tensor<10xi32, #SV>
+    bufferization.dealloc_tensor %3 : tensor<10xf32, #SV>
+    bufferization.dealloc_tensor %5 : tensor<10xf64, #SV>
+    bufferization.dealloc_tensor %7 : tensor<10xf64, #SV>
 
     return
   }

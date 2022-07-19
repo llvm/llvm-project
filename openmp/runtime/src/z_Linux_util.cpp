@@ -1297,7 +1297,13 @@ static void __kmp_atfork_child(void) {
   __kmp_itt_reset(); // reset ITT's global state
 #endif /* USE_ITT_BUILD */
 
-  __kmp_serial_initialize();
+  {
+    // Child process often get terminated without any use of OpenMP. That might
+    // cause mapped shared memory file to be left unattended. Thus we postpone
+    // library registration till middle initialization in the child process.
+    __kmp_need_register_serial = FALSE;
+    __kmp_serial_initialize();
+  }
 
   /* This is necessary to make sure no stale data is left around */
   /* AC: customers complain that we use unsafe routines in the atfork

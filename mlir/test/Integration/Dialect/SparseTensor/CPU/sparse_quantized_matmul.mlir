@@ -70,7 +70,7 @@ module {
     vector.print %v : vector<5x6xi32>
 
     // Release the resources.
-    sparse_tensor.release %sparse_input2 : tensor<3x6xi8, #DCSR>
+    bufferization.dealloc_tensor %sparse_input2 : tensor<3x6xi8, #DCSR>
 
     return
   }

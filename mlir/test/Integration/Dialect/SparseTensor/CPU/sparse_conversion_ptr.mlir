@@ -128,12 +128,12 @@ module {
     call @dumpi08(%i6) : (memref<?xi08>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %1 : tensor<32x64xf64, #DCSR>
-    sparse_tensor.release %2 : tensor<32x64xf64, #DCSC>
-    sparse_tensor.release %3 : tensor<32x64xf64, #CSC>
-    sparse_tensor.release %4 : tensor<32x64xf64, #DCSC>
-    sparse_tensor.release %5 : tensor<32x64xf64, #DCSR>
-    sparse_tensor.release %6 : tensor<32x64xf64, #DCSR>
+    bufferization.dealloc_tensor %1 : tensor<32x64xf64, #DCSR>
+    bufferization.dealloc_tensor %2 : tensor<32x64xf64, #DCSC>
+    bufferization.dealloc_tensor %3 : tensor<32x64xf64, #CSC>
+    bufferization.dealloc_tensor %4 : tensor<32x64xf64, #DCSC>
+    bufferization.dealloc_tensor %5 : tensor<32x64xf64, #DCSR>
+    bufferization.dealloc_tensor %6 : tensor<32x64xf64, #DCSR>
 
     return
   }

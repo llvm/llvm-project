@@ -347,13 +347,11 @@ void SplitAnalysis::analyze(const LiveInterval *li) {
 //===----------------------------------------------------------------------===//
 
 /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
-SplitEditor::SplitEditor(SplitAnalysis &SA, AliasAnalysis &AA,
-                         LiveIntervals &LIS, VirtRegMap &VRM,
+SplitEditor::SplitEditor(SplitAnalysis &SA, LiveIntervals &LIS, VirtRegMap &VRM,
                          MachineDominatorTree &MDT,
                          MachineBlockFrequencyInfo &MBFI, VirtRegAuxInfo &VRAI)
-    : SA(SA), AA(AA), LIS(LIS), VRM(VRM),
-      MRI(VRM.getMachineFunction().getRegInfo()), MDT(MDT),
-      TII(*VRM.getMachineFunction().getSubtarget().getInstrInfo()),
+    : SA(SA), LIS(LIS), VRM(VRM), MRI(VRM.getMachineFunction().getRegInfo()),
+      MDT(MDT), TII(*VRM.getMachineFunction().getSubtarget().getInstrInfo()),
       TRI(*VRM.getMachineFunction().getSubtarget().getRegisterInfo()),
       MBFI(MBFI), VRAI(VRAI), RegAssign(Allocator) {}
 
@@ -371,9 +369,7 @@ void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
     LICalc[1].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                     &LIS.getVNInfoAllocator());
 
-  // We don't need an AliasAnalysis since we will only be performing
-  // cheap-as-a-copy remats anyway.
-  Edit->anyRematerializable(nullptr);
+  Edit->anyRematerializable();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1454,7 +1450,7 @@ void SplitEditor::deleteRematVictims() {
   if (Dead.empty())
     return;
 
-  Edit->eliminateDeadDefs(Dead, None, &AA);
+  Edit->eliminateDeadDefs(Dead, None);
 }
 
 void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {

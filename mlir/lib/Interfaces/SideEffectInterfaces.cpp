@@ -8,6 +8,8 @@
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "llvm/ADT/SmallPtrSet.h"
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -62,11 +64,20 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
       // memory.
       SmallVector<MemoryEffects::EffectInstance, 1> effects;
       effectInterface.getEffects(effects);
-      if (!llvm::all_of(effects, [op](const MemoryEffects::EffectInstance &it) {
-            // We can drop allocations if the value is a result of the
-            // operation.
-            if (isa<MemoryEffects::Allocate>(it.getEffect()))
-              return it.getValue() && it.getValue().getDefiningOp() == op;
+
+      // Gather all results of this op that are allocated.
+      SmallPtrSet<Value, 4> allocResults;
+      for (const MemoryEffects::EffectInstance &it : effects)
+        if (isa<MemoryEffects::Allocate>(it.getEffect()) && it.getValue() &&
+            it.getValue().getDefiningOp() == op)
+          allocResults.insert(it.getValue());
+
+      if (!llvm::all_of(effects, [&allocResults](
+                                     const MemoryEffects::EffectInstance &it) {
+            // We can drop effects if the value is an allocation and is a result
+            // of the operation.
+            if (allocResults.contains(it.getValue()))
+              return true;
             // Otherwise, the effect must be a read.
             return isa<MemoryEffects::Read>(it.getEffect());
           })) {
