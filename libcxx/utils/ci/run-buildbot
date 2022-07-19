@@ -236,7 +236,7 @@ generic-debug-mode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
     check-runtimes
-    check-abi-list
+    # We don't check the ABI lists because the debug mode ABI is not stable
 ;;
 generic-noexceptions)
     clean

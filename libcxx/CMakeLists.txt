@@ -200,12 +200,12 @@ set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros
 option(LIBCXX_EXTRA_SITE_DEFINES "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
-cmake_dependent_option(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS
+option(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS
   "Whether to include the old Debug mode symbols in the compiled library. This
    is provided for backwards compatibility since the compiled library used to
    always contain those symbols, regardless of whether the library was built
-   with the debug mode enabled." ON
-   "LIBCXX_ABI_VERSION EQUAL 1" OFF) # Always OFF in ABI version != 1
+   with the debug mode enabled. This is OFF by default, please contact the libc++
+   developers if you need to turn this on, as this will be removed in LLVM 16." OFF)
 
 # ABI Library options ---------------------------------------------------------
 if (LIBCXX_TARGETING_MSVC)
