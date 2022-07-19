@@ -141,7 +141,7 @@ class ReplaceLDSUseImpl {
   std::vector<GlobalVariable *> collectLDSRequiringPointerReplace() {
     // Collect LDS which requires module lowering.
     std::vector<GlobalVariable *> LDSGlobals =
-        llvm::AMDGPU::findVariablesToLower(M);
+        llvm::AMDGPU::findVariablesToLower(M, nullptr);
 
     // Remove LDS which don't qualify for replacement.
     llvm::erase_if(LDSGlobals, [&](GlobalVariable *GV) {
