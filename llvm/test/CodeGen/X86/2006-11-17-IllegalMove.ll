@@ -9,8 +9,8 @@ define void @handle_vector_size_attribute() nounwind {
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    ja .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb77
-; CHECK-NEXT:    movzbl 0, %eax
-; CHECK-NEXT:    movzbl 0, %eax
+; CHECK-NEXT:    movb 0, %al
+; CHECK-NEXT:    movb 0, %al
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:  .LBB0_2: # %bb84

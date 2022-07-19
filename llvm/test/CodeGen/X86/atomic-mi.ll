@@ -182,7 +182,7 @@ define void @add_8r(ptr %p, i8 %v) {
 ;
 ; X32-LABEL: add_8r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    addb %al, (%ecx)
 ; X32-NEXT:    retl
@@ -437,7 +437,7 @@ define void @sub_8r(ptr %p, i8 %v) {
 ;
 ; X32-LABEL: sub_8r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    subb %al, (%ecx)
 ; X32-NEXT:    retl
@@ -616,7 +616,7 @@ define void @and_8r(ptr %p, i8 %v) {
 ;
 ; X32-LABEL: and_8r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    andb %al, (%ecx)
 ; X32-NEXT:    retl
@@ -837,7 +837,7 @@ define void @or_8r(ptr %p, i8 %v) {
 ;
 ; X32-LABEL: or_8r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    orb %al, (%ecx)
 ; X32-NEXT:    retl
@@ -1059,7 +1059,7 @@ define void @xor_8r(ptr %p, i8 %v) {
 ;
 ; X32-LABEL: xor_8r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorb %al, (%ecx)
 ; X32-NEXT:    retl

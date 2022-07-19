@@ -467,7 +467,7 @@ define void @PR15348(ptr %a, ptr %b) {
 ; unaligned loads and stores.
 ; DARWIN-LABEL: PR15348:
 ; DARWIN:       ## %bb.0:
-; DARWIN-NEXT:    movzbl 16(%rsi), %eax
+; DARWIN-NEXT:    movb 16(%rsi), %al
 ; DARWIN-NEXT:    movb %al, 16(%rdi)
 ; DARWIN-NEXT:    movq (%rsi), %rax
 ; DARWIN-NEXT:    movq 8(%rsi), %rcx
@@ -477,7 +477,7 @@ define void @PR15348(ptr %a, ptr %b) {
 ;
 ; LINUX-LABEL: PR15348:
 ; LINUX:       # %bb.0:
-; LINUX-NEXT:    movzbl 16(%rsi), %eax
+; LINUX-NEXT:    movb 16(%rsi), %al
 ; LINUX-NEXT:    movb %al, 16(%rdi)
 ; LINUX-NEXT:    movq (%rsi), %rax
 ; LINUX-NEXT:    movq 8(%rsi), %rcx
@@ -487,7 +487,7 @@ define void @PR15348(ptr %a, ptr %b) {
 ;
 ; LINUX-SKL-LABEL: PR15348:
 ; LINUX-SKL:       # %bb.0:
-; LINUX-SKL-NEXT:    movzbl 16(%rsi), %eax
+; LINUX-SKL-NEXT:    movb 16(%rsi), %al
 ; LINUX-SKL-NEXT:    movb %al, 16(%rdi)
 ; LINUX-SKL-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-SKL-NEXT:    vmovups %xmm0, (%rdi)
@@ -495,7 +495,7 @@ define void @PR15348(ptr %a, ptr %b) {
 ;
 ; LINUX-SKX-LABEL: PR15348:
 ; LINUX-SKX:       # %bb.0:
-; LINUX-SKX-NEXT:    movzbl 16(%rsi), %eax
+; LINUX-SKX-NEXT:    movb 16(%rsi), %al
 ; LINUX-SKX-NEXT:    movb %al, 16(%rdi)
 ; LINUX-SKX-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-SKX-NEXT:    vmovups %xmm0, (%rdi)
@@ -503,7 +503,7 @@ define void @PR15348(ptr %a, ptr %b) {
 ;
 ; LINUX-KNL-LABEL: PR15348:
 ; LINUX-KNL:       # %bb.0:
-; LINUX-KNL-NEXT:    movzbl 16(%rsi), %eax
+; LINUX-KNL-NEXT:    movb 16(%rsi), %al
 ; LINUX-KNL-NEXT:    movb %al, 16(%rdi)
 ; LINUX-KNL-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-KNL-NEXT:    vmovups %xmm0, (%rdi)
@@ -511,7 +511,7 @@ define void @PR15348(ptr %a, ptr %b) {
 ;
 ; LINUX-AVX512BW-LABEL: PR15348:
 ; LINUX-AVX512BW:       # %bb.0:
-; LINUX-AVX512BW-NEXT:    movzbl 16(%rsi), %eax
+; LINUX-AVX512BW-NEXT:    movb 16(%rsi), %al
 ; LINUX-AVX512BW-NEXT:    movb %al, 16(%rdi)
 ; LINUX-AVX512BW-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-AVX512BW-NEXT:    vmovups %xmm0, (%rdi)

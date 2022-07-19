@@ -55,7 +55,7 @@ define i8 @sub_zext_cmp_mask_narrower_result(i32 %x) {
 ;
 ; X32-LABEL: sub_zext_cmp_mask_narrower_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    orb $46, %al
 ; X32-NEXT:    retl
@@ -77,7 +77,7 @@ define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 ;
 ; X32-LABEL: add_zext_cmp_mask_same_size_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    xorb $27, %al
 ; X32-NEXT:    retl
@@ -120,7 +120,7 @@ define i8 @add_zext_cmp_mask_narrower_result(i32 %x) {
 ;
 ; X32-LABEL: add_zext_cmp_mask_narrower_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    xorb $43, %al
 ; X32-NEXT:    retl
@@ -205,7 +205,7 @@ define i8 @low_bit_select_constants_bigger_true_same_size_result(i8 %x) {
 ;
 ; X32-LABEL: low_bit_select_constants_bigger_true_same_size_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    xorb $-29, %al
 ; X32-NEXT:    retl
@@ -246,7 +246,7 @@ define i8 @low_bit_select_constants_bigger_true_narrower_result(i16 %x) {
 ;
 ; X32-LABEL: low_bit_select_constants_bigger_true_narrower_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    xorb $41, %al
 ; X32-NEXT:    retl

@@ -15,14 +15,14 @@ define i8 @add8(ptr %p) {
 ; X64-LABEL: add8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    mfence
-; X64-NEXT:    movzbl (%rdi), %eax
+; X64-NEXT:    movb (%rdi), %al
 ; X64-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: add8:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
-; X86-SSE2-NEXT:    movzbl (%eax), %eax
+; X86-SSE2-NEXT:    movb (%eax), %al
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SLM-LABEL: add8:

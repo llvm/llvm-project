@@ -27,7 +27,7 @@ define <4 x i3> @test1(ptr %in) nounwind {
 define <4 x i1> @test2(ptr %in) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movb (%rdi), %al
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrb %cl
 ; CHECK-NEXT:    andb $1, %cl
@@ -53,7 +53,7 @@ define <4 x i1> @test2(ptr %in) nounwind {
 define <4 x i64> @test3(ptr %in) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movb (%rdi), %al
 ; CHECK-NEXT:    movzbl %al, %ecx
 ; CHECK-NEXT:    shrb %al
 ; CHECK-NEXT:    movzbl %al, %eax

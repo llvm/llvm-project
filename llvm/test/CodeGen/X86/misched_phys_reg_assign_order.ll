@@ -19,7 +19,7 @@ define void @g() #0 {
 ; CHECK-NEXT:    .cfi_offset %esi, -16
 ; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    movl f, %esi
-; CHECK-NEXT:    movzbl (%esi), %eax
+; CHECK-NEXT:    movb (%esi), %al
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx

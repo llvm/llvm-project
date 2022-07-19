@@ -12,7 +12,7 @@ declare i128 @llvm.abs.i128(i128, i1)
 define i8 @neg_abs_i8(i8 %x) nounwind {
 ; X86-LABEL: neg_abs_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarb $7, %al
 ; X86-NEXT:    xorb %al, %cl
@@ -154,7 +154,7 @@ define i128 @neg_abs_i128(i128 %x) nounwind {
 define i8 @sub_abs_i8(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: sub_abs_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarb $7, %al
 ; X86-NEXT:    xorb %al, %cl

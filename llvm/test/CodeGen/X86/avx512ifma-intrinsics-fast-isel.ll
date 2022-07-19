@@ -17,7 +17,7 @@ entry:
 define <8 x i64> @test_mm512_mask_madd52hi_epu64(<8 x i64> %__W, i8 zeroext %__M, <8 x i64> %__X, <8 x i64> %__Y) {
 ; X86-LABEL: test_mm512_mask_madd52hi_epu64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -37,7 +37,7 @@ entry:
 define <8 x i64> @test_mm512_maskz_madd52hi_epu64(i8 zeroext %__M, <8 x i64> %__X, <8 x i64> %__Y, <8 x i64> %__Z) {
 ; X86-LABEL: test_mm512_maskz_madd52hi_epu64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -67,7 +67,7 @@ entry:
 define <8 x i64> @test_mm512_mask_madd52lo_epu64(<8 x i64> %__W, i8 zeroext %__M, <8 x i64> %__X, <8 x i64> %__Y) {
 ; X86-LABEL: test_mm512_mask_madd52lo_epu64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -87,7 +87,7 @@ entry:
 define <8 x i64> @test_mm512_maskz_madd52lo_epu64(i8 zeroext %__M, <8 x i64> %__X, <8 x i64> %__Y, <8 x i64> %__Z) {
 ; X86-LABEL: test_mm512_maskz_madd52lo_epu64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl

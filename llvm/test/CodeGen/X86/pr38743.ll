@@ -40,11 +40,11 @@ define void @pr38743(i32 %a0) #1 align 2 {
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, (%rax)
-; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %edx
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edi
+; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %dil
 ; CHECK-NEXT:    movb %al, (%rax)
 ; CHECK-NEXT:    movq %rcx, 1(%rax)
 ; CHECK-NEXT:    movw %dx, 9(%rax)

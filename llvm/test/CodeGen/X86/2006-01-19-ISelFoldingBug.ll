@@ -11,7 +11,7 @@ target triple = "i686-unknown-unknown"
 define i32 @test5(i32 %B, i8 %C) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl A, %eax
 ; CHECK-NEXT:    shldl %cl, %edx, %eax

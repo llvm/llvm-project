@@ -9,7 +9,7 @@
 define dso_local void @PR35765() {
 ; CHECK-LABEL: PR35765:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl s1(%rip), %ecx
+; CHECK-NEXT:    movb s1(%rip), %cl
 ; CHECK-NEXT:    addb $-118, %cl
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    shll %cl, %eax

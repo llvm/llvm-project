@@ -8,7 +8,7 @@ define void @_start() {
 ; CHECK:       # %bb.0: # %Entry
 ; CHECK-NEXT:    movl __unnamed_1(%rip), %eax
 ; CHECK-NEXT:    movl %eax, -12(%rsp)
-; CHECK-NEXT:    movzbl -9(%rsp), %ecx
+; CHECK-NEXT:    movb -9(%rsp), %cl
 ; CHECK-NEXT:    movzbl -10(%rsp), %edx
 ; CHECK-NEXT:    movzbl -11(%rsp), %esi
 ; CHECK-NEXT:    andl $31, %eax

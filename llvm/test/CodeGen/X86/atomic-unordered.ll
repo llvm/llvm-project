@@ -5,15 +5,10 @@
 ; RUN: llc -O3 < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mcpu=skylake -x86-experimental-unordered-atomic-isel=1 | FileCheck --check-prefixes=CHECK,CHECK-O3,CHECK-O3-EX %s
 
 define i8 @load_i8(i8* %ptr) {
-; CHECK-O0-LABEL: load_i8:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movb (%rdi), %al
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: load_i8:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movzbl (%rdi), %eax
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: load_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    retq
   %v = load atomic i8, i8* %ptr unordered, align 1
   ret i8 %v
 }

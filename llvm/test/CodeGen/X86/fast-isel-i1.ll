@@ -25,7 +25,7 @@ define void @test2(ptr %a) nounwind {
 entry:
 ; clang uses i8 constants for booleans, so we test with an i8 1.
 ; CHECK-LABEL: test2:
-; CHECK: movzbl {{.*}} %eax
+; CHECK: movb {{.*}} %al
 ; CHECK-NEXT: xorb $1, %al
 ; CHECK-NEXT: testb $1
   %tmp = load i8, ptr %a, align 1

@@ -429,7 +429,7 @@ define void @v12i16(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v1i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movzbl (%rdi), %eax
+; SSE-NEXT:    movb (%rdi), %al
 ; SSE-NEXT:    addb (%rsi), %al
 ; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    movl $255, %ecx
@@ -439,7 +439,7 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ;
 ; AVX-LABEL: v1i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movzbl (%rdi), %eax
+; AVX-NEXT:    movb (%rdi), %al
 ; AVX-NEXT:    addb (%rsi), %al
 ; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    movl $255, %ecx

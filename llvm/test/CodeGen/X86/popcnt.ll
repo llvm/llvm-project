@@ -9,7 +9,7 @@
 define i8 @cnt8(i8 %x) nounwind readnone {
 ; X86-LABEL: cnt8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shrb %al
 ; X86-NEXT:    andb $85, %al
