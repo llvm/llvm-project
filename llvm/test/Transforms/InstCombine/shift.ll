@@ -1829,3 +1829,75 @@ define i8 @shl_mask_demand(i8 %x) {
   %r = and i8 %s, 7  ; 0b00000111
   ret i8 %r
 }
+
+define i64 @lshr_mul_negpow2(i64 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2(
+; CHECK-NEXT:    [[A:%.*]] = mul i64 [[X:%.*]], -4294967296
+; CHECK-NEXT:    [[B:%.*]] = lshr exact i64 [[A]], 32
+; CHECK-NEXT:    ret i64 [[B]]
+;
+  %a = mul i64 %x, -4294967296
+  %b = lshr i64 %a, 32
+  ret i64 %b
+}
+
+define i64 @lshr_mul_negpow2_2(i64 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_2(
+; CHECK-NEXT:    [[A:%.*]] = mul i64 [[X:%.*]], -65536
+; CHECK-NEXT:    [[B:%.*]] = lshr exact i64 [[A]], 16
+; CHECK-NEXT:    ret i64 [[B]]
+;
+  %a = mul i64 %x, -65536
+  %b = lshr i64 %a, 16
+  ret i64 %b
+}
+
+define <2 x i32> @lshr_mul_negpow2_3(<2 x i32> %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_3(
+; CHECK-NEXT:    [[A:%.*]] = mul <2 x i32> [[X:%.*]], <i32 -16777216, i32 -16777216>
+; CHECK-NEXT:    [[B:%.*]] = lshr exact <2 x i32> [[A]], <i32 24, i32 24>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %a = mul <2 x i32> %x, <i32 -16777216, i32 -16777216>
+  %b = lshr <2 x i32> %a, <i32 24, i32 24>
+  ret <2 x i32>  %b
+}
+
+define i32 @lshr_mul_negpow2_4(i32 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_4(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[X:%.*]], -65536
+; CHECK-NEXT:    [[B:%.*]] = lshr exact i32 [[A]], 16
+; CHECK-NEXT:    [[C:%.*]] = xor i32 [[B]], 1
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %a = mul i32 %x, -65536
+  %b = xor i32 %a, 65536
+  %c = lshr i32 %b, 16
+  ret i32 %c
+}
+
+define <2 x i32> @lshr_mul_negpow2_5(<2 x i32> %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_5(
+; CHECK-NEXT:    [[A:%.*]] = mul <2 x i32> [[X:%.*]], <i32 -65536, i32 -65536>
+; CHECK-NEXT:    [[B:%.*]] = lshr exact <2 x i32> [[A]], <i32 16, i32 16>
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[B]], <i32 8, i32 8>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %a = mul <2 x i32> %x, <i32 -65536, i32 -65536>
+  %b = or <2 x i32> %a, <i32 524288, i32 524288>
+  %c = lshr <2 x i32> %b, <i32 16, i32 16>
+  ret <2 x i32> %c
+}
+
+define i64 @lshr_mul_negpow2_extra_use(i64 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = mul i64 [[X:%.*]], -4294967296
+; CHECK-NEXT:    [[B:%.*]] = lshr exact i64 [[A]], 32
+; CHECK-NEXT:    call void @use(i64 [[A]])
+; CHECK-NEXT:    ret i64 [[B]]
+;
+  %a = mul i64 %x, -4294967296
+  %b = lshr i64 %a, 32
+  call void @use(i64 %a)
+  ret i64 %b
+}
