@@ -223,6 +223,11 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
 
   // Extra code to include in the class declaration.
   code extraClassDeclaration = [{}];
+
+  // Additional code that will be added to the generated source file. The
+  // generated code is placed inside the class's C++ namespace. `$cppClass` is
+  // replaced by the class name.
+  code extraClassDefinition = [{}];
 }
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits
