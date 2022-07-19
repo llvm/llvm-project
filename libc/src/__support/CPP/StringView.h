@@ -176,6 +176,20 @@ public:
     return npos;
   }
 
+  // Search for the last character matching the character
+  //
+  // Return the index of the last character equal to the |c| before End.
+  size_t find_last_of(const char c, size_t End = npos) const {
+    End = End > size() ? size() : End + 1;
+    StringView S = drop_back(size() - End);
+    while (!S.empty()) {
+      if (S.back() == c)
+        return S.size() - 1;
+      S = S.drop_back();
+    }
+    return npos;
+  }
+
   // Search for the first character satisfying the predicate Function
   //
   // Returns The index of the first character satisfying Function starting from

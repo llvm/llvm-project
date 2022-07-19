@@ -199,3 +199,53 @@ TEST(LlvmLibcStringViewTest, FindFirstOf) {
   ASSERT_FALSE(Tmp.find_first_of('c', 0) == 1);
   ASSERT_FALSE(Tmp.find_first_of('c', 1) == 1);
 }
+
+TEST(LlvmLibcStringViewTest, FindLastOf) {
+  StringView Tmp("abada");
+
+  ASSERT_EQ(Tmp.find_last_of('a'), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 123), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 5), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 4), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 3), size_t(2));
+  ASSERT_EQ(Tmp.find_last_of('a', 2), size_t(2));
+  ASSERT_EQ(Tmp.find_last_of('a', 1), size_t(0));
+  ASSERT_EQ(Tmp.find_last_of('a', 0), size_t(0));
+
+  ASSERT_EQ(Tmp.find_last_of('b'), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 123), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 5), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 4), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 3), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 2), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 1), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 0), StringView::npos);
+
+  ASSERT_EQ(Tmp.find_last_of('d'), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 123), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 5), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 4), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 3), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 2), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('d', 1), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('d', 0), StringView::npos);
+
+  ASSERT_EQ(Tmp.find_last_of('e'), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 123), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 5), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 4), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 3), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 2), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 1), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 0), StringView::npos);
+
+  StringView Empty;
+  ASSERT_EQ(Empty.find_last_of('a'), StringView::npos);
+  ASSERT_EQ(Empty.find_last_of('a', 0), StringView::npos);
+  ASSERT_EQ(Empty.find_last_of('a', 123), StringView::npos);
+
+  StringView Empty1("");
+  ASSERT_EQ(Empty1.find_last_of('a'), StringView::npos);
+  ASSERT_EQ(Empty1.find_last_of('a', 0), StringView::npos);
+  ASSERT_EQ(Empty1.find_last_of('a', 123), StringView::npos);
+}
