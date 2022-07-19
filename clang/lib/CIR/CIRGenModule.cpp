@@ -410,9 +410,13 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
   // unsigned TargetAS = astCtx.getTargetAddressSpace(AddrSpace);
   if (Entry) {
     if (WeakRefReferences.erase(Entry)) {
-      if (D && !D->hasAttr<WeakAttr>())
+      if (D && !D->hasAttr<WeakAttr>()) {
+        auto LT = mlir::cir::GlobalLinkageKind::ExternalLinkage;
+        Entry.setLinkageAttr(
+            mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), LT));
         mlir::SymbolTable::setSymbolVisibility(
-            Entry, mlir::SymbolTable::Visibility::Public);
+            Entry, getMLIRVisibilityFromCIRLinkage(LT));
+      }
     }
 
     // Handle dropped DLL attributes.
@@ -901,7 +905,7 @@ LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
 
 static mlir::cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
-                      mlir::SymbolTable::Visibility LT, CIRGenModule &CGM,
+                      mlir::cir::GlobalLinkageKind LT, CIRGenModule &CGM,
                       StringRef GlobalName, CharUnits Alignment) {
   unsigned AddrSpace = CGM.getASTContext().getTargetAddressSpace(
       CGM.getGlobalConstantAddressSpace());
@@ -916,7 +920,10 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
 
   // Set up extra information and add to the module
   GV.setAlignmentAttr(CGM.getSize(Alignment));
-  mlir::SymbolTable::setSymbolVisibility(GV, LT);
+  GV.setLinkageAttr(
+      mlir::cir::GlobalLinkageKindAttr::get(CGM.getBuilder().getContext(), LT));
+  mlir::SymbolTable::setSymbolVisibility(
+      GV, CIRGenModule::getMLIRVisibilityFromCIRLinkage(LT));
   GV.setInitialValueAttr(C);
 
   // TODO(cir)
@@ -975,7 +982,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
 
   SmallString<256> MangledNameBuffer;
   StringRef GlobalVariableName;
-  auto LT = mlir::SymbolTable::Visibility::Public;
+  auto LT = mlir::cir::GlobalLinkageKind::ExternalLinkage;
 
   // Mangle the string literal if that's how the ABI merges duplicate strings.
   // Don't do it if they are writable, since we don't want writes in one TU to
@@ -984,7 +991,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
       !getLangOpts().WritableStrings) {
     assert(0 && "not implemented");
   } else {
-    LT = mlir::SymbolTable::Visibility::Private;
+    LT = mlir::cir::GlobalLinkageKind::InternalLinkage;
     GlobalVariableName = Name;
   }
 
@@ -1157,10 +1164,25 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
   return false;
 }
 
-mlir::SymbolTable::Visibility CIRGenModule::getCIRLinkageForDeclarator(
+mlir::SymbolTable::Visibility CIRGenModule::getMLIRVisibilityFromCIRLinkage(
+    mlir::cir::GlobalLinkageKind GLK) {
+  switch (GLK) {
+  case mlir::cir::GlobalLinkageKind::InternalLinkage:
+  case mlir::cir::GlobalLinkageKind::PrivateLinkage:
+    return mlir::SymbolTable::Visibility::Private;
+  case mlir::cir::GlobalLinkageKind::ExternalLinkage:
+  case mlir::cir::GlobalLinkageKind::ExternalWeakLinkage:
+    return mlir::SymbolTable::Visibility::Public;
+  default:
+    assert(0 && "not implemented");
+  }
+  llvm_unreachable("linkage should be handled above!");
+}
+
+mlir::cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
     const DeclaratorDecl *D, GVALinkage Linkage, bool IsConstantVariable) {
   if (Linkage == GVA_Internal)
-    return mlir::SymbolTable::Visibility::Private;
+    return mlir::cir::GlobalLinkageKind::InternalLinkage;
 
   if (D->hasAttr<WeakAttr>()) {
     assert(UnimplementedFeature::globalWeakLinkage() && "NYI");
@@ -1219,10 +1241,10 @@ mlir::SymbolTable::Visibility CIRGenModule::getCIRLinkageForDeclarator(
 
   // Otherwise, we have strong external linkage.
   assert(Linkage == GVA_StrongExternal);
-  return mlir::SymbolTable::Visibility::Public;
+  return mlir::cir::GlobalLinkageKind::ExternalLinkage;
 }
 
-mlir::SymbolTable::Visibility CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
+mlir::cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
   GVALinkage Linkage = astCtx.GetGVALinkageForFunction(D);
@@ -1233,10 +1255,11 @@ mlir::SymbolTable::Visibility CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
   if (isa<CXXConstructorDecl>(D) &&
       cast<CXXConstructorDecl>(D)->isInheritingConstructor() &&
       astCtx.getTargetInfo().getCXXABI().isMicrosoft()) {
+    // Just like in LLVM codegen:
     // Our approach to inheriting constructors is fundamentally different from
     // that used by the MS ABI, so keep our inheriting constructor thunks
     // internal rather than trying to pick an unambiguous mangling for them.
-    return mlir::SymbolTable::Visibility::Private;
+    return mlir::cir::GlobalLinkageKind::InternalLinkage;
   }
 
   return getCIRLinkageForDeclarator(D, Linkage, /*IsConstantVariable=*/false);

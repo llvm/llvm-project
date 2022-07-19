@@ -153,23 +153,41 @@ func.func @b0() {
 // -----
 
 module {
-  cir.global @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{constant array element should match array element type}}
+  cir.global external @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{constant array element should match array element type}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
 module {
-  cir.global @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 4>> // expected-error {{constant array size should match type size}}
+  cir.global external @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 4>> // expected-error {{constant array size should match type size}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
 module {
-  cir.global @b = #cir.cst_array<"example\00" : !cir.array<i32 x 8>> // expected-error {{constant array element for string literals expects i8 array element type}}
+  cir.global external @b = #cir.cst_array<"example\00" : !cir.array<i32 x 8>> // expected-error {{constant array element for string literals expects i8 array element type}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
 module {
-  cir.global "private" constant @".str2" = #cir.cst_array<"example\00"> {alignment = 1 : i64} // expected-error {{expected type declaration for string literal}}
+  cir.global "private" constant external @".str2" = #cir.cst_array<"example\00"> {alignment = 1 : i64} // expected-error {{expected type declaration for string literal}}
 } // expected-error@-1 {{expected constant attribute to match type}}
+
+// -----
+
+module {
+  cir.global @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, private, extern_weak, common]}}
+}
+
+// -----
+
+module {
+  cir.global "private" external @v = 3 : i32 // expected-error {{private visibility not allowed with 'external' linkage}}
+}
+
+// -----
+
+module {
+  cir.global "public" internal @v = 3 : i32 // expected-error {{public visibility not allowed with 'internal' linkage}}
+}

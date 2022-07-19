@@ -41,7 +41,7 @@ void local_stringlit() {
   const char *s = "whatnow";
 }
 
-// CHECK: cir.global "private" constant @".str" = #cir.cst_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64} loc(#loc17)
+// CHECK: cir.global "private" constant internal @".str" = #cir.cst_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64} loc(#loc17)
 // CHECK: func @_Z15local_stringlitv() {
 // CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", cinit] {alignment = 8 : i64}
 // CHECK-NEXT:  %1 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 8>>
