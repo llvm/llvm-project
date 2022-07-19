@@ -83,7 +83,6 @@ set(LLVM_TEST_DEPENDS
           llvm-dlltool
           dsymutil
           llvm-dwarfdump
-          llvm-dwarfutil
           llvm-dwp
           llvm-exegesis
           llvm-extract

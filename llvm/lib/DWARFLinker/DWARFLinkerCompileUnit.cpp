@@ -114,10 +114,6 @@ void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
   this->HighPc = std::max(HighPc, FuncHighPc + PcOffset);
 }
 
-bool CompileUnit::overlapsWithFunctionRanges(uint64_t LowPC, uint64_t HighPC) {
-  return Ranges.overlaps(LowPC, HighPC);
-}
-
 void CompileUnit::noteRangeAttribute(const DIE &Die, PatchLocation Attr) {
   if (Die.getTag() != dwarf::DW_TAG_compile_unit)
     RangeAttributes.push_back(Attr);
