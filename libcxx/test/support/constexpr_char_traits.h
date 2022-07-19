@@ -23,6 +23,8 @@ struct constexpr_char_traits
     typedef std::streamoff off_type;
     typedef std::streampos pos_type;
     typedef std::mbstate_t state_type;
+    // The comparison_category is omitted so the class will have weak_ordering
+    // in C++20. This is intentional.
 
     static TEST_CONSTEXPR_CXX14 void assign(char_type& __c1, const char_type& __c2) TEST_NOEXCEPT
         {__c1 = __c2;}

@@ -17,6 +17,7 @@
 #include <__config>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
+#include <compare>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -193,6 +194,9 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
     typedef streamoff off_type;
     typedef streampos pos_type;
     typedef mbstate_t state_type;
+#if _LIBCPP_STD_VER > 17
+    using comparison_category = strong_ordering;
+#endif
 
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX14
     void assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {__c1 = __c2;}
@@ -307,6 +311,9 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
     typedef streamoff off_type;
     typedef streampos pos_type;
     typedef mbstate_t state_type;
+#  if _LIBCPP_STD_VER > 17
+    using comparison_category = strong_ordering;
+#  endif
 
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX14
     void assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {__c1 = __c2;}
@@ -423,6 +430,9 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
     typedef streamoff      off_type;
     typedef u8streampos    pos_type;
     typedef mbstate_t      state_type;
+#  if _LIBCPP_STD_VER > 17
+    using comparison_category = strong_ordering;
+#  endif
 
     static inline constexpr void assign(char_type& __c1, const char_type& __c2) noexcept
         {__c1 = __c2;}
@@ -524,6 +534,9 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
     typedef streamoff      off_type;
     typedef u16streampos   pos_type;
     typedef mbstate_t      state_type;
+#if _LIBCPP_STD_VER > 17
+    using comparison_category = strong_ordering;
+#endif
 
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX14
     void assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {__c1 = __c2;}
@@ -615,6 +628,9 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t>
     typedef streamoff      off_type;
     typedef u32streampos   pos_type;
     typedef mbstate_t      state_type;
+#if _LIBCPP_STD_VER > 17
+    using comparison_category = strong_ordering;
+#endif
 
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX14
     void assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {__c1 = __c2;}
