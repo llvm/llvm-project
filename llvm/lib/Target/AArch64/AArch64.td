@@ -216,7 +216,7 @@ def FeatureSlowPaired128 : SubtargetFeature<"slow-paired-128",
     "IsPaired128Slow", "true", "Paired 128 bit loads and stores are slow">;
 
 def FeatureAscendStoreAddress : SubtargetFeature<"ascend-store-address",
-    "IsStoreAddressAscend", "false",
+    "IsStoreAddressAscend", "true",
     "Schedule vector stores by ascending address">;
 
 def FeatureSlowSTRQro : SubtargetFeature<"slow-strqro-store", "IsSTRQroSlow",
