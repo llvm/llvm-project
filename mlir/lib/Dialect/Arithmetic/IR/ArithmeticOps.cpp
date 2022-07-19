@@ -128,7 +128,8 @@ LogicalResult arith::ConstantOp::verify() {
 
 bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
   // The value's type must be the same as the provided type.
-  if (value.getType() != type)
+  auto typedAttr = value.dyn_cast<TypedAttr>();
+  if (!typedAttr || typedAttr.getType() != type)
     return false;
   // Integer values must be signless.
   if (type.isa<IntegerType>() && !type.cast<IntegerType>().isSignless())

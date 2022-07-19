@@ -68,7 +68,7 @@ def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
 
 // CHECK-LABEL: OpE definitions
 // CHECK: void OpE::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
-// CHECK: odsState.addTypes({attr.getValue().getType()});
+// CHECK: odsState.addTypes({attr.getValue().cast<::mlir::TypedAttr>().getType()});
 
 def OpF : NS_Op<"one_variadic_result_op", []> {
   let results = (outs Variadic<I32>:$x);
@@ -155,5 +155,5 @@ def OpL3 : NS_Op<"op_with_all_types_constraint",
 
 // CHECK-LABEL: LogicalResult OpL3::inferReturnTypes
 // CHECK-NOT: }
-// CHECK: ::mlir::Type odsInferredType0 = attributes.get("a").getType();
+// CHECK: ::mlir::Type odsInferredType0 = attributes.get("a").cast<::mlir::TypedAttr>().getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;

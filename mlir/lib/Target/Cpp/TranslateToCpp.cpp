@@ -823,7 +823,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   if (auto type = attr.dyn_cast<TypeAttr>())
     return emitType(loc, type.getValue());
 
-  return emitError(loc, "cannot emit attribute of type ") << attr.getType();
+  return emitError(loc, "cannot emit attribute: ") << attr;
 }
 
 LogicalResult CppEmitter::emitOperands(Operation &op) {

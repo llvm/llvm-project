@@ -1652,7 +1652,9 @@ void ByteCodeExecutor::executeGetAttributeType() {
   LLVM_DEBUG(llvm::dbgs() << "Executing GetAttributeType:\n");
   unsigned memIndex = read();
   Attribute attr = read<Attribute>();
-  Type type = attr ? attr.getType() : Type();
+  Type type;
+  if (auto typedAttr = attr.dyn_cast<TypedAttr>())
+    type = typedAttr.getType();
 
   LLVM_DEBUG(llvm::dbgs() << "  * Attribute: " << attr << "\n"
                           << "  * Result: " << type << "\n");

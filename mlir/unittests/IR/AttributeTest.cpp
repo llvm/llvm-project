@@ -237,16 +237,19 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   // Only index (0, 0) contains an element, others are supposed to return
   // the zero/empty value.
-  auto zeroIntValue = sparseInt.getValues<Attribute>()[{1, 1}];
-  EXPECT_EQ(zeroIntValue.cast<IntegerAttr>().getInt(), 0);
+  auto zeroIntValue =
+      sparseInt.getValues<Attribute>()[{1, 1}].cast<IntegerAttr>();
+  EXPECT_EQ(zeroIntValue.getInt(), 0);
   EXPECT_TRUE(zeroIntValue.getType() == intTy);
 
-  auto zeroFloatValue = sparseFloat.getValues<Attribute>()[{1, 1}];
-  EXPECT_EQ(zeroFloatValue.cast<FloatAttr>().getValueAsDouble(), 0.0f);
+  auto zeroFloatValue =
+      sparseFloat.getValues<Attribute>()[{1, 1}].cast<FloatAttr>();
+  EXPECT_EQ(zeroFloatValue.getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
 
-  auto zeroStringValue = sparseString.getValues<Attribute>()[{1, 1}];
-  EXPECT_TRUE(zeroStringValue.cast<StringAttr>().getValue().empty());
+  auto zeroStringValue =
+      sparseString.getValues<Attribute>()[{1, 1}].cast<StringAttr>();
+  EXPECT_TRUE(zeroStringValue.getValue().empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 

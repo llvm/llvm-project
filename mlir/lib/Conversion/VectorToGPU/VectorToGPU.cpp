@@ -698,8 +698,8 @@ static void convertConstantOp(arith::ConstantOp op,
                               llvm::DenseMap<Value, Value> &valueMapping) {
   assert(constantSupportsMMAMatrixType(op));
   OpBuilder b(op);
-  Attribute splat =
-      op.getValue().cast<SplatElementsAttr>().getSplatValue<Attribute>();
+  auto splat =
+      op.getValue().cast<SplatElementsAttr>().getSplatValue<TypedAttr>();
   auto scalarConstant =
       b.create<arith::ConstantOp>(op.getLoc(), splat.getType(), splat);
   const char *fragType = inferFragType(op);

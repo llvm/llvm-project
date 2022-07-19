@@ -283,7 +283,8 @@ bool AttrOrTypeParameter::isOptional() const {
 }
 
 Optional<StringRef> AttrOrTypeParameter::getDefaultValue() const {
-  return getDefValue<llvm::StringInit>("defaultValue");
+  Optional<StringRef> result = getDefValue<llvm::StringInit>("defaultValue");
+  return result && !result->empty() ? result : llvm::None;
 }
 
 llvm::Init *AttrOrTypeParameter::getDef() const { return def->getArg(index); }

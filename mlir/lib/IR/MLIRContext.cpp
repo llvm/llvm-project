@@ -896,10 +896,6 @@ void AttributeUniquer::initializeAttributeStorage(AttributeStorage *storage,
                                                   MLIRContext *ctx,
                                                   TypeID attrID) {
   storage->initializeAbstractAttribute(AbstractAttribute::lookup(attrID, ctx));
-
-  // If the attribute did not provide a type, then default to NoneType.
-  if (!storage->getType())
-    storage->setType(NoneType::get(ctx));
 }
 
 BoolAttr BoolAttr::get(MLIRContext *context, bool value) {

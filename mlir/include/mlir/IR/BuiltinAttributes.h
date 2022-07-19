@@ -25,7 +25,6 @@ class IntegerSet;
 class IntegerType;
 class Location;
 class Operation;
-class ShapedType;
 
 //===----------------------------------------------------------------------===//
 // Elements Attributes
@@ -402,7 +401,7 @@ public:
                              std::numeric_limits<T>::is_signed));
     const char *rawData = getRawData().data();
     bool splat = isSplat();
-    return {Attribute::getType(), ElementIterator<T>(rawData, splat, 0),
+    return {getType(), ElementIterator<T>(rawData, splat, 0),
             ElementIterator<T>(rawData, splat, getNumElements())};
   }
   template <typename T, typename = IntFloatValueTemplateCheckT<T>>
@@ -431,7 +430,7 @@ public:
                           std::numeric_limits<ElementT>::is_signed));
     const char *rawData = getRawData().data();
     bool splat = isSplat();
-    return {Attribute::getType(), ElementIterator<T>(rawData, splat, 0),
+    return {getType(), ElementIterator<T>(rawData, splat, 0),
             ElementIterator<T>(rawData, splat, getNumElements())};
   }
   template <typename T, typename ElementT = typename T::value_type,
@@ -458,7 +457,7 @@ public:
     auto stringRefs = getRawStringData();
     const char *ptr = reinterpret_cast<const char *>(stringRefs.data());
     bool splat = isSplat();
-    return {Attribute::getType(), ElementIterator<StringRef>(ptr, splat, 0),
+    return {getType(), ElementIterator<StringRef>(ptr, splat, 0),
             ElementIterator<StringRef>(ptr, splat, getNumElements())};
   }
   template <typename T, typename = StringRefValueTemplateCheckT<T>>
@@ -478,8 +477,7 @@ public:
       typename std::enable_if<std::is_same<T, Attribute>::value>::type;
   template <typename T, typename = AttributeValueTemplateCheckT<T>>
   iterator_range_impl<AttributeElementIterator> getValues() const {
-    return {Attribute::getType(), value_begin<Attribute>(),
-            value_end<Attribute>()};
+    return {getType(), value_begin<Attribute>(), value_end<Attribute>()};
   }
   template <typename T, typename = AttributeValueTemplateCheckT<T>>
   AttributeElementIterator value_begin() const {
@@ -510,7 +508,7 @@ public:
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   iterator_range_impl<DerivedAttributeElementIterator<T>> getValues() const {
     using DerivedIterT = DerivedAttributeElementIterator<T>;
-    return {Attribute::getType(), DerivedIterT(value_begin<Attribute>()),
+    return {getType(), DerivedIterT(value_begin<Attribute>()),
             DerivedIterT(value_end<Attribute>())};
   }
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
@@ -530,7 +528,7 @@ public:
   template <typename T, typename = BoolValueTemplateCheckT<T>>
   iterator_range_impl<BoolElementIterator> getValues() const {
     assert(isValidBool() && "bool is not the value of this elements attribute");
-    return {Attribute::getType(), BoolElementIterator(*this, 0),
+    return {getType(), BoolElementIterator(*this, 0),
             BoolElementIterator(*this, getNumElements())};
   }
   template <typename T, typename = BoolValueTemplateCheckT<T>>
@@ -552,7 +550,7 @@ public:
   template <typename T, typename = APIntValueTemplateCheckT<T>>
   iterator_range_impl<IntElementIterator> getValues() const {
     assert(getElementType().isIntOrIndex() && "expected integral type");
-    return {Attribute::getType(), raw_int_begin(), raw_int_end()};
+    return {getType(), raw_int_begin(), raw_int_end()};
   }
   template <typename T, typename = APIntValueTemplateCheckT<T>>
   IntElementIterator value_begin() const {
@@ -990,8 +988,6 @@ inline bool operator==(StringRef lhs, StringAttr rhs) {
   return rhs.getValue() == lhs;
 }
 inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
-
-inline Type StringAttr::getType() const { return Attribute::getType(); }
 
 } // namespace mlir
 

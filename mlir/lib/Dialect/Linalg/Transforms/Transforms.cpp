@@ -198,8 +198,11 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   if (opOperand->getOperandNumber() >= paddingValues.size())
     return failure();
   Attribute paddingAttr = paddingValues[opOperand->getOperandNumber()];
-  Value paddingValue = b.create<arith::ConstantOp>(
-      opToPad.getLoc(), paddingAttr.getType(), paddingAttr);
+  Type paddingType = b.getType<NoneType>();
+  if (auto typedAttr = paddingAttr.dyn_cast<TypedAttr>())
+    paddingType = typedAttr.getType();
+  Value paddingValue =
+      b.create<arith::ConstantOp>(opToPad.getLoc(), paddingType, paddingAttr);
 
   // Follow the use-def chain if `currOpOperand` is defined by a LinalgOp.
   OpOperand *currOpOperand = opOperand;

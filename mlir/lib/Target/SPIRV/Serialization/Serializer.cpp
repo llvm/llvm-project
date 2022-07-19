@@ -769,7 +769,8 @@ uint32_t Serializer::prepareConstantBool(Location loc, BoolAttr boolAttr,
 
   // Process the type for this bool literal
   uint32_t typeID = 0;
-  if (failed(processType(loc, boolAttr.getType(), typeID))) {
+  if (failed(
+          processType(loc, boolAttr.cast<IntegerAttr>().getType(), typeID))) {
     return 0;
   }
 

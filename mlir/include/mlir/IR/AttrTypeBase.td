@@ -257,14 +257,6 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   let convertFromStorage = "$_self.cast<" # dialect.cppNamespace #
                                  "::" # cppClassName # ">()";
 
-  // A code block used to build the value 'Type' of an Attribute when
-  // initializing its storage instance. This field is optional, and if not
-  // present the attribute will have its value type set to `NoneType`. This code
-  // block may reference any of the attributes parameters via
-  // `$_<parameter-name`. If one of the parameters of the attribute is of type
-  // `AttributeSelfTypeParameter`, this field is ignored.
-  code typeBuilder = ?;
-
   // The predicate for when this def is used as a constraint.
   let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
                                  "::" # cppClassName # ">()">;
@@ -334,7 +326,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // which by default is the C++ equality operator. The current MLIR context is
   // made available through `$_ctxt`, e.g., for constructing default values for
   // attributes and types.
-  string defaultValue = ?;
+  string defaultValue = "";
 }
 class AttrParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
@@ -392,11 +384,21 @@ class DefaultValuedParameter<string type, string value, string desc = ""> :
   let defaultValue = value;
 }
 
-// This is a special parameter used for AttrDefs that represents a `mlir::Type`
-// that is also used as the value `Type` of the attribute. Only one parameter
-// of the attribute may be of this type.
+// This is a special attribute parameter that represents the "self" type of the
+// attribute. It is specially handled by the assembly format generator to derive
+// its value from the optional trailing type after each attribute.
+//
+// By default, the self type parameter is optional and has a default value of
+// `none`. If a derived type other than `::mlir::Type` is specified, the
+// parameter loses its default value unless another one is specified by
+// `typeBuilder`.
 class AttributeSelfTypeParameter<string desc,
-                                 string derivedType = "::mlir::Type"> :
-    AttrOrTypeParameter<derivedType, desc> {}
+                                 string derivedType = "::mlir::Type",
+                                 string typeBuilder = ""> :
+    AttrOrTypeParameter<derivedType, desc> {
+  let defaultValue = !if(!and(!empty(typeBuilder),
+                              !eq(derivedType, "::mlir::Type")),
+                         "::mlir::NoneType::get($_ctxt)", typeBuilder);
+}
 
 #endif // ATTRTYPEBASE_TD

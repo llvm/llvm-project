@@ -10,6 +10,7 @@
 #define MLPROGRAM_ATTRIBUTES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Dialect/MLProgram/IR/MLProgramBase.td"
 
 // Base class for MLProgram dialect attributes.
@@ -22,7 +23,7 @@ class MLProgram_Attr<string name, list<Trait> traits = []>
 // ExternAttr
 //===----------------------------------------------------------------------===//
 
-def MLProgram_ExternAttr : MLProgram_Attr<"Extern"> {
+def MLProgram_ExternAttr : MLProgram_Attr<"Extern", [TypedAttrInterface]> {
   let summary = "Value used for a global signalling external resolution";
   let description = [{
   When used as the value for a GlobalOp, this indicates that the actual

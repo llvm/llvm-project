@@ -1803,7 +1803,9 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
   if (parser.parseAttribute(value, kValueAttrName, state.attributes))
     return failure();
 
-  Type type = value.getType();
+  Type type = NoneType::get(parser.getContext());
+  if (auto typedAttr = value.dyn_cast<TypedAttr>())
+    type = typedAttr.getType();
   if (type.isa<NoneType, TensorType>()) {
     if (parser.parseColonType(type))
       return failure();
@@ -1820,15 +1822,15 @@ void spirv::ConstantOp::print(OpAsmPrinter &printer) {
 
 static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                                         Type opType) {
-  auto valueType = value.getType();
-
   if (value.isa<IntegerAttr, FloatAttr>()) {
+    auto valueType = value.cast<TypedAttr>().getType();
     if (valueType != opType)
       return op.emitOpError("result type (")
              << opType << ") does not match value type (" << valueType << ")";
     return success();
   }
   if (value.isa<DenseIntOrFPElementsAttr, SparseElementsAttr>()) {
+    auto valueType = value.cast<TypedAttr>().getType();
     if (valueType == opType)
       return success();
     auto arrayType = opType.dyn_cast<spirv::ArrayType>();
@@ -1873,7 +1875,7 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     }
     return success();
   }
-  return op.emitOpError("cannot have value of type ") << valueType;
+  return op.emitOpError("cannot have attribute: ") << value;
 }
 
 LogicalResult spirv::ConstantOp::verify() {

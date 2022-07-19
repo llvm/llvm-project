@@ -64,7 +64,6 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", [
     AffineMap getAffineMap() const { return getValue(); }
   }];
   let skipDefaultBuilders = 1;
-  let typeBuilder = "IndexType::get($_value.getContext())";
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,11 +139,11 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array", [
 }
 
 //===----------------------------------------------------------------------===//
-// DenseIntOrFPElementsAttr
+// DenseArrayBaseAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseArrayBase : Builtin_Attr<
-    "DenseArrayBase", [ElementsAttrInterface]> {
+    "DenseArrayBase", [ElementsAttrInterface, TypedAttrInterface]> {
   let summary = "A dense array of i8, i16, i32, i64, f32, or f64.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
@@ -197,8 +196,12 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     const float *value_begin_impl(OverloadToken<float>) const;
     const double *value_begin_impl(OverloadToken<double>) const;
 
-    /// Methods to support type inquiry through isa, cast, and dyn_cast.
+    /// Returns the shaped type, containing the number of elements in the array
+    /// and the array element type.
+    ShapedType getType() const;
+    /// Returns the element type.
     EltType getElementType() const;
+
     /// Printer for the short form: will dispatch to the appropriate subclass.
     void print(AsmPrinter &printer) const;
     void print(raw_ostream &os) const;
@@ -216,7 +219,8 @@ def Builtin_DenseArrayBase : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
-    "DenseIntOrFPElements", [ElementsAttrInterface], "DenseElementsAttr"
+    "DenseIntOrFPElements", [ElementsAttrInterface, TypedAttrInterface],
+    "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "integer or floating-point values";
@@ -355,7 +359,8 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseStringElementsAttr : Builtin_Attr<
-    "DenseStringElements", [ElementsAttrInterface], "DenseElementsAttr"
+    "DenseStringElements", [ElementsAttrInterface, TypedAttrInterface],
+    "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "strings";
@@ -523,7 +528,7 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
 // FloatAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_FloatAttr : Builtin_Attr<"Float"> {
+def Builtin_FloatAttr : Builtin_Attr<"Float", [TypedAttrInterface]> {
   let summary = "An Attribute containing a floating-point value";
   let description = [{
     Syntax:
@@ -586,7 +591,7 @@ def Builtin_FloatAttr : Builtin_Attr<"Float"> {
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_IntegerAttr : Builtin_Attr<"Integer"> {
+def Builtin_IntegerAttr : Builtin_Attr<"Integer", [TypedAttrInterface]> {
   let summary = "An Attribute containing a integer value";
   let description = [{
     Syntax:
@@ -703,7 +708,7 @@ def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet"> {
 // OpaqueAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
+def Builtin_OpaqueAttr : Builtin_Attr<"Opaque", [TypedAttrInterface]> {
   let summary = "An opaque representation of another Attribute";
   let description = [{
     Syntax:
@@ -741,7 +746,7 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_OpaqueElementsAttr : Builtin_Attr<
-    "OpaqueElements", [ElementsAttrInterface]
+    "OpaqueElements", [ElementsAttrInterface, TypedAttrInterface]
   > {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
@@ -803,7 +808,7 @@ def Builtin_OpaqueElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_SparseElementsAttr : Builtin_Attr<
-    "SparseElements", [ElementsAttrInterface]
+    "SparseElements", [ElementsAttrInterface, TypedAttrInterface]
   > {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
@@ -966,7 +971,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 // StringAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_StringAttr : Builtin_Attr<"String"> {
+def Builtin_StringAttr : Builtin_Attr<"String", [TypedAttrInterface]> {
   let summary = "An Attribute containing a string";
   let description = [{
     Syntax:
