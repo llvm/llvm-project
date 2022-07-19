@@ -1352,3 +1352,32 @@ define <vscale x 8 x i64> @vand_vi_nxv8i64_2(<vscale x 8 x i64> %va) {
   ret <vscale x 8 x i64> %vc
 }
 
+define <vscale x 8 x i64> @vand_xx_nxv8i64(i64 %a, i64 %b) nounwind {
+; RV32-LABEL: vand_xx_nxv8i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV32-NEXT:    vlse64.v v8, (a0), zero
+; RV32-NEXT:    sw a3, 12(sp)
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    vlse64.v v16, (a0), zero
+; RV32-NEXT:    vand.vv v8, v8, v16
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vand_xx_nxv8i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    ret
+  %head1 = insertelement <vscale x 8 x i64> poison, i64 %a, i32 0
+  %splat1 = shufflevector <vscale x 8 x i64> %head1, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %head2 = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
+  %splat2 = shufflevector <vscale x 8 x i64> %head2, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %v = and <vscale x 8 x i64> %splat1, %splat2
+  ret <vscale x 8 x i64> %v
+}
