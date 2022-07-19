@@ -17,13 +17,16 @@ bb:
   ret void
 }
 
+; TODO: Can fold to a duplicate callbr destination.
 define void @callbr_can_fold_to_duplicate_dest1() {
 ; CHECK-LABEL: @callbr_can_fold_to_duplicate_dest1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i"()
-; CHECK-NEXT:    to label [[COMMON_RET:%.*]] [label %common.ret]
+; CHECK-NEXT:    to label [[BB2:%.*]] [label %common.ret]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ;
 entry:
   callbr void asm sideeffect "", "!i"()
@@ -36,13 +39,18 @@ bb2:
   ret void
 }
 
+; TODO: Can fold to a duplicate callbr destination.
 define void @callbr_can_fold_to_duplicate_dest2() {
 ; CHECK-LABEL: @callbr_can_fold_to_duplicate_dest2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i,!i"()
-; CHECK-NEXT:    to label [[COMMON_RET:%.*]] [label [[COMMON_RET]], label %common.ret]
+; CHECK-NEXT:    to label [[COMMON_RET:%.*]] [label [[BB2:%.*]], label %bb3]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   callbr void asm sideeffect "", "!i,!i"()

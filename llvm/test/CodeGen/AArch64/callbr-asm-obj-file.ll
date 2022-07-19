@@ -74,6 +74,7 @@ define hidden i32 @test2() local_unnamed_addr {
 ; CHECK-LABEL: <$x.10>:
 ; CHECK-NEXT:    b {{.*}} <test3+0x18>
 ; CHECK-LABEL: <$x.12>:
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    ret
 define internal i1 @test3() {
