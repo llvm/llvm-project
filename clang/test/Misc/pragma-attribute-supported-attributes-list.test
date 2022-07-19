@@ -83,6 +83,7 @@
 // CHECK-NEXT: Lockable (SubjectMatchRule_record)
 // CHECK-NEXT: MIGServerRoutine (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_block)
 // CHECK-NEXT: MSStruct (SubjectMatchRule_record)
+// CHECK-NEXT: MaybeUndef (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: MicroMips (SubjectMatchRule_function)
 // CHECK-NEXT: MinSize (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: MinVectorWidth (SubjectMatchRule_function)
