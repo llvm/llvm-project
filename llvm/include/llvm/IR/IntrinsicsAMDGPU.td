@@ -167,6 +167,10 @@ def int_amdgcn_dispatch_id :
   ClangBuiltin<"__builtin_amdgcn_dispatch_id">,
   Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
+// For internal use. Coordinates LDS lowering between IR transform and backend.
+def int_amdgcn_lds_kernel_id :
+  Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
 def int_amdgcn_implicit_buffer_ptr :
   ClangBuiltin<"__builtin_amdgcn_implicit_buffer_ptr">,
   Intrinsic<[LLVMQualPointerType<llvm_i8_ty, 4>], [],

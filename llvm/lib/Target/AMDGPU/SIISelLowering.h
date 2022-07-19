@@ -48,6 +48,7 @@ private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
   SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;
+  SDValue getLDSKernelId(SelectionDAG &DAG, const SDLoc &SL) const;
   SDValue lowerKernargMemParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                    const SDLoc &SL, SDValue Chain,
                                    uint64_t Offset, Align Alignment,
