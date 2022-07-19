@@ -1186,14 +1186,27 @@ ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
 void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
   for (const Subsection &subsection : compactUnwindSection.subsections) {
     ConcatInputSection *isec = cast<ConcatInputSection>(subsection.isec);
-    // Hack!! Since each CUE contains a different function address, if ICF
-    // operated naively and compared the entire contents of each CUE, entries
-    // with identical unwind info but belonging to different functions would
-    // never be considered equivalent. To work around this problem, we slice
-    // away the function address here. (Note that we do not adjust the offsets
-    // of the corresponding relocations.) We rely on `relocateCompactUnwind()`
-    // to correctly handle these truncated input sections.
-    isec->data = isec->data.slice(target->wordSize);
+    // Hack!! Each compact unwind entry (CUE) has its UNSIGNED relocations embed
+    // their addends in its data. Thus if ICF operated naively and compared the
+    // entire contents of each CUE, entries with identical unwind info but e.g.
+    // belonging to different functions would never be considered equivalent. To
+    // work around this problem, we remove some parts of the data containing the
+    // embedded addends. In particular, we remove the function address and LSDA
+    // pointers.  Since these locations are at the start and end of the entry,
+    // we can do this using a simple, efficient slice rather than performing a
+    // copy.  We are not losing any information here because the embedded
+    // addends have already been parsed in the corresponding Reloc structs.
+    //
+    // Removing these pointers would not be safe if they were pointers to
+    // absolute symbols. In that case, there would be no corresponding
+    // relocation. However, (AFAIK) MC cannot emit references to absolute
+    // symbols for either the function address or the LSDA. However, it *can* do
+    // so for the personality pointer, so we are not slicing that field away.
+    //
+    // Note that we do not adjust the offsets of the corresponding relocations;
+    // instead, we rely on `relocateCompactUnwind()` to correctly handle these
+    // truncated input sections.
+    isec->data = isec->data.slice(target->wordSize, 8 + target->wordSize);
     uint32_t encoding = read32le(isec->data.data() + sizeof(uint32_t));
     // llvm-mc omits CU entries for functions that need DWARF encoding, but
     // `ld -r` doesn't. We can ignore them because we will re-synthesize these
