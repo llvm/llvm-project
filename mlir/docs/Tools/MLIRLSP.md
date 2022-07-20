@@ -58,6 +58,16 @@ any generated diagnostics in-place.
 
 ![IMG](/mlir-lsp-server/diagnostics.png)
 
+##### Automatically insert `expected-` diagnostic checks
+
+MLIR provides
+[infrastructure](https://mlir.llvm.org/docs/Diagnostics/#sourcemgr-diagnostic-verifier-handler)
+for checking expected diagnostics, which is heavily utilized when defining IR
+parsing and verification. The language server provides code actions for
+automatically inserting the checks for diagnostics it knows about.
+
+![IMG](/mlir-lsp-server/diagnostics_action.gif)
+
 #### Code completion
 
 The language server provides suggestions as you type, offering completions for
