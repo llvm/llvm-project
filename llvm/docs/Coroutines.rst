@@ -1751,4 +1751,8 @@ Areas Requiring Attention
 #. Make required changes to make sure that coroutine optimizations work with
    LTO.
 
+#. A readnone/writeonly call may access memory in a presplit coroutine. Since
+thread-id was assumed to be a constant in a function historically. But it is
+not true for coroutines.
+
 #. More tests, more tests, more tests
