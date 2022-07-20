@@ -622,7 +622,7 @@ There is no support of the following ops:
 *   All atomic ops
 *   All group ops
 *   All matrix ops
-*   All OCL ops
+*   All CL ops
 
 As well as:
 
