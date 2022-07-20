@@ -556,7 +556,7 @@ FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
     auto Result = Entry->File->getBuffer(Filename, FileSize,
                                          RequiresNullTerminator, isVolatile);
     if (CASContents) {
-      auto CASRef = Entry->File->getCASContents();
+      auto CASRef = Entry->File->getObjectRefForContent();
       if (!CASRef)
         return CASRef.getError();
       *CASContents = *CASRef;
@@ -585,14 +585,14 @@ FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
 }
 
 llvm::ErrorOr<Optional<cas::ObjectRef>>
-FileManager::getCASContentsForFile(const Twine &Filename) {
+FileManager::getObjectRefForFileContent(const Twine &Filename) {
   if (FileSystemOpts.WorkingDir.empty())
-    return FS->getCASContentsForFile(Filename);
+    return FS->getObjectRefForFileContent(Filename);
 
   SmallString<128> FilePath;
   Filename.toVector(FilePath);
   FixupRelativePath(FilePath);
-  return FS->getCASContentsForFile(FilePath);
+  return FS->getObjectRefForFileContent(FilePath);
 }
 
 /// getStatValue - Get the 'stat' information for the specified path,

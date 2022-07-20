@@ -207,7 +207,7 @@ public:
                                       RequestedName.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<Optional<cas::ObjectRef>> getCASContents() final {
+  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() final {
     return Entry->getRef();
   }
 

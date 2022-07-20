@@ -114,7 +114,9 @@ bool Status::exists() const {
 
 File::~File() = default;
 
-llvm::ErrorOr<Optional<cas::ObjectRef>> File::getCASContents() { return None; }
+llvm::ErrorOr<Optional<cas::ObjectRef>> File::getObjectRefForContent() {
+  return None;
+}
 
 FileSystem::~FileSystem() = default;
 
@@ -126,7 +128,7 @@ FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
   if (!F)
     return F.getError();
   if (CASContents) {
-    auto CASRef = (*F)->getCASContents();
+    auto CASRef = (*F)->getObjectRefForContent();
     if (!CASRef)
       return CASRef.getError();
     *CASContents = *CASRef;
@@ -136,11 +138,11 @@ FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
 }
 
 llvm::ErrorOr<Optional<cas::ObjectRef>>
-FileSystem::getCASContentsForFile(const Twine &Name) {
+FileSystem::getObjectRefForFileContent(const Twine &Name) {
   auto F = openFileForRead(Name);
   if (!F)
     return F.getError();
-  return (*F)->getCASContents();
+  return (*F)->getObjectRefForContent();
 }
 
 std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {

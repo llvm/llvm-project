@@ -33,7 +33,7 @@ DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
     return MaybeBuffer.getError();
   auto Buffer = std::move(*MaybeBuffer);
 
-  auto MaybeCASContents = File->getCASContents();
+  auto MaybeCASContents = File->getObjectRefForContent();
   if (!MaybeCASContents)
     return MaybeCASContents.getError();
   auto CASContents = std::move(*MaybeCASContents);
@@ -290,7 +290,7 @@ public:
     return std::move(Buffer);
   }
 
-  llvm::ErrorOr<Optional<cas::ObjectRef>> getCASContents() override {
+  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
     return CASContents;
   }
 
@@ -315,7 +315,7 @@ DepScanFile::create(EntryRef Entry) {
       llvm::MemoryBuffer::getMemBuffer(Entry.getContents(),
                                        Entry.getStatus().getName(),
                                        /*RequiresNullTerminator=*/false),
-      Entry.getCASContents(), Entry.getStatus());
+      Entry.getObjectRefForContent(), Entry.getStatus());
 
   return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
       std::unique_ptr<llvm::vfs::File>(std::move(Result)));

@@ -609,7 +609,7 @@ TEST_F(FileManagerTest, CASProvider) {
     FileSystemOptions Opts;
     FileManager Manager(Opts, CASFS);
     llvm::ErrorOr<Optional<ObjectRef>> CASContents =
-        Manager.getCASContentsForFile(Path);
+        Manager.getObjectRefForFileContent(Path);
     ASSERT_TRUE(CASContents);
     ASSERT_TRUE(*CASContents);
     Optional<ObjectProxy> BlobContents;
@@ -622,7 +622,7 @@ TEST_F(FileManagerTest, CASProvider) {
     Opts.WorkingDir = "/root";
     FileManager Manager(Opts, CASFS);
     llvm::ErrorOr<Optional<ObjectRef>> CASContents =
-        Manager.getCASContentsForFile("a.txt");
+        Manager.getObjectRefForFileContent("a.txt");
     ASSERT_TRUE(CASContents);
     ASSERT_TRUE(*CASContents);
     Optional<ObjectProxy> BlobContents;

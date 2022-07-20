@@ -318,7 +318,7 @@ public:
     return llvm::MemoryBuffer::getMemBuffer(Buffer, Name.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<Optional<cas::ObjectRef>> getCASContents() override {
+  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
     return CASContents;
   }
 

@@ -91,7 +91,7 @@ public:
     return Contents->Original->getBuffer();
   }
 
-  Optional<cas::ObjectRef> getCASContents() const {
+  Optional<cas::ObjectRef> getObjectRefForContent() const {
     assert(!isError() && "error");
     assert(!MaybeStat->isDirectory() && "not a file");
     assert(Contents && "contents not initialized");
@@ -275,8 +275,8 @@ public:
   }
 
   StringRef getContents() const { return Entry.getOriginalContents(); }
-  Optional<cas::ObjectRef> getCASContents() const {
-    return Entry.getCASContents();
+  Optional<cas::ObjectRef> getObjectRefForContent() const {
+    return Entry.getObjectRefForContent();
   }
 
   Optional<ArrayRef<dependency_directives_scan::Directive>>

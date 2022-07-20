@@ -143,7 +143,7 @@ public:
   /// Get the CAS reference for the contents of the file.
   /// \returns \p None if the underlying \p FileSystem doesn't support providing
   /// CAS references.
-  virtual llvm::ErrorOr<Optional<cas::ObjectRef>> getCASContents();
+  virtual llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent();
 
   /// Closes the file.
   virtual std::error_code close() = 0;
@@ -299,7 +299,7 @@ public:
   /// file. If both the buffer and its `cas::ObjectRef` are needed use \p
   /// getBufferForFile to avoid the extra file lookup.
   llvm::ErrorOr<Optional<cas::ObjectRef>>
-  getCASContentsForFile(const Twine &Name);
+  getObjectRefForFileContent(const Twine &Name);
 
   /// Get a directory_iterator for \p Dir.
   /// \note The 'end' iterator is directory_iterator().

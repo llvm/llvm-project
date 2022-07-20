@@ -287,7 +287,7 @@ public:
   /// file. If both the buffer and its `cas::ObjectRef` are needed use \p
   /// getBufferForFile to avoid the extra file lookup.
   llvm::ErrorOr<Optional<cas::ObjectRef>>
-  getCASContentsForFile(const Twine &Filename);
+  getObjectRefForFileContent(const Twine &Filename);
 
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>

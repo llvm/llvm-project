@@ -31,7 +31,7 @@ TEST(CASProvidingFileSystemTest, Basic) {
     ErrorOr<std::unique_ptr<vfs::File>> File = CASFS->openFileForRead(Path1);
     ASSERT_TRUE(File);
     ASSERT_TRUE(*File);
-    ErrorOr<Optional<cas::ObjectRef>> Ref = (*File)->getCASContents();
+    ErrorOr<Optional<cas::ObjectRef>> Ref = (*File)->getObjectRefForContent();
     ASSERT_TRUE(Ref);
     ASSERT_TRUE(*Ref);
     Optional<ObjectProxy> BlobContents;
@@ -39,7 +39,8 @@ TEST(CASProvidingFileSystemTest, Basic) {
     EXPECT_EQ(BlobContents->getData(), Contents1);
   }
   {
-    ErrorOr<Optional<cas::ObjectRef>> Ref = CASFS->getCASContentsForFile(Path1);
+    ErrorOr<Optional<cas::ObjectRef>> Ref =
+        CASFS->getObjectRefForFileContent(Path1);
     ASSERT_TRUE(Ref);
     ASSERT_TRUE(*Ref);
     Optional<ObjectProxy> BlobContents;
@@ -79,7 +80,7 @@ TEST(CASProvidingFileSystemTest, WithCASSupportingFS) {
   ErrorOr<std::unique_ptr<vfs::File>> File = CASFS->openFileForRead(Path);
   ASSERT_TRUE(File);
   ASSERT_TRUE(*File);
-  ErrorOr<Optional<cas::ObjectRef>> Ref = (*File)->getCASContents();
+  ErrorOr<Optional<cas::ObjectRef>> Ref = (*File)->getObjectRefForContent();
   ASSERT_TRUE(Ref);
   ASSERT_TRUE(*Ref);
   Optional<ObjectProxy> BlobContents;

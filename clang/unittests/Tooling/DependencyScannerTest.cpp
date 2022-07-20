@@ -281,7 +281,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
         DepFS.openFileForRead(Path);
     ASSERT_TRUE(File);
     ASSERT_TRUE(*File);
-    llvm::ErrorOr<Optional<ObjectRef>> Ref = (*File)->getCASContents();
+    llvm::ErrorOr<Optional<ObjectRef>> Ref = (*File)->getObjectRefForContent();
     ASSERT_TRUE(Ref);
     ASSERT_TRUE(*Ref);
     Optional<ObjectProxy> BlobContents;
