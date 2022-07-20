@@ -465,12 +465,13 @@ int getCASIDForFile(CASDB &CAS, CASID ID, StringRef Path) {
   if (!FS)
     ExitOnErr(FS.takeError());
 
-  auto FileID = (*FS)->getFileCASID(Path);
-  if (!FileID)
+  auto FileRef = (*FS)->getCASContentsForFile(Path);
+  if (!FileRef)
     ExitOnErr(errorCodeToError(
         std::make_error_code(std::errc::no_such_file_or_directory)));
 
-  outs() << *FileID << "\n";
+  CASID FileID = CAS.getID(**FileRef);
+  outs() << FileID << "\n";
   return 0;
 }
 

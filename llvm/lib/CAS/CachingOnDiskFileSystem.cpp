@@ -86,7 +86,6 @@ public:
 
   ErrorOr<vfs::Status> statusAndFileID(const Twine &Path,
                                        Optional<CASID> &FileID) final;
-  Optional<CASID> getFileCASID(const Twine &Path) final;
   ErrorOr<vfs::Status> status(const Twine &Path) final;
   ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path) final;
   vfs::directory_iterator dir_begin(const Twine &Dir,
@@ -206,6 +205,10 @@ public:
     SmallString<256> Storage;
     return MemoryBuffer::getMemBuffer(DB.getDataString(*Object),
                                       RequestedName.toStringRef(Storage));
+  }
+
+  llvm::ErrorOr<Optional<cas::ObjectRef>> getCASContents() final {
+    return Entry->getRef();
   }
 
   /// Closes the file.
@@ -408,19 +411,6 @@ CachingOnDiskFileSystemImpl::statusAndFileID(const Twine &Path,
   if (Entry->isFile())
     FileID = DB.getID(*Entry->getRef());
   return StatusOrErr;
-}
-
-Optional<CASID> CachingOnDiskFileSystemImpl::getFileCASID(const Twine &Path) {
-  // FIXME: This is the correct implementation, but hack it out for now to
-  // focus on CASFileSystem.
-  //
-  // return None;
-  //
-  // ... or don't hack it out.
-
-  Optional<CASID> ID;
-  (void)statusAndFileID(Path, ID);
-  return ID;
 }
 
 Expected<const vfs::CachedDirectoryEntry *>

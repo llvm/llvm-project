@@ -17,10 +17,8 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-void CASFileSystemBase::anchor() {}
-
 namespace {
-class CASFileSystem : public CASFileSystemBase {
+class CASFileSystem : public ThreadSafeFileSystem {
   struct WorkingDirectoryType {
     FileSystemCache::DirectoryEntry *Entry;
 
@@ -70,8 +68,6 @@ public:
     return WorkingDirectory.Path;
   }
 
-  Optional<CASID> getFileCASID(const Twine &Path) final;
-
   Error initialize(ObjectRef Root);
 
   CASFileSystem(std::shared_ptr<CASDB> DB) : DB(*DB), OwnedDB(std::move(DB)) {}
@@ -82,7 +78,7 @@ public:
   }
   CASFileSystem(const CASFileSystem &FS) = default;
 
-  CASDB &getCAS() const final { return DB; }
+  CASDB &getCAS() const { return DB; }
 
 private:
   CASDB &DB;
@@ -109,6 +105,10 @@ public:
     SmallString<256> Storage;
     return MemoryBuffer::getMemBuffer(DB.getDataString(*Object),
                                       Name.toStringRef(Storage));
+  }
+
+  llvm::ErrorOr<Optional<cas::ObjectRef>> getCASContents() final {
+    return Entry->getRef();
   }
 
   /// Closes the file.
@@ -253,28 +253,6 @@ ErrorOr<vfs::Status> CASFileSystem::status(const Twine &Path) {
   return Entry->getStatus(PathRef);
 }
 
-Optional<CASID> CASFileSystem::getFileCASID(const Twine &Path) {
-  SmallString<128> Storage;
-  StringRef PathRef = Path.toStringRef(Storage);
-
-  // Lookup only returns an Error if there's a problem communicating with the
-  // CAS, or there's data corruption.
-  //
-  // FIXME: Translate the error to a filesystem-like error to encapsulate the
-  // user from CAS issues.
-  Expected<DirectoryEntry *> ExpectedEntry = lookupPath(PathRef);
-  if (!ExpectedEntry) {
-    consumeError(ExpectedEntry.takeError());
-    return None;
-  }
-  DirectoryEntry *Entry = *ExpectedEntry;
-  if (Entry->isDirectory())
-    return None; // Only return CASIDs for files.
-  if (Entry->isSymlink())
-    return None; // Broken symlink.
-  return DB.getID(*Entry->getRef());
-}
-
 Expected<const vfs::CachedDirectoryEntry *>
 CASFileSystem::getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const {
   SmallString<128> Storage;
@@ -376,13 +354,13 @@ initializeCASFileSystem(std::unique_ptr<CASFileSystem> FS, CASID RootID) {
   return std::move(FS);
 }
 
-Expected<std::unique_ptr<CASFileSystemBase>>
+Expected<std::unique_ptr<vfs::FileSystem>>
 cas::createCASFileSystem(std::shared_ptr<CASDB> DB, const CASID &RootID) {
   return initializeCASFileSystem(std::make_unique<CASFileSystem>(std::move(DB)),
                                  RootID);
 }
 
-Expected<std::unique_ptr<CASFileSystemBase>>
+Expected<std::unique_ptr<vfs::FileSystem>>
 cas::createCASFileSystem(CASDB &DB, const CASID &RootID) {
   return initializeCASFileSystem(std::make_unique<CASFileSystem>(DB), RootID);
 }
