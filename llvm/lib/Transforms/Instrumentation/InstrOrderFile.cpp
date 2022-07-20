@@ -163,42 +163,11 @@ public:
   }
 
 }; // End of InstrOrderFile struct
-
-class InstrOrderFileLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  InstrOrderFileLegacyPass() : ModulePass(ID) {
-    initializeInstrOrderFileLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override;
-};
-
 } // End anonymous namespace
-
-bool InstrOrderFileLegacyPass::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  return InstrOrderFile().run(M);
-}
 
 PreservedAnalyses
 InstrOrderFilePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (InstrOrderFile().run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
-}
-
-INITIALIZE_PASS_BEGIN(InstrOrderFileLegacyPass, "instrorderfile",
-                      "Instrumentation for Order File", false, false)
-INITIALIZE_PASS_END(InstrOrderFileLegacyPass, "instrorderfile",
-                    "Instrumentation for Order File", false, false)
-
-char InstrOrderFileLegacyPass::ID = 0;
-
-ModulePass *llvm::createInstrOrderFilePass() {
-  return new InstrOrderFileLegacyPass();
 }
