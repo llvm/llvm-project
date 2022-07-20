@@ -47,7 +47,6 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
-#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -256,8 +255,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     // run the default canned pipeline
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
-    // Add O2 optimizer pass pipeline.
-    fir::createDefaultFIROptimizerPassPipeline(pm, llvm::OptimizationLevel::O2);
+    // Add default optimizer pass pipeline.
+    fir::createDefaultFIROptimizerPassPipeline(pm);
   }
 
   if (mlir::succeeded(pm.run(mlirModule))) {
