@@ -109,7 +109,7 @@ struct Configuration {
   bool archMultiple = false;
   bool exportDynamic = false;
   bool forceLoadObjC = false;
-  bool forceLoadSwift = false;
+  bool forceLoadSwift = false; // Only applies to LC_LINKER_OPTIONs.
   bool staticLink = false;
   bool implicitDylibs = false;
   bool isPic = false;
@@ -202,13 +202,6 @@ struct Configuration {
   llvm::MachO::PlatformType platform() const {
     return platformInfo.target.Platform;
   }
-};
-
-// Whether to force-load an archive.
-enum class ForceLoad {
-  Default, // Apply -all_load or -ObjC behaviors if those flags are enabled
-  Yes,     // Always load the archive, regardless of other flags
-  No,      // Never load the archive, regardless of other flags
 };
 
 extern std::unique_ptr<Configuration> config;
