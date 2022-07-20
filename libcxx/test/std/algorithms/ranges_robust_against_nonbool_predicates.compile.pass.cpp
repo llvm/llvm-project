@@ -160,7 +160,7 @@ void test_all() {
   in_pred(std::ranges::stable_partition, in, unary_pred);
   in_pred(std::ranges::sort, in, binary_pred);
   in_pred(std::ranges::stable_sort, in, binary_pred);
-  //in_mid_pred(std::ranges::partial_sort, in, mid, binary_pred);
+  in_mid_pred(std::ranges::partial_sort, in, mid, binary_pred);
   in_mid_pred(std::ranges::nth_element, in, mid, binary_pred);
   //in_mid_pred(std::ranges::inplace_merge, in, mid, binary_pred);
   in_pred(std::ranges::make_heap, in, binary_pred);

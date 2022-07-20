@@ -114,6 +114,7 @@ set(files
   __algorithm/ranges_move_backward.h
   __algorithm/ranges_none_of.h
   __algorithm/ranges_nth_element.h
+  __algorithm/ranges_partial_sort.h
   __algorithm/ranges_partial_sort_copy.h
   __algorithm/ranges_partition.h
   __algorithm/ranges_partition_copy.h

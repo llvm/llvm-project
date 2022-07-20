@@ -353,6 +353,7 @@ module std [system] {
       module ranges_move_backward            { private header "__algorithm/ranges_move_backward.h" }
       module ranges_none_of                  { private header "__algorithm/ranges_none_of.h" }
       module ranges_nth_element              { private header "__algorithm/ranges_nth_element.h" }
+      module ranges_partial_sort             { private header "__algorithm/ranges_partial_sort.h" }
       module ranges_partial_sort_copy        { private header "__algorithm/ranges_partial_sort_copy.h" }
       module ranges_partition                { private header "__algorithm/ranges_partition.h" }
       module ranges_partition_copy           { private header "__algorithm/ranges_partition_copy.h" }

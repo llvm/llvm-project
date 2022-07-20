@@ -156,7 +156,7 @@ constexpr void run_tests() {
   // TODO(ranges): `stable_sort` requires `ranges::rotate` to be implemented.
   //if (!std::is_constant_evaluated())
   //  test(std::ranges::stable_sort, in);
-  //test_mid(std::ranges::partial_sort, in, mid);
+  test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
   //if (!std::is_constant_evaluated())
   //  test_mid(std::ranges::inplace_merge, in, mid);
