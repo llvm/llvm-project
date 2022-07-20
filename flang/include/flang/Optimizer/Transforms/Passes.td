@@ -196,17 +196,4 @@ def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let constructor = "::fir::createSimplifyRegionLitePass()";
 }
 
-def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
-  let summary = "";
-  let description = [{
-    Run algebraic simplifications for Math/Complex/etc. dialect operations.
-    This is a flang specific pass, because we may want to "tune"
-    the rewrite patterns specifically for Fortran (e.g. increase
-    the limit for constant exponent value that defines the cases
-    when pow(x, constant) is transformed into a set of multiplications, etc.).
-  }];
-  let dependentDialects = [ "mlir::math::MathDialect" ];
-  let constructor = "::fir::createAlgebraicSimplificationPass()";
-}
-
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
