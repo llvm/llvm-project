@@ -10,7 +10,7 @@
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL11_I]]
 //
 int8x8_t test_vtbl1_s8(int8x8_t a, int8x8_t b) {
@@ -20,7 +20,7 @@ int8x8_t test_vtbl1_s8(int8x8_t a, int8x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbl1_s8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[A]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[A]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL1_I]]
 //
 int8x8_t test_vqtbl1_s8(int8x16_t a, uint8x8_t b) {
@@ -45,7 +45,7 @@ int8x8_t test_vqtbl1_s8(int8x16_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <8 x i8>], [2 x <8 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX2_I]], align 8
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL13_I]]
 //
 int8x8_t test_vtbl2_s8(int8x8x2_t a, int8x8_t b) {
@@ -69,7 +69,7 @@ int8x8_t test_vtbl2_s8(int8x8x2_t a, int8x8_t b) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X2_T]], %struct.int8x16x2_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL2_I]]
 //
 int8x8_t test_vqtbl2_s8(int8x16x2_t a, uint8x8_t b) {
@@ -98,7 +98,7 @@ int8x8_t test_vqtbl2_s8(int8x16x2_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX4_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL26_I]]
 //
 int8x8_t test_vtbl3_s8(int8x8x3_t a, int8x8_t b) {
@@ -125,7 +125,7 @@ int8x8_t test_vtbl3_s8(int8x8x3_t a, int8x8_t b) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X3_T]], %struct.int8x16x3_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL3_I]]
 //
 int8x8_t test_vqtbl3_s8(int8x16x3_t a, uint8x8_t b) {
@@ -157,7 +157,7 @@ int8x8_t test_vqtbl3_s8(int8x16x3_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX6_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL27_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> [[TMP4]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL27_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL27_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL28_I]]
 //
 int8x8_t test_vtbl4_s8(int8x8x4_t a, int8x8_t b) {
@@ -187,7 +187,7 @@ int8x8_t test_vtbl4_s8(int8x8x4_t a, int8x8_t b) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X4_T]], %struct.int8x16x4_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL4_I]]
 //
 int8x8_t test_vqtbl4_s8(int8x16x4_t a, uint8x8_t b) {
@@ -197,7 +197,7 @@ int8x8_t test_vqtbl4_s8(int8x16x4_t a, uint8x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbl1q_s8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL1_I]]
 //
 int8x16_t test_vqtbl1q_s8(int8x16_t a, int8x16_t b) {
@@ -221,7 +221,7 @@ int8x16_t test_vqtbl1q_s8(int8x16_t a, int8x16_t b) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X2_T]], %struct.int8x16x2_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL2_I]]
 //
 int8x16_t test_vqtbl2q_s8(int8x16x2_t a, int8x16_t b) {
@@ -248,7 +248,7 @@ int8x16_t test_vqtbl2q_s8(int8x16x2_t a, int8x16_t b) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X3_T]], %struct.int8x16x3_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL3_I]]
 //
 int8x16_t test_vqtbl3q_s8(int8x16x3_t a, int8x16_t b) {
@@ -278,7 +278,7 @@ int8x16_t test_vqtbl3q_s8(int8x16x3_t a, int8x16_t b) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X4_T]], %struct.int8x16x4_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL4_I]]
 //
 int8x16_t test_vqtbl4q_s8(int8x16x4_t a, int8x16_t b) {
@@ -289,7 +289,7 @@ int8x16_t test_vqtbl4q_s8(int8x16x4_t a, int8x16_t b) {
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]], <8 x i8> noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
 // CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], [[A]]
@@ -320,7 +320,7 @@ int8x8_t test_vtbx1_s8(int8x8_t a, int8x8_t b, int8x8_t c) {
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <8 x i8>], [2 x <8 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX2_I]], align 8
 // CHECK-NEXT:    [[VTBX1_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBX13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX1_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX1_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX13_I]]
 //
 int8x8_t test_vtbx2_s8(int8x8_t a, int8x8x2_t b, int8x8_t c) {
@@ -349,7 +349,7 @@ int8x8_t test_vtbx2_s8(int8x8_t a, int8x8x2_t b, int8x8_t c) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX4_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i8>
 // CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i8> [[TMP5]], [[A]]
@@ -387,7 +387,7 @@ int8x8_t test_vtbx3_s8(int8x8_t a, int8x8x3_t b, int8x8_t c) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX6_I]], align 8
 // CHECK-NEXT:    [[VTBX2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBX27_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> [[TMP4]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBX28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX2_I]], <16 x i8> [[VTBX27_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX2_I]], <16 x i8> [[VTBX27_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX28_I]]
 //
 int8x8_t test_vtbx4_s8(int8x8_t a, int8x8x4_t b, int8x8_t c) {
@@ -397,7 +397,7 @@ int8x8_t test_vtbx4_s8(int8x8_t a, int8x8x4_t b, int8x8_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbx1_s8
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]], <8 x i8> noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[B]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[B]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX1_I]]
 //
 int8x8_t test_vqtbx1_s8(int8x8_t a, int8x16_t b, uint8x8_t c) {
@@ -421,7 +421,7 @@ int8x8_t test_vqtbx1_s8(int8x8_t a, int8x16_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X2_T]], %struct.int8x16x2_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX2_I]]
 //
 int8x8_t test_vqtbx2_s8(int8x8_t a, int8x16x2_t b, uint8x8_t c) {
@@ -448,7 +448,7 @@ int8x8_t test_vqtbx2_s8(int8x8_t a, int8x16x2_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X3_T]], %struct.int8x16x3_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX3_I]]
 //
 int8x8_t test_vqtbx3_s8(int8x8_t a, int8x16x3_t b, uint8x8_t c) {
@@ -478,7 +478,7 @@ int8x8_t test_vqtbx3_s8(int8x8_t a, int8x16x3_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X4_T]], %struct.int8x16x4_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX4_I]]
 //
 int8x8_t test_vqtbx4_s8(int8x8_t a, int8x16x4_t b, uint8x8_t c) {
@@ -488,7 +488,7 @@ int8x8_t test_vqtbx4_s8(int8x8_t a, int8x16x4_t b, uint8x8_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbx1q_s8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]], <16 x i8> noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX1_I]]
 //
 int8x16_t test_vqtbx1q_s8(int8x16_t a, int8x16_t b, uint8x16_t c) {
@@ -512,7 +512,7 @@ int8x16_t test_vqtbx1q_s8(int8x16_t a, int8x16_t b, uint8x16_t c) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X2_T]], %struct.int8x16x2_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX2_I]]
 //
 int8x16_t test_vqtbx2q_s8(int8x16_t a, int8x16x2_t b, int8x16_t c) {
@@ -539,7 +539,7 @@ int8x16_t test_vqtbx2q_s8(int8x16_t a, int8x16x2_t b, int8x16_t c) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X3_T]], %struct.int8x16x3_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX3_I]]
 //
 int8x16_t test_vqtbx3q_s8(int8x16_t a, int8x16x3_t b, int8x16_t c) {
@@ -569,7 +569,7 @@ int8x16_t test_vqtbx3q_s8(int8x16_t a, int8x16x3_t b, int8x16_t c) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_INT8X16X4_T]], %struct.int8x16x4_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX4_I]]
 //
 int8x16_t test_vqtbx4q_s8(int8x16_t a, int8x16x4_t b, int8x16_t c) {
@@ -580,7 +580,7 @@ int8x16_t test_vqtbx4q_s8(int8x16_t a, int8x16x4_t b, int8x16_t c) {
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL11_I]]
 //
 uint8x8_t test_vtbl1_u8(uint8x8_t a, uint8x8_t b) {
@@ -590,7 +590,7 @@ uint8x8_t test_vtbl1_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbl1_u8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[A]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[A]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL1_I]]
 //
 uint8x8_t test_vqtbl1_u8(uint8x16_t a, uint8x8_t b) {
@@ -615,7 +615,7 @@ uint8x8_t test_vqtbl1_u8(uint8x16_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <8 x i8>], [2 x <8 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX2_I]], align 8
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL13_I]]
 //
 uint8x8_t test_vtbl2_u8(uint8x8x2_t a, uint8x8_t b) {
@@ -639,7 +639,7 @@ uint8x8_t test_vtbl2_u8(uint8x8x2_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X2_T]], %struct.uint8x16x2_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL2_I]]
 //
 uint8x8_t test_vqtbl2_u8(uint8x16x2_t a, uint8x8_t b) {
@@ -668,7 +668,7 @@ uint8x8_t test_vqtbl2_u8(uint8x16x2_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX4_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL26_I]]
 //
 uint8x8_t test_vtbl3_u8(uint8x8x3_t a, uint8x8_t b) {
@@ -695,7 +695,7 @@ uint8x8_t test_vtbl3_u8(uint8x8x3_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X3_T]], %struct.uint8x16x3_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL3_I]]
 //
 uint8x8_t test_vqtbl3_u8(uint8x16x3_t a, uint8x8_t b) {
@@ -727,7 +727,7 @@ uint8x8_t test_vqtbl3_u8(uint8x16x3_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX6_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL27_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> [[TMP4]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL27_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL27_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL28_I]]
 //
 uint8x8_t test_vtbl4_u8(uint8x8x4_t a, uint8x8_t b) {
@@ -757,7 +757,7 @@ uint8x8_t test_vtbl4_u8(uint8x8x4_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X4_T]], %struct.uint8x16x4_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL4_I]]
 //
 uint8x8_t test_vqtbl4_u8(uint8x16x4_t a, uint8x8_t b) {
@@ -767,7 +767,7 @@ uint8x8_t test_vqtbl4_u8(uint8x16x4_t a, uint8x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbl1q_u8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL1_I]]
 //
 uint8x16_t test_vqtbl1q_u8(uint8x16_t a, uint8x16_t b) {
@@ -791,7 +791,7 @@ uint8x16_t test_vqtbl1q_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X2_T]], %struct.uint8x16x2_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL2_I]]
 //
 uint8x16_t test_vqtbl2q_u8(uint8x16x2_t a, uint8x16_t b) {
@@ -818,7 +818,7 @@ uint8x16_t test_vqtbl2q_u8(uint8x16x2_t a, uint8x16_t b) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X3_T]], %struct.uint8x16x3_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL3_I]]
 //
 uint8x16_t test_vqtbl3q_u8(uint8x16x3_t a, uint8x16_t b) {
@@ -848,7 +848,7 @@ uint8x16_t test_vqtbl3q_u8(uint8x16x3_t a, uint8x16_t b) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X4_T]], %struct.uint8x16x4_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL4_I]]
 //
 uint8x16_t test_vqtbl4q_u8(uint8x16x4_t a, uint8x16_t b) {
@@ -859,7 +859,7 @@ uint8x16_t test_vqtbl4q_u8(uint8x16x4_t a, uint8x16_t b) {
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]], <8 x i8> noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
 // CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], [[A]]
@@ -890,7 +890,7 @@ uint8x8_t test_vtbx1_u8(uint8x8_t a, uint8x8_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <8 x i8>], [2 x <8 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX2_I]], align 8
 // CHECK-NEXT:    [[VTBX1_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBX13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX1_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX1_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX13_I]]
 //
 uint8x8_t test_vtbx2_u8(uint8x8_t a, uint8x8x2_t b, uint8x8_t c) {
@@ -919,7 +919,7 @@ uint8x8_t test_vtbx2_u8(uint8x8_t a, uint8x8x2_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX4_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i8>
 // CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i8> [[TMP5]], [[A]]
@@ -957,7 +957,7 @@ uint8x8_t test_vtbx3_u8(uint8x8_t a, uint8x8x3_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX6_I]], align 8
 // CHECK-NEXT:    [[VTBX2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBX27_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> [[TMP4]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBX28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX2_I]], <16 x i8> [[VTBX27_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX2_I]], <16 x i8> [[VTBX27_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX28_I]]
 //
 uint8x8_t test_vtbx4_u8(uint8x8_t a, uint8x8x4_t b, uint8x8_t c) {
@@ -967,7 +967,7 @@ uint8x8_t test_vtbx4_u8(uint8x8_t a, uint8x8x4_t b, uint8x8_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbx1_u8
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]], <8 x i8> noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[B]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[B]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX1_I]]
 //
 uint8x8_t test_vqtbx1_u8(uint8x8_t a, uint8x16_t b, uint8x8_t c) {
@@ -991,7 +991,7 @@ uint8x8_t test_vqtbx1_u8(uint8x8_t a, uint8x16_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X2_T]], %struct.uint8x16x2_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX2_I]]
 //
 uint8x8_t test_vqtbx2_u8(uint8x8_t a, uint8x16x2_t b, uint8x8_t c) {
@@ -1018,7 +1018,7 @@ uint8x8_t test_vqtbx2_u8(uint8x8_t a, uint8x16x2_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X3_T]], %struct.uint8x16x3_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX3_I]]
 //
 uint8x8_t test_vqtbx3_u8(uint8x8_t a, uint8x16x3_t b, uint8x8_t c) {
@@ -1048,7 +1048,7 @@ uint8x8_t test_vqtbx3_u8(uint8x8_t a, uint8x16x3_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X4_T]], %struct.uint8x16x4_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX4_I]]
 //
 uint8x8_t test_vqtbx4_u8(uint8x8_t a, uint8x16x4_t b, uint8x8_t c) {
@@ -1058,7 +1058,7 @@ uint8x8_t test_vqtbx4_u8(uint8x8_t a, uint8x16x4_t b, uint8x8_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbx1q_u8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]], <16 x i8> noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX1_I]]
 //
 uint8x16_t test_vqtbx1q_u8(uint8x16_t a, uint8x16_t b, uint8x16_t c) {
@@ -1082,7 +1082,7 @@ uint8x16_t test_vqtbx1q_u8(uint8x16_t a, uint8x16_t b, uint8x16_t c) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X2_T]], %struct.uint8x16x2_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX2_I]]
 //
 uint8x16_t test_vqtbx2q_u8(uint8x16_t a, uint8x16x2_t b, uint8x16_t c) {
@@ -1109,7 +1109,7 @@ uint8x16_t test_vqtbx2q_u8(uint8x16_t a, uint8x16x2_t b, uint8x16_t c) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X3_T]], %struct.uint8x16x3_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX3_I]]
 //
 uint8x16_t test_vqtbx3q_u8(uint8x16_t a, uint8x16x3_t b, uint8x16_t c) {
@@ -1139,7 +1139,7 @@ uint8x16_t test_vqtbx3q_u8(uint8x16_t a, uint8x16x3_t b, uint8x16_t c) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_UINT8X16X4_T]], %struct.uint8x16x4_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX4_I]]
 //
 uint8x16_t test_vqtbx4q_u8(uint8x16_t a, uint8x16x4_t b, uint8x16_t c) {
@@ -1150,7 +1150,7 @@ uint8x16_t test_vqtbx4q_u8(uint8x16_t a, uint8x16x4_t b, uint8x16_t c) {
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL11_I]]
 //
 poly8x8_t test_vtbl1_p8(poly8x8_t a, uint8x8_t b) {
@@ -1160,7 +1160,7 @@ poly8x8_t test_vtbl1_p8(poly8x8_t a, uint8x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbl1_p8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[A]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[A]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL1_I]]
 //
 poly8x8_t test_vqtbl1_p8(poly8x16_t a, uint8x8_t b) {
@@ -1185,7 +1185,7 @@ poly8x8_t test_vqtbl1_p8(poly8x16_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <8 x i8>], [2 x <8 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX2_I]], align 8
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL13_I]]
 //
 poly8x8_t test_vtbl2_p8(poly8x8x2_t a, uint8x8_t b) {
@@ -1209,7 +1209,7 @@ poly8x8_t test_vtbl2_p8(poly8x8x2_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X2_T]], %struct.poly8x16x2_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL2_I]]
 //
 poly8x8_t test_vqtbl2_p8(poly8x16x2_t a, uint8x8_t b) {
@@ -1238,7 +1238,7 @@ poly8x8_t test_vqtbl2_p8(poly8x16x2_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX4_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL26_I]]
 //
 poly8x8_t test_vtbl3_p8(poly8x8x3_t a, uint8x8_t b) {
@@ -1265,7 +1265,7 @@ poly8x8_t test_vtbl3_p8(poly8x8x3_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X3_T]], %struct.poly8x16x3_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL3_I]]
 //
 poly8x8_t test_vqtbl3_p8(poly8x16x3_t a, uint8x8_t b) {
@@ -1297,7 +1297,7 @@ poly8x8_t test_vqtbl3_p8(poly8x16x3_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX6_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL27_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> [[TMP4]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL27_I]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL27_I]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL28_I]]
 //
 poly8x8_t test_vtbl4_p8(poly8x8x4_t a, uint8x8_t b) {
@@ -1327,7 +1327,7 @@ poly8x8_t test_vtbl4_p8(poly8x8x4_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X4_T]], %struct.poly8x16x4_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[B]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBL4_I]]
 //
 poly8x8_t test_vqtbl4_p8(poly8x16x4_t a, uint8x8_t b) {
@@ -1337,7 +1337,7 @@ poly8x8_t test_vqtbl4_p8(poly8x16x4_t a, uint8x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbl1q_p8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL1_I]]
 //
 poly8x16_t test_vqtbl1q_p8(poly8x16_t a, uint8x16_t b) {
@@ -1361,7 +1361,7 @@ poly8x16_t test_vqtbl1q_p8(poly8x16_t a, uint8x16_t b) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X2_T]], %struct.poly8x16x2_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL2_I]]
 //
 poly8x16_t test_vqtbl2q_p8(poly8x16x2_t a, uint8x16_t b) {
@@ -1388,7 +1388,7 @@ poly8x16_t test_vqtbl2q_p8(poly8x16x2_t a, uint8x16_t b) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X3_T]], %struct.poly8x16x3_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL3_I]]
 //
 poly8x16_t test_vqtbl3q_p8(poly8x16x3_t a, uint8x16_t b) {
@@ -1418,7 +1418,7 @@ poly8x16_t test_vqtbl3q_p8(poly8x16x3_t a, uint8x16_t b) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X4_T]], %struct.poly8x16x4_t* [[__P0_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[B]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBL4_I]]
 //
 poly8x16_t test_vqtbl4q_p8(poly8x16x4_t a, uint8x16_t b) {
@@ -1429,7 +1429,7 @@ poly8x16_t test_vqtbl4q_p8(poly8x16x4_t a, uint8x16_t b) {
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <8 x i8> noundef [[B:%.*]], <8 x i8> noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
 // CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], [[A]]
@@ -1460,7 +1460,7 @@ poly8x8_t test_vtbx1_p8(poly8x8_t a, poly8x8_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <8 x i8>], [2 x <8 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX2_I]], align 8
 // CHECK-NEXT:    [[VTBX1_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBX13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX1_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX13_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX1_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX13_I]]
 //
 poly8x8_t test_vtbx2_p8(poly8x8_t a, poly8x8x2_t b, uint8x8_t c) {
@@ -1489,7 +1489,7 @@ poly8x8_t test_vtbx2_p8(poly8x8_t a, poly8x8x2_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX4_I]], align 8
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i8>
 // CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i8> [[TMP5]], [[A]]
@@ -1527,7 +1527,7 @@ poly8x8_t test_vtbx3_p8(poly8x8_t a, poly8x8x3_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX6_I]], align 8
 // CHECK-NEXT:    [[VTBX2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBX27_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> [[TMP4]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-// CHECK-NEXT:    [[VTBX28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX2_I]], <16 x i8> [[VTBX27_I]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX28_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[VTBX2_I]], <16 x i8> [[VTBX27_I]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX28_I]]
 //
 poly8x8_t test_vtbx4_p8(poly8x8_t a, poly8x8x4_t b, uint8x8_t c) {
@@ -1537,7 +1537,7 @@ poly8x8_t test_vtbx4_p8(poly8x8_t a, poly8x8x4_t b, uint8x8_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbx1_p8
 // CHECK-SAME: (<8 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]], <8 x i8> noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[B]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[A]], <16 x i8> [[B]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX1_I]]
 //
 poly8x8_t test_vqtbx1_p8(poly8x8_t a, uint8x16_t b, uint8x8_t c) {
@@ -1561,7 +1561,7 @@ poly8x8_t test_vqtbx1_p8(poly8x8_t a, uint8x16_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X2_T]], %struct.poly8x16x2_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX2_I]]
 //
 poly8x8_t test_vqtbx2_p8(poly8x8_t a, poly8x16x2_t b, uint8x8_t c) {
@@ -1588,7 +1588,7 @@ poly8x8_t test_vqtbx2_p8(poly8x8_t a, poly8x16x2_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X3_T]], %struct.poly8x16x3_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX3_I]]
 //
 poly8x8_t test_vqtbx3_p8(poly8x8_t a, poly8x16x3_t b, uint8x8_t c) {
@@ -1618,7 +1618,7 @@ poly8x8_t test_vqtbx3_p8(poly8x8_t a, poly8x16x3_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X4_T]], %struct.poly8x16x4_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> [[C]])
 // CHECK-NEXT:    ret <8 x i8> [[VTBX4_I]]
 //
 poly8x8_t test_vqtbx4_p8(poly8x8_t a, poly8x16x4_t b, uint8x8_t c) {
@@ -1628,7 +1628,7 @@ poly8x8_t test_vqtbx4_p8(poly8x8_t a, poly8x16x4_t b, uint8x8_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vqtbx1q_p8
 // CHECK-SAME: (<16 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]], <16 x i8> noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX1_I]]
 //
 poly8x16_t test_vqtbx1q_p8(poly8x16_t a, uint8x16_t b, uint8x16_t c) {
@@ -1652,7 +1652,7 @@ poly8x16_t test_vqtbx1q_p8(poly8x16_t a, uint8x16_t b, uint8x16_t c) {
 // CHECK-NEXT:    [[VAL1_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X2_T]], %struct.poly8x16x2_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds [2 x <16 x i8>], [2 x <16 x i8>]* [[VAL1_I]], i64 0, i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
-// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX2_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX2_I]]
 //
 poly8x16_t test_vqtbx2q_p8(poly8x16_t a, poly8x16x2_t b, uint8x16_t c) {
@@ -1679,7 +1679,7 @@ poly8x16_t test_vqtbx2q_p8(poly8x16_t a, poly8x16x2_t b, uint8x16_t c) {
 // CHECK-NEXT:    [[VAL3_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X3_T]], %struct.poly8x16x3_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX4_I:%.*]] = getelementptr inbounds [3 x <16 x i8>], [3 x <16 x i8>]* [[VAL3_I]], i64 0, i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
-// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX3_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX3_I]]
 //
 poly8x16_t test_vqtbx3q_p8(poly8x16_t a, poly8x16x3_t b, uint8x16_t c) {
@@ -1709,7 +1709,7 @@ poly8x16_t test_vqtbx3q_p8(poly8x16_t a, poly8x16x3_t b, uint8x16_t c) {
 // CHECK-NEXT:    [[VAL5_I:%.*]] = getelementptr inbounds [[STRUCT_POLY8X16X4_T]], %struct.poly8x16x4_t* [[__P1_I]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [4 x <16 x i8>], [4 x <16 x i8>]* [[VAL5_I]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
-// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VTBX4_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> [[A]], <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[C]])
 // CHECK-NEXT:    ret <16 x i8> [[VTBX4_I]]
 //
 poly8x16_t test_vqtbx4q_p8(poly8x16_t a, poly8x16x4_t b, uint8x16_t c) {

@@ -721,7 +721,7 @@ struct S {
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, i32* [[DOTOMP_IV_I]], align 4, !noalias !52
 // CHECK1-NEXT:    store i32 [[TMP24]], i32* [[I_I]], align 4, !noalias !52
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i32, i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !52
-// CHECK1-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]], i32 4) #[[ATTR2]]
+// CHECK1-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]], i32 4)
 // CHECK1-NEXT:    [[TMP27:%.*]] = icmp ne i32 [[TMP26]], 0
 // CHECK1-NEXT:    br i1 [[TMP27]], label [[DOTCANCEL_EXIT_I:%.*]], label [[DOTCANCEL_CONTINUE_I:%.*]]
 // CHECK1:       .cancel.exit.i:
@@ -729,7 +729,7 @@ struct S {
 // CHECK1-NEXT:    br label [[DOTOMP_OUTLINED__9_EXIT:%.*]]
 // CHECK1:       .cancel.continue.i:
 // CHECK1-NEXT:    [[TMP28:%.*]] = load i32, i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !52
-// CHECK1-NEXT:    [[TMP29:%.*]] = call i32 @__kmpc_cancellationpoint(%struct.ident_t* @[[GLOB1]], i32 [[TMP28]], i32 4) #[[ATTR2]]
+// CHECK1-NEXT:    [[TMP29:%.*]] = call i32 @__kmpc_cancellationpoint(%struct.ident_t* @[[GLOB1]], i32 [[TMP28]], i32 4)
 // CHECK1-NEXT:    [[TMP30:%.*]] = icmp ne i32 [[TMP29]], 0
 // CHECK1-NEXT:    br i1 [[TMP30]], label [[DOTCANCEL_EXIT2_I:%.*]], label [[DOTCANCEL_CONTINUE3_I:%.*]]
 // CHECK1:       .cancel.exit2.i:

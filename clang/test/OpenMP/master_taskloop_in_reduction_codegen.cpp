@@ -631,18 +631,18 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP32:%.*]] = load i8*, i8** [[TMP28]], align 8
 // CHECK1-NEXT:    [[TMP33:%.*]] = load i32, i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !14
 // CHECK1-NEXT:    [[TMP34:%.*]] = bitcast i32* [[TMP31]] to i8*
-// CHECK1-NEXT:    [[TMP35:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP33]], i8* [[TMP32]], i8* [[TMP34]]) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP35:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP33]], i8* [[TMP32]], i8* [[TMP34]])
 // CHECK1-NEXT:    [[CONV_I:%.*]] = bitcast i8* [[TMP35]] to i32*
 // CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP22]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP37:%.*]] = load i16*, i16** [[TMP36]], align 8
 // CHECK1-NEXT:    [[TMP38:%.*]] = mul nuw i64 [[TMP24]], 2
 // CHECK1-NEXT:    [[TMP39:%.*]] = udiv exact i64 [[TMP38]], ptrtoint (i16* getelementptr (i16, i16* null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP40:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP33]], i8* bitcast (i64* @{{reduction_size[.].+[.]}}) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP40:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP33]], i8* bitcast (i64* @{{reduction_size[.].+[.]}})
 // CHECK1-NEXT:    [[TMP41:%.*]] = bitcast i8* [[TMP40]] to i64*
 // CHECK1-NEXT:    store i64 [[TMP39]], i64* [[TMP41]], align 8
 // CHECK1-NEXT:    [[TMP42:%.*]] = load i8*, i8** [[TMP29]], align 8
 // CHECK1-NEXT:    [[TMP43:%.*]] = bitcast i16* [[TMP37]] to i8*
-// CHECK1-NEXT:    [[TMP44:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP33]], i8* [[TMP42]], i8* [[TMP43]]) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP44:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP33]], i8* [[TMP42]], i8* [[TMP43]])
 // CHECK1-NEXT:    [[CONV2_I:%.*]] = bitcast i8* [[TMP44]] to i16*
 // CHECK1-NEXT:    [[TMP45:%.*]] = load i64, i64* [[DOTLB__ADDR_I]], align 8, !noalias !14
 // CHECK1-NEXT:    [[CONV3_I:%.*]] = trunc i64 [[TMP45]] to i32
