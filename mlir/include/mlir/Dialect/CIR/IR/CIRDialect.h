@@ -32,6 +32,7 @@ using FuncOp = func::FuncOp;
 
 #include "mlir/Dialect/CIR/IR/CIRAttrs.h"
 #include "mlir/Dialect/CIR/IR/CIROpsDialect.h.inc"
+#include "mlir/Dialect/CIR/IR/CIROpsEnums.h"
 #include "mlir/Dialect/CIR/IR/CIROpsStructs.h.inc"
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 
