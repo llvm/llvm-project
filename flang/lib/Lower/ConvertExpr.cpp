@@ -88,8 +88,12 @@ static llvm::cl::opt<unsigned> clInitialBufferSize(
 // from the "inline" FIR, e.g. it may diagnose out-of-memory conditions
 // during the temporary allocation whereas the inline implementation
 // relies on AllocMemOp that will silently return null in case
-// there is not enough memory. So it may be a good idea to set
-// this option to false for -O0.
+// there is not enough memory.
+//
+// If it is set to false, then TRANSPOSE will be lowered using
+// a runtime call. If it is set to true, then the lowering is controlled
+// by LoweringOptions::optimizeTranspose bit (see isTransposeOptEnabled
+// function in this file).
 static llvm::cl::opt<bool> optimizeTranspose(
     "opt-transpose",
     llvm::cl::desc("lower transpose without using a runtime call"),
@@ -595,36 +599,50 @@ isIntrinsicModuleProcRef(const Fortran::evaluate::ProcedureRef &procRef) {
          module->name().ToString().find("omp_lib") == std::string::npos;
 }
 
+// Return true if TRANSPOSE should be lowered without a runtime call.
+static bool
+isTransposeOptEnabled(const Fortran::lower::AbstractConverter &converter) {
+  return optimizeTranspose &&
+         converter.getLoweringOptions().getOptimizeTranspose();
+}
+
 // A set of visitors to detect if the given expression
 // is a TRANSPOSE call that should be lowered without using
 // runtime TRANSPOSE implementation.
 template <typename T>
-static bool isOptimizableTranspose(const T &) {
+static bool isOptimizableTranspose(const T &,
+                                   const Fortran::lower::AbstractConverter &) {
   return false;
 }
 
 static bool
-isOptimizableTranspose(const Fortran::evaluate::ProcedureRef &procRef) {
+isOptimizableTranspose(const Fortran::evaluate::ProcedureRef &procRef,
+                       const Fortran::lower::AbstractConverter &converter) {
   const Fortran::evaluate::SpecificIntrinsic *intrin =
       procRef.proc().GetSpecificIntrinsic();
-  return optimizeTranspose && intrin && intrin->name == "transpose";
+  return isTransposeOptEnabled(converter) && intrin &&
+         intrin->name == "transpose";
 }
 
 template <typename T>
 static bool
-isOptimizableTranspose(const Fortran::evaluate::FunctionRef<T> &funcRef) {
+isOptimizableTranspose(const Fortran::evaluate::FunctionRef<T> &funcRef,
+                       const Fortran::lower::AbstractConverter &converter) {
   return isOptimizableTranspose(
-      static_cast<const Fortran::evaluate::ProcedureRef &>(funcRef));
+      static_cast<const Fortran::evaluate::ProcedureRef &>(funcRef), converter);
 }
 
 template <typename T>
-static bool isOptimizableTranspose(Fortran::evaluate::Expr<T> expr) {
+static bool
+isOptimizableTranspose(Fortran::evaluate::Expr<T> expr,
+                       const Fortran::lower::AbstractConverter &converter) {
   // If optimizeTranspose is not enabled, return false right away.
-  if (!optimizeTranspose)
+  if (!isTransposeOptEnabled(converter))
     return false;
 
-  return std::visit([&](const auto &e) { return isOptimizableTranspose(e); },
-                    expr.u);
+  return std::visit(
+      [&](const auto &e) { return isOptimizableTranspose(e, converter); },
+      expr.u);
 }
 
 namespace {
@@ -3289,7 +3307,7 @@ public:
     // is used to not create a new temporary storage.
     if (isScalar(x) ||
         Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(x) ||
-        (isTransformationalRef(x) && !isOptimizableTranspose(x)))
+        (isTransformationalRef(x) && !isOptimizableTranspose(x, converter)))
       return std::visit([&](const auto &e) { return genref(e); }, x.u);
     if (useBoxArg)
       return asArrayArg(x);
@@ -5139,7 +5157,7 @@ private:
                 llvm::Optional<mlir::Type> retTy) {
     mlir::Location loc = getLoc();
 
-    if (isOptimizableTranspose(procRef))
+    if (isOptimizableTranspose(procRef, converter))
       return genTransposeProcRef(procRef);
 
     if (procRef.IsElemental()) {
