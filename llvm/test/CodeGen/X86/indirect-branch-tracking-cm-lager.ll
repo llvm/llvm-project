@@ -31,6 +31,6 @@ entry:
 !llvm.module.flags = !{!0, !1, !2, !3}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 4, !"cf-protection-return", i32 1}
-!2 = !{i32 4, !"cf-protection-branch", i32 1}
+!1 = !{i32 8, !"cf-protection-return", i32 1}
+!2 = !{i32 8, !"cf-protection-branch", i32 1}
 !3 = !{i32 1, !"Code Model", i32 4}
