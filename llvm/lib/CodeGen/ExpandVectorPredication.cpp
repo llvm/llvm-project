@@ -419,7 +419,7 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
     if (IsUnmasked) {
       StoreInst *NewStore =
           Builder.CreateStore(DataParam, PtrParam, /*IsVolatile*/ false);
-      if (AlignOpt.hasValue())
+      if (AlignOpt.has_value())
         NewStore->setAlignment(AlignOpt.getValue());
       NewMemoryInst = NewStore;
     } else
@@ -431,7 +431,7 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
     if (IsUnmasked) {
       LoadInst *NewLoad =
           Builder.CreateLoad(VPI.getType(), PtrParam, /*IsVolatile*/ false);
-      if (AlignOpt.hasValue())
+      if (AlignOpt.has_value())
         NewLoad->setAlignment(AlignOpt.getValue());
       NewMemoryInst = NewLoad;
     } else
