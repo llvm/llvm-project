@@ -48,7 +48,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
     The optional `memory_space` attribute specifies the memory space when
     bufferizing this op. The memory space is inferred from `copy` if specified.
-    If neigher `copy` nor `memory_space` is specified, the default memory space
+    If neither `copy` nor `memory_space` is specified, the default memory space
     is used during bufferization.
 
     Both dense and sparse tensor types are supported. The result of a
@@ -258,11 +258,11 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   ]> {
   let summary = "memref to tensor operation";
   let description = [{
-    Create a tensor from a memref, making an independent copy of the element
+    Create a tensor from a `memref`, making an independent copy of the element
     data. The result value is a tensor whose shape and element type match the
     memref operand.
 
-    The opposite of this op is to_memref. Together, these two ops are
+    The opposite of this op is `to_memref`. Together, these two ops are
     useful for source/target materializations when doing type conversions
     involving tensors and memrefs.
 
@@ -351,15 +351,15 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     Casts a tensor to a memref.
 
     ```mlir
-    // Result type is tensor<4x?xf32>
+    // Result type is memref<4x?xf32, #map0, 42>
     %12 = bufferization.to_memref %10 : memref<4x?xf32, #map0, 42>
     ```
 
-    Note, that mutating the result of the to_memref operation leads to
+    Note, that mutating the result of the `to_memref` operation leads to
     undefined behavior.
 
     This operation is a specialized variant of the built-in
-    unrealized_conversion_cast and is intended for use in the context of
+    `unrealized_conversion_cast` and is intended for use in the context of
     gradual bufferization.
   }];
 
