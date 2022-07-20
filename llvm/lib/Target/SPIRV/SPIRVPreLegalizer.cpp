@@ -39,11 +39,58 @@ public:
 };
 } // namespace
 
-static bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
-  if (MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-      MI.getIntrinsicID() == IntrinsicID)
-    return true;
-  return false;
+static void addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
+  SmallVector<MachineInstr *, 10> ToErase, ToEraseComposites;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_track_constant))
+        continue;
+      ToErase.push_back(&MI);
+      auto *Const =
+          cast<Constant>(cast<ConstantAsMetadata>(
+                             MI.getOperand(3).getMetadata()->getOperand(0))
+                             ->getValue());
+      if (auto *GV = dyn_cast<GlobalValue>(Const)) {
+        Register Reg = GR->find(GV, &MF);
+        if (!Reg.isValid())
+          GR->add(GV, &MF, MI.getOperand(2).getReg());
+        else
+          RegsAlreadyAddedToDT[&MI] = Reg;
+      } else {
+        Register Reg = GR->find(Const, &MF);
+        if (!Reg.isValid()) {
+          if (auto *ConstVec = dyn_cast<ConstantDataVector>(Const)) {
+            auto *BuildVec = MRI.getVRegDef(MI.getOperand(2).getReg());
+            assert(BuildVec &&
+                   BuildVec->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+            for (unsigned i = 0; i < ConstVec->getNumElements(); ++i)
+              GR->add(ConstVec->getElementAsConstant(i), &MF,
+                      BuildVec->getOperand(1 + i).getReg());
+          }
+          GR->add(Const, &MF, MI.getOperand(2).getReg());
+        } else {
+          RegsAlreadyAddedToDT[&MI] = Reg;
+          // This MI is unused and will be removed. If the MI uses
+          // const_composite, it will be unused and should be removed too.
+          assert(MI.getOperand(2).isReg() && "Reg operand is expected");
+          MachineInstr *SrcMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+          if (SrcMI && isSpvIntrinsic(*SrcMI, Intrinsic::spv_const_composite))
+            ToEraseComposites.push_back(SrcMI);
+        }
+      }
+    }
+  }
+  for (MachineInstr *MI : ToErase) {
+    Register Reg = MI->getOperand(2).getReg();
+    if (RegsAlreadyAddedToDT.find(MI) != RegsAlreadyAddedToDT.end())
+      Reg = RegsAlreadyAddedToDT[MI];
+    MRI.replaceRegWith(MI->getOperand(0).getReg(), Reg);
+    MI->eraseFromParent();
+  }
+  for (MachineInstr *MI : ToEraseComposites)
+    MI->eraseFromParent();
 }
 
 static void foldConstantsIntoIntrinsics(MachineFunction &MF) {
@@ -120,6 +167,7 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       }
       case TargetOpcode::G_TRUNC:
       case TargetOpcode::G_ADDRSPACE_CAST:
+      case TargetOpcode::G_PTR_ADD:
       case TargetOpcode::COPY: {
         MachineOperand &Op = MI->getOperand(1);
         MachineInstr *Def = Op.isReg() ? MRI.getVRegDef(Op.getReg()) : nullptr;
@@ -308,6 +356,22 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
         processInstr(MI, MIB, MRI, GR);
     }
   }
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      // We need to rewrite dst types for ASSIGN_TYPE instrs to be able
+      // to perform tblgen'erated selection and we can't do that on Legalizer
+      // as it operates on gMIR only.
+      if (MI.getOpcode() != SPIRV::ASSIGN_TYPE)
+        continue;
+      Register SrcReg = MI.getOperand(1).getReg();
+      if (!isTypeFoldingSupported(MRI.getVRegDef(SrcReg)->getOpcode()))
+        continue;
+      Register DstReg = MI.getOperand(0).getReg();
+      if (MRI.getType(DstReg).isVector())
+        MRI.setRegClass(DstReg, &SPIRV::IDRegClass);
+      MRI.setType(DstReg, LLT::scalar(32));
+    }
+  }
 }
 
 static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -421,6 +485,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
   GR->setCurrentFunc(MF);
   MachineIRBuilder MIB(MF);
+  addConstantsToTrack(MF, GR);
   foldConstantsIntoIntrinsics(MF);
   insertBitcasts(MF, GR, MIB);
   generateAssignInstrs(MF, GR, MIB);
