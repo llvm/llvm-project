@@ -160,10 +160,10 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::partial_sort_copy(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::partition(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition_copy(first, last, first2, last2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition_copy(a, first2, last2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition_point(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partition_point(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partition_copy(first, last, first2, last2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partition_copy(a, first2, last2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partition_point(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partition_point(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::pop_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::pop_heap(a, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::prev_permutation(first, last, Less(), Proj(&copies)); assert(copies == 0);
