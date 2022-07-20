@@ -1219,4 +1219,47 @@ def SelectOp : Arith_Op<"select", [
   let hasCustomAssemblyFormat = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// DelinearizeIndexOp
+//===----------------------------------------------------------------------===//
+
+def DelinearizeIndexOp : Op<Arithmetic_Dialect, "delinearize_index",
+    [NoSideEffect]> {
+  let summary = "delinearize an index";
+  let description = [{
+    The `arith.delinearize_index` operation takes a single index value and
+    calculates the multi-index according to the given basis.
+
+    Example:
+
+    ```
+    %indices:3 = arith.delinearize_index %linear_index (%1, %2, %3) : index, index, index
+    ```
+
+    In the above example, `%indices:3` conceptually holds the following:
+
+    ```
+    %v1 = arith.muli %1, %2 : index
+    %indices#0 = floorDiv(%linear_index , %v1)
+    %indices#1 = floorDiv(remander(%linear_index , %v1), %3)
+    %indices#2 = remainder(remainder(%linear_idnex, %v1), %3)
+    ```
+  }];
+
+  let arguments = (ins Index:$linear_index, Variadic<Index>:$basis);
+  let results = (outs Variadic<Index>:$multi_index);
+
+  let assemblyFormat = [{
+    $linear_index `(` $basis `)` attr-dict `:` type($multi_index)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis)>
+  ];
+
+  let hasVerifier = 1;
+}
+
+
+
 #endif // ARITHMETIC_OPS

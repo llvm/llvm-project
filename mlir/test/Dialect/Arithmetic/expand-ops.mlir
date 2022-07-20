@@ -230,3 +230,24 @@ func.func @minui(%a: i32, %b: i32) -> i32 {
 }
 // CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32)
 // CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i32
+
+// -----
+
+// CHECK-LABEL: @static_basis
+//  CHECK-SAME:    (%[[IDX:.+]]: index)
+//       CHECK:   arith.constant
+//       CHECK:   arith.constant
+//   CHECK-DAG:   %[[c224:.+]] = arith.constant 224 : index
+//   CHECK-DAG:   %[[c50176:.+]] = arith.constant 50176 : index
+//       CHECK:   %[[N:.+]] = arith.divui %[[IDX]], %[[c50176]] : index
+//       CHECK:   %[[RES:.+]] = arith.remui %[[IDX]], %[[c50176]] : index
+//       CHECK:   %[[P:.+]] = arith.divui %[[RES]], %[[c224]] : index
+//       CHECK:   %[[Q:.+]] = arith.remui %[[RES]], %[[c224]] : index
+//       CHECK:   return %[[N]], %[[P]], %[[Q]]
+func.func @static_basis(%linear_index: index) -> (index, index, index) {
+  %b0 = arith.constant 16 : index
+  %b1 = arith.constant 224 : index
+  %b2 = arith.constant 224 : index
+  %1:3 = arith.delinearize_index %linear_index (%b0, %b1, %b2) : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}

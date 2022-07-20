@@ -721,3 +721,19 @@ func.func @func() {
 
   %x = arith.constant 1 : i32
 }
+
+// -----
+
+func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
+  // expected-error@+1 {{'arith.delinearize_index' op should return an index for each basis element}}
+  %1 = arith.delinearize_index %idx (%basis0, %basis1) : index
+  return
+}
+
+// -----
+
+func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
+  // expected-error@+1 {{'arith.delinearize_index' op basis should not be empty}}
+  arith.delinearize_index %idx () : index
+  return
+}
