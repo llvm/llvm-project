@@ -307,6 +307,7 @@ END-SCRIPT
 #include <__format/buffer.h> // expected-error@*:* {{use of private header from outside its module: '__format/buffer.h'}}
 #include <__format/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__format/concepts.h'}}
 #include <__format/enable_insertable.h> // expected-error@*:* {{use of private header from outside its module: '__format/enable_insertable.h'}}
+#include <__format/extended_grapheme_cluster_table.h> // expected-error@*:* {{use of private header from outside its module: '__format/extended_grapheme_cluster_table.h'}}
 #include <__format/format_arg.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_arg.h'}}
 #include <__format/format_arg_store.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_arg_store.h'}}
 #include <__format/format_args.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_args.h'}}
@@ -326,6 +327,7 @@ END-SCRIPT
 #include <__format/formatter_pointer.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_pointer.h'}}
 #include <__format/formatter_string.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_string.h'}}
 #include <__format/parser_std_format_spec.h> // expected-error@*:* {{use of private header from outside its module: '__format/parser_std_format_spec.h'}}
+#include <__format/unicode.h> // expected-error@*:* {{use of private header from outside its module: '__format/unicode.h'}}
 #include <__functional/binary_function.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binary_function.h'}}
 #include <__functional/binary_negate.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binary_negate.h'}}
 #include <__functional/bind.h> // expected-error@*:* {{use of private header from outside its module: '__functional/bind.h'}}

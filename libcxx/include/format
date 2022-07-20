@@ -157,6 +157,7 @@ namespace std {
 #include <__format/formatter_pointer.h>
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
+#include <__format/unicode.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/incrementable_traits.h>
 #include <__variant/monostate.h>

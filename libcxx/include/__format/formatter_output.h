@@ -17,6 +17,7 @@
 #include <__config>
 #include <__format/formatter.h>
 #include <__format/parser_std_format_spec.h>
+#include <__format/unicode.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstddef>
@@ -59,8 +60,8 @@ struct _LIBCPP_TYPE_VIS __padding_size_result {
 _LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
 __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
   _LIBCPP_ASSERT(__width > __size, "don't call this function when no padding is required");
-  _LIBCPP_ASSERT(__align != __format_spec::__alignment::__zero_padding,
-                 "the caller should have handled the zero-padding");
+  _LIBCPP_ASSERT(
+      __align != __format_spec::__alignment::__zero_padding, "the caller should have handled the zero-padding");
 
   size_t __fill = __width - __size;
   switch (__align) {
@@ -75,7 +76,7 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
     // __before = floor(__fill, 2);
     // __after = ceil(__fill, 2);
     size_t __before = __fill / 2;
-    size_t __after = __fill - __before;
+    size_t __after  = __fill - __before;
     return {__before, __after};
   }
   case __format_spec::__alignment::__default:
@@ -173,10 +174,12 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
 /// conversion, which means the [\a __first, \a __last) always contains elements
 /// of the type \c char.
 template <class _CharT, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto __write(const _CharT* __first, const _CharT* __last,
-                                   output_iterator<const _CharT&> auto __out_it,
-                                   __format_spec::__parsed_specifications<_ParserCharT> __specs, ptrdiff_t __size)
-    -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto __write(
+    const _CharT* __first,
+    const _CharT* __last,
+    output_iterator<const _CharT&> auto __out_it,
+    __format_spec::__parsed_specifications<_ParserCharT> __specs,
+    ptrdiff_t __size) -> decltype(__out_it) {
   _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
 
   if (__size >= __specs.__width_)
@@ -189,6 +192,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write(const _CharT* __first, const _CharT* __last,
 }
 
 /// \overload
+///
 /// Calls the function above where \a __size = \a __last - \a __first.
 template <class _CharT, class _ParserCharT>
 _LIBCPP_HIDE_FROM_ABI auto __write(const _CharT* __first, const _CharT* __last,
@@ -243,77 +247,56 @@ _LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
   return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 
-#  ifndef _LIBCPP_HAS_NO_UNICODE
+/// Writes a string using format's width estimation algorithm.
+///
+/// \pre !__specs.__has_precision()
+///
+/// \note When \c _LIBCPP_HAS_NO_UNICODE is defined the function assumes the
+/// input is ASCII.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __write_unicode_no_precision(basic_string_view<_CharT> __str,
-                                                        output_iterator<const _CharT&> auto __out_it,
-                                                        __format_spec::__parsed_specifications<_CharT> __specs)
-    -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
+    basic_string_view<_CharT> __str,
+    output_iterator<const _CharT&> auto __out_it,
+    __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+  _LIBCPP_ASSERT(!__specs.__has_precision(), "use __write_string");
 
-  _LIBCPP_ASSERT(!__specs.__has_precision(), "use __write_unicode");
   // No padding -> copy the string
   if (!__specs.__has_width())
     return _VSTD::copy(__str.begin(), __str.end(), _VSTD::move(__out_it));
 
-  // Non Unicode part larger than width -> copy the string
-  auto __last = __format_spec::__detail::__estimate_column_width_fast(__str.begin(), __str.end());
-  ptrdiff_t __size = __last - __str.begin();
-  if (__size >= __specs.__width_)
-    return _VSTD::copy(__str.begin(), __str.end(), _VSTD::move(__out_it));
-
-  // Is there a non Unicode part?
-  if (__last != __str.end()) {
-    // Non Unicode and Unicode part larger than width -> copy the string
-    __format_spec::__detail::__column_width_result __column_width =
-        __format_spec::__detail::__estimate_column_width(__last, __str.end(), __specs.__width_);
-    __size += __column_width.__width; // Note this new size is used when __size < __specs.__width_
-    if (__size >= __specs.__width_)
-      return _VSTD::copy(__str.begin(), __str.end(), _VSTD::move(__out_it));
-  }
+  // Note when the estimated width is larger than size there's no padding. So
+  // there's no reason to get the real size when the estimate is larger than or
+  // equal to the minimum field width.
+  size_t __size =
+      __format_spec::__estimate_column_width(__str, __specs.__width_, __format_spec::__column_width_rounding::__up)
+          .__width_;
 
   return __formatter::__write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __size);
 }
-#  endif
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __write_unicode(basic_string_view<_CharT> __str,
-                                           output_iterator<const _CharT&> auto __out_it,
-                                           __format_spec::__parsed_specifications<_CharT> __specs)
-    -> decltype(__out_it) {
-#  ifndef _LIBCPP_HAS_NO_UNICODE
+_LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __precision_) {
+  __format_spec::__column_width_result<_CharT> __result =
+      __format_spec::__estimate_column_width(__str, __precision_, __format_spec::__column_width_rounding::__down);
+  __str = basic_string_view<_CharT>{__str.begin(), __result.__last_};
+  return __result.__width_;
+}
+
+/// Writes a string using format's width estimation algorithm.
+///
+/// \note When \c _LIBCPP_HAS_NO_UNICODE is defined the function assumes the
+/// input is ASCII.
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI auto __write_string(
+    basic_string_view<_CharT> __str,
+    output_iterator<const _CharT&> auto __out_it,
+    __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   if (!__specs.__has_precision())
-    return __formatter::__write_unicode_no_precision(__str, _VSTD::move(__out_it), __specs);
+    return __formatter::__write_string_no_precision(__str, _VSTD::move(__out_it), __specs);
 
-  // Non unicode part larger than precision -> truncate the output and use the normal write operation.
-  auto __last = __format_spec::__detail::__estimate_column_width_fast(__str.begin(), __str.end());
-  ptrdiff_t __size = __last - __str.begin();
-  if (__size >= __specs.__precision_)
-    return __formatter::__write(__str.begin(), __str.begin() + __specs.__precision_, _VSTD::move(__out_it), __specs,
-                                __specs.__precision_);
+  int __size = __formatter::__truncate(__str, __specs.__precision_);
 
-  // No non Unicode part, implies __size <  __specs.__precision_ -> use normal write operation
-  if (__last == __str.end())
-    return __formatter::__write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __str.size());
-
-  __format_spec::__detail::__column_width_result __column_width =
-      __format_spec::__detail::__estimate_column_width(__last, __str.end(), __specs.__precision_ - __size);
-  __size += __column_width.__width;
-  // Truncate the output
-  if (__column_width.__ptr != __str.end())
-    __str.remove_suffix(__str.end() - __column_width.__ptr);
-
-  return __formatter::__write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __size);
-
-#  else
-  if (__specs.__has_precision()) {
-    ptrdiff_t __size = __str.size();
-    if (__size > __specs.__precision_)
-      return __formatter::__write(__str.begin(), __str.begin() + __specs.__precision_, _VSTD::move(__out_it), __specs,
-                                  __specs.__precision_);
-  }
-  return __formatter::__write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __str.size());
-
-#  endif
+  return __write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __size);
 }
 
 } // namespace __formatter
