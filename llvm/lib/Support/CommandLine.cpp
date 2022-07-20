@@ -2382,7 +2382,7 @@ protected:
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
       for (auto &Cat : Opt->Categories) {
-        assert(find(SortedCategories, Cat) != SortedCategories.end() &&
+        assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
       }
