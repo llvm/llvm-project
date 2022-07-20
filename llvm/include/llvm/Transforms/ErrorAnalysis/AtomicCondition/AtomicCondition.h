@@ -550,7 +550,7 @@ void fACStoreResult() {
 
   long unsigned int RecordsStored = 0;
 
-  fprintf(FP, "\t\"FP32\": [");
+  fprintf(FP, "\t\"FP32\": [\n");
   int I = 0;
   while ((uint64_t)I < StorageTable->Size) {
     if (StorageTable->FP32ACItems[I].NodeId != -1) {
@@ -585,7 +585,7 @@ void fACStoreResult() {
 
   RecordsStored = 0;
 
-  fprintf(FP, "\t\"FP64\": [");
+  fprintf(FP, "\t\"FP64\": [\n");
   I = 0;
   while ((uint64_t)I < StorageTable->Size) {
     if (StorageTable->FP64ACItems[I].NodeId != -1) {

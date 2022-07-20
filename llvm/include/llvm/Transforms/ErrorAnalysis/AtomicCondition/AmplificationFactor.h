@@ -694,12 +694,12 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           ProcessingQ.Size++;
         }
       }
-
-      // Popping off Front of Q
-      ProcessingQ.Front = ProcessingQ.Front->NextItem;
-      ProcessingQ.Size--;
       break;
     }
+
+    // Popping off Front of Q
+    ProcessingQ.Front = ProcessingQ.Front->NextItem;
+    ProcessingQ.Size--;
     free(WRTNode);
   }
 
@@ -744,7 +744,7 @@ void fAFStoreResult() {
 
   long unsigned int RecordsStored = 0;
 
-  fprintf(FP, "\t\"FP32\": [");
+  fprintf(FP, "\t\"FP32\": [\n");
   int I = 0;
   while ((uint64_t)I < AFResult->FloatAFRecords) {
     if (fprintf(FP,
@@ -771,7 +771,7 @@ void fAFStoreResult() {
 
   RecordsStored = 0;
 
-  fprintf(FP, "\t\"FP64\": [");
+  fprintf(FP, "\t\"FP64\": [\n");
   I = 0;
   while ((uint64_t)I < AFResult->DoubleAFRecords) {
     if (fprintf(FP,
