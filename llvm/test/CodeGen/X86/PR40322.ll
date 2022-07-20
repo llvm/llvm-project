@@ -15,7 +15,7 @@ define void @_Z2ami(i32) #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-MINGW-X86-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-MINGW-X86-NEXT:    .cfi_offset %esi, -12
 ; CHECK-MINGW-X86-NEXT:    .cfi_offset %edi, -8
-; CHECK-MINGW-X86-NEXT:    movb __ZGVZ2amiE2au, %al
+; CHECK-MINGW-X86-NEXT:    movzbl __ZGVZ2amiE2au, %eax
 ; CHECK-MINGW-X86-NEXT:    testb %al, %al
 ; CHECK-MINGW-X86-NEXT:    jne LBB0_4
 ; CHECK-MINGW-X86-NEXT:  # %bb.1: # %init.check

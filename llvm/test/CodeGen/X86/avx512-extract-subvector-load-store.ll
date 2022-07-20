@@ -696,7 +696,7 @@ define void @load_v2i1_broadcast_1_v1i1_store(ptr %a0,ptr %a1) {
 define void @load_v3i1_broadcast_1_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v3i1_broadcast_1_v1i1_store:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movb (%rdi), %al
+; AVX512-NEXT:    movzbl (%rdi), %eax
 ; AVX512-NEXT:    shrb %al
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    testb $1, %al
@@ -711,7 +711,7 @@ define void @load_v3i1_broadcast_1_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v3i1_broadcast_1_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    movb (%rdi), %al
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
 ; AVX512NOTDQ-NEXT:    shrb %al
 ; AVX512NOTDQ-NEXT:    xorl %ecx, %ecx
 ; AVX512NOTDQ-NEXT:    testb $1, %al

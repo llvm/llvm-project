@@ -111,7 +111,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kunpckdq %k1, %k0, %k1
 ; X86-NEXT:    vpbroadcastb %eax, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -136,7 +136,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kunpckdq %k1, %k0, %k1
 ; X86-NEXT:    vpbroadcastb %eax, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl

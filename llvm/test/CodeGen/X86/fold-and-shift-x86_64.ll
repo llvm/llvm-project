@@ -5,7 +5,7 @@ define i8 @t1(ptr %X, i64 %i) {
 ; CHECK-LABEL: t1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andq $-255, %rsi
-; CHECK-NEXT:    movb (%rdi,%rsi,4), %al
+; CHECK-NEXT:    movzbl (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 
 entry:
@@ -20,7 +20,7 @@ define i8 @t2(ptr %X, i64 %i) {
 ; CHECK-LABEL: t2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andq $-14, %rsi
-; CHECK-NEXT:    movb (%rdi,%rsi,4), %al
+; CHECK-NEXT:    movzbl (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 
 entry:
@@ -35,7 +35,7 @@ define i8 @t3(ptr %X, i64 %i) {
 ; CHECK-LABEL: t3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    movb (%rdi,%rax,4), %al
+; CHECK-NEXT:    movzbl (%rdi,%rax,4), %eax
 ; CHECK-NEXT:    retq
 
 entry:
@@ -50,7 +50,7 @@ define i8 @t4(ptr %X, i64 %i) {
 ; CHECK-LABEL: t4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andl $-2, %esi
-; CHECK-NEXT:    movb (%rdi,%rsi,4), %al
+; CHECK-NEXT:    movzbl (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 
 entry:
@@ -65,7 +65,7 @@ define i8 @t5(ptr %X, i64 %i) {
 ; CHECK-LABEL: t5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andl $-250002, %esi # imm = 0xFFFC2F6E
-; CHECK-NEXT:    movb (%rdi,%rsi,4), %al
+; CHECK-NEXT:    movzbl (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 
 entry:
@@ -81,7 +81,7 @@ define i8 @t6(ptr %X, i32 %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    movb (%rdi,%rsi,4), %al
+; CHECK-NEXT:    movzbl (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 entry:
   %tmp2 = shl i32 %i, 2
