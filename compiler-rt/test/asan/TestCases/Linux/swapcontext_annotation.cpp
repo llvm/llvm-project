@@ -146,61 +146,9 @@ int Run(int arg, int mode, char *child_stack) {
   return child_stack[arg];
 }
 
-ucontext_t orig_huge_stack_context;
-ucontext_t child_huge_stack_context;
-
-// There used to be a limitation for stack unpoisoning (size <= 4Mb), check that it's gone.
-const int kHugeStackSize = 1 << 23;
-
-void ChildHugeStack() {
-  __sanitizer_finish_switch_fiber(nullptr, &main_thread_stack,
-                                  &main_thread_stacksize);
-  char x[32] = {0}; // Stack gets poisoned.
-  __sanitizer_start_switch_fiber(nullptr, main_thread_stack,
-                                 main_thread_stacksize);
-  if (swapcontext(&child_huge_stack_context, &orig_huge_stack_context) < 0) {
-    perror("swapcontext");
-    _exit(1);
-  }
-}
-
-void DoRunHugeStack(char *child_stack) {
-  getcontext(&child_huge_stack_context);
-  child_huge_stack_context.uc_stack.ss_sp = child_stack;
-  child_huge_stack_context.uc_stack.ss_size = kHugeStackSize;
-  makecontext(&child_huge_stack_context, (void (*)())ChildHugeStack, 0);
-  void *fake_stack_save;
-  __sanitizer_start_switch_fiber(&fake_stack_save,
-                                 child_huge_stack_context.uc_stack.ss_sp,
-                                 child_huge_stack_context.uc_stack.ss_size);
-  if (swapcontext(&orig_huge_stack_context, &child_huge_stack_context) < 0) {
-    perror("swapcontext");
-    _exit(1);
-  }
-  __sanitizer_finish_switch_fiber(
-      fake_stack_save, (const void **)&child_huge_stack_context.uc_stack.ss_sp,
-      &child_huge_stack_context.uc_stack.ss_size);
-  for (int i = 0; i < kHugeStackSize; ++i) {
-    child_stack[i] = i;
-  }
-}
-
-void RunHugeStack() {
-  const int run_offset = 1 << 14;
-  char *heap = new char[kHugeStackSize + run_offset + 1];
-  DoRunHugeStack(heap);
-  DoRunHugeStack(heap + run_offset);
-  DoRunHugeStack(heap);
-  delete[] heap;
-}
-
 void handler(int sig) { CallNoReturn(); }
 
 int main(int argc, char **argv) {
-  // CHECK: WARNING: ASan doesn't fully support makecontext/swapcontext
-  // CHECK-NOT: ASan is ignoring requested __asan_handle_no_return
-  RunHugeStack();
-
   // set up a signal that will spam and trigger __asan_handle_no_return at
   // tricky moments
   struct sigaction act = {};
@@ -222,6 +170,7 @@ int main(int argc, char **argv) {
   char *heap = new char[kStackSize + 1];
   next_child_stack = new char[kStackSize + 1];
   char stack[kStackSize + 1];
+  // CHECK: WARNING: ASan doesn't fully support makecontext/swapcontext
   int ret = 0;
   // CHECK-NOT: ASan is ignoring requested __asan_handle_no_return
   for (unsigned int i = 0; i < 30; ++i) {
