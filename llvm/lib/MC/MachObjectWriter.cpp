@@ -753,32 +753,27 @@ static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
   llvm_unreachable("Invalid mc version min type");
 }
 
-// Encode addrsig data as symbol indexes in variable length encoding.
-void MachObjectWriter::writeAddrsigSection(MCAssembler &Asm) {
+void MachObjectWriter::populateAddrSigSection(MCAssembler &Asm) {
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
-  MCSection::FragmentListType &fragmentList = AddrSigSection->getFragmentList();
-  if (!fragmentList.size())
-    return;
-
-  assert(fragmentList.size() == 1);
-  MCFragment *pFragment = &*fragmentList.begin();
-  MCDataFragment *pDataFragment = dyn_cast_or_null<MCDataFragment>(pFragment);
-  assert(pDataFragment);
-
-  raw_svector_ostream OS(pDataFragment->getContents());
-  for (const MCSymbol *sym : this->getAddrsigSyms())
-    encodeULEB128(sym->getIndex(), OS);
+  unsigned Log2Size = is64Bit() ? 3 : 2;
+  for (const MCSymbol *S : getAddrsigSyms()) {
+    MachO::any_relocation_info MRE;
+    MRE.r_word0 = 0;
+    MRE.r_word1 = (Log2Size << 25) | (MachO::GENERIC_RELOC_VANILLA << 28);
+    addRelocation(S, AddrSigSection, MRE);
+  }
 }
 
 uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
                                        const MCAsmLayout &Layout) {
   uint64_t StartOffset = W.OS.tell();
 
+  populateAddrSigSection(Asm);
+
   // Compute symbol table information and bind symbol indices.
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
                      UndefinedSymbolData);
-  writeAddrsigSection(Asm);
 
   if (!Asm.CGProfile.empty()) {
     MCSection *CGProfileSection = Asm.getContext().getMachOSection(
