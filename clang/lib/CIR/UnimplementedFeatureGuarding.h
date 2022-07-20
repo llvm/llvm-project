@@ -31,17 +31,7 @@ struct UnimplementedFeature {
 
   // Unhandled global/linkage information.
   static bool unnamedAddr() { return false; }
-
-  static bool isWeakForLinker() { return false; }
-  static bool globalWeakLinkage() { return false; }
-  static bool globalLinkOnceAnyLinkage() { return false; }
-  static bool globalAvailableExternallyLinkage() { return false; }
-  static bool globalCommonLinkage() { return false; }
-  static bool globalIsDiscardableIfUnused() { return false; }
-  static bool globalIsValidLinkage() { return false; }
-  static bool globalIsWeakForLinker() { return false; }
   static bool setComdat() { return false; }
-
   static bool setDSOLocal() { return false; }
   static bool threadLocal() { return false; }
   static bool setDLLStorageClass() { return false; }

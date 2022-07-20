@@ -937,7 +937,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
   // TODO(cir)
   assert(!cir::UnimplementedFeature::threadLocal() && "NYI");
   assert(!cir::UnimplementedFeature::unnamedAddr() && "NYI");
-  assert(!cir::UnimplementedFeature::isWeakForLinker() && "NYI");
+  assert(!mlir::cir::isWeakForLinker(LT) && "NYI");
   assert(!cir::UnimplementedFeature::setDSOLocal() && "NYI");
   return GV;
 }
@@ -1193,17 +1193,20 @@ mlir::cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
     return mlir::cir::GlobalLinkageKind::InternalLinkage;
 
   if (D->hasAttr<WeakAttr>()) {
-    assert(UnimplementedFeature::globalWeakLinkage() && "NYI");
+    if (IsConstantVariable)
+      return mlir::cir::GlobalLinkageKind::WeakODRLinkage;
+    else
+      return mlir::cir::GlobalLinkageKind::WeakAnyLinkage;
   }
 
   if (const auto *FD = D->getAsFunction())
     if (FD->isMultiVersion() && Linkage == GVA_AvailableExternally)
-      assert(UnimplementedFeature::globalLinkOnceAnyLinkage() && "NYI");
+      return mlir::cir::GlobalLinkageKind::LinkOnceAnyLinkage;
 
   // We are guaranteed to have a strong definition somewhere else,
   // so we can use available_externally linkage.
   if (Linkage == GVA_AvailableExternally)
-    assert(UnimplementedFeature::globalAvailableExternallyLinkage() && "NYI");
+    return mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage;
 
   // Note that Apple's kernel linker doesn't support symbol
   // coalescing, so we need to avoid linkonce and weak linkages there.
@@ -1217,7 +1220,9 @@ mlir::cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   // merged with other definitions. c) C++ has the ODR, so we know the
   // definition is dependable.
   if (Linkage == GVA_DiscardableODR)
-    assert(0 && "NYI");
+    return !astCtx.getLangOpts().AppleKext
+               ? mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage
+               : mlir::cir::GlobalLinkageKind::InternalLinkage;
 
   // An explicit instantiation of a template has weak linkage, since
   // explicit instantiations can occur in multiple translation units
@@ -1230,7 +1235,14 @@ mlir::cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   // -fgpu-rdc case, device function calls across multiple TU's are allowed,
   // therefore we need to follow the normal linkage paradigm.
   if (Linkage == GVA_StrongODR) {
-    assert(0 && "NYI");
+    if (getLangOpts().AppleKext)
+      return mlir::cir::GlobalLinkageKind::ExternalLinkage;
+    if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+        !getLangOpts().GPURelocatableDeviceCode)
+      return D->hasAttr<CUDAGlobalAttr>()
+                 ? mlir::cir::GlobalLinkageKind::ExternalLinkage
+                 : mlir::cir::GlobalLinkageKind::InternalLinkage;
+    return mlir::cir::GlobalLinkageKind::WeakODRLinkage;
   }
 
   // C++ doesn't have tentative definitions and thus cannot have common
@@ -1238,14 +1250,14 @@ mlir::cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   if (!getLangOpts().CPlusPlus && isa<VarDecl>(D) &&
       !isVarDeclStrongDefinition(astCtx, *this, cast<VarDecl>(D),
                                  getCodeGenOpts().NoCommon))
-    assert(UnimplementedFeature::globalCommonLinkage() && "NYI");
+    return mlir::cir::GlobalLinkageKind::CommonLinkage;
 
   // selectany symbols are externally visible, so use weak instead of
   // linkonce.  MSVC optimizes away references to const selectany globals, so
   // all definitions should be the same and ODR linkage should be used.
   // http://msdn.microsoft.com/en-us/library/5tkz6s71.aspx
   if (D->hasAttr<SelectAnyAttr>())
-    assert(UnimplementedFeature::globalWeakLinkage() && "NYI");
+    return mlir::cir::GlobalLinkageKind::WeakODRLinkage;
 
   // Otherwise, we have strong external linkage.
   assert(Linkage == GVA_StrongExternal);

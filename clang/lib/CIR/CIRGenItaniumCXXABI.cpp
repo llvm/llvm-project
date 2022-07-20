@@ -259,10 +259,20 @@ static StructorCIRGen getCIRGenToUse(CIRGenModule &CGM,
   auto Linkage = CGM.getFunctionLinkage(AliasDecl);
   (void)Linkage;
 
-  assert(!UnimplementedFeature::globalIsDiscardableIfUnused() && "NYI");
-  // // FIXME: Should we allow available_externally aliases?
-  assert(!UnimplementedFeature::globalIsValidLinkage() && "NYI");
-  assert(!UnimplementedFeature::globalIsWeakForLinker() && "NYI");
+  if (mlir::cir::isDiscardableIfUnused(Linkage))
+    return StructorCIRGen::RAUW;
+
+  // FIXME: Should we allow available_externally aliases?
+  if (!mlir::cir::isValidLinkage(Linkage))
+    return StructorCIRGen::RAUW;
+
+  if (mlir::cir::isWeakForLinker(Linkage)) {
+    // Only ELF and wasm support COMDATs with arbitrary names (C5/D5).
+    if (CGM.getTarget().getTriple().isOSBinFormatELF() ||
+        CGM.getTarget().getTriple().isOSBinFormatWasm())
+      return StructorCIRGen::COMDAT;
+    return StructorCIRGen::Emit;
+  }
 
   return StructorCIRGen::Alias;
 }
