@@ -245,7 +245,7 @@ DEFINE_REAL_PTHREAD_FUNCTIONS
 static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
   // Align to page size.
   uptr PageSize = GetPageSizeCached();
-  uptr bottom = stack & ~(PageSize - 1);
+  uptr bottom = RoundDownTo(stack, PageSize);
   ssize += stack - bottom;
   ssize = RoundUpTo(ssize, PageSize);
   static const uptr kMaxSaneContextStackSize = 1 << 22;  // 4 Mb
