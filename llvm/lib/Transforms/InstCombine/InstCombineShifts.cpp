@@ -566,6 +566,13 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
         return false;
     return true;
   }
+  case Instruction::Mul: {
+    const APInt *MulConst;
+    // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
+    return !IsLeftShift && match(I->getOperand(1), m_APInt(MulConst)) &&
+           MulConst->isNegatedPowerOf2() &&
+           MulConst->countTrailingZeros() == NumBits;
+  }
   }
 }
 
@@ -679,6 +686,17 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
       PN->setIncomingValue(i, getShiftedValue(PN->getIncomingValue(i), NumBits,
                                               isLeftShift, IC, DL));
     return PN;
+  }
+  case Instruction::Mul: {
+    assert(!isLeftShift && "Unexpected shift direction!");
+    auto *Neg = BinaryOperator::CreateNeg(I->getOperand(0));
+    IC.InsertNewInstWith(Neg, *I);
+    unsigned TypeWidth = I->getType()->getScalarSizeInBits();
+    APInt Mask = APInt::getLowBitsSet(TypeWidth, TypeWidth - NumBits);
+    auto *And = BinaryOperator::CreateAnd(Neg,
+                                          ConstantInt::get(I->getType(), Mask));
+    And->takeName(I);
+    return IC.InsertNewInstWith(And, *I);
   }
   }
 }
