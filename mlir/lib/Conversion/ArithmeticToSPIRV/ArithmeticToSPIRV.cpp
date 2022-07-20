@@ -60,7 +60,7 @@ struct RemSIOpGLSLPattern final : public OpConversionPattern<arith::RemSIOp> {
 };
 
 /// Converts arith.remsi to OpenCL SPIR-V ops.
-struct RemSIOpOCLPattern final : public OpConversionPattern<arith::RemSIOp> {
+struct RemSIOpCLPattern final : public OpConversionPattern<arith::RemSIOp> {
   using OpConversionPattern<arith::RemSIOp>::OpConversionPattern;
 
   LogicalResult
@@ -487,13 +487,13 @@ RemSIOpGLSLPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
 }
 
 //===----------------------------------------------------------------------===//
-// RemSIOpOCLPattern
+// RemSIOpCLPattern
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-RemSIOpOCLPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
-                                   ConversionPatternRewriter &rewriter) const {
-  Value result = emulateSignedRemainder<spirv::OCLSAbsOp>(
+RemSIOpCLPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                                  ConversionPatternRewriter &rewriter) const {
+  Value result = emulateSignedRemainder<spirv::CLSAbsOp>(
       op.getLoc(), adaptor.getOperands()[0], adaptor.getOperands()[1],
       adaptor.getOperands()[0], rewriter);
   rewriter.replaceOp(op, result);
@@ -862,7 +862,7 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
-    RemSIOpGLSLPattern, RemSIOpOCLPattern,
+    RemSIOpGLSLPattern, RemSIOpCLPattern,
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,

@@ -301,21 +301,21 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
           typeConverter, patterns.getContext());
 
   // OpenCL patterns
-  patterns.add<Log1pOpPattern<spirv::OCLLogOp>, ExpM1OpPattern<spirv::OCLExpOp>,
-               spirv::ElementwiseOpPattern<math::AbsOp, spirv::OCLFAbsOp>,
-               spirv::ElementwiseOpPattern<math::CeilOp, spirv::OCLCeilOp>,
-               spirv::ElementwiseOpPattern<math::CosOp, spirv::OCLCosOp>,
-               spirv::ElementwiseOpPattern<math::ErfOp, spirv::OCLErfOp>,
-               spirv::ElementwiseOpPattern<math::ExpOp, spirv::OCLExpOp>,
-               spirv::ElementwiseOpPattern<math::FloorOp, spirv::OCLFloorOp>,
-               spirv::ElementwiseOpPattern<math::FmaOp, spirv::OCLFmaOp>,
-               spirv::ElementwiseOpPattern<math::LogOp, spirv::OCLLogOp>,
-               spirv::ElementwiseOpPattern<math::PowFOp, spirv::OCLPowOp>,
-               spirv::ElementwiseOpPattern<math::RoundOp, spirv::OCLRoundOp>,
-               spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::OCLRsqrtOp>,
-               spirv::ElementwiseOpPattern<math::SinOp, spirv::OCLSinOp>,
-               spirv::ElementwiseOpPattern<math::SqrtOp, spirv::OCLSqrtOp>,
-               spirv::ElementwiseOpPattern<math::TanhOp, spirv::OCLTanhOp>>(
+  patterns.add<Log1pOpPattern<spirv::CLLogOp>, ExpM1OpPattern<spirv::CLExpOp>,
+               spirv::ElementwiseOpPattern<math::AbsOp, spirv::CLFAbsOp>,
+               spirv::ElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
+               spirv::ElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
+               spirv::ElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,
+               spirv::ElementwiseOpPattern<math::ExpOp, spirv::CLExpOp>,
+               spirv::ElementwiseOpPattern<math::FloorOp, spirv::CLFloorOp>,
+               spirv::ElementwiseOpPattern<math::FmaOp, spirv::CLFmaOp>,
+               spirv::ElementwiseOpPattern<math::LogOp, spirv::CLLogOp>,
+               spirv::ElementwiseOpPattern<math::PowFOp, spirv::CLPowOp>,
+               spirv::ElementwiseOpPattern<math::RoundOp, spirv::CLRoundOp>,
+               spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::CLRsqrtOp>,
+               spirv::ElementwiseOpPattern<math::SinOp, spirv::CLSinOp>,
+               spirv::ElementwiseOpPattern<math::SqrtOp, spirv::CLSqrtOp>,
+               spirv::ElementwiseOpPattern<math::TanhOp, spirv::CLTanhOp>>(
       typeConverter, patterns.getContext());
 }
 
