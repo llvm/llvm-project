@@ -166,9 +166,6 @@ DEFAULT_PARAMETERS = [
               # to make it link against the static libc++experimental.lib.
               # We can't check for the feature 'msvc' in available_features
               # as those features are added after processing parameters.
-              #
-              # TODO: Switch to using the appropriate experimental compiler flag once
-              #       all compilers we support implement that flag.
               AddFeature('c++experimental'),
               PrependLinkFlag(lambda cfg: '-llibc++experimental' if _isMSVC(cfg) else '-lc++experimental'),
               AddCompileFlag('-D_LIBCPP_ENABLE_EXPERIMENTAL'),
