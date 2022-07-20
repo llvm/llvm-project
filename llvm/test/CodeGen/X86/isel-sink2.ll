@@ -8,7 +8,7 @@ define i8 @test(ptr%P) nounwind {
 ; CHECK-NEXT:    cmpb $0, 4(%eax)
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %F
-; CHECK-NEXT:    movb 7(%eax), %al
+; CHECK-NEXT:    movzbl 7(%eax), %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1: # %TB
 ; CHECK-NEXT:    movb $4, %al

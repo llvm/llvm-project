@@ -18,7 +18,7 @@ declare dso_local void @external(i32)
 define dso_local i32 @test1() nounwind {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb b, %cl
+; X32-NEXT:    movzbl b, %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    incb %al
 ; X32-NEXT:    movb %al, b
@@ -44,12 +44,12 @@ define dso_local i32 @test1() nounwind {
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movb b(%rip), %cl
+; X64-NEXT:    movzbl b(%rip), %ecx
 ; X64-NEXT:    leal 1(%rcx), %eax
 ; X64-NEXT:    movb %al, b(%rip)
 ; X64-NEXT:    incl c(%rip)
 ; X64-NEXT:    sete %dl
-; X64-NEXT:    movb a(%rip), %sil
+; X64-NEXT:    movzbl a(%rip), %esi
 ; X64-NEXT:    leal 1(%rsi), %edi
 ; X64-NEXT:    cmpb %cl, %sil
 ; X64-NEXT:    sete d(%rip)
