@@ -34,22 +34,20 @@ matches that Standard in the library.
   library until the standard has been ratified.
 
 
-Using libc++experimental and ``<experimental/...>``
-===================================================
+Enabling experimental C++ Library features
+==========================================
 
-Libc++ provides implementations of experimental technical specifications
-in a separate library, ``libc++experimental.a``. Users of ``<experimental/...>``
-headers may be required to link ``-lc++experimental``. Note that not all
-vendors ship ``libc++experimental.a``, and as a result, you may not be
-able to use those experimental features.
-
-.. code-block:: bash
-
-  $ clang++ test.cpp -lc++experimental
+Libc++ provides implementations of some experimental features. Experimental features
+are either Technical Specifications (TSes) or official features that were voted to
+the Standard but whose implementation is not complete or stable yet in libc++. Those
+are disabled by default because they are neither API nor ABI stable. However, the
+``_LIBCPP_ENABLE_EXPERIMENTAL`` macro can be defined to turn those features on. Note
+that you will also need to link to the appropriate ``libc++experimental.a`` static
+archive.
 
 .. warning::
   Experimental libraries are Experimental.
-    * The contents of the ``<experimental/...>`` headers and ``libc++experimental.a``
+    * The contents of the ``<experimental/...>`` headers and the associated static
       library will not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
     * When the standardized version of an experimental feature is implemented,

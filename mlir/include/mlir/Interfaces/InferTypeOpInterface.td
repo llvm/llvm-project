@@ -48,6 +48,54 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                     "::llvm::SmallVectorImpl<::mlir::Type>&":$inferredReturnTypes)
     >,
     StaticInterfaceMethod<
+      /*desc=*/[{Refine the return types that an op would generate.
+
+      This method computes the return types as `inferReturnTypes` does but
+      additionally takes the existing result types as input. The existing
+      result types can be checked as part of inference to provide more
+      op-specific error messages as well as part of inference to merge
+      additional information, attributes, during inference. It is called during
+      verification for ops implementing this trait with default behavior
+      reporting mismatch with current and inferred types printed.
+
+      The operands and attributes correspond to those with which an Operation
+      would be created (e.g., as used in Operation::create) and the regions of
+      the op. The method takes an optional location which, if set, will be used
+      to report errors on.
+
+      The return types may be elided or specific elements be null for elements
+      that should just be returned but not verified.
+
+      Be aware that this method is supposed to be called with valid arguments,
+      e.g., operands are verified, or it may result in an undefined behavior.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"refineReturnTypes",
+      /*args=*/(ins "::mlir::MLIRContext *":$context,
+                    "::llvm::Optional<::mlir::Location>":$location,
+                    "::mlir::ValueRange":$operands,
+                    "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::RegionRange":$regions,
+                    "::llvm::SmallVectorImpl<::mlir::Type>&":$returnTypes),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+          llvm::SmallVector<Type, 4> inferredReturnTypes;
+          if (failed(ConcreteOp::inferReturnTypes(context, location, operands,
+                                                  attributes, regions,
+                                                  inferredReturnTypes)))
+            return failure();
+          if (!ConcreteOp::isCompatibleReturnTypes(inferredReturnTypes,
+                                                   returnTypes)) {
+            return emitOptionalError(
+                location, "'", ConcreteOp::getOperationName(),
+                "' op inferred type(s) ", inferredReturnTypes,
+                " are incompatible with return type(s) of operation ",
+                returnTypes);
+          }
+          return success();
+      }]
+    >,
+    StaticInterfaceMethod<
       /*desc=*/"Returns whether two array of types are compatible result types"
                " for an op.",
       /*retTy=*/"bool",

@@ -76,8 +76,8 @@ module {
     vector.print %v2 : vector<32xf64>
 
     // Release the resources.
-    sparse_tensor.release %st : tensor<?x?x?xf64, #ST1>
-    sparse_tensor.release %0  : tensor<?x?x?xf64, #ST2>
+    bufferization.dealloc_tensor %st : tensor<?x?x?xf64, #ST1>
+    bufferization.dealloc_tensor %0  : tensor<?x?x?xf64, #ST2>
     return
   }
 }

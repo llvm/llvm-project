@@ -630,6 +630,15 @@ public:
                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                            bool Tied = true, Value *Final = nullptr);
 
+  /// Generator for the taskgroup construct
+  ///
+  /// \param Loc The location where the taskgroup construct was encountered.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  InsertPointTy createTaskgroup(const LocationDescription &Loc,
+                                InsertPointTy AllocaIP,
+                                BodyGenCallbackTy BodyGenCB);
+
   /// Functions used to generate reductions. Such functions take two Values
   /// representing LHS and RHS of the reduction, respectively, and a reference
   /// to the value that is updated to refer to the reduction result.
