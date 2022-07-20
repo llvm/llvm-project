@@ -706,6 +706,19 @@ enum class KernelProfilingInfo : uint32_t {
   CmdExecTime = 0x1,
 };
 StringRef getKernelProfilingInfoName(KernelProfilingInfo e);
+
+enum class InstructionSet : uint32_t {
+  OpenCL_std = 0,
+  GLSL_std_450 = 1,
+  SPV_AMD_shader_trinary_minmax = 2,
+};
+std::string getExtInstSetName(InstructionSet e);
+
+// TODO: implement other mnemonics.
+enum class Opcode : uint32_t {
+  InBoundsPtrAccessChain = 70,
+  PtrCastToGeneric = 121,
+};
 } // namespace SPIRV
 } // namespace llvm
 

@@ -45,6 +45,14 @@ static size_t getPaddedLen(const StringRef &Str) {
   return (Len % 4 == 0) ? Len : Len + (4 - (Len % 4));
 }
 
+void addStringImm(const StringRef &Str, MCInst &Inst) {
+  const size_t PaddedLen = getPaddedLen(Str);
+  for (unsigned i = 0; i < PaddedLen; i += 4) {
+    // Add an operand for the 32-bits of chars or padding.
+    Inst.addOperand(MCOperand::createImm(convertCharsToWord(Str, i)));
+  }
+}
+
 void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB) {
   const size_t PaddedLen = getPaddedLen(Str);
   for (unsigned i = 0; i < PaddedLen; i += 4) {
@@ -182,6 +190,24 @@ SPIRV::MemorySemantics getMemSemanticsForStorageClass(SPIRV::StorageClass SC) {
   }
 }
 
+SPIRV::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
+  switch (Ord) {
+  case AtomicOrdering::Acquire:
+    return SPIRV::MemorySemantics::Acquire;
+  case AtomicOrdering::Release:
+    return SPIRV::MemorySemantics::Release;
+  case AtomicOrdering::AcquireRelease:
+    return SPIRV::MemorySemantics::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return SPIRV::MemorySemantics::SequentiallyConsistent;
+  case AtomicOrdering::Unordered:
+  case AtomicOrdering::Monotonic:
+  case AtomicOrdering::NotAtomic:
+  default:
+    return SPIRV::MemorySemantics::None;
+  }
+}
+
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *ConstInstr = MRI->getVRegDef(ConstReg);
@@ -200,6 +226,11 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
   assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
+}
+
+bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
+  return MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
+         MI.getIntrinsicID() == IntrinsicID;
 }
 
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
