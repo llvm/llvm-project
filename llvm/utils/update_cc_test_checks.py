@@ -214,6 +214,7 @@ def get_function_body(builder, args, filename, clang_args, extra_commands,
     builder.process_run_line(
             common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output,
             prefixes, False)
+    builder.processed_prefixes(prefixes)
   else:
     print('The clang command line should include -emit-llvm as asm tests '
           'are discouraged in Clang testsuite.', file=sys.stderr)

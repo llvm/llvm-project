@@ -120,6 +120,7 @@ def main():
                                            verbose=ti.args.verbose)
       builder.process_run_line(common.OPT_FUNCTION_RE, common.scrub_body,
               raw_tool_output, prefixes, False)
+      builder.processed_prefixes(prefixes)
 
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
