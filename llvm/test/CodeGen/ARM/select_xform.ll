@@ -529,8 +529,7 @@ define  <2 x i32> @t21(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; CHECK-NEXT:    vmov d16, r2, r3
 ; CHECK-NEXT:    vmov d17, r0, r1
 ; CHECK-NEXT:    vceq.i32 d16, d17, d16
-; CHECK-NEXT:    vmov.i32 d17, #0x1
-; CHECK-NEXT:    veor d16, d16, d17
+; CHECK-NEXT:    vmvn d16, d16
 ; CHECK-NEXT:    vshl.i32 d16, d16, #31
 ; CHECK-NEXT:    vshr.s32 d16, d16, #31
 ; CHECK-NEXT:    vmov r0, r1, d16
