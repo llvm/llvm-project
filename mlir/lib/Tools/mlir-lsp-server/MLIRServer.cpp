@@ -286,6 +286,15 @@ struct MLIRDocument {
                                         const DialectRegistry &registry);
 
   //===--------------------------------------------------------------------===//
+  // Code Action
+  //===--------------------------------------------------------------------===//
+
+  void getCodeActionForDiagnostic(const lsp::URIForFile &uri,
+                                  lsp::Position &pos, StringRef severity,
+                                  StringRef message,
+                                  std::vector<lsp::TextEdit> &edits);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -797,6 +806,42 @@ MLIRDocument::getCodeCompletion(const lsp::URIForFile &uri,
 }
 
 //===----------------------------------------------------------------------===//
+// MLIRDocument: Code Action
+//===----------------------------------------------------------------------===//
+
+void MLIRDocument::getCodeActionForDiagnostic(
+    const lsp::URIForFile &uri, lsp::Position &pos, StringRef severity,
+    StringRef message, std::vector<lsp::TextEdit> &edits) {
+  // Ignore diagnostics that print the current operation. These are always
+  // enabled for the language server, but not generally during normal
+  // parsing/verification.
+  if (message.startswith("see current operation: "))
+    return;
+
+  // Get the start of the line containing the diagnostic.
+  const auto &buffer = sourceMgr.getBufferInfo(sourceMgr.getMainFileID());
+  const char *lineStart = buffer.getPointerForLineNumber(pos.line + 1);
+  if (!lineStart)
+    return;
+  StringRef line(lineStart, pos.character);
+
+  // Add a text edit for adding an expected-* diagnostic check for this
+  // diagnostic.
+  lsp::TextEdit edit;
+  edit.range = lsp::Range(lsp::Position(pos.line, 0));
+
+  // Use the indent of the current line for the expected-* diagnostic.
+  size_t indent = line.find_first_not_of(" ");
+  if (indent == StringRef::npos)
+    indent = line.size();
+
+  edit.newText.append(indent, ' ');
+  llvm::raw_string_ostream(edit.newText)
+      << "// expected-" << severity << " @below {{" << message << "}}\n";
+  edits.emplace_back(std::move(edit));
+}
+
+//===----------------------------------------------------------------------===//
 // MLIRTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -853,6 +898,9 @@ public:
   void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
   lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
                                         lsp::Position completePos);
+  void getCodeActions(const lsp::URIForFile &uri, const lsp::Range &pos,
+                      const lsp::CodeActionContext &context,
+                      std::vector<lsp::CodeAction> &actions);
 
 private:
   /// Find the MLIR document that contains the given position, and update the
@@ -1012,6 +1060,62 @@ lsp::CompletionList MLIRTextFile::getCodeCompletion(const lsp::URIForFile &uri,
   return completionList;
 }
 
+void MLIRTextFile::getCodeActions(const lsp::URIForFile &uri,
+                                  const lsp::Range &pos,
+                                  const lsp::CodeActionContext &context,
+                                  std::vector<lsp::CodeAction> &actions) {
+  // Create actions for any diagnostics in this file.
+  for (auto &diag : context.diagnostics) {
+    if (diag.source != "mlir")
+      continue;
+    lsp::Position diagPos = diag.range.start;
+    MLIRTextFileChunk &chunk = getChunkFor(diagPos);
+
+    // Add a new code action that inserts a "expected" diagnostic check.
+    lsp::CodeAction action;
+    action.title = "Add expected-* diagnostic checks";
+    action.kind = lsp::CodeAction::kQuickFix.str();
+
+    StringRef severity;
+    switch (diag.severity) {
+    case lsp::DiagnosticSeverity::Error:
+      severity = "error";
+      break;
+    case lsp::DiagnosticSeverity::Warning:
+      severity = "warning";
+      break;
+    default:
+      continue;
+    }
+
+    // Get edits for the diagnostic.
+    std::vector<lsp::TextEdit> edits;
+    chunk.document.getCodeActionForDiagnostic(uri, diagPos, severity,
+                                              diag.message, edits);
+
+    // Walk the related diagnostics, this is how we encode notes.
+    if (diag.relatedInformation) {
+      for (auto &noteDiag : *diag.relatedInformation) {
+        if (noteDiag.location.uri != uri)
+          continue;
+        diagPos = noteDiag.location.range.start;
+        diagPos.line -= chunk.lineOffset;
+        chunk.document.getCodeActionForDiagnostic(uri, diagPos, "note",
+                                                  noteDiag.message, edits);
+      }
+    }
+    // Fixup the locations for any edits.
+    for (lsp::TextEdit &edit : edits)
+      chunk.adjustLocForChunkOffset(edit.range);
+
+    action.edit.emplace();
+    action.edit->changes[uri.uri().str()] = std::move(edits);
+    action.diagnostics = {diag};
+
+    actions.emplace_back(std::move(action));
+  }
+}
+
 MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -1105,4 +1209,12 @@ lsp::MLIRServer::getCodeCompletion(const URIForFile &uri,
   if (fileIt != impl->files.end())
     return fileIt->second->getCodeCompletion(uri, completePos);
   return CompletionList();
+}
+
+void lsp::MLIRServer::getCodeActions(const URIForFile &uri, const Range &pos,
+                                     const CodeActionContext &context,
+                                     std::vector<CodeAction> &actions) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->getCodeActions(uri, pos, context, actions);
 }
