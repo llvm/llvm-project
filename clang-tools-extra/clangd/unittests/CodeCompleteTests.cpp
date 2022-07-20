@@ -1283,6 +1283,23 @@ TEST(SignatureHelpTest, Overloads) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, FunctionPointers) {
+  auto FunctionPointerResults = signatures(R"cpp(
+    void (*foo)(int x, int y);
+    int main() { foo(^); }
+  )cpp");
+  EXPECT_THAT(FunctionPointerResults.signatures,
+              UnorderedElementsAre(sig("([[int x]], [[int y]]) -> void")));
+
+  auto FunctionPointerTypedefResults = signatures(R"cpp(
+    typedef void (*fn)(int x, int y);
+    fn foo;
+    int main() { foo(^); }
+  )cpp");
+  EXPECT_THAT(FunctionPointerTypedefResults.signatures,
+              UnorderedElementsAre(sig("([[int x]], [[int y]]) -> void")));
+}
+
 TEST(SignatureHelpTest, Constructors) {
   std::string Top = R"cpp(
     struct S {
