@@ -320,7 +320,7 @@ struct UnrollContractionPattern
 
     Location loc = contractOp.getLoc();
     unsigned accIndex = vector::ContractionOp::getAccOperandIndex();
-    AffineMap dstAffineMap = contractOp.getIndexingMaps()[accIndex];
+    AffineMap dstAffineMap = contractOp.getIndexingMapsArray()[accIndex];
     llvm::MapVector<
         SmallVector<int64_t>, Value,
         llvm::DenseMap<SmallVector<int64_t>, unsigned, OffsetMapInfo>>
@@ -347,7 +347,7 @@ struct UnrollContractionPattern
       };
 
       // Extract the new lhs operand.
-      AffineMap lhsPermutationMap = contractOp.getIndexingMaps()[0];
+      AffineMap lhsPermutationMap = contractOp.getIndexingMapsArray()[0];
       SmallVector<int64_t> lhsOffets =
           applyPermutationMap(lhsPermutationMap, ArrayRef<int64_t>(offsets));
       extractOperand(0, contractOp.getLhs(), lhsPermutationMap, lhsOffets);
@@ -357,7 +357,7 @@ struct UnrollContractionPattern
                        lhsOffets);
 
       // Extract the new rhs operand.
-      AffineMap rhsPermutationMap = contractOp.getIndexingMaps()[1];
+      AffineMap rhsPermutationMap = contractOp.getIndexingMapsArray()[1];
       SmallVector<int64_t> rhsOffets =
           applyPermutationMap(rhsPermutationMap, ArrayRef<int64_t>(offsets));
       extractOperand(1, contractOp.getRhs(), rhsPermutationMap, rhsOffets);
@@ -366,7 +366,7 @@ struct UnrollContractionPattern
         extractOperand(4, contractOp.getMasks()[1], rhsPermutationMap,
                        rhsOffets);
 
-      AffineMap accPermutationMap = contractOp.getIndexingMaps()[2];
+      AffineMap accPermutationMap = contractOp.getIndexingMapsArray()[2];
       SmallVector<int64_t> accOffets =
           applyPermutationMap(accPermutationMap, ArrayRef<int64_t>(offsets));
       // If a version of the accumulator has already been computed, use it
@@ -579,7 +579,7 @@ struct ContractExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
       return failure();
     Location loc = contract.getLoc();
     unsigned accIndex = vector::ContractionOp::getAccOperandIndex();
-    AffineMap affineMap = contract.getIndexingMaps()[accIndex];
+    AffineMap affineMap = contract.getIndexingMapsArray()[accIndex];
     // Create a map of the dimensions distributed based on the acc affine map.
     // Only parallel dimensions are being distributed, reduction dimensions are
     // untouched.
@@ -587,7 +587,7 @@ struct ContractExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
     for (unsigned i : llvm::seq(unsigned(0), affineMap.getNumResults()))
       map[affineMap.getDimPosition(i)] = extract.getResultType().getDimSize(i);
     SmallVector<Value, 4> extractOperands;
-    for (const auto &it : llvm::enumerate(contract.getIndexingMaps())) {
+    for (const auto &it : llvm::enumerate(contract.getIndexingMapsArray())) {
       // For each operands calculate the new vector type after distribution.
       Value operand = contract->getOperand(it.index());
       auto vecType = operand.getType().cast<VectorType>();

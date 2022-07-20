@@ -8,7 +8,7 @@
 // RETURN: #define __CET__ 2
 // BRANCH: #define __CET__ 1
 // FULL: #define __CET__ 3
-// CFPROT: "cf-protection-branch", i32 1
-// IBTSEAL: "ibt-seal", i32 1
+// CFPROT: !{i32 8, !"cf-protection-branch", i32 1}
+// IBTSEAL: !{i32 8, !"ibt-seal", i32 1}
 // NOIBTSEAL-NOT: "ibt-seal", i32 1
 void foo() {}

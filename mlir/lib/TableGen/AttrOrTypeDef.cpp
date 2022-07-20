@@ -179,6 +179,11 @@ Optional<StringRef> AttrOrTypeDef::getExtraDecls() const {
   return value.empty() ? Optional<StringRef>() : value;
 }
 
+Optional<StringRef> AttrOrTypeDef::getExtraDefs() const {
+  auto value = def->getValueAsString("extraClassDefinition");
+  return value.empty() ? Optional<StringRef>() : value;
+}
+
 ArrayRef<SMLoc> AttrOrTypeDef::getLoc() const { return def->getLoc(); }
 
 bool AttrOrTypeDef::skipDefaultBuilders() const {

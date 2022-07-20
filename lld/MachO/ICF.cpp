@@ -384,18 +384,13 @@ void macho::markAddrSigSymbols() {
       continue;
     assert(addrSigSection->subsections.size() == 1);
 
-    Subsection *subSection = &addrSigSection->subsections[0];
-    ArrayRef<unsigned char> &contents = subSection->isec->data;
+    const InputSection *isec = addrSigSection->subsections[0].isec;
 
-    const uint8_t *pData = contents.begin();
-    while (pData != contents.end()) {
-      unsigned size;
-      const char *err;
-      uint32_t symIndex = decodeULEB128(pData, &size, contents.end(), &err);
-      if (err)
-        fatal(toString(file) + ": could not decode addrsig section: " + err);
-      markSymAsAddrSig(obj->symbols[symIndex]);
-      pData += size;
+    for (const Reloc &r : isec->relocs) {
+      if (auto *sym = r.referent.dyn_cast<Symbol *>())
+        markSymAsAddrSig(sym);
+      else
+        error(toString(isec) + ": unexpected section relocation");
     }
   }
 }
@@ -420,10 +415,11 @@ void macho::foldIdenticalSections() {
   uint64_t icfUniqueID = inputSections.size();
   for (ConcatInputSection *isec : inputSections) {
     // FIXME: consider non-code __text sections as hashable?
-    bool isHashable = (isCodeSection(isec) || isCfStringSection(isec) ||
-                       isClassRefsSection(isec)) &&
-                      !isec->keepUnique && !isec->shouldOmitFromOutput() &&
-                      sectionType(isec->getFlags()) == MachO::S_REGULAR;
+    bool isHashable =
+        (isCodeSection(isec) || isCfStringSection(isec) ||
+         isClassRefsSection(isec) || isGccExceptTabSection(isec)) &&
+        !isec->keepUnique && !isec->shouldOmitFromOutput() &&
+        sectionType(isec->getFlags()) == MachO::S_REGULAR;
     if (isHashable) {
       hashable.push_back(isec);
       for (Defined *d : isec->symbols)

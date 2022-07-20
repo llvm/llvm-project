@@ -843,7 +843,9 @@ extern unsigned __kmp_affinity_num_masks;
 extern void __kmp_affinity_bind_thread(int which);
 
 extern kmp_affin_mask_t *__kmp_affin_fullMask;
+extern kmp_affin_mask_t *__kmp_affin_origMask;
 extern char *__kmp_cpuinfo_file;
+extern bool __kmp_affin_reset;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -3088,6 +3090,7 @@ static inline bool __kmp_is_hybrid_cpu() { return false; }
 extern volatile int __kmp_init_serial;
 extern volatile int __kmp_init_gtid;
 extern volatile int __kmp_init_common;
+extern volatile int __kmp_need_register_serial;
 extern volatile int __kmp_init_middle;
 extern volatile int __kmp_init_parallel;
 #if KMP_USE_MONITOR
@@ -3644,8 +3647,18 @@ static inline void __kmp_assign_root_init_mask() {
     r->r.r_affinity_assigned = TRUE;
   }
 }
+static inline void __kmp_reset_root_init_mask(int gtid) {
+  kmp_info_t *th = __kmp_threads[gtid];
+  kmp_root_t *r = th->th.th_root;
+  if (r->r.r_uber_thread == th && r->r.r_affinity_assigned) {
+    __kmp_set_system_affinity(__kmp_affin_origMask, FALSE);
+    KMP_CPU_COPY(th->th.th_affin_mask, __kmp_affin_origMask);
+    r->r.r_affinity_assigned = FALSE;
+  }
+}
 #else /* KMP_AFFINITY_SUPPORTED */
 #define __kmp_assign_root_init_mask() /* Nothing */
+static inline void __kmp_reset_root_init_mask(int gtid) {}
 #endif /* KMP_AFFINITY_SUPPORTED */
 // No need for KMP_AFFINITY_SUPPORTED guard as only one field in the
 // format string is for affinity, so platforms that do not support

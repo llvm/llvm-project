@@ -1775,6 +1775,10 @@ Enable support for exception handling
 
 .. option:: -fexec-charset=<arg>
 
+.. option:: -fexperimental-library, -fno-experimental-library
+
+Control whether unstable and experimental library features are enabled. This option enables various library features that are either experimental (also known as TSes), or have been but are not stable yet in the selected Standard Library implementation. It is not recommended to use this option in production code, since neither ABI nor API stability are guaranteed. This is intended to provide a preview of features that will ship in the future for experimentation purposes
+
 .. option:: -fexperimental-new-constant-interpreter
 
 Enable the experimental new constant interpreter
@@ -2656,10 +2660,6 @@ Turn on loop unroller
 .. option:: -funsigned-bitfields
 
 .. option:: -funsigned-char, -fno-unsigned-char, --unsigned-char
-
-.. option:: -funstable, -fno-unstable
-
-Enable unstable and experimental features
 
 .. option:: -funwind-tables, -fno-unwind-tables
 

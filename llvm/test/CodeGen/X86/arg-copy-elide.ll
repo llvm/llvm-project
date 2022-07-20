@@ -74,7 +74,7 @@ define i1 @i1_arg(i1 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp)
@@ -404,9 +404,9 @@ define i1 @use_i3(i3 %a1, i3 %a2) {
 ; CHECK-LABEL: use_i3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    andb $7, %al
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    andb $7, %cl
 ; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    cmpb %cl, %al

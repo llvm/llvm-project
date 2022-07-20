@@ -479,6 +479,8 @@ public:
   static bool serialize(SPSOutputBuffer &OB, StringRef S) {
     if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(S.size())))
       return false;
+    if (S.empty()) // Empty StringRef may have null data, so bail out early.
+      return true;
     return OB.write(S.data(), S.size());
   }
 
@@ -490,7 +492,7 @@ public:
     Data = IB.data();
     if (!IB.skip(Size))
       return false;
-    S = StringRef(Data, Size);
+    S = StringRef(Size ? Data : nullptr, Size);
     return true;
   }
 };

@@ -678,7 +678,7 @@ void __sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
 
   using _Comp_ref = typename __comp_ref_type<_Comp>::type;
   if (__libcpp_is_constant_evaluated()) {
-    std::__partial_sort<_AlgPolicy, _Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
+    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
 
   } else {
     using _WrappedComp = typename _WrapAlgPolicy<_AlgPolicy, _Comp_ref>::type;

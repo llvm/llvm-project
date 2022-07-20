@@ -9039,6 +9039,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 #endif
 
   switch (Opcode) {
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
+    assert(VTList.NumVTs == 2 && Ops.size() == 2 &&
+           "Invalid add/sub overflow op!");
+    assert(VTList.VTs[0].isInteger() && VTList.VTs[1].isInteger() &&
+           Ops[0].getValueType() == Ops[1].getValueType() &&
+           Ops[0].getValueType() == VTList.VTs[0] &&
+           "Binary operator types must match!");
+    break;
   case ISD::STRICT_FP_EXTEND:
     assert(VTList.NumVTs == 2 && Ops.size() == 2 &&
            "Invalid STRICT_FP_EXTEND!");

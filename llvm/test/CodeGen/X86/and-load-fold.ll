@@ -6,7 +6,7 @@
 define i8 @foo(<4 x i8>* %V) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb 2(%rdi), %al
+; CHECK-NEXT:    movzbl 2(%rdi), %eax
 ; CHECK-NEXT:    andb $95, %al
 ; CHECK-NEXT:    retq
   %Vp = bitcast <4 x i8>* %V to <3 x i8>*

@@ -75,39 +75,6 @@ protected:
   /// The width of the scalar type used for array indices.
   const unsigned ArrayIndexWidth;
 
-  SVal evalCastKind(UndefinedVal V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastKind(UnknownVal V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastKind(Loc V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastKind(NonLoc V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastSubKind(loc::ConcreteInt V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(loc::GotoLabel V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::CompoundVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::ConcreteInt V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::LazyCompoundVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::LocAsInteger V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::SymbolVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::PointerToMember V, QualType CastTy,
-                       QualType OriginalTy);
-  /// Reduce cast expression by removing redundant intermediate casts.
-  /// E.g.
-  /// - (char)(short)(int x) -> (char)(int x)
-  /// - (int)(int x) -> int x
-  ///
-  /// \param V -- SymbolVal, which pressumably contains SymbolCast or any symbol
-  /// that is applicable for cast operation.
-  /// \param CastTy -- QualType, which `V` shall be cast to.
-  /// \return SVal with simplified cast expression.
-  /// \note: Currently only support integral casts.
-  nonloc::SymbolVal simplifySymbolCast(nonloc::SymbolVal V, QualType CastTy);
-
 public:
   SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
               ProgramStateManager &stateMgr);

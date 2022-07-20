@@ -966,7 +966,7 @@ define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_srem, i3
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    cltd

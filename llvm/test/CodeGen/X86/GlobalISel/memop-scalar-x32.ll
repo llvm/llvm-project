@@ -8,7 +8,7 @@ define i1 @test_load_i1(i1 * %p1) {
 ; CHECK-LABEL: test_load_i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
-; CHECK-NEXT:    movb (%eax), %al
+; CHECK-NEXT:    movzbl (%eax), %eax
 ; CHECK-NEXT:    retl
   %r = load i1, i1* %p1
   ret i1 %r
@@ -18,7 +18,7 @@ define i8 @test_load_i8(i8 * %p1) {
 ; CHECK-LABEL: test_load_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
-; CHECK-NEXT:    movb (%eax), %al
+; CHECK-NEXT:    movzbl (%eax), %eax
 ; CHECK-NEXT:    retl
   %r = load i8, i8* %p1
   ret i8 %r

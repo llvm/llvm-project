@@ -191,7 +191,7 @@ define i1 @length3_eq(i8* %X, i8* %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    xorw (%rsi), %ax
-; X64-NEXT:    movb 2(%rdi), %cl
+; X64-NEXT:    movzbl 2(%rdi), %ecx
 ; X64-NEXT:    xorb 2(%rsi), %cl
 ; X64-NEXT:    movzbl %cl, %ecx
 ; X64-NEXT:    orw %ax, %cx
@@ -307,7 +307,7 @@ define i1 @length5_eq(i8* %X, i8* %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    xorl (%rsi), %eax
-; X64-NEXT:    movb 4(%rdi), %cl
+; X64-NEXT:    movzbl 4(%rdi), %ecx
 ; X64-NEXT:    xorb 4(%rsi), %cl
 ; X64-NEXT:    movzbl %cl, %ecx
 ; X64-NEXT:    orl %eax, %ecx
@@ -465,7 +465,7 @@ define i1 @length9_eq(i8* %X, i8* %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    xorq (%rsi), %rax
-; X64-NEXT:    movb 8(%rdi), %cl
+; X64-NEXT:    movzbl 8(%rdi), %ecx
 ; X64-NEXT:    xorb 8(%rsi), %cl
 ; X64-NEXT:    movzbl %cl, %ecx
 ; X64-NEXT:    orq %rax, %rcx

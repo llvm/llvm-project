@@ -940,7 +940,22 @@ void PrintPassInstrumentation::registerCallbacks(
     if (isSpecialPass(PassID, SpecialPasses))
       return;
 
-    print() << "Running pass: " << PassID << " on " << getIRName(IR) << "\n";
+    auto &OS = print();
+    OS << "Running pass: " << PassID << " on " << getIRName(IR);
+    if (any_isa<const Function *>(IR)) {
+      unsigned Count = any_cast<const Function *>(IR)->getInstructionCount();
+      OS << " (" << Count << " instruction";
+      if (Count != 1)
+        OS << 's';
+      OS << ')';
+    } else if (any_isa<const LazyCallGraph::SCC *>(IR)) {
+      int Count = any_cast<const LazyCallGraph::SCC *>(IR)->size();
+      OS << " (" << Count << " node";
+      if (Count != 1)
+        OS << 's';
+      OS << ')';
+    }
+    OS << "\n";
     Indent += 2;
   });
   PIC.registerAfterPassCallback(

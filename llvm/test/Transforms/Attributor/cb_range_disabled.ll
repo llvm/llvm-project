@@ -24,7 +24,7 @@ define i32 @test_range(i32 %unknown) {
 define i32 @test1(i32 %unknown, i32 %b) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test1
 ; IS__TUNIT____-SAME: (i32 [[UNKNOWN:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test_range(i32 [[UNKNOWN]]) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test_range(i32 [[UNKNOWN]])
 ; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = sub nsw i32 [[TMP1]], [[B]]
 ; IS__TUNIT____-NEXT:    ret i32 [[TMP2]]
 ;
@@ -42,7 +42,7 @@ define i32 @test1(i32 %unknown, i32 %b) {
 define i32 @test2(i32 %unknown, i32 %b) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test2
 ; IS__TUNIT____-SAME: (i32 [[UNKNOWN:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test_range(i32 [[UNKNOWN]]) #[[ATTR1]], !range [[RNG0]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test_range(i32 [[UNKNOWN]])
 ; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], [[B]]
 ; IS__TUNIT____-NEXT:    ret i32 [[TMP2]]
 ;
@@ -146,11 +146,9 @@ define i32 @test2_ncheck(i32 %unknown) {
 }
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { readnone willreturn }
-;.
-; IS__TUNIT____: [[RNG0]] = !{i32 0, i32 101}
 ;.

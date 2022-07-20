@@ -461,6 +461,12 @@ struct IntrinsicLibrary {
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
+
+  /// Lower a bitwise comparison intrinsic using the given comparator.
+  template <mlir::arith::CmpIPredicate pred>
+  mlir::Value genBitwiseCompare(mlir::Type resultType,
+                                llvm::ArrayRef<mlir::Value> args);
+
   mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -692,6 +698,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"bge", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::uge>},
+    {"bgt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ugt>},
+    {"ble", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ule>},
+    {"blt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ult>},
     {"btest", &I::genBtest},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
@@ -1034,6 +1044,11 @@ static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t}, {t});
 }
 
+static mlir::FunctionType genF128F128FuncType(mlir::MLIRContext *context) {
+  mlir::Type t = mlir::FloatType::getF128(context);
+  return mlir::FunctionType::get(context, {t}, {t});
+}
+
 static mlir::FunctionType genF32F32F32FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF32(context);
   return mlir::FunctionType::get(context, {t, t}, {t});
@@ -1169,6 +1184,8 @@ static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 static constexpr MathOperation mathOperations[] = {
     {"abs", "fabsf", genF32F32FuncType, genMathOp<mlir::math::AbsOp>},
     {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsOp>},
+    {"abs", "llvm.fabs.f128", genF128F128FuncType,
+     genMathOp<mlir::math::AbsOp>},
     // llvm.trunc behaves the same way as libm's trunc.
     {"aint", "llvm.trunc.f32", genF32F32FuncType, genLibCall},
     {"aint", "llvm.trunc.f64", genF64F64FuncType, genLibCall},
@@ -1186,6 +1203,8 @@ static constexpr MathOperation mathOperations[] = {
     {"ceil", "ceil", genF64F64FuncType, genMathOp<mlir::math::CeilOp>},
     {"cos", "cosf", genF32F32FuncType, genMathOp<mlir::math::CosOp>},
     {"cos", "cos", genF64F64FuncType, genMathOp<mlir::math::CosOp>},
+    {"cosh", "coshf", genF32F32FuncType, genLibCall},
+    {"cosh", "cosh", genF64F64FuncType, genLibCall},
     {"erf", "erff", genF32F32FuncType, genMathOp<mlir::math::ErfOp>},
     {"erf", "erf", genF64F64FuncType, genMathOp<mlir::math::ErfOp>},
     {"exp", "expf", genF32F32FuncType, genMathOp<mlir::math::ExpOp>},
@@ -1213,10 +1232,18 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::CopySignOp>},
     {"sign", "copysign", genF64F64F64FuncType,
      genMathOp<mlir::math::CopySignOp>},
+    {"sign", "copysignl", genF80F80F80FuncType,
+     genMathOp<mlir::math::CopySignOp>},
+    {"sign", "llvm.copysign.f128", genF128F128F128FuncType,
+     genMathOp<mlir::math::CopySignOp>},
     {"sin", "sinf", genF32F32FuncType, genMathOp<mlir::math::SinOp>},
     {"sin", "sin", genF64F64FuncType, genMathOp<mlir::math::SinOp>},
+    {"sinh", "sinhf", genF32F32FuncType, genLibCall},
+    {"sinh", "sinh", genF64F64FuncType, genLibCall},
     {"sqrt", "sqrtf", genF32F32FuncType, genMathOp<mlir::math::SqrtOp>},
     {"sqrt", "sqrt", genF64F64FuncType, genMathOp<mlir::math::SqrtOp>},
+    {"tan", "tanf", genF32F32FuncType, genMathOp<mlir::math::TanOp>},
+    {"tan", "tan", genF64F64FuncType, genMathOp<mlir::math::TanOp>},
     {"tanh", "tanhf", genF32F32FuncType, genMathOp<mlir::math::TanhOp>},
     {"tanh", "tanh", genF64F64FuncType, genMathOp<mlir::math::TanhOp>},
 };
@@ -1233,6 +1260,7 @@ static constexpr MathOperation mathOperations[] = {
 static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"abs", "llvm.fabs.f32", genF32F32FuncType},
     {"abs", "llvm.fabs.f64", genF64F64FuncType},
+    {"abs", "llvm.fabs.f128", genF128F128FuncType},
     {"aint", "llvm.trunc.f32", genF32F32FuncType},
     {"aint", "llvm.trunc.f64", genF64F64FuncType},
     {"anint", "llvm.round.f32", genF32F32FuncType},
@@ -2337,6 +2365,39 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
   return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+// BGE, BGT, BLE, BLT
+template <mlir::arith::CmpIPredicate pred>
+mlir::Value
+IntrinsicLibrary::genBitwiseCompare(mlir::Type resultType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value arg0 = args[0];
+  mlir::Value arg1 = args[1];
+  mlir::Type arg0Ty = arg0.getType();
+  mlir::Type arg1Ty = arg1.getType();
+  unsigned bits0 = arg0Ty.getIntOrFloatBitWidth();
+  unsigned bits1 = arg1Ty.getIntOrFloatBitWidth();
+
+  // Arguments do not have to be of the same integer type. However, if neither
+  // of the arguments is a BOZ literal, then the shorter of the two needs
+  // to be converted to the longer by zero-extending (not sign-extending)
+  // to the left [Fortran 2008, 13.3.2].
+  //
+  // In the case of BOZ literals, the standard describes zero-extension or
+  // truncation depending on the kind of the result [Fortran 2008, 13.3.3].
+  // However, that seems to be relevant for the case where the type of the
+  // result must match the type of the BOZ literal. That is not the case for
+  // these intrinsics, so, again, zero-extend to the larger type.
+  //
+  if (bits0 > bits1)
+    arg1 = builder.create<mlir::arith::ExtUIOp>(loc, arg0Ty, arg1);
+  else if (bits0 < bits1)
+    arg0 = builder.create<mlir::arith::ExtUIOp>(loc, arg1Ty, arg0);
+
+  return builder.create<mlir::arith::CmpIOp>(loc, pred, arg0, arg1);
 }
 
 // BTEST

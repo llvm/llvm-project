@@ -302,7 +302,7 @@ define i64 @ctlz_i64(i64 %x) {
 define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X86-LABEL: ctlz_i8_zero_test:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    je .LBB8_1
 ; X86-NEXT:  # %bb.2: # %cond.false
@@ -512,7 +512,7 @@ define i64 @ctlz_i64_zero_test(i64 %n) {
 define i8 @cttz_i8_zero_test(i8 %n) {
 ; X86-LABEL: cttz_i8_zero_test:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    je .LBB12_1
 ; X86-NEXT:  # %bb.2: # %cond.false
@@ -819,7 +819,7 @@ define i32 @ctlz_bsr_zero_test(i32 %n) {
 define i8 @cttz_i8_knownbits(i8 %x)  {
 ; X86-LABEL: cttz_i8_knownbits:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orb $2, %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    bsfl %eax, %eax
@@ -836,7 +836,7 @@ define i8 @cttz_i8_knownbits(i8 %x)  {
 ;
 ; X86-CLZ-LABEL: cttz_i8_knownbits:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    orb $2, %al
 ; X86-CLZ-NEXT:    movzbl %al, %eax
 ; X86-CLZ-NEXT:    tzcntl %eax, %eax
@@ -859,7 +859,7 @@ define i8 @cttz_i8_knownbits(i8 %x)  {
 define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X86-LABEL: ctlz_i8_knownbits:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orb $64, %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    bsrl %eax, %eax
@@ -878,7 +878,7 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ;
 ; X86-CLZ-LABEL: ctlz_i8_knownbits:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    orb $64, %al
 ; X86-CLZ-NEXT:    movzbl %al, %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax

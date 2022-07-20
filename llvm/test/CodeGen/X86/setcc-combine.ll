@@ -243,7 +243,7 @@ define i32 @test_gt_2(<4 x i32> %A, <4 x i32> %B) {
 define void @test_i1_uge(i1 *%A2) {
 ; CHECK-LABEL: test_i1_uge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    xorb $1, %cl
 ; CHECK-NEXT:    andb %cl, %al

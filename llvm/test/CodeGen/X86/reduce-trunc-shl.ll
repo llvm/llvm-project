@@ -157,14 +157,14 @@ define void @trunc_shl_16_i16_i64(i16* %out, i64* %in) {
 define void @trunc_shl_7_i8_i64(i8* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_7_i8_i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movb (%rsi), %al
+; SSE2-NEXT:    movzbl (%rsi), %eax
 ; SSE2-NEXT:    shlb $7, %al
 ; SSE2-NEXT:    movb %al, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_7_i8_i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movb (%rsi), %al
+; AVX2-NEXT:    movzbl (%rsi), %eax
 ; AVX2-NEXT:    shlb $7, %al
 ; AVX2-NEXT:    movb %al, (%rdi)
 ; AVX2-NEXT:    retq

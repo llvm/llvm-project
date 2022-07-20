@@ -632,6 +632,11 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
                 "team %p\n",
                 global_tid, this_thr->th.th_task_team, this_thr->th.th_team));
     }
+#if KMP_AFFINITY_SUPPORTED
+    if (this_thr->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+      __kmp_reset_root_init_mask(global_tid);
+    }
+#endif
   } else {
     if (__kmp_tasking_mode != tskm_immediate_exec) {
       KA_TRACE(20, ("__kmpc_end_serialized_parallel: T#%d decreasing nesting "
@@ -2021,6 +2026,11 @@ void KMP_EXPAND_NAME(ompc_display_affinity)(char const *format) {
   }
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
+#if KMP_AFFINITY_SUPPORTED
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+    __kmp_reset_root_init_mask(gtid);
+  }
+#endif
   __kmp_aux_display_affinity(gtid, format);
 }
 
@@ -2034,6 +2044,11 @@ size_t KMP_EXPAND_NAME(ompc_capture_affinity)(char *buffer, size_t buf_size,
   }
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
+#if KMP_AFFINITY_SUPPORTED
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+    __kmp_reset_root_init_mask(gtid);
+  }
+#endif
   __kmp_str_buf_init(&capture_buf);
   num_required = __kmp_aux_capture_affinity(gtid, format, &capture_buf);
   if (buffer && buf_size) {

@@ -17,7 +17,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    cmpl %eax, var_21(%rip)
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movl %ecx, var_390(%rip)
-; CHECK-NEXT:    movb var_11(%rip), %al
+; CHECK-NEXT:    movzbl var_11(%rip), %eax
 ; CHECK-NEXT:    movb %al, var_370(%rip)
 ; CHECK-NEXT:    retq
 entry:

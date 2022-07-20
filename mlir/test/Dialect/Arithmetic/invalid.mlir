@@ -713,3 +713,11 @@ func.func @bitcast_fl_to_scalable(%arg0 : vector<4xf32>) {
   %0 = arith.bitcast %arg0 : vector<4xf32> to vector<[4]xi32>
   return
 }
+
+// -----
+
+func.func @func() {
+  %c0 = arith.constant  // expected-error {{expected attribute value}}
+
+  %x = arith.constant 1 : i32
+}
