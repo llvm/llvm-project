@@ -48,3 +48,4 @@ def nodefaultlib: P<"nodefaultlib", "">;
 def nodefaultlib_all: F<"nodefaultlib">;
 def nologo : F<"nologo">;
 def subsystem : P<"subsystem", "">;
+def verbose : F<"verbose">;
