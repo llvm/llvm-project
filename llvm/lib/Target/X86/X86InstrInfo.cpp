@@ -3892,6 +3892,10 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
+         "Load size exceeds stack slot");
   if (RC->getID() == X86::TILERegClassID) {
     unsigned Opc = X86::TILELOADD;
     // tileloadd (%sp, %idx), %tmm
@@ -3913,8 +3917,6 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
                       FrameIdx);
   } else {
-    const MachineFunction &MF = *MBB.getParent();
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
     unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
     bool isAligned =
         (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
