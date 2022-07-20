@@ -119,16 +119,16 @@ protected:
   AbstractListFrontEnd(ValueObject &valobj)
       : SyntheticChildrenFrontEnd(valobj) {}
 
-  size_t m_count;
-  ValueObject *m_head;
+  size_t m_count = 0;
+  ValueObject *m_head = nullptr;
 
   static constexpr bool g_use_loop_detect = true;
-  size_t m_loop_detected; // The number of elements that have had loop detection
-                          // run over them.
+  size_t m_loop_detected = 0; // The number of elements that have had loop
+                              // detection run over them.
   ListEntry m_slow_runner; // Used for loop detection
   ListEntry m_fast_runner; // Used for loop detection
 
-  size_t m_list_capping_size;
+  size_t m_list_capping_size = 0;
   CompilerType m_element_type;
   std::map<size_t, ListIterator> m_iterators;
 

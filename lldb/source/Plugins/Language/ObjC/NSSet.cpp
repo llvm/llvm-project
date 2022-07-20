@@ -76,7 +76,7 @@ private:
   uint8_t m_ptr_size = 8;
   DataDescriptor_32 *m_data_32 = nullptr;
   DataDescriptor_64 *m_data_64 = nullptr;
-  lldb::addr_t m_data_ptr;
+  lldb::addr_t m_data_ptr = LLDB_INVALID_ADDRESS;
   std::vector<SetItemDescriptor> m_children;
 };
 

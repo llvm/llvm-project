@@ -331,7 +331,7 @@ private:
 
   std::vector<lldb::LanguageType> m_languages;
 
-  uint32_t m_enabled_position;
+  uint32_t m_enabled_position = 0;
 
   void Enable(bool value, uint32_t position);
 

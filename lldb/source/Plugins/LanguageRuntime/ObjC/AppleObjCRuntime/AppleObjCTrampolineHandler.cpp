@@ -578,7 +578,8 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
     : m_process_wp(), m_objc_module_sp(objc_module_sp),
       m_impl_fn_addr(LLDB_INVALID_ADDRESS),
       m_impl_stret_fn_addr(LLDB_INVALID_ADDRESS),
-      m_msg_forward_addr(LLDB_INVALID_ADDRESS) {
+      m_msg_forward_addr(LLDB_INVALID_ADDRESS),
+      m_msg_forward_stret_addr(LLDB_INVALID_ADDRESS) {
   if (process_sp)
     m_process_wp = process_sp;
   // Look up the known resolution functions:
@@ -780,10 +781,8 @@ AppleObjCTrampolineHandler::FindDispatchFunction(lldb::addr_t addr) {
   return nullptr;
 }
 
-void
-AppleObjCTrampolineHandler::ForEachDispatchFunction(
-    std::function<void(lldb::addr_t, 
-                       const DispatchFunction &)> callback) {
+void AppleObjCTrampolineHandler::ForEachDispatchFunction(
+    std::function<void(lldb::addr_t, const DispatchFunction &)> callback) {
   for (auto elem : m_msgSend_map) {
     callback(elem.first, g_dispatch_functions[elem.second]);
   }

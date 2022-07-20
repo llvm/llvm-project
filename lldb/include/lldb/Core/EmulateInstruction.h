@@ -179,7 +179,7 @@ public:
     eInfoTypeISAAndImmediateSigned,
     eInfoTypeISA,
     eInfoTypeNoArgs
-  } InfoType;
+  };
 
   struct Context {
     ContextType type = eContextInvalid;

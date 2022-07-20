@@ -67,8 +67,8 @@ GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name,
       m_packet_timeout(1),
 #endif
       m_echo_number(0), m_supports_qEcho(eLazyBoolCalculate), m_history(512),
-      m_send_acks(true), m_compression_type(CompressionType::None),
-      m_listen_url() {
+      m_send_acks(true), m_is_platform(false),
+      m_compression_type(CompressionType::None), m_listen_url() {
 }
 
 // Destructor
@@ -1266,7 +1266,7 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
 
 GDBRemoteCommunication::ScopedTimeout::ScopedTimeout(
     GDBRemoteCommunication &gdb_comm, std::chrono::seconds timeout)
-    : m_gdb_comm(gdb_comm), m_timeout_modified(false) {
+    : m_gdb_comm(gdb_comm), m_saved_timeout(0), m_timeout_modified(false) {
   auto curr_timeout = gdb_comm.GetPacketTimeout();
   // Only update the timeout if the timeout is greater than the current
   // timeout. If the current timeout is larger, then just use that.

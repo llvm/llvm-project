@@ -153,40 +153,40 @@ protected:
   bool NeedsEndianSwap() const;
 
   typedef struct dos_header { // DOS .EXE header
-    uint16_t e_magic;         // Magic number
-    uint16_t e_cblp;          // Bytes on last page of file
-    uint16_t e_cp;            // Pages in file
-    uint16_t e_crlc;          // Relocations
-    uint16_t e_cparhdr;       // Size of header in paragraphs
-    uint16_t e_minalloc;      // Minimum extra paragraphs needed
-    uint16_t e_maxalloc;      // Maximum extra paragraphs needed
-    uint16_t e_ss;            // Initial (relative) SS value
-    uint16_t e_sp;            // Initial SP value
-    uint16_t e_csum;          // Checksum
-    uint16_t e_ip;            // Initial IP value
-    uint16_t e_cs;            // Initial (relative) CS value
-    uint16_t e_lfarlc;        // File address of relocation table
-    uint16_t e_ovno;          // Overlay number
+    uint16_t e_magic = 0;     // Magic number
+    uint16_t e_cblp = 0;      // Bytes on last page of file
+    uint16_t e_cp = 0;        // Pages in file
+    uint16_t e_crlc = 0;      // Relocations
+    uint16_t e_cparhdr = 0;   // Size of header in paragraphs
+    uint16_t e_minalloc = 0;  // Minimum extra paragraphs needed
+    uint16_t e_maxalloc = 0;  // Maximum extra paragraphs needed
+    uint16_t e_ss = 0;        // Initial (relative) SS value
+    uint16_t e_sp = 0;        // Initial SP value
+    uint16_t e_csum = 0;      // Checksum
+    uint16_t e_ip = 0;        // Initial IP value
+    uint16_t e_cs = 0;        // Initial (relative) CS value
+    uint16_t e_lfarlc = 0;    // File address of relocation table
+    uint16_t e_ovno = 0;      // Overlay number
     uint16_t e_res[4];        // Reserved words
-    uint16_t e_oemid;         // OEM identifier (for e_oeminfo)
-    uint16_t e_oeminfo;       // OEM information; e_oemid specific
-    uint16_t e_res2[10];      // Reserved words
-    uint32_t e_lfanew;        // File address of new exe header
+    uint16_t e_oemid = 0;     // OEM identifier (for e_oeminfo)
+    uint16_t e_oeminfo = 0;   // OEM information; e_oemid specific
+    uint16_t e_res2[10] = {}; // Reserved words
+    uint32_t e_lfanew = 0;    // File address of new exe header
   } dos_header_t;
 
   typedef struct coff_header {
-    uint16_t machine;
-    uint16_t nsects;
-    uint32_t modtime;
-    uint32_t symoff;
-    uint32_t nsyms;
-    uint16_t hdrsize;
-    uint16_t flags;
+    uint16_t machine = 0;
+    uint16_t nsects = 0;
+    uint32_t modtime = 0;
+    uint32_t symoff = 0;
+    uint32_t nsyms = 0;
+    uint16_t hdrsize = 0;
+    uint16_t flags = 0;
   } coff_header_t;
 
   typedef struct data_directory {
-    uint32_t vmaddr;
-    uint32_t vmsize;
+    uint32_t vmaddr = 0;
+    uint32_t vmsize = 0;
   } data_directory_t;
 
   typedef struct coff_opt_header {
@@ -232,39 +232,39 @@ protected:
   };
 
   typedef struct section_header {
-    char name[8];
-    uint32_t vmsize;  // Virtual Size
-    uint32_t vmaddr;  // Virtual Addr
-    uint32_t size;    // File size
-    uint32_t offset;  // File offset
-    uint32_t reloff;  // Offset to relocations
-    uint32_t lineoff; // Offset to line table entries
-    uint16_t nreloc;  // Number of relocation entries
-    uint16_t nline;   // Number of line table entries
-    uint32_t flags;
+    char name[8] = {};
+    uint32_t vmsize = 0;  // Virtual Size
+    uint32_t vmaddr = 0;  // Virtual Addr
+    uint32_t size = 0;    // File size
+    uint32_t offset = 0;  // File offset
+    uint32_t reloff = 0;  // Offset to relocations
+    uint32_t lineoff = 0; // Offset to line table entries
+    uint16_t nreloc = 0;  // Number of relocation entries
+    uint16_t nline = 0;   // Number of line table entries
+    uint32_t flags = 0;
   } section_header_t;
 
   typedef struct coff_symbol {
-    char name[8];
-    uint32_t value;
-    uint16_t sect;
-    uint16_t type;
-    uint8_t storage;
-    uint8_t naux;
+    char name[8] = {};
+    uint32_t value = 0;
+    uint16_t sect = 0;
+    uint16_t type = 0;
+    uint8_t storage = 0;
+    uint8_t naux = 0;
   } coff_symbol_t;
 
   typedef struct export_directory_entry {
-    uint32_t characteristics;
-    uint32_t time_date_stamp;
-    uint16_t major_version;
-    uint16_t minor_version;
-    uint32_t name;
-    uint32_t base;
-    uint32_t number_of_functions;
-    uint32_t number_of_names;
-    uint32_t address_of_functions;
-    uint32_t address_of_names;
-    uint32_t address_of_name_ordinals;
+    uint32_t characteristics = 0;
+    uint32_t time_date_stamp = 0;
+    uint16_t major_version = 0;
+    uint16_t minor_version = 0;
+    uint32_t name = 0;
+    uint32_t base = 0;
+    uint32_t number_of_functions = 0;
+    uint32_t number_of_names = 0;
+    uint32_t address_of_functions = 0;
+    uint32_t address_of_names = 0;
+    uint32_t address_of_name_ordinals = 0;
   } export_directory_entry;
 
   static bool ParseDOSHeader(lldb_private::DataExtractor &data,
