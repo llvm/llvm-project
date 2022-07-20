@@ -593,12 +593,12 @@ void fACStoreResult() {
                   "\t\t{\n"
                   "\t\t\t\"NodeId\":%d,\n"
                   "\t\t\t\"XName\": \"%s\",\n"
-                  "\t\t\t\"X\": %f,\n"
+                  "\t\t\t\"X\": %lf,\n"
                   "\t\t\t\"YName\": \"%s\",\n"
-                  "\t\t\t\"Y\": %f,\n"
+                  "\t\t\t\"Y\": %lf,\n"
                   "\t\t\t\"Operation\": %d,\n"
-                  "\t\t\t\"ACWRTX\": %f,\n"
-                  "\t\t\t\"ACWRTY\": %f\n",
+                  "\t\t\t\"ACWRTX\": %lf,\n"
+                  "\t\t\t\"ACWRTY\": %lf\n",
                   StorageTable->FP64ACItems[I].NodeId,
                   StorageTable->FP64ACItems[I].XName,
                   StorageTable->FP64ACItems[I].X,

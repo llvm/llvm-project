@@ -10,8 +10,7 @@
 enum NodeKind {
   Register,
   UnaryInstruction,
-  BinaryInstruction,
-  Phi
+  BinaryInstruction
 };
 
 typedef struct CGNode {
@@ -114,7 +113,7 @@ void fCGInitialize() {
 
   // Allocate memory to the Nodes linked list
   if( (CGObject->NodesLinkedListHead =
-           (struct CGNode *)malloc((size_t)((int64_t)sizeof(CGNode) * Size))) == NULL) {
+           (CGNode *)malloc((size_t)((int64_t)sizeof(CGNode) * Size))) == NULL) {
     printf("#CG: graph out of memory error!");
     exit(EXIT_FAILURE);
   }
@@ -122,7 +121,7 @@ void fCGInitialize() {
 
   // Allocate memory to the Instruction Node Map
   if( (CGObject->InstructionNodeMapHead =
-           (struct InstructionNodePair *)malloc((size_t)((int64_t)sizeof(InstructionNodePair) * Size))) == NULL) {
+           (InstructionNodePair *)malloc((size_t)((int64_t)sizeof(InstructionNodePair) * Size))) == NULL) {
     printf("#CG: graph out of memory error!");
     exit(EXIT_FAILURE);
   }
@@ -142,7 +141,7 @@ void fCGInitialize() {
 
   // Allocate memory to the Phi Nodes List
   if( (CGObject->PhiNodesListHead =
-           (struct PhiNode *)malloc((size_t)((int64_t)sizeof(PhiNode) * Size))) == NULL) {
+           (PhiNode *)malloc((size_t)((int64_t)sizeof(PhiNode) * Size))) == NULL) {
     printf("#CG: graph out of memory error!");
     exit(EXIT_FAILURE);
   }
@@ -702,7 +701,7 @@ void fCGStoreResult() {
             "\t\t\t\"NodeId\":%d,\n"
             "\t\t\t\"Instruction\":\"%s\",\n"
             "\t\t\t\"NodeKind\": %d,\n"
-            "\t\t\t\"Height\": %d, \n"
+            "\t\t\t\"Height\": %d,\n"
             "\t\t\t\"RootNode\": %d, \n"
             "\t\t\t\"LeftNode\": %d,\n"
             "\t\t\t\"RightNode\": %d\n",

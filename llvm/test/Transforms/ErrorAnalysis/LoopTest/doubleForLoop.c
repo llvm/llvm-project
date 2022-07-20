@@ -3,7 +3,6 @@
 //
 
 #include<stdio.h>
-#include "/home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h"
 
 int main() {
   float a, b, res;

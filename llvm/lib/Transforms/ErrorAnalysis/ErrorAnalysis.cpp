@@ -18,10 +18,6 @@ PreservedAnalyses ErrorAnalysisPass::run(Function &F,
   if (ACInstrumentation::isUnwantedFunction(&F))
     return PreservedAnalyses::all();
 
-  if (F.getName().str().find("main") != std::string::npos) {
-
-  }
-
   errs() << "---------------------------------------------------" << "\n";
   errs() << "Current Function: " << F.getName() << "\n";
   errs() << "---------------------------------------------------" << "\n";
