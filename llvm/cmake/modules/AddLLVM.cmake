@@ -871,7 +871,7 @@ macro(generate_llvm_objects name)
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
 
   # Generate objlib
-  if(LLVM_ENABLE_OBJLIB OR ARG_GENERATE_DRIVER)
+  if(LLVM_ENABLE_OBJLIB OR (ARG_GENERATE_DRIVER AND LLVM_TOOL_LLVM_DRIVER_BUILD))
     # Generate an obj library for both targets.
     set(obj_name "obj.${name}")
     add_library(${obj_name} OBJECT EXCLUDE_FROM_ALL
@@ -899,13 +899,15 @@ macro(generate_llvm_objects name)
 
     list(APPEND ALL_FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
 
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_COMPONENTS ${LLVM_LINK_COMPONENTS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_DEPS ${ARG_DEPENDS} ${LLVM_COMMON_DEPENDS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_OBJLIBS "${obj_name}")
-    
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
-    target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
-    llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
+    if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_COMPONENTS ${LLVM_LINK_COMPONENTS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_DEPS ${ARG_DEPENDS} ${LLVM_COMMON_DEPENDS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_OBJLIBS "${obj_name}")
+
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
+      target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
+      llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
+    endif()
   endif()
 endmacro()
 
