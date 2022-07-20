@@ -5,7 +5,7 @@
 define i32 @t1(i32 %t, i32 %val) nounwind {
 ; X32-LABEL: t1:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shll %cl, %eax
 ; X32-NEXT:    retl
@@ -25,7 +25,7 @@ define i32 @t1(i32 %t, i32 %val) nounwind {
 define i32 @t2(i32 %t, i32 %val) nounwind {
 ; X32-LABEL: t2:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shll %cl, %eax
 ; X32-NEXT:    retl
@@ -47,7 +47,7 @@ define i32 @t2(i32 %t, i32 %val) nounwind {
 define void @t3(i16 %t) nounwind {
 ; X32-LABEL: t3:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    sarw %cl, X
 ; X32-NEXT:    retl
 ;
@@ -68,7 +68,7 @@ define i64 @t4(i64 %t, i64 %val) nounwind {
 ; X32-LABEL: t4:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl %esi, %edx
@@ -99,7 +99,7 @@ define i64 @t5(i64 %t, i64 %val) nounwind {
 ; X32-LABEL: t5:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl %esi, %edx
@@ -131,7 +131,7 @@ define void @t5ptr(i64 %t, ptr %ptr) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl (%eax), %edx
 ; X32-NEXT:    movl 4(%eax), %edi

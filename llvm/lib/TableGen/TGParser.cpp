@@ -3391,6 +3391,8 @@ bool TGParser::ParseClass() {
         !CurRec->getTemplateArgs().empty())
       return TokError("Class '" + CurRec->getNameInitAsString() +
                       "' already defined");
+
+    CurRec->updateClassLoc(Lex.getLoc());
   } else {
     // If this is the first reference to this class, create and add it.
     auto NewRec =

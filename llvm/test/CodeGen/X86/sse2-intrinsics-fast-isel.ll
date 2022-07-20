@@ -4379,7 +4379,7 @@ define <2 x i64> @test_mm_set1_epi8(i8 %a0) nounwind {
 ;
 ; X86-AVX512-LABEL: test_mm_set1_epi8:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vpbroadcastb %eax, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0x7a,0xc0]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;

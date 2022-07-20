@@ -106,8 +106,8 @@ REM Preserve original path
 set OLDPATH=%PATH%
 
 REM Build the 32-bits and/or 64-bits binaries.
-call :do_build_32 if errorlevel 1 exit /b 1
-call :do_build_64 if errorlevel 1 exit /b 1
+call :do_build_32 || exit /b 1
+call :do_build_64 || exit /b 1
 exit /b 0
 
 ::==============================================================================
@@ -160,7 +160,10 @@ REM with forward slash.
 set all_cmake_flags=^
   %cmake_flags% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
-  -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe
+  -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
+  -DCMAKE_LINKER=%stage0_bin_dir%/lld-link.exe ^
+  -DCMAKE_AR=%stage0_bin_dir%/llvm-lib.exe ^
+  -DCMAKE_RC=%stage0_bin_dir%/llvm-windres.exe
 set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build32
@@ -227,7 +230,10 @@ REM with forward slash.
 set all_cmake_flags=^
   %cmake_flags% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
-  -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe
+  -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
+  -DCMAKE_LINKER=%stage0_bin_dir%/lld-link.exe ^
+  -DCMAKE_AR=%stage0_bin_dir%/llvm-lib.exe ^
+  -DCMAKE_RC=%stage0_bin_dir%/llvm-windres.exe
 set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build64

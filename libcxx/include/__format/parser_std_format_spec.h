@@ -25,10 +25,12 @@
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
+#include <__format/unicode.h>
 #include <__variant/monostate.h>
 #include <bit>
 #include <concepts>
 #include <cstdint>
+#include <string_view>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -90,462 +92,6 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
       },
       __format_arg);
 }
-
-/** Helper struct returned from @ref __get_string_alignment. */
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __string_alignment {
-  /** Points beyond the last character to write to the output. */
-  const _CharT* __last;
-  /**
-   * The estimated number of columns in the output or 0.
-   *
-   * Only when the output needs to be aligned it's required to know the exact
-   * number of columns in the output. So if the formatted output has only a
-   * minimum width the exact size isn't important. It's only important to know
-   * the minimum has been reached. The minimum width is the width specified in
-   * the format-spec.
-   *
-   * For example in this code @code std::format("{:10}", MyString); @endcode
-   * the width estimation can stop once the algorithm has determined the output
-   * width is 10 columns.
-   *
-   * So if:
-   * * @ref __align == @c true the @ref __size is the estimated number of
-   *   columns required.
-   * * @ref __align == @c false the @ref __size is the estimated number of
-   *   columns required or 0 when the estimation algorithm stopped prematurely.
-   */
-  ptrdiff_t __size;
-  /**
-   * Does the output need to be aligned.
-   *
-   * When alignment is needed the output algorithm needs to add the proper
-   * padding. Else the output algorithm just needs to copy the input up to
-   * @ref __last.
-   */
-  bool __align;
-};
-
-#ifndef _LIBCPP_HAS_NO_UNICODE
-namespace __detail {
-
-/**
- * Unicode column width estimates.
- *
- * Unicode can be stored in several formats: UTF-8, UTF-16, and UTF-32.
- * Depending on format the relation between the number of code units stored and
- * the number of output columns differs. The first relation is the number of
- * code units forming a code point. (The text assumes the code units are
- * unsigned.)
- * - UTF-8 The number of code units is between one and four. The first 127
- *   Unicode code points match the ASCII character set. When the highest bit is
- *   set it means the code point has more than one code unit.
- * - UTF-16: The number of code units is between 1 and 2. When the first
- *   code unit is in the range [0xd800,0xdfff) it means the code point uses two
- *   code units.
- * - UTF-32: The number of code units is always one.
- *
- * The code point to the number of columns isn't well defined. The code uses the
- * estimations defined in [format.string.std]/11. This list might change in the
- * future.
- *
- * The algorithm of @ref __get_string_alignment uses two different scanners:
- * - The simple scanner @ref __estimate_column_width_fast. This scanner assumes
- *   1 code unit is 1 column. This scanner stops when it can't be sure the
- *   assumption is valid:
- *   - UTF-8 when the code point is encoded in more than 1 code unit.
- *   - UTF-16 and UTF-32 when the first multi-column code point is encountered.
- *     (The code unit's value is lower than 0xd800 so the 2 code unit encoding
- *     is irrelevant for this scanner.)
- *   Due to these assumptions the scanner is faster than the full scanner. It
- *   can process all text only containing ASCII. For UTF-16/32 it can process
- *   most (all?) European languages. (Note the set it can process might be
- *   reduced in the future, due to updates in the scanning rules.)
- * - The full scanner @ref __estimate_column_width. This scanner, if needed,
- *   converts multiple code units into one code point then converts the code
- *   point to a column width.
- *
- * See also:
- * - [format.string.general]/11
- * - https://en.wikipedia.org/wiki/UTF-8#Encoding
- * - https://en.wikipedia.org/wiki/UTF-16#U+D800_to_U+DFFF
- */
-
-/**
- * The first 2 column code point.
- *
- * This is the point where the fast UTF-16/32 scanner needs to stop processing.
- */
-inline constexpr uint32_t __two_column_code_point = 0x1100;
-
-/** Helper concept for an UTF-8 character type. */
-template <class _CharT>
-concept __utf8_character = same_as<_CharT, char> || same_as<_CharT, char8_t>;
-
-/** Helper concept for an UTF-16 character type. */
-template <class _CharT>
-concept __utf16_character = (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2) || same_as<_CharT, char16_t>;
-
-/** Helper concept for an UTF-32 character type. */
-template <class _CharT>
-concept __utf32_character = (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4) || same_as<_CharT, char32_t>;
-
-/** Helper concept for an UTF-16 or UTF-32 character type. */
-template <class _CharT>
-concept __utf16_or_32_character = __utf16_character<_CharT> || __utf32_character<_CharT>;
-
-/**
- * Converts a code point to the column width.
- *
- * The estimations are conforming to [format.string.general]/11
- *
- * This version expects a value less than 0x1'0000, which is a 3-byte UTF-8
- * character.
- */
-_LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_3(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c < 0x10000,
-                 "Use __column_width_4 or __column_width for larger values");
-
-  // clang-format off
-  return 1 + (__c >= 0x1100 && (__c <= 0x115f ||
-             (__c >= 0x2329 && (__c <= 0x232a ||
-             (__c >= 0x2e80 && (__c <= 0x303e ||
-             (__c >= 0x3040 && (__c <= 0xa4cf ||
-             (__c >= 0xac00 && (__c <= 0xd7a3 ||
-             (__c >= 0xf900 && (__c <= 0xfaff ||
-             (__c >= 0xfe10 && (__c <= 0xfe19 ||
-             (__c >= 0xfe30 && (__c <= 0xfe6f ||
-             (__c >= 0xff00 && (__c <= 0xff60 ||
-             (__c >= 0xffe0 && (__c <= 0xffe6
-             ))))))))))))))))))));
-  // clang-format on
-}
-
-/**
- * @overload
- *
- * This version expects a value greater than or equal to 0x1'0000, which is a
- * 4-byte UTF-8 character.
- */
-_LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_4(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c >= 0x10000,
-                 "Use __column_width_3 or __column_width for smaller values");
-
-  // clang-format off
-  return 1 + (__c >= 0x1'f300 && (__c <= 0x1'f64f ||
-             (__c >= 0x1'f900 && (__c <= 0x1'f9ff ||
-             (__c >= 0x2'0000 && (__c <= 0x2'fffd ||
-             (__c >= 0x3'0000 && (__c <= 0x3'fffd
-             ))))))));
-  // clang-format on
-}
-
-/**
- * @overload
- *
- * The general case, accepting all values.
- */
-_LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width(uint32_t __c) noexcept {
-  if (__c < 0x10000)
-    return __column_width_3(__c);
-
-  return __column_width_4(__c);
-}
-
-/**
- * Estimate the column width for the UTF-8 sequence using the fast algorithm.
- */
-template <__utf8_character _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr const _CharT*
-__estimate_column_width_fast(const _CharT* __first,
-                             const _CharT* __last) noexcept {
-  return _VSTD::find_if(__first, __last,
-                        [](unsigned char __c) { return __c & 0x80; });
-}
-
-/**
- * @overload
- *
- * The implementation for UTF-16/32.
- */
-template <__utf16_or_32_character _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr const _CharT*
-__estimate_column_width_fast(const _CharT* __first,
-                             const _CharT* __last) noexcept {
-  return _VSTD::find_if(__first, __last,
-                        [](uint32_t __c) { return __c >= 0x1100; });
-}
-
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __column_width_result {
-  /** The number of output columns. */
-  size_t __width;
-  /**
-   * The last parsed element.
-   *
-   * This limits the original output to fit in the wanted number of columns.
-   */
-  const _CharT* __ptr;
-};
-
-/**
- * Small helper to determine the width of malformed Unicode.
- *
- * @note This function's only needed for UTF-8. During scanning UTF-8 there
- * are multiple place where it can be detected that the Unicode is malformed.
- * UTF-16 only requires 1 test and UTF-32 requires no testing.
- */
-template <__utf8_character _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT>
-__estimate_column_width_malformed(const _CharT* __first, const _CharT* __last,
-                                  size_t __maximum, size_t __result) noexcept {
-  size_t __size = __last - __first;
-  size_t __n = _VSTD::min(__size, __maximum);
-  return {__result + __n, __first + __n};
-}
-
-/**
- * Determines the number of output columns needed to render the input.
- *
- * @note When the scanner encounters malformed Unicode it acts as-if every code
- * unit at the end of the input is one output column. It's expected the output
- * terminal will replace these malformed code units with a one column
- * replacement characters.
- *
- * @param __first   Points to the first element of the input range.
- * @param __last    Points beyond the last element of the input range.
- * @param __maximum The maximum number of output columns. The returned number
- *                  of estimated output columns will not exceed this value.
- */
-template <__utf8_character _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT>
-__estimate_column_width(const _CharT* __first, const _CharT* __last,
-                        size_t __maximum) noexcept {
-  size_t __result = 0;
-
-  while (__first != __last) {
-    // Based on the number of leading 1 bits the number of code units in the
-    // code point can be determined. See
-    // https://en.wikipedia.org/wiki/UTF-8#Encoding
-    switch (_VSTD::countl_one(static_cast<unsigned char>(*__first))) {
-    case 0: // 1-code unit encoding: all 1 column
-      ++__result;
-      ++__first;
-      break;
-
-    case 2: // 2-code unit encoding: all 1 column
-      // Malformed Unicode.
-      if (__last - __first < 2) [[unlikely]]
-        return __estimate_column_width_malformed(__first, __last, __maximum,
-                                                 __result);
-      __first += 2;
-      ++__result;
-      break;
-
-    case 3: // 3-code unit encoding: either 1 or 2 columns
-      // Malformed Unicode.
-      if (__last - __first < 3) [[unlikely]]
-        return __estimate_column_width_malformed(__first, __last, __maximum,
-                                                 __result);
-      {
-        uint32_t __c = static_cast<unsigned char>(*__first++) & 0x0f;
-        __c <<= 6;
-        __c |= static_cast<unsigned char>(*__first++) & 0x3f;
-        __c <<= 6;
-        __c |= static_cast<unsigned char>(*__first++) & 0x3f;
-        __result += __column_width_3(__c);
-        if (__result > __maximum)
-          return {__result - 2, __first - 3};
-      }
-      break;
-    case 4: // 4-code unit encoding: either 1 or 2 columns
-      // Malformed Unicode.
-      if (__last - __first < 4) [[unlikely]]
-        return __estimate_column_width_malformed(__first, __last, __maximum,
-                                                 __result);
-      {
-        uint32_t __c = static_cast<unsigned char>(*__first++) & 0x07;
-        __c <<= 6;
-        __c |= static_cast<unsigned char>(*__first++) & 0x3f;
-        __c <<= 6;
-        __c |= static_cast<unsigned char>(*__first++) & 0x3f;
-        __c <<= 6;
-        __c |= static_cast<unsigned char>(*__first++) & 0x3f;
-        __result += __column_width_4(__c);
-        if (__result > __maximum)
-          return {__result - 2, __first - 4};
-      }
-      break;
-    default:
-      // Malformed Unicode.
-      return __estimate_column_width_malformed(__first, __last, __maximum,
-                                               __result);
-    }
-
-    if (__result >= __maximum)
-      return {__result, __first};
-  }
-  return {__result, __first};
-}
-
-template <__utf16_character _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT>
-__estimate_column_width(const _CharT* __first, const _CharT* __last,
-                        size_t __maximum) noexcept {
-  size_t __result = 0;
-
-  while (__first != __last) {
-    uint32_t __c = *__first;
-    // Is the code unit part of a surrogate pair? See
-    // https://en.wikipedia.org/wiki/UTF-16#U+D800_to_U+DFFF
-    if (__c >= 0xd800 && __c <= 0xDfff) {
-      // Malformed Unicode.
-      if (__last - __first < 2) [[unlikely]]
-        return {__result + 1, __first + 1};
-
-      __c -= 0xd800;
-      __c <<= 10;
-      __c += (*(__first + 1) - 0xdc00);
-      __c += 0x10000;
-
-      __result += __column_width_4(__c);
-      if (__result > __maximum)
-        return {__result - 2, __first};
-      __first += 2;
-    } else {
-      __result += __column_width_3(__c);
-      if (__result > __maximum)
-        return {__result - 2, __first};
-      ++__first;
-    }
-
-    if (__result >= __maximum)
-      return {__result, __first};
-  }
-
-  return {__result, __first};
-}
-
-template <__utf32_character _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT>
-__estimate_column_width(const _CharT* __first, const _CharT* __last,
-                        size_t __maximum) noexcept {
-  size_t __result = 0;
-
-  while (__first != __last) {
-    uint32_t __c = *__first;
-    __result += __column_width(__c);
-
-    if (__result > __maximum)
-      return {__result - 2, __first};
-
-    ++__first;
-    if (__result >= __maximum)
-      return {__result, __first};
-  }
-
-  return {__result, __first};
-}
-
-} // namespace __detail
-
-template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr __string_alignment<_CharT>
-__get_string_alignment(const _CharT* __first, const _CharT* __last,
-                       ptrdiff_t __width, ptrdiff_t __precision) noexcept {
-  _LIBCPP_ASSERT(__width != 0 || __precision != -1,
-                 "The function has no effect and shouldn't be used");
-
-  // TODO FMT There might be more optimizations possible:
-  // If __precision == __format::__number_max and the encoding is:
-  // * UTF-8  : 4 * (__last - __first) >= __width
-  // * UTF-16 : 2 * (__last - __first) >= __width
-  // * UTF-32 : (__last - __first) >= __width
-  // In these cases it's certain the output is at least the requested width.
-  // It's unknown how often this happens in practice. For now the improvement
-  // isn't implemented.
-
-  /*
-   * First assume there are no special Unicode code units in the input.
-   * - Apply the precision (this may reduce the size of the input). When
-   *   __precison == -1 this step is omitted.
-   * - Scan for special code units in the input.
-   * If our assumption was correct the __pos will be at the end of the input.
-   */
-  const ptrdiff_t __length = __last - __first;
-  const _CharT* __limit =
-      __first +
-      (__precision == -1 ? __length : _VSTD::min(__length, __precision));
-  ptrdiff_t __size = __limit - __first;
-  const _CharT* __pos =
-      __detail::__estimate_column_width_fast(__first, __limit);
-
-  if (__pos == __limit)
-    return {__limit, __size, __size < __width};
-
-  /*
-   * Our assumption was wrong, there are special Unicode code units.
-   * The range [__first, __pos) contains a set of code units with the
-   * following property:
-   *      Every _CharT in the range will be rendered in 1 column.
-   *
-   * If there's no maximum width and the parsed size already exceeds the
-   *   minimum required width. The real size isn't important. So bail out.
-   */
-  if (__precision == -1 && (__pos - __first) >= __width)
-    return {__last, 0, false};
-
-  /* If there's a __precision, truncate the output to that width. */
-  ptrdiff_t __prefix = __pos - __first;
-  if (__precision != -1) {
-    _LIBCPP_ASSERT(__precision > __prefix, "Logic error.");
-    auto __lengh_info = __detail::__estimate_column_width(
-        __pos, __last, __precision - __prefix);
-    __size = __lengh_info.__width + __prefix;
-    return {__lengh_info.__ptr, __size, __size < __width};
-  }
-
-  /* Else use __width to determine the number of required padding characters. */
-  _LIBCPP_ASSERT(__width > __prefix, "Logic error.");
-  /*
-   * The column width is always one or two columns. For the precision the wanted
-   * column width is the maximum, for the width it's the minimum. Using the
-   * width estimation with its truncating behavior will result in the wrong
-   * result in the following case:
-   * - The last code unit processed requires two columns and exceeds the
-   *   maximum column width.
-   * By increasing the __maximum by one avoids this issue. (It means it may
-   * pass one code point more than required to determine the proper result;
-   * that however isn't a problem for the algorithm.)
-   */
-  size_t __maximum = 1 + __width - __prefix;
-  auto __lengh_info =
-      __detail::__estimate_column_width(__pos, __last, __maximum);
-  if (__lengh_info.__ptr != __last) {
-    // Consumed the width number of code units. The exact size of the string
-    // is unknown. We only know we don't need to align the output.
-    _LIBCPP_ASSERT(static_cast<ptrdiff_t>(__lengh_info.__width + __prefix) >=
-                       __width,
-                   "Logic error");
-    return {__last, 0, false};
-  }
-
-  __size = __lengh_info.__width + __prefix;
-  return {__last, __size, __size < __width};
-}
-#else  // _LIBCPP_HAS_NO_UNICODE
-template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr __string_alignment<_CharT>
-__get_string_alignment(const _CharT* __first, const _CharT* __last,
-                       ptrdiff_t __width, ptrdiff_t __precision) noexcept {
-  const ptrdiff_t __length = __last - __first;
-  const _CharT* __limit =
-      __first +
-      (__precision == -1 ? __length : _VSTD::min(__length, __precision));
-  ptrdiff_t __size = __limit - __first;
-  return {__limit, __size, __size < __width};
-}
-#endif // _LIBCPP_HAS_NO_UNICODE
 
 /// These fields are a filter for which elements to parse.
 ///
@@ -1142,6 +688,212 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_pointer(__format_spe
     std::__throw_format_error("The format-spec type has a type not supported for a pointer argument");
   }
 }
+
+template <class _CharT>
+struct __column_width_result {
+  /// The number of output columns.
+  size_t __width_;
+  /// One beyond the last code unit used in the estimation.
+  ///
+  /// This limits the original output to fit in the wanted number of columns.
+  const _CharT* __last_;
+};
+
+/// Since a column width can be two it's possible that the requested column
+/// width can't be achieved. Depending on the intended usage the policy can be
+/// selected.
+/// - When used as precision the maximum width may not be exceeded and the
+///   result should be "rounded down" to the previous boundary.
+/// - When used as a width we're done once the minimum is reached, but
+///   exceeding is not an issue. Rounding down is an issue since that will
+///   result in writing fill characters. Therefore the result needs to be
+///   "rounded up".
+enum class __column_width_rounding { __down, __up };
+
+#  ifndef _LIBCPP_HAS_NO_UNICODE
+
+namespace __detail {
+
+/// Converts a code point to the column width.
+///
+/// The estimations are conforming to [format.string.general]/11
+///
+/// This version expects a value less than 0x1'0000, which is a 3-byte UTF-8
+/// character.
+_LIBCPP_HIDE_FROM_ABI constexpr int __column_width_3(uint32_t __c) noexcept {
+  _LIBCPP_ASSERT(__c < 0x10000, "Use __column_width_4 or __column_width for larger values");
+
+  // clang-format off
+  return 1 + (__c >= 0x1100 && (__c <= 0x115f ||
+             (__c >= 0x2329 && (__c <= 0x232a ||
+             (__c >= 0x2e80 && (__c <= 0x303e ||
+             (__c >= 0x3040 && (__c <= 0xa4cf ||
+             (__c >= 0xac00 && (__c <= 0xd7a3 ||
+             (__c >= 0xf900 && (__c <= 0xfaff ||
+             (__c >= 0xfe10 && (__c <= 0xfe19 ||
+             (__c >= 0xfe30 && (__c <= 0xfe6f ||
+             (__c >= 0xff00 && (__c <= 0xff60 ||
+             (__c >= 0xffe0 && (__c <= 0xffe6
+             ))))))))))))))))))));
+  // clang-format on
+}
+
+/// @overload
+///
+/// This version expects a value greater than or equal to 0x1'0000, which is a
+/// 4-byte UTF-8 character.
+_LIBCPP_HIDE_FROM_ABI constexpr int __column_width_4(uint32_t __c) noexcept {
+  _LIBCPP_ASSERT(__c >= 0x10000, "Use __column_width_3 or __column_width for smaller values");
+
+  // clang-format off
+  return 1 + (__c >= 0x1'f300 && (__c <= 0x1'f64f ||
+             (__c >= 0x1'f900 && (__c <= 0x1'f9ff ||
+             (__c >= 0x2'0000 && (__c <= 0x2'fffd ||
+             (__c >= 0x3'0000 && (__c <= 0x3'fffd
+             ))))))));
+  // clang-format on
+}
+
+/// @overload
+///
+/// The general case, accepting all values.
+_LIBCPP_HIDE_FROM_ABI constexpr int __column_width(uint32_t __c) noexcept {
+  if (__c < 0x10000)
+    return __detail::__column_width_3(__c);
+
+  return __detail::__column_width_4(__c);
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT> __estimate_column_width_grapheme_clustering(
+    const _CharT* __first, const _CharT* __last, size_t __maximum, __column_width_rounding __rounding) noexcept {
+  __unicode::__extended_grapheme_cluster_view<_CharT> __view{__first, __last};
+
+  __column_width_result<_CharT> __result{0, __first};
+  while (__result.__last_ != __last && __result.__width_ <= __maximum) {
+    typename __unicode::__extended_grapheme_cluster_view<_CharT>::__cluster __cluster = __view.__consume();
+    int __width = __detail::__column_width(__cluster.__code_point_);
+
+    // When the next entry would exceed the maximum width the previous width
+    // might be returned. For example when a width of 100 is requested the
+    // returned width might be 99, since the next code point has an estimated
+    // column width of 2. This depends on the rounding flag.
+    // When the maximum is exceeded the loop will abort the next iteration.
+    if (__rounding == __column_width_rounding::__down && __result.__width_ + __width > __maximum)
+      return __result;
+
+    __result.__width_ += __width;
+    __result.__last_ = __cluster.__last_;
+  }
+
+  return __result;
+}
+
+} // namespace __detail
+
+// Unicode can be stored in several formats: UTF-8, UTF-16, and UTF-32.
+// Depending on format the relation between the number of code units stored and
+// the number of output columns differs. The first relation is the number of
+// code units forming a code point. (The text assumes the code units are
+// unsigned.)
+// - UTF-8 The number of code units is between one and four. The first 127
+//   Unicode code points match the ASCII character set. When the highest bit is
+//   set it means the code point has more than one code unit.
+// - UTF-16: The number of code units is between 1 and 2. When the first
+//   code unit is in the range [0xd800,0xdfff) it means the code point uses two
+//   code units.
+// - UTF-32: The number of code units is always one.
+//
+// The code point to the number of columns is specified in
+// [format.string.std]/11. This list might change in the future.
+//
+// Another thing to be taken into account is Grapheme clustering. This means
+// that in some cases multiple code points are combined one element in the
+// output. For example:
+// - an ASCII character with a combined diacritical mark
+// - an emoji with a skin tone modifier
+// - a group of combined people emoji to create a family
+// - a combination of flag emoji
+//
+// See also:
+// - [format.string.general]/11
+// - https://en.wikipedia.org/wiki/UTF-8#Encoding
+// - https://en.wikipedia.org/wiki/UTF-16#U+D800_to_U+DFFF
+
+_LIBCPP_HIDE_FROM_ABI constexpr bool __is_ascii(char32_t __c) { return __c < 0x80; }
+
+/// Determines the number of output columns needed to render the input.
+///
+/// \note When the scanner encounters malformed Unicode it acts as-if every
+/// code unit is a one column code point. Typically a terminal uses the same
+/// strategy and replaces every malformed code unit with a one column
+/// replacement character.
+///
+/// \param __first    Points to the first element of the input range.
+/// \param __last     Points beyond the last element of the input range.
+/// \param __maximum  The maximum number of output columns. The returned number
+///                   of estimated output columns will not exceed this value.
+/// \param __rounding Selects the rounding method.
+///                   \c __down result.__width_ <= __maximum
+///                   \c __up result.__width_ <= __maximum + 1
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT> __estimate_column_width(
+    basic_string_view<_CharT> __str, size_t __maximum, __column_width_rounding __rounding) noexcept {
+  // The width estimation is done in two steps:
+  // - Quickly process for the ASCII part. ASCII has the following properties
+  //   - One code unit is one code point
+  //   - Every code point has an estimated width of one
+  // - When needed it will a Unicode Grapheme clustering algorithm to find
+  //   the proper place for truncation.
+
+  if (__str.empty() || __maximum == 0)
+    return {0, __str.begin()};
+
+  // ASCII has one caveat; when an ASCII character is followed by a non-ASCII
+  // character they might be part of an extended grapheme cluster. For example:
+  //   an ASCII letter and a COMBINING ACUTE ACCENT
+  // The truncate should happen after the COMBINING ACUTE ACCENT. Therefore we
+  // need to scan one code unit beyond the requested precision. When this code
+  // unit is non-ASCII we omit the current code unit and let the Grapheme
+  // clustering algorithm do its work.
+  const _CharT* __it = __str.begin();
+  if (__is_ascii(*__it)) {
+    do {
+      --__maximum;
+      ++__it;
+      if (__it == __str.end())
+        return {__str.size(), __str.end()};
+
+      if (__maximum == 0) {
+        if (__is_ascii(*__it))
+          return {static_cast<size_t>(__it - __str.begin()), __it};
+
+        break;
+      }
+    } while (__is_ascii(*__it));
+    --__it;
+    ++__maximum;
+  }
+
+  ptrdiff_t __ascii_size = __it - __str.begin();
+  __column_width_result __result =
+      __detail::__estimate_column_width_grapheme_clustering(__it, __str.end(), __maximum, __rounding);
+
+  __result.__width_ += __ascii_size;
+  return __result;
+}
+#  else // !defined(_LIBCPP_HAS_NO_UNICODE)
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT>
+__estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __column_width_rounding) noexcept {
+  // When Unicode isn't supported assume ASCII and every code unit is one code
+  // point. In ASCII the estimated column width is always one. Thus there's no
+  // need for rounding.
+  size_t __width_ = _VSTD::min(__str.size(), __maximum);
+  return {__width_, __str.begin() + __width_};
+}
+
+#  endif // !defined(_LIBCPP_HAS_NO_UNICODE)
 
 } // namespace __format_spec
 

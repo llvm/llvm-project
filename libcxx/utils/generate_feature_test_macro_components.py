@@ -186,7 +186,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["bit"],
   }, {
     "name": "__cpp_lib_char8_t",
-    "values": { "c++20": 201811 },
+    "values": { "c++20": 201907 },
     "headers": ["atomic", "filesystem", "istream", "limits", "locale", "ostream", "string", "string_view"],
     "test_suite_guard": "defined(__cpp_char8_t)",
     "libcxx_guard": "!defined(_LIBCPP_HAS_NO_CHAR8_T)",

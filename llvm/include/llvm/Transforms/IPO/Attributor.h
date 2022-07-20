@@ -4966,7 +4966,9 @@ struct AAPointerInfo : public AbstractAttribute {
     bool isWrittenValueYetUndetermined() const { return !Content; }
 
     /// Return true if the value written cannot be determined at all.
-    bool isWrittenValueUnknown() const { return Content && !*Content; }
+    bool isWrittenValueUnknown() const {
+      return Content.has_value() && !*Content;
+    }
 
     /// Return the type associated with the access, if known.
     Type *getType() const { return Ty; }

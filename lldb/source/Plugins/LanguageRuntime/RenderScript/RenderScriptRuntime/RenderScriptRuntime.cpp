@@ -4163,7 +4163,7 @@ public:
     int m_kernel_types = RSReduceBreakpointResolver::eKernelTypeAll;
     llvm::StringRef m_reduce_name;
     RSCoordinate m_coord;
-    bool m_have_coord;
+    bool m_have_coord = false;
   };
 
   Options *GetOptions() override { return &m_options; }
@@ -4268,7 +4268,7 @@ public:
     }
 
     RSCoordinate m_coord;
-    bool m_have_coord;
+    bool m_have_coord = false;
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {

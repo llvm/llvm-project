@@ -679,9 +679,6 @@ void PassManagerBuilder::populateModulePassManager(
     // and saves running remaining passes on the eliminated functions.
     MPM.add(createEliminateAvailableExternallyPass());
 
-  if (EnableOrderFileInstrumentation)
-    MPM.add(createInstrOrderFilePass());
-
   MPM.add(createReversePostOrderFunctionAttrsPass());
 
   // The inliner performs some kind of dead code elimination as it goes,

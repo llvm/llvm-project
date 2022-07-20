@@ -1730,6 +1730,10 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PATCHPOINT:
     Res = PromoteIntOp_PATCHPOINT(N, OpNo);
     break;
+  case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
+  case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
+    Res = PromoteIntOp_VP_STRIDED(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2350,6 +2354,16 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
   SDValue Operand = N->getOperand(OpNo);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
   NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
+  assert((N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_LOAD && OpNo == 3) ||
+         (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_STORE && OpNo == 4));
+
+  SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+  NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
+
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -4708,6 +4722,10 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PATCHPOINT:
     Res = ExpandIntOp_PATCHPOINT(N, OpNo);
     break;
+  case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
+  case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
+    Res = ExpandIntOp_VP_STRIDED(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -5123,6 +5141,17 @@ SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {
   return Swap.getValue(1);
 }
 
+SDValue DAGTypeLegalizer::ExpandIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
+  assert((N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_LOAD && OpNo == 3) ||
+         (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_STORE && OpNo == 4));
+
+  SDValue Hi; // The upper half is dropped out.
+  SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+  GetExpandedInteger(NewOps[OpNo], NewOps[OpNo], Hi);
+
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   SDLoc dl(N);
 
@@ -5268,21 +5297,28 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BUILD_VECTOR(SDNode *N) {
   assert(NOutVT.isVector() && "This type must be promoted to a vector type");
   unsigned NumElems = N->getNumOperands();
   EVT NOutVTElem = NOutVT.getVectorElementType();
-
+  TargetLoweringBase::BooleanContent NOutBoolType = TLI.getBooleanContents(NOutVT);
+  unsigned NOutExtOpc = TargetLowering::getExtendForContent(NOutBoolType);
   SDLoc dl(N);
 
   SmallVector<SDValue, 8> Ops;
   Ops.reserve(NumElems);
   for (unsigned i = 0; i != NumElems; ++i) {
-    SDValue Op;
+    SDValue Op = N->getOperand(i);
+    EVT OpVT = Op.getValueType();
     // BUILD_VECTOR integer operand types are allowed to be larger than the
     // result's element type. This may still be true after the promotion. For
     // example, we might be promoting (<v?i1> = BV <i32>, <i32>, ...) to
     // (v?i16 = BV <i32>, <i32>, ...), and we can't any_extend <i32> to <i16>.
-    if (N->getOperand(i).getValueType().bitsLT(NOutVTElem))
-      Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutVTElem, N->getOperand(i));
-    else
-      Op = N->getOperand(i);
+    if (OpVT.bitsLT(NOutVTElem)) {
+      unsigned ExtOpc = ISD::ANY_EXTEND;
+      // Attempt to extend constant bool vectors to match target's BooleanContent.
+      // While not necessary, this improves chances of the constant correctly
+      // folding with compare results (e.g. for NOT patterns).
+      if (OpVT == MVT::i1 && Op.getOpcode() == ISD::Constant)
+        ExtOpc = NOutExtOpc;
+      Op = DAG.getNode(ExtOpc, dl, NOutVTElem, Op);
+    }
     Ops.push_back(Op);
   }
 

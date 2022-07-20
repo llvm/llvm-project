@@ -114,6 +114,7 @@ set(files
   __algorithm/ranges_move_backward.h
   __algorithm/ranges_none_of.h
   __algorithm/ranges_nth_element.h
+  __algorithm/ranges_partial_sort.h
   __algorithm/ranges_partial_sort_copy.h
   __algorithm/ranges_partition.h
   __algorithm/ranges_partition_copy.h
@@ -274,6 +275,7 @@ set(files
   __format/buffer.h
   __format/concepts.h
   __format/enable_insertable.h
+  __format/extended_grapheme_cluster_table.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
@@ -293,6 +295,7 @@ set(files
   __format/formatter_pointer.h
   __format/formatter_string.h
   __format/parser_std_format_spec.h
+  __format/unicode.h
   __functional/binary_function.h
   __functional/binary_negate.h
   __functional/bind.h
@@ -381,6 +384,7 @@ set(files
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
+  __memory/swap_allocator.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
