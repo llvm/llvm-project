@@ -149,43 +149,60 @@ macro(add_clang_executable name)
 endmacro(add_clang_executable)
 
 macro(add_clang_tool name)
+  cmake_parse_arguments(ARG "DEPENDS;GENERATE_DRIVER" "" "" ${ARGN})
   if (NOT CLANG_BUILD_TOOLS)
     set(EXCLUDE_FROM_ALL ON)
   endif()
+  if(ARG_GENERATE_DRIVER AND LLVM_TOOL_LLVM_DRIVER_BUILD)
+    set(get_obj_args ${ARGN})
+    list(FILTER get_obj_args EXCLUDE REGEX "^SUPPORT_PLUGINS$")
+    generate_llvm_objects(${name} ${get_obj_args})
+    add_custom_target(${name} DEPENDS llvm-driver clang-resource-headers)
+  else()
+    add_clang_executable(${name} ${ARGN})
+    add_dependencies(${name} clang-resource-headers)
 
-  add_clang_executable(${name} ${ARGN})
-  add_dependencies(${name} clang-resource-headers)
+    if (CLANG_BUILD_TOOLS)
+      get_target_export_arg(${name} Clang export_to_clangtargets)
+      install(TARGETS ${name}
+        ${export_to_clangtargets}
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        COMPONENT ${name})
 
-  if (CLANG_BUILD_TOOLS)
-    get_target_export_arg(${name} Clang export_to_clangtargets)
-    install(TARGETS ${name}
-      ${export_to_clangtargets}
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-      COMPONENT ${name})
-
-    if(NOT LLVM_ENABLE_IDE)
-      add_llvm_install_targets(install-${name}
-                               DEPENDS ${name}
-                               COMPONENT ${name})
+      if(NOT LLVM_ENABLE_IDE)
+        add_llvm_install_targets(install-${name}
+                                 DEPENDS ${name}
+                                 COMPONENT ${name})
+      endif()
+      set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
     endif()
-    set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
   endif()
 endmacro()
 
 macro(add_clang_symlink name dest)
-  add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)
-  # Always generate install targets
-  llvm_install_symlink(${name} ${dest} ALWAYS_GENERATE)
+  get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
+  if(LLVM_TOOL_LLVM_DRIVER_BUILD AND ${dest} IN_LIST LLVM_DRIVER_TOOLS)
+    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_SYMLINKS ${name})
+  else()
+    add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)
+    # Always generate install targets
+    llvm_install_symlink(${name} ${dest} ALWAYS_GENERATE)
+  endif()
 endmacro()
 
 function(clang_target_link_libraries target type)
+  if (TARGET obj.${target})
+    target_link_libraries(obj.${target} ${ARGN})
+  endif()
+
+  get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
+  if(LLVM_TOOL_LLVM_DRIVER_BUILD AND ${target} IN_LIST LLVM_DRIVER_TOOLS)
+    set(target llvm-driver)
+  endif()
+
   if (CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${target} ${type} clang-cpp)
   else()
     target_link_libraries(${target} ${type} ${ARGN})
   endif()
-  if (TARGET obj.${target})
-    target_link_libraries(obj.${target} ${ARGN})
-  endif()
-
 endfunction()
