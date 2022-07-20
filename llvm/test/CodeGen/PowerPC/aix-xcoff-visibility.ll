@@ -3,15 +3,11 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec -data-sections=false < %s |\
 ; RUN:   FileCheck %s
 
-; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \
-; RUN:     -filetype=obj -o %t.o < %s 2>&1 | \
-; RUN:   FileCheck --check-prefix=XCOFF %s
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -filetype=obj %s -o %t.o
+; RUN: llvm-readobj --syms --auxiliary-header %t.o | FileCheck %s --check-prefixes=SYM,AUX32
 
-; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:     -filetype=obj -o %t.o 2>&1 < %s 2>&1 | \
-; RUN:   FileCheck --check-prefix=XCOFF %s
-
-; XCOFF: LLVM ERROR: Emitting non-zero visibilities is not supported yet.
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -filetype=obj %s -o %t64.o
+; RUN: llvm-readobj --syms --auxiliary-header %t64.o | FileCheck %s --check-prefixes=SYM,AUX64
 
 @b =  global i32 0, align 4
 @b_h = hidden global i32 0, align 4
@@ -88,3 +84,155 @@ declare dllexport i32 @bar_e(i32*)
 ; CHECK:        .extern bar_h[DS],hidden
 ; CHECK:        .extern .bar_e[PR],exported
 ; CHECK:        .extern bar_e[DS],exported
+
+; AUX32:       AuxiliaryHeader {
+; AUX32-NEXT:    Magic: 0x0
+; AUX32-NEXT:    Version: 0x2
+; AUX32-NEXT:    Size of .text section: 0x134
+; AUX32-NEXT:    Size of .data section: 0x6C
+; AUX32-NEXT:    Size of .bss section: 0x0
+; AUX32-NEXT:    Entry point address: 0x0
+; AUX32-NEXT:    .text section start address: 0x0
+; AUX32-NEXT:    .data section start address: 0x134
+; AUX32-NEXT:  }
+
+; AUX64:       AuxiliaryHeader {
+; AUX64-NEXT:  }
+
+; SYM:         Name: .bar_h
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: zoo_weak_extern_h
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
+
+; SYM:         Name: .zoo_weak_extern_h
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
+
+; SYM:         Name: .zoo_weak_extern_e
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
+
+; SYM:         Name: zoo_weak_extern_e
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
+
+; SYM:         Name: bar_h
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: .bar_e
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: bar_e
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: N_UNDEF
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: .foo
+; SYM-NEXT:    Value (RelocatableAddress): 0x0
+; SYM-NEXT:    Section: .text
+; SYM-NEXT:    Type: 0x0
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: .foo_h
+; SYM-NEXT:    Value (RelocatableAddress): 0x1C
+; SYM-NEXT:    Section: .text
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: .foo_e
+; SYM-NEXT:    Value (RelocatableAddress): 0x3C
+; SYM-NEXT:    Section: .text
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: .foo_protected
+; SYM-NEXT:    Value (RelocatableAddress): 0x5C
+; SYM-NEXT:    Section: .text
+; SYM-NEXT:    Type: 0x3000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: .foo_weak_h
+; SYM-NEXT:    Value (RelocatableAddress): 0x84
+; SYM-NEXT:    Section: .text
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
+
+; SYM:         Name: .foo_weak_e
+; SYM-NEXT:    Value (RelocatableAddress): 0xA4
+; SYM-NEXT:    Section: .text
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
+
+; SYM:         Name: b
+; SYM-NEXT:    Value (RelocatableAddress): 0x134
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x0
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: b_h
+; SYM-NEXT:    Value (RelocatableAddress): 0x138
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: b_e
+; SYM-NEXT:    Value (RelocatableAddress): 0x13C
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: foo
+; SYM-NEXT:    Value (RelocatableAddress): {{[0-9]+}}
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x0
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: foo_h
+; SYM-NEXT:    Value (RelocatableAddress): {{[0-9]+}}
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: foo_e
+; SYM-NEXT:    Value (RelocatableAddress): {{[0-9]+}}
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: foo_protected
+; SYM-NEXT:    Value (RelocatableAddress): {{[0-9]+}}
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x3000
+; SYM-NEXT:    StorageClass: C_EXT (0x2)
+
+; SYM:         Name: foo_weak_h
+; SYM-NEXT:    Value (RelocatableAddress): {{[0-9]+}}
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x2000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
+
+; SYM:         Name: foo_weak_e
+; SYM-NEXT:    Value (RelocatableAddress): {{[0-9]+}}
+; SYM-NEXT:    Section: .data
+; SYM-NEXT:    Type: 0x4000
+; SYM-NEXT:    StorageClass: C_WEAKEXT (0x6F)
