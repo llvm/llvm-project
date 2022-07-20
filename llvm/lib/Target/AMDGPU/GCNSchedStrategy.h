@@ -52,13 +52,18 @@ class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
   MachineFunction *MF;
 
 public:
-  // schedule() have seen a clustered memory operation. Set it to false
-  // before a region scheduling to know if the region had such clusters.
-  bool HasClusteredNodes;
+  // schedule() have seen register pressure over the critical limits and had to
+  // track register pressure for actual scheduling heuristics.
+  bool HasHighPressure;
 
-  // schedule() have seen an excess register pressure and had to track
-  // register pressure for actual scheduling heuristics.
-  bool HasExcessPressure;
+  // An error margin is necessary because of poor performance of the generic RP
+  // tracker and can be adjusted up for tuning heuristics to try and more
+  // aggressively reduce register pressure.
+  const unsigned DefaultErrorMargin = 3;
+
+  const unsigned HighRPErrorMargin = 10;
+
+  unsigned ErrorMargin = DefaultErrorMargin;
 
   unsigned SGPRCriticalLimit;
 
@@ -77,7 +82,7 @@ public:
 
 enum class GCNSchedStageID : unsigned {
   InitialSchedule = 0,
-  UnclusteredReschedule = 1,
+  UnclusteredHighRPReschedule = 1,
   ClusteredLowOccupancyReschedule = 2,
   PreRARematerialize = 3,
   LastStage = PreRARematerialize
@@ -104,7 +109,7 @@ inline bool operator>(GCNSchedStageID &LHS, GCNSchedStageID &RHS) {
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class InitialScheduleStage;
-  friend class UnclusteredRescheduleStage;
+  friend class UnclusteredHighRPStage;
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
 
@@ -126,11 +131,12 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // or we generally desire to reschedule it.
   BitVector RescheduleRegions;
 
-  // Record regions which use clustered loads/stores.
-  BitVector RegionsWithClusters;
-
   // Record regions with high register pressure.
   BitVector RegionsWithHighRP;
+
+  // Record regions with excess register pressure over the physical register
+  // limit. Register pressure in these regions usually will result in spilling.
+  BitVector RegionsWithExcessRP;
 
   // Regions that has the same occupancy as the latest MinOccupancy
   BitVector RegionsWithMinOcc;
@@ -220,7 +226,7 @@ public:
   void setupNewBlock();
 
   // Finalize state after scheudling a region.
-  virtual void finalizeGCNRegion();
+  void finalizeGCNRegion();
 
   // Check result of scheduling.
   void checkScheduling();
@@ -241,17 +247,18 @@ public:
 
 class InitialScheduleStage : public GCNSchedStage {
 public:
-  void finalizeGCNRegion() override;
-
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   InitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 
-class UnclusteredRescheduleStage : public GCNSchedStage {
+class UnclusteredHighRPStage : public GCNSchedStage {
 private:
   std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
+  // Save the initial occupancy before starting this stage.
+  unsigned InitialOccupancy;
 
 public:
   bool initGCNSchedStage() override;
@@ -262,7 +269,7 @@ public:
 
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
-  UnclusteredRescheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+  UnclusteredHighRPStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 
