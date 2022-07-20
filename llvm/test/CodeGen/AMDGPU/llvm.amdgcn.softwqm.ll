@@ -254,12 +254,6 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 main_body:
-  %c.bc = bitcast i32 %c to float
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
-  %tex0 = extractelement <4 x float> %tex, i32 0
-  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
-  %data.sample = extractelement <4 x float> %dtex, i32 0
-
   %cmp = icmp eq i32 %z, 0
   br i1 %cmp, label %IF, label %ELSE
 
@@ -271,6 +265,12 @@ IF:
   br label %END
 
 ELSE:
+  %c.bc = bitcast i32 %c to float
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %tex0 = extractelement <4 x float> %tex, i32 0
+  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %data.sample = extractelement <4 x float> %dtex, i32 0
+
   call void @llvm.amdgcn.struct.buffer.store.f32(float %data.sample, <4 x i32> undef, i32 %c, i32 0, i32 0, i32 0)
   br label %END
 
