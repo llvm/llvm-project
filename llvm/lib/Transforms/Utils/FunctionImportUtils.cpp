@@ -35,6 +35,13 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
 bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
     const GlobalValue *SGV, ValueInfo VI) {
   assert(SGV->hasLocalLinkage());
+
+  // Ifuncs and ifunc alias does not have summary.
+  if (isa<GlobalIFunc>(SGV) ||
+      (isa<GlobalAlias>(SGV) &&
+       isa<GlobalIFunc>(cast<GlobalAlias>(SGV)->getAliaseeObject())))
+    return false;
+
   // Both the imported references and the original local variable must
   // be promoted.
   if (!isPerformingImport() && !isModuleExporting())
