@@ -69,6 +69,12 @@ struct LSPServer {
                     Callback<CompletionList> reply);
 
   //===--------------------------------------------------------------------===//
+  // Code Action
+
+  void onCodeAction(const CodeActionParams &params,
+                    Callback<llvm::json::Value> reply);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -120,6 +126,16 @@ void LSPServer::onInitialize(const InitializeParams &params,
       {"documentSymbolProvider",
        params.capabilities.hierarchicalDocumentSymbol},
   };
+
+  // Per LSP, codeActionProvider can be either boolean or CodeActionOptions.
+  // CodeActionOptions is only valid if the client supports action literal
+  // via textDocument.codeAction.codeActionLiteralSupport.
+  serverCaps["codeActionProvider"] =
+      params.capabilities.codeActionStructure
+          ? llvm::json::Object{{"codeActionKinds",
+                                {CodeAction::kQuickFix, CodeAction::kRefactor,
+                                 CodeAction::kInfo}}}
+          : llvm::json::Value(true);
 
   llvm::json::Object result{
       {{"serverInfo",
@@ -216,6 +232,29 @@ void LSPServer::onCompletion(const CompletionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// Code Action
+
+void LSPServer::onCodeAction(const CodeActionParams &params,
+                             Callback<llvm::json::Value> reply) {
+  URIForFile uri = params.textDocument.uri;
+
+  // Check whether a particular CodeActionKind is included in the response.
+  auto isKindAllowed = [only(params.context.only)](StringRef kind) {
+    if (only.empty())
+      return true;
+    return llvm::any_of(only, [&](StringRef base) {
+      return kind.consume_front(base) && (kind.empty() || kind.startswith("."));
+    });
+  };
+
+  // We provide a code action for fixes on the specified diagnostics.
+  std::vector<CodeAction> actions;
+  if (isKindAllowed(CodeAction::kQuickFix))
+    server.getCodeActions(uri, params.range.start, params.context, actions);
+  reply(std::move(actions));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry point
 //===----------------------------------------------------------------------===//
 
@@ -254,6 +293,10 @@ LogicalResult lsp::runMlirLSPServer(MLIRServer &server,
   // Code Completion
   messageHandler.method("textDocument/completion", &lspServer,
                         &LSPServer::onCompletion);
+
+  // Code Action
+  messageHandler.method("textDocument/codeAction", &lspServer,
+                        &LSPServer::onCodeAction);
 
   // Diagnostics
   lspServer.publishDiagnostics =
