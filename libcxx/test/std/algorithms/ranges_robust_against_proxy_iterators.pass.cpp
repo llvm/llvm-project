@@ -59,7 +59,7 @@ constexpr void run_tests() {
 
   std::array output = {T{4}, T{5}, T{6}, T{7}, T{8}, T{9}};
   ProxyIterator out{output.begin()};
-  //auto out2 = output.begin() + 1;
+  ProxyIterator out2{output.begin() + 1};
 
   T num{2};
   Proxy<T&> x{num};
@@ -82,7 +82,7 @@ constexpr void run_tests() {
   test(std::ranges::mismatch, in, in2);
   test(std::ranges::equal, in, in2);
   test(std::ranges::lexicographical_compare, in, in2);
-  //test(std::ranges::partition_point, unary_pred);
+  test(std::ranges::partition_point, in, unary_pred);
   test(std::ranges::lower_bound, in, x);
   test(std::ranges::upper_bound, in, x);
   //test(std::ranges::equal_range, in, x);
@@ -136,7 +136,7 @@ constexpr void run_tests() {
     test(std::ranges::reverse_copy, in, out);
     test_mid(std::ranges::rotate_copy, in, mid, out);
     //test(std::ranges::unique_copy, in, out);
-    //test(std::ranges::partition_copy, in, out, out2, unary_pred);
+    test(std::ranges::partition_copy, in, out, out2, unary_pred);
     //test_mid(std::ranges::partial_sort_copy, in, in2);
     test(std::ranges::merge, in, in2, out);
     test(std::ranges::set_difference, in, in2, out);

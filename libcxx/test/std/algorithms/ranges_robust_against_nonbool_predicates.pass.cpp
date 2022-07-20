@@ -62,7 +62,7 @@ constexpr bool test_all() {
 
   std::array output = {7, 8, 9, 10, 11, 12};
   auto out = output.begin();
-  //auto out2 = output.begin() + 1;
+  auto out2 = output.begin() + 1;
 
   int x = 2;
   int count = 1;
@@ -77,7 +77,7 @@ constexpr bool test_all() {
   test(std::ranges::mismatch, in, in2, binary_pred);
   test(std::ranges::equal, in, in2, binary_pred);
   test(std::ranges::lexicographical_compare, in, in2, binary_pred);
-  //test(std::ranges::partition_point, unary_pred);
+  test(std::ranges::partition_point, in, unary_pred);
   test(std::ranges::lower_bound, in, x, binary_pred);
   test(std::ranges::upper_bound, in, x, binary_pred);
   //test(std::ranges::equal_range, in, x, binary_pred);
@@ -116,7 +116,7 @@ constexpr bool test_all() {
   test(std::ranges::replace_if, in, unary_pred, x);
   //test(std::ranges::replace_copy_if, in, out, unary_pred, x);
   //test(std::ranges::unique_copy, in, out, binary_pred);
-  //test(std::ranges::partition_copy, in, out, out2, unary_pred);
+  test(std::ranges::partition_copy, in, out, out2, unary_pred);
   //test(std::ranges::partial_sort_copy, in, in2, binary_pred);
   test(std::ranges::merge, in, in2, out, binary_pred);
   test(std::ranges::set_difference, in, in2, out, binary_pred);
