@@ -1019,6 +1019,10 @@ public:
       /// for which we only have a function prototype.
       CK_FunctionType,
 
+      /// The candidate is a variable or expression of function type
+      /// for which we have the location of the prototype declaration.
+      CK_FunctionProtoTypeLoc,
+
       /// The candidate is a template, template arguments are being completed.
       CK_Template,
 
@@ -1042,6 +1046,10 @@ public:
       /// The function type that describes the entity being called,
       /// when Kind == CK_FunctionType.
       const FunctionType *Type;
+
+      /// The location of the function prototype that describes the entity being
+      /// called, when Kind == CK_FunctionProtoTypeLoc.
+      FunctionProtoTypeLoc ProtoTypeLoc;
 
       /// The template overload candidate, available when
       /// Kind == CK_Template.
@@ -1068,6 +1076,11 @@ public:
       assert(Type != nullptr);
     }
 
+    OverloadCandidate(FunctionProtoTypeLoc Prototype)
+        : Kind(CK_FunctionProtoTypeLoc), ProtoTypeLoc(Prototype) {
+      assert(!Prototype.isNull());
+    }
+
     OverloadCandidate(const RecordDecl *Aggregate)
         : Kind(CK_Aggregate), AggregateType(Aggregate) {
       assert(Aggregate != nullptr);
@@ -1092,6 +1105,11 @@ public:
     /// Retrieve the function type of the entity, regardless of how the
     /// function is stored.
     const FunctionType *getFunctionType() const;
+
+    /// Retrieve the function ProtoTypeLoc candidate.
+    /// This can be called for any Kind, but returns null for kinds
+    /// other than CK_FunctionProtoTypeLoc.
+    const FunctionProtoTypeLoc getFunctionProtoTypeLoc() const;
 
     const TemplateDecl *getTemplate() const {
       assert(getKind() == CK_Template && "Not a template");
