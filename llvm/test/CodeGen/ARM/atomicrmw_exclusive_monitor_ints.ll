@@ -190,7 +190,7 @@ define i8 @test_xchg_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB0_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB0_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB0_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB0_1 Depth=1
@@ -387,7 +387,7 @@ define i8 @test_add_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB1_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB1_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB1_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB1_1 Depth=1
@@ -584,7 +584,7 @@ define i8 @test_sub_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB2_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB2_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB2_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB2_1 Depth=1
@@ -783,7 +783,7 @@ define i8 @test_and_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB3_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB3_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB3_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB3_1 Depth=1
@@ -988,7 +988,7 @@ define i8 @test_nand_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB4_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB4_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB4_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB4_1 Depth=1
@@ -1187,7 +1187,7 @@ define i8 @test_or_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB5_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB5_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB5_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB5_1 Depth=1
@@ -1386,7 +1386,7 @@ define i8 @test_xor_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB6_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB6_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB6_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB6_1 Depth=1
@@ -1607,7 +1607,7 @@ define i8 @test_max_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB7_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB7_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB7_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB7_1 Depth=1
@@ -1828,7 +1828,7 @@ define i8 @test_min_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB8_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB8_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB8_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB8_1 Depth=1
@@ -2054,7 +2054,7 @@ define i8 @test_umax_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB9_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r5, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB9_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB9_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB9_1 Depth=1
@@ -2279,7 +2279,7 @@ define i8 @test_umin_i8() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB10_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexb r2, r5, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB10_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB10_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB10_1 Depth=1
@@ -2477,7 +2477,7 @@ define i16 @test_xchg_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB11_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB11_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB11_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB11_1 Depth=1
@@ -2674,7 +2674,7 @@ define i16 @test_add_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB12_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB12_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB12_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB12_1 Depth=1
@@ -2871,7 +2871,7 @@ define i16 @test_sub_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB13_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB13_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB13_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB13_1 Depth=1
@@ -3070,7 +3070,7 @@ define i16 @test_and_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB14_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB14_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB14_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB14_1 Depth=1
@@ -3275,7 +3275,7 @@ define i16 @test_nand_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB15_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB15_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB15_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB15_1 Depth=1
@@ -3474,7 +3474,7 @@ define i16 @test_or_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB16_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB16_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB16_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB16_1 Depth=1
@@ -3673,7 +3673,7 @@ define i16 @test_xor_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB17_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB17_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB17_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB17_1 Depth=1
@@ -3894,7 +3894,7 @@ define i16 @test_max_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB18_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB18_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB18_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB18_1 Depth=1
@@ -4115,7 +4115,7 @@ define i16 @test_min_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB19_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB19_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB19_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB19_1 Depth=1
@@ -4341,7 +4341,7 @@ define i16 @test_umax_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB20_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r5, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB20_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB20_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB20_1 Depth=1
@@ -4566,7 +4566,7 @@ define i16 @test_umin_i16() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB21_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strexh r2, r5, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB21_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB21_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB21_1 Depth=1
@@ -4757,7 +4757,7 @@ define i32 @test_xchg_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB22_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB22_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB22_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB22_1 Depth=1
@@ -4946,7 +4946,7 @@ define i32 @test_add_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB23_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB23_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB23_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB23_1 Depth=1
@@ -5135,7 +5135,7 @@ define i32 @test_sub_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB24_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB24_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB24_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB24_1 Depth=1
@@ -5326,7 +5326,7 @@ define i32 @test_and_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB25_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB25_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB25_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB25_1 Depth=1
@@ -5523,7 +5523,7 @@ define i32 @test_nand_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB26_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB26_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB26_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB26_1 Depth=1
@@ -5714,7 +5714,7 @@ define i32 @test_or_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB27_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB27_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB27_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB27_1 Depth=1
@@ -5905,7 +5905,7 @@ define i32 @test_xor_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB28_2 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB28_2
 ; CHECK-THUMB8BASE-NEXT:  .LBB28_4: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB28_1 Depth=1
@@ -6114,7 +6114,7 @@ define i32 @test_max_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB29_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB29_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB29_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB29_1 Depth=1
@@ -6323,7 +6323,7 @@ define i32 @test_min_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB30_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB30_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB30_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB30_1 Depth=1
@@ -6532,7 +6532,7 @@ define i32 @test_umax_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB31_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB31_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB31_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB31_1 Depth=1
@@ -6741,7 +6741,7 @@ define i32 @test_umin_i32() {
 ; CHECK-THUMB8BASE-NEXT:  @ %bb.5: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB32_4 Depth=2
 ; CHECK-THUMB8BASE-NEXT:    strex r2, r4, [r3]
-; CHECK-THUMB8BASE-NEXT:    cmp.w r2, #0
+; CHECK-THUMB8BASE-NEXT:    cmp r2, #0
 ; CHECK-THUMB8BASE-NEXT:    bne .LBB32_4
 ; CHECK-THUMB8BASE-NEXT:  .LBB32_6: @ %atomicrmw.start
 ; CHECK-THUMB8BASE-NEXT:    @ in Loop: Header=BB32_1 Depth=1
