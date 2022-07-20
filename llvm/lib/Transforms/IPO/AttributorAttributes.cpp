@@ -5393,7 +5393,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     bool UsedAssumedInformation = false;
     Optional<Value *> SimpleV = A.getAssumedSimplified(
         V, QueryingAA, UsedAssumedInformation, AA::Interprocedural);
-    if (!SimpleV.hasValue())
+    if (!SimpleV.has_value())
       return PoisonValue::get(&Ty);
     Value *EffectiveV = &V;
     if (SimpleV.value())
@@ -8340,7 +8340,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedLHS = A.getAssumedSimplified(
         IRPosition::value(*LHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedLHS.hasValue())
+    if (!SimplifiedLHS.has_value())
       return true;
     if (!SimplifiedLHS.value())
       return false;
@@ -8349,7 +8349,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedRHS = A.getAssumedSimplified(
         IRPosition::value(*RHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedRHS.hasValue())
+    if (!SimplifiedRHS.has_value())
       return true;
     if (!SimplifiedRHS.value())
       return false;
@@ -8393,7 +8393,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedOpV = A.getAssumedSimplified(
         IRPosition::value(*OpV, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedOpV.hasValue())
+    if (!SimplifiedOpV.has_value())
       return true;
     if (!SimplifiedOpV.value())
       return false;
@@ -8423,7 +8423,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedLHS = A.getAssumedSimplified(
         IRPosition::value(*LHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedLHS.hasValue())
+    if (!SimplifiedLHS.has_value())
       return true;
     if (!SimplifiedLHS.value())
       return false;
@@ -8432,7 +8432,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedRHS = A.getAssumedSimplified(
         IRPosition::value(*RHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedRHS.hasValue())
+    if (!SimplifiedRHS.has_value())
       return true;
     if (!SimplifiedRHS.value())
       return false;
@@ -8498,7 +8498,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
         const auto &SimplifiedOpV = A.getAssumedSimplified(
             IRPosition::value(V, getCallBaseContext()), *this,
             UsedAssumedInformation, AA::Interprocedural);
-        if (!SimplifiedOpV.hasValue())
+        if (!SimplifiedOpV.has_value())
           return true;
         if (!SimplifiedOpV.value())
           return false;
@@ -9218,7 +9218,7 @@ struct AANoUndefImpl : AANoUndef {
     // the same reason above.
     if (!A.getAssumedSimplified(getIRPosition(), *this, UsedAssumedInformation,
                                 AA::Interprocedural)
-             .hasValue())
+             .has_value())
       return ChangeStatus::UNCHANGED;
     return AANoUndef::manifest(A);
   }
@@ -9759,7 +9759,7 @@ askForAssumedConstant(Attributor &A, const AbstractAttribute &QueryingAA,
 
   Optional<Constant *> COpt = AA.getAssumedConstant(A);
 
-  if (!COpt.hasValue()) {
+  if (!COpt.has_value()) {
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
     return llvm::None;
   }
@@ -9777,10 +9777,10 @@ Value *AAPotentialValues::getSingleValue(
   Optional<Value *> V;
   for (auto &It : Values) {
     V = AA::combineOptionalValuesInAAValueLatice(V, It.getValue(), &Ty);
-    if (V.hasValue() && !V.getValue())
+    if (V.has_value() && !V.getValue())
       break;
   }
-  if (!V.hasValue())
+  if (!V.has_value())
     return UndefValue::get(&Ty);
   return V.getValue();
 }
@@ -9850,7 +9850,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       Type &Ty = *getAssociatedType();
       Optional<Value *> SimpleV =
           askOtherAA<AAValueConstantRange>(A, *this, ValIRP, Ty);
-      if (SimpleV.hasValue() && !SimpleV.getValue()) {
+      if (SimpleV.has_value() && !SimpleV.getValue()) {
         auto &PotentialConstantsAA = A.getAAFor<AAPotentialConstantValues>(
             *this, ValIRP, DepClassTy::OPTIONAL);
         if (PotentialConstantsAA.isValidState()) {
@@ -9862,7 +9862,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
           return;
         }
       }
-      if (!SimpleV.hasValue())
+      if (!SimpleV.has_value())
         return;
 
       if (SimpleV.getValue())
@@ -10003,7 +10003,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const auto &SimplifiedLHS = A.getAssumedSimplified(
         IRPosition::value(*LHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Intraprocedural);
-    if (!SimplifiedLHS.hasValue())
+    if (!SimplifiedLHS.has_value())
       return true;
     if (!SimplifiedLHS.getValue())
       return false;
@@ -10012,7 +10012,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const auto &SimplifiedRHS = A.getAssumedSimplified(
         IRPosition::value(*RHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Intraprocedural);
-    if (!SimplifiedRHS.hasValue())
+    if (!SimplifiedRHS.has_value())
       return true;
     if (!SimplifiedRHS.getValue())
       return false;
@@ -10067,7 +10067,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     Optional<Constant *> C =
         A.getAssumedConstant(*SI.getCondition(), *this, UsedAssumedInformation);
-    bool NoValueYet = !C.hasValue();
+    bool NoValueYet = !C.has_value();
     if (NoValueYet || isa_and_nonnull<UndefValue>(*C))
       return true;
     if (auto *CI = dyn_cast_or_null<ConstantInt>(*C)) {
@@ -10192,7 +10192,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
           UsedAssumedInformation, AA::Intraprocedural);
       // If we are not sure about any operand we are not sure about the entire
       // instruction, we'll wait.
-      if (!SimplifiedOp.hasValue())
+      if (!SimplifiedOp.has_value())
         return true;
 
       if (SimplifiedOp.getValue())
@@ -10493,7 +10493,7 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
       Value *V = It.getValue();
       Optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
           V, *CB, *this, UsedAssumedInformation);
-      if (!CallerV.hasValue()) {
+      if (!CallerV.has_value()) {
         // Nothing to do as long as no value was determined.
         continue;
       }

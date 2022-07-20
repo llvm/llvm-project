@@ -117,9 +117,9 @@ TEST_F(SarifDocumentWriterTest, canCreateDocumentWithOneRun) {
       Runs->begin()->getAsObject()->getObject("tool")->getObject("driver");
   ASSERT_THAT(driver, testing::NotNull());
 
-  ASSERT_TRUE(driver->getString("name").hasValue());
-  ASSERT_TRUE(driver->getString("fullName").hasValue());
-  ASSERT_TRUE(driver->getString("language").hasValue());
+  ASSERT_TRUE(driver->getString("name").has_value());
+  ASSERT_TRUE(driver->getString("fullName").has_value());
+  ASSERT_TRUE(driver->getString("language").has_value());
 
   EXPECT_EQ(driver->getString("name").getValue(), ShortName);
   EXPECT_EQ(driver->getString("fullName").getValue(), LongName);
@@ -186,8 +186,8 @@ TEST_F(SarifDocumentWriterTest, addingResultWithValidRuleAndRunIsOk) {
   const llvm::json::Array *Artifacts = TheRun->getArray("artifacts");
 
   // The tool is as expected
-  ASSERT_TRUE(Driver->getString("name").hasValue());
-  ASSERT_TRUE(Driver->getString("fullName").hasValue());
+  ASSERT_TRUE(Driver->getString("name").has_value());
+  ASSERT_TRUE(Driver->getString("fullName").has_value());
 
   EXPECT_EQ(Driver->getString("name").getValue(), "sarif test");
   EXPECT_EQ(Driver->getString("fullName").getValue(), "sarif test runner");

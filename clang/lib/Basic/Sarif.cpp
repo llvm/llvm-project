@@ -270,18 +270,18 @@ void SarifDocumentWriter::endRun() {
   for (const auto &Pair : CurrentArtifacts) {
     const SarifArtifact &A = Pair.getValue();
     json::Object Loc{{"uri", A.Location.URI}};
-    if (A.Location.Index.hasValue()) {
+    if (A.Location.Index.has_value()) {
       Loc["index"] = static_cast<int64_t>(A.Location.Index.getValue());
     }
     json::Object Artifact;
     Artifact["location"] = std::move(Loc);
-    if (A.Length.hasValue())
+    if (A.Length.has_value())
       Artifact["length"] = static_cast<int64_t>(A.Length.getValue());
     if (!A.Roles.empty())
       Artifact["roles"] = json::Array(A.Roles);
     if (!A.MimeType.empty())
       Artifact["mimeType"] = A.MimeType;
-    if (A.Offset.hasValue())
+    if (A.Offset.has_value())
       Artifact["offset"] = A.Offset;
     Artifacts->push_back(json::Value(std::move(Artifact)));
   }
