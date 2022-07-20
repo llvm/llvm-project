@@ -85,11 +85,11 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    xorb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %edx
-; CHECK-NEXT:    movb g_96(%rip), %al
+; CHECK-NEXT:    movzbl g_96(%rip), %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %bb.i.i.i
-; CHECK-NEXT:    movb g_100(%rip), %cl
+; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    testb %dl, %dl
@@ -102,7 +102,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB3_5
 ; CHECK-NEXT:  # %bb.4: # %bb.i.i
-; CHECK-NEXT:    movb g_100(%rip), %cl
+; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:  .LBB3_5: # %func_1.exit

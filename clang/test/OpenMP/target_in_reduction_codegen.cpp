@@ -612,7 +612,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i8*, i8** [[TMP18]], align 8
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !14
 // CHECK1-NEXT:    [[TMP23:%.*]] = bitcast i32* [[TMP20]] to i8*
-// CHECK1-NEXT:    [[TMP24:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP22]], i8* [[TMP21]], i8* [[TMP23]]) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP24:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP22]], i8* [[TMP21]], i8* [[TMP23]])
 // CHECK1-NEXT:    [[CONV_I:%.*]] = bitcast i8* [[TMP24]] to i32*
 // CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]], align 8

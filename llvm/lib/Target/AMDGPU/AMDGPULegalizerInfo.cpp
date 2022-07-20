@@ -4209,8 +4209,8 @@ bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
   Function &F = B.getMF().getFunction();
   Optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
-  if (KnownSize.hasValue())
-    B.buildConstant(DstReg, KnownSize.getValue());
+  if (KnownSize.has_value())
+    B.buildConstant(DstReg, KnownSize.value());
   return false;
 }
 

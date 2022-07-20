@@ -105,11 +105,11 @@ define void @test_load_add(i1 %cond, ptr %fptr, ptr %iptr1, ptr %iptr2, float %f
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB2_2
 ; X86-64-NEXT:  # %bb.1: # %if
-; X86-64-NEXT:    movb (%rdx), %al
+; X86-64-NEXT:    movzbl (%rdx), %eax
 ; X86-64-NEXT:    addb (%rcx), %al
 ; X86-64-NEXT:    jmp .LBB2_3
 ; X86-64-NEXT:  .LBB2_2: # %else
-; X86-64-NEXT:    movb (%rcx), %al
+; X86-64-NEXT:    movzbl (%rcx), %eax
 ; X86-64-NEXT:  .LBB2_3: # %exit
 ; X86-64-NEXT:    kmovd %eax, %k1
 ; X86-64-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
@@ -126,11 +126,11 @@ define void @test_load_add(i1 %cond, ptr %fptr, ptr %iptr1, ptr %iptr2, float %f
 ; X86-32-NEXT:    je .LBB2_2
 ; X86-32-NEXT:  # %bb.1: # %if
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-32-NEXT:    movb (%edx), %dl
+; X86-32-NEXT:    movzbl (%edx), %edx
 ; X86-32-NEXT:    addb (%ecx), %dl
 ; X86-32-NEXT:    jmp .LBB2_3
 ; X86-32-NEXT:  .LBB2_2: # %else
-; X86-32-NEXT:    movb (%ecx), %dl
+; X86-32-NEXT:    movzbl (%ecx), %edx
 ; X86-32-NEXT:  .LBB2_3: # %exit
 ; X86-32-NEXT:    kmovd %edx, %k1
 ; X86-32-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
@@ -212,10 +212,10 @@ define void @test_loadi1_storei1(i1 %cond, ptr %iptr1, ptr %iptr2, ptr %iptr3)  
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB4_2
 ; X86-64-NEXT:  # %bb.1: # %if
-; X86-64-NEXT:    movb (%rsi), %al
+; X86-64-NEXT:    movzbl (%rsi), %eax
 ; X86-64-NEXT:    jmp .LBB4_3
 ; X86-64-NEXT:  .LBB4_2: # %else
-; X86-64-NEXT:    movb (%rdx), %al
+; X86-64-NEXT:    movzbl (%rdx), %eax
 ; X86-64-NEXT:  .LBB4_3: # %exit
 ; X86-64-NEXT:    andb $1, %al
 ; X86-64-NEXT:    movb %al, (%rcx)
@@ -232,7 +232,7 @@ define void @test_loadi1_storei1(i1 %cond, ptr %iptr1, ptr %iptr2, ptr %iptr3)  
 ; X86-32-NEXT:  .LBB4_2: # %else
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-32-NEXT:  .LBB4_3: # %exit
-; X86-32-NEXT:    movb (%ecx), %cl
+; X86-32-NEXT:    movzbl (%ecx), %ecx
 ; X86-32-NEXT:    andb $1, %cl
 ; X86-32-NEXT:    movb %cl, (%eax)
 ; X86-32-NEXT:    retl
@@ -320,11 +320,11 @@ define void @test_shr1(i1 %cond, ptr %ptr1, ptr %ptr2, <8 x float> %fvec1, <8 x 
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB6_2
 ; X86-64-NEXT:  # %bb.1: # %if
-; X86-64-NEXT:    movb (%rsi), %al
+; X86-64-NEXT:    movzbl (%rsi), %eax
 ; X86-64-NEXT:    shrb %al
 ; X86-64-NEXT:    jmp .LBB6_3
 ; X86-64-NEXT:  .LBB6_2: # %else
-; X86-64-NEXT:    movb (%rdx), %al
+; X86-64-NEXT:    movzbl (%rdx), %eax
 ; X86-64-NEXT:  .LBB6_3: # %exit
 ; X86-64-NEXT:    kmovd %eax, %k1
 ; X86-64-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
@@ -341,12 +341,12 @@ define void @test_shr1(i1 %cond, ptr %ptr1, ptr %ptr2, <8 x float> %fvec1, <8 x 
 ; X86-32-NEXT:    je .LBB6_2
 ; X86-32-NEXT:  # %bb.1: # %if
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-32-NEXT:    movb (%ecx), %cl
+; X86-32-NEXT:    movzbl (%ecx), %ecx
 ; X86-32-NEXT:    shrb %cl
 ; X86-32-NEXT:    jmp .LBB6_3
 ; X86-32-NEXT:  .LBB6_2: # %else
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-32-NEXT:    movb (%ecx), %cl
+; X86-32-NEXT:    movzbl (%ecx), %ecx
 ; X86-32-NEXT:  .LBB6_3: # %exit
 ; X86-32-NEXT:    kmovd %ecx, %k1
 ; X86-32-NEXT:    vmovaps %zmm0, %zmm1 {%k1}

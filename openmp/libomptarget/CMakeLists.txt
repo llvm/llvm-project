@@ -86,7 +86,8 @@ set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
   "Path to folder containing omp.h")
 set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
-
+set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
+  "Path to folder containing llvm library libomptarget.so")
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)

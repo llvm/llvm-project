@@ -425,7 +425,9 @@ define void @callbr() {
 ; CHECK-LABEL: @callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"()
-; CHECK-NEXT:    to label [[IF_END:%.*]] [label %if.end]
+; CHECK-NEXT:    to label [[IF_END:%.*]] [label %target]
+; CHECK:       target:
+; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;

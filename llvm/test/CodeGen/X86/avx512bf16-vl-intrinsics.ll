@@ -321,7 +321,7 @@ entry:
 define <4 x float> @test_mm128_maskz_dpbf16ps_128(<4 x float> %E, <4 x i32> %A, <4 x i32> %B, i4 zeroext %U) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm128_maskz_dpbf16ps_128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
 ; X86-NEXT:    vdpbf16ps %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0x89,0x52,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -340,7 +340,7 @@ entry:
 define <4 x float> @test_mm128_mask_dpbf16ps_128(i4 zeroext %U, <4 x float> %E, <4 x i32> %A, <4 x i32> %B) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm128_mask_dpbf16ps_128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
 ; X86-NEXT:    vdpbf16ps %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x09,0x52,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]

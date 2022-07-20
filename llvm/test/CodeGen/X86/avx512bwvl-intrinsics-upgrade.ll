@@ -6174,7 +6174,7 @@ define i8@test_int_x86_avx512_ptestm_w_128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2)
 ; X86:       # %bb.0:
 ; X86-NEXT:    vptestmw %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x08,0x26,0xc1]
 ; X86-NEXT:    kmovd %k0, %ecx # encoding: [0xc5,0xfb,0x93,0xc8]
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    andb %cl, %al # encoding: [0x20,0xc8]
 ; X86-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -6283,7 +6283,7 @@ define i8@test_int_x86_avx512_ptestnm_w_128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2
 ; X86:       # %bb.0:
 ; X86-NEXT:    vptestnmw %xmm1, %xmm0, %k0 # encoding: [0x62,0xf2,0xfe,0x08,0x26,0xc1]
 ; X86-NEXT:    kmovd %k0, %ecx # encoding: [0xc5,0xfb,0x93,0xc8]
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    andb %cl, %al # encoding: [0x20,0xc8]
 ; X86-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
 ; X86-NEXT:    retl # encoding: [0xc3]

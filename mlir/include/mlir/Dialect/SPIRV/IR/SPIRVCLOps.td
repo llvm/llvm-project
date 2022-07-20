@@ -1,4 +1,4 @@
-//===- SPIRVOCLOps.td - OpenCL extended insts spec file ----*- tablegen -*-===//
+//===- SPIRVCLOps.td - OpenCL extended insts spec file ----*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_IR_OCL_OPS
-#define MLIR_DIALECT_SPIRV_IR_OCL_OPS
+#ifndef MLIR_DIALECT_SPIRV_IR_CL_OPS
+#define MLIR_DIALECT_SPIRV_IR_CL_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
@@ -20,8 +20,8 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for all OpenCL ops.
-class SPV_OCLOp<string mnemonic, int opcode, list<Trait> traits = []> :
-  SPV_ExtInstOp<mnemonic, "OCL", "OpenCL.std", opcode, traits> {
+class SPV_CLOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPV_ExtInstOp<mnemonic, "CL", "OpenCL.std", opcode, traits> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
@@ -32,9 +32,9 @@ class SPV_OCLOp<string mnemonic, int opcode, list<Trait> traits = []> :
 }
 
 // Base class for OpenCL unary ops.
-class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
+class SPV_CLUnaryOp<string mnemonic, int opcode, Type resultType,
                      Type operandType, list<Trait> traits = []> :
-  SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandType>:$operand
@@ -51,15 +51,15 @@ class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for OpenCL Unary arithmetic ops where return type matches
 // the operand type.
-class SPV_OCLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_CLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
                                list<Trait> traits = []> :
-  SPV_OCLUnaryOp<mnemonic, opcode, type, type,
+  SPV_CLUnaryOp<mnemonic, opcode, type, type,
                  traits # [SameOperandsAndResultType]>;
 
 // Base class for OpenCL binary ops.
-class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
+class SPV_CLBinaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandType>:$lhs,
@@ -75,17 +75,17 @@ class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for OpenCL Binary arithmetic ops where operand types and
 // return type matches.
-class SPV_OCLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_CLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
                                 list<Trait> traits = []> :
-  SPV_OCLBinaryOp<mnemonic, opcode, type, type,
-                  traits # [SameOperandsAndResultType]> {                    
+  SPV_CLBinaryOp<mnemonic, opcode, type, type,
+                  traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 // Base class for OpenCL binary ops.
-class SPV_OCLTernaryOp<string mnemonic, int opcode, Type resultType,
+class SPV_CLTernaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandType>:$x,
@@ -102,9 +102,9 @@ class SPV_OCLTernaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for OpenCL Ternary arithmetic ops where operand types and
 // return type matches.
-class SPV_OCLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_CLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
                                 list<Trait> traits = []> :
-  SPV_OCLTernaryOp<mnemonic, opcode, type, type,
+  SPV_CLTernaryOp<mnemonic, opcode, type, type,
                   traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
@@ -113,7 +113,7 @@ class SPV_OCLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
-def SPV_OCLCeilOp : SPV_OCLUnaryArithmeticOp<"ceil", 12, SPV_Float> {
+def SPV_CLCeilOp : SPV_CLUnaryArithmeticOp<"ceil", 12, SPV_Float> {
   let summary = [{
     Round x to integral value using the round to positive infinity rounding
     mode.
@@ -131,22 +131,22 @@ def SPV_OCLCeilOp : SPV_OCLUnaryArithmeticOp<"ceil", 12, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    ceil-op ::= ssa-id `=` `spv.OCL.ceil` ssa-use `:`
+    ceil-op ::= ssa-id `=` `spv.CL.ceil` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.ceil %0 : f32
-    %3 = spv.OCL.ceil %1 : vector<3xf16>
+    %2 = spv.CL.ceil %0 : f32
+    %3 = spv.CL.ceil %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLCosOp : SPV_OCLUnaryArithmeticOp<"cos", 14, SPV_Float> {
+def SPV_CLCosOp : SPV_CLUnaryArithmeticOp<"cos", 14, SPV_Float> {
   let summary = "Compute the cosine of x radians.";
 
   let description = [{
@@ -161,22 +161,22 @@ def SPV_OCLCosOp : SPV_OCLUnaryArithmeticOp<"cos", 14, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    cos-op ::= ssa-id `=` `spv.OCL.cos` ssa-use `:`
+    cos-op ::= ssa-id `=` `spv.CL.cos` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.cos %0 : f32
-    %3 = spv.OCL.cos %1 : vector<3xf16>
+    %2 = spv.CL.cos %0 : f32
+    %3 = spv.CL.cos %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLErfOp : SPV_OCLUnaryArithmeticOp<"erf", 18, SPV_Float> {
+def SPV_CLErfOp : SPV_CLUnaryArithmeticOp<"erf", 18, SPV_Float> {
   let summary = [{
     Error function of x encountered in integrating the normal distribution.
   }];
@@ -193,22 +193,22 @@ def SPV_OCLErfOp : SPV_OCLUnaryArithmeticOp<"erf", 18, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    erf-op ::= ssa-id `=` `spv.OCL.erf` ssa-use `:`
+    erf-op ::= ssa-id `=` `spv.CL.erf` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.erf %0 : f32
-    %3 = spv.OCL.erf %1 : vector<3xf16>
+    %2 = spv.CL.erf %0 : f32
+    %3 = spv.CL.erf %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLExpOp : SPV_OCLUnaryArithmeticOp<"exp", 19, SPV_Float> {
+def SPV_CLExpOp : SPV_CLUnaryArithmeticOp<"exp", 19, SPV_Float> {
   let summary = "Exponentiation of Operand 1";
 
   let description = [{
@@ -224,21 +224,21 @@ def SPV_OCLExpOp : SPV_OCLUnaryArithmeticOp<"exp", 19, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    exp-op ::= ssa-id `=` `spv.OCL.exp` ssa-use `:`
+    exp-op ::= ssa-id `=` `spv.CL.exp` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.OCL.exp %0 : f32
-    %3 = spv.OCL.exp %1 : vector<3xf16>
+    %2 = spv.CL.exp %0 : f32
+    %3 = spv.CL.exp %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLFAbsOp : SPV_OCLUnaryArithmeticOp<"fabs", 23, SPV_Float> {
+def SPV_CLFAbsOp : SPV_CLUnaryArithmeticOp<"fabs", 23, SPV_Float> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -254,21 +254,21 @@ def SPV_OCLFAbsOp : SPV_OCLUnaryArithmeticOp<"fabs", 23, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    abs-op ::= ssa-id `=` `spv.OCL.fabs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spv.CL.fabs` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.OCL.fabs %0 : f32
-    %3 = spv.OCL.fabs %1 : vector<3xf16>
+    %2 = spv.CL.fabs %0 : f32
+    %3 = spv.CL.fabs %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLFloorOp : SPV_OCLUnaryArithmeticOp<"floor", 25, SPV_Float> {
+def SPV_CLFloorOp : SPV_CLUnaryArithmeticOp<"floor", 25, SPV_Float> {
   let summary = [{
     Round x to the integral value using the round to negative infinity
     rounding mode.
@@ -286,22 +286,22 @@ def SPV_OCLFloorOp : SPV_OCLUnaryArithmeticOp<"floor", 25, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spv.OCL.floor` ssa-use `:`
+    floor-op ::= ssa-id `=` `spv.CL.floor` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.floor %0 : f32
-    %3 = spv.OCL.ceifloorl %1 : vector<3xf16>
+    %2 = spv.CL.floor %0 : f32
+    %3 = spv.CL.ceifloorl %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLFmaOp : SPV_OCLTernaryArithmeticOp<"fma", 26, SPV_Float> {
+def SPV_CLFmaOp : SPV_CLTernaryArithmeticOp<"fma", 26, SPV_Float> {
   let summary = [{
     Compute the correctly rounded floating-point representation of the sum
     of c with the infinitely precise product of a and b. Rounding of
@@ -319,20 +319,20 @@ def SPV_OCLFmaOp : SPV_OCLTernaryArithmeticOp<"fma", 26, SPV_Float> {
     <!-- End of AutoGen section -->
 
     ```
-    fma-op ::= ssa-id `=` `spv.OCL.fma` ssa-use, ssa-use, ssa-use `:`
+    fma-op ::= ssa-id `=` `spv.CL.fma` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     ```
-    %0 = spv.OCL.fma %a, %b, %c : f32
-    %1 = spv.OCL.fma %a, %b, %c : vector<3xf16>
+    %0 = spv.CL.fma %a, %b, %c : f32
+    %1 = spv.CL.fma %a, %b, %c : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLLogOp : SPV_OCLUnaryArithmeticOp<"log", 37, SPV_Float> {
+def SPV_CLLogOp : SPV_CLUnaryArithmeticOp<"log", 37, SPV_Float> {
   let summary = "Compute the natural logarithm of x.";
 
   let description = [{
@@ -347,22 +347,22 @@ def SPV_OCLLogOp : SPV_OCLUnaryArithmeticOp<"log", 37, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    log-op ::= ssa-id `=` `spv.OCL.log` ssa-use `:`
+    log-op ::= ssa-id `=` `spv.CL.log` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.log %0 : f32
-    %3 = spv.OCL.log %1 : vector<3xf16>
+    %2 = spv.CL.log %0 : f32
+    %3 = spv.CL.log %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLPowOp : SPV_OCLBinaryArithmeticOp<"pow", 48, SPV_Float> {
+def SPV_CLPowOp : SPV_CLBinaryArithmeticOp<"pow", 48, SPV_Float> {
   let summary = "Compute x to the power y.";
 
   let description = [{
@@ -379,21 +379,21 @@ def SPV_OCLPowOp : SPV_OCLBinaryArithmeticOp<"pow", 48, SPV_Float> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    pow-op ::= ssa-id `=` `spv.OCL.pow` ssa-use `:`
+    pow-op ::= ssa-id `=` `spv.CL.pow` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.OCL.pow %0, %1 : f32
-    %3 = spv.OCL.pow %0, %1 : vector<3xf16>
+    %2 = spv.CL.pow %0, %1 : f32
+    %3 = spv.CL.pow %0, %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLRoundOp : SPV_OCLUnaryArithmeticOp<"round", 55, SPV_Float> {
+def SPV_CLRoundOp : SPV_CLUnaryArithmeticOp<"round", 55, SPV_Float> {
   let summary = [{
     Return the integral value nearest to x rounding halfway cases away from
     zero, regardless of the current rounding direction.
@@ -411,21 +411,21 @@ def SPV_OCLRoundOp : SPV_OCLUnaryArithmeticOp<"round", 55, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    round-op ::= ssa-id `=` `spv.OCL.round` ssa-use `:`
+    round-op ::= ssa-id `=` `spv.CL.round` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.OCL.round %0 : f32
-    %3 = spv.OCL.round %0 : vector<3xf16>
+    %2 = spv.CL.round %0 : f32
+    %3 = spv.CL.round %0 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLRsqrtOp : SPV_OCLUnaryArithmeticOp<"rsqrt", 56, SPV_Float> {
+def SPV_CLRsqrtOp : SPV_CLUnaryArithmeticOp<"rsqrt", 56, SPV_Float> {
   let summary = "Compute inverse square root of x.";
 
   let description = [{
@@ -440,22 +440,22 @@ def SPV_OCLRsqrtOp : SPV_OCLUnaryArithmeticOp<"rsqrt", 56, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    rsqrt-op ::= ssa-id `=` `spv.OCL.rsqrt` ssa-use `:`
+    rsqrt-op ::= ssa-id `=` `spv.CL.rsqrt` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.rsqrt %0 : f32
-    %3 = spv.OCL.rsqrt %1 : vector<3xf16>
+    %2 = spv.CL.rsqrt %0 : f32
+    %3 = spv.CL.rsqrt %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLSinOp : SPV_OCLUnaryArithmeticOp<"sin", 57, SPV_Float> {
+def SPV_CLSinOp : SPV_CLUnaryArithmeticOp<"sin", 57, SPV_Float> {
   let summary = "Compute sine of x radians.";
 
   let description = [{
@@ -470,22 +470,22 @@ def SPV_OCLSinOp : SPV_OCLUnaryArithmeticOp<"sin", 57, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sin-op ::= ssa-id `=` `spv.OCL.sin` ssa-use `:`
+    sin-op ::= ssa-id `=` `spv.CL.sin` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.sin %0 : f32
-    %3 = spv.OCL.sin %1 : vector<3xf16>
+    %2 = spv.CL.sin %0 : f32
+    %3 = spv.CL.sin %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLSqrtOp : SPV_OCLUnaryArithmeticOp<"sqrt", 61, SPV_Float> {
+def SPV_CLSqrtOp : SPV_CLUnaryArithmeticOp<"sqrt", 61, SPV_Float> {
   let summary = "Compute square root of x.";
 
   let description = [{
@@ -500,22 +500,22 @@ def SPV_OCLSqrtOp : SPV_OCLUnaryArithmeticOp<"sqrt", 61, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sqrt-op ::= ssa-id `=` `spv.OCL.sqrt` ssa-use `:`
+    sqrt-op ::= ssa-id `=` `spv.CL.sqrt` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.sqrt %0 : f32
-    %3 = spv.OCL.sqrt %1 : vector<3xf16>
+    %2 = spv.CL.sqrt %0 : f32
+    %3 = spv.CL.sqrt %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLTanhOp : SPV_OCLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
+def SPV_CLTanhOp : SPV_CLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
   let summary = "Compute hyperbolic tangent of x radians.";
 
   let description = [{
@@ -530,22 +530,22 @@ def SPV_OCLTanhOp : SPV_OCLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    tanh-op ::= ssa-id `=` `spv.OCL.tanh` ssa-use `:`
+    tanh-op ::= ssa-id `=` `spv.CL.tanh` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.OCL.tanh %0 : f32
-    %3 = spv.OCL.tanh %1 : vector<3xf16>
+    %2 = spv.CL.tanh %0 : f32
+    %3 = spv.CL.tanh %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_OCLSAbsOp : SPV_OCLUnaryArithmeticOp<"s_abs", 141, SPV_Integer> {
+def SPV_CLSAbsOp : SPV_CLUnaryArithmeticOp<"s_abs", 141, SPV_Integer> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -561,16 +561,16 @@ def SPV_OCLSAbsOp : SPV_OCLUnaryArithmeticOp<"s_abs", 141, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    abs-op ::= ssa-id `=` `spv.OCL.s_abs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spv.CL.s_abs` ssa-use `:`
                integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.OCL.s_abs %0 : i32
-    %3 = spv.OCL.s_abs %1 : vector<3xi16>
+    %2 = spv.CL.s_abs %0 : i32
+    %3 = spv.CL.s_abs %1 : vector<3xi16>
     ```
   }];
 }
 
-#endif // MLIR_DIALECT_SPIRV_IR_OCL_OPS
+#endif // MLIR_DIALECT_SPIRV_IR_CL_OPS

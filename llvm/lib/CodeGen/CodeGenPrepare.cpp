@@ -7819,9 +7819,11 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   }
   // After unmerging, verify that GEPIOp is actually only used in SrcBlock (not
   // alive on IndirectBr edges).
-  assert(find_if(GEPIOp->users(), [&](User *Usr) {
-        return cast<Instruction>(Usr)->getParent() != SrcBlock;
-      }) == GEPIOp->users().end() && "GEPIOp is used outside SrcBlock");
+  assert(llvm::none_of(GEPIOp->users(),
+                       [&](User *Usr) {
+                         return cast<Instruction>(Usr)->getParent() != SrcBlock;
+                       }) &&
+         "GEPIOp is used outside SrcBlock");
   return true;
 }
 

@@ -271,6 +271,10 @@ namespace __sanitizer {
         defined(__powerpc__) || defined(__s390__) || defined(__sparc__) || \
         defined(__hexagon__)
 #      define SIZEOF_STRUCT_USTAT 20
+#    elif defined(__loongarch__)
+  // Not used. The minimum Glibc version available for LoongArch is 2.36
+  // so ustat() wrapper is already gone.
+#      define SIZEOF_STRUCT_USTAT 0
 #    else
 #      error Unknown size of struct ustat
 #    endif

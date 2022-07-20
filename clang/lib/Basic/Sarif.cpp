@@ -217,7 +217,7 @@ SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
   }
   assert(I != CurrentArtifacts.end() && "Failed to insert new artifact");
   const SarifArtifactLocation &Location = I->second.Location;
-  uint32_t Idx = Location.Index.getValue();
+  uint32_t Idx = Location.Index.value();
   return json::Object{{{"artifactLocation", json::Object{{{"index", Idx}}}},
                        {"region", createTextRegion(SourceMgr, R)}}};
 }
@@ -270,18 +270,18 @@ void SarifDocumentWriter::endRun() {
   for (const auto &Pair : CurrentArtifacts) {
     const SarifArtifact &A = Pair.getValue();
     json::Object Loc{{"uri", A.Location.URI}};
-    if (A.Location.Index.hasValue()) {
-      Loc["index"] = static_cast<int64_t>(A.Location.Index.getValue());
+    if (A.Location.Index.has_value()) {
+      Loc["index"] = static_cast<int64_t>(A.Location.Index.value());
     }
     json::Object Artifact;
     Artifact["location"] = std::move(Loc);
-    if (A.Length.hasValue())
-      Artifact["length"] = static_cast<int64_t>(A.Length.getValue());
+    if (A.Length.has_value())
+      Artifact["length"] = static_cast<int64_t>(A.Length.value());
     if (!A.Roles.empty())
       Artifact["roles"] = json::Array(A.Roles);
     if (!A.MimeType.empty())
       Artifact["mimeType"] = A.MimeType;
-    if (A.Offset.hasValue())
+    if (A.Offset.has_value())
       Artifact["offset"] = A.Offset;
     Artifacts->push_back(json::Value(std::move(Artifact)));
   }
