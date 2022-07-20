@@ -489,6 +489,11 @@ def testSharedLibLoad():
           "../../../../bin/mlir_runner_utils.dll",
           "../../../../bin/mlir_c_runner_utils.dll"
       ]
+    elif sys.platform == 'darwin':
+      shared_libs = [
+          "../../../../lib/libmlir_runner_utils.dylib",
+          "../../../../lib/libmlir_c_runner_utils.dylib"
+      ]
     else:
       shared_libs = [
           "../../../../lib/libmlir_runner_utils.so",
