@@ -10,7 +10,7 @@ Search,adjacent_find,Nikolas Klauser,`D126610 <https://llvm.org/D126610>`_,✅
 Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`_,✅
 Search,equal,Nikolas Klauser,`D123681 <https://llvm.org/D123681>`_,✅
 Search,lexicographical_compare,Nikolas Klauser,`D127130 <https://llvm.org/D127130>`_,✅
-Search,partition_point,Konstantin Varlamov,n/a,In progress
+Search,partition_point,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
 Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,upper_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,equal_range,Christopher Di Bella,n/a,Not started
@@ -58,7 +58,7 @@ Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,sample,Not assigned,n/a,Not started
 Write,unique_copy,Not assigned,n/a,Not started
-Write,partition_copy,Konstantin Varlamov,n/a,In progress
+Write,partition_copy,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
 Write,partial_sort_copy,Konstantin Varlamov,n/a,In progress
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
 Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`_,✅

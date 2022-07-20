@@ -10,20 +10,17 @@
 #define _LIBCPP___ALGORITHM_RANGES_PARTITION_COPY_H
 
 #include <__algorithm/in_out_out_result.h>
-#include <__algorithm/make_projected.h>
-#include <__algorithm/partition_copy.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
-#include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
-#include <__utility/forward.h>
 #include <__utility/move.h>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,6 +39,27 @@ namespace __partition_copy {
 
 struct __fn {
 
+  // TODO(ranges): delegate to the classic algorithm.
+  template <class _InIter, class _Sent, class _OutIter1, class _OutIter2, class _Proj, class _Pred>
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  static partition_copy_result<
+      __uncvref_t<_InIter>, __uncvref_t<_OutIter1>, __uncvref_t<_OutIter2>
+  > __partition_copy_fn_impl( _InIter&& __first, _Sent&& __last, _OutIter1&& __out_true, _OutIter2&& __out_false,
+      _Pred& __pred, _Proj& __proj) {
+    for (; __first != __last; ++__first) {
+      if (std::invoke(__pred, std::invoke(__proj, *__first))) {
+        *__out_true = *__first;
+        ++__out_true;
+
+      } else {
+        *__out_false = *__first;
+        ++__out_false;
+      }
+    }
+
+    return {std::move(__first), std::move(__out_true), std::move(__out_false)};
+  }
+
   template <input_iterator _InIter, sentinel_for<_InIter> _Sent,
             weakly_incrementable _OutIter1, weakly_incrementable _OutIter2,
             class _Proj = identity, indirect_unary_predicate<projected<_InIter, _Proj>> _Pred>
@@ -50,9 +68,8 @@ struct __fn {
   partition_copy_result<_InIter, _OutIter1, _OutIter2>
   operator()(_InIter __first, _Sent __last, _OutIter1 __out_true, _OutIter2 __out_false,
              _Pred __pred, _Proj __proj = {}) const {
-    // TODO: implement
-    (void)__first; (void)__last; (void)__out_true; (void)__out_false; (void)__pred; (void)__proj;
-    return {};
+    return __partition_copy_fn_impl(
+        std::move(__first), std::move(__last), std::move(__out_true), std::move(__out_false), __pred, __proj);
   }
 
   template <input_range _Range, weakly_incrementable _OutIter1, weakly_incrementable _OutIter2,
@@ -61,9 +78,8 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI constexpr
   partition_copy_result<borrowed_iterator_t<_Range>, _OutIter1, _OutIter2>
   operator()(_Range&& __range, _OutIter1 __out_true, _OutIter2 __out_false, _Pred __pred, _Proj __proj = {}) const {
-    // TODO: implement
-    (void)__range; (void)__out_true; (void)__out_false; (void)__pred; (void)__proj;
-    return {};
+    return __partition_copy_fn_impl(
+        ranges::begin(__range), ranges::end(__range), std::move(__out_true), std::move(__out_false), __pred, __proj);
   }
 
 };

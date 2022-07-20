@@ -151,6 +151,10 @@ void test_iterators_2() {
   test_one<Iter, Sent, 6>({4, 6, 8, 1, 3, 5}, is_odd, 3, {1, 3, 5, 4, 6, 8});
   // Repeating pattern.
   test_one<Iter, Sent, 6>({1, 2, 1, 2, 1, 2}, is_odd, 3, {1, 1, 1, 2, 2, 2});
+
+  auto is_negative = [](int x) { return x < 0; };
+  // Different comparator.
+  test_one<Iter, Sent, 5>({-3, 5, 7, -6, 2}, is_negative, 2, {-3, -6, 5, 7, 2});
 }
 
 template <class Iter>

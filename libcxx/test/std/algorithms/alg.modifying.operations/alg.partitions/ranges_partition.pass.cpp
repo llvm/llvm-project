@@ -72,7 +72,7 @@ static_assert(HasPartitionRange<R<int*>, UnaryPred>);
 
 // !forward_range<R>
 static_assert(!HasPartitionRange<ForwardRangeNotDerivedFrom, UnaryPred>);
-static_assert(!HasPartitionRange<ForwardIteratorNotIncrementable, UnaryPred>);
+static_assert(!HasPartitionRange<ForwardRangeNotIncrementable, UnaryPred>);
 
 // !indirect_unary_predicate<projected<iterator_t<R>, Proj>> Pred>
 static_assert(!HasPartitionRange<R<int*>, IndirectUnaryPredicateNotPredicate>);
@@ -147,6 +147,10 @@ constexpr void test_iterators_2() {
   test_one<Iter, Sent, 6>({4, 6, 8, 1, 3, 5}, is_odd, 3);
   // Repeating pattern.
   test_one<Iter, Sent, 6>({1, 2, 1, 2, 1, 2}, is_odd, 3);
+
+  auto is_negative = [](int x) { return x < 0; };
+  // Different comparator.
+  test_one<Iter, Sent, 5>({-3, 5, 7, -6, 2}, is_negative, 2);
 }
 
 template <class Iter>
