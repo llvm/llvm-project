@@ -208,3 +208,24 @@ TEST(SimplePackedSerializationTest, ArrayRefEmpty) {
   EXPECT_EQ(AIn.data(), nullptr);
   EXPECT_EQ(AIn.size(), 0U);
 }
+
+TEST(SimplePackedSerializationTest, StringRefEmpty) {
+  // Make sure that empty StringRefs serialize and deserialize as expected.
+  // Empty StringRefs should not succeed even when the data field is null, and
+  // should deserialize to a default-constructed StringRef, not a pointer into
+  // the stream.
+  constexpr unsigned BufferSize = sizeof(uint64_t);
+  char Buffer[BufferSize];
+  memset(Buffer, 0, BufferSize);
+
+  StringRef SROut;
+  SPSOutputBuffer OB(Buffer, BufferSize);
+  EXPECT_TRUE(SPSArgList<SPSSequence<char>>::serialize(OB, SROut));
+
+  StringRef SRIn;
+  SPSInputBuffer IB(Buffer, BufferSize);
+  EXPECT_TRUE(SPSArgList<SPSSequence<char>>::deserialize(IB, SRIn));
+
+  EXPECT_EQ(SRIn.data(), nullptr);
+  EXPECT_EQ(SRIn.size(), 0U);
+}
