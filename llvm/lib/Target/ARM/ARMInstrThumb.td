@@ -1782,11 +1782,15 @@ def tLDRConstPool
 
 let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
     mayLoad = 1, mayStore = 1 in {
-def tCMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+def tCMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, tGPR:$temp),
                              (ins GPR:$addr, tGPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def tCMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+def tCMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, tGPR:$temp),
                               (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                              NoItinerary, []>, Sched<[]>;
+
+def tCMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, tGPR:$temp),
+                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                               NoItinerary, []>, Sched<[]>;
 }

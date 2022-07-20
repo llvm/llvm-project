@@ -3512,7 +3512,7 @@ void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   else if (MemTy == MVT::i16)
     Opcode = Subtarget->isThumb() ? ARM::tCMP_SWAP_16 : ARM::CMP_SWAP_16;
   else if (MemTy == MVT::i32)
-    Opcode = ARM::CMP_SWAP_32;
+    Opcode = Subtarget->isThumb() ? ARM::tCMP_SWAP_32 : ARM::CMP_SWAP_32;
   else
     llvm_unreachable("Unknown AtomicCmpSwap type");
 
