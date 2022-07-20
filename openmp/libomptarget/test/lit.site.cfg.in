@@ -12,6 +12,7 @@ config.libomptarget_obj_root = "@CMAKE_CURRENT_BINARY_DIR@/@CURRENT_TARGET@"
 config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
 config.omp_header_directory = "@LIBOMPTARGET_OPENMP_HEADER_FOLDER@"
 config.omp_host_rtl_directory = "@LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER@"
+config.llvm_lib_directory = "@LIBOMPTARGET_LLVM_LIBRARY_DIR@"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
 config.libomptarget_all_targets = "@LIBOMPTARGET_ALL_TARGETS@".split()
 config.libomptarget_current_target = "@CURRENT_TARGET@"
