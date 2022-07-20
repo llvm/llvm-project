@@ -210,6 +210,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
   assert(BankMaskOpnd && BankMaskOpnd->isImm());
   const bool MaskAllLanes =
       RowMaskOpnd->getImm() == 0xF && BankMaskOpnd->getImm() == 0xF;
+  (void)MaskAllLanes;
   assert(MaskAllLanes ||
          !(TII->isVOPC(DPPOp) ||
            (TII->isVOP3(DPPOp) && OrigOpE32 != -1 && TII->isVOPC(OrigOpE32))) &&
