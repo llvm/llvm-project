@@ -57,7 +57,7 @@ auto DialectResourceBlobManager::insert(StringRef name,
     Twine(nameCounter++).toVector(nameStorage);
 
     // Try inserting with the new name.
-    if (BlobEntry *entry = tryInsertion(name))
+    if (BlobEntry *entry = tryInsertion(nameStorage))
       return *entry;
     nameStorage.resize(name.size() + 1);
   } while (true);

@@ -160,6 +160,7 @@ public:
   /// Parse a handle to a dialect resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(const OpAsmDialectInterface *dialect, StringRef &name);
+  FailureOr<AsmDialectResourceHandle> parseResourceHandle(Dialect *dialect);
 
   //===--------------------------------------------------------------------===//
   // Type Parsing
@@ -271,6 +272,9 @@ public:
   /// Parse a dense elements attribute.
   Attribute parseDenseElementsAttr(Type attrType);
   ShapedType parseElementsLiteralType(Type type);
+
+  /// Parse a dense resource elements attribute.
+  Attribute parseDenseResourceElementsAttr(Type attrType);
 
   /// Parse a DenseArrayAttr.
   Attribute parseDenseArrayAttr();

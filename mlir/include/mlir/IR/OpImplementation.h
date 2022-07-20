@@ -1023,8 +1023,17 @@ public:
   template <typename ResourceT>
   FailureOr<ResourceT> parseResourceHandle() {
     SMLoc handleLoc = getCurrentLocation();
-    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(
-        getContext()->getOrLoadDialect<typename ResourceT::Dialect>());
+
+    // Try to load the dialect that owns the handle.
+    auto *dialect =
+        getContext()->getOrLoadDialect<typename ResourceT::Dialect>();
+    if (!dialect) {
+      return emitError(handleLoc)
+             << "dialect '" << ResourceT::Dialect::getDialectNamespace()
+             << "' is unknown";
+    }
+
+    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(dialect);
     if (failed(handle))
       return failure();
     if (auto *result = dyn_cast<ResourceT>(&*handle))
