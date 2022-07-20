@@ -225,9 +225,13 @@ public:
 
     basic_ostream& operator<<(basic_streambuf<char_type, traits_type>* __sb);
 
+#if _LIBCPP_STD_VER > 14
+// LWG 2221 - nullptr. This is not backported to older standards modes.
+// See https://reviews.llvm.org/D127033 for more info on the rationale.
     _LIBCPP_INLINE_VISIBILITY
     basic_ostream& operator<<(nullptr_t)
     { return *this << "nullptr"; }
+#endif
 
     // 27.7.2.7 Unformatted output:
     basic_ostream& put(char_type __c);
