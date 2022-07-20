@@ -3068,14 +3068,14 @@ define i8 @phi_no_store_2() {
 ; IS__TUNIT_OPM:       loop:
 ; IS__TUNIT_OPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; IS__TUNIT_OPM-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; IS__TUNIT_OPM-NEXT:    store i8 1, i8* [[P]], align 2
 ; IS__TUNIT_OPM-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; IS__TUNIT_OPM-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_OPM:       end:
 ; IS__TUNIT_OPM-NEXT:    [[L21:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 2), align 2
-; IS__TUNIT_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], 0
+; IS__TUNIT_OPM-NEXT:    [[L22:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 3), align 1
+; IS__TUNIT_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], [[L22]]
 ; IS__TUNIT_OPM-NEXT:    ret i8 [[ADD]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn
@@ -3086,14 +3086,14 @@ define i8 @phi_no_store_2() {
 ; IS__TUNIT_NPM:       loop:
 ; IS__TUNIT_NPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; IS__TUNIT_NPM-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; IS__TUNIT_NPM-NEXT:    store i8 1, i8* [[P]], align 2
 ; IS__TUNIT_NPM-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; IS__TUNIT_NPM-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_NPM:       end:
 ; IS__TUNIT_NPM-NEXT:    [[L21:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 2), align 2
-; IS__TUNIT_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], 0
+; IS__TUNIT_NPM-NEXT:    [[L22:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 3), align 1
+; IS__TUNIT_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], [[L22]]
 ; IS__TUNIT_NPM-NEXT:    ret i8 [[ADD]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind
@@ -3104,14 +3104,14 @@ define i8 @phi_no_store_2() {
 ; IS__CGSCC_OPM:       loop:
 ; IS__CGSCC_OPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; IS__CGSCC_OPM-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; IS__CGSCC_OPM-NEXT:    store i8 1, i8* [[P]], align 2
 ; IS__CGSCC_OPM-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; IS__CGSCC_OPM-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_OPM:       end:
 ; IS__CGSCC_OPM-NEXT:    [[L21:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 2), align 2
-; IS__CGSCC_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], 0
+; IS__CGSCC_OPM-NEXT:    [[L22:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 3), align 1
+; IS__CGSCC_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], [[L22]]
 ; IS__CGSCC_OPM-NEXT:    ret i8 [[ADD]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn
@@ -3122,14 +3122,14 @@ define i8 @phi_no_store_2() {
 ; IS__CGSCC_NPM:       loop:
 ; IS__CGSCC_NPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; IS__CGSCC_NPM-NEXT:    store i8 1, i8* [[P]], align 2
 ; IS__CGSCC_NPM-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; IS__CGSCC_NPM-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_NPM:       end:
 ; IS__CGSCC_NPM-NEXT:    [[L21:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 2), align 2
-; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], 0
+; IS__CGSCC_NPM-NEXT:    [[L22:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 3), align 1
+; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L21]], [[L22]]
 ; IS__CGSCC_NPM-NEXT:    ret i8 [[ADD]]
 ;
 entry:
@@ -3153,10 +3153,11 @@ end:
 }
 
 define i8 @phi_no_store_3() {
-; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind writeonly
+; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@phi_no_store_3
-; IS__TUNIT_OPM-SAME: () #[[ATTR7]] {
+; IS__TUNIT_OPM-SAME: () #[[ATTR3]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
+; IS__TUNIT_OPM-NEXT:    store i8 0, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
 ; IS__TUNIT_OPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__TUNIT_OPM:       loop:
 ; IS__TUNIT_OPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
@@ -3166,12 +3167,18 @@ define i8 @phi_no_store_3() {
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_OPM:       end:
-; IS__TUNIT_OPM-NEXT:    ret i8 1
+; IS__TUNIT_OPM-NEXT:    [[L31:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 2), align 2
+; IS__TUNIT_OPM-NEXT:    [[L32:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; IS__TUNIT_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L31]], [[L32]]
+; IS__TUNIT_OPM-NEXT:    [[L34:%.*]] = load i8, i8* bitcast (i32* getelementptr inbounds (i32, i32* @a3, i64 1) to i8*), align 4
+; IS__TUNIT_OPM-NEXT:    [[ADD2:%.*]] = add i8 [[ADD]], [[L34]]
+; IS__TUNIT_OPM-NEXT:    ret i8 [[ADD2]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@phi_no_store_3
-; IS__TUNIT_NPM-SAME: () #[[ATTR5]] {
+; IS__TUNIT_NPM-SAME: () #[[ATTR3]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
+; IS__TUNIT_NPM-NEXT:    store i8 0, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
 ; IS__TUNIT_NPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__TUNIT_NPM:       loop:
 ; IS__TUNIT_NPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
@@ -3181,12 +3188,18 @@ define i8 @phi_no_store_3() {
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_NPM:       end:
-; IS__TUNIT_NPM-NEXT:    ret i8 1
+; IS__TUNIT_NPM-NEXT:    [[L31:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 2), align 2
+; IS__TUNIT_NPM-NEXT:    [[L32:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; IS__TUNIT_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L31]], [[L32]]
+; IS__TUNIT_NPM-NEXT:    [[L34:%.*]] = load i8, i8* bitcast (i32* getelementptr inbounds (i32, i32* @a3, i64 1) to i8*), align 4
+; IS__TUNIT_NPM-NEXT:    [[ADD2:%.*]] = add i8 [[ADD]], [[L34]]
+; IS__TUNIT_NPM-NEXT:    ret i8 [[ADD2]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind writeonly
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@phi_no_store_3
-; IS__CGSCC_OPM-SAME: () #[[ATTR10:[0-9]+]] {
+; IS__CGSCC_OPM-SAME: () #[[ATTR9]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
+; IS__CGSCC_OPM-NEXT:    store i8 0, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
 ; IS__CGSCC_OPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC_OPM:       loop:
 ; IS__CGSCC_OPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
@@ -3196,12 +3209,18 @@ define i8 @phi_no_store_3() {
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_OPM:       end:
-; IS__CGSCC_OPM-NEXT:    ret i8 1
+; IS__CGSCC_OPM-NEXT:    [[L31:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 2), align 2
+; IS__CGSCC_OPM-NEXT:    [[L32:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; IS__CGSCC_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L31]], [[L32]]
+; IS__CGSCC_OPM-NEXT:    [[L34:%.*]] = load i8, i8* bitcast (i32* getelementptr inbounds (i32, i32* @a3, i64 1) to i8*), align 4
+; IS__CGSCC_OPM-NEXT:    [[ADD2:%.*]] = add i8 [[ADD]], [[L34]]
+; IS__CGSCC_OPM-NEXT:    ret i8 [[ADD2]]
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@phi_no_store_3
-; IS__CGSCC_NPM-SAME: () #[[ATTR7]] {
+; IS__CGSCC_NPM-SAME: () #[[ATTR5]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
+; IS__CGSCC_NPM-NEXT:    store i8 0, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
 ; IS__CGSCC_NPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC_NPM:       loop:
 ; IS__CGSCC_NPM-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
@@ -3211,7 +3230,12 @@ define i8 @phi_no_store_3() {
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_NPM:       end:
-; IS__CGSCC_NPM-NEXT:    ret i8 1
+; IS__CGSCC_NPM-NEXT:    [[L31:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 2), align 2
+; IS__CGSCC_NPM-NEXT:    [[L32:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L31]], [[L32]]
+; IS__CGSCC_NPM-NEXT:    [[L34:%.*]] = load i8, i8* bitcast (i32* getelementptr inbounds (i32, i32* @a3, i64 1) to i8*), align 4
+; IS__CGSCC_NPM-NEXT:    [[ADD2:%.*]] = add i8 [[ADD]], [[L34]]
+; IS__CGSCC_NPM-NEXT:    ret i8 [[ADD2]]
 ;
 entry:
   %b = bitcast i32* @a3 to i8*
@@ -3232,7 +3256,10 @@ end:
   %s32 = getelementptr i8, i8* %b, i64 3
   %l32 = load i8, i8* %s32
   %add = add i8 %l31, %l32
-  ret i8 %add
+  %s34 = getelementptr i8, i8* %b, i64 4
+  %l34 = load i8, i8* %s34
+  %add2 = add i8 %add, %l34
+  ret i8 %add2
 }
 
 define i8 @cast_and_load_1() {
@@ -3296,7 +3323,7 @@ define void @recursive_load_store(i64 %N, i32 %v) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind writeonly
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@recursive_load_store
-; IS__CGSCC_OPM-SAME: (i64 [[N:%.*]], i32 [[V:%.*]]) #[[ATTR10]] {
+; IS__CGSCC_OPM-SAME: (i64 [[N:%.*]], i32 [[V:%.*]]) #[[ATTR10:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS__CGSCC_OPM:       for.cond:

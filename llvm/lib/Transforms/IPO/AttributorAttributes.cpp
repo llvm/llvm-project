@@ -1310,6 +1310,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       if (isa<PHINode>(Usr)) {
         // Note the order here, the Usr access might change the map, CurPtr is
         // already in it though.
+        bool IsFirstPHIUser = !OffsetInfoMap.count(Usr);
         OffsetInfo &UsrOI = OffsetInfoMap[Usr];
         OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
         // Check if the PHI is invariant (so far).
@@ -1325,25 +1326,25 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
 
         // Check if the PHI operand is not dependent on the PHI itself.
-        // TODO: This is not great as we look at the pointer type. However, it
-        // is unclear where the Offset size comes from with typeless pointers.
         APInt Offset(
             DL.getIndexSizeInBits(CurPtr->getType()->getPointerAddressSpace()),
             0);
-        if (&AssociatedValue == CurPtr->stripAndAccumulateConstantOffsets(
-                                    DL, Offset, /* AllowNonInbounds */ true)) {
-          if (Offset != PtrOI.Offset) {
-            LLVM_DEBUG(dbgs()
-                       << "[AAPointerInfo] PHI operand pointer offset mismatch "
-                       << *CurPtr << " in " << *Usr << "\n");
-            return false;
-          }
-          return HandlePassthroughUser(Usr, PtrOI, Follow);
+        Value *CurPtrBase = CurPtr->stripAndAccumulateConstantOffsets(
+            DL, Offset, /* AllowNonInbounds */ true);
+        auto It = OffsetInfoMap.find(CurPtrBase);
+        if (It != OffsetInfoMap.end()) {
+          Offset += It->getSecond().Offset;
+          if (IsFirstPHIUser || Offset == UsrOI.Offset)
+            return HandlePassthroughUser(Usr, PtrOI, Follow);
+          LLVM_DEBUG(dbgs()
+                     << "[AAPointerInfo] PHI operand pointer offset mismatch "
+                     << *CurPtr << " in " << *Usr << "\n");
+        } else {
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
+                            << *CurPtr << " in " << *Usr << "\n");
         }
 
         // TODO: Approximate in case we know the direction of the recurrence.
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
-                          << *CurPtr << " in " << *Usr << "\n");
         UsrOI = PtrOI;
         UsrOI.Offset = OffsetAndSize::Unknown;
         Follow = true;
@@ -1381,7 +1382,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
           Changed = translateAndAddState(A, CSArgPI,
                                          OffsetInfoMap[CurPtr].Offset, *CB) |
                     Changed;
-          return true;
+          return isValidState();
         }
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB
                           << "\n");

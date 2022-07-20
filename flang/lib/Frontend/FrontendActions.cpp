@@ -479,11 +479,29 @@ CodeGenAction::~CodeGenAction() = default;
 
 #include "flang/Tools/CLOptions.inc"
 
+static llvm::OptimizationLevel
+mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
+  switch (opts.OptimizationLevel) {
+  default:
+    llvm_unreachable("Invalid optimization level!");
+  case 0:
+    return llvm::OptimizationLevel::O0;
+  case 1:
+    return llvm::OptimizationLevel::O1;
+  case 2:
+    return llvm::OptimizationLevel::O2;
+  case 3:
+    return llvm::OptimizationLevel::O3;
+  }
+}
+
 // Lower the previously generated MLIR module into an LLVM IR module
 void CodeGenAction::generateLLVMIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
+  auto opts = ci.getInvocation().getCodeGenOpts();
+  llvm::OptimizationLevel level = mapToLevel(opts);
 
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
@@ -495,7 +513,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm);
+  fir::createMLIRToLLVMPassPipeline(pm, level);
   mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
@@ -628,22 +646,6 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   // Run the passes
   codeGenPasses.run(llvmModule);
-}
-
-static llvm::OptimizationLevel
-mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
-  switch (opts.OptimizationLevel) {
-  default:
-    llvm_unreachable("Invalid optimization level!");
-  case 0:
-    return llvm::OptimizationLevel::O0;
-  case 1:
-    return llvm::OptimizationLevel::O1;
-  case 2:
-    return llvm::OptimizationLevel::O2;
-  case 3:
-    return llvm::OptimizationLevel::O3;
-  }
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
