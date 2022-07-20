@@ -381,6 +381,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrDoubleGet(
     MlirType shapedType, intptr_t numElements, const double *elements);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrBFloat16Get(
     MlirType shapedType, intptr_t numElements, const uint16_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrFloat16Get(
+    MlirType shapedType, intptr_t numElements, const uint16_t *elements);
 
 /// Creates a dense elements attribute with the given shaped type from string
 /// elements.
