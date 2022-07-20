@@ -190,16 +190,16 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; GCN-NEXT:    s_endpgm
 ; IR-LABEL: @nested_loop_conditions(
 ; IR-NEXT:  bb:
+; IR-NEXT:    [[MY_TMP1134:%.*]] = load volatile i32, i32 addrspace(1)* undef
+; IR-NEXT:    [[MY_TMP1235:%.*]] = icmp slt i32 [[MY_TMP1134]], 9
+; IR-NEXT:    br i1 [[MY_TMP1235]], label [[BB14_LR_PH:%.*]], label [[FLOW:%.*]]
+; IR:       bb14.lr.ph:
 ; IR-NEXT:    [[MY_TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x() #4
 ; IR-NEXT:    [[MY_TMP1:%.*]] = zext i32 [[MY_TMP]] to i64
 ; IR-NEXT:    [[MY_TMP2:%.*]] = getelementptr inbounds i64, i64 addrspace(1)* [[ARG:%.*]], i64 [[MY_TMP1]]
 ; IR-NEXT:    [[MY_TMP3:%.*]] = load i64, i64 addrspace(1)* [[MY_TMP2]], align 16
 ; IR-NEXT:    [[MY_TMP932:%.*]] = load <4 x i32>, <4 x i32> addrspace(1)* undef, align 16
 ; IR-NEXT:    [[MY_TMP1033:%.*]] = extractelement <4 x i32> [[MY_TMP932]], i64 0
-; IR-NEXT:    [[MY_TMP1134:%.*]] = load volatile i32, i32 addrspace(1)* undef
-; IR-NEXT:    [[MY_TMP1235:%.*]] = icmp slt i32 [[MY_TMP1134]], 9
-; IR-NEXT:    br i1 [[MY_TMP1235]], label [[BB14_LR_PH:%.*]], label [[FLOW:%.*]]
-; IR:       bb14.lr.ph:
 ; IR-NEXT:    br label [[BB14:%.*]]
 ; IR:       Flow3:
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP21:%.*]])
@@ -277,17 +277,17 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; IR-NEXT:    store volatile i32 0, i32 addrspace(1)* undef
 ; IR-NEXT:    ret void
 bb:
+  %my.tmp1134 = load volatile i32, i32 addrspace(1)* undef
+  %my.tmp1235 = icmp slt i32 %my.tmp1134, 9
+  br i1 %my.tmp1235, label %bb14.lr.ph, label %bb13
+
+bb14.lr.ph:                                       ; preds = %bb
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %my.tmp1 = zext i32 %my.tmp to i64
   %my.tmp2 = getelementptr inbounds i64, i64 addrspace(1)* %arg, i64 %my.tmp1
   %my.tmp3 = load i64, i64 addrspace(1)* %my.tmp2, align 16
   %my.tmp932 = load <4 x i32>, <4 x i32> addrspace(1)* undef, align 16
   %my.tmp1033 = extractelement <4 x i32> %my.tmp932, i64 0
-  %my.tmp1134 = load volatile i32, i32 addrspace(1)* undef
-  %my.tmp1235 = icmp slt i32 %my.tmp1134, 9
-  br i1 %my.tmp1235, label %bb14.lr.ph, label %bb13
-
-bb14.lr.ph:                                       ; preds = %bb
   br label %bb14
 
 bb4.bb13_crit_edge:                               ; preds = %bb21

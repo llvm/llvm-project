@@ -260,10 +260,10 @@ define amdgpu_kernel void @icmp_users_different_blocks(i32 %cond0, i32 %cond1, i
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %cmp0 = icmp sgt i32 %cond0, 0
-  %cmp1 = icmp sgt i32 %cond1, 0
   br i1 %cmp0, label %bb2, label %bb9
 
 bb2:                                              ; preds = %bb
+  %cmp1 = icmp sgt i32 %cond1, 0
   %tmp2 = sext i1 %cmp1 to i32
   %tmp3 = add i32 %tmp2, %tmp
   br i1 %cmp1, label %bb9, label %bb7

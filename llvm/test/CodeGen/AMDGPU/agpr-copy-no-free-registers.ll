@@ -793,7 +793,6 @@ bb:
 
 bb9:                                              ; preds = %bb12, %bb
   %i10 = phi i64 [ %arg3, %bb ], [ %i13, %bb12 ]
-  %i11 = icmp slt i64 %i10, 0
   br i1 undef, label %bb14, label %bb12
 
 bb12:                                             ; preds = %bb58, %bb9
@@ -801,6 +800,7 @@ bb12:                                             ; preds = %bb58, %bb9
   br label %bb9
 
 bb14:                                             ; preds = %bb9
+  %i11 = icmp slt i64 %i10, 0
   %i15 = load i64, i64 addrspace(1)* null, align 8
   br label %bb16
 
@@ -825,23 +825,23 @@ bb16:                                             ; preds = %bb58, %bb14
   %i34 = getelementptr inbounds [16 x half], [16 x half] addrspace(1)* null, i64 %i24, i64 14
   %i35 = bitcast half addrspace(1)* %i34 to <2 x half> addrspace(1)*
   %i36 = load volatile <2 x half>, <2 x half> addrspace(1)* %i35, align 4
+  %i43 = load volatile <2 x float>, <2 x float> addrspace(3)* null, align 8
+  %i46 = load volatile <2 x float>, <2 x float> addrspace(3)* undef, align 32
+  fence syncscope("workgroup") acquire
+  br i1 %i11, label %bb58, label %bb51
+
+bb51:                                             ; preds = %bb16
   %i37 = fpext <2 x half> %arg4 to <2 x float>
   %i39 = fpext <2 x half> %i27 to <2 x float>
   %i40 = fpext <2 x half> %i30 to <2 x float>
   %i41 = fpext <2 x half> %i33 to <2 x float>
   %i42 = fpext <2 x half> %i36 to <2 x float>
-  %i43 = load volatile <2 x float>, <2 x float> addrspace(3)* null, align 8
   %i44 = fadd contract <2 x float> %i37, %i43
   %i45 = fadd contract <2 x float> %i43, zeroinitializer
-  %i46 = load volatile <2 x float>, <2 x float> addrspace(3)* undef, align 32
   %i47 = fadd contract <2 x float> %i39, %i46
   %i48 = fadd contract <2 x float> %i40, %i43
   %i49 = fadd contract <2 x float> %i41, zeroinitializer
   %i50 = fadd contract <2 x float> %i42, zeroinitializer
-  fence syncscope("workgroup") acquire
-  br i1 %i11, label %bb58, label %bb51
-
-bb51:                                             ; preds = %bb16
   %i52 = fadd contract <2 x float> %i18, %i44
   %i53 = fadd contract <2 x float> %i19, %i45
   %i54 = fadd contract <2 x float> %i20, %i47
