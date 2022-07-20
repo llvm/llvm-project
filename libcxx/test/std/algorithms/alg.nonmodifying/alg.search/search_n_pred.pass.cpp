@@ -158,11 +158,34 @@ test()
     count_equal::count = 0;
 }
 
+class A {
+public:
+  A(int x, int y) : x_(x), y_(y) {}
+  int x() const { return x_; }
+  int y() const { return y_; }
+
+private:
+  int x_;
+  int y_;
+};
+
+struct Pred {
+  bool operator()(const A& l, int r) const { return l.x() == r; }
+};
+
 int main(int, char**)
 {
     test<forward_iterator<const int*> >();
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
+
+    // test bug reported in https://reviews.llvm.org/D124079?#3661721
+    {
+        A a[]       = {A(1, 2), A(2, 3), A(2, 4)};
+        int value   = 2;
+        auto result = std::search_n(a, a + 3, 1, value, Pred());
+        assert(result == a + 1);
+    }
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
