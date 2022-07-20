@@ -2679,9 +2679,9 @@ public:
                                             funcSymbolAttr, operands);
 
     if (caller.mustSaveResult())
-      builder.create<fir::SaveResultOp>(
-          loc, call.getResult(0), fir::getBase(allocatedResult.getValue()),
-          arrayResultShape, resultLengths);
+      builder.create<fir::SaveResultOp>(loc, call.getResult(0),
+                                        fir::getBase(allocatedResult.value()),
+                                        arrayResultShape, resultLengths);
 
     if (allocatedResult) {
       allocatedResult->match(
@@ -4237,10 +4237,10 @@ private:
                                            mlir::Value{});
       }
     } else if (isBoundsRemap()) {
-      auto lbs = lbounds.getValue();
+      auto lbs = lbounds.value();
       if (lbs.size() > 0) {
         // Rebox the value with user-specified shift and shape.
-        auto shapeShiftArgs = flatZip(lbs, ubounds.getValue());
+        auto shapeShiftArgs = flatZip(lbs, ubounds.value());
         auto shapeTy = fir::ShapeShiftType::get(eleTy.getContext(), lbs.size());
         mlir::Value shapeShift =
             builder.create<fir::ShapeShiftOp>(loc, shapeTy, shapeShiftArgs);
