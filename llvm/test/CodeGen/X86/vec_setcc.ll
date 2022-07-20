@@ -208,9 +208,9 @@ define <3 x i1> @test_setcc_v3i1_v3i16(<3 x i16>* %a) nounwind {
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %dl
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_setcc_v3i1_v3i16:

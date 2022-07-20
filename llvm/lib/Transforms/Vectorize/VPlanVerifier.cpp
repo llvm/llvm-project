@@ -133,7 +133,9 @@ void VPlanVerifier::verifyHierarchicalCFG(
   verifyRegionRec(TopRegion);
 }
 
-static bool verifyVPBasicBlock(const VPBasicBlock *VPBB) {
+static bool
+verifyVPBasicBlock(const VPBasicBlock *VPBB,
+                   DenseMap<const VPBlockBase *, unsigned> &BlockNumbering) {
   // Verify that phi-like recipes are at the beginning of the block, with no
   // other recipes in between.
   auto RecipeI = VPBB->begin();
@@ -165,15 +167,71 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     RecipeI++;
   }
 
+  // Verify that defs in VPBB dominate all their uses. The current
+  // implementation is still incomplete.
+  DenseMap<const VPRecipeBase *, unsigned> RecipeNumbering;
+  unsigned Cnt = 0;
+  for (const VPRecipeBase &R : *VPBB)
+    RecipeNumbering[&R] = Cnt++;
+
+  for (const VPRecipeBase &R : *VPBB) {
+    for (const VPValue *V : R.definedValues()) {
+      for (const VPUser *U : V->users()) {
+        auto *UI = dyn_cast<VPRecipeBase>(U);
+        if (!UI || isa<VPHeaderPHIRecipe>(UI))
+          continue;
+
+        // If the user is in the same block, check it comes after R in the
+        // block.
+        if (UI->getParent() == VPBB) {
+          if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
+            errs() << "Use before def!\n";
+            return false;
+          }
+          continue;
+        }
+
+        // Skip blocks outside any region for now and blocks outside
+        // replicate-regions.
+        auto *ParentR = VPBB->getParent();
+        if (!ParentR || !ParentR->isReplicator())
+          continue;
+
+        // For replicators, verify that VPPRedInstPHIRecipe defs are only used
+        // in subsequent blocks.
+        if (isa<VPPredInstPHIRecipe>(&R)) {
+          auto I = BlockNumbering.find(UI->getParent());
+          unsigned BlockNumber = I == BlockNumbering.end() ? std::numeric_limits<unsigned>::max() : I->second;
+          if (BlockNumber < BlockNumbering[ParentR]) {
+            errs() << "Use before def!\n";
+            return false;
+          }
+          continue;
+        }
+
+        // All non-VPPredInstPHIRecipe recipes in the block must be used in
+        // the replicate region only.
+        if (UI->getParent()->getParent() != ParentR) {
+          errs() << "Use before def!\n";
+          return false;
+        }
+      }
+    }
+  }
   return true;
 }
 
 bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
+  DenseMap<const VPBlockBase *, unsigned> BlockNumbering;
+  unsigned Cnt = 0;
   auto Iter = depth_first(
       VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
-  for (const VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<const VPBasicBlock>(Iter)) {
-    if (!verifyVPBasicBlock(VPBB))
+  for (const VPBlockBase *VPB : Iter) {
+    BlockNumbering[VPB] = Cnt++;
+    auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+    if (!VPBB)
+      continue;
+    if (!verifyVPBasicBlock(VPBB, BlockNumbering))
       return false;
   }
 

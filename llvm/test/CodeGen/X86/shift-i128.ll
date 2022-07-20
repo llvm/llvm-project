@@ -15,7 +15,7 @@ define void @test_lshr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    subl $20, %esp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    movb {{[0-9]+}}(%esp), %al
+; i686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; i686-NEXT:    movl %ebp, %esi
@@ -152,7 +152,7 @@ define void @test_ashr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    subl $24, %esp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; i686-NEXT:    movb {{[0-9]+}}(%esp), %al
+; i686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; i686-NEXT:    movl %ebp, %esi
@@ -295,7 +295,7 @@ define void @test_shl_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; i686-NEXT:    subl $20, %esp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movb {{[0-9]+}}(%esp), %al
+; i686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; i686-NEXT:    movl %eax, %ecx
 ; i686-NEXT:    shll %cl, %ebx
@@ -722,7 +722,7 @@ define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocaptur
 ; x86_64:       # %bb.0: # %entry
 ; x86_64-NEXT:    movq %rcx, %rax
 ; x86_64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; x86_64-NEXT:    movb {{[0-9]+}}(%rsp), %r9b
+; x86_64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r9d
 ; x86_64-NEXT:    movl %r9d, %ecx
 ; x86_64-NEXT:    shrdq %cl, %rax, %rdx
 ; x86_64-NEXT:    movl %r8d, %ecx
@@ -1016,7 +1016,7 @@ define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocaptur
 ; x86_64:       # %bb.0: # %entry
 ; x86_64-NEXT:    movq %rcx, %r11
 ; x86_64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; x86_64-NEXT:    movb {{[0-9]+}}(%rsp), %r9b
+; x86_64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r9d
 ; x86_64-NEXT:    movl %r9d, %ecx
 ; x86_64-NEXT:    shrdq %cl, %r11, %rdx
 ; x86_64-NEXT:    movl %r8d, %ecx
@@ -1230,7 +1230,7 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture
 ; i686-NEXT:  .LBB8_29: # %entry
 ; i686-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; i686-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; i686-NEXT:    jne .LBB8_30
 ; i686-NEXT:  # %bb.31: # %entry
@@ -1242,7 +1242,7 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture
 ; i686-NEXT:  .LBB8_34: # %entry
 ; i686-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; i686-NEXT:  .LBB8_35: # %entry
-; i686-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
+; i686-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; i686-NEXT:    shrdl %cl, %ebx, %esi
 ; i686-NEXT:    testb $32, %cl
@@ -1327,7 +1327,7 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture
 ; x86_64:       # %bb.0: # %entry
 ; x86_64-NEXT:    movq %rcx, %rax
 ; x86_64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; x86_64-NEXT:    movb {{[0-9]+}}(%rsp), %r9b
+; x86_64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r9d
 ; x86_64-NEXT:    movl %r9d, %ecx
 ; x86_64-NEXT:    shldq %cl, %rdx, %rax
 ; x86_64-NEXT:    movl %r8d, %ecx

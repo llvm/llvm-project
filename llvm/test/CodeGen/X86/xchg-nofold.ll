@@ -13,7 +13,7 @@ define zeroext i1 @_Z3fooRSt6atomicIbEb(%"struct.std::atomic"* nocapture derefer
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movq %rdi, %rcx
 ; CHECK-NEXT:    shrq $3, %rcx
-; CHECK-NEXT:    movb 2147450880(%rcx), %cl
+; CHECK-NEXT:    movzbl 2147450880(%rcx), %ecx
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.1:

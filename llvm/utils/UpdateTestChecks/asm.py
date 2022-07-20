@@ -23,10 +23,10 @@ ASM_FUNCTION_X86_RE = re.compile(
     flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_RE = re.compile(
-    r'^(?P<func>[0-9a-zA-Z_]+):\n' # f: (name of function)
+    r'^(?P<func>[0-9a-zA-Z_$]+):\n' # f: (name of function)
     r'\s+\.fnstart\n' # .fnstart
-    r'(?P<body>.*?)\n' # (body of the function)
-    r'.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
+    r'(?P<body>.*?)' # (body of the function)
+    r'^.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
     flags=(re.M | re.S))
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
@@ -128,7 +128,8 @@ ASM_FUNCTION_AARCH64_DARWIN_RE = re.compile(
     flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
-    r'^[ \t]*\.globl[ \t]*_(?P<func>[^ \t])[ \t]*@[ \t]--[ \t]Begin[ \t]function[ \t]"?(?P=func)"?'
+    r'@[ \t]--[ \t]Begin[ \t]function[ \t](?P<func>[^ \t]+?)\n'
+    r'^[ \t]*\.globl[ \t]*_(?P=func)[ \t]*'
     r'(?P<directives>.*?)'
     r'^_(?P=func):\n[ \t]*'
     r'(?P<body>.*?)'

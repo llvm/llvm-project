@@ -456,13 +456,13 @@ define void @test_mixed_type(%struct.S3* nocapture noalias %s1, %struct.S3* noca
 ; CHECK-NEXT:  .LBB5_2: # %if.end
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq %rax, (%rsi)
-; CHECK-NEXT:    movb 8(%rdi), %al
+; CHECK-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 8(%rsi)
 ; CHECK-NEXT:    movl 9(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, 9(%rsi)
 ; CHECK-NEXT:    movzwl 13(%rdi), %eax
 ; CHECK-NEXT:    movw %ax, 13(%rsi)
-; CHECK-NEXT:    movb 15(%rdi), %al
+; CHECK-NEXT:    movzbl 15(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 15(%rsi)
 ; CHECK-NEXT:    retq
 ;
@@ -490,13 +490,13 @@ define void @test_mixed_type(%struct.S3* nocapture noalias %s1, %struct.S3* noca
 ; CHECK-AVX2-NEXT:  .LBB5_2: # %if.end
 ; CHECK-AVX2-NEXT:    movq (%rdi), %rax
 ; CHECK-AVX2-NEXT:    movq %rax, (%rsi)
-; CHECK-AVX2-NEXT:    movb 8(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 8(%rsi)
 ; CHECK-AVX2-NEXT:    movl 9(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movl %eax, 9(%rsi)
 ; CHECK-AVX2-NEXT:    movzwl 13(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movw %ax, 13(%rsi)
-; CHECK-AVX2-NEXT:    movb 15(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl 15(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 15(%rsi)
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -511,13 +511,13 @@ define void @test_mixed_type(%struct.S3* nocapture noalias %s1, %struct.S3* noca
 ; CHECK-AVX512-NEXT:  .LBB5_2: # %if.end
 ; CHECK-AVX512-NEXT:    movq (%rdi), %rax
 ; CHECK-AVX512-NEXT:    movq %rax, (%rsi)
-; CHECK-AVX512-NEXT:    movb 8(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 8(%rsi)
 ; CHECK-AVX512-NEXT:    movl 9(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movl %eax, 9(%rsi)
 ; CHECK-AVX512-NEXT:    movzwl 13(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movw %ax, 13(%rsi)
-; CHECK-AVX512-NEXT:    movb 15(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl 15(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 15(%rsi)
 ; CHECK-AVX512-NEXT:    retq
 entry:

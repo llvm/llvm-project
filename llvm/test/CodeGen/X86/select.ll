@@ -207,7 +207,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; MCU-NEXT:    # kill: def $ah killed $ah killed $ax
 ; MCU-NEXT:    sahf
 ; MCU-NEXT:    seta %dl
-; MCU-NEXT:    movb (%ecx,%edx,4), %al
+; MCU-NEXT:    movzbl (%ecx,%edx,4), %eax
 ; MCU-NEXT:    retl
 entry:
   %0 = fcmp olt double %F, 4.200000e+01
@@ -1235,7 +1235,7 @@ define i8 @test18(i32 %x, i8 zeroext %a, i8 zeroext %b) nounwind {
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; ATHLON-NEXT:    cmovll %eax, %ecx
-; ATHLON-NEXT:    movb (%ecx), %al
+; ATHLON-NEXT:    movzbl (%ecx), %eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test18:
@@ -1276,7 +1276,7 @@ define i32 @trunc_select_miscompile(i32 %a, i1 zeroext %cc) {
 ; ATHLON-LABEL: trunc_select_miscompile:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; ATHLON-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; ATHLON-NEXT:    orb $2, %cl
 ; ATHLON-NEXT:    shll %cl, %eax
 ; ATHLON-NEXT:    retl
@@ -1773,7 +1773,7 @@ define i8 @select_uaddo_common_op0(i8 %a, i8 %b, i8 %c, i1 %cond) {
 ;
 ; ATHLON-LABEL: select_uaddo_common_op0:
 ; ATHLON:       ## %bb.0:
-; ATHLON-NEXT:    movb {{[0-9]+}}(%esp), %al
+; ATHLON-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx

@@ -308,7 +308,7 @@ define i16 @test15(i1 *%addr) {
 define i16 @test16(i1 *%addr, i16 %a) {
 ; KNL-LABEL: test16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movb (%rdi), %al
+; KNL-NEXT:    movzbl (%rdi), %eax
 ; KNL-NEXT:    kmovw %esi, %k0
 ; KNL-NEXT:    movw $-1025, %cx ## imm = 0xFBFF
 ; KNL-NEXT:    kmovw %ecx, %k1
@@ -344,7 +344,7 @@ define i16 @test16(i1 *%addr, i16 %a) {
 define i8 @test17(i1 *%addr, i8 %a) {
 ; KNL-LABEL: test17:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movb (%rdi), %al
+; KNL-NEXT:    movzbl (%rdi), %eax
 ; KNL-NEXT:    kmovw %esi, %k0
 ; KNL-NEXT:    movw $-17, %cx
 ; KNL-NEXT:    kmovw %ecx, %k1
@@ -1429,7 +1429,7 @@ define i8 @test_extractelement_variable_v16i8(<16 x i8> %t1, i32 %index) {
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $15, %edi
-; CHECK-NEXT:    movb -24(%rsp,%rdi), %al
+; CHECK-NEXT:    movzbl -24(%rsp,%rdi), %eax
 ; CHECK-NEXT:    retq
   %t2 = extractelement <16 x i8> %t1, i32 %index
   ret i8 %t2
@@ -1448,7 +1448,7 @@ define i8 @test_extractelement_variable_v32i8(<32 x i8> %t1, i32 %index) {
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $31, %edi
-; CHECK-NEXT:    movb (%rsp,%rdi), %al
+; CHECK-NEXT:    movzbl (%rsp,%rdi), %eax
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -1471,7 +1471,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $63, %edi
-; CHECK-NEXT:    movb (%rsp,%rdi), %al
+; CHECK-NEXT:    movzbl (%rsp,%rdi), %eax
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
@@ -1495,7 +1495,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    andl $63, %eax
-; CHECK-NEXT:    movb (%rsp,%rax), %al
+; CHECK-NEXT:    movzbl (%rsp,%rax), %eax
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper

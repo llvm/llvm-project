@@ -712,12 +712,12 @@ void StackLayoutModifier::initialize() {
   IsInitialized = true;
 }
 
-std::atomic_uint64_t ShrinkWrapping::SpillsMovedRegularMode{0};
-std::atomic_uint64_t ShrinkWrapping::SpillsMovedPushPopMode{0};
-std::atomic_uint64_t ShrinkWrapping::SpillsMovedDynamicCount{0};
-std::atomic_uint64_t ShrinkWrapping::SpillsFailedDynamicCount{0};
-std::atomic_uint64_t ShrinkWrapping::InstrDynamicCount{0};
-std::atomic_uint64_t ShrinkWrapping::StoreDynamicCount{0};
+std::atomic<std::uint64_t> ShrinkWrapping::SpillsMovedRegularMode{0};
+std::atomic<std::uint64_t> ShrinkWrapping::SpillsMovedPushPopMode{0};
+std::atomic<std::uint64_t> ShrinkWrapping::SpillsMovedDynamicCount{0};
+std::atomic<std::uint64_t> ShrinkWrapping::SpillsFailedDynamicCount{0};
+std::atomic<std::uint64_t> ShrinkWrapping::InstrDynamicCount{0};
+std::atomic<std::uint64_t> ShrinkWrapping::StoreDynamicCount{0};
 
 using BBIterTy = BinaryBasicBlock::iterator;
 

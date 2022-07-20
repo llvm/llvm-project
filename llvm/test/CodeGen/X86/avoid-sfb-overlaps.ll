@@ -30,9 +30,9 @@ define dso_local void @test_overlap_1(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-NEXT:    movl %eax, 24(%rdi)
 ; CHECK-NEXT:    movzwl -4(%rdi), %eax
 ; CHECK-NEXT:    movw %ax, 28(%rdi)
-; CHECK-NEXT:    movb -2(%rdi), %al
+; CHECK-NEXT:    movzbl -2(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 30(%rdi)
-; CHECK-NEXT:    movb -1(%rdi), %al
+; CHECK-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 31(%rdi)
 ; CHECK-NEXT:    retq
 ;
@@ -68,9 +68,9 @@ define dso_local void @test_overlap_1(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX2-NEXT:    movl %eax, 24(%rdi)
 ; CHECK-AVX2-NEXT:    movzwl -4(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movw %ax, 28(%rdi)
-; CHECK-AVX2-NEXT:    movb -2(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -2(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 30(%rdi)
-; CHECK-AVX2-NEXT:    movb -1(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -93,9 +93,9 @@ define dso_local void @test_overlap_1(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movl %eax, 24(%rdi)
 ; CHECK-AVX512-NEXT:    movzwl -4(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movw %ax, 28(%rdi)
-; CHECK-AVX512-NEXT:    movb -2(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -2(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 30(%rdi)
-; CHECK-AVX512-NEXT:    movb -1(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
@@ -229,9 +229,9 @@ define dso_local void @test_overlap_3(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-NEXT:    movw %ax, 24(%rdi)
 ; CHECK-NEXT:    movl -6(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, 26(%rdi)
-; CHECK-NEXT:    movb -2(%rdi), %al
+; CHECK-NEXT:    movzbl -2(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 30(%rdi)
-; CHECK-NEXT:    movb -1(%rdi), %al
+; CHECK-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 31(%rdi)
 ; CHECK-NEXT:    retq
 ;
@@ -271,9 +271,9 @@ define dso_local void @test_overlap_3(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX2-NEXT:    movw %ax, 24(%rdi)
 ; CHECK-AVX2-NEXT:    movl -6(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movl %eax, 26(%rdi)
-; CHECK-AVX2-NEXT:    movb -2(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -2(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 30(%rdi)
-; CHECK-AVX2-NEXT:    movb -1(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -300,9 +300,9 @@ define dso_local void @test_overlap_3(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movw %ax, 24(%rdi)
 ; CHECK-AVX512-NEXT:    movl -6(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movl %eax, 26(%rdi)
-; CHECK-AVX512-NEXT:    movb -2(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -2(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 30(%rdi)
-; CHECK-AVX512-NEXT:    movb -1(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
@@ -336,7 +336,7 @@ define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-NEXT:    movl $0, -11(%rdi)
 ; CHECK-NEXT:    movl -16(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, 16(%rdi)
-; CHECK-NEXT:    movb -12(%rdi), %al
+; CHECK-NEXT:    movzbl -12(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 20(%rdi)
 ; CHECK-NEXT:    movl -11(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, 21(%rdi)
@@ -344,7 +344,7 @@ define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-NEXT:    movl %eax, 25(%rdi)
 ; CHECK-NEXT:    movzwl -3(%rdi), %eax
 ; CHECK-NEXT:    movw %ax, 29(%rdi)
-; CHECK-NEXT:    movb -1(%rdi), %al
+; CHECK-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 31(%rdi)
 ; CHECK-NEXT:    retq
 ;
@@ -370,7 +370,7 @@ define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX2-NEXT:    movl $0, -11(%rdi)
 ; CHECK-AVX2-NEXT:    movl -16(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movl %eax, 16(%rdi)
-; CHECK-AVX2-NEXT:    movb -12(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -12(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 20(%rdi)
 ; CHECK-AVX2-NEXT:    movl -11(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movl %eax, 21(%rdi)
@@ -378,7 +378,7 @@ define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX2-NEXT:    movl %eax, 25(%rdi)
 ; CHECK-AVX2-NEXT:    movzwl -3(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movw %ax, 29(%rdi)
-; CHECK-AVX2-NEXT:    movb -1(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -392,7 +392,7 @@ define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movl $0, -11(%rdi)
 ; CHECK-AVX512-NEXT:    movl -16(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movl %eax, 16(%rdi)
-; CHECK-AVX512-NEXT:    movb -12(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -12(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 20(%rdi)
 ; CHECK-AVX512-NEXT:    movl -11(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movl %eax, 21(%rdi)
@@ -400,7 +400,7 @@ define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movl %eax, 25(%rdi)
 ; CHECK-AVX512-NEXT:    movzwl -3(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movw %ax, 29(%rdi)
-; CHECK-AVX512-NEXT:    movb -1(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -1(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
@@ -432,11 +432,11 @@ define dso_local void @test_overlap_5(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-NEXT:    movb $0, -11(%rdi)
 ; CHECK-NEXT:    movzwl -16(%rdi), %eax
 ; CHECK-NEXT:    movw %ax, 16(%rdi)
-; CHECK-NEXT:    movb -14(%rdi), %al
+; CHECK-NEXT:    movzbl -14(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 18(%rdi)
 ; CHECK-NEXT:    movzwl -13(%rdi), %eax
 ; CHECK-NEXT:    movw %ax, 19(%rdi)
-; CHECK-NEXT:    movb -11(%rdi), %al
+; CHECK-NEXT:    movzbl -11(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 21(%rdi)
 ; CHECK-NEXT:    movq -10(%rdi), %rax
 ; CHECK-NEXT:    movq %rax, 22(%rdi)
@@ -466,11 +466,11 @@ define dso_local void @test_overlap_5(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX2-NEXT:    movb $0, -11(%rdi)
 ; CHECK-AVX2-NEXT:    movzwl -16(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movw %ax, 16(%rdi)
-; CHECK-AVX2-NEXT:    movb -14(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -14(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 18(%rdi)
 ; CHECK-AVX2-NEXT:    movzwl -13(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movw %ax, 19(%rdi)
-; CHECK-AVX2-NEXT:    movb -11(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl -11(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 21(%rdi)
 ; CHECK-AVX2-NEXT:    movq -10(%rdi), %rax
 ; CHECK-AVX2-NEXT:    movq %rax, 22(%rdi)
@@ -488,11 +488,11 @@ define dso_local void @test_overlap_5(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movb $0, -11(%rdi)
 ; CHECK-AVX512-NEXT:    movzwl -16(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movw %ax, 16(%rdi)
-; CHECK-AVX512-NEXT:    movb -14(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -14(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 18(%rdi)
 ; CHECK-AVX512-NEXT:    movzwl -13(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movw %ax, 19(%rdi)
-; CHECK-AVX512-NEXT:    movb -11(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl -11(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 21(%rdi)
 ; CHECK-AVX512-NEXT:    movq -10(%rdi), %rax
 ; CHECK-AVX512-NEXT:    movq %rax, 22(%rdi)

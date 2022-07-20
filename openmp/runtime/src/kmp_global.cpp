@@ -46,6 +46,7 @@ tsc_tick_count __kmp_stats_start_time;
 volatile int __kmp_init_serial = FALSE;
 volatile int __kmp_init_gtid = FALSE;
 volatile int __kmp_init_common = FALSE;
+volatile int __kmp_need_register_serial = TRUE;
 volatile int __kmp_init_middle = FALSE;
 volatile int __kmp_init_parallel = FALSE;
 volatile int __kmp_init_hidden_helper = FALSE;
@@ -286,6 +287,7 @@ kmp_affin_mask_t *__kmp_affinity_masks = NULL;
 unsigned __kmp_affinity_num_masks = 0;
 
 char *__kmp_cpuinfo_file = NULL;
+bool __kmp_affin_reset = 0;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 

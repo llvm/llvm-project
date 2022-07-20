@@ -90,7 +90,7 @@ define <2 x i64> @sub_op0_constant(i64* %p) nounwind {
 define <16 x i8> @sub_op1_constant(i8* %p) nounwind {
 ; SSE-LABEL: sub_op1_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    addb $-42, %al
 ; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
@@ -98,7 +98,7 @@ define <16 x i8> @sub_op1_constant(i8* %p) nounwind {
 ;
 ; AVX-LABEL: sub_op1_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %al
+; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    addb $-42, %al
 ; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
@@ -210,7 +210,7 @@ define <8 x i16> @xor_op1_constant(i16* %p) nounwind {
 define <4 x i32> @shl_op0_constant(i32* %p) nounwind {
 ; SSE-LABEL: shl_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %cl
+; SSE-NEXT:    movzbl (%rdi), %ecx
 ; SSE-NEXT:    movl $42, %eax
 ; SSE-NEXT:    shll %cl, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
@@ -218,7 +218,7 @@ define <4 x i32> @shl_op0_constant(i32* %p) nounwind {
 ;
 ; AVX-LABEL: shl_op0_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %cl
+; AVX-NEXT:    movzbl (%rdi), %ecx
 ; AVX-NEXT:    movl $42, %eax
 ; AVX-NEXT:    shll %cl, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
@@ -232,7 +232,7 @@ define <4 x i32> @shl_op0_constant(i32* %p) nounwind {
 define <16 x i8> @shl_op1_constant(i8* %p) nounwind {
 ; SSE-LABEL: shl_op1_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    shlb $5, %al
 ; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
@@ -240,7 +240,7 @@ define <16 x i8> @shl_op1_constant(i8* %p) nounwind {
 ;
 ; AVX-LABEL: shl_op1_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %al
+; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    shlb $5, %al
 ; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
@@ -254,7 +254,7 @@ define <16 x i8> @shl_op1_constant(i8* %p) nounwind {
 define <2 x i64> @lshr_op0_constant(i64* %p) nounwind {
 ; SSE-LABEL: lshr_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %cl
+; SSE-NEXT:    movzbl (%rdi), %ecx
 ; SSE-NEXT:    movl $42, %eax
 ; SSE-NEXT:    shrq %cl, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
@@ -262,7 +262,7 @@ define <2 x i64> @lshr_op0_constant(i64* %p) nounwind {
 ;
 ; AVX-LABEL: lshr_op0_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %cl
+; AVX-NEXT:    movzbl (%rdi), %ecx
 ; AVX-NEXT:    movl $42, %eax
 ; AVX-NEXT:    shrq %cl, %rax
 ; AVX-NEXT:    vmovq %rax, %xmm0
@@ -296,7 +296,7 @@ define <4 x i32> @lshr_op1_constant(i32* %p) nounwind {
 define <8 x i16> @ashr_op0_constant(i16* %p) nounwind {
 ; SSE-LABEL: ashr_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %cl
+; SSE-NEXT:    movzbl (%rdi), %ecx
 ; SSE-NEXT:    movl $-42, %eax
 ; SSE-NEXT:    sarl %cl, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
@@ -304,7 +304,7 @@ define <8 x i16> @ashr_op0_constant(i16* %p) nounwind {
 ;
 ; AVX-LABEL: ashr_op0_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %cl
+; AVX-NEXT:    movzbl (%rdi), %ecx
 ; AVX-NEXT:    movl $-42, %eax
 ; AVX-NEXT:    sarl %cl, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
@@ -520,7 +520,7 @@ define <2 x i64> @urem_op0_constant(i64* %p) nounwind {
 define <16 x i8> @urem_op1_constant(i8* %p) nounwind {
 ; SSE-LABEL: urem_op1_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    shrb %cl
 ; SSE-NEXT:    movzbl %cl, %ecx
@@ -534,7 +534,7 @@ define <16 x i8> @urem_op1_constant(i8* %p) nounwind {
 ;
 ; AVX-LABEL: urem_op1_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %al
+; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    movl %eax, %ecx
 ; AVX-NEXT:    shrb %cl
 ; AVX-NEXT:    movzbl %cl, %ecx

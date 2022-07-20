@@ -147,9 +147,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 ; CHECK-NEXT:    [[X:%.*]] = call align 4 i8* @__kmpc_alloc_shared(i64 4) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    call void @unknown_no_openmp()
-; CHECK-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[X]] to i32*
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[X_ON_STACK]] to i8*
-; CHECK-NEXT:    call void @use.internalized(i8* nofree [[TMP0]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree [[X]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[X]], i64 4) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    ret void
@@ -162,17 +160,14 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[MASTER1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master1:
-; CHECK-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* @x_shared, i32 0, i32 0) to i8*) to [4 x i32]*
-; CHECK-NEXT:    [[A0:%.*]] = bitcast [4 x i32]* [[X_ON_STACK]] to i8*
-; CHECK-NEXT:    call void @use.internalized(i8* nofree [[A0]]) #[[ATTR7]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* @x_shared, i32 0, i32 0) to i8*)) #[[ATTR7]]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    call void @unknown_no_openmp()
-; CHECK-NEXT:    br label [[MASTER2:%.*]]
+; CHECK-NEXT:    [[B0:%.*]] = icmp eq i32 [[C]], -1
+; CHECK-NEXT:    br i1 [[B0]], label [[MASTER2:%.*]], label [[EXIT]]
 ; CHECK:       master2:
-; CHECK-NEXT:    [[Y_ON_STACK:%.*]] = bitcast i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @y_shared, i32 0, i32 0) to i8*) to [4 x i32]*
-; CHECK-NEXT:    [[B1:%.*]] = bitcast [4 x i32]* [[Y_ON_STACK]] to i8*
-; CHECK-NEXT:    call void @use.internalized(i8* nofree [[B1]]) #[[ATTR7]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @y_shared, i32 0, i32 0) to i8*)) #[[ATTR7]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
@@ -187,9 +182,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    br i1 [[C0]], label [[MASTER3:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master3:
 ; CHECK-NEXT:    [[Z:%.*]] = call align 4 i8* @__kmpc_alloc_shared(i64 24) #[[ATTR6]], !dbg [[DBG10:![0-9]+]]
-; CHECK-NEXT:    [[Z_ON_STACK:%.*]] = bitcast i8* [[Z]] to [6 x i32]*
-; CHECK-NEXT:    [[C1:%.*]] = bitcast [6 x i32]* [[Z_ON_STACK]] to i8*
-; CHECK-NEXT:    call void @use.internalized(i8* nofree [[C1]]) #[[ATTR7]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree [[Z]]) #[[ATTR7]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[Z]], i64 24) #[[ATTR8]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -197,7 +190,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK: Function Attrs: nofree nounwind writeonly
+; CHECK: Function Attrs: nofree norecurse nounwind writeonly
 ; CHECK-LABEL: define {{[^@]+}}@use.internalized
 ; CHECK-SAME: (i8* nofree [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -220,7 +213,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "kernel" }
-; CHECK: attributes #[[ATTR1]] = { nofree nounwind writeonly }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nounwind writeonly }
 ; CHECK: attributes #[[ATTR2]] = { nosync nounwind readonly allocsize(0) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }

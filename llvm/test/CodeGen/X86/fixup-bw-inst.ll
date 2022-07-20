@@ -100,11 +100,11 @@ a4:                                       ; preds = %4, %.lr.ph
   ret void
 }
 
-; This test contains nothing but a simple byte load and store.  Since
-; movb encodes smaller, we do not want to use movzbl unless in a tight loop.
-; So this test checks that movb is used.
+; This test contains nothing but a simple byte load and store.
+; movb encodes smaller, but we use movzbl for the load for better perf.
 ; CHECK-LABEL: foo3:
-; CHECK: movb
+; BWON:  movzbl
+; BWOFF: movb
 ; CHECK: movb
 define void @foo3(i8 *%dst, i8 *%src) {
   %t0 = load i8, i8 *%src, align 1

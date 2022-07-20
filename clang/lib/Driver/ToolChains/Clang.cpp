@@ -5918,12 +5918,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
-  if (Args.hasArg(options::OPT_funstable)) {
-    CmdArgs.push_back("-funstable");
-    if (!Args.hasArg(options::OPT_fno_coroutines_ts))
-      CmdArgs.push_back("-fcoroutines-ts");
-    CmdArgs.push_back("-fmodules-ts");
-  }
+  Args.AddLastArg(CmdArgs, options::OPT_fexperimental_library);
 
   if (Args.hasArg(options::OPT_fexperimental_new_constant_interpreter))
     CmdArgs.push_back("-fexperimental-new-constant-interpreter");

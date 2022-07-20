@@ -46,7 +46,7 @@ define i8 @foo1(i8* nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dh, %ecx
-; CHECK-NEXT:    movb (%eax,%ecx), %al
+; CHECK-NEXT:    movzbl (%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
   %t0 = lshr i32 %x, 8
   %t1 = and i32 %t0, 255
@@ -59,7 +59,7 @@ define i8 @bar8(i8* nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK-LABEL: bar8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dh, %ecx
-; CHECK-NEXT:    movb (%eax,%ecx,8), %al
+; CHECK-NEXT:    movzbl (%eax,%ecx,8), %eax
 ; CHECK-NEXT:    retl
   %t0 = lshr i32 %x, 5
   %t1 = and i32 %t0, 2040
@@ -72,7 +72,7 @@ define i8 @bar4(i8* nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK-LABEL: bar4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dh, %ecx
-; CHECK-NEXT:    movb (%eax,%ecx,4), %al
+; CHECK-NEXT:    movzbl (%eax,%ecx,4), %eax
 ; CHECK-NEXT:    retl
   %t0 = lshr i32 %x, 6
   %t1 = and i32 %t0, 1020
@@ -85,7 +85,7 @@ define i8 @bar2(i8* nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK-LABEL: bar2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dh, %ecx
-; CHECK-NEXT:    movb (%eax,%ecx,2), %al
+; CHECK-NEXT:    movzbl (%eax,%ecx,2), %eax
 ; CHECK-NEXT:    retl
   %t0 = lshr i32 %x, 7
   %t1 = and i32 %t0, 510

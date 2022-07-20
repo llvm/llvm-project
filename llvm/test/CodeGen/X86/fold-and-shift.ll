@@ -96,7 +96,7 @@ define i8 @t5(i8* %X, i32 %i) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    andl $-14, %ecx
-; CHECK-NEXT:    movb (%eax,%ecx,4), %al
+; CHECK-NEXT:    movzbl (%eax,%ecx,4), %eax
 ; CHECK-NEXT:    retl
 
 entry:
@@ -113,7 +113,7 @@ define i8 @t6(i8* %X, i32 %i) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $-255, %ecx
 ; CHECK-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movb (%eax,%ecx,4), %al
+; CHECK-NEXT:    movzbl (%eax,%ecx,4), %eax
 ; CHECK-NEXT:    retl
 
 entry:

@@ -31,7 +31,7 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(%struct.wxString* noalia
 ; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je LBB0_25
 ; CHECK-NEXT:  ## %bb.1: ## %bb116.i

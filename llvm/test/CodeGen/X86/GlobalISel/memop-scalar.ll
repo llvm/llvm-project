@@ -5,7 +5,7 @@
 define i1 @test_load_i1(i1 * %p1) {
 ; ALL-LABEL: test_load_i1:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movb (%rdi), %al
+; ALL-NEXT:    movzbl (%rdi), %eax
 ; ALL-NEXT:    retq
   %r = load i1, i1* %p1
   ret i1 %r
@@ -14,7 +14,7 @@ define i1 @test_load_i1(i1 * %p1) {
 define i8 @test_load_i8(i8 * %p1) {
 ; ALL-LABEL: test_load_i8:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movb (%rdi), %al
+; ALL-NEXT:    movzbl (%rdi), %eax
 ; ALL-NEXT:    retq
   %r = load i8, i8* %p1
   ret i8 %r

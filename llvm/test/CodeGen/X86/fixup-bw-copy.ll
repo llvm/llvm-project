@@ -6,14 +6,47 @@
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 
-define i8 @test_movb(i8 %a0) {
+define i8 @test_movb(i8 %a0) nounwind {
 ; X64-LABEL: test_movb:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: test_movb:
+; BWON32-LABEL: test_movb:
+; BWON32:       # %bb.0:
+; BWON32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; BWON32-NEXT:    retl
+;
+; BWOFF32-LABEL: test_movb:
+; BWOFF32:       # %bb.0:
+; BWOFF32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; BWOFF32-NEXT:    retl
+  ret i8 %a0
+}
+
+define i8 @test_movb_Os(i8 %a0) nounwind optsize {
+; X64-LABEL: test_movb_Os:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X32-LABEL: test_movb_Os:
+; X32:       # %bb.0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    retl
+  ret i8 %a0
+}
+
+define i8 @test_movb_Oz(i8 %a0) nounwind minsize {
+; X64-LABEL: test_movb_Oz:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X32-LABEL: test_movb_Oz:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    retl
