@@ -1168,6 +1168,8 @@ def gi_arith_extended_reg32to64_i64 :
     GIComplexOperandMatcher<s64, "selectArithExtendedRegister">,
     GIComplexPatternEquiv<arith_extended_reg32to64_i64>;
 
+def arith_uxtx : ComplexPattern<i64, 2, "SelectArithUXTXRegister", []>;
+
 // Floating-point immediate.
 
 def fpimm16XForm : SDNodeXForm<fpimm, [{

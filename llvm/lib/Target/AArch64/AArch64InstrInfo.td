@@ -1691,6 +1691,11 @@ def : InstAlias<"mov $dst, $src",
 defm ADDS : AddSubS<0, "adds", AArch64add_flag, "cmn", "subs", "cmp">;
 defm SUBS : AddSubS<1, "subs", AArch64sub_flag, "cmp", "adds", "cmn">;
 
+def copyFromSP: PatLeaf<(i64 GPR64:$src), [{
+  return N->getOpcode() == ISD::CopyFromReg &&
+         cast<RegisterSDNode>(N->getOperand(1))->getReg() == AArch64::SP;
+}]>;
+
 // Use SUBS instead of SUB to enable CSE between SUBS and SUB.
 def : Pat<(sub GPR32sp:$Rn, addsub_shifted_imm32:$imm),
           (SUBSWri GPR32sp:$Rn, addsub_shifted_imm32:$imm)>;
@@ -1709,6 +1714,8 @@ def : Pat<(sub GPR32sp:$R2, arith_extended_reg32_i32:$R3),
           (SUBSWrx GPR32sp:$R2, arith_extended_reg32_i32:$R3)>;
 def : Pat<(sub GPR64sp:$R2, arith_extended_reg32to64_i64:$R3),
           (SUBSXrx GPR64sp:$R2, arith_extended_reg32to64_i64:$R3)>;
+def : Pat<(sub copyFromSP:$R2, (arith_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
+          (SUBXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
 }
 
 // Because of the immediate format for add/sub-imm instructions, the

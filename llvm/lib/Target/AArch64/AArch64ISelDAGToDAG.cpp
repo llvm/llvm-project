@@ -69,6 +69,7 @@ public:
   bool tryMLAV64LaneV128(SDNode *N);
   bool tryMULLV64LaneV128(unsigned IntNo, SDNode *N);
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
+  bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
   bool SelectNegArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
   bool SelectArithShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
@@ -888,6 +889,30 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
   // (harmlessly) synthesize one by injected an EXTRACT_SUBREG here.
   assert(Ext != AArch64_AM::UXTX && Ext != AArch64_AM::SXTX);
   Reg = narrowIfNeeded(CurDAG, Reg);
+  Shift = CurDAG->getTargetConstant(getArithExtendImm(Ext, ShiftVal), SDLoc(N),
+                                    MVT::i32);
+  return isWorthFolding(N);
+}
+
+/// SelectArithUXTXRegister - Select a "UXTX register" operand. This
+/// operand is refered by the instructions have SP operand
+bool AArch64DAGToDAGISel::SelectArithUXTXRegister(SDValue N, SDValue &Reg,
+                                                  SDValue &Shift) {
+  unsigned ShiftVal = 0;
+  AArch64_AM::ShiftExtendType Ext;
+
+  if (N.getOpcode() != ISD::SHL)
+    return false;
+
+  ConstantSDNode *CSD = dyn_cast<ConstantSDNode>(N.getOperand(1));
+  if (!CSD)
+    return false;
+  ShiftVal = CSD->getZExtValue();
+  if (ShiftVal > 4)
+    return false;
+
+  Ext = AArch64_AM::UXTX;
+  Reg = N.getOperand(0);
   Shift = CurDAG->getTargetConstant(getArithExtendImm(Ext, ShiftVal), SDLoc(N),
                                     MVT::i32);
   return isWorthFolding(N);
