@@ -337,11 +337,16 @@ define i64 @bexti_i64(i64 %a) nounwind {
 }
 
 define signext i32 @bexti_i32_cmp(i32 signext %a) nounwind {
-; CHECK-LABEL: bexti_i32_cmp:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 26
-; CHECK-NEXT:    srli a0, a0, 31
-; CHECK-NEXT:    ret
+; RV32I-LABEL: bexti_i32_cmp:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 26
+; RV32I-NEXT:    srli a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bexti_i32_cmp:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bexti a0, a0, 5
+; RV32ZBS-NEXT:    ret
   %and = and i32 %a, 32
   %cmp = icmp ne i32 %and, 0
   %zext = zext i1 %cmp to i32
@@ -349,12 +354,18 @@ define signext i32 @bexti_i32_cmp(i32 signext %a) nounwind {
 }
 
 define i64 @bexti_i64_cmp(i64 %a) nounwind {
-; CHECK-LABEL: bexti_i64_cmp:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 26
-; CHECK-NEXT:    srli a0, a0, 31
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: bexti_i64_cmp:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 26
+; RV32I-NEXT:    srli a0, a0, 31
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bexti_i64_cmp:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bexti a0, a0, 5
+; RV32ZBS-NEXT:    li a1, 0
+; RV32ZBS-NEXT:    ret
   %and = and i64 %a, 32
   %cmp = icmp ne i64 %and, 0
   %zext = zext i1 %cmp to i64
