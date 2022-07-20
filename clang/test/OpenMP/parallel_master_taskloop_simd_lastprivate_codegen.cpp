@@ -479,7 +479,7 @@ void loop() {
 // CHECK1-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP42]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP50:%.*]] = bitcast %struct.S* [[ARRAYIDX6_I]] to i8*
 // CHECK1-NEXT:    [[TMP51:%.*]] = bitcast %struct.S* [[TMP40]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP50]], i8* align 8 [[TMP51]], i64 8, i1 false) #[[ATTR4]], !llvm.access.group [[ACC_GRP15]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP50]], i8* align 8 [[TMP51]], i64 8, i1 false), !llvm.access.group [[ACC_GRP15]]
 // CHECK1-NEXT:    store i32 33, i32* [[TMP44]], align 4, !llvm.access.group [[ACC_GRP15]]
 // CHECK1-NEXT:    [[TMP52:%.*]] = load i32, i32* [[DOTOMP_IV_I]], align 4, !noalias !14, !llvm.access.group [[ACC_GRP15]]
 // CHECK1-NEXT:    [[ADD7_I:%.*]] = add nsw i32 [[TMP52]], 1
@@ -492,7 +492,7 @@ void loop() {
 // CHECK1:       .omp.lastprivate.then.i:
 // CHECK1-NEXT:    [[TMP55:%.*]] = bitcast %struct.S* [[TMP27]] to i8*
 // CHECK1-NEXT:    [[TMP56:%.*]] = bitcast %struct.S* [[TMP40]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP55]], i8* align 8 [[TMP56]], i64 8, i1 false) #[[ATTR4]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP55]], i8* align 8 [[TMP56]], i64 8, i1 false)
 // CHECK1-NEXT:    [[TMP57:%.*]] = load i32, i32* [[TMP41]], align 4
 // CHECK1-NEXT:    store i32 [[TMP57]], i32* [[TMP29]], align 4
 // CHECK1-NEXT:    [[ARRAY_BEGIN_I:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP31]], i32 0, i32 0
@@ -504,7 +504,7 @@ void loop() {
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST_I:%.*]] = phi %struct.S* [ [[ARRAY_BEGIN_I]], [[DOTOMP_LASTPRIVATE_THEN_I]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT_I:%.*]], [[OMP_ARRAYCPY_BODY_I]] ]
 // CHECK1-NEXT:    [[TMP60:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST_I]] to i8*
 // CHECK1-NEXT:    [[TMP61:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST_I]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP60]], i8* align 8 [[TMP61]], i64 8, i1 false) #[[ATTR4]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP60]], i8* align 8 [[TMP61]], i64 8, i1 false)
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT_I]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST_I]], i32 1
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT_I]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST_I]], i32 1
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE_I:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT_I]], [[TMP59]]
@@ -512,7 +512,7 @@ void loop() {
 // CHECK1:       omp.arraycpy.done8.i:
 // CHECK1-NEXT:    [[TMP62:%.*]] = bitcast [2 x i32]* [[TMP33]] to i8*
 // CHECK1-NEXT:    [[TMP63:%.*]] = bitcast [2 x i32]* [[TMP43]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP62]], i8* align 4 [[TMP63]], i64 8, i1 false) #[[ATTR4]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP62]], i8* align 4 [[TMP63]], i64 8, i1 false)
 // CHECK1-NEXT:    [[TMP64:%.*]] = load i32, i32* [[TMP44]], align 4
 // CHECK1-NEXT:    store i32 [[TMP64]], i32* [[TMP39]], align 4
 // CHECK1-NEXT:    br label [[DOTOMP_OUTLINED__1_EXIT]]
@@ -891,7 +891,7 @@ void loop() {
 // CHECK1-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[TMP40]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP47:%.*]] = bitcast %struct.S.0* [[ARRAYIDX5_I]] to i8*
 // CHECK1-NEXT:    [[TMP48:%.*]] = bitcast %struct.S.0* [[TMP41]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP47]], i8* align 4 [[TMP48]], i64 4, i1 false) #[[ATTR4]], !llvm.access.group [[ACC_GRP33]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP47]], i8* align 4 [[TMP48]], i64 4, i1 false), !llvm.access.group [[ACC_GRP33]]
 // CHECK1-NEXT:    [[TMP49:%.*]] = load i32, i32* [[DOTOMP_IV_I]], align 4, !noalias !32, !llvm.access.group [[ACC_GRP33]]
 // CHECK1-NEXT:    [[ADD6_I:%.*]] = add nsw i32 [[TMP49]], 1
 // CHECK1-NEXT:    store i32 [[ADD6_I]], i32* [[DOTOMP_IV_I]], align 4, !noalias !32, !llvm.access.group [[ACC_GRP33]]
@@ -905,7 +905,7 @@ void loop() {
 // CHECK1-NEXT:    store i32 [[TMP52]], i32* [[TMP27]], align 128
 // CHECK1-NEXT:    [[TMP53:%.*]] = bitcast [2 x i32]* [[TMP29]] to i8*
 // CHECK1-NEXT:    [[TMP54:%.*]] = bitcast [2 x i32]* [[TMP39]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP53]], i8* align 4 [[TMP54]], i64 8, i1 false) #[[ATTR4]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP53]], i8* align 4 [[TMP54]], i64 8, i1 false)
 // CHECK1-NEXT:    [[ARRAY_BEGIN_I:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[TMP31]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP55:%.*]] = bitcast [2 x %struct.S.0]* [[TMP40]] to %struct.S.0*
 // CHECK1-NEXT:    [[TMP56:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN_I]], i64 2
@@ -915,7 +915,7 @@ void loop() {
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST_I:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN_I]], [[DOTOMP_LASTPRIVATE_THEN_I]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT_I:%.*]], [[OMP_ARRAYCPY_BODY_I]] ]
 // CHECK1-NEXT:    [[TMP57:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST_I]] to i8*
 // CHECK1-NEXT:    [[TMP58:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST_I]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP57]], i8* align 4 [[TMP58]], i64 4, i1 false) #[[ATTR4]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP57]], i8* align 4 [[TMP58]], i64 4, i1 false)
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT_I]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST_I]], i32 1
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT_I]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST_I]], i32 1
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE_I:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT_I]], [[TMP56]]
@@ -923,7 +923,7 @@ void loop() {
 // CHECK1:       omp.arraycpy.done7.i:
 // CHECK1-NEXT:    [[TMP59:%.*]] = bitcast %struct.S.0* [[TMP35]] to i8*
 // CHECK1-NEXT:    [[TMP60:%.*]] = bitcast %struct.S.0* [[TMP41]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP59]], i8* align 4 [[TMP60]], i64 4, i1 false) #[[ATTR4]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP59]], i8* align 4 [[TMP60]], i64 4, i1 false)
 // CHECK1-NEXT:    br label [[DOTOMP_OUTLINED__3_EXIT]]
 // CHECK1:       .omp_outlined..3.exit:
 // CHECK1-NEXT:    ret i32 0
@@ -1195,7 +1195,7 @@ void loop() {
 // CHECK3-NEXT:    store double* [[TMP30]], double** [[TMP36]], align 8, !noalias !14, !llvm.access.group [[ACC_GRP15]]
 // CHECK3-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[REF_TMP_I]], i32 0, i32 1
 // CHECK3-NEXT:    store i32* [[TMP31]], i32** [[TMP37]], align 8, !noalias !14, !llvm.access.group [[ACC_GRP15]]
-// CHECK3-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(16) [[REF_TMP_I]]) #[[ATTR3]], !llvm.access.group [[ACC_GRP15]]
+// CHECK3-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(16) [[REF_TMP_I]]), !llvm.access.group [[ACC_GRP15]]
 // CHECK3-NEXT:    [[TMP38:%.*]] = load i32, i32* [[DOTOMP_IV_I]], align 4, !noalias !14, !llvm.access.group [[ACC_GRP15]]
 // CHECK3-NEXT:    [[ADD3_I:%.*]] = add nsw i32 [[TMP38]], 1
 // CHECK3-NEXT:    store i32 [[ADD3_I]], i32* [[DOTOMP_IV_I]], align 4, !noalias !14, !llvm.access.group [[ACC_GRP15]]

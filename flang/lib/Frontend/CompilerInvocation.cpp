@@ -90,6 +90,25 @@ static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
           llvm::sys::Process::StandardErrHasColors());
 }
 
+/// Extracts the optimisation level from \a args.
+static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
+                                     clang::DiagnosticsEngine &diags) {
+  unsigned defaultOpt = llvm::CodeGenOpt::None;
+
+  if (llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_O_Group)) {
+    if (a->getOption().matches(clang::driver::options::OPT_O0))
+      return llvm::CodeGenOpt::None;
+
+    assert(a->getOption().matches(clang::driver::options::OPT_O));
+
+    return getLastArgIntValue(args, clang::driver::options::OPT_O, defaultOpt,
+                              diags);
+  }
+
+  return defaultOpt;
+}
+
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
                                             llvm::opt::ArgList &args) {
   opts.ShowColors = parseShowColorsArgs(args);
@@ -100,9 +119,7 @@ bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
 static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                              llvm::opt::ArgList &args,
                              clang::DiagnosticsEngine &diags) {
-  unsigned defaultOpt = llvm::CodeGenOpt::None;
-  opts.OptimizationLevel = clang::getLastArgIntValue(
-      args, clang::driver::options::OPT_O, defaultOpt, diags);
+  opts.OptimizationLevel = getOptimizationLevel(args, diags);
 
   if (args.hasFlag(clang::driver::options::OPT_fdebug_pass_manager,
                    clang::driver::options::OPT_fno_debug_pass_manager, false))
