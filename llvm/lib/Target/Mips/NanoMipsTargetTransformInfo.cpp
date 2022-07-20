@@ -99,6 +99,30 @@ void NanoMipsTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 
+static InstructionCost selectCost(const Value *Cond,
+                                  const Value *A, const Value *B) {
+  const ConstantInt *AI = dyn_cast<ConstantInt>(A),
+    *BI = dyn_cast<ConstantInt>(B);
+
+  if (AI && BI) {
+    uint64_t AV = AI->getZExtValue(), BV = BI->getZExtValue();
+    if ((AV == 0 && BV == 1) || (AV == 1 && BV == 0)) {
+      // If the comparison can be implemented as a a SLT[UI], then the
+      // result of the Select will be the same as the value of the
+      // comparison itself, making the Select operation free.
+      const CmpInst *CondI = dyn_cast<CmpInst>(Cond);
+      if (CondI != nullptr && CondI->getOpcode() == Instruction::ICmp) {
+        CmpInst::Predicate Pred = CondI->getPredicate();
+        if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_SGT ||
+            Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_SLT) {
+          return TTI::TCC_Free;
+        }
+      }
+    }
+  }
+  return TTI::TCC_Basic;
+}
+
 /// Cost for compare and select. When selecting between constant 0 and
 /// 1 values, this can be implemented as just a comparison, making the
 /// selection free.
@@ -111,29 +135,11 @@ InstructionCost NanoMipsTTIImpl::getCmpSelInstrCost (
   if (I != nullptr) {
     // Decode compare and select
     if (I->getOpcode() == Instruction::Select) {
-      const ConstantInt *A = dyn_cast<ConstantInt>(I->getOperand(1)),
-        *B = dyn_cast<ConstantInt>(I->getOperand(2));
-      if (A && B) {
-        uint64_t AV = A->getZExtValue(), BV = B->getZExtValue();
-
-        if ((AV == 0 && BV == 1) || (AV == 1 && BV == 0)) {
-          return TTI::TCC_Free;
-        }
-      }
+      return selectCost(I->getOperand(0), I->getOperand(1), I->getOperand(2));
     }
-    // XXX also compare and phi?
-  } else if (Operands.size() == 2) {
-
-    // Putative operands passed
-    const ConstantInt *A = dyn_cast<ConstantInt>(Operands[0]),
-      *B = dyn_cast<ConstantInt>(Operands[1]);
-    if (A && B) {
-      uint64_t AV = A->getZExtValue(), BV = B->getZExtValue();
-      if (AV == 0 && BV == 1 || AV == 1 && BV == 0) {
-        return TTI::TCC_Free;
-      }
-    }
-
+  } else if (Opcode == Instruction::Select) {
+    assert(Operands.size() == 3);
+    return selectCost(Operands[0], Operands[1], Operands[2]);
   }
 
   return TTI::TCC_Basic;
