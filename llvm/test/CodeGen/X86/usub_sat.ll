@@ -74,7 +74,7 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movzbl %al, %eax
@@ -97,7 +97,7 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y) nounwind {
 define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movzbl %al, %eax

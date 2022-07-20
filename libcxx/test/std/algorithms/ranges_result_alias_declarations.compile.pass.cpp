@@ -47,11 +47,11 @@ static_assert(std::is_same_v<in_out_result<int, long>, uninitialized_move_n_resu
 
 static_assert(std::is_same_v<in_in_out_result<int, long, char>, binary_transform_result<int, long, char>>);
 static_assert(std::is_same_v<in_in_out_result<int, long, char>, merge_result<int, long, char>>);
-// static_assert(std::is_same_v<in_in_out_result<int, long, char>, set_symmetric_difference_result<int, long, char>>);
-// static_assert(std::is_same_v<in_in_out_result<int, long, char>, set_union_result<int, long, char>>);
-// static_assert(std::is_same_v<in_in_out_result<int, long, char>, set_intersection_result<int, long, char>>);
+static_assert(std::is_same_v<in_in_out_result<int, long, char>, set_symmetric_difference_result<int, long, char>>);
+static_assert(std::is_same_v<in_in_out_result<int, long, char>, set_union_result<int, long, char>>);
+static_assert(std::is_same_v<in_in_out_result<int, long, char>, set_intersection_result<int, long, char>>);
 
-// static_assert(std::is_same_v<in_out_out_result<int, long, char>, partition_copy_result<int, long, char>>);
+static_assert(std::is_same_v<in_out_out_result<int, long, char>, partition_copy_result<int, long, char>>);
 
 static_assert(std::is_same_v<min_max_result<int>, minmax_result<int>>);
 static_assert(std::is_same_v<min_max_result<int>, minmax_element_result<int>>);

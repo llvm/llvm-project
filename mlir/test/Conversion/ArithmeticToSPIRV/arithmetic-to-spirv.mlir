@@ -952,8 +952,8 @@ module attributes {
 // CHECK-LABEL: @scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_srem(%lhs: i32, %rhs: i32) {
-  // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : i32
-  // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : i32
+  // CHECK: %[[LABS:.+]] = spv.CL.s_abs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.CL.s_abs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
@@ -965,8 +965,8 @@ func.func @scalar_srem(%lhs: i32, %rhs: i32) {
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
 func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
-  // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : vector<3xi16>
-  // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : vector<3xi16>
+  // CHECK: %[[LABS:.+]] = spv.CL.s_abs %[[LHS]] : vector<3xi16>
+  // CHECK: %[[RABS:.+]] = spv.CL.s_abs %[[RHS]] : vector<3xi16>
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : vector<3xi16>
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : vector<3xi16>

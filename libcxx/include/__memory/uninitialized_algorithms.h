@@ -10,12 +10,17 @@
 #ifndef _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
 #define _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
 
+#include <__algorithm/copy.h>
+#include <__algorithm/move.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
+#include <__memory/pointer_traits.h>
 #include <__memory/voidify.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/transaction.h>
@@ -347,6 +352,7 @@ uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
                                                    __unreachable_sentinel(), __iter_move);
 }
 
+// TODO: Rewrite this to iterate left to right and use reverse_iterators when calling
 // Destroys every element in the range [first, last) FROM RIGHT TO LEFT using allocator
 // destruction. If elements are themselves C-style arrays, they are recursively destroyed
 // in the same manner.
@@ -491,6 +497,133 @@ constexpr void __uninitialized_allocator_value_construct_n(_Alloc& __alloc, _Bid
 }
 
 #endif // _LIBCPP_STD_VER > 14
+
+// Destroy all elements in [__first, __last) from left to right using allocator destruction.
+template <class _Alloc, class _Iter, class _Sent>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void
+__allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
+  for (; __first != __last; ++__first)
+    allocator_traits<_Alloc>::destroy(__alloc, std::__to_address(__first));
+}
+
+template <class _Alloc, class _Iter>
+class _AllocatorDestroyRangeReverse {
+public:
+  _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
+      : __alloc_(__alloc), __first_(__first), __last_(__last) {}
+
+  _LIBCPP_CONSTEXPR_AFTER_CXX11 void operator()() const {
+    std::__allocator_destroy(__alloc_, std::reverse_iterator<_Iter>(__last_), std::reverse_iterator<_Iter>(__first_));
+  }
+
+private:
+  _Alloc& __alloc_;
+  _Iter& __first_;
+  _Iter& __last_;
+};
+
+// Copy-construct [__first1, __last1) in [__first2, __first2 + N), where N is distance(__first1, __last1).
+//
+// The caller has to ensure that __first2 can hold at least N uninitialized elements. If an exception is thrown the
+// already copied elements are destroyed in reverse order of their construction.
+template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter2
+__uninitialized_allocator_copy(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
+  auto __destruct_first = __first2;
+  auto __guard =
+      std::__make_transaction(_AllocatorDestroyRangeReverse<_Alloc, _Iter2>(__alloc, __destruct_first, __first2));
+  while (__first1 != __last1) {
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__first2), *__first1);
+    ++__first1;
+    ++__first2;
+  }
+  __guard.__complete();
+  return __first2;
+}
+
+template <class _Alloc, class _Type>
+struct __allocator_has_trivial_copy_construct : _Not<__has_construct<_Alloc, _Type*, const _Type&> > {};
+
+template <class _Type>
+struct __allocator_has_trivial_copy_construct<allocator<_Type>, _Type> : true_type {};
+
+template <class _Alloc,
+          class _Type,
+          class _RawType = typename remove_const<_Type>::type,
+          __enable_if_t<
+              // using _RawType because of the allocator<T const> extension
+              is_trivially_copy_constructible<_RawType>::value && is_trivially_copy_assignable<_RawType>::value &&
+              __allocator_has_trivial_copy_construct<_Alloc, _RawType>::value>* = nullptr>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Type*
+__uninitialized_allocator_copy(_Alloc&, const _Type* __first1, const _Type* __last1, _Type* __first2) {
+  // TODO: Remove the const_cast once we drop support for std::allocator<T const>
+  if (__libcpp_is_constant_evaluated()) {
+    while (__first1 != __last1) {
+      std::__construct_at(std::__to_address(__first2), *__first1);
+      ++__first1;
+      ++__first2;
+    }
+    return __first2;
+  } else {
+    return std::copy(__first1, __last1, const_cast<_RawType*>(__first2));
+  }
+}
+
+// Move-construct the elements [__first1, __last1) into [__first2, __first2 + N)
+// if the move constructor is noexcept, where N is distance(__first1, __last1).
+//
+// Otherwise try to copy all elements. If an exception is thrown the already copied
+// elements are destroyed in reverse order of their construction.
+template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter2 __uninitialized_allocator_move_if_noexcept(
+    _Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
+  static_assert(__is_cpp17_move_insertable<_Alloc>::value,
+                "The specified type does not meet the requirements of Cpp17MoveInsertable");
+  auto __destruct_first = __first2;
+  auto __guard =
+      std::__make_transaction(_AllocatorDestroyRangeReverse<_Alloc, _Iter2>(__alloc, __destruct_first, __first2));
+
+  while (__first1 != __last1) {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__first2), std::move_if_noexcept(*__first1));
+#else
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__first2), std::move(*__first1));
+#endif
+    ++__first1;
+    ++__first2;
+  }
+  __guard.__complete();
+  return __first2;
+}
+
+template <class _Alloc, class _Type>
+struct __allocator_has_trivial_move_construct : _Not<__has_construct<_Alloc, _Type*, _Type&&> > {};
+
+template <class _Type>
+struct __allocator_has_trivial_move_construct<allocator<_Type>, _Type> : true_type {};
+
+#ifndef _LIBCPP_COMPILER_GCC
+template <
+    class _Alloc,
+    class _Iter1,
+    class _Iter2,
+    class _Type = typename iterator_traits<_Iter1>::value_type,
+    class = __enable_if_t<is_trivially_move_constructible<_Type>::value && is_trivially_move_assignable<_Type>::value &&
+                          __allocator_has_trivial_move_construct<_Alloc, _Type>::value> >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter1
+__uninitialized_allocator_move_if_noexcept(_Alloc&, _Iter1 __first1, _Iter1 __last1, _Iter2 __first2) {
+  if (__libcpp_is_constant_evaluated()) {
+    while (__first1 != __last1) {
+      std::__construct_at(std::__to_address(__first2), std::move(*__first1));
+      ++__first1;
+      ++__first2;
+    }
+    return __first2;
+  } else {
+    return std::move(__first1, __last1, __first2);
+  }
+}
+#endif // _LIBCPP_COMPILER_GCC
 
 _LIBCPP_END_NAMESPACE_STD
 

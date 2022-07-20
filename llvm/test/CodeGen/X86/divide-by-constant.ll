@@ -162,7 +162,7 @@ define i32 @test7(i32 %x) nounwind {
 define i8 @test8(i8 %x) nounwind {
 ; X32-LABEL: test8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shrb %al
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    imull $211, %eax, %eax
@@ -185,7 +185,7 @@ define i8 @test8(i8 %x) nounwind {
 define i8 @test9(i8 %x) nounwind {
 ; X32-LABEL: test9:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shrb $2, %al
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    imull $71, %eax, %eax

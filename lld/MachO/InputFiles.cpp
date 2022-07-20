@@ -263,11 +263,15 @@ static Optional<size_t> getRecordSize(StringRef segname, StringRef name) {
     if (segname == segment_names::ld)
       return target->wordSize == 8 ? 32 : 20;
   }
-  if (config->icfLevel == ICFLevel::none)
+  if (!config->dedupLiterals)
     return {};
 
   if (name == section_names::cfString && segname == segment_names::data)
     return target->wordSize == 8 ? 32 : 16;
+
+  if (config->icfLevel == ICFLevel::none)
+    return {};
+
   if (name == section_names::objcClassRefs && segname == segment_names::data)
     return target->wordSize;
   return {};

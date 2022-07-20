@@ -45,7 +45,7 @@
     __cpp_lib_boyer_moore_searcher                 201603L [C++17]
     __cpp_lib_byte                                 201603L [C++17]
     __cpp_lib_byteswap                             202110L [C++2b]
-    __cpp_lib_char8_t                              201811L [C++20]
+    __cpp_lib_char8_t                              201907L [C++20]
     __cpp_lib_chrono                               201611L [C++17]
     __cpp_lib_chrono_udls                          201304L [C++14]
     __cpp_lib_clamp                                201603L [C++17]
@@ -2595,8 +2595,8 @@
 #   ifndef __cpp_lib_char8_t
 #     error "__cpp_lib_char8_t should be defined in c++20"
 #   endif
-#   if __cpp_lib_char8_t != 201811L
-#     error "__cpp_lib_char8_t should have the value 201811L in c++20"
+#   if __cpp_lib_char8_t != 201907L
+#     error "__cpp_lib_char8_t should have the value 201907L in c++20"
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t
@@ -3814,8 +3814,8 @@
 #   ifndef __cpp_lib_char8_t
 #     error "__cpp_lib_char8_t should be defined in c++2b"
 #   endif
-#   if __cpp_lib_char8_t != 201811L
-#     error "__cpp_lib_char8_t should have the value 201811L in c++2b"
+#   if __cpp_lib_char8_t != 201907L
+#     error "__cpp_lib_char8_t should have the value 201907L in c++2b"
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t

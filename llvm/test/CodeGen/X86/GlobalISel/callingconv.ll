@@ -324,7 +324,7 @@ define void @test_abi_exts_call(ptr %addr) {
 ; X32-NEXT:    .cfi_offset %esi, -12
 ; X32-NEXT:    .cfi_offset %ebx, -8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movb (%eax), %bl
+; X32-NEXT:    movzbl (%eax), %ebx
 ; X32-NEXT:    movzbl %bl, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll take_char
@@ -346,7 +346,7 @@ define void @test_abi_exts_call(ptr %addr) {
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    .cfi_offset %rbx, -16
-; X64-NEXT:    movb (%rdi), %al
+; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    movzbl %al, %ebx
 ; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq take_char

@@ -30,7 +30,7 @@
 // CHECK64-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* [[__ENKEY_LO_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* [[__ENKEY_HI_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP7:%.*]] = load i32, i32* [[__CTL_ADDR_I]], align 4
-// CHECK64-NEXT:    call void @llvm.x86.loadiwkey(<2 x i64> [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], i32 [[TMP7]]) #[[ATTR1:[0-9]+]]
+// CHECK64-NEXT:    call void @llvm.x86.loadiwkey(<2 x i64> [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], i32 [[TMP7]])
 // CHECK64-NEXT:    ret void
 //
 // CHECK32-LABEL: @test_loadiwkey(
@@ -59,7 +59,7 @@
 // CHECK32-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* [[__ENKEY_LO_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* [[__ENKEY_HI_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP7:%.*]] = load i32, i32* [[__CTL_ADDR_I]], align 4
-// CHECK32-NEXT:    call void @llvm.x86.loadiwkey(<2 x i64> [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], i32 [[TMP7]]) #[[ATTR1:[0-9]+]]
+// CHECK32-NEXT:    call void @llvm.x86.loadiwkey(<2 x i64> [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], i32 [[TMP7]])
 // CHECK32-NEXT:    ret void
 //
 void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i enkey_hi) {
@@ -86,7 +86,7 @@ void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i 
 // CHECK64-NEXT:    [[TMP3:%.*]] = load i32, i32* [[__HTYPE_ADDR_I]], align 4
 // CHECK64-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__KEY_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 8
-// CHECK64-NEXT:    [[TMP6:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 [[TMP3]], <2 x i64> [[TMP4]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP6:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 [[TMP3]], <2 x i64> [[TMP4]])
 // CHECK64-NEXT:    [[TMP7:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 1
 // CHECK64-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP5]] to <2 x i64>*
 // CHECK64-NEXT:    store <2 x i64> [[TMP7]], <2 x i64>* [[TMP8]], align 1
@@ -121,7 +121,7 @@ void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i 
 // CHECK32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[__HTYPE_ADDR_I]], align 4
 // CHECK32-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__KEY_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 4
-// CHECK32-NEXT:    [[TMP6:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 [[TMP3]], <2 x i64> [[TMP4]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP6:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 [[TMP3]], <2 x i64> [[TMP4]])
 // CHECK32-NEXT:    [[TMP7:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 1
 // CHECK32-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP5]] to <2 x i64>*
 // CHECK32-NEXT:    store <2 x i64> [[TMP7]], <2 x i64>* [[TMP8]], align 1
@@ -166,7 +166,7 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
 // CHECK64-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* [[__KEY_LO_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* [[__KEY_HI_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 8
-// CHECK64-NEXT:    [[TMP8:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP8:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]])
 // CHECK64-NEXT:    [[TMP9:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 1
 // CHECK64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[TMP7]] to <2 x i64>*
 // CHECK64-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP10]], align 1
@@ -211,7 +211,7 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
 // CHECK32-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* [[__KEY_LO_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* [[__KEY_HI_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 4
-// CHECK32-NEXT:    [[TMP8:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP8:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]])
 // CHECK32-NEXT:    [[TMP9:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 1
 // CHECK32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[TMP7]] to <2 x i64>*
 // CHECK32-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP10]], align 1
@@ -254,7 +254,7 @@ unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo, __m128i k
 // CHECK64-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 8
 // CHECK64-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 8
-// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK64-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK64-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK64-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -289,7 +289,7 @@ unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo, __m128i k
 // CHECK32-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 4
 // CHECK32-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 4
-// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK32-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK32-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK32-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -328,7 +328,7 @@ unsigned char test_mm_aesenc256kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK64-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 8
 // CHECK64-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 8
-// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK64-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK64-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK64-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -363,7 +363,7 @@ unsigned char test_mm_aesenc256kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK32-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 4
 // CHECK32-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 4
-// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK32-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK32-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK32-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -402,7 +402,7 @@ unsigned char test_mm_aesdec256kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK64-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 8
 // CHECK64-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 8
-// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK64-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK64-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK64-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -437,7 +437,7 @@ unsigned char test_mm_aesdec256kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK32-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 4
 // CHECK32-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 4
-// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK32-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK32-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK32-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -476,7 +476,7 @@ unsigned char test_mm_aesenc128kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK64-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 8
 // CHECK64-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK64-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 8
-// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK64-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK64-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK64-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -511,7 +511,7 @@ unsigned char test_mm_aesenc128kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK32-NEXT:    [[TMP3:%.*]] = load <2 x i64>*, <2 x i64>** [[__ODATA_ADDR_I]], align 4
 // CHECK32-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[__IDATA_ADDR_I]], align 16
 // CHECK32-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[__H_ADDR_I]], align 4
-// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> [[TMP4]], i8* [[TMP5]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP6:%.*]] = call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> [[TMP4]], i8* [[TMP5]])
 // CHECK32-NEXT:    [[TMP7:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 0
 // CHECK32-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 // CHECK32-NEXT:    [[TMP9:%.*]] = extractvalue { i8, <2 x i64> } [[TMP6]], 1
@@ -565,7 +565,7 @@ unsigned char test_mm_aesdec128kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK64-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK64-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK64-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK64-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK64-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK64-NEXT:    br i1 [[TMP23]], label [[AESENCWIDE128KL_NO_ERROR_I:%.*]], label [[AESENCWIDE128KL_ERROR_I:%.*]]
@@ -658,7 +658,7 @@ unsigned char test_mm_aesdec128kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK32-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK32-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK32-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK32-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK32-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK32-NEXT:    br i1 [[TMP23]], label [[AESENCWIDE128KL_NO_ERROR_I:%.*]], label [[AESENCWIDE128KL_ERROR_I:%.*]]
@@ -755,7 +755,7 @@ unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK64-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK64-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK64-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK64-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK64-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK64-NEXT:    br i1 [[TMP23]], label [[AESDECWIDE128KL_NO_ERROR_I:%.*]], label [[AESDECWIDE128KL_ERROR_I:%.*]]
@@ -848,7 +848,7 @@ unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK32-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK32-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK32-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK32-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK32-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK32-NEXT:    br i1 [[TMP23]], label [[AESDECWIDE128KL_NO_ERROR_I:%.*]], label [[AESDECWIDE128KL_ERROR_I:%.*]]
@@ -945,7 +945,7 @@ unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK64-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK64-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK64-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK64-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK64-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK64-NEXT:    br i1 [[TMP23]], label [[AESENCWIDE256KL_NO_ERROR_I:%.*]], label [[AESENCWIDE256KL_ERROR_I:%.*]]
@@ -1038,7 +1038,7 @@ unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK32-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK32-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK32-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK32-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK32-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK32-NEXT:    br i1 [[TMP23]], label [[AESENCWIDE256KL_NO_ERROR_I:%.*]], label [[AESENCWIDE256KL_ERROR_I:%.*]]
@@ -1135,7 +1135,7 @@ unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK64-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK64-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK64-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK64-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK64-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK64-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK64-NEXT:    br i1 [[TMP23]], label [[AESDECWIDE256KL_NO_ERROR_I:%.*]], label [[AESDECWIDE256KL_ERROR_I:%.*]]
@@ -1228,7 +1228,7 @@ unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK32-NEXT:    [[TMP18:%.*]] = load <2 x i64>, <2 x i64>* [[TMP17]], align 16
 // CHECK32-NEXT:    [[TMP19:%.*]] = getelementptr <2 x i64>, <2 x i64>* [[TMP4]], i32 7
 // CHECK32-NEXT:    [[TMP20:%.*]] = load <2 x i64>, <2 x i64>* [[TMP19]], align 16
-// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]]) #[[ATTR1]]
+// CHECK32-NEXT:    [[TMP21:%.*]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* [[TMP5]], <2 x i64> [[TMP6]], <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <2 x i64> [[TMP16]], <2 x i64> [[TMP18]], <2 x i64> [[TMP20]])
 // CHECK32-NEXT:    [[TMP22:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
 // CHECK32-NEXT:    [[TMP23:%.*]] = trunc i8 [[TMP22]] to i1
 // CHECK32-NEXT:    br i1 [[TMP23]], label [[AESDECWIDE256KL_NO_ERROR_I:%.*]], label [[AESDECWIDE256KL_ERROR_I:%.*]]

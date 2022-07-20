@@ -91,7 +91,8 @@ public:
 
   EmulateInstructionARM(const ArchSpec &arch)
       : EmulateInstruction(arch), m_arm_isa(0), m_opcode_mode(eModeInvalid),
-        m_opcode_cpsr(0), m_it_session(), m_ignore_conditions(false) {
+        m_opcode_cpsr(0), m_new_inst_cpsr(0), m_it_session(),
+        m_ignore_conditions(false) {
     SetArchitecture(arch);
   }
 

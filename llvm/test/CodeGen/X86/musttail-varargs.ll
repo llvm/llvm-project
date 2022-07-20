@@ -82,7 +82,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    movq %rbp, %rdx
 ; LINUX-NEXT:    movq %r13, %rcx
 ; LINUX-NEXT:    movq %r12, %r8
-; LINUX-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
+; LINUX-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
 ; LINUX-NEXT:    movq %r15, %r9
 ; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
@@ -175,7 +175,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    movq %rbp, %rdx
 ; LINUX-X32-NEXT:    movq %r13, %rcx
 ; LINUX-X32-NEXT:    movq %r12, %r8
-; LINUX-X32-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; LINUX-X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; LINUX-X32-NEXT:    movq %r15, %r9
 ; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload

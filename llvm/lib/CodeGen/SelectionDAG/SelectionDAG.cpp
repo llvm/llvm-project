@@ -9037,6 +9037,28 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 #endif
 
   switch (Opcode) {
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO: {
+    assert(VTList.NumVTs == 2 && Ops.size() == 2 &&
+           "Invalid add/sub overflow op!");
+    assert(VTList.VTs[0].isInteger() && VTList.VTs[1].isInteger() &&
+           Ops[0].getValueType() == Ops[1].getValueType() &&
+           Ops[0].getValueType() == VTList.VTs[0] &&
+           "Binary operator types must match!");
+    SDValue N1 = Ops[0], N2 = Ops[1];
+    canonicalizeCommutativeBinop(Opcode, N1, N2);
+
+    // (X +- 0) -> X with zero-overflow.
+    ConstantSDNode *N2CV = isConstOrConstSplat(N2, /*AllowUndefs*/ false,
+                                               /*AllowTruncation*/ true);
+    if (N2CV && N2CV->isZero()) {
+      SDValue ZeroOverFlow = getConstant(0, DL, VTList.VTs[1]);
+      return getNode(ISD::MERGE_VALUES, DL, VTList, {N1, ZeroOverFlow}, Flags);
+    }
+    break;
+  }
   case ISD::STRICT_FP_EXTEND:
     assert(VTList.NumVTs == 2 && Ops.size() == 2 &&
            "Invalid STRICT_FP_EXTEND!");

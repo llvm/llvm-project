@@ -343,6 +343,7 @@ static bool getPotentialCopiesOfMemoryValue(
 
   const auto *TLI =
       A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
+  LLVM_DEBUG(dbgs() << "Visit " << Objects.size() << " objects:\n");
   for (Value *Obj : Objects) {
     LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
     if (isa<UndefValue>(Obj))
@@ -390,8 +391,10 @@ static bool getPotentialCopiesOfMemoryValue(
 
     if (IsLoad) {
       Value *InitialValue = AA::getInitialValueForObj(*Obj, *I.getType(), TLI);
-      if (!InitialValue)
+      if (!InitialValue) {
+        LLVM_DEBUG(dbgs() << "Failed to get initial value: " << *Obj << "\n");
         return false;
+      }
       CheckForNullOnlyAndUndef(InitialValue);
       NewCopies.push_back(InitialValue);
       NewCopyOrigins.push_back(nullptr);
@@ -1106,9 +1109,9 @@ bool Attributor::getAssumedSimplifiedValues(
   const auto &SimplificationCBs = SimplificationCallbacks.lookup(IRP);
   for (auto &CB : SimplificationCBs) {
     Optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);
-    if (!CBResult.hasValue())
+    if (!CBResult.has_value())
       continue;
-    Value *V = CBResult.getValue();
+    Value *V = CBResult.value();
     if (!V)
       return false;
     if ((S & AA::ValueScope::Interprocedural) ||
@@ -1330,8 +1333,21 @@ bool Attributor::checkForAllUses(
   SmallVector<const Use *, 16> Worklist;
   SmallPtrSet<const Use *, 16> Visited;
 
-  for (const Use &U : V.uses())
-    Worklist.push_back(&U);
+  auto AddUsers = [&](const Value &V, const Use *OldUse) {
+    for (const Use &UU : V.uses()) {
+      if (OldUse && EquivalentUseCB && !EquivalentUseCB(*OldUse, UU)) {
+        LLVM_DEBUG(dbgs() << "[Attributor] Potential copy was "
+                             "rejected by the equivalence call back: "
+                          << *UU << "!\n");
+        return false;
+      }
+
+      Worklist.push_back(&UU);
+    }
+    return true;
+  };
+
+  AddUsers(V, /* OldUse */ nullptr);
 
   LLVM_DEBUG(dbgs() << "[Attributor] Got " << Worklist.size()
                     << " initial uses to check\n");
@@ -1377,15 +1393,8 @@ bool Attributor::checkForAllUses(
                             << PotentialCopies.size()
                             << " potential copies instead!\n");
           for (Value *PotentialCopy : PotentialCopies)
-            for (const Use &CopyUse : PotentialCopy->uses()) {
-              if (EquivalentUseCB && !EquivalentUseCB(*U, CopyUse)) {
-                LLVM_DEBUG(dbgs() << "[Attributor] Potential copy was "
-                                     "rejected by the equivalence call back: "
-                                  << *CopyUse << "!\n");
-                return false;
-              }
-              Worklist.push_back(&CopyUse);
-            }
+            if (!AddUsers(*PotentialCopy, U))
+              return false;
           continue;
         }
       }
@@ -1396,8 +1405,25 @@ bool Attributor::checkForAllUses(
       return false;
     if (!Follow)
       continue;
-    for (const Use &UU : U->getUser()->uses())
-      Worklist.push_back(&UU);
+
+    User &Usr = *U->getUser();
+    AddUsers(Usr, /* OldUse */ nullptr);
+
+    auto *RI = dyn_cast<ReturnInst>(&Usr);
+    if (!RI)
+      continue;
+
+    Function &F = *RI->getFunction();
+    auto CallSitePred = [&](AbstractCallSite ACS) {
+      return AddUsers(*ACS.getInstruction(), U);
+    };
+    if (!checkForAllCallSites(CallSitePred, F, /* RequireAllCallSites */ true,
+                              &QueryingAA, UsedAssumedInformation)) {
+      LLVM_DEBUG(dbgs() << "[Attributor] Could not follow return instruction "
+                           "to all call sites: "
+                        << *RI << "\n");
+      return false;
+    }
   }
 
   return true;

@@ -94,7 +94,7 @@ define void @local_load_v3i1(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr %p
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rdi, %r14
-; CHECK-NEXT:    movb (%rdx), %al
+; CHECK-NEXT:    movzbl (%rdx), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrb %cl
 ; CHECK-NEXT:    andb $1, %cl

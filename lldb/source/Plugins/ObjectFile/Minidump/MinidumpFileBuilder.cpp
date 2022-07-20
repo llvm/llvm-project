@@ -349,6 +349,7 @@ llvm::support::ulittle64_t read_register_u64(RegisterContext *reg_ctx,
 lldb_private::minidump::MinidumpContext_x86_64
 GetThreadContext_64(RegisterContext *reg_ctx) {
   lldb_private::minidump::MinidumpContext_x86_64 thread_context;
+  thread_context.p1_home = {};
   thread_context.context_flags = static_cast<uint32_t>(
       lldb_private::minidump::MinidumpContext_x86_64_Flags::x86_64_Flag |
       lldb_private::minidump::MinidumpContext_x86_64_Flags::Control |
