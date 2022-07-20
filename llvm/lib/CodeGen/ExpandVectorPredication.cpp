@@ -419,7 +419,7 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
     if (IsUnmasked) {
       StoreInst *NewStore =
           Builder.CreateStore(DataParam, PtrParam, /*IsVolatile*/ false);
-      if (AlignOpt.hasValue())
+      if (AlignOpt.has_value())
         NewStore->setAlignment(AlignOpt.getValue());
       NewMemoryInst = NewStore;
     } else
@@ -431,7 +431,7 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
     if (IsUnmasked) {
       LoadInst *NewLoad =
           Builder.CreateLoad(VPI.getType(), PtrParam, /*IsVolatile*/ false);
-      if (AlignOpt.hasValue())
+      if (AlignOpt.has_value())
         NewLoad->setAlignment(AlignOpt.getValue());
       NewMemoryInst = NewLoad;
     } else
@@ -444,15 +444,15 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
         cast<VectorType>(DataParam->getType())->getElementType();
     NewMemoryInst = Builder.CreateMaskedScatter(
         DataParam, PtrParam,
-        AlignOpt.getValueOr(DL.getPrefTypeAlign(ElementType)), MaskParam);
+        AlignOpt.value_or(DL.getPrefTypeAlign(ElementType)), MaskParam);
     break;
   }
   case Intrinsic::vp_gather: {
     auto *ElementType = cast<VectorType>(VPI.getType())->getElementType();
     NewMemoryInst = Builder.CreateMaskedGather(
         VPI.getType(), PtrParam,
-        AlignOpt.getValueOr(DL.getPrefTypeAlign(ElementType)), MaskParam,
-        nullptr, VPI.getName());
+        AlignOpt.value_or(DL.getPrefTypeAlign(ElementType)), MaskParam, nullptr,
+        VPI.getName());
     break;
   }
   }

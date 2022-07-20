@@ -27,18 +27,21 @@
 #include "MoveOnly.h"
 #include "test_iterators.h"
 
+// (in, ...)
 template <class Func, std::ranges::range Input, class ...Args>
 constexpr void test(Func&& func, Input& in, Args&& ...args) {
   func(in.begin(), in.end(), std::forward<Args>(args)...);
   func(in, std::forward<Args>(args)...);
 }
 
+// (in1, in2, ...)
 template <class Func, std::ranges::range Range1, std::ranges::range Range2, class ...Args>
 constexpr void test(Func&& func, Range1& r1, Range2& r2, Args&& ...args) {
   func(r1.begin(), r1.end(), r2.begin(), r2.end(), std::forward<Args>(args)...);
   func(r1, r2, std::forward<Args>(args)...);
 }
 
+// (in, mid, ...)
 template <class Func, std::ranges::range Input, class ...Args>
 constexpr void test_mid(Func&& func, Input& in, std::ranges::iterator_t<Input> mid, Args&& ...args) {
   func(in.begin(), mid, in.end(), std::forward<Args>(args)...);
@@ -156,7 +159,7 @@ constexpr void run_tests() {
   // TODO(ranges): `stable_sort` requires `ranges::rotate` to be implemented.
   //if (!std::is_constant_evaluated())
   //  test(std::ranges::stable_sort, in);
-  //test_mid(std::ranges::partial_sort, in, mid);
+  test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
   //if (!std::is_constant_evaluated())
   //  test_mid(std::ranges::inplace_merge, in, mid);

@@ -20,6 +20,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -1679,6 +1680,59 @@ TEST(InstructionsTest, AllocaInst) {
   EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
   EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
+}
+
+static Instruction *getInstructionByName(Function &F, StringRef Name) {
+  for (auto &I : instructions(F))
+    if (I.getName() == Name)
+      return &I;
+  llvm_unreachable("Expected to find instruction!");
+}
+
+TEST(InstructionsTest, CallInstInPresplitCoroutine) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+      define void @f() presplitcoroutine  {
+      entry:
+        %ReadNoneCall = call i32 @readnone_func() readnone
+        %WriteOnlyCall = call i32 @writeonly_func() writeonly
+        %ArgMemOnlyCall = call i32 @argmemonly_func() argmemonly
+        %OnlyAccessesInaccessibleMemoryCall = call i32 @only_accesses_inaccessible_memory_call() inaccessiblememonly
+        %OnlyAccessesInaccessibleMemOrArgMemCall = call i32 @only_accesses_inaccessible_memory_or_argmemonly_call() inaccessiblemem_or_argmemonly
+        ret void
+      }
+
+      declare i32 @readnone_func() readnone
+      declare i32 @writeonly_func() writeonly
+      declare i32 @argmemonly_func() argmemonly
+      declare i32 @only_accesses_inaccessible_memory_call() inaccessiblememonly
+      declare i32 @only_accesses_inaccessible_memory_or_argmemonly_call() inaccessiblemem_or_argmemonly
+    )");
+
+  ASSERT_TRUE(M);
+  Function *F = M->getFunction("f");
+  CallInst *ReadNoneCall =
+      cast<CallInst>(getInstructionByName(*F, "ReadNoneCall"));
+  CallInst *WriteOnlyCall =
+      cast<CallInst>(getInstructionByName(*F, "WriteOnlyCall"));
+  CallInst *OnlyAccessesInaccessibleMemoryCall =
+      cast<CallInst>(getInstructionByName(*F, "OnlyAccessesInaccessibleMemoryCall"));
+  CallInst *OnlyAccessesInaccessibleMemOrArgMemCall =
+      cast<CallInst>(getInstructionByName(*F, "OnlyAccessesInaccessibleMemOrArgMemCall"));
+   CallInst *ArgMemOnlyCall =
+      cast<CallInst>(getInstructionByName(*F, "ArgMemOnlyCall"));
+
+  EXPECT_FALSE(ReadNoneCall->doesNotAccessMemory());
+  EXPECT_FALSE(ReadNoneCall->onlyWritesMemory());
+  EXPECT_TRUE(ReadNoneCall->onlyReadsMemory());
+
+  EXPECT_FALSE(WriteOnlyCall->onlyWritesMemory());
+
+  EXPECT_FALSE(OnlyAccessesInaccessibleMemoryCall->onlyAccessesInaccessibleMemory());
+
+  EXPECT_FALSE(OnlyAccessesInaccessibleMemOrArgMemCall->onlyAccessesInaccessibleMemOrArgMem());
+
+  EXPECT_FALSE(ArgMemOnlyCall->onlyAccessesArgMemory());
 }
 
 } // end anonymous namespace

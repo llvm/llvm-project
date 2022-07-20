@@ -151,6 +151,7 @@ END-SCRIPT
 #include <__algorithm/ranges_move_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move_backward.h'}}
 #include <__algorithm/ranges_none_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_none_of.h'}}
 #include <__algorithm/ranges_nth_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_nth_element.h'}}
+#include <__algorithm/ranges_partial_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_partial_sort.h'}}
 #include <__algorithm/ranges_partial_sort_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_partial_sort_copy.h'}}
 #include <__algorithm/ranges_partition.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_partition.h'}}
 #include <__algorithm/ranges_partition_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_partition_copy.h'}}

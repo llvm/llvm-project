@@ -1671,7 +1671,7 @@ SDValue SITargetLowering::getLDSKernelId(SelectionDAG &DAG,
   Function &F = DAG.getMachineFunction().getFunction();
   Optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
-  if (KnownSize.hasValue())
+  if (KnownSize.has_value())
     return DAG.getConstant(KnownSize.getValue(), SL, MVT::i32);
   return SDValue();
 }
@@ -2824,7 +2824,7 @@ void SITargetLowering::passSpecialInputs(
       InputReg = getImplicitArgPtr(DAG, DL);
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
       Optional<uint32_t> Id = AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
-      if (Id.hasValue()) {
+      if (Id.has_value()) {
         InputReg = DAG.getConstant(Id.getValue(), DL, ArgVT);
       } else {
         InputReg = DAG.getUNDEF(ArgVT);

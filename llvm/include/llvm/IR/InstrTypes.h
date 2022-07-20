@@ -1848,7 +1848,14 @@ public:
   bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }
   void setIsNoInline() { addFnAttr(Attribute::NoInline); }
   /// Determine if the call does not access memory.
-  bool doesNotAccessMemory() const { return hasFnAttr(Attribute::ReadNone); }
+  bool doesNotAccessMemory() const {
+    return hasFnAttr(Attribute::ReadNone) &&
+           // If the call lives in presplit coroutine, we can't assume the
+           // call won't access memory even if it has readnone attribute.
+           // Since readnone could be used for thread identification and
+           // coroutines might resume in different threads.
+           (!getFunction() || !getFunction()->isPresplitCoroutine());
+  }
   void setDoesNotAccessMemory() { addFnAttr(Attribute::ReadNone); }
 
   /// Determine if the call does not access or only reads memory.
@@ -1860,21 +1867,30 @@ public:
 
   /// Determine if the call does not access or only writes memory.
   bool onlyWritesMemory() const {
-    return hasImpliedFnAttr(Attribute::WriteOnly);
+    return hasImpliedFnAttr(Attribute::WriteOnly) &&
+           // See the comments in doesNotAccessMemory. Because readnone implies
+           // writeonly.
+           (!getFunction() || !getFunction()->isPresplitCoroutine());
   }
   void setOnlyWritesMemory() { addFnAttr(Attribute::WriteOnly); }
 
   /// Determine if the call can access memmory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const {
-    return hasFnAttr(Attribute::ArgMemOnly);
+    return hasFnAttr(Attribute::ArgMemOnly) &&
+        // Thread ID don't count as inaccessible memory. And thread ID don't
+        // count as constant in presplit coroutine.
+        (!getFunction() || !getFunction()->isPresplitCoroutine());;
   }
   void setOnlyAccessesArgMemory() { addFnAttr(Attribute::ArgMemOnly); }
 
   /// Determine if the function may only access memory that is
   /// inaccessible from the IR.
   bool onlyAccessesInaccessibleMemory() const {
-    return hasFnAttr(Attribute::InaccessibleMemOnly);
+    return hasFnAttr(Attribute::InaccessibleMemOnly) &&
+        // Thread ID don't count as inaccessible memory. And thread ID don't
+        // count as constant in presplit coroutine.
+        (!getFunction() || !getFunction()->isPresplitCoroutine());
   }
   void setOnlyAccessesInaccessibleMemory() {
     addFnAttr(Attribute::InaccessibleMemOnly);
@@ -1883,7 +1899,10 @@ public:
   /// Determine if the function may only access memory that is
   /// either inaccessible from the IR or pointed to by its arguments.
   bool onlyAccessesInaccessibleMemOrArgMem() const {
-    return hasFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+    return hasFnAttr(Attribute::InaccessibleMemOrArgMemOnly) &&
+        // Thread ID don't count as inaccessible memory. And thread ID don't
+        // count as constant in presplit coroutine.
+        (!getFunction() || !getFunction()->isPresplitCoroutine());
   }
   void setOnlyAccessesInaccessibleMemOrArgMem() {
     addFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
