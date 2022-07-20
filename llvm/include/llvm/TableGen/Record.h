@@ -1558,6 +1558,7 @@ private:
   // Location where record was instantiated, followed by the location of
   // multiclass prototypes used.
   SmallVector<SMLoc, 4> Locs;
+  SmallVector<SMLoc, 0> ForwardDeclarationLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1622,6 +1623,13 @@ public:
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
   void appendLoc(SMLoc Loc) { Locs.push_back(Loc); }
+
+  ArrayRef<SMLoc> getForwardDeclarationLocs() const {
+    return ForwardDeclarationLocs;
+  }
+
+  // Update a class location when encountering a (re-)definition.
+  void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
   RecordRecTy *getType();

@@ -2424,6 +2424,14 @@ void RecordVal::print(raw_ostream &OS, bool PrintSem) const {
   if (PrintSem) OS << ";\n";
 }
 
+void Record::updateClassLoc(SMLoc Loc) {
+  assert(Locs.size() == 1);
+  ForwardDeclarationLocs.push_back(Locs.front());
+
+  Locs.clear();
+  Locs.push_back(Loc);
+}
+
 void Record::checkName() {
   // Ensure the record name has string type.
   const TypedInit *TypedName = cast<const TypedInit>(Name);
