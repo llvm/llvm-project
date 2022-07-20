@@ -59,3 +59,106 @@ entry:
   %t4 = shufflevector <2 x i32> %t2, <2 x i32> %t3, <2 x i32> <i32 0, i32 3>
   ret <2 x i32> %t4
 }
+
+define <64 x i8> @addb_selectw_64xi8(<64 x i8> %t0, <64 x i8> %t1) {
+; CHECK-LABEL: addb_selectw_64xi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddb %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    vmovdqu16 %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %t2 = add nsw <64 x i8> %t0, %t1
+  %t3 = sub nsw <64 x i8> %t0, %t1
+  %t4 = shufflevector <64 x i8> %t2, <64 x i8> %t3, <64 x i32> <i32 64, i32 65, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  ret <64 x i8> %t4
+}
+
+define <32 x i8> @addb_selectw_32xi8(<32 x i8> %t0, <32 x i8> %t1) {
+; CHECK-LABEL: addb_selectw_32xi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddb %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    retq
+  %t2 = add nsw <32 x i8> %t0, %t1
+  %t3 = sub nsw <32 x i8> %t0, %t1
+  %t4 = shufflevector <32 x i8> %t2, <32 x i8> %t3, <32 x i32> <i32 32, i32 33, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i8> %t4
+}
+
+define <16 x i8> @addb_selectw_16xi8(<16 x i8> %t0, <16 x i8> %t1) {
+; CHECK-LABEL: addb_selectw_16xi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    retq
+  %t2 = add nsw <16 x i8> %t0, %t1
+  %t3 = sub nsw <16 x i8> %t0, %t1
+  %t4 = shufflevector <16 x i8> %t2, <16 x i8> %t3, <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %t4
+}
+
+define <32 x i16> @addw_selectd_32xi16(<32 x i16> %t0, <32 x i16> %t1) {
+; CHECK-LABEL: addw_selectd_32xi16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddw %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vpsubw %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    movw $1, %ax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    vmovdqa32 %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %t2 = add nsw <32 x i16> %t0, %t1
+  %t3 = sub nsw <32 x i16> %t0, %t1
+  %t4 = shufflevector <32 x i16> %t2, <32 x i16> %t3, <32 x i32> <i32 32, i32 33, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i16> %t4
+}
+
+define <16 x i16> @addw_selectd_16xi16(<16 x i16> %t0, <16 x i16> %t1) {
+; CHECK-LABEL: addw_selectd_16xi16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddw %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    retq
+  %t2 = add nsw <16 x i16> %t0, %t1
+  %t3 = sub nsw <16 x i16> %t0, %t1
+  %t4 = shufflevector <16 x i16> %t2, <16 x i16> %t3, <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i16> %t4
+}
+
+define <16 x i32> @addd_selectq_16xi32(<16 x i32> %t0, <16 x i32> %t1) {
+; CHECK-LABEL: addd_selectq_16xi32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %t2 = add nsw <16 x i32> %t0, %t1
+  %t3 = sub nsw <16 x i32> %t0, %t1
+  %t4 = shufflevector <16 x i32> %t2, <16 x i32> %t3, <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  ret <16 x i32> %t4
+}
+
+define <8 x i32> @addd_selectq_8xi32(<8 x i32> %t0, <8 x i32> %t1) {
+; CHECK-LABEL: addd_selectq_8xi32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
+; CHECK-NEXT:    retq
+  %t2 = add nsw <8 x i32> %t0, %t1
+  %t3 = sub nsw <8 x i32> %t0, %t1
+  %t4 = shufflevector <8 x i32> %t2, <8 x i32> %t3, <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  ret <8 x i32> %t4
+}
