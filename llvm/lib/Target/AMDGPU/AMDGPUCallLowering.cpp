@@ -816,7 +816,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
       Optional<uint32_t> Id =
           AMDGPUMachineFunction::getLDSKernelIdMetadata(MF.getFunction());
       if (Id.has_value()) {
-        MIRBuilder.buildConstant(InputReg, Id.getValue());
+        MIRBuilder.buildConstant(InputReg, Id.value());
       } else {
         MIRBuilder.buildUndef(InputReg);
       }
