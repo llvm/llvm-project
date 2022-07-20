@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
@@ -1896,6 +1897,10 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
       os << " ";
     denseArrayAttr.printWithoutBraces(os);
     os << "]";
+  } else if (auto resourceAttr = attr.dyn_cast<DenseResourceElementsAttr>()) {
+    os << "dense_resource<";
+    printResourceHandle(resourceAttr.getRawHandle());
+    os << ">";
   } else if (auto locAttr = attr.dyn_cast<LocationAttr>()) {
     printLocation(locAttr);
   } else {

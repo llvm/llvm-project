@@ -712,8 +712,9 @@ public:
 
   /// Signal a completion for an attribute.
   void completeAttribute(const llvm::StringMap<Attribute> &aliases) override {
-    appendSimpleCompletions({"affine_set", "affine_map", "dense", "false",
-                             "loc", "opaque", "sparse", "true", "unit"},
+    appendSimpleCompletions({"affine_set", "affine_map", "dense",
+                             "dense_resource", "false", "loc", "opaque",
+                             "sparse", "true", "unit"},
                             lsp::CompletionItemKind::Field,
                             /*sortText=*/"1");
 
