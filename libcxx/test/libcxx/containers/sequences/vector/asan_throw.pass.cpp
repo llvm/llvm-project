@@ -99,9 +99,9 @@ void test_insert_range() {
     v.insert(v.end(), a, a + 2);
     assert(0);
   } catch (int e) {
-    assert(v.size() == 3);
+    assert(v.size() == 2);
   }
-  assert(v.size() == 3);
+  assert(v.size() == 2);
   assert(is_contiguous_container_asan_correct(v));
 }
 
