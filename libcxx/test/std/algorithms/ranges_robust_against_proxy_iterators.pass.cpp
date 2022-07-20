@@ -149,10 +149,11 @@ constexpr void run_tests() {
   //test(std::ranges::sample, in, out, count, rand_gen);
   //test(std::ranges::unique, in);
   test(std::ranges::partition, in, unary_pred);
-  if (!std::is_constant_evaluated())
-    test(std::ranges::stable_partition, in, unary_pred);
+  // TODO(ranges): `stable_partition` requires `ranges::rotate` to be implemented.
+  //if (!std::is_constant_evaluated())
+  // test(std::ranges::stable_partition, in, unary_pred);
   test(std::ranges::sort, in);
-  // TODO: `stable_sort` requires `ranges::rotate` to be implemented.
+  // TODO(ranges): `stable_sort` requires `ranges::rotate` to be implemented.
   //if (!std::is_constant_evaluated())
   //  test(std::ranges::stable_sort, in);
   //test_mid(std::ranges::partial_sort, in, mid);
