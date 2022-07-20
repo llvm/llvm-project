@@ -26,7 +26,7 @@ include (FindPackageHandleStandardArgs)
 if (OPENMP_STANDALONE_BUILD)
   # Complete LLVM package is required for building libomptarget
   # in an out-of-tree mode.
-  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
+  find_package(LLVM REQUIRED)
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVM in: ${LLVM_DIR}")
   list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
