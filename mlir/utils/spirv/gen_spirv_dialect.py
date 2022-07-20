@@ -10,7 +10,7 @@
 #
 # For example, to define the enum attribute for SPIR-V memory model:
 #
-# ./gen_spirv_dialect.py --base_td_path /path/to/SPIRVBase.td \
+# ./gen_spirv_dialect.py --base-td-path /path/to/SPIRVBase.td \
 #                        --new-enum MemoryModel
 #
 # The 'operand_kinds' dict of spirv.core.grammar.json contains all supported
@@ -25,8 +25,8 @@ import yaml
 SPIRV_HTML_SPEC_URL = 'https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html'
 SPIRV_JSON_SPEC_URL = 'https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/spirv.core.grammar.json'
 
-SPIRV_OCL_EXT_HTML_SPEC_URL = 'https://www.khronos.org/registry/SPIR-V/specs/unified1/OpenCL.ExtendedInstructionSet.100.html'
-SPIRV_OCL_EXT_JSON_SPEC_URL = 'https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/extinst.opencl.std.100.grammar.json'
+SPIRV_CL_EXT_HTML_SPEC_URL = 'https://www.khronos.org/registry/SPIR-V/specs/unified1/OpenCL.ExtendedInstructionSet.100.html'
+SPIRV_CL_EXT_JSON_SPEC_URL = 'https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/extinst.opencl.std.100.grammar.json'
 
 AUTOGEN_OP_DEF_SEPARATOR = '\n// -----\n\n'
 AUTOGEN_ENUM_SECTION_MARKER = 'enum section. Generated from SPIR-V spec; DO NOT MODIFY!'
@@ -50,7 +50,7 @@ def get_spirv_doc_from_html_spec(url, settings):
 
   doc = {}
 
-  if settings.gen_ocl_ops:
+  if settings.gen_cl_ops:
     section_anchor = spirv.find('h2', {'id': '_binary_form'})
     for section in section_anchor.parent.find_all('div', {'class': 'sect2'}):
       for table in section.find_all('table'):
@@ -703,7 +703,7 @@ def get_op_definition(instruction, opname, doc, existing_info, capability_mappin
   Returns:
     - A string containing the TableGen op definition
   """
-  if settings.gen_ocl_ops:
+  if settings.gen_cl_ops:
     fmt_str = ('def SPV_{opname}Op : '
                'SPV_{inst_category}<"{opname_src}", {opcode}, <<Insert result type>> > '
                '{{\n  let summary = {summary};\n\n  let description = '
@@ -959,8 +959,8 @@ def update_td_op_definitions(path, instructions, docs, filter_list,
 
   op_defs = []
 
-  if settings.gen_ocl_ops:
-    fix_opname = lambda src: src.replace('OCL','').lower()
+  if settings.gen_cl_ops:
+    fix_opname = lambda src: src.replace('CL','').lower()
   else:
     fix_opname = lambda src: src
 
@@ -1035,19 +1035,19 @@ if __name__ == '__main__':
       help='SPIR-V instruction category used for choosing '\
            'the TableGen base class to define this op')
   cli_parser.add_argument(
-      '--gen-ocl-ops',
-      dest='gen_ocl_ops',
+      '--gen-cl-ops',
+      dest='gen_cl_ops',
       help='Generate OpenCL Extended Instruction Set op',
       action='store_true')
-  cli_parser.set_defaults(gen_ocl_ops=False)
+  cli_parser.set_defaults(gen_cl_ops=False)
   cli_parser.add_argument('--gen-inst-coverage', dest='gen_inst_coverage', action='store_true')
   cli_parser.set_defaults(gen_inst_coverage=False)
 
   args = cli_parser.parse_args()
 
-  if args.gen_ocl_ops:
-    ext_html_url = SPIRV_OCL_EXT_HTML_SPEC_URL
-    ext_json_url = SPIRV_OCL_EXT_JSON_SPEC_URL
+  if args.gen_cl_ops:
+    ext_html_url = SPIRV_CL_EXT_HTML_SPEC_URL
+    ext_json_url = SPIRV_CL_EXT_JSON_SPEC_URL
   else:
     ext_html_url = None
     ext_json_url = None

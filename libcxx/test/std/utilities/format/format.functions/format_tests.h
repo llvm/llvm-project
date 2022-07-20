@@ -293,8 +293,8 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
 }
 
 template <class CharT, class TestFunction>
-void format_test_string_unicode(TestFunction check) {
-  (void)check;
+void format_test_string_unicode([[maybe_unused]] TestFunction check) {
+  // unicode.pass.cpp and ascii.pass.cpp have additional tests.
 #ifndef TEST_HAS_NO_UNICODE
   // Make sure all possible types are tested. For clarity don't use macros.
   if constexpr (std::same_as<CharT, char>) {
@@ -332,7 +332,7 @@ void format_test_string_unicode(TestFunction check) {
     check.template operator()<"{:*^5}">(SV("*aßc*"), std::wstring_view(L"aßc"));
     check.template operator()<"{:*^4.2}">(SV("*aß*"), std::wstring_view(L"aßc"));
   }
-#  endif
+#  endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   // ß requires one column
   check.template operator()<"{}">(SV("aßc"), STR("aßc"));
@@ -365,6 +365,25 @@ void format_test_string_unicode(TestFunction check) {
   check.template operator()<"{:-<7}">(SV("a\u1110c---"), STR("a\u1110c"));
   check.template operator()<"{:-^7}">(SV("-a\u1110c--"), STR("a\u1110c"));
   check.template operator()<"{:->7}">(SV("---a\u1110c"), STR("a\u1110c"));
+
+  // Examples used in P1868R2
+  check.template operator()<"{:*^3}">(SV("*\u0041*"), STR("\u0041")); // { LATIN CAPITAL LETTER A }
+  check.template operator()<"{:*^3}">(SV("*\u00c1*"), STR("\u00c1")); // { LATIN CAPITAL LETTER A WITH ACUTE }
+  check.template operator()<"{:*^3}">(
+      SV("*\u0041\u0301*"),
+      STR("\u0041\u0301")); // { LATIN CAPITAL LETTER A } { COMBINING ACUTE ACCENT }
+  check.template operator()<"{:*^3}">(SV("*\u0132*"), STR("\u0132")); // { LATIN CAPITAL LIGATURE IJ }
+  check.template operator()<"{:*^3}">(SV("*\u0394*"), STR("\u0394")); // { GREEK CAPITAL LETTER DELTA }
+
+  check.template operator()<"{:*^3}">(SV("*\u0429*"), STR("\u0429"));         // { CYRILLIC CAPITAL LETTER SHCHA }
+  check.template operator()<"{:*^3}">(SV("*\u05d0*"), STR("\u05d0"));         // { HEBREW LETTER ALEF }
+  check.template operator()<"{:*^3}">(SV("*\u0634*"), STR("\u0634"));         // { ARABIC LETTER SHEEN }
+  check.template operator()<"{:*^4}">(SV("*\u3009*"), STR("\u3009"));         // { RIGHT-POINTING ANGLE BRACKET }
+  check.template operator()<"{:*^4}">(SV("*\u754c*"), STR("\u754c"));         // { CJK Unified Ideograph-754C }
+  check.template operator()<"{:*^4}">(SV("*\U0001f921*"), STR("\U0001f921")); // { UNICORN FACE }
+  check.template operator()<"{:*^4}">(
+      SV("*\U0001f468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466*"),
+      STR("\U0001f468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466")); // { Family: Man, Woman, Girl, Boy }
 #endif // TEST_HAS_NO_UNICODE
 }
 
@@ -2580,9 +2599,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   // *** Test char format argument ***
   // The `char` to `wchar_t` formatting is tested separately.
-  check.template operator()<"hello {}{}{}{}{}{}{}">(SV("hello 09azAZ!"), CharT('0'), CharT('9'), CharT('a'), CharT('z'),
-                                                    CharT('A'), CharT('Z'), CharT('!'));
-
+  check.template operator()<"hello {}{}{}{}{}{}{}">(
+      SV("hello 09azAZ!"), CharT('0'), CharT('9'), CharT('a'), CharT('z'), CharT('A'), CharT('Z'), CharT('!'));
   format_test_char<CharT>(check, check_exception);
   format_test_char_as_integer<CharT>(check, check_exception);
 

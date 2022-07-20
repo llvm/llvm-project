@@ -4,7 +4,7 @@ Number,Name,Assignee,Patch,Status,First released version
 `P1892 <https://wg21.link/P1892>`_,"Extended locale-specific presentation specifiers for std::format",Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Complete|,Clang 14
 `P1868 <https://wg21.link/P1868>`_,"width: clarifying units of width and precision in std::format (Implements the unicode support.)",Mark de Wever,"`D103413 <https://reviews.llvm.org/D103413>`__ `D103425 <https://reviews.llvm.org/D103425>`__ `D103670 <https://reviews.llvm.org/D103670>`__",|Complete|,Clang 14
 `P2216 <https://wg21.link/P2216>`_,"std::format improvements",Mark de Wever,,|Complete|,Clang 15
-`P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``",Mark de Wever,`D127570 <https://reviews.llvm.org/D127570>`__,|Review|,
+`P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``",Mark de Wever,`D127570 <https://reviews.llvm.org/D127570>`__,|Complete|, Clang 15
 
 `P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting",Mark de Wever,,|In Progress|,
 `P2372 <https://wg21.link/P2372>`__,"Fixing locale handling in chrono formatters",Mark de Wever,,|In Progress|,

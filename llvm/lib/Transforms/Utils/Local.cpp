@@ -439,6 +439,9 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     return true;
   }
 
+  if (isAllocationFn(I, TLI) && isAllocRemovable(cast<CallBase>(I), TLI))
+    return true;
+
   if (!I->willReturn())
     return false;
 
@@ -488,9 +491,6 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
       return *ExBehavior != fp::ebStrict;
     }
   }
-
-  if (isAllocationFn(I, TLI) && isAllocRemovable(cast<CallBase>(I), TLI))
-    return true;
 
   if (CallInst *CI = isFreeCall(I, TLI))
     if (Constant *C = dyn_cast<Constant>(CI->getArgOperand(0)))
@@ -1086,6 +1086,18 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
         }
       }
       ++BBI;
+    }
+  }
+
+  // We cannot fold the block if it's a branch to an already present callbr
+  // successor because that creates duplicate successors.
+  for (BasicBlock *PredBB : predecessors(BB)) {
+    if (auto *CBI = dyn_cast<CallBrInst>(PredBB->getTerminator())) {
+      if (Succ == CBI->getDefaultDest())
+        return false;
+      for (unsigned i = 0, e = CBI->getNumIndirectDests(); i != e; ++i)
+        if (Succ == CBI->getIndirectDest(i))
+          return false;
     }
   }
 

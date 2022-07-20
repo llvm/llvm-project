@@ -79,7 +79,7 @@ define float @caller(ptr %error_ref) {
 ; CHECK-APPLE-NEXT:    testq %r12, %r12
 ; CHECK-APPLE-NEXT:    jne LBB1_2
 ; CHECK-APPLE-NEXT:  ## %bb.1: ## %cont
-; CHECK-APPLE-NEXT:    movb 8(%rdi), %al
+; CHECK-APPLE-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB1_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
@@ -131,7 +131,7 @@ define float @caller(ptr %error_ref) {
 ; CHECK-i386-NEXT:    jne LBB1_2
 ; CHECK-i386-NEXT:  ## %bb.1: ## %cont
 ; CHECK-i386-NEXT:    movl 16(%esp), %ecx
-; CHECK-i386-NEXT:    movb 8(%eax), %dl
+; CHECK-i386-NEXT:    movzbl 8(%eax), %edx
 ; CHECK-i386-NEXT:    movb %dl, (%ecx)
 ; CHECK-i386-NEXT:  LBB1_2: ## %handler
 ; CHECK-i386-NEXT:    movl %eax, (%esp)
@@ -182,7 +182,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-APPLE-NEXT:    jbe LBB2_1
 ; CHECK-APPLE-NEXT:  ## %bb.3: ## %bb_end
-; CHECK-APPLE-NEXT:    movb 8(%r12), %al
+; CHECK-APPLE-NEXT:    movzbl 8(%r12), %eax
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB2_4: ## %handler
 ; CHECK-APPLE-NEXT:    movq %r12, %rdi
@@ -263,7 +263,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    sahf
 ; CHECK-i386-NEXT:    jbe LBB2_1
 ; CHECK-i386-NEXT:  ## %bb.3: ## %bb_end
-; CHECK-i386-NEXT:    movb 8(%ecx), %al
+; CHECK-i386-NEXT:    movzbl 8(%ecx), %eax
 ; CHECK-i386-NEXT:    movb %al, (%esi)
 ; CHECK-i386-NEXT:    fldz
 ; CHECK-i386-NEXT:  LBB2_4: ## %handler
@@ -632,7 +632,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-APPLE-NEXT:    testq %r12, %r12
 ; CHECK-APPLE-NEXT:    jne LBB6_2
 ; CHECK-APPLE-NEXT:  ## %bb.1: ## %cont
-; CHECK-APPLE-NEXT:    movb 8(%rdi), %al
+; CHECK-APPLE-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB6_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
@@ -689,7 +689,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-i386-NEXT:    jne LBB6_2
 ; CHECK-i386-NEXT:  ## %bb.1: ## %cont
 ; CHECK-i386-NEXT:    movl 48(%esp), %ecx
-; CHECK-i386-NEXT:    movb 8(%eax), %dl
+; CHECK-i386-NEXT:    movzbl 8(%eax), %edx
 ; CHECK-i386-NEXT:    movb %dl, (%ecx)
 ; CHECK-i386-NEXT:  LBB6_2: ## %handler
 ; CHECK-i386-NEXT:    movl %eax, (%esp)
@@ -744,7 +744,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-APPLE-NEXT:    testq %r12, %r12
 ; CHECK-APPLE-NEXT:    jne LBB7_2
 ; CHECK-APPLE-NEXT:  ## %bb.1: ## %cont
-; CHECK-APPLE-NEXT:    movb 8(%rdi), %al
+; CHECK-APPLE-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB7_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
@@ -757,7 +757,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-APPLE-NEXT:    testq %r12, %r12
 ; CHECK-APPLE-NEXT:    jne LBB7_4
 ; CHECK-APPLE-NEXT:  ## %bb.3: ## %cont2
-; CHECK-APPLE-NEXT:    movb 8(%rdi), %al
+; CHECK-APPLE-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-APPLE-NEXT:    movb %al, (%r14)
 ; CHECK-APPLE-NEXT:  LBB7_4: ## %handler2
 ; CHECK-APPLE-NEXT:    callq _free
@@ -842,7 +842,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-i386-NEXT:    jne LBB7_2
 ; CHECK-i386-NEXT:  ## %bb.1: ## %cont
 ; CHECK-i386-NEXT:    movl 8(%ebp), %ecx
-; CHECK-i386-NEXT:    movb 8(%eax), %dl
+; CHECK-i386-NEXT:    movzbl 8(%eax), %edx
 ; CHECK-i386-NEXT:    movb %dl, (%ecx)
 ; CHECK-i386-NEXT:  LBB7_2: ## %handler
 ; CHECK-i386-NEXT:    subl $12, %esp
@@ -863,7 +863,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-i386-NEXT:    jne LBB7_4
 ; CHECK-i386-NEXT:  ## %bb.3: ## %cont2
 ; CHECK-i386-NEXT:    movl 12(%ebp), %ecx
-; CHECK-i386-NEXT:    movb 8(%eax), %dl
+; CHECK-i386-NEXT:    movzbl 8(%eax), %edx
 ; CHECK-i386-NEXT:    movb %dl, (%ecx)
 ; CHECK-i386-NEXT:  LBB7_4: ## %handler2
 ; CHECK-i386-NEXT:    subl $12, %esp

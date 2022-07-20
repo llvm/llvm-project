@@ -1173,6 +1173,27 @@ struct AAPointerInfoImpl
   /// Statistic tracking for all AAPointerInfo implementations.
   /// See AbstractAttribute::trackStatistics().
   void trackPointerInfoStatistics(const IRPosition &IRP) const {}
+
+  /// Dump the state into \p O.
+  void dumpState(raw_ostream &O) {
+    for (auto &It : AccessBins) {
+      O << "[" << It.first.getOffset() << "-"
+        << It.first.getOffset() + It.first.getSize()
+        << "] : " << It.getSecond()->size() << "\n";
+      for (auto &Acc : *It.getSecond()) {
+        O << "     - " << Acc.getKind() << " - " << *Acc.getLocalInst() << "\n";
+        if (Acc.getLocalInst() != Acc.getRemoteInst())
+          O << "     -->                         " << *Acc.getRemoteInst()
+            << "\n";
+        if (!Acc.isWrittenValueYetUndetermined()) {
+          if (Acc.getWrittenValue())
+            O << "       - c: " << *Acc.getWrittenValue() << "\n";
+          else
+            O << "       - c: <unknown>\n";
+        }
+      }
+    }
+  }
 };
 
 struct AAPointerInfoFloating : public AAPointerInfoImpl {
@@ -1280,7 +1301,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         Follow = true;
         return true;
       }
-      if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
+      if (isa<CastInst>(Usr) || isa<SelectInst>(Usr) || isa<ReturnInst>(Usr))
         return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
 
       // For PHIs we need to take care of the recurrence explicitly as the value
@@ -1372,36 +1393,30 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       return false;
     };
     auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
-      if (OffsetInfoMap.count(NewU))
+      if (OffsetInfoMap.count(NewU)) {
+        LLVM_DEBUG({
+          if (!(OffsetInfoMap[NewU] == OffsetInfoMap[OldU])) {
+            dbgs() << "[AAPointerInfo] Equivalent use callback failed: "
+                   << OffsetInfoMap[NewU].Offset << " vs "
+                   << OffsetInfoMap[OldU].Offset << "\n";
+          }
+        });
         return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
+      }
       OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
       return true;
     };
     if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
                            /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
-                           /* IgnoreDroppableUses */ true, EquivalentUseCB))
+                           /* IgnoreDroppableUses */ true, EquivalentUseCB)) {
+      LLVM_DEBUG(
+          dbgs() << "[AAPointerInfo] Check for all uses failed, abort!\n");
       return indicatePessimisticFixpoint();
+    }
 
     LLVM_DEBUG({
       dbgs() << "Accesses by bin after update:\n";
-      for (auto &It : AccessBins) {
-        dbgs() << "[" << It.first.getOffset() << "-"
-               << It.first.getOffset() + It.first.getSize()
-               << "] : " << It.getSecond()->size() << "\n";
-        for (auto &Acc : *It.getSecond()) {
-          dbgs() << "     - " << Acc.getKind() << " - " << *Acc.getLocalInst()
-                 << "\n";
-          if (Acc.getLocalInst() != Acc.getRemoteInst())
-            dbgs() << "     -->                         "
-                   << *Acc.getRemoteInst() << "\n";
-          if (!Acc.isWrittenValueYetUndetermined()) {
-            if (Acc.getWrittenValue())
-              dbgs() << "       - c: " << *Acc.getWrittenValue() << "\n";
-            else
-              dbgs() << "       - c: <unknown>\n";
-          }
-        }
-      }
+      dumpState(dbgs());
     });
 
     return Changed;
@@ -1474,6 +1489,12 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
                           << *MI << "\n");
         return indicatePessimisticFixpoint();
       }
+
+      LLVM_DEBUG({
+        dbgs() << "Accesses by bin after update:\n";
+        dumpState(dbgs());
+      });
+
       return Changed;
     }
 
@@ -5372,7 +5393,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     bool UsedAssumedInformation = false;
     Optional<Value *> SimpleV = A.getAssumedSimplified(
         V, QueryingAA, UsedAssumedInformation, AA::Interprocedural);
-    if (!SimpleV.hasValue())
+    if (!SimpleV.has_value())
       return PoisonValue::get(&Ty);
     Value *EffectiveV = &V;
     if (SimpleV.value())
@@ -7338,7 +7359,7 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use &U,
                                                   const Instruction *UserI) {
   // The loaded value is unrelated to the pointer argument, no need to
   // follow the users of the load.
-  if (isa<LoadInst>(UserI))
+  if (isa<LoadInst>(UserI) || isa<ReturnInst>(UserI))
     return false;
 
   // By default we follow all uses assuming UserI might leak information on U,
@@ -8319,7 +8340,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedLHS = A.getAssumedSimplified(
         IRPosition::value(*LHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedLHS.hasValue())
+    if (!SimplifiedLHS.has_value())
       return true;
     if (!SimplifiedLHS.value())
       return false;
@@ -8328,7 +8349,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedRHS = A.getAssumedSimplified(
         IRPosition::value(*RHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedRHS.hasValue())
+    if (!SimplifiedRHS.has_value())
       return true;
     if (!SimplifiedRHS.value())
       return false;
@@ -8372,7 +8393,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedOpV = A.getAssumedSimplified(
         IRPosition::value(*OpV, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedOpV.hasValue())
+    if (!SimplifiedOpV.has_value())
       return true;
     if (!SimplifiedOpV.value())
       return false;
@@ -8402,7 +8423,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedLHS = A.getAssumedSimplified(
         IRPosition::value(*LHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedLHS.hasValue())
+    if (!SimplifiedLHS.has_value())
       return true;
     if (!SimplifiedLHS.value())
       return false;
@@ -8411,7 +8432,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     const auto &SimplifiedRHS = A.getAssumedSimplified(
         IRPosition::value(*RHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Interprocedural);
-    if (!SimplifiedRHS.hasValue())
+    if (!SimplifiedRHS.has_value())
       return true;
     if (!SimplifiedRHS.value())
       return false;
@@ -8477,7 +8498,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
         const auto &SimplifiedOpV = A.getAssumedSimplified(
             IRPosition::value(V, getCallBaseContext()), *this,
             UsedAssumedInformation, AA::Interprocedural);
-        if (!SimplifiedOpV.hasValue())
+        if (!SimplifiedOpV.has_value())
           return true;
         if (!SimplifiedOpV.value())
           return false;
@@ -9197,7 +9218,7 @@ struct AANoUndefImpl : AANoUndef {
     // the same reason above.
     if (!A.getAssumedSimplified(getIRPosition(), *this, UsedAssumedInformation,
                                 AA::Interprocedural)
-             .hasValue())
+             .has_value())
       return ChangeStatus::UNCHANGED;
     return AANoUndef::manifest(A);
   }
@@ -9478,8 +9499,11 @@ private:
 
       for (auto *AAEdges : AAEdgesList) {
         if (AAEdges->hasUnknownCallee()) {
-          if (!CanReachUnknownCallee)
+          if (!CanReachUnknownCallee) {
+            LLVM_DEBUG(dbgs()
+                       << "[QueryResolver] Edges include unknown callee!\n");
             Change = ChangeStatus::CHANGED;
+          }
           CanReachUnknownCallee = true;
           return Change;
         }
@@ -9643,8 +9667,11 @@ public:
     // This is a hack for us to be able to cache queries.
     auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
     QueryResolver &InstQSet = NonConstThis->InstQueries[&Inst];
-    if (!AllKnown)
+    if (!AllKnown) {
+      LLVM_DEBUG(dbgs() << "[AAReachability] Not all reachable edges known, "
+                           "may reach unknown callee!\n");
       InstQSet.CanReachUnknownCallee = true;
+    }
 
     return InstQSet.isReachable(A, *NonConstThis, CallEdges, Fn);
   }
@@ -9677,8 +9704,11 @@ public:
         bool AllKnown =
             getReachableCallEdges(A, *Reachability, *InstPair.first, CallEdges);
         // Update will return change if we this effects any queries.
-        if (!AllKnown)
+        if (!AllKnown) {
+          LLVM_DEBUG(dbgs() << "[AAReachability] Not all reachable edges "
+                               "known, may reach unknown callee!\n");
           InstPair.second.CanReachUnknownCallee = true;
+        }
         Change |= InstPair.second.update(A, *this, CallEdges);
       }
     }
@@ -9691,8 +9721,11 @@ public:
         WholeFunction.Reachable.size() + WholeFunction.Unreachable.size();
 
     return "FunctionReachability [" +
-           std::to_string(WholeFunction.Reachable.size()) + "," +
-           std::to_string(QueryCount) + "]";
+           (canReachUnknownCallee()
+                ? "unknown"
+                : (std::to_string(WholeFunction.Reachable.size()) + "," +
+                   std::to_string(QueryCount))) +
+           "]";
   }
 
   void trackStatistics() const override {}
@@ -9726,11 +9759,11 @@ askForAssumedConstant(Attributor &A, const AbstractAttribute &QueryingAA,
 
   Optional<Constant *> COpt = AA.getAssumedConstant(A);
 
-  if (!COpt.hasValue()) {
+  if (!COpt.has_value()) {
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
     return llvm::None;
   }
-  if (auto *C = COpt.getValue()) {
+  if (auto *C = COpt.value()) {
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
     return C;
   }
@@ -9744,12 +9777,12 @@ Value *AAPotentialValues::getSingleValue(
   Optional<Value *> V;
   for (auto &It : Values) {
     V = AA::combineOptionalValuesInAAValueLatice(V, It.getValue(), &Ty);
-    if (V.hasValue() && !V.getValue())
+    if (V.has_value() && !V.value())
       break;
   }
-  if (!V.hasValue())
+  if (!V.has_value())
     return UndefValue::get(&Ty);
-  return V.getValue();
+  return V.value();
 }
 
 namespace {
@@ -9792,7 +9825,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     Optional<Constant *> C = askForAssumedConstant<AAType>(A, AA, IRP, Ty);
     if (!C)
       return llvm::None;
-    if (C.getValue())
+    if (C.value())
       if (auto *CC = AA::getWithType(**C, Ty))
         return CC;
     return nullptr;
@@ -9817,7 +9850,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       Type &Ty = *getAssociatedType();
       Optional<Value *> SimpleV =
           askOtherAA<AAValueConstantRange>(A, *this, ValIRP, Ty);
-      if (SimpleV.hasValue() && !SimpleV.getValue()) {
+      if (SimpleV.has_value() && !SimpleV.value()) {
         auto &PotentialConstantsAA = A.getAAFor<AAPotentialConstantValues>(
             *this, ValIRP, DepClassTy::OPTIONAL);
         if (PotentialConstantsAA.isValidState()) {
@@ -9829,11 +9862,11 @@ struct AAPotentialValuesImpl : AAPotentialValues {
           return;
         }
       }
-      if (!SimpleV.hasValue())
+      if (!SimpleV.has_value())
         return;
 
-      if (SimpleV.getValue())
-        VPtr = SimpleV.getValue();
+      if (SimpleV.value())
+        VPtr = SimpleV.value();
     }
 
     if (isa<ConstantInt>(VPtr))
@@ -9970,18 +10003,18 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const auto &SimplifiedLHS = A.getAssumedSimplified(
         IRPosition::value(*LHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Intraprocedural);
-    if (!SimplifiedLHS.hasValue())
+    if (!SimplifiedLHS.has_value())
       return true;
-    if (!SimplifiedLHS.getValue())
+    if (!SimplifiedLHS.value())
       return false;
     LHS = *SimplifiedLHS;
 
     const auto &SimplifiedRHS = A.getAssumedSimplified(
         IRPosition::value(*RHS, getCallBaseContext()), *this,
         UsedAssumedInformation, AA::Intraprocedural);
-    if (!SimplifiedRHS.hasValue())
+    if (!SimplifiedRHS.has_value())
       return true;
-    if (!SimplifiedRHS.getValue())
+    if (!SimplifiedRHS.value())
       return false;
     RHS = *SimplifiedRHS;
 
@@ -10034,7 +10067,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     Optional<Constant *> C =
         A.getAssumedConstant(*SI.getCondition(), *this, UsedAssumedInformation);
-    bool NoValueYet = !C.hasValue();
+    bool NoValueYet = !C.has_value();
     if (NoValueYet || isa_and_nonnull<UndefValue>(*C))
       return true;
     if (auto *CI = dyn_cast_or_null<ConstantInt>(*C)) {
@@ -10058,8 +10091,12 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!AA::getPotentiallyLoadedValues(A, LI, PotentialCopies,
                                         PotentialValueOrigins, *this,
                                         UsedAssumedInformation,
-                                        /* OnlyExact */ true))
+                                        /* OnlyExact */ true)) {
+      LLVM_DEBUG(dbgs() << "[AAPotentialValues] Failed to get potentially "
+                           "loaded values for load instruction "
+                        << LI << "\n");
       return false;
+    }
 
     // Do not simplify loads that are only used in llvm.assume if we cannot also
     // remove all stores that may feed into the load. The reason is that the
@@ -10077,8 +10114,12 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
             return A.isAssumedDead(*I, this, /* LivenessAA */ nullptr,
                                    UsedAssumedInformation,
                                    /* CheckBBLivenessOnly */ false);
-          }))
+          })) {
+        LLVM_DEBUG(dbgs() << "[AAPotentialValues] Load is onl used by assumes "
+                             "and we cannot delete all the stores: "
+                          << LI << "\n");
         return false;
+      }
     }
 
     // Values have to be dynamically unique or we loose the fact that a
@@ -10091,8 +10132,12 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       AllLocal &= AA::isValidInScope(*PC, getAnchorScope());
       return AA::isDynamicallyUnique(A, *this, *PC);
     });
-    if (!DynamicallyUnique)
+    if (!DynamicallyUnique) {
+      LLVM_DEBUG(dbgs() << "[AAPotentialValues] Not all potentially loaded "
+                           "values are dynamically unique: "
+                        << LI << "\n");
       return false;
+    }
 
     for (auto *PotentialCopy : PotentialCopies) {
       if (AllLocal) {
@@ -10147,11 +10192,11 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
           UsedAssumedInformation, AA::Intraprocedural);
       // If we are not sure about any operand we are not sure about the entire
       // instruction, we'll wait.
-      if (!SimplifiedOp.hasValue())
+      if (!SimplifiedOp.has_value())
         return true;
 
-      if (SimplifiedOp.getValue())
-        NewOps[Idx] = SimplifiedOp.getValue();
+      if (SimplifiedOp.value())
+        NewOps[Idx] = SimplifiedOp.value();
       else
         NewOps[Idx] = Op;
 
@@ -10448,14 +10493,14 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
       Value *V = It.getValue();
       Optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
           V, *CB, *this, UsedAssumedInformation);
-      if (!CallerV.hasValue()) {
+      if (!CallerV.has_value()) {
         // Nothing to do as long as no value was determined.
         continue;
       }
-      V = CallerV.getValue() ? CallerV.getValue() : V;
+      V = CallerV.value() ? CallerV.value() : V;
       if (AA::isDynamicallyUnique(A, *this, *V) &&
           AA::isValidInScope(*V, Caller)) {
-        if (CallerV.getValue()) {
+        if (CallerV.value()) {
           SmallVector<AA::ValueAndContext> ArgValues;
           IRPosition IRP = IRPosition::value(*V);
           if (auto *Arg = dyn_cast<Argument>(V))

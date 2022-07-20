@@ -38,7 +38,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVMatrixOps.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVMemoryOps.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVMiscOps.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVNonUniformOps.td"
-include "mlir/Dialect/SPIRV/IR/SPIRVOCLOps.td"
+include "mlir/Dialect/SPIRV/IR/SPIRVCLOps.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVStructureOps.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 

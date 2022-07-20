@@ -42,7 +42,7 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; X86-X87-NEXT:    movb $-1, %dl
 ; X86-X87-NEXT:    jb .LBB0_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB0_2:
 ; X86-X87-NEXT:    fldz
 ; X86-X87-NEXT:    fxch %st(1)
@@ -115,7 +115,7 @@ define i8 @test_signed_i8_f32(float %f) nounwind {
 ; X86-X87-NEXT:    movb $-128, %dl
 ; X86-X87-NEXT:    jb .LBB1_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB1_2:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-X87-NEXT:    fxch %st(1)
@@ -1062,7 +1062,7 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; X86-X87-NEXT:    movb $-1, %dl
 ; X86-X87-NEXT:    jb .LBB10_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB10_2:
 ; X86-X87-NEXT:    fldz
 ; X86-X87-NEXT:    fxch %st(1)
@@ -1135,7 +1135,7 @@ define i8 @test_signed_i8_f64(double %f) nounwind {
 ; X86-X87-NEXT:    movb $-128, %dl
 ; X86-X87-NEXT:    jb .LBB11_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB11_2:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-X87-NEXT:    fxch %st(1)
@@ -2079,7 +2079,7 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; X86-X87-NEXT:    movb $-1, %dl
 ; X86-X87-NEXT:    jb .LBB20_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB20_2:
 ; X86-X87-NEXT:    fldz
 ; X86-X87-NEXT:    fxch %st(1)
@@ -2176,7 +2176,7 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; X86-X87-NEXT:    movb $-128, %dl
 ; X86-X87-NEXT:    jb .LBB21_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB21_2:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-X87-NEXT:    fxch %st(1)
@@ -3274,7 +3274,7 @@ define i1 @test_signed_i1_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    movb $-1, %dl
 ; X86-X87-NEXT:    jb .LBB30_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB30_2:
 ; X86-X87-NEXT:    fldz
 ; X86-X87-NEXT:    fxch %st(1)
@@ -3387,7 +3387,7 @@ define i8 @test_signed_i8_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    movb $-128, %dl
 ; X86-X87-NEXT:    jb .LBB31_2
 ; X86-X87-NEXT:  # %bb.1:
-; X86-X87-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-X87-NEXT:  .LBB31_2:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-X87-NEXT:    fxch %st(1)

@@ -3511,6 +3511,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
   const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
                                          options::OPT_D,
+                                         options::OPT_I,
                                          options::OPT_S,
                                          options::OPT_emit_llvm,
                                          options::OPT_disable_llvm_passes,
@@ -7005,7 +7006,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcuda-include-gpubinary");
     CmdArgs.push_back(CudaDeviceInput->getFilename());
   } else if (!HostOffloadingInputs.empty()) {
-    if (IsCuda && !IsRDCMode) {
+    if ((IsCuda || IsHIP) && !IsRDCMode) {
       assert(HostOffloadingInputs.size() == 1 && "Only one input expected");
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(HostOffloadingInputs.front().getFilename());

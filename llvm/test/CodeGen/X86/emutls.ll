@@ -211,7 +211,7 @@ define dso_local i8 @f13() {
 ; X86-LABEL: f13:
 ; X86:         movl $__emutls_v.b1, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
-; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl

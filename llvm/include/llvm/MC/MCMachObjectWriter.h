@@ -263,9 +263,9 @@ public:
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  void populateAddrSigSection(MCAssembler &Asm);
 
-  void writeAddrsigSection(MCAssembler &Asm);
+  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 };
 
 /// Construct a new Mach-O writer instance.

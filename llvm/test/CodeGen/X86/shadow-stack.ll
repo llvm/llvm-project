@@ -235,4 +235,4 @@ declare i32 @llvm.eh.sjlj.setjmp(ptr)
 
 !llvm.module.flags = !{!0}
 
-!0 = !{i32 4, !"cf-protection-return", i32 1}
+!0 = !{i32 8, !"cf-protection-return", i32 1}

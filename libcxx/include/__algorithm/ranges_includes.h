@@ -20,7 +20,6 @@
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
-#include <__ranges/dangling.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 

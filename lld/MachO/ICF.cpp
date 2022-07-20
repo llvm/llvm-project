@@ -384,23 +384,18 @@ void macho::markAddrSigSymbols() {
       continue;
     assert(addrSigSection->subsections.size() == 1);
 
-    Subsection *subSection = &addrSigSection->subsections[0];
-    ArrayRef<unsigned char> &contents = subSection->isec->data;
+    const InputSection *isec = addrSigSection->subsections[0].isec;
 
-    const uint8_t *pData = contents.begin();
-    while (pData != contents.end()) {
-      unsigned size;
-      const char *err;
-      uint32_t symIndex = decodeULEB128(pData, &size, contents.end(), &err);
-      if (err)
-        fatal(toString(file) + ": could not decode addrsig section: " + err);
-      markSymAsAddrSig(obj->symbols[symIndex]);
-      pData += size;
+    for (const Reloc &r : isec->relocs) {
+      if (auto *sym = r.referent.dyn_cast<Symbol *>())
+        markSymAsAddrSig(sym);
+      else
+        error(toString(isec) + ": unexpected section relocation");
     }
   }
 }
 
-void macho::foldIdenticalSections() {
+void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed
   // hashes of InputSection::data for the ConcatOutputSection::inputs and all
@@ -421,6 +416,7 @@ void macho::foldIdenticalSections() {
   for (ConcatInputSection *isec : inputSections) {
     // FIXME: consider non-code __text sections as hashable?
     bool isHashable =
+        (!onlyCfStrings || isCfStringSection(isec)) &&
         (isCodeSection(isec) || isCfStringSection(isec) ||
          isClassRefsSection(isec) || isGccExceptTabSection(isec)) &&
         !isec->keepUnique && !isec->shouldOmitFromOutput() &&

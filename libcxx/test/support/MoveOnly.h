@@ -43,6 +43,10 @@ public:
     friend TEST_CONSTEXPR bool operator>=(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ >= y.data_; }
 
+#if TEST_STD_VER > 17
+    friend constexpr auto operator<=>(const MoveOnly&, const MoveOnly&) = default;
+#endif // TEST_STD_VER > 17
+
     TEST_CONSTEXPR_CXX14 MoveOnly operator+(const MoveOnly& x) const
         { return MoveOnly(data_ + x.data_); }
     TEST_CONSTEXPR_CXX14 MoveOnly operator*(const MoveOnly& x) const
