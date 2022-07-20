@@ -151,6 +151,8 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   allSources->set_encoding(invoc.getFortranOpts().encoding);
   // Create the semantics context and set semantic options.
   invoc.setSemanticsOpts(*this->allCookedSources);
+  // Set options controlling lowering to FIR.
+  invoc.setLoweringOptions();
 
   // Run the frontend action `act` for every input file.
   for (const FrontendInputFile &fif : getFrontendOpts().inputs) {
