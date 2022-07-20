@@ -243,6 +243,12 @@ If there are users of this configuration we are happy to provide support.
 #    define _LIBCPP_ABI_VCRUNTIME
 #  endif
 
+#  if __has_feature(experimental_library)
+#    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
+#      define _LIBCPP_ENABLE_EXPERIMENTAL
+#    endif
+#  endif
+
 // Incomplete features get their own specific disabling flags. This makes it
 // easier to grep for target specific flags once the feature is complete.
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
