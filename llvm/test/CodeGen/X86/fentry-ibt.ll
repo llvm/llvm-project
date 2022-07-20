@@ -14,4 +14,4 @@ entry:
 !llvm.module.flags = !{!0}
 
 attributes #0 = { "fentry-call"="true" }
-!0 = !{i32 4, !"cf-protection-branch", i32 1}
+!0 = !{i32 8, !"cf-protection-branch", i32 1}
