@@ -84,7 +84,7 @@ void IntegerRangeAnalysis::visitOperation(
     auto result = v.dyn_cast<OpResult>();
     if (!result)
       return;
-    assert(llvm::find(op->getResults(), result) != op->result_end());
+    assert(llvm::is_contained(op->getResults(), result));
 
     LLVM_DEBUG(llvm::dbgs() << "Inferred range " << attrs << "\n");
     IntegerValueRangeLattice *lattice = results[result.getResultNumber()];
@@ -126,8 +126,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       auto arg = v.dyn_cast<BlockArgument>();
       if (!arg)
         return;
-      if (llvm::find(successor.getSuccessor()->getArguments(), arg) ==
-          successor.getSuccessor()->args_end())
+      if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
         return;
 
       LLVM_DEBUG(llvm::dbgs() << "Inferred range " << attrs << "\n");
