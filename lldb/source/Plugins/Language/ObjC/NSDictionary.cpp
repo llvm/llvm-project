@@ -137,7 +137,7 @@ private:
   lldb::ByteOrder m_order = lldb::eByteOrderInvalid;
   DataDescriptor_32 *m_data_32 = nullptr;
   DataDescriptor_64 *m_data_64 = nullptr;
-  lldb::addr_t m_data_ptr;
+  lldb::addr_t m_data_ptr = LLDB_INVALID_ADDRESS;
   CompilerType m_pair_type;
   std::vector<DictionaryItemDescriptor> m_children;
 };

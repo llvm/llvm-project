@@ -120,12 +120,12 @@ private:
     // Instance variables to hold the values for command options.
 
     TypeSummaryImpl::Flags m_flags;
-    bool m_regex;
+    bool m_regex = false;
     std::string m_format_string;
     ConstString m_name;
     std::string m_python_script;
     std::string m_python_function;
-    bool m_is_add_script;
+    bool m_is_add_script = false;
     std::string m_category;
   };
 

@@ -275,7 +275,7 @@ public:
   OptionValueUInt64 m_num_per_line;
   bool m_output_as_binary = false;
   OptionValueString m_view_as_type;
-  bool m_force;
+  bool m_force = false;
   OptionValueUInt64 m_offset;
   OptionValueLanguage m_language_for_type;
 };

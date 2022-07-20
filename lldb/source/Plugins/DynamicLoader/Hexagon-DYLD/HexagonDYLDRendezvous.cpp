@@ -49,6 +49,10 @@ HexagonDYLDRendezvous::HexagonDYLDRendezvous(Process *process)
     : m_process(process), m_rendezvous_addr(LLDB_INVALID_ADDRESS), m_current(),
       m_previous(), m_soentries(), m_added_soentries(), m_removed_soentries() {
   m_thread_info.valid = false;
+  m_thread_info.dtv_offset = 0;
+  m_thread_info.dtv_slot_size = 0;
+  m_thread_info.modid_offset = 0;
+  m_thread_info.tls_offset = 0;
 
   // Cache a copy of the executable path
   if (m_process) {

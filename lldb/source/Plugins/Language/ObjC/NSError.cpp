@@ -177,7 +177,7 @@ private:
   // values to leak if the latter, then I need to store a SharedPointer to it -
   // so that it only goes away when everyone else in the cluster goes away oh
   // joy!
-  ValueObject *m_child_ptr;
+  ValueObject *m_child_ptr = nullptr;
   ValueObjectSP m_child_sp;
 };
 

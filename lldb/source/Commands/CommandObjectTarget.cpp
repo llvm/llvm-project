@@ -4616,7 +4616,7 @@ public:
       m_class_name.clear();
       m_function_name.clear();
       m_line_start = 0;
-      m_line_end = UINT_MAX;
+      m_line_end = LLDB_INVALID_LINE_NUMBER;
       m_file_name.clear();
       m_module_name.clear();
       m_func_name_type_mask = eFunctionNameTypeAuto;
@@ -4637,23 +4637,23 @@ public:
     std::string m_class_name;
     std::string m_function_name;
     uint32_t m_line_start = 0;
-    uint32_t m_line_end;
+    uint32_t m_line_end = LLDB_INVALID_LINE_NUMBER;
     std::string m_file_name;
     std::string m_module_name;
     uint32_t m_func_name_type_mask =
         eFunctionNameTypeAuto; // A pick from lldb::FunctionNameType.
-    lldb::tid_t m_thread_id;
-    uint32_t m_thread_index;
+    lldb::tid_t m_thread_id = LLDB_INVALID_THREAD_ID;
+    uint32_t m_thread_index = UINT32_MAX;
     std::string m_thread_name;
     std::string m_queue_name;
     bool m_sym_ctx_specified = false;
-    bool m_no_inlines;
+    bool m_no_inlines = false;
     bool m_thread_specified = false;
     // Instance variables to hold the values for one_liner options.
     bool m_use_one_liner = false;
     std::vector<std::string> m_one_liner;
 
-    bool m_auto_continue;
+    bool m_auto_continue = false;
   };
 
   CommandObjectTargetStopHookAdd(CommandInterpreter &interpreter)
