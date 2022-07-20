@@ -709,7 +709,7 @@ void assignExportOrdinals() {
     if (e.ordinal == 0)
       e.ordinal = ++max;
   if (max > std::numeric_limits<uint16_t>::max())
-    fatal("too many exported symbols (max " +
+    fatal("too many exported symbols (got " + Twine(max) + ", max " +
           Twine(std::numeric_limits<uint16_t>::max()) + ")");
 }
 
