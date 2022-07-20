@@ -1666,7 +1666,9 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (config->icfLevel != ICFLevel::none) {
       if (config->icfLevel == ICFLevel::safe)
         markAddrSigSymbols();
-      foldIdenticalSections();
+      foldIdenticalSections(/*onlyCfStrings=*/false);
+    } else if (config->dedupLiterals) {
+      foldIdenticalSections(/*onlyCfStrings=*/true);
     }
 
     // Write to an output file.

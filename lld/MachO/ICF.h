@@ -19,7 +19,7 @@ class Symbol;
 
 void markAddrSigSymbols();
 void markSymAsAddrSig(Symbol *s);
-void foldIdenticalSections();
+void foldIdenticalSections(bool onlyCfStrings);
 
 } // namespace macho
 } // namespace lld
