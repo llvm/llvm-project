@@ -750,7 +750,7 @@ static void printCmpOp(mlir::OpAsmPrinter &p, OPTY op) {
             OPTY::getPredicateAttrName())
           .getInt());
   assert(predSym.has_value() && "invalid symbol value for predicate");
-  p << '"' << mlir::arith::stringifyCmpFPredicate(predSym.getValue()) << '"'
+  p << '"' << mlir::arith::stringifyCmpFPredicate(predSym.value()) << '"'
     << ", ";
   p.printOperand(op.getLhs());
   p << ", ";
@@ -809,7 +809,7 @@ mlir::arith::CmpFPredicate
 fir::CmpcOp::getPredicateByName(llvm::StringRef name) {
   auto pred = mlir::arith::symbolizeCmpFPredicate(name);
   assert(pred.has_value() && "invalid predicate name");
-  return pred.getValue();
+  return pred.value();
 }
 
 void fir::CmpcOp::print(mlir::OpAsmPrinter &p) { printCmpOp(p, *this); }
