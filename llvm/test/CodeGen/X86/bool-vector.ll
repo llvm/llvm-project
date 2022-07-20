@@ -9,9 +9,9 @@
 define i32 @PR15215_bad(<4 x i32> %input) {
 ; X86-LABEL: PR15215_bad:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
 ; X86-NEXT:    addb %ah, %ah
 ; X86-NEXT:    andb $1, %cl

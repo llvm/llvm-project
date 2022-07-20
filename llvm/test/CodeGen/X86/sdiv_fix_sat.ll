@@ -264,10 +264,10 @@ define i4 @func4(i4 %x, i4 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shlb $4, %cl
 ; X86-NEXT:    sarb $4, %cl
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shlb $4, %dl
 ; X86-NEXT:    sarb $4, %dl
 ; X86-NEXT:    shlb $2, %dl

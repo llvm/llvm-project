@@ -244,7 +244,7 @@ define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_9
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    movb 0, %bl
+; CHECK-NEXT:    movzbl 0, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_8

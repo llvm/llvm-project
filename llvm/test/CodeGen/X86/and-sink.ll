@@ -51,7 +51,7 @@ define i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB1_5
 ; CHECK-NEXT:  # %bb.1: # %bb0.preheader
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # %bb0

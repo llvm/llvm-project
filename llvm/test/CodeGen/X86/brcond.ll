@@ -6,7 +6,7 @@
 define i32 @test1(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; CHECK-NEXT:    testb $64, %al
 ; CHECK-NEXT:    je LBB0_1

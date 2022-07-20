@@ -30,7 +30,7 @@ entry:
 define i8 @bar() nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movb bara+19, %al
+; CHECK-NEXT:    movzbl bara+19, %eax
 ; CHECK-NEXT:    addb bara+4, %al
 ; CHECK-NEXT:    retl
 entry:

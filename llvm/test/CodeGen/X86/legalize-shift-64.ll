@@ -5,7 +5,7 @@ define i64 @test1(i32 %xx, i32 %test) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    andb $7, %cl
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shll %cl, %eax
@@ -26,7 +26,7 @@ define i64 @test2(i64 %xx, i32 %test) nounwind {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    andb $7, %cl
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    shll %cl, %eax
@@ -44,7 +44,7 @@ define i64 @test3(i64 %xx, i32 %test) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    andb $7, %cl
 ; CHECK-NEXT:    shrdl %cl, %edx, %eax
 ; CHECK-NEXT:    shrl %cl, %edx
@@ -60,7 +60,7 @@ define i64 @test4(i64 %xx, i32 %test) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    andb $7, %cl
 ; CHECK-NEXT:    shrdl %cl, %edx, %eax
 ; CHECK-NEXT:    sarl %cl, %edx
