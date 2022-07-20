@@ -1450,9 +1450,9 @@ void
 TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
                                             TiedPairList &TiedPairs,
                                             unsigned &Dist) {
-  bool IsEarlyClobber = llvm::find_if(TiedPairs, [MI](auto const &TP) {
-                          return MI->getOperand(TP.second).isEarlyClobber();
-                        }) != TiedPairs.end();
+  bool IsEarlyClobber = llvm::any_of(TiedPairs, [MI](auto const &TP) {
+    return MI->getOperand(TP.second).isEarlyClobber();
+  });
 
   bool RemovedKillFlag = false;
   bool AllUsesCopied = true;
