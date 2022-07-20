@@ -47,14 +47,13 @@ define half @fadda_nxv6f16(<vscale x 6 x half> %v, half %s) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI3_0
+; CHECK-NEXT:    mov w8, #32768
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    ld1rh { z0.d }, p1/z, [x8]
-; CHECK-NEXT:    st1h { z0.d }, p1, [sp, #3, mul vl]
 ; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    st1h { z2.d }, p1, [sp, #3, mul vl]
 ; CHECK-NEXT:    ld1h { z2.h }, p0/z, [sp]
 ; CHECK-NEXT:    fadda h0, p0, h0, z2.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
@@ -73,22 +72,21 @@ define half @fadda_nxv10f16(<vscale x 10 x half> %v, half %s) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI4_0
+; CHECK-NEXT:    mov w8, #32768
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
-; CHECK-NEXT:    ld1rh { z1.d }, p1/z, [x8]
+; CHECK-NEXT:    mov z3.h, w8
 ; CHECK-NEXT:    addvl x8, sp, #1
+; CHECK-NEXT:    st1h { z3.d }, p1, [sp, #1, mul vl]
 ; CHECK-NEXT:    fadda h2, p0, h2, z0.h
-; CHECK-NEXT:    st1h { z1.d }, p1, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1h { z3.h }, p0/z, [sp]
-; CHECK-NEXT:    st1h { z3.h }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    st1h { z1.d }, p1, [sp, #6, mul vl]
-; CHECK-NEXT:    ld1h { z3.h }, p0/z, [sp, #1, mul vl]
-; CHECK-NEXT:    st1h { z3.h }, p0, [sp, #2, mul vl]
-; CHECK-NEXT:    st1h { z1.d }, p1, [x8, #7, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [sp]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z3.d }, p1, [sp, #6, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1h { z3.d }, p1, [x8, #7, mul vl]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [sp, #2, mul vl]
 ; CHECK-NEXT:    fadda h2, p0, h2, z1.h
 ; CHECK-NEXT:    fmov s0, s2
@@ -102,14 +100,12 @@ define half @fadda_nxv10f16(<vscale x 10 x half> %v, half %s) {
 define half @fadda_nxv12f16(<vscale x 12 x half> %v, half %s) {
 ; CHECK-LABEL: fadda_nxv12f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI5_0
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #32768
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    ld1rh { z3.s }, p0/z, [x8]
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fadda h2, p0, h2, z0.h
+; CHECK-NEXT:    mov z3.h, w8
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z3.h
 ; CHECK-NEXT:    fadda h2, p0, h2, z1.h
 ; CHECK-NEXT:    fmov s0, s2
