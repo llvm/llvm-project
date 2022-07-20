@@ -106,8 +106,8 @@ REM Preserve original path
 set OLDPATH=%PATH%
 
 REM Build the 32-bits and/or 64-bits binaries.
-call :do_build_32 if errorlevel 1 exit /b 1
-call :do_build_64 if errorlevel 1 exit /b 1
+call :do_build_32 || exit /b 1
+call :do_build_64 || exit /b 1
 exit /b 0
 
 ::==============================================================================
