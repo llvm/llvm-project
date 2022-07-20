@@ -293,8 +293,10 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
       DC.getInstructionsForAccess(Sink->PointerValue, Sink->IsWritePtr);
   Type *SrcTy = getLoadStoreType(SrcInsts[0]);
   Type *DstTy = getLoadStoreType(SinkInsts[0]);
-  if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy))
+  if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy)) {
+    CanUseDiffCheck = false;
     return;
+  }
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
   IntegerType *IntTy =
