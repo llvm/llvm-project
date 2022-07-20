@@ -273,6 +273,7 @@ public:
 template <class HandleT> class ProxyBase : public HandleT {
 public:
   const CASDB &getCAS() const { return *CAS; }
+  CASDB &getCAS() { return *CAS; }
   CASID getID() const {
     return CAS->getID(*static_cast<const ObjectHandle *>(this));
   }
@@ -298,8 +299,8 @@ public:
   }
 
 protected:
-  ProxyBase(const CASDB &CAS, HandleT H) : HandleT(H), CAS(&CAS) {}
-  const CASDB *CAS;
+  ProxyBase(CASDB &CAS, HandleT H) : HandleT(H), CAS(&CAS) {}
+  CASDB *CAS;
 };
 
 
@@ -354,8 +355,7 @@ public:
   }
 
 private:
-  ObjectProxy(const CASDB &CAS, ObjectHandle H, size_t NumReferences,
-              StringRef Data)
+  ObjectProxy(CASDB &CAS, ObjectHandle H, size_t NumReferences, StringRef Data)
       : ProxyBase::ProxyBase(CAS, H), NumReferences(NumReferences), Data(Data) {
   }
 
