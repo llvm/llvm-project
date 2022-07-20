@@ -29,7 +29,7 @@ using namespace mlir;
 scf::SCFTilingOptions &
 scf::SCFTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
   assert(!tileSizeComputationFunction && "tile sizes already set");
-  SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
+  SmallVector<int64_t> tileSizes(ts.begin(), ts.end());
   tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPointToStart(
@@ -40,6 +40,49 @@ scf::SCFTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
     }));
   };
   return *this;
+}
+
+/// Helper method to adjust the interchange vector to match the iteration
+/// domain.
+static SmallVector<unsigned>
+fillInterchangeVector(ArrayRef<unsigned> interchangeVector,
+                      size_t iterationDomainSize) {
+  SmallVector<unsigned> filledVector = llvm::to_vector(interchangeVector);
+  if (filledVector.size() < iterationDomainSize) {
+    auto range = llvm::seq<unsigned>(filledVector.size(), iterationDomainSize);
+    filledVector.append(range.begin(), range.end());
+  }
+  if (filledVector.size() > iterationDomainSize)
+    filledVector.resize(iterationDomainSize);
+  return filledVector;
+}
+
+/// Helper method to apply permutation to a vector
+template <typename T>
+static SmallVector<T> applyPermutationToVector(const SmallVector<T> &vector,
+                                               ArrayRef<unsigned> interchange) {
+  assert(interchange.size() == vector.size());
+  return llvm::to_vector(
+      llvm::map_range(interchange, [&](unsigned val) { return vector[val]; }));
+}
+/// Helper method to apply to invert a permutation.
+static SmallVector<unsigned>
+invertPermutationVector(ArrayRef<unsigned> interchange) {
+  SmallVector<unsigned> inversion(interchange.size());
+  for (auto pos : llvm::enumerate(interchange)) {
+    inversion[pos.value()] = pos.index();
+  }
+  return inversion;
+}
+/// Method to check if an interchange vector is a permutation.
+static bool isPermutation(ArrayRef<unsigned> interchange) {
+  llvm::SmallDenseSet<unsigned, 4> seenVals;
+  for (auto val : interchange) {
+    if (seenVals.count(val))
+      return false;
+    seenVals.insert(val);
+  }
+  return seenVals.size() == interchange.size();
 }
 
 //===----------------------------------------------------------------------===//
@@ -137,7 +180,7 @@ scf::TileUsingSCFForOp::returningMatchAndRewrite(
   // skips tiling a particular dimension. This convention is significantly
   // simpler to handle instead of adjusting affine maps to account for missing
   // dimensions.
-  SmallVector<Value, 4> tileSizeVector =
+  SmallVector<Value> tileSizeVector =
       options.tileSizeComputationFunction(rewriter, op);
   if (tileSizeVector.size() < iterationDomain.size()) {
     auto zero = rewriter.create<arith::ConstantIndexOp>(op.getLoc(), 0);
@@ -147,11 +190,37 @@ scf::TileUsingSCFForOp::returningMatchAndRewrite(
   scf::SCFTilingResult tilingResult;
   SmallVector<OpFoldResult> offsets, sizes;
   {
+    // If there is an interchange specified, permute the iteration domain and
+    // the tile sizes.
+    SmallVector<unsigned> interchangeVector;
+    if (!options.interchangeVector.empty()) {
+      interchangeVector = fillInterchangeVector(options.interchangeVector,
+                                                iterationDomain.size());
+    }
+    if (!interchangeVector.empty()) {
+      if (!isPermutation(interchangeVector)) {
+        return rewriter.notifyMatchFailure(
+            op, "invalid intechange vector, not a permutation of the entire "
+                "iteration space");
+      }
+
+      iterationDomain =
+          applyPermutationToVector(iterationDomain, interchangeVector);
+      tileSizeVector =
+          applyPermutationToVector(tileSizeVector, interchangeVector);
+    }
+
     // 3. Materialize an empty loop nest that iterates over the tiles. These
     // loops for now do not return any values even if the original operation has
     // results.
     tilingResult.loops = generateTileLoopNest(
         rewriter, op.getLoc(), iterationDomain, tileSizeVector, offsets, sizes);
+
+    if (!interchangeVector.empty()) {
+      auto inversePermutation = invertPermutationVector(interchangeVector);
+      offsets = applyPermutationToVector(offsets, inversePermutation);
+      sizes = applyPermutationToVector(sizes, inversePermutation);
+    }
 
     LLVM_DEBUG({
       if (!tilingResult.loops.empty()) {
