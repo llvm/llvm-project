@@ -428,6 +428,30 @@ define i64 @bexti_i64(i64 %a) nounwind {
   ret i64 %and
 }
 
+define signext i32 @bexti_i32_cmp(i32 signext %a) nounwind {
+; CHECK-LABEL: bexti_i32_cmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 58
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 32
+  %cmp = icmp ne i32 %and, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
+define i64 @bexti_i64_cmp(i64 %a) nounwind {
+; CHECK-LABEL: bexti_i64_cmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 58
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    ret
+  %and = and i64 %a, 32
+  %cmp = icmp ne i64 %and, 0
+  %zext = zext i1 %cmp to i64
+  ret i64 %zext
+}
+
 define signext i32 @bclri_i32_10(i32 signext %a) nounwind {
 ; CHECK-LABEL: bclri_i32_10:
 ; CHECK:       # %bb.0:
