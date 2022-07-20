@@ -1712,11 +1712,17 @@ example:
     the module.  That is, a function can be both ``inaccessiblememonly`` and
     have a ``noalias`` return which introduces a new, potentially initialized,
     allocation.
+
+    Note that accessing the current thread's identity, e.g. getting the address
+    of a thread-local variable is not considered a memory read.
 ``inaccessiblemem_or_argmemonly``
     This attribute indicates that the function may only access memory that is
     either not accessible by the module being compiled, or is pointed to
     by its pointer arguments. This is a weaker form of  ``argmemonly``. If the
     function reads or writes other memory, the behavior is undefined.
+
+    Note that accessing the current thread's identity, e.g. getting the address
+    of a thread-local variable is not considered a memory read.
 ``inlinehint``
     This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -1943,6 +1949,9 @@ example:
     or has other side-effects, the behavior is undefined. If a
     function reads from or writes to a readnone pointer argument, the behavior
     is undefined.
+
+    Note that accessing the current thread's identity, e.g. getting the address
+    of a thread-local variable is not considered a memory read.
 ``readonly``
     On a function, this attribute indicates that the function does not write
     through any pointer arguments (including ``byval`` arguments) or otherwise
@@ -1990,6 +1999,9 @@ example:
     If a writeonly function reads memory visible outside the function or has
     other side-effects, the behavior is undefined. If a function reads
     from a writeonly pointer argument, the behavior is undefined.
+
+    Note that accessing the current thread's identity, e.g. getting the address
+    of a thread-local variable is not considered a memory read.
 ``argmemonly``
     This attribute indicates that the only memory accesses inside function are
     loads and stores from objects pointed to by its pointer-typed arguments,

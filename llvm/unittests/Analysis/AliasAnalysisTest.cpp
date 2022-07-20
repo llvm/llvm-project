@@ -366,6 +366,60 @@ TEST_F(AliasAnalysisTest, PartialAliasOffsetSign) {
   EXPECT_EQ(AR, AliasResult::PartialAlias);
   EXPECT_EQ(-1, AR.getOffset());
 }
+
+TEST_F(AliasAnalysisTest, AAInCoroutines) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+      define void @f() presplitcoroutine  {
+      entry:
+        %ReadNoneCall = call i32 @readnone_func() readnone
+        %WriteOnlyCall = call i32 @writeonly_func() writeonly
+        %ArgMemOnlyCall = call i32 @argmemonly_func() argmemonly
+        %OnlyAccessesInaccessibleMemoryCall = call i32 @only_accesses_inaccessible_memory_call() inaccessiblememonly
+        %OnlyAccessesInaccessibleMemOrArgMemCall = call i32 @only_accesses_inaccessible_memory_or_argmemonly_call() inaccessiblemem_or_argmemonly
+        ret void
+      }
+
+      declare i32 @readnone_func() readnone
+      declare i32 @writeonly_func() writeonly
+      declare i32 @argmemonly_func() argmemonly
+      declare i32 @only_accesses_inaccessible_memory_call() inaccessiblememonly
+      declare i32 @only_accesses_inaccessible_memory_or_argmemonly_call() inaccessiblemem_or_argmemonly
+    )",
+                                                  Err, C);
+
+  ASSERT_TRUE(M);
+  Function *F = M->getFunction("f");
+  CallInst *ReadNoneCall =
+      cast<CallInst>(getInstructionByName(*F, "ReadNoneCall"));
+
+  auto &AA = getAAResults(*F);
+  EXPECT_FALSE(AA.doesNotAccessMemory(ReadNoneCall));
+  EXPECT_TRUE(AA.onlyReadsMemory(ReadNoneCall));
+
+  EXPECT_EQ(FMRB_OnlyReadsMemory, AA.getModRefBehavior(ReadNoneCall));
+
+  CallInst *WriteOnlyCall =
+      cast<CallInst>(getInstructionByName(*F, "WriteOnlyCall"));
+  EXPECT_EQ(FMRB_UnknownModRefBehavior, AA.getModRefBehavior(WriteOnlyCall));
+
+  CallInst *ArgMemOnlyCall =
+      cast<CallInst>(getInstructionByName(*F, "ArgMemOnlyCall"));
+  EXPECT_EQ(FMRB_UnknownModRefBehavior,
+            AA.getModRefBehavior(ArgMemOnlyCall));
+
+  CallInst *OnlyAccessesInaccessibleMemoryCall =
+      cast<CallInst>(getInstructionByName(*F, "OnlyAccessesInaccessibleMemoryCall"));
+  EXPECT_EQ(FMRB_UnknownModRefBehavior,
+            AA.getModRefBehavior(OnlyAccessesInaccessibleMemoryCall));
+
+  CallInst *OnlyAccessesInaccessibleMemOrArgMemCall =
+      cast<CallInst>(getInstructionByName(*F, "OnlyAccessesInaccessibleMemOrArgMemCall"));
+  EXPECT_EQ(FMRB_UnknownModRefBehavior,
+            AA.getModRefBehavior(OnlyAccessesInaccessibleMemOrArgMemCall));
+}
+
 class AAPassInfraTest : public testing::Test {
 protected:
   LLVMContext C;
