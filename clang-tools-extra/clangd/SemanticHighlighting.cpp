@@ -369,6 +369,47 @@ public:
     return addToken(*Range, Kind);
   }
 
+  // Most of this function works around
+  // https://github.com/clangd/clangd/issues/871.
+  void addAngleBracketTokens(SourceLocation LLoc, SourceLocation RLoc) {
+    if (!LLoc.isValid() || !RLoc.isValid())
+      return;
+
+    auto LRange = getRangeForSourceLocation(LLoc);
+    if (!LRange)
+      return;
+
+    // RLoc might be pointing at a virtual buffer when it's part of a `>>`
+    // token.
+    RLoc = SourceMgr.getFileLoc(RLoc);
+    // Make sure token is part of the main file.
+    RLoc = getHighlightableSpellingToken(RLoc, SourceMgr);
+    if (!RLoc.isValid())
+      return;
+
+    const auto *RTok = TB.spelledTokenAt(RLoc);
+    // Handle `>>`. RLoc is always pointing at the right location, just change
+    // the end to be offset by 1.
+    // We'll either point at the beginning of `>>`, hence get a proper spelled
+    // or point in the middle of `>>` hence get no spelled tok.
+    if (!RTok || RTok->kind() == tok::greatergreater) {
+      Position Begin = sourceLocToPosition(SourceMgr, RLoc);
+      Position End = sourceLocToPosition(SourceMgr, RLoc.getLocWithOffset(1));
+      addToken(*LRange, HighlightingKind::Bracket);
+      addToken({Begin, End}, HighlightingKind::Bracket);
+      return;
+    }
+
+    // Easy case, we have the `>` token directly available.
+    if (RTok->kind() == tok::greater) {
+      if (auto RRange = getRangeForSourceLocation(RLoc)) {
+        addToken(*LRange, HighlightingKind::Bracket);
+        addToken(*RRange, HighlightingKind::Bracket);
+      }
+      return;
+    }
+  }
+
   HighlightingToken &addToken(Range R, HighlightingKind Kind) {
     HighlightingToken HT;
     HT.R = std::move(R);
@@ -559,11 +600,88 @@ public:
     return Base::TraverseConstructorInitializer(Init);
   }
 
+  bool TraverseTypeConstraint(const TypeConstraint *C) {
+    if (auto *Args = C->getTemplateArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return Base::TraverseTypeConstraint(C);
+  }
+
   bool VisitPredefinedExpr(PredefinedExpr *E) {
     H.addToken(E->getLocation(), HighlightingKind::LocalVariable)
         .addModifier(HighlightingModifier::Static)
         .addModifier(HighlightingModifier::Readonly)
         .addModifier(HighlightingModifier::FunctionScope);
+    return true;
+  }
+
+  bool VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
+    if (auto *Args = E->getTemplateArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitTemplateDecl(TemplateDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitTagDecl(TagDecl *D) {
+    for (unsigned i = 0; i < D->getNumTemplateParameterLists(); ++i) {
+      if (auto *TPL = D->getTemplateParameterList(i))
+        H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    }
+    return true;
+  }
+
+  bool VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    if (auto *Args = D->getTemplateArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
+    if (auto *Args = D->getTemplateArgsInfo())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitVarTemplatePartialSpecializationDecl(
+      VarTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    if (auto *Args = D->getTemplateArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitClassScopeFunctionSpecializationDecl(
+      ClassScopeFunctionSpecializationDecl *D) {
+    if (auto *Args = D->getTemplateArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *E) {
+    H.addAngleBracketTokens(E->getLAngleLoc(), E->getRAngleLoc());
+    return true;
+  }
+  bool VisitMemberExpr(MemberExpr *E) {
+    H.addAngleBracketTokens(E->getLAngleLoc(), E->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
+    H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
+    return true;
+  }
+
+  bool VisitAutoTypeLoc(AutoTypeLoc L) {
+    if (L.isConstrained())
+      H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }
 
@@ -581,6 +699,10 @@ public:
       if (Kind == OO_Call || Kind == OO_Subscript)
         AddOpDeclToken(Range.getEnd());
     }
+    if (auto *Args = D->getTemplateSpecializationArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    if (auto *I = D->getDependentSpecializationInfo())
+      H.addAngleBracketTokens(I->getLAngleLoc(), I->getRAngleLoc());
     return true;
   }
 
@@ -629,6 +751,12 @@ public:
     auto &Token = H.addToken(E->getBeginLoc(), HighlightingKind::Operator);
     if (isa_and_present<CXXMethodDecl>(E->getOperatorDelete()))
       Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
+  bool VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {
+    const auto &B = E->getAngleBrackets();
+    H.addAngleBracketTokens(B.getBegin(), B.getEnd());
     return true;
   }
 
@@ -757,6 +885,10 @@ public:
   }
 
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
+    for (unsigned i = 0; i < D->getNumTemplateParameterLists(); ++i) {
+      if (auto *TPL = D->getTemplateParameterList(i))
+        H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    }
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
       return true;
@@ -858,6 +990,7 @@ public:
   }
 
   bool VisitOverloadExpr(OverloadExpr *E) {
+    H.addAngleBracketTokens(E->getLAngleLoc(), E->getRAngleLoc());
     if (!E->decls().empty())
       return true; // handled by findExplicitReferences.
     auto &Tok = H.addToken(E->getNameLoc(), HighlightingKind::Unknown)
@@ -872,6 +1005,7 @@ public:
     H.addToken(E->getMemberNameInfo().getLoc(), HighlightingKind::Unknown)
         .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
+    H.addAngleBracketTokens(E->getLAngleLoc(), E->getRAngleLoc());
     return true;
   }
 
@@ -879,6 +1013,7 @@ public:
     H.addToken(E->getNameInfo().getLoc(), HighlightingKind::Unknown)
         .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
+    H.addAngleBracketTokens(E->getLAngleLoc(), E->getRAngleLoc());
     return true;
   }
 
@@ -906,6 +1041,7 @@ public:
     H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
         .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
+    H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }
 
@@ -1074,6 +1210,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Modifier";
   case HighlightingKind::Operator:
     return OS << "Operator";
+  case HighlightingKind::Bracket:
+    return OS << "Bracket";
   case HighlightingKind::InactiveCode:
     return OS << "InactiveCode";
   }
@@ -1212,6 +1350,8 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "modifier";
   case HighlightingKind::Operator:
     return "operator";
+  case HighlightingKind::Bracket:
+    return "bracket";
   case HighlightingKind::InactiveCode:
     return "comment";
   }
