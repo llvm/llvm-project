@@ -9763,7 +9763,7 @@ askForAssumedConstant(Attributor &A, const AbstractAttribute &QueryingAA,
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
     return llvm::None;
   }
-  if (auto *C = COpt.getValue()) {
+  if (auto *C = COpt.value()) {
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
     return C;
   }
@@ -9777,12 +9777,12 @@ Value *AAPotentialValues::getSingleValue(
   Optional<Value *> V;
   for (auto &It : Values) {
     V = AA::combineOptionalValuesInAAValueLatice(V, It.getValue(), &Ty);
-    if (V.has_value() && !V.getValue())
+    if (V.has_value() && !V.value())
       break;
   }
   if (!V.has_value())
     return UndefValue::get(&Ty);
-  return V.getValue();
+  return V.value();
 }
 
 namespace {
@@ -9825,7 +9825,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     Optional<Constant *> C = askForAssumedConstant<AAType>(A, AA, IRP, Ty);
     if (!C)
       return llvm::None;
-    if (C.getValue())
+    if (C.value())
       if (auto *CC = AA::getWithType(**C, Ty))
         return CC;
     return nullptr;
@@ -9850,7 +9850,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       Type &Ty = *getAssociatedType();
       Optional<Value *> SimpleV =
           askOtherAA<AAValueConstantRange>(A, *this, ValIRP, Ty);
-      if (SimpleV.has_value() && !SimpleV.getValue()) {
+      if (SimpleV.has_value() && !SimpleV.value()) {
         auto &PotentialConstantsAA = A.getAAFor<AAPotentialConstantValues>(
             *this, ValIRP, DepClassTy::OPTIONAL);
         if (PotentialConstantsAA.isValidState()) {
@@ -9865,8 +9865,8 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       if (!SimpleV.has_value())
         return;
 
-      if (SimpleV.getValue())
-        VPtr = SimpleV.getValue();
+      if (SimpleV.value())
+        VPtr = SimpleV.value();
     }
 
     if (isa<ConstantInt>(VPtr))
@@ -10005,7 +10005,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         UsedAssumedInformation, AA::Intraprocedural);
     if (!SimplifiedLHS.has_value())
       return true;
-    if (!SimplifiedLHS.getValue())
+    if (!SimplifiedLHS.value())
       return false;
     LHS = *SimplifiedLHS;
 
@@ -10014,7 +10014,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         UsedAssumedInformation, AA::Intraprocedural);
     if (!SimplifiedRHS.has_value())
       return true;
-    if (!SimplifiedRHS.getValue())
+    if (!SimplifiedRHS.value())
       return false;
     RHS = *SimplifiedRHS;
 
@@ -10195,8 +10195,8 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       if (!SimplifiedOp.has_value())
         return true;
 
-      if (SimplifiedOp.getValue())
-        NewOps[Idx] = SimplifiedOp.getValue();
+      if (SimplifiedOp.value())
+        NewOps[Idx] = SimplifiedOp.value();
       else
         NewOps[Idx] = Op;
 
@@ -10497,10 +10497,10 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
         // Nothing to do as long as no value was determined.
         continue;
       }
-      V = CallerV.getValue() ? CallerV.getValue() : V;
+      V = CallerV.value() ? CallerV.value() : V;
       if (AA::isDynamicallyUnique(A, *this, *V) &&
           AA::isValidInScope(*V, Caller)) {
-        if (CallerV.getValue()) {
+        if (CallerV.value()) {
           SmallVector<AA::ValueAndContext> ArgValues;
           IRPosition IRP = IRPosition::value(*V);
           if (auto *Arg = dyn_cast<Argument>(V))
