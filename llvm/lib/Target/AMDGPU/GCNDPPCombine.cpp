@@ -202,6 +202,19 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
     return nullptr;
   }
+  int OrigOpE32 = AMDGPU::getVOPe32(OrigOp);
+  // Prior checks cover Mask with VOPC condition, but not on purpose
+  auto *RowMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask);
+  assert(RowMaskOpnd && RowMaskOpnd->isImm());
+  auto *BankMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::bank_mask);
+  assert(BankMaskOpnd && BankMaskOpnd->isImm());
+  const bool MaskAllLanes =
+      RowMaskOpnd->getImm() == 0xF && BankMaskOpnd->getImm() == 0xF;
+  (void)MaskAllLanes;
+  assert(MaskAllLanes ||
+         !(TII->isVOPC(DPPOp) ||
+           (TII->isVOP3(DPPOp) && OrigOpE32 != -1 && TII->isVOPC(OrigOpE32))) &&
+             "VOPC cannot form DPP unless mask is full");
 
   auto DPPInst = BuildMI(*OrigMI.getParent(), OrigMI,
                          OrigMI.getDebugLoc(), TII->get(DPPOp))
@@ -222,7 +235,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       // If we shrunk a 64bit vop3b to 32bits, just ignore the sdst
     }
 
-    int OrigOpE32 = AMDGPU::getVOPe32(OrigOp);
     const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
