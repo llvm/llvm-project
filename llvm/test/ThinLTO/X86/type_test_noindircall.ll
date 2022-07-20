@@ -6,10 +6,8 @@
 
 ; RUN: opt -thinlto-bc -o %t.o %s
 
-; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
-; RUN:   -verify-machineinstrs=0 \
 ; RUN:	 -r=%t.o,_ZTVN12_GLOBAL__N_18RealFileE,px \
 ; RUN:   -o %t2
 ; RUN: llvm-dis %t2.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
@@ -18,7 +16,6 @@
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit=false -o %t3.o %s
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
-; RUN:   -verify-machineinstrs=0 \
 ; RUN:	 -r=%t.o,_ZTVN12_GLOBAL__N_18RealFileE,px \
 ; RUN:   -o %t4
 ; RUN: llvm-dis %t4.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
