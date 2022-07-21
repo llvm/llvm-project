@@ -210,17 +210,15 @@ static void DoResetImpl(uptr epoch) {
 // Clang does not understand locking all slots in the loop:
 // error: expecting mutex 'slot.mtx' to be held at start of each loop
 void DoReset(ThreadState* thr, uptr epoch) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-  {
-    for (auto& slot : ctx->slots) {
-      slot.mtx.Lock();
-      if (UNLIKELY(epoch == 0))
-        epoch = ctx->global_epoch;
-      if (UNLIKELY(epoch != ctx->global_epoch)) {
-        // Epoch can't change once we've locked the first slot.
-        CHECK_EQ(slot.sid, 0);
-        slot.mtx.Unlock();
-        return;
-      }
+  for (auto& slot : ctx->slots) {
+    slot.mtx.Lock();
+    if (UNLIKELY(epoch == 0))
+      epoch = ctx->global_epoch;
+    if (UNLIKELY(epoch != ctx->global_epoch)) {
+      // Epoch can't change once we've locked the first slot.
+      CHECK_EQ(slot.sid, 0);
+      slot.mtx.Unlock();
+      return;
     }
   }
   DPrintf("#%d: DoReset epoch=%lu\n", thr ? thr->tid : -1, epoch);
