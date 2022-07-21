@@ -23,12 +23,30 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
   # Define macro with the ELF ID for this target.
   add_definitions("-DTARGET_ELF_ID=${elf_machine_id}")
 
-  add_library("omptarget.rtl.${tmachine_libname}" SHARED
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/rtl.cpp)
+  add_llvm_library("omptarget.rtl.${tmachine_libname}" 
+    SHARED
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rtl.cpp
+
+    ADDITIONAL_HEADER_DIRS
+    ${LIBOMPTARGET_INCLUDE_DIR}
+    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR}
+    ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR}
+
+    LINK_LIBS
+    PRIVATE
+    elf_common
+    ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
+    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
+    ${additional_libs}
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs"
+
+    NO_INSTALL_RPATH
+  )
 
   # Install plugin under the lib destination folder.
-  install(TARGETS "omptarget.rtl.${tmachine_libname}"
-    LIBRARY DESTINATION lib${OPENMP_LIBDIR_SUFFIX})
+  install(TARGETS  "omptarget.rtl.${tmachine_libname}" LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES 
+    INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 
   target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
     ${LIBOMPTARGET_INCLUDE_DIR}
