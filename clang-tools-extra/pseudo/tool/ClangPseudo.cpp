@@ -29,7 +29,7 @@ using llvm::cl::desc;
 using llvm::cl::init;
 using llvm::cl::opt;
 
-static opt<bool> PrintGrammar("print-grammar", desc("Print the grammar."));
+static opt<bool> PrintGrammar("print-grammar", desc("Print the grammar"));
 static opt<bool> PrintGraph("print-graph",
                             desc("Print the LR graph for the grammar"));
 static opt<bool> PrintTable("print-table",
@@ -50,7 +50,7 @@ static opt<bool> ForestAbbrev("forest-abbrev", desc("Abbreviate parse forest"),
 static opt<std::string> HTMLForest("html-forest",
                                    desc("output file for HTML forest"));
 static opt<std::string> StartSymbol("start-symbol",
-                                    desc("specify the start symbol to parse"),
+                                    desc("Specify the start symbol to parse"),
                                     init("translation-unit"));
 
 static std::string readOrDie(llvm::StringRef Path) {
