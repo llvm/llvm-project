@@ -737,6 +737,20 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::SELECT:
     Results.push_back(ExpandSELECT(Node));
     return;
+  case ISD::SELECT_CC: {
+    if (Node->getValueType(0).isScalableVector()) {
+      EVT CondVT = TLI.getSetCCResultType(
+          DAG.getDataLayout(), *DAG.getContext(), Node->getValueType(0));
+      SDValue SetCC =
+          DAG.getNode(ISD::SETCC, SDLoc(Node), CondVT, Node->getOperand(0),
+                      Node->getOperand(1), Node->getOperand(4));
+      Results.push_back(DAG.getSelect(SDLoc(Node), Node->getValueType(0), SetCC,
+                                      Node->getOperand(2),
+                                      Node->getOperand(3)));
+      return;
+    }
+    break;
+  }
   case ISD::FP_TO_UINT:
     ExpandFP_TO_UINT(Node, Results);
     return;
@@ -831,6 +845,16 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     if (SDValue Expanded = TLI.expandAddSubSat(Node, DAG)) {
       Results.push_back(Expanded);
       return;
+    }
+    break;
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    // Expand the fpsosisat if it is scalable to prevent it from unrolling below.
+    if (Node->getValueType(0).isScalableVector()) {
+      if (SDValue Expanded = TLI.expandFP_TO_INT_SAT(Node, DAG)) {
+        Results.push_back(Expanded);
+        return;
+      }
     }
     break;
   case ISD::SMULFIX:
