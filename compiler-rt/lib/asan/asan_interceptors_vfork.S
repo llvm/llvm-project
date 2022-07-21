@@ -6,6 +6,7 @@
 #include "sanitizer_common/sanitizer_common_interceptors_vfork_aarch64.inc.S"
 #include "sanitizer_common/sanitizer_common_interceptors_vfork_arm.inc.S"
 #include "sanitizer_common/sanitizer_common_interceptors_vfork_i386.inc.S"
+#include "sanitizer_common/sanitizer_common_interceptors_vfork_loongarch64.inc.S"
 #include "sanitizer_common/sanitizer_common_interceptors_vfork_riscv64.inc.S"
 #include "sanitizer_common/sanitizer_common_interceptors_vfork_x86_64.inc.S"
 #endif
