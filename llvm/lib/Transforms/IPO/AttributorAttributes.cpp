@@ -1372,7 +1372,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       if (auto *CB = dyn_cast<CallBase>(Usr)) {
         if (CB->isLifetimeStartOrEnd())
           return true;
-        if (TLI && isFreeCall(CB, TLI))
+        if (getFreedOperand(CB, TLI) == U)
           return true;
         if (CB->isArgOperand(&U)) {
           unsigned ArgNo = CB->getArgOperandNo(&U);

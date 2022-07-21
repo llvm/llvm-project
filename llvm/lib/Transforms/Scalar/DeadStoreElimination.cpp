@@ -1108,9 +1108,8 @@ struct DSEState {
       return {std::make_pair(MemoryLocation(Ptr, Len), false)};
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
-      if (isFreeCall(I, &TLI))
-        return {std::make_pair(MemoryLocation::getAfter(CB->getArgOperand(0)),
-                               true)};
+      if (Value *FreedOp = getFreedOperand(CB, &TLI))
+        return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
     }
 
     return None;

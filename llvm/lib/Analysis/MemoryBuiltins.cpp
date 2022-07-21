@@ -531,20 +531,25 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   return true;
 }
 
-/// isFreeCall - Returns non-null if the value is a call to the builtin free()
-const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
+bool llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
   bool IsNoBuiltinCall;
   const Function *Callee = getCalledFunction(I, IsNoBuiltinCall);
   if (Callee == nullptr || IsNoBuiltinCall)
-    return nullptr;
+    return false;
 
   LibFunc TLIFn;
   if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
-    return nullptr;
+    return false;
 
-  return isLibFreeFunction(Callee, TLIFn) ? dyn_cast<CallInst>(I) : nullptr;
+  return isLibFreeFunction(Callee, TLIFn);
 }
 
+Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+  // All currently supported free functions free the first argument.
+  if (isFreeCall(CB, TLI))
+    return CB->getArgOperand(0);
+  return nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
