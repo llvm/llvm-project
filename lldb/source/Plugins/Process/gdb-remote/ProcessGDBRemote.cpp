@@ -5307,8 +5307,11 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
   // Hardware breakpoints/watchpoints are not inherited implicitly,
   // so we need to readd them if we're following child.
-  if (GetFollowForkMode() == eFollowChild)
+  if (GetFollowForkMode() == eFollowChild) {
     DidForkSwitchHardwareTraps(true);
+    // Update our PID
+    SetID(child_pid);
+  }
 }
 
 void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
@@ -5360,6 +5363,11 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
                "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
                 error.AsCString() ? error.AsCString() : "<unknown error>");
       return;
+  }
+
+  if (GetFollowForkMode() == eFollowChild) {
+    // Update our PID
+    SetID(child_pid);
   }
 }
 
