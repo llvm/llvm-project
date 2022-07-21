@@ -9,7 +9,7 @@
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
 declare void @foo()
-define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4, i8* %ptr) {
+define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4, ptr %ptr) {
 ; CHECK-LABEL: intrinsics1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
@@ -116,7 +116,6 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
   %2 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1> %1, <16 x i8> %vc1, <16 x i8> %vc3)
   tail call void @foo()
   %3 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1> %2, <16 x i8> %vc1, <16 x i8> %vc3)
-  %4 = bitcast i8* %ptr to <512 x i1>*
-  store <512 x i1> %3, <512 x i1>* %4, align 64
+  store <512 x i1> %3, ptr %ptr, align 64
   ret void
 }
