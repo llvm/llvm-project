@@ -2307,6 +2307,45 @@ TEST_P(ASTMatchersTest,
           hasName("cc"), hasInitializer(integerLiteral(equals(1))))))))));
 }
 
+TEST(ASTMatchersTestObjC, ObjCMessageCalees) {
+  StatementMatcher MessagingFoo =
+      objcMessageExpr(callee(objcMethodDecl(hasName("foo"))));
+
+  EXPECT_TRUE(matchesObjC("@interface I"
+                          "+ (void)foo;"
+                          "@end\n"
+                          "int main() {"
+                          "  [I foo];"
+                          "}",
+                          MessagingFoo));
+  EXPECT_TRUE(notMatchesObjC("@interface I"
+                             "+ (void)foo;"
+                             "+ (void)bar;"
+                             "@end\n"
+                             "int main() {"
+                             "  [I bar];"
+                             "}",
+                             MessagingFoo));
+  EXPECT_TRUE(matchesObjC("@interface I"
+                          "- (void)foo;"
+                          "- (void)bar;"
+                          "@end\n"
+                          "int main() {"
+                          "  I *i;"
+                          "  [i foo];"
+                          "}",
+                          MessagingFoo));
+  EXPECT_TRUE(notMatchesObjC("@interface I"
+                             "- (void)foo;"
+                             "- (void)bar;"
+                             "@end\n"
+                             "int main() {"
+                             "  I *i;"
+                             "  [i bar];"
+                             "}",
+                             MessagingFoo));
+}
+
 TEST(ASTMatchersTestObjC, ObjCMessageExpr) {
   // Don't find ObjCMessageExpr where none are present.
   EXPECT_TRUE(notMatchesObjC("", objcMessageExpr(anything())));
