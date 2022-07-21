@@ -36,7 +36,7 @@ int main(int, char**)
   }
   {
     using H = coro::coroutine_handle<int>;
-    // expected-error-re@experimental/coroutine:* 1 {{static assertion failed{{.*}}coroutine_handle<promise_type>::from_address cannot be used with pointers to the coroutine's promise type; use 'from_promise' instead}}
+    // expected-error-re@experimental/coroutine:* 1 {{static_assert failed{{.*}}coroutine_handle<promise_type>::from_address cannot be used with pointers to the coroutine's promise type; use 'from_promise' instead}}
     H::from_address((const char*)nullptr); // expected-note {{requested here}}
     // expected-error@experimental/coroutine:* 1 {{coroutine_handle<promise_type>::from_address cannot be called with non-void pointers}}
     H::from_address((int*)nullptr); // expected-note {{requested here}}

@@ -26,6 +26,6 @@ void test(std::geometric_distribution<int> dist)
   G<int> badg;
   G<unsigned> okg;
 
-  dist(badg); //expected-error@*:* 7 {{static assertion failed}} //expected-note {{in instantiation}}
+  dist(badg); //expected-error@*:* 7 {{static_assert failed}} //expected-note {{in instantiation}}
   dist(okg);
 }

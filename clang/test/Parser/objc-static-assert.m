@@ -15,7 +15,7 @@
 @interface A {
   int a;
   _Static_assert(1, "");
-  _Static_assert(0, ""); // expected-error {{static assertion failed}}
+  _Static_assert(0, ""); // expected-error {{static_assert failed}}
 
   _Static_assert(a, ""); // expected-error {{use of undeclared identifier 'a'}}
   _Static_assert(sizeof(a), ""); // expected-error {{use of undeclared identifier 'a'}}
@@ -44,7 +44,7 @@ struct S {
 @interface A {
   int a;
   _Static_assert(1, "");
-  _Static_assert(0, ""); // expected-error {{static assertion failed}}
+  _Static_assert(0, ""); // expected-error {{static_assert failed}}
 }
 
 _Static_assert(1, "");

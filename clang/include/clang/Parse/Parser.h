@@ -1043,7 +1043,7 @@ private:
   /// If the next token is not a semicolon, this emits the specified diagnostic,
   /// or, if there's just some closing-delimiter noise (e.g., ')' or ']') prior
   /// to the semicolon, consumes that extra token.
-  bool ExpectAndConsumeSemi(unsigned DiagID , StringRef TokenUsed = "");
+  bool ExpectAndConsumeSemi(unsigned DiagID);
 
   /// The kind of extra semi diagnostic to emit.
   enum ExtraSemiKind {
