@@ -355,6 +355,23 @@ static Optional<OpResult> getFusableProducer(Value v) {
   return v.cast<OpResult>();
 }
 
+// Replace iter args of the outer most loop with region args of the inner most
+// one.
+static void replaceIterArgs(scf::ForOp outerFor, scf::ForOp innerFor,
+                            PatternRewriter &rewriter) {
+  assert(outerFor.getNumIterOperands() == innerFor.getNumIterOperands() &&
+         "expect same number of iter args");
+  Block *block = &(*innerFor.getRegion().begin());
+  for (auto it :
+       llvm::zip(outerFor.getIterOperands(), innerFor.getRegionIterArgs())) {
+    Value source = std::get<0>(it);
+    Value target = std::get<1>(it);
+    source.replaceUsesWithIf(target, [&](OpOperand &use) {
+      return use.getOwner()->getBlock() == block;
+    });
+  }
+}
+
 FailureOr<scf::SCFTileAndFuseResult>
 scf::TileConsumerAndFuseProducersUsingSCFForOp::returningMatchAndRewrite(
     TilingInterface op, PatternRewriter &rewriter) const {
@@ -470,5 +487,7 @@ scf::TileConsumerAndFuseProducersUsingSCFForOp::returningMatchAndRewrite(
       }
     }
   }
+  replaceIterArgs(tileAndFuseResult.loops.front(),
+                  tileAndFuseResult.loops.back(), rewriter);
   return tileAndFuseResult;
 }
