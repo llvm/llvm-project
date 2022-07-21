@@ -183,14 +183,14 @@ public:
   /// it.
   virtual ArrayRef<char> getDataConst(ObjectHandle Node) const = 0;
 
-  ArrayRef<char> getDataImpl(ObjectHandle Node, bool NullTerminate) final {
+  ArrayRef<char> getData(ObjectHandle Node,
+                         bool RequiresNullTerminator) const final {
+    // BuiltinCAS Objects are always null terminated.
     return getDataConst(Node);
   }
   uint64_t getDataSize(ObjectHandle Node) const final {
     return getDataConst(Node).size();
   }
-  uint64_t readDataImpl(ObjectHandle Node, raw_ostream &OS, uint64_t Offset,
-                        uint64_t MaxBytes) const final;
 
   Error createUnknownObjectError(CASID ID) const {
     return createStringError(std::make_error_code(std::errc::invalid_argument),

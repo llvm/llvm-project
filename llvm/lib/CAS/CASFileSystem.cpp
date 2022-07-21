@@ -103,8 +103,7 @@ public:
       return errorToErrorCode(Object.takeError());
     assert(DB.getNumRefs(*Object) == 0 && "Expected a leaf node");
     SmallString<256> Storage;
-    return MemoryBuffer::getMemBuffer(DB.getDataString(*Object),
-                                      Name.toStringRef(Storage));
+    return DB.getMemoryBuffer(*Object, Name.toStringRef(Storage));
   }
 
   llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() final {

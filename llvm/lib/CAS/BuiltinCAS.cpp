@@ -103,15 +103,6 @@ Expected<ObjectHandle> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
                    Refs, Data);
 }
 
-uint64_t BuiltinCAS::readDataImpl(ObjectHandle Node, raw_ostream &OS,
-                                  uint64_t Offset, uint64_t MaxBytes) const {
-  ArrayRef<char> Data = getDataConst(Node);
-  assert(Offset < Data.size() && "Expected valid offset");
-  Data = Data.drop_front(Offset).take_front(MaxBytes);
-  OS << toStringRef(Data);
-  return Data.size();
-}
-
 Error BuiltinCAS::validate(const CASID &ID) {
   auto Handle = load(ID);
   if (!Handle)

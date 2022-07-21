@@ -84,11 +84,6 @@ public:
   inline ArrayRef<char> getData() const;
 
   inline ArrayRef<const InMemoryObject *> getRefs() const;
-
-  StringRef getDataString() const {
-    ArrayRef<char> Array = getData();
-    return StringRef(Array.begin(), Array.size());
-  }
 };
 
 class InMemoryRefObject : public InMemoryObject {
