@@ -178,4 +178,4 @@ def SPV_ImageOp : SPV_Op<"Image",
   let hasVerifier = 0;
 }
 
-#endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS
+#endif // MLIR_DIALECT_SPIRV_IR_GL_OPS
