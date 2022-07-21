@@ -90,6 +90,24 @@ define i64 @parity_64(i64 %x) {
   ret i64 %2
 }
 
+define i128 @parity_128(i128 %x) {
+; CHECK-LABEL: parity_128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor x8, x0, x1
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-NEXT:    eor x8, x8, x8, lsr #16
+; CHECK-NEXT:    eor x8, x8, x8, lsr #8
+; CHECK-NEXT:    eor x8, x8, x8, lsr #4
+; CHECK-NEXT:    eor x8, x8, x8, lsr #2
+; CHECK-NEXT:    eor w8, w8, w8, lsr #1
+; CHECK-NEXT:    and x0, x8, #0x1
+; CHECK-NEXT:    ret
+  %1 = tail call i128 @llvm.ctpop.i128(i128 %x)
+  %2 = and i128 %1, 1
+  ret i128 %2
+}
+
 define i32 @parity_64_trunc(i64 %x) {
 ; CHECK-LABEL: parity_64_trunc:
 ; CHECK:       // %bb.0:
@@ -159,3 +177,4 @@ declare i16 @llvm.ctpop.i16(i16 %x)
 declare i17 @llvm.ctpop.i17(i17 %x)
 declare i32 @llvm.ctpop.i32(i32 %x)
 declare i64 @llvm.ctpop.i64(i64 %x)
+declare i128 @llvm.ctpop.i128(i128 %x)
