@@ -168,29 +168,6 @@ bool hasFlag(const Record *OptionOrGroup, StringRef OptionFlag) {
   return false;
 }
 
-bool isIncluded(const Record *OptionOrGroup, const Record *DocInfo) {
-  assert(DocInfo->getValue("IncludedFlags") && "Missing includeFlags");
-  for (StringRef Inclusion : DocInfo->getValueAsListOfStrings("IncludedFlags"))
-    if (hasFlag(OptionOrGroup, Inclusion))
-      return true;
-  return false;
-}
-
-bool isGroupIncluded(const DocumentedGroup &Group, const Record *DocInfo) {
-  if (isIncluded(Group.Group, DocInfo))
-    return true;
-  for (auto &O : Group.Options)
-    if (isIncluded(O.Option, DocInfo))
-      return true;
-  for (auto &G : Group.Groups) {
-    if (isIncluded(G.Group, DocInfo))
-      return true;
-    if (isGroupIncluded(G, DocInfo))
-      return true;
-  }
-  return false;
-}
-
 bool isExcluded(const Record *OptionOrGroup, const Record *DocInfo) {
   // FIXME: Provide a flag to specify the set of exclusions.
   for (StringRef Exclusion : DocInfo->getValueAsListOfStrings("ExcludedFlags"))
@@ -327,8 +304,6 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
                 raw_ostream &OS) {
   if (isExcluded(Option.Option, DocInfo))
     return;
-  if (DocInfo->getValue("IncludedFlags") && !isIncluded(Option.Option, DocInfo))
-    return;
   if (Option.Option->getValueAsDef("Kind")->getName() == "KIND_UNKNOWN" ||
       Option.Option->getValueAsDef("Kind")->getName() == "KIND_INPUT")
     return;
@@ -402,9 +377,6 @@ void emitDocumentation(int Depth, const Documentation &Doc,
 void emitGroup(int Depth, const DocumentedGroup &Group, const Record *DocInfo,
                raw_ostream &OS) {
   if (isExcluded(Group.Group, DocInfo))
-    return;
-
-  if (DocInfo->getValue("IncludedFlags") && !isGroupIncluded(Group, DocInfo))
     return;
 
   emitHeading(Depth,
