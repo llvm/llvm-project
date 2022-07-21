@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -S < %s -debug 2>%t | FileCheck %s
+; RUN: opt -loop-vectorize -S < %s -debug -prefer-predicate-over-epilogue=scalar-epilogue 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=DEBUG
 
 target triple = "aarch64-unknown-linux-gnu"

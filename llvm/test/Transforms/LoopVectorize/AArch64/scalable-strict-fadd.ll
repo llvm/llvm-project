@@ -1,10 +1,15 @@
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=false -hints-allow-reordering=false -S | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=false -hints-allow-reordering=true  -S | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=true  -hints-allow-reordering=false -S | FileCheck %s --check-prefix=CHECK-ORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=true  -hints-allow-reordering=true  -S | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -hints-allow-reordering=false -S | FileCheck %s --check-prefix=CHECK-ORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefix=CHECK-ORDERED-TF
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -force-ordered-reductions=false -hints-allow-reordering=false -S | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -force-ordered-reductions=false -hints-allow-reordering=true  -S | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -force-ordered-reductions=true  -hints-allow-reordering=false -S | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -force-ordered-reductions=true  -hints-allow-reordering=true  -S | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -hints-allow-reordering=false -S | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN:   -hints-allow-reordering=false -S | FileCheck %s --check-prefix=CHECK-ORDERED-TF
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_strict
