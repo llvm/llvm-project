@@ -1,4 +1,4 @@
-//===- SPIRVGLSLCanonicalization.cpp - SPIR-V GLSL canonicalization patterns =//
+//===- SPIRVGLCanonicalization.cpp - SPIR-V GLSL canonicalization patterns =//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVGLSLCanonicalization.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVGLCanonicalization.h"
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
@@ -22,7 +22,7 @@ namespace {
 
 namespace mlir {
 namespace spirv {
-void populateSPIRVGLSLCanonicalizationPatterns(RewritePatternSet &results) {
+void populateSPIRVGLCanonicalizationPatterns(RewritePatternSet &results) {
   results.add<ConvertComparisonIntoClamp1_SPV_FOrdLessThanOp,
               ConvertComparisonIntoClamp1_SPV_FOrdLessThanEqualOp,
               ConvertComparisonIntoClamp1_SPV_SLessThanOp,

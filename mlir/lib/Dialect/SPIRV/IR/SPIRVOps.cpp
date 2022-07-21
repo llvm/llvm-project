@@ -2385,44 +2385,43 @@ Operation::operand_range spirv::FunctionCallOp::getArgOperands() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.GLSLFClampOp
+// spv.GLFClampOp
 //===----------------------------------------------------------------------===//
 
-ParseResult spirv::GLSLFClampOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
+ParseResult spirv::GLFClampOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
   return parseOneResultSameOperandTypeOp(parser, result);
 }
-void spirv::GLSLFClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+void spirv::GLFClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
-// spv.GLSLUClampOp
+// spv.GLUClampOp
 //===----------------------------------------------------------------------===//
 
-ParseResult spirv::GLSLUClampOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
+ParseResult spirv::GLUClampOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
   return parseOneResultSameOperandTypeOp(parser, result);
 }
-void spirv::GLSLUClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+void spirv::GLUClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
-// spv.GLSLSClampOp
+// spv.GLSClampOp
 //===----------------------------------------------------------------------===//
 
-ParseResult spirv::GLSLSClampOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
+ParseResult spirv::GLSClampOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
   return parseOneResultSameOperandTypeOp(parser, result);
 }
-void spirv::GLSLSClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+void spirv::GLSClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
-// spv.GLSLFmaOp
+// spv.GLFmaOp
 //===----------------------------------------------------------------------===//
 
-ParseResult spirv::GLSLFmaOp::parse(OpAsmParser &parser,
-                                    OperationState &result) {
+ParseResult spirv::GLFmaOp::parse(OpAsmParser &parser, OperationState &result) {
   return parseOneResultSameOperandTypeOp(parser, result);
 }
-void spirv::GLSLFmaOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+void spirv::GLFmaOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
 // spv.GlobalVariable
@@ -4176,10 +4175,10 @@ LogicalResult spirv::SpecConstantOperationOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.GLSL.FrexpStruct
+// spv.GL.FrexpStruct
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::GLSLFrexpStructOp::verify() {
+LogicalResult spirv::GLFrexpStructOp::verify() {
   spirv::StructType structTy = result().getType().dyn_cast<spirv::StructType>();
 
   if (structTy.getNumElements() != 2)
@@ -4222,10 +4221,10 @@ LogicalResult spirv::GLSLFrexpStructOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.GLSL.Ldexp
+// spv.GL.Ldexp
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::GLSLLdexpOp::verify() {
+LogicalResult spirv::GLLdexpOp::verify() {
   Type significandType = x().getType();
   Type exponentType = exp().getType();
 

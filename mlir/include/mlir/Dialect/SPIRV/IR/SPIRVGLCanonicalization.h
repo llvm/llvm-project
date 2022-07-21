@@ -1,4 +1,4 @@
-//===- SPIRVGLSLCanonicalization.h - GLSL-specific patterns -----*- C++ -*-===//
+//===- SPIRVGLCanonicalization.h - GLSL-specific patterns -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_IR_SPIRVGLSLCANONICALIZATION_H_
-#define MLIR_DIALECT_SPIRV_IR_SPIRVGLSLCANONICALIZATION_H_
+#ifndef MLIR_DIALECT_SPIRV_IR_SPIRVGLCANONICALIZATION_H_
+#define MLIR_DIALECT_SPIRV_IR_SPIRVGLCANONICALIZATION_H_
 
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
@@ -23,12 +23,12 @@
 
 namespace mlir {
 namespace spirv {
-/// Populates patterns to run canoncalization that involves GLSL ops.
+/// Populates patterns to run canoncalization that involves GL ops.
 ///
-/// These patterns cannot be run in default canonicalization because GLSL ops
+/// These patterns cannot be run in default canonicalization because GL ops
 /// aren't always available. So they should be involed specifically when needed.
-void populateSPIRVGLSLCanonicalizationPatterns(RewritePatternSet &results);
+void populateSPIRVGLCanonicalizationPatterns(RewritePatternSet &results);
 } // namespace spirv
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPIRV_IR_SPIRVGLSLCANONICALIZATION_H_
+#endif // MLIR_DIALECT_SPIRV_IR_SPIRVGLCANONICALIZATION_H_

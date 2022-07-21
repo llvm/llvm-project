@@ -163,7 +163,7 @@ func.func @insert_size1_vector(%arg0 : vector<1xf32>, %arg1: vector<3xf32>) -> v
 
 // CHECK-LABEL: @fma
 //  CHECK-SAME: %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>, %[[C:.*]]: vector<4xf32>
-//       CHECK:   spv.GLSL.Fma %[[A]], %[[B]], %[[C]] : vector<4xf32>
+//       CHECK:   spv.GL.Fma %[[A]], %[[B]], %[[C]] : vector<4xf32>
 func.func @fma(%a: vector<4xf32>, %b: vector<4xf32>, %c: vector<4xf32>) -> vector<4xf32> {
   %0 = vector.fma %a, %b, %c: vector<4xf32>
   return %0 : vector<4xf32>
@@ -172,7 +172,7 @@ func.func @fma(%a: vector<4xf32>, %b: vector<4xf32>, %c: vector<4xf32>) -> vecto
 // -----
 
 // CHECK-LABEL: @fma_size1_vector
-//       CHECK:   spv.GLSL.Fma %{{.+}} : f32
+//       CHECK:   spv.GL.Fma %{{.+}} : f32
 func.func @fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<1xf32>) -> vector<1xf32> {
   %0 = vector.fma %a, %b, %c: vector<1xf32>
   return %0 : vector<1xf32>

@@ -866,12 +866,12 @@ public:
 };
 
 class InverseSqrtPattern
-    : public SPIRVToLLVMConversion<spirv::GLSLInverseSqrtOp> {
+    : public SPIRVToLLVMConversion<spirv::GLInverseSqrtOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSLInverseSqrtOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::GLInverseSqrtOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSLInverseSqrtOp op, OpAdaptor adaptor,
+  matchAndRewrite(spirv::GLInverseSqrtOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = op.getType();
     auto dstType = typeConverter.convertType(srcType);
@@ -1191,12 +1191,12 @@ public:
   }
 };
 
-class TanPattern : public SPIRVToLLVMConversion<spirv::GLSLTanOp> {
+class TanPattern : public SPIRVToLLVMConversion<spirv::GLTanOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSLTanOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::GLTanOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSLTanOp tanOp, OpAdaptor adaptor,
+  matchAndRewrite(spirv::GLTanOp tanOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType = typeConverter.convertType(tanOp.getType());
     if (!dstType)
@@ -1216,12 +1216,12 @@ public:
 ///   -----------
 ///   exp(2x) + 1
 ///
-class TanhPattern : public SPIRVToLLVMConversion<spirv::GLSLTanhOp> {
+class TanhPattern : public SPIRVToLLVMConversion<spirv::GLTanhOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSLTanhOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::GLTanhOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSLTanhOp tanhOp, OpAdaptor adaptor,
+  matchAndRewrite(spirv::GLTanhOp tanhOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = tanhOp.getType();
     auto dstType = typeConverter.convertType(srcType);
@@ -1515,18 +1515,18 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
 
       // GLSL extended instruction set ops
-      DirectConversionPattern<spirv::GLSLCeilOp, LLVM::FCeilOp>,
-      DirectConversionPattern<spirv::GLSLCosOp, LLVM::CosOp>,
-      DirectConversionPattern<spirv::GLSLExpOp, LLVM::ExpOp>,
-      DirectConversionPattern<spirv::GLSLFAbsOp, LLVM::FAbsOp>,
-      DirectConversionPattern<spirv::GLSLFloorOp, LLVM::FFloorOp>,
-      DirectConversionPattern<spirv::GLSLFMaxOp, LLVM::MaxNumOp>,
-      DirectConversionPattern<spirv::GLSLFMinOp, LLVM::MinNumOp>,
-      DirectConversionPattern<spirv::GLSLLogOp, LLVM::LogOp>,
-      DirectConversionPattern<spirv::GLSLSinOp, LLVM::SinOp>,
-      DirectConversionPattern<spirv::GLSLSMaxOp, LLVM::SMaxOp>,
-      DirectConversionPattern<spirv::GLSLSMinOp, LLVM::SMinOp>,
-      DirectConversionPattern<spirv::GLSLSqrtOp, LLVM::SqrtOp>,
+      DirectConversionPattern<spirv::GLCeilOp, LLVM::FCeilOp>,
+      DirectConversionPattern<spirv::GLCosOp, LLVM::CosOp>,
+      DirectConversionPattern<spirv::GLExpOp, LLVM::ExpOp>,
+      DirectConversionPattern<spirv::GLFAbsOp, LLVM::FAbsOp>,
+      DirectConversionPattern<spirv::GLFloorOp, LLVM::FFloorOp>,
+      DirectConversionPattern<spirv::GLFMaxOp, LLVM::MaxNumOp>,
+      DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
+      DirectConversionPattern<spirv::GLSinOp, LLVM::SinOp>,
+      DirectConversionPattern<spirv::GLSMaxOp, LLVM::SMaxOp>,
+      DirectConversionPattern<spirv::GLSMinOp, LLVM::SMinOp>,
+      DirectConversionPattern<spirv::GLSqrtOp, LLVM::SqrtOp>,
       InverseSqrtPattern, TanPattern, TanhPattern,
 
       // Logical ops
