@@ -320,24 +320,23 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              "send packet: %Stop:W00#00",
              ], True)
         ret = self.expect_gdbremote_sequence()
-        self.assertIn(ret["O_content"], b"message 1\r\n")
 
-        # Now, this is somewhat messy.  expect_gdbremote_sequence() will
-        # automatically consume output packets, so we just send vStdio,
-        # assume the first reply was consumed, send another one and expect
-        # a non-consumable "OK" reply.
+        # We know there will be at least two messages, but there may be more.
+        # Loop until we have everything. The first message waiting for us in the
+        # packet queue.
+        count = 1
+        output = self._server.get_raw_output_packet()
+        while not (b"message 2\r\n" in output):
+            self._server.send_packet(b"vStdio")
+            output += self._server.get_raw_output_packet()
+            count += 1
+        self.assertGreaterEqual(count, 2)
+
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
             ["read packet: $vStdio#00",
-             "read packet: $vStdio#00",
              "send packet: $OK#00",
-             ], True)
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn(ret["O_content"], b"message 2\r\n")
-
-        self.reset_test_sequence()
-        self.test_sequence.add_log_lines(
-            ["read packet: $vStopped#00",
+             "read packet: $vStopped#00",
              "send packet: $OK#00",
              ], True)
         self.expect_gdbremote_sequence()
