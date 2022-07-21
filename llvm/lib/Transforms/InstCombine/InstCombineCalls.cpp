@@ -3158,8 +3158,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
             Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
     }
 
-  if (isAllocationFn(&Call, &TLI) &&
-      isAllocRemovable(&cast<CallBase>(Call), &TLI))
+  if (isRemovableAlloc(&Call, &TLI))
     return visitAllocSite(Call);
 
   // Handle intrinsics which can be used in both call and invoke context.
