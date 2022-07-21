@@ -298,12 +298,12 @@ static void DefineFastIntType(unsigned TypeWidth, bool IsSigned,
 
 /// Get the value the ATOMIC_*_LOCK_FREE macro should have for a type with
 /// the specified properties.
-static const char *getLockFreeValue(unsigned TypeWidth, unsigned TypeAlign,
-                                    unsigned InlineWidth) {
+static const char *getLockFreeValue(unsigned TypeWidth, unsigned InlineWidth) {
   // Fully-aligned, power-of-2 sizes no larger than the inline
   // width will be inlined as lock-free operations.
-  if (TypeWidth == TypeAlign && (TypeWidth & (TypeWidth - 1)) == 0 &&
-      TypeWidth <= InlineWidth)
+  // Note: we do not need to check alignment since _Atomic(T) is always
+  // appropriately-aligned in clang.
+  if ((TypeWidth & (TypeWidth - 1)) == 0 && TypeWidth <= InlineWidth)
     return "2"; // "always lock free"
   // We cannot be certain what operations the lib calls might be
   // able to implement as lock-free on future processors.
@@ -1142,7 +1142,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #define DEFINE_LOCK_FREE_MACRO(TYPE, Type)                                     \
   Builder.defineMacro(Prefix + #TYPE "_LOCK_FREE",                             \
                       getLockFreeValue(TI.get##Type##Width(),                  \
-                                       TI.get##Type##Align(),                  \
                                        InlineWidthBits));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
@@ -1157,7 +1156,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     DEFINE_LOCK_FREE_MACRO(LLONG, LongLong);
     Builder.defineMacro(Prefix + "POINTER_LOCK_FREE",
                         getLockFreeValue(TI.getPointerWidth(0),
-                                         TI.getPointerAlign(0),
                                          InlineWidthBits));
 #undef DEFINE_LOCK_FREE_MACRO
   };
