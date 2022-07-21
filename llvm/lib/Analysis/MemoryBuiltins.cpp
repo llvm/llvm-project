@@ -540,14 +540,17 @@ Optional<StringRef> llvm::getAllocationFamily(const Value *I,
   if (Callee == nullptr || IsNoBuiltin)
     return None;
   LibFunc TLIFn;
-  if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
-    return None;
-  const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
-  if (AllocData)
-    return mangledNameForMallocFamily(AllocData.value().Family);
-  const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
-  if (FreeData)
-    return mangledNameForMallocFamily(FreeData.value().Family);
+
+  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn)) {
+    // Callee is some known library function.
+    const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
+    if (AllocData)
+      return mangledNameForMallocFamily(AllocData.value().Family);
+    const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
+    if (FreeData)
+      return mangledNameForMallocFamily(FreeData.value().Family);
+  }
+  // Callee isn't a known library function, still check attributes.
   if (checkFnAllocKind(I, AllocFnKind::Free | AllocFnKind::Alloc |
                               AllocFnKind::Realloc)) {
     Attribute Attr = cast<CallBase>(I)->getFnAttr("alloc-family");
