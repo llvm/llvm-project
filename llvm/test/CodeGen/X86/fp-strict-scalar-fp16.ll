@@ -357,13 +357,12 @@ define void @fptrunc_double_to_f16(ptr %val, ptr%ret) nounwind strictfp {
 ;
 ; AVX-LABEL: fptrunc_double_to_f16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movw %ax, (%rsi)
+; AVX-NEXT:    pushq %rbx
+; AVX-NEXT:    movq %rsi, %rbx
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    callq __truncdfhf2@PLT
+; AVX-NEXT:    vpextrw $0, %xmm0, (%rbx)
+; AVX-NEXT:    popq %rbx
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: fptrunc_double_to_f16:
