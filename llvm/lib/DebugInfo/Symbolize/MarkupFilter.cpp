@@ -125,15 +125,15 @@ bool MarkupFilter::tryReset(const MarkupNode &Node,
     return true;
 
   if (!Modules.empty() || !MMaps.empty()) {
-    Modules.clear();
-    MMaps.clear();
-
     endAnyModuleInfoLine();
     for (const MarkupNode &Node : DeferredNodes)
       filterNode(Node);
     highlight();
     OS << "[[[reset]]]" << lineEnding();
     restoreColor();
+
+    Modules.clear();
+    MMaps.clear();
   }
   return true;
 }
