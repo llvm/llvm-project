@@ -4,10 +4,13 @@
 ; RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LE
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
-; RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-BE
+; RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LINUXBE
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O0 \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-O0
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-AIXBE
 
 ; These test cases aims to test the builtins for the Power10 VSX vector
 ; instructions introduced in ISA 3.1.
@@ -46,11 +49,11 @@ define void @vec_xst_trunc_sc(<1 x i128> %__vec, i64 %__offset, i8* nocapture %_
 ; CHECK-LE-NEXT:    stxvrbx v2, r6, r5
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_sc:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 9
-; CHECK-BE-NEXT:    stxsibx v2, r6, r5
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_sc:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    vsldoi v2, v2, v2, 9
+; CHECK-LINUXBE-NEXT:    stxsibx v2, r6, r5
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_sc:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -60,6 +63,12 @@ define void @vec_xst_trunc_sc(<1 x i128> %__vec, i64 %__offset, i8* nocapture %_
 ; CHECK-O0-NEXT:    add r4, r6, r5
 ; CHECK-O0-NEXT:    stb r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_sc:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    vsldoi v2, v2, v2, 9
+; CHECK-AIXBE-NEXT:    stxsibx v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <16 x i8>
   %conv = extractelement <16 x i8> %0, i32 0
@@ -74,11 +83,11 @@ define void @vec_xst_trunc_uc(<1 x i128> %__vec, i64 %__offset, i8* nocapture %_
 ; CHECK-LE-NEXT:    stxvrbx v2, r6, r5
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_uc:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 9
-; CHECK-BE-NEXT:    stxsibx v2, r6, r5
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_uc:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    vsldoi v2, v2, v2, 9
+; CHECK-LINUXBE-NEXT:    stxsibx v2, r6, r5
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_uc:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -88,6 +97,12 @@ define void @vec_xst_trunc_uc(<1 x i128> %__vec, i64 %__offset, i8* nocapture %_
 ; CHECK-O0-NEXT:    add r4, r6, r5
 ; CHECK-O0-NEXT:    stb r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_uc:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    vsldoi v2, v2, v2, 9
+; CHECK-AIXBE-NEXT:    stxsibx v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <16 x i8>
   %conv = extractelement <16 x i8> %0, i32 0
@@ -103,12 +118,12 @@ define void @vec_xst_trunc_ss(<1 x i128> %__vec, i64 %__offset, i16* nocapture %
 ; CHECK-LE-NEXT:    stxvrhx v2, r6, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_ss:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r5, 1
-; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 10
-; CHECK-BE-NEXT:    stxsihx v2, r6, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_ss:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 1
+; CHECK-LINUXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-LINUXBE-NEXT:    stxsihx v2, r6, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_ss:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -119,6 +134,13 @@ define void @vec_xst_trunc_ss(<1 x i128> %__vec, i64 %__offset, i16* nocapture %
 ; CHECK-O0-NEXT:    add r4, r6, r4
 ; CHECK-O0-NEXT:    sth r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_ss:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 1
+; CHECK-AIXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-AIXBE-NEXT:    stxsihx v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <8 x i16>
   %conv = extractelement <8 x i16> %0, i32 0
@@ -134,12 +156,12 @@ define void @vec_xst_trunc_us(<1 x i128> %__vec, i64 %__offset, i16* nocapture %
 ; CHECK-LE-NEXT:    stxvrhx v2, r6, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_us:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r5, 1
-; CHECK-BE-NEXT:    vsldoi v2, v2, v2, 10
-; CHECK-BE-NEXT:    stxsihx v2, r6, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_us:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 1
+; CHECK-LINUXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-LINUXBE-NEXT:    stxsihx v2, r6, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_us:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -150,6 +172,13 @@ define void @vec_xst_trunc_us(<1 x i128> %__vec, i64 %__offset, i16* nocapture %
 ; CHECK-O0-NEXT:    add r4, r6, r4
 ; CHECK-O0-NEXT:    sth r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_us:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 1
+; CHECK-AIXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-AIXBE-NEXT:    stxsihx v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <8 x i16>
   %conv = extractelement <8 x i16> %0, i32 0
@@ -165,12 +194,12 @@ define void @vec_xst_trunc_si(<1 x i128> %__vec, i64 %__offset, i32* nocapture %
 ; CHECK-LE-NEXT:    stxvrwx v2, r6, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_si:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r5, 2
-; CHECK-BE-NEXT:    xxsldwi vs0, v2, v2, 3
-; CHECK-BE-NEXT:    stfiwx f0, r6, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_si:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 2
+; CHECK-LINUXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-LINUXBE-NEXT:    stfiwx f0, r6, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_si:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -181,6 +210,13 @@ define void @vec_xst_trunc_si(<1 x i128> %__vec, i64 %__offset, i32* nocapture %
 ; CHECK-O0-NEXT:    add r4, r6, r4
 ; CHECK-O0-NEXT:    stw r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_si:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 2
+; CHECK-AIXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-AIXBE-NEXT:    stfiwx f0, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <4 x i32>
   %conv = extractelement <4 x i32> %0, i32 0
@@ -196,12 +232,12 @@ define void @vec_xst_trunc_ui(<1 x i128> %__vec, i64 %__offset, i32* nocapture %
 ; CHECK-LE-NEXT:    stxvrwx v2, r6, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_ui:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r5, 2
-; CHECK-BE-NEXT:    xxsldwi vs0, v2, v2, 3
-; CHECK-BE-NEXT:    stfiwx f0, r6, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_ui:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 2
+; CHECK-LINUXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-LINUXBE-NEXT:    stfiwx f0, r6, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_ui:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -212,6 +248,13 @@ define void @vec_xst_trunc_ui(<1 x i128> %__vec, i64 %__offset, i32* nocapture %
 ; CHECK-O0-NEXT:    add r4, r6, r4
 ; CHECK-O0-NEXT:    stw r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_ui:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 2
+; CHECK-AIXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-AIXBE-NEXT:    stfiwx f0, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <4 x i32>
   %conv = extractelement <4 x i32> %0, i32 0
@@ -227,11 +270,11 @@ define void @vec_xst_trunc_sll(<1 x i128> %__vec, i64 %__offset, i64* nocapture 
 ; CHECK-LE-NEXT:    stxvrdx v2, r6, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_sll:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r5, 3
-; CHECK-BE-NEXT:    stxsdx v2, r6, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_sll:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 3
+; CHECK-LINUXBE-NEXT:    stxsdx v2, r6, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_sll:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -240,6 +283,12 @@ define void @vec_xst_trunc_sll(<1 x i128> %__vec, i64 %__offset, i64* nocapture 
 ; CHECK-O0-NEXT:    add r4, r6, r4
 ; CHECK-O0-NEXT:    std r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_sll:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 3
+; CHECK-AIXBE-NEXT:    stxsdx v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <2 x i64>
   %conv = extractelement <2 x i64> %0, i32 0
@@ -255,11 +304,11 @@ define void @vec_xst_trunc_ull(<1 x i128> %__vec, i64 %__offset, i64* nocapture 
 ; CHECK-LE-NEXT:    stxvrdx v2, r6, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xst_trunc_ull:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r5, 3
-; CHECK-BE-NEXT:    stxsdx v2, r6, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xst_trunc_ull:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 3
+; CHECK-LINUXBE-NEXT:    stxsdx v2, r6, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xst_trunc_ull:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -268,6 +317,12 @@ define void @vec_xst_trunc_ull(<1 x i128> %__vec, i64 %__offset, i64* nocapture 
 ; CHECK-O0-NEXT:    add r4, r6, r4
 ; CHECK-O0-NEXT:    std r3, 0(r4)
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xst_trunc_ull:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 3
+; CHECK-AIXBE-NEXT:    stxsdx v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %__vec to <2 x i64>
   %conv = extractelement <2 x i64> %0, i32 0
@@ -340,13 +395,13 @@ define dso_local <1 x i128> @vec_xl_sext_b(i64 %offset, i8* %p) {
 ; CHECK-LE-NEXT:    mtvsrdd v2, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xl_sext_b:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lbzx r3, r4, r3
-; CHECK-BE-NEXT:    extsb r3, r3
-; CHECK-BE-NEXT:    sradi r4, r3, 63
-; CHECK-BE-NEXT:    mtvsrdd v2, r4, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xl_sext_b:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    lbzx r3, r4, r3
+; CHECK-LINUXBE-NEXT:    extsb r3, r3
+; CHECK-LINUXBE-NEXT:    sradi r4, r3, 63
+; CHECK-LINUXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xl_sext_b:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -355,6 +410,14 @@ define dso_local <1 x i128> @vec_xl_sext_b(i64 %offset, i8* %p) {
 ; CHECK-O0-NEXT:    sradi r3, r4, 63
 ; CHECK-O0-NEXT:    mtvsrdd v2, r3, r4
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xl_sext_b:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    lbzx r3, r4, r3
+; CHECK-AIXBE-NEXT:    extsb r3, r3
+; CHECK-AIXBE-NEXT:    sradi r4, r3, 63
+; CHECK-AIXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %p, i64 %offset
   %0 = load i8, i8* %add.ptr, align 1
@@ -372,13 +435,13 @@ define dso_local <1 x i128> @vec_xl_sext_h(i64 %offset, i16* %p) {
 ; CHECK-LE-NEXT:    mtvsrdd v2, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xl_sext_h:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r3, 1
-; CHECK-BE-NEXT:    lhax r3, r4, r3
-; CHECK-BE-NEXT:    sradi r4, r3, 63
-; CHECK-BE-NEXT:    mtvsrdd v2, r4, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xl_sext_h:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r3, 1
+; CHECK-LINUXBE-NEXT:    lhax r3, r4, r3
+; CHECK-LINUXBE-NEXT:    sradi r4, r3, 63
+; CHECK-LINUXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xl_sext_h:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -387,6 +450,14 @@ define dso_local <1 x i128> @vec_xl_sext_h(i64 %offset, i16* %p) {
 ; CHECK-O0-NEXT:    sradi r3, r4, 63
 ; CHECK-O0-NEXT:    mtvsrdd v2, r3, r4
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xl_sext_h:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 1
+; CHECK-AIXBE-NEXT:    lhax r3, r4, r3
+; CHECK-AIXBE-NEXT:    sradi r4, r3, 63
+; CHECK-AIXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i16, i16* %p, i64 %offset
   %0 = load i16, i16* %add.ptr, align 2
@@ -404,13 +475,13 @@ define dso_local <1 x i128> @vec_xl_sext_w(i64 %offset, i32* %p) {
 ; CHECK-LE-NEXT:    mtvsrdd v2, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xl_sext_w:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r3, 2
-; CHECK-BE-NEXT:    lwax r3, r4, r3
-; CHECK-BE-NEXT:    sradi r4, r3, 63
-; CHECK-BE-NEXT:    mtvsrdd v2, r4, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xl_sext_w:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r3, 2
+; CHECK-LINUXBE-NEXT:    lwax r3, r4, r3
+; CHECK-LINUXBE-NEXT:    sradi r4, r3, 63
+; CHECK-LINUXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xl_sext_w:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -419,6 +490,14 @@ define dso_local <1 x i128> @vec_xl_sext_w(i64 %offset, i32* %p) {
 ; CHECK-O0-NEXT:    sradi r3, r4, 63
 ; CHECK-O0-NEXT:    mtvsrdd v2, r3, r4
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xl_sext_w:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 2
+; CHECK-AIXBE-NEXT:    lwax r3, r4, r3
+; CHECK-AIXBE-NEXT:    sradi r4, r3, 63
+; CHECK-AIXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 %offset
   %0 = load i32, i32* %add.ptr, align 4
@@ -436,13 +515,13 @@ define dso_local <1 x i128> @vec_xl_sext_d(i64 %offset, i64* %p) {
 ; CHECK-LE-NEXT:    mtvsrdd v2, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: vec_xl_sext_d:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    sldi r3, r3, 3
-; CHECK-BE-NEXT:    ldx r3, r4, r3
-; CHECK-BE-NEXT:    sradi r4, r3, 63
-; CHECK-BE-NEXT:    mtvsrdd v2, r4, r3
-; CHECK-BE-NEXT:    blr
+; CHECK-LINUXBE-LABEL: vec_xl_sext_d:
+; CHECK-LINUXBE:       # %bb.0: # %entry
+; CHECK-LINUXBE-NEXT:    sldi r3, r3, 3
+; CHECK-LINUXBE-NEXT:    ldx r3, r4, r3
+; CHECK-LINUXBE-NEXT:    sradi r4, r3, 63
+; CHECK-LINUXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-LINUXBE-NEXT:    blr
 ;
 ; CHECK-O0-LABEL: vec_xl_sext_d:
 ; CHECK-O0:       # %bb.0: # %entry
@@ -451,6 +530,14 @@ define dso_local <1 x i128> @vec_xl_sext_d(i64 %offset, i64* %p) {
 ; CHECK-O0-NEXT:    sradi r3, r4, 63
 ; CHECK-O0-NEXT:    mtvsrdd v2, r3, r4
 ; CHECK-O0-NEXT:    blr
+;
+; CHECK-AIXBE-LABEL: vec_xl_sext_d:
+; CHECK-AIXBE:       # %bb.0: # %entry
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 3
+; CHECK-AIXBE-NEXT:    ldx r3, r4, r3
+; CHECK-AIXBE-NEXT:    sradi r4, r3, 63
+; CHECK-AIXBE-NEXT:    mtvsrdd v2, r4, r3
+; CHECK-AIXBE-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %p, i64 %offset
   %0 = load i64, i64* %add.ptr, align 8
