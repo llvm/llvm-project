@@ -23,7 +23,7 @@ func.func @gemm_fill_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) ->
 // CHECK-SAME:         iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
 //  CHECK-DAG:       %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]][%[[IV0]], 0]
 //  CHECK-DAG:       %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]][0, %[[IV1]]]
-//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[ITERARG1]][%[[IV0]], %[[IV1]]]
+//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[INIT]][%[[IV0]], %[[IV1]]]
 //      CHECK:       %[[FILL_TILE:.+]] = linalg.fill
 // CHECK-SAME:           outs(%[[INIT_TILE]] :
 //      CHECK:       %[[GEMM_TILE:.+]] = linalg.matmul
@@ -68,7 +68,7 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 // CHECK-SAME:         iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
 //  CHECK-DAG:       %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]][%[[IV0]], 0]
 //  CHECK-DAG:       %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]][0, %[[IV1]]]
-//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[ITERARG1]][%[[IV0]], %[[IV1]]]
+//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[INIT]][%[[IV0]], %[[IV1]]]
 //      CHECK:       %[[FILL_TILE:.+]] = linalg.fill
 // CHECK-SAME:           outs(%[[INIT_TILE]] :
 //      CHECK:       %[[GEMM_TILE:.+]] = linalg.matmul
@@ -123,7 +123,7 @@ func.func @gemm_gemm_fusion(%lhs0 : tensor<?x?xf32>, %rhs0 : tensor<?x?xf32>, %r
 // CHECK-SAME:         ins(%[[LHS0_TILE]], %[[RHS0_TILE]] :
 // CHECK-SAME:         outs(%[[FILL0_TILE]] :
 //  CHECK-DAG:     %[[RHS1_TILE:.+]] = tensor.extract_slice %[[RHS1]][0, 0]
-//  CHECK-DAG:     %[[INIT1_TILE:.+]] = tensor.extract_slice %[[ITERARG]][%[[IV]], 0]
+//  CHECK-DAG:     %[[INIT1_TILE:.+]] = tensor.extract_slice %[[INIT1]][%[[IV]], 0]
 //      CHECK:     %[[FILL1_TILE:.+]] = linalg.fill
 // CHECK-SAME:         outs(%[[INIT1_TILE]] :
 //      CHECK:     %[[GEMM1_TILE:.+]] = linalg.matmul
