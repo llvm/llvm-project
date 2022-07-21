@@ -1655,11 +1655,16 @@ bool DWARFExpression::Evaluate(
     case DW_OP_skip: {
       int16_t skip_offset = (int16_t)opcodes.GetU16(&offset);
       lldb::offset_t new_offset = offset + skip_offset;
-      if (opcodes.ValidOffset(new_offset))
+      // New offset can point at the end of the data, in this case we should
+      // terminate the DWARF expression evaluation (will happen in the loop
+      // condition).
+      if (new_offset <= opcodes.GetByteSize())
         offset = new_offset;
       else {
         if (error_ptr)
-          error_ptr->SetErrorString("Invalid opcode offset in DW_OP_skip.");
+          error_ptr->SetErrorStringWithFormatv(
+              "Invalid opcode offset in DW_OP_skip: {0}+({1}) > {2}", offset,
+              skip_offset, opcodes.GetByteSize());
         return false;
       }
     } break;
@@ -1684,11 +1689,16 @@ bool DWARFExpression::Evaluate(
         Scalar zero(0);
         if (tmp.ResolveValue(exe_ctx) != zero) {
           lldb::offset_t new_offset = offset + bra_offset;
-          if (opcodes.ValidOffset(new_offset))
+          // New offset can point at the end of the data, in this case we should
+          // terminate the DWARF expression evaluation (will happen in the loop
+          // condition).
+          if (new_offset <= opcodes.GetByteSize())
             offset = new_offset;
           else {
             if (error_ptr)
-              error_ptr->SetErrorString("Invalid opcode offset in DW_OP_bra.");
+              error_ptr->SetErrorStringWithFormatv(
+                  "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}", offset,
+                  bra_offset, opcodes.GetByteSize());
             return false;
           }
         }
