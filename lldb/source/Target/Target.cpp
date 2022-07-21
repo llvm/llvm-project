@@ -107,7 +107,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
   SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
   SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
-  
+
   CheckInWithManager();
 
   LLDB_LOG(GetLog(LLDBLog::Object), "{0} Target::Target()",
@@ -2085,11 +2085,12 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
     // a suitable image.
     if (m_image_search_paths.GetSize()) {
       ModuleSpec transformed_spec(module_spec);
+      ConstString transformed_dir;
       if (m_image_search_paths.RemapPath(
-              module_spec.GetFileSpec().GetDirectory(),
-              transformed_spec.GetFileSpec().GetDirectory())) {
-        transformed_spec.GetFileSpec().GetFilename() =
-            module_spec.GetFileSpec().GetFilename();
+              module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
+        transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
+        transformed_spec.GetFileSpec().SetFilename(
+              module_spec.GetFileSpec().GetFilename());
         error = ModuleList::GetSharedModule(transformed_spec, module_sp,
                                             &search_paths, &old_modules,
                                             &did_create_module);
@@ -3219,8 +3220,8 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   // the process to attach to by default
   if (!attach_info.ProcessInfoSpecified()) {
     if (old_exec_module_sp)
-      attach_info.GetExecutableFile().GetFilename() =
-          old_exec_module_sp->GetPlatformFileSpec().GetFilename();
+      attach_info.GetExecutableFile().SetFilename(
+            old_exec_module_sp->GetPlatformFileSpec().GetFilename());
 
     if (!attach_info.ProcessInfoSpecified()) {
       return Status("no process specified, create a target with a file, or "
@@ -3362,7 +3363,7 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
   }
 }
 
-void Target::AddDummySignal(llvm::StringRef name, LazyBool pass, LazyBool notify, 
+void Target::AddDummySignal(llvm::StringRef name, LazyBool pass, LazyBool notify,
                             LazyBool stop) {
     if (name.empty())
       return;
@@ -3377,38 +3378,38 @@ void Target::AddDummySignal(llvm::StringRef name, LazyBool pass, LazyBool notify
     elem.stop = stop;
 }
 
-bool Target::UpdateSignalFromDummy(UnixSignalsSP signals_sp, 
+bool Target::UpdateSignalFromDummy(UnixSignalsSP signals_sp,
                                           const DummySignalElement &elem) {
   if (!signals_sp)
     return false;
 
-  int32_t signo 
+  int32_t signo
       = signals_sp->GetSignalNumberFromName(elem.first().str().c_str());
   if (signo == LLDB_INVALID_SIGNAL_NUMBER)
     return false;
-    
+
   if (elem.second.pass == eLazyBoolYes)
     signals_sp->SetShouldSuppress(signo, false);
   else if (elem.second.pass == eLazyBoolNo)
     signals_sp->SetShouldSuppress(signo, true);
-  
+
   if (elem.second.notify == eLazyBoolYes)
     signals_sp->SetShouldNotify(signo, true);
   else if (elem.second.notify == eLazyBoolNo)
     signals_sp->SetShouldNotify(signo, false);
-  
+
   if (elem.second.stop == eLazyBoolYes)
     signals_sp->SetShouldStop(signo, true);
   else if (elem.second.stop == eLazyBoolNo)
     signals_sp->SetShouldStop(signo, false);
-  return true;  
+  return true;
 }
 
-bool Target::ResetSignalFromDummy(UnixSignalsSP signals_sp, 
+bool Target::ResetSignalFromDummy(UnixSignalsSP signals_sp,
                                           const DummySignalElement &elem) {
   if (!signals_sp)
     return false;
-  int32_t signo 
+  int32_t signo
       = signals_sp->GetSignalNumberFromName(elem.first().str().c_str());
   if (signo == LLDB_INVALID_SIGNAL_NUMBER)
     return false;
@@ -3419,14 +3420,14 @@ bool Target::ResetSignalFromDummy(UnixSignalsSP signals_sp,
   return true;
 }
 
-void Target::UpdateSignalsFromDummy(UnixSignalsSP signals_sp, 
+void Target::UpdateSignalsFromDummy(UnixSignalsSP signals_sp,
                                     StreamSP warning_stream_sp) {
   if (!signals_sp)
     return;
 
   for (const auto &elem : m_dummy_signals) {
     if (!UpdateSignalFromDummy(signals_sp, elem))
-      warning_stream_sp->Printf("Target signal '%s' not found in process\n", 
+      warning_stream_sp->Printf("Target signal '%s' not found in process\n",
           elem.first().str().c_str());
   }
 }
@@ -3459,7 +3460,7 @@ void Target::ClearDummySignals(Args &signal_names) {
 void Target::PrintDummySignals(Stream &strm, Args &signal_args) {
   strm.Printf("NAME         PASS     STOP     NOTIFY\n");
   strm.Printf("===========  =======  =======  =======\n");
-  
+
   auto str_for_lazy = [] (LazyBool lazy) -> const char * {
     switch (lazy) {
       case eLazyBoolCalculate: return "not set";

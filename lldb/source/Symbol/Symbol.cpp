@@ -425,7 +425,7 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
       // Next try and find the module by basename in case environment variables
       // or other runtime trickery causes shared libraries to be loaded from
       // alternate paths
-      module_spec.GetFileSpec().GetDirectory().Clear();
+      module_spec.GetFileSpec().ClearDirectory();
       module_sp = target.GetImages().FindFirstModule(module_spec);
     }
   }
