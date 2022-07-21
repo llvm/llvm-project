@@ -1370,6 +1370,23 @@ unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context
 // with 1/-1.
 static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
                                     ISD::CondCode &CC, SelectionDAG &DAG) {
+  // If this is a single bit test that can't be handled by ANDI, shift the
+  // bit to be tested to the MSB and perform a signed compare with 0.
+  if (isIntEqualitySetCC(CC) && isNullConstant(RHS) &&
+      LHS.getOpcode() == ISD::AND && LHS.hasOneUse() &&
+      isa<ConstantSDNode>(LHS.getOperand(1))) {
+    uint64_t Mask = LHS.getConstantOperandVal(1);
+    if (isPowerOf2_64(Mask) && !isInt<12>(Mask)) {
+      CC = CC == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
+      unsigned ShAmt = LHS.getValueSizeInBits() - 1 - Log2_64(Mask);
+      LHS = LHS.getOperand(0);
+      if (ShAmt != 0)
+        LHS = DAG.getNode(ISD::SHL, DL, LHS.getValueType(), LHS,
+                          DAG.getConstant(ShAmt, DL, LHS.getValueType()));
+      return;
+    }
+  }
+
   // Convert X > -1 to X >= 0.
   if (CC == ISD::SETGT && isAllOnesConstant(RHS)) {
     RHS = DAG.getConstant(0, DL, RHS.getValueType());
