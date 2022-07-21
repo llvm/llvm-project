@@ -96,7 +96,7 @@ bool MarkupFilter::tryMMap(const MarkupNode &Node,
 
   if (const MMap *M = overlappingMMap(*ParsedMMap)) {
     WithColor::error(errs())
-        << formatv("overlapping mmap: #{0:x} [{1:x},{2:x})\n", M->Module->ID,
+        << formatv("overlapping mmap: #{0:x} [{1:x},{2:x})\n", M->Mod->ID,
                    M->Addr, M->Addr + M->Size);
     reportLocation(Node.Fields[0].begin());
     return true;
@@ -106,11 +106,11 @@ bool MarkupFilter::tryMMap(const MarkupNode &Node,
   assert(Res.second && "Overlap check should ensure emplace succeeds.");
   MMap &MMap = Res.first->second;
 
-  if (!MIL || MIL->Module != MMap.Module) {
+  if (!MIL || MIL->Mod != MMap.Mod) {
     endAnyModuleInfoLine();
     for (const MarkupNode &Node : DeferredNodes)
       filterNode(Node);
-    beginModuleInfoLine(MMap.Module);
+    beginModuleInfoLine(MMap.Mod);
     OS << "; adds";
   }
   MIL->MMaps.push_back(&MMap);
