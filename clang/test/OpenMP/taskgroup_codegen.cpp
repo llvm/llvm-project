@@ -8,6 +8,9 @@
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix=CHECK2
+
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -168,3 +171,69 @@ void parallel_taskgroup() {
 // DEBUG1-NEXT:    call void @__clang_call_terminate(i8* [[TMP3]]) #[[ATTR8]], !dbg [[DBG25]]
 // DEBUG1-NEXT:    unreachable, !dbg [[DBG25]]
 //
+
+// CHECK2-LABEL: define dso_local void @_Z3foov() #{{.+}} {
+// CHECK2:       entry:
+// CHECK2-NEXT:    call void @_Z8mayThrowv()
+// CHECK2-NEXT:    ret void
+
+// CHECK2-LABEL: define dso_local noundef i32 @main() #{{.+}} {
+// CHECK2:       entry:
+// CHECK2-NEXT:    %[[RETVAL:.+]] = alloca i32, align 4
+// CHECK2-NEXT:    %[[A:.+]] = alloca i8, align 1
+// CHECK2-NEXT:    store i32 0, i32* %[[RETVAL]], align 4
+// CHECK2-NEXT:    %[[OMP_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.+}})
+// CHECK2-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @{{.+}}, i32 %[[OMP_THREAD_NUM]])
+// CHECK2-NEXT:    store i8 2, i8* %[[A]], align 1
+// CHECK2-NEXT:    br label %taskgroup.exit
+
+// CHECK2:       taskgroup.exit:
+// CHECK2-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @{{.+}}, i32 %[[OMP_THREAD_NUM]])
+// CHECK2-NEXT:    %[[OMP_THREAD_NUM2:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.+}})
+// CHECK2-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @{{.+}}, i32 %[[OMP_THREAD_NUM2]])
+// CHECK2-NEXT:    call void @_Z3foov()
+// CHECK2-NEXT:    br label %taskgroup.exit2
+
+// CHECK2:       taskgroup.exit2:
+// CHECK2-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @{{.+}}, i32 %[[OMP_THREAD_NUM2]])
+// CHECK2-NEXT:    %[[TMP:.+]] = load i8, i8* %[[A]], align 1
+// CHECK2-NEXT:    %[[CONV:.+]] = sext i8 %[[TMP]] to i32
+// CHECK2-NEXT:    ret i32 %[[CONV]]
+
+// CHECK2-LABEL: define dso_local void @_Z18parallel_taskgroupv() #{{.+}} {
+// CHECK2:       entry:
+// CHECK2-NEXT:    %[[OMP_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.+}})
+// CHECK2-NEXT:    br label %omp_parallel
+
+// CHECK2:       omp_parallel:
+// CHECK2-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @_Z18parallel_taskgroupv..omp_par to void (i32*, i32*, ...)*))
+// CHECK2-NEXT:    br label %omp.par.outlined.exit
+
+// CHECK2:       omp.par.outlined.exit:
+// CHECK2-NEXT:    br label %omp.par.exit.split
+
+// CHECK2:       omp.par.exit.split:
+// CHECK2-NEXT:    ret void
+
+// CHECK2-LABEL: define internal void @_Z18parallel_taskgroupv..omp_par(i32* noalias %{{.+}}, i32* noalias %{{.+}}) #{{.+}} {
+// CHECK2:       omp.par.entry:
+// CHECK2:         br label %omp.par.region
+
+// CHECK2:       omp.par.region:
+// CHECK2-NEXT:    %[[OMP_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.+}})
+// CHECK2-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @{{.+}}, i32 %[[OMP_THREAD_NUM]])
+// CHECK2-NEXT:    call void @_Z3foov()
+// CHECK2-NEXT:    br label %taskgroup.exit
+
+// CHECK2:       taskgroup.exit:
+// CHECK2-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @{{.+}}, i32 %[[OMP_THREAD_NUM]])
+// CHECK2-NEXT:    br label %omp.par.region.parallel.after
+
+// CHECK2:       omp.par.region.parallel.after:
+// CHECK2-NEXT:    br label %omp.par.pre_finalize
+
+// CHECK2:       omp.par.pre_finalize:
+// CHECK2-NEXT:    br label %omp.par.outlined.exit.exitStub
+
+// CHECK2:       omp.par.outlined.exit.exitStub:
+// CHECK2-NEXT:    ret void
