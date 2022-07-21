@@ -560,7 +560,7 @@ void ObjFile::parseOptimizationHints(ArrayRef<uint8_t> data) {
     if (section == sections.end())
       return;
     ++subsection;
-    if (subsection == (*section)->subsections.end()) {
+    while (subsection == (*section)->subsections.end()) {
       ++section;
       if (section == sections.end())
         return;
@@ -582,6 +582,7 @@ void ObjFile::parseOptimizationHints(ArrayRef<uint8_t> data) {
         if (section == sections.end())
           break;
         updateAddr();
+        assert(hintStart->offset0 >= subsectionBase);
       }
     }
 
