@@ -21,7 +21,7 @@ def Quantization_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
