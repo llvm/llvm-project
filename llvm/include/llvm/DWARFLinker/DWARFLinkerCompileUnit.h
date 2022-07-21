@@ -9,8 +9,8 @@
 #ifndef LLVM_DWARFLINKER_DWARFLINKERCOMPILEUNIT_H
 #define LLVM_DWARFLINKER_DWARFLINKERCOMPILEUNIT_H
 
-#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 
@@ -18,9 +18,12 @@ namespace llvm {
 
 class DeclContext;
 
-/// Mapped value in the address map is the offset to apply to the
-/// linked address.
-using RangesTy = AddressRangesMap<int64_t>;
+template <typename KeyT, typename ValT>
+using HalfOpenIntervalMap =
+    IntervalMap<KeyT, ValT, IntervalMapImpl::NodeSizer<KeyT, ValT>::LeafSize,
+                IntervalMapHalfOpenInfo<KeyT>>;
+
+using FunctionIntervals = HalfOpenIntervalMap<uint64_t, int64_t>;
 
 // FIXME: Delete this structure.
 struct PatchLocation {
@@ -81,7 +84,8 @@ public:
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
               StringRef ClangModuleName)
-      : OrigUnit(OrigUnit), ID(ID), ClangModuleName(ClangModuleName) {
+      : OrigUnit(OrigUnit), ID(ID), Ranges(RangeAlloc),
+        ClangModuleName(ClangModuleName) {
     Info.resize(OrigUnit.getNumDIEs());
 
     auto CUDie = OrigUnit.getUnitDIE(false);
@@ -139,7 +143,7 @@ public:
     return UnitRangeAttribute;
   }
 
-  const RangesTy &getFunctionRanges() const { return Ranges; }
+  const FunctionIntervals &getFunctionRanges() const { return Ranges; }
 
   const std::vector<PatchLocation> &getRangesAttributes() const {
     return RangeAttributes;
@@ -177,6 +181,10 @@ public:
   /// Add a function range [\p LowPC, \p HighPC) that is relocated by applying
   /// offset \p PCOffset.
   void addFunctionRange(uint64_t LowPC, uint64_t HighPC, int64_t PCOffset);
+
+  /// Check whether specified address range \p LowPC \p HighPC
+  /// overlaps with existing function ranges.
+  bool overlapsWithFunctionRanges(uint64_t LowPC, uint64_t HighPC);
 
   /// Keep track of a DW_AT_range attribute that we will need to patch up later.
   void noteRangeAttribute(const DIE &Die, PatchLocation Attr);
@@ -262,10 +270,12 @@ private:
       std::tuple<DIE *, const CompileUnit *, DeclContext *, PatchLocation>>
       ForwardDIEReferences;
 
-  /// The ranges in that map are the PC ranges for functions in this unit,
-  /// associated with the PC offset to apply to the addresses to get
-  /// the linked address.
-  RangesTy Ranges;
+  FunctionIntervals::Allocator RangeAlloc;
+
+  /// The ranges in that interval map are the PC ranges for
+  /// functions in this unit, associated with the PC offset to apply
+  /// to the addresses to get the linked address.
+  FunctionIntervals Ranges;
 
   /// The DW_AT_low_pc of each DW_TAG_label.
   SmallDenseMap<uint64_t, uint64_t, 1> Labels;
