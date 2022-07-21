@@ -65,13 +65,12 @@ bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 /// allocates memory (either malloc, calloc, or strdup like).
 bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
-/// Tests if a value is a call or invoke to a library function that
-/// reallocates memory (e.g., realloc).
-bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
 bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
+
+/// If this is a call to a realloc function, return the reallocated operand.
+Value *getReallocatedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
@@ -80,26 +79,23 @@ bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
 /// isLibFreeFunction - Returns true if the function is a builtin free()
 bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 
-/// isFreeCall - Returns non-null if the value is a call to the builtin free()
-const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
-
-inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
-  return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
-}
+/// If this if a call to a free function, return the freed operand.
+Value *getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //
 
-/// Return false if the allocation can have side effects on the program state
-/// we are required to preserve beyond the effect of allocating a new object.
+/// Return true if this is a call to an allocation function that does not have
+/// side effects that we are required to preserve beyond the effect of
+/// allocating a new object.
 /// Ex: If our allocation routine has a counter for the number of objects
 /// allocated, and the program prints it on exit, can the value change due
 /// to optimization? Answer is highly language dependent.
 /// Note: *Removable* really does mean removable; it does not mean observable.
 /// A language (e.g. C++) can allow removing allocations without allowing
 /// insertion or speculative execution of allocation routines.
-bool isAllocRemovable(const CallBase *V, const TargetLibraryInfo *TLI);
+bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 
 /// Gets the alignment argument for an aligned_alloc-like function, using either
 /// built-in knowledge based on fuction names/signatures or allocalign
@@ -107,13 +103,16 @@ bool isAllocRemovable(const CallBase *V, const TargetLibraryInfo *TLI);
 /// the definition of the allocalign attribute.
 Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
 
-/// Return the size of the requested allocation.  With a trivial mapper, this is
-/// identical to calling getObjectSize(..., Exact).  A mapper function can be
-/// used to replace one Value* (operand to the allocation) with another.  This
-/// is useful when doing abstract interpretation.
-Optional<APInt> getAllocSize(const CallBase *CB,
-                             const TargetLibraryInfo *TLI,
-                             std::function<const Value*(const Value*)> Mapper);
+/// Return the size of the requested allocation. With a trivial mapper, this is
+/// similar to calling getObjectSize(..., Exact), but without looking through
+/// calls that return their argument. A mapper function can be used to replace
+/// one Value* (operand to the allocation) with another. This is useful when
+/// doing abstract interpretation.
+Optional<APInt> getAllocSize(
+    const CallBase *CB, const TargetLibraryInfo *TLI,
+    function_ref<const Value *(const Value *)> Mapper = [](const Value *V) {
+      return V;
+    });
 
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return

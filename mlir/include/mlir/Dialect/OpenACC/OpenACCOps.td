@@ -27,6 +27,9 @@ def OpenACC_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
   let cppNamespace = "::mlir::acc";
+
+  // TODO: Flip to _Prefixed.
+  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 
 // AccCommon requires definition of OpenACC_Dialect.

@@ -722,3 +722,119 @@ define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_down(double* %valp) 
   %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x double> %shf
 }
+
+define <vscale x 2 x double> @dupq_ld1rqd_f64(<2 x double>* %a) {
+; CHECK-LABEL: dupq_ld1rqd_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <2 x double>, <2 x double>* %a
+  %2 = tail call fast <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %1, i64 0)
+  %3 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %2, i64 0)
+  ret <vscale x 2 x double> %3
+}
+
+define <vscale x 4 x float> @dupq_ld1rqw_f32(<4 x float>* %a) {
+; CHECK-LABEL: dupq_ld1rqw_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <4 x float>, <4 x float>* %a
+  %2 = tail call fast <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %1, i64 0)
+  %3 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %2, i64 0)
+  ret <vscale x 4 x float> %3
+}
+
+define <vscale x 8 x half> @dupq_ld1rqh_f16(<8 x half>* %a) {
+; CHECK-LABEL: dupq_ld1rqh_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <8 x half>, <8 x half>* %a
+  %2 = tail call fast <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %1, i64 0)
+  %3 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %2, i64 0)
+  ret <vscale x 8 x half> %3
+}
+
+define <vscale x 8 x bfloat> @dupq_ld1rqh_bf16(<8 x bfloat>* %a) #0 {
+; CHECK-LABEL: dupq_ld1rqh_bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <8 x bfloat>, <8 x bfloat>* %a
+  %2 = tail call fast <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %1, i64 0)
+  %3 = tail call fast <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %2, i64 0)
+  ret <vscale x 8 x bfloat> %3
+}
+
+define <vscale x 2 x i64> @dupq_ld1rqd_i64(<2 x i64>* %a) #0 {
+; CHECK-LABEL: dupq_ld1rqd_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <2 x i64>, <2 x i64>* %a
+  %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> %1, i64 0)
+  %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2, i64 0)
+  ret <vscale x 2 x i64> %3
+}
+
+define <vscale x 4 x i32> @dupq_ld1rqw_i32(<4 x i32>* %a) #0 {
+; CHECK-LABEL: dupq_ld1rqw_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <4 x i32>, <4 x i32>* %a
+  %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> %1, i64 0)
+  %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2, i64 0)
+  ret <vscale x 4 x i32> %3
+}
+
+define <vscale x 8 x i16> @dupq_ld1rqw_i16(<8 x i16>* %a) #0 {
+; CHECK-LABEL: dupq_ld1rqw_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <8 x i16>, <8 x i16>* %a
+  %2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> %1, i64 0)
+  %3 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %2, i64 0)
+  ret <vscale x 8 x i16> %3
+}
+
+define <vscale x 16 x i8> @dupq_ld1rqw_i8(<16 x i8>* %a) #0 {
+; CHECK-LABEL: dupq_ld1rqw_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %1 = load <16 x i8>, <16 x i8>* %a
+  %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> %1, i64 0)
+  %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2, i64 0)
+  ret <vscale x 16 x i8> %3
+}
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8>, i64)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16>, i64)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32>, i64)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64>, i64)
+declare <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half>, i64)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat>, i64)
+declare <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float>, i64)
+declare <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double>, i64)
+
+declare <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double>, <2 x double>, i64)
+declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
+declare <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half>, <8 x half>, i64)
+declare <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64>, <2 x i64>, i64)
+declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32>, <4 x i32>, i64)
+declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16>, <8 x i16>, i64)
+declare <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8>, <16 x i8>, i64)
+declare <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat>, <8 x bfloat>, i64)
+
+attributes #0 = { "target-features"="+sve,+bf16" }

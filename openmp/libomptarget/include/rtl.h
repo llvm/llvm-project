@@ -26,6 +26,7 @@ struct __tgt_bin_desc;
 
 struct RTLInfoTy {
   typedef int32_t(is_valid_binary_ty)(void *);
+  typedef int32_t(is_valid_binary_info_ty)(void *, void *);
   typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
   typedef int32_t(number_of_devices_ty)();
   typedef int32_t(init_device_ty)(int32_t);
@@ -82,6 +83,7 @@ struct RTLInfoTy {
 
   // Functions implemented in the RTL.
   is_valid_binary_ty *is_valid_binary = nullptr;
+  is_valid_binary_info_ty *is_valid_binary_info = nullptr;
   is_data_exchangable_ty *is_data_exchangable = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
   init_device_ty *init_device = nullptr;

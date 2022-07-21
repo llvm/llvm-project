@@ -1,4 +1,4 @@
-//===- SPIRVGLSLOps.td - GLSL extended insts spec file -----*- tablegen -*-===//
+//===- SPIRVGLOps.td - GLSL extended insts spec file -----*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_IR_GLSL_OPS
-#define MLIR_DIALECT_SPIRV_IR_GLSL_OPS
+#ifndef MLIR_DIALECT_SPIRV_IR_GL_OPS
+#define MLIR_DIALECT_SPIRV_IR_GL_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -20,9 +20,9 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // SPIR-V GLSL 4.50 opcode specification.
 //===----------------------------------------------------------------------===//
 
-// Base class for all GLSL ops.
-class SPV_GLSLOp<string mnemonic, int opcode, list<Trait> traits = []> :
-  SPV_ExtInstOp<mnemonic, "GLSL", "GLSL.std.450", opcode, traits> {
+// Base class for all GL ops.
+class SPV_GLOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPV_ExtInstOp<mnemonic, "GL", "GLSL.std.450", opcode, traits> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
@@ -32,10 +32,10 @@ class SPV_GLSLOp<string mnemonic, int opcode, list<Trait> traits = []> :
   ];
 }
 
-// Base class for GLSL unary ops.
-class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
+// Base class for GL unary ops.
+class SPV_GLUnaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPV_GLSLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandType>:$operand
@@ -48,19 +48,19 @@ class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
   let hasVerifier = 0;
 }
 
-// Base class for GLSL Unary arithmetic ops where return type matches
+// Base class for GL Unary arithmetic ops where return type matches
 // the operand type.
-class SPV_GLSLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_GLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
                                 list<Trait> traits = []> :
-  SPV_GLSLUnaryOp<mnemonic, opcode, type, type,
+  SPV_GLUnaryOp<mnemonic, opcode, type, type,
                   traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "$operand `:` type($operand) attr-dict";
 }
 
-// Base class for GLSL binary ops.
-class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
+// Base class for GL binary ops.
+class SPV_GLBinaryOp<string mnemonic, int opcode, Type resultType,
                         Type operandType, list<Trait> traits = []> :
-  SPV_GLSLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandType>:$lhs,
@@ -74,19 +74,19 @@ class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
   let hasVerifier = 0;
 }
 
-// Base class for GLSL Binary arithmetic ops where operand types and
+// Base class for GL Binary arithmetic ops where operand types and
 // return type matches.
-class SPV_GLSLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_GLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
                                  list<Trait> traits = []> :
-  SPV_GLSLBinaryOp<mnemonic, opcode, type, type,
+  SPV_GLBinaryOp<mnemonic, opcode, type, type,
                    traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-// Base class for GLSL ternary ops.
-class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
+// Base class for GL ternary ops.
+class SPV_GLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
                         list<Trait> traits = []> :
-  SPV_GLSLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
     SPV_ScalarOrVectorOf<type>:$x,
@@ -104,7 +104,7 @@ class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
-def SPV_GLSLFAbsOp : SPV_GLSLUnaryArithmeticOp<"FAbs", 4, SPV_Float> {
+def SPV_GLFAbsOp : SPV_GLUnaryArithmeticOp<"FAbs", 4, SPV_Float> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -120,21 +120,21 @@ def SPV_GLSLFAbsOp : SPV_GLSLUnaryArithmeticOp<"FAbs", 4, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    abs-op ::= ssa-id `=` `spv.GLSL.FAbs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spv.GL.FAbs` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.FAbs %0 : f32
-    %3 = spv.GLSL.FAbs %1 : vector<3xf16>
+    %2 = spv.GL.FAbs %0 : f32
+    %3 = spv.GL.FAbs %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSAbsOp : SPV_GLSLUnaryArithmeticOp<"SAbs", 5, SPV_Integer> {
+def SPV_GLSAbsOp : SPV_GLUnaryArithmeticOp<"SAbs", 5, SPV_Integer> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -149,21 +149,21 @@ def SPV_GLSLSAbsOp : SPV_GLSLUnaryArithmeticOp<"SAbs", 5, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    abs-op ::= ssa-id `=` `spv.GLSL.SAbs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spv.GL.SAbs` ssa-use `:`
                integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.SAbs %0 : i32
-    %3 = spv.GLSL.SAbs %1 : vector<3xi16>
+    %2 = spv.GL.SAbs %0 : i32
+    %3 = spv.GL.SAbs %1 : vector<3xi16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLCeilOp : SPV_GLSLUnaryArithmeticOp<"Ceil", 9, SPV_Float> {
+def SPV_GLCeilOp : SPV_GLUnaryArithmeticOp<"Ceil", 9, SPV_Float> {
   let summary = "Rounds up to the next whole number";
 
   let description = [{
@@ -180,21 +180,21 @@ def SPV_GLSLCeilOp : SPV_GLSLUnaryArithmeticOp<"Ceil", 9, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    ceil-op ::= ssa-id `=` `spv.GLSL.Ceil` ssa-use `:`
+    ceil-op ::= ssa-id `=` `spv.GL.Ceil` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Ceil %0 : f32
-    %3 = spv.GLSL.Ceil %1 : vector<3xf16>
+    %2 = spv.GL.Ceil %0 : f32
+    %3 = spv.GL.Ceil %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLCosOp : SPV_GLSLUnaryArithmeticOp<"Cos", 14, SPV_Float16or32> {
+def SPV_GLCosOp : SPV_GLUnaryArithmeticOp<"Cos", 14, SPV_Float16or32> {
   let summary = "Cosine of operand in radians";
 
   let description = [{
@@ -212,21 +212,21 @@ def SPV_GLSLCosOp : SPV_GLSLUnaryArithmeticOp<"Cos", 14, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    cos-op ::= ssa-id `=` `spv.GLSL.Cos` ssa-use `:`
+    cos-op ::= ssa-id `=` `spv.GL.Cos` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Cos %0 : f32
-    %3 = spv.GLSL.Cos %1 : vector<3xf16>
+    %2 = spv.GL.Cos %0 : f32
+    %3 = spv.GL.Cos %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSinOp : SPV_GLSLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
+def SPV_GLSinOp : SPV_GLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
   let summary = "Sine of operand in radians";
 
   let description = [{
@@ -244,21 +244,21 @@ def SPV_GLSLSinOp : SPV_GLSLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    sin-op ::= ssa-id `=` `spv.GLSL.Sin` ssa-use `:`
+    sin-op ::= ssa-id `=` `spv.GL.Sin` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Sin %0 : f32
-    %3 = spv.GLSL.Sin %1 : vector<3xf16>
+    %2 = spv.GL.Sin %0 : f32
+    %3 = spv.GL.Sin %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLTanOp : SPV_GLSLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
+def SPV_GLTanOp : SPV_GLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
   let summary = "Tangent of operand in radians";
 
   let description = [{
@@ -276,21 +276,21 @@ def SPV_GLSLTanOp : SPV_GLSLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    tan-op ::= ssa-id `=` `spv.GLSL.Tan` ssa-use `:`
+    tan-op ::= ssa-id `=` `spv.GL.Tan` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Tan %0 : f32
-    %3 = spv.GLSL.Tan %1 : vector<3xf16>
+    %2 = spv.GL.Tan %0 : f32
+    %3 = spv.GL.Tan %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLAsinOp : SPV_GLSLUnaryArithmeticOp<"Asin", 16, SPV_Float16or32> {
+def SPV_GLAsinOp : SPV_GLUnaryArithmeticOp<"Asin", 16, SPV_Float16or32> {
   let summary = "Arc Sine of operand in radians";
 
   let description = [{
@@ -310,21 +310,21 @@ def SPV_GLSLAsinOp : SPV_GLSLUnaryArithmeticOp<"Asin", 16, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    asin-op ::= ssa-id `=` `spv.GLSL.Asin` ssa-use `:`
+    asin-op ::= ssa-id `=` `spv.GL.Asin` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Asin %0 : f32
-    %3 = spv.GLSL.Asin %1 : vector<3xf16>
+    %2 = spv.GL.Asin %0 : f32
+    %3 = spv.GL.Asin %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLAcosOp : SPV_GLSLUnaryArithmeticOp<"Acos", 17, SPV_Float16or32> {
+def SPV_GLAcosOp : SPV_GLUnaryArithmeticOp<"Acos", 17, SPV_Float16or32> {
   let summary = "Arc Cosine of operand in radians";
 
   let description = [{
@@ -344,21 +344,21 @@ def SPV_GLSLAcosOp : SPV_GLSLUnaryArithmeticOp<"Acos", 17, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    acos-op ::= ssa-id `=` `spv.GLSL.Acos` ssa-use `:`
+    acos-op ::= ssa-id `=` `spv.GL.Acos` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Acos %0 : f32
-    %3 = spv.GLSL.Acos %1 : vector<3xf16>
+    %2 = spv.GL.Acos %0 : f32
+    %3 = spv.GL.Acos %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLAtanOp : SPV_GLSLUnaryArithmeticOp<"Atan", 18, SPV_Float16or32> {
+def SPV_GLAtanOp : SPV_GLUnaryArithmeticOp<"Atan", 18, SPV_Float16or32> {
   let summary = "Arc Tangent of operand in radians";
 
   let description = [{
@@ -378,21 +378,21 @@ def SPV_GLSLAtanOp : SPV_GLSLUnaryArithmeticOp<"Atan", 18, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    atan-op ::= ssa-id `=` `spv.GLSL.Atan` ssa-use `:`
+    atan-op ::= ssa-id `=` `spv.GL.Atan` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Atan %0 : f32
-    %3 = spv.GLSL.Atan %1 : vector<3xf16>
+    %2 = spv.GL.Atan %0 : f32
+    %3 = spv.GL.Atan %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLExpOp : SPV_GLSLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
+def SPV_GLExpOp : SPV_GLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
   let summary = "Exponentiation of Operand 1";
 
   let description = [{
@@ -410,21 +410,21 @@ def SPV_GLSLExpOp : SPV_GLSLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    exp-op ::= ssa-id `=` `spv.GLSL.Exp` ssa-use `:`
+    exp-op ::= ssa-id `=` `spv.GL.Exp` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Exp %0 : f32
-    %3 = spv.GLSL.Exp %1 : vector<3xf16>
+    %2 = spv.GL.Exp %0 : f32
+    %3 = spv.GL.Exp %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLFloorOp : SPV_GLSLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
+def SPV_GLFloorOp : SPV_GLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
   let summary = "Rounds down to the next whole number";
 
   let description = [{
@@ -441,21 +441,21 @@ def SPV_GLSLFloorOp : SPV_GLSLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spv.GLSL.Floor` ssa-use `:`
+    floor-op ::= ssa-id `=` `spv.GL.Floor` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Floor %0 : f32
-    %3 = spv.GLSL.Floor %1 : vector<3xf16>
+    %2 = spv.GL.Floor %0 : f32
+    %3 = spv.GL.Floor %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLRoundOp: SPV_GLSLUnaryArithmeticOp<"Round", 1, SPV_Float> {
+def SPV_GLRoundOp: SPV_GLUnaryArithmeticOp<"Round", 1, SPV_Float> {
   let summary = "Rounds to the whole number";
 
   let description = [{
@@ -471,21 +471,21 @@ def SPV_GLSLRoundOp: SPV_GLSLUnaryArithmeticOp<"Round", 1, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spv.GLSL.Round` ssa-use `:`
+    floor-op ::= ssa-id `=` `spv.GL.Round` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Round %0 : f32
-    %3 = spv.GLSL.Round %1 : vector<3xf16>
+    %2 = spv.GL.Round %0 : f32
+    %3 = spv.GL.Round %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLInverseSqrtOp : SPV_GLSLUnaryArithmeticOp<"InverseSqrt", 32, SPV_Float> {
+def SPV_GLInverseSqrtOp : SPV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPV_Float> {
   let summary = "Reciprocal of sqrt(operand)";
 
   let description = [{
@@ -501,21 +501,21 @@ def SPV_GLSLInverseSqrtOp : SPV_GLSLUnaryArithmeticOp<"InverseSqrt", 32, SPV_Flo
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    rsqrt-op ::= ssa-id `=` `spv.GLSL.InverseSqrt` ssa-use `:`
+    rsqrt-op ::= ssa-id `=` `spv.GL.InverseSqrt` ssa-use `:`
                  float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.InverseSqrt %0 : f32
-    %3 = spv.GLSL.InverseSqrt %1 : vector<3xf16>
+    %2 = spv.GL.InverseSqrt %0 : f32
+    %3 = spv.GL.InverseSqrt %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLLogOp : SPV_GLSLUnaryArithmeticOp<"Log", 28, SPV_Float16or32> {
+def SPV_GLLogOp : SPV_GLUnaryArithmeticOp<"Log", 28, SPV_Float16or32> {
   let summary = "Natural logarithm of the operand";
 
   let description = [{
@@ -534,21 +534,21 @@ def SPV_GLSLLogOp : SPV_GLSLUnaryArithmeticOp<"Log", 28, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    log-op ::= ssa-id `=` `spv.GLSL.Log` ssa-use `:`
+    log-op ::= ssa-id `=` `spv.GL.Log` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Log %0 : f32
-    %3 = spv.GLSL.Log %1 : vector<3xf16>
+    %2 = spv.GL.Log %0 : f32
+    %3 = spv.GL.Log %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLFMaxOp : SPV_GLSLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
+def SPV_GLFMaxOp : SPV_GLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
   let summary = "Return maximum of two floating-point operands";
 
   let description = [{
@@ -565,21 +565,21 @@ def SPV_GLSLFMaxOp : SPV_GLSLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmax-op ::= ssa-id `=` `spv.GLSL.FMax` ssa-use `:`
+    fmax-op ::= ssa-id `=` `spv.GL.FMax` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.FMax %0, %1 : f32
-    %3 = spv.GLSL.FMax %0, %1 : vector<3xf16>
+    %2 = spv.GL.FMax %0, %1 : f32
+    %3 = spv.GL.FMax %0, %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLUMaxOp : SPV_GLSLBinaryArithmeticOp<"UMax", 41, SPV_Integer> {
+def SPV_GLUMaxOp : SPV_GLBinaryArithmeticOp<"UMax", 41, SPV_Integer> {
   let summary = "Return maximum of two unsigned integer operands";
 
   let description = [{
@@ -595,21 +595,21 @@ def SPV_GLSLUMaxOp : SPV_GLSLBinaryArithmeticOp<"UMax", 41, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spv.GLSL.UMax` ssa-use `:`
+    smax-op ::= ssa-id `=` `spv.GL.UMax` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.UMax %0, %1 : i32
-    %3 = spv.GLSL.UMax %0, %1 : vector<3xi16>
+    %2 = spv.GL.UMax %0, %1 : i32
+    %3 = spv.GL.UMax %0, %1 : vector<3xi16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSMaxOp : SPV_GLSLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
+def SPV_GLSMaxOp : SPV_GLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
   let summary = "Return maximum of two signed integer operands";
 
   let description = [{
@@ -625,21 +625,21 @@ def SPV_GLSLSMaxOp : SPV_GLSLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spv.GLSL.SMax` ssa-use `:`
+    smax-op ::= ssa-id `=` `spv.GL.SMax` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.SMax %0, %1 : i32
-    %3 = spv.GLSL.SMax %0, %1 : vector<3xi16>
+    %2 = spv.GL.SMax %0, %1 : i32
+    %3 = spv.GL.SMax %0, %1 : vector<3xi16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLFMinOp : SPV_GLSLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
+def SPV_GLFMinOp : SPV_GLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
   let summary = "Return minimum of two floating-point operands";
 
   let description = [{
@@ -656,21 +656,21 @@ def SPV_GLSLFMinOp : SPV_GLSLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmin-op ::= ssa-id `=` `spv.GLSL.FMin` ssa-use `:`
+    fmin-op ::= ssa-id `=` `spv.GL.FMin` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.FMin %0, %1 : f32
-    %3 = spv.GLSL.FMin %0, %1 : vector<3xf16>
+    %2 = spv.GL.FMin %0, %1 : f32
+    %3 = spv.GL.FMin %0, %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLUMinOp : SPV_GLSLBinaryArithmeticOp<"UMin", 38, SPV_Integer> {
+def SPV_GLUMinOp : SPV_GLBinaryArithmeticOp<"UMin", 38, SPV_Integer> {
   let summary = "Return minimum of two unsigned integer operands";
 
   let description = [{
@@ -686,21 +686,21 @@ def SPV_GLSLUMinOp : SPV_GLSLBinaryArithmeticOp<"UMin", 38, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spv.GLSL.UMin` ssa-use `:`
+    smin-op ::= ssa-id `=` `spv.GL.UMin` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.UMin %0, %1 : i32
-    %3 = spv.GLSL.UMin %0, %1 : vector<3xi16>
+    %2 = spv.GL.UMin %0, %1 : i32
+    %3 = spv.GL.UMin %0, %1 : vector<3xi16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSMinOp : SPV_GLSLBinaryArithmeticOp<"SMin", 39, SPV_Integer> {
+def SPV_GLSMinOp : SPV_GLBinaryArithmeticOp<"SMin", 39, SPV_Integer> {
   let summary = "Return minimum of two signed integer operands";
 
   let description = [{
@@ -716,21 +716,21 @@ def SPV_GLSLSMinOp : SPV_GLSLBinaryArithmeticOp<"SMin", 39, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spv.GLSL.SMin` ssa-use `:`
+    smin-op ::= ssa-id `=` `spv.GL.SMin` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.SMin %0, %1 : i32
-    %3 = spv.GLSL.SMin %0, %1 : vector<3xi16>
+    %2 = spv.GL.SMin %0, %1 : i32
+    %3 = spv.GL.SMin %0, %1 : vector<3xi16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLPowOp : SPV_GLSLBinaryArithmeticOp<"Pow", 26, SPV_Float16or32> {
+def SPV_GLPowOp : SPV_GLBinaryArithmeticOp<"Pow", 26, SPV_Float16or32> {
   let summary = "Return x raised to the y power of two operands";
 
   let description = [{
@@ -750,21 +750,21 @@ def SPV_GLSLPowOp : SPV_GLSLBinaryArithmeticOp<"Pow", 26, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    pow-op ::= ssa-id `=` `spv.GLSL.Pow` ssa-use `:`
+    pow-op ::= ssa-id `=` `spv.GL.Pow` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Pow %0, %1 : f32
-    %3 = spv.GLSL.Pow %0, %1 : vector<3xf16>
+    %2 = spv.GL.Pow %0, %1 : f32
+    %3 = spv.GL.Pow %0, %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLFSignOp : SPV_GLSLUnaryArithmeticOp<"FSign", 6, SPV_Float> {
+def SPV_GLFSignOp : SPV_GLUnaryArithmeticOp<"FSign", 6, SPV_Float> {
   let summary = "Returns the sign of the operand";
 
   let description = [{
@@ -780,21 +780,21 @@ def SPV_GLSLFSignOp : SPV_GLSLUnaryArithmeticOp<"FSign", 6, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sign-op ::= ssa-id `=` `spv.GLSL.FSign` ssa-use `:`
+    sign-op ::= ssa-id `=` `spv.GL.FSign` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.FSign %0 : f32
-    %3 = spv.GLSL.FSign %1 : vector<3xf16>
+    %2 = spv.GL.FSign %0 : f32
+    %3 = spv.GL.FSign %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSSignOp : SPV_GLSLUnaryArithmeticOp<"SSign", 7, SPV_Integer> {
+def SPV_GLSSignOp : SPV_GLUnaryArithmeticOp<"SSign", 7, SPV_Integer> {
   let summary = "Returns the sign of the operand";
 
   let description = [{
@@ -809,21 +809,21 @@ def SPV_GLSLSSignOp : SPV_GLSLUnaryArithmeticOp<"SSign", 7, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    sign-op ::= ssa-id `=` `spv.GLSL.SSign` ssa-use `:`
+    sign-op ::= ssa-id `=` `spv.GL.SSign` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.SSign %0 : i32
-    %3 = spv.GLSL.SSign %1 : vector<3xi16>
+    %2 = spv.GL.SSign %0 : i32
+    %3 = spv.GL.SSign %1 : vector<3xi16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSqrtOp : SPV_GLSLUnaryArithmeticOp<"Sqrt", 31, SPV_Float> {
+def SPV_GLSqrtOp : SPV_GLUnaryArithmeticOp<"Sqrt", 31, SPV_Float> {
   let summary = "Returns the square root of the operand";
 
   let description = [{
@@ -839,21 +839,21 @@ def SPV_GLSLSqrtOp : SPV_GLSLUnaryArithmeticOp<"Sqrt", 31, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sqrt-op ::= ssa-id `=` `spv.GLSL.Sqrt` ssa-use `:`
+    sqrt-op ::= ssa-id `=` `spv.GL.Sqrt` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Sqrt %0 : f32
-    %3 = spv.GLSL.Sqrt %1 : vector<3xf16>
+    %2 = spv.GL.Sqrt %0 : f32
+    %3 = spv.GL.Sqrt %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSinhOp : SPV_GLSLUnaryArithmeticOp<"Sinh", 19, SPV_Float16or32> {
+def SPV_GLSinhOp : SPV_GLUnaryArithmeticOp<"Sinh", 19, SPV_Float16or32> {
   let summary = "Hyperbolic sine of operand in radians";
 
   let description = [{
@@ -871,21 +871,21 @@ def SPV_GLSLSinhOp : SPV_GLSLUnaryArithmeticOp<"Sinh", 19, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    sinh-op ::= ssa-id `=` `spv.GLSL.Sinh` ssa-use `:`
+    sinh-op ::= ssa-id `=` `spv.GL.Sinh` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Sinh %0 : f32
-    %3 = spv.GLSL.Sinh %1 : vector<3xf16>
+    %2 = spv.GL.Sinh %0 : f32
+    %3 = spv.GL.Sinh %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLCoshOp : SPV_GLSLUnaryArithmeticOp<"Cosh", 20, SPV_Float16or32> {
+def SPV_GLCoshOp : SPV_GLUnaryArithmeticOp<"Cosh", 20, SPV_Float16or32> {
   let summary = "Hyperbolic cosine of operand in radians";
 
   let description = [{
@@ -903,21 +903,21 @@ def SPV_GLSLCoshOp : SPV_GLSLUnaryArithmeticOp<"Cosh", 20, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    cosh-op ::= ssa-id `=` `spv.GLSL.Cosh` ssa-use `:`
+    cosh-op ::= ssa-id `=` `spv.GL.Cosh` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Cosh %0 : f32
-    %3 = spv.GLSL.Cosh %1 : vector<3xf16>
+    %2 = spv.GL.Cosh %0 : f32
+    %3 = spv.GL.Cosh %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLTanhOp : SPV_GLSLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
+def SPV_GLTanhOp : SPV_GLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
   let summary = "Hyperbolic tangent of operand in radians";
 
   let description = [{
@@ -935,21 +935,21 @@ def SPV_GLSLTanhOp : SPV_GLSLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    tanh-op ::= ssa-id `=` `spv.GLSL.Tanh` ssa-use `:`
+    tanh-op ::= ssa-id `=` `spv.GL.Tanh` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.Tanh %0 : f32
-    %3 = spv.GLSL.Tanh %1 : vector<3xf16>
+    %2 = spv.GL.Tanh %0 : f32
+    %3 = spv.GL.Tanh %1 : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLFClampOp : SPV_GLSLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
+def SPV_GLFClampOp : SPV_GLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -965,21 +965,21 @@ def SPV_GLSLFClampOp : SPV_GLSLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
 
     <!-- End of AutoGen section -->
     ```
-    fclamp-op ::= ssa-id `=` `spv.GLSL.FClamp` ssa-use, ssa-use, ssa-use `:`
+    fclamp-op ::= ssa-id `=` `spv.GL.FClamp` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.FClamp %x, %min, %max : f32
-    %3 = spv.GLSL.FClamp %x, %min, %max : vector<3xf16>
+    %2 = spv.GL.FClamp %x, %min, %max : f32
+    %3 = spv.GL.FClamp %x, %min, %max : vector<3xf16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_Integer> {
+def SPV_GLUClampOp : SPV_GLTernaryArithmeticOp<"UClamp", 44, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -994,21 +994,21 @@ def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_Integer> {
 
     <!-- End of AutoGen section -->
     ```
-    uclamp-op ::= ssa-id `=` `spv.GLSL.UClamp` ssa-use, ssa-use, ssa-use `:`
+    uclamp-op ::= ssa-id `=` `spv.GL.UClamp` ssa-use, ssa-use, ssa-use `:`
                unsigned-signless-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.UClamp %x, %min, %max : i32
-    %3 = spv.GLSL.UClamp %x, %min, %max : vector<3xui16>
+    %2 = spv.GL.UClamp %x, %min, %max : i32
+    %3 = spv.GL.UClamp %x, %min, %max : vector<3xui16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_Integer> {
+def SPV_GLSClampOp : SPV_GLTernaryArithmeticOp<"SClamp", 45, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -1023,21 +1023,21 @@ def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_Integer> {
 
     <!-- End of AutoGen section -->
     ```
-    uclamp-op ::= ssa-id `=` `spv.GLSL.UClamp` ssa-use, ssa-use, ssa-use `:`
+    uclamp-op ::= ssa-id `=` `spv.GL.UClamp` ssa-use, ssa-use, ssa-use `:`
                sgined-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.SClamp %x, %min, %max : si32
-    %3 = spv.GLSL.SClamp %x, %min, %max : vector<3xsi16>
+    %2 = spv.GL.SClamp %x, %min, %max : si32
+    %3 = spv.GL.SClamp %x, %min, %max : vector<3xsi16>
     ```
   }];
 }
 
 // -----
 
-def SPV_GLSLFmaOp : SPV_GLSLTernaryArithmeticOp<"Fma", 50, SPV_Float> {
+def SPV_GLFmaOp : SPV_GLTernaryArithmeticOp<"Fma", 50, SPV_Float> {
   let summary = "Computes a * b + c.";
 
   let description = [{
@@ -1063,21 +1063,21 @@ def SPV_GLSLFmaOp : SPV_GLSLTernaryArithmeticOp<"Fma", 50, SPV_Float> {
 
     <!-- End of AutoGen section -->
     ```
-    fma-op ::= ssa-id `=` `spv.GLSL.Fma` ssa-use, ssa-use, ssa-use `:`
+    fma-op ::= ssa-id `=` `spv.GL.Fma` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %0 = spv.GLSL.Fma %a, %b, %c : f32
-    %1 = spv.GLSL.Fma %a, %b, %c : vector<3xf16>
+    %0 = spv.GL.Fma %a, %b, %c : f32
+    %1 = spv.GL.Fma %a, %b, %c : vector<3xf16>
     ```
   }];
 }
 
 // ----
 
-def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
+def SPV_GLFrexpStructOp : SPV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
   let summary = "Splits x into two components such that x = significand * 2^exponent";
 
   let description = [{
@@ -1105,15 +1105,15 @@ def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
                                  `vector<` integer-literal `x` float-type `>`
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    frexpstruct-op ::= ssa-id `=` `spv.GLSL.FrexpStruct` ssa-use `:`
+    frexpstruct-op ::= ssa-id `=` `spv.GL.FrexpStruct` ssa-use `:`
                                   `!spv.struct<` float-scalar-vector-type `,`
                                                   integer-scalar-vector-type `>`
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GLSL.FrexpStruct %0 : f32 -> !spv.struct<f32, i32>
-    %3 = spv.GLSL.FrexpStruct %0 : vector<3xf32> -> !spv.struct<vector<3xf32>, vector<3xi32>>
+    %2 = spv.GL.FrexpStruct %0 : f32 -> !spv.struct<f32, i32>
+    %3 = spv.GL.FrexpStruct %0 : vector<3xf32> -> !spv.struct<vector<3xf32>, vector<3xi32>>
     ```
   }];
 
@@ -1130,8 +1130,8 @@ def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
   }];
 }
 
-def SPV_GLSLLdexpOp :
-  SPV_GLSLOp<"Ldexp", 53, [
+def SPV_GLLdexpOp :
+  SPV_GLOp<"Ldexp", 53, [
       NoSideEffect, AllTypesMatch<["x", "y"]>]> {
   let summary = "Builds y such that y = significand * 2^exponent";
 
@@ -1163,8 +1163,8 @@ def SPV_GLSLLdexpOp :
     #### Example:
 
     ```mlir
-    %y = spv.GLSL.Ldexp %x : f32, %exp : i32 -> f32
-    %y = spv.GLSL.Ldexp %x : vector<3xf32>, %exp : vector<3xi32> -> vector<3xf32>
+    %y = spv.GL.Ldexp %x : f32, %exp : i32 -> f32
+    %y = spv.GL.Ldexp %x : vector<3xf32>, %exp : vector<3xi32> -> vector<3xf32>
     ```
   }];
 
@@ -1182,8 +1182,8 @@ def SPV_GLSLLdexpOp :
   }];
 }
 
-def SPV_GLSLFMixOp :
-  SPV_GLSLOp<"FMix", 46, [
+def SPV_GLFMixOp :
+  SPV_GLOp<"FMix", 46, [
       NoSideEffect, AllTypesMatch<["x", "y", "a", "result"]>]> {
   let summary = "Builds the linear blend of x and y";
 
@@ -1199,8 +1199,8 @@ def SPV_GLSLFMixOp :
     #### Example:
 
     ```mlir
-    %0 = spv.GLSL.FMix %x : f32, %y : f32, %a : f32 -> f32
-    %0 = spv.GLSL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
+    %0 = spv.GL.FMix %x : f32, %y : f32, %a : f32 -> f32
+    %0 = spv.GL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
     ```
   }];
 
@@ -1221,7 +1221,7 @@ def SPV_GLSLFMixOp :
   let hasVerifier = 0;
 }
 
-def SPV_GLSLFindUMsbOp : SPV_GLSLUnaryArithmeticOp<"FindUMsb", 75, SPV_Int32> {
+def SPV_GLFindUMsbOp : SPV_GLUnaryArithmeticOp<"FindUMsb", 75, SPV_Int32> {
   let summary = "Unsigned-integer most-significant bit";
 
   let description = [{
@@ -1237,4 +1237,4 @@ def SPV_GLSLFindUMsbOp : SPV_GLSLUnaryArithmeticOp<"FindUMsb", 75, SPV_Int32> {
   }];
 }
 
-#endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS
+#endif // MLIR_DIALECT_SPIRV_IR_GL_OPS

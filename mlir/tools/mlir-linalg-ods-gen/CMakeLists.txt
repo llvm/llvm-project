@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 # New mlir-linalg-ods-yaml-gen.
-add_llvm_tool(mlir-linalg-ods-yaml-gen
+add_mlir_tool(mlir-linalg-ods-yaml-gen
   mlir-linalg-ods-yaml-gen.cpp
 )
 llvm_update_compile_flags(mlir-linalg-ods-yaml-gen)

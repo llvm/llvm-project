@@ -84,6 +84,10 @@ public:
   /// \returns the next markup node or None if none remain.
   Optional<MarkupNode> nextNode();
 
+  bool isSGR(const MarkupNode &Node) const {
+    return SGRSyntax.match(Node.Text);
+  }
+
 private:
   Optional<MarkupNode> parseElement(StringRef Line);
   void parseTextOutsideMarkup(StringRef Text);
