@@ -903,7 +903,6 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     if (sym.n_type & N_STAB)
       continue;
 
-    StringRef name = strtab + sym.n_strx;
     if ((sym.n_type & N_TYPE) == N_SECT) {
       Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
@@ -913,7 +912,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     } else if (isUndef(sym)) {
       undefineds.push_back(i);
     } else {
-      symbols[i] = parseNonSectionSymbol(sym, name);
+      symbols[i] = parseNonSectionSymbol(sym, StringRef(strtab + sym.n_strx));
     }
   }
 
