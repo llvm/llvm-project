@@ -96,7 +96,7 @@ public:
   /// original \p Entries.
   void emitRangesEntries(
       int64_t UnitPcOffset, uint64_t OrigLowPc,
-      Optional<std::pair<AddressRange, int64_t>> FuncRange,
+      const FunctionIntervals::const_iterator &FuncRange,
       const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
       unsigned AddressSize) override;
 
