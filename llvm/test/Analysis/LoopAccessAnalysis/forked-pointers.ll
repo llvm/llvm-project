@@ -448,10 +448,31 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; CHECK-LABEL: function 'forked_ptrs_add_to_offset'
 ; CHECK-NEXT:  for.body:
-; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
+; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: ((4 * %extra_offset) + %Base) High: (404 + (4 * %extra_offset) + %Base))
+; CHECK-NEXT:          Member: {(4 + (4 * %extra_offset) + %Base),+,4}<%for.body>
+; CHECK-NEXT:          Member: {((4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:    SCEV assumptions:
@@ -483,10 +504,31 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; CHECK-LABEL: function 'forked_ptrs_sub_from_offset'
 ; CHECK-NEXT:  for.body:
-; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
+; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: ((-4 * %extra_offset) + %Base) High: (404 + (-4 * %extra_offset) + %Base))
+; CHECK-NEXT:          Member: {(4 + (-4 * %extra_offset) + %Base),+,4}<%for.body>
+; CHECK-NEXT:          Member: {((-4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:    SCEV assumptions:
@@ -518,10 +560,31 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; CHECK-LABEL: function 'forked_ptrs_add_sub_offset'
 ; CHECK-NEXT:  for.body:
-; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
+; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1:.+]]:
+; CHECK-NEXT:        (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: ((4 * %to_add) + (-4 * %to_sub) + %Base) High: (404 + (4 * %to_add) + (-4 * %to_sub) + %Base))
+; CHECK-NEXT:          Member: {(4 + (4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
+; CHECK-NEXT:          Member: {((4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:    SCEV assumptions:
