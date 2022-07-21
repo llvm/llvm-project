@@ -373,33 +373,37 @@ define void @load_variant(i64* noalias %a, i64* noalias %b) {
 ; VF1UF4-NEXT:    store i64 [[TMP5]], i64* [[B:%.*]], align 8
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF1UF4:       pred.store.continue:
+; VF1UF4-NEXT:    [[TMP6:%.*]] = phi i64 [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_STORE_IF]] ]
 ; VF1UF4-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
 ; VF1UF4:       pred.store.if7:
 ; VF1UF4-NEXT:    [[INDUCTION1:%.*]] = add i64 [[INDEX]], 1
-; VF1UF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDUCTION1]]
-; VF1UF4-NEXT:    [[TMP7:%.*]] = load i64, i64* [[TMP6]], align 8
-; VF1UF4-NEXT:    store i64 [[TMP7]], i64* [[B]], align 8
+; VF1UF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDUCTION1]]
+; VF1UF4-NEXT:    [[TMP8:%.*]] = load i64, i64* [[TMP7]], align 8
+; VF1UF4-NEXT:    store i64 [[TMP8]], i64* [[B]], align 8
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; VF1UF4:       pred.store.continue8:
+; VF1UF4-NEXT:    [[TMP9:%.*]] = phi i64 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP8]], [[PRED_STORE_IF7]] ]
 ; VF1UF4-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
 ; VF1UF4:       pred.store.if9:
 ; VF1UF4-NEXT:    [[INDUCTION2:%.*]] = add i64 [[INDEX]], 2
-; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDUCTION2]]
-; VF1UF4-NEXT:    [[TMP9:%.*]] = load i64, i64* [[TMP8]], align 8
-; VF1UF4-NEXT:    store i64 [[TMP9]], i64* [[B]], align 8
+; VF1UF4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDUCTION2]]
+; VF1UF4-NEXT:    [[TMP11:%.*]] = load i64, i64* [[TMP10]], align 8
+; VF1UF4-NEXT:    store i64 [[TMP11]], i64* [[B]], align 8
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE10]]
 ; VF1UF4:       pred.store.continue10:
+; VF1UF4-NEXT:    [[TMP12:%.*]] = phi i64 [ poison, [[PRED_STORE_CONTINUE8]] ], [ [[TMP11]], [[PRED_STORE_IF9]] ]
 ; VF1UF4-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12]]
 ; VF1UF4:       pred.store.if11:
 ; VF1UF4-NEXT:    [[INDUCTION3:%.*]] = add i64 [[INDEX]], 3
-; VF1UF4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDUCTION3]]
-; VF1UF4-NEXT:    [[TMP11:%.*]] = load i64, i64* [[TMP10]], align 8
-; VF1UF4-NEXT:    store i64 [[TMP11]], i64* [[B]], align 8
+; VF1UF4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDUCTION3]]
+; VF1UF4-NEXT:    [[TMP14:%.*]] = load i64, i64* [[TMP13]], align 8
+; VF1UF4-NEXT:    store i64 [[TMP14]], i64* [[B]], align 8
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE12]]
 ; VF1UF4:       pred.store.continue12:
+; VF1UF4-NEXT:    [[TMP15:%.*]] = phi i64 [ poison, [[PRED_STORE_CONTINUE10]] ], [ [[TMP14]], [[PRED_STORE_IF11]] ]
 ; VF1UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; VF1UF4-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF1UF4-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF1UF4-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; VF1UF4-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF1UF4:       middle.block:
 ; VF1UF4-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; VF1UF4:       scalar.ph:
