@@ -466,9 +466,16 @@ struct ForeachThreadTilingResult {
   Operation *tiledOp;
 };
 FailureOr<ForeachThreadTilingResult>
-tileToForeachThreadOp(OpBuilder &builder, TilingInterface op,
+tileToForeachThreadOp(RewriterBase &builder, TilingInterface op,
                       ArrayRef<OpFoldResult> numThreads,
                       ArrayRef<int64_t> threadDimMapping = {});
+
+/// Same as `tileToForeachThreadOp`, but calculate the number of threads
+/// required using the given tileSizes.
+FailureOr<ForeachThreadTilingResult>
+tileToForeachThreadOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
+                                    ArrayRef<OpFoldResult> tileSizes,
+                                    ArrayRef<int64_t> threadDimMapping = {});
 
 /// All indices returned by IndexOp should be invariant with respect to tiling.
 /// Therefore, if an operation is tiled, we have to transform the indices
