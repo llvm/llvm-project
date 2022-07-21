@@ -146,6 +146,189 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+; CHECK-LABEL: function 'forked_ptrs_different_base_same_offset_64b':
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G4:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %Dest High: (800 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,8}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: %Base2 High: (800 + %Base2))
+; CHECK-NEXT:          Member: {%Base2,+,8}<nw><%for.body>
+; CHECK-NEXT:      Group [[G4]]:
+; CHECK-NEXT:        (Low: %Base1 High: (800 + %Base1))
+; CHECK-NEXT:          Member: {%Base1,+,8}<nw><%for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define dso_local void @forked_ptrs_different_base_same_offset_64b(ptr nocapture readonly nonnull %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp1.not = icmp eq i32 %0, 0
+  %spec.select = select i1 %cmp1.not, ptr %Base2, ptr %Base1
+  %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
+  %.sink = load double, ptr %.sink.in, align 8
+  %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
+  store double %.sink, ptr %1, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: function 'forked_ptrs_different_base_same_offset_23b':
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds i23, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds i23, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds i23, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G4:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %Dest High: (399 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: %Base2 High: (399 + %Base2))
+; CHECK-NEXT:          Member: {%Base2,+,4}<nw><%for.body>
+; CHECK-NEXT:      Group [[G4]]:
+; CHECK-NEXT:        (Low: %Base1 High: (399 + %Base1))
+; CHECK-NEXT:          Member: {%Base1,+,4}<nw><%for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define dso_local void @forked_ptrs_different_base_same_offset_23b(ptr nocapture readonly nonnull %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp1.not = icmp eq i32 %0, 0
+  %spec.select = select i1 %cmp1.not, ptr %Base2, ptr %Base1
+  %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
+  %.sink = load i23, ptr %.sink.in
+  %1 = getelementptr inbounds i23, ptr %Dest, i64 %indvars.iv
+  store i23 %.sink, ptr %1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: function 'forked_ptrs_different_base_same_offset_6b':
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds i6, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds i6, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G3:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %1 = getelementptr inbounds i6, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G4:.+]]):
+; CHECK-NEXT:        %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %Dest High: (100 + %Dest))
+; CHECK-NEXT:          Member: {%Dest,+,1}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: %Base2 High: (100 + %Base2))
+; CHECK-NEXT:          Member: {%Base2,+,1}<nw><%for.body>
+; CHECK-NEXT:      Group [[G4]]:
+; CHECK-NEXT:        (Low: %Base1 High: (100 + %Base1))
+; CHECK-NEXT:          Member: {%Base1,+,1}<nw><%for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define dso_local void @forked_ptrs_different_base_same_offset_6b(ptr nocapture readonly nonnull %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp1.not = icmp eq i32 %0, 0
+  %spec.select = select i1 %cmp1.not, ptr %Base2, ptr %Base1
+  %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
+  %.sink = load i6, ptr %.sink.in
+  %1 = getelementptr inbounds i6, ptr %Dest, i64 %indvars.iv
+  store i6 %.sink, ptr %1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
 ; CHECK-LABEL: function 'forked_ptrs_different_base_same_offset_possible_poison':
 ; CHECK-NEXT:  for.body:
 ; CHECK-NEXT:    Memory dependences are safe with run-time checks
@@ -263,7 +446,148 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+; CHECK-LABEL: function 'forked_ptrs_add_to_offset'
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define dso_local void @forked_ptrs_add_to_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds, i64 %extra_offset) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp.not = icmp eq i32 %0, 0
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %sel = select i1 %cmp.not, i64 %indvars.iv.next, i64 %indvars.iv
+  %offset = add nuw nsw i64 %sel, %extra_offset
+  %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
+  %1 = load float, ptr %arrayidx3, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+  store float %1, ptr %arrayidx5, align 4
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: function 'forked_ptrs_sub_from_offset'
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define dso_local void @forked_ptrs_sub_from_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds, i64 %extra_offset) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp.not = icmp eq i32 %0, 0
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %sel = select i1 %cmp.not, i64 %indvars.iv.next, i64 %indvars.iv
+  %offset = sub nuw nsw i64 %sel, %extra_offset
+  %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
+  %1 = load float, ptr %arrayidx3, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+  store float %1, ptr %arrayidx5, align 4
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: function 'forked_ptrs_add_sub_offset'
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define dso_local void @forked_ptrs_add_sub_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds, i64 %to_add, i64 %to_sub) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp.not = icmp eq i32 %0, 0
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %sel = select i1 %cmp.not, i64 %indvars.iv.next, i64 %indvars.iv
+  %add = add nuw nsw i64 %sel, %to_add
+  %offset = sub nuw nsw i64 %add, %to_sub
+  %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
+  %1 = load float, ptr %arrayidx3, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+  store float %1, ptr %arrayidx5, align 4
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
 ;;;; Cases that can be handled by a forked pointer but are not currently allowed.
+
+; CHECK-LABEL: function 'forked_ptrs_mul_by_offset'
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define dso_local void @forked_ptrs_mul_by_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds, i64 %extra_offset) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp.not = icmp eq i32 %0, 0
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %sel = select i1 %cmp.not, i64 %indvars.iv.next, i64 %indvars.iv
+  %offset = mul nuw nsw i64 %sel, %extra_offset
+  %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
+  %1 = load float, ptr %arrayidx3, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+  store float %1, ptr %arrayidx5, align 4
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
 
 ; CHECK-LABEL: function 'forked_ptrs_uniform_and_strided_forks':
 ; CHECK-NEXT:  for.body:
