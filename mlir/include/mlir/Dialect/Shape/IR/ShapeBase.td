@@ -110,6 +110,10 @@ def Shape_ShapeOrExtentTensorType : AnyTypeOf<[Shape_ShapeType,
 
 def Shape_SizeOrIndexType : AnyTypeOf<[Shape_SizeType, Index], "size or index">;
 
+def Shape_ShapeOrSizeOrIndexType : AnyTypeOf<[Shape_SizeType, Shape_ShapeType, 
+                                              Index], 
+                                              "shape, size or index">;
+
 def Shape_WitnessType : Shape_Type<"Witness", "witness"> {
   let description = [{
     A witness is a structural device in the compiler to maintain ordering of

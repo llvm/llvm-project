@@ -433,9 +433,10 @@ def Shape_MeetOp : Shape_Op<"meet",
     ```
   }];
 
-  let arguments = (ins Shape_ShapeOrSizeType:$arg0, Shape_ShapeOrSizeType:$arg1,
+  let arguments = (ins Shape_ShapeOrSizeOrIndexType:$arg0, 
+                   Shape_ShapeOrSizeOrIndexType:$arg1,
                    OptionalAttr<StrAttr>:$error);
-  let results = (outs Shape_ShapeOrSizeType:$result);
+  let results = (outs Shape_ShapeOrSizeOrIndexType:$result);
 
   let assemblyFormat = [{
     $arg0 `,` $arg1 (`,` `error` `=` $error^)? attr-dict `:`

@@ -61,6 +61,12 @@ func.func @test_broadcast_extents() -> tensor<4xindex> {
   return %2 : tensor<4xindex>
 }
 
+func.func @test_shape_index_type(%arg0 : index) {
+  %0 = arith.constant 2: index
+  %1 = shape.meet %arg0, %0 : index, index -> index
+  return
+}
+
 func.func @test_shape_any_fixed() {
   %0 = shape.const_shape [4, 57, 92] : !shape.shape
   %1 = shape.const_shape [4, 57, 92] : !shape.shape

@@ -1326,7 +1326,7 @@ bool mlir::shape::MeetOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   if (lhs != rhs)
     return false;
 
-  if (lhs.isa<SizeType>() || lhs.isa<ShapeType>())
+  if (lhs.isa<SizeType, ShapeType, IndexType>())
     return true;
 
   if (succeeded(verifyCompatibleShapes({lhs, rhs})))
