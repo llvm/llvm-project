@@ -351,6 +351,10 @@ function(add_mlir_library name)
   endif()
 endfunction(add_mlir_library)
 
+macro(add_mlir_tool name)
+  llvm_add_tool(MLIR ${ARGV})
+endmacro()
+
 # Sets a variable with a transformed list of link libraries such individual
 # libraries will be dynamically excluded when evaluated on a final library
 # which defines an MLIR_AGGREGATE_EXCLUDE_LIBS which contains any of the
