@@ -1790,4 +1790,16 @@ TYPED_TEST(MutableConstTest, ICmp) {
   EXPECT_EQ(R, MatchR);
 }
 
+TEST_F(PatternMatchTest, ConstExpr) {
+  Constant *G =
+      M->getOrInsertGlobal("dummy", PointerType::getUnqual(IRB.getInt32Ty()));
+  Constant *S = ConstantExpr::getPtrToInt(G, IRB.getInt32Ty());
+  Type *VecTy = FixedVectorType::get(IRB.getInt32Ty(), 2);
+  PoisonValue *P = PoisonValue::get(VecTy);
+  Constant *V = ConstantExpr::getInsertElement(P, S, IRB.getInt32(0));
+
+  EXPECT_TRUE(match(S, m_ConstantExpr()));
+  EXPECT_FALSE(match(V, m_ConstantExpr()));
+}
+
 } // anonymous namespace.
