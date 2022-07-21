@@ -656,6 +656,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   int PPColumnCorrection = 0;
   if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash &&
       Previous.is(tok::hash) && State.FirstIndent > 0 &&
+      &Previous == State.Line->First &&
       (State.Line->Type == LT_PreprocessorDirective ||
        State.Line->Type == LT_ImportStatement)) {
     Spaces += State.FirstIndent;
