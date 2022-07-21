@@ -52,7 +52,7 @@ private:
   struct MMap {
     uint64_t Addr;
     uint64_t Size;
-    const Module *Module;
+    const Module *Mod;
     std::string Mode; // Lowercase
     uint64_t ModuleRelativeAddr;
 
@@ -62,7 +62,7 @@ private:
   // An informational module line currently being constructed. As many mmap
   // elements as possible are folded into one ModuleInfo line.
   struct ModuleInfoLine {
-    const Module *Module;
+    const Module *Mod;
 
     SmallVector<const MMap *> MMaps = {};
   };
