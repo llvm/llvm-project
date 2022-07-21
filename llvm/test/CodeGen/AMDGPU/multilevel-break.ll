@@ -10,36 +10,37 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; OPT-NEXT:  main_body:
 ; OPT-NEXT:    br label [[LOOP_OUTER:%.*]]
 ; OPT:       LOOP.outer:
-; OPT-NEXT:    [[PHI_BROKEN2:%.*]] = phi i64 [ [[TMP9:%.*]], [[FLOW1:%.*]] ], [ 0, [[MAIN_BODY:%.*]] ]
+; OPT-NEXT:    [[PHI_BROKEN2:%.*]] = phi i64 [ [[TMP10:%.*]], [[FLOW1:%.*]] ], [ 0, [[MAIN_BODY:%.*]] ]
 ; OPT-NEXT:    [[TMP43:%.*]] = phi i32 [ 0, [[MAIN_BODY]] ], [ [[TMP4:%.*]], [[FLOW1]] ]
 ; OPT-NEXT:    br label [[LOOP:%.*]]
 ; OPT:       LOOP:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP7:%.*]], [[FLOW:%.*]] ], [ 0, [[LOOP_OUTER]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP8:%.*]], [[FLOW:%.*]] ], [ 0, [[LOOP_OUTER]] ]
 ; OPT-NEXT:    [[TMP0:%.*]] = phi i32 [ undef, [[LOOP_OUTER]] ], [ [[TMP4]], [[FLOW]] ]
-; OPT-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP43]], [[LOOP_OUTER]] ], [ [[TMP47:%.*]], [[FLOW]] ]
-; OPT-NEXT:    [[TMP47]] = add i32 [[TMP45]], 1
+; OPT-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP43]], [[LOOP_OUTER]] ], [ [[TMP5:%.*]], [[FLOW]] ]
 ; OPT-NEXT:    [[TMP48:%.*]] = icmp slt i32 [[TMP45]], [[UB:%.*]]
 ; OPT-NEXT:    [[TMP1:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP48]])
 ; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP1]], 0
 ; OPT-NEXT:    [[TMP3:%.*]] = extractvalue { i1, i64 } [[TMP1]], 1
 ; OPT-NEXT:    br i1 [[TMP2]], label [[ENDIF:%.*]], label [[FLOW]]
 ; OPT:       Flow:
-; OPT-NEXT:    [[TMP4]] = phi i32 [ [[TMP47]], [[ENDIF]] ], [ [[TMP0]], [[LOOP]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP51:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
-; OPT-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP51_INV:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
+; OPT-NEXT:    [[TMP4]] = phi i32 [ [[TMP47:%.*]], [[ENDIF]] ], [ [[TMP0]], [[LOOP]] ]
+; OPT-NEXT:    [[TMP5]] = phi i32 [ [[TMP47]], [[ENDIF]] ], [ undef, [[LOOP]] ]
+; OPT-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP51:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
+; OPT-NEXT:    [[TMP7:%.*]] = phi i1 [ [[TMP51_INV:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP3]])
-; OPT-NEXT:    [[TMP7]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP6]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP8:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP7]])
-; OPT-NEXT:    [[TMP9]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP5]], i64 [[PHI_BROKEN2]])
-; OPT-NEXT:    br i1 [[TMP8]], label [[FLOW1]], label [[LOOP]]
+; OPT-NEXT:    [[TMP8]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP7]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP9:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP8]])
+; OPT-NEXT:    [[TMP10]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP6]], i64 [[PHI_BROKEN2]])
+; OPT-NEXT:    br i1 [[TMP9]], label [[FLOW1]], label [[LOOP]]
 ; OPT:       Flow1:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
-; OPT-NEXT:    [[TMP10:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP9]])
-; OPT-NEXT:    br i1 [[TMP10]], label [[IF:%.*]], label [[LOOP_OUTER]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
+; OPT-NEXT:    [[TMP11:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP10]])
+; OPT-NEXT:    br i1 [[TMP11]], label [[IF:%.*]], label [[LOOP_OUTER]]
 ; OPT:       IF:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP9]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP10]])
 ; OPT-NEXT:    ret void
 ; OPT:       ENDIF:
+; OPT-NEXT:    [[TMP47]] = add i32 [[TMP45]], 1
 ; OPT-NEXT:    [[TMP51]] = icmp eq i32 [[TMP47]], [[CONT:%.*]]
 ; OPT-NEXT:    [[TMP51_INV]] = xor i1 [[TMP51]], true
 ; OPT-NEXT:    br label [[FLOW]]
@@ -98,7 +99,6 @@ LOOP.outer:                                       ; preds = %ENDIF, %main_body
 
 LOOP:                                             ; preds = %ENDIF, %LOOP.outer
   %tmp45 = phi i32 [ %tmp43, %LOOP.outer ], [ %tmp47, %ENDIF ]
-  %tmp47 = add i32 %tmp45, 1
   %tmp48 = icmp slt i32 %tmp45, %ub
   br i1 %tmp48, label %ENDIF, label %IF
 
@@ -106,6 +106,7 @@ IF:                                               ; preds = %LOOP
   ret void
 
 ENDIF:                                            ; preds = %LOOP
+  %tmp47 = add i32 %tmp45, 1
   %tmp51 = icmp eq i32 %tmp47, %cont
   br i1 %tmp51, label %LOOP, label %LOOP.outer
 }

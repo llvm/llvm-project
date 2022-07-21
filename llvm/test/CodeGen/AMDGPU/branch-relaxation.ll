@@ -508,11 +508,11 @@ define amdgpu_kernel void @long_branch_hang(i32 addrspace(1)* nocapture %arg, i3
 bb:
   %tmp = icmp slt i32 %arg2, 9
   %tmp6 = icmp eq i32 %arg1, 0
-  %tmp7 = icmp sgt i32 %arg4, 0
   %tmp8 = icmp sgt i32 %arg4, 5
   br i1 %tmp8, label %bb9, label %bb13
 
 bb9:                                              ; preds = %bb
+  %tmp7 = icmp sgt i32 %arg4, 0
   %tmp10 = and i1 %tmp7, %tmp
   %tmp11 = icmp slt i32 %arg3, %arg4
   %tmp12 = or i1 %tmp11, %tmp7

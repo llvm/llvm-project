@@ -1536,7 +1536,6 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out
 ; GFX11_W64-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 2
   %gep.a = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.b = getelementptr float, float addrspace(1)* %gep.a, i32 1
   %gep.c = getelementptr float, float addrspace(1)* %gep.a, i32 2
@@ -1555,6 +1554,7 @@ bb:
 
 exit:
   %cond = phi i1 [false, %entry], [%cmp1, %bb]
+  %gep.out = getelementptr float, float addrspace(1)* %out, i32 2
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %cond)
   store float %result, float addrspace(1)* %gep.out, align 4
   ret void
