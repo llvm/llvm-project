@@ -1272,10 +1272,13 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard]>;
 
-// Features for GFX 11.0.0 and 11.0.1
-def FeatureISAVersion11_0 : FeatureSet<
+def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureUserSGPRInit16Bug])>;
+
+def FeatureISAVersion11_0_1 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
