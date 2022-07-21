@@ -1429,6 +1429,51 @@ TEST(InlayHints, RestrictRange) {
               ElementsAre(labelIs(": int"), labelIs(": char")));
 }
 
+TEST(ParameterHints, ArgPacksAndConstructors) {
+  assertParameterHints(
+      R"cpp(
+    struct Foo{ Foo(); Foo(int x); };
+    void foo(Foo a, int b);
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(args...);
+    }
+    template <typename... Args>
+    void baz(Args... args) { foo($param1[[Foo{args...}]], $param2[[1]]); }
+
+    template <typename... Args>
+    void bax(Args... args) { foo($param3[[{args...}]], args...); }
+
+    void foo() {
+      bar($param4[[Foo{}]], $param5[[42]]);
+      bar($param6[[42]], $param7[[42]]);
+      baz($param8[[42]]);
+      bax($param9[[42]]);
+    }
+  )cpp",
+      ExpectedHint{"a: ", "param1"}, ExpectedHint{"b: ", "param2"},
+      ExpectedHint{"a: ", "param3"}, ExpectedHint{"a: ", "param4"},
+      ExpectedHint{"b: ", "param5"}, ExpectedHint{"a: ", "param6"},
+      ExpectedHint{"b: ", "param7"}, ExpectedHint{"x: ", "param8"},
+      ExpectedHint{"b: ", "param9"});
+}
+
+TEST(ParameterHints, DoesntExpandAllArgs) {
+  assertParameterHints(
+      R"cpp(
+    void foo(int x, int y);
+    int id(int a, int b, int c);
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(id($param1[[args]], $param2[[1]], $param3[[args]])...);
+    }
+    void foo() {
+      bar(1, 2); // FIXME: We could have `bar(a: 1, a: 2)` here.
+    }
+  )cpp",
+      ExpectedHint{"a: ", "param1"}, ExpectedHint{"b: ", "param2"},
+      ExpectedHint{"c: ", "param3"});
+}
 // FIXME: Low-hanging fruit where we could omit a type hint:
 //  - auto x = TypeName(...);
 //  - auto x = (TypeName) (...);
