@@ -86,11 +86,6 @@ private:
     bool __completed_;
 };
 
-template <class _Rollback>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __transaction<_Rollback> __make_transaction(_Rollback __rollback) {
-  return __transaction<_Rollback>(std::move(__rollback));
-}
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___UTILITY_TRANSACTION_H

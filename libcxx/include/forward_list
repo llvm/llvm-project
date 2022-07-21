@@ -188,7 +188,6 @@ template <class T, class Allocator, class Predicate>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
 #include <__iterator/next.h>
-#include <__memory/swap_allocator.h>
 #include <__utility/forward.h>
 #include <limits>
 #include <memory>
