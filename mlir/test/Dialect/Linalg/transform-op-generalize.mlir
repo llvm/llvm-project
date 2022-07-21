@@ -12,17 +12,9 @@ func.func @generalize_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> t
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  pdl.pattern @pdl_target : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = pdl.operation "linalg.elemwise_unary"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    // TODO: we don't want this, but it is the required terminator for pdl.pattern
-    rewrite %0 with "transform.dialect"
-  }
-
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
-    %0 = pdl_match @pdl_target in %arg1
+    %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1
     %1 = transform.structured.generalize %0
   }
 }

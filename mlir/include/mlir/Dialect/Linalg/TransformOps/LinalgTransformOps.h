@@ -25,6 +25,8 @@ class LinalgOp;
 // Linalg Transform Operations
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.h.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h.inc"
 
