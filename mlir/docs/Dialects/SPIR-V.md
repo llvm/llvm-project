@@ -79,7 +79,7 @@ The SPIR-V dialect adopts the following conventions for IR:
 *   The prefix for all SPIR-V types and operations are `spv.`.
 *   All instructions in an extended instruction set are further qualified with
     the extended instruction set's prefix. For example, all operations in the
-    GLSL extended instruction set have the prefix of `spv.GLSL.`.
+    GLSL extended instruction set have the prefix of `spv.GL.`.
 *   Ops that directly mirror instructions in the specification have `CamelCase`
     names that are the same as the instruction opnames (without the `Op`
     prefix). For example, `spv.FMul` is a direct mirror of `OpFMul` in the
@@ -508,8 +508,8 @@ proper name prefix. For example, for
 we can have
 
 ```mlir
-%1 = "spv.GLSL.Log"(%cst) : (f32) -> (f32)
-%2 = "spv.GLSL.Sqrt"(%cst) : (f32) -> (f32)
+%1 = "spv.GL.Log"(%cst) : (f32) -> (f32)
+%2 = "spv.GL.Sqrt"(%cst) : (f32) -> (f32)
 ```
 
 ## Control Flow

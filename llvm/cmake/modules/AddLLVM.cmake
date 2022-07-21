@@ -1281,7 +1281,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     )
 endif()
 
-macro(add_llvm_tool name)
+macro(llvm_add_tool project name)
   cmake_parse_arguments(ARG "DEPENDS;GENERATE_DRIVER" "" "" ${ARGN})
   if( NOT LLVM_BUILD_TOOLS )
     set(EXCLUDE_FROM_ALL ON)
@@ -1297,7 +1297,7 @@ macro(add_llvm_tool name)
         get_target_export_arg(${name} LLVM export_to_llvmexports)
         install(TARGETS ${name}
                 ${export_to_llvmexports}
-                RUNTIME DESTINATION ${LLVM_TOOLS_INSTALL_DIR}
+                RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
                 COMPONENT ${name})
 
         if (NOT LLVM_ENABLE_IDE)
@@ -1312,7 +1312,11 @@ macro(add_llvm_tool name)
     endif()
     set_target_properties(${name} PROPERTIES FOLDER "Tools")
   endif()
-endmacro(add_llvm_tool name)
+endmacro(llvm_add_tool project name)
+
+macro(add_llvm_tool name)
+  llvm_add_tool(LLVM ${ARGV})
+endmacro()
 
 
 macro(add_llvm_example name)
@@ -2009,7 +2013,7 @@ function(llvm_install_library_symlink name dest type)
 
 endfunction()
 
-function(llvm_install_symlink name dest)
+function(llvm_install_symlink project name dest)
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
   if(LLVM_TOOL_LLVM_DRIVER_BUILD AND ${dest} IN_LIST LLVM_DRIVER_TOOLS)
     set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_SYMLINKS ${name})
@@ -2040,7 +2044,7 @@ function(llvm_install_symlink name dest)
   endif()
 
   install(SCRIPT ${INSTALL_SYMLINK}
-          CODE "install_symlink(${full_name} ${full_dest} ${LLVM_TOOLS_INSTALL_DIR})"
+          CODE "install_symlink(${full_name} ${full_dest} ${${project}_TOOLS_INSTALL_DIR})"
           COMPONENT ${component})
 
   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
@@ -2051,7 +2055,7 @@ function(llvm_install_symlink name dest)
   endif()
 endfunction()
 
-function(add_llvm_tool_symlink link_name target)
+function(llvm_add_tool_symlink project link_name target)
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "OUTPUT_DIR" "" ${ARGN})
 
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
@@ -2133,9 +2137,13 @@ function(add_llvm_tool_symlink link_name target)
     endif()
 
     if ((TOOL_IS_TOOLCHAIN OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY) AND LLVM_BUILD_TOOLS)
-      llvm_install_symlink(${link_name} ${target})
+      llvm_install_symlink("${project}" ${link_name} ${target})
     endif()
   endif()
+endfunction()
+
+function(add_llvm_tool_symlink link_name target)
+  llvm_add_tool_symlink(LLVM ${ARGV})
 endfunction()
 
 function(llvm_externalize_debuginfo name)

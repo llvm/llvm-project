@@ -516,6 +516,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genMaxloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMerge(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genMergeBits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genMinloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -821,6 +822,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"merge", &I::genMerge},
+    {"merge_bits", &I::genMergeBits},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"minloc",
      &I::genMinloc,
@@ -3290,6 +3292,24 @@ IntrinsicLibrary::genMerge(mlir::Type,
     return charRslt;
   }
   return rslt;
+}
+
+// MERGE_BITS
+mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+
+  mlir::Value i = builder.createConvert(loc, resultType, args[0]);
+  mlir::Value j = builder.createConvert(loc, resultType, args[1]);
+  mlir::Value mask = builder.createConvert(loc, resultType, args[2]);
+  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+
+  // MERGE_BITS(I, J, MASK) = IOR(IAND(I, MASK), IAND(J, NOT(MASK)))
+  mlir::Value notMask = builder.create<mlir::arith::XOrIOp>(loc, mask, ones);
+  mlir::Value lft = builder.create<mlir::arith::AndIOp>(loc, i, mask);
+  mlir::Value rgt = builder.create<mlir::arith::AndIOp>(loc, j, notMask);
+
+  return builder.create<mlir::arith::OrIOp>(loc, lft, rgt);
 }
 
 // MOD

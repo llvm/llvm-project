@@ -360,7 +360,7 @@ elements should have appeared somewhere earlier in the logging stream. It should
 always be possible for the symbolizing filter to be implemented as a single pass
 over the raw logging stream, accumulating context and massaging text as it goes.
 
-``{{{reset}}}`` [#not_yet_implemented]_
+``{{{reset}}}``
 
   This should be output before any other contextual element. The need for this
   contextual element is to support implementations that handle logs coming from
@@ -372,7 +372,7 @@ over the raw logging stream, accumulating context and massaging text as it goes.
   previous process's contextual elements is not assumed for new process that
   just happens have the same identifying information.
 
-``{{{module:%i:%s:%s:...}}}`` [#not_yet_implemented]_
+``{{{module:%i:%s:%s:...}}}``
 
   This element represents a so-called "module". A "module" is a single linked
   binary, such as a loaded ELF file. Usually each module occupies a contiguous
@@ -399,7 +399,7 @@ over the raw logging stream, accumulating context and massaging text as it goes.
 
     {{{module:1:libc.so:elf:83238ab56ba10497}}}
 
-``{{{mmap:%p:%i:...}}}`` [#not_yet_implemented]_
+``{{{mmap:%p:%i:...}}}``
 
   This contextual element is used to give information about a particular region
   in memory. ``%p`` is the starting address and ``%i`` gives the size in hex of the

@@ -294,8 +294,8 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
 bool TargetTransformInfo::preferPredicateOverEpilogue(
     Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
     TargetLibraryInfo *TLI, DominatorTree *DT,
-    const LoopAccessInfo *LAI) const {
-  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
+    LoopVectorizationLegality *LVL) const {
+  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL);
 }
 
 PredicationStyle TargetTransformInfo::emitGetActiveLaneMask() const {
