@@ -2885,21 +2885,21 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   // of the respective allocator declaration with generic attributes.
   bool Changed = false;
 
-  if (isAllocationFn(&Call, TLI)) {
-    uint64_t Size;
-    ObjectSizeOpts Opts;
-    if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
-      // TODO: We really should just emit deref_or_null here and then
-      // let the generic inference code combine that with nonnull.
-      if (Call.hasRetAttr(Attribute::NonNull)) {
-        Changed = !Call.hasRetAttr(Attribute::Dereferenceable);
-        Call.addRetAttr(
-            Attribute::getWithDereferenceableBytes(Call.getContext(), Size));
-      } else {
-        Changed = !Call.hasRetAttr(Attribute::DereferenceableOrNull);
-        Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-            Call.getContext(), Size));
-      }
+  if (!Call.getType()->isPointerTy())
+    return Changed;
+
+  Optional<APInt> Size = getAllocSize(&Call, TLI);
+  if (Size && *Size != 0) {
+    // TODO: We really should just emit deref_or_null here and then
+    // let the generic inference code combine that with nonnull.
+    if (Call.hasRetAttr(Attribute::NonNull)) {
+      Changed = !Call.hasRetAttr(Attribute::Dereferenceable);
+      Call.addRetAttr(Attribute::getWithDereferenceableBytes(
+          Call.getContext(), Size->getLimitedValue()));
+    } else {
+      Changed = !Call.hasRetAttr(Attribute::DereferenceableOrNull);
+      Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
+          Call.getContext(), Size->getLimitedValue()));
     }
   }
 
