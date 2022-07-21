@@ -100,6 +100,9 @@ Optional<MarkupNode> MarkupParser::nextNode() {
 }
 
 void MarkupParser::flush() {
+  Buffer.clear();
+  NextIdx = 0;
+  Line = {};
   if (InProgressMultiline.empty())
     return;
   FinishedMultiline.swap(InProgressMultiline);

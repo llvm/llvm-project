@@ -255,6 +255,9 @@ OPTIONS
   markup elements are supported:
 
   * ``{{symbol}}``
+  * ``{{reset}}``
+  * ``{{module}}``
+  * ``{{mmap}}``
 
 .. _llvm-symbolizer-opt-f:
 

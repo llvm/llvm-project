@@ -1,0 +1,21 @@
+RUN: split-file %s %t
+RUN: llvm-symbolizer --filter-markup < %t/log > %t.out 2> %t.err
+RUN: FileCheck %s --input-file=%t.out --match-full-lines \
+RUN:   --implicit-check-not {{.}}
+RUN: FileCheck %s --check-prefix=ERR -input-file=%t.err --match-full-lines
+
+CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "a.o"; BuildID=ab 0x0(r)[[END:\]{3}]]
+CHECK: {{  }}[[BEGIN]]reset[[END]]
+CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "b.o"; BuildID=cd 0x1(r)[[END:\]{3}]]
+
+ERR: error: expected 0 fields; found 1
+
+;--- log
+  {{{reset}}}
+{{{module:0:a.o:elf:ab}}}
+{{{mmap:0:1:load:0:r:0}}}
+  {{{reset}}}
+{{{module:0:b.o:elf:cd}}}
+{{{mmap:0x1:1:load:0:r:0}}}
+
+{{{reset:}}}
