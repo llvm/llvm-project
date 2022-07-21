@@ -6,7 +6,12 @@
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 
 // RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10-LE
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10
+
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10
 
 // CHECK-BE-DAG: @_mm_movemask_pd.__perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
 // CHECK-BE-DAG: @_mm_shuffle_epi32.__permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
@@ -623,12 +628,12 @@ test_load() {
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_load1_pd
 // CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, double* %[[ADDR]], align 8
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, double* %[[ADDR]]
 // CHECK: call <2 x double> @vec_splats(double)(double noundef %[[VAL]])
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_loadh_pd
 // CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, double* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, double* %{{[0-9a-zA-Z_.]+}}
 // CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: insertelement <2 x double> %[[VEC]], double %[[VAL]], i32 1
 
@@ -637,7 +642,7 @@ test_load() {
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_loadl_pd
 // CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = load double, double* %[[ADDR]], align 8
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = load double, double* %[[ADDR]]
 // CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: insertelement <2 x double> %[[VEC]], double %[[ADDR2]], i32 0
 
@@ -762,8 +767,8 @@ test_move() {
 // CHECK: %[[EXT:[0-9a-zA-Z_.]+]] = extractelement <2 x double> %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x double> %{{[0-9a-zA-Z_.]+}}, double %[[EXT]], i32 0
 
-// CHECK-P10-LE-LABEL: define available_externally signext i32 @_mm_movemask_epi8
-// CHECK-P10-LE: call zeroext i32 @vec_extractm(unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK-P10-LABEL: define available_externally signext i32 @_mm_movemask_epi8
+// CHECK-P10: call zeroext i32 @vec_extractm(unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_epi8
 // CHECK: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef <i8 120, i8 112, i8 104, i8 96, i8 88, i8 80, i8 72, i8 64, i8 56, i8 48, i8 40, i8 32, i8 24, i8 16, i8 8, i8 0>)
@@ -771,8 +776,8 @@ test_move() {
 // CHECK-BE: %[[VAL:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: trunc i64 %[[VAL]] to i32
 
-// CHECK-P10-LE-LABEL: define available_externally signext i32 @_mm_movemask_pd
-// CHECK-P10-LE: call zeroext i32 @vec_extractm(unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK-P10-LABEL: define available_externally signext i32 @_mm_movemask_pd
+// CHECK-P10: call zeroext i32 @vec_extractm(unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_pd
 // CHECK-LE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef bitcast (<4 x i32> <i32 -2139094976, i32 -2139062144, i32 -2139062144, i32 -2139062144> to <16 x i8>))
@@ -1316,7 +1321,7 @@ test_store() {
 
 // CHECK-LABEL: define available_externally void @_mm_store_sd
 // CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: store double %{{[0-9a-zA-Z_.]+}}, double* %[[ADDR]], align 8
+// CHECK: store double %{{[0-9a-zA-Z_.]+}}, double* %[[ADDR]]
 
 // CHECK-LABEL: define available_externally void @_mm_store_si128
 // CHECK: %[[LOAD:[0-9a-zA-Z_.]+]] = load <2 x i64>*, <2 x i64>** %{{[0-9a-zA-Z_.]+}}, align 8
@@ -1331,7 +1336,7 @@ test_store() {
 
 // CHECK-LABEL: define available_externally void @_mm_storeh_pd
 // CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: store double %{{[0-9a-zA-Z_.]+}}, double* %[[ADDR]], align 8
+// CHECK: store double %{{[0-9a-zA-Z_.]+}}, double* %[[ADDR]]
 
 // CHECK-LABEL: define available_externally void @_mm_storel_epi64
 // CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load <2 x i64>*, <2 x i64>** %{{[0-9a-zA-Z_.]+}}, align 8
