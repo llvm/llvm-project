@@ -1,7 +1,16 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
+
+; Does not apply to wave64
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+
+; Does not apply to gfx1101
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1101 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1101 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
 
 ; There aren't any stack objects, but we still enable the
 ; private_segment_wavefront_offset to get to 16, and the workgroup ID
@@ -10,17 +19,19 @@
 ; private_segment_buffer + workgroup_id_x = 5, + 11 padding
 
 ; GCN-LABEL: {{^}}minimal_kernel_inputs:
-; GCN: v_mov_b32_e32 [[V:v[0-9]+]], s15
+; WORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s15
+; NOWORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s0
 ; GCN-NEXT: global_store_b32 v{{\[[0-9]+:[0-9]+\]}}, [[V]], off
 
 ; GCN: .amdhsa_kernel minimal_kernel_inputs
-; GCN: .amdhsa_user_sgpr_count 15
+; WORKAROUND: .amdhsa_user_sgpr_count 15
+; NOWORKAROUND: .amdhsa_user_sgpr_count 0
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; GCN-NEXT: .amdhsa_wavefront_size32 1
+; GCN-NEXT: .amdhsa_wavefront_size32
 ; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
 ; GCN-NEXT: .amdhsa_enable_private_segment 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -28,7 +39,8 @@
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; GCN: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @minimal_kernel_inputs() {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   store volatile i32 %id, i32 addrspace(1)* undef
@@ -36,17 +48,19 @@ define amdgpu_kernel void @minimal_kernel_inputs() {
 }
 
 ; GCN-LABEL: {{^}}minimal_kernel_inputs_with_stack:
-; GCN: v_mov_b32_e32 [[V:v[0-9]+]], s15
+; WORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s15
+; NOWORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s0
 ; GCN: global_store_b32 v{{\[[0-9]+:[0-9]+\]}}, [[V]], off
 
 ; GCN: .amdhsa_kernel minimal_kernel_inputs
-; GCN: .amdhsa_user_sgpr_count 15
+; WORKAROUND: .amdhsa_user_sgpr_count 15
+; NOWORKAROUND: .amdhsa_user_sgpr_count 0
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; GCN-NEXT: .amdhsa_wavefront_size32 1
+; GCN-NEXT: .amdhsa_wavefront_size32
 ; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
 ; GCN-NEXT: .amdhsa_enable_private_segment 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -54,7 +68,8 @@ define amdgpu_kernel void @minimal_kernel_inputs() {
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; GCN: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @minimal_kernel_inputs_with_stack() {
   %alloca = alloca i32, addrspace(5)
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -66,17 +81,19 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() {
 ; GCN-LABEL: {{^}}queue_ptr:
 ; GCN: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
 
-; GCN: v_mov_b32_e32 [[V:v[0-9]+]], s15
+; WORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s15
+; NOWORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s2
 ; GCN-NEXT: global_store_b32 v{{\[[0-9]+:[0-9]+\]}}, [[V]], off
 
 ; GCN: .amdhsa_kernel queue_ptr
-; GCN: .amdhsa_user_sgpr_count 15
+; WORKAROUND: .amdhsa_user_sgpr_count 15
+; NOWORKAROUND: .amdhsa_user_sgpr_count 2
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; GCN-NEXT: .amdhsa_wavefront_size32 1
+; GCN-NEXT: .amdhsa_wavefront_size32
 ; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
 ; GCN-NEXT: .amdhsa_enable_private_segment 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -84,7 +101,8 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() {
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; GCN: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 2
 define amdgpu_kernel void @queue_ptr() {
   %queue.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
   %load = load volatile i8, i8 addrspace(4)* %queue.ptr
@@ -94,9 +112,13 @@ define amdgpu_kernel void @queue_ptr() {
 }
 
 ; GCN-LABEL: {{^}}all_inputs:
-; GCN: v_mov_b32_e32 [[V_X:v[0-9]+]], s13
-; GCN: v_mov_b32_e32 [[V_Y:v[0-9]+]], s14
-; GCN: v_mov_b32_e32 [[V_Z:v[0-9]+]], s15
+; WORKAROUND: v_mov_b32_e32 [[V_X:v[0-9]+]], s13
+; WORKAROUND: v_mov_b32_e32 [[V_Y:v[0-9]+]], s14
+; WORKAROUND: v_mov_b32_e32 [[V_Z:v[0-9]+]], s15
+
+; NOWORKAROUND: v_mov_b32_e32 [[V_X:v[0-9]+]], s8
+; NOWORKAROUND: v_mov_b32_e32 [[V_Y:v[0-9]+]], s9
+; NOWORKAROUND: v_mov_b32_e32 [[V_Z:v[0-9]+]], s10
 
 ; GCN: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
 ; GCN: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[2:3]
@@ -111,13 +133,14 @@ define amdgpu_kernel void @queue_ptr() {
 ; GCN: global_store_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[DISPATCH_LO]]:[[DISPATCH_HI]]{{\]}}, off
 
 ; GCN: .amdhsa_kernel all_inputs
-; GCN: .amdhsa_user_sgpr_count 13
+; WORKAROUND: .amdhsa_user_sgpr_count 13
+; NOWORKAROUND: .amdhsa_user_sgpr_count 8
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; GCN-NEXT: .amdhsa_wavefront_size32 1
+; GCN-NEXT: .amdhsa_wavefront_size32
 ; GCN-NEXT: .amdhsa_uses_dynamic_stack 0
 ; GCN-NEXT: .amdhsa_enable_private_segment 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -125,7 +148,8 @@ define amdgpu_kernel void @queue_ptr() {
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
-; GCN: ; COMPUTE_PGM_RSRC2:USER_SGPR: 13
+; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 13
+; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 8
 define amdgpu_kernel void @all_inputs() {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
