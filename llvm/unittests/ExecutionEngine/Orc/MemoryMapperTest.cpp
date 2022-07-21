@@ -66,10 +66,10 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
   int DeinitializeCounter = 0;
   {
     std::unique_ptr<MemoryMapper> Mapper =
-        std::make_unique<InProcessMemoryMapper>();
+        cantFail(InProcessMemoryMapper::Create());
 
     // We will do two separate allocations
-    auto PageSize = cantFail(sys::Process::getPageSize());
+    auto PageSize = Mapper->getPageSize();
     auto TotalSize = PageSize * 2;
 
     // Reserve address space
