@@ -479,6 +479,10 @@ struct PluginManager {
   /// RTLs identified on the host
   RTLsTy RTLs;
 
+  /// Executable images and information extracted from the input images passed
+  /// to the runtime.
+  std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
+
   /// Devices associated with RTLs
   std::vector<std::unique_ptr<DeviceTy>> Devices;
   std::mutex RTLsMtx; ///< For RTLs and Devices
