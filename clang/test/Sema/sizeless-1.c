@@ -69,7 +69,7 @@ void func(int sel) {
   // Using pointers to sizeless data isn't wrong here, but because the
   // type is incomplete, it doesn't provide any alignment guarantees.
   _Static_assert(__atomic_is_lock_free(1, &local_int8) == __atomic_is_lock_free(1, incomplete_ptr), "");
-  _Static_assert(__atomic_is_lock_free(2, &local_int8) == __atomic_is_lock_free(2, incomplete_ptr), ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  _Static_assert(__atomic_is_lock_free(2, &local_int8) == __atomic_is_lock_free(2, incomplete_ptr), ""); // expected-error {{static_assert expression is not an integral constant expression}}
   _Static_assert(__atomic_always_lock_free(1, &local_int8) == __atomic_always_lock_free(1, incomplete_ptr), "");
 
   local_int8; // expected-warning {{expression result unused}}

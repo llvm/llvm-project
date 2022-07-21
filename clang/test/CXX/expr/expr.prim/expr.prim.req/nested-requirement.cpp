@@ -43,5 +43,5 @@ namespace std_example {
       requires sizeof(a) == 4; // OK
       requires a == 0; // expected-note{{because 'a == 0' would be invalid: constraint variable 'a' cannot be used in an evaluated context}}
     };
-  static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static assertion failed}}
+  static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static_assert failed}}
 }

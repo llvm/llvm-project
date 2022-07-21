@@ -11,19 +11,19 @@ struct DummyTemplate { };
 
 void func() {
   auto L0 = []<typename T>(T arg) {
-    static_assert(is_same<T, int>); // expected-error {{static assertion failed}}
+    static_assert(is_same<T, int>); // expected-error {{static_assert failed}}
   };
   L0(0);
   L0(0.0); // expected-note {{in instantiation}}
 
   auto L1 = []<int I> {
-    static_assert(I == 5); // expected-error {{static assertion failed}}
+    static_assert(I == 5); // expected-error {{static_assert failed}}
   };
   L1.operator()<5>();
   L1.operator()<6>(); // expected-note {{in instantiation}}
 
   auto L2 = []<template<typename> class T, class U>(T<U> &&arg) {
-    static_assert(is_same<T<U>, DummyTemplate<float>>); // // expected-error {{static assertion failed}}
+    static_assert(is_same<T<U>, DummyTemplate<float>>); // // expected-error {{static_assert failed}}
   };
   L2(DummyTemplate<float>());
   L2(DummyTemplate<double>()); // expected-note {{in instantiation}}

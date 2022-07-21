@@ -48,6 +48,6 @@ constexpr bool test() // expected-error {{constexpr function never produces a co
 int main(int, char**)
 {
     static_assert (!std::is_trivially_move_constructible_v<S>, "" );
-    static_assert (test(), "");  // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert (test(), "");  // expected-error {{static_assert expression is not an integral constant expression}}
     return 0;
 }
