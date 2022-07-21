@@ -62,11 +62,11 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
   auto F = P.get_future();
 
   {
-    auto PageSize = cantFail(sys::Process::getPageSize());
-    size_t ReqSize = PageSize;
-
     std::unique_ptr<MemoryMapper> Mapper =
-        std::make_unique<SharedMemoryMapper>(*SelfEPC, SAs);
+        cantFail(SharedMemoryMapper::Create(*SelfEPC, SAs));
+
+    auto PageSize = Mapper->getPageSize();
+    size_t ReqSize = PageSize;
 
     Mapper->reserve(ReqSize, [&](Expected<ExecutorAddrRange> Result) {
       EXPECT_THAT_ERROR(Result.takeError(), Succeeded());

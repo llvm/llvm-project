@@ -24,6 +24,17 @@ namespace orc {
 
 MemoryMapper::~MemoryMapper() {}
 
+InProcessMemoryMapper::InProcessMemoryMapper(size_t PageSize)
+    : PageSize(PageSize) {}
+
+Expected<std::unique_ptr<InProcessMemoryMapper>>
+InProcessMemoryMapper::Create() {
+  auto PageSize = sys::Process::getPageSize();
+  if (!PageSize)
+    return PageSize.takeError();
+  return std::make_unique<InProcessMemoryMapper>(*PageSize);
+}
+
 void InProcessMemoryMapper::reserve(size_t NumBytes,
                                     OnReservedFunction OnReserved) {
   std::error_code EC;
@@ -159,6 +170,19 @@ InProcessMemoryMapper::~InProcessMemoryMapper() {
 }
 
 // SharedMemoryMapper
+
+SharedMemoryMapper::SharedMemoryMapper(ExecutorProcessControl &EPC,
+                                       SymbolAddrs SAs, size_t PageSize)
+    : EPC(EPC), SAs(SAs), PageSize(PageSize) {}
+
+Expected<std::unique_ptr<SharedMemoryMapper>>
+SharedMemoryMapper::Create(ExecutorProcessControl &EPC, SymbolAddrs SAs) {
+  auto PageSize = sys::Process::getPageSize();
+  if (!PageSize)
+    return PageSize.takeError();
+
+  return std::make_unique<SharedMemoryMapper>(EPC, SAs, *PageSize);
+}
 
 void SharedMemoryMapper::reserve(size_t NumBytes,
                                  OnReservedFunction OnReserved) {
