@@ -634,11 +634,12 @@ TEST_F(GLRTest, GuardExtension) {
     start := IDENTIFIER [guard]
   )bnf");
   TestLang.Guards.try_emplace(
-      ruleFor("start"),
-      [&](llvm::ArrayRef<const ForestNode *> RHS, const TokenStream &Tokens) {
-        assert(RHS.size() == 1 &&
-               RHS.front()->symbol() == tokenSymbol(clang::tok::identifier));
-        return Tokens.tokens()[RHS.front()->startTokenIndex()].text() == "test";
+      ruleFor("start"), [&](const GuardParams &P) {
+        assert(P.RHS.size() == 1 &&
+               P.RHS.front()->symbol() ==
+                   tokenSymbol(clang::tok::identifier));
+        return P.Tokens.tokens()[P.RHS.front()->startTokenIndex()]
+                   .text() == "test";
       });
   clang::LangOptions LOptions;
   TestLang.Table = LRTable::buildSLR(TestLang.G);

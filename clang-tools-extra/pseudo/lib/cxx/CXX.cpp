@@ -156,15 +156,19 @@ bool isFunctionDeclarator(const ForestNode *Declarator) {
   llvm_unreachable("unreachable");
 }
 
+bool guardNextTokenNotElse(const GuardParams &P) {
+  return symbolToToken(P.Lookahead) != tok::kw_else;
+}
+
 llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
 #define TOKEN_GUARD(kind, cond)                                                \
-  [](llvm::ArrayRef<const ForestNode *> RHS, const TokenStream &Tokens) {      \
-    const Token &Tok = onlyToken(tok::kind, RHS, Tokens);                      \
+  [](const GuardParams& P) {                                                   \
+    const Token &Tok = onlyToken(tok::kind, P.RHS, P.Tokens);                  \
     return cond;                                                               \
   }
 #define SYMBOL_GUARD(kind, cond)                                               \
-  [](llvm::ArrayRef<const ForestNode *> RHS, const TokenStream &Tokens) {      \
-    const ForestNode &N = onlySymbol((SymbolID)Symbol::kind, RHS, Tokens);     \
+  [](const GuardParams& P) {                                                   \
+    const ForestNode &N = onlySymbol((SymbolID)Symbol::kind, P.RHS, P.Tokens); \
     return cond;                                                               \
   }
   return {
@@ -185,6 +189,11 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
        TOKEN_GUARD(identifier, Tok.text() == "module")},
       {(RuleID)Rule::contextual_zero_0numeric_constant,
        TOKEN_GUARD(numeric_constant, Tok.text() == "0")},
+
+      {(RuleID)Rule::selection_statement_0if_1l_paren_2condition_3r_paren_4statement,
+        guardNextTokenNotElse},
+      {(RuleID)Rule::selection_statement_0if_1constexpr_2l_paren_3condition_4r_paren_5statement,
+        guardNextTokenNotElse},
 
       // The grammar distinguishes (only) user-defined vs plain string literals,
       // where the clang lexer distinguishes (only) encoding types.

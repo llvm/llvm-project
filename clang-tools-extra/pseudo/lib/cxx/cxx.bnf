@@ -290,7 +290,7 @@ expression-statement := expression_opt ;
 compound-statement := { statement-seq_opt [recover=Brackets] }
 statement-seq := statement
 statement-seq := statement-seq statement
-selection-statement := IF CONSTEXPR_opt ( init-statement_opt condition ) statement
+selection-statement := IF CONSTEXPR_opt ( init-statement_opt condition ) statement [guard]
 selection-statement := IF CONSTEXPR_opt ( init-statement_opt condition ) statement ELSE statement
 selection-statement := SWITCH ( init-statement_opt condition ) statement
 iteration-statement := WHILE ( condition ) statement
