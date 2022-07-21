@@ -930,7 +930,7 @@ void CSProfileGenerator::populateInferredFunctionSamples(
   FunctionSamples &CallerProfile = *getOrCreateFunctionSamples(CallerNode);
   // Since we don't have call count for inlined functions, we
   // estimate it from inlinee's profile using entry body sample.
-  uint64_t EstimatedCallCount = CalleeProfile->getEntrySamples();
+  uint64_t EstimatedCallCount = CalleeProfile->getHeadSamplesEstimate();
   // If we don't have samples with location, use 1 to indicate live.
   if (!EstimatedCallCount && !CalleeProfile->getBodySamples().size())
     EstimatedCallCount = 1;
