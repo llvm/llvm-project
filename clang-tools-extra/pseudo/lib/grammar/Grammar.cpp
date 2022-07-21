@@ -86,8 +86,8 @@ std::string Grammar::dumpRule(RuleID RID) const {
     if (R.RecoveryIndex == I)
       OS << " [recover=" << T->AttributeValues[R.Recovery] << "]";
   }
-  if (R.Guard)
-    OS << " [guard=" << T->AttributeValues[R.Guard] << "]";
+  if (R.Guarded)
+    OS << " [guard]";
   return Result;
 }
 
