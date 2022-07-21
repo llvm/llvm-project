@@ -76,12 +76,12 @@ Implemented Papers
     - P1970R2 - Consistency for ``size()`` functions: Add ``ranges::ssize``
     - P1983R0 - Wording for GB301, US296, US292, US291, and US283
 
-New Features
-------------
+Improvements and New Features
+-----------------------------
 
-- `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
+- ``std::pop_heap`` now uses an algorithm known as "bottom-up heapsort" or
   "heapsort with bounce" to reduce the number of comparisons, and rearranges
-  elements using move-assignment instead of `swap`.
+  elements using move-assignment instead of ``std::swap``.
 
 - Libc++ now supports a variety of assertions that can be turned on to help catch
   undefined behavior in user code. This new support is now separate from the old
@@ -109,30 +109,23 @@ New Features
   argument for the formatting functions. This change causes bit fields to become
   invalid arguments for the formatting functions.
 
-API Changes
------------
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION`` macro has been added to allow
+  re-enabling the ``allocator<void>`` specialization. When used in conjunction with
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS``, this ensures that the members of
+  ``allocator<void>`` removed in C++20 can be accessed.
 
-- The ``_LIBCPP_ABI_UNSTABLE`` macro has been removed in favour of setting
-  ``_LIBCPP_ABI_VERSION=2``. This should not have any impact on users because
-  they were not supposed to set ``_LIBCPP_ABI_UNSTABLE`` manually, however we
-  still feel that it is worth mentioning in the release notes in case some users
-  had been doing it.
+- ``boyer_moore_searcher`` and ``boyer_moore_horspool_searcher`` have been implemented.
+
+- ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
+  and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI,
+  which improves libc++'s conformance to the Standard.
+
+Deprecations and Removals
+-------------------------
 
 - The header ``<experimental/filesystem>`` has been removed. Instead, use
   ``<filesystem>`` header. The associated macro
   ``_LIBCPP_DEPRECATED_EXPERIMENTAL_FILESYSTEM`` has been removed too.
-
-- Libc++ is getting ready to remove unnecessary transitive inclusions. This may
-  break your code in the future. To future-proof your code to these removals,
-  please compile your code with ``_LIBCPP_REMOVE_TRANSITIVE_INCLUDES`` defined
-  and fix any compilation error resulting from missing includes.
-
-- The integer distributions ``binomial_distribution``, ``discrete_distribution``,
-  ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
-  and ``uniform_int_distribution`` now conform to the Standard by rejecting
-  template parameter types other than ``short``, ``int``, ``long``, ``long long``,
-  (as an extension) ``__int128_t``, and the unsigned versions thereof.
-  In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
 
 - The C++14 function ``std::quoted(const char*)`` is no longer supported in
   C++03 or C++11 modes.
@@ -140,30 +133,6 @@ API Changes
 - Setting a custom debug handler with ``std::__libcpp_debug_function`` is not
   supported anymore. Please migrate to using the new support for
   :ref:`assertions <assertions-mode>` instead.
-
-- ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
-  and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI.
-
-- The ``_LIBCPP_DEBUG`` macro is not supported anymore. It will be honoured until
-  LLVM 16, and then it will be an error to define that macro. To enable basic
-  assertions (previously ``_LIBCPP_DEBUG=0``), please use ``_LIBCPP_ENABLE_ASSERTIONS=1``.
-  To enable the debug mode (previously ``_LIBCPP_DEBUG=1|2``), please ensure that
-  the library has been built with support for the debug mode, and it will be
-  enabled automatically (no need to define ``_LIBCPP_DEBUG``).
-
-- The ``_LIBCPP_DISABLE_EXTERN_TEMPLATE`` macro is not honored anymore when defined by
-  users of libc++. Instead, users not wishing to take a dependency on libc++ should link
-  against the static version of libc++, which will result in no dependency being
-  taken against the shared library.
-
-- The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION`` macro has been added to allow
-  re-enabling the ``allocator<void>`` specialization. When used in conjunction with
-  ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS``, this ensures that the members of
-  ``allocator<void>`` removed in C++20 can be accessed.
-
-- The experimental versions of ``boyer_moore_searcher`` and ``boyer_moore_horspool_searcher``
-  will be removed in LLVM 17. You can disable the deprecation warnings by defining
-  ``_LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_SEARCHERS``.
 
 - ``std::function`` has been removed in C++03. If you are using it, please remove usages
   or upgrade to C++11 or later. It is possible to re-enable ``std::function`` in C++03 by defining
@@ -179,10 +148,47 @@ API Changes
   To disable deprecation warnings you have to define ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS``. Note that this
   disables all deprecation warnings.
 
-- ``boyer_moore_searcher`` and ``boyer_moore_horspool_searcher`` have been implemented.
+- The ``_LIBCPP_DISABLE_EXTERN_TEMPLATE`` macro is not honored anymore when defined by
+  users of libc++. Instead, users not wishing to take a dependency on libc++ should link
+  against the static version of libc++, which will result in no dependency being
+  taken against the shared library.
 
-ABI Changes
------------
+- The ``_LIBCPP_ABI_UNSTABLE`` macro has been removed in favour of setting
+  ``_LIBCPP_ABI_VERSION=2``. This should not have any impact on users because
+  they were not supposed to set ``_LIBCPP_ABI_UNSTABLE`` manually, however we
+  still feel that it is worth mentioning in the release notes in case some users
+  had been doing it.
+
+- The integer distributions ``binomial_distribution``, ``discrete_distribution``,
+  ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
+  and ``uniform_int_distribution`` now conform to the Standard by rejecting
+  template parameter types other than ``short``, ``int``, ``long``, ``long long``,
+  (as an extension) ``__int128_t``, and the unsigned versions thereof.
+  In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
+
+Upcoming Deprecations and Removals
+----------------------------------
+
+- The ``_LIBCPP_DEBUG`` macro is not supported anymore. It will be honoured until
+  LLVM 16, and then it will be an error to define that macro. To enable basic
+  assertions (previously ``_LIBCPP_DEBUG=0``), please use ``_LIBCPP_ENABLE_ASSERTIONS=1``.
+  To enable the debug mode (previously ``_LIBCPP_DEBUG=1|2``), please ensure that
+  the library has been built with support for the debug mode, and it will be
+  enabled automatically (no need to define ``_LIBCPP_DEBUG``).
+
+- The experimental versions of ``boyer_moore_searcher`` and ``boyer_moore_horspool_searcher``
+  will be removed in LLVM 17. You can disable the deprecation warnings by defining
+  ``_LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_SEARCHERS``.
+
+- The implementation of the Coroutines TS in ``std::experimental`` will be removed in LLVM 16.
+
+- Libc++ is getting ready to remove unnecessary transitive inclusions. This may
+  break your code in the future. To future-proof your code to these removals,
+  please compile your code with ``_LIBCPP_REMOVE_TRANSITIVE_INCLUDES`` defined
+  and fix any compilation error resulting from missing includes.
+
+ABI Affecting Changes
+---------------------
 
 - The ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` macro controlling whether we use an
   emulation for ``std::nullptr_t`` in C++03 mode has been removed. After this change,
