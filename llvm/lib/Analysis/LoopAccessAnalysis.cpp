@@ -1011,7 +1011,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     unsigned RunningDepId = 1;
     DenseMap<Value *, unsigned> DepSetId;
 
-    SmallVector<MemAccessInfo, 4> Retries;
+    SmallVector<std::pair<MemAccessInfo, Type *>, 4> Retries;
 
     // First, count how many write and read accesses are in the alias set. Also
     // collect MemAccessInfos for later.
@@ -1049,7 +1049,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                   ShouldCheckWrap, false)) {
           LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:"
                             << *Access.getPointer() << '\n');
-          Retries.push_back(Access);
+          Retries.push_back({Access, AccessTy});
           CanDoAliasSetRT = false;
         }
       }
@@ -1073,15 +1073,15 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       // We know that we need these checks, so we can now be more aggressive
       // and add further checks if required (overflow checks).
       CanDoAliasSetRT = true;
-      for (auto Access : Retries) {
-        for (const auto &AccessTy : Accesses[Access]) {
-          if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
-                                    DepSetId, TheLoop, RunningDepId, ASId,
-                                    ShouldCheckWrap, /*Assume=*/true)) {
-            CanDoAliasSetRT = false;
-            UncomputablePtr = Access.getPointer();
-            break;
-          }
+      for (auto Retry : Retries) {
+        MemAccessInfo Access = Retry.first;
+        Type *AccessTy = Retry.second;
+        if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
+                                  DepSetId, TheLoop, RunningDepId, ASId,
+                                  ShouldCheckWrap, /*Assume=*/true)) {
+          CanDoAliasSetRT = false;
+          UncomputablePtr = Access.getPointer();
+          break;
         }
       }
     }
