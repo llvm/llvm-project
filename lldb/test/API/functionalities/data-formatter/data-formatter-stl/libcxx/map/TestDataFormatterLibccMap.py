@@ -116,6 +116,16 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                     substrs=['first =',
                              'second ='])
 
+        # (Non-)const key/val iterators
+        self.expect_expr("it", result_children=[
+            ValueCheck(name="first", value="0"),
+            ValueCheck(name="second", value="0")
+        ])
+        self.expect_expr("const_it", result_children=[
+            ValueCheck(name="first", value="0"),
+            ValueCheck(name="second", value="0")
+        ])
+
         # check that MightHaveChildren() gets it right
         self.assertTrue(
             self.frame().FindVariable("ii").MightHaveChildren(),
