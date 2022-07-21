@@ -361,7 +361,7 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
       if (Call->isDataOperand(&U)) {
         // Detect calls to free.
         if (Call->isArgOperand(&U) &&
-            isFreeCall(I, &GetTLI(*Call->getFunction()))) {
+            getFreedOperand(Call, &GetTLI(*Call->getFunction())) == U) {
           if (Writers)
             Writers->insert(Call->getParent()->getParent());
         } else {

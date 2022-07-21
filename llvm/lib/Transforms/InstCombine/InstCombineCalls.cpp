@@ -1140,8 +1140,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Value *V = simplifyCall(&CI, SQ.getWithInstruction(&CI)))
       return replaceInstUsesWith(CI, V);
 
-  if (isFreeCall(&CI, &TLI))
-    return visitFree(CI);
+  if (Value *FreedOp = getFreedOperand(&CI, &TLI))
+    return visitFree(CI, FreedOp);
 
   // If the caller function (i.e. us, the function that contains this CallInst)
   // is nounwind, mark the call as nounwind, even if the callee isn't.

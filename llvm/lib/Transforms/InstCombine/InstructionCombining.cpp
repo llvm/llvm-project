@@ -3034,9 +3034,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   return &FI;
 }
 
-Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
-  Value *Op = FI.getArgOperand(0);
-
+Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   // free undef -> unreachable.
   if (isa<UndefValue>(Op)) {
     // Leave a marker since we can't modify the CFG here.
