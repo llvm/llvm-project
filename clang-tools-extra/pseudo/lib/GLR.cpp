@@ -416,11 +416,11 @@ public:
   }
 
 private:
-  bool canReduce(ExtensionID GuardID, RuleID RID,
+  bool canReduce(const Rule &R, RuleID RID,
                  llvm::ArrayRef<const ForestNode *> RHS) const {
-    if (!GuardID)
+    if (!R.Guarded)
       return true;
-    if (auto Guard = Lang.Guards.lookup(GuardID))
+    if (auto Guard = Lang.Guards.lookup(RID))
       return Guard(RHS, Params.Code);
     LLVM_DEBUG(llvm::dbgs()
                << llvm::formatv("missing guard implementation for rule {0}\n",
@@ -441,7 +441,7 @@ private:
           for (const auto *B : N->parents())
             llvm::dbgs() << "    --> base at S" << B->State << "\n";
         });
-        if (!canReduce(Rule.Guard, RID, TempSequence))
+        if (!canReduce(Rule, RID, TempSequence))
           return;
         // Copy the chain to stable storage so it can be enqueued.
         if (SequenceStorageCount == SequenceStorage.size())
@@ -572,7 +572,7 @@ private:
       TempSequence[Rule.Size - 1 - I] = Base->Payload;
       Base = Base->parents().front();
     }
-    if (!canReduce(Rule.Guard, *RID, TempSequence))
+    if (!canReduce(Rule, *RID, TempSequence))
       return true; // reduction is not available
     const ForestNode *Parsed =
         &Params.Forest.createSequence(Rule.Target, *RID, TempSequence);
