@@ -1146,12 +1146,9 @@ define i1 @lshr_pow2_ult_equal_constants(i32 %x) {
   ret i1 %r
 }
 
-; TODO: This should reduce to X != 0.
-
 define i1 @lshr_pow2_ult_smin(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ult_smin(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[S]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 128, %x
@@ -1189,8 +1186,7 @@ define i1 @lshr_pow2_slt(i8 %x) {
 
 define i1 @lshr_neg_sgt_minus_1(i8 %x) {
 ; CHECK-LABEL: @lshr_neg_sgt_minus_1(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -17, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[S]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 -17, %x
@@ -1200,8 +1196,7 @@ define i1 @lshr_neg_sgt_minus_1(i8 %x) {
 
 define <2 x i1> @lshr_neg_sgt_minus_1_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_neg_sgt_minus_1_vector(
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i8> <i8 -17, i8 -17>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[S]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s = lshr <2 x i8> <i8 -17, i8 -17>, %x
@@ -1209,13 +1204,11 @@ define <2 x i1> @lshr_neg_sgt_minus_1_vector(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
-; Negative tests
-
 define i1 @lshr_neg_sgt_minus_1_extra_use(i8 %x) {
 ; CHECK-LABEL: @lshr_neg_sgt_minus_1_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 -17, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[S]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 -17, %x
@@ -1223,6 +1216,8 @@ define i1 @lshr_neg_sgt_minus_1_extra_use(i8 %x) {
   %r = icmp sgt i8 %s, -1
   ret i1 %r
 }
+
+; Negative tests
 
 define i1 @lshr_neg_sgt_minus_2(i8 %x) {
 ; CHECK-LABEL: @lshr_neg_sgt_minus_2(
@@ -1250,8 +1245,7 @@ define i1 @lshr_neg_slt_minus_1(i8 %x) {
 
 define i1 @lshr_neg_slt_zero(i8 %x) {
 ; CHECK-LABEL: @lshr_neg_slt_zero(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -17, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[S]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 -17, %x
@@ -1261,8 +1255,7 @@ define i1 @lshr_neg_slt_zero(i8 %x) {
 
 define <2 x i1> @lshr_neg_slt_zero_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_neg_slt_zero_vector(
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i8> <i8 -17, i8 -17>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[S]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s = lshr <2 x i8> <i8 -17, i8 -17>, %x
@@ -1270,13 +1263,11 @@ define <2 x i1> @lshr_neg_slt_zero_vector(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
-; Negative tests
-
 define i1 @lshr_neg_slt_zero_extra_use(i8 %x) {
 ; CHECK-LABEL: @lshr_neg_slt_zero_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 -17, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[S]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 -17, %x
@@ -1284,6 +1275,8 @@ define i1 @lshr_neg_slt_zero_extra_use(i8 %x) {
   %r = icmp slt i8 %s, 0
   ret i1 %r
 }
+
+; Negative tests
 
 define i1 @lshr_neg_slt_non-zero(i8 %x) {
 ; CHECK-LABEL: @lshr_neg_slt_non-zero(
