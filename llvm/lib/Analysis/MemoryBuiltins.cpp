@@ -179,6 +179,11 @@ static const Function *getCalledFunction(const Value *V,
 static Optional<AllocFnsTy>
 getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
                              const TargetLibraryInfo *TLI) {
+  // Don't perform a slow TLI lookup, if this function doesn't return a pointer
+  // and thus can't be an allocation function.
+  if (!Callee->getReturnType()->isPointerTy())
+    return None;
+
   // Make sure that the function is available.
   LibFunc TLIFn;
   if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
