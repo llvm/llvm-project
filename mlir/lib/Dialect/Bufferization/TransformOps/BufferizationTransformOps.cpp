@@ -75,10 +75,14 @@ class BufferizationTransformDialectExtension
     : public transform::TransformDialectExtension<
           BufferizationTransformDialectExtension> {
 public:
-  BufferizationTransformDialectExtension() {
-    declareDependentDialect<bufferization::BufferizationDialect>();
+  using Base::Base;
+
+  void init() {
     declareDependentDialect<pdl::PDLDialect>();
-    declareDependentDialect<memref::MemRefDialect>();
+
+    declareGeneratedDialect<bufferization::BufferizationDialect>();
+    declareGeneratedDialect<memref::MemRefDialect>();
+
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp.inc"

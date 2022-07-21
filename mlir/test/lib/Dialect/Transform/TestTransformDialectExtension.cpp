@@ -295,7 +295,9 @@ class TestTransformDialectExtension
     : public transform::TransformDialectExtension<
           TestTransformDialectExtension> {
 public:
-  TestTransformDialectExtension() {
+  using Base::Base;
+
+  void init() {
     declareDependentDialect<pdl::PDLDialect>();
     registerTransformOps<TestTransformOp,
                          TestTransformUnrestrictedOpNoInterface,
