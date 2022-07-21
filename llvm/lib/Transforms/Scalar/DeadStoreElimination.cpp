@@ -1118,9 +1118,9 @@ struct DSEState {
   /// Returns true if \p I is a memory terminator instruction like
   /// llvm.lifetime.end or free.
   bool isMemTerminatorInst(Instruction *I) const {
-    IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
-    return (II && II->getIntrinsicID() == Intrinsic::lifetime_end) ||
-           isFreeCall(I, &TLI);
+    auto *CB = dyn_cast<CallBase>(I);
+    return CB && (CB->getIntrinsicID() == Intrinsic::lifetime_end ||
+                  getFreedOperand(CB, &TLI) != nullptr);
   }
 
   /// Returns true if \p MaybeTerm is a memory terminator for \p Loc from
