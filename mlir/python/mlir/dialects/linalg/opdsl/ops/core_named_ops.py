@@ -483,6 +483,32 @@ def depthwise_conv_2d_nhwc_hwc(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
 
 
 @linalg_structured_op
+def depthwise_conv_2d_nchw_chw(I=TensorDef(T1, S.N, S.IC, S.OH * S.SH + S.KH * S.DH,
+                                           S.OW * S.SW + S.KW * S.DW),
+                               K=TensorDef(T2, S.IC, S.KH, S.KW),
+                               O=TensorDef(U,
+                                           S.N,
+                                           S.IC,
+                                           S.OH,
+                                           S.OW,
+                                           output=True),
+                               strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+                               dilations=IndexAttrDef(S.DH,
+                                                      S.DW,
+                                                      default=[1, 1])):
+  """Performs depth-wise 2-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. Multiplier is set to 1
+  which is a special case for most depthwise convolutions.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
+  O[D.n, D.ic, D.oh, D.ow] += TypeFn.cast_signed(
+      U, I[D.n, D.ic, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]) * TypeFn.cast_signed(U, K[D.ic, D.kh, D.kw])
+
+
+@linalg_structured_op
 def depthwise_conv_2d_nhwc_hwc_q(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
                                              S.OW * S.SW + S.KW * S.DW, S.IC),
                                  K=TensorDef(T2, S.KH, S.KW, S.IC),
