@@ -66,6 +66,12 @@ class TestCase(TestBase):
         self.expect_expr("A::scoped_ll_enum_val_neg", result_value="case0")
         self.expect_expr("A::scoped_ll_enum_val", result_value="case2")
 
+        # Test an aliased enum with fixed underlying type.
+        self.expect_expr("ClassWithEnumAlias::enum_alias",
+                         result_value="scoped_enum_case2")
+        self.expect_expr("ClassWithEnumAlias::enum_alias_alias",
+                         result_value="scoped_enum_case1")
+
         # Test taking address.
         if lldbplatformutil.getPlatform() == "windows":
             # On Windows data members without the out-of-class definitions still have
