@@ -8745,6 +8745,29 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     return true;
   }
 
+  // Fold ((srl (and X, 1<<C), C), 0, eq/ne) -> ((shl X, XLen-1-C), 0, ge/lt)
+  if (isNullConstant(RHS) && LHS.getOpcode() == ISD::SRL && LHS.hasOneUse() &&
+      LHS.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue LHS0 = LHS.getOperand(0);
+    if (LHS0.getOpcode() == ISD::AND &&
+        LHS0.getOperand(1).getOpcode() == ISD::Constant) {
+      uint64_t Mask = LHS0.getConstantOperandVal(1);
+      uint64_t ShAmt = LHS.getConstantOperandVal(1);
+      if (isPowerOf2_64(Mask) && Log2_64(Mask) == ShAmt) {
+        CCVal = CCVal == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
+        CC = DAG.getCondCode(CCVal);
+
+        ShAmt = LHS.getValueSizeInBits() - 1 - ShAmt;
+        LHS = LHS0.getOperand(0);
+        if (ShAmt != 0)
+          LHS =
+              DAG.getNode(ISD::SHL, DL, LHS.getValueType(), LHS0.getOperand(0),
+                          DAG.getConstant(ShAmt, DL, LHS.getValueType()));
+        return true;
+      }
+    }
+  }
+
   // (X, 1, setne) -> // (X, 0, seteq) if we can prove X is 0/1.
   // This can occur when legalizing some floating point comparisons.
   APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
