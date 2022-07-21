@@ -50,31 +50,31 @@ almost complete. The ``ranges`` library is considered experimental.
 Implemented Papers
 ------------------
 
-- P0627R6 – Function to mark unreachable code
-- P1165R1 – Make stateful allocator propagation more consistent for ``operator+(basic_string)``
-- P0674R1 – Support arrays in ``make_shared`` and ``allocate_shared``
-- P0980R1 – Making ``std::string`` constexpr
-- P2216R3 – ``std::format`` improvements
-- P0174R2 – Deprecating Vestigial Library Parts in C++17
-- N4190 – Removing ``auto_ptr``, ``random_shuffle()``, And Old ``<functional>`` Stuff
-- P0154R1 – Hardware inference size
-- P0618R0 – Deprecating ``<codecvt>``
-- P2418R2 – Add support for ``std::generator``-like types to ``std::format``
-- LWG3659 – Consider ``ATOMIC_FLAG_INIT`` undeprecation
-- P1423R3 – ``char8_t`` backward compatibility remediation
+- P0627R6 - Function to mark unreachable code
+- P1165R1 - Make stateful allocator propagation more consistent for ``operator+(basic_string)``
+- P0674R1 - Support arrays in ``make_shared`` and ``allocate_shared``
+- P0980R1 - Making ``std::string`` constexpr
+- P2216R3 - ``std::format`` improvements
+- P0174R2 - Deprecating Vestigial Library Parts in C++17
+- N4190 - Removing ``auto_ptr``, ``random_shuffle()``, And Old ``<functional>`` Stuff
+- P0154R1 - Hardware inference size
+- P0618R0 - Deprecating ``<codecvt>``
+- P2418R2 - Add support for ``std::generator``-like types to ``std::format``
+- LWG3659 - Consider ``ATOMIC_FLAG_INIT`` undeprecation
+- P1423R3 - ``char8_t`` backward compatibility remediation
 
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):
 
-    - P1207R4 – Movability of Single-pass Iterators
-    - P1474R1 – Helpful pointers for ``ContiguousIterator``
-    - P1522R1 – Iterator Difference Type and Integer Overflow
-    - P1523R1 – Views and Size Types
-    - P1456R1 – Move-only views
-    - P1870R1 – ``forwarding-range`` is too subtle
-    - P1878R1 – Constraining Readable Types
-    - P1970R2 – Consistency for ``size()`` functions: Add ``ranges::ssize``
-    - P1983R0 – Wording for GB301, US296, US292, US291, and US283
+    - P1207R4 - Movability of Single-pass Iterators
+    - P1474R1 - Helpful pointers for ``ContiguousIterator``
+    - P1522R1 - Iterator Difference Type and Integer Overflow
+    - P1523R1 - Views and Size Types
+    - P1456R1 - Move-only views
+    - P1870R1 - ``forwarding-range`` is too subtle
+    - P1878R1 - Constraining Readable Types
+    - P1970R2 - Consistency for ``size()`` functions: Add ``ranges::ssize``
+    - P1983R0 - Wording for GB301, US296, US292, US291, and US283
 
 New Features
 ------------
