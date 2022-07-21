@@ -1424,6 +1424,8 @@ void Pattern::printVariableDefs(const SourceMgr &SM,
   // Sort variable captures by the order in which they matched the input.
   // Ranges shouldn't be overlapping, so we can just compare the start.
   llvm::sort(VarCaptures, [](const VarCapture &A, const VarCapture &B) {
+    if (&A == &B)
+      return false;
     assert(A.Range.Start != B.Range.Start &&
            "unexpected overlapping variable captures");
     return A.Range.Start.getPointer() < B.Range.Start.getPointer();
