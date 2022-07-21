@@ -21,4 +21,5 @@ target_link_libraries(tco PRIVATE
   MLIRParser
   MLIRSupport
   MLIRVectorToLLVM
+  LLVMPasses
 )

@@ -16,30 +16,45 @@ func.func @_QQmain() {
 
 // PASSES: Pass statistics report
 
-// PASSES: CSE
-// PASSES-LABEL: 'func.func' Pipeline
-// PASSES: ArrayValueCopy
-// PASSES: CharacterConversion
-// PASSES: Canonicalizer
-// PASSES: SimplifyRegionLite
-// PASSES: CSE
+// PASSES:      CSE
+// PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
+// PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-// PASSES-LABEL: 'func.func' Pipeline
-// PASSES: MemoryAllocationOpt
-// PASSES: Inliner
-// PASSES: CSE
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   ArrayValueCopy
+// PASSES-NEXT:   CharacterConversion
 
-// PASSES-LABEL: 'func.func' Pipeline
-// PASSES: CFGConversion
-// PASSES: SCFToControlFlow
-// PASSES: Canonicalizer
-// PASSES: SimplifyRegionLite
-// PASSES: CSE
-// PASSES: BoxedProcedurePass
+// PASSES-NEXT: Canonicalizer
+// PASSES-NEXT: SimplifyRegionLite
+// PASSES-NEXT: AlgebraicSimplification
+// PASSES-NEXT: CSE
+// PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
+// PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-// PASSES-LABEL: 'func.func' Pipeline
-// PASSES: AbstractResultOpt
-// PASSES: CodeGenRewrite
-// PASSES: TargetRewrite
-// PASSES: FIRToLLVMLowering
-// PASSES: LLVMIRLoweringPass
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   MemoryAllocationOpt
+
+// PASSES-NEXT: Inliner
+// PASSES-NEXT: CSE
+// PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
+// PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   CFGConversion
+
+// PASSES-NEXT: SCFToControlFlow
+// PASSES-NEXT: Canonicalizer
+// PASSES-NEXT: SimplifyRegionLite
+// PASSES-NEXT: CSE
+// PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
+// PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+// PASSES-NEXT: BoxedProcedurePass
+
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   AbstractResultOpt
+
+// PASSES-NEXT: CodeGenRewrite
+// PASSES-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
+// PASSES-NEXT: TargetRewrite
+// PASSES-NEXT: FIRToLLVMLowering
+// PASSES-NEXT: LLVMIRLoweringPass
