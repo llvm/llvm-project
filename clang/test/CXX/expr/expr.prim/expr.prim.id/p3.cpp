@@ -161,10 +161,10 @@ concept Large = sizeof(T) > 100;
 
 struct small { };
 static_assert(Large<small>);
-// expected-error@-1 {{static_assert failed}}
+// expected-error@-1 {{static assertion failed}}
 // expected-note@-2 {{because 'small' does not satisfy 'Large'}}
 static_assert(Large<small>, "small isn't large");
-// expected-error@-1 {{static_assert failed: small isn't large}}
+// expected-error@-1 {{static assertion failed: small isn't large}}
 // expected-note@-2 {{because 'small' does not satisfy 'Large'}}
 
 // Make sure access-checking can fail a concept specialization
@@ -173,7 +173,7 @@ class T4 { static constexpr bool f = true; };
 template<typename T> concept AccessPrivate = T{}.f;
 // expected-note@-1{{because substituted constraint expression is ill-formed: 'f' is a private member of 'T4'}}
 static_assert(AccessPrivate<T4>);
-// expected-error@-1{{static_assert failed}}
+// expected-error@-1{{static assertion failed}}
 // expected-note@-2{{because 'T4' does not satisfy 'AccessPrivate'}}
 
 template<typename T, typename U>
