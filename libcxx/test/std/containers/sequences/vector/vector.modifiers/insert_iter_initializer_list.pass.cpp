@@ -19,46 +19,9 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-#ifndef TEST_HAS_NO_EXCEPTIONS
-int throw_if_zero     = 2;
-int constructed_count = 0;
-
-struct ThrowSometimes {
-  ThrowSometimes() { ++constructed_count; }
-  ThrowSometimes(const ThrowSometimes&) {
-    if (--throw_if_zero == 0)
-      throw 1;
-    ++constructed_count;
-  }
-  ThrowSometimes& operator=(const ThrowSometimes&) {
-    if (--throw_if_zero == 0)
-      throw 1;
-    ++constructed_count;
-    return *this;
-  }
-  ~ThrowSometimes() { --constructed_count; }
-};
-
-void test_throwing() {
-  std::vector<ThrowSometimes> v;
-  v.reserve(4);
-  v.emplace_back();
-  v.emplace_back();
-  try {
-    v.insert(v.end(), {ThrowSometimes{}, ThrowSometimes{}});
-    assert(false);
-  } catch (int) {
-    assert(v.size() == 2);
-    assert(constructed_count == 2);
-  }
-}
-#endif // TEST_HAS_NO_EXCEPTIONS
-
-int main(int, char**) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  test_throwing();
-#endif
-  {
+int main(int, char**)
+{
+    {
     std::vector<int> d(10, 1);
     std::vector<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
     assert(d.size() == 14);
@@ -78,8 +41,8 @@ int main(int, char**) {
     assert(d[11] == 1);
     assert(d[12] == 1);
     assert(d[13] == 1);
-  }
-  {
+    }
+    {
     std::vector<int, min_allocator<int>> d(10, 1);
     std::vector<int, min_allocator<int>>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
     assert(d.size() == 14);
@@ -99,7 +62,7 @@ int main(int, char**) {
     assert(d[11] == 1);
     assert(d[12] == 1);
     assert(d[13] == 1);
-  }
+    }
 
   return 0;
 }

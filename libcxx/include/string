@@ -532,7 +532,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
-#include <__memory/swap_allocator.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__utility/auto_cast.h>

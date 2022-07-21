@@ -18,7 +18,6 @@
 #include <__debug>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/swap_allocator.h>
 #include <__utility/swap.h>
 #include <cmath>
 #include <initializer_list>
