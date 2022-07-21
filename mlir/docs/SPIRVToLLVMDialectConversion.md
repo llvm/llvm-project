@@ -630,14 +630,14 @@ As well as:
 *   spv.ControlBarrier
 *   spv.CopyMemory
 *   spv.FMod
-*   spv.GLSL.Acos
-*   spv.GLSL.Asin
-*   spv.GLSL.Atan
-*   spv.GLSL.Cosh
-*   spv.GLSL.FSign
-*   spv.GLSL.SAbs
-*   spv.GLSL.Sinh
-*   spv.GLSL.SSign
+*   spv.GL.Acos
+*   spv.GL.Asin
+*   spv.GL.Atan
+*   spv.GL.Cosh
+*   spv.GL.FSign
+*   spv.GL.SAbs
+*   spv.GL.Sinh
+*   spv.GL.SSign
 *   spv.MemoryBarrier
 *   spv.mlir.referenceof
 *   spv.SMod
@@ -730,18 +730,18 @@ mapped to LLVM Dialect.
 
 SPIR-V Dialect op | LLVM Dialect op
 :---------------: | :----------------:
-`spv.GLSL.Ceil`   | `llvm.intr.ceil`
-`spv.GLSL.Cos`    | `llvm.intr.cos`
-`spv.GLSL.Exp`    | `llvm.intr.exp`
-`spv.GLSL.FAbs`   | `llvm.intr.fabs`
-`spv.GLSL.Floor`  | `llvm.intr.floor`
-`spv.GLSL.FMax`   | `llvm.intr.maxnum`
-`spv.GLSL.FMin`   | `llvm.intr.minnum`
-`spv.GLSL.Log`    | `llvm.intr.log`
-`spv.GLSL.Sin`    | `llvm.intr.sin`
-`spv.GLSL.Sqrt`   | `llvm.intr.sqrt`
-`spv.GLSL.SMax`   | `llvm.intr.smax`
-`spv.GLSL.SMin`   | `llvm.intr.smin`
+`spv.GL.Ceil`     | `llvm.intr.ceil`
+`spv.GL.Cos`      | `llvm.intr.cos`
+`spv.GL.Exp`      | `llvm.intr.exp`
+`spv.GL.FAbs`     | `llvm.intr.fabs`
+`spv.GL.Floor`    | `llvm.intr.floor`
+`spv.GL.FMax`     | `llvm.intr.maxnum`
+`spv.GL.FMin`     | `llvm.intr.minnum`
+`spv.GL.Log`      | `llvm.intr.log`
+`spv.GL.Sin`      | `llvm.intr.sin`
+`spv.GL.Sqrt`     | `llvm.intr.sqrt`
+`spv.GL.SMax`     | `llvm.intr.smax`
+`spv.GL.SMin`     | `llvm.intr.smin`
 
 ### Special cases
 
