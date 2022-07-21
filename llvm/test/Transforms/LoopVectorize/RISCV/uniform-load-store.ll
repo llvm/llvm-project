@@ -382,6 +382,82 @@ for.end:
   ret void
 }
 
+define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
+; SCALABLE-LABEL: @uniform_store_of_loop_varying(
+; SCALABLE-NEXT:  entry:
+; SCALABLE-NEXT:    br label [[FOR_BODY:%.*]]
+; SCALABLE:       for.body:
+; SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; SCALABLE-NEXT:    store i64 [[IV]], ptr [[B:%.*]], align 8
+; SCALABLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[IV]]
+; SCALABLE-NEXT:    store i64 [[V:%.*]], ptr [[ARRAYIDX]], align 8
+; SCALABLE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; SCALABLE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; SCALABLE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; SCALABLE:       for.end:
+; SCALABLE-NEXT:    ret void
+;
+; FIXEDLEN-LABEL: @uniform_store_of_loop_varying(
+; FIXEDLEN-NEXT:  entry:
+; FIXEDLEN-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXEDLEN:       vector.ph:
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[V:%.*]], i32 0
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[V]], i32 0
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; FIXEDLEN-NEXT:    br label [[VECTOR_BODY:%.*]]
+; FIXEDLEN:       vector.body:
+; FIXEDLEN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; FIXEDLEN-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; FIXEDLEN-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
+; FIXEDLEN-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
+; FIXEDLEN-NEXT:    store i64 [[TMP0]], ptr [[B:%.*]], align 8
+; FIXEDLEN-NEXT:    store i64 [[TMP1]], ptr [[B]], align 8
+; FIXEDLEN-NEXT:    store i64 [[TMP2]], ptr [[B]], align 8
+; FIXEDLEN-NEXT:    store i64 [[TMP3]], ptr [[B]], align 8
+; FIXEDLEN-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXEDLEN-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
+; FIXEDLEN-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
+; FIXEDLEN-NEXT:    store <2 x i64> [[BROADCAST_SPLAT]], ptr [[TMP6]], align 8
+; FIXEDLEN-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 2
+; FIXEDLEN-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP7]], align 8
+; FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; FIXEDLEN-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXEDLEN-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; FIXEDLEN:       middle.block:
+; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
+; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN:       scalar.ph:
+; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
+; FIXEDLEN:       for.body:
+; FIXEDLEN-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; FIXEDLEN-NEXT:    store i64 [[IV]], ptr [[B]], align 8
+; FIXEDLEN-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; FIXEDLEN-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
+; FIXEDLEN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; FIXEDLEN-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; FIXEDLEN-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; FIXEDLEN:       for.end:
+; FIXEDLEN-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  store i64 %iv, ptr %b, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  store i64 %v, ptr %arrayidx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
 ; SCALABLE-LABEL: @conditional_uniform_store(
 ; SCALABLE-NEXT:  entry:
@@ -434,7 +510,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], <i64 2, i64 2>
 ; FIXEDLEN-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXEDLEN-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; FIXEDLEN-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXEDLEN:       middle.block:
 ; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -453,7 +529,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; FIXEDLEN-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
 ; FIXEDLEN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; FIXEDLEN-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXEDLEN-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; FIXEDLEN-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; FIXEDLEN:       for.end:
 ; FIXEDLEN-NEXT:    ret void
 ;
@@ -519,7 +595,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; FIXEDLEN-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP5]], align 8
 ; FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXEDLEN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXEDLEN-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; FIXEDLEN-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FIXEDLEN:       middle.block:
 ; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -533,7 +609,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; FIXEDLEN-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
 ; FIXEDLEN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; FIXEDLEN-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXEDLEN-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; FIXEDLEN-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; FIXEDLEN:       for.end:
 ; FIXEDLEN-NEXT:    ret void
 ;
