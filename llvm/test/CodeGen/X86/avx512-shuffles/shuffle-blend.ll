@@ -138,6 +138,19 @@ define <16 x i8> @addb_selectw_16xi8(<16 x i8> %t0, <16 x i8> %t1) {
   ret <16 x i8> %t4
 }
 
+define <8 x i8> @addb_selectw_8xi8(<8 x i8> %t0, <8 x i8> %t1) {
+; CHECK-LABEL: addb_selectw_8xi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %t2 = add nsw <8 x i8> %t0, %t1
+  %t3 = sub nsw <8 x i8> %t0, %t1
+  %t4 = shufflevector <8 x i8> %t2, <8 x i8> %t3, <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %t4
+}
+
 define <32 x i16> @addw_selectd_32xi16(<32 x i16> %t0, <32 x i16> %t1) {
 ; AVX512F-LABEL: addw_selectd_32xi16:
 ; AVX512F:       # %bb.0:
@@ -220,4 +233,18 @@ define <8 x i32> @addd_selectq_8xi32(<8 x i32> %t0, <8 x i32> %t1) {
   %t4 = shufflevector <8 x i32> %t2, <8 x i32> %t3, <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 
   ret <8 x i32> %t4
+}
+
+define <4 x i32> @addd_selectq_4xi32(<4 x i32> %t0, <4 x i32> %t1) {
+; CHECK-LABEL: addd_selectq_4xi32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %t2 = add nsw <4 x i32> %t0, %t1
+  %t3 = sub nsw <4 x i32> %t0, %t1
+  %t4 = shufflevector <4 x i32> %t2, <4 x i32> %t3, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+
+  ret <4 x i32> %t4
 }
