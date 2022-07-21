@@ -78,6 +78,7 @@ struct TeamStateTy {
   ///}
 
   uint32_t ParallelTeamSize;
+  uint32_t HasThreadState;
   ParallelRegionFnTy ParallelRegionFnVar;
 };
 
@@ -125,6 +126,7 @@ enum ValueKind {
   VK_RunSchedChunk,
   VK_ParallelRegionFn,
   VK_ParallelTeamSize,
+  VK_HasThreadState,
 };
 
 /// TODO
@@ -143,56 +145,66 @@ struct DateEnvironmentRAII {
 void resetStateForThread(uint32_t TId);
 
 inline uint32_t &lookupForModify32Impl(uint32_t state::ICVStateTy::*Var,
-                                       IdentTy *Ident) {
-  if (OMP_LIKELY(!config::mayUseThreadStates() ||
-                 TeamState.ICVState.LevelVar == 0))
+                                       IdentTy *Ident, bool ForceTeamState) {
+  if (OMP_LIKELY(ForceTeamState || !config::mayUseThreadStates() ||
+                 !TeamState.HasThreadState))
     return TeamState.ICVState.*Var;
   uint32_t TId = mapping::getThreadIdInBlock();
   if (OMP_UNLIKELY(!ThreadStates[TId])) {
     ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
         sizeof(ThreadStateTy), "ICV modification outside data environment"));
     ASSERT(ThreadStates[TId] != nullptr && "Nullptr returned by malloc!");
+    TeamState.HasThreadState = true;
     ThreadStates[TId]->init();
   }
   return ThreadStates[TId]->ICVState.*Var;
 }
 
-inline uint32_t &lookupImpl(uint32_t state::ICVStateTy::*Var) {
+inline uint32_t &lookupImpl(uint32_t state::ICVStateTy::*Var,
+                            bool ForceTeamState) {
   auto TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(config::mayUseThreadStates() && ThreadStates[TId]))
+  if (OMP_UNLIKELY(!ForceTeamState && config::mayUseThreadStates() &&
+                   TeamState.HasThreadState && ThreadStates[TId]))
     return ThreadStates[TId]->ICVState.*Var;
   return TeamState.ICVState.*Var;
 }
 
 __attribute__((always_inline, flatten)) inline uint32_t &
-lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident) {
+lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_NThreads:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::NThreadsVar);
-    return lookupForModify32Impl(&ICVStateTy::NThreadsVar, Ident);
+      return lookupImpl(&ICVStateTy::NThreadsVar, ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::NThreadsVar, Ident,
+                                 ForceTeamState);
   case state::VK_Level:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::LevelVar);
-    return lookupForModify32Impl(&ICVStateTy::LevelVar, Ident);
+      return lookupImpl(&ICVStateTy::LevelVar, ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::LevelVar, Ident, ForceTeamState);
   case state::VK_ActiveLevel:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::ActiveLevelVar);
-    return lookupForModify32Impl(&ICVStateTy::ActiveLevelVar, Ident);
+      return lookupImpl(&ICVStateTy::ActiveLevelVar, ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::ActiveLevelVar, Ident,
+                                 ForceTeamState);
   case state::VK_MaxActiveLevels:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::MaxActiveLevelsVar);
-    return lookupForModify32Impl(&ICVStateTy::MaxActiveLevelsVar, Ident);
+      return lookupImpl(&ICVStateTy::MaxActiveLevelsVar, ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::MaxActiveLevelsVar, Ident,
+                                 ForceTeamState);
   case state::VK_RunSched:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::RunSchedVar);
-    return lookupForModify32Impl(&ICVStateTy::RunSchedVar, Ident);
+      return lookupImpl(&ICVStateTy::RunSchedVar, ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::RunSchedVar, Ident,
+                                 ForceTeamState);
   case state::VK_RunSchedChunk:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::RunSchedChunkVar);
-    return lookupForModify32Impl(&ICVStateTy::RunSchedChunkVar, Ident);
+      return lookupImpl(&ICVStateTy::RunSchedChunkVar, ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::RunSchedChunkVar, Ident,
+                                 ForceTeamState);
   case state::VK_ParallelTeamSize:
     return TeamState.ParallelTeamSize;
+  case state::VK_HasThreadState:
+    return TeamState.HasThreadState;
   default:
     break;
   }
@@ -200,7 +212,7 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident) {
 }
 
 __attribute__((always_inline, flatten)) inline void *&
-lookupPtr(ValueKind Kind, bool IsReadonly) {
+lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_ParallelRegionFn:
     return TeamState.ParallelRegionFnVar;
@@ -214,7 +226,8 @@ lookupPtr(ValueKind Kind, bool IsReadonly) {
 /// update ICV values we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct Value {
   __attribute__((flatten, always_inline)) operator Ty() {
-    return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr);
+    return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr,
+                  /* ForceTeamState */ false);
   }
 
   __attribute__((flatten, always_inline)) Value &operator=(const Ty &Other) {
@@ -232,21 +245,29 @@ template <typename Ty, ValueKind Kind> struct Value {
     return *this;
   }
 
+  __attribute__((flatten, always_inline)) void
+  assert_eq(const Ty &V, IdentTy *Ident = nullptr,
+            bool ForceTeamState = false) {
+    ASSERT(lookup(/* IsReadonly */ true, Ident, ForceTeamState) == V);
+  }
+
 private:
-  __attribute__((flatten, always_inline)) Ty &lookup(bool IsReadonly,
-                                                     IdentTy *Ident) {
-    Ty &t = lookup32(Kind, IsReadonly, Ident);
+  __attribute__((flatten, always_inline)) Ty &
+  lookup(bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
+    Ty &t = lookup32(Kind, IsReadonly, Ident, ForceTeamState);
     return t;
   }
 
   __attribute__((flatten, always_inline)) Ty &inc(int UpdateVal,
                                                   IdentTy *Ident) {
-    return (lookup(/* IsReadonly */ false, Ident) += UpdateVal);
+    return (lookup(/* IsReadonly */ false, Ident, /* ForceTeamState */ false) +=
+            UpdateVal);
   }
 
   __attribute__((flatten, always_inline)) Ty &set(Ty UpdateVal,
                                                   IdentTy *Ident) {
-    return (lookup(/* IsReadonly */ false, Ident) = UpdateVal);
+    return (lookup(/* IsReadonly */ false, Ident, /* ForceTeamState */ false) =
+                UpdateVal);
   }
 
   template <typename VTy, typename Ty2> friend struct ValueRAII;
@@ -257,7 +278,8 @@ private:
 /// we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct PtrValue {
   __attribute__((flatten, always_inline)) operator Ty() {
-    return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr);
+    return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr,
+                  /* ForceTeamState */ false);
   }
 
   __attribute__((flatten, always_inline)) PtrValue &operator=(const Ty Other) {
@@ -266,18 +288,22 @@ template <typename Ty, ValueKind Kind> struct PtrValue {
   }
 
 private:
-  Ty &lookup(bool IsReadonly, IdentTy *) { return lookupPtr(Kind, IsReadonly); }
+  Ty &lookup(bool IsReadonly, IdentTy *, bool ForceTeamState) {
+    return lookupPtr(Kind, IsReadonly, ForceTeamState);
+  }
 
   Ty &set(Ty UpdateVal) {
-    return (lookup(/* IsReadonly */ false, /* IdentTy */ nullptr) = UpdateVal);
+    return (lookup(/* IsReadonly */ false, /* IdentTy */ nullptr,
+                   /* ForceTeamState */ false) = UpdateVal);
   }
 
   template <typename VTy, typename Ty2> friend struct ValueRAII;
 };
 
 template <typename VTy, typename Ty> struct ValueRAII {
-  ValueRAII(VTy &V, Ty NewValue, Ty OldValue, bool Active, IdentTy *Ident)
-      : Ptr(Active ? &V.lookup(/* IsReadonly */ false, Ident)
+  ValueRAII(VTy &V, Ty NewValue, Ty OldValue, bool Active, IdentTy *Ident,
+            bool ForceTeamState = false)
+      : Ptr(Active ? &V.lookup(/* IsReadonly */ false, Ident, ForceTeamState)
                    : (Ty *)utils::UndefPtr),
         Val(OldValue), Active(Active) {
     if (!Active)
@@ -302,6 +328,9 @@ inline state::Value<uint32_t, state::VK_RunSchedChunk> RunSchedChunk;
 
 /// TODO
 inline state::Value<uint32_t, state::VK_ParallelTeamSize> ParallelTeamSize;
+
+/// TODO
+inline state::Value<uint32_t, state::VK_HasThreadState> HasThreadState;
 
 /// TODO
 inline state::PtrValue<ParallelRegionFnTy, state::VK_ParallelRegionFn>
