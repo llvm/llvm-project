@@ -204,6 +204,7 @@ static void DoResetImpl(uptr epoch) {
   }
   DPrintf("Resetting meta shadow...\n");
   ctx->metamap.ResetClocks();
+  StoreShadow(&ctx->last_spurious_race, Shadow::kEmpty);
   ctx->resetting = false;
 }
 
