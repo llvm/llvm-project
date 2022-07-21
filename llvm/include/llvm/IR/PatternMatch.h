@@ -153,10 +153,16 @@ inline class_match<ConstantFP> m_ConstantFP() {
   return class_match<ConstantFP>();
 }
 
-/// Match an arbitrary ConstantExpr and ignore it.
-inline class_match<ConstantExpr> m_ConstantExpr() {
-  return class_match<ConstantExpr>();
-}
+struct constantexpr_match {
+  template <typename ITy> bool match(ITy *V) {
+    auto *C = dyn_cast<Constant>(V);
+    return C && (isa<ConstantExpr>(C) || C->containsConstantExpression());
+  }
+};
+
+/// Match a constant expression or a constant that contains a constant
+/// expression.
+inline constantexpr_match m_ConstantExpr() { return constantexpr_match(); }
 
 /// Match an arbitrary basic block value and ignore it.
 inline class_match<BasicBlock> m_BasicBlock() {
@@ -741,14 +747,14 @@ inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
 
 /// Match an arbitrary immediate Constant and ignore it.
 inline match_combine_and<class_match<Constant>,
-                         match_unless<class_match<ConstantExpr>>>
+                         match_unless<constantexpr_match>>
 m_ImmConstant() {
   return m_CombineAnd(m_Constant(), m_Unless(m_ConstantExpr()));
 }
 
 /// Match an immediate Constant, capturing the value if we match.
 inline match_combine_and<bind_ty<Constant>,
-                         match_unless<class_match<ConstantExpr>>>
+                         match_unless<constantexpr_match>>
 m_ImmConstant(Constant *&C) {
   return m_CombineAnd(m_Constant(C), m_Unless(m_ConstantExpr()));
 }

@@ -1426,5 +1426,28 @@ if.end:
   br label %if.end
 }
 
+; This would infinite loop because we failed to match a
+; vector constant with constant expression elements as
+; a constant expression.
+
+@g = external hidden global [1 x [1 x double]]
+
+define <1 x i64> @PR56601(<1 x i64> %x, <1 x i64> %y) {
+; CHECK-LABEL: @PR56601(
+; CHECK-NEXT:    [[M1:%.*]] = mul nsw <1 x i64> [[X:%.*]], <i64 42>
+; CHECK-NEXT:    [[M2:%.*]] = mul nsw <1 x i64> [[Y:%.*]], <i64 12>
+; CHECK-NEXT:    [[A1:%.*]] = add <1 x i64> [[M1]], <i64 add (i64 ptrtoint (ptr @g to i64), i64 -4)>
+; CHECK-NEXT:    [[A2:%.*]] = add <1 x i64> [[M2]], <i64 add (i64 ptrtoint (ptr @g to i64), i64 -3)>
+; CHECK-NEXT:    [[R:%.*]] = sub <1 x i64> [[A1]], [[A2]]
+; CHECK-NEXT:    ret <1 x i64> [[R]]
+;
+  %m1 = mul nsw <1 x i64> %x, <i64 42>
+  %m2 = mul nsw <1 x i64> %y, <i64 12>
+  %a1 = add <1 x i64> %m1, <i64 add (i64 ptrtoint (ptr @g to i64), i64 -4)>
+  %a2 = add <1 x i64> %m2, <i64 add (i64 ptrtoint (ptr @g to i64), i64 -3)>
+  %r = sub <1 x i64> %a1, %a2
+  ret <1 x i64> %r
+}
+
 ; CHECK: !0 = !{!"branch_weights", i32 40, i32 1}
 !0 = !{!"branch_weights", i32 40, i32 1}

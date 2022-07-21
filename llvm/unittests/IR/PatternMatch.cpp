@@ -1798,8 +1798,10 @@ TEST_F(PatternMatchTest, ConstExpr) {
   PoisonValue *P = PoisonValue::get(VecTy);
   Constant *V = ConstantExpr::getInsertElement(P, S, IRB.getInt32(0));
 
+  // The match succeeds on a constant that is a constant expression itself
+  // or a constant that contains a constant expression.
   EXPECT_TRUE(match(S, m_ConstantExpr()));
-  EXPECT_FALSE(match(V, m_ConstantExpr()));
+  EXPECT_TRUE(match(V, m_ConstantExpr()));
 }
 
 } // anonymous namespace.
