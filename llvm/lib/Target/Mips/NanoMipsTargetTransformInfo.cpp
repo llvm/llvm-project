@@ -137,7 +137,7 @@ InstructionCost NanoMipsTTIImpl::getCmpSelInstrCost (
     if (I->getOpcode() == Instruction::Select) {
       return selectCost(I->getOperand(0), I->getOperand(1), I->getOperand(2));
     }
-  } else if (Opcode == Instruction::Select) {
+  } else if (Opcode == Instruction::Select && Operands.size() != 0) {
     assert(Operands.size() == 3);
     return selectCost(Operands[0], Operands[1], Operands[2]);
   }
