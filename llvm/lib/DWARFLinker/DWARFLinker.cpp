@@ -504,14 +504,22 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
                   &DIE);
     return Flags;
   }
-  if (*LowPc > *HighPc) {
-    reportWarning("low_pc greater than high_pc. Range will be discarded.\n",
-                  File, &DIE);
+
+  // TODO: Following check is a workaround for overlapping address ranges.
+  //       ELF binaries built with LTO might contain overlapping address
+  //       ranges. The better fix would be to combine such ranges. Following
+  //       is a workaround that should be removed when a good fix is done.
+  if (Unit.overlapsWithFunctionRanges(*LowPc, *HighPc)) {
+    reportWarning(
+        formatv("Overlapping address range [{0:X}, {1:X}]. Range will "
+                "be discarded.\n",
+                *LowPc, *HighPc),
+        File, &DIE);
     return Flags;
   }
 
   // Replace the debug map range with a more accurate one.
-  Ranges.insert({*LowPc, *HighPc}, MyInfo.AddrAdjust);
+  Ranges[*LowPc] = ObjFileAddressRange(*HighPc, MyInfo.AddrAdjust);
   Unit.addFunctionRange(*LowPc, *HighPc, MyInfo.AddrAdjust);
   return Flags;
 }
@@ -1580,7 +1588,7 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
   DWARFDataExtractor RangeExtractor(OrigDwarf.getDWARFObj(),
                                     OrigDwarf.getDWARFObj().getRangesSection(),
                                     OrigDwarf.isLittleEndian(), AddressSize);
-  Optional<std::pair<AddressRange, int64_t>> CurrRange;
+  auto InvalidRange = FunctionRanges.end(), CurrRange = InvalidRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
   uint64_t OrigLowPc =
@@ -1603,11 +1611,12 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
     if (!Entries.empty()) {
       const DWARFDebugRangeList::RangeListEntry &First = Entries.front();
 
-      if (!CurrRange ||
-          !CurrRange->first.contains(First.StartAddress + OrigLowPc)) {
-        CurrRange = FunctionRanges.getRangeValueThatContains(
-            First.StartAddress + OrigLowPc);
-        if (!CurrRange) {
+      if (CurrRange == InvalidRange ||
+          First.StartAddress + OrigLowPc < CurrRange.start() ||
+          First.StartAddress + OrigLowPc >= CurrRange.stop()) {
+        CurrRange = FunctionRanges.find(First.StartAddress + OrigLowPc);
+        if (CurrRange == InvalidRange ||
+            CurrRange.start() > First.StartAddress + OrigLowPc) {
           reportWarning("no mapping for range.", File);
           continue;
         }
@@ -1714,7 +1723,7 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
   // in NewRows.
   std::vector<DWARFDebugLine::Row> Seq;
   const auto &FunctionRanges = Unit.getFunctionRanges();
-  Optional<std::pair<AddressRange, int64_t>> CurrRange;
+  auto InvalidRange = FunctionRanges.end(), CurrRange = InvalidRange;
 
   // FIXME: This logic is meant to generate exactly the same output as
   // Darwin's classic dsymutil. There is a nicer way to implement this
@@ -1733,14 +1742,19 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
     // it is marked as end_sequence in the input (because in that
     // case, the relocation offset is accurate and that entry won't
     // serve as the start of another function).
-    if (!CurrRange || !CurrRange->first.contains(Row.Address.Address) ||
-        (Row.Address.Address == CurrRange->first.end() && !Row.EndSequence)) {
+    if (CurrRange == InvalidRange || Row.Address.Address < CurrRange.start() ||
+        Row.Address.Address > CurrRange.stop() ||
+        (Row.Address.Address == CurrRange.stop() && !Row.EndSequence)) {
       // We just stepped out of a known range. Insert a end_sequence
       // corresponding to the end of the range.
-      uint64_t StopAddress =
-          CurrRange ? CurrRange->first.end() + CurrRange->second : -1ULL;
-      CurrRange = FunctionRanges.getRangeValueThatContains(Row.Address.Address);
-      if (!CurrRange) {
+      uint64_t StopAddress = CurrRange != InvalidRange
+                                 ? CurrRange.stop() + CurrRange.value()
+                                 : -1ULL;
+      CurrRange = FunctionRanges.find(Row.Address.Address);
+      bool CurrRangeValid =
+          CurrRange != InvalidRange && CurrRange.start() <= Row.Address.Address;
+      if (!CurrRangeValid) {
+        CurrRange = InvalidRange;
         if (StopAddress != -1ULL) {
           // Try harder by looking in the Address ranges map.
           // There are corner cases where this finds a
@@ -1748,9 +1762,14 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
           // for now do as dsymutil.
           // FIXME: Understand exactly what cases this addresses and
           // potentially remove it along with the Ranges map.
-          if (Optional<std::pair<AddressRange, int64_t>> Range =
-                  Ranges.getRangeValueThatContains(Row.Address.Address))
-            StopAddress = Row.Address.Address + (*Range).second;
+          auto Range = Ranges.lower_bound(Row.Address.Address);
+          if (Range != Ranges.begin() && Range != Ranges.end())
+            --Range;
+
+          if (Range != Ranges.end() && Range->first <= Row.Address.Address &&
+              Range->second.HighPC >= Row.Address.Address) {
+            StopAddress = Row.Address.Address + Range->second.Offset;
+          }
         }
       }
       if (StopAddress != -1ULL && !Seq.empty()) {
@@ -1766,7 +1785,7 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
         insertLineSequence(Seq, NewRows);
       }
 
-      if (!CurrRange)
+      if (!CurrRangeValid)
         continue;
     }
 
@@ -1775,7 +1794,7 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
       continue;
 
     // Relocate row address and add it to the current sequence.
-    Row.Address.Address += CurrRange->second;
+    Row.Address.Address += CurrRange.value();
     Seq.emplace_back(Row);
 
     if (Row.EndSequence)
@@ -1915,9 +1934,11 @@ void DWARFLinker::patchFrameInfoForObject(const DWARFFile &File,
     // the function entry point, thus we can't just lookup the address
     // in the debug map. Use the AddressInfo's range map to see if the FDE
     // describes something that we can relocate.
-    Optional<std::pair<AddressRange, int64_t>> Range =
-        Ranges.getRangeValueThatContains(Loc);
-    if (!Range) {
+    auto Range = Ranges.upper_bound(Loc);
+    if (Range != Ranges.begin())
+      --Range;
+    if (Range == Ranges.end() || Range->first > Loc ||
+        Range->second.HighPC <= Loc) {
       // The +4 is to account for the size of the InitialLength field itself.
       InputOffset = EntryOffset + InitialLength + 4;
       continue;
@@ -1945,7 +1966,7 @@ void DWARFLinker::patchFrameInfoForObject(const DWARFFile &File,
     // fields that will get reconstructed by emitFDE().
     unsigned FDERemainingBytes = InitialLength - (4 + AddrSize);
     TheDwarfEmitter->emitFDE(IteratorInserted.first->getValue(), AddrSize,
-                             Loc + Range->second,
+                             Loc + Range->second.Offset,
                              FrameData.substr(InputOffset, FDERemainingBytes));
     InputOffset += FDERemainingBytes;
   }
