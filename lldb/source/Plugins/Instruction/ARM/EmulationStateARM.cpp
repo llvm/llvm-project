@@ -97,7 +97,7 @@ uint64_t EmulationStateARM::ReadPseudoRegisterValue(uint32_t reg_num,
     uint32_t idx = reg_num - dwarf_d0;
     if (idx < 16)
       value = (uint64_t)m_vfp_regs.s_regs[idx * 2] |
-              ((uint64_t)m_vfp_regs.s_regs[idx * 2 + 1] >> 32);
+              ((uint64_t)m_vfp_regs.s_regs[idx * 2 + 1] << 32);
     else
       value = m_vfp_regs.d_regs[idx - 16];
   } else
