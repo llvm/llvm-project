@@ -29,7 +29,7 @@ def ArmNeon_Dialect : Dialect {
   // this dialect (such as canonicalization) do not produce entities belonging
   // to the LLVMDialect (ops or types).
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -133,19 +133,19 @@ def Sdot2dOp : ArmNeon_2dOp<"sdot", [
       AllTypesMatch<["a", "res"]>,
       PredOpTrait<
         "operand `a` should be 1-dimensional",
-        CPred<"a().getType().cast<VectorType>().getShape().size() == 1">
+        CPred<"getA().getType().cast<VectorType>().getShape().size() == 1">
       >,
       PredOpTrait<
         "operand `b` should be 2-dimensional",
-        CPred<"b().getType().cast<VectorType>().getShape().size() == 2">
+        CPred<"getB().getType().cast<VectorType>().getShape().size() == 2">
       >,
       PredOpTrait<
         "operand `b` should have 4 columns",
-        CPred<"b().getType().cast<VectorType>().getShape()[1] == 4">
+        CPred<"getB().getType().cast<VectorType>().getShape()[1] == 4">
       >,
       PredOpTrait<
         "operand `b` should have as many rows as the size of operand `a`",
-        CPred<"b().getType().cast<VectorType>().getShape()[0] == a().getType().cast<VectorType>().getShape()[0]">
+        CPred<"getB().getType().cast<VectorType>().getShape()[0] == getA().getType().cast<VectorType>().getShape()[0]">
       >,
       ]
   > {

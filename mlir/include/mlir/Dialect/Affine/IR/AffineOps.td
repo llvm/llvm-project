@@ -25,7 +25,7 @@ def Affine_Dialect : Dialect {
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithmeticDialect"];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // Base class for Affine dialect ops.
@@ -78,7 +78,7 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
 
   let extraClassDeclaration = [{
     /// Returns the affine map to be applied by this operation.
-    AffineMap getAffineMap() { return map(); }
+    AffineMap getAffineMap() { return getMap(); }
 
     /// Returns the affine value map computed from this operation.
     AffineValueMap getAffineValueMap();
@@ -445,26 +445,26 @@ def AffineIfOp : Affine_Op<"if",
     void setConditional(IntegerSet set, ValueRange operands);
 
     /// Returns true if an else block exists.
-    bool hasElse() { return !elseRegion().empty(); }
+    bool hasElse() { return !getElseRegion().empty(); }
 
     Block *getThenBlock() {
-      assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
-      return &thenRegion().front();
+      assert(!getThenRegion().empty() && "Unexpected empty 'then' region.");
+      return &getThenRegion().front();
     }
 
     Block *getElseBlock() {
       assert(hasElse() && "Empty 'else' region.");
-      return &elseRegion().front();
+      return &getElseRegion().front();
     }
 
     OpBuilder getThenBodyBuilder() {
-      assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
-      Block &body = thenRegion().front();
+      assert(!getThenRegion().empty() && "Unexpected empty 'then' region.");
+      Block &body = getThenRegion().front();
       return OpBuilder(&body, std::prev(body.end()));
     }
     OpBuilder getElseBodyBuilder() {
       assert(hasElse() && "No 'else' block");
-      Block &body = elseRegion().front();
+      Block &body = getElseRegion().front();
       return OpBuilder(&body, std::prev(body.end()));
     }
   }];
@@ -556,14 +556,14 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     static StringRef getMapAttrStrName() { return "map"; }
-    AffineMap getAffineMap() { return map(); }
+    AffineMap getAffineMap() { return getMap(); }
     ValueRange getMapOperands() { return operands(); }
     ValueRange getDimOperands() {
       return OperandRange{operands().begin(),
-                        operands().begin() + map().getNumDims()};
+                        operands().begin() + getMap().getNumDims()};
     }
     ValueRange getSymbolOperands() {
-      return OperandRange{operands().begin() + map().getNumDims(),
+      return OperandRange{operands().begin() + getMap().getNumDims(),
                         operands().end()};
     }
   }];
@@ -747,8 +747,8 @@ def AffineParallelOp : Affine_Op<"parallel",
 
     /// Returns `true` if the loop bounds have min/max expressions.
     bool hasMinMaxBounds() {
-      return lowerBoundsMap().getNumResults() != getNumDims() ||
-             upperBoundsMap().getNumResults() != getNumDims();
+      return getLowerBoundsMap().getNumResults() != getNumDims() ||
+             getUpperBoundsMap().getNumResults() != getNumDims();
     }
   }];
 
@@ -803,7 +803,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
 
     /// Returns the affine map used to index the memref for this operation.
@@ -815,7 +815,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
     /// Impelements the AffineMapAccessInterface.
     /// Returns the AffineMapAttr associated with 'memref'.
     NamedAttribute getAffineMapAttrForMemRef(Value mref) {
-      assert(mref == memref() &&
+      assert(mref == getMemref() &&
              "Expected mref argument to match memref operand");
       return {StringAttr::get(getContext(), getMapAttrStrName()),
         getAffineMapAttr()};
@@ -986,7 +986,7 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
-      return result().getType().cast<VectorType>();
+      return getResult().getType().cast<VectorType>();
     }
   }];
 
@@ -1052,7 +1052,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
-      return value().getType().cast<VectorType>();
+      return getValue().getType().cast<VectorType>();
     }
   }];
 

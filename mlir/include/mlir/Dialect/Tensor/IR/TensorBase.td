@@ -51,6 +51,7 @@ def Tensor_Dialect : Dialect {
     "complex::ComplexDialect",
   ];
 
+  // TODO: flip post changing ViewLike interface.
   let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 

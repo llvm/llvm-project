@@ -25,7 +25,7 @@ def X86Vector_Dialect : Dialect {
   let name = "x86vector";
   let cppNamespace = "::mlir::x86vector";
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
