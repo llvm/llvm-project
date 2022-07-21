@@ -206,6 +206,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   uint16_t SectionCount = 0;
   uint64_t RelocationEntryOffset = 0;
   std::vector<std::pair<std::string, size_t>> FileNames;
+  bool HasVisibility = false;
 
   support::endian::Writer W;
   std::unique_ptr<MCXCOFFObjectTargetWriter> TargetObjectWriter;
@@ -275,6 +276,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void writeSymbolEntryForDwarfSection(const XCOFFSection &DwarfSectionRef,
                                        int16_t SectionIndex);
   void writeFileHeader();
+  void writeAuxFileHeader();
   void writeSectionHeaderTable();
   void writeSections(const MCAssembler &Asm, const MCAsmLayout &Layout);
   void writeSectionForControlSectionEntry(const MCAssembler &Asm,
@@ -308,14 +310,9 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void assignAddressesAndIndices(const MCAsmLayout &);
   void finalizeSectionInfo();
 
-  // TODO aux header support not implemented.
-  bool needsAuxiliaryHeader() const { return false; }
-
-  // Returns the size of the auxiliary header to be written to the object file.
   size_t auxiliaryHeaderSize() const {
-    assert(!needsAuxiliaryHeader() &&
-           "Auxiliary header support not implemented.");
-    return 0;
+    // 64-bit object files have no auxiliary header.
+    return HasVisibility && !is64Bit() ? XCOFF::AuxFileHeaderSizeShort : 0;
   }
 
 public:
@@ -467,6 +464,9 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 
     const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
+
+    if (XSym->getVisibilityType() != XCOFF::SYM_V_UNSPECIFIED)
+      HasVisibility = true;
 
     if (ContainingCsect->getCSectType() == XCOFF::XTY_ER) {
       // Handle undefined symbol.
@@ -648,6 +648,7 @@ uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm,
   uint64_t StartOffset = W.OS.tell();
 
   writeFileHeader();
+  writeAuxFileHeader();
   writeSectionHeaderTable();
   writeSections(Asm, Layout);
   writeRelocations();
@@ -688,12 +689,6 @@ void XCOFFObjectWriter::writeSymbolEntry(StringRef SymbolName, uint64_t Value,
     W.write<uint32_t>(Value);
   }
   W.write<int16_t>(SectionNumber);
-  // Basic/Derived type. See the description of the n_type field for symbol
-  // table entries for a detailed description. Since we don't yet support
-  // visibility, and all other bits are either optionally set or reserved, this
-  // is always zero.
-  if (SymbolType != 0)
-    report_fatal_error("Emitting non-zero visibilities is not supported yet.");
   // TODO Set the function indicator (bit 10, 0x0020) for functions
   // when debugging is enabled.
   W.write<uint16_t>(SymbolType);
@@ -773,16 +768,30 @@ void XCOFFObjectWriter::writeFileHeader() {
   W.write<int32_t>(0); // TimeStamp
   writeWord(SymbolTableOffset);
   if (is64Bit()) {
-    W.write<uint16_t>(0); // AuxHeaderSize. No optional header for an object
-                          // file that is not to be loaded.
+    W.write<uint16_t>(auxiliaryHeaderSize());
     W.write<uint16_t>(0); // Flags
     W.write<int32_t>(SymbolTableEntryCount);
   } else {
     W.write<int32_t>(SymbolTableEntryCount);
-    W.write<uint16_t>(0); // AuxHeaderSize. No optional header for an object
-                          // file that is not to be loaded.
+    W.write<uint16_t>(auxiliaryHeaderSize());
     W.write<uint16_t>(0); // Flags
   }
+}
+
+void XCOFFObjectWriter::writeAuxFileHeader() {
+  if (!auxiliaryHeaderSize())
+    return;
+  W.write<uint16_t>(0); // Magic
+  W.write<uint16_t>(
+      XCOFF::NEW_XCOFF_INTERPRET); // Version. The new interpretation of the
+                                   // n_type field in the symbol table entry is
+                                   // used in XCOFF32.
+  W.write<uint32_t>(Sections[0]->Size);    // TextSize
+  W.write<uint32_t>(Sections[1]->Size);    // InitDataSize
+  W.write<uint32_t>(Sections[2]->Size);    // BssDataSize
+  W.write<uint32_t>(0);                    // EntryPointAddr
+  W.write<uint32_t>(Sections[0]->Address); // TextStartAddr
+  W.write<uint32_t>(Sections[1]->Address); // DataStartAddr
 }
 
 void XCOFFObjectWriter::writeSectionHeaderTable() {

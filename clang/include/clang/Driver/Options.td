@@ -55,6 +55,10 @@ def CC1AsOption : OptionFlag;
 // are made available when the driver is running in DXC compatibility mode.
 def DXCOption : OptionFlag;
 
+// CLDXCOption - This is a cl.exe/dxc.exe compatibility option. Options with this flag
+// are made available when the driver is running in CL/DXC compatibility mode.
+def CLDXCOption : OptionFlag;
+
 // NoDriverOption - This option should not be accepted by the driver.
 def NoDriverOption : OptionFlag;
 
@@ -6532,7 +6536,7 @@ def defsym : Separate<["-"], "defsym">,
 // clang-cl Options
 //===----------------------------------------------------------------------===//
 
-def cl_Group : OptionGroup<"<clang-cl options>">, Flags<[CLOption]>,
+def cl_Group : OptionGroup<"<clang-cl options>">, Flags<[CLDXCOption]>,
   HelpText<"CL.EXE COMPATIBILITY OPTIONS">;
 
 def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,
@@ -6561,6 +6565,9 @@ class CLIgnoredJoined<string name> : Option<["/", "-"], name, KIND_JOINED>,
 
 class CLJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<cl_Group>, Flags<[CLOption, NoXarchOption]>;
+
+class CLDXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
+  KIND_JOINED_OR_SEPARATE>, Group<cl_Group>, Flags<[CLDXCOption, NoXarchOption]>;
 
 class CLCompileJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<cl_compile_Group>,
@@ -6639,7 +6646,7 @@ def _SLASH_help : CLFlag<"help">, Alias<help>,
 def _SLASH_HELP : CLFlag<"HELP">, Alias<help>;
 def _SLASH_hotpatch : CLFlag<"hotpatch">, Alias<fms_hotpatch>,
   HelpText<"Create hotpatchable image">;
-def _SLASH_I : CLJoinedOrSeparate<"I">,
+def _SLASH_I : CLDXCJoinedOrSeparate<"I">,
   HelpText<"Add directory to include search path">, MetaVarName<"<dir>">,
   Alias<I>;
 def _SLASH_J : CLFlag<"J">, HelpText<"Make char type unsigned">,

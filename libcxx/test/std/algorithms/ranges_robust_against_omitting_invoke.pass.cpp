@@ -63,7 +63,7 @@ constexpr bool test_all() {
 
   std::array output = {Bar{Foo{7}}, Bar{Foo{8}}, Bar{Foo{9}}, Bar{Foo{10}}, Bar{Foo{11}}, Bar{Foo{12}}};
   auto out = output.begin();
-  //auto out2 = output.begin() + 1;
+  auto out2 = output.begin() + 1;
 
   Bar a{Foo{1}};
   Bar b{Foo{2}};
@@ -83,7 +83,7 @@ constexpr bool test_all() {
   test(std::ranges::mismatch, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::equal, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::lexicographical_compare, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
-  //test(std::ranges::partition_point, in, &Foo::unary_pred, &Bar::val);
+  test(std::ranges::partition_point, in, &Foo::unary_pred, &Bar::val);
   test(std::ranges::lower_bound, in, x, &Foo::binary_pred, &Bar::val);
   test(std::ranges::upper_bound, in, x, &Foo::binary_pred, &Bar::val);
   //test(std::ranges::equal_range, in, x, &Foo::binary_pred, &Bar::val);
@@ -142,7 +142,7 @@ constexpr bool test_all() {
   // `rotate_copy` has neither a projection nor a predicate.
   // `sample` has no requirement that the given generator be invoked via `std::invoke`.
   //test(std::ranges::unique_copy, in, out, &Foo::binary_pred, &Bar::val);
-  //test(std::ranges::partition_copy, in, out, out2, &Foo::unary_pred, &Bar::val);
+  test(std::ranges::partition_copy, in, out, out2, &Foo::unary_pred, &Bar::val);
   //test(std::ranges::partial_sort_copy, in, in2, &Foo::binary_pred, &Bar::val);
   test(std::ranges::merge, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::set_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);

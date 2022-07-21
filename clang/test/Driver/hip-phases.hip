@@ -11,6 +11,9 @@
 //
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=BIN,NRD,OLD %s
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: --offload-new-driver --cuda-gpu-arch=gfx803 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,NRD %s
 //
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
@@ -38,8 +41,10 @@
 // RDC-DAG: [[P11:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, object
 // NRD-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
 // NRD-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
-// NRD-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
-// RDC-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
+// OLD-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
+// COM: Disabling checking for lines to be produced by new driver, till it becomes default.
+// COM: NEW-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, image, (host-[[T]])
+// COM: RDC-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
 
 //
 // Test single gpu architecture up to the assemble phase.

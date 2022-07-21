@@ -75,7 +75,7 @@ constexpr bool test_all() {
   using std::ranges::move_result;
   //using std::ranges::move_backward_result;
   //using std::ranges::partial_sort_copy_result;
-  //using std::ranges::partition_copy_result;
+  using std::ranges::partition_copy_result;
   //using std::ranges::remove_copy_result;
   //using std::ranges::remove_copy_if_result;
   using std::ranges::reverse_copy_result;
@@ -100,7 +100,7 @@ constexpr bool test_all() {
 
   std::array output = {7, 8, 9, 10, 11, 12};
   auto out = output.begin();
-  //auto out2 = output.begin() + 1;
+  auto out2 = output.begin() + 1;
 
   int x = 2;
   size_t count = 1;
@@ -113,7 +113,7 @@ constexpr bool test_all() {
   dangling_1st<mismatch_result<dangling, int*>>(std::ranges::mismatch, in, in2);
   dangling_2nd<mismatch_result<int*, dangling>>(std::ranges::mismatch, in, in2);
   dangling_both<mismatch_result<dangling, dangling>>(std::ranges::mismatch, in, in2);
-  //dangling_1st(std::ranges::partition_point, in, unary_pred);
+  dangling_1st(std::ranges::partition_point, in, unary_pred);
   dangling_1st(std::ranges::lower_bound, in, x);
   dangling_1st(std::ranges::upper_bound, in, x);
   //dangling_1st(std::ranges::equal_range, in, x);
@@ -157,7 +157,7 @@ constexpr bool test_all() {
   dangling_1st<reverse_copy_result<dangling, int*>>(std::ranges::reverse_copy, in, out);
   dangling_1st<rotate_copy_result<dangling, int*>>(std::ranges::rotate_copy, in, mid, out);
   //dangling_1st<unique_copy_result<dangling, int*>>(std::ranges::unique_copy, in, out);
-  //dangling_1st<partition_copy_result<dangling, int*, int*>>std::ranges::partition_copy(in, out, out2, unary_pred);
+  dangling_1st<partition_copy_result<dangling, int*, int*>>(std::ranges::partition_copy, in, out, out2, unary_pred);
   //dangling_1st<partial_sort_copy_result<dangling, int*>>(std::ranges::partial_sort_copy, in, in2);
   //dangling_2nd<partial_sort_copy_result<int*, dangling>>(std::ranges::partial_sort_copy, in, in2);
   //dangling_both<partial_sort_copy_result<dangling, dangling>>(std::ranges::partial_sort_copy, in, in2);

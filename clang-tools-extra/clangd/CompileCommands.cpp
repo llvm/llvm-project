@@ -423,6 +423,8 @@ unsigned char getModes(const llvm::opt::Option &Opt) {
   if (!Opt.hasFlag(driver::options::NoDriverOption)) {
     if (Opt.hasFlag(driver::options::CLOption)) {
       Result |= DM_CL;
+    } else if (Opt.hasFlag(driver::options::CLDXCOption)) {
+      Result |= DM_CL;
     } else {
       Result |= DM_GCC;
       if (Opt.hasFlag(driver::options::CoreOption)) {

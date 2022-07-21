@@ -690,6 +690,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // 32 trailing ones should use srliw via tablegen pattern.
     if (TrailingOnes == 32 || ShAmt >= TrailingOnes)
       break;
+    // If C2 is (1 << ShAmt) use bexti if possible.
+    if (Subtarget->hasStdExtZbs() && ShAmt + 1 == TrailingOnes) {
+      SDNode *BEXTI =
+          CurDAG->getMachineNode(RISCV::BEXTI, DL, VT, N0->getOperand(0),
+                                 CurDAG->getTargetConstant(ShAmt, DL, VT));
+      ReplaceNode(Node, BEXTI);
+      return;
+    }
     unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
     SDNode *SLLI =
         CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),

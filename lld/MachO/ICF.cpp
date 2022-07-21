@@ -395,7 +395,7 @@ void macho::markAddrSigSymbols() {
   }
 }
 
-void macho::foldIdenticalSections() {
+void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed
   // hashes of InputSection::data for the ConcatOutputSection::inputs and all
@@ -416,6 +416,7 @@ void macho::foldIdenticalSections() {
   for (ConcatInputSection *isec : inputSections) {
     // FIXME: consider non-code __text sections as hashable?
     bool isHashable =
+        (!onlyCfStrings || isCfStringSection(isec)) &&
         (isCodeSection(isec) || isCfStringSection(isec) ||
          isClassRefsSection(isec) || isGccExceptTabSection(isec)) &&
         !isec->keepUnique && !isec->shouldOmitFromOutput() &&

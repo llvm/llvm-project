@@ -126,7 +126,8 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
           inconvertibleErrorCode()));
 
     char *Mem = Seg.Addr.toPtr<char *>();
-    memcpy(Mem, Seg.Content.data(), Seg.Content.size());
+    if (!Seg.Content.empty())
+      memcpy(Mem, Seg.Content.data(), Seg.Content.size());
     memset(Mem + Seg.Content.size(), 0, Seg.Size - Seg.Content.size());
     assert(Seg.Size <= std::numeric_limits<size_t>::max());
     if (auto EC = sys::Memory::protectMappedMemory(

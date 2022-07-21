@@ -616,32 +616,34 @@ module std [system] {
     export *
 
     module __format {
-      module buffer                   { private header "__format/buffer.h" }
-      module concepts                 { private header "__format/concepts.h" }
-      module enable_insertable        { private header "__format/enable_insertable.h" }
-      module format_arg               { private header "__format/format_arg.h" }
-      module format_arg_store         { private header "__format/format_arg_store.h" }
-      module format_args              { private header "__format/format_args.h" }
+      module buffer                          { private header "__format/buffer.h" }
+      module concepts                        { private header "__format/concepts.h" }
+      module enable_insertable               { private header "__format/enable_insertable.h" }
+      module extended_grapheme_cluster_table { private header "__format/extended_grapheme_cluster_table.h" }
+      module format_arg                      { private header "__format/format_arg.h" }
+      module format_arg_store                { private header "__format/format_arg_store.h" }
+      module format_args                     { private header "__format/format_args.h" }
       module format_context {
         private header "__format/format_context.h"
         export optional
         export locale
       }
-      module format_error             { private header "__format/format_error.h" }
-      module format_fwd               { private header "__format/format_fwd.h" }
-      module format_parse_context     { private header "__format/format_parse_context.h" }
-      module format_string            { private header "__format/format_string.h" }
-      module format_to_n_result       { private header "__format/format_to_n_result.h" }
-      module formatter                { private header "__format/formatter.h" }
-      module formatter_bool           { private header "__format/formatter_bool.h" }
-      module formatter_char           { private header "__format/formatter_char.h" }
-      module formatter_floating_point { private header "__format/formatter_floating_point.h" }
-      module formatter_integer        { private header "__format/formatter_integer.h" }
-      module formatter_integral       { private header "__format/formatter_integral.h" }
-      module formatter_output         { private header "__format/formatter_output.h" }
-      module formatter_pointer        { private header "__format/formatter_pointer.h" }
-      module formatter_string         { private header "__format/formatter_string.h" }
-      module parser_std_format_spec   { private header "__format/parser_std_format_spec.h" }
+      module format_error                    { private header "__format/format_error.h" }
+      module format_fwd                      { private header "__format/format_fwd.h" }
+      module format_parse_context            { private header "__format/format_parse_context.h" }
+      module format_string                   { private header "__format/format_string.h" }
+      module format_to_n_result              { private header "__format/format_to_n_result.h" }
+      module formatter                       { private header "__format/formatter.h" }
+      module formatter_bool                  { private header "__format/formatter_bool.h" }
+      module formatter_char                  { private header "__format/formatter_char.h" }
+      module formatter_floating_point        { private header "__format/formatter_floating_point.h" }
+      module formatter_integer               { private header "__format/formatter_integer.h" }
+      module formatter_integral              { private header "__format/formatter_integral.h" }
+      module formatter_output                { private header "__format/formatter_output.h" }
+      module formatter_pointer               { private header "__format/formatter_pointer.h" }
+      module formatter_string                { private header "__format/formatter_string.h" }
+      module parser_std_format_spec          { private header "__format/parser_std_format_spec.h" }
+      module unicode                         { private header "__format/unicode.h" }
     }
   }
   module forward_list {
@@ -830,6 +832,7 @@ module std [system] {
       module ranges_uninitialized_algorithms { private header "__memory/ranges_uninitialized_algorithms.h" }
       module raw_storage_iterator            { private header "__memory/raw_storage_iterator.h" }
       module shared_ptr                      { private header "__memory/shared_ptr.h" }
+      module swap_allocator                  { private header "__memory/swap_allocator.h" }
       module temporary_buffer                { private header "__memory/temporary_buffer.h" }
       module uninitialized_algorithms        { private header "__memory/uninitialized_algorithms.h" }
       module unique_ptr                      { private header "__memory/unique_ptr.h" }

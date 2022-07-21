@@ -36,7 +36,7 @@ AVAILABLE_EXTERNALLY void *memcpy(void *a, const void *b, size_t c) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[A_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[B_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, i64* [[C_ADDR_I]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[TMP3]], i8* align 1 [[TMP4]], i64 [[TMP5]], i1 false) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[TMP3]], i8* align 1 [[TMP4]], i64 [[TMP5]], i1 false)
 // CHECK-NEXT:    ret i8* [[TMP3]]
 //
 void *foo(void *a, const void *b, size_t c) {

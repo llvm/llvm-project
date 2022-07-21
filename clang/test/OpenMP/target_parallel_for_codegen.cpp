@@ -1117,7 +1117,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i8** null, i8*** [[TMP32]], align 8, !noalias !24
 // CHECK1-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i32 8
 // CHECK1-NEXT:    store i64 0, i64* [[TMP33]], align 8, !noalias !24
-// CHECK1-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null) #[[ATTR4]]
+// CHECK1-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null)
 // CHECK1-NEXT:    [[TMP35:%.*]] = icmp ne i32 [[TMP34]], 0
 // CHECK1-NEXT:    br i1 [[TMP35]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK1:       omp_offload.failed.i:
@@ -2847,7 +2847,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i8** null, i8*** [[TMP32]], align 4, !noalias !25
 // CHECK3-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i32 8
 // CHECK3-NEXT:    store i64 0, i64* [[TMP33]], align 8, !noalias !25
-// CHECK3-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null) #[[ATTR4]]
+// CHECK3-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null)
 // CHECK3-NEXT:    [[TMP35:%.*]] = icmp ne i32 [[TMP34]], 0
 // CHECK3-NEXT:    br i1 [[TMP35]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK3:       omp_offload.failed.i:
@@ -6159,7 +6159,7 @@ int bar(int n){
 // CHECK17-NEXT:    store i8** null, i8*** [[TMP32]], align 8, !noalias !24
 // CHECK17-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i32 8
 // CHECK17-NEXT:    store i64 0, i64* [[TMP33]], align 8, !noalias !24
-// CHECK17-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null) #[[ATTR4]]
+// CHECK17-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null)
 // CHECK17-NEXT:    [[TMP35:%.*]] = icmp ne i32 [[TMP34]], 0
 // CHECK17-NEXT:    br i1 [[TMP35]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK17:       omp_offload.failed.i:
@@ -7889,7 +7889,7 @@ int bar(int n){
 // CHECK19-NEXT:    store i8** null, i8*** [[TMP32]], align 4, !noalias !25
 // CHECK19-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i32 8
 // CHECK19-NEXT:    store i64 0, i64* [[TMP33]], align 8, !noalias !25
-// CHECK19-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null) #[[ATTR4]]
+// CHECK19-NEXT:    [[TMP34:%.*]] = call i32 @__tgt_target_kernel_nowait(%struct.ident_t* @[[GLOB2]], i64 -1, i32 1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS_I]], i32 0, i8* null, i32 0, i8* null)
 // CHECK19-NEXT:    [[TMP35:%.*]] = icmp ne i32 [[TMP34]], 0
 // CHECK19-NEXT:    br i1 [[TMP35]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK19:       omp_offload.failed.i:

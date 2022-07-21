@@ -66,9 +66,22 @@ struct _IterOps<_ClassicAlgPolicy> {
   // iter_move
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-  // Declaring the return type is necessary for the C++03 mode (which doesn't support placeholder return types).
-  static typename iterator_traits<__uncvref_t<_Iter> >::value_type&& __iter_move(_Iter&& __i) {
+      // Declaring the return type is necessary for C++03, so we basically mirror what `decltype(auto)` would deduce.
+      static __enable_if_t<
+          is_reference<typename iterator_traits<__uncvref_t<_Iter> >::reference>::value,
+          typename remove_reference< typename iterator_traits<__uncvref_t<_Iter> >::reference >::type&&>
+      __iter_move(_Iter&& __i) {
     return std::move(*std::forward<_Iter>(__i));
+  }
+
+  template <class _Iter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+      // Declaring the return type is necessary for C++03, so we basically mirror what `decltype(auto)` would deduce.
+      static __enable_if_t<
+          !is_reference<typename iterator_traits<__uncvref_t<_Iter> >::reference>::value,
+          typename iterator_traits<__uncvref_t<_Iter> >::reference>
+      __iter_move(_Iter&& __i) {
+    return *std::forward<_Iter>(__i);
   }
 
   // iter_swap

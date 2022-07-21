@@ -21,6 +21,16 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK %s
 
+// RUN: %clang -### -target x86_64-linux-gnu -fno-gpu-rdc \
+// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
+// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
+// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
+// RUN:   -fuse-ld=lld -nogpuinc --offload-new-driver -c \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck -check-prefixes=CHECK %s
+
 // RUN: touch %T/a.o
 // RUN: touch %T/b.o
 // RUN: %clang -### -target x86_64-linux-gnu \

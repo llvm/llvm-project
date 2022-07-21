@@ -503,8 +503,7 @@ static bool markReexport(StringRef searchName, ArrayRef<StringRef> extensions) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
       StringRef filename = path::filename(dylibFile->getName());
       if (filename.consume_front(searchName) &&
-          (filename.empty() ||
-           find(extensions, filename) != extensions.end())) {
+          (filename.empty() || llvm::is_contained(extensions, filename))) {
         dylibFile->reexport = true;
         return true;
       }
@@ -1667,7 +1666,9 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (config->icfLevel != ICFLevel::none) {
       if (config->icfLevel == ICFLevel::safe)
         markAddrSigSymbols();
-      foldIdenticalSections();
+      foldIdenticalSections(/*onlyCfStrings=*/false);
+    } else if (config->dedupLiterals) {
+      foldIdenticalSections(/*onlyCfStrings=*/true);
     }
 
     // Write to an output file.

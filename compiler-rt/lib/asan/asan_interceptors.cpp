@@ -248,7 +248,7 @@ DEFINE_REAL_PTHREAD_FUNCTIONS
 static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
   // Align to page size.
   uptr PageSize = GetPageSizeCached();
-  uptr bottom = stack & ~(PageSize - 1);
+  uptr bottom = RoundDownTo(stack, PageSize);
   ssize += stack - bottom;
   ssize = RoundUpTo(ssize, PageSize);
   static const uptr kMaxSaneContextStackSize = 1 << 22;  // 4 Mb
@@ -269,15 +269,14 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
   uptr stack, ssize;
   ReadContextStack(ucp, &stack, &ssize);
   ClearShadowMemoryForContextStack(stack, ssize);
-#if __has_attribute(__indirect_return__) && \
-    (defined(__x86_64__) || defined(__i386__))
+#    if __has_attribute(__indirect_return__) && \
+        (defined(__x86_64__) || defined(__i386__))
   int (*real_swapcontext)(struct ucontext_t *, struct ucontext_t *)
-    __attribute__((__indirect_return__))
-    = REAL(swapcontext);
+      __attribute__((__indirect_return__)) = REAL(swapcontext);
   int res = real_swapcontext(oucp, ucp);
-#else
+#    else
   int res = REAL(swapcontext)(oucp, ucp);
-#endif
+#    endif
   // swapcontext technically does not return, but program may swap context to
   // "oucp" later, that would look as if swapcontext() returned 0.
   // We need to clear shadow for ucp once again, as it may be in arbitrary

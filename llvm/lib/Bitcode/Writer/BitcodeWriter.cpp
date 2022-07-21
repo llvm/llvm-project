@@ -4204,8 +4204,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 
   for (const GlobalAlias &A : M.aliases()) {
     auto *Aliasee = A.getAliaseeObject();
-    if (!Aliasee->hasName())
-      // Nameless function don't have an entry in the summary, skip it.
+    // Skip ifunc and nameless functions which don't have an entry in the
+    // summary.
+    if (!Aliasee->hasName() || isa<GlobalIFunc>(Aliasee))
       continue;
     auto AliasId = VE.getValueID(&A);
     auto AliaseeId = VE.getValueID(Aliasee);

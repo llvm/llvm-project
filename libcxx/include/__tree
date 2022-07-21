@@ -17,6 +17,7 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__memory/swap_allocator.h>
 #include <__utility/forward.h>
 #include <__utility/swap.h>
 #include <limits>

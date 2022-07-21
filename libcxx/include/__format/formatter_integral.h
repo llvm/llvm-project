@@ -343,7 +343,7 @@ __format_bool(bool __value, auto& __ctx, __format_spec::__parsed_specifications<
   if (__specs.__std_.__locale_specific_form_) {
     const auto& __np           = use_facet<numpunct<_CharT>>(__ctx.locale());
     basic_string<_CharT> __str = __value ? __np.truename() : __np.falsename();
-    return __formatter::__write_unicode_no_precision(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
+    return __formatter::__write_string_no_precision(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
   }
 #  endif
   basic_string_view<_CharT> __str =
