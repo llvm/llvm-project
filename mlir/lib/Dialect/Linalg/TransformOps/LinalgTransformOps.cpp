@@ -909,12 +909,20 @@ DiagnosedSilenceableFailure transform::TileToForeachThreadOp::applyToOne(
   IRRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   auto maybeThreadDimMappingAttr = getThreadDimMapping();
-  FailureOr<ForeachThreadTilingResult> tilingResult =
-      linalg::tileToForeachThreadOp(
-          rewriter, target, getAsOpFoldResult(getNumThreads()),
-          maybeThreadDimMappingAttr
-              ? extractFromI64ArrayAttr(*maybeThreadDimMappingAttr)
-              : ArrayRef<int64_t>{});
+  auto dimMapping =
+      llvm::to_vector(maybeThreadDimMappingAttr
+                          ? extractFromI64ArrayAttr(*maybeThreadDimMappingAttr)
+                          : ArrayRef<int64_t>{});
+
+  FailureOr<ForeachThreadTilingResult> tilingResult = failure();
+  if (Optional<ArrayAttr> numThreads = getNumThreads())
+    tilingResult = linalg::tileToForeachThreadOp(
+        rewriter, target, getAsOpFoldResult(*numThreads), dimMapping);
+
+  if (Optional<ArrayAttr> tileSizes = getTileSizes())
+    tilingResult = linalg::tileToForeachThreadOpUsingTileSizes(
+        rewriter, target, getAsOpFoldResult(*tileSizes), dimMapping);
+
   if (failed(tilingResult))
     return emitDefaultSilenceableFailure(target);
   rewriter.replaceOp(target, tilingResult->tileOp->getResults());
