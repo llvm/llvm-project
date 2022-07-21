@@ -80,12 +80,11 @@ bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
 /// isLibFreeFunction - Returns true if the function is a builtin free()
 bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 
-/// isFreeCall - Returns non-null if the value is a call to the builtin free()
-const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
+/// Returns true if the value is a call to a free function.
+bool isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
 
-inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
-  return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
-}
+/// If this if a call to a free function, return the freed operand.
+Value *getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
