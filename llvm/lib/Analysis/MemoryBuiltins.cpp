@@ -361,9 +361,8 @@ static bool CheckedZextOrTrunc(APInt &I, unsigned IntTyBits) {
 }
 
 Optional<APInt>
-llvm::getAllocSize(const CallBase *CB,
-                   const TargetLibraryInfo *TLI,
-                   std::function<const Value*(const Value*)> Mapper) {
+llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
+                   function_ref<const Value *(const Value *)> Mapper) {
   // Note: This handles both explicitly listed allocation functions and
   // allocsize.  The code structure could stand to be cleaned up a bit.
   Optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
@@ -769,8 +768,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
-  auto Mapper = [](const Value *V) { return V; };
-  if (Optional<APInt> Size = getAllocSize(&CB, TLI, Mapper))
+  if (Optional<APInt> Size = getAllocSize(&CB, TLI))
     return std::make_pair(*Size, Zero);
   return unknown();
 }

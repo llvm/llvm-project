@@ -108,13 +108,16 @@ bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 /// the definition of the allocalign attribute.
 Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
 
-/// Return the size of the requested allocation.  With a trivial mapper, this is
-/// identical to calling getObjectSize(..., Exact).  A mapper function can be
-/// used to replace one Value* (operand to the allocation) with another.  This
-/// is useful when doing abstract interpretation.
-Optional<APInt> getAllocSize(const CallBase *CB,
-                             const TargetLibraryInfo *TLI,
-                             std::function<const Value*(const Value*)> Mapper);
+/// Return the size of the requested allocation. With a trivial mapper, this is
+/// similar to calling getObjectSize(..., Exact), but without looking through
+/// calls that return their argument. A mapper function can be used to replace
+/// one Value* (operand to the allocation) with another. This is useful when
+/// doing abstract interpretation.
+Optional<APInt> getAllocSize(
+    const CallBase *CB, const TargetLibraryInfo *TLI,
+    function_ref<const Value *(const Value *)> Mapper = [](const Value *V) {
+      return V;
+    });
 
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return
