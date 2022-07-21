@@ -10,9 +10,10 @@
 #define LLVM_ADT_ADDRESSRANGES_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <stdint.h>
-#include <vector>
 
 namespace llvm {
 
@@ -47,20 +48,29 @@ private:
 /// The AddressRanges class helps normalize address range collections.
 /// This class keeps a sorted vector of AddressRange objects and can perform
 /// insertions and searches efficiently. The address ranges are always sorted
-/// and never contain any invalid or empty address ranges. Intersecting
+/// and never contain any invalid or empty address ranges.
+/// Intersecting([100,200), [150,300)) and adjacent([100,200), [200,300))
 /// address ranges are combined during insertion.
 class AddressRanges {
 protected:
-  using Collection = std::vector<AddressRange>;
+  using Collection = SmallVector<AddressRange>;
   Collection Ranges;
 
 public:
   void clear() { Ranges.clear(); }
   bool empty() const { return Ranges.empty(); }
-  bool contains(uint64_t Addr) const;
-  bool contains(AddressRange Range) const;
-  Optional<AddressRange> getRangeThatContains(uint64_t Addr) const;
-  void insert(AddressRange Range);
+  bool contains(uint64_t Addr) const { return find(Addr) != Ranges.end(); }
+  bool contains(AddressRange Range) const {
+    return find(Range) != Ranges.end();
+  }
+  Optional<AddressRange> getRangeThatContains(uint64_t Addr) const {
+    Collection::const_iterator It = find(Addr);
+    if (It == Ranges.end())
+      return None;
+
+    return *It;
+  }
+  Collection::const_iterator insert(AddressRange Range);
   void reserve(size_t Capacity) { Ranges.reserve(Capacity); }
   size_t size() const { return Ranges.size(); }
   bool operator==(const AddressRanges &RHS) const {
@@ -72,6 +82,64 @@ public:
   }
   Collection::const_iterator begin() const { return Ranges.begin(); }
   Collection::const_iterator end() const { return Ranges.end(); }
+
+protected:
+  Collection::const_iterator find(uint64_t Addr) const;
+  Collection::const_iterator find(AddressRange Range) const;
+};
+
+/// AddressRangesMap class maps values to the address ranges.
+/// It keeps address ranges and corresponding values. If ranges
+/// are combined during insertion, then combined range keeps
+/// newly inserted value.
+template <typename T> class AddressRangesMap : protected AddressRanges {
+public:
+  void clear() {
+    Ranges.clear();
+    Values.clear();
+  }
+  bool empty() const { return AddressRanges::empty(); }
+  bool contains(uint64_t Addr) const { return AddressRanges::contains(Addr); }
+  bool contains(AddressRange Range) const {
+    return AddressRanges::contains(Range);
+  }
+  void insert(AddressRange Range, T Value) {
+    size_t InputSize = Ranges.size();
+    Collection::const_iterator RangesIt = AddressRanges::insert(Range);
+    if (RangesIt == Ranges.end())
+      return;
+
+    // make Values match to Ranges.
+    size_t Idx = RangesIt - Ranges.begin();
+    typename ValuesCollection::iterator ValuesIt = Values.begin() + Idx;
+    if (InputSize < Ranges.size())
+      Values.insert(ValuesIt, T());
+    else if (InputSize > Ranges.size())
+      Values.erase(ValuesIt, ValuesIt + InputSize - Ranges.size());
+    assert(Ranges.size() == Values.size());
+
+    // set value to the inserted or combined range.
+    Values[Idx] = Value;
+  }
+  size_t size() const {
+    assert(Ranges.size() == Values.size());
+    return AddressRanges::size();
+  }
+  Optional<std::pair<AddressRange, T>>
+  getRangeValueThatContains(uint64_t Addr) const {
+    Collection::const_iterator It = find(Addr);
+    if (It == Ranges.end())
+      return None;
+
+    return std::make_pair(*It, Values[It - Ranges.begin()]);
+  }
+  std::pair<AddressRange, T> operator[](size_t Idx) const {
+    return std::make_pair(Ranges[Idx], Values[Idx]);
+  }
+
+protected:
+  using ValuesCollection = SmallVector<T>;
+  ValuesCollection Values;
 };
 
 } // namespace llvm
