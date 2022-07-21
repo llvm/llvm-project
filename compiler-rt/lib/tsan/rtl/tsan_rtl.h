@@ -316,7 +316,6 @@ struct Context {
 
   Mutex racy_mtx;
   Vector<RacyStacks> racy_stacks;
-  Vector<RacyAddress> racy_addresses;
   // Number of fired suppressions may be large enough.
   Mutex fired_suppressions_mtx;
   InternalMmapVector<FiredSuppression> fired_suppressions;

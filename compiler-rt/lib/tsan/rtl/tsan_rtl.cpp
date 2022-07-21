@@ -368,7 +368,6 @@ Context::Context()
       }),
       racy_mtx(MutexTypeRacy),
       racy_stacks(),
-      racy_addresses(),
       fired_suppressions_mtx(MutexTypeFired),
       slot_mtx(MutexTypeSlots),
       resetting() {
