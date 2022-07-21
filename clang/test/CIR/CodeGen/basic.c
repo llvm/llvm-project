@@ -10,7 +10,7 @@ int foo(int i) {
 }
 
 // CHECK: module  {
-// CHECK-NEXT: func @foo(%arg0: i32 loc({{.*}})) -> i32 {
+// CHECK-NEXT: cir.func @foo(%arg0: i32 loc({{.*}})) -> i32 {
 // CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["i", paraminit] {alignment = 4 : i64}
 // CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized] {alignment = 4 : i64}
 // CHECK-NEXT: cir.store %arg0, %0 : i32, cir.ptr <i32>
@@ -22,7 +22,7 @@ int foo(int i) {
 
 int f2() { return 3; }
 
-// CHECK: func @f2() -> i32 {
+// CHECK: cir.func @f2() -> i32 {
 // CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized] {alignment = 4 : i64}
 // CHECK-NEXT: %1 = cir.cst(3 : i32) : i32
 // CHECK-NEXT: cir.store %1, %0 : i32, cir.ptr <i32>
@@ -34,7 +34,7 @@ int f3() {
   return i;
 }
 
-// CHECK: func @f3() -> i32 {
+// CHECK: cir.func @f3() -> i32 {
 // CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized] {alignment = 4 : i64}
 // CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
 // CHECK-NEXT: %2 = cir.cst(3 : i32) : i32

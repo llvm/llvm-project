@@ -6,7 +6,7 @@ void a0() {
   int a[10];
 }
 
-// CHECK: func @_Z2a0v() {
+// CHECK: cir.func @_Z2a0v() {
 // CHECK-NEXT:   %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a", uninitialized] {alignment = 16 : i64}
 
 void a1() {
@@ -14,7 +14,7 @@ void a1() {
   a[0] = 1;
 }
 
-// CHECK: func @_Z2a1v() {
+// CHECK: cir.func @_Z2a1v() {
 // CHECK-NEXT:  %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a", uninitialized] {alignment = 16 : i64}
 // CHECK-NEXT:  %1 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:  %2 = cir.cst(0 : i32) : i32
@@ -27,7 +27,7 @@ int *a2() {
   return &a[0];
 }
 
-// CHECK: func @_Z2a2v() -> !cir.ptr<i32> {
+// CHECK: cir.func @_Z2a2v() -> !cir.ptr<i32> {
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca !cir.array<i32 x 4>, cir.ptr <!cir.array<i32 x 4>>, ["a", uninitialized] {alignment = 16 : i64}
 // CHECK-NEXT:   %2 = cir.cst(0 : i32) : i32
@@ -42,7 +42,7 @@ void local_stringlit() {
 }
 
 // CHECK: cir.global "private" constant internal @".str" = #cir.cst_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64} loc(#loc17)
-// CHECK: func @_Z15local_stringlitv() {
+// CHECK: cir.func @_Z15local_stringlitv() {
 // CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", cinit] {alignment = 8 : i64}
 // CHECK-NEXT:  %1 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 8>>
 // CHECK-NEXT:  %2 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<i8 x 8>>), !cir.ptr<i8>

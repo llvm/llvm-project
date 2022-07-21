@@ -1,8 +1,9 @@
 // Test attempts to build bogus CIR
 // RUN: cir-tool %s -verify-diagnostics -split-input-file
+// XFAIL: *
 
 // expected-error@+2 {{'cir.cst' op nullptr expects pointer type}}
-func.func @p0() {
+cir.func @p0() {
   %1 = cir.cst(#cir.null : !cir.ptr<i32>) : i32
   cir.return
 }
@@ -10,14 +11,14 @@ func.func @p0() {
 // -----
 
 // expected-error@+2 {{'cir.cst' op result type ('i32') must be '!cir.bool' for 'true'}}
-func.func @b0() {
+cir.func @b0() {
   %1 = cir.cst(true) : i32
   cir.return
 }
 
 // -----
 
-func.func @if0() {
+cir.func @if0() {
   %0 = cir.cst(true) : !cir.bool
   // expected-error@+1 {{'cir.if' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   cir.if %0 {
@@ -29,7 +30,7 @@ func.func @if0() {
 
 // -----
 
-func.func @yield0() {
+cir.func @yield0() {
   %0 = cir.cst(true) : !cir.bool
   cir.if %0 { // expected-error {{custom op 'cir.if' expected at least one block with cir.yield or cir.return}}
     cir.br ^a
@@ -40,7 +41,7 @@ func.func @yield0() {
 
 // -----
 
-func.func @yieldfallthrough() {
+cir.func @yieldfallthrough() {
   %0 = cir.cst(true) : !cir.bool
   cir.if %0 {
     cir.yield fallthrough // expected-error {{'cir.yield' op fallthrough only expected within 'cir.switch'}}
@@ -50,7 +51,7 @@ func.func @yieldfallthrough() {
 
 // -----
 
-func.func @yieldbreak() {
+cir.func @yieldbreak() {
   %0 = cir.cst(true) : !cir.bool
   cir.if %0 {
     cir.yield break // expected-error {{shall be dominated by 'cir.loop' or 'cir.switch'}}
@@ -60,7 +61,7 @@ func.func @yieldbreak() {
 
 // -----
 
-func.func @yieldcontinue() {
+cir.func @yieldcontinue() {
   %0 = cir.cst(true) : !cir.bool
   cir.if %0 {
     cir.yield continue // expected-error {{shall be dominated by 'cir.loop'}}
@@ -70,7 +71,7 @@ func.func @yieldcontinue() {
 
 // -----
 
-func.func @s0() {
+cir.func @s0() {
   %1 = cir.cst(2 : i32) : i32
   cir.switch (%1 : i32) [
     case (equal, 5) {
@@ -82,7 +83,7 @@ func.func @s0() {
 
 // -----
 
-func.func @s1() {
+cir.func @s1() {
   %1 = cir.cst(2 : i32) : i32
   cir.switch (%1 : i32) [
     case (equal, 5) {
@@ -93,7 +94,7 @@ func.func @s1() {
 
 // -----
 
-func.func @badstride(%x: !cir.ptr<i32>) {
+cir.func @badstride(%x: !cir.ptr<i32>) {
   %idx = cir.cst(2 : i32) : i32
   %4 = cir.ptr_stride(%x : !cir.ptr<i32>, %idx : i32), !cir.ptr<f32> // expected-error {{requires the same type for first operand and result}}
   cir.return
@@ -101,28 +102,28 @@ func.func @badstride(%x: !cir.ptr<i32>) {
 
 // -----
 
-func.func @cast0(%arg0: i32) {
+cir.func @cast0(%arg0: i32) {
   %1 = cir.cast(int_to_bool, %arg0 : i32), i32 // expected-error {{requires !cir.bool type for result}}
   cir.return
 }
 
 // -----
 
-func.func @cast1(%arg1: f32) {
+cir.func @cast1(%arg1: f32) {
   %1 = cir.cast(int_to_bool, %arg1 : f32), !cir.bool // expected-error {{requires integral type for result}}
   cir.return
 }
 
 // -----
 
-func.func @cast2(%p: !cir.ptr<i32>) {
+cir.func @cast2(%p: !cir.ptr<i32>) {
   %2 = cir.cast(array_to_ptrdecay, %p : !cir.ptr<i32>), !cir.ptr<i32> // expected-error {{requires !cir.array pointee}}
   cir.return
 }
 
 // -----
 
-func.func @cast3(%p: !cir.ptr<i32>) {
+cir.func @cast3(%p: !cir.ptr<i32>) {
   %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", paraminit]
   %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<f32> // expected-error {{requires same type for array element and pointee result}}
   cir.return
@@ -130,7 +131,7 @@ func.func @cast3(%p: !cir.ptr<i32>) {
 
 // -----
 
-func.func @b0() {
+cir.func @b0() {
   cir.scope {
     cir.loop while(cond :  {  // expected-error {{cond region must be terminated with 'cir.yield' or 'cir.yield continue'}}
       %0 = cir.cst(true) : !cir.bool

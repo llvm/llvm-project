@@ -260,7 +260,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
-                                 mlir::func::CallOp *callOrInvoke,
+                                 mlir::cir::CallOp *callOrInvoke,
                                  bool IsMustTail, SourceLocation Loc) {
   // FIXME: We no longer need the types from CallArgs; lift up and simplify
 
@@ -362,7 +362,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   }
 
   const CIRGenCallee &ConcreteCallee = Callee.prepareConcreteCallee(*this);
-  mlir::FuncOp CalleePtr = ConcreteCallee.getFunctionPointer();
+  auto CalleePtr = ConcreteCallee.getFunctionPointer();
 
   // If we're using inalloca, set up that argument.
   assert(!ArgMemory.isValid() && "inalloca NYI");
@@ -396,7 +396,12 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // Emit the actual call op.
   auto callLoc = CGM.getLoc(Loc);
-  auto theCall = CGM.getBuilder().create<mlir::func::CallOp>(callLoc, CalleePtr,
+
+  // FIXME: Used to be:
+  // auto theCall = CGM.getBuilder().create<mlir::cir::CallOp>(
+  //     callLoc, mlir::SymbolRefAttr::get(CalleePtr),
+  //     CalleePtr.getType().getResults(), CIRCallArgs);
+  auto theCall = CGM.getBuilder().create<mlir::cir::CallOp>(callLoc, CalleePtr,
                                                              CIRCallArgs);
 
   if (callOrInvoke)

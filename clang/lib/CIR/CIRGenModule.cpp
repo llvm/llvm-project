@@ -331,7 +331,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   Op = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/true,
                          ForDefinition);
 
-  auto Fn = cast<mlir::FuncOp>(Op);
+  auto Fn = cast<mlir::cir::FuncOp>(Op);
   // Already emitted.
   if (!Fn.isDeclaration())
     return;
@@ -344,7 +344,10 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
 
   CIRGenFunction CGF{*this, builder};
   CurCGF = &CGF;
-  CGF.generateCode(GD, Fn, FI);
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    CGF.generateCode(GD, Fn, FI);
+  }
   CurCGF = nullptr;
 
   // TODO: setNonAliasAttributes
@@ -1296,7 +1299,7 @@ bool CIRGenModule::verifyModule() {
   return mlir::verify(theModule).succeeded();
 }
 
-std::pair<mlir::FunctionType, mlir::FuncOp>
+std::pair<mlir::FunctionType, mlir::cir::FuncOp>
 CIRGenModule::getAddrAndTypeOfCXXStructor(GlobalDecl GD,
                                           const CIRGenFunctionInfo *FnInfo,
                                           mlir::FunctionType FnType,
@@ -1319,10 +1322,10 @@ CIRGenModule::getAddrAndTypeOfCXXStructor(GlobalDecl GD,
   return {FnType, Fn};
 }
 
-mlir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD,
-                                             mlir::Type Ty, bool ForVTable,
-                                             bool DontDefer,
-                                             ForDefinition_t IsForDefinition) {
+mlir::cir::FuncOp
+CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
+                                bool ForVTable, bool DontDefer,
+                                ForDefinition_t IsForDefinition) {
   assert(!ForVTable && "NYI");
 
   assert(!cast<FunctionDecl>(GD.getDecl())->isConsteval() &&
@@ -1436,14 +1439,39 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef MangledName,
   return true;
 }
 
-/// GetOrCreateCIRFunction - If the specified mangled name is not in the module,
+mlir::cir::FuncOp CIRGenModule::createCIRFunction(mlir::Location loc,
+                                                  StringRef name,
+                                                  mlir::FunctionType Ty) {
+  // At the point we need to create the function, the insertion point
+  // could be anywhere (e.g. callsite). Do not rely on whatever it might
+  // be, properly save, find the appropriate place and restore.
+  FuncOp f;
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+
+    // Some global emissions are triggered while emitting a function, e.g.
+    // void s() { x.method() }
+    //
+    // Be sure to insert a new function before a current one.
+    auto *curCGF = getCurrCIRGenFun();
+    if (curCGF)
+      builder.setInsertionPoint(curCGF->CurFn.getOperation());
+
+    f = builder.create<mlir::cir::FuncOp>(loc, name, Ty);
+    if (!curCGF)
+      theModule.push_back(f);
+  }
+  return f;
+}
+
+/// If the specified mangled name is not in the module,
 /// create and return a CIR Function with the specified type. If there is
 /// something in the module with the specified name, return it potentially
 /// bitcasted to the right type.
 ///
 /// If D is non-null, it specifies a decl that corresponded to this. This is
 /// used to set the attributes on the function when it is first created.
-mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
+mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     StringRef MangledName, mlir::Type Ty, GlobalDecl GD, bool ForVTable,
     bool DontDefer, bool IsThunk, ForDefinition_t IsForDefinition) {
   assert(!ForVTable && "NYI");
@@ -1463,7 +1491,7 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   // Lookup the entry, lazily creating it if necessary.
   mlir::Operation *Entry = getGlobalValue(MangledName);
   if (Entry) {
-    assert(isa<mlir::FuncOp>(Entry) &&
+    assert(isa<mlir::cir::FuncOp>(Entry) &&
            "not implemented, only supports FuncOp for now");
 
     if (WeakRefReferences.erase(Entry)) {
@@ -1478,7 +1506,7 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
 
     // If there are two attempts to define the same mangled name, issue an
     // error.
-    auto Fn = cast<mlir::FuncOp>(Entry);
+    auto Fn = cast<mlir::cir::FuncOp>(Entry);
     if (IsForDefinition && Fn && !Fn.isDeclaration()) {
       GlobalDecl OtherGD;
       // CHeck that GD is not yet in DiagnosedConflictingDefinitions is required
@@ -1521,8 +1549,7 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   auto fnLoc = getLoc(FD->getSourceRange());
   // TODO: CodeGen includeds the linkage (ExternalLinkage) and only passes the
   // mangledname if Entry is nullptr
-  mlir::FuncOp F = mlir::FuncOp::create(fnLoc, MangledName, FTy);
-  theModule.push_back(F);
+  auto F = createCIRFunction(fnLoc, MangledName, FTy);
 
   if (Entry) {
     llvm_unreachable("NYI");
@@ -1657,7 +1684,7 @@ void CIRGenModule::buildDeferred() {
 
     // Make sure getGlobalValue returned non-null.
     assert(Op);
-    assert(isa<mlir::FuncOp>(Op) &&
+    assert(isa<mlir::cir::FuncOp>(Op) &&
            "not implemented, only supports FuncOp for now");
 
     // Check to see if we've already emitted this. This is necessary for a
@@ -1666,7 +1693,7 @@ void CIRGenModule::buildDeferred() {
     // ways (e.g. by an extern inline function acquiring a strong function
     // redefinition). Just ignore those cases.
     // TODO: Not sure what to map this to for MLIR
-    if (auto Fn = cast<mlir::FuncOp>(Op))
+    if (auto Fn = cast<mlir::cir::FuncOp>(Op))
       if (!Fn.isDeclaration())
         continue;
 
@@ -1777,7 +1804,7 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &D, mlir::Operation *Op) {
   assert(!UnimplementedFeature::setComdat() && "NYI");
 }
 
-bool CIRGenModule::isInNoSanitizeList(SanitizerMask Kind, mlir::FuncOp Fn,
+bool CIRGenModule::isInNoSanitizeList(SanitizerMask Kind, mlir::cir::FuncOp Fn,
                                       SourceLocation Loc) const {
   const auto &NoSanitizeL = getASTContext().getNoSanitizeList();
   // NoSanitize by function name.

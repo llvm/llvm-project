@@ -322,7 +322,7 @@ void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
   // In such cases we should try to emit the deleting dtor as an alias to the
   // selected 'operator delete'.
 
-  mlir::FuncOp Fn = CGM.codegenCXXStructor(GD);
+  auto Fn = CGM.codegenCXXStructor(GD);
 
   if (CIRGenType == StructorCIRGen::COMDAT) {
     llvm_unreachable("NYI");

@@ -354,8 +354,9 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
   insertCleanupAndLeave(currBlock);
 }
 
-mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
-                                          const CIRGenFunctionInfo &FnInfo) {
+mlir::cir::FuncOp
+CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
+                             const CIRGenFunctionInfo &FnInfo) {
   assert(Fn && "generating code for a null function");
   const auto FD = cast<FunctionDecl>(GD.getDecl());
   CurGD = GD;
@@ -596,7 +597,7 @@ void CIRGenFunction::buildCXXConstructorCall(
   const CIRGenFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CIRGenCallee Callee = CIRGenCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
-  mlir::func::CallOp C;
+  mlir::cir::CallOp C;
   buildCall(Info, Callee, ReturnValueSlot(), Args, &C, false, Loc);
 
   assert(CGM.getCodeGenOpts().OptimizationLevel == 0 ||
@@ -672,7 +673,7 @@ LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
 }
 
 void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
-                                   mlir::FuncOp Fn,
+                                   mlir::cir::FuncOp Fn,
                                    const CIRGenFunctionInfo &FnInfo,
                                    const FunctionArgList &Args,
                                    SourceLocation Loc,

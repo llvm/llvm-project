@@ -1,7 +1,7 @@
 // RUN: cir-tool %s | FileCheck %s
 
 
-func.func @b0() {
+cir.func @b0() {
   cir.scope {
     cir.loop while(cond :  {
       %0 = cir.cst(true) : !cir.bool
@@ -21,7 +21,7 @@ func.func @b0() {
   cir.return
 }
 
-// CHECK: func @b0
+// CHECK: cir.func @b0
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
 // CHECK-NEXT:      %0 = cir.cst(true) : !cir.bool

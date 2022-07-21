@@ -162,8 +162,8 @@ SimplifyRetYieldBlocks<ScopeOp>::replaceScopeLikeOp(PatternRewriter &rewriter,
 }
 
 template <>
-mlir::LogicalResult SimplifyRetYieldBlocks<mlir::FuncOp>::replaceScopeLikeOp(
-    PatternRewriter &rewriter, mlir::FuncOp funcOp) const {
+mlir::LogicalResult SimplifyRetYieldBlocks<cir::FuncOp>::replaceScopeLikeOp(
+    PatternRewriter &rewriter, cir::FuncOp funcOp) const {
   auto regionChanged = mlir::failure();
   if (checkAndRewriteRegion(funcOp.getRegion(), rewriter).succeeded())
     regionChanged = mlir::success();
@@ -195,7 +195,7 @@ mlir::LogicalResult SimplifyRetYieldBlocks<cir::LoopOp>::replaceScopeLikeOp(
 void getMergeCleanupsPatterns(RewritePatternSet &results,
                               MLIRContext *context) {
   results.add<SimplifyRetYieldBlocks<IfOp>, SimplifyRetYieldBlocks<ScopeOp>,
-              SimplifyRetYieldBlocks<mlir::FuncOp>,
+              SimplifyRetYieldBlocks<cir::FuncOp>,
               SimplifyRetYieldBlocks<cir::SwitchOp>,
               SimplifyRetYieldBlocks<cir::LoopOp>>(context);
 }
@@ -221,7 +221,7 @@ void MergeCleanupsPass::runOnOperation() {
 
   SmallVector<Operation *> opsToSimplify;
   op->walk([&](Operation *op) {
-    if (isa<cir::IfOp, cir::ScopeOp, mlir::FuncOp, cir::SwitchOp, cir::LoopOp>(
+    if (isa<cir::IfOp, cir::ScopeOp, cir::FuncOp, cir::SwitchOp, cir::LoopOp>(
             op))
       opsToSimplify.push_back(op);
   });

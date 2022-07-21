@@ -236,7 +236,7 @@ public:
                                            LValueBaseInfo *BaseInfo = nullptr,
                                            bool forPointeeType = false);
 
-  mlir::FuncOp getAddrOfCXXStructor(
+  mlir::cir::FuncOp getAddrOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
       mlir::FunctionType FnType = nullptr, bool DontDefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition) {
@@ -262,7 +262,7 @@ public:
     DeferredDeclsToEmit.emplace_back(GD);
   }
 
-  std::pair<mlir::FunctionType, mlir::FuncOp> getAddrAndTypeOfCXXStructor(
+  std::pair<mlir::FunctionType, mlir::cir::FuncOp> getAddrAndTypeOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
       mlir::FunctionType FnType = nullptr, bool Dontdefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition);
@@ -286,7 +286,7 @@ public:
   bool MayDropFunctionReturn(const clang::ASTContext &Context,
                              clang::QualType ReturnType);
 
-  bool isInNoSanitizeList(clang::SanitizerMask Kind, mlir::FuncOp Fn,
+  bool isInNoSanitizeList(clang::SanitizerMask Kind, mlir::cir::FuncOp Fn,
                           clang::SourceLocation) const;
 
   /// Determine whether the definition can be emitted eagerly, or should be
@@ -300,7 +300,7 @@ public:
   /// Return the address of the given function. If Ty is non-null, then this
   /// function will use the specified type if it has to create it.
   // TODO: this is a bit weird as `GetAddr` given we give back a FuncOp?
-  mlir::FuncOp
+  mlir::cir::FuncOp
   GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty = nullptr,
                     bool ForVTable = false, bool Dontdefer = false,
                     ForDefinition_t IsForDefinition = NotForDefinition);
@@ -339,7 +339,7 @@ public:
   // Produce code for this constructor/destructor. This method doesn't try to
   // apply any ABI rules about which other constructors/destructors are needed
   // or if they are alias to each other.
-  mlir::FuncOp codegenCXXStructor(clang::GlobalDecl GD);
+  mlir::cir::FuncOp codegenCXXStructor(clang::GlobalDecl GD);
 
   bool lookupRepresentativeDecl(llvm::StringRef MangledName,
                                 clang::GlobalDecl &Result) const;
@@ -363,11 +363,15 @@ public:
 private:
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
-  mlir::FuncOp
+  mlir::cir::FuncOp
   GetOrCreateCIRFunction(llvm::StringRef MangledName, mlir::Type Ty,
                          clang::GlobalDecl D, bool ForVTable,
                          bool DontDefer = false, bool IsThunk = false,
                          ForDefinition_t IsForDefinition = NotForDefinition);
+  // Effectively create the CIR instruction, properly handling insertion
+  // points.
+  mlir::cir::FuncOp createCIRFunction(mlir::Location loc, StringRef name,
+                                      mlir::FunctionType Ty);
 
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;

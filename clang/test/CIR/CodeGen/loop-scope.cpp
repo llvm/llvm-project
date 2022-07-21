@@ -9,7 +9,7 @@ void l0() {
   }
 }
 
-// CPPSCOPE: func @_Z2l0v() {
+// CPPSCOPE: cir.func @_Z2l0v() {
 // CPPSCOPE-NEXT:   cir.scope {
 // CPPSCOPE-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
 // CPPSCOPE-NEXT:     %1 = cir.alloca i32, cir.ptr <i32>, ["j", cinit] {alignment = 4 : i64}
@@ -17,7 +17,7 @@ void l0() {
 // CPPSCOPE-NEXT:     cir.store %2, %0 : i32, cir.ptr <i32>
 // CPPSCOPE-NEXT:     cir.loop for(cond :  {
 
-// CSCOPE: func @l0() {
+// CSCOPE: cir.func @l0() {
 // CSCOPE-NEXT: cir.scope {
 // CSCOPE-NEXT:   %0 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
 // CSCOPE-NEXT:   %1 = cir.cst(0 : i32) : i32

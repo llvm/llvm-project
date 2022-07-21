@@ -7,7 +7,7 @@ int *p0() {
   return p;
 }
 
-// CHECK: func @_Z2p0v() -> !cir.ptr<i32> {
+// CHECK: cir.func @_Z2p0v() -> !cir.ptr<i32> {
 // CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit]
 // CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
 // CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
@@ -18,7 +18,7 @@ int *p1() {
   return p;
 }
 
-// CHECK: func @_Z2p1v() -> !cir.ptr<i32> {
+// CHECK: cir.func @_Z2p1v() -> !cir.ptr<i32> {
 // CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", uninitialized]
 // CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
 // CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
@@ -34,7 +34,7 @@ int *p2() {
   return p;
 }
 
-// CHECK: func @_Z2p2v() -> !cir.ptr<i32> {
+// CHECK: cir.func @_Z2p2v() -> !cir.ptr<i32> {
 // CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64}
 // CHECK-NEXT:  %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit] {alignment = 8 : i64}
 // CHECK-NEXT:  %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
@@ -58,13 +58,13 @@ int *p2() {
 
 void b0() { bool x = true, y = false; }
 
-// CHECK: func @_Z2b0v() {
+// CHECK: cir.func @_Z2b0v() {
 // CHECK: %2 = cir.cst(true) : !cir.bool
 // CHECK: %3 = cir.cst(false) : !cir.bool
 
 void b1(int a) { bool b = a; }
 
-// CHECK: func @_Z2b1i(%arg0: i32 loc({{.*}})) {
+// CHECK: cir.func @_Z2b1i(%arg0: i32 loc({{.*}})) {
 // CHECK: %2 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK: %3 = cir.cast(int_to_bool, %2 : i32), !cir.bool
 // CHECK: cir.store %3, %1 : !cir.bool, cir.ptr <!cir.bool>
@@ -78,7 +78,7 @@ void if0(int a) {
   }
 }
 
-// CHECK: func @_Z3if0i(%arg0: i32 loc({{.*}}))
+// CHECK: cir.func @_Z3if0i(%arg0: i32 loc({{.*}}))
 // CHECK: cir.scope {
 // CHECK:   %3 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK:   %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
@@ -106,7 +106,7 @@ void if1(int a, bool b, bool c) {
   }
 }
 
-// CHECK: func @_Z3if1ibb(%arg0: i32 loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
+// CHECK: cir.func @_Z3if1ibb(%arg0: i32 loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
 // CHECK: cir.scope {
 // CHECK:   %5 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK:   %6 = cir.cast(int_to_bool, %5 : i32), !cir.bool

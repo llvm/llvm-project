@@ -25,13 +25,6 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-namespace mlir {
-namespace func {
-class FuncOp;
-} // namespace func
-using FuncOp = func::FuncOp;
-} // namespace mlir
-
 #include "mlir/Dialect/CIR/IR/CIRAttrs.h"
 #include "mlir/Dialect/CIR/IR/CIROpsDialect.h.inc"
 #include "mlir/Dialect/CIR/IR/CIROpsEnums.h"

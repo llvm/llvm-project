@@ -15,7 +15,7 @@ void test() {
   String s2{1};
 }
 
-//      CHECK: func @_ZN6StringC2Ev
+//      CHECK: cir.func @_ZN6StringC2Ev
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>
 // CHECK-NEXT:   cir.store %arg0, %0
 // CHECK-NEXT:   %1 = cir.load %0
@@ -28,7 +28,7 @@ void test() {
 // CHECK-NEXT:   cir.store %6, %4 : i64, cir.ptr <i64>
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
-//      CHECK: func @_ZN6StringC2Ei
+//      CHECK: cir.func @_ZN6StringC2Ei
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>
 // CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["size", paraminit]
 // CHECK-NEXT:   cir.store %arg0, %0

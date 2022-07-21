@@ -1,6 +1,6 @@
 // RUN: cir-tool %s | FileCheck %s
 
-func.func @l0() {
+cir.func @l0() {
   %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
   %1 = cir.cst(0 : i32) : i32
   cir.store %1, %0 : i32, cir.ptr <i32>
@@ -89,7 +89,7 @@ func.func @l0() {
   cir.return
 }
 
-// CHECK: func @l0
+// CHECK: cir.func @l0
 // CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:     %5 = cir.cst(10 : i32) : i32
@@ -159,7 +159,7 @@ func.func @l0() {
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }
 
-func.func @l1() {
+cir.func @l1() {
   cir.scope {
     cir.loop while(cond :  {
       cir.yield continue
@@ -172,7 +172,7 @@ func.func @l1() {
   cir.return
 }
 
-// CHECK: func @l1
+// CHECK: cir.func @l1
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
 // CHECK-NEXT:      cir.yield continue
@@ -185,7 +185,7 @@ func.func @l1() {
 // CHECK-NEXT:  cir.return
 // CHECK-NEXT: }
 
-func.func @l2() {
+cir.func @l2() {
   cir.scope {
     cir.loop while(cond :  {
       cir.yield
@@ -198,7 +198,7 @@ func.func @l2() {
   cir.return
 }
 
-// CHECK: func @l2
+// CHECK: cir.func @l2
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
 // CHECK-NEXT:      cir.yield

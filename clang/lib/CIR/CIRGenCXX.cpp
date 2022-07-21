@@ -20,7 +20,7 @@
 using namespace clang;
 using namespace cir;
 
-mlir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
+mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   const auto &FnInfo = getTypes().arrangeCXXStructorDeclaration(GD);
   auto Fn = getAddrOfCXXStructor(GD, &FnInfo, /*FnType=*/nullptr,
                                  /*DontDefer=*/true, ForDefinition);
@@ -28,11 +28,13 @@ mlir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   // TODO: setFunctionLinkage
   CIRGenFunction CGF{*this, builder};
   CurCGF = &CGF;
-  CGF.generateCode(GD, Fn, FnInfo);
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    CGF.generateCode(GD, Fn, FnInfo);
+  }
   CurCGF = nullptr;
 
   // TODO: setNonAliasAttributes
   // TODO: SetLLVMFunctionAttributesForDefinition
   return Fn;
 }
-
