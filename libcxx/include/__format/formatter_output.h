@@ -275,9 +275,9 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __precision_) {
+_LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __precision) {
   __format_spec::__column_width_result<_CharT> __result =
-      __format_spec::__estimate_column_width(__str, __precision_, __format_spec::__column_width_rounding::__down);
+      __format_spec::__estimate_column_width(__str, __precision, __format_spec::__column_width_rounding::__down);
   __str = basic_string_view<_CharT>{__str.begin(), __result.__last_};
   return __result.__width_;
 }
