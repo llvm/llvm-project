@@ -34,6 +34,7 @@ unittest("AnalysisTests") {
     "LoopNestTest.cpp",
     "MLModelRunnerTest.cpp",
     "MemoryBuiltinsTest.cpp",
+    "MemoryProfileInfoTest.cpp",
     "MemorySSATest.cpp",
     "PhiValuesTest.cpp",
     "ProfileSummaryInfoTest.cpp",
