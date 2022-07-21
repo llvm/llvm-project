@@ -2885,7 +2885,7 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   // of the respective allocator declaration with generic attributes.
   bool Changed = false;
 
-  if (Call.getType()->isPointerTy()) {
+  if (isAllocationFn(&Call, TLI)) {
     uint64_t Size;
     ObjectSizeOpts Opts;
     if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
