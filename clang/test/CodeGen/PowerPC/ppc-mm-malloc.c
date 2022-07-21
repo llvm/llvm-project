@@ -7,6 +7,7 @@
 // failures. So this test will focus on native build only.
 
 // RUN: %clang -Xclang -no-opaque-pointers -target powerpc64-unknown-linux-gnu -S -emit-llvm %s -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -target powerpc64-ibm-aix -S -emit-llvm %s -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s
 
 #include <mm_malloc.h>
 

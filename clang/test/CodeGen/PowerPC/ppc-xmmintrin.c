@@ -10,7 +10,7 @@
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 
 // RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10-LE
 
 // RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
@@ -20,6 +20,13 @@
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 // RUN: %clang -Xclang -no-opaque-pointers -x c++ -fsyntax-only -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
+
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang -Xclang -no-opaque-pointers -x c++ -fsyntax-only -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10-BE
 
 #include <xmmintrin.h>
 
@@ -388,7 +395,8 @@ test_convert() {
 // CHECK-LABEL: define available_externally signext i32 @_mm_cvtss_si32
 // CHECK-LE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xxsldwi ${0:x},${0:x},${0:x},3;\0Axscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
 // CHECK-BE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
-// CHECK-P10: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xxsldwi ${0:x},${0:x},${0:x},3;\0Axscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
+// CHECK-P10-LE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xxsldwi ${0:x},${0:x},${0:x},3;\0Axscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
+// CHECK-P10-BE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
 // CHECK: extractvalue { <4 x float>, i32, double } %[[VEC]], 0
 // CHECK: extractvalue { <4 x float>, i32, double } %[[VEC]], 1
 // CHECK: extractvalue { <4 x float>, i32, double } %[[VEC]], 2
@@ -688,7 +696,8 @@ test_move() {
 // CHECK-BE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef bitcast (<4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 2113632> to <16 x i8>))
 // CHECK-BE: %[[EXT:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK-BE: trunc i64 %[[EXT]] to i32
-// CHECK-P10: call zeroext i32 @vec_extractm(unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK-P10-LE: call zeroext i32 @vec_extractm(unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK-P10-BE: call zeroext i32 @vec_extractm(unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 
 void __attribute__((noinline))
 test_alt_name_move() {

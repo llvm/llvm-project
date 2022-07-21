@@ -222,11 +222,13 @@ void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
   const Driver &D = getDriver();
 
-  // Add the Clang builtin headers (<resource>/include).
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     SmallString<128> P(D.ResourceDir);
-    path::append(P, "/include");
-    addSystemInclude(DriverArgs, CC1Args, P.str());
+    // Add the PowerPC intrinsic headers (<resource>/include/ppc_wrappers)
+    path::append(P, "include", "ppc_wrappers");
+    addSystemInclude(DriverArgs, CC1Args, P);
+    // Add the Clang builtin headers (<resource>/include)
+    addSystemInclude(DriverArgs, CC1Args, path::parent_path(P.str()));
   }
 
   // Return if -nostdlibinc is specified as a driver option.
