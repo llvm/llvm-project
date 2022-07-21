@@ -319,15 +319,14 @@ bool llvm::isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI) {
   return getAllocationDataForFunction(F, ReallocLike, TLI).has_value();
 }
 
-bool llvm::isAllocRemovable(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  assert(isAllocationFn(CB, TLI));
-
+bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
   // Note: Removability is highly dependent on the source language.  For
   // example, recent C++ requires direct calls to the global allocation
   // [basic.stc.dynamic.allocation] to be observable unless part of a new
   // expression [expr.new paragraph 13].
 
-  // Historically we've treated the C family allocation routines as removable
+  // Historically we've treated the C family allocation routines and operator
+  // new as removable
   return isAllocLikeFn(CB, TLI);
 }
 

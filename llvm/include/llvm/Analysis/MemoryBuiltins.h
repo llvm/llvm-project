@@ -91,15 +91,16 @@ inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
 //  Properties of allocation functions
 //
 
-/// Return false if the allocation can have side effects on the program state
-/// we are required to preserve beyond the effect of allocating a new object.
+/// Return true if this is a call to an allocation function that does not have
+/// side effects that we are required to preserve beyond the effect of
+/// allocating a new object.
 /// Ex: If our allocation routine has a counter for the number of objects
 /// allocated, and the program prints it on exit, can the value change due
 /// to optimization? Answer is highly language dependent.
 /// Note: *Removable* really does mean removable; it does not mean observable.
 /// A language (e.g. C++) can allow removing allocations without allowing
 /// insertion or speculative execution of allocation routines.
-bool isAllocRemovable(const CallBase *V, const TargetLibraryInfo *TLI);
+bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 
 /// Gets the alignment argument for an aligned_alloc-like function, using either
 /// built-in knowledge based on fuction names/signatures or allocalign
