@@ -704,7 +704,7 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     return;
   }
 
-  if (isa<FuncOp>(op))
+  if (isa<mlir::FuncOp>(op))
     return checkFunc(op);
   if (auto ifOp = dyn_cast<IfOp>(op))
     return checkIf(ifOp);
