@@ -312,16 +312,19 @@ bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, AllocLike, TLI).has_value();
 }
 
-/// Tests if a value is a call or invoke to a library function that
-/// reallocates memory (e.g., realloc).
-bool llvm::isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, ReallocLike, TLI).has_value();
-}
-
 /// Tests if a functions is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
 bool llvm::isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI) {
   return getAllocationDataForFunction(F, ReallocLike, TLI).has_value();
+}
+
+Value *llvm::getReallocatedOperand(const CallBase *CB,
+                                   const TargetLibraryInfo *TLI) {
+  if (getAllocationData(CB, ReallocLike, TLI).has_value()) {
+    // All currently supported realloc functions reallocate the first argument.
+    return CB->getArgOperand(0);
+  }
+  return nullptr;
 }
 
 bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
@@ -531,23 +534,19 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   return true;
 }
 
-bool llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
+Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
   bool IsNoBuiltinCall;
-  const Function *Callee = getCalledFunction(I, IsNoBuiltinCall);
+  const Function *Callee = getCalledFunction(CB, IsNoBuiltinCall);
   if (Callee == nullptr || IsNoBuiltinCall)
-    return false;
+    return nullptr;
 
   LibFunc TLIFn;
-  if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
-    return false;
-
-  return isLibFreeFunction(Callee, TLIFn);
-}
-
-Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  // All currently supported free functions free the first argument.
-  if (isFreeCall(CB, TLI))
+  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
+      isLibFreeFunction(Callee, TLIFn)) {
+    // All currently supported free functions free the first argument.
     return CB->getArgOperand(0);
+  }
+
   return nullptr;
 }
 

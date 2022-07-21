@@ -34,15 +34,9 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    pdl.pattern @match_linalg_matmul : benefit(1) {
-      %0 = operands
-      %1 = types
-      %2 = operation "linalg.matmul"(%0 : !pdl.range<value>)  -> (%1 : !pdl.range<type>)
-      rewrite %2 with "transform.dialect"
-    }
     transform.sequence %arg0 {
     ^bb1(%arg1: !pdl.operation):
-      %0 = pdl_match @match_linalg_matmul in %arg1
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1:2 = transform.structured.tile_to_foreach_thread_op %0 [10, 20] (mapped to dims [1, 0])
     }
   }

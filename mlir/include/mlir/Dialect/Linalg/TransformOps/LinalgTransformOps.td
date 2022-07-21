@@ -14,6 +14,7 @@ include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
@@ -125,6 +126,52 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
         ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
         ::mlir::transform::TransformState &state);
   }];
+}
+
+def MatchInterfaceEnum : I32EnumAttr<"MatchInterfaceEnum", "An interface to match",
+    [
+      I32EnumAttrCase<"LinalgOp", 0>,
+      I32EnumAttrCase<"TilingInterface", 1>
+    ]>{
+  let cppNamespace = "mlir::transform";
+}
+
+def MatchOp : Op<Transform_Dialect, "structured.match",
+    [MemoryEffectsOpInterface,
+     NavigationTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Match op with the specified constraints, within the target op.
+
+    The following constraints are supported:
+      - interface: an optional MatchInterfaceEnum specifying an enum
+      representation for an interface to target.
+      - ops: an optional StrArrayAttr specifying the concrete name of an op. 
+      
+    Note: either `ops` or `interface` must be specified.
+
+    TODO: Extend with regions to allow a limited form of constraints.
+
+    #### Return modes
+    
+    This op traverses the ops nested under `target` and returns the handles to
+    all the operations that match the requirements.
+
+    This op fails if the target is not a handle to exactly one operation. 
+    Otherwise it succeeds.
+  
+    This operation does not consume the target handle and produces new handles:
+    it is a navigation op.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       OptionalAttr<StrArrayAttr>:$ops,
+                       OptionalAttr<MatchInterfaceEnum>:$interface);
+  // TODO: variadic results when needed.
+  let results = (outs PDL_Operation:$results);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",

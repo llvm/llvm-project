@@ -65,13 +65,12 @@ bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 /// allocates memory (either malloc, calloc, or strdup like).
 bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
-/// Tests if a value is a call or invoke to a library function that
-/// reallocates memory (e.g., realloc).
-bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
 bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
+
+/// If this is a call to a realloc function, return the reallocated operand.
+Value *getReallocatedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
@@ -79,9 +78,6 @@ bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
 
 /// isLibFreeFunction - Returns true if the function is a builtin free()
 bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
-
-/// Returns true if the value is a call to a free function.
-bool isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
 
 /// If this if a call to a free function, return the freed operand.
 Value *getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);

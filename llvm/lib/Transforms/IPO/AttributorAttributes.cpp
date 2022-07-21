@@ -5798,6 +5798,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   struct DeallocationInfo {
     /// The call that deallocates the memory.
     CallBase *const CB;
+    /// The value freed by the call.
+    Value *FreedOp;
 
     /// Flag to indicate if we don't know all objects this deallocation might
     /// free.
@@ -5829,8 +5831,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       CallBase *CB = dyn_cast<CallBase>(&I);
       if (!CB)
         return true;
-      if (isFreeCall(CB, TLI)) {
-        DeallocationInfos[CB] = new (A.Allocator) DeallocationInfo{CB};
+      if (Value *FreedOp = getFreedOperand(CB, TLI)) {
+        DeallocationInfos[CB] = new (A.Allocator) DeallocationInfo{CB, FreedOp};
         return true;
       }
       // To do heap to stack, we need to know that the allocation itself is
@@ -6104,7 +6106,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         continue;
 
       // Use the non-optimistic version to get the freed object.
-      Value *Obj = getUnderlyingObject(DI.CB->getArgOperand(0));
+      Value *Obj = getUnderlyingObject(DI.FreedOp);
       if (!Obj) {
         LLVM_DEBUG(dbgs() << "[H2S] Unknown underlying object for free!\n");
         DI.MightFreeUnknownObjects = true;
