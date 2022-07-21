@@ -705,6 +705,9 @@ def concat_vectors : SDNode<"ISD::CONCAT_VECTORS",
 def vector_extract_subvec : SDNode<"ISD::EXTRACT_SUBVECTOR",
     SDTypeProfile<1, 2, [SDTCisInt<2>, SDTCisVec<1>, SDTCisVec<0>]>,
     []>;
+def vector_insert_subvec : SDNode<"ISD::INSERT_SUBVECTOR",
+    SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVec<2>, SDTCisInt<3>]>,
+    []>;
 
 // This operator does subvector type checking.
 def extract_subvector : SDNode<"ISD::EXTRACT_SUBVECTOR", SDTSubVecExtract, []>;
