@@ -21,10 +21,10 @@ struct A {};
 
 int main(int, char**)
 {
-    std::chrono::hh_mm_ss<void> h0;        // expected-error-re@*:* {{static assertion failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
-    std::chrono::hh_mm_ss<int> h1;         // expected-error-re@*:* {{static assertion failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
-    std::chrono::hh_mm_ss<std::string> h2; // expected-error-re@*:* {{static assertion failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
-    std::chrono::hh_mm_ss<A> h3;           // expected-error-re@*:* {{static assertion failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
+    std::chrono::hh_mm_ss<void> h0;        // expected-error-re@*:* {{static_assert failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
+    std::chrono::hh_mm_ss<int> h1;         // expected-error-re@*:* {{static_assert failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
+    std::chrono::hh_mm_ss<std::string> h2; // expected-error-re@*:* {{static_assert failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
+    std::chrono::hh_mm_ss<A> h3;           // expected-error-re@*:* {{static_assert failed{{.*}}template parameter of hh_mm_ss must be a std::chrono::duration}}
 
     return 0;
 }

@@ -113,8 +113,8 @@ void constant_expression(int x) {
   _Static_assert(__builtin_align_down(33, 32) == 32, "");
 
   // But not if one of the arguments isn't constant:
-  _Static_assert(ALIGN_BUILTIN(33, x) != 100, ""); // expected-error {{static assertion expression is not an integral constant expression}}
-  _Static_assert(ALIGN_BUILTIN(x, 4) != 100, "");  // expected-error {{static assertion expression is not an integral constant expression}}
+  _Static_assert(ALIGN_BUILTIN(33, x) != 100, ""); // expected-error {{static_assert expression is not an integral constant expression}}
+  _Static_assert(ALIGN_BUILTIN(x, 4) != 100, "");  // expected-error {{static_assert expression is not an integral constant expression}}
 }
 
 // Check that it is a constant expression that can be assigned to globals:
