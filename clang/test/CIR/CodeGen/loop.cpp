@@ -6,7 +6,7 @@ void l0() {
   }
 }
 
-// CHECK: func @_Z2l0v
+// CHECK: cir.func @_Z2l0v
 // CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:   cir.yield continue
 // CHECK-NEXT: }, step :  {
@@ -22,7 +22,7 @@ void l1() {
   }
 }
 
-// CHECK: func @_Z2l1v
+// CHECK: cir.func @_Z2l1v
 // CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:   %5 = cir.cst(10 : i32) : i32
@@ -59,7 +59,7 @@ void l2(bool cond) {
   }
 }
 
-// CHECK: func @_Z2l2b
+// CHECK: cir.func @_Z2l2b
 // CHECK:         cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
@@ -124,7 +124,7 @@ void l3(bool cond) {
   } while (1);
 }
 
-// CHECK: func @_Z2l3b
+// CHECK: cir.func @_Z2l3b
 // CHECK: cir.scope {
 // CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
@@ -186,7 +186,7 @@ void l4() {
   }
 }
 
-// CHECK: func @_Z2l4v
+// CHECK: cir.func @_Z2l4v
 // CHECK: cir.loop while(cond :  {
 // CHECK-NEXT:   cir.yield continue
 // CHECK-NEXT: }, step :  {
@@ -210,7 +210,7 @@ void l5() {
   } while (0);
 }
 
-// CHECK: func @_Z2l5v() {
+// CHECK: cir.func @_Z2l5v() {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop dowhile(cond :  {
 // CHECK-NEXT:       %0 = cir.cst(0 : i32) : i32
@@ -235,7 +235,7 @@ void l6() {
   }
 }
 
-// CHECK: func @_Z2l6v() {
+// CHECK: cir.func @_Z2l6v() {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       cir.yield continue

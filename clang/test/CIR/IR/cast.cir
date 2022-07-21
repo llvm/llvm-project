@@ -1,7 +1,8 @@
 // RUN: cir-tool %s | cir-tool | FileCheck %s
+// XFAIL: *
 
 module  {
-  func.func @yolo(%arg0 : i32) {
+  cir.func @yolo(%arg0 : i32) {
     %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr<!cir.array<i32 x 10>>, ["x", paraminit]
     %a = cir.cast (int_to_bool, %arg0 : i32), !cir.bool
 
@@ -11,6 +12,6 @@ module  {
   }
 }
 
-// CHECK: func @yolo(%arg0: i32)
+// CHECK: cir.func @yolo(%arg0: i32)
 // CHECK: %1 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
 // CHECK: %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>

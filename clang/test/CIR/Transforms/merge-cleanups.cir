@@ -1,8 +1,9 @@
 // RUN: cir-tool %s -cir-merge-cleanups -o %t.out.cir
 // RUN: FileCheck --input-file=%t.out.cir %s
+// XFAIL: *
 
 module  {
-  func.func @sw1(%arg0: i32, %arg1: i32) {
+  cir.func @sw1(%arg0: i32, %arg1: i32) {
     %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
     %1 = cir.alloca i32, cir.ptr <i32>, ["c", paraminit] {alignment = 4 : i64}
     cir.store %arg0, %0 : i32, cir.ptr <i32>
@@ -58,7 +59,7 @@ module  {
     cir.return
   }
 
-  func.func @l0() {
+  cir.func @l0() {
     cir.scope {
       cir.loop while(cond :  {
         %0 = cir.cst(true) : !cir.bool
@@ -78,7 +79,7 @@ module  {
     cir.return
   }
 
-  func.func @l1() {
+  cir.func @l1() {
     cir.scope {
       cir.loop while(cond :  {
         %0 = cir.cst(false) : !cir.bool
@@ -136,7 +137,7 @@ module  {
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-// CHECK: func @l0
+// CHECK: cir.func @l0
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
 // CHECK-NEXT:      cir.yield continue
@@ -149,7 +150,7 @@ module  {
 // CHECK-NEXT:  cir.return
 // CHECK-NEXT: }
 
-// CHECK: func @l1
+// CHECK: cir.func @l1
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
 // CHECK-NEXT:      cir.yield

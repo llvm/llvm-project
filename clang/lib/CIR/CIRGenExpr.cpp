@@ -26,7 +26,8 @@ using namespace cir;
 using namespace clang;
 using namespace mlir::cir;
 
-static mlir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM, GlobalDecl GD) {
+static mlir::cir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM,
+                                                  GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
   assert(!FD->hasAttr<WeakRefAttr>() && "NYI");
 
@@ -649,7 +650,7 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   assert(!CGM.getLangOpts().HIP && "HIP NYI");
 
   assert(!MustTailCall && "Must tail NYI");
-  mlir::func::CallOp callOP = nullptr;
+  mlir::cir::CallOp callOP = nullptr;
   RValue Call = buildCall(FnInfo, Callee, ReturnValue, Args, &callOP,
                           E == MustTailCall, E->getExprLoc());
 

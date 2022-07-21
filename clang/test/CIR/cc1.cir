@@ -3,7 +3,7 @@
 // XFAIL: *
 
 module {
-  func.func @foo() {
+  cir.func @foo() {
     cir.return
   }
 }

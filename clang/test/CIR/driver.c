@@ -12,7 +12,7 @@
 void foo() {}
 
 //      CIR: module  {
-// CIR-NEXT:   func @foo() {
+// CIR-NEXT:   cir.func @foo() {
 // CIR-NEXT:     cir.return
 // CIR-NEXT:   }
 // CIR-NEXT: }

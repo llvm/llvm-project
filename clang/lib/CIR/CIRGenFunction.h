@@ -327,7 +327,7 @@ public:
   const clang::Decl *CurCodeDecl;
   const CIRGenFunctionInfo *CurFnInfo;
   clang::QualType FnRetTy;
-  mlir::FuncOp CurFn = nullptr;
+  mlir::cir::FuncOp CurFn = nullptr;
 
   /// CXXStructorImplicitParamDecl - When generating code for a constructor or
   /// destructor, this will hold the implicit argument (e.g. VTT).
@@ -524,7 +524,7 @@ public:
   /// LLVM arguments and the types they were derived from.
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
-                   const CallArgList &Args, mlir::func::CallOp *callOrInvoke,
+                   const CallArgList &Args, mlir::cir::CallOp *callOrInvoke,
                    bool IsMustTail, clang::SourceLocation Loc);
   RValue buildCall(clang::QualType FnType, const CIRGenCallee &Callee,
                    const clang::CallExpr *E, ReturnValueSlot returnValue,
@@ -649,8 +649,8 @@ public:
                                        mlir::Type condType,
                                        mlir::cir::CaseAttr &caseEntry);
 
-  mlir::FuncOp generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
-                            const CIRGenFunctionInfo &FnInfo);
+  mlir::cir::FuncOp generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
+                                 const CIRGenFunctionInfo &FnInfo);
 
   clang::QualType buildFunctionArgList(clang::GlobalDecl GD,
                                        FunctionArgList &Args);
@@ -839,7 +839,7 @@ public:
   /// \param Loc       The location to be associated with the function.
   /// \param StartLoc  The location of the function body.
   void StartFunction(clang::GlobalDecl GD, clang::QualType RetTy,
-                     mlir::FuncOp Fn, const CIRGenFunctionInfo &FnInfo,
+                     mlir::cir::FuncOp Fn, const CIRGenFunctionInfo &FnInfo,
                      const FunctionArgList &Args, clang::SourceLocation Loc,
                      clang::SourceLocation StartLoc);
 
