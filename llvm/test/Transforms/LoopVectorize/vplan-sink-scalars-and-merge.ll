@@ -253,24 +253,7 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]> vp<[[BTC]]>
 ; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr ir<%A>, ir<0>
-; CHECK-NEXT: Successor(s): pred.load
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.load: {
-; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.if:
-; CHECK-NEXT:     REPLICATE ir<%lv> = load ir<%gep.A.uniform>
-; CHECK-NEXT:   Successor(s): pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): loop.0
-; CHECK-EMPTY:
-; CHECK-NEXT: loop.0:
+; CHECK-NEXT:   REPLICATE ir<%lv> = load ir<%gep.A.uniform>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ir<%iv>, ir<%k>
 ; CHECK-NEXT: Successor(s): loop.then
 ; CHECK-EMPTY:
@@ -286,7 +269,7 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.B> = getelementptr ir<%B>, vp<[[STEPS]]>
-; CHECK-NEXT:     REPLICATE store vp<[[PRED]]>, ir<%gep.B>
+; CHECK-NEXT:     REPLICATE store ir<%lv>, ir<%gep.B>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
