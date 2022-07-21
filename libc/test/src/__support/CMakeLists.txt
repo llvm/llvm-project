@@ -33,6 +33,17 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  integer_to_string_test
+  SUITE
+    libc_support_unittests
+  SRCS
+    integer_to_string_test.cpp
+  DEPENDS
+    libc.src.__support.integer_to_string
+    libc.src.__support.CPP.string_view
+)
+
+add_libc_unittest(
   arg_list_test
   SUITE
     libc_support_unittests
