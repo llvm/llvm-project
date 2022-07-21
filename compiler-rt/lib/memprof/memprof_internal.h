@@ -66,8 +66,6 @@ void *MemprofDoesNotSupportStaticLinkage();
 // memprof_thread.cpp
 MemprofThread *CreateMainThread();
 
-void ReadContextStack(void *context, uptr *stack, uptr *ssize);
-
 // Wrapper for TLS/TSD.
 void TSDInit(void (*destructor)(void *tsd));
 void *TSDGet();
