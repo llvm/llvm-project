@@ -201,13 +201,13 @@ define void @double_to_half(double %0) strictfp {
 ;
 ; X32-F16C-LABEL: double_to_half:
 ; X32-F16C:       ## %bb.0:
-; X32-F16C-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; X32-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X32-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X32-F16C-NEXT:    vmovd %xmm0, %eax
-; X32-F16C-NEXT:    movw %ax, _a
+; X32-F16C-NEXT:    subl $12, %esp
+; X32-F16C-NEXT:    .cfi_def_cfa_offset 16
+; X32-F16C-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X32-F16C-NEXT:    vmovq %xmm0, (%esp)
+; X32-F16C-NEXT:    calll ___truncdfhf2
+; X32-F16C-NEXT:    vpextrw $0, %xmm0, _a
+; X32-F16C-NEXT:    addl $12, %esp
 ; X32-F16C-NEXT:    retl
 ;
 ; X64-NOF16C-LABEL: double_to_half:
@@ -222,12 +222,11 @@ define void @double_to_half(double %0) strictfp {
 ;
 ; X64-F16C-LABEL: double_to_half:
 ; X64-F16C:       ## %bb.0:
-; X64-F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X64-F16C-NEXT:    vmovd %xmm0, %eax
-; X64-F16C-NEXT:    movw %ax, _a(%rip)
+; X64-F16C-NEXT:    pushq %rax
+; X64-F16C-NEXT:    .cfi_def_cfa_offset 16
+; X64-F16C-NEXT:    callq ___truncdfhf2
+; X64-F16C-NEXT:    vpextrw $0, %xmm0, _a(%rip)
+; X64-F16C-NEXT:    popq %rax
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f64(double %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   store half %2, ptr @a, align 2
