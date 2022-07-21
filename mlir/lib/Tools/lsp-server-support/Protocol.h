@@ -146,6 +146,10 @@ struct ClientCapabilities {
   /// Client supports hierarchical document symbols.
   /// textDocument.documentSymbol.hierarchicalDocumentSymbolSupport
   bool hierarchicalDocumentSymbol = false;
+
+  /// Client supports CodeAction return value for textDocument/codeAction.
+  /// textDocument.codeAction.codeActionLiteralSupport.
+  bool codeActionStructure = false;
 };
 
 /// Add support for JSON serialization.
@@ -374,6 +378,8 @@ struct Location {
 };
 
 /// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, Location &result,
+              llvm::json::Path path);
 llvm::json::Value toJSON(const Location &value);
 raw_ostream &operator<<(raw_ostream &os, const Location &value);
 
@@ -612,6 +618,7 @@ bool fromJSON(const llvm::json::Value &value, DocumentSymbolParams &result,
 /// This should be used to point to code locations that cause or related to a
 /// diagnostics, e.g. when duplicating a symbol in a scope.
 struct DiagnosticRelatedInformation {
+  DiagnosticRelatedInformation() = default;
   DiagnosticRelatedInformation(Location location, std::string message)
       : location(std::move(location)), message(std::move(message)) {}
 
@@ -622,6 +629,8 @@ struct DiagnosticRelatedInformation {
 };
 
 /// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value,
+              DiagnosticRelatedInformation &result, llvm::json::Path path);
 llvm::json::Value toJSON(const DiagnosticRelatedInformation &info);
 
 //===----------------------------------------------------------------------===//
@@ -666,6 +675,8 @@ struct Diagnostic {
 
 /// Add support for JSON serialization.
 llvm::json::Value toJSON(const Diagnostic &diag);
+bool fromJSON(const llvm::json::Value &value, Diagnostic &result,
+              llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // PublishDiagnosticsParams
@@ -1085,6 +1096,103 @@ llvm::json::Value toJSON(const InlayHint &);
 bool operator==(const InlayHint &lhs, const InlayHint &rhs);
 bool operator<(const InlayHint &lhs, const InlayHint &rhs);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, InlayHintKind value);
+
+//===----------------------------------------------------------------------===//
+// CodeActionContext
+//===----------------------------------------------------------------------===//
+
+struct CodeActionContext {
+  /// An array of diagnostics known on the client side overlapping the range
+  /// provided to the `textDocument/codeAction` request. They are provided so
+  /// that the server knows which errors are currently presented to the user for
+  /// the given range. There is no guarantee that these accurately reflect the
+  /// error state of the resource. The primary parameter to compute code actions
+  /// is the provided range.
+  std::vector<Diagnostic> diagnostics;
+
+  /// Requested kind of actions to return.
+  ///
+  /// Actions not of this kind are filtered out by the client before being
+  /// shown. So servers can omit computing them.
+  std::vector<std::string> only;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, CodeActionContext &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// CodeActionParams
+//===----------------------------------------------------------------------===//
+
+struct CodeActionParams {
+  /// The document in which the command was invoked.
+  TextDocumentIdentifier textDocument;
+
+  /// The range for which the command was invoked.
+  Range range;
+
+  /// Context carrying additional information.
+  CodeActionContext context;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, CodeActionParams &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// WorkspaceEdit
+//===----------------------------------------------------------------------===//
+
+struct WorkspaceEdit {
+  /// Holds changes to existing resources.
+  std::map<std::string, std::vector<TextEdit>> changes;
+
+  /// Note: "documentChanges" is not currently used because currently there is
+  /// no support for versioned edits.
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, WorkspaceEdit &result,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const WorkspaceEdit &value);
+
+//===----------------------------------------------------------------------===//
+// CodeAction
+//===----------------------------------------------------------------------===//
+
+/// A code action represents a change that can be performed in code, e.g. to fix
+/// a problem or to refactor code.
+///
+/// A CodeAction must set either `edit` and/or a `command`. If both are
+/// supplied, the `edit` is applied first, then the `command` is executed.
+struct CodeAction {
+  /// A short, human-readable, title for this code action.
+  std::string title;
+
+  /// The kind of the code action.
+  /// Used to filter code actions.
+  Optional<std::string> kind;
+  const static llvm::StringLiteral kQuickFix;
+  const static llvm::StringLiteral kRefactor;
+  const static llvm::StringLiteral kInfo;
+
+  /// The diagnostics that this code action resolves.
+  Optional<std::vector<Diagnostic>> diagnostics;
+
+  /// Marks this as a preferred action. Preferred actions are used by the
+  /// `auto fix` command and can be targeted by keybindings.
+  /// A quick fix should be marked preferred if it properly addresses the
+  /// underlying error. A refactoring should be marked preferred if it is the
+  /// most reasonable choice of actions to take.
+  bool isPreferred = false;
+
+  /// The workspace edit this code action performs.
+  Optional<WorkspaceEdit> edit;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const CodeAction &);
 
 } // namespace lsp
 } // namespace mlir

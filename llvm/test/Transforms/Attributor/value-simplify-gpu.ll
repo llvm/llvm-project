@@ -288,7 +288,7 @@ define internal void @level2a(i32* %addr) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
-; IS__TUNIT____-NEXT:    call void @use(i32 [[TMP0]], i32 [[TMP1]], i32 17) #[[ATTR6]]
+; IS__TUNIT____-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 17) #[[ATTR6]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nosync nounwind
@@ -298,7 +298,7 @@ define internal void @level2a(i32* %addr) {
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
 ; IS__CGSCC____-NEXT:    [[QQQQ2:%.*]] = load i32, i32* [[ADDR]], align 4
-; IS__CGSCC____-NEXT:    call void @use(i32 [[TMP0]], i32 [[TMP1]], i32 [[QQQQ2]]) #[[ATTR4]]
+; IS__CGSCC____-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 [[QQQQ2]]) #[[ATTR4]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -316,7 +316,7 @@ define internal void @level2b(i32* %addr) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
-; IS__TUNIT____-NEXT:    call void @use(i32 [[TMP0]], i32 [[TMP1]], i32 17) #[[ATTR6]]
+; IS__TUNIT____-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 17) #[[ATTR6]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nosync nounwind
@@ -326,7 +326,7 @@ define internal void @level2b(i32* %addr) {
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ADDR]], align 4
-; IS__CGSCC____-NEXT:    call void @use(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]]) #[[ATTR4]]
+; IS__CGSCC____-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 [[TMP2]]) #[[ATTR4]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:

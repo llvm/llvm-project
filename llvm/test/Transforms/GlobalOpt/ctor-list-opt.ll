@@ -27,6 +27,7 @@
 @Z = global i32 123		; <i32*> [#uses=1]
 @D = global double 0.000000e+00		; <double*> [#uses=1]
 @CTORGV = internal global i1 false		; <i1*> [#uses=2]
+@GA = global i32 0		; <i32*> [#uses=1]
 
 define internal void @CTOR1() {
 	ret void
@@ -129,4 +130,10 @@ define internal void @CTOR11() {
 ; CHECK: CTOR12
 define internal void @CTOR12() {
 	ret void
+}
+
+; CHECK-NOT: CTOR13
+define internal void @CTOR13() {
+  store atomic i32 123, i32* @GA seq_cst, align 4
+  ret void
 }

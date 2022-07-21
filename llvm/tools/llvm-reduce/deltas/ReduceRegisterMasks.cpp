@@ -42,7 +42,7 @@ static void reduceMasksInFunction(Oracle &O, MachineFunction &MF) {
 
         bool MadeChange = false;
         for (unsigned I = 0; I != NumRegs; ++I) {
-          if (OldRegMask[I / 32] >> I % 32) {
+          if (OldRegMask[I / 32] & (1u << (I % 32))) {
             if (O.shouldKeep())
               NewMask[I / 32] |= 1u << (I % 32);
           } else
