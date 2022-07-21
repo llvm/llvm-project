@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK-NOT: CTOR
 %ini = type { i32, void()*, i8* }
-@llvm.global_ctors = appending global [15 x %ini] [
+@llvm.global_ctors = appending global [16 x %ini] [
 	%ini { i32 65534, void ()* @CTOR1, i8* null },
 	%ini { i32 65535, void ()* @CTOR1, i8* null },
 	%ini { i32 65535, void ()* @CTOR1, i8* null },
@@ -13,6 +13,7 @@
 	%ini { i32 65535, void ()* @CTOR7, i8* null },
 	%ini { i32 65535, void ()* @CTOR8, i8* null },
 	%ini { i32 65535, void ()* @CTOR9, i8* null },
+	%ini { i32 65535, void ()* @CTOR14,i8* null },
 	%ini { i32 65536, void ()* @CTOR10_EXTERNAL, i8* null },
 	%ini { i32 65536, void ()* @CTOR11, i8* null },
 	%ini { i32 65537, void ()* @CTOR12, i8* null },
@@ -28,6 +29,7 @@
 @D = global double 0.000000e+00		; <double*> [#uses=1]
 @CTORGV = internal global i1 false		; <i1*> [#uses=2]
 @GA = global i32 0		; <i32*> [#uses=1]
+@GA14 = global i32 0		; <i32*> [#uses=1]
 
 define internal void @CTOR1() {
 	ret void
@@ -137,3 +139,12 @@ define internal void @CTOR13() {
   store atomic i32 123, i32* @GA seq_cst, align 4
   ret void
 }
+
+; CHECK-NOT: CTOR14
+define internal void @CTOR14() {
+  %X = load atomic i32, i32* @GA14 seq_cst, align 4
+  %Y = add i32 %X, 124
+  store i32 %Y, i32* @GA14
+  ret void
+}
+
