@@ -35,15 +35,8 @@ transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   sequence %arg0 {
     ^bb0(%arg1: !pdl.operation):
-      %0 = pdl_match @pdl_target in %arg1
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1, %loops:3 = transform.structured.tile %0 [16, 16, 16]
       %2 = transform.structured.promote %1 { operands_to_promote = [0, 2], force_full_tiles = [false, false] }
-  }
-
-  pdl.pattern @pdl_target : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = operation "linalg.matmul"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    rewrite %0 with "transform.dialect"
   }
 }

@@ -4,15 +4,8 @@ transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   sequence %arg0 {
     ^bb0(%arg1: !pdl.operation):
-      %0 = pdl_match @pdl_target in %arg1
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1, %loops:3 = transform.structured.tile %0 [4, 4, 4]
-  }
-
-  pdl.pattern @pdl_target : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = operation "linalg.matmul"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    rewrite %0 with "transform.dialect"
   }
 }
 
@@ -50,22 +43,9 @@ transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   sequence %arg0 {
     ^bb0(%arg1: !pdl.operation):
-      %0 = pdl_match @pdl_target in %arg1
-      %1 = pdl_match @func_call in %arg1
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      %1 = transform.structured.match ops{["func.call"]} in %arg1
       %2, %loops:3 = transform.structured.tile %0 [%1, %1, 4]
-  }
-
-  pdl.pattern @pdl_target : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = operation "linalg.matmul"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    rewrite %0 with "transform.dialect"
-  }
-  pdl.pattern @func_call : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = operation "func.call"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    rewrite %0 with "transform.dialect"
   }
 }
 

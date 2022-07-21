@@ -2,17 +2,10 @@
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  pdl.pattern @linalg_generic : benefit(1) {
-    %0 = pdl.operands
-    %1 = pdl.types
-    %2 = pdl.operation "linalg.generic"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
-    pdl.rewrite %2 with "transform.dialect"
-  }
-
   // This implements a 2D multisize tiling with target sizes [3, 10].
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
-    %0 = pdl_match @linalg_generic in %arg1
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3}
     %t:3 = transform.structured.multitile_sizes %0 { dimension = 1, target_size = 10}
     %2:2 = transform.structured.split %0 after %1#2 { dimension = 0 }
