@@ -66,6 +66,10 @@ versions of these toolchains.
 Changes to the LLVM IR
 ----------------------
 
+* LLVM now uses `opaque pointers <OpaquePointers.html>`__. This means that
+  different pointer types like ``i8*``, ``i32*`` or ``void()**`` are now
+  represented as a single ``ptr`` type. See the linked document for migration
+  instructions.
 * Renamed ``llvm.experimental.vector.extract`` intrinsic to ``llvm.vector.extract``.
 * Renamed ``llvm.experimental.vector.insert`` intrinsic to ``llvm.vector.insert``.
 * The constant expression variants of the following instructions have been
@@ -223,6 +227,19 @@ Changes to the C API
 
 * Add ``LLVMDeleteInstruction`` function which allows deleting instructions that
   are not inserted into a basic block.
+
+* As part of the opaque pointer migration, the following APIs are deprecated and
+  will be removed in the next release:
+  * ``LLVMBuildLoad`` -> ``LLVMBuildLoad2``
+  * ``LLVMBuildCall`` -> ``LLVMBuildCall2``
+  * ``LLVMBuildInvoke`` -> ``LLVMBuildInvoke2``
+  * ``LLVMBuildGEP`` -> ``LLVMBuildGEP2``
+  * ``LLVMBuildInBoundsGEP`` -> ``LLVMBuildInBoundsGEP2``
+  * ``LLVMBuildStructGEP`` -> ``LLVMBuildStructGEP2``
+  * ``LLVMBuildPtrDiff`` -> ``LLVMBuildPtrDiff2``
+  * ``LLVMConstGEP`` -> ``LLVMConstGEP2``
+  * ``LLVMConstInBoundsGEP`` -> ``LLVMConstInBoundsGEP2``
+  * ``LLVMAddAlias`` -> ``LLVMAddAlias2``
 
 * Refactor compression namespaces across the project, making way for a possible
   introduction of alternatives to zlib compression in the llvm toolchain.
