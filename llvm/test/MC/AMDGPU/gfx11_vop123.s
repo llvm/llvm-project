@@ -4271,14 +4271,28 @@ v_div_fmas_f64 v[5:6], v[1:2], v[2:3], v[3:4] div:2
 v_dot2_f16_f16 v0, v1, v2, v3
 // GFX11: encoding: [0x00,0x00,0x66,0xd6,0x01,0x05,0x0e,0x04]
 
+v_dot2_f16_f16 v0, v1, v2, v3 op_sel:[1,1,0,0]
+// W32-ERR: error: invalid op_sel operand
+// W64-ERR: error: invalid op_sel operand
+
 v_dot2_f16_f16 v0, v1, v2, v3 op_sel:[0,0,1,1]
 // GFX11: encoding: [0x00,0x60,0x66,0xd6,0x01,0x05,0x0e,0x04]
+
+v_dot2_f16_f16 v0, |v1|, -v2, -|v3| op_sel:[0,0,1,1]
+// GFX11: encoding: [0x00,0x65,0x66,0xd6,0x01,0x05,0x0e,0xc4]
 
 v_dot2_bf16_bf16 v0, v1, v2, v3
 // GFX11: encoding: [0x00,0x00,0x67,0xd6,0x01,0x05,0x0e,0x04]
 
+v_dot2_bf16_bf16 v0, v1, v2, v3 op_sel:[1,1,0,0]
+// W32-ERR: error: invalid op_sel operand
+// W64-ERR: error: invalid op_sel operand
+
 v_dot2_bf16_bf16 v0, v1, v2, v3 op_sel:[0,0,1,1]
 // GFX11: encoding: [0x00,0x60,0x67,0xd6,0x01,0x05,0x0e,0x04]
+
+v_dot2_bf16_bf16 v0, |v1|, -v2, -|v3| op_sel:[0,0,1,1]
+// GFX11: encoding: [0x00,0x65,0x67,0xd6,0x01,0x05,0x0e,0xc4]
 
 v_dot2c_f32_f16_e32 v5, v1, v2
 // GFX11: encoding: [0x01,0x05,0x0a,0x04]
