@@ -62,6 +62,17 @@ char **GetEnviron();
 
 void RestrictMemoryToMaxAddress(uptr max_address);
 
+using ThreadEventCallback = void (*)(uptr thread);
+using ThreadCreateEventCallback = void (*)(uptr thread, bool gcd_worker);
+struct ThreadEventCallbacks {
+  ThreadCreateEventCallback create;
+  ThreadEventCallback start;
+  ThreadEventCallback terminate;
+  ThreadEventCallback destroy;
+};
+
+void InstallPthreadIntrospectionHook(const ThreadEventCallbacks &callbacks);
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_APPLE
