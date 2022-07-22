@@ -1,36 +1,74 @@
-; RUN: llc --mtriple=loongarch32 --mattr=+d < %s | FileCheck %s --check-prefixes=ALL,LA32
-; RUN: llc --mtriple=loongarch64 --mattr=+d < %s | FileCheck %s --check-prefixes=ALL,LA64
+; RUN: llc --mtriple=loongarch32 --mattr=+d --relocation-model=static < %s | FileCheck %s --check-prefixes=ALL,LA32NOPIC,LA32
+; RUN: llc --mtriple=loongarch32 --mattr=+d --relocation-model=pic < %s | FileCheck %s --check-prefixes=ALL,LA32PIC,LA32
+; RUN: llc --mtriple=loongarch64 --mattr=+d --relocation-model=static < %s | FileCheck %s --check-prefixes=ALL,LA64NOPIC,LA64
+; RUN: llc --mtriple=loongarch64 --mattr=+d --relocation-model=pic < %s | FileCheck %s --check-prefixes=ALL,LA64PIC,LA64
 
-;; Check load from and store to a global mem.
-@G = global i32 0
+;; Check load from and store to global variables.
+@G = dso_local global i32 zeroinitializer, align 4
+@arr = dso_local global [10 x i32] zeroinitializer, align 4
 
-define i32 @load_store_global(i32 %a) nounwind {
-; LA32-LABEL: load_store_global:
-; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a1, G
-; LA32-NEXT:    addi.w $a2, $a1, G
-; LA32-NEXT:    ld.w $a1, $a2, 0
-; LA32-NEXT:    st.w $a0, $a2, 0
-; LA32-NEXT:    ld.w $a3, $a2, 36
-; LA32-NEXT:    st.w $a0, $a2, 36
-; LA32-NEXT:    move $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
-;
-; LA64-LABEL: load_store_global:
-; LA64:       # %bb.0:
-; LA64-NEXT:    pcalau12i $a1, G
-; LA64-NEXT:    addi.d $a2, $a1, G
-; LA64-NEXT:    ld.w $a1, $a2, 0
-; LA64-NEXT:    st.w $a0, $a2, 0
-; LA64-NEXT:    ld.w $a3, $a2, 36
-; LA64-NEXT:    st.w $a0, $a2, 36
-; LA64-NEXT:    move $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
-  %1 = load volatile i32, ptr @G
-  store i32 %a, ptr @G
-  %2 = getelementptr i32, ptr @G, i32 9
-  %3 = load volatile i32, ptr %2
-  store i32 %a, ptr %2
+define i32 @load_store_global() nounwind {
+; ALL-LABEL:      load_store_global:
+; ALL:            # %bb.0:
+
+; LA32NOPIC-NEXT:   pcalau12i $a0, G
+; LA32NOPIC-NEXT:   addi.w $a1, $a0, G
+; LA32PIC-NEXT:     pcalau12i $a0, .LG$local
+; LA32PIC-NEXT:     addi.w $a1, $a0, .LG$local
+; LA32-NEXT:        ld.w $a0, $a1, 0
+; LA32-NEXT:        addi.w $a0, $a0, 1
+; LA32-NEXT:        st.w $a0, $a1, 0
+
+; LA64NOPIC-NEXT:   pcalau12i $a0, G
+; LA64NOPIC-NEXT:   addi.d $a1, $a0, G
+; LA64PIC-NEXT:     pcalau12i $a0, .LG$local
+; LA64PIC-NEXT:     addi.d $a1, $a0, .LG$local
+; LA64-NEXT:        ld.w $a0, $a1, 0
+; LA64-NEXT:        addi.d $a0, $a0, 1
+; LA64-NEXT:        st.w $a0, $a1, 0
+
+; ALL-NEXT:         jirl $zero, $ra, 0
+
+  %v = load i32, ptr @G
+  %sum = add i32 %v, 1
+  store i32 %sum, ptr @G
+  ret i32 %sum
+}
+
+define i32 @load_store_global_array(i32 %a) nounwind {
+; ALL-LABEL: load_store_global_array:
+; ALL:       # %bb.0:
+
+; LA32NOPIC-NEXT:   pcalau12i $a1, arr
+; LA32NOPIC-NEXT:   addi.w $a2, $a1, arr
+; LA32PIC-NEXT:     pcalau12i $a1, .Larr$local
+; LA32PIC-NEXT:     addi.w $a2, $a1, .Larr$local
+; LA32-NEXT:        ld.w $a1, $a2, 0
+; LA32-NEXT:        st.w $a0, $a2, 0
+; LA32NOPIC-NEXT:   ld.w $a3, $a2, 0
+; LA32NOPIC-NEXT:   st.w $a0, $a2, 0
+; LA32PIC-NEXT:     ld.w $a3, $a2, 36
+; LA32PIC-NEXT:     st.w $a0, $a2, 36
+
+; LA64NOPIC-NEXT:   pcalau12i $a1, arr
+; LA64NOPIC-NEXT:   addi.d $a2, $a1, arr
+; LA64PIC-NEXT:     pcalau12i $a1, .Larr$local
+; LA64PIC-NEXT:     addi.d $a2, $a1, .Larr$local
+; LA64-NEXT:        ld.w $a1, $a2, 0
+; LA64-NEXT:        st.w $a0, $a2, 0
+; LA64NOPIC-NEXT:   ld.w $a3, $a2, 0
+; LA64NOPIC-NEXT:   st.w $a0, $a2, 0
+; LA64PIC-NEXT:     ld.w $a3, $a2, 36
+; LA64PIC-NEXT:     st.w $a0, $a2, 36
+
+; ALL-NEXT:         move $a0, $a1
+; ALL-NEXT:         jirl $zero, $ra, 0
+
+  %1 = load volatile i32, ptr @arr, align 4
+  store i32 %a, ptr @arr, align 4
+  %2 = getelementptr [10 x i32], ptr @arr, i32 0, i32 9
+  %3 = load volatile i32, ptr %2, align 4
+  store i32 %a, ptr %2, align 4
   ret i32 %1
 }
 
