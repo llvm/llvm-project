@@ -92,8 +92,8 @@ constexpr bool all_the_algorithms()
 #endif
     (void)std::ranges::equal(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::equal(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::equal_range(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::equal_range(a, value, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::equal_range(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::equal_range(a, value, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find(first, last, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find(a, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_end(first, last, first2, mid2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);

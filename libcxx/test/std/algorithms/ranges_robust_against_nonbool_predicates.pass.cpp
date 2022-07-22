@@ -80,7 +80,7 @@ constexpr bool test_all() {
   test(std::ranges::partition_point, in, unary_pred);
   test(std::ranges::lower_bound, in, x, binary_pred);
   test(std::ranges::upper_bound, in, x, binary_pred);
-  //test(std::ranges::equal_range, in, x, binary_pred);
+  test(std::ranges::equal_range, in, x, binary_pred);
   test(std::ranges::binary_search, in, x, binary_pred);
 
   // min
