@@ -134,8 +134,8 @@ define i32 @main() nounwind  {
 ; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @f(i32 1, i64 2) #[[ATTR2:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @g(i32 1, i64 2) #[[ATTR2]]
+; IS__CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @f(i32 noundef 1, i64 noundef 2) #[[ATTR2:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @g(i32 noundef 1, i64 noundef 2) #[[ATTR2]]
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[A]]
 ;

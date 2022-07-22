@@ -1702,10 +1702,20 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       auto &Context = Call->getContext();
       auto &DL = Call->getModule()->getDataLayout();
       auto GetBaseAndOffset = [&](Value *Derived) {
-        assert(PointerToBase.count(Derived));
+        Value *Base = nullptr;
+        // Optimizations in unreachable code might substitute the real pointer
+        // with undef, poison or null-derived constant. Return null base for
+        // them to be consistent with the handling in the main algorithm in
+        // findBaseDefiningValue.
+        if (isa<Constant>(Derived))
+          Base =
+              ConstantPointerNull::get(cast<PointerType>(Derived->getType()));
+        else {
+          assert(PointerToBase.count(Derived));
+          Base = PointerToBase.find(Derived)->second;
+        }
         unsigned AddressSpace = Derived->getType()->getPointerAddressSpace();
         unsigned IntPtrSize = DL.getPointerSizeInBits(AddressSpace);
-        Value *Base = PointerToBase.find(Derived)->second;
         Value *Base_int = Builder.CreatePtrToInt(
             Base, Type::getIntNTy(Context, IntPtrSize));
         Value *Derived_int = Builder.CreatePtrToInt(

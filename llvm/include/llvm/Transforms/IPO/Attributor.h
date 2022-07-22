@@ -4880,8 +4880,7 @@ struct AAFunctionReachability
   /// Can  \p Inst reach \p Fn.
   /// See also AA::isPotentiallyReachable.
   virtual bool instructionCanReach(Attributor &A, const Instruction &Inst,
-                                   const Function &Fn,
-                                   bool UseBackwards = true) const = 0;
+                                   const Function &Fn) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAFunctionReachability &createForPosition(const IRPosition &IRP,
@@ -4913,19 +4912,36 @@ struct AAPointerInfo : public AbstractAttribute {
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}
 
   enum AccessKind {
-    AK_READ = 1 << 0,
-    AK_WRITE = 1 << 1,
-    AK_READ_WRITE = AK_READ | AK_WRITE,
+    // First two bits to distinguish may and must accesses
+    AK_MUST = 1 << 0,
+    AK_MAY = 1 << 1,
+
+    // Then two bits for read and write. These are not exclusive.
+    AK_R = 1 << 2,
+    AK_W = 1 << 3,
+    AK_RW = AK_R | AK_W,
+
+    // Helper for easy access.
+    AK_MAY_READ = AK_MAY | AK_R,
+    AK_MAY_WRITE = AK_MAY | AK_W,
+    AK_MAY_READ_WRITE = AK_MAY | AK_R | AK_W,
+    AK_MUST_READ = AK_MUST | AK_R,
+    AK_MUST_WRITE = AK_MUST | AK_W,
+    AK_MUST_READ_WRITE = AK_MUST | AK_R | AK_W,
   };
 
   /// An access description.
   struct Access {
     Access(Instruction *I, Optional<Value *> Content, AccessKind Kind, Type *Ty)
-        : LocalI(I), RemoteI(I), Content(Content), Kind(Kind), Ty(Ty) {}
+        : LocalI(I), RemoteI(I), Content(Content), Kind(Kind), Ty(Ty) {
+      verify();
+    }
     Access(Instruction *LocalI, Instruction *RemoteI, Optional<Value *> Content,
            AccessKind Kind, Type *Ty)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content), Kind(Kind),
-          Ty(Ty) {}
+          Ty(Ty) {
+      verify();
+    }
     Access(const Access &Other) = default;
     Access(const Access &&Other)
         : LocalI(Other.LocalI), RemoteI(Other.RemoteI), Content(Other.Content),
@@ -4946,14 +4962,22 @@ struct AAPointerInfo : public AbstractAttribute {
       return *this;
     }
 
+    void verify() {
+      assert(isMustAccess() + isMayAccess() == 1 &&
+             "Expect must or may access, not both.");
+    }
+
     /// Return the access kind.
     AccessKind getKind() const { return Kind; }
 
     /// Return true if this is a read access.
-    bool isRead() const { return Kind & AK_READ; }
+    bool isRead() const { return Kind & AK_R; }
 
     /// Return true if this is a write access.
-    bool isWrite() const { return Kind & AK_WRITE; }
+    bool isWrite() const { return Kind & AK_W; }
+
+    bool isMustAccess() const { return Kind & AK_MUST; }
+    bool isMayAccess() const { return Kind & AK_MAY; }
 
     /// Return the instruction that causes the access with respect to the local
     /// scope of the associated attribute.
@@ -5057,10 +5081,14 @@ struct AAPointerInfo : public AbstractAttribute {
   /// return true if all such accesses were known and the callback returned true
   /// for all of them, false otherwise. In contrast to forallInterferingAccesses
   /// this function will perform reasoning to exclude write accesses that cannot
-  /// affect the load even if they on the surface look as if they would.
-  virtual bool forallInterferingAccesses(
-      Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
-      function_ref<bool(const Access &, bool)> CB) const = 0;
+  /// affect the load even if they on the surface look as if they would. The
+  /// flag \p HasBeenWrittenTo will be set to true if we know that \p I does not
+  /// read the intial value of the underlying memory.
+  virtual bool
+  forallInterferingAccesses(Attributor &A, const AbstractAttribute &QueryingAA,
+                            Instruction &I,
+                            function_ref<bool(const Access &, bool)> CB,
+                            bool &HasBeenWrittenTo) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
   static bool classof(const AbstractAttribute *AA) {

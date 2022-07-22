@@ -19,6 +19,12 @@ class ForestNode;
 class TokenStream;
 class LRTable;
 
+struct GuardParams {
+  llvm::ArrayRef<const ForestNode *> RHS;
+  const TokenStream &Tokens;
+  // FIXME: use the index of Tokens.
+  SymbolID Lookahead;
+};
 // A guard restricts when a grammar rule can be used.
 //
 // The GLR parser will use the guard to determine whether a rule reduction will
@@ -26,8 +32,7 @@ class LRTable;
 // `virt-specifier := IDENTIFIER` only if the identifier's text is 'override`.
 //
 // Return true if the guard is satisfied.
-using RuleGuard = llvm::function_ref<bool(
-    llvm::ArrayRef<const ForestNode *> RHS, const TokenStream &)>;
+using RuleGuard = llvm::function_ref<bool(const GuardParams &)>;
 
 // A recovery strategy determines a region of code to skip when parsing fails.
 //
