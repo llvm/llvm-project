@@ -87,7 +87,7 @@ static void printArHelp(StringRef ToolName) {
     =gnu                -   gnu
     =darwin             -   darwin
     =bsd                -   bsd
-    =aix                -   aix (big archive)
+    =bigarchive         -   big archive (AIX OS)
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
   --output              - the directory to extract archive members to
