@@ -23,6 +23,13 @@
 
 namespace clang {
 namespace dataflow {
+
+/// Returns a string representation of a boolean assignment to true or false.
+std::string debugString(Solver::Result::Assignment Assignment);
+
+/// Returns a string representation of the result status of a SAT check.
+std::string debugString(Solver::Result::Status Status);
+
 /// Returns a string representation for the boolean value `B`.
 ///
 /// Atomic booleans appearing in the boolean value `B` are assigned to labels
