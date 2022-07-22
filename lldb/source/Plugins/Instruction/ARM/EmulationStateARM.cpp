@@ -251,22 +251,32 @@ bool EmulationStateARM::WritePseudoRegister(
                                                 reg_value.GetAsUInt64());
 }
 
-bool EmulationStateARM::CompareState(EmulationStateARM &other_state) {
+bool EmulationStateARM::CompareState(EmulationStateARM &other_state,
+                                     Stream *out_stream) {
   bool match = true;
 
   for (int i = 0; match && i < 17; ++i) {
-    if (m_gpr[i] != other_state.m_gpr[i])
+    if (m_gpr[i] != other_state.m_gpr[i]) {
       match = false;
+      out_stream->Printf("r%d: 0x%x != 0x%x\n", i, m_gpr[i],
+                         other_state.m_gpr[i]);
+    }
   }
 
   for (int i = 0; match && i < 32; ++i) {
-    if (m_vfp_regs.s_regs[i] != other_state.m_vfp_regs.s_regs[i])
+    if (m_vfp_regs.s_regs[i] != other_state.m_vfp_regs.s_regs[i]) {
       match = false;
+      out_stream->Printf("s%d: 0x%x != 0x%x\n", i, m_vfp_regs.s_regs[i],
+                         other_state.m_vfp_regs.s_regs[i]);
+    }
   }
 
   for (int i = 0; match && i < 16; ++i) {
-    if (m_vfp_regs.d_regs[i] != other_state.m_vfp_regs.d_regs[i])
+    if (m_vfp_regs.d_regs[i] != other_state.m_vfp_regs.d_regs[i]) {
       match = false;
+      out_stream->Printf("d%d: 0x%lx != 0x%lx\n", i + 16, m_vfp_regs.d_regs[i],
+                         other_state.m_vfp_regs.d_regs[i]);
+    }
   }
 
   return match;
