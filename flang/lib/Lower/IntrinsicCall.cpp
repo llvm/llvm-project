@@ -510,6 +510,7 @@ struct IntrinsicLibrary {
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genLeadz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -527,6 +528,8 @@ struct IntrinsicLibrary {
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genPopcnt(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genPoppar(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
@@ -547,6 +550,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTranspose(mlir::Type,
@@ -793,6 +797,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genLbound,
      {{{"array", asInquired}, {"dim", asValue}, {"kind", asValue}}},
      /*isElemental=*/false},
+    {"leadz", &I::genLeadz},
     {"len",
      &I::genLen,
      {{{"string", asInquired}, {"kind", asValue}}},
@@ -857,6 +862,8 @@ static constexpr IntrinsicHandler handlers[]{
        {"mask", asBox},
        {"vector", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"popcnt", &I::genPopcnt},
+    {"poppar", &I::genPoppar},
     {"present",
      &I::genPresent,
      {{{"a", asInquired}}},
@@ -925,6 +932,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genSystemClock,
      {{{"count", asAddr}, {"count_rate", asAddr}, {"count_max", asAddr}}},
      /*isElemental=*/false},
+    {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
      {{{"source", asAddr}, {"mold", asAddr}, {"size", asValue}}},
@@ -3201,6 +3209,17 @@ mlir::Value IntrinsicLibrary::genIshftc(mlir::Type resultType,
   return builder.create<mlir::arith::SelectOp>(loc, shiftIsNop, I, res);
 }
 
+// LEADZ
+mlir::Value IntrinsicLibrary::genLeadz(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  mlir::Value result =
+      builder.create<mlir::math::CountLeadingZerosOp>(loc, args);
+
+  return builder.createConvert(loc, resultType, result);
+}
+
 // LEN
 // Note that this is only used for an unrestricted intrinsic LEN call.
 // Other uses of LEN are rewritten as descriptor inquiries by the front-end.
@@ -3497,6 +3516,27 @@ IntrinsicLibrary::genPack(mlir::Type resultType,
                            "unexpected result for PACK");
 }
 
+// POPCNT
+mlir::Value IntrinsicLibrary::genPopcnt(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  mlir::Value count = builder.create<mlir::math::CtPopOp>(loc, args);
+
+  return builder.createConvert(loc, resultType, count);
+}
+
+// POPPAR
+mlir::Value IntrinsicLibrary::genPoppar(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  mlir::Value count = genPopcnt(resultType, args);
+  mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
+
+  return builder.create<mlir::arith::AndIOp>(loc, count, one);
+}
+
 // PRESENT
 fir::ExtendedValue
 IntrinsicLibrary::genPresent(mlir::Type,
@@ -3774,6 +3814,17 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, size);
       })
       .getResults()[0];
+}
+
+// TRAILZ
+mlir::Value IntrinsicLibrary::genTrailz(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  mlir::Value result =
+      builder.create<mlir::math::CountTrailingZerosOp>(loc, args);
+
+  return builder.createConvert(loc, resultType, result);
 }
 
 static bool hasDefaultLowerBound(const fir::ExtendedValue &exv) {
