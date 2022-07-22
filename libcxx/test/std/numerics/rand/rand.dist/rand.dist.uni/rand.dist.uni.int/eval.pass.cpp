@@ -32,14 +32,12 @@
 #endif
 
 template <class T>
-T sqr(T x)
-{
+T sqr(T x) {
     return x * x;
 }
 
 template <class ResultType, class EngineType>
-void test_statistics(ResultType a, ResultType b)
-{
+void test_statistics(ResultType a, ResultType b) {
     ASSERT_SAME_TYPE(typename std::uniform_int_distribution<ResultType>::result_type, ResultType);
 
     EngineType g;
@@ -94,8 +92,7 @@ void test_statistics(ResultType a, ResultType b)
 }
 
 template <class ResultType, class EngineType>
-void test_statistics()
-{
+void test_statistics() {
     test_statistics<ResultType, EngineType>(0, std::numeric_limits<ResultType>::max());
 }
 
@@ -125,13 +122,9 @@ int main(int, char**)
 
     test_statistics<short, std::minstd_rand0>(SHRT_MIN, SHRT_MAX);
 
-    // http://eel.is/c++draft/rand.req#genl-1.5
-    // The effect of instantiating a template that has a parameter
-    // named IntType is undefined unless the corresponding template
-    // argument is cv-unqualified and is one of short, int, long,
-    // long long, unsigned short, unsigned int, unsigned long,
-    // or unsigned long long.
-    // (We support __int128 as an extension.)
+#if defined(_LIBCPP_VERSION) // extension
+    test_statistics<int8_t, std::minstd_rand0>();
+    test_statistics<uint8_t, std::minstd_rand0>();
 
 #if !defined(TEST_HAS_NO_INT128) && !defined(TEST_BUGGY_I128_FP)
     test_statistics<__int128_t, std::minstd_rand0>();
@@ -141,6 +134,7 @@ int main(int, char**)
     test_statistics<__int128_t, std::minstd_rand0>(0, UINT64_MAX);
     test_statistics<__int128_t, std::minstd_rand0>(std::numeric_limits<__int128_t>::min(), std::numeric_limits<__int128_t>::max());
     test_statistics<__uint128_t, std::minstd_rand0>(0, UINT64_MAX);
+#endif
 #endif
 
     return 0;

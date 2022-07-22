@@ -23,11 +23,8 @@
 #include "test_macros.h"
 
 template <class T>
-inline
-T
-sqr(T x)
-{
-    return x * x;
+T sqr(T x) {
+  return x * x;
 }
 
 void test_bad_ranges() {
@@ -91,126 +88,149 @@ void test_bad_ranges() {
   }
 }
 
-int main(int, char**)
-{
+template <class T>
+void tests() {
+  {
+    typedef std::poisson_distribution<T> D;
+    typedef std::minstd_rand G;
+    G g;
+    D d(2);
+    const int N = 100000;
+    std::vector<double> u;
+    for (int i = 0; i < N; ++i)
     {
-        typedef std::poisson_distribution<> D;
-        typedef std::minstd_rand G;
-        G g;
-        D d(2);
-        const int N = 100000;
-        std::vector<double> u;
-        for (int i = 0; i < N; ++i)
-        {
-            D::result_type v = d(g);
-            assert(d.min() <= v && v <= d.max());
-            u.push_back(v);
-        }
-        double mean = std::accumulate(u.begin(), u.end(), 0.0) / u.size();
-        double var = 0;
-        double skew = 0;
-        double kurtosis = 0;
-        for (unsigned i = 0; i < u.size(); ++i)
-        {
-            double dbl = (u[i] - mean);
-            double d2 = sqr(dbl);
-            var += d2;
-            skew += dbl * d2;
-            kurtosis += d2 * d2;
-        }
-        var /= u.size();
-        double dev = std::sqrt(var);
-        skew /= u.size() * dev * var;
-        kurtosis /= u.size() * var * var;
-        kurtosis -= 3;
-        double x_mean = d.mean();
-        double x_var = d.mean();
-        double x_skew = 1 / std::sqrt(x_var);
-        double x_kurtosis = 1 / x_var;
-        assert(std::abs((mean - x_mean) / x_mean) < 0.01);
-        assert(std::abs((var - x_var) / x_var) < 0.01);
-        assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
+      typename D::result_type v = d(g);
+      assert(d.min() <= v && v <= d.max());
+      u.push_back(v);
     }
+    double mean = std::accumulate(u.begin(), u.end(), 0.0) / u.size();
+    double var = 0;
+    double skew = 0;
+    double kurtosis = 0;
+    for (unsigned i = 0; i < u.size(); ++i)
     {
-        typedef std::poisson_distribution<> D;
-        typedef std::minstd_rand G;
-        G g;
-        D d(0.75);
-        const int N = 100000;
-        std::vector<double> u;
-        for (int i = 0; i < N; ++i)
-        {
-            D::result_type v = d(g);
-            assert(d.min() <= v && v <= d.max());
-            u.push_back(v);
-        }
-        double mean = std::accumulate(u.begin(), u.end(), 0.0) / u.size();
-        double var = 0;
-        double skew = 0;
-        double kurtosis = 0;
-        for (unsigned i = 0; i < u.size(); ++i)
-        {
-            double dbl = (u[i] - mean);
-            double d2 = sqr(dbl);
-            var += d2;
-            skew += dbl * d2;
-            kurtosis += d2 * d2;
-        }
-        var /= u.size();
-        double dev = std::sqrt(var);
-        skew /= u.size() * dev * var;
-        kurtosis /= u.size() * var * var;
-        kurtosis -= 3;
-        double x_mean = d.mean();
-        double x_var = d.mean();
-        double x_skew = 1 / std::sqrt(x_var);
-        double x_kurtosis = 1 / x_var;
-        assert(std::abs((mean - x_mean) / x_mean) < 0.01);
-        assert(std::abs((var - x_var) / x_var) < 0.01);
-        assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.04);
+      double dbl = (u[i] - mean);
+      double d2 = sqr(dbl);
+      var += d2;
+      skew += dbl * d2;
+      kurtosis += d2 * d2;
     }
+    var /= u.size();
+    double dev = std::sqrt(var);
+    skew /= u.size() * dev * var;
+    kurtosis /= u.size() * var * var;
+    kurtosis -= 3;
+    double x_mean = d.mean();
+    double x_var = d.mean();
+    double x_skew = 1 / std::sqrt(x_var);
+    double x_kurtosis = 1 / x_var;
+    assert(std::abs((mean - x_mean) / x_mean) < 0.01);
+    assert(std::abs((var - x_var) / x_var) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
+  }
+  {
+    typedef std::poisson_distribution<T> D;
+    typedef std::minstd_rand G;
+    G g;
+    D d(0.75);
+    const int N = 100000;
+    std::vector<double> u;
+    for (int i = 0; i < N; ++i)
     {
-        typedef std::poisson_distribution<> D;
-        typedef std::mt19937 G;
-        G g;
-        D d(20);
-        const int N = 1000000;
-        std::vector<double> u;
-        for (int i = 0; i < N; ++i)
-        {
-            D::result_type v = d(g);
-            assert(d.min() <= v && v <= d.max());
-            u.push_back(v);
-        }
-        double mean = std::accumulate(u.begin(), u.end(), 0.0) / u.size();
-        double var = 0;
-        double skew = 0;
-        double kurtosis = 0;
-        for (unsigned i = 0; i < u.size(); ++i)
-        {
-            double dbl = (u[i] - mean);
-            double d2 = sqr(dbl);
-            var += d2;
-            skew += dbl * d2;
-            kurtosis += d2 * d2;
-        }
-        var /= u.size();
-        double dev = std::sqrt(var);
-        skew /= u.size() * dev * var;
-        kurtosis /= u.size() * var * var;
-        kurtosis -= 3;
-        double x_mean = d.mean();
-        double x_var = d.mean();
-        double x_skew = 1 / std::sqrt(x_var);
-        double x_kurtosis = 1 / x_var;
-        assert(std::abs((mean - x_mean) / x_mean) < 0.01);
-        assert(std::abs((var - x_var) / x_var) < 0.01);
-        assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+      typename D::result_type v = d(g);
+      assert(d.min() <= v && v <= d.max());
+      u.push_back(v);
     }
+    double mean = std::accumulate(u.begin(), u.end(), 0.0) / u.size();
+    double var = 0;
+    double skew = 0;
+    double kurtosis = 0;
+    for (unsigned i = 0; i < u.size(); ++i)
+    {
+      double dbl = (u[i] - mean);
+      double d2 = sqr(dbl);
+      var += d2;
+      skew += dbl * d2;
+      kurtosis += d2 * d2;
+    }
+    var /= u.size();
+    double dev = std::sqrt(var);
+    skew /= u.size() * dev * var;
+    kurtosis /= u.size() * var * var;
+    kurtosis -= 3;
+    double x_mean = d.mean();
+    double x_var = d.mean();
+    double x_skew = 1 / std::sqrt(x_var);
+    double x_kurtosis = 1 / x_var;
+    assert(std::abs((mean - x_mean) / x_mean) < 0.01);
+    assert(std::abs((var - x_var) / x_var) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.04);
+  }
+  {
+    typedef std::poisson_distribution<T> D;
+    typedef std::mt19937 G;
+    G g;
+    D d(20);
+    const int N = 1000000;
+    std::vector<double> u;
+    for (int i = 0; i < N; ++i)
+    {
+      typename D::result_type v = d(g);
+      assert(d.min() <= v && v <= d.max());
+      u.push_back(v);
+    }
+    double mean = std::accumulate(u.begin(), u.end(), 0.0) / u.size();
+    double var = 0;
+    double skew = 0;
+    double kurtosis = 0;
+    for (unsigned i = 0; i < u.size(); ++i)
+    {
+      double dbl = (u[i] - mean);
+      double d2 = sqr(dbl);
+      var += d2;
+      skew += dbl * d2;
+      kurtosis += d2 * d2;
+    }
+    var /= u.size();
+    double dev = std::sqrt(var);
+    skew /= u.size() * dev * var;
+    kurtosis /= u.size() * var * var;
+    kurtosis -= 3;
+    double x_mean = d.mean();
+    double x_var = d.mean();
+    double x_skew = 1 / std::sqrt(x_var);
+    double x_kurtosis = 1 / x_var;
+    assert(std::abs((mean - x_mean) / x_mean) < 0.01);
+    assert(std::abs((var - x_var) / x_var) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+  }
+}
 
-    test_bad_ranges();
-    return 0;
+int main(int, char**) {
+  test_bad_ranges();
+
+  tests<short>();
+  tests<int>();
+  tests<long>();
+  tests<long long>();
+
+  tests<unsigned short>();
+  tests<unsigned int>();
+  tests<unsigned long>();
+  tests<unsigned long long>();
+
+#if defined(_LIBCPP_VERSION) // extension
+  // TODO: std::poisson_distribution currently doesn't work reliably with small types.
+  // tests<int8_t>();
+  // tests<uint8_t>();
+#if !defined(TEST_HAS_NO_INT128)
+  tests<__int128_t>();
+  tests<__uint128_t>();
+#endif
+#endif
+
+  return 0;
 }

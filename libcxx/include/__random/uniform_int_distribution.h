@@ -159,7 +159,7 @@ __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
 template<class _IntType = int>
 class uniform_int_distribution
 {
-    static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be an integer type larger than char");
+    static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be a supported integer type");
 public:
     // types
     typedef _IntType result_type;
