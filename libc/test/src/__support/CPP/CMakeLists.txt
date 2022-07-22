@@ -80,3 +80,14 @@ add_libc_unittest(
   DEPENDS
     libc.src.__support.CPP.blockstore
 )
+
+add_libc_unittest(
+  stringstream_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    stringstream_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.array_ref
+    libc.src.__support.CPP.stringstream
+)
