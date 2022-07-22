@@ -2520,7 +2520,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
       continue;
 
     // Cannot make a deduction guide when unparsed arguments are present.
-    if (std::any_of(CD->param_begin(), CD->param_end(), [](ParmVarDecl *P) {
+    if (llvm::any_of(CD->parameters(), [](ParmVarDecl *P) {
           return !P || P->hasUnparsedDefaultArg();
         }))
       continue;

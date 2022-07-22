@@ -15400,7 +15400,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
          pty->getKind() == BuiltinType::Overload)) {
       auto *OE = dyn_cast<OverloadExpr>(LHSExpr);
       if (OE && !OE->hasTemplateKeyword() && !OE->hasExplicitTemplateArgs() &&
-          std::any_of(OE->decls_begin(), OE->decls_end(), [](NamedDecl *ND) {
+          llvm::any_of(OE->decls(), [](NamedDecl *ND) {
             return isa<FunctionTemplateDecl>(ND);
           })) {
         Diag(OE->getQualifier() ? OE->getQualifierLoc().getBeginLoc()
