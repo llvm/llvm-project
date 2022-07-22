@@ -773,8 +773,8 @@ attributes #0 = { noinline cold }
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local void @omp_init_nest_lock_with_hint(%struct.omp_nest_lock_t*, i32)
 
-; CHECK-NOT: Function Attrs
-; CHECK: declare dso_local double @omp_get_wtime()
+; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare dso_local double @omp_get_wtime()
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local void @use_double(double)
@@ -1313,8 +1313,8 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local void @omp_init_nest_lock_with_hint(%struct.omp_nest_lock_t*, i32)
 
-; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare dso_local double @omp_get_wtime()
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC-NEXT: declare dso_local double @omp_get_wtime()
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local void @use_double(double)
@@ -1736,7 +1736,7 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
-; OPTIMISTIC: ; Function Attrs: cold convergent noinline nounwind 
+; OPTIMISTIC: ; Function Attrs: cold convergent noinline nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
 
 !llvm.module.flags = !{!0}
