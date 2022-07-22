@@ -2147,10 +2147,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
     CHECK(arguments.size() == 3);
     if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
-      if (expr->Rank() > 0) {
-        context.messages().Say(arguments[0]->sourceLocation(),
-            "CPTR= argument to C_F_POINTER() must be scalar"_err_en_US);
-      }
+      // General semantic checks will catch an actual argument that's not
+      // scalar.
       if (auto type{expr->GetType()}) {
         if (type->category() != TypeCategory::Derived ||
             type->IsPolymorphic() ||
@@ -2231,6 +2229,8 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
           if (const auto &targetArg{call.arguments[1]}) {
             if (const auto *targetExpr{targetArg->UnwrapExpr()}) {
               std::optional<characteristics::Procedure> pointerProc, targetProc;
+              const auto *targetProcDesignator{
+                  UnwrapExpr<ProcedureDesignator>(*targetExpr)};
               const Symbol *targetSymbol{GetLastSymbol(*targetExpr)};
               bool isCall{false};
               std::string targetName;
@@ -2243,6 +2243,10 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                   targetName = targetProcRef->proc().GetName() + "()";
                   isCall = true;
                 }
+              } else if (targetProcDesignator) {
+                targetProc = characteristics::Procedure::Characterize(
+                    *targetProcDesignator, context);
+                targetName = targetProcDesignator->GetName();
               } else if (targetSymbol) {
                 // proc that's not a call
                 if (IsProcedure(*targetSymbol)) {
@@ -2259,9 +2263,14 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                 if (targetProc) {
                   // procedure pointer and procedure target
                   std::string whyNot;
+                  const SpecificIntrinsic *specificIntrinsic{nullptr};
+                  if (targetProcDesignator) {
+                    specificIntrinsic =
+                        targetProcDesignator->GetSpecificIntrinsic();
+                  }
                   if (std::optional<parser::MessageFixedText> msg{
-                          CheckProcCompatibility(
-                              isCall, pointerProc, &*targetProc, whyNot)}) {
+                          CheckProcCompatibility(isCall, pointerProc,
+                              &*targetProc, specificIntrinsic, whyNot)}) {
                     msg->set_severity(parser::Severity::Warning);
                     AttachDeclaration(
                         context.messages().Say(std::move(*msg),

@@ -67,8 +67,9 @@ private:
   bool Check(const evaluate::ProcedureDesignator &);
   bool Check(const evaluate::ProcedureRef &);
   // Target is a procedure
-  bool Check(
-      parser::CharBlock rhsName, bool isCall, const Procedure * = nullptr);
+  bool Check(parser::CharBlock rhsName, bool isCall,
+      const Procedure * = nullptr,
+      const evaluate::SpecificIntrinsic *specific = nullptr);
   bool LhsOkForUnlimitedPoly() const;
   template <typename... A> parser::Message *Say(A &&...);
 
@@ -255,11 +256,12 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 }
 
 // Common handling for procedure pointer right-hand sides
-bool PointerAssignmentChecker::Check(
-    parser::CharBlock rhsName, bool isCall, const Procedure *rhsProcedure) {
+bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
+    const Procedure *rhsProcedure,
+    const evaluate::SpecificIntrinsic *specific) {
   std::string whyNot;
   if (std::optional<MessageFixedText> msg{evaluate::CheckProcCompatibility(
-          isCall, procedure_, rhsProcedure, whyNot)}) {
+          isCall, procedure_, rhsProcedure, specific, whyNot)}) {
     Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
   }
@@ -268,24 +270,23 @@ bool PointerAssignmentChecker::Check(
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
   if (auto chars{Procedure::Characterize(d, context_)}) {
-    return Check(d.GetName(), false, &*chars);
+    return Check(d.GetName(), false, &*chars, d.GetSpecificIntrinsic());
   } else {
     return Check(d.GetName(), false);
   }
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureRef &ref) {
-  const Procedure *procedure{nullptr};
-  auto chars{Procedure::Characterize(ref, context_)};
-  if (chars) {
-    procedure = &*chars;
+  if (auto chars{Procedure::Characterize(ref, context_)}) {
     if (chars->functionResult) {
       if (const auto *proc{chars->functionResult->IsProcedurePointer()}) {
-        procedure = proc;
+        return Check(ref.proc().GetName(), true, proc);
       }
     }
+    return Check(ref.proc().GetName(), true, &*chars);
+  } else {
+    return Check(ref.proc().GetName(), true, nullptr);
   }
-  return Check(ref.proc().GetName(), true, procedure);
 }
 
 // The target can be unlimited polymorphic if the pointer is, or if it is
