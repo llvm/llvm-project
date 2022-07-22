@@ -11,9 +11,9 @@ program omp_reduction
   !DEF: /omp_reduction/m ObjectEntity INTEGER(4)
   integer :: m = 12
   !$omp parallel do  reduction(max:k)
-  !DEF: /omp_reduction/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_reduction/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/Block1/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct1/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/max ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
     !REF: /omp_reduction/m
     k = max(k, m)
@@ -21,9 +21,9 @@ program omp_reduction
   !$omp end parallel do
 
   !$omp parallel do  reduction(min:k)
-  !DEF: /omp_reduction/Block2/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_reduction/OtherConstruct2/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/Block2/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct2/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/min ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
     !REF: /omp_reduction/m
     k = min(k, m)
@@ -31,9 +31,9 @@ program omp_reduction
   !$omp end parallel do
 
   !$omp parallel do  reduction(iand:k)
-  !DEF: /omp_reduction/Block3/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_reduction/OtherConstruct3/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/Block3/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct3/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/iand ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
     !REF: /omp_reduction/m
     k = iand(k, m)
@@ -41,9 +41,9 @@ program omp_reduction
   !$omp end parallel do
 
   !$omp parallel do  reduction(ior:k)
-  !DEF: /omp_reduction/Block4/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_reduction/OtherConstruct4/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/Block4/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct4/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/ior ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
     !REF: /omp_reduction/m
     k = ior(k, m)
@@ -51,9 +51,9 @@ program omp_reduction
   !$omp end parallel do
 
   !$omp parallel do  reduction(ieor:k)
-  !DEF: /omp_reduction/Block5/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_reduction/OtherConstruct5/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !DEF: /omp_reduction/Block5/k (OmpReduction) HostAssoc INTEGER(4)
+    !DEF: /omp_reduction/OtherConstruct5/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/ieor ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
     !REF: /omp_reduction/m
     k = ieor(k,m)
