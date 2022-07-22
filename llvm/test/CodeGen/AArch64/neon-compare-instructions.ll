@@ -4648,17 +4648,7 @@ define <2 x i64> @fcmogt2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 define <2 x i32> @fcmole2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 ; CHECK-LABEL: fcmole2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmge v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmole2xfloat_fast:
@@ -4675,25 +4665,7 @@ define <2 x i32> @fcmole2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 define <4 x i32> @fcmole4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: fcmole4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    mov s4, v0.s[2]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    mov s3, v1.s[2]
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov s1, v1.s[3]
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    mov v2.s[1], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v2.s[2], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmole4xfloat_fast:
@@ -4710,14 +4682,7 @@ define <4 x i32> @fcmole4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 define <2 x i64> @fcmole2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 ; CHECK-LABEL: fcmole2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    mov d3, v0.d[1]
-; CHECK-NEXT:    fcmp d3, d2
-; CHECK-NEXT:    csetm x8, le
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    csetm x9, le
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmge v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmole2xdouble_fast:
@@ -4734,17 +4699,7 @@ define <2 x i64> @fcmole2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 define <2 x i32> @fcmolt2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 ; CHECK-LABEL: fcmolt2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmolt2xfloat_fast:
@@ -4761,25 +4716,7 @@ define <2 x i32> @fcmolt2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 define <4 x i32> @fcmolt4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: fcmolt4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    mov s4, v0.s[2]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    mov s3, v1.s[2]
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov s1, v1.s[3]
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    mov v2.s[1], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v2.s[2], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmolt4xfloat_fast:
@@ -4796,14 +4733,7 @@ define <4 x i32> @fcmolt4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 define <2 x i64> @fcmolt2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 ; CHECK-LABEL: fcmolt2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    mov d3, v0.d[1]
-; CHECK-NEXT:    fcmp d3, d2
-; CHECK-NEXT:    csetm x8, lt
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    csetm x9, lt
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmolt2xdouble_fast:
@@ -5181,17 +5111,7 @@ define <2 x i64> @fcmugt2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 define <2 x i32> @fcmule2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 ; CHECK-LABEL: fcmule2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmge v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmule2xfloat_fast:
@@ -5209,25 +5129,7 @@ define <2 x i32> @fcmule2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 define <4 x i32> @fcmule4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: fcmule4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    mov s4, v0.s[2]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    mov s3, v1.s[2]
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov s1, v1.s[3]
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    mov v2.s[1], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v2.s[2], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmule4xfloat_fast:
@@ -5245,14 +5147,7 @@ define <4 x i32> @fcmule4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 define <2 x i64> @fcmule2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 ; CHECK-LABEL: fcmule2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    mov d3, v0.d[1]
-; CHECK-NEXT:    fcmp d3, d2
-; CHECK-NEXT:    csetm x8, le
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    csetm x9, le
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmge v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmule2xdouble_fast:
@@ -5270,17 +5165,7 @@ define <2 x i64> @fcmule2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 define <2 x i32> @fcmult2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 ; CHECK-LABEL: fcmult2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmult2xfloat_fast:
@@ -5298,25 +5183,7 @@ define <2 x i32> @fcmult2xfloat_fast(<2 x float> %A, <2 x float> %B) {
 define <4 x i32> @fcmult4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: fcmult4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    mov s4, v0.s[2]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    mov s3, v1.s[2]
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov s1, v1.s[3]
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    mov v2.s[1], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v2.s[2], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmult4xfloat_fast:
@@ -5334,14 +5201,7 @@ define <4 x i32> @fcmult4xfloat_fast(<4 x float> %A, <4 x float> %B) {
 define <2 x i64> @fcmult2xdouble_fast(<2 x double> %A, <2 x double> %B) {
 ; CHECK-LABEL: fcmult2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    mov d3, v0.d[1]
-; CHECK-NEXT:    fcmp d3, d2
-; CHECK-NEXT:    csetm x8, lt
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    csetm x9, lt
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmult2xdouble_fast:
@@ -5567,15 +5427,7 @@ define <2 x i64> @fcmogtz2xdouble_fast(<2 x double> %A) {
 define <2 x i32> @fcmoltz2xfloat_fast(<2 x float> %A) {
 ; CHECK-LABEL: fcmoltz2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmlt v0.2s, v0.2s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmoltz2xfloat_fast:
@@ -5592,22 +5444,7 @@ define <2 x i32> @fcmoltz2xfloat_fast(<2 x float> %A) {
 define <4 x i32> @fcmoltz4xfloat_fast(<4 x float> %A) {
 ; CHECK-LABEL: fcmoltz4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    mov s2, v0.s[2]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fcmp s2, #0.0
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    mov v1.s[1], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov v1.s[2], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    mov v1.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fcmlt v0.4s, v0.4s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmoltz4xfloat_fast:
@@ -5624,13 +5461,7 @@ define <4 x i32> @fcmoltz4xfloat_fast(<4 x float> %A) {
 define <2 x i64> @fcmoltz2xdouble_fast(<2 x double> %A) {
 ; CHECK-LABEL: fcmoltz2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcmp d1, #0.0
-; CHECK-NEXT:    csetm x8, lt
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csetm x9, lt
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmlt v0.2d, v0.2d, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmoltz2xdouble_fast:
@@ -5647,15 +5478,7 @@ define <2 x i64> @fcmoltz2xdouble_fast(<2 x double> %A) {
 define <2 x i32> @fcmolez2xfloat_fast(<2 x float> %A) {
 ; CHECK-LABEL: fcmolez2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmle v0.2s, v0.2s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmolez2xfloat_fast:
@@ -5672,22 +5495,7 @@ define <2 x i32> @fcmolez2xfloat_fast(<2 x float> %A) {
 define <4 x i32> @fcmolez4xfloat_fast(<4 x float> %A) {
 ; CHECK-LABEL: fcmolez4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    mov s2, v0.s[2]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fcmp s2, #0.0
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    mov v1.s[1], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov v1.s[2], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    mov v1.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fcmle v0.4s, v0.4s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmolez4xfloat_fast:
@@ -5704,13 +5512,7 @@ define <4 x i32> @fcmolez4xfloat_fast(<4 x float> %A) {
 define <2 x i64> @fcmolez2xdouble_fast(<2 x double> %A) {
 ; CHECK-LABEL: fcmolez2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcmp d1, #0.0
-; CHECK-NEXT:    csetm x8, le
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csetm x9, le
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmle v0.2d, v0.2d, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmolez2xdouble_fast:
@@ -6018,15 +5820,7 @@ define <2 x i64> @fcmugtz2xdouble_fast(<2 x double> %A) {
 define <2 x i32> @fcmultz2xfloat_fast(<2 x float> %A) {
 ; CHECK-LABEL: fcmultz2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmlt v0.2s, v0.2s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmultz2xfloat_fast:
@@ -6044,22 +5838,7 @@ define <2 x i32> @fcmultz2xfloat_fast(<2 x float> %A) {
 define <4 x i32> @fcmultz4xfloat_fast(<4 x float> %A) {
 ; CHECK-LABEL: fcmultz4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    mov s2, v0.s[2]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, lt
-; CHECK-NEXT:    fcmp s2, #0.0
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    mov v1.s[1], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov v1.s[2], w8
-; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    mov v1.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fcmlt v0.4s, v0.4s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmultz4xfloat_fast:
@@ -6077,13 +5856,7 @@ define <4 x i32> @fcmultz4xfloat_fast(<4 x float> %A) {
 define <2 x i64> @fcmultz2xdouble_fast(<2 x double> %A) {
 ; CHECK-LABEL: fcmultz2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcmp d1, #0.0
-; CHECK-NEXT:    csetm x8, lt
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csetm x9, lt
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmlt v0.2d, v0.2d, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmultz2xdouble_fast:
@@ -6102,15 +5875,7 @@ define <2 x i64> @fcmultz2xdouble_fast(<2 x double> %A) {
 define <2 x i32> @fcmulez2xfloat_fast(<2 x float> %A) {
 ; CHECK-LABEL: fcmulez2xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    fcmle v0.2s, v0.2s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmulez2xfloat_fast:
@@ -6128,22 +5893,7 @@ define <2 x i32> @fcmulez2xfloat_fast(<2 x float> %A) {
 define <4 x i32> @fcmulez4xfloat_fast(<4 x float> %A) {
 ; CHECK-LABEL: fcmulez4xfloat_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    mov s2, v0.s[2]
-; CHECK-NEXT:    fcmp s1, #0.0
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fcmp s2, #0.0
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    mov v1.s[1], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    mov v1.s[2], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    mov v1.s[3], w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fcmle v0.4s, v0.4s, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmulez4xfloat_fast:
@@ -6161,13 +5911,7 @@ define <4 x i32> @fcmulez4xfloat_fast(<4 x float> %A) {
 define <2 x i64> @fcmulez2xdouble_fast(<2 x double> %A) {
 ; CHECK-LABEL: fcmulez2xdouble_fast:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fcmp d1, #0.0
-; CHECK-NEXT:    csetm x8, le
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csetm x9, le
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    fcmle v0.2d, v0.2d, #0.0
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmulez2xdouble_fast:
@@ -6313,26 +6057,9 @@ define <2 x i64> @fcmunoz2xdouble_fast(<2 x double> %A) {
 define <4 x i32> @fcmule4xfloat_fast_zext(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: fcmule4xfloat_fast_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s3, v1.s[1]
-; CHECK-NEXT:    mov s4, v0.s[1]
 ; CHECK-NEXT:    movi v2.4s, #1
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    mov s3, v1.s[2]
-; CHECK-NEXT:    mov s4, v0.s[2]
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov s1, v1.s[3]
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    fmov s3, w9
-; CHECK-NEXT:    mov v3.s[1], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v3.s[2], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    mov v3.s[3], w8
-; CHECK-NEXT:    and v0.16b, v3.16b, v2.16b
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmule4xfloat_fast_zext:
@@ -6351,25 +6078,8 @@ define <4 x i32> @fcmule4xfloat_fast_zext(<4 x float> %A, <4 x float> %B) {
 define <4 x i1> @fcmule4xfloat_fast_aext(<4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: fcmule4xfloat_fast_aext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s2, v1.s[1]
-; CHECK-NEXT:    mov s3, v0.s[1]
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    mov s2, v1.s[2]
-; CHECK-NEXT:    mov s3, v0.s[2]
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov s1, v1.s[3]
-; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    csetm w9, le
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    fmov s4, w9
-; CHECK-NEXT:    mov v4.s[1], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v4.s[2], w8
-; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    mov v4.s[3], w8
-; CHECK-NEXT:    xtn v0.4h, v4.4s
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmule4xfloat_fast_aext:
