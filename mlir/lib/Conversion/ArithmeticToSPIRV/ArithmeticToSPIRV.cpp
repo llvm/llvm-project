@@ -51,7 +51,7 @@ struct ConstantScalarOpPattern final
 ///
 /// This cannot be merged into the template unary/binary pattern due to Vulkan
 /// restrictions over spv.SRem and spv.SMod.
-struct RemSIOpGLSLPattern final : public OpConversionPattern<arith::RemSIOp> {
+struct RemSIOpGLPattern final : public OpConversionPattern<arith::RemSIOp> {
   using OpConversionPattern<arith::RemSIOp>::OpConversionPattern;
 
   LogicalResult
@@ -442,7 +442,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// RemSIOpGLSLPattern
+// RemSIOpGLPattern
 //===----------------------------------------------------------------------===//
 
 /// Returns signed remainder for `lhs` and `rhs` and lets the result follow
@@ -476,9 +476,9 @@ static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
 }
 
 LogicalResult
-RemSIOpGLSLPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
-                                    ConversionPatternRewriter &rewriter) const {
-  Value result = emulateSignedRemainder<spirv::GLSLSAbsOp>(
+RemSIOpGLPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                                  ConversionPatternRewriter &rewriter) const {
+  Value result = emulateSignedRemainder<spirv::GLSAbsOp>(
       op.getLoc(), adaptor.getOperands()[0], adaptor.getOperands()[1],
       adaptor.getOperands()[0], rewriter);
   rewriter.replaceOp(op, result);
@@ -862,7 +862,7 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
-    RemSIOpGLSLPattern, RemSIOpCLPattern,
+    RemSIOpGLPattern, RemSIOpCLPattern,
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,
@@ -889,12 +889,12 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     CmpFOpNanNonePattern, CmpFOpPattern,
     SelectOpPattern,
 
-    spirv::ElementwiseOpPattern<arith::MaxFOp, spirv::GLSLFMaxOp>,
-    spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSLSMaxOp>,
-    spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::GLSLUMaxOp>,
-    spirv::ElementwiseOpPattern<arith::MinFOp, spirv::GLSLFMinOp>,
-    spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSLSMinOp>,
-    spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLSLUMinOp>
+    spirv::ElementwiseOpPattern<arith::MaxFOp, spirv::GLFMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::GLUMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MinFOp, spirv::GLFMinOp>,
+    spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSMinOp>,
+    spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLUMinOp>
   >(typeConverter, patterns.getContext());
   // clang-format on
 

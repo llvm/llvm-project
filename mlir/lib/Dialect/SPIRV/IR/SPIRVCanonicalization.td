@@ -41,18 +41,18 @@ def ConvertLogicalNotOfLogicalNotEqual : Pat<
     (SPV_LogicalEqualOp $lhs, $rhs)>;
 
 //===----------------------------------------------------------------------===//
-// spv.Select -> spv.GLSL.*Clamp
+// spv.Select -> spv.GL.*Clamp
 //===----------------------------------------------------------------------===//
 
 def ValuesAreEqual : Constraint<CPred<"$0 == $1">>;
 
 foreach CmpClampPair = [
-    [SPV_FOrdLessThanOp, SPV_GLSLFClampOp],
-    [SPV_FOrdLessThanEqualOp, SPV_GLSLFClampOp],
-    [SPV_SLessThanOp, SPV_GLSLSClampOp],
-    [SPV_SLessThanEqualOp, SPV_GLSLSClampOp],
-    [SPV_ULessThanOp, SPV_GLSLUClampOp],
-    [SPV_ULessThanEqualOp, SPV_GLSLUClampOp]] in {
+    [SPV_FOrdLessThanOp, SPV_GLFClampOp],
+    [SPV_FOrdLessThanEqualOp, SPV_GLFClampOp],
+    [SPV_SLessThanOp, SPV_GLSClampOp],
+    [SPV_SLessThanEqualOp, SPV_GLSClampOp],
+    [SPV_ULessThanOp, SPV_GLUClampOp],
+    [SPV_ULessThanEqualOp, SPV_GLUClampOp]] in {
 
 // Detect: $min < $input, $input < $max
 def ConvertComparisonIntoClamp1_#CmpClampPair[0] : Pat<

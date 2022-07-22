@@ -3382,6 +3382,8 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
   if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
     return Register();
 
+  assert(Def->getNumOperands() == 3 &&
+         MRI.getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
   if (mi_match(Def->getOperand(2).getReg(), MRI, m_ZeroInt())) {
     return Def->getOperand(1).getReg();
   }

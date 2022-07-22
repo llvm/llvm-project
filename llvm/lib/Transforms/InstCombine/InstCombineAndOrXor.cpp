@@ -2664,8 +2664,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // Inverted form (example):
   // (icmp slt (X | Y), 0) & (icmp sgt (X & Y), -1) -> (icmp slt (X ^ Y), 0)
   bool TrueIfSignedL, TrueIfSignedR;
-  if (InstCombiner::isSignBitCheck(PredL, *LHSC, TrueIfSignedL) &&
-      InstCombiner::isSignBitCheck(PredR, *RHSC, TrueIfSignedR) &&
+  if (isSignBitCheck(PredL, *LHSC, TrueIfSignedL) &&
+      isSignBitCheck(PredR, *RHSC, TrueIfSignedR) &&
       (RHS->hasOneUse() || LHS->hasOneUse())) {
     Value *X, *Y;
     if (IsAnd) {
@@ -3219,6 +3219,21 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       return TrueIfSignedL == TrueIfSignedR ? Builder.CreateIsNeg(XorLR) :
                                               Builder.CreateIsNotNeg(XorLR);
     }
+
+    // (X > C) ^ (X < C + 2) --> X != C + 1
+    // (X < C + 2) ^ (X > C) --> X != C + 1
+    // Considering the correctness of this pattern, we should avoid that C is
+    // non-negative and C + 2 is negative, although it will be matched by other
+    // patterns.
+    const APInt *C1, *C2;
+    if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_APInt(C1)) &&
+         PredR == CmpInst::ICMP_SLT && match(RHS1, m_APInt(C2))) ||
+        (PredL == CmpInst::ICMP_SLT && match(LHS1, m_APInt(C2)) &&
+         PredR == CmpInst::ICMP_SGT && match(RHS1, m_APInt(C1))))
+      if (LHS0 == RHS0 && *C1 + 2 == *C2 &&
+          (C1->isNegative() || C2->isNonNegative()))
+        return Builder.CreateICmpNE(LHS0,
+                                    ConstantInt::get(LHS0->getType(), *C1 + 1));
   }
 
   // Instead of trying to imitate the folds for and/or, decompose this 'xor'

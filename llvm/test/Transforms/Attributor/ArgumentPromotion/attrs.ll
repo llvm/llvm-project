@@ -105,7 +105,7 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @f(i32 1, i64 2, i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @f(i32 noundef 1, i64 noundef 2, i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[C]]
 ;
 entry:

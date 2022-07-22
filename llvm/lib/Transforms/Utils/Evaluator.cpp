@@ -337,10 +337,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       if (!Res.first->second.write(Val, Offset, DL))
         return false;
     } else if (LoadInst *LI = dyn_cast<LoadInst>(CurInst)) {
-      if (!LI->isSimple()) {
+      if (LI->isVolatile()) {
         LLVM_DEBUG(
-            dbgs() << "Found a Load! Not a simple load, can not evaluate.\n");
-        return false;  // no volatile/atomic accesses.
+            dbgs() << "Found a Load! Volatile load, can not evaluate.\n");
+        return false;  // no volatile accesses.
       }
 
       Constant *Ptr = getVal(LI->getOperand(0));

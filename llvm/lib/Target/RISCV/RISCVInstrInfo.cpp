@@ -651,21 +651,48 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
 
   // Fold load from stack followed by sext.w into lw.
   // TODO: Fold with sext.b, sext.h, zext.b, zext.h, zext.w?
-  if (Ops.size() == 1 && Ops[0] == 1 && RISCV::isSEXT_W(MI)) {
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FrameIndex),
-        MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-        MFI.getObjectAlign(FrameIndex));
+  if (Ops.size() != 1 || Ops[0] != 1)
+   return nullptr;
 
-    Register DstReg = MI.getOperand(0).getReg();
-    return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(RISCV::LW),
-                   DstReg)
-        .addFrameIndex(FrameIndex)
-        .addImm(0)
-        .addMemOperand(MMO);
+  unsigned LoadOpc;
+  switch (MI.getOpcode()) {
+  default:
+    if (RISCV::isSEXT_W(MI)) {
+      LoadOpc = RISCV::LW;
+      break;
+    }
+    if (RISCV::isZEXT_W(MI)) {
+      LoadOpc = RISCV::LWU;
+      break;
+    }
+    if (RISCV::isZEXT_B(MI)) {
+      LoadOpc = RISCV::LBU;
+      break;
+    }
+    return nullptr;
+  case RISCV::SEXT_H:
+    LoadOpc = RISCV::LH;
+    break;
+  case RISCV::SEXT_B:
+    LoadOpc = RISCV::LB;
+    break;
+  case RISCV::ZEXT_H_RV32:
+  case RISCV::ZEXT_H_RV64:
+    LoadOpc = RISCV::LHU;
+    break;
   }
 
-  return nullptr;
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(MF, FrameIndex),
+      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
+      MFI.getObjectAlign(FrameIndex));
+
+  Register DstReg = MI.getOperand(0).getReg();
+  return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(LoadOpc),
+                 DstReg)
+      .addFrameIndex(FrameIndex)
+      .addImm(0)
+      .addMemOperand(MMO);
 }
 
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
@@ -1901,6 +1928,18 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
 bool RISCV::isSEXT_W(const MachineInstr &MI) {
   return MI.getOpcode() == RISCV::ADDIW && MI.getOperand(1).isReg() &&
          MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0;
+}
+
+// Returns true if this is the zext.w pattern, adduw rd, rs1, x0.
+bool RISCV::isZEXT_W(const MachineInstr &MI) {
+  return MI.getOpcode() == RISCV::ADD_UW && MI.getOperand(1).isReg() &&
+         MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0;
+}
+
+// Returns true if this is the zext.b pattern, andi rd, rs1, 255.
+bool RISCV::isZEXT_B(const MachineInstr &MI) {
+  return MI.getOpcode() == RISCV::ANDI && MI.getOperand(1).isReg() &&
+         MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 255;
 }
 
 static bool isRVVWholeLoadStore(unsigned Opcode) {

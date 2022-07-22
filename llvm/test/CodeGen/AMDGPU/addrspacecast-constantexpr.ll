@@ -226,10 +226,10 @@ define i32 addrspace(3)* @ret_constant_cast_group_gv_gep_to_flat_to_group() #1 {
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind }
 ;.
-; AKF_HSA: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree nounwind willreturn }
+; AKF_HSA: attributes #[[ATTR0:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn }
 ; AKF_HSA: attributes #[[ATTR1]] = { nounwind }
 ;.
-; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree nounwind willreturn }
+; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ;.

@@ -1720,6 +1720,9 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
     }
   }
 
+  if (!D->isInlineSpecified() && D->isInlined()) {
+    OS << " implicit-inline";
+  }
   // Since NumParams comes from the FunctionProtoType of the FunctionDecl and
   // the Params are set later, it is possible for a dump during debugging to
   // encounter a FunctionDecl that has been created but hasn't been assigned

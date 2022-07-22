@@ -942,7 +942,7 @@ public:
   }
 
   bool hasUserSGPRInit16Bug() const {
-    return UserSGPRInit16Bug;
+    return UserSGPRInit16Bug && isWave32();
   }
 
   bool hasNegativeScratchOffsetBug() const { return NegativeScratchOffsetBug; }

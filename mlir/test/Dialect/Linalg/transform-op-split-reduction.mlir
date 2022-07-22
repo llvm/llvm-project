@@ -19,17 +19,9 @@ func.func @matmul_split(%A : tensor<16x256xf32>, %B: tensor<256x32xf32>, %C: ten
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  pdl.pattern @pdl_target : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = pdl.operation "linalg.matmul"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    // TODO: we don't want this, but it is the required terminator for pdl.pattern
-    rewrite %0 with "transform.dialect"
-  }
-
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
-    %0 = pdl_match @pdl_target in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:4 = transform.structured.split_reduction %0 { split_factor = 4, insert_split_dimension = 2}
   }
 }

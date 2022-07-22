@@ -4,6 +4,9 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
+
+  // TODO: Flip to _Prefixed
+  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 
 def TopLevelTypeInterface : TypeInterface<"TopLevelTypeInterface">;

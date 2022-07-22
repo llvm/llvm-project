@@ -132,8 +132,8 @@ private:
       for (const auto &Entry : DMO.symbols()) {
         const auto &Mapping = Entry.getValue();
         if (Mapping.Size && Mapping.ObjectAddress)
-          AddressRanges[*Mapping.ObjectAddress] = ObjFileAddressRange(
-              *Mapping.ObjectAddress + Mapping.Size,
+          AddressRanges.insert(
+              {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
               int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
       }
     }

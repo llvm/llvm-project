@@ -143,6 +143,11 @@ struct __tgt_device_image {
   __tgt_offload_entry *EntriesEnd;   // End of table (non inclusive)
 };
 
+/// This struct contains information about a given image.
+struct __tgt_image_info {
+  const char *Arch;
+};
+
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {

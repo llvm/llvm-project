@@ -1374,10 +1374,10 @@ define amdgpu_ps void @no_skip_no_successors(float inreg %arg, float inreg %arg1
 ; GFX11-NEXT:    s_endpgm
 bb:
   %tmp = fcmp ult float %arg1, 0.000000e+00
-  %tmp2 = fcmp ult float %arg, 0x3FCF5C2900000000
   br i1 %tmp, label %bb6, label %bb3
 
 bb3:                                              ; preds = %bb
+  %tmp2 = fcmp ult float %arg, 0x3FCF5C2900000000
   br i1 %tmp2, label %bb5, label %bb4
 
 bb4:                                              ; preds = %bb3

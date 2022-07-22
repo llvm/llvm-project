@@ -73,8 +73,7 @@
 ; GCN-NEXT: s_and_b64           [[EXIT1]], vcc, exec
 
 ; GCN: ; %Flow
-; GCN-NEXT: s_or_saveexec_b64
-; GCN-NEXT: s_xor_b64
+; GCN-NEXT: s_andn2_saveexec_b64
 
 ; GCN: ; %LeafBlock
 ; GCN-DAG:  v_cmp_eq_u32_e32    vcc, 1,
