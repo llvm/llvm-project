@@ -29,7 +29,7 @@ Search,find_end,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,✅
 Read-only,is_partitioned,Nikolas Klauser,`D124440 <https://llvm.org/D124440>`_,✅
 Read-only,is_sorted,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅
 Read-only,is_sorted_until,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅
-Read-only,includes,Nikolas Klauser,n/a,Not started
+Read-only,includes,Hui Xie,`D130116 <https://llvm.org/D130116>`,✅
 Read-only,is_heap,Nikolas Klauser,n/a,Not started
 Read-only,is_heap_until,Nikolas Klauser,n/a,Not started
 Read-only,clamp,Nikolas Klauser,`D126193 <https://llvm.org/D126193>`_,Under review
