@@ -1966,12 +1966,14 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       return BinaryOperator::CreateAdd(X, ConstantExpr::getSub(C, C2));
   }
 
-  // If there's no chance any bit will need to borrow from an adjacent bit:
-  // sub C, X --> xor X, C
   const APInt *Op0C;
-  if (match(Op0, m_APInt(Op0C)) &&
-      (~computeKnownBits(Op1, 0, &I).Zero).isSubsetOf(*Op0C))
-    return BinaryOperator::CreateXor(Op1, Op0);
+  if (match(Op0, m_APInt(Op0C)) && Op0C->isMask()) {
+    // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
+    // zero.
+    KnownBits RHSKnown = computeKnownBits(Op1, 0, &I);
+    if ((*Op0C | RHSKnown.Zero).isAllOnes())
+      return BinaryOperator::CreateXor(Op1, Op0);
+  }
 
   {
     Value *Y;
