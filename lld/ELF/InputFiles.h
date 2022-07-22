@@ -374,10 +374,6 @@ public:
 ELFFileBase *createObjFile(MemoryBufferRef mb, StringRef archiveName = "",
                            bool lazy = false);
 
-inline bool isBitcode(MemoryBufferRef mb) {
-  return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
-}
-
 std::string replaceThinLTOSuffix(StringRef path);
 
 } // namespace elf
