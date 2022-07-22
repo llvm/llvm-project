@@ -57,7 +57,7 @@ auto odd = [](int x) { return x % 2 != 0; };
 auto triple = [](int x) { return 3*x; };
 //auto gen = [] { return 42; };
 //auto plus = [](int x, int y) { return x == y; };
-//std::mt19937 g;
+std::mt19937 g;
 
 // [algorithm.syn]
 
@@ -137,7 +137,7 @@ static_assert(test(std::ranges::set_difference, a, a, a));
 static_assert(test(std::ranges::set_intersection, a, a, a));
 static_assert(test(std::ranges::set_symmetric_difference, a, a, a));
 static_assert(test(std::ranges::set_union, a, a, a));
-//static_assert(test(std::ranges::shuffle, a, g));
+static_assert(test(std::ranges::shuffle, a, g));
 static_assert(test(std::ranges::sort, a));
 static_assert(test(std::ranges::sort_heap, a));
 static_assert(test(std::ranges::stable_partition, a, odd));
