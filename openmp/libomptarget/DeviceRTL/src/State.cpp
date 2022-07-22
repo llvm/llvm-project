@@ -219,13 +219,13 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ASSERT(HasThreadState == Other.HasThreadState);
 }
 
-namespace {
-
-state::TeamStateTy SHARED(TeamState);
+state::TeamStateTy SHARED(_OMP::state::TeamState);
 
 __attribute__((loader_uninitialized))
-state::ThreadStateTy *ThreadStates[mapping::MaxThreadsPerTeam];
-#pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
+state::ThreadStateTy *_OMP::state::ThreadStates[mapping::MaxThreadsPerTeam];
+#pragma omp allocate(_OMP::state::ThreadStates) allocator(omp_pteam_mem_alloc)
+
+namespace {
 
 int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
                              int OutOfBoundsVal = -1) {
