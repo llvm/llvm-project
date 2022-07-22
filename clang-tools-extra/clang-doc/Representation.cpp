@@ -33,7 +33,7 @@ const SymbolID EmptySID = SymbolID();
 template <typename T>
 llvm::Expected<std::unique_ptr<Info>>
 reduce(std::vector<std::unique_ptr<Info>> &Values) {
-  if (Values.empty())
+  if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
   std::unique_ptr<Info> Merged = std::make_unique<T>(Values[0]->USR);
@@ -95,7 +95,7 @@ void reduceChildren(std::vector<EnumInfo> &Children,
 // Dispatch function.
 llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
-  if (Values.empty())
+  if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no info values to merge");
 
