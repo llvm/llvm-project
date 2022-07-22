@@ -812,9 +812,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
                 reexport_module_sp =
                     target.GetImages().FindFirstModule(reexport_module_spec);
                 if (!reexport_module_sp) {
-                  reexport_module_spec.GetPlatformFileSpec()
-                      .GetDirectory()
-                      .Clear();
+                  reexport_module_spec.GetPlatformFileSpec().ClearDirectory();
                   reexport_module_sp =
                       target.GetImages().FindFirstModule(reexport_module_spec);
                 }

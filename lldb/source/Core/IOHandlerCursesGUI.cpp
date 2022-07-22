@@ -3170,7 +3170,7 @@ public:
     FileSpec core_file_spec = m_core_file_field->GetResolvedFileSpec();
 
     FileSpec core_file_directory_spec;
-    core_file_directory_spec.GetDirectory() = core_file_spec.GetDirectory();
+    core_file_directory_spec.SetDirectory(core_file_spec.GetDirectory());
     target_sp->AppendExecutableSearchPaths(core_file_directory_spec);
 
     ProcessSP process_sp(target_sp->CreateProcess(
