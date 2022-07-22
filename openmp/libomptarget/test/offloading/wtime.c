@@ -21,4 +21,4 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK: duration: [1-9]+
+// CHECK: duration: {{.+[1-9]+}}
