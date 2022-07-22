@@ -206,8 +206,9 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
 
   // The first instruction of F9 can reach the first call.
   ASSERT_TRUE(F9AA.instructionCanReach(A, F9FirstInst, F3));
-  // Because func10 calls the func4 after the call to func9 it is reachable.
-  ASSERT_TRUE(F9AA.instructionCanReach(A, F9FirstInst, F4));
+  // Because func10 calls the func4 after the call to func9 it is reachable but
+  // as it requires backwards logic we would need AA::isPotentiallyReachable.
+  ASSERT_FALSE(F9AA.instructionCanReach(A, F9FirstInst, F4));
 }
 
 } // namespace llvm
