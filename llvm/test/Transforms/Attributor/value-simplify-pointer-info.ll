@@ -4500,7 +4500,7 @@ define i1 @alloca_non_unique_caller(i32 %in, i1 %c) {
 ; IS__TUNIT_NPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn uwtable }
 ; IS__TUNIT_NPM: attributes #[[ATTR9]] = { argmemonly nofree nosync nounwind }
 ; IS__TUNIT_NPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind readnone }
-; IS__TUNIT_NPM: attributes #[[ATTR11:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__TUNIT_NPM: attributes #[[ATTR11:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__TUNIT_NPM: attributes #[[ATTR12]] = { willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR13]] = { nofree nosync nounwind willreturn writeonly }
 ; IS__TUNIT_NPM: attributes #[[ATTR14]] = { norecurse }
@@ -4541,7 +4541,7 @@ define i1 @alloca_non_unique_caller(i32 %in, i1 %c) {
 ; IS__CGSCC_NPM: attributes #[[ATTR10]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR11]] = { argmemonly nofree nosync nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR12]] = { nofree nosync nounwind readnone }
-; IS__CGSCC_NPM: attributes #[[ATTR13:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR13:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR14]] = { willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR15]] = { nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR16]] = { norecurse }

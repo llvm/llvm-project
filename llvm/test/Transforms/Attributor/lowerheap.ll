@@ -22,8 +22,8 @@ define i64 @f(i64 %len) {
 ; IS________NPM-LABEL: define {{[^@]+}}@f
 ; IS________NPM-SAME: (i64 [[LEN:%.*]]) {
 ; IS________NPM-NEXT:  entry:
-; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 [[LEN]], align 1
-; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[TMP0]]) #[[ATTR2:[0-9]+]]
+; IS________NPM-NEXT:    [[MEM_H2S:%.*]] = alloca i8, i64 [[LEN]], align 1
+; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM_H2S]]) #[[ATTR2:[0-9]+]]
 ; IS________NPM-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -47,9 +47,9 @@ define i64 @g(i64 %len) {
 ; IS________NPM-SAME: (i64 [[LEN:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = mul i64 [[LEN]], 8
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 1
-; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP1]], i8 0, i64 [[TMP0]], i1 false)
-; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[TMP1]]) #[[ATTR2]]
+; IS________NPM-NEXT:    [[MEM_H2S:%.*]] = alloca i8, i64 [[TMP0]], align 1
+; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[MEM_H2S]], i8 0, i64 [[TMP0]], i1 false)
+; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM_H2S]]) #[[ATTR2]]
 ; IS________NPM-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -65,6 +65,6 @@ attributes #0 = { nounwind willreturn }
 ; IS________OPM: attributes #[[ATTR1]] = { nounwind }
 ;.
 ; IS________NPM: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
-; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS________NPM: attributes #[[ATTR2]] = { nounwind }
 ;.

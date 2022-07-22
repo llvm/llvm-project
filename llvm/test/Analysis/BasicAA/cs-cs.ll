@@ -429,8 +429,8 @@ entry:
 }
 
 
-; CHECK:      attributes #0 = { argmemonly nofree nounwind willreturn writeonly }
-; CHECK-NEXT: attributes #1 = { argmemonly nofree nounwind willreturn }
+; CHECK:      attributes #0 = { argmemonly nocallback nofree nounwind willreturn writeonly }
+; CHECK-NEXT: attributes #1 = { argmemonly nocallback nofree nounwind willreturn }
 ; CHECK-NEXT: attributes #2 = { argmemonly nosync nounwind willreturn }
 ; CHECK-NEXT: attributes #3 = { noinline nounwind readonly }
 ; CHECK-NEXT: attributes #4 = { noinline nounwind writeonly }
