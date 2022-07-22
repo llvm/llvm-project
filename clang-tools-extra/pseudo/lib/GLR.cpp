@@ -421,7 +421,7 @@ private:
     if (!R.Guarded)
       return true;
     if (auto Guard = Lang.Guards.lookup(RID))
-      return Guard(RHS, Params.Code);
+      return Guard({RHS, Params.Code, Lookahead});
     LLVM_DEBUG(llvm::dbgs()
                << llvm::formatv("missing guard implementation for rule {0}\n",
                                 Lang.G.dumpRule(RID)));
