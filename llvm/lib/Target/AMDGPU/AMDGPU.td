@@ -1285,7 +1285,7 @@ def FeatureISAVersion11_0_0 : FeatureSet<
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [])>;
+    [FeatureGFX11ExtraVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
