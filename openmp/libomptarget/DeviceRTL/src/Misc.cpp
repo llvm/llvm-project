@@ -52,7 +52,7 @@ double getWTick() {
 
 double getWTime() {
   unsigned long long nsecs;
-  asm volatile("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
+  asm("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
   return (double)nsecs * getWTick();
 }
 
