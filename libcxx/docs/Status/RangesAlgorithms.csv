@@ -69,7 +69,7 @@ Permutation,remove,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,remove_if,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅
 Permutation,rotate,Nikolas Klauser,`D124122 <https://llvm.org/D124122>`_,Under review
-Permutation,shuffle,Not assigned,n/a,Not started
+Permutation,shuffle,Konstantin Varlamov,`D130321 <https://llvm.org/D130321>`_,✅
 Permutation,unique,Not assigned,n/a,Not started
 Permutation,partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
 Permutation,stable_partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
