@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-error=int-conversion -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: @test_builtin_clz(
 // CHECK: tail call i32 @llvm.ctlz.i32(i32 %a, i1 true)

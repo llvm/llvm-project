@@ -29,11 +29,11 @@ void test(void) {
   NSNumber *n6 = '1'; // expected-error{{numeric literal must be prefixed by '@'}}
 
   int i;
-  NSNumber *n7 = i; // c-warning{{incompatible integer to pointer conversion}}
+  NSNumber *n7 = i; // c-error{{incompatible integer to pointer conversion}}
                     // arc-error@-1{{implicit conversion of 'int' to 'NSNumber *' is disallowed with ARC}}
                     // cxx-error@-2{{cannot initialize a variable of type 'NSNumber *' with an lvalue of type 'int'}}
 
-  id n8 = 1; // c-warning{{incompatible integer to pointer conversion}}
+  id n8 = 1; // c-error{{incompatible integer to pointer conversion}}
              // arc-error@-1{{implicit conversion of 'int' to 'id' is disallowed with ARC}}
              // cxx-error@-2{{cannot initialize a variable of type 'id' with an rvalue of type 'int'}}
 }

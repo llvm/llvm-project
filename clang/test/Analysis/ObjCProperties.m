@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -w %s -verify \
+// RUN: %clang_analyze_cc1 -w -Wno-int-conversion %s -verify \
 // RUN:     -analyzer-checker=core,alpha.core,debug.ExprInspection
 
 #ifdef HEADER // A clever trick to avoid splitting up the test.

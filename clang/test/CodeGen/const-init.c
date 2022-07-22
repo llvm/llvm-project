@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -ffreestanding -Wno-pointer-to-int-cast -verify -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -ffreestanding -Wno-pointer-to-int-cast -Wno-int-conversion -emit-llvm -o - %s | FileCheck %s
 
 #include <stdint.h>
 
@@ -11,10 +11,10 @@ char a2[2][5] = { "asdf" };
 
 // Double-implicit-conversions of array/functions (not legal C, but
 // clang accepts it for gcc compat).
-intptr_t b = a; // expected-warning {{incompatible pointer to integer conversion}}
+intptr_t b = a;
 int c(void);
 void *d = c;
-intptr_t e = c; // expected-warning {{incompatible pointer to integer conversion}}
+intptr_t e = c;
 
 int f, *g = __extension__ &f, *h = (1 != 1) ? &f : &f;
 
@@ -59,7 +59,7 @@ struct {
 } __attribute__((__packed__)) gv1  = { .a = 0x0, .b = 7,  };
 
 // PR5118
-// CHECK: @gv2 ={{.*}} global %struct.anon.0 <{ i8 1, i8* null }>, align 1 
+// CHECK: @gv2 ={{.*}} global %struct.anon.0 <{ i8 1, i8* null }>, align 1
 struct {
   unsigned char a;
   char *b;
@@ -67,9 +67,9 @@ struct {
 
 // Global references
 // CHECK: @g11.l0 = internal global i32 ptrtoint (i32 ()* @g11 to i32)
-long g11(void) { 
+long g11(void) {
   static long l0 = (long) g11;
-  return l0; 
+  return l0;
 }
 
 // CHECK: @g12 ={{.*}} global i32 ptrtoint (i8* @g12_tmp to i32)
@@ -156,7 +156,7 @@ void g29(void) {
   // CHECK: @g29.b = internal global [1 x i32] [i32 ptrtoint ([5 x i8]* @.str.1 to i32)], align 4
   // CHECK: @g29.c = internal global [1 x i32] [i32 97], align 4
   static DCC_SRVR_NM a = { {"@"} };
-  static int b[1] = { "asdf" }; // expected-warning {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[5]'}}
+  static int b[1] = { "asdf" };
   static int c[1] = { L"a" };
 }
 

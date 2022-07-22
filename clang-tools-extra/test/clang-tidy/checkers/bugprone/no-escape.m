@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-no-escape %t
-// RUN: %check_clang_tidy %s -assume-filename=bugprone-no-escape.c bugprone-no-escape %t -- -- -fblocks
+// RUN: %check_clang_tidy %s bugprone-no-escape %t -- -- -Wno-int-conversion
+// RUN: %check_clang_tidy %s -assume-filename=bugprone-no-escape.c bugprone-no-escape %t -- -- -fblocks -Wno-int-conversion
 
 typedef struct dispatch_queue_s *dispatch_queue_t;
 typedef struct dispatch_time_s *dispatch_time_t;

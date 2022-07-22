@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -w -analyzer-checker=osx.NumberObjectConversion %s -verify
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -w -analyzer-checker=osx.NumberObjectConversion -analyzer-config osx.NumberObjectConversion:Pedantic=true -DPEDANTIC %s -verify
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -fobjc-arc -w -analyzer-checker=osx.NumberObjectConversion %s -verify
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -fobjc-arc -w -analyzer-checker=osx.NumberObjectConversion -analyzer-config osx.NumberObjectConversion:Pedantic=true -DPEDANTIC %s -verify
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -w -Wno-int-conversion -analyzer-checker=osx.NumberObjectConversion %s -verify
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -w -Wno-int-conversion -analyzer-checker=osx.NumberObjectConversion -analyzer-config osx.NumberObjectConversion:Pedantic=true -DPEDANTIC %s -verify
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -fobjc-arc -w -Wno-int-conversion -analyzer-checker=osx.NumberObjectConversion %s -verify
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -fblocks -fobjc-arc -w -Wno-int-conversion -analyzer-checker=osx.NumberObjectConversion -analyzer-config osx.NumberObjectConversion:Pedantic=true -DPEDANTIC %s -verify
 
 #include "Inputs/system-header-simulator-objc.h"
 

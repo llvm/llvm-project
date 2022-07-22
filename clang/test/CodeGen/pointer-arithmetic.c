@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S %s -o -
+// RUN: %clang_cc1 -S -Wno-int-conversions %s -o -
 
 typedef int Int;
 

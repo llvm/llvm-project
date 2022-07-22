@@ -160,16 +160,16 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_load(CI, CI, memory_order_relaxed); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
 
   __c11_atomic_store(i, 1, memory_order_seq_cst);
-  __c11_atomic_store(p, 1, memory_order_seq_cst); // expected-warning {{incompatible integer to pointer conversion}}
+  __c11_atomic_store(p, 1, memory_order_seq_cst); // expected-error {{incompatible integer to pointer conversion}}
   (int)__c11_atomic_store(f, 1, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
 
   __atomic_store_n(I, 4, memory_order_release);
   __atomic_store_n(I, 4.0, memory_order_release);
   __atomic_store_n(CI, 4, memory_order_release); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
-  __atomic_store_n(I, P, memory_order_release); // expected-warning {{parameter of type 'int'}}
+  __atomic_store_n(I, P, memory_order_release); // expected-error {{parameter of type 'int'}}
   __atomic_store_n(i, 1, memory_order_release); // expected-error {{must be a pointer to integer or pointer}}
   __atomic_store_n(s1, *s2, memory_order_release); // expected-error {{must be a pointer to integer or pointer}}
-  __atomic_store_n(I, I, memory_order_release); // expected-warning {{incompatible pointer to integer conversion passing 'int *' to parameter of type 'int'; dereference with *}}
+  __atomic_store_n(I, I, memory_order_release); // expected-error {{incompatible pointer to integer conversion passing 'int *' to parameter of type 'int'; dereference with *}}
 
   __atomic_store(I, *P, memory_order_release);
   __atomic_store(CI, I, memory_order_release); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
@@ -225,11 +225,11 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   _Bool cmpexch_4 = __atomic_compare_exchange_n(I, I, 5, 1, memory_order_seq_cst, memory_order_seq_cst);
   _Bool cmpexch_5 = __atomic_compare_exchange_n(I, P, 5, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{; dereference with *}}
-  _Bool cmpexch_6 = __atomic_compare_exchange_n(I, I, P, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{passing 'int **' to parameter of type 'int'}}
+  _Bool cmpexch_6 = __atomic_compare_exchange_n(I, I, P, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{passing 'int **' to parameter of type 'int'}}
   (void)__atomic_compare_exchange_n(CI, I, 5, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
   (void)__atomic_compare_exchange_n(I, CI, 5, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
 
-  _Bool cmpexch_7 = __atomic_compare_exchange(I, I, 5, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{passing 'int' to parameter of type 'int *'}}
+  _Bool cmpexch_7 = __atomic_compare_exchange(I, I, 5, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{passing 'int' to parameter of type 'int *'}}
   _Bool cmpexch_8 = __atomic_compare_exchange(I, P, I, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{; dereference with *}}
   _Bool cmpexch_9 = __atomic_compare_exchange(I, I, I, 0, memory_order_seq_cst, memory_order_seq_cst);
   (void)__atomic_compare_exchange(CI, I, I, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
@@ -253,7 +253,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   // Ensure the <stdatomic.h> macros behave appropriately.
   atomic_int n = ATOMIC_VAR_INIT(123);
   atomic_init(&n, 456);
-  atomic_init(&n, (void*)0); // expected-warning {{passing 'void *' to parameter of type 'int'}}
+  atomic_init(&n, (void*)0); // expected-error {{passing 'void *' to parameter of type 'int'}}
 
   const atomic_wchar_t cawt;
   atomic_init(&cawt, L'x'); // expected-error {{non-const}}
@@ -275,7 +275,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   k = atomic_exchange(&n, 72);
   k = atomic_exchange_explicit(&n, k, memory_order_release);
 
-  atomic_compare_exchange_strong(&n, k, k); // expected-warning {{take the address with &}}
+  atomic_compare_exchange_strong(&n, k, k); // expected-error {{take the address with &}}
   atomic_compare_exchange_weak(&n, &k, k);
   atomic_compare_exchange_strong_explicit(&n, &k, k, memory_order_seq_cst); // expected-error {{too few arguments}}
   atomic_compare_exchange_weak_explicit(&n, &k, k, memory_order_seq_cst, memory_order_acquire);

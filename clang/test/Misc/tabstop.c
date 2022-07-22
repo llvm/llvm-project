@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -ftabstop 3 -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-3 -strict-whitespace %s
-// RUN: %clang_cc1 -ftabstop 4 -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-4 -strict-whitespace %s
-// RUN: %clang_cc1 -ftabstop 5 -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-5 -strict-whitespace %s
+// RUN: %clang_cc1 -ftabstop 3 -fsyntax-only -Wno-error=int-conversion %s 2>&1 | FileCheck -check-prefix=CHECK-3 -strict-whitespace %s
+// RUN: %clang_cc1 -ftabstop 4 -fsyntax-only -Wno-error=int-conversion %s 2>&1 | FileCheck -check-prefix=CHECK-4 -strict-whitespace %s
+// RUN: %clang_cc1 -ftabstop 5 -fsyntax-only -Wno-error=int-conversion %s 2>&1 | FileCheck -check-prefix=CHECK-5 -strict-whitespace %s
 
 // tab
 	void* a = 1;

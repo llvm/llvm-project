@@ -1,5 +1,5 @@
-// RUN: %clang_dfsan %s -mllvm -dfsan-combine-offset-labels-on-gep=false -o %t && %run %t
-// RUN: %clang_dfsan %s -DPROP_OFFSET_LABELS -o %t && %run %t
+// RUN: %clang_dfsan %s -mllvm -dfsan-combine-offset-labels-on-gep=false -Wno-error=int-conversion -o %t && %run %t
+// RUN: %clang_dfsan %s -DPROP_OFFSET_LABELS -Wno-error=int-conversion -o %t && %run %t
 //
 // REQUIRES: x86_64-target-arch
 

@@ -1,6 +1,6 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -x objective-c -Wundeclared-selector -fixit %t
-// RUN: %clang_cc1 -x objective-c -Wundeclared-selector -Werror %t
+// RUN: %clang_cc1 -x objective-c -Wundeclared-selector -Wno-int-conversion -fixit %t
+// RUN: %clang_cc1 -x objective-c -Wundeclared-selector -Wno-int-conversion -Werror %t
 // rdar://14039037
 
 @interface NSObject @end
