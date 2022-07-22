@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
-#include "NoopAnalysis.h"
 #include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "gmock/gmock.h"

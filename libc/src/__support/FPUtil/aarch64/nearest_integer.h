@@ -18,6 +18,12 @@
 namespace __llvm_libc {
 namespace fputil {
 
+static inline float nearest_integer(float x) {
+  float result;
+  __asm__ __volatile__("frintn %s0, %s1\n\t" : "=w"(result) : "w"(x));
+  return result;
+}
+
 static inline double nearest_integer(double x) {
   double result;
   __asm__ __volatile__("frintn %d0, %d1\n\t" : "=w"(result) : "w"(x));

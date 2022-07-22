@@ -98,8 +98,8 @@ public:
     llvm::SmallVector<int64_t> pad;
     llvm::SmallVector<int64_t> stride;
 
-    getValuesFromIntArrayAttribute(op.out_pad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
+    getValuesFromIntArrayAttribute(op.getOutPad().cast<ArrayAttr>(), pad);
+    getValuesFromIntArrayAttribute(op.getStride().cast<ArrayAttr>(), stride);
 
     // If striding is all 1 we can modify padding and reverse the kernel along
     // the x/y direction to make it a regular convolution. This is much simpler
@@ -126,11 +126,11 @@ public:
         loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
 
     Value conv2d;
-    if (op.quantization_info()) {
+    if (op.getQuantizationInfo()) {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
           rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr({1, 1}), *op.quantization_info());
+          rewriter.getI64ArrayAttr({1, 1}), *op.getQuantizationInfo());
     } else {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
@@ -167,8 +167,8 @@ public:
     llvm::SmallVector<int64_t> pad;
     llvm::SmallVector<int64_t> stride;
 
-    getValuesFromIntArrayAttribute(op.out_pad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
+    getValuesFromIntArrayAttribute(op.getOutPad().cast<ArrayAttr>(), pad);
+    getValuesFromIntArrayAttribute(op.getStride().cast<ArrayAttr>(), stride);
 
     // If striding is all 1 we can modify padding and reverse the kernel along
     // the x/y direction to make it a regular convolution. This is much simpler
@@ -200,8 +200,8 @@ public:
     Value weightPaddingVal = createOpAndInfer<tosa::ConstOp>(
         rewriter, loc, weightPaddingAttr.getType(), weightPaddingAttr);
 
-    if (op.quantization_info().has_value()) {
-      auto quantInfo = op.quantization_info().value();
+    if (op.getQuantizationInfo().has_value()) {
+      auto quantInfo = op.getQuantizationInfo().value();
       weight = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
@@ -264,8 +264,8 @@ public:
     Value inputPaddingVal = createOpAndInfer<tosa::ConstOp>(
         rewriter, loc, inputPaddingAttr.getType(), inputPaddingAttr);
 
-    if (op.quantization_info().has_value()) {
-      auto quantInfo = op.quantization_info().value();
+    if (op.getQuantizationInfo().has_value()) {
+      auto quantInfo = op.getQuantizationInfo().value();
       input = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,
@@ -288,14 +288,14 @@ public:
 
     // Perform the convolution using the zero bias.
     Value conv2d;
-    if (op.quantization_info()) {
+    if (op.getQuantizationInfo()) {
       conv2d = createOpAndInfer<tosa::Conv2DOp>(
                    rewriter, loc, UnrankedTensorType::get(resultETy), input,
                    weight, zeroBias,
                    /*pad=*/rewriter.getI64ArrayAttr({0, 0, 0, 0}),
                    /*stride=*/rewriter.getI64ArrayAttr({1, 1}),
                    /*dilation=*/rewriter.getI64ArrayAttr({1, 1}),
-                   *op.quantization_info())
+                   *op.getQuantizationInfo())
                    .getResult();
     } else {
       conv2d = createOpAndInfer<tosa::Conv2DOp>(

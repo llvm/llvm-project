@@ -18,10 +18,14 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Object/TapiFile.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
@@ -55,6 +59,7 @@
 #endif
 
 using namespace llvm;
+using namespace llvm::object;
 
 // The name this program was invoked as.
 static StringRef ToolName;
@@ -82,7 +87,7 @@ static void printArHelp(StringRef ToolName) {
     =gnu                -   gnu
     =darwin             -   darwin
     =bsd                -   bsd
-    =aix                -   aix (big archive)
+    =bigarchive         -   big archive (AIX OS)
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
   --output              - the directory to extract archive members to
@@ -91,6 +96,7 @@ static void printArHelp(StringRef ToolName) {
     =windows            -   windows
   --thin                - create a thin archive
   --version             - print the version and exit
+  -X{32|64|32_64|any}   - object mode (only for AIX OS)
   @<file>               - read options from <file>
 
 OPERATIONS:
@@ -184,6 +190,10 @@ static void failIfError(Error E, Twine Context = "") {
   });
 }
 
+static void warn(Twine Message) {
+  WithColor::warning(errs(), ToolName) << Message << "\n";
+}
+
 static SmallVector<const char *, 256> PositionalArgs;
 
 static bool MRI;
@@ -208,6 +218,10 @@ enum ArchiveOperation {
   Extract,         ///< Extract files back to file system
   CreateSymTab     ///< Create a symbol table in an existing archive
 };
+
+enum class BitModeTy { Bit32, Bit64, Bit32_64, Any, Unknown };
+
+static BitModeTy BitMode = BitModeTy::Bit32;
 
 // Modifiers to follow operation to vary behavior
 static bool AddAfter = false;             ///< 'a' modifier
@@ -632,6 +646,71 @@ static bool shouldCreateArchive(ArchiveOperation Op) {
   llvm_unreachable("Missing entry in covered switch.");
 }
 
+static bool is64BitSymbolicFile(SymbolicFile &Obj) {
+  if (auto *IRObj = dyn_cast<IRObjectFile>(&Obj))
+    return Triple(IRObj->getTargetTriple()).isArch64Bit();
+  if (isa<COFFObjectFile>(Obj) || isa<COFFImportFile>(Obj))
+    return false;
+  if (XCOFFObjectFile *XCOFFObj = dyn_cast<XCOFFObjectFile>(&Obj))
+    return XCOFFObj->is64Bit();
+  if (isa<WasmObjectFile>(Obj))
+    return false;
+  if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
+    return Tapi->is64Bit();
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
+    return MachO->is64Bit();
+  if (ELFObjectFileBase *ElfO = dyn_cast<ELFObjectFileBase>(&Obj))
+    return ElfO->getBytesInAddress() == 8;
+
+  fail("unsupported file format");
+}
+
+static bool isValidInBitMode(Binary &Bin) {
+  if (BitMode == BitModeTy::Bit32_64 || BitMode == BitModeTy::Any)
+    return true;
+
+  if (SymbolicFile *SymFile = dyn_cast<SymbolicFile>(&Bin)) {
+    bool Is64Bit = is64BitSymbolicFile(*SymFile);
+    if ((Is64Bit && (BitMode == BitModeTy::Bit32)) ||
+        (!Is64Bit && (BitMode == BitModeTy::Bit64)))
+      return false;
+  }
+  // In AIX "ar", non-object files are always considered to have a valid bit
+  // mode.
+  return true;
+}
+
+Expected<std::unique_ptr<Binary>> getAsBinary(const NewArchiveMember &NM,
+                                              LLVMContext *Context) {
+  auto BinaryOrErr = createBinary(NM.Buf->getMemBufferRef(), Context);
+  if (BinaryOrErr)
+    return std::move(*BinaryOrErr);
+  return BinaryOrErr.takeError();
+}
+
+Expected<std::unique_ptr<Binary>> getAsBinary(const Archive::Child &C,
+                                              LLVMContext *Context) {
+  return C.getAsBinary(Context);
+}
+
+template <class A> static bool isValidInBitMode(const A &Member) {
+  if (object::Archive::getDefaultKindForHost() != object::Archive::K_AIXBIG)
+    return true;
+  LLVMContext Context;
+  Expected<std::unique_ptr<Binary>> BinOrErr = getAsBinary(Member, &Context);
+  // In AIX "ar", if there is a non-object file member, it is never ignored due
+  // to the bit mode setting.
+  if (!BinOrErr) {
+    consumeError(BinOrErr.takeError());
+    return true;
+  }
+  return isValidInBitMode(*BinOrErr.get());
+}
+
+static void warnInvalidObjectForFileMode(Twine Name) {
+  warn("'" + Name + "' is not valid with the current object file mode");
+}
+
 static void performReadOperation(ArchiveOperation Operation,
                                  object::Archive *OldArchive) {
   if (Operation == Extract && OldArchive->isThin())
@@ -645,6 +724,10 @@ static void performReadOperation(ArchiveOperation Operation,
       Expected<StringRef> NameOrErr = C.getName();
       failIfError(NameOrErr.takeError());
       StringRef Name = NameOrErr.get();
+
+      // Check whether to ignore this object due to its bitness.
+      if (!isValidInBitMode(C))
+        continue;
 
       if (Filter) {
         auto I = find_if(Members, [Name](StringRef Path) {
@@ -722,8 +805,7 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
   Members.push_back(std::move(*NMOrErr));
 }
 
-static void addMember(std::vector<NewArchiveMember> &Members,
-                      StringRef FileName, bool FlattenArchive = false) {
+static NewArchiveMember getArchiveMember(StringRef FileName) {
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getFile(FileName, Deterministic);
   failIfError(NMOrErr.takeError(), FileName);
@@ -743,9 +825,24 @@ static void addMember(std::vector<NewArchiveMember> &Members,
           PathOrErr ? *PathOrErr : sys::path::convert_to_slash(FileName));
     }
   }
+  return std::move(*NMOrErr);
+}
+
+static void addMember(std::vector<NewArchiveMember> &Members,
+                      NewArchiveMember &NM) {
+  Members.push_back(std::move(NM));
+}
+
+static void addMember(std::vector<NewArchiveMember> &Members,
+                      StringRef FileName, bool FlattenArchive = false) {
+  NewArchiveMember NM = getArchiveMember(FileName);
+  if (!isValidInBitMode(NM)) {
+    warnInvalidObjectForFileMode(FileName);
+    return;
+  }
 
   if (FlattenArchive &&
-      identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
+      identify_magic(NM.Buf->getBuffer()) == file_magic::archive) {
     object::Archive &Lib = readLibrary(FileName);
     // When creating thin archives, only flatten if the member is also thin.
     if (!Thin || Lib.isThin()) {
@@ -757,7 +854,7 @@ static void addMember(std::vector<NewArchiveMember> &Members,
       return;
     }
   }
-  Members.push_back(std::move(*NMOrErr));
+  Members.push_back(std::move(NM));
 }
 
 enum InsertAction {
@@ -773,6 +870,9 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
                                         StringRef Name,
                                         std::vector<StringRef>::iterator &Pos,
                                         StringMap<int> &MemberCount) {
+  if (!isValidInBitMode(Member))
+    return IA_AddOldMember;
+
   if (Operation == QuickAppend || Members.empty())
     return IA_AddOldMember;
   auto MI = find_if(
@@ -834,7 +934,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       Expected<StringRef> NameOrErr = Child.getName();
       failIfError(NameOrErr.takeError());
       std::string Name = std::string(NameOrErr.get());
-      if (comparePaths(Name, RelPos)) {
+      if (comparePaths(Name, RelPos) && isValidInBitMode(Child)) {
         assert(AddAfter || AddBefore);
         if (AddBefore)
           InsertPos = Pos;
@@ -845,12 +945,25 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       std::vector<StringRef>::iterator MemberI = Members.end();
       InsertAction Action =
           computeInsertAction(Operation, Child, Name, MemberI, MemberCount);
+
+      auto HandleNewMember = [](auto Member, auto &Members, auto &Child) {
+        NewArchiveMember NM = getArchiveMember(*Member);
+        if (isValidInBitMode(NM))
+          addMember(Members, NM);
+        else {
+          // If a new member is not a valid object for the bit mode, add
+          // the old member back.
+          warnInvalidObjectForFileMode(*Member);
+          addChildMember(Members, Child, /*FlattenArchive=*/Thin);
+        }
+      };
+
       switch (Action) {
       case IA_AddOldMember:
         addChildMember(Ret, Child, /*FlattenArchive=*/Thin);
         break;
       case IA_AddNewMember:
-        addMember(Ret, *MemberI);
+        HandleNewMember(MemberI, Ret, Child);
         break;
       case IA_Delete:
         break;
@@ -858,7 +971,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
         addChildMember(Moved, Child, /*FlattenArchive=*/Thin);
         break;
       case IA_MoveNewMember:
-        addMember(Moved, *MemberI);
+        HandleNewMember(MemberI, Moved, Child);
         break;
       }
       // When processing elements with the count param, we need to preserve the
@@ -1043,8 +1156,7 @@ static int performOperation(ArchiveOperation Operation,
   } else {
     if (!Create) {
       // Produce a warning if we should and we're creating the archive
-      WithColor::warning(errs(), ToolName)
-          << "creating " << ArchiveName << "\n";
+      warn("creating " + ArchiveName);
     }
   }
 
@@ -1155,6 +1267,15 @@ static bool handleGenericOption(StringRef arg) {
   return false;
 }
 
+static BitModeTy getBitMode(const char *RawBitMode) {
+  return StringSwitch<BitModeTy>(RawBitMode)
+      .Case("32", BitModeTy::Bit32)
+      .Case("64", BitModeTy::Bit64)
+      .Case("32_64", BitModeTy::Bit32_64)
+      .Case("any", BitModeTy::Any)
+      .Default(BitModeTy::Unknown);
+}
+
 static const char *matchFlagWithArg(StringRef Expected,
                                     ArrayRef<const char *>::iterator &ArgIt,
                                     ArrayRef<const char *> Args) {
@@ -1203,6 +1324,14 @@ static int ar_main(int argc, char **argv) {
   StringSaver Saver(Alloc);
 
   cl::ExpandResponseFiles(Saver, getRspQuoting(makeArrayRef(argv, argc)), Argv);
+
+  // Get BitMode from enviorment variable "OBJECT_MODE" for AIX OS, if
+  // specified.
+  if (object::Archive::getDefaultKindForHost() == object::Archive::K_AIXBIG) {
+    BitMode = getBitMode(getenv("OBJECT_MODE"));
+    if (BitMode == BitModeTy::Unknown)
+      BitMode = BitModeTy::Bit32;
+  }
 
   for (ArrayRef<const char *>::iterator ArgIt = Argv.begin();
        ArgIt != Argv.end(); ++ArgIt) {
@@ -1257,6 +1386,19 @@ static int ar_main(int argc, char **argv) {
     if (matchFlagWithArg("plugin", ArgIt, Argv) ||
         matchFlagWithArg("rsp-quoting", ArgIt, Argv))
       continue;
+
+    if (strncmp(*ArgIt, "-X", 2) == 0) {
+      if (object::Archive::getDefaultKindForHost() ==
+          object::Archive::K_AIXBIG) {
+        Match = *(*ArgIt + 2) != '\0' ? *ArgIt + 2 : *(++ArgIt);
+        BitMode = getBitMode(Match);
+        if (BitMode == BitModeTy::Unknown)
+          fail(Twine("invalid bit mode: ") + Match);
+        continue;
+      } else {
+        fail(Twine(*ArgIt) + " option not supported on non AIX OS");
+      }
+    }
 
     Options += *ArgIt + 1;
   }

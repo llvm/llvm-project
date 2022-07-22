@@ -132,6 +132,7 @@ clang/include/clang/Analysis/FlowSensitive/DataflowWorklist.h
 clang/include/clang/Analysis/FlowSensitive/DebugSupport.h
 clang/include/clang/Analysis/FlowSensitive/MapLattice.h
 clang/include/clang/Analysis/FlowSensitive/MatchSwitch.h
+clang/include/clang/Analysis/FlowSensitive/NoopAnalysis.h
 clang/include/clang/Analysis/FlowSensitive/NoopLattice.h
 clang/include/clang/Analysis/FlowSensitive/Solver.h
 clang/include/clang/Analysis/FlowSensitive/StorageLocation.h
@@ -634,7 +635,6 @@ clang/unittests/Analysis/FlowSensitive/DataflowEnvironmentTest.cpp
 clang/unittests/Analysis/FlowSensitive/MapLatticeTest.cpp
 clang/unittests/Analysis/FlowSensitive/MatchSwitchTest.cpp
 clang/unittests/Analysis/FlowSensitive/MultiVarConstantPropagationTest.cpp
-clang/unittests/Analysis/FlowSensitive/NoopAnalysis.h
 clang/unittests/Analysis/FlowSensitive/SingleVarConstantPropagationTest.cpp
 clang/unittests/Analysis/FlowSensitive/SolverTest.cpp
 clang/unittests/Analysis/FlowSensitive/TestingSupport.cpp

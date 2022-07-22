@@ -284,7 +284,7 @@ SanitizerMask OpenBSD::getSupportedSanitizers() const {
 OpenBSD::OpenBSD(const Driver &D, const llvm::Triple &Triple,
                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
+  getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
 }
 
 void OpenBSD::AddClangSystemIncludeArgs(
@@ -317,13 +317,14 @@ void OpenBSD::AddClangSystemIncludeArgs(
     return;
   }
 
-  addExternCSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/usr/include");
+  addExternCSystemInclude(DriverArgs, CC1Args,
+                          concat(D.SysRoot, "/usr/include"));
 }
 
 void OpenBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                     llvm::opt::ArgStringList &CC1Args) const {
   addSystemInclude(DriverArgs, CC1Args,
-                   getDriver().SysRoot + "/usr/include/c++/v1");
+                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
 }
 
 void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,

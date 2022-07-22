@@ -41,18 +41,22 @@ Libc++ provides implementations of some experimental features. Experimental feat
 are either Technical Specifications (TSes) or official features that were voted to
 the Standard but whose implementation is not complete or stable yet in libc++. Those
 are disabled by default because they are neither API nor ABI stable. However, the
-``_LIBCPP_ENABLE_EXPERIMENTAL`` macro can be defined to turn those features on. Note
-that you will also need to link to the appropriate ``libc++experimental.a`` static
-archive.
+``-fexperimental-library`` compiler flag can be defined to turn those features on.
 
 .. warning::
-  Experimental libraries are Experimental.
+  Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
       library will not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
     * When the standardized version of an experimental feature is implemented,
       the experimental feature is removed two releases after the non-experimental
       version has shipped. The full policy is explained :ref:`here <experimental features>`.
+
+.. note::
+  On compilers that do not support the ``-fexperimental-library`` flag, users can
+  define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against the
+  appropriate static library (usually shipped as ``libc++experimental.a``) to get
+  access to experimental library features.
 
 
 Using libc++ when it is not the system default
@@ -427,3 +431,12 @@ which no dialect declares as such (See the second form described above).
 * ``identity::operator()``
 * ``to_integer``
 * ``to_underlying``
+
+Additional types supported in random distributions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The `C++ Standard <http://eel.is/c++draft/rand#req.genl-1.5>`_ mentions that instantiating several random number
+distributions with types other than ``short``, ``int``, ``long``, ``long long``, and their unsigned versions is
+undefined. As an extension, libc++ supports instantiating ``binomial_distribution``, ``discrete_distribution``,
+``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``, and ``uniform_int_distribution``
+with ``int8_t``, ``__int128_t`` and their unsigned versions.

@@ -8,7 +8,7 @@
 
 ; assemble_acc
 declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
-define void @ass_acc(<512 x i1>* %ptr, <16 x i8> %vc) {
+define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-LABEL: ass_acc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmr v3, v2
@@ -36,13 +36,13 @@ define void @ass_acc(<512 x i1>* %ptr, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc)
-  store <512 x i1> %0, <512 x i1>* %ptr, align 64
+  store <512 x i1> %0, ptr %ptr, align 64
   ret void
 }
 
 ; xxmtacc
 declare <512 x i1> @llvm.ppc.mma.xxmtacc(<512 x i1>)
-define void @int_xxmtacc(<512 x i1>* %ptr, <16 x i8> %vc) {
+define void @int_xxmtacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-LABEL: int_xxmtacc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmr v3, v2
@@ -75,13 +75,13 @@ entry:
 ; generated from the call to xxmtacc then one xxmfacc is generated for the store
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc)
   %1 = tail call <512 x i1> @llvm.ppc.mma.xxmtacc(<512 x i1> %0)
-  store <512 x i1> %1, <512 x i1>* %ptr, align 64
+  store <512 x i1> %1, ptr %ptr, align 64
   ret void
 }
 
 ; xxmfacc
 declare <512 x i1> @llvm.ppc.mma.xxmfacc(<512 x i1>)
-define void @int_xxmfacc(<512 x i1>* %ptr, <16 x i8> %vc) {
+define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-LABEL: int_xxmfacc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmr v3, v2
@@ -112,13 +112,13 @@ entry:
 ; generated from the call to xxmfacc then one xxmfacc is generated for the store
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc)
   %1 = tail call <512 x i1> @llvm.ppc.mma.xxmfacc(<512 x i1> %0)
-  store <512 x i1> %1, <512 x i1>* %ptr, align 64
+  store <512 x i1> %1, ptr %ptr, align 64
   ret void
 }
 
 ; xxsetaccz
 declare <512 x i1> @llvm.ppc.mma.xxsetaccz()
-define void @int_xxsetaccz(<512 x i1>* %ptr) {
+define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-LABEL: int_xxsetaccz:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz acc0
@@ -140,13 +140,13 @@ define void @int_xxsetaccz(<512 x i1>* %ptr) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
-  store <512 x i1> %0, <512 x i1>* %ptr, align 64
+  store <512 x i1> %0, ptr %ptr, align 64
   ret void
 }
 
 ; disassemble_acc
 declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1>)
-define void @disass_acc(<16 x i8>* %ptr1, <16 x i8>* %ptr2, <16 x i8>* %ptr3, <16 x i8>* %ptr4) {
+define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-LABEL: disass_acc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz acc0
@@ -173,15 +173,15 @@ entry:
   %3 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %1, 1
   %4 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %1, 2
   %5 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %1, 3
-  store <16 x i8> %2, <16 x i8>* %ptr1, align 16
-  store <16 x i8> %3, <16 x i8>* %ptr2, align 16
-  store <16 x i8> %4, <16 x i8>* %ptr3, align 16
-  store <16 x i8> %5, <16 x i8>* %ptr4, align 16
+  store <16 x i8> %2, ptr %ptr1, align 16
+  store <16 x i8> %3, ptr %ptr2, align 16
+  store <16 x i8> %4, ptr %ptr3, align 16
+  store <16 x i8> %5, ptr %ptr4, align 16
   ret void
 }
 
 declare <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1>, <16 x i8>, <16 x i8>)
-define void @testBranch(<512 x i1>* %ptr, <16 x i8> %vc, i32 %val) {
+define void @testBranch(ptr %ptr, <16 x i8> %vc, i32 %val) {
 ; CHECK-LABEL: testBranch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmplwi r7, 0
@@ -234,13 +234,13 @@ if.then:
   br label %if.end
 
 if.else:
-  %1 = load <512 x i1>, <512 x i1>* %ptr, align 64
+  %1 = load <512 x i1>, ptr %ptr, align 64
   %2 = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
   br label %if.end
 
 if.end:
   %vq1.0 = phi <512 x i1> [ %0, %if.then ], [ %2, %if.else ]
-  store <512 x i1> %vq1.0, <512 x i1>* %ptr, align 64
+  store <512 x i1> %vq1.0, ptr %ptr, align 64
   ret void
 }
 
@@ -249,7 +249,7 @@ declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1>, <16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @testcse(<512 x i1>* %res, <16 x i8> %vc) {
+define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-LABEL: testcse:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz acc0
@@ -284,14 +284,14 @@ entry:
   %1 = call <512 x i1> @llvm.ppc.mma.xxsetaccz()
   %2 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
   %3 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %4 = getelementptr inbounds <512 x i1>, <512 x i1>* %res, i64 0
-  %5 = getelementptr inbounds <512 x i1>, <512 x i1>* %res, i64 1
-  store <512 x i1> %2, <512 x i1>* %4, align 64
-  store <512 x i1> %3, <512 x i1>* %5, align 64
+  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 0
+  %5 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
+  store <512 x i1> %2, ptr %4, align 64
+  store <512 x i1> %3, ptr %5, align 64
   ret void
 }
 
-define void @testcse2(<512 x i1>* %res, <16 x i8> %vc) {
+define void @testcse2(ptr %res, <16 x i8> %vc) {
 ; CHECK-LABEL: testcse2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz acc0
@@ -332,14 +332,14 @@ entry:
   %1 = call <512 x i1> @llvm.ppc.mma.xxsetaccz()
   %2 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
   %3 = call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %4 = getelementptr inbounds <512 x i1>, <512 x i1>* %res, i64 0
-  %5 = getelementptr inbounds <512 x i1>, <512 x i1>* %res, i64 1
-  store <512 x i1> %2, <512 x i1>* %4, align 64
-  store <512 x i1> %3, <512 x i1>* %5, align 64
+  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 0
+  %5 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
+  store <512 x i1> %2, ptr %4, align 64
+  store <512 x i1> %3, ptr %5, align 64
   ret void
 }
 
-define void @testcse3(<512 x i1>* %res, <16 x i8> %vc) {
+define void @testcse3(ptr %res, <16 x i8> %vc) {
 ; CHECK-LABEL: testcse3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz acc0
@@ -379,14 +379,14 @@ entry:
   %0 = call <512 x i1> @llvm.ppc.mma.xxsetaccz()
   %1 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
   %2 = call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = getelementptr inbounds <512 x i1>, <512 x i1>* %res, i64 0
-  %4 = getelementptr inbounds <512 x i1>, <512 x i1>* %res, i64 1
-  store <512 x i1> %1, <512 x i1>* %3, align 64
-  store <512 x i1> %2, <512 x i1>* %4, align 64
+  %3 = getelementptr inbounds <512 x i1>, ptr %res, i64 0
+  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
+  store <512 x i1> %1, ptr %3, align 64
+  store <512 x i1> %2, ptr %4, align 64
   ret void
 }
 
-define void @testcse4(<512 x i1>* %res, i32 %lim, <16 x i8>* %vc) {
+define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-LABEL: testcse4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r4, 1
@@ -503,46 +503,46 @@ for.body:                                         ; preds = %for.body, %for.body
   %3 = trunc i64 %indvars.iv to i32
   %mul = mul nsw i32 %3, 6
   %idxprom = zext i32 %mul to i64
-  %arrayidx = getelementptr inbounds <16 x i8>, <16 x i8>* %vc, i64 %idxprom
-  %4 = load <16 x i8>, <16 x i8>* %arrayidx, align 16
+  %arrayidx = getelementptr inbounds <16 x i8>, ptr %vc, i64 %idxprom
+  %4 = load <16 x i8>, ptr %arrayidx, align 16
   %add2 = or i32 %mul, 1
   %idxprom3 = zext i32 %add2 to i64
-  %arrayidx4 = getelementptr inbounds <16 x i8>, <16 x i8>* %vc, i64 %idxprom3
-  %5 = load <16 x i8>, <16 x i8>* %arrayidx4, align 16
+  %arrayidx4 = getelementptr inbounds <16 x i8>, ptr %vc, i64 %idxprom3
+  %5 = load <16 x i8>, ptr %arrayidx4, align 16
   %6 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %4, <16 x i8> %5)
   %add6 = add nuw nsw i32 %mul, 2
   %idxprom7 = zext i32 %add6 to i64
-  %arrayidx8 = getelementptr inbounds <16 x i8>, <16 x i8>* %vc, i64 %idxprom7
-  %7 = load <16 x i8>, <16 x i8>* %arrayidx8, align 16
+  %arrayidx8 = getelementptr inbounds <16 x i8>, ptr %vc, i64 %idxprom7
+  %7 = load <16 x i8>, ptr %arrayidx8, align 16
   %add10 = add nuw nsw i32 %mul, 3
   %idxprom11 = zext i32 %add10 to i64
-  %arrayidx12 = getelementptr inbounds <16 x i8>, <16 x i8>* %vc, i64 %idxprom11
-  %8 = load <16 x i8>, <16 x i8>* %arrayidx12, align 16
+  %arrayidx12 = getelementptr inbounds <16 x i8>, ptr %vc, i64 %idxprom11
+  %8 = load <16 x i8>, ptr %arrayidx12, align 16
   %9 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> %1, <16 x i8> %7, <16 x i8> %8)
   %add14 = add nuw nsw i32 %mul, 4
   %idxprom15 = zext i32 %add14 to i64
-  %arrayidx16 = getelementptr inbounds <16 x i8>, <16 x i8>* %vc, i64 %idxprom15
-  %10 = load <16 x i8>, <16 x i8>* %arrayidx16, align 16
+  %arrayidx16 = getelementptr inbounds <16 x i8>, ptr %vc, i64 %idxprom15
+  %10 = load <16 x i8>, ptr %arrayidx16, align 16
   %add18 = add nuw nsw i32 %mul, 5
   %idxprom19 = zext i32 %add18 to i64
-  %arrayidx20 = getelementptr inbounds <16 x i8>, <16 x i8>* %vc, i64 %idxprom19
-  %11 = load <16 x i8>, <16 x i8>* %arrayidx20, align 16
+  %arrayidx20 = getelementptr inbounds <16 x i8>, ptr %vc, i64 %idxprom19
+  %11 = load <16 x i8>, ptr %arrayidx20, align 16
   %12 = tail call <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1> %2, <16 x i8> %10, <16 x i8> %11)
   %mul21 = mul i64 %indvars.iv, 3
   %idx.ext = and i64 %mul21, 4294967295
-  %add.ptr = getelementptr inbounds <512 x i1>, <512 x i1>* %res, i64 %idx.ext
-  store <512 x i1> %6, <512 x i1>* %add.ptr, align 64
-  %add.ptr26 = getelementptr inbounds <512 x i1>, <512 x i1>* %add.ptr, i64 1
-  store <512 x i1> %9, <512 x i1>* %add.ptr26, align 64
-  %add.ptr30 = getelementptr inbounds <512 x i1>, <512 x i1>* %add.ptr, i64 2
-  store <512 x i1> %12, <512 x i1>* %add.ptr30, align 64
+  %add.ptr = getelementptr inbounds <512 x i1>, ptr %res, i64 %idx.ext
+  store <512 x i1> %6, ptr %add.ptr, align 64
+  %add.ptr26 = getelementptr inbounds <512 x i1>, ptr %add.ptr, i64 1
+  store <512 x i1> %9, ptr %add.ptr26, align 64
+  %add.ptr30 = getelementptr inbounds <512 x i1>, ptr %add.ptr, i64 2
+  store <512 x i1> %12, ptr %add.ptr30, align 64
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
 declare i32 @testRedundantPrimeUnprimeF()
-define void @testRedundantPrimeUnprime(<512 x i1>* %dst, <16 x i8> %vc) nounwind {
+define void @testRedundantPrimeUnprime(ptr %dst, <16 x i8> %vc) nounwind {
 ; CHECK-LABEL: testRedundantPrimeUnprime:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -611,19 +611,19 @@ define void @testRedundantPrimeUnprime(<512 x i1>* %dst, <16 x i8> %vc) nounwind
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
-  store <512 x i1> %0, <512 x i1>* %dst, align 64
+  store <512 x i1> %0, ptr %dst, align 64
   %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
-  %call = tail call signext i32 bitcast (i32 ()* @testRedundantPrimeUnprimeF to i32 ()*)()
-  %add.ptr1 = getelementptr inbounds <512 x i1>, <512 x i1>* %dst, i64 1
-  store <512 x i1> %1, <512 x i1>* %add.ptr1, align 64
+  %call = tail call signext i32 @testRedundantPrimeUnprimeF()
+  %add.ptr1 = getelementptr inbounds <512 x i1>, ptr %dst, i64 1
+  store <512 x i1> %1, ptr %add.ptr1, align 64
   ret void
 }
 
-declare <256 x i1> @llvm.ppc.vsx.lxvp(i8*)
-declare void @llvm.ppc.vsx.stxvp(<256 x i1>, i8*)
+declare <256 x i1> @llvm.ppc.vsx.lxvp(ptr)
+declare void @llvm.ppc.vsx.stxvp(<256 x i1>, ptr)
 
 ; Function Attrs: nofree nounwind
-define void @test_ldst_1(i8* nocapture readonly %vqp, <256 x i1>* %vpp, <16 x i8> %vc, i8* nocapture %resp)  {
+define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, ptr nocapture %resp)  {
 ; CHECK-LABEL: test_ldst_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -656,19 +656,16 @@ define void @test_ldst_1(i8* nocapture readonly %vqp, <256 x i1>* %vpp, <16 x i8
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast <256 x i1>* %vpp to i8*
-  %3 = getelementptr i8, i8* %2, i64 8
-  %4 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %3)
-  %5 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernn(<512 x i1> %1, <256 x i1> %4, <16 x i8> %vc, i32 0, i32 0)
-  %6 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %5, <512 x i1>* %6, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = getelementptr i8, ptr %vpp, i64 8
+  %2 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr %1)
+  %3 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernn(<512 x i1> %0, <256 x i1> %2, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %3, ptr %resp, align 64
   ret void
 }
 
 ; Function Attrs: nofree nounwind
-define void @test_ldst_2(i8* nocapture readonly %vqp, <256 x i1>* %vpp, <16 x i8> %vc, i8* nocapture %resp)  {
+define void @test_ldst_2(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, ptr nocapture %resp)  {
 ; CHECK-LABEL: test_ldst_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -701,18 +698,15 @@ define void @test_ldst_2(i8* nocapture readonly %vqp, <256 x i1>* %vpp, <16 x i8
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast <256 x i1>* %vpp to i8*
-  %3 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %2)
-  %4 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr %vpp)
+  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 ; Function Attrs: nofree nounwind
-define void @test_ldst_3(i8* nocapture readonly %vqp, i64 %offs, <256 x i1>* %vpp, <16 x i8> %vc, i8* nocapture %resp)  {
+define void @test_ldst_3(ptr nocapture readonly %vqp, i64 %offs, ptr %vpp, <16 x i8> %vc, ptr nocapture %resp)  {
 ; CHECK-LABEL: test_ldst_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -745,13 +739,10 @@ define void @test_ldst_3(i8* nocapture readonly %vqp, i64 %offs, <256 x i1>* %vp
 ; CHECK-BE-NEXT:    stxv vs2, 32(r9)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast <256 x i1>* %vpp to i8*
-  %3 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %2)
-  %4 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr %vpp)
+  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 

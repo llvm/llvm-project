@@ -297,6 +297,11 @@ Improvements to Clang's diagnostics
   member of the contained class.
 - Added ``-Winvalid-utf8`` which diagnoses invalid UTF-8 code unit sequences in
   comments.
+- The ``-Wint-conversion`` warning diagnostic for implicit int <-> pointer
+  conversions now defaults to an error in all C language modes. It may be
+  downgraded to a warning with ``-Wno-error=int-conversion``, or disabled
+  entirely with ``-Wno-int-conversion``.
+
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
