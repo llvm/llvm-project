@@ -321,9 +321,8 @@ unsigned FlatAffineValueConstraints::insertVar(VarKind kind, unsigned pos,
 }
 
 bool FlatAffineValueConstraints::hasValues() const {
-  return llvm::find_if(values, [](Optional<Value> var) {
-           return var.has_value();
-         }) != values.end();
+  return llvm::any_of(
+      values, [](const Optional<Value> &var) { return var.has_value(); });
 }
 
 /// Checks if two constraint systems are in the same space, i.e., if they are
