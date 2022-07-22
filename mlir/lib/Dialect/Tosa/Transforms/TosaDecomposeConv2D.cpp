@@ -25,8 +25,8 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
 
   LogicalResult matchAndRewrite(tosa::Conv2DOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    Value weight = op.weight();
+    Value input = op.getInput();
+    Value weight = op.getWeight();
     ShapedType inputType = input.getType().cast<ShapedType>();
     ShapedType weightType = weight.getType().cast<ShapedType>();
     ShapedType resultType = op.getType().cast<ShapedType>();
@@ -41,7 +41,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
       return rewriter.notifyMatchFailure(op, "unranked weight input");
 
     // Stride must be 1 for this optimization.
-    for (APInt stride : op.stride().getAsValueRange<IntegerAttr>()) {
+    for (APInt stride : op.getStride().getAsValueRange<IntegerAttr>()) {
       if (!stride.isOne())
         return failure();
     }
@@ -83,18 +83,18 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
         RankedTensorType::get(fullyConnectedShape, resultType.getElementType());
 
     Value fullyConnectedValue;
-    if (op.quantization_info()) {
+    if (op.getQuantizationInfo()) {
       fullyConnectedValue =
           rewriter
               .create<tosa::FullyConnectedOp>(
                   op.getLoc(), fullyConnectedShapeType, reshapedInput,
-                  reshapedWeight, op.bias(), *op.quantization_info())
+                  reshapedWeight, op.getBias(), *op.getQuantizationInfo())
               .getResult();
     } else {
       fullyConnectedValue = rewriter
                                 .create<tosa::FullyConnectedOp>(
                                     op.getLoc(), fullyConnectedShapeType,
-                                    reshapedInput, reshapedWeight, op.bias())
+                                    reshapedInput, reshapedWeight, op.getBias())
                                 .getResult();
     }
 

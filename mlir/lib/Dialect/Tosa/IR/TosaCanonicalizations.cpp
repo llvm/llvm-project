@@ -38,17 +38,17 @@ struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
 
   LogicalResult matchAndRewrite(tosa::ConcatOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.input1().size() != 1)
+    if (op.getInput1().size() != 1)
       return failure();
-    if (op.input1().front().getType() != op.getType()) {
+    if (op.getInput1().front().getType() != op.getType()) {
       rewriter
           .replaceOpWithNewOp<tensor::CastOp>(op, op.getType(),
-                                              op.input1().front())
+                                              op.getInput1().front())
           .getResult();
       return success();
     }
 
-    rewriter.replaceOp(op, op.input1().front());
+    rewriter.replaceOp(op, op.getInput1().front());
     return success();
   }
 };
@@ -63,14 +63,14 @@ struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
 
   LogicalResult matchAndRewrite(tosa::ReshapeOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input1();
+    Value input = op.getInput1();
     Operation *definingOp = input.getDefiningOp();
     if (!definingOp)
       return failure();
 
     if (tosa::ReshapeOp reshapeOp = dyn_cast<tosa::ReshapeOp>(definingOp)) {
       rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-          op, op.getType(), reshapeOp.input1(), op.new_shape());
+          op, op.getType(), reshapeOp.getInput1(), op.getNewShape());
       return success();
     }
 
@@ -83,8 +83,8 @@ struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
 
   LogicalResult matchAndRewrite(tosa::ReshapeOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input1();
-    ArrayAttr newShape = op.new_shape();
+    Value input = op.getInput1();
+    ArrayAttr newShape = op.getNewShape();
 
     // Check if input is constant
     DenseElementsAttr inputAttr;
@@ -118,12 +118,12 @@ void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
-  auto notOp = op.pred().getDefiningOp<tosa::LogicalNotOp>();
+  auto notOp = op.getPred().getDefiningOp<tosa::LogicalNotOp>();
   if (!notOp)
     return failure();
   rewriter.updateRootInPlace(op, [&]() {
     op.getOperation()->setOperands(
-        {notOp.input1(), op.on_false(), op.on_true()});
+        {notOp.getInput1(), op.getOnFalse(), op.getOnTrue()});
   });
   return success();
 }
@@ -133,7 +133,7 @@ struct NoOpOptimization : public OpRewritePattern<tosa::TransposeOp> {
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    auto perm = op.perms();
+    auto perm = op.getPerms();
 
     DenseIntElementsAttr permAttr;
     if (!matchPattern(perm, m_Constant(&permAttr))) {
@@ -150,7 +150,7 @@ struct NoOpOptimization : public OpRewritePattern<tosa::TransposeOp> {
       }
     }
 
-    rewriter.replaceOp(op, op.input1());
+    rewriter.replaceOp(op, op.getInput1());
     return success();
   }
 };
@@ -165,15 +165,15 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
 
   LogicalResult matchAndRewrite(tosa::AddOp op,
                                 PatternRewriter &rewriter) const override {
-    auto input1 = op.input1();
-    auto input2 = op.input2();
+    auto input1 = op.getInput1();
+    auto input2 = op.getInput2();
 
     DenseElementsAttr input1Attr;
     if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
         input2.getType() == op.getType()) {
       if (input1Attr.getType().getElementType().isa<IntegerType>() &&
           input1Attr.getSplatValue<APInt>().isZero()) {
-        rewriter.replaceOp(op, op.input2());
+        rewriter.replaceOp(op, op.getInput2());
         return success();
       }
     }
@@ -183,7 +183,7 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
         input1.getType() == op.getType()) {
       if (input2Attr.getType().getElementType().isa<IntegerType>() &&
           input2Attr.getSplatValue<APInt>().isZero()) {
-        rewriter.replaceOp(op, op.input1());
+        rewriter.replaceOp(op, op.getInput1());
         return success();
       }
     }
@@ -202,21 +202,21 @@ struct MulOneOptimization : public OpRewritePattern<tosa::MulOp> {
 
   LogicalResult matchAndRewrite(tosa::MulOp op,
                                 PatternRewriter &rewriter) const override {
-    auto input1 = op.input1();
-    auto input2 = op.input2();
+    auto input1 = op.getInput1();
+    auto input2 = op.getInput2();
 
     DenseElementsAttr input1Attr;
     if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
         input2.getType() == op.getType()) {
       if (input1Attr.getType().getElementType().isa<FloatType>() &&
           input1Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
-        rewriter.replaceOp(op, op.input2());
+        rewriter.replaceOp(op, op.getInput2());
         return success();
       }
 
       if (input1Attr.getType().getElementType().isa<IntegerType>() &&
           matchPattern(input1, m_One())) {
-        rewriter.replaceOp(op, op.input2());
+        rewriter.replaceOp(op, op.getInput2());
         return success();
       }
     }
@@ -226,13 +226,13 @@ struct MulOneOptimization : public OpRewritePattern<tosa::MulOp> {
         input1.getType() == op.getType()) {
       if (input2Attr.getType().getElementType().isa<FloatType>() &&
           input2Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
-        rewriter.replaceOp(op, op.input1());
+        rewriter.replaceOp(op, op.getInput1());
         return success();
       }
 
       if (input2Attr.getType().getElementType().isa<IntegerType>() &&
           matchPattern(input2, m_One())) {
-        rewriter.replaceOp(op, op.input1());
+        rewriter.replaceOp(op, op.getInput1());
         return success();
       }
     }
@@ -251,11 +251,11 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
 
   LogicalResult matchAndRewrite(tosa::PadOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.pad_const())
+    if (op.getPadConst())
       return failure();
 
-    auto input = op.input1();
-    auto padding = op.padding();
+    auto input = op.getInput1();
+    auto padding = op.getPadding();
 
     ShapedType inputTy = input.getType().cast<ShapedType>();
     Type elementTy = inputTy.getElementType();
@@ -263,10 +263,10 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     Attribute constantAttr;
     if (elementTy.isa<FloatType>()) {
       constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (elementTy.isa<IntegerType>() && !op.quantization_info()) {
+    } else if (elementTy.isa<IntegerType>() && !op.getQuantizationInfo()) {
       constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (elementTy.isa<IntegerType>() && op.quantization_info()) {
-      auto value = op.quantization_info()->getInputZp();
+    } else if (elementTy.isa<IntegerType>() && op.getQuantizationInfo()) {
+      auto value = op.getQuantizationInfo()->getInputZp();
       constantAttr = rewriter.getIntegerAttr(elementTy, value);
     }
 
@@ -298,8 +298,8 @@ struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
 
   LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    Value output = op.output();
+    Value input = op.getInput();
+    Value output = op.getOutput();
     ShapedType inputType = input.getType().cast<ShapedType>();
     ShapedType outputType = output.getType().cast<ShapedType>();
 
@@ -333,8 +333,9 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
 
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    auto inputType = op.input().getType().template dyn_cast<RankedTensorType>();
+    Value input = op.getInput();
+    auto inputType =
+        op.getInput().getType().template dyn_cast<RankedTensorType>();
     auto inputElementType = inputType.getElementType();
 
     if (!inputType.hasStaticShape()) {
@@ -342,8 +343,8 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     }
 
     if (inputElementType.isF32()) {
-      auto minClamp = op.min_fp();
-      auto maxClamp = op.max_fp();
+      auto minClamp = op.getMinFp();
+      auto maxClamp = op.getMaxFp();
       bool isMin = (minClamp.isLargest() || minClamp.isInfinity()) &&
                    minClamp.isNegative();
       bool isMax = (maxClamp.isLargest() || maxClamp.isInfinity()) &&
@@ -357,8 +358,8 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     }
 
     if (inputElementType.isUnsignedInteger()) {
-      int64_t minClamp = op.min_int();
-      int64_t maxClamp = op.max_int();
+      int64_t minClamp = op.getMinInt();
+      int64_t maxClamp = op.getMaxInt();
 
       int64_t intMin =
           APInt::getMinValue(inputElementType.getIntOrFloatBitWidth())
@@ -375,8 +376,8 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     }
 
     if (inputElementType.isa<IntegerType>()) {
-      int64_t minClamp = op.min_int();
-      int64_t maxClamp = op.max_int();
+      int64_t minClamp = op.getMinInt();
+      int64_t maxClamp = op.getMaxInt();
 
       int64_t intMin =
           APInt::getSignedMinValue(inputElementType.getIntOrFloatBitWidth())
@@ -401,21 +402,22 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
 
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input();
+    Value input = op.getInput();
 
     Operation *definingOp = input.getDefiningOp();
     if (!definingOp)
       return failure();
 
     if (tosa::ClampOp clampOp = dyn_cast<tosa::ClampOp>(definingOp)) {
-      auto minFp = std::max(op.min_fp(), clampOp.min_fp()).convertToFloat();
-      auto maxFp = std::min(op.max_fp(), clampOp.max_fp()).convertToFloat();
+      auto minFp = std::max(op.getMinFp(), clampOp.getMinFp()).convertToFloat();
+      auto maxFp = std::min(op.getMaxFp(), clampOp.getMaxFp()).convertToFloat();
 
-      auto minInt = std::max(op.min_int(), clampOp.min_int());
-      auto maxInt = std::min(op.max_int(), clampOp.max_int());
+      auto minInt = std::max(op.getMinInt(), clampOp.getMinInt());
+      auto maxInt = std::min(op.getMaxInt(), clampOp.getMaxInt());
 
       rewriter.replaceOpWithNewOp<tosa::ClampOp>(
-          op, op.getType(), clampOp.input(), rewriter.getI64IntegerAttr(minInt),
+          op, op.getType(), clampOp.getInput(),
+          rewriter.getI64IntegerAttr(minInt),
           rewriter.getI64IntegerAttr(maxInt), rewriter.getF32FloatAttr(minFp),
           rewriter.getF32FloatAttr(maxFp));
       return success();
@@ -436,14 +438,14 @@ void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
-  if (input().getType() == getType())
-    return input();
+  if (getInput().getType() == getType())
+    return getInput();
   return {};
 }
 
 OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.empty() && "constant has no operands");
-  return valueAttr();
+  return getValueAttr();
 }
 
 #define REDUCE_FOLDER(OP)                                                      \
@@ -465,12 +467,12 @@ REDUCE_FOLDER(ReduceSumOp)
 #undef REDUCE_FOLDER
 
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
-  auto inputTy = input1().getType().dyn_cast<RankedTensorType>();
+  auto inputTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
   if (!inputTy || !outputTy || inputTy != outputTy)
     return {};
-  return input1();
+  return getInput1();
 }
 
 OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
@@ -478,7 +480,7 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
   if (operands[1]) {
     auto densePad = operands[1].cast<DenseElementsAttr>();
     if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
-      return input1();
+      return getInput1();
     }
   }
 
@@ -486,20 +488,20 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
-  auto inputTy = input().getType().dyn_cast<RankedTensorType>();
+  auto inputTy = getInput().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
   if (!inputTy || !outputTy || inputTy != outputTy)
     return {};
   if (inputTy.hasStaticShape())
-    return input();
+    return getInput();
 
   return {};
 }
 
 OpFoldResult tosa::SelectOp::fold(ArrayRef<Attribute> operands) {
-  if (on_true() == on_false())
-    return on_true();
+  if (getOnTrue() == getOnFalse())
+    return getOnTrue();
 
   auto predicate = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
   if (!predicate)
@@ -507,18 +509,18 @@ OpFoldResult tosa::SelectOp::fold(ArrayRef<Attribute> operands) {
 
   if (!predicate.isSplat())
     return {};
-  return predicate.getSplatValue<APInt>().getBoolValue() ? on_true()
-                                                         : on_false();
+  return predicate.getSplatValue<APInt>().getBoolValue() ? getOnTrue()
+                                                         : getOnFalse();
 }
 
 OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
   bool allOnes = true;
-  for (Attribute val : multiples().getValue()) {
+  for (Attribute val : getMultiples().getValue()) {
     allOnes = allOnes && val.cast<IntegerAttr>().getValue().getSExtValue() == 1;
   }
 
-  if (allOnes && input1().getType() == getType())
-    return input1();
+  if (allOnes && getInput1().getType() == getType())
+    return getInput1();
   return {};
 }
 
@@ -537,7 +539,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
       [](const APInt &val) { return val.getSExtValue(); }));
 
   if (llvm::equal(llvm::seq<int64_t>(0, perms.size()), perms) &&
-      input1().getType() == getType())
-    return input1();
+      getInput1().getType() == getType())
+    return getInput1();
   return {};
 }
