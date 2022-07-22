@@ -336,37 +336,28 @@ bool ExpressionAnalyzer::CheckRanks(const DataRef &dataRef) {
 }
 
 // Parse tree correction after a substring S(j:k) was misparsed as an
-// array section.  N.B. Fortran substrings have to have a range, not a
+// array section.  Fortran substrings must have a range, not a
 // single index.
-static void FixMisparsedSubstring(const parser::Designator &d) {
-  auto &mutate{const_cast<parser::Designator &>(d)};
-  if (auto *dataRef{std::get_if<parser::DataRef>(&mutate.u)}) {
-    if (auto *ae{std::get_if<common::Indirection<parser::ArrayElement>>(
-            &dataRef->u)}) {
-      parser::ArrayElement &arrElement{ae->value()};
-      if (!arrElement.subscripts.empty()) {
-        auto iter{arrElement.subscripts.begin()};
-        if (auto *triplet{std::get_if<parser::SubscriptTriplet>(&iter->u)}) {
-          if (!std::get<2>(triplet->t) /* no stride */ &&
-              ++iter == arrElement.subscripts.end() /* one subscript */) {
-            if (Symbol *
-                symbol{common::visit(
-                    common::visitors{
-                        [](parser::Name &n) { return n.symbol; },
-                        [](common::Indirection<parser::StructureComponent>
-                                &sc) { return sc.value().component.symbol; },
-                        [](auto &) -> Symbol * { return nullptr; },
-                    },
-                    arrElement.base.u)}) {
-              const Symbol &ultimate{symbol->GetUltimate()};
-              if (const semantics::DeclTypeSpec * type{ultimate.GetType()}) {
-                if (!ultimate.IsObjectArray() &&
-                    type->category() == semantics::DeclTypeSpec::Character) {
-                  // The ambiguous S(j:k) was parsed as an array section
-                  // reference, but it's now clear that it's a substring.
-                  // Fix the parse tree in situ.
-                  mutate.u = arrElement.ConvertToSubstring();
-                }
+static std::optional<parser::Substring> FixMisparsedSubstringDataRef(
+    parser::DataRef &dataRef) {
+  if (auto *ae{
+          std::get_if<common::Indirection<parser::ArrayElement>>(&dataRef.u)}) {
+    // ...%a(j:k) and "a" is a character scalar
+    parser::ArrayElement &arrElement{ae->value()};
+    if (arrElement.subscripts.size() == 1) {
+      if (auto *triplet{std::get_if<parser::SubscriptTriplet>(
+              &arrElement.subscripts.front().u)}) {
+        if (!std::get<2 /*stride*/>(triplet->t).has_value()) {
+          if (const Symbol *
+              symbol{parser::GetLastName(arrElement.base).symbol}) {
+            const Symbol &ultimate{symbol->GetUltimate()};
+            if (const semantics::DeclTypeSpec * type{ultimate.GetType()}) {
+              if (!ultimate.IsObjectArray() &&
+                  type->category() == semantics::DeclTypeSpec::Character) {
+                // The ambiguous S(j:k) was parsed as an array section
+                // reference, but it's now clear that it's a substring.
+                // Fix the parse tree in situ.
+                return arrElement.ConvertToSubstring();
               }
             }
           }
@@ -374,11 +365,45 @@ static void FixMisparsedSubstring(const parser::Designator &d) {
       }
     }
   }
+  return std::nullopt;
+}
+
+// When a designator is a misparsed type-param-inquiry of a misparsed
+// substring -- it looks like a structure component reference of an array
+// slice -- fix the substring and then convert to an intrinsic function
+// call to KIND() or LEN().  And when the designator is a misparsed
+// substring, convert it into a substring reference in place.
+MaybeExpr ExpressionAnalyzer::FixMisparsedSubstring(
+    const parser::Designator &d) {
+  auto &mutate{const_cast<parser::Designator &>(d)};
+  if (auto *dataRef{std::get_if<parser::DataRef>(&mutate.u)}) {
+    if (auto *sc{std::get_if<common::Indirection<parser::StructureComponent>>(
+            &dataRef->u)}) {
+      parser::StructureComponent &structComponent{sc->value()};
+      parser::CharBlock which{structComponent.component.source};
+      if (which == "kind" || which == "len") {
+        if (auto substring{
+                FixMisparsedSubstringDataRef(structComponent.base)}) {
+          // ...%a(j:k)%kind or %len and "a" is a character scalar
+          mutate.u = std::move(*substring);
+          if (MaybeExpr substringExpr{Analyze(d)}) {
+            return MakeFunctionRef(which,
+                ActualArguments{ActualArgument{std::move(*substringExpr)}});
+          }
+        }
+      }
+    } else if (auto substring{FixMisparsedSubstringDataRef(*dataRef)}) {
+      mutate.u = std::move(*substring);
+    }
+  }
+  return std::nullopt;
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
   auto restorer{GetContextualMessages().SetLocation(d.source)};
-  FixMisparsedSubstring(d);
+  if (auto substringInquiry{FixMisparsedSubstring(d)}) {
+    return std::move(substringInquiry);
+  }
   // These checks have to be deferred to these "top level" data-refs where
   // we can be sure that there are no following subscripts (yet).
   if (MaybeExpr result{Analyze(d.u)}) {
@@ -916,6 +941,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     }
   }
   return std::nullopt;
+}
+
+// substring%KIND/LEN
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::SubstringInquiry &x) {
+  if (MaybeExpr substring{Analyze(x.v)}) {
+    CHECK(x.source.size() >= 8);
+    int nameLen{x.source.end()[-1] == 'n' ? 3 /*LEN*/ : 4 /*KIND*/};
+    parser::CharBlock name{
+        x.source.end() - nameLen, static_cast<std::size_t>(nameLen)};
+    CHECK(name == "len" || name == "kind");
+    return MakeFunctionRef(
+        name, ActualArguments{ActualArgument{std::move(*substring)}});
+  } else {
+    return std::nullopt;
+  }
 }
 
 // Subscripted array references
