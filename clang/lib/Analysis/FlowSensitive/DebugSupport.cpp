@@ -82,7 +82,7 @@ public:
 
   /// Returns a string representation of a set of boolean `Constraints` and the
   /// `Result` of satisfiability checking on the `Constraints`.
-  std::string debugString(const std::vector<BoolValue *> &Constraints,
+  std::string debugString(ArrayRef<BoolValue *> &Constraints,
                           const Solver::Result &Result) {
     auto Template = R"(
 Constraints
@@ -185,8 +185,7 @@ debugString(const BoolValue &B,
 }
 
 std::string
-debugString(const std::vector<BoolValue *> &Constraints,
-            const Solver::Result &Result,
+debugString(ArrayRef<BoolValue *> Constraints, const Solver::Result &Result,
             llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames) {
   return DebugStringGenerator(std::move(AtomNames))
       .debugString(Constraints, Result);
