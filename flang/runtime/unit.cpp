@@ -114,6 +114,7 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
     // Otherwise, OPEN on open unit with new FILE= implies CLOSE
     DoImpliedEndfile(handler);
     FlushOutput(handler);
+    TruncateFrame(0, handler);
     Close(CloseStatus::Keep, handler);
   }
   if (newPath.get() && newPathLength > 0) {
