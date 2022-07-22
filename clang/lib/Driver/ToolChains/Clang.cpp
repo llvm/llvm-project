@@ -1923,18 +1923,11 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   AddAAPCSVolatileBitfieldArgs(Args, CmdArgs);
 
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
-    StringRef Name = A->getValue();
-
-    std::string TuneCPU;
-    if (Name == "native")
-      TuneCPU = std::string(llvm::sys::getHostCPUName());
+    CmdArgs.push_back("-tune-cpu");
+    if (strcmp(A->getValue(), "native") == 0)
+      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
     else
-      TuneCPU = std::string(Name);
-
-    if (!TuneCPU.empty()) {
-      CmdArgs.push_back("-tune-cpu");
-      CmdArgs.push_back(Args.MakeArgString(TuneCPU));
-    }
+      CmdArgs.push_back(A->getValue());
   }
 
   AddUnalignedAccessWarning(CmdArgs);
