@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -786,6 +787,9 @@ private:
   // inspects the given callee with the given args to check whether it
   // contains Parameters, and sets Info accordingly.
   void handleCall(FunctionDecl *Callee, typename CallExpr::arg_range Args) {
+    // Skip functions with less parameters, they can't be the target.
+    if (Callee->parameters().size() < Parameters.size())
+      return;
     if (std::any_of(Args.begin(), Args.end(), [](const Expr *E) {
           return dyn_cast<PackExpansionExpr>(E) != nullptr;
         })) {
@@ -822,12 +826,20 @@ private:
   // in the given arguments, if it is there.
   llvm::Optional<size_t> findPack(typename CallExpr::arg_range Args) {
     // find the argument directly referring to the first parameter
-    for (auto It = Args.begin(); It != Args.end(); ++It) {
-      const Expr *Arg = *It;
-      if (const auto *RefArg = unwrapForward(Arg)) {
+    assert(Parameters.size() <= static_cast<size_t>(llvm::size(Args)));
+    for (auto Begin = Args.begin(), End = Args.end() - Parameters.size() + 1;
+         Begin != End; ++Begin) {
+      if (const auto *RefArg = unwrapForward(*Begin)) {
         if (Parameters.front() != RefArg->getDecl())
           continue;
-        return std::distance(Args.begin(), It);
+        // Check that this expands all the way until the last parameter.
+        // It's enough to look at the last parameter, because it isn't possible
+        // to expand without expanding all of them.
+        auto ParamEnd = Begin + Parameters.size() - 1;
+        RefArg = unwrapForward(*ParamEnd);
+        if (!RefArg || Parameters.back() != RefArg->getDecl())
+          continue;
+        return std::distance(Args.begin(), Begin);
       }
     }
     return llvm::None;
@@ -872,6 +884,12 @@ private:
   // std::forward.
   static const DeclRefExpr *unwrapForward(const Expr *E) {
     E = E->IgnoreImplicitAsWritten();
+    // There might be an implicit copy/move constructor call on top of the
+    // forwarded arg.
+    // FIXME: Maybe mark implicit calls in the AST to properly filter here.
+    if (const auto *Const = dyn_cast<CXXConstructExpr>(E))
+      if (Const->getConstructor()->isCopyOrMoveConstructor())
+        E = Const->getArg(0)->IgnoreImplicitAsWritten();
     if (const auto *Call = dyn_cast<CallExpr>(E)) {
       const auto Callee = Call->getBuiltinCallee();
       if (Callee == Builtin::BIforward) {
