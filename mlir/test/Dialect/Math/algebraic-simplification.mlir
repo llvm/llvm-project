@@ -73,3 +73,93 @@ func.func @pow_rsqrt(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) 
   %1 = math.powf %arg1, %v : vector<4xf32>
   return %0, %1 : f32, vector<4xf32>
 }
+
+// CHECK-LABEL: @ipowi_zero_exp(
+// CHECK-SAME: %[[ARG0:.+]]: i32
+// CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
+// CHECK-SAME: -> (i32, vector<4xi32>) {
+func.func @ipowi_zero_exp(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32>) {
+  // CHECK: %[[CST_S:.*]] = arith.constant 1 : i32
+  // CHECK: %[[CST_V:.*]] = arith.constant dense<1> : vector<4xi32>
+  // CHECK: return %[[CST_S]], %[[CST_V]]
+  %c = arith.constant 0 : i32
+  %v = arith.constant dense <0> : vector<4xi32>
+  %0 = math.ipowi %arg0, %c : i32
+  %1 = math.ipowi %arg1, %v : vector<4xi32>
+  return %0, %1 : i32, vector<4xi32>
+}
+
+// CHECK-LABEL: @ipowi_exp_one(
+// CHECK-SAME: %[[ARG0:.+]]: i32
+// CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
+// CHECK-SAME: -> (i32, vector<4xi32>, i32, vector<4xi32>) {
+func.func @ipowi_exp_one(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32>, i32, vector<4xi32>) {
+  // CHECK: %[[CST_S:.*]] = arith.constant 1 : i32
+  // CHECK: %[[CST_V:.*]] = arith.constant dense<1> : vector<4xi32>
+  // CHECK: %[[SCALAR:.*]] = arith.divsi %[[CST_S]], %[[ARG0]]
+  // CHECK: %[[VECTOR:.*]] = arith.divsi %[[CST_V]], %[[ARG1]]
+  // CHECK: return %[[ARG0]], %[[ARG1]], %[[SCALAR]], %[[VECTOR]]
+  %c1 = arith.constant 1 : i32
+  %v1 = arith.constant dense <1> : vector<4xi32>
+  %0 = math.ipowi %arg0, %c1 : i32
+  %1 = math.ipowi %arg1, %v1 : vector<4xi32>
+  %cm1 = arith.constant -1 : i32
+  %vm1 = arith.constant dense <-1> : vector<4xi32>
+  %2 = math.ipowi %arg0, %cm1 : i32
+  %3 = math.ipowi %arg1, %vm1 : vector<4xi32>
+  return %0, %1, %2, %3 : i32, vector<4xi32>, i32, vector<4xi32>
+}
+
+// CHECK-LABEL: @ipowi_exp_two(
+// CHECK-SAME: %[[ARG0:.+]]: i32
+// CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
+// CHECK-SAME: -> (i32, vector<4xi32>, i32, vector<4xi32>) {
+func.func @ipowi_exp_two(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32>, i32, vector<4xi32>) {
+  // CHECK: %[[CST_S:.*]] = arith.constant 1 : i32
+  // CHECK: %[[CST_V:.*]] = arith.constant dense<1> : vector<4xi32>
+  // CHECK: %[[SCALAR0:.*]] = arith.muli %[[ARG0]], %[[ARG0]]
+  // CHECK: %[[VECTOR0:.*]] = arith.muli %[[ARG1]], %[[ARG1]]
+  // CHECK: %[[SCALAR1:.*]] = arith.divsi %[[CST_S]], %[[ARG0]]
+  // CHECK: %[[SMUL:.*]] = arith.muli %[[SCALAR1]], %[[SCALAR1]]
+  // CHECK: %[[VECTOR1:.*]] = arith.divsi %[[CST_V]], %[[ARG1]]
+  // CHECK: %[[VMUL:.*]] = arith.muli %[[VECTOR1]], %[[VECTOR1]]
+  // CHECK: return %[[SCALAR0]], %[[VECTOR0]], %[[SMUL]], %[[VMUL]]
+  %c1 = arith.constant 2 : i32
+  %v1 = arith.constant dense <2> : vector<4xi32>
+  %0 = math.ipowi %arg0, %c1 : i32
+  %1 = math.ipowi %arg1, %v1 : vector<4xi32>
+  %cm1 = arith.constant -2 : i32
+  %vm1 = arith.constant dense <-2> : vector<4xi32>
+  %2 = math.ipowi %arg0, %cm1 : i32
+  %3 = math.ipowi %arg1, %vm1 : vector<4xi32>
+  return %0, %1, %2, %3 : i32, vector<4xi32>, i32, vector<4xi32>
+}
+
+// CHECK-LABEL: @ipowi_exp_three(
+// CHECK-SAME: %[[ARG0:.+]]: i32
+// CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
+// CHECK-SAME: -> (i32, vector<4xi32>, i32, vector<4xi32>) {
+func.func @ipowi_exp_three(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32>, i32, vector<4xi32>) {
+  // CHECK: %[[CST_S:.*]] = arith.constant 1 : i32
+  // CHECK: %[[CST_V:.*]] = arith.constant dense<1> : vector<4xi32>
+  // CHECK: %[[SMUL0:.*]] = arith.muli %[[ARG0]], %[[ARG0]]
+  // CHECK: %[[SCALAR0:.*]] = arith.muli %[[SMUL0]], %[[ARG0]]
+  // CHECK: %[[VMUL0:.*]] = arith.muli %[[ARG1]], %[[ARG1]]
+  // CHECK: %[[VECTOR0:.*]] = arith.muli %[[VMUL0]], %[[ARG1]]
+  // CHECK: %[[SCALAR1:.*]] = arith.divsi %[[CST_S]], %[[ARG0]]
+  // CHECK: %[[SMUL1:.*]] = arith.muli %[[SCALAR1]], %[[SCALAR1]]
+  // CHECK: %[[SMUL2:.*]] = arith.muli %[[SMUL1]], %[[SCALAR1]]
+  // CHECK: %[[VECTOR1:.*]] = arith.divsi %[[CST_V]], %[[ARG1]]
+  // CHECK: %[[VMUL1:.*]] = arith.muli %[[VECTOR1]], %[[VECTOR1]]
+  // CHECK: %[[VMUL2:.*]] = arith.muli %[[VMUL1]], %[[VECTOR1]]
+  // CHECK: return %[[SCALAR0]], %[[VECTOR0]], %[[SMUL2]], %[[VMUL2]]
+  %c1 = arith.constant 3 : i32
+  %v1 = arith.constant dense <3> : vector<4xi32>
+  %0 = math.ipowi %arg0, %c1 : i32
+  %1 = math.ipowi %arg1, %v1 : vector<4xi32>
+  %cm1 = arith.constant -3 : i32
+  %vm1 = arith.constant dense <-3> : vector<4xi32>
+  %2 = math.ipowi %arg0, %cm1 : i32
+  %3 = math.ipowi %arg1, %vm1 : vector<4xi32>
+  return %0, %1, %2, %3 : i32, vector<4xi32>, i32, vector<4xi32>
+}
