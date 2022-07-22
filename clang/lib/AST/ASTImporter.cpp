@@ -3109,6 +3109,11 @@ Error ASTNodeImporter::ImportTemplateInformation(
   case FunctionDecl::TK_FunctionTemplate:
     return Error::success();
 
+  case FunctionDecl::TK_DependentNonTemplate:
+    if (Expected<FunctionDecl *> InstFDOrErr =
+            import(FromFD->getInstantiatedFromDecl()))
+      ToFD->setInstantiatedFromDecl(*InstFDOrErr);
+    return Error::success();
   case FunctionDecl::TK_MemberSpecialization: {
     TemplateSpecializationKind TSK = FromFD->getTemplateSpecializationKind();
 
