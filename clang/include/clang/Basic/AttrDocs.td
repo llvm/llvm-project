@@ -5040,6 +5040,12 @@ general this requires the template to be declared at least twice. For example:
                                 clang::preferred_name(wstring)]] basic_string {
     // ...
   };
+
+
+Note that the ``preferred_name`` attribute will be ignored when the compiler
+writes a C++20 Module interface now. This is due to a compiler issue
+(https://github.com/llvm/llvm-project/issues/56490) that blocks users to modularize
+declarations with `preferred_name`. This is intended to be fixed in the future.
   }];
 }
 
