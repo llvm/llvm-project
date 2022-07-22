@@ -14,7 +14,9 @@
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "llvm/Support/Debug.h"
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -291,6 +293,17 @@ BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowConditionWithCache(
     }
   }
   return substituteBoolValue(*ConstraintsIT->second, SubstitutionsCache);
+}
+
+void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token) {
+  llvm::DenseSet<BoolValue *> Constraints = {&Token};
+  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
+
+  llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {
+      {&getBoolLiteralValue(false), "False"},
+      {&getBoolLiteralValue(true), "True"}};
+  llvm::dbgs() << debugString(Constraints, AtomNames);
 }
 
 } // namespace dataflow

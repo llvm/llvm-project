@@ -43,6 +43,20 @@ std::string debugString(
     llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
 
 /// Returns a string representation for `Constraints` - a collection of boolean
+/// formulas.
+///
+/// Atomic booleans appearing in the boolean value `Constraints` are assigned to
+/// labels either specified in `AtomNames` or created by default rules as B0,
+/// B1, ...
+///
+/// Requirements:
+///
+///   Names assigned to atoms should not be repeated in `AtomNames`.
+std::string debugString(
+    const llvm::DenseSet<BoolValue *> &Constraints,
+    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
+
+/// Returns a string representation for `Constraints` - a collection of boolean
 /// formulas and the `Result` of satisfiability checking.
 ///
 /// Atomic booleans appearing in `Constraints` and `Result` are assigned to
