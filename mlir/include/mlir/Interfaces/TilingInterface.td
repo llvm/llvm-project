@@ -167,6 +167,28 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*defaultImplementation=*/[{
           return failure();
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Generates the scalar implementation of the operation. 
+
+          Given the list `ivs` that represent points in the iteration space
+          (as specified by `getIterationDomain()`) returns the scalar operations
+          that represent the computation at that point in the iteration space.
+          This method is typically used as the "exit path", i.e. once all
+          transformations are done, this method can be used to lower to scalar 
+          code that can then be lowered to LLVM or SPIR-V dialects.
+        }],
+        /*retType=*/"LogicalResult",
+        /*methodName=*/"generateScalarImplementation",
+        /*args=*/(ins
+            "OpBuilder &":$b,
+            "Location ":$loc,
+            "ValueRange ":$ivs),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
       >
   ];  
 }

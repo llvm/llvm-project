@@ -62,7 +62,7 @@ OpFoldResult getAsOpFoldResult(Value val) {
 
 /// Given an array of values, try to extract a constant Attribute from each
 /// value. If this fails, return the original value.
-SmallVector<OpFoldResult> getAsOpFoldResult(ArrayRef<Value> values) {
+SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values) {
   return llvm::to_vector<4>(
       llvm::map_range(values, [](Value v) { return getAsOpFoldResult(v); }));
 }
