@@ -681,6 +681,7 @@ __OMP_RTL_ATTRS(omp_get_partition_num_places, GetterAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_partition_place_nums, GetterAttrs, AttributeSet(),
                 ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_wtime, GetterAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(omp_set_num_threads, SetterAttrs, AttributeSet(), ParamAttrs())
 __OMP_RTL_ATTRS(omp_set_dynamic, SetterAttrs, AttributeSet(), ParamAttrs())
@@ -919,7 +920,7 @@ __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
 
 __OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
   EnumAttr(NoUnwind),
-  EnumAttr(NoSync), 
+  EnumAttr(NoSync),
   AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
                 ParamAttrs(NoCaptureAttrs))
