@@ -8,10 +8,10 @@
 // FIXME: Move this to clang/unittests/Analysis/FlowSensitive/Models.
 
 #include "clang/Analysis/FlowSensitive/Models/ChromiumCheckModel.h"
-#include "NoopAnalysis.h"
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
