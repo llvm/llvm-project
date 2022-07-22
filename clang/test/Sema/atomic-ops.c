@@ -33,11 +33,7 @@ _Static_assert(__GCC_ATOMIC_INT_LOCK_FREE == 2, "");
 _Static_assert(__GCC_ATOMIC_INT_LOCK_FREE == __CLANG_ATOMIC_INT_LOCK_FREE, "");
 _Static_assert(__GCC_ATOMIC_LONG_LOCK_FREE == 2, "");
 _Static_assert(__GCC_ATOMIC_LONG_LOCK_FREE == __CLANG_ATOMIC_LONG_LOCK_FREE, "");
-#ifdef __i386__
-_Static_assert(__GCC_ATOMIC_LLONG_LOCK_FREE == 1, "");
-#else
 _Static_assert(__GCC_ATOMIC_LLONG_LOCK_FREE == 2, "");
-#endif
 _Static_assert(__GCC_ATOMIC_LLONG_LOCK_FREE == __CLANG_ATOMIC_LLONG_LOCK_FREE, "");
 _Static_assert(__GCC_ATOMIC_POINTER_LOCK_FREE == 2, "");
 _Static_assert(__GCC_ATOMIC_POINTER_LOCK_FREE == __CLANG_ATOMIC_POINTER_LOCK_FREE, "");
