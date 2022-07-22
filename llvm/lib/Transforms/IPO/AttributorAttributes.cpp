@@ -1074,17 +1074,9 @@ struct AAPointerInfoImpl
 
       // For now we only filter accesses based on CFG reasoning which does not
       // work yet if we have threading effects, or the access is complicated.
-      if (CanUseCFGResoning) {
-        if ((!Acc.isWrite() ||
-             !AA::isPotentiallyReachable(A, *Acc.getLocalInst(), I, QueryingAA,
-                                         IsLiveInCalleeCB)) &&
-            (!Acc.isRead() ||
-             !AA::isPotentiallyReachable(A, I, *Acc.getLocalInst(), QueryingAA,
-                                         IsLiveInCalleeCB)))
-          return true;
-        if (Dominates && UseDominanceReasoning && IsSameThreadAsLoad(Acc))
-          DominatingWrites.insert(&Acc);
-      }
+      if (CanUseCFGResoning && Dominates && UseDominanceReasoning &&
+          IsSameThreadAsLoad(Acc))
+        DominatingWrites.insert(&Acc);
 
       InterferingAccesses.push_back({&Acc, Exact});
       return true;
@@ -1092,19 +1084,27 @@ struct AAPointerInfoImpl
     if (!State::forallInterferingAccesses(I, AccessCB))
       return false;
 
-    // If we cannot use CFG reasoning we only filter the non-write accesses
-    // and are done here.
-    if (!CanUseCFGResoning) {
-      for (auto &It : InterferingAccesses)
-        if (!UserCB(*It.first, It.second))
-          return false;
-      return true;
+    if (HasBeenWrittenTo) {
+      const Function *ScopePtr = &Scope;
+      IsLiveInCalleeCB = [ScopePtr](const Function &Fn) {
+        return ScopePtr != &Fn;
+      };
     }
 
     // Helper to determine if we can skip a specific write access. This is in
     // the worst case quadratic as we are looking for another write that will
     // hide the effect of this one.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
+      if ((!Acc.isWrite() ||
+           !AA::isPotentiallyReachable(A, *Acc.getLocalInst(), I, QueryingAA,
+                                       IsLiveInCalleeCB)) &&
+          (!Acc.isRead() ||
+           !AA::isPotentiallyReachable(A, I, *Acc.getLocalInst(), QueryingAA,
+                                       IsLiveInCalleeCB)))
+        return true;
+
+      if (!DT || !UseDominanceReasoning)
+        return false;
       if (!IsSameThreadAsLoad(Acc))
         return false;
       if (!DominatingWrites.count(&Acc))
@@ -1126,8 +1126,7 @@ struct AAPointerInfoImpl
     // succeeded for all or not.
     unsigned NumInterferingAccesses = InterferingAccesses.size();
     for (auto &It : InterferingAccesses) {
-      if (!DT || !UseDominanceReasoning ||
-          NumInterferingAccesses > MaxInterferingAccesses ||
+      if (NumInterferingAccesses > MaxInterferingAccesses ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
@@ -3241,7 +3240,9 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
           }
         }
 
-        if (!AA::isPotentiallyReachable(A, *UserI, *getCtxI(), *this))
+        if (!AA::isPotentiallyReachable(
+                A, *UserI, *getCtxI(), *this,
+                [ScopeFn](const Function &Fn) { return &Fn != ScopeFn; }))
           return true;
       }
 
@@ -4833,7 +4834,9 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
           return false;
         // If this call base might reach the scope again we might forward the
         // argument back here. This is very conservative.
-        if (AA::isPotentiallyReachable(A, *CB, *Scope, *this, nullptr))
+        if (AA::isPotentiallyReachable(
+                A, *CB, *Scope, *this,
+                [Scope](const Function &Fn) { return &Fn != Scope; }))
           return false;
         return true;
       }
@@ -9668,13 +9671,9 @@ public:
   }
 
   bool instructionCanReach(Attributor &A, const Instruction &Inst,
-                           const Function &Fn,
-                           bool UseBackwards) const override {
+                           const Function &Fn) const override {
     if (!isValidState())
       return true;
-
-    if (UseBackwards)
-      return AA::isPotentiallyReachable(A, Inst, Fn, *this, nullptr);
 
     const auto &Reachability = A.getAAFor<AAReachability>(
         *this, IRPosition::function(*getAssociatedFunction()),
