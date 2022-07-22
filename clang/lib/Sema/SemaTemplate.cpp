@@ -4573,7 +4573,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   void *InsertPos = nullptr;
   if (VarTemplateSpecializationDecl *Spec = Template->findSpecialization(
           Converted, InsertPos)) {
-    checkSpecializationVisibility(TemplateNameLoc, Spec);
+    checkSpecializationReachability(TemplateNameLoc, Spec);
     // If we already have a variable template specialization, return it.
     return Spec;
   }
@@ -4694,7 +4694,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
           dyn_cast<VarTemplatePartialSpecializationDecl>(InstantiationPattern))
     Decl->setInstantiationOf(D, InstantiationArgs);
 
-  checkSpecializationVisibility(TemplateNameLoc, Decl);
+  checkSpecializationReachability(TemplateNameLoc, Decl);
 
   assert(Decl && "No variable template specialization?");
   return Decl;
