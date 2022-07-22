@@ -169,6 +169,8 @@ public:
   Register find(const Argument *Arg, const MachineFunction *MF) {
     return AT.find(const_cast<Argument *>(Arg), MF);
   }
+
+  const SPIRVDuplicatesTracker<Type> *getTypes() { return &TT; }
 };
 } // namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVDUPLICATESTRACKER_H

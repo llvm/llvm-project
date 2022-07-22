@@ -848,6 +848,33 @@ func.func @fold_linalgop_with_cast_consumer(%arg0 : tensor<?x?xf32>, %arg1 : ten
 
 // -----
 
+func.func private @some_use(%0 : tensor<4x8xf32>)
+
+func.func @linalgop_with_cond_cast_consumer(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
+    %arg2 : tensor<?x?xf32>, %arg3 : i1) -> tensor<?x?xf32> {
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  scf.if %arg3 {
+    %1 = tensor.cast %0 : tensor<?x?xf32> to tensor<4x8xf32>
+    func.call @some_use(%1) : (tensor<4x8xf32>) -> ()
+  }
+  return %0 : tensor<?x?xf32>
+}
+
+// Check conditionally reachable cast is not folded into producer.
+// CHECK-LABEL: func @linalgop_with_cond_cast_consumer
+//  CHECK-SAME:     (%[[ARG0:.*]]: tensor<?x?xf32>, %[[ARG1:.*]]: tensor<?x?xf32>, %[[ARG2:.*]]: tensor<?x?xf32>, %[[ARG3:.*]]: i1)
+//       CHECK: %[[RES:.*]] = linalg.matmul ins(%[[ARG0]], %[[ARG1]] : tensor<?x?xf32>, tensor<?x?xf32>)
+//  CHECK-SAME:      outs(%[[ARG2]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+//       CHECK: scf.if %[[ARG3]] {
+//       CHECK:   %[[CAST:.*]] = tensor.cast %[[RES]] : tensor<?x?xf32> to tensor<4x8xf32>
+//       CHECK:   func.call @some_use(%[[CAST]]) : (tensor<4x8xf32>) -> ()
+//       CHECK: }
+//       CHECK: return %[[RES]] : tensor<?x?xf32>
+
+
+// -----
+
 func.func @fold_conv_op_with_cast_consumer(%arg0 : tensor<?x?x?x?xf32>,
     %arg1 : tensor<?x?x?x?xf32>,  %arg2 : tensor<?x?x?x?xf32>) ->
     (tensor<4x8x12x16xf32>, tensor<?x?x?x?xf32>) {

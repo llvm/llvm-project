@@ -75,6 +75,7 @@ public:
 
   explicit operator bool() { return set; }
   bool operator==(IntegerSet other) const { return set == other.set; }
+  bool operator!=(IntegerSet other) const { return set != other.set; }
 
   unsigned getNumDims() const;
   unsigned getNumSymbols() const;

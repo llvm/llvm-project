@@ -1,4 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR --implicit-check-not=error %s
 
 v_mov_b32 v5, v1 dpp8:[0,1,2,3,4,5,6,7]
 // GFX11: encoding: [0xe9,0x02,0x0a,0x7e,0x01,0x88,0xc6,0xfa]
@@ -518,4 +519,28 @@ v_subrev_nc_u32 v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
 
 v_subrev_nc_u32 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX11: encoding: [0xea,0x04,0x0a,0x4e,0x01,0x77,0x39,0x05]
+
+v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x00,0x66,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x88,0x46,0x92]
+
+v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 op_sel:[1,1,0,0] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x60,0x66,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x88,0x46,0x92]
+
+v_dot2_f16_f16_e64_dpp v0, |v1|, -v2, -|v3| op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x65,0x66,0xd6,0xe9,0x04,0x0e,0xc4,0x01,0x88,0x46,0x92]
+
+v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x00,0x67,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x88,0x46,0x92]
+
+v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 op_sel:[1,1,0,0] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
+
+v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x60,0x67,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x88,0x46,0x92]
+
+v_dot2_bf16_bf16_e64_dpp v0, |v1|, -v2, -|v3| op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x65,0x67,0xd6,0xe9,0x04,0x0e,0xc4,0x01,0x88,0x46,0x92]
 

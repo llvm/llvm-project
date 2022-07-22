@@ -772,6 +772,17 @@ namespace ranges {
                                                       borrowed_iterator_t<R2>, O>
       set_symmetric_difference(R1&& r1, R2&& r2, O result, Comp comp = {},
                                Proj1 proj1 = {}, Proj2 proj2 = {});                                 // since C++20
+
+  template<forward_iterator I, sentinel_for<I> S, class T, class Proj = identity,
+           indirect_strict_weak_order<const T*, projected<I, Proj>> Comp = ranges::less>
+    constexpr subrange<I>
+      equal_range(I first, S last, const T& value, Comp comp = {}, Proj proj = {});                 // since C++20
+  
+  template<forward_range R, class T, class Proj = identity,
+           indirect_strict_weak_order<const T*, projected<iterator_t<R>, Proj>> Comp =
+             ranges::less>
+    constexpr borrowed_subrange_t<R>
+      equal_range(R&& r, const T& value, Comp comp = {}, Proj proj = {});                           // since C++20
   
   template<class I1, class I2, class O>
     using set_union_result = in_in_out_result<I1, I2, O>;                                           // since C++20
@@ -790,6 +801,20 @@ namespace ranges {
     constexpr set_union_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>, O>
       set_union(R1&& r1, R2&& r2, O result, Comp comp = {},
                 Proj1 proj1 = {}, Proj2 proj2 = {});                                                // since C++20
+
+  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
+           class Proj1 = identity, class Proj2 = identity,
+           indirect_strict_weak_order<projected<I1, Proj1>, projected<I2, Proj2>> Comp =
+             ranges::less>
+    constexpr bool includes(I1 first1, S1 last1, I2 first2, S2 last2, Comp comp = {},
+                            Proj1 proj1 = {}, Proj2 proj2 = {});                                   // Since C++20
+  
+  template<input_range R1, input_range R2, class Proj1 = identity,
+           class Proj2 = identity,
+           indirect_strict_weak_order<projected<iterator_t<R1>, Proj1>,
+                                      projected<iterator_t<R2>, Proj2>> Comp = ranges::less>
+    constexpr bool includes(R1&& r1, R2&& r2, Comp comp = {},
+                            Proj1 proj1 = {}, Proj2 proj2 = {});                                   // Since C++20
 }
 
     constexpr bool     // constexpr in C++20
@@ -1530,6 +1555,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_count.h>
 #include <__algorithm/ranges_count_if.h>
 #include <__algorithm/ranges_equal.h>
+#include <__algorithm/ranges_equal_range.h>
 #include <__algorithm/ranges_fill.h>
 #include <__algorithm/ranges_fill_n.h>
 #include <__algorithm/ranges_find.h>
@@ -1539,6 +1565,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_find_if_not.h>
 #include <__algorithm/ranges_for_each.h>
 #include <__algorithm/ranges_for_each_n.h>
+#include <__algorithm/ranges_includes.h>
 #include <__algorithm/ranges_is_partitioned.h>
 #include <__algorithm/ranges_is_sorted.h>
 #include <__algorithm/ranges_is_sorted_until.h>

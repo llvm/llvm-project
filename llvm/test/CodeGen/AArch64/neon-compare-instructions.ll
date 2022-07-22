@@ -4494,3 +4494,1600 @@ define <2 x i64> @fcmunoz2xdouble(<2 x double> %A) {
   ret <2 x i64> %tmp4
 
 }
+
+define <2 x i32> @fcmoeq2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmoeq2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoeq2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oeq <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmoeq4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmoeq4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoeq4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oeq <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmoeq2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmoeq2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoeq2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oeq <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmoge2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmoge2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoge2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2s, v0.2s, v1.2s
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oge <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmoge4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmoge4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoge4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oge <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmoge2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmoge2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoge2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oge <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmogt2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmogt2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogt2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2s, v0.2s, v1.2s
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ogt <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmogt4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmogt4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogt4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ogt <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmogt2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmogt2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogt2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ogt <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmole2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmole2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmole2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ole <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmole4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmole4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmole4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ole <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmole2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmole2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmole2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ole <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmolt2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmolt2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmolt2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast olt <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmolt4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmolt4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmolt4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast olt <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmolt2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmolt2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmolt2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast olt <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmone2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmone2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmone2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v2.2s, v0.2s, v1.2s
+; GISEL-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    orr v0.8b, v0.8b, v2.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast one <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmone4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmone4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmone4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v2.4s, v0.4s, v1.4s
+; GISEL-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast one <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmone2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmone2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmone2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v2.2d, v0.2d, v1.2d
+; GISEL-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast one <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmord2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmord2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v2.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmord2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v2.2s, v0.2s, v1.2s
+; GISEL-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    orr v0.8b, v0.8b, v2.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ord <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmord4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmord4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmord4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v2.4s, v0.4s, v1.4s
+; GISEL-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ord <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmord2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmord2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmord2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v2.2d, v0.2d, v1.2d
+; GISEL-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ord <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+
+define <2 x i32> @fcmuno2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmuno2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v2.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmuno2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v2.2s, v0.2s, v1.2s
+; GISEL-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    orr v0.8b, v0.8b, v2.8b
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uno <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmuno4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmuno4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmuno4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v2.4s, v0.4s, v1.4s
+; GISEL-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uno <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmuno2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmuno2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmuno2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v2.2d, v0.2d, v1.2d
+; GISEL-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uno <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmueq2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmueq2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmueq2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v2.2s, v0.2s, v1.2s
+; GISEL-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    orr v0.8b, v0.8b, v2.8b
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ueq <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmueq4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmueq4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmueq4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v2.4s, v0.4s, v1.4s
+; GISEL-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ueq <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmueq2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmueq2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmueq2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v2.2d, v0.2d, v1.2d
+; GISEL-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    orr v0.16b, v0.16b, v2.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ueq <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmuge2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmuge2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmuge2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uge <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmuge4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmuge4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmuge4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uge <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmuge2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmuge2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmuge2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uge <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmugt2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmugt2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugt2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2s, v1.2s, v0.2s
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ugt <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmugt4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmugt4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugt4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ugt <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmugt2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmugt2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugt2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ugt <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmule2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmule2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmule2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2s, v0.2s, v1.2s
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmule4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmule4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmule4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmule2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmule2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmule2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmult2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmult2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmult2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2s, v0.2s, v1.2s
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ult <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmult4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmult4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmult4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ult <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmult2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmult2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmult2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ult <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmune2xfloat_fast(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmune2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmune2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast une <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmune4xfloat_fast(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmune4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmune4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast une <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmune2xdouble_fast(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmune2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmune2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast une <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmoeqz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmoeqz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoeqz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oeq <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmoeqz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmoeqz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoeqz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oeq <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmoeqz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmoeqz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoeqz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oeq <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+
+define <2 x i32> @fcmogez2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmogez2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogez2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oge <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmogez4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmogez4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogez4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oge <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmogez2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmogez2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogez2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast oge <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmogtz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmogtz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogtz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ogt <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmogtz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmogtz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogtz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ogt <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmogtz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmogtz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmogtz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ogt <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmoltz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmoltz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoltz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast olt <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmoltz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmoltz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoltz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast olt <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmoltz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmoltz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmoltz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast olt <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmolez2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmolez2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmle v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmolez2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmle v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ole <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmolez4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmolez4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmle v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmolez4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmle v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ole <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmolez2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmolez2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmle v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmolez2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmle v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ole <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmonez2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmonez2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmonez2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v1.2s, v0.2s, #0.0
+; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast one <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmonez4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmonez4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmonez4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v1.4s, v0.4s, #0.0
+; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast one <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmonez2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmonez2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmonez2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v1.2d, v0.2d, #0.0
+; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast one <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmordz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmordz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v1.2s, v0.2s, #0.0
+; CHECK-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmordz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v1.2s, v0.2s, #0.0
+; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ord <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmordz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmordz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v1.4s, v0.4s, #0.0
+; CHECK-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmordz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v1.4s, v0.4s, #0.0
+; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ord <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmordz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmordz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v1.2d, v0.2d, #0.0
+; CHECK-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmordz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v1.2d, v0.2d, #0.0
+; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ord <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmueqz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmueqz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmueqz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v1.2s, v0.2s, #0.0
+; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ueq <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmueqz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmueqz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmueqz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v1.4s, v0.4s, #0.0
+; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ueq <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmueqz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmueqz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmueqz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v1.2d, v0.2d, #0.0
+; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ueq <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmugez2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmugez2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugez2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uge <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmugez4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmugez4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugez4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uge <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmugez2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmugez2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugez2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uge <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmugtz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmugtz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugtz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmle v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ugt <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmugtz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmugtz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugtz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmle v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ugt <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmugtz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmugtz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmugtz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmle v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ugt <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmultz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmultz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmultz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ult <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmultz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmultz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmultz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ult <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmultz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmultz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmultz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ult <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+; ULE with zero = !OGT
+define <2 x i32> @fcmulez2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmulez2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmle v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmulez2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmulez4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmulez4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmle v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmulez4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmulez2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmulez2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmle v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmulez2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmunez2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmunez2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmunez2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast une <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmunez4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmunez4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmunez4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast une <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmunez2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmunez2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmunez2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmeq v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast une <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmunoz2xfloat_fast(<2 x float> %A) {
+; CHECK-LABEL: fcmunoz2xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v1.2s, v0.2s, #0.0
+; CHECK-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmunoz2xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v1.2s, v0.2s, #0.0
+; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
+; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
+; GISEL-NEXT:    mvn v0.8b, v0.8b
+; GISEL-NEXT:    shl v0.2s, v0.2s, #31
+; GISEL-NEXT:    sshr v0.2s, v0.2s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uno <2 x float> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmunoz4xfloat_fast(<4 x float> %A) {
+; CHECK-LABEL: fcmunoz4xfloat_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v1.4s, v0.4s, #0.0
+; CHECK-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmunoz4xfloat_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v1.4s, v0.4s, #0.0
+; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uno <4 x float> %A, zeroinitializer
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+define <2 x i64> @fcmunoz2xdouble_fast(<2 x double> %A) {
+; CHECK-LABEL: fcmunoz2xdouble_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v1.2d, v0.2d, #0.0
+; CHECK-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmunoz2xdouble_fast:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmge v1.2d, v0.2d, #0.0
+; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
+; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    shl v0.2d, v0.2d, #63
+; GISEL-NEXT:    sshr v0.2d, v0.2d, #63
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast uno <2 x double> %A, zeroinitializer
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+
+}
+
+; Test SETCC fast-math flags are propagated when combining zext(setcc).
+define <4 x i32> @fcmule4xfloat_fast_zext(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmule4xfloat_fast_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmule4xfloat_fast_zext:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI322_0
+; GISEL-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI322_0]
+; GISEL-NEXT:    bic v0.16b, v1.16b, v0.16b
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <4 x float> %A, %B
+  %tmp4 = zext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+
+; Test SETCC fast-math flags are propagated when combining aext(setcc).
+define <4 x i1> @fcmule4xfloat_fast_aext(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fcmule4xfloat_fast_aext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: fcmule4xfloat_fast_aext:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    mvn v0.16b, v0.16b
+; GISEL-NEXT:    xtn v0.4h, v0.4s
+; GISEL-NEXT:    ret
+  %tmp3 = fcmp fast ule <4 x float> %A, %B
+  ret <4 x i1> %tmp3
+}
