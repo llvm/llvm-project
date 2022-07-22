@@ -1712,8 +1712,15 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
                                 PatternRewriter &rewriter) const override {
     if (!tensor::canFoldIntoProducerOp(castOp))
       return failure();
+
     auto linalgOp = castOp.getSource().getDefiningOp<LinalgOp>();
     if (!linalgOp)
+      return failure();
+
+    // Cast can be in conditionally reachable region, if which case folding will
+    // generate invalid code. Only conservatively fold ops in same block for
+    // now.
+    if (castOp->getBlock() != linalgOp->getBlock())
       return failure();
 
     OpBuilder::InsertionGuard guard(rewriter);

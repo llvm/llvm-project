@@ -179,10 +179,10 @@ private:
 #    endif
 
 _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
-    bool& __RI_break_allowed,
+    bool& __ri_break_allowed,
     bool __has_extened_pictographic,
     __extended_grapheme_custer_property_boundary::__property __prev,
-    __extended_grapheme_custer_property_boundary::__property __next_) {
+    __extended_grapheme_custer_property_boundary::__property __next) {
   using __extended_grapheme_custer_property_boundary::__property;
 
   __has_extened_pictographic |= __prev == __property::__Extended_Pictographic;
@@ -195,34 +195,34 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
   _LIBCPP_ASSERT(__prev != __property::__eot, "should be handled by our caller");      // GB2
 
   // *** Do not break between a CR and LF. Otherwise, break before and after controls. ***
-  if (__prev == __property::__CR && __next_ == __property::__LF) // GB3
+  if (__prev == __property::__CR && __next == __property::__LF) // GB3
     return false;
 
   if (__prev == __property::__Control || __prev == __property::__CR || __prev == __property::__LF) // GB4
     return true;
 
-  if (__next_ == __property::__Control || __next_ == __property::__CR || __next_ == __property::__LF) // GB5
+  if (__next == __property::__Control || __next == __property::__CR || __next == __property::__LF) // GB5
     return true;
 
   // *** Do not break Hangul syllable sequences. ***
   if (__prev == __property::__L &&
-      (__next_ == __property::__L || __next_ == __property::__V || __next_ == __property::__LV ||
-       __next_ == __property::__LVT)) // GB6
+      (__next == __property::__L || __next == __property::__V || __next == __property::__LV ||
+       __next == __property::__LVT)) // GB6
     return false;
 
   if ((__prev == __property::__LV || __prev == __property::__V) &&
-      (__next_ == __property::__V || __next_ == __property::__T)) // GB7
+      (__next == __property::__V || __next == __property::__T)) // GB7
     return false;
 
-  if ((__prev == __property::__LVT || __prev == __property::__T) && __next_ == __property::__T) // GB8
+  if ((__prev == __property::__LVT || __prev == __property::__T) && __next == __property::__T) // GB8
     return false;
 
   // *** Do not break before extending characters or ZWJ. ***
-  if (__next_ == __property::__Extend || __next_ == __property::__ZWJ)
+  if (__next == __property::__Extend || __next == __property::__ZWJ)
     return false; // GB9
 
   // *** Do not break before SpacingMarks, or after Prepend characters. ***
-  if (__next_ == __property::__SpacingMark) // GB9a
+  if (__next == __property::__SpacingMark) // GB9a
     return false;
 
   if (__prev == __property::__Prepend) // GB9b
@@ -241,7 +241,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
   // So the only case left to test is
   // - \p{Extended_Pictographic}' x ZWJ x \p{Extended_Pictographic}
   //   where  \p{Extended_Pictographic}' is stored in __has_extened_pictographic
-  if (__has_extened_pictographic && __prev == __property::__ZWJ && __next_ == __property::__Extended_Pictographic)
+  if (__has_extened_pictographic && __prev == __property::__ZWJ && __next == __property::__Extended_Pictographic)
     return false;
 
   // *** Do not break within emoji flag sequences ***
@@ -249,9 +249,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
   // That is, do not break between regional indicator (RI) symbols if there
   // is an odd number of RI characters before the break point.
 
-  if (__prev == __property::__Regional_Indicator && __next_ == __property::__Regional_Indicator) { // GB12 + GB13
-    __RI_break_allowed = !__RI_break_allowed;
-    if (__RI_break_allowed)
+  if (__prev == __property::__Regional_Indicator && __next == __property::__Regional_Indicator) { // GB12 + GB13
+    __ri_break_allowed = !__ri_break_allowed;
+    if (__ri_break_allowed)
       return true;
 
     return false;
@@ -307,7 +307,7 @@ private:
   __extended_grapheme_custer_property_boundary::__property __next_prop_;
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _CharT* __get_break() {
-    bool __RI_break_allowed         = true;
+    bool __ri_break_allowed         = true;
     bool __has_extened_pictographic = false;
     while (true) {
       const _CharT* __result                                          = __code_point_view_.__position();
@@ -322,7 +322,7 @@ private:
       __has_extened_pictographic |=
           __prev == __extended_grapheme_custer_property_boundary::__property::__Extended_Pictographic;
 
-      if (__at_extended_grapheme_cluster_break(__RI_break_allowed, __has_extened_pictographic, __prev, __next_prop_))
+      if (__at_extended_grapheme_cluster_break(__ri_break_allowed, __has_extened_pictographic, __prev, __next_prop_))
         return __result;
     }
   }

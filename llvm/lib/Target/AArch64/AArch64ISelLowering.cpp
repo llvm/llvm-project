@@ -11975,6 +11975,11 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
       if (IsZero)
         return DAG.getNode(AArch64ISD::FCMGTz, dl, VT, LHS);
       return DAG.getNode(AArch64ISD::FCMGT, dl, VT, LHS, RHS);
+    case AArch64CC::LE:
+      if (!NoNans)
+        return SDValue();
+      // If we ignore NaNs then we can use to the LS implementation.
+      LLVM_FALLTHROUGH;
     case AArch64CC::LS:
       if (IsZero)
         return DAG.getNode(AArch64ISD::FCMLEz, dl, VT, LHS);
@@ -12079,7 +12084,7 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   bool ShouldInvert;
   changeVectorFPCCToAArch64CC(CC, CC1, CC2, ShouldInvert);
 
-  bool NoNaNs = getTargetMachine().Options.NoNaNsFPMath;
+  bool NoNaNs = getTargetMachine().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs();
   SDValue Cmp =
       EmitVectorComparison(LHS, RHS, CC1, NoNaNs, CmpVT, dl, DAG);
   if (!Cmp.getNode())
@@ -19256,6 +19261,41 @@ static SDValue performBSPExpandForSVE(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::OR, DL, VT, Sel, SelInv);
 }
 
+static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+
+  SDValue Insert = N->getOperand(0);
+  if (Insert.getOpcode() != ISD::INSERT_SUBVECTOR)
+    return SDValue();
+
+  if (!Insert.getOperand(0).isUndef())
+    return SDValue();
+
+  uint64_t IdxInsert = Insert.getConstantOperandVal(2);
+  uint64_t IdxDupLane = N->getConstantOperandVal(1);
+  if (IdxInsert != IdxDupLane)
+    return SDValue();
+
+  SDValue Bitcast = Insert.getOperand(1);
+  if (Bitcast.getOpcode() != ISD::BITCAST)
+    return SDValue();
+
+  SDValue Subvec = Bitcast.getOperand(0);
+  EVT SubvecVT = Subvec.getValueType();
+  if (!SubvecVT.is128BitVector())
+    return SDValue();
+  EVT NewSubvecVT =
+      getPackedSVEVectorVT(Subvec.getValueType().getVectorElementType());
+
+  SDLoc DL(N);
+  SDValue NewInsert =
+      DAG.getNode(ISD::INSERT_SUBVECTOR, DL, NewSubvecVT,
+                  DAG.getUNDEF(NewSubvecVT), Subvec, Insert->getOperand(2));
+  SDValue NewDuplane128 = DAG.getNode(AArch64ISD::DUPLANE128, DL, NewSubvecVT,
+                                      NewInsert, N->getOperand(1));
+  return DAG.getNode(ISD::BITCAST, DL, VT, NewDuplane128);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -19342,6 +19382,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performCSELCombine(N, DCI, DAG);
   case AArch64ISD::DUP:
     return performDUPCombine(N, DCI);
+  case AArch64ISD::DUPLANE128:
+    return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:
     return performNVCASTCombine(N);
   case AArch64ISD::SPLICE:

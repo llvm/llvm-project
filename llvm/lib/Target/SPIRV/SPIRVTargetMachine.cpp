@@ -140,7 +140,10 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SPIRVPassConfig(*this, PM);
 }
 
-void SPIRVPassConfig::addIRPasses() { TargetPassConfig::addIRPasses(); }
+void SPIRVPassConfig::addIRPasses() {
+  TargetPassConfig::addIRPasses();
+  addPass(createSPIRVPrepareFunctionsPass());
+}
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));

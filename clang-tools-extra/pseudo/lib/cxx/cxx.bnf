@@ -290,7 +290,7 @@ expression-statement := expression_opt ;
 compound-statement := { statement-seq_opt [recover=Brackets] }
 statement-seq := statement
 statement-seq := statement-seq statement
-selection-statement := IF CONSTEXPR_opt ( init-statement_opt condition ) statement
+selection-statement := IF CONSTEXPR_opt ( init-statement_opt condition ) statement [guard]
 selection-statement := IF CONSTEXPR_opt ( init-statement_opt condition ) statement ELSE statement
 selection-statement := SWITCH ( init-statement_opt condition ) statement
 iteration-statement := WHILE ( condition ) statement
@@ -413,8 +413,8 @@ init-declarator-list := init-declarator-list , init-declarator
 #! to eliminate these false parses.
 init-declarator := non-function-declarator initializer_opt
 init-declarator := function-declarator requires-clause_opt
-function-declarator := declarator [guard=FunctionDeclarator]
-non-function-declarator := declarator [guard=NonFunctionDeclarator]
+function-declarator := declarator [guard]
+non-function-declarator := declarator [guard]
 declarator := ptr-declarator
 declarator := noptr-declarator parameters-and-qualifiers trailing-return-type
 ptr-declarator := noptr-declarator
@@ -715,18 +715,18 @@ literal := string-literal
 literal := boolean-literal
 literal := pointer-literal
 literal := user-defined-literal
-integer-literal := NUMERIC_CONSTANT
-character-literal := CHAR_CONSTANT
-character-literal := WIDE_CHAR_CONSTANT
-character-literal := UTF8_CHAR_CONSTANT
-character-literal := UTF16_CHAR_CONSTANT
-character-literal := UTF32_CHAR_CONSTANT
-floating-point-literal := NUMERIC_CONSTANT
-string-literal-chunk := STRING_LITERAL
-string-literal-chunk := WIDE_STRING_LITERAL
-string-literal-chunk := UTF8_STRING_LITERAL
-string-literal-chunk := UTF16_STRING_LITERAL
-string-literal-chunk := UTF32_STRING_LITERAL
+integer-literal := NUMERIC_CONSTANT [guard]
+character-literal := CHAR_CONSTANT [guard]
+character-literal := WIDE_CHAR_CONSTANT [guard]
+character-literal := UTF8_CHAR_CONSTANT [guard]
+character-literal := UTF16_CHAR_CONSTANT [guard]
+character-literal := UTF32_CHAR_CONSTANT [guard]
+floating-point-literal := NUMERIC_CONSTANT [guard]
+string-literal-chunk := STRING_LITERAL [guard]
+string-literal-chunk := WIDE_STRING_LITERAL [guard]
+string-literal-chunk := UTF8_STRING_LITERAL [guard]
+string-literal-chunk := UTF16_STRING_LITERAL [guard]
+string-literal-chunk := UTF32_STRING_LITERAL [guard]
 #! Technically, string concatenation happens at phase 6 which is before parsing,
 #! so it doesn't belong to the grammar. However, we extend the grammar to
 #! support it, to make the pseudoparser fully functional on practical code.
@@ -736,33 +736,33 @@ user-defined-literal := user-defined-integer-literal
 user-defined-literal := user-defined-floating-point-literal
 user-defined-literal := user-defined-string-literal
 user-defined-literal := user-defined-character-literal
-user-defined-integer-literal := NUMERIC_CONSTANT
-user-defined-string-literal-chunk := STRING_LITERAL
-user-defined-string-literal-chunk := WIDE_STRING_LITERAL
-user-defined-string-literal-chunk := UTF8_STRING_LITERAL
-user-defined-string-literal-chunk := UTF16_STRING_LITERAL
-user-defined-string-literal-chunk := UTF32_STRING_LITERAL
+user-defined-integer-literal := NUMERIC_CONSTANT [guard]
+user-defined-string-literal-chunk := STRING_LITERAL [guard]
+user-defined-string-literal-chunk := WIDE_STRING_LITERAL [guard]
+user-defined-string-literal-chunk := UTF8_STRING_LITERAL [guard]
+user-defined-string-literal-chunk := UTF16_STRING_LITERAL [guard]
+user-defined-string-literal-chunk := UTF32_STRING_LITERAL [guard]
 user-defined-string-literal := user-defined-string-literal-chunk
 user-defined-string-literal := string-literal-chunk user-defined-string-literal
 user-defined-string-literal := user-defined-string-literal string-literal-chunk
-user-defined-floating-point-literal := NUMERIC_CONSTANT
-user-defined-character-literal := CHAR_CONSTANT
-user-defined-character-literal := WIDE_CHAR_CONSTANT
-user-defined-character-literal := UTF8_CHAR_CONSTANT
-user-defined-character-literal := UTF16_CHAR_CONSTANT
-user-defined-character-literal := UTF32_CHAR_CONSTANT
+user-defined-floating-point-literal := NUMERIC_CONSTANT [guard]
+user-defined-character-literal := CHAR_CONSTANT [guard]
+user-defined-character-literal := WIDE_CHAR_CONSTANT [guard]
+user-defined-character-literal := UTF8_CHAR_CONSTANT [guard]
+user-defined-character-literal := UTF16_CHAR_CONSTANT [guard]
+user-defined-character-literal := UTF32_CHAR_CONSTANT [guard]
 boolean-literal := FALSE
 boolean-literal := TRUE
 pointer-literal := NULLPTR
 
 #! Contextual keywords -- clang lexer always lexes them as identifier tokens.
 #! Placeholders for literal text in the grammar that lex as other things.
-contextual-override := IDENTIFIER [guard=Override]
-contextual-final := IDENTIFIER [guard=Final]
-contextual-zero := NUMERIC_CONSTANT [guard=Zero]
-module-keyword := IDENTIFIER [guard=Module]
-import-keyword := IDENTIFIER [guard=Import]
-export-keyword := IDENTIFIER [guard=Export]
+contextual-override := IDENTIFIER [guard]
+contextual-final := IDENTIFIER [guard]
+contextual-zero := NUMERIC_CONSTANT [guard]
+module-keyword := IDENTIFIER [guard]
+import-keyword := IDENTIFIER [guard]
+export-keyword := IDENTIFIER [guard]
 
 #! greatergreater token -- clang lexer always lexes it as a single token, we
 #! split it into two tokens to make the GLR parser aware of the nested-template

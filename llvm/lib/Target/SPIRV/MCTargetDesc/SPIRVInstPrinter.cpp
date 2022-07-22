@@ -59,7 +59,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
-  llvm_unreachable("Unimplemented recordOpExtInstImport");
+  // TODO: insert {Reg, Set} into ExtInstSetIDs map.
 }
 
 void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -176,7 +176,18 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void SPIRVInstPrinter::printOpExtInst(const MCInst *MI, raw_ostream &O) {
-  llvm_unreachable("Unimplemented printOpExtInst");
+  // The fixed operands have already been printed, so just need to decide what
+  // type of ExtInst operands to print based on the instruction set and number.
+  MCInstrDesc MCDesc = MII.get(MI->getOpcode());
+  unsigned NumFixedOps = MCDesc.getNumOperands();
+  const auto NumOps = MI->getNumOperands();
+  if (NumOps == NumFixedOps)
+    return;
+
+  O << ' ';
+
+  // TODO: implement special printing for OpenCLExtInst::vstor*.
+  printRemainingVariableOps(MI, NumFixedOps, O, true);
 }
 
 void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {

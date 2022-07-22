@@ -185,6 +185,19 @@ def testBlockArgumentList():
     for t in entry_block.arguments.types:
       print("Type: ", t)
 
+    # Check that slicing and type access compose.
+    # CHECK: Sliced type: i16
+    # CHECK: Sliced type: i24
+    for t in entry_block.arguments[1:].types:
+      print("Sliced type: ", t)
+
+    # Check that slice addition works as expected.
+    # CHECK: Argument 2, type i24
+    # CHECK: Argument 0, type i8
+    restructured = entry_block.arguments[-1:] + entry_block.arguments[:1]
+    for arg in restructured:
+      print(f"Argument {arg.arg_number}, type {arg.type}")
+
 
 # CHECK-LABEL: TEST: testOperationOperands
 @run

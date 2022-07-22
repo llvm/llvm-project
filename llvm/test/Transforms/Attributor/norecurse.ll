@@ -68,7 +68,7 @@ define i32 @extern() {
 declare i32 @k() readnone
 
 define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
-; CHECK: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@intrinsic
 ; CHECK-SAME: (i8* nocapture nofree writeonly [[DEST:%.*]], i8* nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[DEST]], i8* noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) #[[ATTR9:[0-9]+]]
@@ -313,8 +313,8 @@ f:
 ; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ; CHECK: attributes #[[ATTR2]] = { nosync readnone }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { readnone }
-; CHECK: attributes #[[ATTR4]] = { argmemonly nofree nosync nounwind willreturn }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn }
+; CHECK: attributes #[[ATTR4]] = { argmemonly nofree norecurse nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn }
 ; CHECK: attributes #[[ATTR6]] = { norecurse nosync readnone }
 ; CHECK: attributes #[[ATTR7]] = { null_pointer_is_valid }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { norecurse }

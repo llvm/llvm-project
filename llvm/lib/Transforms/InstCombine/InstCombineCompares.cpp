@@ -2235,13 +2235,22 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
 
   bool IsAShr = Shr->getOpcode() == Instruction::AShr;
   const APInt *ShiftValC;
-  if (match(Shr->getOperand(0), m_APInt(ShiftValC))) {
+  if (match(X, m_APInt(ShiftValC))) {
     if (Cmp.isEquality())
       return foldICmpShrConstConst(Cmp, Shr->getOperand(1), C, *ShiftValC);
 
+    // (ShiftValC >> Y) >s -1 --> Y != 0 with ShiftValC < 0
+    // (ShiftValC >> Y) <s  0 --> Y == 0 with ShiftValC < 0
+    bool TrueIfSigned;
+    if (!IsAShr && ShiftValC->isNegative() &&
+        isSignBitCheck(Pred, C, TrueIfSigned))
+      return new ICmpInst(TrueIfSigned ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE,
+                          Shr->getOperand(1),
+                          ConstantInt::getNullValue(X->getType()));
+
     // If the shifted constant is a power-of-2, test the shift amount directly:
-    // (ShiftValC >> X) >u C --> X <u (LZ(C) - LZ(ShiftValC))
-    // (ShiftValC >> X) <u C --> X >=u (LZ(C-1) - LZ(ShiftValC))
+    // (ShiftValC >> Y) >u C --> X <u (LZ(C) - LZ(ShiftValC))
+    // (ShiftValC >> Y) <u C --> X >=u (LZ(C-1) - LZ(ShiftValC))
     if (!IsAShr && ShiftValC->isPowerOf2() &&
         (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_ULT)) {
       bool IsUGT = Pred == CmpInst::ICMP_UGT;
@@ -2972,7 +2981,7 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
     const APInt *C;
     bool TrueIfSigned;
     if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
-        InstCombiner::isSignBitCheck(Pred, *C, TrueIfSigned)) {
+        isSignBitCheck(Pred, *C, TrueIfSigned)) {
       if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
           match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
         // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0

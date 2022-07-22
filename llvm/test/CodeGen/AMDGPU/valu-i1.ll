@@ -22,8 +22,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; v_mov should be after exec modification
 ; SI: [[FLOW_BB]]:
-; SI-NEXT: s_or_saveexec_b64 [[SAVE3:s\[[0-9]+:[0-9]+\]]], [[SAVE2]]
-; SI-NEXT: s_xor_b64 exec, exec, [[SAVE3]]
+; SI-NEXT: s_andn2_saveexec_b64 [[SAVE2]], [[SAVE2]]
 ;
 define amdgpu_kernel void @test_if(i32 %b, i32 addrspace(1)* %src, i32 addrspace(1)* %dst) #1 {
 entry:
@@ -121,8 +120,7 @@ exit:
 ; SI: s_cbranch_execnz [[EXIT:.LBB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: {{^.LBB[0-9]+_[0-9]+}}: ; %Flow
-; SI-NEXT: s_or_saveexec_b64
-; SI-NEXT: s_xor_b64 exec, exec
+; SI-NEXT: s_andn2_saveexec_b64 [[BR_SREG]], [[BR_SREG]]
 ; SI-NEXT: s_cbranch_execz [[UNIFIED_RETURN:.LBB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: ; %bb.{{[0-9]+}}: ; %then
@@ -163,7 +161,6 @@ exit:
 ; SI: s_cbranch_scc1 [[LABEL_LOOP]]
 ; SI: [[LABEL_EXIT]]:
 ; SI: s_endpgm
-
 define amdgpu_kernel void @simple_test_v_loop(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -223,7 +220,6 @@ exit:
 ; SI: [[LABEL_EXIT]]:
 ; SI-NOT: [[COND_STATE]]
 ; SI: s_endpgm
-
 define amdgpu_kernel void @multi_vcond_loop(i32 addrspace(1)* noalias nocapture %arg, i32 addrspace(1)* noalias nocapture readonly %arg1, i32 addrspace(1)* noalias nocapture readonly %arg2, i32 addrspace(1)* noalias nocapture readonly %arg3) #1 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0

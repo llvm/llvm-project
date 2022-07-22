@@ -321,13 +321,14 @@ void DwarfStreamer::emitSwiftReflectionSection(
 /// sized addresses describing the ranges.
 void DwarfStreamer::emitRangesEntries(
     int64_t UnitPcOffset, uint64_t OrigLowPc,
-    const FunctionIntervals::const_iterator &FuncRange,
+    Optional<std::pair<AddressRange, int64_t>> FuncRange,
     const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
     unsigned AddressSize) {
   MS->switchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
 
   // Offset each range by the right amount.
-  int64_t PcOffset = Entries.empty() ? 0 : FuncRange.value() + UnitPcOffset;
+  int64_t PcOffset =
+      (Entries.empty() || !FuncRange) ? 0 : FuncRange->second + UnitPcOffset;
   for (const auto &Range : Entries) {
     if (Range.isBaseAddressSelectionEntry(AddressSize)) {
       warn("unsupported base address selection operation",
@@ -339,8 +340,7 @@ void DwarfStreamer::emitRangesEntries(
       continue;
 
     // All range entries should lie in the function range.
-    if (!(Range.StartAddress + OrigLowPc >= FuncRange.start() &&
-          Range.EndAddress + OrigLowPc <= FuncRange.stop()))
+    if (!FuncRange->first.contains(Range.StartAddress + OrigLowPc))
       warn("inconsistent range data.", "emitting debug_ranges");
     MS->emitIntValue(Range.StartAddress + PcOffset, AddressSize);
     MS->emitIntValue(Range.EndAddress + PcOffset, AddressSize);
@@ -365,11 +365,13 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
   // IntervalMap will have coalesced the non-linked ranges, but here
   // we want to coalesce the linked addresses.
   std::vector<std::pair<uint64_t, uint64_t>> Ranges;
-  const auto &FunctionRanges = Unit.getFunctionRanges();
-  for (auto Range = FunctionRanges.begin(), End = FunctionRanges.end();
-       Range != End; ++Range)
-    Ranges.push_back(std::make_pair(Range.start() + Range.value(),
-                                    Range.stop() + Range.value()));
+  const RangesTy &FunctionRanges = Unit.getFunctionRanges();
+  for (size_t Idx = 0; Idx < FunctionRanges.size(); Idx++) {
+    std::pair<AddressRange, int64_t> CurRange = FunctionRanges[Idx];
+
+    Ranges.push_back(std::make_pair(CurRange.first.start() + CurRange.second,
+                                    CurRange.first.end() + CurRange.second));
+  }
 
   // The object addresses where sorted, but again, the linked
   // addresses might end up in a different order.

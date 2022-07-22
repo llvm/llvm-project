@@ -19,7 +19,6 @@
 #include <__iterator/move_iterator.h>
 #include <__memory/allocator.h>
 #include <__memory/compressed_pair.h>
-#include <__memory/swap_allocator.h>
 #include <__utility/forward.h>
 #include <memory>
 #include <type_traits>

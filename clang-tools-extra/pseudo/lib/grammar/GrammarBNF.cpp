@@ -76,6 +76,7 @@ public:
     });
     // Add an empty string for the corresponding sentinel unset attribute.
     T->AttributeValues.push_back("");
+    UniqueAttributeValues.erase("");
     llvm::for_each(UniqueAttributeValues, [&T](llvm::StringRef Name) {
       T->AttributeValues.emplace_back();
       T->AttributeValues.back() = Name.str();
@@ -258,7 +259,7 @@ private:
     for (unsigned I = 0; I < Spec.Sequence.size(); ++I) {
       for (const auto &KV : Spec.Sequence[I].Attributes) {
         if (KV.first == "guard") {
-          R.Guard = LookupExtensionID(KV.second);
+          R.Guarded = true;
         } else if (KV.first == "recover") {
           R.Recovery = LookupExtensionID(KV.second);
           R.RecoveryIndex = I;

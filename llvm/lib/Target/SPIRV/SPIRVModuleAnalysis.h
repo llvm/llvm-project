@@ -52,6 +52,9 @@ struct ModuleAnalysisInfo {
   SPIRV::AddressingModel Addr;
   SPIRV::SourceLanguage SrcLang;
   unsigned SrcLangVersion;
+  StringSet<> SrcExt;
+  // Maps ExtInstSet to corresponding ID register.
+  DenseMap<unsigned, Register> ExtInstSetMap;
   // Contains the list of all global OpVariables in the module.
   SmallVector<MachineInstr *, 4> GlobalVarList;
   // Maps function names to coresponding function ID registers.
@@ -59,6 +62,9 @@ struct ModuleAnalysisInfo {
   // The set contains machine instructions which are necessary
   // for correct MIR but will not be emitted in function bodies.
   DenseSet<MachineInstr *> InstrsToDelete;
+  // The set contains machine basic blocks which are necessary
+  // for correct MIR but will not be emitted.
+  DenseSet<MachineBasicBlock *> MBBsToSkip;
   // The table contains global aliases of local registers for each machine
   // function. The aliases are used to substitute local registers during
   // code emission.
@@ -75,6 +81,7 @@ struct ModuleAnalysisInfo {
     assert(FuncReg != FuncNameMap.end() && "Cannot find function Id");
     return FuncReg->second;
   }
+  Register getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }
   void setSkipEmission(MachineInstr *MI) { InstrsToDelete.insert(MI); }
   bool getSkipEmission(const MachineInstr *MI) {
@@ -123,7 +130,6 @@ public:
 
 private:
   void setBaseInfo(const Module &M);
-  template <typename T> void collectTypesConstsVars();
   void collectGlobalEntities(
       const std::vector<SPIRV::DTSortableEntry *> &DepsGraph,
       SPIRV::ModuleSectionType MSType,

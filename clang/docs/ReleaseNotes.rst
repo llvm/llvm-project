@@ -192,6 +192,8 @@ Bug Fixes
   Fixes `Issue 56310 <https://github.com/llvm/llvm-project/issues/56310>`_.
 - Clang will now look through type sugar when checking a member function is a
   move assignment operator. Fixes `Issue 56456 <https://github.com/llvm/llvm-project/issues/56456>`_.
+- Fixed a crash when a variable with a bool enum type that has no definition
+  used in comparison operators. Fixes `Issue 56560 <https://github.com/llvm/llvm-project/issues/56560>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

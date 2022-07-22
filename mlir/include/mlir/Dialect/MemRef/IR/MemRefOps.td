@@ -34,7 +34,7 @@ class MemRef_OpWithOffsetSizesAndStrides<string mnemonic,
     : MemRef_Op<mnemonic, traits> {
   code extraBaseClassDeclaration = [{
     /// Returns the dynamic sizes for this subview operation if specified.
-    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
+    ::mlir::Operation::operand_range getDynamicSizes() { return getSizes(); }
 
     /// Return the list of Range (i.e. offset, size, stride). Each
     /// Range entry contains either the dynamic value or a ConstantIndexOp
@@ -373,7 +373,7 @@ def MemRef_CastOp : MemRef_Op<"cast", [
     /// Fold the given CastOp into consumer op.
     static bool canFoldIntoConsumerOp(CastOp castOp);
 
-    Value getViewSource() { return source(); }
+    Value getViewSource() { return getSource(); }
   }];
 
   let hasFolder = 1;
@@ -748,7 +748,7 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
       return getRegion().getArgument(0);
     }
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
   }];
   let hasCustomAssemblyFormat = 1;
@@ -855,9 +855,9 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
   }];
 
   let extraClassDeclaration = [{
-     bool isExternal() { return !initial_value(); }
+     bool isExternal() { return !getInitialValue(); }
      bool isUninitialized() {
-       return !isExternal() && initial_value()->isa<UnitAttr>();
+       return !isExternal() && getInitialValue()->isa<UnitAttr>();
      }
      /// Returns the constant initial value if the memref.global is a constant,
      /// or null otherwise.
@@ -971,7 +971,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
     static StringRef getLocalityHintAttrStrName() { return "localityHint"; }
     static StringRef getIsWriteAttrStrName() { return "isWrite"; }
@@ -1054,7 +1054,7 @@ def MemRef_ReinterpretCastOp
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     // The result of the op is always a ranked memref.
     MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
-    Value getViewSource() { return source(); }
+    Value getViewSource() { return getSource(); }
 
     /// Return the rank of the source ShapedType.
     unsigned getResultRank() {
@@ -1154,7 +1154,7 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
 
   let extraClassDeclaration = [{
     MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
-    Value getViewSource() { return source(); }
+    Value getViewSource() { return getSource(); }
   }];
 
   let assemblyFormat = [{
@@ -1180,7 +1180,7 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 
     SmallVector<ReassociationIndices, 4> getReassociationIndices() {
       SmallVector<ReassociationIndices, 4> reassociationIndices;
-      for (auto attr : reassociation())
+      for (auto attr : getReassociation())
         reassociationIndices.push_back(llvm::to_vector<2>(
             llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
               return indexAttr.cast<IntegerAttr>().getInt();
@@ -1188,11 +1188,11 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
       return reassociationIndices;
     };
 
-    MemRefType getSrcType() { return src().getType().cast<MemRefType>(); }
+    MemRefType getSrcType() { return getSrc().getType().cast<MemRefType>(); }
 
-    MemRefType getResultType() { return result().getType().cast<MemRefType>(); }
+    MemRefType getResultType() { return getResult().getType().cast<MemRefType>(); }
 
-    Value getViewSource() { return src(); }
+    Value getViewSource() { return getSrc(); }
   }];
 
   let assemblyFormat = [{
@@ -1628,7 +1628,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the base memref operand.
     MemRefType getSourceType() {
-      return source().getType().cast<MemRefType>();
+      return getSource().getType().cast<MemRefType>();
     }
 
     /// The result of a subview is always a memref.
@@ -1741,7 +1741,7 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [NoSideEffect]>,
 
   let extraClassDeclaration = [{
     static StringRef getPermutationAttrStrName() { return "permutation"; }
-    ShapedType getShapedType() { return in().getType().cast<ShapedType>(); }
+    ShapedType getShapedType() { return getIn().getType().cast<ShapedType>(); }
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -1810,7 +1810,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
     ///                              Region *region)
     /// ```
     operand_range getDynamicSizes() {
-      return {sizes().begin(), sizes().end()};
+      return {getSizes().begin(), getSizes().end()};
     }
   }];
 
@@ -1864,7 +1864,7 @@ def AtomicRMWOp : MemRef_Op<"atomic_rmw", [
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
   }];
   let hasFolder = 1;

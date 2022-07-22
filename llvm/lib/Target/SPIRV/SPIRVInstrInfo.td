@@ -449,6 +449,7 @@ def OpCopyLogical: UnOp<"OpCopyLogical", 400>;
 
 def OpSNegate: UnOp<"OpSNegate", 126>;
 def OpFNegate: UnOpTyped<"OpFNegate", 127, fID, fneg>;
+def OpFNegateV: UnOpTyped<"OpFNegate", 127, vfID, fneg>;
 defm OpIAdd: BinOpTypedGen<"OpIAdd", 128, add, 0, 1>;
 defm OpFAdd: BinOpTypedGen<"OpFAdd", 129, fadd, 1, 1>;
 
@@ -618,8 +619,10 @@ def OpAtomicCompareExchange: Op<230, (outs ID:$res),
                   (ins TYPE:$ty, ID:$ptr, ID:$sc, ID:$eq,
                    ID:$neq, ID:$val, ID:$cmp),
                   "$res = OpAtomicCompareExchange $ty $ptr $sc $eq $neq $val $cmp">;
-// TODO Currently the following deprecated opcode is missing:
-// OpAtomicCompareExchangeWeak
+def OpAtomicCompareExchangeWeak: Op<231, (outs ID:$res),
+                   (ins TYPE:$ty, ID:$ptr, ID:$sc, ID:$eq,
+                    ID:$neq, ID:$val, ID:$cmp),
+                   "$res = OpAtomicCompareExchangeWeak $ty $ptr $sc $eq $neq $val $cmp">;
 
 def OpAtomicIIncrement: AtomicOp<"OpAtomicIIncrement", 232>;
 def OpAtomicIDecrement: AtomicOp<"OpAtomicIDecrement", 233>;
@@ -660,6 +663,11 @@ def OpMemoryNamedBarrier: Op<329, (outs), (ins ID:$barr, ID:$mem, ID:$sem),
 
 // 3.42.21. Group and Subgroup Instructions
 
+def OpGroupAsyncCopy: Op<259, (outs ID:$res), (ins TYPE:$ty, ID:$scope,
+                  ID:$dst, ID:$src, ID:$nelts, ID:$stride, ID:$event),
+                  "$res = OpGroupAsyncCopy $ty $scope $dst $src $nelts $stride $event">;
+def OpGroupWaitEvents: Op<260, (outs), (ins ID:$scope, ID:$nelts, ID:$elist),
+                  "OpGroupWaitEvents $scope $nelts $elist">;
 def OpGroupAll: Op<261, (outs ID:$res), (ins TYPE:$ty, ID:$scope, ID:$pr),
                   "$res = OpGroupAll $ty $scope $pr">;
 def OpGroupAny: Op<262, (outs ID:$res), (ins TYPE:$ty, ID:$scope, ID:$pr),
@@ -680,6 +688,18 @@ def OpGroupUMax: OpGroup<"UMax", 270>;
 def OpGroupSMax: OpGroup<"SMax", 271>;
 
 // TODO: 3.42.22. Device-Side Enqueue Instructions
+def OpRetainEvent: Op<297, (outs), (ins ID:$event), "OpRetainEvent $event">;
+def OpReleaseEvent: Op<298, (outs), (ins ID:$event), "OpReleaseEvent $event">;
+def OpCreateUserEvent: Op<299, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpCreateUserEvent $type">;
+def OpIsValidEvent: Op<300, (outs ID:$res), (ins TYPE:$type, ID:$event),
+                  "$res = OpIsValidEvent $type $event ">;
+def OpSetUserEventStatus: Op<301, (outs), (ins ID:$event, ID:$status),
+                  "OpSetUserEventStatus $event $status">;
+def OpCaptureEventProfilingInfo: Op<302, (outs),
+                  (ins ID:$event, ID:$info, ID:$value),
+                  "OpCaptureEventProfilingInfo $event $info $value">;
+
 // TODO: 3.42.23. Pipe Instructions
 
 // 3.42.24. Non-Uniform Instructions

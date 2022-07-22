@@ -62,7 +62,7 @@ template <typename Type> struct IsIntegral {
       // UInt<128>.
       IsSameV<__llvm_libc::cpp::UInt<128>, TypeNoCV>
 #ifdef __SIZEOF_INT128__
-      || IsSameV<__uint128_t, TypeNoCV>
+      || IsSameV<__int128_t, TypeNoCV> || IsSameV<__uint128_t, TypeNoCV>
 #endif
       ;
 };
@@ -88,6 +88,58 @@ template <typename Type> struct IsArithmetic {
   static constexpr bool Value =
       IsIntegral<Type>::Value || IsFloatingPointType<Type>::Value;
 };
+
+template <typename Type> struct IsSigned {
+  static constexpr bool Value =
+      IsArithmetic<Type>::Value && (Type(-1) < Type(0));
+  constexpr operator bool() const { return Value; }
+  constexpr bool operator()() const { return Value; }
+};
+
+template <typename Type> struct MakeUnsigned;
+template <> struct MakeUnsigned<char> {
+  using Type = unsigned char;
+};
+template <> struct MakeUnsigned<signed char> {
+  using Type = unsigned char;
+};
+template <> struct MakeUnsigned<short> {
+  using Type = unsigned short;
+};
+template <> struct MakeUnsigned<int> {
+  using Type = unsigned int;
+};
+template <> struct MakeUnsigned<long> {
+  using Type = unsigned long;
+};
+template <> struct MakeUnsigned<long long> {
+  using Type = unsigned long long;
+};
+template <> struct MakeUnsigned<unsigned char> {
+  using Type = unsigned char;
+};
+template <> struct MakeUnsigned<unsigned short> {
+  using Type = unsigned short;
+};
+template <> struct MakeUnsigned<unsigned int> {
+  using Type = unsigned int;
+};
+template <> struct MakeUnsigned<unsigned long> {
+  using Type = unsigned long;
+};
+template <> struct MakeUnsigned<unsigned long long> {
+  using Type = unsigned long long;
+};
+#ifdef __SIZEOF_INT128__
+template <> struct MakeUnsigned<__int128_t> {
+  using Type = __uint128_t;
+};
+template <> struct MakeUnsigned<__uint128_t> {
+  using Type = __uint128_t;
+};
+#endif
+
+template <typename T> using MakeUnsignedType = typename MakeUnsigned<T>::Type;
 
 // Compile time type selection.
 template <bool _, class TrueT, class FalseT> struct Conditional {

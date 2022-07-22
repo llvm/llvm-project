@@ -211,7 +211,7 @@ void UnwindInfoSection::addSymbol(const Defined *d) {
   // we use that as the key here.
   auto p = symbols.insert({{d->isec, d->value}, d});
   // If we have multiple symbols at the same address, only one of them can have
-  // an associated CUE.
+  // an associated unwind entry.
   if (!p.second && d->unwindEntry) {
     assert(!p.first->second->unwindEntry);
     p.first->second = d;

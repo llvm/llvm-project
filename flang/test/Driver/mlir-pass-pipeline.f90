@@ -4,6 +4,9 @@
 ! -O0 is the default:
 ! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O0 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL %s
 ! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O2 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,O2 %s
+
+! REQUIRES: asserts
+
 end program
 
 ! ALL: Pass statistics report

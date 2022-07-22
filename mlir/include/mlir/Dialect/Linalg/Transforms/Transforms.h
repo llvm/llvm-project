@@ -169,71 +169,6 @@ void peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
                        ArrayRef<int64_t> peeledLoops,
                        LinalgTilingLoopType loopType);
 
-/// Fuse a sequence of linalg operations (`ops`) using tile-and-fuse. This
-/// proceeds as follows:
-/// - Find outer parallel loops in these ops that can be fused.
-/// - Tile fusable outer parallel loops of the last operation in the sequence.
-/// - Fuse the remaining operations with the tiled operation
-///
-/// For example, consider the sequence of matmul below
-///
-///   linalg.matmul ins(%arg0, %arg1 : memref<256x32xf32>, memref<32x32xf32>)
-///                 outs(%arg2 : memref<256x32xf32>)
-///   linalg.matmul ins(%arg2, %arg3 : memref<256x32xf32>, memref<32x32xf32>)
-///                 outs(%arg4 : memref<256x32xf32>)
-///
-/// It is legal to fuse the RAW dependence (through %arg2) by only fusing the
-/// matmuls row-wise. For example, the fused computation for the above is shown
-/// below. The outer `scf.parallel` loop is the "fused" loop obtained by tiling
-/// along the rows of the matrix. The entire rows of the first matmul operation
-/// need to be computed before they can be used for the second matmul. The
-/// second matmul is further tiled (similar to normal tiling).
-///
-/// #map0 = affine_map<(d0, d1)[s0] -> (d0 * 32 + s0 + d1)>
-/// #map1 = affine_map<(d0, d1) -> (d0 * 32 + d1)>
-/// scf.parallel (%arg5) = (%c0) to (%c256) step (%c16) {
-///   %0 = subview %arg2[%arg5, 0] [16, 32] [1, 1]
-///     : memref<256x32xf32> to memref<16x32xf32, #map0>
-///   %1 = subview %arg4[%arg5, 0] [16, 32] [1, 1]
-///     : memref<256x32xf32> to memref<16x32xf32, #map0>
-///   %2 = subview %arg0[%arg5, 0] [16, 32] [1, 1]
-///     : memref<256x32xf32> to memref<16x32xf32, #map0>
-///   %3 = subview %arg1[0, 0] [32, 32] [1, 1]
-///     : memref<32x32xf32> to memref<32x32xf32, #map1>
-///   %4 = subview %arg3[0, 0] [32, 32] [1, 1]
-///     : memref<32x32xf32> to memref<32x32xf32, #map1>
-///   linalg.matmul
-///     ins(%2, %3 : memref<16x32xf32, #map0>, memref<32x32xf32, #map1>)
-///     outs(%0 : memref<16x32xf32, #map0>)
-///   linalg.matmul
-///     ins(%0, %4 : memref<16x4xf32, #map0>, memref<4x8xf32, #map0>)
-///     outs(%1 : memref<16x8xf32, #map0>)
-/// }
-///
-/// `tilingOptions` are used to tile the corresponding operation in `ops` (the
-/// size of the former should be same as size of the latter. Based on how
-/// tile+fuse is implemented, the fused loops are generated based on the last
-/// operation in the sequence. For example, the tile sizes for the fused loops
-/// is obtained from `tilingOptions.back()`. The following tiling options are
-/// handled differently in tile+fuse (compared to tile only)
-/// - Interchange of the tiling loops is not supported right now.
-/// - Only the fused loops are distributed.
-struct TiledAndFusedLinalgOps {
-  /// Operation obtained by tiling the last operation in sequence of `ops`
-  /// passed to `tileAndFuseLinalgOps`.
-  LinalgOp op;
-  /// The dimension of the loops that are fused.
-  std::set<unsigned> fusedLoopDims;
-  /// The generated fused operations (created within the fused loops).
-  SmallVector<LinalgOp, 1> fusedProducers;
-  /// The fused loop generated.
-  SmallVector<Operation *, 4> fusedLoops;
-};
-FailureOr<TiledAndFusedLinalgOps>
-tileAndFuseLinalgOps(OpBuilder &builder, ArrayRef<LinalgOp> ops,
-                     const LinalgDependenceGraph &dependenceGraph,
-                     const LinalgTilingOptions &tilingOptions);
-
 /// Interchange the `iterator_types` and `iterator_maps` dimensions and adapts
 /// the index accesses of `op`. This is an in-place transformation controlled by
 /// `interchangeVector`. An empty vector is interpreted as the identity
@@ -531,9 +466,16 @@ struct ForeachThreadTilingResult {
   Operation *tiledOp;
 };
 FailureOr<ForeachThreadTilingResult>
-tileToForeachThreadOp(OpBuilder &builder, TilingInterface op,
+tileToForeachThreadOp(RewriterBase &builder, TilingInterface op,
                       ArrayRef<OpFoldResult> numThreads,
                       ArrayRef<int64_t> threadDimMapping = {});
+
+/// Same as `tileToForeachThreadOp`, but calculate the number of threads
+/// required using the given tileSizes.
+FailureOr<ForeachThreadTilingResult>
+tileToForeachThreadOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
+                                    ArrayRef<OpFoldResult> tileSizes,
+                                    ArrayRef<int64_t> threadDimMapping = {});
 
 /// All indices returned by IndexOp should be invariant with respect to tiling.
 /// Therefore, if an operation is tiled, we have to transform the indices
@@ -845,62 +787,6 @@ struct DownscaleDepthwiseConv2DNhwcHwcOp final
 private:
   /// LinalgTransformMarker handles special attribute manipulations.
   LinalgTransformationFilter filter;
-};
-
-struct LinalgFusionOptions {
-  /// List of operands indices to use for fusion.
-  llvm::SmallSet<unsigned, 1> indicesToFuse = {};
-  LinalgFusionOptions &setIndicesToFuse(ArrayRef<int64_t> operands) {
-    indicesToFuse.insert(operands.begin(), operands.end());
-    return *this;
-  }
-};
-
-struct LinalgBaseTileAndFusePattern : public RewritePattern {
-  LinalgBaseTileAndFusePattern(
-      StringRef opName, MLIRContext *context,
-      const LinalgDependenceGraph &dependenceGraph,
-      LinalgTilingOptions tilingOptions, LinalgFusionOptions fusionOptions,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      LinalgTransformationFilter fusedOpMarker = LinalgTransformationFilter(),
-      LinalgTransformationFilter originalOpMarker =
-          LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// Dependence graph needed for fusion.
-  const LinalgDependenceGraph &dependenceGraph;
-  /// Options to control tiling.
-  LinalgTilingOptions tilingOptions;
-  /// Options to control fusion.
-  LinalgFusionOptions fusionOptions;
-  /// Marker to control application of the pattern.
-  LinalgTransformationFilter filter;
-  /// Marker set on the fused op after tile and fuse.
-  LinalgTransformationFilter fusedOpMarker;
-  /// The dependenceGraph is not modifiable, i.e. if the Linalg operations used
-  /// to build the dependence graph changes then the dependenceGraph needs to be
-  /// recomputed right now. To not invalidate the dependenceGraph as
-  /// transformation happens, the original producer can be tagged with a filter
-  /// that can be later used to delete the original operations.
-  LinalgTransformationFilter originalOpMarker;
-};
-
-template <typename OpTy>
-struct LinalgTileAndFusePattern : public LinalgBaseTileAndFusePattern {
-  LinalgTileAndFusePattern(
-      MLIRContext *context, const LinalgDependenceGraph &dependenceGraph,
-      LinalgTilingOptions tilingOptions, LinalgFusionOptions fusionOptions,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      LinalgTransformationFilter fusedOpMarker = LinalgTransformationFilter(),
-      LinalgTransformationFilter originalOpMarker =
-          LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : LinalgBaseTileAndFusePattern(
-            OpTy::getOperationName(), context, dependenceGraph, tilingOptions,
-            fusionOptions, f, fusedOpMarker, originalOpMarker, benefit) {}
 };
 
 ///
