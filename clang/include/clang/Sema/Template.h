@@ -75,8 +75,6 @@ enum class TemplateSubstitutionKind : char {
   class MultiLevelTemplateArgumentList {
     /// The template argument list at a certain template depth
     using ArgList = ArrayRef<TemplateArgument>;
-    using ArgListsIterator = SmallVector<ArgList, 4>::iterator;
-    using ConstArgListsIterator = SmallVector<ArgList, 4>::const_iterator;
 
     /// The template argument lists, stored from the innermost template
     /// argument list (first) to the outermost template argument list (last).
@@ -123,12 +121,6 @@ enum class TemplateSubstitutionKind : char {
       return TemplateArgumentLists.size();
     }
 
-    // Determine the number of substituted args at 'Depth'.
-    unsigned getNumSubsitutedArgs(unsigned Depth) const {
-      assert(NumretainedOuterLevels <= Depth && Depth < getNumLevels());
-      return TemplateArgumentLists[getNumLevels() - Depth - 1].size();
-    }
-
     unsigned getNumRetainedOuterLevels() const {
       return NumRetainedOuterLevels;
     }
@@ -166,14 +158,6 @@ enum class TemplateSubstitutionKind : char {
       return !(*this)(Depth, Index).isNull();
     }
 
-    bool isAnyArgInstantiationDependent() const {
-      for (ArgList List : TemplateArgumentLists)
-        for (const TemplateArgument &TA : List)
-          if (TA.isInstantiationDependent())
-            return true;
-      return false;
-    }
-
     /// Clear out a specific template argument.
     void setArgument(unsigned Depth, unsigned Index,
                      TemplateArgument Arg) {
@@ -199,14 +183,6 @@ enum class TemplateSubstitutionKind : char {
       TemplateArgumentLists.push_back(Args);
     }
 
-    /// Replaces the current 'innermost' level with the provided argument list.
-    /// This is useful for type deduction cases where we need to get the entire
-    /// list from the AST, but then add the deduced innermost list.
-    void replaceInnermostTemplateArguments(ArgList Args) {
-      assert(TemplateArgumentLists.size() > 0 && "Replacing in an empty list?");
-      TemplateArgumentLists[0] = Args;
-    }
-
     /// Add an outermost level that we are not substituting. We have no
     /// arguments at this level, and do not remove it from the depth of inner
     /// template parameters that we instantiate.
@@ -221,16 +197,6 @@ enum class TemplateSubstitutionKind : char {
     const ArgList &getInnermost() const {
       return TemplateArgumentLists.front();
     }
-    /// Retrieve the outermost template argument list.
-    const ArgList &getOutermost() const {
-      return TemplateArgumentLists.back();
-    }
-    ArgListsIterator begin() { return TemplateArgumentLists.begin(); }
-    ConstArgListsIterator begin() const {
-      return TemplateArgumentLists.begin();
-    }
-    ArgListsIterator end() { return TemplateArgumentLists.end(); }
-    ConstArgListsIterator end() const { return TemplateArgumentLists.end(); }
   };
 
   /// The context in which partial ordering of function templates occurs.
