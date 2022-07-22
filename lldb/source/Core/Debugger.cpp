@@ -302,7 +302,7 @@ void Debugger::SetPrompt(llvm::StringRef p) {
 
 llvm::StringRef Debugger::GetReproducerPath() const {
   auto &r = repro::Reproducer::Instance();
-  return r.GetReproducerPath().GetCString();
+  return r.GetReproducerPath().GetPathAsConstString().AsCString();
 }
 
 const FormatEntity::Entry *Debugger::GetThreadFormat() const {

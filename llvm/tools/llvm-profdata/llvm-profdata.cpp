@@ -2471,9 +2471,10 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
         (ProfileTotalSample > 0)
             ? (Func.getTotalSamples() * 100.0) / ProfileTotalSample
             : 0;
-    PrintValues.emplace_back(HotFuncInfo(
-        Func.getContext().toString(), Func.getTotalSamples(),
-        TotalSamplePercent, FuncPair.second.second, Func.getEntrySamples()));
+    PrintValues.emplace_back(
+        HotFuncInfo(Func.getContext().toString(), Func.getTotalSamples(),
+                    TotalSamplePercent, FuncPair.second.second,
+                    Func.getHeadSamplesEstimate()));
   }
   dumpHotFunctionList(ColumnTitle, ColumnOffset, PrintValues, HotFuncCount,
                       Profiles.size(), HotFuncSample, ProfileTotalSample,

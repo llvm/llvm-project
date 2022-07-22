@@ -122,10 +122,10 @@ define dso_local void @testLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PWR8-NEXT:    stxvd2x vs2, r3, r5
 ; BE-PWR8-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds <512 x i1>, <512 x i1>* @f, i64 1
-  %0 = load <512 x i1>, <512 x i1>* %arrayidx, align 64
-  %arrayidx1 = getelementptr inbounds <512 x i1>, <512 x i1>* @f, i64 2
-  store <512 x i1> %0, <512 x i1>* %arrayidx1, align 64
+  %arrayidx = getelementptr inbounds <512 x i1>, ptr @f, i64 1
+  %0 = load <512 x i1>, ptr %arrayidx, align 64
+  %arrayidx1 = getelementptr inbounds <512 x i1>, ptr @f, i64 2
+  store <512 x i1> %0, ptr %arrayidx1, align 64
   ret void
 }
 
@@ -243,10 +243,10 @@ define dso_local void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PWR8-NEXT:    stxvd2x vs3, r4, r9
 ; BE-PWR8-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds <512 x i1>, <512 x i1>* @f, i64 %SrcIdx
-  %0 = load <512 x i1>, <512 x i1>* %arrayidx, align 64
-  %arrayidx1 = getelementptr inbounds <512 x i1>, <512 x i1>* @f, i64 %DstIdx
-  store <512 x i1> %0, <512 x i1>* %arrayidx1, align 64
+  %arrayidx = getelementptr inbounds <512 x i1>, ptr @f, i64 %SrcIdx
+  %0 = load <512 x i1>, ptr %arrayidx, align 64
+  %arrayidx1 = getelementptr inbounds <512 x i1>, ptr @f, i64 %DstIdx
+  store <512 x i1> %0, ptr %arrayidx1, align 64
   ret void
 }
 
@@ -365,13 +365,10 @@ define dso_local void @testUnalignedLdSt() {
 ; BE-PWR8-NEXT:    stxvd2x vs2, r3, r5
 ; BE-PWR8-NEXT:    blr
 entry:
-  %0 = bitcast <512 x i1>* @f to i8*
-  %add.ptr = getelementptr inbounds i8, i8* %0, i64 11
-  %add.ptr1 = getelementptr inbounds i8, i8* %0, i64 19
-  %1 = bitcast i8* %add.ptr to <512 x i1>*
-  %2 = bitcast i8* %add.ptr1 to <512 x i1>*
-  %3 = load <512 x i1>, <512 x i1>* %1, align 64
-  store <512 x i1> %3, <512 x i1>* %2, align 64
+  %add.ptr = getelementptr inbounds i8, ptr @f, i64 11
+  %add.ptr1 = getelementptr inbounds i8, ptr @f, i64 19
+  %0 = load <512 x i1>, ptr %add.ptr, align 64
+  store <512 x i1> %0, ptr %add.ptr1, align 64
   ret void
 }
 
@@ -442,10 +439,10 @@ define dso_local void @testLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PWR8-NEXT:    stxvd2x vs0, r3, r5
 ; BE-PWR8-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds <256 x i1>, <256 x i1>* @g, i64 1
-  %0 = load <256 x i1>, <256 x i1>* %arrayidx, align 64
-  %arrayidx1 = getelementptr inbounds <256 x i1>, <256 x i1>* @g, i64 2
-  store <256 x i1> %0, <256 x i1>* %arrayidx1, align 64
+  %arrayidx = getelementptr inbounds <256 x i1>, ptr @g, i64 1
+  %0 = load <256 x i1>, ptr %arrayidx, align 64
+  %arrayidx1 = getelementptr inbounds <256 x i1>, ptr @g, i64 2
+  store <256 x i1> %0, ptr %arrayidx1, align 64
   ret void
 }
 
@@ -535,10 +532,10 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PWR8-NEXT:    stxvd2x vs1, r4, r7
 ; BE-PWR8-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds <256 x i1>, <256 x i1>* @g, i64 %SrcIdx
-  %0 = load <256 x i1>, <256 x i1>* %arrayidx, align 64
-  %arrayidx1 = getelementptr inbounds <256 x i1>, <256 x i1>* @g, i64 %DstIdx
-  store <256 x i1> %0, <256 x i1>* %arrayidx1, align 64
+  %arrayidx = getelementptr inbounds <256 x i1>, ptr @g, i64 %SrcIdx
+  %0 = load <256 x i1>, ptr %arrayidx, align 64
+  %arrayidx1 = getelementptr inbounds <256 x i1>, ptr @g, i64 %DstIdx
+  store <256 x i1> %0, ptr %arrayidx1, align 64
   ret void
 }
 
@@ -617,12 +614,9 @@ define dso_local void @testUnalignedLdStPair() {
 ; BE-PWR8-NEXT:    stxvd2x vs0, r3, r5
 ; BE-PWR8-NEXT:    blr
 entry:
-  %0 = bitcast <256 x i1>* @g to i8*
-  %add.ptr = getelementptr inbounds i8, i8* %0, i64 11
-  %add.ptr1 = getelementptr inbounds i8, i8* %0, i64 19
-  %1 = bitcast i8* %add.ptr to <256 x i1>*
-  %2 = bitcast i8* %add.ptr1 to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %1, align 64
-  store <256 x i1> %3, <256 x i1>* %2, align 64
+  %add.ptr = getelementptr inbounds i8, ptr @g, i64 11
+  %add.ptr1 = getelementptr inbounds i8, ptr @g, i64 19
+  %0 = load <256 x i1>, ptr %add.ptr, align 64
+  store <256 x i1> %0, ptr %add.ptr1, align 64
   ret void
 }

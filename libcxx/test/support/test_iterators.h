@@ -758,6 +758,7 @@ namespace adl {
 class Iterator {
  public:
   using value_type = int;
+  using reference = int&;
   using difference_type = ptrdiff_t;
 
  private:
@@ -786,9 +787,27 @@ class Iterator {
   constexpr int iter_swaps() const { assert(iter_swaps_); return *iter_swaps_; }
 
   constexpr value_type& operator*() const { return *ptr_; }
+  constexpr reference operator[](difference_type n) const { return ptr_[n]; }
 
-  constexpr Iterator operator+(difference_type n) const {
-    return Iterator(ptr_ + n, iter_moves_, iter_swaps_);
+  friend constexpr Iterator operator+(Iterator i, difference_type n) {
+    return Iterator(i.ptr_ + n, i.iter_moves_, i.iter_swaps_);
+  }
+  friend constexpr Iterator operator+(difference_type n, Iterator i) {
+    return i + n;
+  }
+  constexpr Iterator operator-(difference_type n) const {
+    return Iterator(ptr_ - n, iter_moves_, iter_swaps_);
+  }
+  constexpr difference_type operator-(Iterator rhs) const {
+    return ptr_ - rhs.ptr_;
+  }
+  constexpr Iterator& operator+=(difference_type n) {
+    ptr_ += n;
+    return *this;
+  }
+  constexpr Iterator& operator-=(difference_type n) {
+    ptr_ -= n;
+    return *this;
   }
 
   constexpr Iterator& operator++() { ++ptr_; return *this; }
@@ -805,7 +824,8 @@ class Iterator {
     return prev;
   }
 
-  constexpr friend void iter_swap(Iterator a, Iterator) {
+  constexpr friend void iter_swap(Iterator a, Iterator b) {
+    std::swap(a.ptr_, b.ptr_);
     if (a.iter_swaps_) {
       ++(*a.iter_swaps_);
     }
@@ -818,7 +838,12 @@ class Iterator {
     return std::move(*iter);
   }
 
-  constexpr friend bool operator==(const Iterator& lhs, const Iterator& rhs) { return lhs.ptr_ == rhs.ptr_; }
+  constexpr friend bool operator==(const Iterator& lhs, const Iterator& rhs) {
+    return lhs.ptr_ == rhs.ptr_;
+  }
+  constexpr friend auto operator<=>(const Iterator& lhs, const Iterator& rhs) {
+    return lhs.ptr_ <=> rhs.ptr_;
+  }
 };
 
 } // namespace adl

@@ -18,6 +18,7 @@
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <limits>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -679,6 +680,9 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
               continue;
           }
           Out.emitBytes(Info.substr(UnitOffset - C.Length, C.Length));
+          if (std::numeric_limits<uint32_t>::max() - InfoSectionOffset < C.Length)
+            return make_error<DWPError>("Debug Info offset greater then 4GB.");
+
           InfoSectionOffset += C.Length;
         }
       }
