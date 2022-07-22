@@ -143,6 +143,9 @@ static bool convertExternsToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
         if (!strncmp(F->getName().str().c_str(), "__ockl_dm_dealloc",
                      strlen("__ockl_dm_dealloc")))
           continue;
+        if (!strncmp(F->getName().str().c_str(), "hostrpc_invoke",
+                     strlen("hostrpc_invoke")))
+          continue;
         // all other functions
         F->setLinkage(GlobalValue::LinkOnceODRLinkage);
         F->setVisibility(GlobalValue::ProtectedVisibility);
