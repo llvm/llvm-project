@@ -555,7 +555,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         AFItemPointer->WRTNodeID = WRTNode->Node->LeftNode->NodeId;
         AFItemPointer->AF =
             AFofWRTNode *
-            StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTX;
+            StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTX;
 
         AFResult->DoubleAFRecords++;
 
@@ -608,7 +608,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         AFItemPointer->WRTNodeID = WRTNode->Node->LeftNode->NodeId;
         AFItemPointer->AF =
             AFofWRTNode *
-            StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTX;
+            StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTX;
         AFResult->DoubleAFRecords++;
 
 #if FAF_DEBUG == 2
@@ -657,7 +657,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         AFItemPointer->WRTNodeID = WRTNode->Node->RightNode->NodeId;
         AFItemPointer->AF =
             AFofWRTNode *
-            StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTY;
+            StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTY;
 
         AFResult->DoubleAFRecords++;
 
@@ -753,7 +753,7 @@ void fAFStoreResult() {
                 "\t\t\t\"Result Node ID\":%d,\n"
                 "\t\t\t\"AF WRT Node\": \"%s\",\n"
                 "\t\t\t\"WRT Node ID\":%d,\n"
-                "\t\t\t\"AF\": %f\n",
+                "\t\t\t\"AF\": %0.7f\n",
                 AFResult->FloatAFItemPointer[I].ResultInstructionString,
                 AFResult->FloatAFItemPointer[I].ResultNodeID,
                 AFResult->FloatAFItemPointer[I].WRTInstructionString,
@@ -780,7 +780,7 @@ void fAFStoreResult() {
                 "\t\t\t\"Result Node ID\":%d,\n"
                 "\t\t\t\"AF WRT Node\": \"%s\",\n"
                 "\t\t\t\"WRT Node ID\":%d,\n"
-                "\t\t\t\"AF\": %lf\n",
+                "\t\t\t\"AF\": %0.15lf\n",
                 AFResult->DoubleAFItemPointer[I].ResultInstructionString,
                 AFResult->DoubleAFItemPointer[I].ResultNodeID,
                 AFResult->DoubleAFItemPointer[I].WRTInstructionString,
