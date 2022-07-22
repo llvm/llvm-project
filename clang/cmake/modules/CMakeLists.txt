@@ -32,7 +32,8 @@ set(CLANG_CONFIG_LLVM_CMAKE_DIR)
 
 # For compatibility with projects that include(ClangConfig)
 # via CMAKE_MODULE_PATH, place API modules next to it.
-# Copy without source permissions because the source could be read-only
+# Copy without source permissions because the source could be read-only,
+# but we need to write into the copied folder.
 file(COPY .
   DESTINATION ${clang_cmake_builddir}
   NO_SOURCE_PERMISSIONS
