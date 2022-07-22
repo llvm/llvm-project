@@ -71,9 +71,16 @@ module Clang_Basic {
   textual header "Basic/RISCVVTypes.def"
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TargetCXXABI.def"
-  textual header "Basic/TokenKinds.def"
 
   module * { export * }
+}
+module Clang_Basic_TokenKinds {
+  requires cplusplus
+
+  header "Basic/TokenKinds.h"
+  textual header "Basic/TokenKinds.def"
+
+  export *
 }
 
 module Clang_CodeGen { requires cplusplus umbrella "CodeGen" module * { export * } }

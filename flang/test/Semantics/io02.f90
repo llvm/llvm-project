@@ -29,6 +29,9 @@
   !ERROR: Invalid STATUS value 'old'
   close(status='old', unit=17)
 
+  !Ok: trailing spaces ignored
+  close(status='keep ', unit=17)
+
   !ERROR: IOSTAT variable 'const_stat' must be definable
   close(14, iostat=const_stat)
 

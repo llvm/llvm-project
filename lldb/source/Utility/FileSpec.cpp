@@ -170,9 +170,7 @@ void FileSpec::SetFile(llvm::StringRef pathname) { SetFile(pathname, m_style); }
 // up into a directory and filename and stored as uniqued string values for
 // quick comparison and efficient memory usage.
 void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
-  m_filename.Clear();
-  m_directory.Clear();
-  m_is_resolved = false;
+  Clear();
   m_style = (style == Style::native) ? GetNativeStyle() : style;
 
   if (pathname.empty())
@@ -259,6 +257,7 @@ Stream &lldb_private::operator<<(Stream &s, const FileSpec &f) {
 void FileSpec::Clear() {
   m_directory.Clear();
   m_filename.Clear();
+  PathWasModified();
 }
 
 // Compare two FileSpec objects. If "full" is true, then both the directory and
@@ -332,26 +331,32 @@ FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
 void FileSpec::SetDirectory(ConstString directory) {
   m_directory = directory;
+  PathWasModified();
 }
 
 void FileSpec::SetDirectory(llvm::StringRef directory) {
   m_directory = ConstString(directory);
+  PathWasModified();
 }
 
 void FileSpec::SetFilename(ConstString filename) {
   m_filename = filename;
+  PathWasModified();
 }
 
 void FileSpec::SetFilename(llvm::StringRef filename) {
   m_filename = ConstString(filename);
+  PathWasModified();
 }
 
 void FileSpec::ClearFilename() {
   m_filename.Clear();
+  PathWasModified();
 }
 
 void FileSpec::ClearDirectory() {
   m_directory.Clear();
+  PathWasModified();
 }
 
 // Extract the directory and path into a fixed buffer. This is needed as the
@@ -488,18 +493,22 @@ bool FileSpec::IsRelative() const {
 }
 
 bool FileSpec::IsAbsolute() const {
-llvm::SmallString<64> current_path;
-  GetPath(current_path, false);
+  // Check if we have cached if this path is absolute to avoid recalculating.
+  if (m_absolute != Absolute::Calculate)
+    return m_absolute == Absolute::Yes;
 
-  // Early return if the path is empty.
-  if (current_path.empty())
-    return false;
+  m_absolute = Absolute::No;
 
-  // We consider paths starting with ~ to be absolute.
-  if (current_path[0] == '~')
-    return true;
+  llvm::SmallString<64> path;
+  GetPath(path, false);
 
-  return llvm::sys::path::is_absolute(current_path, m_style);
+  if (!path.empty()) {
+    // We consider paths starting with ~ to be absolute.
+    if (path[0] == '~' || llvm::sys::path::is_absolute(path, m_style))
+      m_absolute = Absolute::Yes;
+  }
+
+  return m_absolute == Absolute::Yes;
 }
 
 void FileSpec::MakeAbsolute(const FileSpec &dir) {

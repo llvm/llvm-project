@@ -920,10 +920,12 @@ public:
 
   /// If this decl is defined inside a function/method/block it returns
   /// the corresponding DeclContext, otherwise it returns null.
-  const DeclContext *getParentFunctionOrMethod() const;
-  DeclContext *getParentFunctionOrMethod() {
-    return const_cast<DeclContext*>(
-                    const_cast<const Decl*>(this)->getParentFunctionOrMethod());
+  const DeclContext *
+  getParentFunctionOrMethod(bool LexicalParent = false) const;
+  DeclContext *getParentFunctionOrMethod(bool LexicalParent = false) {
+    return const_cast<DeclContext *>(
+        const_cast<const Decl *>(this)->getParentFunctionOrMethod(
+            LexicalParent));
   }
 
   /// Retrieves the "canonical" declaration of the given declaration.
