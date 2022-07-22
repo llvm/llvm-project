@@ -2981,7 +2981,7 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
     const APInt *C;
     bool TrueIfSigned;
     if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
-        InstCombiner::isSignBitCheck(Pred, *C, TrueIfSigned)) {
+        isSignBitCheck(Pred, *C, TrueIfSigned)) {
       if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
           match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
         // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0
