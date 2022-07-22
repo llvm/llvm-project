@@ -217,9 +217,8 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
   unsigned ADDIOp = Subtarget.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
 
-  // FIXME: Only support PC-relative addressing to access the symbol.
-  // TODO: Add target flags.
-  if (!isPositionIndependent()) {
+  // TODO: Support dso_preemptable and target flags.
+  if (GV->isDSOLocal()) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, Ty);
     SDValue AddrHi(DAG.getMachineNode(LoongArch::PCALAU12I, DL, Ty, GA), 0);
     SDValue Addr(DAG.getMachineNode(ADDIOp, DL, Ty, AddrHi, GA), 0);
