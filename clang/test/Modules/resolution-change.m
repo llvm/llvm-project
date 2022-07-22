@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/modules-with-same-name/DependsOnA -I %S/Inputs/modules-with-same-name/path1/A -include-pch %t-A.pch %s -fsyntax-only -Werror
 
 // Different -W options are ok
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/modules-with-same-name/DependsOnA -I %S/Inputs/modules-with-same-name/path1/A -include-pch %t-A.pch %s -fsyntax-only -Werror -Wauto-import
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/modules-with-same-name/DependsOnA -I %S/Inputs/modules-with-same-name/path1/A -include-pch %t-A.pch %s -fsyntax-only -Werror -Rmodule-include-translation
 
 // Use the PCH with no way to resolve DependsOnA
 // RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -include-pch %t-A.pch %s -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-NODOA %s
