@@ -268,8 +268,8 @@ void llvm::sortBasicBlocksAndUpdateBranches(
 // If the exception section begins with a landing pad, that landing pad will
 // assume a zero offset (relative to @LPStart) in the LSDA. However, a value of
 // zero implies "no landing pad." This function inserts a NOP just before the EH
-// pad label to ensure a nonzero offset. Returns true if padding is not needed.
-static bool avoidZeroOffsetLandingPad(MachineFunction &MF) {
+// pad label to ensure a nonzero offset.
+void llvm::avoidZeroOffsetLandingPad(MachineFunction &MF) {
   for (auto &MBB : MF) {
     if (MBB.isBeginSection() && MBB.isEHPad()) {
       MachineBasicBlock::iterator MI = MBB.begin();
@@ -278,10 +278,8 @@ static bool avoidZeroOffsetLandingPad(MachineFunction &MF) {
       MCInst Nop = MF.getSubtarget().getInstrInfo()->getNop();
       BuildMI(MBB, MI, DebugLoc(),
               MF.getSubtarget().getInstrInfo()->get(Nop.getOpcode()));
-      return false;
     }
   }
-  return true;
 }
 
 // This checks if the source of this function has drifted since this binary was
