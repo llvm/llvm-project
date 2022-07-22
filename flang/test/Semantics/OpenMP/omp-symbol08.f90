@@ -31,18 +31,18 @@ subroutine test_do
  !REF: /test_do/i
  i = 99
 !$omp do  collapse(2)
- !DEF: /test_do/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /test_do/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_do/Block1/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_do/OtherConstruct1/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
    !REF: /test_do/a
    a(1,1,1) = 0.
-   !DEF: /test_do/Block1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_do/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_do/a
-    !REF: /test_do/Block1/k
-    !REF: /test_do/Block1/Block1/j
-    !REF: /test_do/Block1/Block1/i
+    !REF: /test_do/OtherConstruct1/k
+    !REF: /test_do/OtherConstruct1/OtherConstruct1/j
+    !REF: /test_do/OtherConstruct1/OtherConstruct1/i
     a(k,j,i) = 1.
    end do
   end do
@@ -61,18 +61,18 @@ subroutine test_pardo
  !DEF: /test_pardo/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do  collapse(2) private(k) ordered(2)
- !DEF: /test_pardo/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /test_pardo/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-   !DEF: /test_pardo/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_pardo/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
     do j=6,10
    !REF: /test_pardo/a
    a(1,1,1) = 0.
-   !DEF: /test_pardo/Block1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_pardo/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_pardo/a
-    !REF: /test_pardo/Block1/k
-    !REF: /test_pardo/Block1/j
-    !REF: /test_pardo/Block1/i
+    !REF: /test_pardo/OtherConstruct1/k
+    !REF: /test_pardo/OtherConstruct1/j
+    !REF: /test_pardo/OtherConstruct1/i
     a(k,j,i) = 1.
    end do
   end do
@@ -89,14 +89,14 @@ subroutine test_taskloop
  !DEF: /test_taskloop/j ObjectEntity INTEGER(4)
  integer i, j
 !$omp taskloop  private(j)
- !DEF: /test_taskloop/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /test_taskloop/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_taskloop/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  !REF: /test_taskloop/Block1/i
+  !DEF: /test_taskloop/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !REF: /test_taskloop/OtherConstruct1/i
   do j=1,i
    !REF: /test_taskloop/a
-   !REF: /test_taskloop/Block1/j
-   !REF: /test_taskloop/Block1/i
+   !REF: /test_taskloop/OtherConstruct1/j
+   !REF: /test_taskloop/OtherConstruct1/i
    a(j,i) = 3.14
   end do
  end do
@@ -132,20 +132,20 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
 !$omp target  map(to:b,c)  map(tofrom:sum)
 !$omp teams  num_teams(num_teams) thread_limit(block_threads) reduction(+:sum)
 !$omp distribute
- !DEF: /dotprod/Block1/Block1/Block1/i0 (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/i0 (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  !REF: /dotprod/n
  !REF: /dotprod/block_size
  do i0=1,n,block_size
 !$omp parallel do  reduction(+:sum)
-  !DEF: /dotprod/Block1/Block1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  !REF: /dotprod/Block1/Block1/Block1/i0
+  !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !REF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/i0
   !DEF: /dotprod/min ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
   !REF: /dotprod/block_size
   !REF: /dotprod/n
   do i=i0,min(i0+block_size, n)
-   !DEF: /dotprod/Block1/Block1/Block1/Block1/sum (OmpReduction) HostAssoc REAL(4)
+   !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/sum (OmpReduction) HostAssoc REAL(4)
    !REF: /dotprod/b
-   !REF: /dotprod/Block1/Block1/Block1/Block1/i
+   !REF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/i
    !REF: /dotprod/c
    sum = sum+b(i)*c(i)
   end do
@@ -168,16 +168,16 @@ subroutine test_simd
  !DEF: /test_simd/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do simd
- !DEF: /test_simd/Block1/i (OmpLinear, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /test_simd/OtherConstruct1/i (OmpLinear, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_simd/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_simd/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
-   !DEF: /test_simd/Block1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_simd/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_simd/a
-    !REF: /test_simd/Block1/k
-    !REF: /test_simd/Block1/j
-    !REF: /test_simd/Block1/i
+    !REF: /test_simd/OtherConstruct1/k
+    !REF: /test_simd/OtherConstruct1/j
+    !REF: /test_simd/OtherConstruct1/i
     a(k,j,i) = 3.14
    end do
   end do
@@ -195,16 +195,16 @@ subroutine test_simd_multi
  !DEF: /test_simd_multi/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do simd  collapse(3)
- !DEF: /test_simd_multi/Block1/i (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /test_simd_multi/OtherConstruct1/i (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_simd_multi/Block1/j (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_simd_multi/OtherConstruct1/j (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
-   !DEF: /test_simd_multi/Block1/k (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_simd_multi/OtherConstruct1/k (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_simd_multi/a
-    !REF: /test_simd_multi/Block1/k
-    !REF: /test_simd_multi/Block1/j
-    !REF: /test_simd_multi/Block1/i
+    !REF: /test_simd_multi/OtherConstruct1/k
+    !REF: /test_simd_multi/OtherConstruct1/j
+    !REF: /test_simd_multi/OtherConstruct1/i
     a(k,j,i) = 3.14
    end do
   end do
@@ -228,17 +228,17 @@ subroutine test_seq_loop
   print *, i, j
   !$omp parallel
   !REF: /test_seq_loop/i
-  !DEF: /test_seq_loop/Block1/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_seq_loop/OtherConstruct1/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   print *, i, j
   !$omp do
-  !DEF: /test_seq_loop/Block1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_seq_loop/OtherConstruct1/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-   !REF: /test_seq_loop/Block1/Block1/j
+   !REF: /test_seq_loop/OtherConstruct1/OtherConstruct1/j
    do j=1,10
    end do
   end do
   !REF: /test_seq_loop/i
-  !REF: /test_seq_loop/Block1/Block1/j
+  !REF: /test_seq_loop/OtherConstruct1/OtherConstruct1/j
   print *, i, j
   !$omp end parallel
   !REF: /test_seq_loop/i

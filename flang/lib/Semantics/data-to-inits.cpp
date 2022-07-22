@@ -821,7 +821,7 @@ static bool ProcessScopes(const Scope &scope,
   case Scope::Kind::MainProgram:
   case Scope::Kind::Subprogram:
   case Scope::Kind::BlockData:
-  case Scope::Kind::Block: {
+  case Scope::Kind::BlockConstruct: {
     std::list<std::list<SymbolRef>> associations{GetStorageAssociations(scope)};
     for (const std::list<SymbolRef> &associated : associations) {
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {

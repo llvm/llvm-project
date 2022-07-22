@@ -20,10 +20,10 @@ subroutine tds
   !REF: /tds/k
   k = 12
   !$omp do  schedule(static,j-k)
-  !DEF: /tds/Block1/i (OmpPrivate,OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /tds/OtherConstruct1/i (OmpPrivate,OmpPreDetermined) HostAssoc INTEGER(4)
   do i = 1,10
     !REF: /tds/y
-    !REF: /tds/Block1/i
+    !REF: /tds/OtherConstruct1/i
     !REF: /tds/z
     !REF: /tds/a
     y(i) = z(i-1)+a(i)

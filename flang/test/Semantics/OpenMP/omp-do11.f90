@@ -9,11 +9,11 @@ program omp_do
   !DEF: /omp_do/k ObjectEntity INTEGER(4)
   integer i, j, k
   !$omp do
-  !DEF: /omp_do/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_do/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
     !REF: /omp_do/j
     do j=1,10
-      !REF: /omp_do/Block1/i
+      !REF: /omp_do/OtherConstruct1/i
       !REF: /omp_do/j
       print *, "it", i, j
     end do
@@ -27,9 +27,9 @@ subroutine omp_do2
   !DEF: /omp_do2/k ObjectEntity INTEGER(4)
   integer :: i = 0, k
   !$omp do
-  !DEF: /omp_do2/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_do2/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !REF: /omp_do2/Block1/i
+    !REF: /omp_do2/OtherConstruct1/i
     print *, "it", i
   end do
   !$omp end do
