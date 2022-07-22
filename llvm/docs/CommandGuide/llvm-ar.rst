@@ -294,6 +294,25 @@ Other
 
  Display the version of the :program:`llvm-ar` executable.
 
+.. option:: -X mode
+
+ Specifies the type of object file :program:`llvm-ar` will recognise. The mode must be
+ one of the following:
+
+   32
+         Process only 32-bit object files.
+   64
+         Process only 64-bit object files.
+   32_64
+         Process both 32-bit and 64-bit object files.
+   any
+         Process all object files.
+
+ The default is to process 32-bit object files (ignore 64-bit objects). The mode can also
+ be set with the OBJECT_MODE environment variable. For example, OBJECT_MODE=64 causes ar to
+ process any 64-bit objects and ignore 32-bit objects. The -X flag overrides the OBJECT_MODE
+ variable.
+
 .. option:: @<FILE>
 
   Read command-line options and commands from response file ``<FILE>``.
