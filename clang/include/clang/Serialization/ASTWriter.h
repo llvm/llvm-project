@@ -703,6 +703,10 @@ public:
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
+  bool isWritingNamedModules() const {
+    return WritingModule && WritingModule->isModulePurview();
+  }
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
