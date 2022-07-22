@@ -11843,6 +11843,9 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
   EVT N00VT = N00.getValueType();
   SDLoc DL(N);
 
+  // Propagate fast-math-flags.
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N0->getFlags());
+
   // On some architectures (such as SSE/NEON/etc) the SETCC result type is
   // the same size as the compared operands. Try to optimize sext(setcc())
   // if this is the case.
@@ -12384,6 +12387,9 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     return V;
 
   if (N0.getOpcode() == ISD::SETCC) {
+    // Propagate fast-math-flags.
+    SelectionDAG::FlagInserter FlagsInserter(DAG, N0->getFlags());
+
     // Only do this before legalize for now.
     if (!LegalOperations && VT.isVector() &&
         N0.getValueType().getVectorElementType() == MVT::i1) {
@@ -12575,6 +12581,9 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   }
 
   if (N0.getOpcode() == ISD::SETCC) {
+    // Propagate fast-math-flags.
+    SelectionDAG::FlagInserter FlagsInserter(DAG, N0->getFlags());
+
     // For vectors:
     // aext(setcc) -> vsetcc
     // aext(setcc) -> truncate(vsetcc)
