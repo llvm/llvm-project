@@ -1756,7 +1756,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
 }
 
 bool InputFile::shouldExtractForCommon(StringRef name) {
-  if (isBitcode(mb))
+  if (isa<BitcodeFile>(this))
     return isBitcodeNonCommonDef(mb, name, archiveName);
 
   return isNonCommonDef(mb, name, archiveName);
