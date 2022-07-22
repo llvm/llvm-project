@@ -299,10 +299,10 @@ void dr261(void) {
   /* This is an invalid initialization/assignment because the right-hand side
    * does not have pointer to void or pointer to char type and is not the null
    * pointer constant. */
-  char *p2 = (42, 1 - 1); /* expected-warning {{incompatible integer to pointer conversion initializing 'char *' with an expression of type 'int'}}
+  char *p2 = (42, 1 - 1); /* expected-error {{incompatible integer to pointer conversion initializing 'char *' with an expression of type 'int'}}
                              expected-warning {{left operand of comma operator has no effect}}
                            */
-  p1 = (42, 1 - 1);       /* expected-warning {{incompatible integer to pointer conversion assigning to 'char *' from 'int'}}
+  p1 = (42, 1 - 1);       /* expected-error {{incompatible integer to pointer conversion assigning to 'char *' from 'int'}}
                              expected-warning {{left operand of comma operator has no effect}}
                            */
 

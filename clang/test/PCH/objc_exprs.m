@@ -9,7 +9,7 @@
 int *A1 = (objc_string)0;   // expected-warning {{aka 'NSString *'}}
 
 char A2 = (objc_encode){};  // expected-error {{not a compile-time constant}} \
-                               expected-warning {{char[2]}}
+                               expected-error {{char[2]}}
 
 int *A3 = (objc_protocol)0; // expected-warning {{aka 'Protocol *'}}
 

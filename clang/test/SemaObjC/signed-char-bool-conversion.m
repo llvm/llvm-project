@@ -24,9 +24,7 @@ void t1(void) {
   b = 2.1; // expected-warning {{implicit conversion from constant value 2.1 to 'BOOL'; the only well defined values for 'BOOL' are YES and NO}}
 
   b = YES;
-#ifndef __cplusplus
-  b = ptr; // expected-warning {{incompatible pointer to integer conversion assigning to 'BOOL' (aka 'signed char') from 'int *'}}
-#endif
+  b = ptr; // expected-error {{incompatible pointer to integer conversion assigning to 'BOOL' (aka 'signed char') from 'int *'}}
 }
 
 @interface BoolProp
@@ -41,9 +39,7 @@ void t2(BoolProp *bp) {
   bp.p = i; // expected-warning {{implicit conversion from integral type 'int' to 'BOOL'}}
   bp.p = b;
   bp.p = bp.p;
-#ifndef __cplusplus
-  bp.p = ptr; // expected-warning {{incompatible pointer to integer conversion assigning to 'BOOL' (aka 'signed char') from 'int *'}}
-#endif
+  bp.p = ptr; // expected-error {{incompatible pointer to integer conversion assigning to 'BOOL' (aka 'signed char') from 'int *'}}
   bp.p = 1;
   bp.p = 2; // expected-warning {{implicit conversion from constant value 2 to 'BOOL'; the only well defined values for 'BOOL' are YES and NO}}
 }

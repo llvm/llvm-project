@@ -90,7 +90,7 @@ extern int f1(void);
 
 int f0(int a) {
   // GCC considers this a warning.
-  return a ? f1() : nil; // expected-warning {{pointer/integer type mismatch in conditional expression ('int' and 'void *')}} expected-warning {{incompatible pointer to integer conversion returning 'void *' from a function with result type 'int'}}
+  return a ? f1() : nil; // expected-warning {{pointer/integer type mismatch in conditional expression ('int' and 'void *')}} expected-error {{incompatible pointer to integer conversion returning 'void *' from a function with result type 'int'}}
 }
 
 int f2(int x) {

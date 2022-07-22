@@ -21,7 +21,7 @@
 // Diagnostics:
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.external.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-DIAG-EXTERNAL %s
-// CHECK-DIAG-EXTERNAL: {{.*}}Inputs{{..?}}external-names.h:{{[0-9]*:[0-9]*}}: warning: incompatible pointer
+// CHECK-DIAG-EXTERNAL: {{.*}}Inputs{{..?}}external-names.h:{{[0-9]*:[0-9]*}}: warning: initializing 'const char **'
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-DIAG %s
 // CHECK-DIAG-NOT: Inputs

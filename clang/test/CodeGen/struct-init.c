@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin -target-feature +neon %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-int-conversion -triple armv7-apple-darwin -target-feature +neon %s -emit-llvm -o - | FileCheck %s
 
 typedef struct _zend_ini_entry zend_ini_entry;
 struct _zend_ini_entry {

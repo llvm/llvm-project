@@ -9,7 +9,7 @@ void test2(int a) {
 }
 
 void test3(unsigned *b) {
-  __builtin_alloca_with_align(b, 32); // expected-warning {{incompatible pointer to integer conversion passing 'unsigned int *' to parameter of type}}
+  __builtin_alloca_with_align(b, 32); // expected-error {{incompatible pointer to integer conversion passing 'unsigned int *' to parameter of type}}
 }
 
 void test4(int a) {

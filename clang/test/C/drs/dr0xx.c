@@ -363,7 +363,7 @@ char *dr064_1(int i, int *pi) {
 }
 
 char *dr064_2(int i, int *pi) {
-  return (*pi = i, 0); /* expected-warning {{incompatible integer to pointer conversion returning 'int' from a function with result type 'char *'}} */
+  return (*pi = i, 0); /* expected-error {{incompatible integer to pointer conversion returning 'int' from a function with result type 'char *'}} */
 }
 
 /* WG14 DR068: yes
