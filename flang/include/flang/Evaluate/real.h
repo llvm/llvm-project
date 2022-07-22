@@ -170,6 +170,8 @@ public:
   static constexpr int MINEXPONENT{2 - exponentBias};
   Real RRSPACING() const;
   Real SPACING() const;
+  Real SET_EXPONENT(int) const;
+  Real FRACTION() const;
 
   // SCALE(); also known as IEEE_SCALB and (in IEEE-754 '08) ScaleB.
   template <typename INT>
