@@ -4144,6 +4144,24 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       }
       break;
     }
+    case Intrinsic::swift_async_context_addr: {
+      SDLoc DL(Node);
+      SDValue Chain = Node->getOperand(0);
+      SDValue CopyFP = CurDAG->getCopyFromReg(Chain, DL,
+                                              AArch64::FP, MVT::i64);
+      SDValue Res = SDValue(CurDAG->getMachineNode(AArch64::SUBXri, DL, MVT::i64,
+                           CopyFP,
+                           CurDAG->getTargetConstant(8, DL, MVT::i32),
+                           CurDAG->getTargetConstant(0, DL, MVT::i32)), 0);
+      ReplaceUses(SDValue(Node, 0), Res);
+      ReplaceUses(SDValue(Node, 1), CopyFP.getValue(1));
+      CurDAG->RemoveDeadNode(Node);
+
+      auto &MF = CurDAG->getMachineFunction();
+      MF.getFrameInfo().setFrameAddressIsTaken(true);
+      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+      return;
+    }
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -4247,19 +4265,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
                                  SDValue(N, 1)).getNode();
       ReplaceNode(Node, N);
-      return;
-    }
-
-    case Intrinsic::swift_async_context_addr: {
-      SDLoc DL(Node);
-      CurDAG->SelectNodeTo(Node, AArch64::SUBXri, MVT::i64,
-                           CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
-                                                  AArch64::FP, MVT::i64),
-                           CurDAG->getTargetConstant(8, DL, MVT::i32),
-                           CurDAG->getTargetConstant(0, DL, MVT::i32));
-      auto &MF = CurDAG->getMachineFunction();
-      MF.getFrameInfo().setFrameAddressIsTaken(true);
-      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
       return;
     }
     }

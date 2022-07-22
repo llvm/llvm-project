@@ -494,7 +494,7 @@ def int_objc_arc_annotation_bottomup_bbend  : Intrinsic<[],
 // Returns the location of the Swift asynchronous context (usually stored just
 // before the frame pointer), and triggers the creation of a null context if it
 // would otherwise be unneeded.
-def int_swift_async_context_addr : Intrinsic<[llvm_ptrptr_ty], [], [IntrNoMem]>;
+def int_swift_async_context_addr : Intrinsic<[llvm_ptrptr_ty], [], []>;
 
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
