@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a NoopAnalysis class that is used by dataflow analysis
-//  tests.
+//  This file defines a NoopAnalysis class that just uses the builtin transfer.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
-#define LLVM_CLANG_UNITTESTS_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
+#ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
+#define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
@@ -41,4 +40,4 @@ public:
 } // namespace dataflow
 } // namespace clang
 
-#endif // LLVM_CLANG_UNITTESTS_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
+#endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
