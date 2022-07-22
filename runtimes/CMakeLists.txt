@@ -15,7 +15,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
 set(LLVM_ALL_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
