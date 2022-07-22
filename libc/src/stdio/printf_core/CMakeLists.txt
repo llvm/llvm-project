@@ -67,6 +67,7 @@ add_object_library(
     ptr_converter.h
     oct_converter.h
     write_int_converter.h
+    float_inf_nan_converter.h
     float_hex_converter.h
   DEPENDS
     .writer

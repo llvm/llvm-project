@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/float_inf_nan_converter.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <inttypes.h>
@@ -55,6 +56,9 @@ int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
     is_inf_or_nan = float_bits.is_inf_or_nan();
   }
 
+  if (is_inf_or_nan)
+    return convert_inf_nan(writer, to_conv);
+
   char sign_char = 0;
 
   if (is_negative)
@@ -64,34 +68,6 @@ int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
   else if ((to_conv.flags & FormatFlags::SPACE_PREFIX) ==
            FormatFlags::SPACE_PREFIX)
     sign_char = ' ';
-
-  // TODO: move the inf/nan handling to a seperate conversion, since the
-  // functionality is identical accross all float conversions.
-  if (is_inf_or_nan) {
-    // Both "inf" and "nan" are the same number of characters, being 3.
-    int padding = to_conv.min_width - (sign_char > 0 ? 1 : 0) - 3;
-
-    // The right justified pattern is (spaces), (sign), inf/nan
-    // The left justified pattern is  (sign), inf/nan, (spaces)
-
-    if (padding > 0 && ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) !=
-                        FormatFlags::LEFT_JUSTIFIED))
-      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', padding));
-
-    if (sign_char)
-      RET_IF_RESULT_NEGATIVE(writer->write(&sign_char, 1));
-    if (mantissa == 0) { // inf
-      RET_IF_RESULT_NEGATIVE(writer->write((a == 'a' ? "inf" : "INF"), 3));
-    } else { // nan
-      RET_IF_RESULT_NEGATIVE(writer->write((a == 'a' ? "nan" : "NAN"), 3));
-    }
-
-    if (padding > 0 && ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) ==
-                        FormatFlags::LEFT_JUSTIFIED))
-      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', padding));
-
-    return WRITE_OK;
-  }
 
   // Handle the exponent for numbers with a 0 exponent
   if (exponent == -exponent_bias) {
