@@ -131,6 +131,25 @@ TEST(DWARFExpression, DW_OP_const) {
       llvm::HasValue(0xffff010101010101));
 }
 
+TEST(DWARFExpression, DW_OP_skip) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0x42, DW_OP_skip, 0x02, 0x00,
+                                 DW_OP_const1u, 0xff}),
+                       llvm::HasValue(0x42));
+}
+
+TEST(DWARFExpression, DW_OP_bra) {
+  EXPECT_THAT_EXPECTED(
+      // clang-format off
+      Evaluate({
+        DW_OP_const1u, 0x42,     // push 0x42
+        DW_OP_const1u, 0x1,      // push 0x1
+        DW_OP_bra, 0x02, 0x00,   // if 0x1 > 0, then skip 0x0002 opcodes
+        DW_OP_const1u, 0xff,     // push 0xff
+      }),
+      // clang-format on
+      llvm::HasValue(0x42));
+}
+
 TEST(DWARFExpression, DW_OP_convert) {
   /// Auxiliary debug info.
   const char *yamldata = R"(
