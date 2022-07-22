@@ -113,8 +113,99 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 }
 
 //----------------------------------------------------------------------------//
+// IPowIOp strength reduction.
+//----------------------------------------------------------------------------//
+
+namespace {
+struct IPowIStrengthReduction : public OpRewritePattern<math::IPowIOp> {
+  unsigned exponentThreshold;
+
+public:
+  IPowIStrengthReduction(MLIRContext *context, unsigned exponentThreshold = 3,
+                         PatternBenefit benefit = 1,
+                         ArrayRef<StringRef> generatedNames = {})
+      : OpRewritePattern<math::IPowIOp>(context, benefit, generatedNames),
+        exponentThreshold(exponentThreshold) {}
+  LogicalResult matchAndRewrite(math::IPowIOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+LogicalResult
+IPowIStrengthReduction::matchAndRewrite(math::IPowIOp op,
+                                        PatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  Value base = op.getLhs();
+
+  IntegerAttr scalarExponent;
+  DenseIntElementsAttr vectorExponent;
+
+  bool isScalar = matchPattern(op.getRhs(), m_Constant(&scalarExponent));
+  bool isVector = matchPattern(op.getRhs(), m_Constant(&vectorExponent));
+
+  // Simplify cases with known exponent value.
+  int64_t exponentValue = 0;
+  if (isScalar)
+    exponentValue = scalarExponent.getInt();
+  else if (isVector && vectorExponent.isSplat())
+    exponentValue = vectorExponent.getSplatValue<IntegerAttr>().getInt();
+  else
+    return failure();
+
+  // Maybe broadcasts scalar value into vector type compatible with `op`.
+  auto bcast = [&](Value value) -> Value {
+    if (auto vec = op.getType().dyn_cast<VectorType>())
+      return rewriter.create<vector::BroadcastOp>(loc, vec, value);
+    return value;
+  };
+
+  if (exponentValue == 0) {
+    // Replace `ipowi(x, 0)` with `1`.
+    Value one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(getElementTypeOrSelf(op.getType()), 1));
+    rewriter.replaceOp(op, bcast(one));
+    return success();
+  }
+
+  bool exponentIsNegative = false;
+  if (exponentValue < 0) {
+    exponentIsNegative = true;
+    exponentValue *= -1;
+  }
+
+  // Bail out if `abs(exponent)` exceeds the threshold.
+  if (exponentValue > exponentThreshold)
+    return failure();
+
+  // Inverse the base for negative exponent, i.e. for
+  // `ipowi(x, negative_exponent)` set `x` to `1 / x`.
+  if (exponentIsNegative) {
+    Value one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(getElementTypeOrSelf(op.getType()), 1));
+    base = rewriter.create<arith::DivSIOp>(loc, bcast(one), base);
+  }
+
+  Value result = base;
+  // Transform to naive sequence of multiplications:
+  //   * For positive exponent case replace:
+  //       `ipowi(x, positive_exponent)`
+  //     with:
+  //       x * x * x * ...
+  //   * For negative exponent case replace:
+  //       `ipowi(x, negative_exponent)`
+  //     with:
+  //       (1 / x) * (1 / x) * (1 / x) * ...
+  for (unsigned i = 1; i < exponentValue; ++i)
+    result = rewriter.create<arith::MulIOp>(loc, result, base);
+
+  rewriter.replaceOp(op, result);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 
 void mlir::populateMathAlgebraicSimplificationPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<PowFStrengthReduction>(patterns.getContext());
+  patterns.add<PowFStrengthReduction, IPowIStrengthReduction>(
+      patterns.getContext());
 }
