@@ -18,9 +18,9 @@ the archive can contain any kind of file. By default, :program:`llvm-ar`
 generates a symbol table that makes linking faster because only the symbol
 table needs to be consulted, not each individual file member of the archive.
 
-The :program:`llvm-ar` command can be used to *read* archive files in SVR4,
-GNU, BSD and Darwin format, and *write* in the GNU, BSD, and Darwin style
-archive files. If an SVR4 format archive is used with the :option:`r`
+The :program:`llvm-ar` command can be used to *read* archive files in SVR4, GNU,
+BSD , Big Archive, and Darwin format, and *write* in the GNU, BSD, Big Archive, and
+Darwin style archive files. If an SVR4 format archive is used with the :option:`r`
 (replace), :option:`d` (delete), :option:`m` (move) or :option:`q`
 (quick update) operations, the archive will be reconstructed in the format
 defined by :option:`--format`.
