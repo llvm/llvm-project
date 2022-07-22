@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -102,6 +103,22 @@ public:
     return formatv("{0}", fmt_pad(S, Indent, 0));
   }
 
+  std::string debugString(const llvm::DenseSet<BoolValue *> &Constraints) {
+    std::vector<std::string> ConstraintsStrings;
+    ConstraintsStrings.reserve(Constraints.size());
+    for (BoolValue *Constraint : Constraints) {
+      ConstraintsStrings.push_back(debugString(*Constraint));
+    }
+    llvm::sort(ConstraintsStrings);
+
+    std::string Result;
+    for (const std::string &S : ConstraintsStrings) {
+      Result += S;
+      Result += '\n';
+    }
+    return Result;
+  }
+
   /// Returns a string representation of a set of boolean `Constraints` and the
   /// `Result` of satisfiability checking on the `Constraints`.
   std::string debugString(ArrayRef<BoolValue *> &Constraints,
@@ -151,7 +168,7 @@ private:
                           clang::dataflow::debugString(AtomAssignment.second));
       Lines.push_back(Line);
     }
-    llvm::sort(Lines.begin(), Lines.end());
+    llvm::sort(Lines);
 
     return formatv("{0:$[\n]}", llvm::make_range(Lines.begin(), Lines.end()));
   }
@@ -180,6 +197,12 @@ std::string
 debugString(const BoolValue &B,
             llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames) {
   return DebugStringGenerator(std::move(AtomNames)).debugString(B);
+}
+
+std::string
+debugString(const llvm::DenseSet<BoolValue *> &Constraints,
+            llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames) {
+  return DebugStringGenerator(std::move(AtomNames)).debugString(Constraints);
 }
 
 std::string
