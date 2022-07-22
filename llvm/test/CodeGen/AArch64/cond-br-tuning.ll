@@ -27,15 +27,16 @@ L2:
 define void @test_add_cbz_multiple_use(i32 %a, i32 %b, i32* %ptr) {
 ; CHECK-LABEL: test_add_cbz_multiple_use:
 ; CHECK:       // %bb.0: // %common.ret
-; CHECK-NEXT:    adds w8, w0, w1
-; CHECK-NEXT:    csel w8, wzr, w8, ne
+; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    adds w9, w0, w1
+; CHECK-NEXT:    csel w8, w8, w9, ne
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %c = add nsw i32 %a, %b
   %d = icmp ne i32 %c, 0
   br i1 %d, label %L1, label %L2
 L1:
-  store i32 0, i32* %ptr, align 4
+  store i32 10, i32* %ptr, align 4
   ret void
 L2:
   store i32 %c, i32* %ptr, align 4
