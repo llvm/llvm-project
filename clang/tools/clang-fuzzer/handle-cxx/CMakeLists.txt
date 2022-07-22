@@ -11,5 +11,3 @@ add_clang_library(clangHandleCXX
   clangSerialization
   clangTooling
   )
-
-target_include_directories(clangHandleCXX PUBLIC .)
