@@ -610,8 +610,10 @@ bool DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress(
     // Also copy over the uuid from the old entry to the removed entry so we
     // can use it to lookup the module in the module list.
 
-    ImageInfo::collection::iterator pos, end = m_dyld_image_infos.end();
-    for (pos = m_dyld_image_infos.begin(); pos != end; pos++) {
+    bool found = false;
+
+    for (ImageInfo::collection::iterator pos = m_dyld_image_infos.begin();
+         pos != m_dyld_image_infos.end(); pos++) {
       if (image_infos[idx].address == (*pos).address) {
         image_infos[idx].uuid = (*pos).uuid;
 
@@ -635,11 +637,12 @@ bool DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress(
         // Then remove it from the m_dyld_image_infos:
 
         m_dyld_image_infos.erase(pos);
+        found = true;
         break;
       }
     }
 
-    if (pos == end) {
+    if (!found) {
       if (log) {
         LLDB_LOGF(log, "Could not find image_info entry for unloading image:");
         image_infos[idx].PutToLog(log);
