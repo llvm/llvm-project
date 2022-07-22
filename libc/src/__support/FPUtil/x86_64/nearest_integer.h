@@ -24,6 +24,13 @@
 namespace __llvm_libc {
 namespace fputil {
 
+static inline float nearest_integer(float x) {
+  __m128 xmm = _mm_set_ss(x); // NOLINT
+  __m128 ymm =
+      _mm_round_ss(xmm, xmm, _MM_ROUND_NEAREST | _MM_FROUND_NO_EXC); // NOLINT
+  return ymm[0];
+}
+
 static inline double nearest_integer(double x) {
   __m128d xmm = _mm_set_sd(x); // NOLINT
   __m128d ymm =
