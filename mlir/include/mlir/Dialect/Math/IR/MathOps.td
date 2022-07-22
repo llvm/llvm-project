@@ -538,6 +538,7 @@ def Math_IPowIOp : Math_IntegerBinaryOp<"ipowi"> {
     %a = math.ipowi %b, %c : i32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
