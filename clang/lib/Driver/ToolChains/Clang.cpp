@@ -2181,18 +2181,11 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
 
   SetRISCVSmallDataLimit(getToolChain(), Args, CmdArgs);
 
-  std::string TuneCPU;
-
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
-    StringRef Name = A->getValue();
-
-    Name = llvm::RISCV::resolveTuneCPUAlias(Name, Triple.isArch64Bit());
-    TuneCPU = std::string(Name);
-  }
-
-  if (!TuneCPU.empty()) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    StringRef Name =
+        llvm::RISCV::resolveTuneCPUAlias(A->getValue(), Triple.isArch64Bit());
     CmdArgs.push_back("-tune-cpu");
-    CmdArgs.push_back(Args.MakeArgString(TuneCPU));
+    CmdArgs.push_back(Name.data());
   }
 }
 
