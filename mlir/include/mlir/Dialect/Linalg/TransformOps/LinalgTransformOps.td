@@ -193,10 +193,14 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
 
     The following constraints are supported:
       - interface: an optional MatchInterfaceEnum specifying an enum
-      representation for an interface to target.
-      - ops: an optional StrArrayAttr specifying the concrete name of an op. 
+        representation for an interface to target.
+      - ops: an optional StrArrayAttr specifying the concrete name of an op.
+        Multiple names can be specified. Matched ops must have one of specified
+        names.
+      - attribute: an optional Str specifying the name of an attribute that
+        matched ops must have.
       
-    Note: either `ops` or `interface` must be specified.
+    Note: Only ops that satisfy all specified constraints are matched.
 
     TODO: Extend with regions to allow a limited form of constraints.
 
@@ -214,12 +218,17 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
 
   let arguments = (ins PDL_Operation:$target,
                        OptionalAttr<StrArrayAttr>:$ops,
-                       OptionalAttr<MatchInterfaceEnum>:$interface);
+                       OptionalAttr<MatchInterfaceEnum>:$interface,
+                       OptionalAttr<StrAttr>:$attribute);
   // TODO: variadic results when needed.
   let results = (outs PDL_Operation:$results);
 
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  let assemblyFormat = [{
+    (`ops` `{` $ops^ `}`)? 
+    (`interface` `{` $interface^ `}`)? 
+    (`attribute` `{` $attribute^ `}`)? 
+    `in` $target attr-dict
+  }];
 }
 
 def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
