@@ -46,7 +46,7 @@ std::string debugString(
 ///
 ///   Names assigned to atoms should not be repeated in `AtomNames`.
 std::string debugString(
-    const std::vector<BoolValue *> &Constraints, const Solver::Result &Result,
+    ArrayRef<BoolValue *> Constraints, const Solver::Result &Result,
     llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
 inline std::string debugString(
     const llvm::DenseSet<BoolValue *> &Constraints,
