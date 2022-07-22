@@ -6779,7 +6779,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         // in each unrolled VF) and can thus handle scalable loads too.  For
         // scalable stores, we use a scatter if legal.  If not, we have no way
         // to lower (currently) and thus have to abort vectorization.
-        InstructionCost Cost;
         if (isa<StoreInst>(&I) && VF.isScalable()) {
           if (isLegalGatherOrScatter(&I, VF))
             setWideningDecision(&I, VF, CM_GatherScatter,
