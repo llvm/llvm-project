@@ -6772,19 +6772,30 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         NumPredStores++;
 
       if (Legal->isUniformMemOp(I)) {
-        // TODO: Avoid replicating loads and stores instead of
-        // relying on instcombine to remove them.
+        // Lowering story for uniform memory ops is currently a bit complicated.
+        // Scalarization works for everything which isn't a store with scalable
+        // VF.  Fixed len VFs just scalarize and then DCE later; scalarization
+        // knows how to handle uniform-per-part values (i.e. the first lane
+        // in each unrolled VF) and can thus handle scalable loads too.  For
+        // scalable stores, we use a scatter if legal.  If not, we have no way
+        // to lower (currently) and thus have to abort vectorization.
+        InstructionCost Cost;
+        if (isa<StoreInst>(&I) && VF.isScalable()) {
+          if (isLegalGatherOrScatter(&I, VF))
+            setWideningDecision(&I, VF, CM_GatherScatter,
+                                getGatherScatterCost(&I, VF));
+          else
+            // Error case, abort vectorization
+            setWideningDecision(&I, VF, CM_Scalarize,
+                                InstructionCost::getInvalid());
+          continue;
+        }
         // Load: Scalar load + broadcast
         // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
-        InstructionCost Cost;
-        if (isa<StoreInst>(&I) && VF.isScalable() &&
-            isLegalGatherOrScatter(&I, VF)) {
-          Cost = getGatherScatterCost(&I, VF);
-          setWideningDecision(&I, VF, CM_GatherScatter, Cost);
-        } else {
-          Cost = getUniformMemOpCost(&I, VF);
-          setWideningDecision(&I, VF, CM_Scalarize, Cost);
-        }
+        // TODO: Avoid replicating loads and stores instead of relying on
+        // instcombine to remove them.
+        setWideningDecision(&I, VF, CM_Scalarize,
+                            getUniformMemOpCost(&I, VF));
         continue;
       }
 
@@ -7139,13 +7150,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       InstWidening Decision = getWideningDecision(I, Width);
       assert(Decision != CM_Unknown &&
              "CM decision should be taken at this point");
-      if (Decision == CM_Scalarize) {
-        if (VF.isScalable() && isa<StoreInst>(I))
-          // We can't scalarize a scalable vector store (even a uniform one
-          // currently), return an invalid cost so as to prevent vectorization.
-          return InstructionCost::getInvalid();
+      if (getWideningCost(I, VF) == InstructionCost::getInvalid())
+        return InstructionCost::getInvalid();
+      if (Decision == CM_Scalarize)
         Width = ElementCount::getFixed(1);
-      }
     }
     VectorTy = ToVectorTy(getLoadStoreType(I), Width);
     return getMemoryInstructionCost(I, VF);
