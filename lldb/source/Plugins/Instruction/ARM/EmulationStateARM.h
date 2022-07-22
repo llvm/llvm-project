@@ -61,6 +61,10 @@ public:
                       const lldb_private::RegisterValue &reg_value);
 
 private:
+  bool LoadRegistersStateFromDictionary(
+      lldb_private::OptionValueDictionary *reg_dict, char kind, int first_reg,
+      int num);
+
   uint32_t m_gpr[17] = {0};
   struct _sd_regs {
     uint32_t s_regs[32]; // sregs 0 - 31 & dregs 0 - 15
