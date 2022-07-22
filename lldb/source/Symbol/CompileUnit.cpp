@@ -216,10 +216,11 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
   return m_variables;
 }
 
-std::vector<uint32_t> FindFileIndexes(const FileSpecList &files, const FileSpec &file) {
+std::vector<uint32_t> FindFileIndexes(const FileSpecList &files,
+                                      const FileSpec &file) {
   std::vector<uint32_t> result;
   uint32_t idx = -1;
-  while ((idx = files.FindFileIndex(idx + 1, file, /*full=*/true)) !=
+  while ((idx = files.FindCompatibleIndex(idx + 1, file)) !=
          UINT32_MAX)
     result.push_back(idx);
   return result;
@@ -230,7 +231,8 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
                                     LineEntry *line_entry_ptr) {
   if (!file_spec_ptr)
     file_spec_ptr = &GetPrimaryFile();
-  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(), *file_spec_ptr);
+  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(),
+                                                       *file_spec_ptr);
   if (file_indexes.empty())
     return UINT32_MAX;
 
@@ -255,7 +257,6 @@ void CompileUnit::ResolveSymbolContext(
   // First find all of the file indexes that match our "file_spec". If
   // "file_spec" has an empty directory, then only compare the basenames when
   // finding file indexes
-  std::vector<uint32_t> file_indexes;
   bool file_spec_matches_cu_file_spec =
       FileSpec::Match(file_spec, this->GetPrimaryFile());
 
@@ -276,13 +277,8 @@ void CompileUnit::ResolveSymbolContext(
     return;
   }
 
-  uint32_t file_idx =
-      GetSupportFiles().FindFileIndex(0, file_spec, true);
-  while (file_idx != UINT32_MAX) {
-    file_indexes.push_back(file_idx);
-    file_idx = GetSupportFiles().FindFileIndex(file_idx + 1, file_spec, true);
-  }
-
+  std::vector<uint32_t> file_indexes = FindFileIndexes(GetSupportFiles(),
+                                                       file_spec);
   const size_t num_file_indexes = file_indexes.size();
   if (num_file_indexes == 0)
     return;
