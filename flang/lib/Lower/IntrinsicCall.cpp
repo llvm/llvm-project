@@ -515,6 +515,8 @@ struct IntrinsicLibrary {
   mlir::Value genLeadz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <typename Shift>
+  mlir::Value genMask(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -813,6 +815,8 @@ static constexpr IntrinsicHandler handlers[]{
     {"lgt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sgt>},
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
+    {"maskl", &I::genMask<mlir::arith::ShLIOp>},
+    {"maskr", &I::genMask<mlir::arith::ShRUIOp>},
     {"matmul",
      &I::genMatmul,
      {{{"matrix_a", asAddr}, {"matrix_b", asAddr}}},
@@ -3312,6 +3316,27 @@ IntrinsicLibrary::genCharacterCompare(mlir::Type resultType,
   return fir::runtime::genCharCompare(
       builder, loc, pred, fir::getBase(args[0]), fir::getLen(args[0]),
       fir::getBase(args[1]), fir::getLen(args[1]));
+}
+
+// MASKL, MASKR
+template <typename Shift>
+mlir::Value IntrinsicLibrary::genMask(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value bitSize = builder.createIntegerConstant(
+      loc, resultType, resultType.getIntOrFloatBitWidth());
+  mlir::Value bitsToSet = builder.createConvert(loc, resultType, args[0]);
+
+  // The standard does not specify what to return if the number of bits to be
+  // set, I < 0 or I >= BIT_SIZE(KIND). The shift instruction used below will
+  // produce a poison value which may return a possibly platform-specific and/or
+  // non-deterministic result. Other compilers don't produce a consistent result
+  // in this case either, so we choose the most efficient implementation.
+  mlir::Value shift =
+      builder.create<mlir::arith::SubIOp>(loc, bitSize, bitsToSet);
+  return builder.create<Shift>(loc, ones, shift);
 }
 
 // MATMUL
