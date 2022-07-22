@@ -29,3 +29,6 @@ void foo() {
 // CHECK-NEXT: 1 type-name
 // CHECK-EMPTY:
 // CHECK-NEXT: 0 Opaque nodes:
+// CHECK-EMPTY:
+// CHECK-NEXT: Ambiguity: 0.40 misparses/token
+// CHECK-NEXT: Unparsed: 0.00%

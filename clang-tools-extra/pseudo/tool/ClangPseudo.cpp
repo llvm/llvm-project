@@ -24,6 +24,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
+using clang::pseudo::ForestNode;
+using clang::pseudo::Token;
 using clang::pseudo::TokenStream;
 using llvm::cl::desc;
 using llvm::cl::init;
@@ -174,9 +176,8 @@ int main(int argc, char *argv[]) {
       llvm::outs() << "GSS bytes: " << GSS.bytes()
                    << " nodes: " << GSS.nodesCreated() << "\n";
 
-      for (auto &P :
-           {std::make_pair("Ambiguous", clang::pseudo::ForestNode::Ambiguous),
-            std::make_pair("Opaque", clang::pseudo::ForestNode::Opaque)}) {
+      for (auto &P : {std::make_pair("Ambiguous", ForestNode::Ambiguous),
+                      std::make_pair("Opaque", ForestNode::Opaque)}) {
         clang::pseudo::NodeStats Stats(
             Root, [&](const auto &N) { return N.kind() == P.second; });
         llvm::outs() << "\n" << Stats.Total << " " << P.first << " nodes:\n";
@@ -184,6 +185,39 @@ int main(int argc, char *argv[]) {
           llvm::outs() << llvm::formatv("  {0,3} {1}\n", S.second,
                                         Lang.G.symbolName(S.first));
       }
+
+      // Metrics for how imprecise parsing was.
+      // These are rough but aim to be:
+      // - linear: if we eliminate half the errors the metric should halve
+      // - length-independent
+      unsigned UnparsedTokens = 0; // Tokens covered by Opaque. (not unique)
+      unsigned Misparses = 0;      // Sum of alternatives-1
+      llvm::DenseSet<const ForestNode *> Visited;
+      auto DFS = [&](const ForestNode &N, Token::Index End, auto &DFS) -> void {
+        if (N.kind() == ForestNode::Opaque) {
+          UnparsedTokens += End - N.startTokenIndex();
+        } else if (N.kind() == ForestNode::Ambiguous) {
+          Misparses += N.alternatives().size() - 1;
+          for (const auto *C : N.alternatives())
+            if (Visited.insert(C).second)
+              DFS(*C, End, DFS);
+        } else if (N.kind() == ForestNode::Sequence) {
+          for (unsigned I = 0, E = N.children().size(); I < E; ++I)
+            if (Visited.insert(N.children()[I]).second)
+              DFS(*N.children()[I],
+                  I + 1 == N.children().size()
+                      ? End
+                      : N.children()[I + 1]->startTokenIndex(),
+                  DFS);
+        }
+      };
+      unsigned Len = ParseableStream->tokens().size();
+      DFS(Root, Len, DFS);
+      llvm::outs() << "\n";
+      llvm::outs() << llvm::formatv("Ambiguity: {0} misparses/token\n",
+                                    double(Misparses) / Len);
+      llvm::outs() << llvm::formatv("Unparsed: {0}%\n",
+                                    100.0 * UnparsedTokens / Len);
     }
   }
 
