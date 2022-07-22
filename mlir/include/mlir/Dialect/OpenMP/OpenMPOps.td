@@ -1234,7 +1234,8 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
 // [5.1] 2.21.2 threadprivate Directive
 //===----------------------------------------------------------------------===//
 
-def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
+def ThreadprivateOp : OpenMP_Op<"threadprivate",
+                                [AllTypesMatch<["sym_addr", "tls_addr"]>]> {
   let summary = "threadprivate directive";
   let description = [{
     The threadprivate directive specifies that variables are replicated, with
