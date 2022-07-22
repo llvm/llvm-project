@@ -45,6 +45,7 @@ on how to get in touch with us and to learn more about the current status.
    DoConcurrent
    Extensions
    FIRLangRef
+   FlangCommandLineReference
    FlangDriver
    FortranIR
    FortranLLVMTestSuite
