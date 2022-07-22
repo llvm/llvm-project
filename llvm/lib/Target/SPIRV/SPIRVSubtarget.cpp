@@ -46,8 +46,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
       PointerSize(computePointerSize(TT)), SPIRVVersion(0), InstrInfo(),
       FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
   GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
-  CallLoweringInfo =
-      std::make_unique<SPIRVCallLowering>(TLInfo, *this, GR.get());
+  CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
   InstSelector.reset(

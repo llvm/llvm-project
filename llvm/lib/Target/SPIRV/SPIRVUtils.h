@@ -32,6 +32,7 @@ class SPIRVInstrInfo;
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
+void addStringImm(const llvm::StringRef &Str, llvm::MCInst &Inst);
 void addStringImm(const llvm::StringRef &Str, llvm::MachineInstrBuilder &MIB);
 void addStringImm(const llvm::StringRef &Str, llvm::IRBuilder<> &B,
                   std::vector<llvm::Value *> &Args);
@@ -67,6 +68,8 @@ llvm::SPIRV::StorageClass addressSpaceToStorageClass(unsigned AddrSpace);
 llvm::SPIRV::MemorySemantics
 getMemSemanticsForStorageClass(llvm::SPIRV::StorageClass SC);
 
+llvm::SPIRV::MemorySemantics getMemSemantics(llvm::AtomicOrdering Ord);
+
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def
 // of OpConstant instruction.
@@ -77,6 +80,9 @@ getDefInstrMaybeConstant(llvm::Register &ConstReg,
 // Get constant integer value of the given ConstReg.
 uint64_t getIConstVal(llvm::Register ConstReg,
                       const llvm::MachineRegisterInfo *MRI);
+
+// Check if MI is a SPIR-V specific intrinsic call.
+bool isSpvIntrinsic(llvm::MachineInstr &MI, llvm::Intrinsic::ID IntrinsicID);
 
 // Get type of i-th operand of the metadata node.
 llvm::Type *getMDOperandAsType(const llvm::MDNode *N, unsigned I);

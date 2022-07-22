@@ -45,7 +45,12 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
       break;
     }
     case MachineOperand::MO_Immediate:
-      MCOp = MCOperand::createImm(MO.getImm());
+      if (MI->getOpcode() == SPIRV::OpExtInst && i == 2) {
+        Register Reg = MAI->getExtInstSetReg(MO.getImm());
+        MCOp = MCOperand::createReg(Reg);
+      } else {
+        MCOp = MCOperand::createImm(MO.getImm());
+      }
       break;
     case MachineOperand::MO_FPImmediate:
       MCOp = MCOperand::createDFPImm(

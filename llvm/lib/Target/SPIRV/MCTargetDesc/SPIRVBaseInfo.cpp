@@ -1068,5 +1068,15 @@ StringRef getKernelProfilingInfoName(KernelProfilingInfo e) {
   }
   llvm_unreachable("Unexpected operand");
 }
+
+std::string getExtInstSetName(InstructionSet e) {
+  switch (e) {
+    CASE(InstructionSet, OpenCL_std)
+    CASE(InstructionSet, GLSL_std_450)
+    CASE(InstructionSet, SPV_AMD_shader_trinary_minmax)
+    break;
+  }
+  llvm_unreachable("Unexpected operand");
+}
 } // namespace SPIRV
 } // namespace llvm
