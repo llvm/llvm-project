@@ -35,7 +35,8 @@
 #ifndef _MMINTRIN_H_INCLUDED
 #define _MMINTRIN_H_INCLUDED
 
-#if defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))
+#if defined(__ppc64__) &&                                                      \
+    (defined(__linux__) || defined(__FreeBSD__) || defined(_AIX))
 
 #include <altivec.h>
 /* The Intel API is flexible enough that we must allow aliasing with other
@@ -1446,7 +1447,7 @@ extern __inline __m64
 
 #else
 #include_next <mmintrin.h>
-#endif /* defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))   \
-        */
+#endif /* defined(__ppc64__) &&
+        *   (defined(__linux__) || defined(__FreeBSD__) || defined(_AIX)) */
 
 #endif /* _MMINTRIN_H_INCLUDED */

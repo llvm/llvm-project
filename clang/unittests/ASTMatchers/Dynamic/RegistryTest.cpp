@@ -198,13 +198,32 @@ TEST_F(RegistryTest, OverloadedMatchers) {
                            constructMatcher("hasName", StringRef("x")))))
       .getTypedMatcher<Stmt>();
 
+  Matcher<Stmt> ObjCMsgExpr =
+      constructMatcher(
+          "objcMessageExpr",
+          constructMatcher(
+              "callee",
+              constructMatcher("objcMethodDecl",
+                               constructMatcher("hasName", StringRef("x")))))
+          .getTypedMatcher<Stmt>();
+
   std::string Code = "class Y { public: void x(); }; void z() { Y y; y.x(); }";
   EXPECT_FALSE(matches(Code, CallExpr0));
   EXPECT_TRUE(matches(Code, CallExpr1));
+  EXPECT_FALSE(matches(Code, ObjCMsgExpr));
 
   Code = "class Z { public: void z() { this->z(); } };";
   EXPECT_TRUE(matches(Code, CallExpr0));
   EXPECT_FALSE(matches(Code, CallExpr1));
+  EXPECT_FALSE(matches(Code, ObjCMsgExpr));
+
+  Code = "@interface I "
+         "+ (void)x; "
+         "@end\n"
+         "int main() { [I x]; }";
+  EXPECT_FALSE(matchesObjC(Code, CallExpr0));
+  EXPECT_FALSE(matchesObjC(Code, CallExpr1));
+  EXPECT_TRUE(matchesObjC(Code, ObjCMsgExpr));
 
   Matcher<Decl> DeclDecl = declaratorDecl(hasTypeLoc(
       constructMatcher(

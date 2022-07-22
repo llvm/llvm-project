@@ -164,62 +164,108 @@ RebaseSection::RebaseSection()
     : LinkEditSection(segment_names::linkEdit, section_names::rebase) {}
 
 namespace {
-struct Rebase {
-  OutputSegment *segment = nullptr;
-  uint64_t offset = 0;
-  uint64_t consecutiveCount = 0;
+struct RebaseState {
+  uint64_t sequenceLength;
+  uint64_t skipLength;
 };
 } // namespace
 
-// Rebase opcodes allow us to describe a contiguous sequence of rebase location
-// using a single DO_REBASE opcode. To take advantage of it, we delay emitting
-// `DO_REBASE` until we have reached the end of a contiguous sequence.
-static void encodeDoRebase(Rebase &rebase, raw_svector_ostream &os) {
-  assert(rebase.consecutiveCount != 0);
-  if (rebase.consecutiveCount <= REBASE_IMMEDIATE_MASK) {
-    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_IMM_TIMES |
-                               rebase.consecutiveCount);
+static void emitIncrement(uint64_t incr, raw_svector_ostream &os) {
+  assert(incr != 0);
+
+  if ((incr >> target->p2WordSize) <= REBASE_IMMEDIATE_MASK &&
+      (incr % target->wordSize) == 0) {
+    os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_IMM_SCALED |
+                               (incr >> target->p2WordSize));
   } else {
-    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_ULEB_TIMES);
-    encodeULEB128(rebase.consecutiveCount, os);
+    os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_ULEB);
+    encodeULEB128(incr, os);
   }
-  rebase.consecutiveCount = 0;
 }
 
-static void encodeRebase(const OutputSection *osec, uint64_t outSecOff,
-                         Rebase &lastRebase, raw_svector_ostream &os) {
-  OutputSegment *seg = osec->parent;
-  uint64_t offset = osec->getSegmentOffset() + outSecOff;
-  if (lastRebase.segment != seg || lastRebase.offset != offset) {
-    if (lastRebase.consecutiveCount != 0)
-      encodeDoRebase(lastRebase, os);
+static void flushRebase(const RebaseState &state, raw_svector_ostream &os) {
+  assert(state.sequenceLength > 0);
 
-    if (lastRebase.segment != seg) {
-      os << static_cast<uint8_t>(REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
-                                 seg->index);
-      encodeULEB128(offset, os);
-      lastRebase.segment = seg;
-      lastRebase.offset = offset;
+  if (state.skipLength == target->wordSize) {
+    if (state.sequenceLength <= REBASE_IMMEDIATE_MASK) {
+      os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_IMM_TIMES |
+                                 state.sequenceLength);
     } else {
-      assert(lastRebase.offset != offset);
-      uint64_t delta = offset - lastRebase.offset;
-      // For unknown reasons, ld64 checks if the scaled offset is strictly less
-      // than REBASE_IMMEDIATE_MASK instead of allowing equality. We match this
-      // behavior as a precaution.
-      if ((delta % target->wordSize == 0) &&
-          (delta / target->wordSize < REBASE_IMMEDIATE_MASK)) {
-        os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_IMM_SCALED |
-                                   (delta / target->wordSize));
-      } else {
-        os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_ULEB);
-        encodeULEB128(delta, os);
-      }
-      lastRebase.offset = offset;
+      os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_ULEB_TIMES);
+      encodeULEB128(state.sequenceLength, os);
+    }
+  } else if (state.sequenceLength == 1) {
+    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB);
+    encodeULEB128(state.skipLength - target->wordSize, os);
+  } else {
+    os << static_cast<uint8_t>(
+        REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB);
+    encodeULEB128(state.sequenceLength, os);
+    encodeULEB128(state.skipLength - target->wordSize, os);
+  }
+}
+
+// Rebases are communicated to dyld using a bytecode, whose opcodes cause the
+// memory location at a specific address to be rebased and/or the address to be
+// incremented.
+//
+// Opcode REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB is the most generic
+// one, encoding a series of evenly spaced addresses. This algorithm works by
+// splitting up the sorted list of addresses into such chunks. If the locations
+// are consecutive or the sequence consists of a single location, flushRebase
+// will use a smaller, more specialized encoding.
+static void encodeRebases(const OutputSegment *seg,
+                          MutableArrayRef<Location> locations,
+                          raw_svector_ostream &os) {
+  // dyld operates on segments. Translate section offsets into segment offsets.
+  for (Location &loc : locations)
+    loc.offset =
+        loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
+  // The algorithm assumes that locations are unique.
+  Location *end =
+      llvm::unique(locations, [](const Location &a, const Location &b) {
+        return a.offset == b.offset;
+      });
+  size_t count = end - locations.begin();
+
+  os << static_cast<uint8_t>(REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
+                             seg->index);
+  assert(!locations.empty());
+  uint64_t offset = locations[0].offset;
+  encodeULEB128(offset, os);
+
+  RebaseState state{1, target->wordSize};
+
+  for (size_t i = 1; i < count; ++i) {
+    offset = locations[i].offset;
+
+    uint64_t skip = offset - locations[i - 1].offset;
+    assert(skip != 0 && "duplicate locations should have been weeded out");
+
+    if (skip == state.skipLength) {
+      ++state.sequenceLength;
+    } else if (state.sequenceLength == 1) {
+      ++state.sequenceLength;
+      state.skipLength = skip;
+    } else if (skip < state.skipLength) {
+      // The address is lower than what the rebase pointer would be if the last
+      // location would be part of a sequence. We start a new sequence from the
+      // previous location.
+      --state.sequenceLength;
+      flushRebase(state, os);
+
+      state.sequenceLength = 2;
+      state.skipLength = skip;
+    } else {
+      // The address is at some positive offset from the rebase pointer. We
+      // start a new sequence which begins with the current location.
+      flushRebase(state, os);
+      emitIncrement(skip - state.skipLength, os);
+      state.sequenceLength = 1;
+      state.skipLength = target->wordSize;
     }
   }
-  ++lastRebase.consecutiveCount;
-  // DO_REBASE causes dyld to both perform the binding and increment the offset
-  lastRebase.offset += target->wordSize;
+  flushRebase(state, os);
 }
 
 void RebaseSection::finalizeContents() {
@@ -227,19 +273,20 @@ void RebaseSection::finalizeContents() {
     return;
 
   raw_svector_ostream os{contents};
-  Rebase lastRebase;
-
   os << static_cast<uint8_t>(REBASE_OPCODE_SET_TYPE_IMM | REBASE_TYPE_POINTER);
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
     return a.isec->getVA(a.offset) < b.isec->getVA(b.offset);
   });
-  for (const Location &loc : locations)
-    encodeRebase(loc.isec->parent, loc.isec->getOffset(loc.offset), lastRebase,
-                 os);
-  if (lastRebase.consecutiveCount != 0)
-    encodeDoRebase(lastRebase, os);
 
+  for (size_t i = 0, count = locations.size(); i < count;) {
+    const OutputSegment *seg = locations[i].isec->parent->parent;
+    size_t j = i + 1;
+    while (j < count && locations[j].isec->parent->parent == seg)
+      ++j;
+    encodeRebases(seg, {locations.data() + i, locations.data() + j}, os);
+    i = j;
+  }
   os << static_cast<uint8_t>(REBASE_OPCODE_DONE);
 }
 

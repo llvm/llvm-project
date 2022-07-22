@@ -389,17 +389,6 @@ static bool getPotentialCopiesOfMemoryValue(
         NullOnly = false;
     };
 
-    if (IsLoad) {
-      Value *InitialValue = AA::getInitialValueForObj(*Obj, *I.getType(), TLI);
-      if (!InitialValue) {
-        LLVM_DEBUG(dbgs() << "Failed to get initial value: " << *Obj << "\n");
-        return false;
-      }
-      CheckForNullOnlyAndUndef(InitialValue, /* IsExact */ true);
-      NewCopies.push_back(InitialValue);
-      NewCopyOrigins.push_back(nullptr);
-    }
-
     auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
       if ((IsLoad && !Acc.isWrite()) || (!IsLoad && !Acc.isRead()))
         return true;
@@ -448,15 +437,36 @@ static bool getPotentialCopiesOfMemoryValue(
       return true;
     };
 
+    // If the value has been written to we don't need the initial value of the
+    // object.
+    bool HasBeenWrittenTo = false;
+
     auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(*Obj),
                                          DepClassTy::NONE);
-    if (!PI.forallInterferingAccesses(A, QueryingAA, I, CheckAccess)) {
+    if (!PI.forallInterferingAccesses(A, QueryingAA, I, CheckAccess,
+                                      HasBeenWrittenTo)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "
           << *Obj << "\n");
       return false;
     }
+
+    if (IsLoad && !HasBeenWrittenTo) {
+      Value *InitialValue = AA::getInitialValueForObj(*Obj, *I.getType(), TLI);
+      if (!InitialValue)
+        return false;
+      CheckForNullOnlyAndUndef(InitialValue, /* IsExact */ true);
+      if (NullRequired && !NullOnly) {
+        LLVM_DEBUG(dbgs() << "Non exact access but initial value that is not "
+                             "null or undef, abort!\n");
+        return false;
+      }
+
+      NewCopies.push_back(InitialValue);
+      NewCopyOrigins.push_back(nullptr);
+    }
+
     PIs.push_back(&PI);
   }
 
@@ -544,12 +554,21 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
                     << " from " << FromI << " [GBCB: " << bool(GoBackwardsCB)
                     << "]\n");
 
+  // TODO: If we can go arbitrarily backwards we will eventually reach an
+  // entry point that can reach ToI. Only once this takes a set of blocks
+  // through which we cannot go, or once we track internal functions not
+  // accessible from the outside, it makes sense to perform backwards analysis
+  // in the absence of a GoBackwardsCB.
+  if (!GoBackwardsCB) {
+    LLVM_DEBUG(dbgs() << "[AA] check @" << ToFn.getName() << " from " << FromI
+                      << " is not checked backwards, abort\n");
+    return true;
+  }
+
   SmallPtrSet<const Instruction *, 8> Visited;
   SmallVector<const Instruction *> Worklist;
   Worklist.push_back(&FromI);
 
-  const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
-      QueryingAA, IRPosition::function(ToFn), DepClassTy::OPTIONAL);
   while (!Worklist.empty()) {
     const Instruction *CurFromI = Worklist.pop_back_val();
     if (!Visited.insert(CurFromI).second)
@@ -569,26 +588,13 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
                         << *ToI << " [Intra]\n");
       if (Result)
         return true;
-      if (NoRecurseAA.isAssumedNoRecurse())
-        continue;
-    }
-
-    // TODO: If we can go arbitrarily backwards we will eventually reach an
-    // entry point that can reach ToI. Only once this takes a set of blocks
-    // through which we cannot go, or once we track internal functions not
-    // accessible from the outside, it makes sense to perform backwards analysis
-    // in the absence of a GoBackwardsCB.
-    if (!GoBackwardsCB) {
-      LLVM_DEBUG(dbgs() << "[AA] check @" << ToFn.getName() << " from "
-                        << *CurFromI << " is not checked backwards, abort\n");
-      return true;
     }
 
     // Check if the current instruction is already known to reach the ToFn.
     const auto &FnReachabilityAA = A.getAAFor<AAFunctionReachability>(
         QueryingAA, IRPosition::function(*FromFn), DepClassTy::OPTIONAL);
     bool Result = FnReachabilityAA.instructionCanReach(
-        A, *CurFromI, ToFn, /* UseBackwards */ false);
+        A, *CurFromI, ToFn);
     LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " in @" << FromFn->getName()
                       << " " << (Result ? "can potentially " : "cannot ")
                       << "reach @" << ToFn.getName() << " [FromFn]\n");

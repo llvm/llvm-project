@@ -1448,15 +1448,14 @@ public:
   // through scalar predication or masked load/store or masked gather/scatter.
   // \p VF is the vectorization factor that will be used to vectorize \p I.
   // Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I, ElementCount VF,
-                        bool IsKnownUniform = false) {
-    // When we know the load is uniform and the original scalar loop was not
-    // predicated we don't need to mark it as a predicated instruction. Any
-    // vectorised blocks created when tail-folding are something artificial we
-    // have introduced and we know there is always at least one active lane.
-    // That's why we call Legal->blockNeedsPredication here because it doesn't
-    // query tail-folding.
-    if (IsKnownUniform && isa<LoadInst>(I) &&
+  bool isPredicatedInst(Instruction *I, ElementCount VF) {
+    // When we know the load's address is loop invariant and the instruction
+    // in the original scalar loop was unconditionally executed then we
+    // don't need to mark it as a predicated instruction. Tail folding may
+    // introduce additional predication, but we're guaranteed to always have
+    // at least one active lane.  We call Legal->blockNeedsPredication here
+    // because it doesn't query tail-folding.
+    if (Legal->isUniformMemOp(*I) && isa<LoadInst>(I) &&
         !Legal->blockNeedsPredication(I->getParent()))
       return false;
     if (!blockNeedsPredicationForAnyReason(I->getParent()))
@@ -6062,7 +6061,8 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert(isPredicatedInst(I, VF) && "Expecting a scalar emulated instruction");
+  assert((isPredicatedInst(I, VF) || Legal->isUniformMemOp(*I)) &&
+         "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
           NumPredStores > NumberOfStoresToPredicate);
@@ -8363,7 +8363,7 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
       Range);
 
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) { return CM.isPredicatedInst(I, VF, IsUniform); },
+      [&](ElementCount VF) { return CM.isPredicatedInst(I, VF); },
       Range);
 
   // Even if the instruction is not marked as uniform, there are certain
@@ -9745,8 +9745,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
   };
 
   // 4) if the TTI hook indicates this is profitable, request predication.
-  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT,
-                                       LVL.getLAI()))
+  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, &LVL))
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
   return CM_ScalarEpilogueAllowed;

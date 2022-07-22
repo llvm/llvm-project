@@ -69,6 +69,15 @@ struct ClassWithConstexprs {
   constexpr static ScopedEnum scoped_enum_val = ScopedEnum::scoped_enum_case2;
 } cwc;
 
+struct ClassWithEnumAlias {
+  using EnumAlias = ScopedEnum;
+  static constexpr EnumAlias enum_alias = ScopedEnum::scoped_enum_case2;
+
+  using EnumAliasAlias = EnumAlias;
+  static constexpr EnumAliasAlias enum_alias_alias =
+      ScopedEnum::scoped_enum_case1;
+};
+
 int main() {
   A a;
 
@@ -98,5 +107,9 @@ int main() {
   se = A::invalid_scoped_enum_val;
   ScopedCharEnum sce = A::scoped_char_enum_val;
   ScopedLongLongEnum sle = A::scoped_ll_enum_val;
+
+  auto enum_alias_val = ClassWithEnumAlias::enum_alias;
+  auto enum_alias_alias_val = ClassWithEnumAlias::enum_alias_alias;
+
   return 0; // break here
 }
