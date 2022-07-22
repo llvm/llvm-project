@@ -183,10 +183,11 @@ define void @test_trunc64(double %in, ptr %addr) #0 {
 ;
 ; BWON-F16C-LABEL: test_trunc64:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rdi)
+; BWON-F16C-NEXT:    pushq %rbx
+; BWON-F16C-NEXT:    movq %rdi, %rbx
+; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
+; BWON-F16C-NEXT:    popq %rbx
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_trunc64:
@@ -681,9 +682,36 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_trunc64_vec4:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vcvtpd2ps %ymm0, %xmm0
-; BWON-F16C-NEXT:    vcvtps2ph $0, %xmm0, (%rdi)
+; BWON-F16C-NEXT:    pushq %rbx
+; BWON-F16C-NEXT:    subq $64, %rsp
+; BWON-F16C-NEXT:    movq %rdi, %rbx
+; BWON-F16C-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; BWON-F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; BWON-F16C-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; BWON-F16C-NEXT:    vzeroupper
+; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
+; BWON-F16C-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWON-F16C-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
+; BWON-F16C-NEXT:    # xmm0 = mem[1,0]
+; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
+; BWON-F16C-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; BWON-F16C-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWON-F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; BWON-F16C-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; BWON-F16C-NEXT:    vzeroupper
+; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
+; BWON-F16C-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; BWON-F16C-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; BWON-F16C-NEXT:    # xmm0 = mem[1,0]
+; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
+; BWON-F16C-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
+; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; BWON-F16C-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; BWON-F16C-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; BWON-F16C-NEXT:    vmovq %xmm0, (%rbx)
+; BWON-F16C-NEXT:    addq $64, %rsp
+; BWON-F16C-NEXT:    popq %rbx
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_trunc64_vec4:

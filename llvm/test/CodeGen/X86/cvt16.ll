@@ -154,10 +154,11 @@ define i16 @test5(double %src) nounwind {
 ;
 ; F16C-LABEL: test5:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
+; F16C-NEXT:    pushq %rax
+; F16C-NEXT:    callq __truncdfhf2@PLT
+; F16C-NEXT:    vpextrw $0, %xmm0, %eax
 ; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-NEXT:    popq %rcx
 ; F16C-NEXT:    retq
 ;
 ; SOFTFLOAT-LABEL: test5:
