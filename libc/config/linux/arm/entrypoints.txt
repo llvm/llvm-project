@@ -78,7 +78,6 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
-    libc.src.math.cosf
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
@@ -91,8 +90,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmin
     libc.src.math.fminf
     libc.src.math.fminl
-    libc.src.math.sincosf
-    libc.src.math.sinf
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

@@ -21,13 +21,27 @@
 namespace __llvm_libc {
 namespace fputil {
 
-// This is a fast implementation for rounding to a nearest integer that, in case
-// of a tie, might pick a random one among 2 closest integers when the rounding
-// mode is not FE_TONEAREST.
+// This is a fast implementation for rounding to a nearest integer that.
 //
 // Notice that for AARCH64 and x86-64 with SSE4.2 support, we will use their
 // corresponding rounding instruction instead.  And in those cases, the results
 // are rounded to the nearest integer, tie-to-even.
+static inline float nearest_integer(float x) {
+  if (x < 0x1p24f && x > -0x1p24f) {
+    float r = x < 0 ? (x - 0x1.0p23f) + 0x1.0p23f : (x + 0x1.0p23f) - 0x1.0p23f;
+    float diff = x - r;
+    // The expression above is correct for the default rounding mode, round-to-
+    // nearest, tie-to-even.  For other rounding modes, it might be off by 1,
+    // which is corrected below.
+    if (unlikely(diff > 0.5f))
+      return r + 1.0f;
+    if (unlikely(diff < -0.5f))
+      return r - 1.0f;
+    return r;
+  }
+  return x;
+}
+
 static inline double nearest_integer(double x) {
   if (x < 0x1p53 && x > -0x1p53) {
     double r = x < 0 ? (x - 0x1.0p52) + 0x1.0p52 : (x + 0x1.0p52) - 0x1.0p52;

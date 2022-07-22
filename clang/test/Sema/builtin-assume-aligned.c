@@ -25,7 +25,7 @@ int test4(int *a) {
 }
 
 int test5(int *a, unsigned *b) {
-  a = __builtin_assume_aligned(a, 32, b); // expected-warning {{incompatible pointer to integer conversion passing 'unsigned int *' to parameter of type}}
+  a = __builtin_assume_aligned(a, 32, b); // expected-error {{incompatible pointer to integer conversion passing 'unsigned int *' to parameter of type}}
   return a[0];
 }
 

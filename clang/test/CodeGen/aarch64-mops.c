@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -target-feature +mops -target-feature +mte -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -target-feature +mops -Wno-implicit-function-declaration -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -Wno-implicit-function-declaration -target-feature +mte -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -Wno-implicit-function-declaration -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -Wno-int-conversion -target-feature +mops -target-feature +mte -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -Wno-int-conversion -target-feature +mops -Wno-implicit-function-declaration -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -Wno-int-conversion -Wno-implicit-function-declaration -target-feature +mte -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang_cc1 -triple aarch64-arm-unknown-eabi -Wno-int-conversion -Wno-implicit-function-declaration -w -S -emit-llvm -o - %s  | FileCheck --check-prefix=CHECK-NOMOPS %s
 
 #include <arm_acle.h>
 #include <stddef.h>

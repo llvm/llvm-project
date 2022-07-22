@@ -146,7 +146,7 @@ void test_fence() {
   __builtin_amdgcn_fence(4); // expected-error {{too few arguments to function call, expected 2}}
   __builtin_amdgcn_fence(4, 4, 4); // expected-error {{too many arguments to function call, expected 2}}
   __builtin_amdgcn_fence(3.14, ""); // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
-  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, 5); // expected-warning {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, 5); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   const char ptr[] = "workgroup";
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, ptr); // expected-error {{expression is not a string literal}}
 }
@@ -164,7 +164,7 @@ void test_atomic_inc32() {
   val = __builtin_amdgcn_atomic_inc32(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc32(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc32(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
-  val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-warning {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
+  val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   const char ptr[] = "workgroup";
   val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_ACQUIRE, ptr); // expected-error {{expression is not a string literal}}
   int signedVal = 15;
@@ -179,7 +179,7 @@ void test_atomic_inc64() {
   val = __builtin_amdgcn_atomic_inc64(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc64(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc64(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
-  val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-warning {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
+  val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   const char ptr[] = "workgroup";
   val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_ACQUIRE, ptr); // expected-error {{expression is not a string literal}}
   __INT64_TYPE__ signedVal = 15;
@@ -194,7 +194,7 @@ void test_atomic_dec32() {
   val = __builtin_amdgcn_atomic_dec32(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec32(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec32(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
-  val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-warning {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
+  val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   const char ptr[] = "workgroup";
   val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_ACQUIRE, ptr); // expected-error {{expression is not a string literal}}
   int signedVal = 15;
@@ -209,7 +209,7 @@ void test_atomic_dec64() {
   val = __builtin_amdgcn_atomic_dec64(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec64(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec64(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
-  val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-warning {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
+  val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_ACQUIRE, 5);               // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   const char ptr[] = "workgroup";
   val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_ACQUIRE, ptr); // expected-error {{expression is not a string literal}}
   __INT64_TYPE__ signedVal = 15;

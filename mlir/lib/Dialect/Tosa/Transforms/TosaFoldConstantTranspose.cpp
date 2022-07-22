@@ -31,21 +31,21 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
       return failure();
 
     DenseElementsAttr inputValues;
-    if (!matchPattern(op.input1(), m_Constant(&inputValues)))
+    if (!matchPattern(op.getInput1(), m_Constant(&inputValues)))
       return failure();
     // Make sure the input is a constant that has a single user.
-    if (!llvm::hasSingleElement(op.input1().getDefiningOp()->getUsers()))
+    if (!llvm::hasSingleElement(op.getInput1().getDefiningOp()->getUsers()))
       return failure();
 
     DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.perms(), m_Constant(&permAttr)))
+    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
       return failure();
     auto permValues = llvm::to_vector<6>(llvm::map_range(
         // TOSA allows both 32- and 64-bit integer tensors here.
         permAttr.getValues<APInt>(),
         [](const APInt &val) { return val.getZExtValue(); }));
 
-    auto inputType = op.input1().getType().cast<ShapedType>();
+    auto inputType = op.getInput1().getType().cast<ShapedType>();
     ArrayRef<int64_t> inputShape = inputType.getShape();
     int64_t numElements = inputType.getNumElements();
 

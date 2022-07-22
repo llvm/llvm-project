@@ -65,6 +65,54 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
   let hasVerifier = 1;
 }
 
+def FuseIntoContainingOp :
+    Op<Transform_Dialect, "structured.fuse_into_containing_op",
+      [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{Fuse a producer into a containing operation.}];
+
+  let summary = [{
+    Fuses the `producer_op` into the `containing_op`. Only producers with a
+    single result are supported at the moment. Returns a handle to the fused
+    ops.
+
+    The producer is typically a slice of a tileable op (i.e., implements
+    TilingInterface). In that case, this transform computes the accessed
+    producer slice inside of the containing op ("tile and fuse"). Otherwise,
+    the entire producer is cloned inside the containing op ("clone and fuse").
+
+    The containing op handle must be associated with exactly one payload op. The
+    producer op handle may be associated with multiple payload ops. This
+    transform fuses producers one-by-one, always picking an unspecified producer
+    that has at least one use inside the containing op among the 
+    producers.
+
+    Note: If a producer has multiple uses inside the containing op, it is
+    currently tiled and/or cloned multiple times into the containing op.
+    TODO: Reuse already fused OpResults instead of tiling/cloning a second time
+    when possible. Fuse producers according to a topological sorting to achieve
+    the largest amount of reuse.
+
+    #### Return modes
+
+    If at least one producer could not be fused, this operation fails silently.
+    This is the case when tiling fails or when no producer op could be found
+    among the remaining producers that has at least one use within the
+    containing op. I.e., "producers" that are not consumed within the containing
+    op are rejected by this operation. This operation reads and frees the
+    producer handle. It reads the containing op handle.
+  }];
+
+  let arguments = (ins Arg<PDL_Operation, "",
+                           [TransformMappingRead,
+                            TransformMappingFree]>:$producer_op,
+                       Arg<PDL_Operation, "",
+                           [TransformMappingRead]>:$containing_op);
+  let results = (outs Res<PDL_Operation, "",
+                          [TransformMappingAlloc,
+                           TransformMappingWrite]>:$fused_op);
+  let assemblyFormat = "$producer_op `into` $containing_op attr-dict";
+}
+
 def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -145,10 +193,14 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
 
     The following constraints are supported:
       - interface: an optional MatchInterfaceEnum specifying an enum
-      representation for an interface to target.
-      - ops: an optional StrArrayAttr specifying the concrete name of an op. 
+        representation for an interface to target.
+      - ops: an optional StrArrayAttr specifying the concrete name of an op.
+        Multiple names can be specified. Matched ops must have one of specified
+        names.
+      - attribute: an optional Str specifying the name of an attribute that
+        matched ops must have.
       
-    Note: either `ops` or `interface` must be specified.
+    Note: Only ops that satisfy all specified constraints are matched.
 
     TODO: Extend with regions to allow a limited form of constraints.
 
@@ -166,12 +218,17 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
 
   let arguments = (ins PDL_Operation:$target,
                        OptionalAttr<StrArrayAttr>:$ops,
-                       OptionalAttr<MatchInterfaceEnum>:$interface);
+                       OptionalAttr<MatchInterfaceEnum>:$interface,
+                       OptionalAttr<StrAttr>:$attribute);
   // TODO: variadic results when needed.
   let results = (outs PDL_Operation:$results);
 
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  let assemblyFormat = [{
+    (`ops` `{` $ops^ `}`)? 
+    (`interface` `{` $interface^ `}`)? 
+    (`attribute` `{` $attribute^ `}`)? 
+    `in` $target attr-dict
+  }];
 }
 
 def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",

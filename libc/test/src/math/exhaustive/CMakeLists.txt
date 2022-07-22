@@ -23,15 +23,19 @@ add_fp_unittest(
 
 add_fp_unittest(
   sinf_test
+  NO_RUN_POSTBUILD
   NEED_MPFR
   SUITE
     libc_math_exhaustive_tests
   SRCS
     sinf_test.cpp
   DEPENDS
+    .exhaustive_test
     libc.include.math
     libc.src.math.sinf
     libc.src.__support.FPUtil.fputil
+  LINK_LIBRARIES
+    -lpthread
 )
 
 add_fp_unittest(

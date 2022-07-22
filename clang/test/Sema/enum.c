@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify -pedantic
-enum e {A, 
+enum e {A,
         B = 42LL << 32,        // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
       C = -4, D = 12456 };
 
@@ -11,7 +11,7 @@ enum g {  // too negative
 enum h { e = -2147483648, // too pos
    f = 2147483648,           // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
   i = 0xFFFF0000 // expected-warning {{too large}}
-}; 
+};
 
 // minll maxull
 enum x                      // expected-warning {{enumeration values exceed range of largest integer}}
@@ -91,7 +91,7 @@ static enum e1 badfunc(struct s1 *q) {
 typedef enum {
   an_enumerator = 20
 } an_enum;
-char * s = (an_enum) an_enumerator; // expected-warning {{incompatible integer to pointer conversion initializing 'char *' with an expression of type 'an_enum'}}
+char * s = (an_enum) an_enumerator; // expected-error {{incompatible integer to pointer conversion initializing 'char *' with an expression of type 'an_enum'}}
 
 // PR4515
 enum PR4515 {PR4515a=1u,PR4515b=(PR4515a-2)/2};

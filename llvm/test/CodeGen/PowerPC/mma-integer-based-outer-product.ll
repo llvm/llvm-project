@@ -7,7 +7,7 @@
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
 
 ; Function Attrs: nofree nounwind writeonly
-define dso_local void @test1(i8* nocapture readnone %vqp, i8* nocapture readnone %vpp, <16 x i8> %vc, i8* nocapture %resp) {
+define dso_local void @test1(ptr nocapture readnone %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvi16ger2 acc0, v2, v2
@@ -29,8 +29,7 @@ define dso_local void @test1(i8* nocapture readnone %vqp, i8* nocapture readnone
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2(<16 x i8> %vc, <16 x i8> %vc)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
@@ -38,7 +37,7 @@ entry:
 declare <512 x i1> @llvm.ppc.mma.xvi16ger2(<16 x i8>, <16 x i8>)
 
 ; Function Attrs: nofree nounwind writeonly
-define dso_local void @test2(i8* nocapture readnone %vqp, i8* nocapture readnone %vpp, <16 x i8> %vc, i8* nocapture %resp) {
+define dso_local void @test2(ptr nocapture readnone %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pmxvi16ger2 acc0, v2, v2, 0, 0, 0
@@ -60,8 +59,7 @@ define dso_local void @test2(i8* nocapture readnone %vqp, i8* nocapture readnone
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2(<16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
@@ -69,7 +67,7 @@ entry:
 declare <512 x i1> @llvm.ppc.mma.pmxvi16ger2(<16 x i8>, <16 x i8>, i32, i32, i32)
 
 ; Function Attrs: nofree nounwind
-define dso_local void @test3(i8* nocapture readonly %vqp, i8* nocapture readnone %vpp, <16 x i8> %vc, i8* nocapture %resp) {
+define dso_local void @test3(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -100,11 +98,9 @@ define dso_local void @test3(i8* nocapture readonly %vqp, i8* nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4spp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4spp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
@@ -112,7 +108,7 @@ entry:
 declare <512 x i1> @llvm.ppc.mma.xvi8ger4spp(<512 x i1>, <16 x i8>, <16 x i8>)
 
 ; Function Attrs: nofree nounwind
-define dso_local void @test4(i8* nocapture readonly %vqp, i8* nocapture readnone %vpp, <16 x i8> %vc, i8* nocapture %resp) {
+define dso_local void @test4(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -143,11 +139,9 @@ define dso_local void @test4(i8* nocapture readonly %vqp, i8* nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
@@ -155,7 +149,7 @@ entry:
 declare <512 x i1> @llvm.ppc.mma.xvi16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 
 ; Function Attrs: nofree nounwind
-define dso_local void @test5(i8* nocapture readonly %vqp, i8* nocapture readnone %vpp, <16 x i8> %vc, i8* nocapture %resp) {
+define dso_local void @test5(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -186,11 +180,9 @@ define dso_local void @test5(i8* nocapture readonly %vqp, i8* nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4spp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4spp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
@@ -198,7 +190,7 @@ entry:
 declare <512 x i1> @llvm.ppc.mma.pmxvi8ger4spp(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
 ; Function Attrs: nofree nounwind
-define dso_local void @test6(i8* nocapture readonly %vqp, i8* nocapture readnone %vpp, <16 x i8> %vc, i8* nocapture %resp) {
+define dso_local void @test6(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -229,11 +221,9 @@ define dso_local void @test6(i8* nocapture readonly %vqp, i8* nocapture readnone
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 

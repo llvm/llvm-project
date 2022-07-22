@@ -13,6 +13,7 @@ add_header_library(
     NormalFloat.h
     PlatformDefs.h
     builtin_wrappers.h
+    except_value_utils.h
   DEPENDS
     libc.include.math
     libc.include.errno
@@ -75,6 +76,8 @@ add_header_library(
     nearest_integer.h
   DEPENDS
     libc.src.__support.common
+  FLAGS
+    ROUND_OPT
 )
 
 add_subdirectory(generic)
