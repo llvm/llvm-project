@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=i386-linux | FileCheck %s
-	%union.x = type { i64 }
+	%union.x = type { i32 }
 
 ; CHECK:	.globl r
 ; CHECK: r:
-; CHECK: .quad	r&4294967295
+; CHECK: .long	r
 
-@r = global %union.x { i64 ptrtoint (ptr @r to i64) }, align 4
+@r = global %union.x { i32 ptrtoint (ptr @r to i32) }, align 4
 
 ; CHECK:	.globl x
 ; CHECK: x:
