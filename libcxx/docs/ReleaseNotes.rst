@@ -89,6 +89,13 @@ Improvements and New Features
   should include assertions or not by default. For details, see
   :ref:`the documentation <assertions-mode>` about this new feature.
 
+- Clang now implements the ``-fexperimental-library`` flag. This flag can be used to
+  enable experimental library features such as TSes and other in-progress work like
+  ``<ranges>`` and ``<format>``. Using this flag makes it unnecessary to manually link
+  against ``libc++experimental.a`` -- just use ``-fexperimental-library`` and the
+  compiler will do what's needed to make experimental features work. However, be
+  aware that experimental features are not stable!
+
 - The implementation of the function ``std::to_chars`` for integral types using
   base 10 has moved from the dylib to the header. This means the function no
   longer has a minimum deployment target.
