@@ -368,7 +368,8 @@ static SmallVector<uint8_t> parseBuildIDArg(const opt::InputArgList &Args,
 // Symbolize markup from stdin and write the result to stdout.
 static void filterMarkup(const opt::InputArgList &Args) {
   MarkupFilter Filter(outs(), parseColorArg(Args));
-  for (std::string InputString; std::getline(std::cin, InputString);) {
+  std::string InputString;
+  while (std::getline(std::cin, InputString)) {
     InputString += '\n';
     Filter.filter(InputString);
   }
