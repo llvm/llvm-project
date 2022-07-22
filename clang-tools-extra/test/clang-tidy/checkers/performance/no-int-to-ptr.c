@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-no-int-to-ptr %t
+// RUN: %check_clang_tidy %s performance-no-int-to-ptr %t -- -- -Wno-int-conversion
 
 void *t0(char x) {
   return x;

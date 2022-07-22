@@ -35,10 +35,6 @@ namespace CodeGen {
   class CodeGenTypes;
   class SwiftABIInfo;
 
-namespace swiftcall {
-  class SwiftAggLowering;
-}
-
   // FIXME: All of this stuff should be part of the target interface
   // somehow. It is currently here because it is not clear how to factor
   // the targets to support this, since the Targets currently live in a

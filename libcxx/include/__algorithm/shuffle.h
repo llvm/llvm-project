@@ -136,11 +136,15 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
 }
 #endif
 
-template <class _AlgPolicy, class _RandomAccessIterator, class _UniformRandomNumberGenerator>
-void __shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _UniformRandomNumberGenerator&& __g) {
+template <class _AlgPolicy, class _RandomAccessIterator, class _Sentinel, class _UniformRandomNumberGenerator>
+_RandomAccessIterator __shuffle(
+    _RandomAccessIterator __first, _Sentinel __last_sentinel, _UniformRandomNumberGenerator&& __g) {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef uniform_int_distribution<ptrdiff_t> _Dp;
     typedef typename _Dp::param_type _Pp;
+
+    auto __original_last = _IterOps<_AlgPolicy>::next(__first, __last_sentinel);
+    auto __last = __original_last;
     difference_type __d = __last - __first;
     if (__d > 1)
     {
@@ -152,12 +156,14 @@ void __shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _Uni
                 _IterOps<_AlgPolicy>::iter_swap(__first, __first + __i);
         }
     }
+
+    return __original_last;
 }
 
 template <class _RandomAccessIterator, class _UniformRandomNumberGenerator>
 void shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
              _UniformRandomNumberGenerator&& __g) {
-  std::__shuffle<_ClassicAlgPolicy>(
+  (void)std::__shuffle<_ClassicAlgPolicy>(
       std::move(__first), std::move(__last), std::forward<_UniformRandomNumberGenerator>(__g));
 }
 

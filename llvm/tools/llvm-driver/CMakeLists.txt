@@ -33,6 +33,6 @@ macro(generate_driver_tool_targets)
   foreach(name IN LISTS LLVM_DRIVER_TOOLS LLVM_DRIVER_TOOL_SYMLINKS)
     add_llvm_tool_symlink(${name} llvm-driver ALWAYS_GENERATE)
     # Always generate install targets
-    llvm_install_symlink(${name} llvm-driver ALWAYS_GENERATE)
+    llvm_install_symlink(LLVM ${name} llvm-driver ALWAYS_GENERATE)
   endforeach()
 endmacro()

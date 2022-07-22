@@ -130,7 +130,8 @@ class IntrinsicCostAttributes {
 public:
   IntrinsicCostAttributes(
       Intrinsic::ID Id, const CallBase &CI,
-      InstructionCost ScalarCost = InstructionCost::getInvalid());
+      InstructionCost ScalarCost = InstructionCost::getInvalid(),
+      bool TypeBasedOnly = false);
 
   IntrinsicCostAttributes(
       Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,

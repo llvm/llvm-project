@@ -40,32 +40,63 @@ endif()
 if (LIBOMPTARGET_CAN_LINK_LIBCUDA AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Building CUDA plugin linked against libcuda")
   include_directories(${LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS})
-  add_library(omptarget.rtl.cuda SHARED src/rtl.cpp)
-  set (LIBOMPTARGET_DEP_LIBRARIES ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES})
+  add_llvm_library(omptarget.rtl.cuda SHARED
+
+    src/rtl.cpp
+
+    ADDITIONAL_HEADER_DIRS
+    ${LIBOMPTARGET_INCLUDE_DIR}
+    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
+
+    LINK_LIBS
+    PRIVATE
+    elf_common
+    MemoryManager
+    ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}
+    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
+    ${OPENMP_PTHREAD_LIB}
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+    "-Wl,-z,defs"
+
+    NO_INSTALL_RPATH
+  )
 else()
   libomptarget_say("Building CUDA plugin for dlopened libcuda")
   include_directories(dynamic_cuda)
-  add_library(omptarget.rtl.cuda SHARED src/rtl.cpp dynamic_cuda/cuda.cpp)
-  set (LIBOMPTARGET_DEP_LIBRARIES ${CMAKE_DL_LIBS})
+  add_llvm_library(omptarget.rtl.cuda 
+    SHARED
+
+    src/rtl.cpp
+    dynamic_cuda/cuda.cpp
+
+    ADDITIONAL_HEADER_DIRS
+    ${LIBOMPTARGET_INCLUDE_DIR}
+    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
+
+    LINK_LIBS
+    PRIVATE
+    elf_common
+    MemoryManager
+    ${CMAKE_DL_LIBS}
+    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
+    ${OPENMP_PTHREAD_LIB}
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+    "-Wl,-z,defs"
+
+    NO_INSTALL_RPATH
+  )
 endif()
 add_dependencies(omptarget.rtl.cuda omptarget.devicertl.nvptx)
 
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+set_target_properties(omptarget.rtl.cuda PROPERTIES 
+  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 
 target_include_directories(omptarget.rtl.cuda PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
   ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
 )
-
-target_link_libraries(omptarget.rtl.cuda
-  elf_common
-  MemoryManager
-  ${LIBOMPTARGET_DEP_LIBRARIES}
-  ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
-  ${OPENMP_PTHREAD_LIB}
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
-  "-Wl,-z,defs")
 
 # Report to the parent scope that we are building a plugin for CUDA.
 # This controls whether tests are run for the nvptx offloading target

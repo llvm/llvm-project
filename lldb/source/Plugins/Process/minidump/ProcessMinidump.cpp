@@ -567,7 +567,7 @@ void ProcessMinidump::ReadModuleList() {
       partial_module_spec.GetUUID().Clear();
       module_sp = GetOrCreateModule(uuid, name, partial_module_spec);
       if (!module_sp) {
-        partial_module_spec.GetFileSpec().GetDirectory().Clear();
+        partial_module_spec.GetFileSpec().ClearDirectory();
         module_sp = GetOrCreateModule(uuid, name, partial_module_spec);
       }
     }

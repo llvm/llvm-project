@@ -54,14 +54,6 @@ _RandomAccessIterator __partial_sort_impl(
   return __i;
 }
 
-// TODO(ranges): once `ranges::shuffle` is implemented, remove this helper and make `__debug_randomize_range` support
-// sentinels.
-template <class _AlgPolicy, class _RandomAccessIterator, class _Sentinel>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-void __maybe_randomize(_RandomAccessIterator __first, _Sentinel __last) {
-  std::__debug_randomize_range<_AlgPolicy>(__first, _IterOps<_AlgPolicy>::next(__first, __last));
-}
-
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_AFTER_CXX17
 _RandomAccessIterator __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Sentinel __last,
@@ -69,12 +61,12 @@ _RandomAccessIterator __partial_sort(_RandomAccessIterator __first, _RandomAcces
   if (__first == __middle)
       return _IterOps<_AlgPolicy>::next(__middle, __last);
 
-  std::__maybe_randomize<_AlgPolicy>(__first, __last);
+  std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
   using _Comp_ref = typename __comp_ref_type<_Compare>::type;
   auto __last_iter = std::__partial_sort_impl<_AlgPolicy, _Comp_ref>(__first, __middle, __last, __comp);
 
-  std::__maybe_randomize<_AlgPolicy>(__middle, __last);
+  std::__debug_randomize_range<_AlgPolicy>(__middle, __last);
 
   return __last_iter;
 }
