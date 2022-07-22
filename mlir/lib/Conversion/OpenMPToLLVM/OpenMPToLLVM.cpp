@@ -81,13 +81,14 @@ struct RegionLessOpWithVarOperandsConversion
 
 void mlir::configureOpenMPToLLVMConversionLegality(
     ConversionTarget &target, LLVMTypeConverter &typeConverter) {
-  target.addDynamicallyLegalOp<mlir::omp::ParallelOp, mlir::omp::WsLoopOp,
-                               mlir::omp::MasterOp, mlir::omp::SectionsOp,
-                               mlir::omp::SingleOp>([&](Operation *op) {
-    return typeConverter.isLegal(&op->getRegion(0)) &&
-           typeConverter.isLegal(op->getOperandTypes()) &&
-           typeConverter.isLegal(op->getResultTypes());
-  });
+  target.addDynamicallyLegalOp<mlir::omp::CriticalOp, mlir::omp::ParallelOp,
+                               mlir::omp::WsLoopOp, mlir::omp::MasterOp,
+                               mlir::omp::SectionsOp, mlir::omp::SingleOp>(
+      [&](Operation *op) {
+        return typeConverter.isLegal(&op->getRegion(0)) &&
+               typeConverter.isLegal(op->getOperandTypes()) &&
+               typeConverter.isLegal(op->getResultTypes());
+      });
   target
       .addDynamicallyLegalOp<mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp,
                              mlir::omp::FlushOp, mlir::omp::ThreadprivateOp>(
@@ -100,9 +101,9 @@ void mlir::configureOpenMPToLLVMConversionLegality(
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
   patterns.add<
-      RegionOpConversion<omp::MasterOp>, RegionOpConversion<omp::ParallelOp>,
-      RegionOpConversion<omp::WsLoopOp>, RegionOpConversion<omp::SectionsOp>,
-      RegionOpConversion<omp::SingleOp>,
+      RegionOpConversion<omp::CriticalOp>, RegionOpConversion<omp::MasterOp>,
+      RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::WsLoopOp>,
+      RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SingleOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicReadOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
       RegionLessOpWithVarOperandsConversion<omp::FlushOp>,
