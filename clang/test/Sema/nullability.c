@@ -211,7 +211,7 @@ void arrays(int ints[_Nonnull],
             int vla[_Nonnull GLOBAL_LENGTH],
             void ** _Nullable reference);
 void testDecayedType(void) {
-  int produceAnErrorMessage = arrays; // expected-warning {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'void (int * _Nonnull, void ** _Nullable, void *** _Nullable, void * _Null_unspecified * _Nonnull * _Nullable, int * _Nonnull, int * _Nonnull, int * _Nonnull, int * _Nonnull, int * _Nonnull, void ** _Nullable)'}}
+  int produceAnErrorMessage = arrays; // expected-error {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'void (int * _Nonnull, void ** _Nullable, void *** _Nullable, void * _Null_unspecified * _Nonnull * _Nullable, int * _Nonnull, int * _Nonnull, int * _Nonnull, int * _Nonnull, int * _Nonnull, void ** _Nullable)'}}
 }
 
 int notInFunction[_Nullable 3]; // expected-error {{nullability specifier '_Nullable' cannot be applied to non-pointer type 'int[3]'}}

@@ -8,7 +8,7 @@
 
 declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
 declare <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8>, <16 x i8>)
-define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4, i8* %ptr) {
+define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4, ptr %ptr) {
 ; CHECK-LABEL: intrinsics1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmr v1, v4
@@ -62,13 +62,12 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
   %4 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpn(<512 x i1> %3, <16 x i8> %vc2, <16 x i8> %vc4, i32 0, i32 0)
   %5 = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> %vc4, <16 x i8> %vc1)
   %6 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernp(<512 x i1> %4, <256 x i1> %5, <16 x i8> %vc1, i32 0, i32 0)
-  %7 = bitcast i8* %ptr to <512 x i1>*
-  store <512 x i1> %6, <512 x i1>* %7, align 64
+  store <512 x i1> %6, ptr %ptr, align 64
   ret void
 }
 
 declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1>)
-define void @intrinsics2(<16 x i8>* %ptr1, <16 x i8>* %ptr2, <16 x i8>* %ptr3, <16 x i8>* %ptr4, i8* %ptr) {
+define void @intrinsics2(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr) {
 ; CHECK-LABEL: intrinsics2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -116,10 +115,10 @@ define void @intrinsics2(<16 x i8>* %ptr1, <16 x i8>* %ptr2, <16 x i8>* %ptr3, <
 ; CHECK-BE-NEXT:    stxv vs2, 0(r5)
 ; CHECK-BE-NEXT:    stxv vs3, 0(r6)
 ; CHECK-BE-NEXT:    blr
-  %vc1 = load <16 x i8>, <16 x i8>* %ptr1, align 16
-  %vc2 = load <16 x i8>, <16 x i8>* %ptr2, align 16
-  %vc3 = load <16 x i8>, <16 x i8>* %ptr3, align 16
-  %vc4 = load <16 x i8>, <16 x i8>* %ptr4, align 16
+  %vc1 = load <16 x i8>, ptr %ptr1, align 16
+  %vc2 = load <16 x i8>, ptr %ptr2, align 16
+  %vc3 = load <16 x i8>, ptr %ptr3, align 16
+  %vc4 = load <16 x i8>, ptr %ptr4, align 16
   %1 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4)
   %2 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4pp(<512 x i1> %1, <16 x i8> %vc1, <16 x i8> %vc2)
   %3 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pn(<512 x i1> %2, <16 x i8> %vc1, <16 x i8> %vc3)
@@ -131,15 +130,14 @@ define void @intrinsics2(<16 x i8>* %ptr1, <16 x i8>* %ptr2, <16 x i8>* %ptr3, <
   %9 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %7, 1
   %10 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %7, 2
   %11 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %7, 3
-  %12 = bitcast i8* %ptr to <512 x i1>*
-  store <16 x i8> %8, <16 x i8>* %ptr1, align 16
-  store <16 x i8> %9, <16 x i8>* %ptr2, align 16
-  store <16 x i8> %10, <16 x i8>* %ptr3, align 16
-  store <16 x i8> %11, <16 x i8>* %ptr4, align 16
+  store <16 x i8> %8, ptr %ptr1, align 16
+  store <16 x i8> %9, ptr %ptr2, align 16
+  store <16 x i8> %10, ptr %ptr3, align 16
+  store <16 x i8> %11, ptr %ptr4, align 16
   ret void
 }
 
-define void @test1(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test1(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvi4ger8 acc0, v2, v2
@@ -161,15 +159,14 @@ define void @test1(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8(<16 x i8> %vc, <16 x i8> %vc)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvi4ger8(<16 x i8>, <16 x i8>)
 
-define void @test2(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test2(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -200,18 +197,16 @@ define void @test2(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test3(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test3(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pmxvi4ger8 acc0, v2, v2, 0, 0, 0
@@ -233,15 +228,14 @@ define void @test3(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.pmxvi4ger8(<16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvi4ger8(<16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test4(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test4(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -272,18 +266,16 @@ define void @test4(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvi4ger8pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvi4ger8pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvi4ger8pp(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test5(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test5(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvi8ger4 acc0, v2, v2
@@ -305,15 +297,14 @@ define void @test5(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4(<16 x i8> %vc, <16 x i8> %vc)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvi8ger4(<16 x i8>, <16 x i8>)
 
-define void @test6(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test6(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -344,18 +335,16 @@ define void @test6(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvi8ger4pp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test7(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test7(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pmxvi8ger4 acc0, v2, v2, 0, 0, 0
@@ -377,15 +366,14 @@ define void @test7(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4(<16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvi8ger4(<16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test8(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test8(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -416,18 +404,16 @@ define void @test8(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvi8ger4pp(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test9(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test9(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvi16ger2s acc0, v2, v2
@@ -449,15 +435,14 @@ define void @test9(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2s(<16 x i8> %vc, <16 x i8> %vc)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvi16ger2s(<16 x i8>, <16 x i8>)
 
-define void @test10(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test10(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -488,18 +473,16 @@ define void @test10(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2spp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2spp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvi16ger2spp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test11(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test11(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pmxvi16ger2s acc0, v2, v2, 0, 0, 0
@@ -521,15 +504,14 @@ define void @test11(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2s(<16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvi16ger2s(<16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test12(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test12(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -560,18 +542,16 @@ define void @test12(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2spp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2spp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvi16ger2spp(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test13(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test13(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvf16ger2 acc0, v2, v2
@@ -593,15 +573,14 @@ define void @test13(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2(<16 x i8> %vc, <16 x i8> %vc)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2(<16 x i8>, <16 x i8>)
 
-define void @test14(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test14(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test14:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -632,18 +611,16 @@ define void @test14(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test15(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test15(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test15:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -674,18 +651,16 @@ define void @test15(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2pn(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test16(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test16(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -716,18 +691,16 @@ define void @test16(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2np(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2np(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2np(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test17(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test17(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test17:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -758,18 +731,16 @@ define void @test17(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2nn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2nn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2nn(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test18(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test18(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test18:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pmxvf16ger2 acc0, v2, v2, 0, 0, 0
@@ -791,15 +762,14 @@ define void @test18(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2(<16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2(<16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test19(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test19(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test19:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -830,18 +800,16 @@ define void @test19(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2pp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2pp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test20(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test20(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -872,18 +840,16 @@ define void @test20(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2pn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2pn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2pn(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test21(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test21(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test21:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -914,18 +880,16 @@ define void @test21(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2np(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2np(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2np(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test22(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test22(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test22:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -956,18 +920,16 @@ define void @test22(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2nn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2nn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2nn(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32, i32)
 
-define void @test23(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test23(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test23:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvf32ger acc0, v2, v2
@@ -989,15 +951,14 @@ define void @test23(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.xvf32ger(<16 x i8> %vc, <16 x i8> %vc)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf32ger(<16 x i8>, <16 x i8>)
 
-define void @test24(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test24(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test24:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1028,18 +989,16 @@ define void @test24(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test25(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test25(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test25:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1070,18 +1029,16 @@ define void @test25(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test26(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test26(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test26:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1112,18 +1069,16 @@ define void @test26(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test27(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test27(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test27:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1154,18 +1109,16 @@ define void @test27(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf32gernn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gernn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf32gernn(<512 x i1>, <16 x i8>, <16 x i8>)
 
-define void @test28(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test28(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test28:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pmxvf32ger acc0, v2, v2, 0, 0
@@ -1187,15 +1140,14 @@ define void @test28(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32ger(<16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
-  %1 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %0, <512 x i1>* %1, align 64
+  store <512 x i1> %0, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf32ger(<16 x i8>, <16 x i8>, i32, i32)
 
-define void @test29(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test29(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test29:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1226,18 +1178,16 @@ define void @test29(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32)
 
-define void @test30(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test30(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test30:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1268,18 +1218,16 @@ define void @test30(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf32gerpn(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32)
 
-define void @test31(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test31(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test31:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1310,18 +1258,16 @@ define void @test31(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gernp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gernp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf32gernp(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32)
 
-define void @test32(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test32(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1352,18 +1298,16 @@ define void @test32(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gernn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gernn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf32gernn(<512 x i1>, <16 x i8>, <16 x i8>, i32, i32)
 
-define void @test33(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test33(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test33:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v5, 0(r4)
@@ -1388,18 +1332,16 @@ define void @test33(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vpp to <256 x i1>*
-  %1 = load <256 x i1>, <256 x i1>* %0, align 32
-  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1> %1, <16 x i8> %vc)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <256 x i1>, ptr %vpp, align 32
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1> %0, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1>, <16 x i8>)
 
-define void @test34(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test34(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test34:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1434,20 +1376,17 @@ define void @test34(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.xvf64gerpp(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf64gerpp(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf64gerpp(<512 x i1>, <256 x i1>, <16 x i8>)
 
-define void @test35(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test35(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test35:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1482,20 +1421,17 @@ define void @test35(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.xvf64gerpn(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf64gerpn(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf64gerpn(<512 x i1>, <256 x i1>, <16 x i8>)
 
-define void @test36(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test36(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test36:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1530,20 +1466,17 @@ define void @test36(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1>, <256 x i1>, <16 x i8>)
 
-define void @test37(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test37(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test37:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1578,20 +1511,17 @@ define void @test37(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernn(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.xvf64gernn(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.xvf64gernn(<512 x i1>, <256 x i1>, <16 x i8>)
 
-define void @test38(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test38(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test38:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v5, 0(r4)
@@ -1616,18 +1546,16 @@ define void @test38(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vpp to <256 x i1>*
-  %1 = load <256 x i1>, <256 x i1>* %0, align 32
-  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64ger(<256 x i1> %1, <16 x i8> %vc, i32 0, i32 0)
-  %3 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %2, <512 x i1>* %3, align 64
+  %0 = load <256 x i1>, ptr %vpp, align 32
+  %1 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64ger(<256 x i1> %0, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %1, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf64ger(<256 x i1>, <16 x i8>, i32, i32)
 
-define void @test39(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test39(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test39:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1662,20 +1590,17 @@ define void @test39(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gerpp(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc, i32 0, i32 0)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gerpp(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf64gerpp(<512 x i1>, <256 x i1>, <16 x i8>, i32, i32)
 
-define void @test40(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test40(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test40:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1710,20 +1635,17 @@ define void @test40(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gerpn(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc, i32 0, i32 0)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gerpn(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf64gerpn(<512 x i1>, <256 x i1>, <16 x i8>, i32, i32)
 
-define void @test41(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test41(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test41:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1758,20 +1680,17 @@ define void @test41(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernp(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc, i32 0, i32 0)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernp(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
 
 declare <512 x i1> @llvm.ppc.mma.pmxvf64gernp(<512 x i1>, <256 x i1>, <16 x i8>, i32, i32)
 
-define void @test42(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
+define void @test42(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test42:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs1, 32(r3)
@@ -1806,13 +1725,10 @@ define void @test42(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = bitcast i8* %vqp to <512 x i1>*
-  %1 = load <512 x i1>, <512 x i1>* %0, align 64
-  %2 = bitcast i8* %vpp to <256 x i1>*
-  %3 = load <256 x i1>, <256 x i1>* %2, align 32
-  %4 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernn(<512 x i1> %1, <256 x i1> %3, <16 x i8> %vc, i32 0, i32 0)
-  %5 = bitcast i8* %resp to <512 x i1>*
-  store <512 x i1> %4, <512 x i1>* %5, align 64
+  %0 = load <512 x i1>, ptr %vqp, align 64
+  %1 = load <256 x i1>, ptr %vpp, align 32
+  %2 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernn(<512 x i1> %0, <256 x i1> %1, <16 x i8> %vc, i32 0, i32 0)
+  store <512 x i1> %2, ptr %resp, align 64
   ret void
 }
 
