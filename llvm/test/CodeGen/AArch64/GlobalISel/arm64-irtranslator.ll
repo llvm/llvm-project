@@ -1458,10 +1458,12 @@ define void @test_lifetime_intrin() {
 ; O3-LABEL: name: test_lifetime_intrin
 ; O3: {{%[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.0.slot
 ; O3-NEXT: LIFETIME_START %stack.0.slot
+; O3-NEXT: G_STORE
 ; O3-NEXT: LIFETIME_END %stack.0.slot
 ; O3-NEXT: RET_ReallyLR
   %slot = alloca i8, i32 4
   call void @llvm.lifetime.start.p0i8(i64 0, i8* %slot)
+  store volatile i8 10, i8* %slot
   call void @llvm.lifetime.end.p0i8(i64 0, i8* %slot)
   ret void
 }
