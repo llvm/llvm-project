@@ -363,6 +363,7 @@ def Math_ExpOp : Math_FloatUnaryOp<"exp"> {
     %a = math.exp %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
