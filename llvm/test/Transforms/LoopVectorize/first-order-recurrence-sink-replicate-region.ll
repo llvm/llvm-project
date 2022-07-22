@@ -447,31 +447,14 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, i32* %src) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%.pn> = phi ir<0>, vp<[[P_L:%.+]]>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%.pn> = phi ir<0>, ir<%l>
 ; CHECK-NEXT:     EMIT vp<[[WIDE_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule vp<[[WIDE_IV]]> vp<[[BTC]]>
-; CHECK-NEXT:   Successor(s): loop.0
-; CHECK-EMPTY:
-; CHECK-NEXT:   loop.0:
-; CHECK-NEXT:   Successor(s): pred.load
-; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.load: {
-; CHECK-NEXT:     pred.load.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[CMP]]>
-; CHECK-NEXT:     Successor(s): pred.load.if, pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.load.if:
-; CHECK-NEXT:       REPLICATE ir<%l> = load ir<%src> (S->V)
-; CHECK-NEXT:     Successor(s): pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.load.continue:
-; CHECK-NEXT:       PHI-PREDICATED-INSTRUCTION vp<[[P_L]]> = ir<%l>
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): pred.load.succ
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.succ:
-; CHECK-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%.pn> vp<[[P_L]]>
+; CHECK-NEXT:      Successor(s): loop.0
+; CHECK-EMPTY:     
+; CHECK-NEXT:       loop.0:
+; CHECK-NEXT:         REPLICATE ir<%l> = load ir<%src>
+; CHECK-NEXT:         EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%.pn> ir<%l>
 ; CHECK-NEXT:   Successor(s): pred.sdiv
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.sdiv: {
@@ -487,9 +470,9 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, i32* %src) {
 ; CHECK-NEXT:       PHI-PREDICATED-INSTRUCTION vp<[[P_VAL:%.+]]> = ir<%val>
 ; CHECK-NEXT:     No successors
 ; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): loop.1
+; CHECK-NEXT:   Successor(s): loop.0.split
 ; CHECK-EMPTY:
-; CHECK-NEXT:   loop.1:
+; CHECK-NEXT:   loop.0.split:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +  vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
