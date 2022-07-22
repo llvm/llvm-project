@@ -13,6 +13,7 @@ add_header_library(
     NormalFloat.h
     PlatformDefs.h
     builtin_wrappers.h
+    except_value_utils.h
   DEPENDS
     libc.include.math
     libc.include.errno

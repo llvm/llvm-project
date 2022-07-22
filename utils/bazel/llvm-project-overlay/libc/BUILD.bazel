@@ -161,6 +161,7 @@ fputil_common_hdrs = [
     "src/__support/FPUtil/NormalFloat.h",
     "src/__support/FPUtil/PlatformDefs.h",
     "src/__support/FPUtil/builtin_wrappers.h",
+    "src/__support/FPUtil/except_value_utils.h",
 ]
 
 fputil_hdrs = selects.with_or({
@@ -460,6 +461,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "range_reduction",
+    hdrs = [
+        "src/math/generic/range_reduction.h",
+        "src/math/generic/range_reduction_fma.h",
+    ],
+    deps = [
+        ":__support_fputil",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":libc_root",
+    ],
+)
+
 libc_math_function(
     name = "expm1f",
     additional_deps = [
@@ -635,8 +651,10 @@ libc_math_function(
 libc_math_function(
     name = "sinf",
     additional_deps = [
-        ":math_utils",
-        ":sincosf_utils",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":range_reduction",
     ],
 )
 
