@@ -604,9 +604,9 @@ int clangTidyMain(int argc, const char **argv) {
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix);
-  bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
-                       return E.DiagLevel == ClangTidyError::Error;
-                     }) != Errors.end();
+  bool FoundErrors = llvm::any_of(Errors, [](const ClangTidyError &E) {
+    return E.DiagLevel == ClangTidyError::Error;
+  });
 
   // --fix-errors and --fix-notes imply --fix.
   FixBehaviour Behaviour = FixNotes             ? FB_FixNotes

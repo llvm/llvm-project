@@ -196,10 +196,9 @@ static bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
     return true;
   auto HasCodeGenSuffix = [](const SymbolLocation &Loc) {
     constexpr static const char *CodegenSuffixes[] = {".proto"};
-    return std::any_of(std::begin(CodegenSuffixes), std::end(CodegenSuffixes),
-                       [&](llvm::StringRef Suffix) {
-                         return llvm::StringRef(Loc.FileURI).endswith(Suffix);
-                       });
+    return llvm::any_of(CodegenSuffixes, [&](llvm::StringRef Suffix) {
+      return llvm::StringRef(Loc.FileURI).endswith(Suffix);
+    });
   };
   return HasCodeGenSuffix(L) && !HasCodeGenSuffix(R);
 }

@@ -697,8 +697,7 @@ isl::set ScopBuilder::getPredecessorDomainConstraints(BasicBlock *BB,
 
     // If the predecessor is in a region we used for propagation we can skip it.
     auto PredBBInRegion = [PredBB](Region *PR) { return PR->contains(PredBB); };
-    if (std::any_of(PropagatedRegions.begin(), PropagatedRegions.end(),
-                    PredBBInRegion)) {
+    if (llvm::any_of(PropagatedRegions, PredBBInRegion)) {
       continue;
     }
 
