@@ -171,7 +171,7 @@ bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
   if (HostInfoPosix::ComputeSupportExeDirectory(file_spec) &&
       file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
     return true;
-  file_spec.GetDirectory() = GetProgramFileSpec().GetDirectory();
+  file_spec.SetDirectory(GetProgramFileSpec().GetDirectory());
   return !file_spec.GetDirectory().IsEmpty();
 }
 
