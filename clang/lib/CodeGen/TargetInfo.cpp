@@ -443,6 +443,9 @@ static Address emitMergePHI(CodeGenFunction &CGF,
   return Address(PHI, Addr1.getElementType(), Align);
 }
 
+TargetCodeGenInfo::TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info)
+    : Info(std::move(Info)) {}
+
 TargetCodeGenInfo::~TargetCodeGenInfo() = default;
 
 // If someone can figure out a general rule for this, that would be great.
