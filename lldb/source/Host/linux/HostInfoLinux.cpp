@@ -178,7 +178,7 @@ bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
 bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
   FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins");
   FileSystem::Instance().Resolve(temp_file);
-  file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
+  file_spec.SetDirectory(temp_file.GetPath());
   return true;
 }
 
@@ -190,9 +190,9 @@ bool HostInfoLinux::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   if (xdg_data_home && xdg_data_home[0]) {
     std::string user_plugin_dir(xdg_data_home);
     user_plugin_dir += "/lldb";
-    file_spec.GetDirectory().SetCString(user_plugin_dir.c_str());
+    file_spec.SetDirectory(user_plugin_dir.c_str());
   } else
-    file_spec.GetDirectory().SetCString("~/.local/share/lldb");
+    file_spec.SetDirectory("~/.local/share/lldb");
   return true;
 }
 
