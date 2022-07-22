@@ -1,7 +1,6 @@
 #ifndef LLVM_TRANSFORMS_YK_CONTROLPOINT_H
 #define LLVM_TRANSFORMS_YK_CONTROLPOINT_H
 
-#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 // The name of the "dummy function" that the user puts in their interpreter

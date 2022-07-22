@@ -77,11 +77,6 @@ namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
 }
 
-static cl::opt<bool>
-YkPatchCtrlPoint("yk-patch-control-point",
-  cl::init(false), cl::NotHidden,
-  cl::desc("Patch yk_control_point()"));
-
 [[noreturn]] static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
