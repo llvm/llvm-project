@@ -73,6 +73,7 @@ extern "C" {
 #include <malloc/malloc.h>
 #include <os/log.h>
 #include <pthread.h>
+#include <pthread/introspection.h>
 #include <sched.h>
 #include <signal.h>
 #include <spawn.h>
@@ -1394,6 +1395,61 @@ u32 GetNumberOfCPUs() {
 }
 
 void InitializePlatformCommonFlags(CommonFlags *cf) {}
+
+// Pthread introspection hook
+//
+// * GCD worker threads are created without a call to pthread_create(), but we
+//   still need to register these threads (with ThreadCreate/Start()).
+// * We use the "pthread introspection hook" below to observe the creation of
+//   such threads.
+// * GCD worker threads don't have parent threads and the CREATE event is
+//   delivered in the context of the thread itself.  CREATE events for regular
+//   threads, are delivered on the parent.  We use this to tell apart which
+//   threads are GCD workers with `thread == pthread_self()`.
+//
+static pthread_introspection_hook_t prev_pthread_introspection_hook;
+static ThreadEventCallbacks thread_event_callbacks;
+
+static void sanitizer_pthread_introspection_hook(unsigned int event,
+                                                 pthread_t thread, void *addr,
+                                                 size_t size) {
+  // create -> start -> terminate -> destroy
+  // * create/destroy are usually (not guaranteed) delivered on the parent and
+  //   track resource allocation/reclamation
+  // * start/terminate are guaranteed to be delivered in the context of the
+  //   thread and give hooks into "just after (before) thread starts (stops)
+  //   executing"
+  DCHECK(event >= PTHREAD_INTROSPECTION_THREAD_CREATE &&
+         event <= PTHREAD_INTROSPECTION_THREAD_DESTROY);
+
+  if (event == PTHREAD_INTROSPECTION_THREAD_CREATE) {
+    bool gcd_worker = (thread == pthread_self());
+    if (thread_event_callbacks.create)
+      thread_event_callbacks.create((uptr)thread, gcd_worker);
+  } else if (event == PTHREAD_INTROSPECTION_THREAD_START) {
+    CHECK_EQ(thread, pthread_self());
+    if (thread_event_callbacks.start)
+      thread_event_callbacks.start((uptr)thread);
+  }
+
+  if (prev_pthread_introspection_hook)
+    prev_pthread_introspection_hook(event, thread, addr, size);
+
+  if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE) {
+    CHECK_EQ(thread, pthread_self());
+    if (thread_event_callbacks.terminate)
+      thread_event_callbacks.terminate((uptr)thread);
+  } else if (event == PTHREAD_INTROSPECTION_THREAD_DESTROY) {
+    if (thread_event_callbacks.destroy)
+      thread_event_callbacks.destroy((uptr)thread);
+  }
+}
+
+void InstallPthreadIntrospectionHook(const ThreadEventCallbacks &callbacks) {
+  thread_event_callbacks = callbacks;
+  prev_pthread_introspection_hook =
+      pthread_introspection_hook_install(&sanitizer_pthread_introspection_hook);
+}
 
 }  // namespace __sanitizer
 
