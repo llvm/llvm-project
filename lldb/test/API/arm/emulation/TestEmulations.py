@@ -49,4 +49,4 @@ class ARMEmulationTestCase(TestBase):
             print('\nRunning test ' + os.path.basename(filename))
             print(output)
 
-        self.assertTrue(success, 'Emulation test succeeded.')
+        self.assertTrue(success, 'Emulation test failed.')
