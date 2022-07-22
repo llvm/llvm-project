@@ -383,10 +383,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   std::vector<InputFile *> ret;
   for (unsigned i = 0; i != maxTasks; ++i)
     if (!buf[i].empty())
-      ret.push_back(createObjectFile(MemoryBufferRef(buf[i], "lto.tmp")));
+      ret.push_back(createObjFile(MemoryBufferRef(buf[i], "lto.tmp")));
 
   for (std::unique_ptr<MemoryBuffer> &file : files)
     if (file)
-      ret.push_back(createObjectFile(*file));
+      ret.push_back(createObjFile(*file));
   return ret;
 }
