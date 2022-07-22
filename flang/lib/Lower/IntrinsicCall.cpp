@@ -483,6 +483,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDprod(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genDshiftl(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genDshiftr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genExit(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -543,6 +545,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
+  template <typename Shift>
+  mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
@@ -741,6 +745,8 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
      /*isElemental=*/false},
     {"dprod", &I::genDprod},
+    {"dshiftl", &I::genDshiftl},
+    {"dshiftr", &I::genDshiftr},
     {"eoshift",
      &I::genEoshift,
      {{{"array", asBox},
@@ -910,6 +916,9 @@ static constexpr IntrinsicHandler handlers[]{
        {"kind", asValue}}},
      /*isElemental=*/true},
     {"set_exponent", &I::genSetExponent},
+    {"shifta", &I::genShift<mlir::arith::ShRSIOp>},
+    {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
+    {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
     {"sign", &I::genSign},
     {"size",
      &I::genSize,
@@ -2664,6 +2673,54 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
   return builder.create<mlir::arith::MulFOp>(loc, a, b);
 }
 
+// DSHIFTL
+mlir::Value IntrinsicLibrary::genDshiftl(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+
+  mlir::Value i = args[0];
+  mlir::Value j = args[1];
+  mlir::Value shift = builder.createConvert(loc, resultType, args[2]);
+  mlir::Value bitSize = builder.createIntegerConstant(
+      loc, resultType, resultType.getIntOrFloatBitWidth());
+
+  // Per the standard, the value of DSHIFTL(I, J, SHIFT) is equal to
+  // IOR (SHIFTL(I, SHIFT), SHIFTR(J, BIT_SIZE(J) - SHIFT))
+  mlir::Value diff = builder.create<mlir::arith::SubIOp>(loc, bitSize, shift);
+
+  mlir::Value lArgs[2]{i, shift};
+  mlir::Value lft = genShift<mlir::arith::ShLIOp>(resultType, lArgs);
+
+  mlir::Value rArgs[2]{j, diff};
+  mlir::Value rgt = genShift<mlir::arith::ShRUIOp>(resultType, rArgs);
+
+  return builder.create<mlir::arith::OrIOp>(loc, lft, rgt);
+}
+
+// DSHIFTR
+mlir::Value IntrinsicLibrary::genDshiftr(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+
+  mlir::Value i = args[0];
+  mlir::Value j = args[1];
+  mlir::Value shift = builder.createConvert(loc, resultType, args[2]);
+  mlir::Value bitSize = builder.createIntegerConstant(
+      loc, resultType, resultType.getIntOrFloatBitWidth());
+
+  // Per the standard, the value of DSHIFTR(I, J, SHIFT) is equal to
+  // IOR (SHIFTL(I, BIT_SIZE(I) - SHIFT), SHIFTR(J, SHIFT))
+  mlir::Value diff = builder.create<mlir::arith::SubIOp>(loc, bitSize, shift);
+
+  mlir::Value lArgs[2]{i, diff};
+  mlir::Value lft = genShift<mlir::arith::ShLIOp>(resultType, lArgs);
+
+  mlir::Value rArgs[2]{j, shift};
+  mlir::Value rgt = genShift<mlir::arith::ShRUIOp>(resultType, rArgs);
+
+  return builder.create<mlir::arith::OrIOp>(loc, lft, rgt);
+}
+
 // EOSHIFT
 fir::ExtendedValue
 IntrinsicLibrary::genEoshift(mlir::Type resultType,
@@ -3753,6 +3810,32 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genSetExponent(builder, loc, fir::getBase(args[0]),
                                    fir::getBase(args[1])));
+}
+
+// SHIFTA, SHIFTL, SHIFTR
+template <typename Shift>
+mlir::Value IntrinsicLibrary::genShift(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  // If SHIFT < 0 or SHIFT >= BIT_SIZE(I), return 0. This is not required by
+  // the standard. However, several other compilers behave this way, so try and
+  // maintain compatibility with them to an extent.
+
+  unsigned bits = resultType.getIntOrFloatBitWidth();
+  mlir::Value bitSize = builder.createIntegerConstant(loc, resultType, bits);
+  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+  mlir::Value shift = builder.createConvert(loc, resultType, args[1]);
+
+  mlir::Value tooSmall = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::slt, shift, zero);
+  mlir::Value tooLarge = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::sge, shift, bitSize);
+  mlir::Value outOfBounds =
+      builder.create<mlir::arith::OrIOp>(loc, tooSmall, tooLarge);
+
+  mlir::Value shifted = builder.create<Shift>(loc, args[0], shift);
+  return builder.create<mlir::arith::SelectOp>(loc, outOfBounds, zero, shifted);
 }
 
 // SIGN
