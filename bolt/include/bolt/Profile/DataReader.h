@@ -502,6 +502,9 @@ protected:
   /// Maps of common LTO names to possible matching profiles.
   StringMap<std::vector<FuncBranchData *>> LTOCommonNameMap;
   StringMap<std::vector<FuncMemData *>> LTOCommonNameMemMap;
+
+public:
+  void setParsingBuffer(StringRef Buffer) { ParsingBuf = Buffer; }
 };
 
 } // namespace bolt
