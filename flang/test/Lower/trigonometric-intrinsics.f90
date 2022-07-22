@@ -142,10 +142,10 @@ subroutine sinh_testcd(z)
 end subroutine
 
 ! CHECK-LABEL: @fir.atan.f32.f32
-! CHECK: fir.call {{.*}}atan
+! CHECK: math.atan %{{.*}} : f32
 
 ! CHECK-LABEL: @fir.atan.f64.f64
-! CHECK: fir.call {{.*}}atan
+! CHECK: math.atan %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.atan.z4.z4
 ! CHECK: fir.call {{.*}}atan
@@ -154,10 +154,10 @@ end subroutine
 ! CHECK: fir.call {{.*}}atan
 
 ! CHECK-LABEL: @fir.cos.f32.f32
-! CHECK: fir.call {{.*}}cos
+! CHECK: math.cos %{{.*}} : f32
 
 ! CHECK-LABEL: @fir.cos.f64.f64
-! CHECK: fir.call {{.*}}cos
+! CHECK: math.cos %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.cos.z4.z4
 ! CHECK: fir.call {{.*}}cos
@@ -178,10 +178,10 @@ end subroutine
 ! CHECK: fir.call {{.*}}cosh
 
 ! CHECK-LABEL: @fir.sin.f32.f32
-! CHECK: fir.call {{.*}}sin
+! CHECK: math.sin %{{.*}} : f32
 
 ! CHECK-LABEL: @fir.sin.f64.f64
-! CHECK: fir.call {{.*}}sin
+! CHECK: math.sin %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.sin.z4.z4
 ! CHECK: fir.call {{.*}}sin

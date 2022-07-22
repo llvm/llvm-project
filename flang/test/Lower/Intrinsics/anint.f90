@@ -3,7 +3,7 @@
 ! CHECK-LABEL: anint_test
 subroutine anint_test(a, b)
   real :: a, b
-  ! CHECK: fir.call @llvm.round.f32
+  ! CHECK: "llvm.intr.round"
   b = anint(a)
 end subroutine
   

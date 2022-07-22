@@ -30,10 +30,10 @@ subroutine sqrt_testcd(z)
 end subroutine
 
 ! CHECK-LABEL: @fir.sqrt.f32.f32
-! CHECK: fir.call {{.*}}mth_i_sqrt
+! CHECK: math.sqrt %{{.*}} : f32
 
 ! CHECK-LABEL: @fir.sqrt.f64.f64
-! CHECK: fir.call {{.*}}mth_i_dsqrt
+! CHECK: math.sqrt %{{.*}} : f64
 
 ! CHECK-LABEL: func private @fir.sqrt.z4.z4
 ! CHECK: fir.call {{.*}}fc_sqrt

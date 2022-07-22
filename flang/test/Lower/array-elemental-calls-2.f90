@@ -135,7 +135,7 @@ subroutine check_pow()
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_25:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
-! CHECK:  %[[VAL_27:.*]] = fir.call @__fd_pow_1(%[[VAL_25]], %[[VAL_26]]) : (f64, f64) -> f64
+! CHECK:  %[[VAL_27:.*]] = math.powf %[[VAL_25]], %[[VAL_26]] : f64
 ! CHECK:  fir.store %[[VAL_27]] to %[[VAL_0]] : !fir.ref<f64>
 ! CHECK:  %[[VAL_28:.*]] = fir.call @_QPelem_func_real(%[[VAL_0]]) : (!fir.ref<f64>) -> i32
 end subroutine
