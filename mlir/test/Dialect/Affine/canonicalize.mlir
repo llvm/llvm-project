@@ -622,6 +622,28 @@ func.func @canonicalize_affine_if(%M : index, %N : index) {
 
 // -----
 
+// CHECK-DAG: #[[$SET:.*]] = affine_set<(d0, d1)[s0] : (d0 - 1 >= 0, d1 - 1 == 0, -d0 + s0 + 10 >= 0)>
+
+// CHECK-LABEL: func @canonicalize_affine_if_compose_apply
+// CHECK-SAME:   %[[N:.*]]: index
+func.func @canonicalize_affine_if_compose_apply(%N: index) {
+  %M = affine.apply affine_map<()[s0] -> (s0 + 10)> ()[%N]
+  // CHECK-NEXT: affine.for %[[I:.*]] =
+  affine.for %i = 0 to 1024 {
+    // CHECK-NEXT: affine.for %[[J:.*]] =
+    affine.for %j = 0 to 100 {
+      %j_ = affine.apply affine_map<(d0)[] -> (d0 + 1)> (%j)
+      // CHECK-NEXT: affine.if #[[$SET]](%[[I]], %[[J]])[%[[N]]]
+      affine.if affine_set<(d0, d1)[s0] : (d0 - 1 >= 0, d1 - 2 == 0, -d0 + s0 >= 0)>(%i, %j_)[%M] {
+        "test.foo"() : ()->()
+      }
+    }
+  }
+  return
+}
+
+// -----
+
 // CHECK-DAG: #[[$LBMAP:.*]] = affine_map<()[s0] -> (0, s0)>
 // CHECK-DAG: #[[$UBMAP:.*]] = affine_map<()[s0] -> (1024, s0 * 2)>
 
