@@ -3337,6 +3337,38 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known.Zero |= Known2.Zero;
     }
     break;
+  case ISD::SHL_PARTS:
+  case ISD::SRA_PARTS:
+  case ISD::SRL_PARTS: {
+    assert((Op.getResNo() == 0 || Op.getResNo() == 1) && "Unknown result");
+
+    // Collect lo/hi source values and concatenate.
+    // TODO: Would a KnownBits::concatBits helper be useful?
+    unsigned LoBits = Op.getOperand(0).getScalarValueSizeInBits();
+    unsigned HiBits = Op.getOperand(1).getScalarValueSizeInBits();
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = Known.anyext(LoBits + HiBits);
+    Known.insertBits(Known2, LoBits);
+
+    // Collect shift amount.
+    Known2 = computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+
+    if (Opcode == ISD::SHL_PARTS)
+      Known = KnownBits::shl(Known, Known2);
+    else if (Opcode == ISD::SRA_PARTS)
+      Known = KnownBits::ashr(Known, Known2);
+    else // if (Opcode == ISD::SRL_PARTS)
+      Known = KnownBits::lshr(Known, Known2);
+
+    // TODO: Minimum shift low/high bits are known zero.
+
+    if (Op.getResNo() == 0)
+      Known = Known.extractBits(LoBits, 0);
+    else
+      Known = Known.extractBits(HiBits, LoBits);
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     EVT EVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
