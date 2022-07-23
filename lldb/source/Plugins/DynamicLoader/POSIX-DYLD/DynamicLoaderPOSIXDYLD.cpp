@@ -650,7 +650,7 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       LLDB_LOGF(
           log,
           "DynamicLoaderPOSIXDYLD::%s failed loading module %s at 0x%" PRIx64,
-          __FUNCTION__, I->file_spec.GetPath().c_str(), I->base_addr);
+          __FUNCTION__, I->file_spec.GetCString(), I->base_addr);
     }
   }
 

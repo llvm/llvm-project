@@ -1503,7 +1503,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qGetWorkingDir(
   FileSpec working_dir{m_process_launch_info.GetWorkingDirectory()};
   if (working_dir) {
     StreamString response;
-    response.PutStringAsRawHex8(working_dir.GetPath().c_str());
+    response.PutStringAsRawHex8(working_dir.GetCString());
     return SendPacketNoLock(response.GetString());
   }
 

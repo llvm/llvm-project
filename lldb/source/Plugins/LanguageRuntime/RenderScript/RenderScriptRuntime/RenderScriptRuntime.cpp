@@ -577,7 +577,7 @@ struct RenderScriptRuntime::Element {
       array_size;        // Number of items in array, only needed for structs
   ConstString type_name; // Name of type, only needed for structs
 
-  static ConstString
+  static ConstString 
   GetFallbackStructName(); // Print this as the type name of a struct Element
                            // If we can't resolve the actual struct name
 
@@ -879,7 +879,7 @@ RSReduceBreakpointResolver::SearchCallback(lldb_private::SearchFilter &filter,
           LLDB_LOGF(log, "%s: %s reduction breakpoint on %s in %s",
                     __FUNCTION__, new_bp ? "new" : "existing",
                     kernel_name.GetCString(),
-                    address.GetModule()->GetFileSpec().GetPath().c_str());
+                    address.GetModule()->GetFileSpec().GetCString());
         }
       }
     }
@@ -2984,8 +2984,7 @@ bool RSModuleDescriptor::ParseRSInfo() {
     const llvm::StringRef raw_rs_info((const char *)buffer->GetBytes());
     raw_rs_info.split(info_lines, '\n');
     LLDB_LOGF(log, "'.rs.info symbol for '%s':\n%s",
-              m_module->GetFileSpec().GetPath().c_str(),
-              raw_rs_info.str().c_str());
+              m_module->GetFileSpec().GetCString(), raw_rs_info.str().c_str());
   }
 
   enum {

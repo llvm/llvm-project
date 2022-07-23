@@ -925,7 +925,7 @@ static int dumpObjectFiles(Debugger &Dbg) {
       for (size_t I = 0; I < Files.GetSize(); ++I) {
         AutoIndent Indent(Printer, 2);
         Printer.formatLine("Name: {0}",
-                           Files.GetFileSpecAtIndex(I).GetPath());
+                           Files.GetFileSpecAtIndex(I).GetCString());
       }
       Printer.NewLine();
     }

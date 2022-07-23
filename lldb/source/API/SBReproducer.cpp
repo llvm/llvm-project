@@ -136,8 +136,9 @@ bool SBReproducer::SetAutoGenerate(bool b) {
 const char *SBReproducer::GetPath() {
   LLDB_INSTRUMENT()
   ConstString path;
+  auto &r = Reproducer::Instance();
   if (FileSpec reproducer_path = Reproducer::Instance().GetReproducerPath())
-    path = ConstString(reproducer_path.GetPathAsConstString());
+    path = ConstString(r.GetReproducerPath().GetCString());
   return path.GetCString();
 }
 
