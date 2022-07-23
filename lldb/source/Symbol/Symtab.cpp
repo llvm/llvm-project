@@ -1137,7 +1137,7 @@ void Symtab::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
   }
 
   if (!symbol_indexes.empty()) {
-    llvm::sort(symbol_indexes.begin(), symbol_indexes.end());
+    llvm::sort(symbol_indexes);
     symbol_indexes.erase(
         std::unique(symbol_indexes.begin(), symbol_indexes.end()),
         symbol_indexes.end());
