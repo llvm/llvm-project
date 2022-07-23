@@ -974,7 +974,7 @@ public:
   /// This is a convenience function for code that uses aggregate return values
   /// as a vehicle for having multiple return values.
   ReturnInst *CreateAggregateRet(Value *const *retVals, unsigned N) {
-    Value *V = UndefValue::get(getCurrentFunctionReturnType());
+    Value *V = PoisonValue::get(getCurrentFunctionReturnType());
     for (unsigned i = 0; i != N; ++i)
       V = CreateInsertValue(V, retVals[i], i, "mrv");
     return Insert(ReturnInst::Create(Context, V));
