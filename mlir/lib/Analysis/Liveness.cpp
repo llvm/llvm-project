@@ -15,6 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -288,10 +289,9 @@ void Liveness::print(raw_ostream &os) const {
 
   auto printValueRefs = [&](const ValueSetT &values) {
     std::vector<Value> orderedValues(values.begin(), values.end());
-    std::sort(orderedValues.begin(), orderedValues.end(),
-              [&](Value left, Value right) {
-                return valueIds[left] < valueIds[right];
-              });
+    llvm::sort(orderedValues, [&](Value left, Value right) {
+      return valueIds[left] < valueIds[right];
+    });
     for (Value value : orderedValues)
       printValueRef(value);
   };
@@ -317,10 +317,9 @@ void Liveness::print(raw_ostream &os) const {
         printValueRef(result);
         os << ":";
         auto liveOperations = resolveLiveness(result);
-        std::sort(liveOperations.begin(), liveOperations.end(),
-                  [&](Operation *left, Operation *right) {
-                    return operationIds[left] < operationIds[right];
-                  });
+        llvm::sort(liveOperations, [&](Operation *left, Operation *right) {
+          return operationIds[left] < operationIds[right];
+        });
         for (Operation *operation : liveOperations) {
           os << "\n//     ";
           operation->print(os);

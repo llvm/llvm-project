@@ -3709,10 +3709,9 @@ Optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   for (auto &PHI : CreatedPHIs)
     SortedPHIs.push_back(PHI);
 
-  std::sort(
-      SortedPHIs.begin(), SortedPHIs.end(), [&](LDVSSAPhi *A, LDVSSAPhi *B) {
-        return BBToOrder[&A->getParent()->BB] < BBToOrder[&B->getParent()->BB];
-      });
+  llvm::sort(SortedPHIs, [&](LDVSSAPhi *A, LDVSSAPhi *B) {
+    return BBToOrder[&A->getParent()->BB] < BBToOrder[&B->getParent()->BB];
+  });
 
   for (auto &PHI : SortedPHIs) {
     ValueIDNum ThisBlockValueNum =

@@ -15,6 +15,7 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -650,8 +651,9 @@ void SearchableTableEmitter::collectTableEntries(
   SearchIndex Idx;
   std::copy(Table.Fields.begin(), Table.Fields.end(),
             std::back_inserter(Idx.Fields));
-  std::sort(Table.Entries.begin(), Table.Entries.end(),
-            [&](Record *LHS, Record *RHS) { return compareBy(LHS, RHS, Idx); });
+  llvm::sort(Table.Entries, [&](Record *LHS, Record *RHS) {
+    return compareBy(LHS, RHS, Idx);
+  });
 }
 
 void SearchableTableEmitter::run(raw_ostream &OS) {

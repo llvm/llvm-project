@@ -21,8 +21,8 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Refactoring.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include <algorithm>
 #include <string>
 
 namespace clang {
@@ -206,8 +206,7 @@ static void reorderFieldsInConstructor(
     return NewFieldsPositions[LHS->getMember()->getFieldIndex()] <
            NewFieldsPositions[RHS->getMember()->getFieldIndex()];
   };
-  std::sort(std::begin(NewWrittenInitializersOrder),
-            std::end(NewWrittenInitializersOrder), ByFieldNewPosition);
+  llvm::sort(NewWrittenInitializersOrder, ByFieldNewPosition);
   assert(OldWrittenInitializersOrder.size() ==
          NewWrittenInitializersOrder.size());
   for (unsigned i = 0, e = NewWrittenInitializersOrder.size(); i < e; ++i)

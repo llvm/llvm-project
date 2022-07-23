@@ -26,6 +26,7 @@
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -683,7 +684,7 @@ static void getProducerCandidates(unsigned dstId, MemRefDependenceGraph *mdg,
       srcIdCandidates.push_back(srcNode->id);
   }
 
-  std::sort(srcIdCandidates.begin(), srcIdCandidates.end());
+  llvm::sort(srcIdCandidates);
   srcIdCandidates.erase(
       std::unique(srcIdCandidates.begin(), srcIdCandidates.end()),
       srcIdCandidates.end());
