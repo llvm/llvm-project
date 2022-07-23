@@ -1128,7 +1128,7 @@ public:
   /// Determine whether this is a block-scope declaration with linkage.
   /// This will either be a local variable declaration declared 'extern', or a
   /// local function declaration.
-  bool isLocalExternDecl() {
+  bool isLocalExternDecl() const {
     return IdentifierNamespace & IDNS_LocalExtern;
   }
 
