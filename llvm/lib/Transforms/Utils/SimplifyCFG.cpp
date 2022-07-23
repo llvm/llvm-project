@@ -4851,7 +4851,7 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI, DomTreeUpdater *DTU) {
       PN.moveBefore(InsertPt);
       // Also, add a dummy incoming value for the original BB itself,
       // so that the PHI is well-formed until we drop said predecessor.
-      PN.addIncoming(UndefValue::get(PN.getType()), BB);
+      PN.addIncoming(PoisonValue::get(PN.getType()), BB);
     }
   }
 

@@ -31,7 +31,7 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   Value *Res = Builder.CreateSelect(Equal, Val, Orig);
   Builder.CreateStore(Res, Ptr);
 
-  Res = Builder.CreateInsertValue(UndefValue::get(CXI->getType()), Orig, 0);
+  Res = Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
   Res = Builder.CreateInsertValue(Res, Equal, 1);
 
   CXI->replaceAllUsesWith(Res);

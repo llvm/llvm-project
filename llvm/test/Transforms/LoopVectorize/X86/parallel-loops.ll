@@ -76,15 +76,15 @@ define void @parallel_loop(i32* nocapture %a, i32* nocapture %b) nounwind uwtabl
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4, !llvm.access.group !0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4, !llvm.access.group [[ACC_GRP0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP5]], align 4, !llvm.access.group !0
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP6]], align 4, !llvm.access.group !0
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP7]], align 4, !llvm.access.group !0
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP8]], align 4, !llvm.access.group !0
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP5]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP6]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP7]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP8]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP11]] to i64
@@ -94,19 +94,19 @@ define void @parallel_loop(i32* nocapture %a, i32* nocapture %b) nounwind uwtabl
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    store i32 [[TMP21]], i32* [[TMP17]], align 4, !llvm.access.group !1
+; CHECK-NEXT:    store i32 [[TMP21]], i32* [[TMP17]], align 4, !llvm.access.group [[ACC_GRP1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    store i32 [[TMP22]], i32* [[TMP18]], align 4, !llvm.access.group !1
+; CHECK-NEXT:    store i32 [[TMP22]], i32* [[TMP18]], align 4, !llvm.access.group [[ACC_GRP1]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 2
-; CHECK-NEXT:    store i32 [[TMP23]], i32* [[TMP19]], align 4, !llvm.access.group !1
+; CHECK-NEXT:    store i32 [[TMP23]], i32* [[TMP19]], align 4, !llvm.access.group [[ACC_GRP1]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 3
-; CHECK-NEXT:    store i32 [[TMP24]], i32* [[TMP20]], align 4, !llvm.access.group !1
+; CHECK-NEXT:    store i32 [[TMP24]], i32* [[TMP20]], align 4, !llvm.access.group [[ACC_GRP1]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = or i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i32* [[TMP26]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP27]], align 4, !llvm.access.group !0
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP27]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = bitcast i32* [[TMP5]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD1]], <4 x i32>* [[TMP28]], align 4, !llvm.access.group !0
+; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD1]], <4 x i32>* [[TMP28]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
@@ -115,7 +115,7 @@ define void @parallel_loop(i32* nocapture %a, i32* nocapture %b) nounwind uwtabl
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -156,16 +156,16 @@ define void @mixed_metadata(i32* nocapture %a, i32* nocapture %b) nounwind uwtab
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4, !llvm.access.group !7
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP7:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4, !llvm.access.group !7
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4, !llvm.access.group [[ACC_GRP7]]
 ; CHECK-NEXT:    [[IDXPROM3:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[IDXPROM3]]
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[ARRAYIDX4]], align 4, !llvm.access.group !8
+; CHECK-NEXT:    store i32 [[TMP0]], i32* [[ARRAYIDX4]], align 4, !llvm.access.group [[ACC_GRP8:![0-9]+]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4, !llvm.access.group !7
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ARRAYIDX2]], align 4, !llvm.access.group !7
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ARRAYIDX2]], align 4, !llvm.access.group [[ACC_GRP7]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP3]], 512
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
