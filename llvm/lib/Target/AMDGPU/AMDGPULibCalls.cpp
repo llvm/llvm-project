@@ -694,7 +694,6 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     return false;
 
   int const sz = (int)tr.size();
-  const TableEntry * const ftbl = tr.data();
   Value *opr0 = CI->getArgOperand(0);
 
   if (getVecSize(FInfo) > 1) {
@@ -706,8 +705,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
         assert(eltval && "Non-FP arguments in math function!");
         bool found = false;
         for (int i=0; i < sz; ++i) {
-          if (eltval->isExactlyValue(ftbl[i].input)) {
-            DVal.push_back(ftbl[i].result);
+          if (eltval->isExactlyValue(tr[i].input)) {
+            DVal.push_back(tr[i].result);
             found = true;
             break;
           }
@@ -738,8 +737,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     // Scalar version
     if (ConstantFP *CF = dyn_cast<ConstantFP>(opr0)) {
       for (int i = 0; i < sz; ++i) {
-        if (CF->isExactlyValue(ftbl[i].input)) {
-          Value *nval = ConstantFP::get(CF->getType(), ftbl[i].result);
+        if (CF->isExactlyValue(tr[i].input)) {
+          Value *nval = ConstantFP::get(CF->getType(), tr[i].result);
           LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
           replaceCall(nval);
           return true;
