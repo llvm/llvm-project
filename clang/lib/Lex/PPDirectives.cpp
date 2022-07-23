@@ -1261,7 +1261,16 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIncludeNextDirective(SavedHash.getLocation(), Result);
 
     case tok::pp_warning:
-      Diag(Result, diag::ext_pp_warning_directive);
+      if (LangOpts.CPlusPlus)
+        Diag(Result, LangOpts.CPlusPlus2b
+                         ? diag::warn_cxx2b_compat_warning_directive
+                         : diag::ext_pp_warning_directive)
+            << /*C++2b*/ 1;
+      else
+        Diag(Result, LangOpts.C2x ? diag::warn_c2x_compat_warning_directive
+                                  : diag::ext_pp_warning_directive)
+            << /*C2x*/ 0;
+
       return HandleUserDiagnosticDirective(Result, true);
     case tok::pp_ident:
       return HandleIdentSCCSDirective(Result);
