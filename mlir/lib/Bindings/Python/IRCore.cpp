@@ -785,8 +785,7 @@ py::tuple PyDiagnostic::getNotes() {
   materializedNotes = py::tuple(numNotes);
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
-    py::object pyNoteDiag = py::cast(PyDiagnostic(noteDiag));
-    PyTuple_SET_ITEM(materializedNotes->ptr(), i, pyNoteDiag.ptr());
+    materializedNotes.value()[i] = PyDiagnostic(noteDiag);
   }
   return *materializedNotes;
 }

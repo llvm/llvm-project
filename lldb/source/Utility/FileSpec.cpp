@@ -330,29 +330,17 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
-void FileSpec::SetDirectory(ConstString directory) {
-  m_directory = directory;
-}
+// Directory string get accessor.
+ConstString &FileSpec::GetDirectory() { return m_directory; }
 
-void FileSpec::SetDirectory(llvm::StringRef directory) {
-  m_directory = ConstString(directory);
-}
+// Directory string const get accessor.
+ConstString FileSpec::GetDirectory() const { return m_directory; }
 
-void FileSpec::SetFilename(ConstString filename) {
-  m_filename = filename;
-}
+// Filename string get accessor.
+ConstString &FileSpec::GetFilename() { return m_filename; }
 
-void FileSpec::SetFilename(llvm::StringRef filename) {
-  m_filename = ConstString(filename);
-}
-
-void FileSpec::ClearFilename() {
-  m_filename.Clear();
-}
-
-void FileSpec::ClearDirectory() {
-  m_directory.Clear();
-}
+// Filename string const get accessor.
+ConstString FileSpec::GetFilename() const { return m_filename; }
 
 // Extract the directory and path into a fixed buffer. This is needed as the
 // directory and path are stored in separate string values.
@@ -372,8 +360,8 @@ std::string FileSpec::GetPath(bool denormalize) const {
   return static_cast<std::string>(result);
 }
 
-ConstString FileSpec::GetPathAsConstString(bool denormalize) const {
-  return ConstString{GetPath(denormalize)};
+const char *FileSpec::GetCString(bool denormalize) const {
+  return ConstString{GetPath(denormalize)}.AsCString(nullptr);
 }
 
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
@@ -488,7 +476,7 @@ bool FileSpec::IsRelative() const {
 }
 
 bool FileSpec::IsAbsolute() const {
-llvm::SmallString<64> current_path;
+  llvm::SmallString<64> current_path;
   GetPath(current_path, false);
 
   // Early return if the path is empty.

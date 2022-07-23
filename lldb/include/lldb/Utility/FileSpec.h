@@ -216,38 +216,29 @@ public:
 
   Style GetPathStyle() const;
 
+  /// Directory string get accessor.
+  ///
+  /// \return
+  ///     A reference to the directory string object.
+  ConstString &GetDirectory();
+
   /// Directory string const get accessor.
   ///
   /// \return
   ///     A const reference to the directory string object.
-  const ConstString &GetDirectory() const { return m_directory; }
+  ConstString GetDirectory() const;
 
-  /// Directory string set accessor.
+  /// Filename string get accessor.
   ///
-  /// \param[in] directory
-  ///     The value to replace the directory with.
-  void SetDirectory(ConstString directory);
-  void SetDirectory(llvm::StringRef directory);
-
-  /// Clear the directory in this object.
-  void ClearDirectory();
-
+  /// \return
+  ///     A reference to the filename string object.
+  ConstString &GetFilename();
 
   /// Filename string const get accessor.
   ///
   /// \return
   ///     A const reference to the filename string object.
-  const ConstString &GetFilename() const { return m_filename; }
-
-  /// Filename string set accessor.
-  ///
-  /// \param[in] filename
-  ///     The const string to replace the directory with.
-  void SetFilename(ConstString filename);
-  void SetFilename(llvm::StringRef filename);
-
-  /// Clear the filename in this object.
-  void ClearFilename();
+  ConstString GetFilename() const;
 
   /// Returns true if the filespec represents an implementation source file
   /// (files with a ".c", ".cpp", ".m", ".mm" (many more) extension).
@@ -308,13 +299,7 @@ public:
   ///     concatenated.
   std::string GetPath(bool denormalize = true) const;
 
-  /// Get the full path as a ConstString.
-  ///
-  /// This method should only be used when you need a ConstString or the
-  /// const char * from a ConstString to ensure permanent lifetime of C string.
-  /// Anyone needing the path temporarily should use the GetPath() method that
-  /// returns a std:string.
-  ConstString GetPathAsConstString(bool denormalize = true) const;
+  const char *GetCString(bool denormalize = true) const;
 
   /// Extract the full path to the file.
   ///

@@ -948,9 +948,7 @@ public:
     if (!targetStrides)
       return failure();
     // Only support static strides for now, regardless of contiguity.
-    if (llvm::any_of(*targetStrides, [](int64_t stride) {
-          return ShapedType::isDynamicStrideOrOffset(stride);
-        }))
+    if (llvm::any_of(*targetStrides, ShapedType::isDynamicStrideOrOffset))
       return failure();
 
     auto int64Ty = IntegerType::get(rewriter.getContext(), 64);

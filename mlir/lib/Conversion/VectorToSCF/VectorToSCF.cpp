@@ -880,9 +880,8 @@ struct UnrollTransferReadConversion
   void getInsertionIndices(TransferReadOp xferOp,
                            SmallVector<int64_t, 8> &indices) const {
     if (auto insertOp = getInsertOp(xferOp)) {
-      llvm::for_each(insertOp.getPosition(), [&](Attribute attr) {
+      for (Attribute attr : insertOp.getPosition())
         indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
-      });
     }
   }
 
@@ -1008,9 +1007,8 @@ struct UnrollTransferWriteConversion
   void getExtractionIndices(TransferWriteOp xferOp,
                             SmallVector<int64_t, 8> &indices) const {
     if (auto extractOp = getExtractOp(xferOp)) {
-      llvm::for_each(extractOp.getPosition(), [&](Attribute attr) {
+      for (Attribute attr : extractOp.getPosition())
         indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
-      });
     }
   }
 

@@ -7,14 +7,14 @@
   !DEF: /MainProgram1/b (Implicit) ObjectEntity REAL(4)
   b = 2
   !$omp parallel  private(a) shared(b)
-  !DEF: /MainProgram1/Block1/a (OmpPrivate) HostAssoc REAL(4)
+  !DEF: /MainProgram1/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(4)
   a = 3.
   !REF: /MainProgram1/b
   b = 4
   !$omp parallel  private(b) shared(a)
-  !REF: /MainProgram1/Block1/a
+  !REF: /MainProgram1/OtherConstruct1/a
   a = 5.
-  !DEF: /MainProgram1/Block1/Block1/b (OmpPrivate) HostAssoc REAL(4)
+  !DEF: /MainProgram1/OtherConstruct1/OtherConstruct1/b (OmpPrivate) HostAssoc REAL(4)
   b = 6
   !$omp end parallel
   !$omp end parallel

@@ -243,14 +243,26 @@ DEFINE_REAL_PTHREAD_FUNCTIONS
 
 #if ASAN_INTERCEPT_SWAPCONTEXT
 static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
+  // Only clear if we know the stack. This should be true only for contexts
+  // created with makecontext().
+  if (!ssize)
+    return;
   // Align to page size.
   uptr PageSize = GetPageSizeCached();
   uptr bottom = RoundDownTo(stack, PageSize);
+  if (!AddrIsInMem(bottom))
+    return;
   ssize += stack - bottom;
   ssize = RoundUpTo(ssize, PageSize);
-  static const uptr kMaxSaneContextStackSize = 1 << 22;  // 4 Mb
-  if (AddrIsInMem(bottom) && ssize && ssize <= kMaxSaneContextStackSize)
-    PoisonShadow(bottom, ssize, 0);
+  PoisonShadow(bottom, ssize, 0);
+}
+
+INTERCEPTOR(int, getcontext, struct ucontext_t *ucp) {
+  // API does not requires to have ucp clean, and sets only part of fields. We
+  // use ucp->uc_stack to unpoison new stack. We prefer to have zeroes then
+  // uninitialized bytes.
+  ResetContextStack(ucp);
+  return REAL(getcontext)(ucp);
 }
 
 INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
@@ -266,6 +278,10 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
   uptr stack, ssize;
   ReadContextStack(ucp, &stack, &ssize);
   ClearShadowMemoryForContextStack(stack, ssize);
+
+  // See getcontext interceptor.
+  ResetContextStack(oucp);
+
 #    if __has_attribute(__indirect_return__) && \
         (defined(__x86_64__) || defined(__i386__))
   int (*real_swapcontext)(struct ucontext_t *, struct ucontext_t *)
@@ -643,6 +659,7 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(longjmp);
 
 #if ASAN_INTERCEPT_SWAPCONTEXT
+  ASAN_INTERCEPT_FUNC(getcontext);
   ASAN_INTERCEPT_FUNC(swapcontext);
 #endif
 #if ASAN_INTERCEPT__LONGJMP

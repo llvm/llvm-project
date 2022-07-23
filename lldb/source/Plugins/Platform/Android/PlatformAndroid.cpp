@@ -174,7 +174,7 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   FileSpec source_spec(source.GetPath(false), FileSpec::Style::posix);
   if (source_spec.IsRelative())
     source_spec = GetRemoteWorkingDirectory().CopyByAppendingPathComponent(
-        source_spec.GetPathAsConstString(false).GetStringRef());
+        source_spec.GetCString(false));
 
   Status error;
   auto sync_service = GetSyncService(error);
@@ -189,13 +189,13 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   if (mode != 0)
     return sync_service->PullFile(source_spec, destination);
 
-  std::string source_file = source_spec.GetPath(false);
+  auto source_file = source_spec.GetCString(false);
 
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
-            source_file.c_str());
+            source_file);
 
-  if (strchr(source_file.c_str(), '\'') != nullptr)
+  if (strchr(source_file, '\'') != nullptr)
     return Status("Doesn't support single-quotes in filenames");
 
   // mode == 0 can signify that adbd cannot access the file due security
@@ -203,7 +203,7 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   AdbClient adb(m_device_id);
 
   char cmd[PATH_MAX];
-  snprintf(cmd, sizeof(cmd), "cat '%s'", source_file.c_str());
+  snprintf(cmd, sizeof(cmd), "cat '%s'", source_file);
 
   return adb.ShellToFile(cmd, minutes(1), destination);
 }
@@ -217,7 +217,7 @@ Status PlatformAndroid::PutFile(const FileSpec &source,
   FileSpec destination_spec(destination.GetPath(false), FileSpec::Style::posix);
   if (destination_spec.IsRelative())
     destination_spec = GetRemoteWorkingDirectory().CopyByAppendingPathComponent(
-        destination_spec.GetPath(false));
+        destination_spec.GetCString(false));
 
   // TODO: Set correct uid and gid on remote file.
   Status error;
@@ -325,8 +325,8 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
   // Execute oatdump on the remote device to generate a file with symtab
   StreamString command;
   command.Printf("oatdump --symbolize=%s --output=%s",
-                 module_sp->GetPlatformFileSpec().GetPath(false).c_str(),
-                 symfile_platform_filespec.GetPath(false).c_str());
+                 module_sp->GetPlatformFileSpec().GetCString(false),
+                 symfile_platform_filespec.GetCString(false));
   error = adb.Shell(command.GetData(), minutes(1), nullptr);
   if (error.Fail())
     return Status("Oatdump failed: %s", error.AsCString());

@@ -260,7 +260,7 @@ FileSpec ScriptInterpreterPython::GetPythonDir() {
 #else
     ComputePythonDir(path);
 #endif
-    spec.SetDirectory(path);
+    spec.GetDirectory().SetString(path);
     return spec;
   }();
   return g_spec;

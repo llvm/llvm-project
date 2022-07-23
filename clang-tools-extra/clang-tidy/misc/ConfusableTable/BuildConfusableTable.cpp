@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <algorithm>
 
 using namespace llvm;
 
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
     Entries.emplace_back(CodePoint, To);
   }
-  std::sort(Entries.begin(), Entries.end());
+  llvm::sort(Entries);
 
   unsigned LargestValue =
       std::max_element(Entries.begin(), Entries.end(),
