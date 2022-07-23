@@ -13,8 +13,11 @@ Enumerators:
 Tags:
 - Name: NSSomeEnumOptions
   SwiftName: SomeEnum.Options
-- Name: Struct
-  SwiftName: SwiftStruct
+- Name: GlobalStruct
   Methods:
   - Name: 'method'
-    SwiftName: swiftMethod()
+    SwiftName: globalMethod()
+- Name: ParentNS.ChildNS.ParentStruct.ChildStruct
+  Methods:
+    - Name: 'method'
+      SwiftName: nestedMethod()

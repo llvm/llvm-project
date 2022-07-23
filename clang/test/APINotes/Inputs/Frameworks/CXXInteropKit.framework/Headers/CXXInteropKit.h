@@ -22,6 +22,21 @@ typedef NS_OPTIONS(NSUInteger, NSSomeEnumOptions) {
 	NSSomeEnumWithBlue,
 };
 
-struct Struct {
+struct GlobalStruct {
+  int x;
   void method() {}
 };
+
+namespace ParentNS {
+namespace ChildNS {
+
+struct ParentStruct {
+  int x;
+  struct ChildStruct {
+    int y;
+    void method() {}
+  };
+};
+
+}
+}
