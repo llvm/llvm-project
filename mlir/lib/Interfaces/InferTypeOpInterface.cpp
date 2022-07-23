@@ -100,10 +100,7 @@ bool ShapeAdaptor::hasStaticShape() const {
     return true;
   }
   auto *stc = val.get<ShapedTypeComponents *>();
-  for (int64_t dim : stc->getDims())
-    if (ShapedType::isDynamic(dim))
-      return false;
-  return true;
+  return llvm::none_of(stc->getDims(), ShapedType::isDynamic);
 }
 
 int64_t ShapeAdaptor::getNumElements() const {
