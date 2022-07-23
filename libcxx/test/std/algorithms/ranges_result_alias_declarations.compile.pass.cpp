@@ -43,7 +43,7 @@ static_assert(std::is_same_v<in_out_result<int, long>, uninitialized_copy_result
 static_assert(std::is_same_v<in_out_result<int, long>, uninitialized_copy_n_result<int, long>>);
 static_assert(std::is_same_v<in_out_result<int, long>, uninitialized_move_result<int, long>>);
 static_assert(std::is_same_v<in_out_result<int, long>, uninitialized_move_n_result<int, long>>);
-// static_assert(std::is_same_v<in_out_result<int, long>, unique_copy_result<int, long>>);
+static_assert(std::is_same_v<in_out_result<int, long>, unique_copy_result<int, long>>);
 
 static_assert(std::is_same_v<in_in_out_result<int, long, char>, binary_transform_result<int, long, char>>);
 static_assert(std::is_same_v<in_in_out_result<int, long, char>, merge_result<int, long, char>>);
