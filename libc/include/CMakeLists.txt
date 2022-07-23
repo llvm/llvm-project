@@ -16,6 +16,17 @@ add_gen_header(
 )
 
 add_gen_header(
+  dirent
+  DEF_FILE dirent.h.def
+  GEN_HDR dirent.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.DIR
+    .llvm-libc-types.ino_t
+    .llvm-libc-types.struct_dirent
+)
+
+add_gen_header(
   fcntl
   DEF_FILE fcntl.h.def
   GEN_HDR fcntl.h

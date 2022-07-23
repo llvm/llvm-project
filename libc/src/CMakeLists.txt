@@ -9,6 +9,7 @@ add_subdirectory(string)
 add_subdirectory(stdlib)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(dirent)
   add_subdirectory(fcntl)
   add_subdirectory(pthread)
   add_subdirectory(sys)
