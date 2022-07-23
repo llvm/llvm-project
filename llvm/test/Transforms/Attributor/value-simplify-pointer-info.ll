@@ -2674,6 +2674,7 @@ define i32 @static_global_not_simplifiable_2(i32 %cnd) {
 ; IS__TUNIT_NPM-NEXT:    store i32 1, i32* @Flag4, align 4, !tbaa [[TBAA3]]
 ; IS__TUNIT_NPM-NEXT:    call void @sync() #[[ATTR14:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    [[I:%.*]] = load i32, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; IS__TUNIT_NPM-NEXT:    store i32 2, i32* @Flag4, align 4, !tbaa [[TBAA3]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[I]]
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@static_global_not_simplifiable_2
@@ -2691,6 +2692,7 @@ define i32 @static_global_not_simplifiable_2(i32 %cnd) {
 ; IS__CGSCC_NPM-NEXT:    store i32 1, i32* @Flag4, align 4, !tbaa [[TBAA3]]
 ; IS__CGSCC_NPM-NEXT:    call void @sync() #[[ATTR16:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = load i32, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; IS__CGSCC_NPM-NEXT:    store i32 2, i32* @Flag4, align 4, !tbaa [[TBAA3]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[I]]
 ;
 entry:
