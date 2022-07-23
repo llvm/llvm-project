@@ -2054,7 +2054,7 @@ void arith::DelinearizeIndexOp::build(OpBuilder &builder,
   SmallVector<Value> basisValues =
       llvm::to_vector(llvm::map_range(basis, [&](OpFoldResult ofr) -> Value {
         Optional<int64_t> staticDim = getConstantIntValue(ofr);
-        if (staticDim.hasValue())
+        if (staticDim.has_value())
           return builder.create<arith::ConstantIndexOp>(result.location,
                                                         *staticDim);
         return ofr.dyn_cast<Value>();
