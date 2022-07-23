@@ -469,6 +469,7 @@ C2x Feature Support
   support for functions without prototypes, which no longer exist in C2x.
 - Implemented `WG14 N2841 No function declarators without prototypes <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2841.htm>`_
   and `WG14 N2432 Remove support for function definitions with identifier lists <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2432.pdf>`_.
+- Implemented `WG14 N2836 Identifier Syntax using Unicode Standard Annex 31 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2836.pdf>`_.
 
 C++ Language Changes in Clang
 -----------------------------
