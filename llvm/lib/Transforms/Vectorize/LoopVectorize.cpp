@@ -1657,10 +1657,6 @@ private:
   InstructionCost getScalarizationOverhead(Instruction *I,
                                            ElementCount VF) const;
 
-  /// Returns whether the instruction is a load or store and will be a emitted
-  /// as a vector operation.
-  bool isConsecutiveLoadOrStore(Instruction *I);
-
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
@@ -7307,14 +7303,6 @@ Pass *createLoopVectorizePass(bool InterleaveOnlyWhenForced,
 }
 
 } // end namespace llvm
-
-bool LoopVectorizationCostModel::isConsecutiveLoadOrStore(Instruction *Inst) {
-  // Check if the pointer operand of a load or store instruction is
-  // consecutive.
-  if (auto *Ptr = getLoadStorePointerOperand(Inst))
-    return Legal->isConsecutivePtr(getLoadStoreType(Inst), Ptr);
-  return false;
-}
 
 void LoopVectorizationCostModel::collectValuesToIgnore() {
   // Ignore ephemeral values.
