@@ -1680,17 +1680,17 @@ void ObjCImageInfoSection::finalizeContents() {
     ImageInfo inputInfo = parseImageInfo(file);
     info.hasCategoryClassProperties &= inputInfo.hasCategoryClassProperties;
 
-    if (inputInfo.swiftVersion != 0) {
-      if (info.swiftVersion != 0 &&
-          info.swiftVersion != inputInfo.swiftVersion) {
-        error("Swift version mismatch: " + toString(firstFile) +
-              " has version " + swiftVersionString(info.swiftVersion) +
-              " but " + toString(file) + " has version " +
-              swiftVersionString(inputInfo.swiftVersion));
-      } else {
-        info.swiftVersion = inputInfo.swiftVersion;
-        firstFile = file;
-      }
+    // swiftVersion 0 means no Swift is present, so no version checking required
+    if (inputInfo.swiftVersion == 0)
+      continue;
+
+    if (info.swiftVersion != 0 && info.swiftVersion != inputInfo.swiftVersion) {
+      error("Swift version mismatch: " + toString(firstFile) + " has version " +
+            swiftVersionString(info.swiftVersion) + " but " + toString(file) +
+            " has version " + swiftVersionString(inputInfo.swiftVersion));
+    } else {
+      info.swiftVersion = inputInfo.swiftVersion;
+      firstFile = file;
     }
   }
 }
