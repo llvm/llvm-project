@@ -1615,7 +1615,7 @@ public:
     return Name;
   }
 
-  const std::string getNameInitAsString() const {
+  std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
 
