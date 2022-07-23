@@ -57,3 +57,16 @@ int x;
 // For C++
 // pre-cpp2b-pedantic-warning@-7 {{use of a '#elifndef' directive is a C++2b extension}}
 // pre-cpp2b-compat-warning@-8 {{use of a '#elifndef' directive is incompatible with C++ standards before C++2b}}
+
+#warning foo
+// For C
+// pre-c2x-pedantic-warning@-2 {{#warning is a C2x extension}}
+// pre-c2x-pedantic-warning@-3 {{foo}}
+// pre-c2x-compat-warning@-4 {{#warning is incompatible with C standards before C2x}}
+// pre-c2x-compat-warning@-5 {{foo}}
+
+// For C++
+// pre-cpp2b-pedantic-warning@-8 {{#warning is a C++2b extension}}
+// pre-cpp2b-pedantic-warning@-9 {{foo}}
+// pre-cpp2b-compat-warning@-10 {{#warning is incompatible with C++ standards before C++2b}}
+// pre-cpp2b-compat-warning@-11 {{foo}}
