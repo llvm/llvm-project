@@ -768,9 +768,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   RenameResult Result;
   Result.Target = CurrentIdentifier;
   Edit MainFileEdits = Edit(MainFileCode, std::move(*MainFileRenameEdit));
-  llvm::for_each(MainFileEdits.asTextEdits(), [&Result](const TextEdit &TE) {
+  for (const TextEdit &TE : MainFileEdits.asTextEdits())
     Result.LocalChanges.push_back(TE.range);
-  });
 
   // return the main file edit if this is a within-file rename or the symbol
   // being renamed is function local.
