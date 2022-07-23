@@ -29,25 +29,56 @@
 namespace clang {
 namespace pseudo {
 namespace cxx {
-// Symbol represents nonterminal symbols in the C++ grammar.
-// It provides a simple uniform way to access a particular nonterminal.
-enum class Symbol : SymbolID {
+
+// We want enums to be scoped but implicitly convertible to RuleID etc.
+// So create regular (unscoped) enums inside subnamespaces of `detail`.
+// Then add aliases for them outside `detail`.
+namespace detail {
+namespace symbols {
+enum Symbol : SymbolID {
 #define NONTERMINAL(X, Y) X = Y,
 #include "CXXSymbols.inc"
 #undef NONTERMINAL
 };
+} // namespace symbols
 
-enum class Rule : RuleID {
-#define RULE(X, Y) X = Y,
-#include "CXXSymbols.inc"
-#undef RULE
-};
-
-enum class Extension : ExtensionID {
+namespace extensions {
+enum Extension : ExtensionID {
 #define EXTENSION(X, Y) X = Y,
 #include "CXXSymbols.inc"
 #undef EXTENSION
 };
+} // namespace extensions
+
+namespace rules {
+// For each symbol we close the last symbol's enum+namespace and open new ones.
+// We need a dummy namespace+enum so that this works for the first rule.
+namespace dummy {
+enum Dummy {
+//clang-format off
+#define NONTERMINAL(NAME, ID) \
+};                            \
+}                             \
+namespace NAME {              \
+enum Rule : RuleID {
+//clang-format on
+#define RULE(LHS, RHS, ID) RHS = ID,
+#include "CXXSymbols.inc"
+};
+}
+} // namespace rules
+} // namespace detail
+
+// Symbol represents nonterminal symbols in the C++ grammar.
+// It provides a simple uniform way to access a particular nonterminal.
+using Symbol = detail::symbols::Symbol;
+
+using Extension = detail::extensions::Extension;
+
+namespace rule {
+#define NONTERMINAL(NAME, ID) using NAME = detail::rules::NAME::Rule;
+#include "CXXSymbols.inc"
+} // namespace rule
 
 // Returns the Language for the cxx.bnf grammar.
 const Language &getLanguage();
