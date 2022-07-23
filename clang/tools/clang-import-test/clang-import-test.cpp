@@ -230,8 +230,9 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
   return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, CI.getHeaderSearchOpts(),
-      CI.getPreprocessorOpts(), CI.getCodeGenOpts(), LLVMCtx));
+      CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
+      CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
+      LLVMCtx));
 }
 } // namespace init_convenience
 
