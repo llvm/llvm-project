@@ -4034,9 +4034,7 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
                      options::OPT_fno_spell_checking);
 }
 
-enum class DwarfFissionKind { None, Split, Single };
-
-static DwarfFissionKind getDebugFissionKind(const Driver &D,
+DwarfFissionKind tools::getDebugFissionKind(const Driver &D,
                                             const ArgList &Args, Arg *&Arg) {
   Arg = Args.getLastArg(options::OPT_gsplit_dwarf, options::OPT_gsplit_dwarf_EQ,
                         options::OPT_gno_split_dwarf);
