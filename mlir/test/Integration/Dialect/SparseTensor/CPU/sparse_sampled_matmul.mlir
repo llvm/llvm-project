@@ -78,7 +78,7 @@ module {
     %x0 = bufferization.alloc_tensor(%c5, %c5) : tensor<?x?xf32>
     %a, %b, %x = scf.for %i = %c0 to %c5 step %c1 iter_args(%a1 = %a0, %b1 = %b0, %x1 = %x0)
         -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) {
-      %x2 = scf.for %j = %c0 to %c5 step %c1 iter_args(%x3 = %x0) -> (tensor<?x?xf32>) {
+      %x2 = scf.for %j = %c0 to %c5 step %c1 iter_args(%x3 = %x1) -> (tensor<?x?xf32>) {
         %x4 = tensor.insert %d0 into %x3[%i, %j] : tensor<?x?xf32>
         scf.yield %x4 : tensor<?x?xf32>
       }
