@@ -90,22 +90,20 @@ private:
                           MachineRegisterInfo &MRI) const;
   bool selectIntrinsic(MachineInstr &I, MachineBasicBlock &MBB,
                        MachineRegisterInfo &MRI);
-  bool selectDiv(MachineInstr &I, MachineBasicBlock &MBB,
-                 MachineRegisterInfo &MRI) const;
 
   bool isMC88110() const {
     return TII.getSubtarget().isMC88110();
   }
 
   bool useDivInstr() const {
-    return TII.getSubtarget().useDivInstr();
+    return TM.useDivInstr();
   }
 
   bool noZeroDivCheck() const {
-    return TII.getSubtarget().noZeroDivCheck();
+    return TM.noZeroDivCheck();
   }
 
-  //const M88kTargetMachine &TM;
+  const M88kTargetMachine &TM;
   const M88kInstrInfo &TII;
   const M88kRegisterInfo &TRI;
   const M88kRegisterBankInfo &RBI;
@@ -133,7 +131,7 @@ private:
 M88kInstructionSelector::M88kInstructionSelector(
     const M88kTargetMachine &TM, const M88kSubtarget &STI,
     const M88kRegisterBankInfo &RBI)
-    : InstructionSelector(), /*TM(TM),*/ TII(*STI.getInstrInfo()),
+    : InstructionSelector(), TM(TM), TII(*STI.getInstrInfo()),
       TRI(*STI.getRegisterInfo()), RBI(RBI),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
@@ -913,45 +911,6 @@ bool M88kInstructionSelector::selectIntrinsic(MachineInstr &I,
   return false;
 }
 
-bool M88kInstructionSelector::selectDiv(MachineInstr &I, MachineBasicBlock &MBB,
-                                        MachineRegisterInfo &MRI) const {
-  assert(I.getOpcode() == TargetOpcode::G_UDIV ||
-         I.getOpcode() == TargetOpcode::G_SDIV && "Unexpected G code");
-
-  bool Signed = I.getOpcode() == TargetOpcode::G_SDIV;
-  MachineInstr *MI = nullptr;
-  Register DstReg = I.getOperand(0).getReg();
-  Register DividendReg = I.getOperand(1).getReg();
-  Register DivisorReg = I.getOperand(2).getReg();
-
-  int64_t Divisor;
-  if (mi_match(DivisorReg, MRI, m_ICst(Divisor)) && isUInt<16>(Divisor)) {
-    const unsigned NewOpc = Signed ? M88k::DIVSri : M88k::DIVUri;
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
-             .addReg(DividendReg)
-             .addImm(Divisor);
-  } else {
-    const unsigned NewOpc = Signed ? M88k::DIVSrr : M88k::DIVUrr;
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
-             .addReg(DividendReg)
-             .addReg(DivisorReg);
-
-    if (!noZeroDivCheck() && !isMC88110()) {
-      if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
-        return false;
-
-      // Generate trap with exception number 503 if divisor is zero.
-      // TODO It may be good to bundle both instructions.
-      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::TCND))
-               .addImm(static_cast<int64_t>(CC0::EQ0))
-               .addReg(DivisorReg)
-               .addImm(503);
-    }
-  }
-  I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-}
-
 bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -1080,9 +1039,6 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return true;
 
   switch (I.getOpcode()) {
-  case TargetOpcode::G_UDIV:
-  case TargetOpcode::G_SDIV:
-    return selectDiv(I, MBB, MRI);
   case TargetOpcode::G_INTRINSIC:
     return selectIntrinsic(I, MBB, MRI);
   case TargetOpcode::G_GLOBAL_VALUE:

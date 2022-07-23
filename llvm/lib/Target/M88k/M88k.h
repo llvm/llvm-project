@@ -36,11 +36,13 @@ FunctionPass *createM88kPreLegalizerCombiner();
 FunctionPass *createM88kPostLegalizerCombiner(bool IsOptNone);
 FunctionPass *createM88kPostLegalizerLowering();
 FunctionPass *createM88kDelaySlotFiller();
+FunctionPass *createM88kDivInstr(const M88kTargetMachine &TM);
 
 void initializeM88kPreLegalizerCombinerPass(PassRegistry &Registry);
 void initializeM88kPostLegalizerCombinerPass(PassRegistry &Registry);
 void initializeM88kPostLegalizerLoweringPass(PassRegistry &Registry);
 void initializeM88kDelaySlotFillerPass(PassRegistry &Registry);
+void initializeM88kDivInstrPass(PassRegistry &Registry);
 
 } // end namespace llvm
 #endif

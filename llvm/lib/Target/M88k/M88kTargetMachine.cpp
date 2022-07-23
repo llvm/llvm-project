@@ -28,6 +28,16 @@
 using namespace llvm;
 
 static cl::opt<bool>
+    NoZeroDivCheck("m88k-no-check-zero-division", cl::Hidden,
+                   cl::desc("M88k: Don't trap on integer division by zero."),
+                   cl::init(false));
+
+static cl::opt<bool> UseDivInstr(
+    "m88k-use-div-instruction", cl::Hidden,
+    cl::desc("M88k: Use the div instruction for signed integer division."),
+    cl::init(false));
+
+static cl::opt<bool>
     BranchRelaxation("m88k-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
@@ -44,6 +54,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTarget() {
   initializeM88kPostLegalizerCombinerPass(PR);
   initializeM88kPostLegalizerLoweringPass(PR);
   initializeM88kDelaySlotFillerPass(PR);
+  initializeM88kDivInstrPass(PR);
 }
 
 namespace {
@@ -132,6 +143,9 @@ M88kTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+bool M88kTargetMachine::useDivInstr() const { return UseDivInstr; }
+bool M88kTargetMachine::noZeroDivCheck() const { return NoZeroDivCheck; }
+
 namespace {
 /// M88k Code Generator Pass Configuration Options.
 class M88kPassConfig : public TargetPassConfig {
@@ -143,6 +157,7 @@ public:
     return getTM<M88kTargetMachine>();
   }
 
+  void addMachineSSAOptimization() override;
   void addPreEmitPass() override;
 
   // GlobalISEL
@@ -157,6 +172,11 @@ public:
 
 TargetPassConfig *M88kTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new M88kPassConfig(*this, PM);
+}
+
+void M88kPassConfig::addMachineSSAOptimization() {
+  addPass(createM88kDivInstr(getTM<M88kTargetMachine>()));
+  TargetPassConfig::addMachineSSAOptimization();
 }
 
 void M88kPassConfig::addPreEmitPass() {

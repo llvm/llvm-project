@@ -430,10 +430,8 @@ let Predicates = [IsMC88110] in {
 defm : BinaryOpPat<"ADDU", add>;
 defm : BinaryOpPat<"SUBU", sub>;
 defm : BinaryOpPat<"MULU", mul>;
-// DIVU and DIVS require some special handling.
-// For now, don#t add patterns for both instructions.
-// TODO The trap could be inserted in a later path.
-//defm : BinaryOpPat<"DIVS", sdiv>;
+defm : BinaryOpPat<"DIVU", udiv>;
+defm : BinaryOpPat<"DIVS", sdiv>;
 //def : Pat<(umullohi GPR:$rs1, GPR:$rs2), (MULUrrd GPR:$rs1, GPR:$rs2)>;
 
 
@@ -878,6 +876,23 @@ let isTrap = 1 in {
   def TCND : F_TCND<(outs), (ins ccode:$m5, GPR:$rs1, Vec9:$vec9), "tcnd">;
   def TBNDi : F_TBNDIMM<(outs), (ins GPR:$rs1, imm32zx16:$imm16), "tbnd">;
   def TBND : F_TBND<(outs), (ins GPR:$rs1, GPR:$rs2), "tbnd">;
+
+  let isTerminator = 1, isCodeGenOnly = 1 in {
+    // Raises trap with vector 502 if bit 0 of %rs1 is not set. This is used to
+    // generate the trap after a zero division. Marked as terminator to allow
+    // instruction to be last of basic block.
+    def TRAP503 : InstM88k<(outs), (ins GPR:$rs1), "tb0", "0, $rs1, 503", []> {
+      bits<5>  b5;
+      bits<5>  rs1;
+      bits<9>  vec9;
+
+      let Inst{31-26} = 0b111100;
+      let Inst{25-21} = 0b00000;
+      let Inst{20-16} = rs1;
+      let Inst{15-9}  = 0b1101000;
+      let Inst{8-0}   = 0b111110111;
+    }
+  }
 }
 
 // Compares against zero use bcond instruction.

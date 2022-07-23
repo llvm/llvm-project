@@ -42,6 +42,12 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  // Returns true if signed division instruction should be used on MC88100.
+  bool useDivInstr() const;
+
+  // Returns true if check for zero division should be omitted on MC88100.
+  bool noZeroDivCheck() const;
 };
 
 } // end namespace llvm
