@@ -1534,8 +1534,9 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       // to register the unwind entry under same symbol.
       // This is not particularly efficient, but we should run into this case
       // infrequently (only when handling the output of `ld -r`).
-      funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
-                                   funcSym->value);
+      if (funcSym->isec)
+        funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
+                                     funcSym->value);
     } else {
       funcSym = findSymbolAtAddress(sections, funcAddr);
       ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);
