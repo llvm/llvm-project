@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/MathExtras.h"
@@ -600,6 +601,27 @@ private:
   std::unordered_map<uint32_t, uint64_t> literal4Map;
 };
 
+class ObjCImageInfoSection final : public SyntheticSection {
+public:
+  ObjCImageInfoSection();
+  bool isNeeded() const override { return !files.empty(); }
+  uint64_t getSize() const override { return 8; }
+  void addFile(const InputFile *file) {
+    assert(!file->objCImageInfo.empty());
+    files.push_back(file);
+  }
+  void finalizeContents();
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  struct ImageInfo {
+    uint8_t swiftVersion = 0;
+    bool hasCategoryClassProperties = false;
+  } info;
+  static ImageInfo parseImageInfo(const InputFile *);
+  std::vector<const InputFile *> files; // files with image info
+};
+
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
@@ -616,6 +638,7 @@ struct InStruct {
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
+  ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;
 };
 

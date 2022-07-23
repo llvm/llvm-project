@@ -363,6 +363,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       // have the same name without causing duplicate symbol errors. To avoid
       // spurious duplicate symbol errors, we do not parse these sections.
       // TODO: Evaluate whether the bitcode metadata is needed.
+    } else if (name == section_names::objCImageInfo &&
+               segname == segment_names::data) {
+      objCImageInfo = data;
     } else {
       if (name == section_names::addrSig)
         addrSigSection = sections.back();
