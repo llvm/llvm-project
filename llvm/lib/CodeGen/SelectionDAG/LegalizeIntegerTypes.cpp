@@ -2912,11 +2912,15 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
     if (N->getOpcode() == ISD::ADD) {
       Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
-      Hi = DAG.getNode(ISD::ADDCARRY, dl, VTList, HiOps);
+      Hi = DAG.computeKnownBits(HiOps[2]).isZero()
+               ? DAG.getNode(ISD::UADDO, dl, VTList, makeArrayRef(HiOps, 2))
+               : DAG.getNode(ISD::ADDCARRY, dl, VTList, HiOps);
     } else {
       Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
-      Hi = DAG.getNode(ISD::SUBCARRY, dl, VTList, HiOps);
+      Hi = DAG.computeKnownBits(HiOps[2]).isZero()
+               ? DAG.getNode(ISD::USUBO, dl, VTList, makeArrayRef(HiOps, 2))
+               : DAG.getNode(ISD::SUBCARRY, dl, VTList, HiOps);
     }
     return;
   }
