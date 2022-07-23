@@ -15,11 +15,11 @@ program ompdoschedule
   !REF: /ompdoschedule/b
   b = 10
   !$omp do  schedule(static,b-b)
-  !DEF: /ompdoschedule/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /ompdoschedule/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   !REF: /ompdoschedule/n
   do i = 2,n+1
     !REF: /ompdoschedule/y
-    !REF: /ompdoschedule/Block1/i
+    !REF: /ompdoschedule/OtherConstruct1/i
     !REF: /ompdoschedule/z
     !REF: /ompdoschedule/a
     y(i) = z(i-1) + a(i)

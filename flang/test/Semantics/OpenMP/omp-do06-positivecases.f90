@@ -12,7 +12,7 @@ program omp_do
   !DEF: /omp_do/k ObjectEntity INTEGER(4)
   integer i, j, k
   !$omp do  ordered
-    !DEF: /omp_do/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+    !DEF: /omp_do/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
     do i=1,10
       !$omp ordered
       !DEF: /my_func EXTERNAL (Subroutine) ProcEntity

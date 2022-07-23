@@ -6,17 +6,17 @@ subroutine s1
  !DEF: /s1/x ObjectEntity INTEGER(4)
  integer x
  block
-  !DEF: /s1/Block1/y ObjectEntity INTEGER(4)
+  !DEF: /s1/BlockConstruct1/y ObjectEntity INTEGER(4)
   integer y
   !REF: /s1/x
   x = 1
-  !REF: /s1/Block1/y
+  !REF: /s1/BlockConstruct1/y
   y = 2.0
  end block
  block
-  !DEF: /s1/Block2/y ObjectEntity REAL(4)
+  !DEF: /s1/BlockConstruct2/y ObjectEntity REAL(4)
   real y
-  !REF: /s1/Block2/y
+  !REF: /s1/BlockConstruct2/y
   y = 3.0
  end block
 end subroutine
@@ -45,13 +45,13 @@ subroutine s3
  !DEF: /s3/j ObjectEntity INTEGER(8)
  integer(kind=8) j
  block
-  !DEF: /s3/Block1/t DerivedType
+  !DEF: /s3/BlockConstruct1/t DerivedType
   type :: t
-   !DEF: /s3/Block1/t/x ObjectEntity REAL(4)
-   !DEF: /s3/Block1/t/ImpliedDos1/i (Implicit) ObjectEntity INTEGER(4)
+   !DEF: /s3/BlockConstruct1/t/x ObjectEntity REAL(4)
+   !DEF: /s3/BlockConstruct1/t/ImpliedDos1/i (Implicit) ObjectEntity INTEGER(4)
    real :: x(10) = [(i, i=1,10)]
-   !DEF: /s3/Block1/t/y ObjectEntity REAL(4)
-   !DEF: /s3/Block1/t/ImpliedDos2/j ObjectEntity INTEGER(8)
+   !DEF: /s3/BlockConstruct1/t/y ObjectEntity REAL(4)
+   !DEF: /s3/BlockConstruct1/t/ImpliedDos2/j ObjectEntity INTEGER(8)
    real :: y(10) = [(j, j=1,10)]
   end type
  end block
@@ -73,10 +73,10 @@ end subroutine
 !DEF: /s5 (Subroutine) Subprogram
 subroutine s5
  block
-  !DEF: /s5/Block1/x (Implicit) ObjectEntity REAL(4)
+  !DEF: /s5/BlockConstruct1/x (Implicit) ObjectEntity REAL(4)
   dimension :: x(2)
   block
-   !DEF: /s5/Block1/Block1/x (Implicit) ObjectEntity REAL(4)
+   !DEF: /s5/BlockConstruct1/BlockConstruct1/x (Implicit) ObjectEntity REAL(4)
    dimension :: x(3)
   end block
  end block
@@ -91,13 +91,13 @@ subroutine s6
   !DEF: /s6/k ObjectEntity INTEGER(4)
   integer i, j, k
   block
-    !DEF: /s6/Block1/i ASYNCHRONOUS, VOLATILE HostAssoc INTEGER(4)
+    !DEF: /s6/BlockConstruct1/i ASYNCHRONOUS, VOLATILE HostAssoc INTEGER(4)
     volatile :: i
-    !DEF: /s6/Block1/j ASYNCHRONOUS HostAssoc INTEGER(4)
+    !DEF: /s6/BlockConstruct1/j ASYNCHRONOUS HostAssoc INTEGER(4)
     asynchronous :: j
-    !REF: /s6/Block1/i
+    !REF: /s6/BlockConstruct1/i
     asynchronous :: i
-    !DEF: /s6/Block1/k TARGET (Implicit) ObjectEntity INTEGER(4)
+    !DEF: /s6/BlockConstruct1/k TARGET (Implicit) ObjectEntity INTEGER(4)
     target :: k
   end block
 end subroutine

@@ -14,11 +14,11 @@ program mm
   b = 2
  !$acc parallel present(c) firstprivate(b) private(a)
  !$acc loop
-  !DEF: /mm/Block1/i (AccPrivate, AccPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /mm/OtherConstruct1/i (AccPrivate, AccPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-   !DEF: /mm/Block1/a (AccPrivate) HostAssoc INTEGER(4)
-   !REF: /mm/Block1/i
-   !DEF: /mm/Block1/b (AccFirstPrivate) HostAssoc INTEGER(4)
+   !DEF: /mm/OtherConstruct1/a (AccPrivate) HostAssoc INTEGER(4)
+   !REF: /mm/OtherConstruct1/i
+   !DEF: /mm/OtherConstruct1/b (AccFirstPrivate) HostAssoc INTEGER(4)
    a(i) = b(i)
   end do
  !$acc end parallel

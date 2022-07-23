@@ -11,7 +11,7 @@ program omp_do1
   integer i, j, k, n
   !$omp threadprivate (k,n)
   !$omp do
-  !DEF: /omp_do1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_do1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
     !REF: /omp_do1/j
     do j=1,10

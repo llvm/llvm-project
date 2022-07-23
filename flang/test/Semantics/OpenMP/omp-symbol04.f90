@@ -9,12 +9,12 @@
   !REF: /MainProgram1/a
   a = 3.14
   !$omp parallel  private(a)
-  !DEF: /MainProgram1/Block1/a (OmpPrivate) HostAssoc REAL(8)
+  !DEF: /MainProgram1/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(8)
   a = 2.
   !$omp do  private(a)
-  !DEF: /MainProgram1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /MainProgram1/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-     !DEF: /MainProgram1/Block1/Block1/a (OmpPrivate) HostAssoc REAL(8)
+     !DEF: /MainProgram1/OtherConstruct1/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(8)
      a = 1.
   end do
   !$omp end parallel

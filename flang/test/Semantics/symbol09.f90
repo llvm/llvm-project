@@ -25,10 +25,10 @@ subroutine s2
  real a(10)
  !DEF: /s2/i ObjectEntity INTEGER(4)
  integer i
- !DEF: /s2/Block1/i ObjectEntity INTEGER(4)
+ !DEF: /s2/OtherConstruct1/i ObjectEntity INTEGER(4)
  do concurrent(i=1:10)
   !REF: /s2/a
-  !REF: /s2/Block1/i
+  !REF: /s2/OtherConstruct1/i
   a(i) = i
  end do
  !REF: /s2/i
@@ -104,14 +104,14 @@ subroutine s6
  integer(kind=8) j
  !DEF: /s6/a ObjectEntity INTEGER(4)
  integer :: a(5) = 1
- !DEF: /s6/Block1/i ObjectEntity INTEGER(4)
- !DEF: /s6/Block1/j (LocalityLocal) HostAssoc INTEGER(8)
- !DEF: /s6/Block1/k (Implicit, LocalityLocalInit) HostAssoc INTEGER(4)
-  !DEF: /s6/Block1/a (LocalityShared) HostAssoc INTEGER(4)
+ !DEF: /s6/OtherConstruct1/i ObjectEntity INTEGER(4)
+ !DEF: /s6/OtherConstruct1/j (LocalityLocal) HostAssoc INTEGER(8)
+ !DEF: /s6/OtherConstruct1/k (Implicit, LocalityLocalInit) HostAssoc INTEGER(4)
+  !DEF: /s6/OtherConstruct1/a (LocalityShared) HostAssoc INTEGER(4)
  do concurrent(integer::i=1:5)local(j)local_init(k)shared(a)
-  !REF: /s6/Block1/a
-  !REF: /s6/Block1/i
-  !REF: /s6/Block1/j
+  !REF: /s6/OtherConstruct1/a
+  !REF: /s6/OtherConstruct1/i
+  !REF: /s6/OtherConstruct1/j
   a(i) = j+1
  end do
 end subroutine
