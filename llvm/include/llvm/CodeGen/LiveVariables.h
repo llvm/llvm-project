@@ -219,8 +219,7 @@ public:
       return false;
 
     bool Removed = false;
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && MO.isKill() && MO.getReg() == Reg) {
         MO.setIsKill(false);
         Removed = true;
@@ -255,8 +254,7 @@ public:
       return false;
 
     bool Removed = false;
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
         MO.setIsDead(false);
         Removed = true;

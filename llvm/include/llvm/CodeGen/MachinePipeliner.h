@@ -333,9 +333,9 @@ public:
   NodeSet() = default;
   NodeSet(iterator S, iterator E) : Nodes(S, E), HasRecurrence(true) {
     Latency = 0;
-    for (unsigned i = 0, e = Nodes.size(); i < e; ++i) {
+    for (const SUnit *Node : Nodes) {
       DenseMap<SUnit *, unsigned> SuccSUnitLatency;
-      for (const SDep &Succ : Nodes[i]->Succs) {
+      for (const SDep &Succ : Node->Succs) {
         auto SuccSUnit = Succ.getSUnit();
         if (!Nodes.count(SuccSUnit))
           continue;
