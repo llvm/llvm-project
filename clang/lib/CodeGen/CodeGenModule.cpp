@@ -6973,3 +6973,31 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
     OS << getContext().getCUIDHash();
   }
 }
+
+void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
+  assert(DeferredDeclsToEmit.empty() &&
+         "Should have emitted all decls deferred to emit.");
+  assert(NewBuilder->DeferredDecls.empty() &&
+         "Newly created module should not have deferred decls");
+  NewBuilder->DeferredDecls = std::move(DeferredDecls);
+
+  assert(NewBuilder->DeferredVTables.empty() &&
+         "Newly created module should not have deferred vtables");
+  NewBuilder->DeferredVTables = std::move(DeferredVTables);
+
+  assert(NewBuilder->MangledDeclNames.empty() &&
+         "Newly created module should not have mangled decl names");
+  assert(NewBuilder->Manglings.empty() &&
+         "Newly created module should not have manglings");
+  NewBuilder->Manglings = std::move(Manglings);
+
+  assert(WeakRefReferences.empty() && "Not all WeakRefRefs have been applied");
+  NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
+
+  NewBuilder->TBAA = std::move(TBAA);
+
+  assert(NewBuilder->EmittedDeferredDecls.empty() &&
+         "Still have (unmerged) EmittedDeferredDecls deferred decls");
+
+  NewBuilder->EmittedDeferredDecls = std::move(EmittedDeferredDecls);
+}
