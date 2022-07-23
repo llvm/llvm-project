@@ -125,9 +125,9 @@ TEST(TBDv4, ReadFile) {
       Sym->isReexported() ? Reexports.emplace_back(std::move(temp))
                           : Exports.emplace_back(std::move(temp));
   }
-  llvm::sort(Exports.begin(), Exports.end());
-  llvm::sort(Reexports.begin(), Reexports.end());
-  llvm::sort(Undefineds.begin(), Undefineds.end());
+  llvm::sort(Exports);
+  llvm::sort(Reexports);
+  llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
       {SymbolKind::GlobalSymbol, "_symA", false, false},
@@ -296,9 +296,9 @@ TEST(TBDv4, ReadMultipleDocuments) {
       Sym->isReexported() ? Reexports.emplace_back(std::move(Temp))
                           : Exports.emplace_back(std::move(Temp));
   }
-  llvm::sort(Exports.begin(), Exports.end());
-  llvm::sort(Reexports.begin(), Reexports.end());
-  llvm::sort(Undefineds.begin(), Undefineds.end());
+  llvm::sort(Exports);
+  llvm::sort(Reexports);
+  llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
       {SymbolKind::GlobalSymbol, "_symA", false, false},

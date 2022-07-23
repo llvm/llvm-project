@@ -59,7 +59,7 @@ static void rank(std::vector<SymbolAndSignals> &Symbols,
   }
   // Sort by the gathered scores. Use file name as a tie breaker so we can
   // deduplicate.
-  llvm::sort(Symbols.begin(), Symbols.end(),
+  llvm::sort(Symbols,
              [&](const SymbolAndSignals &A, const SymbolAndSignals &B) {
                auto AS = Score[A.Symbol.getFilePath()];
                auto BS = Score[B.Symbol.getFilePath()];

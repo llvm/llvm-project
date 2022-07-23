@@ -544,7 +544,7 @@ static bool collectObjectSources(ObjectFile &Obj, DWARFContext &DICtx,
   }
 
   // Dedup and order the sources.
-  llvm::sort(Sources.begin(), Sources.end());
+  llvm::sort(Sources);
   Sources.erase(std::unique(Sources.begin(), Sources.end()), Sources.end());
 
   for (StringRef Name : Sources)

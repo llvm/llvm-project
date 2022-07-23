@@ -65,7 +65,7 @@ ArmUnwindInfo::ArmUnwindInfo(ObjectFile &objfile, SectionSP &arm_exidx,
 
   // Sort the entries in the exidx section. The entries should be sorted inside
   // the section but some old compiler isn't sorted them.
-  llvm::sort(m_exidx_entries.begin(), m_exidx_entries.end());
+  llvm::sort(m_exidx_entries);
 }
 
 ArmUnwindInfo::~ArmUnwindInfo() = default;
