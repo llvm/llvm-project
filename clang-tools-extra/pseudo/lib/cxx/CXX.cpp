@@ -111,42 +111,41 @@ const ForestNode &onlySymbol(SymbolID Kind,
 }
 
 bool isFunctionDeclarator(const ForestNode *Declarator) {
-  assert(Declarator->symbol() == (SymbolID)(cxx::Symbol::declarator));
+  assert(Declarator->symbol() == cxx::Symbol::declarator);
   bool IsFunction = false;
-  using cxx::Rule;
   while (true) {
     // not well-formed code, return the best guess.
     if (Declarator->kind() != ForestNode::Sequence)
       return IsFunction;
 
-    switch ((cxx::Rule)Declarator->rule()) {
-    case Rule::noptr_declarator_0declarator_id: // reached the bottom
+    switch (Declarator->rule()) {
+    case rule::noptr_declarator::declarator_id: // reached the bottom
       return IsFunction;
     // *X is a nonfunction (unless X is a function).
-    case Rule::ptr_declarator_0ptr_operator_1ptr_declarator:
+    case rule::ptr_declarator::ptr_operator__ptr_declarator:
       Declarator = Declarator->elements()[1];
       IsFunction = false;
       continue;
     // X() is a function (unless X is a pointer or similar).
-    case Rule::
-        declarator_0noptr_declarator_1parameters_and_qualifiers_2trailing_return_type:
-    case Rule::noptr_declarator_0noptr_declarator_1parameters_and_qualifiers:
+    case rule::declarator::
+        noptr_declarator__parameters_and_qualifiers__trailing_return_type:
+    case rule::noptr_declarator::noptr_declarator__parameters_and_qualifiers:
       Declarator = Declarator->elements()[0];
       IsFunction = true;
       continue;
     // X[] is an array (unless X is a pointer or function).
-    case Rule::
-        noptr_declarator_0noptr_declarator_1l_square_2constant_expression_3r_square:
-    case Rule::noptr_declarator_0noptr_declarator_1l_square_2r_square:
+    case rule::noptr_declarator::
+        noptr_declarator__L_SQUARE__constant_expression__R_SQUARE:
+    case rule::noptr_declarator::noptr_declarator__L_SQUARE__R_SQUARE:
       Declarator = Declarator->elements()[0];
       IsFunction = false;
       continue;
     // (X) is whatever X is.
-    case Rule::noptr_declarator_0l_paren_1ptr_declarator_2r_paren:
+    case rule::noptr_declarator::L_PAREN__ptr_declarator__R_PAREN:
       Declarator = Declarator->elements()[1];
       continue;
-    case Rule::ptr_declarator_0noptr_declarator:
-    case Rule::declarator_0ptr_declarator:
+    case rule::ptr_declarator::noptr_declarator:
+    case rule::declarator::ptr_declarator:
       Declarator = Declarator->elements()[0];
       continue;
 
@@ -173,13 +172,13 @@ bool hasExclusiveType(const ForestNode *N) {
   // FIXME: every time we apply this check, we walk the whole subtree.
   // Add per-node caching instead.
   while (true) {
-    assert(N->symbol() == (SymbolID)Symbol::decl_specifier_seq ||
-           N->symbol() == (SymbolID)Symbol::type_specifier_seq ||
-           N->symbol() == (SymbolID)Symbol::defining_type_specifier_seq ||
-           N->symbol() == (SymbolID)Symbol::decl_specifier ||
-           N->symbol() == (SymbolID)Symbol::type_specifier ||
-           N->symbol() == (SymbolID)Symbol::defining_type_specifier ||
-           N->symbol() == (SymbolID)Symbol::simple_type_specifier);
+    assert(N->symbol() == Symbol::decl_specifier_seq ||
+           N->symbol() == Symbol::type_specifier_seq ||
+           N->symbol() == Symbol::defining_type_specifier_seq ||
+           N->symbol() == Symbol::decl_specifier ||
+           N->symbol() == Symbol::type_specifier ||
+           N->symbol() == Symbol::defining_type_specifier ||
+           N->symbol() == Symbol::simple_type_specifier);
     if (N->kind() == ForestNode::Opaque)
       return false; // conservative
     if (N->kind() == ForestNode::Ambiguous)
@@ -188,66 +187,66 @@ bool hasExclusiveType(const ForestNode *N) {
     assert(N->kind() == ForestNode::Sequence);
     switch (N->rule()) {
       // seq := element seq: check element then continue into seq
-      case (RuleID)Rule::decl_specifier_seq_0decl_specifier_1decl_specifier_seq:
-      case (RuleID)Rule::defining_type_specifier_seq_0defining_type_specifier_1defining_type_specifier_seq:
-      case (RuleID)Rule::type_specifier_seq_0type_specifier_1type_specifier_seq:
+      case rule::decl_specifier_seq::decl_specifier__decl_specifier_seq:
+      case rule::defining_type_specifier_seq::defining_type_specifier__defining_type_specifier_seq:
+      case rule::type_specifier_seq::type_specifier__type_specifier_seq:
         if (hasExclusiveType(N->children()[0]))
           return true;
         N = N->children()[1];
         continue;
       // seq := element: continue into element
-      case (RuleID)Rule::decl_specifier_seq_0decl_specifier:
-      case (RuleID)Rule::type_specifier_seq_0type_specifier:
-      case (RuleID)Rule::defining_type_specifier_seq_0defining_type_specifier:
+      case rule::decl_specifier_seq::decl_specifier:
+      case rule::type_specifier_seq::type_specifier:
+      case rule::defining_type_specifier_seq::defining_type_specifier:
         N = N->children()[0];
         continue;
 
       // defining-type-specifier
-      case (RuleID)Rule::defining_type_specifier_0type_specifier:
+      case rule::defining_type_specifier::type_specifier:
         N = N->children()[0];
         continue;
-      case (RuleID)Rule::defining_type_specifier_0class_specifier:
-      case (RuleID)Rule::defining_type_specifier_0enum_specifier:
+      case rule::defining_type_specifier::class_specifier:
+      case rule::defining_type_specifier::enum_specifier:
         return true;
 
       // decl-specifier
-      case (RuleID)Rule::decl_specifier_0defining_type_specifier:
+      case rule::decl_specifier::defining_type_specifier:
         N = N->children()[0];
         continue;
-      case (RuleID)Rule::decl_specifier_0consteval:
-      case (RuleID)Rule::decl_specifier_0constexpr:
-      case (RuleID)Rule::decl_specifier_0constinit:
-      case (RuleID)Rule::decl_specifier_0inline:
-      case (RuleID)Rule::decl_specifier_0friend:
-      case (RuleID)Rule::decl_specifier_0storage_class_specifier:
-      case (RuleID)Rule::decl_specifier_0typedef:
-      case (RuleID)Rule::decl_specifier_0function_specifier:
+      case rule::decl_specifier::CONSTEVAL:
+      case rule::decl_specifier::CONSTEXPR:
+      case rule::decl_specifier::CONSTINIT:
+      case rule::decl_specifier::INLINE:
+      case rule::decl_specifier::FRIEND:
+      case rule::decl_specifier::storage_class_specifier:
+      case rule::decl_specifier::TYPEDEF:
+      case rule::decl_specifier::function_specifier:
         return false;
 
       // type-specifier
-      case (RuleID)Rule::type_specifier_0elaborated_type_specifier:
-      case (RuleID)Rule::type_specifier_0typename_specifier:
+      case rule::type_specifier::elaborated_type_specifier:
+      case rule::type_specifier::typename_specifier:
         return true;
-      case (RuleID)Rule::type_specifier_0simple_type_specifier:
+      case rule::type_specifier::simple_type_specifier:
         N = N->children()[0];
         continue;
-      case (RuleID)Rule::type_specifier_0cv_qualifier:
+      case rule::type_specifier::cv_qualifier:
         return false;
 
       // simple-type-specifier
-      case (RuleID)Rule::simple_type_specifier_0type_name:
-      case (RuleID)Rule::simple_type_specifier_0template_name:
-      case (RuleID)Rule::simple_type_specifier_0builtin_type:
-      case (RuleID)Rule::simple_type_specifier_0nested_name_specifier_1template_2simple_template_id:
-      case (RuleID)Rule::simple_type_specifier_0nested_name_specifier_1template_name:
-      case (RuleID)Rule::simple_type_specifier_0nested_name_specifier_1type_name:
-      case (RuleID)Rule::simple_type_specifier_0decltype_specifier:
-      case (RuleID)Rule::simple_type_specifier_0placeholder_type_specifier:
+      case rule::simple_type_specifier::type_name:
+      case rule::simple_type_specifier::template_name:
+      case rule::simple_type_specifier::builtin_type:
+      case rule::simple_type_specifier::nested_name_specifier__TEMPLATE__simple_template_id:
+      case rule::simple_type_specifier::nested_name_specifier__template_name:
+      case rule::simple_type_specifier::nested_name_specifier__type_name:
+      case rule::simple_type_specifier::decltype_specifier:
+      case rule::simple_type_specifier::placeholder_type_specifier:
         return true;
-      case (RuleID)Rule::simple_type_specifier_0long:
-      case (RuleID)Rule::simple_type_specifier_0short:
-      case (RuleID)Rule::simple_type_specifier_0signed:
-      case (RuleID)Rule::simple_type_specifier_0unsigned:
+      case rule::simple_type_specifier::LONG:
+      case rule::simple_type_specifier::SHORT:
+      case rule::simple_type_specifier::SIGNED:
+      case rule::simple_type_specifier::UNSIGNED:
         return false;
 
       default:
@@ -269,96 +268,96 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
   }
 #define SYMBOL_GUARD(kind, cond)                                               \
   [](const GuardParams& P) {                                                   \
-    const ForestNode &N = onlySymbol((SymbolID)Symbol::kind, P.RHS, P.Tokens); \
+    const ForestNode &N = onlySymbol(Symbol::kind, P.RHS, P.Tokens); \
     return cond;                                                               \
   }
   return {
-      {(RuleID)Rule::function_declarator_0declarator,
+      {rule::function_declarator::declarator,
        SYMBOL_GUARD(declarator, isFunctionDeclarator(&N))},
-      {(RuleID)Rule::non_function_declarator_0declarator,
+      {rule::non_function_declarator::declarator,
        SYMBOL_GUARD(declarator, !isFunctionDeclarator(&N))},
 
       // A {decl,type,defining-type}-specifier-sequence cannot have multiple
       // "exclusive" types (like class names): a value has only one type.
-      {(RuleID)Rule::
-           defining_type_specifier_seq_0defining_type_specifier_1defining_type_specifier_seq,
+      {rule::defining_type_specifier_seq::
+           defining_type_specifier__defining_type_specifier_seq,
        GUARD(!hasExclusiveType(P.RHS[0]) || !hasExclusiveType(P.RHS[1]))},
-      {(RuleID)Rule::type_specifier_seq_0type_specifier_1type_specifier_seq,
+      {rule::type_specifier_seq::type_specifier__type_specifier_seq,
        GUARD(!hasExclusiveType(P.RHS[0]) || !hasExclusiveType(P.RHS[1]))},
-      {(RuleID)Rule::decl_specifier_seq_0decl_specifier_1decl_specifier_seq,
+      {rule::decl_specifier_seq::decl_specifier__decl_specifier_seq,
        GUARD(!hasExclusiveType(P.RHS[0]) || !hasExclusiveType(P.RHS[1]))},
 
-      {(RuleID)Rule::contextual_override_0identifier,
+      {rule::contextual_override::IDENTIFIER,
        TOKEN_GUARD(identifier, Tok.text() == "override")},
-      {(RuleID)Rule::contextual_final_0identifier,
+      {rule::contextual_final::IDENTIFIER,
        TOKEN_GUARD(identifier, Tok.text() == "final")},
-      {(RuleID)Rule::import_keyword_0identifier,
+      {rule::import_keyword::IDENTIFIER,
        TOKEN_GUARD(identifier, Tok.text() == "import")},
-      {(RuleID)Rule::export_keyword_0identifier,
+      {rule::export_keyword::IDENTIFIER,
        TOKEN_GUARD(identifier, Tok.text() == "export")},
-      {(RuleID)Rule::module_keyword_0identifier,
+      {rule::module_keyword::IDENTIFIER,
        TOKEN_GUARD(identifier, Tok.text() == "module")},
-      {(RuleID)Rule::contextual_zero_0numeric_constant,
+      {rule::contextual_zero::NUMERIC_CONSTANT,
        TOKEN_GUARD(numeric_constant, Tok.text() == "0")},
 
-      {(RuleID)Rule::
-           selection_statement_0if_1l_paren_2condition_3r_paren_4statement,
+      // FIXME: the init-statement variants are missing?
+      {rule::selection_statement::IF__L_PAREN__condition__R_PAREN__statement,
        guardNextTokenNotElse},
-      {(RuleID)Rule::
-           selection_statement_0if_1constexpr_2l_paren_3condition_4r_paren_5statement,
+      {rule::selection_statement::
+           IF__CONSTEXPR__L_PAREN__condition__R_PAREN__statement,
        guardNextTokenNotElse},
 
       // The grammar distinguishes (only) user-defined vs plain string literals,
       // where the clang lexer distinguishes (only) encoding types.
-      {(RuleID)Rule::user_defined_string_literal_chunk_0string_literal,
+      {rule::user_defined_string_literal_chunk::STRING_LITERAL,
        TOKEN_GUARD(string_literal, isStringUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_string_literal_chunk_0utf8_string_literal,
+      {rule::user_defined_string_literal_chunk::UTF8_STRING_LITERAL,
        TOKEN_GUARD(utf8_string_literal, isStringUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_string_literal_chunk_0utf16_string_literal,
+      {rule::user_defined_string_literal_chunk::UTF16_STRING_LITERAL,
        TOKEN_GUARD(utf16_string_literal, isStringUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_string_literal_chunk_0utf32_string_literal,
+      {rule::user_defined_string_literal_chunk::UTF32_STRING_LITERAL,
        TOKEN_GUARD(utf32_string_literal, isStringUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_string_literal_chunk_0wide_string_literal,
+      {rule::user_defined_string_literal_chunk::WIDE_STRING_LITERAL,
        TOKEN_GUARD(wide_string_literal, isStringUserDefined(Tok))},
-      {(RuleID)Rule::string_literal_chunk_0string_literal,
+      {rule::string_literal_chunk::STRING_LITERAL,
        TOKEN_GUARD(string_literal, !isStringUserDefined(Tok))},
-      {(RuleID)Rule::string_literal_chunk_0utf8_string_literal,
+      {rule::string_literal_chunk::UTF8_STRING_LITERAL,
        TOKEN_GUARD(utf8_string_literal, !isStringUserDefined(Tok))},
-      {(RuleID)Rule::string_literal_chunk_0utf16_string_literal,
+      {rule::string_literal_chunk::UTF16_STRING_LITERAL,
        TOKEN_GUARD(utf16_string_literal, !isStringUserDefined(Tok))},
-      {(RuleID)Rule::string_literal_chunk_0utf32_string_literal,
+      {rule::string_literal_chunk::UTF32_STRING_LITERAL,
        TOKEN_GUARD(utf32_string_literal, !isStringUserDefined(Tok))},
-      {(RuleID)Rule::string_literal_chunk_0wide_string_literal,
+      {rule::string_literal_chunk::WIDE_STRING_LITERAL,
        TOKEN_GUARD(wide_string_literal, !isStringUserDefined(Tok))},
       // And the same for chars.
-      {(RuleID)Rule::user_defined_character_literal_0char_constant,
+      {rule::user_defined_character_literal::CHAR_CONSTANT,
        TOKEN_GUARD(char_constant, isCharUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_character_literal_0utf8_char_constant,
+      {rule::user_defined_character_literal::UTF8_CHAR_CONSTANT,
        TOKEN_GUARD(utf8_char_constant, isCharUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_character_literal_0utf16_char_constant,
+      {rule::user_defined_character_literal::UTF16_CHAR_CONSTANT,
        TOKEN_GUARD(utf16_char_constant, isCharUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_character_literal_0utf32_char_constant,
+      {rule::user_defined_character_literal::UTF32_CHAR_CONSTANT,
        TOKEN_GUARD(utf32_char_constant, isCharUserDefined(Tok))},
-      {(RuleID)Rule::user_defined_character_literal_0wide_char_constant,
+      {rule::user_defined_character_literal::WIDE_CHAR_CONSTANT,
        TOKEN_GUARD(wide_char_constant, isCharUserDefined(Tok))},
-      {(RuleID)Rule::character_literal_0char_constant,
+      {rule::character_literal::CHAR_CONSTANT,
        TOKEN_GUARD(char_constant, !isCharUserDefined(Tok))},
-      {(RuleID)Rule::character_literal_0utf8_char_constant,
+      {rule::character_literal::UTF8_CHAR_CONSTANT,
        TOKEN_GUARD(utf8_char_constant, !isCharUserDefined(Tok))},
-      {(RuleID)Rule::character_literal_0utf16_char_constant,
+      {rule::character_literal::UTF16_CHAR_CONSTANT,
        TOKEN_GUARD(utf16_char_constant, !isCharUserDefined(Tok))},
-      {(RuleID)Rule::character_literal_0utf32_char_constant,
+      {rule::character_literal::UTF32_CHAR_CONSTANT,
        TOKEN_GUARD(utf32_char_constant, !isCharUserDefined(Tok))},
-      {(RuleID)Rule::character_literal_0wide_char_constant,
+      {rule::character_literal::WIDE_CHAR_CONSTANT,
        TOKEN_GUARD(wide_char_constant, !isCharUserDefined(Tok))},
       // clang just has one NUMERIC_CONSTANT token for {ud,plain}x{float,int}
-      {(RuleID)Rule::user_defined_integer_literal_0numeric_constant,
+      {rule::user_defined_integer_literal::NUMERIC_CONSTANT,
        TOKEN_GUARD(numeric_constant, numKind(Tok) == (Integer | UserDefined))},
-      {(RuleID)Rule::user_defined_floating_point_literal_0numeric_constant,
+      {rule::user_defined_floating_point_literal::NUMERIC_CONSTANT,
        TOKEN_GUARD(numeric_constant, numKind(Tok) == (Floating | UserDefined))},
-      {(RuleID)Rule::integer_literal_0numeric_constant,
+      {rule::integer_literal::NUMERIC_CONSTANT,
        TOKEN_GUARD(numeric_constant, numKind(Tok) == Integer)},
-      {(RuleID)Rule::floating_point_literal_0numeric_constant,
+      {rule::floating_point_literal::NUMERIC_CONSTANT,
        TOKEN_GUARD(numeric_constant, numKind(Tok) == Floating)},
   };
 #undef TOKEN_GUARD
@@ -379,7 +378,7 @@ Token::Index recoverBrackets(Token::Index Begin, const TokenStream &Tokens) {
 
 llvm::DenseMap<ExtensionID, RecoveryStrategy> buildRecoveryStrategies() {
   return {
-      {(ExtensionID)Extension::Brackets, recoverBrackets},
+      {Extension::Brackets, recoverBrackets},
   };
 }
 
