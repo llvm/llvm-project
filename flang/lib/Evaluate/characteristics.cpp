@@ -949,9 +949,16 @@ bool Procedure::IsCompatibleWith(
   if (!attrs.test(Attr::Elemental)) {
     actualAttrs.reset(Attr::Elemental);
   }
-  if (attrs != actualAttrs) {
+  Attrs differences{attrs ^ actualAttrs};
+  differences.reset(Attr::Subroutine); // dealt with specifically later
+  if (!differences.empty()) {
     if (whyNot) {
+      auto sep{": "s};
       *whyNot = "incompatible procedure attributes";
+      differences.IterateOverMembers([&](Attr x) {
+        *whyNot += sep + EnumToString(x);
+        sep = ", ";
+      });
     }
   } else if ((IsFunction() && actual.IsSubroutine()) ||
       (IsSubroutine() && actual.IsFunction())) {

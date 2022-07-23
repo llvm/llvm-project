@@ -100,7 +100,7 @@ contains
     !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2': incompatible dummy argument #1: incompatible dummy data object attributes
     p_impure => f_elemental2
 
-    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_impure2': incompatible procedure attributes
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_impure2': incompatible procedure attributes: BindC
     sp_impure => s_impure2
     !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_pure2': incompatible dummy argument #1: incompatible dummy data object intents
     sp_impure => s_pure2
@@ -292,5 +292,11 @@ contains
     integer, parameter :: i = rank(b)
   end subroutine
 
-
+  subroutine s13
+    external :: s_external
+    procedure(), pointer :: ptr
+    !Ok - don't emit an error about incompatible Subroutine attribute
+    ptr => s_external
+    call ptr
+  end subroutine
 end
