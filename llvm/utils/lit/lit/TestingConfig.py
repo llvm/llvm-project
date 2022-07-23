@@ -58,6 +58,7 @@ class TestingConfig(object):
             'WindowsSDKLibVersion',
             'SOURCE_DATE_EPOCH',
             'GTEST_FILTER',
+            'DFLTCC',
         ]
 
         if sys.platform == 'win32':
