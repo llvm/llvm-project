@@ -239,55 +239,6 @@ bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
   if (Tokens.size() < 2)
     return false;
 
-  // Interpolated strings could contain { } with " characters inside.
-  // $"{x ?? "null"}"
-  // should not be split into $"{x ?? ", null, "}" but should treated as a
-  // single string-literal.
-  //
-  // We opt not to try and format expressions inside {} within a C#
-  // interpolated string. Formatting expressions within an interpolated string
-  // would require similar work as that done for JavaScript template strings
-  // in `handleTemplateStrings()`.
-  auto &CSharpInterpolatedString = *(Tokens.end() - 2);
-  if (CSharpInterpolatedString->getType() == TT_CSharpStringLiteral &&
-      (CSharpInterpolatedString->TokenText.startswith(R"($")") ||
-       CSharpInterpolatedString->TokenText.startswith(R"($@")"))) {
-    int UnmatchedOpeningBraceCount = 0;
-
-    auto TokenTextSize = CSharpInterpolatedString->TokenText.size();
-    for (size_t Index = 0; Index < TokenTextSize; ++Index) {
-      char C = CSharpInterpolatedString->TokenText[Index];
-      if (C == '{') {
-        // "{{"  inside an interpolated string is an escaped '{' so skip it.
-        if (Index + 1 < TokenTextSize &&
-            CSharpInterpolatedString->TokenText[Index + 1] == '{') {
-          ++Index;
-          continue;
-        }
-        ++UnmatchedOpeningBraceCount;
-      } else if (C == '}') {
-        // "}}"  inside an interpolated string is an escaped '}' so skip it.
-        if (Index + 1 < TokenTextSize &&
-            CSharpInterpolatedString->TokenText[Index + 1] == '}') {
-          ++Index;
-          continue;
-        }
-        --UnmatchedOpeningBraceCount;
-      }
-    }
-
-    if (UnmatchedOpeningBraceCount > 0) {
-      auto &NextToken = *(Tokens.end() - 1);
-      CSharpInterpolatedString->TokenText =
-          StringRef(CSharpInterpolatedString->TokenText.begin(),
-                    NextToken->TokenText.end() -
-                        CSharpInterpolatedString->TokenText.begin());
-      CSharpInterpolatedString->ColumnWidth += NextToken->ColumnWidth;
-      Tokens.erase(Tokens.end() - 1);
-      return true;
-    }
-  }
-
   // Look for @"aaaaaa" or $"aaaaaa".
   auto &String = *(Tokens.end() - 1);
   if (!String->is(tok::string_literal))
@@ -571,45 +522,105 @@ void FormatTokenLexer::tryParseJSRegexLiteral() {
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset)));
 }
 
-void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
-  FormatToken *CSharpStringLiteral = Tokens.back();
-
-  if (CSharpStringLiteral->getType() != TT_CSharpStringLiteral)
-    return;
-
-  // Deal with multiline strings.
-  if (!(CSharpStringLiteral->TokenText.startswith(R"(@")") ||
-        CSharpStringLiteral->TokenText.startswith(R"($@")"))) {
-    return;
-  }
-
-  const char *StrBegin =
-      Lex->getBufferLocation() - CSharpStringLiteral->TokenText.size();
-  const char *Offset = StrBegin;
-  if (CSharpStringLiteral->TokenText.startswith(R"(@")"))
-    Offset += 2;
-  else // CSharpStringLiteral->TokenText.startswith(R"($@")")
-    Offset += 3;
+static auto lexCSharpString(const char *Begin, const char *End, bool Verbatim,
+                            bool Interpolated) {
+  auto Repeated = [&Begin, End]() {
+    return Begin + 1 < End && Begin[1] == Begin[0];
+  };
 
   // Look for a terminating '"' in the current file buffer.
   // Make no effort to format code within an interpolated or verbatim string.
-  for (; Offset != Lex->getBuffer().end(); ++Offset) {
-    if (Offset[0] == '"') {
-      // "" within a verbatim string is an escaped double quote: skip it.
-      if (Offset + 1 < Lex->getBuffer().end() && Offset[1] == '"')
-        ++Offset;
-      else
+  //
+  // Interpolated strings could contain { } with " characters inside.
+  // $"{x ?? "null"}"
+  // should not be split into $"{x ?? ", null, "}" but should be treated as a
+  // single string-literal.
+  //
+  // We opt not to try and format expressions inside {} within a C#
+  // interpolated string. Formatting expressions within an interpolated string
+  // would require similar work as that done for JavaScript template strings
+  // in `handleTemplateStrings()`.
+  for (int UnmatchedOpeningBraceCount = 0; Begin < End; ++Begin) {
+    switch (*Begin) {
+    case '\\':
+      if (!Verbatim)
+        ++Begin;
+      break;
+    case '{':
+      if (Interpolated) {
+        // {{ inside an interpolated string is escaped, so skip it.
+        if (Repeated())
+          ++Begin;
+        else
+          ++UnmatchedOpeningBraceCount;
+      }
+      break;
+    case '}':
+      if (Interpolated) {
+        // }} inside an interpolated string is escaped, so skip it.
+        if (Repeated())
+          ++Begin;
+        else if (UnmatchedOpeningBraceCount > 0)
+          --UnmatchedOpeningBraceCount;
+        else
+          return End;
+      }
+      break;
+    case '"':
+      if (UnmatchedOpeningBraceCount > 0)
         break;
+      // "" within a verbatim string is an escaped double quote: skip it.
+      if (Verbatim && Repeated()) {
+        ++Begin;
+        break;
+      }
+      return Begin;
     }
   }
 
+  return End;
+}
+
+void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
+  FormatToken *CSharpStringLiteral = Tokens.back();
+
+  if (CSharpStringLiteral->isNot(TT_CSharpStringLiteral))
+    return;
+
+  auto &TokenText = CSharpStringLiteral->TokenText;
+
+  bool Verbatim = false;
+  bool Interpolated = false;
+  if (TokenText.startswith(R"($@")")) {
+    Verbatim = true;
+    Interpolated = true;
+  } else if (TokenText.startswith(R"(@")")) {
+    Verbatim = true;
+  } else if (TokenText.startswith(R"($")")) {
+    Interpolated = true;
+  }
+
+  // Deal with multiline strings.
+  if (!Verbatim && !Interpolated)
+    return;
+
+  const char *StrBegin = Lex->getBufferLocation() - TokenText.size();
+  const char *Offset = StrBegin;
+  if (Verbatim && Interpolated)
+    Offset += 3;
+  else
+    Offset += 2;
+
+  const auto End = Lex->getBuffer().end();
+  Offset = lexCSharpString(Offset, End, Verbatim, Interpolated);
+
   // Make no attempt to format code properly if a verbatim string is
   // unterminated.
-  if (Offset == Lex->getBuffer().end())
+  if (Offset >= End)
     return;
 
   StringRef LiteralText(StrBegin, Offset - StrBegin + 1);
-  CSharpStringLiteral->TokenText = LiteralText;
+  TokenText = LiteralText;
 
   // Adjust width for potentially multiline string literals.
   size_t FirstBreak = LiteralText.find('\n');
@@ -628,10 +639,8 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
                                       StartColumn, Style.TabWidth, Encoding);
   }
 
-  SourceLocation loc = Offset < Lex->getBuffer().end()
-                           ? Lex->getSourceLocation(Offset + 1)
-                           : SourceMgr.getLocForEndOfFile(ID);
-  resetLexer(SourceMgr.getFileOffset(loc));
+  assert(Offset < End);
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset + 1)));
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
