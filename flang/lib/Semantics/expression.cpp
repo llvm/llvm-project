@@ -402,7 +402,7 @@ MaybeExpr ExpressionAnalyzer::FixMisparsedSubstring(
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
   auto restorer{GetContextualMessages().SetLocation(d.source)};
   if (auto substringInquiry{FixMisparsedSubstring(d)}) {
-    return std::move(substringInquiry);
+    return substringInquiry;
   }
   // These checks have to be deferred to these "top level" data-refs where
   // we can be sure that there are no following subscripts (yet).
