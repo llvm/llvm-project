@@ -225,7 +225,7 @@ Token Lexer::lexBareIdentifierOrKeyword(const char *tokStart) {
   StringRef spelling(tokStart, curPtr - tokStart);
 
   auto isAllDigit = [](StringRef str) {
-    return llvm::all_of(str, [](char c) { return llvm::isDigit(c); });
+    return llvm::all_of(str, llvm::isDigit);
   };
 
   // Check for i123, si456, ui789.

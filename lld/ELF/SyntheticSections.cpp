@@ -29,6 +29,7 @@
 #include "lld/Common/DWARF.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1703,7 +1704,7 @@ void RelocationBaseSection::computeRels() {
     parallelSort(relocs.begin(), nonRelative,
                  [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
     // Non-relative relocations are few, so don't bother with parallelSort.
-    std::sort(nonRelative, relocs.end(), [&](auto &a, auto &b) {
+    llvm::sort(nonRelative, relocs.end(), [&](auto &a, auto &b) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
   }
@@ -2039,7 +2040,7 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize() {
   std::unique_ptr<uint64_t[]> offsets(new uint64_t[relocs.size()]);
   for (auto it : llvm::enumerate(relocs))
     offsets[it.index()] = it.value().getOffset();
-  std::sort(offsets.get(), offsets.get() + relocs.size());
+  llvm::sort(offsets.get(), offsets.get() + relocs.size());
 
   // For each leading relocation, find following ones that can be folded
   // as a bitmap and fold them.
@@ -3855,7 +3856,8 @@ void InStruct::reset() {
 
 constexpr char kMemtagAndroidNoteName[] = "Android";
 void MemtagAndroidNote::writeTo(uint8_t *buf) {
-  assert(sizeof(kMemtagAndroidNoteName) == 8); // ABI check for Android 11 & 12.
+  static_assert(sizeof(kMemtagAndroidNoteName) == 8,
+                "ABI check for Android 11 & 12.");
   assert((config->androidMemtagStack || config->androidMemtagHeap) &&
          "Should only be synthesizing a note if heap || stack is enabled.");
 

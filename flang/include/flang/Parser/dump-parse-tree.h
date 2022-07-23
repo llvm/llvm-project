@@ -664,6 +664,7 @@ public:
   NODE(parser, SubroutineSubprogram)
   NODE(parser, SubscriptTriplet)
   NODE(parser, Substring)
+  NODE(parser, SubstringInquiry)
   NODE(parser, SubstringRange)
   NODE(parser, Suffix)
   NODE(parser, SyncAllStmt)

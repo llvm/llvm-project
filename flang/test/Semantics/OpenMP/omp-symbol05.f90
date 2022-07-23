@@ -24,9 +24,9 @@ contains
     !REF: /mm/foo/a
     print *, a
     block
-      !DEF: /mm/foo/Block2/i ObjectEntity REAL(4)
+      !DEF: /mm/foo/BlockConstruct1/i ObjectEntity REAL(4)
       real i
-      !REF: /mm/foo/Block2/i
+      !REF: /mm/foo/BlockConstruct1/i
       i = 3.14
     end block
   end subroutine foo

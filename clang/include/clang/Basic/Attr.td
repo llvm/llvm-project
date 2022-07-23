@@ -2703,7 +2703,7 @@ def Target : InheritableAttr {
     template<class Compare>
     ParsedTargetAttr parse(Compare cmp) const {
       ParsedTargetAttr Attrs = parse();
-      llvm::sort(std::begin(Attrs.Features), std::end(Attrs.Features), cmp);
+      llvm::sort(Attrs.Features, cmp);
       return Attrs;
     }
 

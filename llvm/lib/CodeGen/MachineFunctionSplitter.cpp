@@ -146,7 +146,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
     return X.getSectionID().Type < Y.getSectionID().Type;
   };
   llvm::sortBasicBlocksAndUpdateBranches(MF, Comparator);
-
+  llvm::avoidZeroOffsetLandingPad(MF);
   return true;
 }
 

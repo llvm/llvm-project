@@ -179,6 +179,7 @@ struct EquivalenceStmt; // R870
 struct CommonStmt; // R873
 struct Substring; // R908
 struct CharLiteralConstantSubstring;
+struct SubstringInquiry;
 struct DataRef; // R911
 struct StructureComponent; // R913
 struct CoindexedNamedObject; // R914
@@ -1734,7 +1735,7 @@ struct Expr {
       StructureConstructor, common::Indirection<FunctionReference>, Parentheses,
       UnaryPlus, Negate, NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide,
       Add, Subtract, Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV,
-      DefinedBinary, ComplexConstructor>
+      DefinedBinary, ComplexConstructor, common::Indirection<SubstringInquiry>>
       u;
 };
 
@@ -1776,6 +1777,15 @@ struct Substring {
 struct CharLiteralConstantSubstring {
   TUPLE_CLASS_BOILERPLATE(CharLiteralConstantSubstring);
   std::tuple<CharLiteralConstant, SubstringRange> t;
+};
+
+// substring%KIND/LEN type parameter inquiry for cases that could not be
+// parsed as part-refs and fixed up afterwards.  N.B. we only have to
+// handle inquiries into designator-based substrings, not those based on
+// char-literal-constants.
+struct SubstringInquiry {
+  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(SubstringInquiry, Substring);
 };
 
 // R901 designator -> object-name | array-element | array-section |
