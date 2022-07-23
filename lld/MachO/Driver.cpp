@@ -586,7 +586,7 @@ static void initializeSectionRenameMap() {
                              section_names::objcCatList,
                              section_names::objcNonLazyCatList,
                              section_names::objcProtoList,
-                             section_names::objcImageInfo};
+                             section_names::objCImageInfo};
     for (StringRef s : v)
       config->sectionRenameMap[{segment_names::data, s}] = {
           segment_names::dataConst, s};
@@ -1102,6 +1102,8 @@ static void gatherInputSections() {
         }
       }
     }
+    if (!file->objCImageInfo.empty())
+      in.objCImageInfo->addFile(file);
   }
   assert(inputOrder <= UnspecifiedInputOrder);
 }

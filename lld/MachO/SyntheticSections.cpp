@@ -1621,6 +1621,86 @@ void WordLiteralSection::writeTo(uint8_t *buf) const {
     memcpy(buf + p.second * 4, &p.first, 4);
 }
 
+ObjCImageInfoSection::ObjCImageInfoSection()
+    : SyntheticSection(segment_names::data, section_names::objCImageInfo) {}
+
+ObjCImageInfoSection::ImageInfo
+ObjCImageInfoSection::parseImageInfo(const InputFile *file) {
+  ImageInfo info;
+  ArrayRef<uint8_t> data = file->objCImageInfo;
+  // The image info struct has the following layout:
+  // struct {
+  //   uint32_t version;
+  //   uint32_t flags;
+  // };
+  if (data.size() < 8) {
+    warn(toString(file) + ": invalid __objc_imageinfo size");
+    return info;
+  }
+
+  auto *buf = reinterpret_cast<const uint32_t *>(data.data());
+  if (read32le(buf) != 0) {
+    warn(toString(file) + ": invalid __objc_imageinfo version");
+    return info;
+  }
+
+  uint32_t flags = read32le(buf + 1);
+  info.swiftVersion = (flags >> 8) & 0xff;
+  info.hasCategoryClassProperties = flags & 0x40;
+  return info;
+}
+
+static std::string swiftVersionString(uint8_t version) {
+  switch (version) {
+    case 1:
+      return "1.0";
+    case 2:
+      return "1.1";
+    case 3:
+      return "2.0";
+    case 4:
+      return "3.0";
+    case 5:
+      return "4.0";
+    default:
+      return ("0x" + Twine::utohexstr(version)).str();
+  }
+}
+
+// Validate each object file's __objc_imageinfo and use them to generate the
+// image info for the output binary. Only two pieces of info are relevant:
+// 1. The Swift version (should be identical across inputs)
+// 2. `bool hasCategoryClassProperties` (true only if true for all inputs)
+void ObjCImageInfoSection::finalizeContents() {
+  assert(files.size() != 0); // should have already been checked via isNeeded()
+
+  info.hasCategoryClassProperties = true;
+  const InputFile *firstFile;
+  for (auto file : files) {
+    ImageInfo inputInfo = parseImageInfo(file);
+    info.hasCategoryClassProperties &= inputInfo.hasCategoryClassProperties;
+
+    if (inputInfo.swiftVersion != 0) {
+      if (info.swiftVersion != 0 &&
+          info.swiftVersion != inputInfo.swiftVersion) {
+        error("Swift version mismatch: " + toString(firstFile) +
+              " has version " + swiftVersionString(info.swiftVersion) +
+              " but " + toString(file) + " has version " +
+              swiftVersionString(inputInfo.swiftVersion));
+      } else {
+        info.swiftVersion = inputInfo.swiftVersion;
+        firstFile = file;
+      }
+    }
+  }
+}
+
+void ObjCImageInfoSection::writeTo(uint8_t *buf) const {
+  uint32_t flags = info.hasCategoryClassProperties ? 0x40 : 0x0;
+  flags |= info.swiftVersion << 8;
+  write32le(buf + 4, flags);
+}
+
 void macho::createSyntheticSymbols() {
   auto addHeaderSymbol = [](const char *name) {
     symtab->addSynthetic(name, in.header->isec, /*value=*/0,
