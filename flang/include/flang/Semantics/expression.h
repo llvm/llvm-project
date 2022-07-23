@@ -269,6 +269,7 @@ private:
   MaybeExpr Analyze(const parser::ArrayElement &);
   MaybeExpr Analyze(const parser::CoindexedNamedObject &);
   MaybeExpr Analyze(const parser::CharLiteralConstantSubstring &);
+  MaybeExpr Analyze(const parser::SubstringInquiry &);
   MaybeExpr Analyze(const parser::ArrayConstructor &);
   MaybeExpr Analyze(const parser::FunctionReference &,
       std::optional<parser::StructureConstructor> * = nullptr);
@@ -326,6 +327,7 @@ private:
   std::optional<Expr<SubscriptInteger>> GetSubstringBound(
       const std::optional<parser::ScalarIntExpr> &);
   MaybeExpr AnalyzeDefinedOp(const parser::Name &, ActualArguments &&);
+  MaybeExpr FixMisparsedSubstring(const parser::Designator &);
 
   struct CalleeAndArguments {
     // A non-component function reference may constitute a misparsed
