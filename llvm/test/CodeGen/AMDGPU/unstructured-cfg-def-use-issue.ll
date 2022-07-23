@@ -217,10 +217,10 @@ define hidden void @blam() {
 ; GCN-NEXT:    s_mov_b32 s45, s14
 ; GCN-NEXT:    s_mov_b32 s46, s13
 ; GCN-NEXT:    s_mov_b32 s47, s12
-; GCN-NEXT:    s_mov_b64 s[36:37], s[10:11]
-; GCN-NEXT:    s_mov_b64 s[38:39], s[8:9]
-; GCN-NEXT:    s_mov_b64 s[40:41], s[6:7]
-; GCN-NEXT:    s_mov_b64 s[42:43], s[4:5]
+; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
+; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
+; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
@@ -233,7 +233,7 @@ define hidden void @blam() {
 ; GCN-NEXT:    s_addc_u32 s49, s49, spam@rel32@hi+12
 ; GCN-NEXT:    v_lshlrev_b32_e32 v42, 2, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_f32_e64 s[34:35], 0, v44
+; GCN-NEXT:    v_cmp_eq_f32_e64 s[42:43], 0, v44
 ; GCN-NEXT:    s_branch .LBB1_3
 ; GCN-NEXT:  .LBB1_1: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
@@ -275,10 +275,10 @@ define hidden void @blam() {
 ; GCN-NEXT:  ; %bb.7: ; %bb11
 ; GCN-NEXT:    ; in Loop: Header=BB1_4 Depth=2
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GCN-NEXT:    s_mov_b64 s[4:5], s[42:43]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[40:41]
-; GCN-NEXT:    s_mov_b64 s[8:9], s[38:39]
-; GCN-NEXT:    s_mov_b64 s[10:11], s[36:37]
+; GCN-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
+; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
 ; GCN-NEXT:    s_mov_b32 s12, s47
 ; GCN-NEXT:    s_mov_b32 s13, s46
 ; GCN-NEXT:    s_mov_b32 s14, s45
@@ -293,7 +293,7 @@ define hidden void @blam() {
 ; GCN-NEXT:  ; %bb.8: ; %bb14
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GCN-NEXT:    s_and_saveexec_b64 s[4:5], s[34:35]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], s[42:43]
 ; GCN-NEXT:    s_cbranch_execnz .LBB1_10
 ; GCN-NEXT:  ; %bb.9: ; %bb16
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1

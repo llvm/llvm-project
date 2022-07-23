@@ -28,11 +28,11 @@ define amdgpu_vs float @load_i32(i32 addrspace(6)* inreg %p0, i32 addrspace(6)* 
 ; SICI-DAG: s_load_dwordx2 s[{{.*}}], s[2:3], 0x4
 ; VI-DAG: s_load_dwordx2 s[{{.*}}], s[0:1], 0x0
 ; VI-DAG: s_load_dwordx2 s[{{.*}}], s[2:3], 0x10
-; GFX9-DAG: s_mov_b32 s6, s1
-; GFX9-DAG: s_mov_b32 s7, 0
-; GFX9-DAG: s_mov_b32 s1, s7
+; GFX9-DAG: s_mov_b32 s2, s1
+; GFX9-DAG: s_mov_b32 s3, 0
+; GFX9-DAG: s_mov_b32 s1, s3
 ; GFX9-DAG: s_load_dwordx2 s[{{.*}}], s[0:1], 0x0
-; GFX9-DAG: s_load_dwordx2 s[{{.*}}], s[6:7], 0x10
+; GFX9-DAG: s_load_dwordx2 s[{{.*}}], s[2:3], 0x10
 define amdgpu_vs <2 x float> @load_v2i32(<2 x i32> addrspace(6)* inreg %p0, <2 x i32> addrspace(6)* inreg %p1) #0 {
   %gep1 = getelementptr inbounds <2 x i32>, <2 x i32> addrspace(6)* %p1, i32 2
   %r0 = load <2 x i32>, <2 x i32> addrspace(6)* %p0
@@ -125,11 +125,11 @@ define amdgpu_vs float @load_float(float addrspace(6)* inreg %p0, float addrspac
 ; SICI-DAG: s_load_dwordx2 s[{{.*}}], s[2:3], 0x4
 ; VI-DAG: s_load_dwordx2 s[{{.*}}], s[0:1], 0x0
 ; VI-DAG: s_load_dwordx2 s[{{.*}}], s[2:3], 0x10
-; GFX9-DAG: s_mov_b32 s6, s1
-; GFX9-DAG: s_mov_b32 s7, 0
-; GFX9-DAG: s_mov_b32 s1, s7
+; GFX9-DAG: s_mov_b32 s2, s1
+; GFX9-DAG: s_mov_b32 s3, 0
+; GFX9-DAG: s_mov_b32 s1, s3
 ; GFX9-DAG: s_load_dwordx2 s[{{.*}}], s[0:1], 0x0
-; GFX9-DAG: s_load_dwordx2 s[{{.*}}], s[6:7], 0x10
+; GFX9-DAG: s_load_dwordx2 s[{{.*}}], s[2:3], 0x10
 define amdgpu_vs <2 x float> @load_v2float(<2 x float> addrspace(6)* inreg %p0, <2 x float> addrspace(6)* inreg %p1) #0 {
   %gep1 = getelementptr inbounds <2 x float>, <2 x float> addrspace(6)* %p1, i32 2
   %r0 = load <2 x float>, <2 x float> addrspace(6)* %p0
