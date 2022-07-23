@@ -1056,13 +1056,13 @@ bool TargetLowering::SimplifyDemandedBits(
   // TODO: We can probably do more work on calculating the known bits and
   // simplifying the operations for scalable vectors, but for now we just
   // bail out.
-  if (Op.getValueType().isScalableVector())
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector())
     return false;
 
   bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
   unsigned NumElts = OriginalDemandedElts.getBitWidth();
-  assert((!Op.getValueType().isVector() ||
-          NumElts == Op.getValueType().getVectorNumElements()) &&
+  assert((!VT.isVector() || NumElts == VT.getVectorNumElements()) &&
          "Unexpected vector size");
 
   APInt DemandedBits = OriginalDemandedBits;
@@ -1088,7 +1088,6 @@ bool TargetLowering::SimplifyDemandedBits(
   }
 
   // Other users may use these bits.
-  EVT VT = Op.getValueType();
   if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
     if (Depth != 0) {
       // If not at the root, Just compute the Known bits to
