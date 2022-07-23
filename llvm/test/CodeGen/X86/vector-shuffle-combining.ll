@@ -3353,6 +3353,34 @@ define <2 x i64> @PR55157(ptr %0) {
 }
 declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>)
 
+; FIXME: SelectionDAG::isSplatValue - incorrect handling of undef sub-elements
+define <2 x i64> @PR56520(<16 x i8> %0) {
+; SSE-LABEL: PR56520:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    movsbl %al, %eax
+; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR56520:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    movsbl %al, %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    retq
+  %2 = icmp eq <16 x i8> zeroinitializer, %0
+  %3 = extractelement <16 x i1> %2, i64 0
+  %4 = sext i1 %3 to i32
+  %5 = insertelement <2 x i32> zeroinitializer, i32 %4, i64 0
+  %6 = zext <2 x i32> %5 to <2 x i64>
+  %7 = shufflevector <2 x i64> %6, <2 x i64> zeroinitializer, <2 x i32> zeroinitializer
+  ret <2 x i64> %7
+}
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
