@@ -1073,7 +1073,7 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // Constructing the simplified semi-affine sum of product/division/mod
   // expression from the flattened form in the desired sorted order of indices
   // of the various individual product/division/mod expressions.
-  std::sort(indices.begin(), indices.end());
+  llvm::sort(indices);
   for (const std::pair<unsigned, unsigned> index : indices) {
     assert(indexToExprMap.lookup(index) &&
            "cannot find key in `indexToExprMap` map");

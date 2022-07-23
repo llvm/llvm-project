@@ -122,15 +122,14 @@ static std::string buildCategoryStr(StringSet<> &Cetegorys) {
 static void emitDXILEnums(std::vector<DXILOperationData> &DXILOps,
                           raw_ostream &OS) {
   // Sort by Category + OpName.
-  std::sort(DXILOps.begin(), DXILOps.end(),
-            [](DXILOperationData &A, DXILOperationData &B) {
-              // Group by Category first.
-              if (A.Category == B.Category)
-                // Inside same Category, order by OpName.
-                return A.DXILOp < B.DXILOp;
-              else
-                return A.Category < B.Category;
-            });
+  llvm::sort(DXILOps, [](DXILOperationData &A, DXILOperationData &B) {
+    // Group by Category first.
+    if (A.Category == B.Category)
+      // Inside same Category, order by OpName.
+      return A.DXILOp < B.DXILOp;
+    else
+      return A.Category < B.Category;
+  });
 
   OS << "// Enumeration for operations specified by DXIL\n";
   OS << "enum class OpCode : unsigned {\n";
@@ -160,20 +159,19 @@ static void emitDXILEnums(std::vector<DXILOperationData> &DXILOps,
         std::make_pair(It.getKey().str(), buildCategoryStr(It.second)));
   }
   // Sort by Category + ClassName.
-  std::sort(ClassVec.begin(), ClassVec.end(),
-            [](std::pair<std::string, std::string> &A,
-               std::pair<std::string, std::string> &B) {
-              StringRef ClassA = A.first;
-              StringRef CategoryA = A.second;
-              StringRef ClassB = B.first;
-              StringRef CategoryB = B.second;
-              // Group by Category first.
-              if (CategoryA == CategoryB)
-                // Inside same Category, order by ClassName.
-                return ClassA < ClassB;
-              else
-                return CategoryA < CategoryB;
-            });
+  llvm::sort(ClassVec, [](std::pair<std::string, std::string> &A,
+                          std::pair<std::string, std::string> &B) {
+    StringRef ClassA = A.first;
+    StringRef CategoryA = A.second;
+    StringRef ClassB = B.first;
+    StringRef CategoryB = B.second;
+    // Group by Category first.
+    if (CategoryA == CategoryB)
+      // Inside same Category, order by ClassName.
+      return ClassA < ClassB;
+    else
+      return CategoryA < CategoryB;
+  });
 
   OS << "// Groups for DXIL operations with equivalent function templates\n";
   OS << "enum class OpCodeClass : unsigned {\n";
@@ -266,10 +264,9 @@ static std::string getDXILOpClassName(StringRef DXILOpClass) {
 static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
                                    raw_ostream &OS) {
   // Sort by DXILOpID.
-  std::sort(DXILOps.begin(), DXILOps.end(),
-            [](DXILOperationData &A, DXILOperationData &B) {
-              return A.DXILOpID < B.DXILOpID;
-            });
+  llvm::sort(DXILOps, [](DXILOperationData &A, DXILOperationData &B) {
+    return A.DXILOpID < B.DXILOpID;
+  });
 
   // Collect Names.
   SequenceToOffsetTable<std::string> OpClassStrings;

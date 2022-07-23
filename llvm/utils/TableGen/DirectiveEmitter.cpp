@@ -681,7 +681,7 @@ void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
   std::vector<Record *> Clauses = DirLang.getClauses();
   // Sort clauses in reverse alphabetical order so with clauses with same
   // beginning, the longer option is tried before.
-  std::sort(Clauses.begin(), Clauses.end(), compareClauseName);
+  llvm::sort(Clauses, compareClauseName);
   IfDefScope Scope("GEN_FLANG_CLAUSES_PARSER", OS);
   OS << "\n";
   unsigned index = 0;
