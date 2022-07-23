@@ -100,7 +100,7 @@ static Status save_socket_id_to_file(const std::string &socket_id,
   Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
     return Status("Failed to create directory %s: %s",
-                  temp_file_spec.GetPath().c_str(), error.AsCString());
+                  temp_file_spec.GetCString(), error.AsCString());
 
   llvm::SmallString<64> temp_file_path;
   temp_file_spec.AppendPathComponent("port-file.%%%%%%");

@@ -624,7 +624,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"modulo", {{"a", OperandIntOrReal}, {"p", OperandIntOrReal}},
         OperandIntOrReal},
     {"nearest", {{"x", SameReal}, {"s", AnyReal}}, SameReal},
-    {"new_line", {{"x", SameChar, Rank::anyOrAssumedRank}}, SameChar,
+    {"new_line", {{"a", SameChar, Rank::anyOrAssumedRank}}, SameChar,
         Rank::scalar, IntrinsicClass::inquiryFunction},
     {"nint", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"norm2", {{"x", SameReal, Rank::array}, OptionalDIM}, SameReal,
