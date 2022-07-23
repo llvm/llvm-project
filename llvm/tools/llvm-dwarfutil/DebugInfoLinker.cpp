@@ -150,9 +150,9 @@ protected:
         TextAddressRanges.getRangeThatContains(LowPC);
 
     if (HighPC)
-      return Range.hasValue() && Range->end() >= *HighPC;
+      return Range.has_value() && Range->end() >= *HighPC;
 
-    return Range.hasValue();
+    return Range.has_value();
   }
 
   uint64_t isBFDDeadAddressRange(uint64_t LowPC, Optional<uint64_t> HighPC,

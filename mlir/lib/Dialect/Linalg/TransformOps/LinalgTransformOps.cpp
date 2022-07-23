@@ -434,7 +434,7 @@ DiagnosedSilenceableFailure
 transform::MatchOp::apply(transform::TransformResults &results,
                           transform::TransformState &state) {
   llvm::StringSet<> strs;
-  if (getOps().hasValue())
+  if (getOps().has_value())
     strs.insert(getOps()->getAsValueRange<StringAttr>().begin(),
                 getOps()->getAsValueRange<StringAttr>().end());
 
@@ -445,13 +445,13 @@ transform::MatchOp::apply(transform::TransformResults &results,
 
   SmallVector<Operation *> res;
   auto matchFun = [&](Operation *op) {
-    if (getOps().hasValue() && !strs.contains(op->getName().getStringRef()))
+    if (getOps().has_value() && !strs.contains(op->getName().getStringRef()))
       return WalkResult::advance();
 
     // Interfaces cannot be matched by name, just by ID.
     // So we specifically encode the interfaces we care about for this op.
-    if (getInterface().hasValue()) {
-      auto iface = getInterface().getValue();
+    if (getInterface().has_value()) {
+      auto iface = getInterface().value();
       if (iface == transform::MatchInterfaceEnum::LinalgOp &&
           !isa<linalg::LinalgOp>(op))
         return WalkResult::advance();
@@ -460,7 +460,7 @@ transform::MatchOp::apply(transform::TransformResults &results,
         return WalkResult::advance();
     }
 
-    if (getAttribute().hasValue() && !op->hasAttr(getAttribute().getValue()))
+    if (getAttribute().has_value() && !op->hasAttr(getAttribute().value()))
       return WalkResult::advance();
 
     // All constraints are satisfied.

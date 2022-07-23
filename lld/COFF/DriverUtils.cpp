@@ -18,6 +18,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -694,10 +695,9 @@ void fixupExports() {
   config->exports = std::move(v);
 
   // Sort by name.
-  std::sort(config->exports.begin(), config->exports.end(),
-            [](const Export &a, const Export &b) {
-              return a.exportName < b.exportName;
-            });
+  llvm::sort(config->exports, [](const Export &a, const Export &b) {
+    return a.exportName < b.exportName;
+  });
 }
 
 void assignExportOrdinals() {

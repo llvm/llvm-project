@@ -1045,6 +1045,11 @@ static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t}, {t});
 }
 
+static mlir::FunctionType genF80F80FuncType(mlir::MLIRContext *context) {
+  mlir::Type t = mlir::FloatType::getF80(context);
+  return mlir::FunctionType::get(context, {t}, {t});
+}
+
 static mlir::FunctionType genF128F128FuncType(mlir::MLIRContext *context) {
   mlir::Type t = mlir::FloatType::getF128(context);
   return mlir::FunctionType::get(context, {t}, {t});
@@ -1190,10 +1195,16 @@ static constexpr MathOperation mathOperations[] = {
     // llvm.trunc behaves the same way as libm's trunc.
     {"aint", "llvm.trunc.f32", genF32F32FuncType, genLibCall},
     {"aint", "llvm.trunc.f64", genF64F64FuncType, genLibCall},
+    {"aint", "llvm.trunc.f80", genF80F80FuncType, genLibCall},
+    {"aint", "llvm.trunc.f128", genF128F128FuncType, genLibCall},
     // llvm.round behaves the same way as libm's round.
     {"anint", "llvm.round.f32", genF32F32FuncType,
      genMathOp<mlir::LLVM::RoundOp>},
     {"anint", "llvm.round.f64", genF64F64FuncType,
+     genMathOp<mlir::LLVM::RoundOp>},
+    {"anint", "llvm.round.f80", genF80F80FuncType,
+     genMathOp<mlir::LLVM::RoundOp>},
+    {"anint", "llvm.round.f128", genF128F128FuncType,
      genMathOp<mlir::LLVM::RoundOp>},
     {"atan", "atanf", genF32F32FuncType, genMathOp<mlir::math::AtanOp>},
     {"atan", "atan", genF64F64FuncType, genMathOp<mlir::math::AtanOp>},

@@ -144,7 +144,7 @@ bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
 
 bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
   FileSpec temp_file("/opt/local/include/lldb");
-  file_spec.SetDirectory(temp_file.GetPath());
+  file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }
 

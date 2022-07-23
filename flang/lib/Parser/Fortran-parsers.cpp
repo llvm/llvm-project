@@ -1075,6 +1075,9 @@ TYPE_PARSER(
 TYPE_PARSER(construct<CharLiteralConstantSubstring>(
     charLiteralConstant, parenthesized(Parser<SubstringRange>{})))
 
+TYPE_PARSER(sourced(construct<SubstringInquiry>(Parser<Substring>{}) /
+    ("%LEN"_tok || "%KIND"_tok)))
+
 // R910 substring-range -> [scalar-int-expr] : [scalar-int-expr]
 TYPE_PARSER(construct<SubstringRange>(
     maybe(scalarIntExpr), ":" >> maybe(scalarIntExpr)))

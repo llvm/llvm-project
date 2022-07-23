@@ -131,7 +131,7 @@ void SymbolFileProvider::Keep() {
     return;
 
   // Remove duplicates.
-  llvm::sort(m_symbol_files.begin(), m_symbol_files.end());
+  llvm::sort(m_symbol_files);
   m_symbol_files.erase(
       std::unique(m_symbol_files.begin(), m_symbol_files.end()),
       m_symbol_files.end());
