@@ -225,12 +225,12 @@ public:
       aliasToAllocations[alloc] = allocationInterface;
 
       // Get the alias information for the current allocation node.
-      llvm::for_each(aliases.resolve(alloc), [&](Value alias) {
+      for (Value alias : aliases.resolve(alloc)) {
         // TODO: check for incompatible implementations of the
         // AllocationOpInterface. This could be realized by promoting the
         // AllocationOpInterface to a DialectInterface.
         aliasToAllocations[alias] = allocationInterface;
-      });
+      }
     }
     return success();
   }

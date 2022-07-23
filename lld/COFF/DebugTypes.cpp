@@ -1126,9 +1126,8 @@ void TypeMerger::mergeTypesWithGHash() {
   }
 
   // In parallel, remap all types.
-  for_each(dependencySources, [&](TpiSource *source) {
+  for (TpiSource *source : dependencySources)
     source->remapTpiWithGHashes(&ghashState);
-  });
   parallelForEach(objectSources, [&](TpiSource *source) {
     source->remapTpiWithGHashes(&ghashState);
   });

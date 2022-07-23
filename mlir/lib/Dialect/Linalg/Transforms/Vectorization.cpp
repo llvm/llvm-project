@@ -665,14 +665,14 @@ static int64_t getIntFromAttr(Attribute attr) {
 static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
                                            ArrayRef<OpFoldResult> ofrs) {
   SmallVector<Value> result;
-  llvm::for_each(ofrs, [&](auto o) {
+  for (auto o : ofrs) {
     if (auto val = o.template dyn_cast<Value>()) {
       result.push_back(val);
     } else {
       result.push_back(builder.create<arith::ConstantIndexOp>(
           loc, getIntFromAttr(o.template get<Attribute>())));
     }
-  });
+  }
   return result;
 }
 

@@ -328,7 +328,8 @@ void DefGen::emitDefaultBuilder() {
       getBuilderParams({{"::mlir::MLIRContext *", "context"}}));
   MethodBody &body = m->body().indent();
   auto scope = body.scope("return Base::get(context", ");");
-  llvm::for_each(params, [&](auto &param) { body << ", " << param.getName(); });
+  for (const auto &param : params)
+    body << ", " << param.getName();
 }
 
 void DefGen::emitCheckedBuilder() {
@@ -339,7 +340,8 @@ void DefGen::emitCheckedBuilder() {
            {"::mlir::MLIRContext *", "context"}}));
   MethodBody &body = m->body().indent();
   auto scope = body.scope("return Base::getChecked(emitError, context", ");");
-  llvm::for_each(params, [&](auto &param) { body << ", " << param.getName(); });
+  for (const auto &param : params)
+    body << ", " << param.getName();
 }
 
 static SmallVector<MethodParameter>
