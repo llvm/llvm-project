@@ -368,9 +368,7 @@ int main(int argc, char **argv) {
     printf("%06x: %s\n", static_cast<unsigned int>(Codepoint), Name.c_str());
     T.insert(Name, Codepoint);
     LongestName =
-        std::max(LongestName, std::size_t(llvm::count_if(Name, [](char c) {
-                   return llvm::isAlnum(c);
-                 })));
+        std::max(LongestName, std::size_t(llvm::count_if(Name, llvm::isAlnum)));
     NameCount++;
   }
   T.compact();

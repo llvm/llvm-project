@@ -427,8 +427,7 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
       continue;
 
     // Fail hoisting if the operand shape is not fully static.
-    if (llvm::any_of(paddedOp.getShape(opOperand),
-                     [](int64_t size) { return ShapedType::isDynamic(size); }))
+    if (llvm::any_of(paddedOp.getShape(opOperand), ShapedType::isDynamic))
       return failure();
 
     tensor::PadOp hoistedOp;

@@ -1840,9 +1840,8 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     if (!ShapedType::isDynamic(shape[idx]))
       return createIndexConstant(rewriter, loc, shape[idx]);
     // Count the number of dynamic dims in range [0, idx]
-    unsigned nDynamic = llvm::count_if(shape.take_front(idx), [](int64_t v) {
-      return ShapedType::isDynamic(v);
-    });
+    unsigned nDynamic =
+        llvm::count_if(shape.take_front(idx), ShapedType::isDynamic);
     return dynamicSizes[nDynamic];
   }
 
