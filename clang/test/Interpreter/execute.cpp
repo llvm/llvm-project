@@ -5,6 +5,7 @@
 // UNSUPPORTED: system-aix
 // CHECK-DRIVER: i = 10
 // RUN: cat %s | clang-repl | FileCheck %s
+// RUN: cat %s | clang-repl -Xcc -O2 | FileCheck %s
 extern "C" int printf(const char *, ...);
 int i = 42;
 auto r1 = printf("i = %d\n", i);
