@@ -72,12 +72,12 @@ void ModuleCacheTest::SetUp() {
 static void VerifyDiskState(const FileSpec &cache_dir, const char *hostname) {
   FileSpec uuid_view = GetUuidView(cache_dir);
   EXPECT_TRUE(FileSystem::Instance().Exists(uuid_view))
-      << "uuid_view is: " << uuid_view.GetPath();
+      << "uuid_view is: " << uuid_view.GetCString();
   EXPECT_EQ(module_size, FileSystem::Instance().GetByteSize(uuid_view));
 
   FileSpec sysroot_view = GetSysrootView(cache_dir, hostname);
   EXPECT_TRUE(FileSystem::Instance().Exists(sysroot_view))
-      << "sysroot_view is: " << sysroot_view.GetPath();
+      << "sysroot_view is: " << sysroot_view.GetCString();
   EXPECT_EQ(module_size, FileSystem::Instance().GetByteSize(sysroot_view));
 }
 
@@ -97,10 +97,10 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
       [&download_called, this](const ModuleSpec &module_spec,
                                const FileSpec &tmp_download_file_spec) {
         download_called = true;
-        EXPECT_STREQ(GetDummyRemotePath().GetPath().c_str(),
-                     module_spec.GetFileSpec().GetPath().c_str());
+        EXPECT_STREQ(GetDummyRemotePath().GetCString(),
+                     module_spec.GetFileSpec().GetCString());
         std::error_code ec = llvm::sys::fs::copy_file(
-            s_test_executable, tmp_download_file_spec.GetPath());
+            s_test_executable, tmp_download_file_spec.GetCString());
         EXPECT_FALSE(ec);
         return Status();
       },
@@ -118,8 +118,8 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
   module_sp->FindFunctionSymbols(ConstString("boom"), eFunctionNameTypeFull,
                                  sc_list);
   EXPECT_EQ(1u, sc_list.GetSize());
-  EXPECT_STREQ(GetDummyRemotePath().GetPath().c_str(),
-               module_sp->GetPlatformFileSpec().GetPath().c_str());
+  EXPECT_STREQ(GetDummyRemotePath().GetCString(),
+               module_sp->GetPlatformFileSpec().GetCString());
   EXPECT_STREQ(module_uuid, module_sp->GetUUID().GetAsString().c_str());
 }
 
@@ -140,7 +140,7 @@ TEST_F(ModuleCacheTest, GetAndPutUuidExists) {
   std::error_code ec =
       llvm::sys::fs::create_directories(uuid_view.GetDirectory().GetCString());
   ASSERT_FALSE(ec);
-  ec = llvm::sys::fs::copy_file(s_test_executable, uuid_view.GetPath().c_str());
+  ec = llvm::sys::fs::copy_file(s_test_executable, uuid_view.GetCString());
   ASSERT_FALSE(ec);
 
   const bool expect_download = false;

@@ -23,7 +23,7 @@ define i8* @bar() nounwind {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8*, i8** [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i8* [[TMP0]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    ret i8* undef
+; CHECK-NEXT:    ret i8* poison
 ;
 entry:
   %retval = alloca i8*
@@ -85,7 +85,7 @@ entry:
 }
 
 @.str5 = private constant [9 x i32] [i32 97, i32 98, i32 99, i32 100, i32 0, i32
- 101, i32 102, i32 103, i32 0], align 4
+  101, i32 102, i32 103, i32 0], align 4
 define i32 @test2() nounwind {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    ret i32 34

@@ -1056,13 +1056,13 @@ bool TargetLowering::SimplifyDemandedBits(
   // TODO: We can probably do more work on calculating the known bits and
   // simplifying the operations for scalable vectors, but for now we just
   // bail out.
-  if (Op.getValueType().isScalableVector())
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector())
     return false;
 
   bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
   unsigned NumElts = OriginalDemandedElts.getBitWidth();
-  assert((!Op.getValueType().isVector() ||
-          NumElts == Op.getValueType().getVectorNumElements()) &&
+  assert((!VT.isVector() || NumElts == VT.getVectorNumElements()) &&
          "Unexpected vector size");
 
   APInt DemandedBits = OriginalDemandedBits;
@@ -1088,7 +1088,6 @@ bool TargetLowering::SimplifyDemandedBits(
   }
 
   // Other users may use these bits.
-  EVT VT = Op.getValueType();
   if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
     if (Depth != 0) {
       // If not at the root, Just compute the Known bits to
@@ -1465,6 +1464,33 @@ bool TargetLowering::SimplifyDemandedBits(
         Op1 = DemandedOp1 ? DemandedOp1 : Op1;
         SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
         return TLO.CombineTo(Op, NewOp);
+      }
+    }
+
+    // (or (and X, C1), (and (or X, Y), C2)) -> (or (and X, C1|C2), (and Y, C2))
+    // TODO: Use SimplifyMultipleUseDemandedBits to peek through masks.
+    if (Op0.getOpcode() == ISD::AND && Op1.getOpcode() == ISD::AND &&
+        Op0->hasOneUse() && Op1->hasOneUse()) {
+      // Attempt to match all commutations - m_c_Or would've been useful!
+      for (int I = 0; I != 2; ++I) {
+        SDValue X = Op.getOperand(I).getOperand(0);
+        SDValue C1 = Op.getOperand(I).getOperand(1);
+        SDValue Alt = Op.getOperand(1 - I).getOperand(0);
+        SDValue C2 = Op.getOperand(1 - I).getOperand(1);
+        if (Alt.getOpcode() == ISD::OR) {
+          for (int J = 0; J != 2; ++J) {
+            if (X == Alt.getOperand(J)) {
+              SDValue Y = Alt.getOperand(1 - J);
+              if (SDValue C12 = TLO.DAG.FoldConstantArithmetic(ISD::OR, dl, VT,
+                                                               {C1, C2})) {
+                SDValue MaskX = TLO.DAG.getNode(ISD::AND, dl, VT, X, C12);
+                SDValue MaskY = TLO.DAG.getNode(ISD::AND, dl, VT, Y, C2);
+                return TLO.CombineTo(
+                    Op, TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
+              }
+            }
+          }
+        }
       }
     }
 

@@ -31,9 +31,8 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     ShapedType weightType = weight.getType().cast<ShapedType>();
     ShapedType resultType = op.getType().cast<ShapedType>();
 
-    auto numDynamic = llvm::count_if(inputType.getShape(), [](int64_t d) {
-      return ShapedType::isDynamic(d);
-    });
+    auto numDynamic =
+        llvm::count_if(inputType.getShape(), ShapedType::isDynamic);
     if (numDynamic > 1)
       return rewriter.notifyMatchFailure(
           op, "at most one dim in input may be dynamic");

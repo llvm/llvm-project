@@ -37421,6 +37421,7 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                bool IsUnary) {
   unsigned NumMaskElts = Mask.size();
   unsigned EltSizeInBits = MaskVT.getScalarSizeInBits();
+  unsigned SizeInBits = MaskVT.getSizeInBits();
 
   if (MaskVT.is128BitVector()) {
     if (isTargetShuffleEquivalent(MaskVT, Mask, {0, 0}, DAG) &&
@@ -37488,7 +37489,10 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
 
   // Attempt to match against a OR if we're performing a blend shuffle and the
   // non-blended source element is zero in each case.
-  if ((EltSizeInBits % V1.getScalarValueSizeInBits()) == 0 &&
+  // TODO: Handle cases where V1/V2 sizes doesn't match SizeInBits.
+  if (SizeInBits == V1.getValueSizeInBits() &&
+      SizeInBits == V2.getValueSizeInBits() &&
+      (EltSizeInBits % V1.getScalarValueSizeInBits()) == 0 &&
       (EltSizeInBits % V2.getScalarValueSizeInBits()) == 0) {
     bool IsBlend = true;
     unsigned NumV1Elts = V1.getValueType().getVectorNumElements();

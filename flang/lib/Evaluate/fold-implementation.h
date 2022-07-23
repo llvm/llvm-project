@@ -342,11 +342,9 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
           return std::move(*specific);
         }
       }
-      if (auto length{ToInt64(Fold(context_, substring->LEN()))}) {
-        if (*length == 0) {
-          return Expr<T>{Constant<T>{Scalar<T>{}}};
-        }
-      }
+      // We used to fold zero-length substrings into zero-length
+      // constants here, but that led to problems in variable
+      // definition contexts.
     }
   } else if constexpr (T::category == TypeCategory::Real) {
     if (auto *zPart{std::get_if<ComplexPart>(&designator.u)}) {

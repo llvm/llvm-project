@@ -10,6 +10,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <map>
 
@@ -125,20 +126,20 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
 
     // Sort the includes. We first sort by priority, then lexicographically.
     for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI)
-      std::sort(IncludeIndices.begin() + Blocks[BI],
-                IncludeIndices.begin() + Blocks[BI + 1],
-                [&FileDirectives](unsigned LHSI, unsigned RHSI) {
-                  IncludeDirective &LHS = FileDirectives[LHSI];
-                  IncludeDirective &RHS = FileDirectives[RHSI];
+      llvm::sort(IncludeIndices.begin() + Blocks[BI],
+                 IncludeIndices.begin() + Blocks[BI + 1],
+                 [&FileDirectives](unsigned LHSI, unsigned RHSI) {
+                   IncludeDirective &LHS = FileDirectives[LHSI];
+                   IncludeDirective &RHS = FileDirectives[RHSI];
 
-                  int PriorityLHS =
-                      getPriority(LHS.Filename, LHS.IsAngled, LHS.IsMainModule);
-                  int PriorityRHS =
-                      getPriority(RHS.Filename, RHS.IsAngled, RHS.IsMainModule);
+                   int PriorityLHS = getPriority(LHS.Filename, LHS.IsAngled,
+                                                 LHS.IsMainModule);
+                   int PriorityRHS = getPriority(RHS.Filename, RHS.IsAngled,
+                                                 RHS.IsMainModule);
 
-                  return std::tie(PriorityLHS, LHS.Filename) <
-                         std::tie(PriorityRHS, RHS.Filename);
-                });
+                   return std::tie(PriorityLHS, LHS.Filename) <
+                          std::tie(PriorityRHS, RHS.Filename);
+                 });
 
     // Emit a warning for each block and fixits for all changes within that
     // block.

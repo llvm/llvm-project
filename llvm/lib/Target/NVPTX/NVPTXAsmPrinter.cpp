@@ -356,8 +356,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
       // PTX ABI requires all scalar return values to be at least 32
       // bits in size.  fp16 normally uses .b16 as its storage type in
       // PTX, so its size must be adjusted here, too.
-      if (size < 32)
-        size = 32;
+      size = promoteScalarArgumentSize(size);
 
       O << ".param .b" << size << " func_retval0";
     } else if (isa<PointerType>(Ty)) {
@@ -386,8 +385,8 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
 
       for (unsigned j = 0, je = elems; j != je; ++j) {
         unsigned sz = elemtype.getSizeInBits();
-        if (elemtype.isInteger() && (sz < 32))
-          sz = 32;
+        if (elemtype.isInteger())
+          sz = promoteScalarArgumentSize(sz);
         O << ".reg .b" << sz << " func_retval" << idx;
         if (j < je - 1)
           O << ", ";
@@ -1576,8 +1575,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       unsigned sz = 0;
       if (isa<IntegerType>(Ty)) {
         sz = cast<IntegerType>(Ty)->getBitWidth();
-        if (sz < 32)
-          sz = 32;
+        sz = promoteScalarArgumentSize(sz);
       } else if (isa<PointerType>(Ty))
         sz = thePointerTy.getSizeInBits();
       else if (Ty->isHalfTy())
@@ -1641,8 +1639,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
         for (unsigned j = 0, je = elems; j != je; ++j) {
           unsigned sz = elemtype.getSizeInBits();
-          if (elemtype.isInteger() && (sz < 32))
-            sz = 32;
+          if (elemtype.isInteger())
+            sz = promoteScalarArgumentSize(sz);
           O << "\t.reg .b" << sz << " ";
           printParamName(I, paramIndex, O);
           if (j < je - 1)

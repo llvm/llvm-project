@@ -283,8 +283,9 @@ unsigned Decl::getTemplateDepth() const {
   return cast<Decl>(DC)->getTemplateDepth();
 }
 
-const DeclContext *Decl::getParentFunctionOrMethod() const {
-  for (const DeclContext *DC = getDeclContext();
+const DeclContext *Decl::getParentFunctionOrMethod(bool LexicalParent) const {
+  for (const DeclContext *DC = LexicalParent ? getLexicalDeclContext()
+                                             : getDeclContext();
        DC && !DC->isTranslationUnit() && !DC->isNamespace();
        DC = DC->getParent())
     if (DC->isFunctionOrMethod())

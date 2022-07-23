@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -29,6 +30,28 @@ namespace dataflow {
 using llvm::AlignStyle;
 using llvm::fmt_pad;
 using llvm::formatv;
+
+std::string debugString(Solver::Result::Assignment Assignment) {
+  switch (Assignment) {
+  case Solver::Result::Assignment::AssignedFalse:
+    return "False";
+  case Solver::Result::Assignment::AssignedTrue:
+    return "True";
+  }
+  llvm_unreachable("Booleans can only be assigned true/false");
+}
+
+std::string debugString(Solver::Result::Status Status) {
+  switch (Status) {
+  case Solver::Result::Status::Satisfiable:
+    return "Satisfiable";
+  case Solver::Result::Status::Unsatisfiable:
+    return "Unsatisfiable";
+  case Solver::Result::Status::TimedOut:
+    return "TimedOut";
+  }
+  llvm_unreachable("Unhandled SAT check result status");
+}
 
 namespace {
 
@@ -80,9 +103,25 @@ public:
     return formatv("{0}", fmt_pad(S, Indent, 0));
   }
 
+  std::string debugString(const llvm::DenseSet<BoolValue *> &Constraints) {
+    std::vector<std::string> ConstraintsStrings;
+    ConstraintsStrings.reserve(Constraints.size());
+    for (BoolValue *Constraint : Constraints) {
+      ConstraintsStrings.push_back(debugString(*Constraint));
+    }
+    llvm::sort(ConstraintsStrings);
+
+    std::string Result;
+    for (const std::string &S : ConstraintsStrings) {
+      Result += S;
+      Result += '\n';
+    }
+    return Result;
+  }
+
   /// Returns a string representation of a set of boolean `Constraints` and the
   /// `Result` of satisfiability checking on the `Constraints`.
-  std::string debugString(const std::vector<BoolValue *> &Constraints,
+  std::string debugString(ArrayRef<BoolValue *> &Constraints,
                           const Solver::Result &Result) {
     auto Template = R"(
 Constraints
@@ -101,7 +140,7 @@ Constraints
       ConstraintsStrings.push_back(debugString(*Constraint));
     }
 
-    auto StatusString = debugString(Result.getStatus());
+    auto StatusString = clang::dataflow::debugString(Result.getStatus());
     auto Solution = Result.getSolution();
     auto SolutionString = Solution ? "\n" + debugString(Solution.value()) : "";
 
@@ -126,36 +165,12 @@ private:
       auto Line = formatv("{0} = {1}",
                           fmt_align(getAtomName(AtomAssignment.first),
                                     AlignStyle::Left, MaxNameLength),
-                          debugString(AtomAssignment.second));
+                          clang::dataflow::debugString(AtomAssignment.second));
       Lines.push_back(Line);
     }
-    llvm::sort(Lines.begin(), Lines.end());
+    llvm::sort(Lines);
 
     return formatv("{0:$[\n]}", llvm::make_range(Lines.begin(), Lines.end()));
-  }
-
-  /// Returns a string representation of a boolean assignment to true or false.
-  std::string debugString(Solver::Result::Assignment Assignment) {
-    switch (Assignment) {
-    case Solver::Result::Assignment::AssignedFalse:
-      return "False";
-    case Solver::Result::Assignment::AssignedTrue:
-      return "True";
-    }
-    llvm_unreachable("Booleans can only be assigned true/false");
-  }
-
-  /// Returns a string representation of the result status of a SAT check.
-  std::string debugString(Solver::Result::Status Status) {
-    switch (Status) {
-    case Solver::Result::Status::Satisfiable:
-      return "Satisfiable";
-    case Solver::Result::Status::Unsatisfiable:
-      return "Unsatisfiable";
-    case Solver::Result::Status::TimedOut:
-      return "TimedOut";
-    }
-    llvm_unreachable("Unhandled SAT check result status");
   }
 
   /// Returns the name assigned to `Atom`, either user-specified or created by
@@ -185,8 +200,13 @@ debugString(const BoolValue &B,
 }
 
 std::string
-debugString(const std::vector<BoolValue *> &Constraints,
-            const Solver::Result &Result,
+debugString(const llvm::DenseSet<BoolValue *> &Constraints,
+            llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames) {
+  return DebugStringGenerator(std::move(AtomNames)).debugString(Constraints);
+}
+
+std::string
+debugString(ArrayRef<BoolValue *> Constraints, const Solver::Result &Result,
             llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames) {
   return DebugStringGenerator(std::move(AtomNames))
       .debugString(Constraints, Result);

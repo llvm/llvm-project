@@ -83,7 +83,7 @@ class BitVector {
   using Storage = SmallVector<BitWord>;
 
   Storage Bits;  // Actual bits.
-  unsigned Size; // Size of bitvector in bits.
+  unsigned Size = 0; // Size of bitvector in bits.
 
 public:
   using size_type = unsigned;
@@ -135,7 +135,7 @@ public:
   }
 
   /// BitVector default ctor - Creates an empty bitvector.
-  BitVector() : Size(0) {}
+  BitVector() = default;
 
   /// BitVector ctor - Creates a bitvector of specified number of bits. All
   /// bits are initialized to the specified value.
