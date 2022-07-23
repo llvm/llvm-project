@@ -13824,7 +13824,8 @@ static void CheckIdentityFieldAssignment(Expr *LHSExpr, Expr *RHSExpr,
 // C99 6.5.16.1
 QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
                                        SourceLocation Loc,
-                                       QualType CompoundType) {
+                                       QualType CompoundType,
+                                       BinaryOperatorKind Opc) {
   assert(!LHSExpr->hasPlaceholderType(BuiltinType::PseudoObject));
 
   // Verify that LHS is a modifiable lvalue, and emit error if not.
@@ -13937,10 +13938,18 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       //   expression or an unevaluated operand
       ExprEvalContexts.back().VolatileAssignmentLHSs.push_back(LHSExpr);
     } else {
-      // C++2a [expr.ass]p6:
+      // C++20 [expr.ass]p6:
       //   [Compound-assignment] expressions are deprecated if E1 has
-      //   volatile-qualified type
-      Diag(Loc, diag::warn_deprecated_compound_assign_volatile) << LHSType;
+      //   volatile-qualified type and op is not one of the bitwise
+      //   operators |, &, ˆ.
+      switch (Opc) {
+      case BO_OrAssign:
+      case BO_AndAssign:
+      case BO_XorAssign:
+        break;
+      default:
+        Diag(Loc, diag::warn_deprecated_compound_assign_volatile) << LHSType;
+      }
     }
   }
 
@@ -14879,7 +14888,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   switch (Opc) {
   case BO_Assign:
-    ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType());
+    ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {
       VK = LHS.get()->getValueKind();
@@ -14976,32 +14985,37 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
                                                Opc == BO_DivAssign);
     CompLHSTy = CompResultTy;
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
-      ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
+      ResultTy =
+          CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
     break;
   case BO_RemAssign:
     CompResultTy = CheckRemainderOperands(LHS, RHS, OpLoc, true);
     CompLHSTy = CompResultTy;
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
-      ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
+      ResultTy =
+          CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
     break;
   case BO_AddAssign:
     ConvertHalfVec = true;
     CompResultTy = CheckAdditionOperands(LHS, RHS, OpLoc, Opc, &CompLHSTy);
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
-      ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
+      ResultTy =
+          CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
     break;
   case BO_SubAssign:
     ConvertHalfVec = true;
     CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, &CompLHSTy);
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
-      ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
+      ResultTy =
+          CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
     break;
   case BO_ShlAssign:
   case BO_ShrAssign:
     CompResultTy = CheckShiftOperands(LHS, RHS, OpLoc, Opc, true);
     CompLHSTy = CompResultTy;
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
-      ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
+      ResultTy =
+          CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
     break;
   case BO_AndAssign:
   case BO_OrAssign: // fallthrough
@@ -15011,7 +15025,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     CompResultTy = CheckBitwiseOperands(LHS, RHS, OpLoc, Opc);
     CompLHSTy = CompResultTy;
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
-      ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
+      ResultTy =
+          CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
     break;
   case BO_Comma:
     ResultTy = CheckCommaOperands(*this, LHS, RHS, OpLoc);

@@ -520,6 +520,7 @@ C++2b Feature Support
   This feature is available as an extension in all C and C++ language modes.
 - Implemented `P2071 Named universal character escapes <https://wg21.link/P2290R2>`_.
   This feature is available as an extension in all C and C++ language modes.
+- Implemented `P2327R1 De-deprecating volatile compound operations <https://wg21.link/P2327R1>`_
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
