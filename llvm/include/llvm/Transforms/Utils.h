@@ -50,15 +50,6 @@ extern char &LowerSwitchID;
 
 //===----------------------------------------------------------------------===//
 //
-// EntryExitInstrumenter pass - Instrument function entry/exit with calls to
-// mcount(), @__cyg_profile_func_{enter,exit} and the like. There are two
-// variants, intended to run pre- and post-inlining, respectively.
-//
-FunctionPass *createEntryExitInstrumenterPass();
-FunctionPass *createPostInlineEntryExitInstrumenterPass();
-
-//===----------------------------------------------------------------------===//
-//
 // BreakCriticalEdges - Break all of the critical edges in the CFG by inserting
 // a dummy basic block. This pass may be "required" by passes that cannot deal
 // with critical edges. For this usage, a pass must call:
