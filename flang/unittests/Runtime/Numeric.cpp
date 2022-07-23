@@ -18,28 +18,6 @@ template <int KIND> using Real = CppTypeFor<TypeCategory::Real, KIND>;
 
 // Simple tests of numeric intrinsic functions using examples from Fortran 2018
 
-TEST(Numeric, Aint) {
-  EXPECT_EQ(RTNAME(Aint4_4)(Real<4>{3.7}), 3.0);
-  EXPECT_EQ(RTNAME(Aint8_4)(Real<8>{-3.7}), -3.0);
-  EXPECT_EQ(RTNAME(Aint8_8)(Real<8>{0}), 0.0);
-  EXPECT_EQ(RTNAME(Aint4_4)(std::numeric_limits<Real<4>>::infinity()),
-      std::numeric_limits<Real<4>>::infinity());
-  EXPECT_TRUE(
-      std::isnan(RTNAME(Aint8_8)(std::numeric_limits<Real<8>>::quiet_NaN())));
-}
-
-TEST(Numeric, Anint) {
-  EXPECT_EQ(RTNAME(Anint4_4)(Real<4>{2.783}), 3.0);
-  EXPECT_EQ(RTNAME(Anint8_4)(Real<8>{-2.783}), -3.0);
-  EXPECT_EQ(RTNAME(Anint4_4)(Real<4>{2.5}), 3.0);
-  EXPECT_EQ(RTNAME(Anint8_4)(Real<8>{-2.5}), -3.0);
-  EXPECT_EQ(RTNAME(Anint8_8)(Real<8>{0}), 0.0);
-  EXPECT_EQ(RTNAME(Anint4_4)(std::numeric_limits<Real<4>>::infinity()),
-      std::numeric_limits<Real<4>>::infinity());
-  EXPECT_TRUE(
-      std::isnan(RTNAME(Aint8_8)(std::numeric_limits<Real<8>>::quiet_NaN())));
-}
-
 TEST(Numeric, Ceiling) {
   EXPECT_EQ(RTNAME(Ceiling4_4)(Real<4>{3.7}), 4);
   EXPECT_EQ(RTNAME(Ceiling8_8)(Real<8>{-3.7}), -3);
