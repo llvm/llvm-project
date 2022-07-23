@@ -1069,7 +1069,7 @@ struct AAPointerInfoImpl
       bool Dominates = DT && Exact && Acc.isMustAccess() &&
                        (Acc.getLocalInst()->getFunction() == &Scope) &&
                        DT->dominates(Acc.getRemoteInst(), &I);
-      if (Dominates)
+      if (FindInterferingWrites && Dominates)
         HasBeenWrittenTo = true;
 
       // For now we only filter accesses based on CFG reasoning which does not
