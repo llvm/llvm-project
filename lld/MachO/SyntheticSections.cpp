@@ -57,7 +57,7 @@ static void sha256(const uint8_t *data, size_t len, uint8_t *output) {
 #else
   ArrayRef<uint8_t> block(data, len);
   std::array<uint8_t, 32> hash = SHA256::hash(block);
-  assert(hash.size() == CodeSignatureSection::hashSize);
+  static_assert(hash.size() == CodeSignatureSection::hashSize, "");
   memcpy(output, hash.data(), hash.size());
 #endif
 }

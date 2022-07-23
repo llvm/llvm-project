@@ -3856,7 +3856,8 @@ void InStruct::reset() {
 
 constexpr char kMemtagAndroidNoteName[] = "Android";
 void MemtagAndroidNote::writeTo(uint8_t *buf) {
-  assert(sizeof(kMemtagAndroidNoteName) == 8); // ABI check for Android 11 & 12.
+  static_assert(sizeof(kMemtagAndroidNoteName) == 8,
+                "ABI check for Android 11 & 12.");
   assert((config->androidMemtagStack || config->androidMemtagHeap) &&
          "Should only be synthesizing a note if heap || stack is enabled.");
 
