@@ -530,6 +530,7 @@ struct Tag {
   Optional<EnumExtensibilityKind> EnumExtensibility;
   Optional<bool> FlagEnum;
   Optional<EnumConvenienceAliasKind> EnumConvenienceKind;
+  FunctionsSeq MemberFuncs;
 };
 
 typedef std::vector<Tag> TagsSeq;
@@ -560,6 +561,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
+    IO.mapOptional("Methods", T.MemberFuncs);
   }
 };
 } // namespace yaml
@@ -1099,6 +1101,23 @@ namespace {
         }
 
         Writer->addTag(t.Name, tagInfo, swiftVersion);
+
+        for (auto Member : t.MemberFuncs) {
+          auto MemberName = (t.Name + "." + Member.Name).str();
+
+          FunctionInfo info;
+          convertAvailability(Member.Availability, info, MemberName);
+          info.setSwiftPrivate(Member.SwiftPrivate);
+          info.SwiftName = std::string(Member.SwiftName);
+          convertParams(Member.Params, info);
+          convertNullability(Member.Nullability,
+                             Member.NullabilityOfRet,
+                             info, MemberName);
+          info.ResultType = std::string(Member.ResultType);
+          info.setRetainCountConvention(Member.RetainCountConvention);
+
+          Writer->addMemberFunction(MemberName, info, swiftVersion);
+        }
       }
 
       // Write all typedefs.

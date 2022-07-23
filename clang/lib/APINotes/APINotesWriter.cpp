@@ -101,6 +101,11 @@ public:
                                    1>>
     GlobalFunctions;
 
+  llvm::DenseMap<unsigned,
+                 llvm::SmallVector<std::pair<VersionTuple, FunctionInfo>,
+                                   1>>
+      MemberFunctions;
+
   /// Information about enumerators.
   ///
   /// Indexed by the identifier ID.
@@ -169,6 +174,7 @@ private:
   void writeObjCSelectorBlock(llvm::BitstreamWriter &writer);
   void writeGlobalVariableBlock(llvm::BitstreamWriter &writer);
   void writeGlobalFunctionBlock(llvm::BitstreamWriter &writer);
+  void writeMemberFunctionBlock(llvm::BitstreamWriter &writer);
   void writeEnumConstantBlock(llvm::BitstreamWriter &writer);
   void writeTagBlock(llvm::BitstreamWriter &writer);
   void writeTypedefBlock(llvm::BitstreamWriter &writer);
@@ -970,6 +976,31 @@ namespace {
       emitFunctionInfo(out, info);
     }
   };
+
+  /// Used to serialize the on-disk global function table.
+  class MemberFunctionTableInfo
+      : public VersionedTableInfo<MemberFunctionTableInfo,
+                                  unsigned,
+                                  FunctionInfo> {
+  public:
+    unsigned getKeyLength(key_type_ref) {
+      return sizeof(uint32_t);
+    }
+
+    void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
+      endian::Writer writer(out, little);
+      writer.write<uint32_t>(key);
+    }
+
+    unsigned getUnversionedInfoSize(const FunctionInfo &info) {
+      return getFunctionInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out,
+                             const FunctionInfo &info) {
+      emitFunctionInfo(out, info);
+    }
+  };
 } // end anonymous namespace
 
 void APINotesWriter::Implementation::writeGlobalFunctionBlock(
@@ -994,6 +1025,31 @@ void APINotesWriter::Implementation::writeGlobalFunctionBlock(
   }
 
   global_function_block::GlobalFunctionDataLayout layout(writer);
+  layout.emit(ScratchRecord, tableOffset, hashTableBlob);
+}
+
+void APINotesWriter::Implementation::writeMemberFunctionBlock(
+    llvm::BitstreamWriter &writer) {
+  llvm::BCBlockRAII restoreBlock(writer, MEMBER_FUNCTION_BLOCK_ID, 3);
+
+  if (MemberFunctions.empty())
+    return;
+
+  llvm::SmallString<4096> hashTableBlob;
+  uint32_t tableOffset;
+  {
+    llvm::OnDiskChainedHashTableGenerator<MemberFunctionTableInfo> generator;
+    for (auto &entry : MemberFunctions) {
+      generator.insert(entry.first, entry.second);
+    }
+
+    llvm::raw_svector_ostream blobStream(hashTableBlob);
+    // Make sure that no bucket is at offset 0
+    endian::write<uint32_t>(blobStream, 0, little);
+    tableOffset = generator.Emit(blobStream);
+  }
+
+  member_function_block::MemberFunctionDataLayout layout(writer);
   layout.emit(ScratchRecord, tableOffset, hashTableBlob);
 }
 
@@ -1196,6 +1252,7 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &os) {
     writeObjCSelectorBlock(writer);
     writeGlobalVariableBlock(writer);
     writeGlobalFunctionBlock(writer);
+    writeMemberFunctionBlock(writer);
     writeEnumConstantBlock(writer);
     writeTagBlock(writer);
     writeTypedefBlock(writer);
@@ -1312,6 +1369,13 @@ void APINotesWriter::addGlobalFunction(llvm::StringRef name,
                                        VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
   Impl.GlobalFunctions[nameID].push_back({swiftVersion, info});
+}
+
+void APINotesWriter::addMemberFunction(llvm::StringRef name,
+                                       const FunctionInfo &info,
+                                       VersionTuple swiftVersion) {
+  IdentifierID nameID = Impl.getIdentifier(name);
+  Impl.MemberFunctions[nameID].push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addEnumConstant(llvm::StringRef name,

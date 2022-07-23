@@ -21,3 +21,7 @@ typedef NS_OPTIONS(NSUInteger, NSSomeEnumOptions) {
 	NSSomeEnumWithGreen,
 	NSSomeEnumWithBlue,
 };
+
+struct Struct {
+  void method() {}
+};

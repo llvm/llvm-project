@@ -822,8 +822,9 @@ void Sema::ProcessAPINotes(Decl *D) {
     return;
 
   // Globals.
-  if (D->getDeclContext()->isFileContext() ||
-      D->getDeclContext()->isExternCContext()) {
+  if (!isa<CXXMethodDecl>(D) &&
+      (D->getDeclContext()->isFileContext() ||
+       D->getDeclContext()->isExternCContext())) {
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
@@ -897,6 +898,11 @@ void Sema::ProcessAPINotes(Decl *D) {
         ProcessVersionedAPINotes(*this, Tag, Info);
       }
 
+      for (auto Member : Tag->decls()) {
+        if (isa<CXXMethodDecl>(Member))
+          ProcessAPINotes(Member);
+      }
+
       return;
     }
 
@@ -908,6 +914,22 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       return;
+    }
+  }
+
+  if (auto Method = dyn_cast<CXXMethodDecl>(D)) {
+    for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      auto Name = Method->getNameAsString();
+      auto parent = Method->getParent();
+      std::string parents = parent->getNameAsString();
+      while (isa<clang::CXXRecordDecl>(parent->getParent())) {
+        parent = cast<clang::CXXRecordDecl>(parent->getParent());
+        parents += "." + parent->getNameAsString();
+      }
+
+      auto FullName = parents + "." + Name;
+      auto Info = Reader->lookupMemberFunction(FullName);
+      ProcessVersionedAPINotes(*this, Method, Info);
     }
   }
 

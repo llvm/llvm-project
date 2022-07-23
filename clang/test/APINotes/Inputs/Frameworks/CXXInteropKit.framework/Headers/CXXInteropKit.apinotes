@@ -13,3 +13,8 @@ Enumerators:
 Tags:
 - Name: NSSomeEnumOptions
   SwiftName: SomeEnum.Options
+- Name: Struct
+  SwiftName: SwiftStruct
+  Methods:
+  - Name: 'method'
+    SwiftName: swiftMethod()

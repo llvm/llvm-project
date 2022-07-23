@@ -72,6 +72,8 @@ enum BlockID {
   /// information about the global function.
   GLOBAL_FUNCTION_BLOCK_ID,
 
+  MEMBER_FUNCTION_BLOCK_ID,
+
   /// The tag data block, which maps tag names to information about
   /// the tags.
   TAG_BLOCK_ID,
@@ -206,6 +208,16 @@ enum { GLOBAL_FUNCTION_DATA = 1 };
 
 using GlobalFunctionDataLayout = llvm::BCRecordLayout<
     GLOBAL_FUNCTION_DATA, // record ID
+    llvm::BCVBR<16>,      // table offset within the blob (see below)
+    llvm::BCBlob          // map from name to global function information
+    >;
+} // namespace global_function_block
+
+namespace member_function_block {
+enum { MEMBER_FUNCTION_DATA = 1 };
+
+using MemberFunctionDataLayout = llvm::BCRecordLayout<
+    MEMBER_FUNCTION_DATA, // record ID
     llvm::BCVBR<16>,      // table offset within the blob (see below)
     llvm::BCBlob          // map from name to global function information
     >;
