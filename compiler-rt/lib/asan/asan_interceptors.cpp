@@ -243,14 +243,18 @@ DEFINE_REAL_PTHREAD_FUNCTIONS
 
 #if ASAN_INTERCEPT_SWAPCONTEXT
 static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
+  // Only clear if we know the stack. This should be true only for contexts
+  // created with makecontext().
+  if (!ssize)
+    return;
   // Align to page size.
   uptr PageSize = GetPageSizeCached();
   uptr bottom = RoundDownTo(stack, PageSize);
+  if (!AddrIsInMem(bottom))
+    return;
   ssize += stack - bottom;
   ssize = RoundUpTo(ssize, PageSize);
-  static const uptr kMaxSaneContextStackSize = 1 << 22;  // 4 Mb
-  if (AddrIsInMem(bottom) && ssize && ssize <= kMaxSaneContextStackSize)
-    PoisonShadow(bottom, ssize, 0);
+  PoisonShadow(bottom, ssize, 0);
 }
 
 INTERCEPTOR(int, getcontext, struct ucontext_t *ucp) {
