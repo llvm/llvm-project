@@ -120,7 +120,7 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   if (!FileSystem::Instance().Exists(pdb_file)) {
     const auto exe_dir = FileSpec(exe_path).CopyByRemovingLastPathComponent();
     const auto pdb_name = FileSpec(pdb_file).GetFilename().GetCString();
-    pdb_file = exe_dir.CopyByAppendingPathComponent(pdb_name).GetPathAsConstString().GetStringRef();
+    pdb_file = exe_dir.CopyByAppendingPathComponent(pdb_name).GetCString();
   }
 
   // If the file is not a PDB or if it doesn't have a matching GUID, fail.

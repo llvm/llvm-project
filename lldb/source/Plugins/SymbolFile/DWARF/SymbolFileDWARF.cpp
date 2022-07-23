@@ -993,9 +993,10 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
                                   dwarf_cu.GetOffset()))
     return false;
 
-  std::string comp_dir = dwarf_cu.GetCompilationDirectory().GetPath();
   support_files = ParseSupportFilesFromPrologue(
-      module, prologue, dwarf_cu.GetPathStyle(), comp_dir);
+      module, prologue, dwarf_cu.GetPathStyle(),
+      dwarf_cu.GetCompilationDirectory().GetCString());
+
   return true;
 }
 

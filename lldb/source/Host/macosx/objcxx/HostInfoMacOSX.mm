@@ -167,7 +167,8 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     }
   }
 
-  file_spec.SetDirectory(raw_path);
+  file_spec.GetDirectory().SetString(
+      llvm::StringRef(raw_path.c_str(), raw_path.size()));
   return (bool)file_spec.GetDirectory();
 }
 
@@ -184,7 +185,8 @@ bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
     raw_path.resize(framework_pos);
     raw_path.append("/Headers");
   }
-  file_spec.SetDirectory(raw_path);
+  file_spec.GetDirectory().SetString(
+      llvm::StringRef(raw_path.c_str(), raw_path.size()));
   return true;
 }
 
@@ -202,14 +204,15 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
   framework_pos += strlen("LLDB.framework");
   raw_path.resize(framework_pos);
   raw_path.append("/Resources/PlugIns");
-  file_spec.SetDirectory(raw_path);
+  file_spec.GetDirectory().SetString(
+      llvm::StringRef(raw_path.c_str(), raw_path.size()));
   return true;
 }
 
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns");
   FileSystem::Instance().Resolve(temp_file);
-  file_spec.SetDirectory(temp_file.GetPathAsConstString());
+  file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }
 
@@ -259,8 +262,8 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
       arch_32.SetArchitecture(eArchTypeMachO, cputype & ~(CPU_ARCH_MASK),
                               cpusubtype32);
 
-      if (cputype == CPU_TYPE_ARM ||
-          cputype == CPU_TYPE_ARM64 ||
+      if (cputype == CPU_TYPE_ARM || 
+          cputype == CPU_TYPE_ARM64 || 
           cputype == CPU_TYPE_ARM64_32) {
 // When running on a watch or tv, report the host os correctly
 #if defined(TARGET_OS_TV) && TARGET_OS_TV == 1

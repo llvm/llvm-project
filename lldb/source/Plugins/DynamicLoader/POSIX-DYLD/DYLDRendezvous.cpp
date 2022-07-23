@@ -119,7 +119,7 @@ void DYLDRendezvous::UpdateExecutablePath() {
     if (exe_mod) {
       m_exe_file_spec = exe_mod->GetPlatformFileSpec();
       LLDB_LOGF(log, "DYLDRendezvous::%s exe module executable path set: '%s'",
-                __FUNCTION__, m_exe_file_spec.GetPath().c_str());
+                __FUNCTION__, m_exe_file_spec.GetCString());
     } else {
       LLDB_LOGF(log,
                 "DYLDRendezvous::%s cannot cache exe module path: null "
@@ -658,7 +658,7 @@ void DYLDRendezvous::DumpToLog(Log *log) const {
     log->PutCString("DYLDRendezvous SOEntries:");
 
   for (int i = 1; I != E; ++I, ++i) {
-    LLDB_LOGF(log, "\n   SOEntry [%d] %s", i, I->file_spec.GetPath().c_str());
+    LLDB_LOGF(log, "\n   SOEntry [%d] %s", i, I->file_spec.GetCString());
     LLDB_LOGF(log, "      Base : %" PRIx64, I->base_addr);
     LLDB_LOGF(log, "      Path : %" PRIx64, I->path_addr);
     LLDB_LOGF(log, "      Dyn  : %" PRIx64, I->dyn_addr);

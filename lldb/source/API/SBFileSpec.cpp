@@ -115,26 +115,26 @@ const char *SBFileSpec::GetDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
   FileSpec directory{*m_opaque_up};
-  directory.ClearFilename();
-  return directory.GetPathAsConstString().GetCString();
+  directory.GetFilename().Clear();
+  return directory.GetCString();
 }
 
 void SBFileSpec::SetFilename(const char *filename) {
   LLDB_INSTRUMENT_VA(this, filename);
 
   if (filename && filename[0])
-    m_opaque_up->SetFilename(filename);
+    m_opaque_up->GetFilename().SetCString(filename);
   else
-    m_opaque_up->ClearFilename();
+    m_opaque_up->GetFilename().Clear();
 }
 
 void SBFileSpec::SetDirectory(const char *directory) {
   LLDB_INSTRUMENT_VA(this, directory);
 
   if (directory && directory[0])
-    m_opaque_up->SetDirectory(directory);
+    m_opaque_up->GetDirectory().SetCString(directory);
   else
-    m_opaque_up->ClearDirectory();
+    m_opaque_up->GetDirectory().Clear();
 }
 
 uint32_t SBFileSpec::GetPath(char *dst_path, size_t dst_len) const {
