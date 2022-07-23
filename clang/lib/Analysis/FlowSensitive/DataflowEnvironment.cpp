@@ -15,10 +15,8 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -510,6 +508,10 @@ void Environment::addToFlowCondition(BoolValue &Val) {
 
 bool Environment::flowConditionImplies(BoolValue &Val) const {
   return DACtx->flowConditionImplies(*FlowConditionToken, Val);
+}
+
+void Environment::dump() const {
+  DACtx->dumpFlowCondition(*FlowConditionToken);
 }
 
 } // namespace dataflow

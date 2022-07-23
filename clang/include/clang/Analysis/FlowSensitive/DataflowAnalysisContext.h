@@ -23,6 +23,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
 #include <type_traits>
@@ -250,6 +251,8 @@ public:
   /// Note: This function doesn't take into account constraints on `Val1` and
   /// `Val2` imposed by the flow condition.
   bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
+
+  LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token);
 
 private:
   struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
