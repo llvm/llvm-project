@@ -2895,7 +2895,7 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
-; IND-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP29:![0-9]+]]
+; IND-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP29:![0-9]+]]
 ; IND:       exit:
 ; IND-NEXT:    ret i32 0
 ;
@@ -2914,7 +2914,7 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
-; UNROLL-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP29:![0-9]+]]
+; UNROLL-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP29:![0-9]+]]
 ; UNROLL:       exit:
 ; UNROLL-NEXT:    ret i32 0
 ;
@@ -2967,7 +2967,7 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
-; INTERLEAVE-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP29:![0-9]+]]
+; INTERLEAVE-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP29:![0-9]+]]
 ; INTERLEAVE:       exit:
 ; INTERLEAVE-NEXT:    ret i32 0
 ;
@@ -3034,7 +3034,7 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
-; IND-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP31:![0-9]+]]
+; IND-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP31:![0-9]+]]
 ; IND:       exit:
 ; IND-NEXT:    ret i32 0
 ;
@@ -3053,7 +3053,7 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
-; UNROLL-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP31:![0-9]+]]
+; UNROLL-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP31:![0-9]+]]
 ; UNROLL:       exit:
 ; UNROLL-NEXT:    ret i32 0
 ;
@@ -3106,7 +3106,7 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
-; INTERLEAVE-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP31:![0-9]+]]
+; INTERLEAVE-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP31:![0-9]+]]
 ; INTERLEAVE:       exit:
 ; INTERLEAVE-NEXT:    ret i32 0
 ;
@@ -3168,9 +3168,9 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; IND:       vector.ph:
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
-; IND-NEXT:    br i1 undef, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; IND-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; IND:       middle.block:
-; IND-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; IND-NEXT:    br i1 poison, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
@@ -3187,9 +3187,9 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
-; UNROLL-NEXT:    br i1 undef, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; UNROLL-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; UNROLL:       middle.block:
-; UNROLL-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; UNROLL-NEXT:    br i1 poison, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
@@ -3240,9 +3240,9 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
-; INTERLEAVE-NEXT:    br i1 undef, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; INTERLEAVE-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; INTERLEAVE:       middle.block:
-; INTERLEAVE-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br i1 poison, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
@@ -5363,13 +5363,13 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[FOR_BODY:%.*]]
 ; IND:       for.body:
-; IND-NEXT:    br i1 undef, label [[FOR_INC:%.*]], label [[FOR_COND:%.*]]
+; IND-NEXT:    br i1 poison, label [[FOR_INC:%.*]], label [[FOR_COND:%.*]]
 ; IND:       for.cond:
 ; IND-NEXT:    br label [[FOR_INC]]
 ; IND:       for.inc:
-; IND-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP49:![0-9]+]]
+; IND-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP49:![0-9]+]]
 ; IND:       for.end:
-; IND-NEXT:    [[VAR7:%.*]] = phi i32 [ undef, [[FOR_INC]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
+; IND-NEXT:    [[VAR7:%.*]] = phi i32 [ poison, [[FOR_INC]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
 ; IND-NEXT:    ret i32 [[VAR7]]
 ;
 ; UNROLL-LABEL: @PR32419(
@@ -5441,13 +5441,13 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL:       for.body:
-; UNROLL-NEXT:    br i1 undef, label [[FOR_INC:%.*]], label [[FOR_COND:%.*]]
+; UNROLL-NEXT:    br i1 poison, label [[FOR_INC:%.*]], label [[FOR_COND:%.*]]
 ; UNROLL:       for.cond:
 ; UNROLL-NEXT:    br label [[FOR_INC]]
 ; UNROLL:       for.inc:
-; UNROLL-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP49:![0-9]+]]
+; UNROLL-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP49:![0-9]+]]
 ; UNROLL:       for.end:
-; UNROLL-NEXT:    [[VAR7:%.*]] = phi i32 [ undef, [[FOR_INC]] ], [ [[TMP31]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NEXT:    [[VAR7:%.*]] = phi i32 [ poison, [[FOR_INC]] ], [ [[TMP31]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NEXT:    ret i32 [[VAR7]]
 ;
 ; UNROLL-NO-IC-LABEL: @PR32419(
@@ -6189,7 +6189,7 @@ define void @pr52460_first_order_recurrence_truncated_iv(i32* noalias %src, i32*
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
-; IND-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP53:![0-9]+]]
+; IND-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP53:![0-9]+]]
 ; IND:       exit:
 ; IND-NEXT:    ret void
 ;
@@ -6231,7 +6231,7 @@ define void @pr52460_first_order_recurrence_truncated_iv(i32* noalias %src, i32*
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
-; UNROLL-NEXT:    br i1 undef, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP53:![0-9]+]]
+; UNROLL-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP53:![0-9]+]]
 ; UNROLL:       exit:
 ; UNROLL-NEXT:    ret void
 ;

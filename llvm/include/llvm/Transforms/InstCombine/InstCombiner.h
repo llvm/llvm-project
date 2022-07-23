@@ -425,7 +425,7 @@ public:
     // If we are replacing the instruction with itself, this must be in a
     // segment of unreachable code, so just clobber the instruction.
     if (&I == V)
-      V = UndefValue::get(I.getType());
+      V = PoisonValue::get(I.getType());
 
     LLVM_DEBUG(dbgs() << "IC: Replacing " << I << "\n"
                       << "    with " << *V << '\n');

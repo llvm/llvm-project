@@ -593,7 +593,7 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   }
 
   // Trunc no longer needed.
-  TI->replaceAllUsesWith(UndefValue::get(TI->getType()));
+  TI->replaceAllUsesWith(PoisonValue::get(TI->getType()));
   DeadInsts.emplace_back(TI);
   return true;
 }

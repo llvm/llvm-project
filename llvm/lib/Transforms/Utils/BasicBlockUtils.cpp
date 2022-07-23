@@ -80,7 +80,7 @@ void llvm::detachDeadBlocks(
       // contained within it must dominate their uses, that all uses will
       // eventually be removed (they are themselves dead).
       if (!I.use_empty())
-        I.replaceAllUsesWith(UndefValue::get(I.getType()));
+        I.replaceAllUsesWith(PoisonValue::get(I.getType()));
       BB->getInstList().pop_back();
     }
     new UnreachableInst(BB->getContext(), BB);
@@ -1142,7 +1142,7 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
   if (Preds.empty()) {
     // Insert dummy values as the incoming value.
     for (BasicBlock::iterator I = BB->begin(); isa<PHINode>(I); ++I)
-      cast<PHINode>(I)->addIncoming(UndefValue::get(I->getType()), NewBB);
+      cast<PHINode>(I)->addIncoming(PoisonValue::get(I->getType()), NewBB);
   }
 
   // Update DominatorTree, LoopInfo, and LCCSA analysis information.
