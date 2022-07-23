@@ -13,6 +13,7 @@
 #include "DXILBitcodeWriter.h"
 #include "DXILValueEnumerator.h"
 #include "PointerTypeAnalysis.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -2580,10 +2581,9 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     SortedTable.push_back(VI.second->getValueName());
   }
   // The keys are unique, so there shouldn't be stability issues.
-  std::sort(SortedTable.begin(), SortedTable.end(),
-            [](const ValueName *A, const ValueName *B) {
-              return A->first() < B->first();
-            });
+  llvm::sort(SortedTable, [](const ValueName *A, const ValueName *B) {
+    return A->first() < B->first();
+  });
 
   for (const ValueName *SI : SortedTable) {
     auto &Name = *SI;

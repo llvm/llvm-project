@@ -10,6 +10,7 @@
 #include "clang-pseudo/grammar/LRGraph.h"
 #include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include <cstdint>
 
@@ -60,8 +61,8 @@ LRTable LRTable::Builder::build() && {
       continue;
     Table.Reduces.insert(Table.Reduces.end(), It->second.begin(),
                          It->second.end());
-    std::sort(Table.Reduces.begin() + Table.ReduceOffset.back(),
-              Table.Reduces.end());
+    llvm::sort(Table.Reduces.begin() + Table.ReduceOffset.back(),
+               Table.Reduces.end());
   }
   Table.ReduceOffset.push_back(Table.Reduces.size());
 
