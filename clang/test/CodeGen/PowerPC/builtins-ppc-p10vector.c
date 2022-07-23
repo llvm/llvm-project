@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefixes=CHECK-LE,CHECK
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +vsx \
+// RUN:   -target-cpu pwr10 -triple powerpc64-ibm-aix-xcoff -emit-llvm %s \
+// RUN:   -o - | FileCheck %s -check-prefixes=CHECK-BE,CHECK
 
 #include <altivec.h>
 

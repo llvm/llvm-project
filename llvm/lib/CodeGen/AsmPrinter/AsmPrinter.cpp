@@ -3389,9 +3389,12 @@ void AsmPrinter::emitGlobalConstant(const DataLayout &DL, const Constant *CV,
   }
   if (!AliasList)
     return;
-  for (const auto &AliasPair : *AliasList)
-    report_fatal_error("Aliases with offset " + Twine(AliasPair.first) +
-                       " were not emitted.");
+  // TODO: These remaining aliases are not emitted in the correct location. Need
+  // to handle the case where the alias offset doesn't refer to any sub-element.
+  for (auto &AliasPair : *AliasList) {
+    for (const GlobalAlias *GA : AliasPair.second)
+      OutStreamer->emitLabel(getSymbol(GA));
+  }
 }
 
 void AsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {

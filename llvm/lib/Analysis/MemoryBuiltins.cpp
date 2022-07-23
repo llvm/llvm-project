@@ -179,6 +179,11 @@ static const Function *getCalledFunction(const Value *V,
 static Optional<AllocFnsTy>
 getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
                              const TargetLibraryInfo *TLI) {
+  // Don't perform a slow TLI lookup, if this function doesn't return a pointer
+  // and thus can't be an allocation function.
+  if (!Callee->getReturnType()->isPointerTy())
+    return None;
+
   // Make sure that the function is available.
   LibFunc TLIFn;
   if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
@@ -307,27 +312,29 @@ bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, AllocLike, TLI).has_value();
 }
 
-/// Tests if a value is a call or invoke to a library function that
-/// reallocates memory (e.g., realloc).
-bool llvm::isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, ReallocLike, TLI).has_value();
-}
-
 /// Tests if a functions is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
 bool llvm::isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI) {
   return getAllocationDataForFunction(F, ReallocLike, TLI).has_value();
 }
 
-bool llvm::isAllocRemovable(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  assert(isAllocationFn(CB, TLI));
+Value *llvm::getReallocatedOperand(const CallBase *CB,
+                                   const TargetLibraryInfo *TLI) {
+  if (getAllocationData(CB, ReallocLike, TLI).has_value()) {
+    // All currently supported realloc functions reallocate the first argument.
+    return CB->getArgOperand(0);
+  }
+  return nullptr;
+}
 
+bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
   // Note: Removability is highly dependent on the source language.  For
   // example, recent C++ requires direct calls to the global allocation
   // [basic.stc.dynamic.allocation] to be observable unless part of a new
   // expression [expr.new paragraph 13].
 
-  // Historically we've treated the C family allocation routines as removable
+  // Historically we've treated the C family allocation routines and operator
+  // new as removable
   return isAllocLikeFn(CB, TLI);
 }
 
@@ -357,9 +364,8 @@ static bool CheckedZextOrTrunc(APInt &I, unsigned IntTyBits) {
 }
 
 Optional<APInt>
-llvm::getAllocSize(const CallBase *CB,
-                   const TargetLibraryInfo *TLI,
-                   std::function<const Value*(const Value*)> Mapper) {
+llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
+                   function_ref<const Value *(const Value *)> Mapper) {
   // Note: This handles both explicitly listed allocation functions and
   // allocsize.  The code structure could stand to be cleaned up a bit.
   Optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
@@ -528,20 +534,21 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   return true;
 }
 
-/// isFreeCall - Returns non-null if the value is a call to the builtin free()
-const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
+Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
   bool IsNoBuiltinCall;
-  const Function *Callee = getCalledFunction(I, IsNoBuiltinCall);
+  const Function *Callee = getCalledFunction(CB, IsNoBuiltinCall);
   if (Callee == nullptr || IsNoBuiltinCall)
     return nullptr;
 
   LibFunc TLIFn;
-  if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
-    return nullptr;
+  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
+      isLibFreeFunction(Callee, TLIFn)) {
+    // All currently supported free functions free the first argument.
+    return CB->getArgOperand(0);
+  }
 
-  return isLibFreeFunction(Callee, TLIFn) ? dyn_cast<CallInst>(I) : nullptr;
+  return nullptr;
 }
-
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
@@ -765,8 +772,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
-  auto Mapper = [](const Value *V) { return V; };
-  if (Optional<APInt> Size = getAllocSize(&CB, TLI, Mapper))
+  if (Optional<APInt> Size = getAllocSize(&CB, TLI))
     return std::make_pair(*Size, Zero);
   return unknown();
 }

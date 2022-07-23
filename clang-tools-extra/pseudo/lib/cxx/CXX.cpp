@@ -124,7 +124,7 @@ Token::Index recoverBrackets(Token::Index Begin, const TokenStream &Tokens) {
   assert(Left.Kind == tok::l_brace || Left.Kind == tok::l_paren ||
          Left.Kind == tok::l_square);
   if (const Token *Right = Left.pair()) {
-    assert(Tokens.index(*Right) > Begin);
+    assert(Tokens.index(*Right) > Begin - 1);
     return Tokens.index(*Right);
   }
   return Token::Invalid;

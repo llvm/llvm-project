@@ -21,17 +21,14 @@
 ;    vcvtps2ph instructions
 
 
-define void @test1(float %src, i16* %dest) {
+define void @test1(float %src, ptr %dest) nounwind {
 ; LIBCALL-LABEL: test1:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rbx
-; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
-; LIBCALL-NEXT:    .cfi_offset %rbx, -16
 ; LIBCALL-NEXT:    movq %rdi, %rbx
 ; LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
 ; LIBCALL-NEXT:    movw %ax, (%rbx)
 ; LIBCALL-NEXT:    popq %rbx
-; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
 ; LIBCALL-NEXT:    retq
 ;
 ; F16C-LABEL: test1:
@@ -43,20 +40,17 @@ define void @test1(float %src, i16* %dest) {
 ; SOFTFLOAT-LABEL: test1:
 ; SOFTFLOAT:       # %bb.0:
 ; SOFTFLOAT-NEXT:    pushq %rbx
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
-; SOFTFLOAT-NEXT:    .cfi_offset %rbx, -16
 ; SOFTFLOAT-NEXT:    movq %rsi, %rbx
 ; SOFTFLOAT-NEXT:    callq __gnu_f2h_ieee@PLT
 ; SOFTFLOAT-NEXT:    movw %ax, (%rbx)
 ; SOFTFLOAT-NEXT:    popq %rbx
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
   %1 = tail call i16 @llvm.convert.to.fp16.f32(float %src)
-  store i16 %1, i16* %dest, align 2
+  store i16 %1, ptr %dest, align 2
   ret void
 }
 
-define float @test2(i16* nocapture %src) {
+define float @test2(ptr nocapture %src) nounwind {
 ; LIBCALL-LABEL: test2:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    movzwl (%rdi), %edi
@@ -72,13 +66,11 @@ define float @test2(i16* nocapture %src) {
 ; SOFTFLOAT-LABEL: test2:
 ; SOFTFLOAT:       # %bb.0:
 ; SOFTFLOAT-NEXT:    pushq %rax
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
 ; SOFTFLOAT-NEXT:    movzwl (%rdi), %edi
 ; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee@PLT
 ; SOFTFLOAT-NEXT:    popq %rcx
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
-  %1 = load i16, i16* %src, align 2
+  %1 = load i16, ptr %src, align 2
   %2 = tail call float @llvm.convert.from.fp16.f32(i16 %1)
   ret float %2
 }
@@ -115,16 +107,14 @@ define float @test3(float %src) nounwind uwtable readnone {
   ret float %2
 }
 
-define double @test4(i16* nocapture %src) {
+define double @test4(ptr nocapture %src) nounwind {
 ; LIBCALL-LABEL: test4:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
-; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; LIBCALL-NEXT:    movzwl (%rdi), %edi
 ; LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
 ; LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm0
 ; LIBCALL-NEXT:    popq %rax
-; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
 ; LIBCALL-NEXT:    retq
 ;
 ; F16C-LABEL: test4:
@@ -138,20 +128,18 @@ define double @test4(i16* nocapture %src) {
 ; SOFTFLOAT-LABEL: test4:
 ; SOFTFLOAT:       # %bb.0:
 ; SOFTFLOAT-NEXT:    pushq %rax
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
 ; SOFTFLOAT-NEXT:    movzwl (%rdi), %edi
 ; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee@PLT
 ; SOFTFLOAT-NEXT:    movl %eax, %edi
 ; SOFTFLOAT-NEXT:    callq __extendsfdf2@PLT
 ; SOFTFLOAT-NEXT:    popq %rcx
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
-  %1 = load i16, i16* %src, align 2
+  %1 = load i16, ptr %src, align 2
   %2 = tail call double @llvm.convert.from.fp16.f64(i16 %1)
   ret double %2
 }
 
-define i16 @test5(double %src) {
+define i16 @test5(double %src) nounwind {
 ; LIBCALL-LABEL: test5:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    jmp __truncdfhf2@PLT # TAILCALL
@@ -163,10 +151,8 @@ define i16 @test5(double %src) {
 ; SOFTFLOAT-LABEL: test5:
 ; SOFTFLOAT:       # %bb.0:
 ; SOFTFLOAT-NEXT:    pushq %rax
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
 ; SOFTFLOAT-NEXT:    callq __truncdfhf2@PLT
 ; SOFTFLOAT-NEXT:    popq %rcx
-; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
   %val = tail call i16 @llvm.convert.to.fp16.f64(double %src)
   ret i16 %val

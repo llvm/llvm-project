@@ -6113,8 +6113,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N1.getValueType().isVector() == VT.isVector() &&
            "FP_TO_*INT_SAT type should be vector iff the operand type is "
            "vector!");
-    assert((!VT.isVector() || VT.getVectorNumElements() ==
-                                  N1.getValueType().getVectorNumElements()) &&
+    assert((!VT.isVector() || VT.getVectorElementCount() ==
+                                  N1.getValueType().getVectorElementCount()) &&
            "Vector element counts must match in FP_TO_*INT_SAT");
     assert(!cast<VTSDNode>(N2)->getVT().isVector() &&
            "Type to saturate to must be a scalar.");
@@ -8943,6 +8943,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "True and False arms of SelectCC must have same type!");
     assert(Ops[2].getValueType() == VT &&
            "select_cc node must be of same type as true and false value!");
+    assert((!Ops[0].getValueType().isVector() ||
+            Ops[0].getValueType().getVectorElementCount() ==
+                VT.getVectorElementCount()) &&
+           "Expected select_cc with vector result to have the same sized "
+           "comparison type!");
     break;
   case ISD::BR_CC:
     assert(NumOps == 5 && "BR_CC takes 5 operands!");

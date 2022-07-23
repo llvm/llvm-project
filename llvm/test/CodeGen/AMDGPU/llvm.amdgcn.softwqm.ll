@@ -182,8 +182,7 @@ define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:  ; %bb.1: ; %ELSE
 ; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 idxen
 ; CHECK-NEXT:  .LBB6_2: ; %Flow
-; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[0:1]
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
+; CHECK-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; CHECK-NEXT:    s_cbranch_execz .LBB6_4
 ; CHECK-NEXT:  ; %bb.3: ; %IF
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s12
@@ -238,8 +237,7 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:  .LBB7_2: ; %Flow
-; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[16:17]
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
+; CHECK-NEXT:    s_andn2_saveexec_b64 s[0:1], s[16:17]
 ; CHECK-NEXT:    s_cbranch_execz .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %IF
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s12
@@ -256,12 +254,6 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 main_body:
-  %c.bc = bitcast i32 %c to float
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
-  %tex0 = extractelement <4 x float> %tex, i32 0
-  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
-  %data.sample = extractelement <4 x float> %dtex, i32 0
-
   %cmp = icmp eq i32 %z, 0
   br i1 %cmp, label %IF, label %ELSE
 
@@ -273,6 +265,12 @@ IF:
   br label %END
 
 ELSE:
+  %c.bc = bitcast i32 %c to float
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %tex0 = extractelement <4 x float> %tex, i32 0
+  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
+  %data.sample = extractelement <4 x float> %dtex, i32 0
+
   call void @llvm.amdgcn.struct.buffer.store.f32(float %data.sample, <4 x i32> undef, i32 %c, i32 0, i32 0, i32 0)
   br label %END
 

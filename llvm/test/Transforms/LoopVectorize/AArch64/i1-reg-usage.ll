@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 < %s | FileCheck %s
+; RUN: opt -loop-vectorize -debug-only=loop-vectorize -disable-output -prefer-predicate-over-epilogue=scalar-epilogue 2>&1 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "aarch64"

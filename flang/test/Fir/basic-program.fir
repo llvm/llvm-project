@@ -1,6 +1,8 @@
 // RUN: tco %s | FileCheck %s
 // RUN: tco %s --mlir-pass-statistics --mlir-pass-statistics-display=pipeline 2>&1 | FileCheck %s --check-prefix=PASSES
 
+// REQUIRES: asserts
+
 // Check that tco is working with a basic test.
 // Also check the passes in the default pipeline.
 

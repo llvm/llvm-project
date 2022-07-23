@@ -694,4 +694,8 @@ def err_drv_invalid_format_dxil_validator_version : Error<
 def err_drv_invalid_empty_dxil_validator_version : Error<
   "invalid validator version : %0\n"
   "If validator major version is 0, minor version must also be 0.">;
+
+def warn_drv_sarif_format_unstable : Warning<
+  "diagnostic formatting in SARIF mode is currently unstable">,
+  InGroup<DiagGroup<"sarif-format-unstable">>;
 }
