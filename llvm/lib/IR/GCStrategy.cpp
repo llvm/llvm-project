@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/GCStrategy.h"
+#include "llvm/ADT/Twine.h"
 
 using namespace llvm;
 
@@ -32,7 +33,7 @@ std::unique_ptr<GCStrategy> llvm::getGCStrategy(const StringRef Name) {
     const std::string error =
         std::string("unsupported GC: ") + Name.str() +
         " (did you remember to link and initialize the library?)";
-    report_fatal_error(error);
+    report_fatal_error(Twine(error));
   } else
-    report_fatal_error(std::string("unsupported GC: ") + Name.str());
+    report_fatal_error(Twine(std::string("unsupported GC: ") + Name.str()));
 }
