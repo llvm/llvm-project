@@ -9088,6 +9088,15 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     }
     break;
   }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI: {
+    assert(VTList.NumVTs == 2 && Ops.size() == 2 && "Invalid mul lo/hi op!");
+    assert(VTList.VTs[0].isInteger() && VTList.VTs[0] == VTList.VTs[1] &&
+           VTList.VTs[0] == Ops[0].getValueType() &&
+           VTList.VTs[0] == Ops[1].getValueType() &&
+           "Binary operator types must match!");
+    break;
+  }
   case ISD::STRICT_FP_EXTEND:
     assert(VTList.NumVTs == 2 && Ops.size() == 2 &&
            "Invalid STRICT_FP_EXTEND!");
