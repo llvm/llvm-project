@@ -81,36 +81,35 @@ cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
 // facilities, the error message will be shown in place of the expected output.
 //
 enum class ChangePrinter {
-  NoChangePrinter,
-  PrintChangedVerbose,
-  PrintChangedQuiet,
-  PrintChangedDiffVerbose,
-  PrintChangedDiffQuiet,
-  PrintChangedColourDiffVerbose,
-  PrintChangedColourDiffQuiet,
-  PrintChangedDotCfgVerbose,
-  PrintChangedDotCfgQuiet
+  None,
+  Verbose,
+  Quiet,
+  DiffVerbose,
+  DiffQuiet,
+  ColourDiffVerbose,
+  ColourDiffQuiet,
+  DotCfgVerbose,
+  DotCfgQuiet,
 };
 static cl::opt<ChangePrinter> PrintChanged(
     "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
-    cl::ValueOptional, cl::init(ChangePrinter::NoChangePrinter),
+    cl::ValueOptional, cl::init(ChangePrinter::None),
     cl::values(
-        clEnumValN(ChangePrinter::PrintChangedQuiet, "quiet",
-                   "Run in quiet mode"),
-        clEnumValN(ChangePrinter::PrintChangedDiffVerbose, "diff",
+        clEnumValN(ChangePrinter::Quiet, "quiet", "Run in quiet mode"),
+        clEnumValN(ChangePrinter::DiffVerbose, "diff",
                    "Display patch-like changes"),
-        clEnumValN(ChangePrinter::PrintChangedDiffQuiet, "diff-quiet",
+        clEnumValN(ChangePrinter::DiffQuiet, "diff-quiet",
                    "Display patch-like changes in quiet mode"),
-        clEnumValN(ChangePrinter::PrintChangedColourDiffVerbose, "cdiff",
+        clEnumValN(ChangePrinter::ColourDiffVerbose, "cdiff",
                    "Display patch-like changes with color"),
-        clEnumValN(ChangePrinter::PrintChangedColourDiffQuiet, "cdiff-quiet",
+        clEnumValN(ChangePrinter::ColourDiffQuiet, "cdiff-quiet",
                    "Display patch-like changes in quiet mode with color"),
-        clEnumValN(ChangePrinter::PrintChangedDotCfgVerbose, "dot-cfg",
+        clEnumValN(ChangePrinter::DotCfgVerbose, "dot-cfg",
                    "Create a website with graphical changes"),
-        clEnumValN(ChangePrinter::PrintChangedDotCfgQuiet, "dot-cfg-quiet",
+        clEnumValN(ChangePrinter::DotCfgQuiet, "dot-cfg-quiet",
                    "Create a website with graphical changes in quiet mode"),
         // Sentinel value for unspecified option.
-        clEnumValN(ChangePrinter::PrintChangedVerbose, "", "")));
+        clEnumValN(ChangePrinter::Verbose, "", "")));
 
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
@@ -596,8 +595,8 @@ void TextChangeReporter<T>::handleIgnored(StringRef PassID, std::string &Name) {
 IRChangedPrinter::~IRChangedPrinter() = default;
 
 void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (PrintChanged == ChangePrinter::PrintChangedVerbose ||
-      PrintChanged == ChangePrinter::PrintChangedQuiet)
+  if (PrintChanged == ChangePrinter::Verbose ||
+      PrintChanged == ChangePrinter::Quiet)
     TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
 }
 
@@ -1275,10 +1274,10 @@ void InLineChangePrinter::handleFunctionCompare(
 }
 
 void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (PrintChanged == ChangePrinter::PrintChangedDiffVerbose ||
-      PrintChanged == ChangePrinter::PrintChangedDiffQuiet ||
-      PrintChanged == ChangePrinter::PrintChangedColourDiffVerbose ||
-      PrintChanged == ChangePrinter::PrintChangedColourDiffQuiet)
+  if (PrintChanged == ChangePrinter::DiffVerbose ||
+      PrintChanged == ChangePrinter::DiffQuiet ||
+      PrintChanged == ChangePrinter::ColourDiffVerbose ||
+      PrintChanged == ChangePrinter::ColourDiffQuiet)
     TextChangeReporter<IRDataT<EmptyData>>::registerRequiredCallbacks(PIC);
 }
 
@@ -2111,8 +2110,8 @@ DotCfgChangeReporter::~DotCfgChangeReporter() {
 
 void DotCfgChangeReporter::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  if ((PrintChanged == ChangePrinter::PrintChangedDotCfgVerbose ||
-       PrintChanged == ChangePrinter::PrintChangedDotCfgQuiet)) {
+  if (PrintChanged == ChangePrinter::DotCfgVerbose ||
+       PrintChanged == ChangePrinter::DotCfgQuiet) {
     SmallString<128> OutputDir;
     sys::fs::expand_tilde(DotCfgDir, OutputDir);
     sys::fs::make_absolute(OutputDir);
@@ -2129,14 +2128,12 @@ void DotCfgChangeReporter::registerCallbacks(
 StandardInstrumentations::StandardInstrumentations(
     bool DebugLogging, bool VerifyEach, PrintPassOptions PrintPassOpts)
     : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
-      PrintChangedIR(PrintChanged == ChangePrinter::PrintChangedVerbose),
-      PrintChangedDiff(
-          PrintChanged == ChangePrinter::PrintChangedDiffVerbose ||
-              PrintChanged == ChangePrinter::PrintChangedColourDiffVerbose,
-          PrintChanged == ChangePrinter::PrintChangedColourDiffVerbose ||
-              PrintChanged == ChangePrinter::PrintChangedColourDiffQuiet),
-      WebsiteChangeReporter(PrintChanged ==
-                            ChangePrinter::PrintChangedDotCfgVerbose),
+      PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
+      PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
+                           PrintChanged == ChangePrinter::ColourDiffVerbose,
+                       PrintChanged == ChangePrinter::ColourDiffVerbose ||
+                           PrintChanged == ChangePrinter::ColourDiffQuiet),
+      WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
       Verify(DebugLogging), VerifyEach(VerifyEach) {}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
