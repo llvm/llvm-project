@@ -40,7 +40,7 @@ static std::string getTypeStr(const QualType &OrigT, const Decl &D,
   QualType T = OrigT;
   PrintingPolicy Policy(D.getASTContext().getLangOpts());
   Policy.SuppressStrongLifetime = true;
-  std::string Prefix = "";
+  std::string Prefix;
   // If the nullability is specified via a property attribute, use the shorter
   // `nullable` form for the method parameter.
   if (PropertyAttributes & ObjCPropertyAttribute::kind_nullability) {
