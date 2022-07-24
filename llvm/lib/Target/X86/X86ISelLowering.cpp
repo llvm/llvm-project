@@ -41025,12 +41025,20 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
                                         EltBits)) {
         OpBits.clearAllBits();
         OpElts.clearAllBits();
-        for (int I = 0; I != NumElts; ++I)
-          if (DemandedElts[I] && ((Invert && !EltBits[I].isAllOnes()) ||
-                                  (!Invert && !EltBits[I].isZero()))) {
+        for (int I = 0; I != NumElts; ++I) {
+          if (!DemandedElts[I])
+            continue;
+          if (UndefElts[I]) {
+            // We can't assume an undef src element gives an undef dst - the
+            // other src might be zero.
+            OpBits.setAllBits();
+            OpElts.setBit(I);
+          } else if ((Invert && !EltBits[I].isAllOnes()) ||
+                     (!Invert && !EltBits[I].isZero())) {
             OpBits |= Invert ? ~EltBits[I] : EltBits[I];
             OpElts.setBit(I);
           }
+        }
       }
       return std::make_pair(OpBits, OpElts);
     };
@@ -47876,11 +47884,17 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                                         EltBits)) {
         DemandedBits.clearAllBits();
         DemandedElts.clearAllBits();
-        for (int I = 0; I != NumElts; ++I)
-          if (!EltBits[I].isZero()) {
+        for (int I = 0; I != NumElts; ++I) {
+          if (UndefElts[I]) {
+            // We can't assume an undef src element gives an undef dst - the
+            // other src might be zero.
+            DemandedBits.setAllBits();
+            DemandedElts.setBit(I);
+          } else if (!EltBits[I].isZero()) {
             DemandedBits |= EltBits[I];
             DemandedElts.setBit(I);
           }
+        }
       }
       return std::make_pair(DemandedBits, DemandedElts);
     };
@@ -51120,6 +51134,8 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
+  int NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
   // ANDNP(undef, x) -> 0
   // ANDNP(x, undef) -> 0
@@ -51138,6 +51154,19 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = IsNOT(N0, DAG))
     return DAG.getNode(ISD::AND, SDLoc(N), VT, DAG.getBitcast(VT, Not), N1);
 
+  // Constant Folding
+  APInt Undefs0, Undefs1;
+  SmallVector<APInt> EltBits0, EltBits1;
+  if (getTargetConstantBitsFromNode(N0, EltSizeInBits, Undefs0, EltBits0) &&
+      getTargetConstantBitsFromNode(N1, EltSizeInBits, Undefs1, EltBits1)) {
+    SDLoc DL(N);
+    SmallVector<APInt> ResultBits;
+    for (int I = 0; I != NumElts; ++I)
+      ResultBits.push_back(~EltBits0[I] & EltBits1[I]);
+    APInt ResultUndefs = APInt::getZero(NumElts);
+    return getConstVector(ResultBits, ResultUndefs, VT, DAG, DL);
+  }
+
   // TODO: Constant fold NOT(N0) to allow us to use AND.
   // TODO: Do this in IsNOT with suitable oneuse checks?
 
@@ -51152,20 +51181,24 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     auto GetDemandedMasks = [&](SDValue Op, bool Invert = false) {
       APInt UndefElts;
       SmallVector<APInt> EltBits;
-      int NumElts = VT.getVectorNumElements();
-      int EltSizeInBits = VT.getScalarSizeInBits();
       APInt DemandedBits = APInt::getAllOnes(EltSizeInBits);
       APInt DemandedElts = APInt::getAllOnes(NumElts);
       if (getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts,
                                         EltBits)) {
         DemandedBits.clearAllBits();
         DemandedElts.clearAllBits();
-        for (int I = 0; I != NumElts; ++I)
-          if ((Invert && !EltBits[I].isAllOnes()) ||
-              (!Invert && !EltBits[I].isZero())) {
+        for (int I = 0; I != NumElts; ++I) {
+          if (UndefElts[I]) {
+            // We can't assume an undef src element gives an undef dst - the
+            // other src might be zero.
+            DemandedBits.setAllBits();
+            DemandedElts.setBit(I);
+          } else if ((Invert && !EltBits[I].isAllOnes()) ||
+                     (!Invert && !EltBits[I].isZero())) {
             DemandedBits |= Invert ? ~EltBits[I] : EltBits[I];
             DemandedElts.setBit(I);
           }
+        }
       }
       return std::make_pair(DemandedBits, DemandedElts);
     };
