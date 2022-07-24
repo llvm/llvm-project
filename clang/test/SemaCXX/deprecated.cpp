@@ -184,6 +184,9 @@ namespace DeprecatedVolatile {
     n *= 3; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
     n /= 2; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
     n %= 42; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
+    n &= 2; // undeprecated as a DR in C++23
+    n |= 2; // undeprecated as a DR in C++23
+    n ^= 2; // undeprecated as a DR in C++23
 
     (void)__is_trivially_assignable(volatile int&, int); // no warning
 

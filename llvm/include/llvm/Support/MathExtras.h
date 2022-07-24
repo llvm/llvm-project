@@ -747,6 +747,12 @@ inline uint64_t alignTo(uint64_t Value, uint64_t Align) {
   return (Value + Align - 1) / Align * Align;
 }
 
+inline uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
+  assert(Align != 0 && (Align & Align - 1) == 0 &&
+         "Align must be a power of 2");
+  return (Value + Align - 1) & -Align;
+}
+
 /// If non-zero \p Skew is specified, the return value will be a minimal integer
 /// that is greater than or equal to \p Size and equal to \p A * N + \p Skew for
 /// some integer N. If \p Skew is larger than \p A, its value is adjusted to '\p
