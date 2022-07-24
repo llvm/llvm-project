@@ -125,6 +125,26 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
     HasIndirectCall |= Info.HasIndirectCall;
   }
 
+  // It's possible we have unreachable functions in the module which weren't
+  // visited by the PO traversal. Make sure we have some resource counts to
+  // report.
+  for (const auto &IT : CG) {
+    const Function *F = IT.first;
+    if (!F || F->isDeclaration())
+      continue;
+
+    auto CI = CallGraphResourceInfo.insert(
+      std::make_pair(F, SIFunctionResourceInfo()));
+    if (!CI.second) // Skip already visited functions
+      continue;
+
+    SIFunctionResourceInfo &Info = CI.first->second;
+    MachineFunction *MF = MMI.getMachineFunction(*F);
+    assert(MF && "function must have been generated already");
+    Info = analyzeResourceUsage(*MF, TM);
+    HasIndirectCall |= Info.HasIndirectCall;
+  }
+
   if (HasIndirectCall)
     propagateIndirectCallRegisterUsage();
 
