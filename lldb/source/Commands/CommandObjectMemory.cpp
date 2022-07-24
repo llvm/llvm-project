@@ -1659,7 +1659,7 @@ class CommandObjectMemoryRegion : public CommandObjectParsed {
 public:
   class OptionGroupMemoryRegion : public OptionGroup {
   public:
-    OptionGroupMemoryRegion() : OptionGroup(), m_all(false, false) {}
+    OptionGroupMemoryRegion() : m_all(false, false) {}
 
     ~OptionGroupMemoryRegion() override = default;
 

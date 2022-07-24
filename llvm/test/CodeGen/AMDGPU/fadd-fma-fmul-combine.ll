@@ -201,10 +201,10 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 
 
 ; GCN-SLOWFMA-DAG: v_mul_f32_e32 v{{[0-9]+}}, [[X]], [[Y]]
 ; GCN-SLOWFMA: v_add_f32_e32
-; GCN-SLOWFMA: v_sub_f32_e32 [[MAD:v[0-9]+]]
+; GCN-SLOWFMA: v_sub_f32_e32 [[SUB:v[0-9]+]]
 
 ; GCN: buffer_store_dword [[MUL]]
-; GCN: buffer_store_dword [[MAD]]
+; GCN: buffer_store_dword [[SUB]]
 define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
@@ -213,9 +213,9 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
   %v = load volatile float, float addrspace(1)* undef
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
-  %add = fsub fast float %fma, %z
+  %sub = fsub fast float %fma, %z
   store volatile float %mul.u.v, float addrspace(1)* undef
-  store volatile float %add, float addrspace(1)* undef
+  store volatile float %sub, float addrspace(1)* undef
   ret void
 }
 
