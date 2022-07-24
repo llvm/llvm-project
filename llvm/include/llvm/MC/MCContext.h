@@ -603,8 +603,6 @@ public:
                                     const MCSymbolELF *Group,
                                     const MCSectionELF *RelInfoSection);
 
-  void renameELFSection(MCSectionELF *Section, StringRef Name);
-
   MCSectionELF *createELFGroupSection(const MCSymbolELF *Group, bool IsComdat);
 
   void recordELFMergeableSectionInfo(StringRef SectionName, unsigned Flags,
