@@ -137,6 +137,11 @@ New checks
 
   Warns when there is an assignment within an if statement condition expression.
 
+- New :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check.
+
+  Detects unmodified local variables and suggest adding ``const`` if the transformation is possible.
+
 - New :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` check.
 

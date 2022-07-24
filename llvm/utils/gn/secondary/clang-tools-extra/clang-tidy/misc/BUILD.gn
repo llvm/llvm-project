@@ -29,6 +29,7 @@ static_library("misc") {
   ]
   sources = [
     "ConfusableIdentifierCheck.cpp",
+    "ConstCorrectnessCheck.cpp",
     "DefinitionsInHeadersCheck.cpp",
     "MiscTidyModule.cpp",
     "MisleadingBidirectional.cpp",

@@ -22,6 +22,7 @@ add_custom_command(
 add_custom_target(genconfusable DEPENDS Confusables.inc)
 
 add_clang_library(clangTidyMiscModule
+  ConstCorrectnessCheck.cpp
   DefinitionsInHeadersCheck.cpp
   ConfusableIdentifierCheck.cpp
   MiscTidyModule.cpp
@@ -42,6 +43,7 @@ add_clang_library(clangTidyMiscModule
   UnusedUsingDeclsCheck.cpp
 
   LINK_LIBS
+  clangAnalysis
   clangTidy
   clangTidyUtils
 

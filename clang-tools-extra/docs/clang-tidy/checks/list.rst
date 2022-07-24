@@ -239,6 +239,7 @@ Clang-Tidy Checks
    `llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace.html>`_,
    `llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers.html>`_, "Yes"
    `misc-confusable-identifiers <misc/confusable-identifiers.html>`_,
+   `misc-const-correctness <misc/const-correctness.html>`_, "Yes"
    `misc-definitions-in-headers <misc/definitions-in-headers.html>`_, "Yes"
    `misc-misleading-bidirectional <misc/misleading-bidirectional.html>`_,
    `misc-misleading-identifier <misc/misleading-identifier.html>`_,
