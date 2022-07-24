@@ -27,7 +27,6 @@ enum class ExceptionHandling {
 
 enum class DebugCompressionType {
   None, ///< No compression
-  GNU,  ///< zlib-gnu style compression
   Z,    ///< zlib style complession
 };
 
