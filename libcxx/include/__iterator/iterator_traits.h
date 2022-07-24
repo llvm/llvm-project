@@ -501,6 +501,12 @@ using __iter_to_alloc_type = pair<
     typename add_const<typename iterator_traits<_InputIterator>::value_type::first_type>::type,
     typename iterator_traits<_InputIterator>::value_type::second_type>;
 
+template <class _Iter>
+using __iterator_category_type = typename iterator_traits<_Iter>::iterator_category;
+
+template <class _Iter>
+using __iterator_pointer_type = typename iterator_traits<_Iter>::pointer;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
