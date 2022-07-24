@@ -85,7 +85,6 @@ public:
   int getAllocSizeOf(const Type *Ty) const;
   int getTypeAlignment(Type *Ty) const;
 
-  VectorType *getByteVectorTy(int ScLen) const;
   Constant *getNullValue(Type *Ty) const;
   Constant *getFullValue(Type *Ty) const;
 
