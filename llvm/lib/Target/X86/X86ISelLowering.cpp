@@ -51134,7 +51134,6 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
-  MVT SVT = VT.getScalarType();
   int NumElts = VT.getVectorNumElements();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
