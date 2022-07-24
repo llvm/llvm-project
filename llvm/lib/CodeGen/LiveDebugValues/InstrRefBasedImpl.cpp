@@ -3136,8 +3136,7 @@ bool InstrRefBasedLDV::emitTransfers(
                         MI->getDebugLoc()->getInlinedAt());
       Insts.emplace_back(AllVarsNumbering.find(Var)->second, MI);
     }
-    llvm::sort(Insts,
-               [](const auto &A, const auto &B) { return A.first < B.first; });
+    llvm::sort(Insts, llvm::less_first());
 
     // Insert either before or after the designated point...
     if (P.MBB) {
