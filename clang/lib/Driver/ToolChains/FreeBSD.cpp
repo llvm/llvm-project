@@ -489,12 +489,14 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
-  if (IsX86_64 || IsMIPS64) {
+  if (IsAArch64 || IsX86_64 || IsMIPS64) {
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::Thread;
   }
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Function;
+  }
+  if (IsAArch64 || IsX86 || IsX86_64) {
     Res |= SanitizerKind::SafeStack;
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
@@ -502,8 +504,6 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   if (IsAArch64 || IsX86_64) {
     Res |= SanitizerKind::KernelAddress;
     Res |= SanitizerKind::KernelMemory;
-  }
-  if (IsX86_64) {
     Res |= SanitizerKind::Memory;
   }
   return Res;
