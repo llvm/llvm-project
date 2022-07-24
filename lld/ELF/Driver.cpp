@@ -197,6 +197,10 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
   return v;
 }
 
+static bool isBitcode(MemoryBufferRef mb) {
+  return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
+}
+
 // Opens a file and create a file object. Path has to be resolved already.
 void LinkerDriver::addFile(StringRef path, bool withLOption) {
   using namespace sys::fs;
@@ -217,8 +221,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   case file_magic::archive: {
     if (inWholeArchive) {
-      for (const auto &p : getArchiveMembers(mbref))
-        files.push_back(createObjectFile(p.first, path, p.second));
+      for (const auto &p : getArchiveMembers(mbref)) {
+        if (isBitcode(p.first))
+          files.push_back(make<BitcodeFile>(p.first, path, p.second, false));
+        else
+          files.push_back(createObjFile(p.first, path));
+      }
       return;
     }
 
@@ -241,8 +249,10 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     InputFile::isInGroup = true;
     for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
       auto magic = identify_magic(p.first.getBuffer());
-      if (magic == file_magic::bitcode || magic == file_magic::elf_relocatable)
-        files.push_back(createLazyFile(p.first, path, p.second));
+      if (magic == file_magic::elf_relocatable)
+        files.push_back(createObjFile(p.first, path, true));
+      else if (magic == file_magic::bitcode)
+        files.push_back(make<BitcodeFile>(p.first, path, p.second, true));
       else
         warn(path + ": archive member '" + p.first.getBufferIdentifier() +
              "' is neither ET_REL nor LLVM bitcode");
@@ -267,11 +277,10 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         make<SharedFile>(mbref, withLOption ? path::filename(path) : path));
     return;
   case file_magic::bitcode:
+    files.push_back(make<BitcodeFile>(mbref, "", 0, inLib));
+    break;
   case file_magic::elf_relocatable:
-    if (inLib)
-      files.push_back(createLazyFile(mbref, "", 0));
-    else
-      files.push_back(createObjectFile(mbref));
+    files.push_back(createObjFile(mbref, "", inLib));
     break;
   default:
     error(path + ": unknown file type");
@@ -1612,7 +1621,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     case OPT_just_symbols:
       if (Optional<MemoryBufferRef> mb = readFile(arg->getValue())) {
-        files.push_back(createObjectFile(*mb));
+        files.push_back(createObjFile(*mb));
         files.back()->justSymbols = true;
       }
       break;

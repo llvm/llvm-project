@@ -47,7 +47,7 @@ define float @half_to_float() strictfp {
 ; X64-F16C-NEXT:    vmovd %eax, %xmm0
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    retq
-  %1 = load half, half* @a, align 2
+  %1 = load half, ptr @a, align 2
   %2 = tail call float @llvm.experimental.constrained.fpext.f32.f16(half %1, metadata !"fpexcept.strict") #0
   ret float %2
 }
@@ -94,7 +94,7 @@ define double @half_to_double() strictfp {
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; X64-F16C-NEXT:    retq
-  %1 = load half, half* @a, align 2
+  %1 = load half, ptr @a, align 2
   %2 = tail call double @llvm.experimental.constrained.fpext.f64.f16(half %1, metadata !"fpexcept.strict") #0
   ret double %2
 }
@@ -144,7 +144,7 @@ define x86_fp80 @half_to_fp80() strictfp {
 ; X64-F16C-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; X64-F16C-NEXT:    wait
 ; X64-F16C-NEXT:    retq
-  %1 = load half, half* @a, align 2
+  %1 = load half, ptr @a, align 2
   %2 = tail call x86_fp80 @llvm.experimental.constrained.fpext.f80.f16(half %1, metadata !"fpexcept.strict") #0
   ret x86_fp80 %2
 }
@@ -186,7 +186,7 @@ define void @float_to_half(float %0) strictfp {
 ; X64-F16C-NEXT:    vpextrw $0, %xmm0, _a(%rip)
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f32(float %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  store half %2, half* @a, align 2
+  store half %2, ptr @a, align 2
   ret void
 }
 
@@ -232,7 +232,7 @@ define void @double_to_half(double %0) strictfp {
 ; X64-F16C-NEXT:    popq %rax
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f64(double %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  store half %2, half* @a, align 2
+  store half %2, ptr @a, align 2
   ret void
 }
 
@@ -285,7 +285,7 @@ define void @fp80_to_half(x86_fp80 %0) strictfp {
 ; X64-F16C-NEXT:    addq $24, %rsp
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f80(x86_fp80 %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  store half %2, half* @a, align 2
+  store half %2, ptr @a, align 2
   ret void
 }
 
@@ -355,13 +355,13 @@ define void @add() strictfp {
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X64-F16C-NEXT:    vpextrw $0, %xmm0, _c(%rip)
 ; X64-F16C-NEXT:    retq
-  %1 = load half, half* @a, align 2
+  %1 = load half, ptr @a, align 2
   %2 = tail call float @llvm.experimental.constrained.fpext.f32.f16(half %1, metadata !"fpexcept.strict") #0
-  %3 = load half, half* @b, align 2
+  %3 = load half, ptr @b, align 2
   %4 = tail call float @llvm.experimental.constrained.fpext.f32.f16(half %3, metadata !"fpexcept.strict") #0
   %5 = tail call float @llvm.experimental.constrained.fadd.f32(float %2, float %4, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   %6 = tail call half @llvm.experimental.constrained.fptrunc.f16.f32(float %5, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  store half %6, half* @c, align 2
+  store half %6, ptr @c, align 2
   ret void
 }
 

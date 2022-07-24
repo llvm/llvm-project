@@ -436,8 +436,7 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
       CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArches,
                             ViewOpts.CompilationDirectory);
   if (Error E = CoverageOrErr.takeError()) {
-    error("Failed to load coverage: " + toString(std::move(E)),
-          join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "));
+    error("Failed to load coverage: " + toString(std::move(E)));
     return nullptr;
   }
   auto Coverage = std::move(CoverageOrErr.get());

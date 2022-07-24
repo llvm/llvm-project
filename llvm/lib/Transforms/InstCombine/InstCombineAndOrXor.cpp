@@ -2664,8 +2664,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // Inverted form (example):
   // (icmp slt (X | Y), 0) & (icmp sgt (X & Y), -1) -> (icmp slt (X ^ Y), 0)
   bool TrueIfSignedL, TrueIfSignedR;
-  if (InstCombiner::isSignBitCheck(PredL, *LHSC, TrueIfSignedL) &&
-      InstCombiner::isSignBitCheck(PredR, *RHSC, TrueIfSignedR) &&
+  if (isSignBitCheck(PredL, *LHSC, TrueIfSignedL) &&
+      isSignBitCheck(PredR, *RHSC, TrueIfSignedR) &&
       (RHS->hasOneUse() || LHS->hasOneUse())) {
     Value *X, *Y;
     if (IsAnd) {

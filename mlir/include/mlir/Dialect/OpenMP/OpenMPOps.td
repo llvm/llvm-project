@@ -28,6 +28,9 @@ def OpenMP_Dialect : Dialect {
   let cppNamespace = "::mlir::omp";
   let dependentDialects = ["::mlir::LLVM::LLVMDialect"];
   let useDefaultAttributePrinterParser = 1;
+
+  // TODO: Flip to _Prefixed.
+  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.
@@ -1231,7 +1234,8 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
 // [5.1] 2.21.2 threadprivate Directive
 //===----------------------------------------------------------------------===//
 
-def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
+def ThreadprivateOp : OpenMP_Op<"threadprivate",
+                                [AllTypesMatch<["sym_addr", "tls_addr"]>]> {
   let summary = "threadprivate directive";
   let description = [{
     The threadprivate directive specifies that variables are replicated, with

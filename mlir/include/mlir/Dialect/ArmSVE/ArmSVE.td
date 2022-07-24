@@ -29,7 +29,7 @@ def ArmSVE_Dialect : Dialect {
     scalable vector operations.
   }];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//

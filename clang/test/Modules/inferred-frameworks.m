@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -x objective-c -Wauto-import -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs %s -verify
+// RUN: %clang_cc1 -x objective-c -Rmodule-include-translation -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs %s -verify
 
 #include <NotAModule/NotAModule.h>
 

@@ -193,6 +193,8 @@ namespace RISCV {
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 bool isSEXT_W(const MachineInstr &MI);
+bool isZEXT_W(const MachineInstr &MI);
+bool isZEXT_B(const MachineInstr &MI);
 
 // Returns true if the given MI is an RVV instruction opcode for which we may
 // expect to see a FrameIndex operand.

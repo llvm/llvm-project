@@ -108,8 +108,8 @@ constexpr bool all_the_algorithms()
 #endif
     (void)std::ranges::equal(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::equal(a, b, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::equal_range(first, last, value, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::equal_range(a, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::equal_range(first, last, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::equal_range(a, value, Less(&copies)); assert(copies == 0);
     (void)std::ranges::find_end(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::find_end(a, b, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::find_first_of(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
@@ -124,8 +124,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::generate(first, last, NullaryValue(&copies)); assert(copies == 0);
     //(void)std::ranges::generate(a, NullaryValue(&copies)); assert(copies == 0);
     //(void)std::ranges::generate_n(first, count, NullaryValue(&copies)); assert(copies == 0);
-    //(void)std::ranges::includes(first, last, first2, last2, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::includes(a, b, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::includes(first, last, first2, last2, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::includes(a, b, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::is_heap(first, last, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::is_heap(a, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::is_heap_until(first, last, Less(&copies)); assert(copies == 0);

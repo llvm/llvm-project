@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s -check-prefix=MFS-DEFAULTS
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefix=MFS-OPTS1
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefix=MFS-OPTS2
+; RUN: llc < %s -opaque-pointers -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s -check-prefix=MFS-DEFAULTS
+; RUN: llc < %s -opaque-pointers -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefix=MFS-OPTS1
+; RUN: llc < %s -opaque-pointers -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefix=MFS-OPTS2
 
 define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ;; Check that cold block is moved to .text.split.
@@ -242,6 +242,28 @@ define void @foo9(i1 zeroext %0) nounwind #0 !prof !14 {
   ret void
 }
 
+define i32 @foo10(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14 {
+;; Check that nop is inserted just before the EH pad if it's beginning a section.
+; MFS-DEFAULTS-LABEL: foo10
+; MFS-DEFAULTS-LABEL: callq   baz
+; MFS-DEFAULTS:       .section        .text.split.foo10,"ax",@progbits
+; MFS-DEFAULTS-NEXT:  foo10.cold:
+; MFS-DEFAULTS:       nop
+; MFS-DEFAULTS:       callq   _Unwind_Resume@PLT
+entry:
+  invoke void @_Z1fv()
+          to label %try.cont unwind label %lpad, !prof !17
+
+lpad:
+  %1 = landingpad { ptr, i32 }
+          cleanup
+          catch ptr @_ZTIi
+  resume { ptr, i32 } %1
+
+try.cont:
+  %2 = call i32 @baz()
+  ret i32 %2
+}
 
 declare i32 @bar()
 declare i32 @baz()

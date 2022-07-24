@@ -89,6 +89,13 @@ Improvements and New Features
   should include assertions or not by default. For details, see
   :ref:`the documentation <assertions-mode>` about this new feature.
 
+- Clang now implements the ``-fexperimental-library`` flag. This flag can be used to
+  enable experimental library features such as TSes and other in-progress work like
+  ``<ranges>`` and ``<format>``. Using this flag makes it unnecessary to manually link
+  against ``libc++experimental.a`` -- just use ``-fexperimental-library`` and the
+  compiler will do what's needed to make experimental features work. However, be
+  aware that experimental features are not stable!
+
 - The implementation of the function ``std::to_chars`` for integral types using
   base 10 has moved from the dylib to the header. This means the function no
   longer has a minimum deployment target.
@@ -163,8 +170,10 @@ Deprecations and Removals
   ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
   and ``uniform_int_distribution`` now conform to the Standard by rejecting
   template parameter types other than ``short``, ``int``, ``long``, ``long long``,
-  (as an extension) ``__int128_t``, and the unsigned versions thereof.
-  In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
+  and the unsigned versions thereof. As an extension, ``int8_t``, ``__int128_t`` and
+  their unsigned versions are supported too. In particular, instantiating these
+  distributions with non-integer types like ``bool`` and ``char`` will not compile
+  anymore.
 
 Upcoming Deprecations and Removals
 ----------------------------------

@@ -509,6 +509,10 @@ public:
       DP("Failed to load CUDA shared library\n");
       return;
     }
+    if (Err == CUDA_ERROR_NO_DEVICE) {
+      DP("There are no devices supporting CUDA.\n");
+      return;
+    }
     if (!checkResult(Err, "Error returned from cuInit\n")) {
       return;
     }

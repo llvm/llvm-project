@@ -371,14 +371,8 @@ public:
   void parse();
 };
 
-InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName = "",
-                            uint64_t offsetInArchive = 0);
-InputFile *createLazyFile(MemoryBufferRef mb, StringRef archiveName,
-                          uint64_t offsetInArchive);
-
-inline bool isBitcode(MemoryBufferRef mb) {
-  return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
-}
+ELFFileBase *createObjFile(MemoryBufferRef mb, StringRef archiveName = "",
+                           bool lazy = false);
 
 std::string replaceThinLTOSuffix(StringRef path);
 

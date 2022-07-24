@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/CommonFolders.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -1332,10 +1333,37 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
     }
   }
 
+  // Move constant to the right side.
+  if (operands[0] && !operands[1]) {
+    // Do not use invertPredicate, as it will change eq to ne and vice versa.
+    using Pred = CmpIPredicate;
+    const std::pair<Pred, Pred> invPreds[] = {
+        {Pred::slt, Pred::sgt}, {Pred::sgt, Pred::slt}, {Pred::sle, Pred::sge},
+        {Pred::sge, Pred::sle}, {Pred::ult, Pred::ugt}, {Pred::ugt, Pred::ult},
+        {Pred::ule, Pred::uge}, {Pred::uge, Pred::ule}, {Pred::eq, Pred::eq},
+        {Pred::ne, Pred::ne},
+    };
+    Pred origPred = getPredicate();
+    for (auto pred : invPreds) {
+      if (origPred == pred.first) {
+        setPredicateAttr(CmpIPredicateAttr::get(getContext(), pred.second));
+        Value lhs = getLhs();
+        Value rhs = getRhs();
+        getLhsMutable().assign(rhs);
+        getRhsMutable().assign(lhs);
+        return getResult();
+      }
+    }
+    llvm_unreachable("unknown cmpi predicate kind");
+  }
+
   auto lhs = operands.front().dyn_cast_or_null<IntegerAttr>();
-  auto rhs = operands.back().dyn_cast_or_null<IntegerAttr>();
-  if (!lhs || !rhs)
+  if (!lhs)
     return {};
+
+  // We are moving constants to the right side; So if lhs is constant rhs is
+  // guaranteed to be a constant.
+  auto rhs = operands.back().cast<IntegerAttr>();
 
   auto val = applyCmpPredicate(getPredicate(), lhs.getValue(), rhs.getValue());
   return BoolAttr::get(getContext(), val);
@@ -2011,6 +2039,35 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     break;
   }
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// DelinearizeIndexOp
+//===----------------------------------------------------------------------===//
+
+void arith::DelinearizeIndexOp::build(OpBuilder &builder,
+                                      OperationState &result,
+                                      Value linear_index,
+                                      ArrayRef<OpFoldResult> basis) {
+  result.addTypes(SmallVector<Type>(basis.size(), builder.getIndexType()));
+  result.addOperands(linear_index);
+  SmallVector<Value> basisValues =
+      llvm::to_vector(llvm::map_range(basis, [&](OpFoldResult ofr) -> Value {
+        Optional<int64_t> staticDim = getConstantIntValue(ofr);
+        if (staticDim.has_value())
+          return builder.create<arith::ConstantIndexOp>(result.location,
+                                                        *staticDim);
+        return ofr.dyn_cast<Value>();
+      }));
+  result.addOperands(basisValues);
+}
+
+LogicalResult arith::DelinearizeIndexOp::verify() {
+  if (getBasis().empty())
+    return emitOpError("basis should not be empty");
+  if (getNumResults() != getBasis().size())
+    return emitOpError("should return an index for each basis element");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

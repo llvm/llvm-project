@@ -91,6 +91,16 @@ if (LLVM_ENABLE_DOXYGEN)
 endif()
 endif()
 
+function (gen_rst_file_from_td output_file td_option source docs_target)
+  if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
+    message(FATAL_ERROR "Cannot find source file: ${source} in ${CMAKE_CURRENT_SOURCE_DIR}")
+  endif()
+  get_filename_component(TABLEGEN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${source}" DIRECTORY)
+  list(APPEND LLVM_TABLEGEN_FLAGS "-I${TABLEGEN_INCLUDE_DIR}")
+  clang_tablegen(Source/${output_file} ${td_option} SOURCE ${source} TARGET "gen-${output_file}")
+  add_dependencies(${docs_target} "gen-${output_file}")
+endfunction()
+
 if (LLVM_ENABLE_SPHINX)
   include(AddSphinxTarget)
   if (SPHINX_FOUND)
@@ -108,12 +118,15 @@ if (LLVM_ENABLE_SPHINX)
         "${CMAKE_CURRENT_BINARY_DIR}/Source"
         DEPENDS flang-doc)
 
-        # Runs a python script prior to HTML generation to prepend a header to FIRLangRef,
-        # Without the header, the page is incorrectly formatted, as it assumes the first entry is the page title.
-        add_custom_command(TARGET copy-flang-src-docs
-          COMMAND "${Python3_EXECUTABLE}"
-          ARGS ${CMAKE_CURRENT_BINARY_DIR}/Source/FIR/CreateFIRLangRef.py)
+      # Runs a python script prior to HTML generation to prepend a header to FIRLangRef,
+      # Without the header, the page is incorrectly formatted, as it assumes the first entry is the page title.
+      add_custom_command(TARGET copy-flang-src-docs
+        COMMAND "${Python3_EXECUTABLE}"
+        ARGS ${CMAKE_CURRENT_BINARY_DIR}/Source/FIR/CreateFIRLangRef.py)
 
+      # CLANG_TABLEGEN_EXE variable needs to be set for clang_tablegen to run without error
+      set(CLANG_TABLEGEN_EXE clang-tblgen)
+      gen_rst_file_from_td(FlangCommandLineReference.rst -gen-opt-docs ../include/flang/FlangOptionsDocs.td docs-flang-html)
     endif()
     if (${SPHINX_OUTPUT_MAN})
       add_sphinx_target(man flang)

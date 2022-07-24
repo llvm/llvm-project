@@ -2627,7 +2627,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   } else if (!CB.use_empty()) {
     // No returns, but something is using the return value of the call.  Just
     // nuke the result.
-    CB.replaceAllUsesWith(UndefValue::get(CB.getType()));
+    CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
   }
 
   // Since we are now done with the Call/Invoke, we can delete it.

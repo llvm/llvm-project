@@ -280,7 +280,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     // Symbolic fixed max size per thread.
     // TODO: floor + 0/1 depending on case for better load-balancing.
     OpFoldResult tileSizePerThread =
-        nominalTileSizes.hasValue()
+        nominalTileSizes.has_value()
             ? (*nominalTileSizes)[loopIdx]
             : makeComposedFoldedAffineApply(
                   b, loc, M.ceilDiv(N),

@@ -57,7 +57,7 @@ auto odd = [](int x) { return x % 2 != 0; };
 auto triple = [](int x) { return 3*x; };
 //auto gen = [] { return 42; };
 //auto plus = [](int x, int y) { return x == y; };
-//std::mt19937 g;
+std::mt19937 g;
 
 // [algorithm.syn]
 
@@ -74,7 +74,7 @@ static_assert(test(std::ranges::count, a, 42));
 static_assert(test(std::ranges::count_if, a, odd));
 //static_assert(test(std::ranges::ends_with, a, a));
 static_assert(test(std::ranges::equal, a, a));
-//static_assert(test(std::ranges::equal_range, a, 42));
+static_assert(test(std::ranges::equal_range, a, 42));
 static_assert(test(std::ranges::fill, a, 42));
 static_assert(test(std::ranges::fill_n, a, 10, 42));
 static_assert(test(std::ranges::find, a, 42));
@@ -86,7 +86,7 @@ static_assert(test(std::ranges::for_each, a, odd));
 static_assert(test(std::ranges::for_each_n, a, 10, odd));
 //static_assert(test(std::ranges::generate, a, gen));
 //static_assert(test(std::ranges::generate_n, a, 10, gen));
-//static_assert(test(std::ranges::includes, a, a));
+static_assert(test(std::ranges::includes, a, a));
 //static_assert(test(std::ranges::inplace_merge, a, a+5));
 //static_assert(test(std::ranges::is_heap, a));
 //static_assert(test(std::ranges::is_heap_until, a));
@@ -137,7 +137,7 @@ static_assert(test(std::ranges::set_difference, a, a, a));
 static_assert(test(std::ranges::set_intersection, a, a, a));
 static_assert(test(std::ranges::set_symmetric_difference, a, a, a));
 static_assert(test(std::ranges::set_union, a, a, a));
-//static_assert(test(std::ranges::shuffle, a, g));
+static_assert(test(std::ranges::shuffle, a, g));
 static_assert(test(std::ranges::sort, a));
 static_assert(test(std::ranges::sort_heap, a));
 static_assert(test(std::ranges::stable_partition, a, odd));

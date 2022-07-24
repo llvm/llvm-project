@@ -1261,7 +1261,16 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIncludeNextDirective(SavedHash.getLocation(), Result);
 
     case tok::pp_warning:
-      Diag(Result, diag::ext_pp_warning_directive);
+      if (LangOpts.CPlusPlus)
+        Diag(Result, LangOpts.CPlusPlus2b
+                         ? diag::warn_cxx2b_compat_warning_directive
+                         : diag::ext_pp_warning_directive)
+            << /*C++2b*/ 1;
+      else
+        Diag(Result, LangOpts.C2x ? diag::warn_c2x_compat_warning_directive
+                                  : diag::ext_pp_warning_directive)
+            << /*C2x*/ 0;
+
       return HandleUserDiagnosticDirective(Result, true);
     case tok::pp_ident:
       return HandleIdentSCCSDirective(Result);
@@ -1806,22 +1815,14 @@ static void diagnoseAutoModuleImport(
     Preprocessor &PP, SourceLocation HashLoc, Token &IncludeTok,
     ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> Path,
     SourceLocation PathEnd) {
-  StringRef ImportKeyword;
-  if (PP.getLangOpts().ObjC)
-    ImportKeyword = "@import";
-  else if (PP.getLangOpts().ModulesTS || PP.getLangOpts().CPlusPlusModules)
-    ImportKeyword = "import";
-  else
-    return; // no import syntax available
-
   SmallString<128> PathString;
   for (size_t I = 0, N = Path.size(); I != N; ++I) {
     if (I)
       PathString += '.';
     PathString += Path[I].first->getName();
   }
-  int IncludeKind = 0;
 
+  int IncludeKind = 0;
   switch (IncludeTok.getIdentifierInfo()->getPPKeywordID()) {
   case tok::pp_include:
     IncludeKind = 0;
@@ -1843,12 +1844,8 @@ static void diagnoseAutoModuleImport(
     llvm_unreachable("unknown include directive kind");
   }
 
-  CharSourceRange ReplaceRange(SourceRange(HashLoc, PathEnd),
-                               /*IsTokenRange=*/false);
-  PP.Diag(HashLoc, diag::warn_auto_module_import)
-      << IncludeKind << PathString
-      << FixItHint::CreateReplacement(
-             ReplaceRange, (ImportKeyword + " " + PathString + ";").str());
+  PP.Diag(HashLoc, diag::remark_pp_include_directive_modular_translation)
+      << IncludeKind << PathString;
 }
 
 // Given a vector of path components and a string containing the real

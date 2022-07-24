@@ -67,10 +67,12 @@ add_object_library(
     ptr_converter.h
     oct_converter.h
     write_int_converter.h
+    float_inf_nan_converter.h
     float_hex_converter.h
   DEPENDS
     .writer
     .core_structs
+    libc.src.__support.integer_to_string
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fputil
 )

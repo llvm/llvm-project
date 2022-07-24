@@ -214,6 +214,160 @@ LogicalResult transform::FuseOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// FuseIntoContainingOp
+//===----------------------------------------------------------------------===//
+
+static FailureOr<SmallVector<Operation *>> tileAndFuse(Operation *producerOp,
+                                                       Operation *containingOp,
+                                                       RewriterBase &rewriter) {
+  auto tileableProducer = dyn_cast<TilingInterface>(producerOp);
+  if (!tileableProducer)
+    return failure();
+
+  // Search the producer slices accessed within the containing operation.
+  // TODO: Generalize to more extract/insert/parallel_insert triples. Maybe
+  // evolve into an interface.
+  SmallVector<tensor::ExtractSliceOp> sliceOps;
+  for (Operation *user : tileableProducer->getUsers()) {
+    auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(user);
+    if (!sliceOp)
+      continue;
+    if (!containingOp->isProperAncestor(sliceOp))
+      continue;
+    sliceOps.push_back(sliceOp);
+  }
+
+  // Check for a non-empty list of fusion opportunities.
+  if (sliceOps.empty())
+    return failure();
+
+  SmallVector<Value> destinationOperands =
+      tileableProducer.getDestinationOperands(rewriter);
+
+  // Try to fuse the producer in-place.
+  SmallVector<Operation *> fusedOps;
+  for (tensor::ExtractSliceOp sliceOp : sliceOps) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(sliceOp);
+
+    // Tile the producer.
+    FailureOr<Value> tiledProducer = tileableProducer.generateResultTileValue(
+        rewriter, /*resultNumber=*/0, destinationOperands,
+        sliceOp.getMixedOffsets(), sliceOp.getMixedSizes(), true);
+    if (failed(tiledProducer))
+      return failure();
+    fusedOps.push_back(tiledProducer->getDefiningOp());
+  }
+
+  // Replace the extract op.
+  for (const auto &en : enumerate(sliceOps))
+    rewriter.replaceOp(en.value(), fusedOps[en.index()]->getResult(0));
+  return fusedOps;
+}
+
+static FailureOr<SmallVector<Operation *>>
+cloneAndFuse(Operation *producerOp, Operation *containingOp,
+             RewriterBase &rewriter) {
+  // Gather all uses inside the containing op.
+  SmallVector<OpOperand *> uses;
+  for (OpResult result : producerOp->getOpResults())
+    for (OpOperand &use : result.getUses())
+      if (containingOp->isProperAncestor(use.getOwner()))
+        uses.push_back(&use);
+
+  // Check for a non-empty list of fusion opportunities.
+  if (uses.empty())
+    return failure();
+
+  // Clone and fuse inside the containing op.
+  SmallVector<Operation *> fusedOps;
+  for (OpOperand *use : uses) {
+    unsigned resultNumber = use->get().cast<OpResult>().getResultNumber();
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(use->getOwner());
+    Operation *cloned = rewriter.clone(*producerOp);
+    rewriter.updateRootInPlace(
+        use->getOwner(), [&] { use->set(cloned->getOpResult(resultNumber)); });
+    fusedOps.push_back(cloned);
+  }
+
+  return fusedOps;
+}
+
+DiagnosedSilenceableFailure
+transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
+                                       transform::TransformState &state) {
+  SmallVector<Operation *> fusedOps;
+  ArrayRef<Operation *> producerOps = state.getPayloadOps(getProducerOp());
+  for (Operation *producerOp : producerOps) {
+    if (producerOp->getNumResults() != 1) {
+      Diagnostic diag(producerOp->getLoc(), DiagnosticSeverity::Note);
+      diag << "op with != 1 results not supported";
+      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    }
+  }
+  ArrayRef<Operation *> containingOps = state.getPayloadOps(getContainingOp());
+  if (containingOps.size() != 1)
+    return DiagnosedSilenceableFailure(
+        this->emitOpError("requires exactly one containing_op handle"));
+  Operation *containingOp = containingOps.front();
+
+  // Helper function to find the next producer that should be fused. Take any
+  // producer that has a use inside the containing op.
+  SmallVector<Operation *> remainingProducers(producerOps.begin(),
+                                              producerOps.end());
+  auto getNextProducer = [&]() -> FailureOr<Operation *> {
+    for (const auto &it : enumerate(remainingProducers)) {
+      Operation *producerOp = it.value();
+      bool hasUseInContainingOp =
+          any_of(producerOp->getUsers(), [&](Operation *op) {
+            return containingOp->isProperAncestor(op);
+          });
+      // TODO: When resolving the TODO below (no duplicate ops), take an op that
+      // has no use among the remaining producers. This is a topological
+      // sorting.
+      if (hasUseInContainingOp) {
+        remainingProducers.erase(remainingProducers.begin() + it.index());
+        return producerOp;
+      }
+    }
+    return failure();
+  };
+
+  IRRewriter rewriter(getContext());
+  while (!remainingProducers.empty()) {
+    auto nextProducer = getNextProducer();
+    if (failed(nextProducer)) {
+      Diagnostic diag(containingOp->getLoc(), DiagnosticSeverity::Note);
+      diag << "could not fuse ops into container";
+      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    }
+
+    Operation *producerOp = *nextProducer;
+    // TODO: If there are multiple uses of the producer in the containing op, we
+    // currently tile/clone the op multiple times (once per use). In some cases,
+    // we can tile/clone once and reuse the value for each use. Futhermore,
+    // producers should then be traversed according to a topological sorting.
+    auto tiled = tileAndFuse(producerOp, containingOp, rewriter);
+    if (succeeded(tiled))
+      fusedOps.append(*tiled);
+
+    auto cloned = cloneAndFuse(producerOp, containingOp, rewriter);
+    if (succeeded(cloned))
+      fusedOps.append(*cloned);
+
+    if (failed(tiled) && failed(cloned)) {
+      Diagnostic diag(producerOp->getLoc(), DiagnosticSeverity::Note);
+      diag << "could not fuse into containing op";
+      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    }
+  }
+
+  results.set(getFusedOp().cast<OpResult>(), fusedOps);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GeneralizeOp
 //===----------------------------------------------------------------------===//
 
@@ -276,20 +430,11 @@ LogicalResult transform::InterchangeOp::verify() {
 // MatchOp
 //===---------------------------------------------------------------------===//
 
-LogicalResult transform::MatchOp::verify() {
-  bool opXorIface = getOps().hasValue() ^ getInterface().hasValue();
-  if (!opXorIface)
-    return this->emitOpError(
-        "requires a either a match_op or a match_interface attribute (but not "
-        "both)");
-  return success();
-}
-
 DiagnosedSilenceableFailure
 transform::MatchOp::apply(transform::TransformResults &results,
                           transform::TransformState &state) {
   llvm::StringSet<> strs;
-  if (getOps().hasValue())
+  if (getOps().has_value())
     strs.insert(getOps()->getAsValueRange<StringAttr>().begin(),
                 getOps()->getAsValueRange<StringAttr>().end());
 
@@ -299,85 +444,33 @@ transform::MatchOp::apply(transform::TransformResults &results,
         this->emitOpError("requires exactly one target handle"));
 
   SmallVector<Operation *> res;
-
   auto matchFun = [&](Operation *op) {
-    if (strs.contains(op->getName().getStringRef()))
-      res.push_back(op);
+    if (getOps().has_value() && !strs.contains(op->getName().getStringRef()))
+      return WalkResult::advance();
+
     // Interfaces cannot be matched by name, just by ID.
     // So we specifically encode the interfaces we care about for this op.
-    if (getInterface().hasValue()) {
-      auto iface = getInterface().getValue();
+    if (getInterface().has_value()) {
+      auto iface = getInterface().value();
       if (iface == transform::MatchInterfaceEnum::LinalgOp &&
-          isa<linalg::LinalgOp>(op))
-        res.push_back(op);
+          !isa<linalg::LinalgOp>(op))
+        return WalkResult::advance();
       if (iface == transform::MatchInterfaceEnum::TilingInterface &&
           isa<TilingInterface>(op))
-        res.push_back(op);
+        return WalkResult::advance();
     }
+
+    if (getAttribute().has_value() && !op->hasAttr(getAttribute().value()))
+      return WalkResult::advance();
+
+    // All constraints are satisfied.
+    res.push_back(op);
+    return WalkResult::advance();
   };
 
   payloadOps.front()->walk(matchFun);
   results.set(getResult().cast<OpResult>(), res);
   return DiagnosedSilenceableFailure(success());
-}
-
-ParseResult transform::MatchOp::parse(OpAsmParser &parser,
-                                      OperationState &result) {
-  // Parse 'match_op' or 'interface' clause.
-  if (succeeded(parser.parseOptionalKeyword("ops"))) {
-    ArrayAttr opsAttr;
-    if (parser.parseLBrace() ||
-        parser.parseCustomAttributeWithFallback(
-            opsAttr, parser.getBuilder().getType<NoneType>(), "ops",
-            result.attributes) ||
-        parser.parseRBrace())
-      return failure();
-  } else if (succeeded(parser.parseOptionalKeyword("interface"))) {
-    if (parser.parseLBrace())
-      return failure();
-    StringRef attrStr;
-    auto loc = parser.getCurrentLocation();
-    if (parser.parseKeyword(&attrStr))
-      return failure();
-    auto interfaceEnum = transform::symbolizeMatchInterfaceEnum(attrStr);
-    if (!interfaceEnum)
-      return parser.emitError(loc, "invalid ")
-             << "match_interface attribute specification: \"" << attrStr << '"';
-    transform::MatchInterfaceEnumAttr match_interfaceAttr =
-        transform::MatchInterfaceEnumAttr::get(parser.getBuilder().getContext(),
-                                               interfaceEnum.value());
-    result.addAttribute("interface", match_interfaceAttr);
-    if (parser.parseRBrace())
-      return failure();
-  } else {
-    auto loc = parser.getCurrentLocation();
-    return parser.emitError(loc, "expected ops or interface");
-  }
-
-  OpAsmParser::UnresolvedOperand targetRawOperands[1];
-  ArrayRef<OpAsmParser::UnresolvedOperand> targetOperands(targetRawOperands);
-  if (parser.parseKeyword("in") || parser.parseOperand(targetRawOperands[0]) ||
-      parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  Type pdlOpType = parser.getBuilder().getType<pdl::OperationType>();
-  result.addTypes(pdlOpType);
-  if (parser.resolveOperands(targetOperands, pdlOpType, result.operands))
-    return failure();
-  return success();
-}
-
-void transform::MatchOp::print(OpAsmPrinter &p) {
-  if ((*this)->getAttr("ops")) {
-    p << " ops{";
-    p.printAttributeWithoutType(getOpsAttr());
-    p << "}";
-  }
-  if ((*this)->getAttr("interface")) {
-    p << " interface{" << stringifyMatchInterfaceEnum(*getInterface()) << "}";
-  }
-  p << " in " << getTarget();
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{"ops", "interface"});
 }
 
 //===---------------------------------------------------------------------===//

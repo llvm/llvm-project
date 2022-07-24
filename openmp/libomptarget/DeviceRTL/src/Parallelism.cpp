@@ -87,13 +87,20 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   FunctionTracingRAII();
 
   uint32_t TId = mapping::getThreadIdInBlock();
-  // Handle the serialized case first, same for SPMD/non-SPMD.
-  if (OMP_UNLIKELY(!if_expr || icv::Level)) {
+
+  // Handle the serialized case first, same for SPMD/non-SPMD:
+  // 1) if-clause(0)
+  // 2) nested parallel regions
+  // 3) parallel in task or other thread state inducing construct
+  if (OMP_UNLIKELY(!if_expr || icv::Level || state::HasThreadState)) {
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
     return;
   }
+
+  // From this point forward we know that there is no thread state used.
+  ASSERT(state::HasThreadState == false);
 
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
   if (mapping::isSPMDMode()) {
@@ -105,18 +112,21 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
       // last or the other updates will cause a thread specific state to be
       // created.
       state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
-                                            1u, TId == 0, ident);
+                                            1u, TId == 0, ident,
+                                            /* ForceTeamState */ true);
       state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0,
-                                       ident);
-      state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident);
+                                       ident, /* ForceTeamState */ true);
+      state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
+                                 /* ForceTeamState */ true);
 
       // Synchronize all threads after the main thread (TId == 0) set up the
       // team state properly.
       synchronize::threadsAligned();
 
-      ASSERT(state::ParallelTeamSize == NumThreads);
-      ASSERT(icv::ActiveLevel == 1u);
-      ASSERT(icv::Level == 1u);
+      state::ParallelTeamSize.assert_eq(NumThreads, ident,
+                                        /* ForceTeamState */ true);
+      icv::ActiveLevel.assert_eq(1u, ident, /* ForceTeamState */ true);
+      icv::Level.assert_eq(1u, ident, /* ForceTeamState */ true);
 
       if (TId < NumThreads)
         invokeMicrotask(TId, 0, fn, args, nargs);
@@ -130,9 +140,9 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     // __kmpc_target_deinit may not hold.
     synchronize::threadsAligned();
 
-    ASSERT(state::ParallelTeamSize == 1u);
-    ASSERT(icv::ActiveLevel == 0u);
-    ASSERT(icv::Level == 0u);
+    state::ParallelTeamSize.assert_eq(1u, ident, /* ForceTeamState */ true);
+    icv::ActiveLevel.assert_eq(0u, ident, /* ForceTeamState */ true);
+    icv::Level.assert_eq(0u, ident, /* ForceTeamState */ true);
     return;
   }
 
@@ -215,11 +225,15 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     // last or the other updates will cause a thread specific state to be
     // created.
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
-                                          1u, true, ident);
+                                          1u, true, ident,
+                                          /* ForceTeamState */ true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
-                                          (void *)nullptr, true, ident);
-    state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, true, ident);
-    state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident);
+                                          (void *)nullptr, true, ident,
+                                          /* ForceTeamState */ true);
+    state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, true, ident,
+                                     /* ForceTeamState */ true);
+    state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident,
+                               /* ForceTeamState */ true);
 
 #ifdef __AMDGCN__
     synchronize::omptarget_master_ready = true;

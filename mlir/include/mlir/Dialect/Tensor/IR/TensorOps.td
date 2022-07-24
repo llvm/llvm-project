@@ -1220,7 +1220,7 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
 
     ```mlir
     %s = arith.constant 10.1 : f32
-    %t = tensor.splat %s : tensor<8x16xi32>
+    %t = tensor.splat %s : tensor<8x16xf32>
     ```
 
     TODO: This operation is easy to extend to broadcast to dynamically shaped
@@ -1231,7 +1231,7 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
     // to the sizes of the two dynamic dimensions.
     %m = "foo"() : () -> (index)
     %n = "bar"() : () -> (index)
-    %t = tensor.splat %s [%m, %n] : tensor<?x?xi32>
+    %t = tensor.splat %s [%m, %n] : tensor<?x?xf32>
     ```
   }];
 

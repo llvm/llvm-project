@@ -9,6 +9,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -188,6 +189,23 @@ public:
   }
 };
 
+/// Lowers `arith.delinearize_index` into a sequence of division and remainder
+/// operations.
+struct LowerDelinearizeIndexOps
+    : public OpRewritePattern<arith::DelinearizeIndexOp> {
+  using OpRewritePattern<arith::DelinearizeIndexOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::DelinearizeIndexOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<SmallVector<Value>> multiIndex =
+        delinearizeIndex(rewriter, op->getLoc(), op.getLinearIndex(),
+                         llvm::to_vector(op.getBasis()));
+    if (failed(multiIndex))
+      return failure();
+    rewriter.replaceOp(op, *multiIndex);
+    return success();
+  }
+};
+
 struct ArithmeticExpandOpsPass
     : public ArithmeticExpandOpsBase<ArithmeticExpandOpsPass> {
   void runOnOperation() override {
@@ -207,7 +225,8 @@ struct ArithmeticExpandOpsPass
       arith::MaxUIOp,
       arith::MinFOp,
       arith::MinSIOp,
-      arith::MinUIOp
+      arith::MinUIOp,
+      arith::DelinearizeIndexOp
     >();
     // clang-format on
     if (failed(applyPartialConversion(getOperation(), target,
@@ -230,7 +249,8 @@ void mlir::arith::populateArithmeticExpandOpsPatterns(
     MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
     MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
     MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
-    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>
+    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>,
+    LowerDelinearizeIndexOps
    >(patterns.getContext());
   // clang-format on
 }

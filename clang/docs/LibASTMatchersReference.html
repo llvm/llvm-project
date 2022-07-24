@@ -7255,14 +7255,24 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('callee1')"><a name="callee1Anchor">callee</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="callee1"><pre>Matches if the call expression's callee's declaration matches the
-given matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('callee2')"><a name="callee2Anchor">callee</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="callee2"><pre>Matches 1) if the call expression's callee's declaration matches the
+given matcher; or 2) if the Obj-C message expression's callee's method
+declaration matches the given matcher.
 
 Example matches y.x() (matcher = callExpr(callee(
                                    cxxMethodDecl(hasName("x")))))
   class Y { public: void x(); };
   void z() { Y y; y.x(); }
+
+Example 2. Matches [I foo] with
+objcMessageExpr(callee(objcMethodDecl(hasName("foo"))))
+
+  @interface I: NSObject
+  +(void)foo;
+  @end
+  ...
+  [I foo]
 </pre></td></tr>
 
 
@@ -8811,6 +8821,27 @@ In the following example, Bar matches isDerivedFrom(hasName("X")):
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom1')"><a name="isSameOrDerivedFrom1Anchor">isSameOrDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
 <tr><td colspan="4" class="doc" id="isSameOrDerivedFrom1"><pre>Similar to isDerivedFrom(), but also matches classes that directly
 match Base.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('callee1')"><a name="callee1Anchor">callee</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="callee1"><pre>Matches 1) if the call expression's callee's declaration matches the
+given matcher; or 2) if the Obj-C message expression's callee's method
+declaration matches the given matcher.
+
+Example matches y.x() (matcher = callExpr(callee(
+                                   cxxMethodDecl(hasName("x")))))
+  class Y { public: void x(); };
+  void z() { Y y; y.x(); }
+
+Example 2. Matches [I foo] with
+objcMessageExpr(callee(objcMethodDecl(hasName("foo"))))
+
+  @interface I: NSObject
+  +(void)foo;
+  @end
+  ...
+  [I foo]
 </pre></td></tr>
 
 

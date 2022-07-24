@@ -363,6 +363,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       // have the same name without causing duplicate symbol errors. To avoid
       // spurious duplicate symbol errors, we do not parse these sections.
       // TODO: Evaluate whether the bitcode metadata is needed.
+    } else if (name == section_names::objCImageInfo &&
+               segname == segment_names::data) {
+      objCImageInfo = data;
     } else {
       if (name == section_names::addrSig)
         addrSigSection = sections.back();
@@ -560,7 +563,7 @@ void ObjFile::parseOptimizationHints(ArrayRef<uint8_t> data) {
     if (section == sections.end())
       return;
     ++subsection;
-    if (subsection == (*section)->subsections.end()) {
+    while (subsection == (*section)->subsections.end()) {
       ++section;
       if (section == sections.end())
         return;
@@ -582,6 +585,7 @@ void ObjFile::parseOptimizationHints(ArrayRef<uint8_t> data) {
         if (section == sections.end())
           break;
         updateAddr();
+        assert(hintStart->offset0 >= subsectionBase);
       }
     }
 
@@ -1533,8 +1537,9 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       // to register the unwind entry under same symbol.
       // This is not particularly efficient, but we should run into this case
       // infrequently (only when handling the output of `ld -r`).
-      funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
-                                   funcSym->value);
+      if (funcSym->isec)
+        funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
+                                     funcSym->value);
     } else {
       funcSym = findSymbolAtAddress(sections, funcAddr);
       ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);

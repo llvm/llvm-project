@@ -14,10 +14,8 @@
 #include "Configuration.h"
 #include "Debug.h"
 #include "Interface.h"
-#include "Mapping.h"
 #include "Synchronization.h"
 #include "Types.h"
-#include "Utils.h"
 
 using namespace _OMP;
 
@@ -185,22 +183,7 @@ void memory::freeGlobal(void *Ptr, const char *Reason) { free(Ptr); }
 
 ///}
 
-namespace {
-
-struct ICVStateTy {
-  uint32_t NThreadsVar;
-  uint32_t LevelVar;
-  uint32_t ActiveLevelVar;
-  uint32_t MaxActiveLevelsVar;
-  uint32_t RunSchedVar;
-  uint32_t RunSchedChunkVar;
-
-  bool operator==(const ICVStateTy &Other) const;
-
-  void assertEqual(const ICVStateTy &Other) const;
-};
-
-bool ICVStateTy::operator==(const ICVStateTy &Other) const {
+bool state::ICVStateTy::operator==(const ICVStateTy &Other) const {
   return (NThreadsVar == Other.NThreadsVar) & (LevelVar == Other.LevelVar) &
          (ActiveLevelVar == Other.ActiveLevelVar) &
          (MaxActiveLevelsVar == Other.MaxActiveLevelsVar) &
@@ -208,7 +191,7 @@ bool ICVStateTy::operator==(const ICVStateTy &Other) const {
          (RunSchedChunkVar == Other.RunSchedChunkVar);
 }
 
-void ICVStateTy::assertEqual(const ICVStateTy &Other) const {
+void state::ICVStateTy::assertEqual(const ICVStateTy &Other) const {
   ASSERT(NThreadsVar == Other.NThreadsVar);
   ASSERT(LevelVar == Other.LevelVar);
   ASSERT(ActiveLevelVar == Other.ActiveLevelVar);
@@ -217,30 +200,7 @@ void ICVStateTy::assertEqual(const ICVStateTy &Other) const {
   ASSERT(RunSchedChunkVar == Other.RunSchedChunkVar);
 }
 
-struct TeamStateTy {
-  /// TODO: provide a proper init function.
-  void init(bool IsSPMD);
-
-  bool operator==(const TeamStateTy &) const;
-
-  void assertEqual(TeamStateTy &Other) const;
-
-  /// ICVs
-  ///
-  /// Preallocated storage for ICV values that are used if the threads have not
-  /// set a custom default. The latter is supported but unlikely and slow(er).
-  ///
-  ///{
-  ICVStateTy ICVState;
-  ///}
-
-  uint32_t ParallelTeamSize;
-  ParallelRegionFnTy ParallelRegionFnVar;
-};
-
-TeamStateTy SHARED(TeamState);
-
-void TeamStateTy::init(bool IsSPMD) {
+void state::TeamStateTy::init(bool IsSPMD) {
   ICVState.NThreadsVar = mapping::getBlockSize(IsSPMD);
   ICVState.LevelVar = 0;
   ICVState.ActiveLevelVar = 0;
@@ -248,67 +208,29 @@ void TeamStateTy::init(bool IsSPMD) {
   ICVState.RunSchedVar = omp_sched_static;
   ICVState.RunSchedChunkVar = 1;
   ParallelTeamSize = 1;
+  HasThreadState = false;
   ParallelRegionFnVar = nullptr;
 }
 
-bool TeamStateTy::operator==(const TeamStateTy &Other) const {
+bool state::TeamStateTy::operator==(const TeamStateTy &Other) const {
   return (ICVState == Other.ICVState) &
+         (HasThreadState == Other.HasThreadState) &
          (ParallelTeamSize == Other.ParallelTeamSize);
 }
 
-void TeamStateTy::assertEqual(TeamStateTy &Other) const {
+void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ICVState.assertEqual(Other.ICVState);
   ASSERT(ParallelTeamSize == Other.ParallelTeamSize);
+  ASSERT(HasThreadState == Other.HasThreadState);
 }
 
-struct ThreadStateTy {
-
-  /// ICVs have preallocated storage in the TeamStateTy which is used if a
-  /// thread has not set a custom value. The latter is supported but unlikely.
-  /// When it happens we will allocate dynamic memory to hold the values of all
-  /// ICVs. Thus, the first time an ICV is set by a thread we will allocate an
-  /// ICV struct to hold them all. This is slower than alternatives but allows
-  /// users to pay only for what they use.
-  ///
-  ICVStateTy ICVState;
-
-  ThreadStateTy *PreviousThreadState;
-
-  void init() {
-    ICVState = TeamState.ICVState;
-    PreviousThreadState = nullptr;
-  }
-
-  void init(ThreadStateTy *PreviousTS) {
-    ICVState = PreviousTS ? PreviousTS->ICVState : TeamState.ICVState;
-    PreviousThreadState = PreviousTS;
-  }
-};
+state::TeamStateTy SHARED(_OMP::state::TeamState);
 
 __attribute__((loader_uninitialized))
-ThreadStateTy *ThreadStates[mapping::MaxThreadsPerTeam];
-#pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
+state::ThreadStateTy *_OMP::state::ThreadStates[mapping::MaxThreadsPerTeam];
+#pragma omp allocate(_OMP::state::ThreadStates) allocator(omp_pteam_mem_alloc)
 
-uint32_t &lookupForModify32Impl(uint32_t ICVStateTy::*Var, IdentTy *Ident) {
-  if (OMP_LIKELY(!config::mayUseThreadStates() ||
-                 TeamState.ICVState.LevelVar == 0))
-    return TeamState.ICVState.*Var;
-  uint32_t TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(!ThreadStates[TId])) {
-    ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
-        sizeof(ThreadStateTy), "ICV modification outside data environment"));
-    ASSERT(ThreadStates[TId] != nullptr && "Nullptr returned by malloc!");
-    ThreadStates[TId]->init();
-  }
-  return ThreadStates[TId]->ICVState.*Var;
-}
-
-template <typename IntTy> IntTy &lookupImpl(IntTy ICVStateTy::*Var) {
-  IntTy TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(config::mayUseThreadStates() && ThreadStates[TId]))
-    return ThreadStates[TId]->ICVState.*Var;
-  return TeamState.ICVState.*Var;
-}
+namespace {
 
 int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
                              int OutOfBoundsVal = -1) {
@@ -324,50 +246,6 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 }
 
 } // namespace
-
-uint32_t &state::lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident) {
-  switch (Kind) {
-  case state::VK_NThreads:
-    if (IsReadonly)
-      return lookupImpl<uint32_t>(&ICVStateTy::NThreadsVar);
-    return lookupForModify32Impl(&ICVStateTy::NThreadsVar, Ident);
-  case state::VK_Level:
-    if (IsReadonly)
-      return lookupImpl<uint32_t>(&ICVStateTy::LevelVar);
-    return lookupForModify32Impl(&ICVStateTy::LevelVar, Ident);
-  case state::VK_ActiveLevel:
-    if (IsReadonly)
-      return lookupImpl<uint32_t>(&ICVStateTy::ActiveLevelVar);
-    return lookupForModify32Impl(&ICVStateTy::ActiveLevelVar, Ident);
-  case state::VK_MaxActiveLevels:
-    if (IsReadonly)
-      return lookupImpl<uint32_t>(&ICVStateTy::MaxActiveLevelsVar);
-    return lookupForModify32Impl(&ICVStateTy::MaxActiveLevelsVar, Ident);
-  case state::VK_RunSched:
-    if (IsReadonly)
-      return lookupImpl<uint32_t>(&ICVStateTy::RunSchedVar);
-    return lookupForModify32Impl(&ICVStateTy::RunSchedVar, Ident);
-  case state::VK_RunSchedChunk:
-    if (IsReadonly)
-      return lookupImpl<uint32_t>(&ICVStateTy::RunSchedChunkVar);
-    return lookupForModify32Impl(&ICVStateTy::RunSchedChunkVar, Ident);
-  case state::VK_ParallelTeamSize:
-    return TeamState.ParallelTeamSize;
-  default:
-    break;
-  }
-  __builtin_unreachable();
-}
-
-void *&state::lookupPtr(ValueKind Kind, bool IsReadonly) {
-  switch (Kind) {
-  case state::VK_ParallelRegionFn:
-    return TeamState.ParallelRegionFnVar;
-  default:
-    break;
-  }
-  __builtin_unreachable();
-}
 
 void state::init(bool IsSPMD) {
   SharedMemorySmartStack.init(IsSPMD);
@@ -387,6 +265,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
   NewThreadState->init(ThreadStates[TId]);
+  TeamState.HasThreadState = true;
   ThreadStates[TId] = NewThreadState;
 }
 
@@ -399,7 +278,7 @@ void state::exitDataEnvironment() {
 }
 
 void state::resetStateForThread(uint32_t TId) {
-  if (OMP_LIKELY(!ThreadStates[TId]))
+  if (OMP_LIKELY(!TeamState.HasThreadState || !ThreadStates[TId]))
     return;
 
   ThreadStateTy *PreviousThreadState = ThreadStates[TId]->PreviousThreadState;

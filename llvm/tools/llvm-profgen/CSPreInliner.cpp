@@ -117,7 +117,7 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
 
     // Call site count is more reliable, so we look up the corresponding call
     // target profile in caller's context profile to retrieve call site count.
-    uint64_t CalleeEntryCount = CalleeSamples->getEntrySamples();
+    uint64_t CalleeEntryCount = CalleeSamples->getHeadSamplesEstimate();
     uint64_t CallsiteCount = 0;
     LineLocation Callsite = CalleeNode->getCallSiteLoc();
     if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {

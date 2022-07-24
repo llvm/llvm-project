@@ -1710,34 +1710,27 @@ void BinaryFile::parse() {
                                        data.size(), 0, nullptr});
 }
 
-InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
-                                 uint64_t offsetInArchive) {
-  if (isBitcode(mb))
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false);
-
+ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
+                                bool lazy) {
+  ELFFileBase *f;
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
-    return make<ObjFile<ELF32LE>>(mb, archiveName);
+    f = make<ObjFile<ELF32LE>>(mb, archiveName);
+    break;
   case ELF32BEKind:
-    return make<ObjFile<ELF32BE>>(mb, archiveName);
+    f = make<ObjFile<ELF32BE>>(mb, archiveName);
+    break;
   case ELF64LEKind:
-    return make<ObjFile<ELF64LE>>(mb, archiveName);
+    f = make<ObjFile<ELF64LE>>(mb, archiveName);
+    break;
   case ELF64BEKind:
-    return make<ObjFile<ELF64BE>>(mb, archiveName);
+    f = make<ObjFile<ELF64BE>>(mb, archiveName);
+    break;
   default:
     llvm_unreachable("getELFKind");
   }
-}
-
-InputFile *elf::createLazyFile(MemoryBufferRef mb, StringRef archiveName,
-                               uint64_t offsetInArchive) {
-  if (isBitcode(mb))
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/true);
-
-  auto *file =
-      cast<ELFFileBase>(createObjectFile(mb, archiveName, offsetInArchive));
-  file->lazy = true;
-  return file;
+  f->lazy = lazy;
+  return f;
 }
 
 template <class ELFT> void ObjFile<ELFT>::parseLazy() {
@@ -1763,7 +1756,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
 }
 
 bool InputFile::shouldExtractForCommon(StringRef name) {
-  if (isBitcode(mb))
+  if (isa<BitcodeFile>(this))
     return isBitcodeNonCommonDef(mb, name, archiveName);
 
   return isNonCommonDef(mb, name, archiveName);

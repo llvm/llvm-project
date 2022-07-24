@@ -86,7 +86,7 @@ constexpr bool test_all() {
   test(std::ranges::partition_point, in, &Foo::unary_pred, &Bar::val);
   test(std::ranges::lower_bound, in, x, &Foo::binary_pred, &Bar::val);
   test(std::ranges::upper_bound, in, x, &Foo::binary_pred, &Bar::val);
-  //test(std::ranges::equal_range, in, x, &Foo::binary_pred, &Bar::val);
+  test(std::ranges::equal_range, in, x, &Foo::binary_pred, &Bar::val);
   test(std::ranges::binary_search, in, x, &Foo::binary_pred, &Bar::val);
 
   // min
@@ -113,7 +113,7 @@ constexpr bool test_all() {
   test(std::ranges::is_partitioned, in, &Foo::unary_pred, &Bar::val);
   test(std::ranges::is_sorted, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::is_sorted_until, in, &Foo::binary_pred, &Bar::val);
-  //test(std::ranges::includes, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
+  test(std::ranges::includes, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
   //test(std::ranges::is_heap, in, &Foo::binary_pred, &Bar::val);
   //test(std::ranges::is_heap_until, in, &Foo::binary_pred, &Bar::val);
   //std::ranges::clamp(b, a, c, &Foo::binary_pred);

@@ -20,13 +20,10 @@
 define void @test_fshl(<8 x i64> %lo, <8 x i64> %hi, <8 x i64>* %arr) {
 ; CHECK-LABEL: test_fshl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $63, %eax
-; CHECK-NEXT:    vmovd %eax, %xmm2
-; CHECK-NEXT:    movl $12, %eax
-; CHECK-NEXT:    vmovd %eax, %xmm3
-; CHECK-NEXT:    vpand %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpsllq %xmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12]
+; CHECK-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm2, %zmm2
+; CHECK-NEXT:    vpsllvq %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpsrlq $52, %zmm0, %zmm0
 ; CHECK-NEXT:    vpternlogq $168, {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%eax)

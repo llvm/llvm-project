@@ -193,8 +193,7 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
   // Sort replacements per file to keep consistent behavior when
   // clang-apply-replacements run on differents machine.
   for (auto &FileAndReplacements : GroupedReplacements) {
-    llvm::sort(FileAndReplacements.second.begin(),
-               FileAndReplacements.second.end());
+    llvm::sort(FileAndReplacements.second);
   }
 
   return GroupedReplacements;

@@ -159,7 +159,7 @@ define i64 @known_power_of_two_urem_loop_mul_negative(i64 %size, i64 %a) {
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[SIZE:%.*]], [[PHI]]
 ; CHECK-NEXT:    [[ADD]] = add nuw i64 [[SUM]], [[UREM]]
 ; CHECK-NEXT:    [[I]] = mul nuw i64 [[PHI]], 3
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[I]], 100000000
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[PHI]], 33333334
 ; CHECK-NEXT:    br i1 [[ICMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i64 [[SUM]]

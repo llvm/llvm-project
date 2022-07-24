@@ -1216,6 +1216,10 @@ template <class LP> void Writer::run() {
 
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
+
+  if (in.objCImageInfo->isNeeded())
+    in.objCImageInfo->finalizeContents();
+
   // At this point, we should know exactly which output sections are needed,
   // courtesy of scanSymbols() and scanRelocations().
   createOutputSections<LP>();
@@ -1262,6 +1266,7 @@ void macho::createSyntheticSections() {
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();
   in.unwindInfo = makeUnwindInfoSection();
+  in.objCImageInfo = make<ObjCImageInfoSection>();
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.

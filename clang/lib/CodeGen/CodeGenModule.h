@@ -321,7 +321,7 @@ private:
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
-
+  bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
@@ -1597,34 +1597,7 @@ public:
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
-  void moveLazyEmissionStates(CodeGenModule *NewBuilder) {
-    assert(DeferredDeclsToEmit.empty() &&
-           "Should have emitted all decls deferred to emit.");
-    assert(NewBuilder->DeferredDecls.empty() &&
-           "Newly created module should not have deferred decls");
-    NewBuilder->DeferredDecls = std::move(DeferredDecls);
-
-    assert(NewBuilder->DeferredVTables.empty() &&
-           "Newly created module should not have deferred vtables");
-    NewBuilder->DeferredVTables = std::move(DeferredVTables);
-
-    assert(NewBuilder->MangledDeclNames.empty() &&
-           "Newly created module should not have mangled decl names");
-    assert(NewBuilder->Manglings.empty() &&
-           "Newly created module should not have manglings");
-    NewBuilder->Manglings = std::move(Manglings);
-
-    assert(WeakRefReferences.empty() &&
-           "Not all WeakRefRefs have been applied");
-    NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
-
-    NewBuilder->TBAA = std::move(TBAA);
-
-    assert(NewBuilder->EmittedDeferredDecls.empty() &&
-           "Still have (unmerged) EmittedDeferredDecls deferred decls");
-
-    NewBuilder->EmittedDeferredDecls = std::move(EmittedDeferredDecls);
-  }
+  void moveLazyEmissionStates(CodeGenModule *NewBuilder);
 
 
 private:
@@ -1682,6 +1655,9 @@ private:
 
   /// Emit the function that initializes C++ thread_local variables.
   void EmitCXXThreadLocalInitFunc();
+
+  /// Emit the function that initializes global variables for a C++ Module.
+  void EmitCXXModuleInitFunc(clang::Module *Primary);
 
   /// Emit the function that initializes C++ globals.
   void EmitCXXGlobalInitFunc();
@@ -1749,6 +1725,9 @@ private:
 
   /// Emit the llvm.used and llvm.compiler.used metadata.
   void emitLLVMUsed();
+
+  /// For C++20 Itanium ABI, emit the initializers for the module.
+  void EmitModuleInitializers(clang::Module *Primary);
 
   /// Emit the link options introduced by imported modules.
   void EmitModuleLinkOptions();

@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a NoopAnalysis class that is used by dataflow analysis
-//  tests.
+//  This file defines a NoopAnalysis class that just uses the builtin transfer.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
-#define LLVM_CLANG_UNITTESTS_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
+#ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
+#define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
@@ -25,13 +24,17 @@ namespace dataflow {
 
 class NoopAnalysis : public DataflowAnalysis<NoopAnalysis, NoopLattice> {
 public:
+  /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
+  NoopAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
+      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context,
+                                                    ApplyBuiltinTransfer) {}
+
   /// `ApplyBuiltinTransfer` controls whether to run the built-in transfer
   /// functions that model memory during the analysis. Their results are not
   /// used by `NoopAnalysis`, but tests that need to inspect the environment
   /// should enable them.
-  NoopAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context,
-                                                    ApplyBuiltinTransfer) {}
+  NoopAnalysis(ASTContext &Context, DataflowAnalysisOptions Options)
+      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context, Options) {}
 
   static NoopLattice initialElement() { return {}; }
 
@@ -41,4 +44,4 @@ public:
 } // namespace dataflow
 } // namespace clang
 
-#endif // LLVM_CLANG_UNITTESTS_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
+#endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H

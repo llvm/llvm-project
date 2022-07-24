@@ -66,13 +66,15 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 //         literal-constant | designator | array-constructor |
 //         structure-constructor | function-reference | type-param-inquiry |
 //         type-param-name | ( expr )
-// N.B. type-param-inquiry is parsed as a structure component
+// type-param-inquiry is parsed as a structure component, except for
+// substring%KIND/LEN
 constexpr auto primary{instrumented("primary"_en_US,
     first(construct<Expr>(indirect(Parser<CharLiteralConstantSubstring>{})),
         construct<Expr>(literalConstant),
         construct<Expr>(construct<Expr::Parentheses>(parenthesized(expr))),
-        construct<Expr>(indirect(functionReference) / !"("_tok),
-        construct<Expr>(designator / !"("_tok),
+        construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
+        construct<Expr>(designator / !"("_tok / !"%"_tok),
+        construct<Expr>(indirect(Parser<SubstringInquiry>{})), // %LEN or %KIND
         construct<Expr>(Parser<StructureConstructor>{}),
         construct<Expr>(Parser<ArrayConstructor>{}),
         // PGI/XLF extension: COMPLEX constructor (x,y)
