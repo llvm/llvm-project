@@ -37522,8 +37522,8 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       break;
     }
     if (IsBlend) {
-      if (DAG.computeKnownBits(V1, DemandedZeroV1).isZero() &&
-          DAG.computeKnownBits(V2, DemandedZeroV2).isZero()) {
+      if (DAG.MaskedVectorIsZero(V1, DemandedZeroV1) &&
+          DAG.MaskedVectorIsZero(V2, DemandedZeroV2)) {
         Shuffle = ISD::OR;
         SrcVT = DstVT = MaskVT.changeTypeToInteger();
         return true;
@@ -41191,7 +41191,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     SDValue Src = Op.getOperand(0);
     APInt DemandedUpperElts = DemandedElts;
     DemandedUpperElts.clearLowBits(1);
-    if (TLO.DAG.computeKnownBits(Src, DemandedUpperElts, Depth + 1).isZero())
+    if (TLO.DAG.MaskedVectorIsZero(Src, DemandedUpperElts, Depth + 1))
       return TLO.CombineTo(Op, Src);
     break;
   }
