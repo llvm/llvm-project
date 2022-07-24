@@ -3956,6 +3956,8 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   switch (D->getKind()) {
   case Decl::Enum:
     return CXCursor_EnumDecl;
+  case Decl::LinkageSpec:  
+    return CXCursor_LinkageSpec;
   case Decl::EnumConstant:
     return CXCursor_EnumConstantDecl;
   case Decl::Field:
