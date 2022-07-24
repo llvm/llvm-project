@@ -317,6 +317,7 @@ define <32 x i16> @splatvar_rotate_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind
 ; AVX512F-NEXT:    vpsrlw $1, %ymm0, %ymm6
 ; AVX512F-NEXT:    vpsrlw %xmm3, %ymm6, %ymm3
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm5, %zmm3, %zmm3
+; AVX512F-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512F-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpsllw %xmm1, %ymm4, %ymm2
 ; AVX512F-NEXT:    vpsllw %xmm1, %ymm0, %ymm0
@@ -334,6 +335,7 @@ define <32 x i16> @splatvar_rotate_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind
 ; AVX512VL-NEXT:    vpsrlw $1, %ymm0, %ymm6
 ; AVX512VL-NEXT:    vpsrlw %xmm3, %ymm6, %ymm3
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm5, %zmm3, %zmm3
+; AVX512VL-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsllw %xmm1, %ymm4, %ymm2
 ; AVX512VL-NEXT:    vpsllw %xmm1, %ymm0, %ymm0
