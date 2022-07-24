@@ -70,9 +70,7 @@ public:
                                   typename iterator_traits<_Iter>::iterator_category>;
     using pointer = typename iterator_traits<_Iter>::pointer;
 #if _LIBCPP_STD_VER > 17
-    using iterator_concept = _If<__is_cpp17_random_access_iterator<_Iter>::value,
-                                  random_access_iterator_tag,
-                                  bidirectional_iterator_tag>;
+    using iterator_concept = _If<random_access_iterator<_Iter>, random_access_iterator_tag, bidirectional_iterator_tag>;
     using value_type = iter_value_t<_Iter>;
     using difference_type = iter_difference_t<_Iter>;
     using reference = iter_reference_t<_Iter>;
