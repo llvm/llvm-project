@@ -194,6 +194,8 @@ Bug Fixes
   move assignment operator. Fixes `Issue 56456 <https://github.com/llvm/llvm-project/issues/56456>`_.
 - Fixed a crash when a variable with a bool enum type that has no definition
   used in comparison operators. Fixes `Issue 56560 <https://github.com/llvm/llvm-project/issues/56560>`_.
+- Fix that ``if consteval`` could evaluate to ``true`` at runtime because it was incorrectly
+  constant folded. Fixes `Issue 55638 <https://github.com/llvm/llvm-project/issues/55638>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
