@@ -1090,10 +1090,16 @@ module std [system] {
     module add_pointer                        { private header "__type_traits/add_pointer.h" }
     module add_rvalue_reference               { private header "__type_traits/add_rvalue_reference.h" }
     module add_volatile                       { private header "__type_traits/add_volatile.h" }
+    module aligned_storage                    { private header "__type_traits/aligned_storage.h" }
+    module aligned_union                      { private header "__type_traits/aligned_union.h" }
     module alignment_of                       { private header "__type_traits/alignment_of.h" }
     module apply_cv                           { private header "__type_traits/apply_cv.h" }
+    module common_reference                   { private header "__type_traits/common_reference.h" }
+    module common_type                        { private header "__type_traits/common_type.h" }
     module conditional                        { private header "__type_traits/conditional.h" }
     module conjunction                        { private header "__type_traits/conjunction.h" }
+    module copy_cv                            { private header "__type_traits/copy_cv.h" }
+    module copy_cvref                         { private header "__type_traits/copy_cvref.h" }
     module decay                              { private header "__type_traits/decay.h" }
     module disjunction                        { private header "__type_traits/disjunction.h" }
     module enable_if                          { private header "__type_traits/enable_if.h" }
@@ -1135,6 +1141,7 @@ module std [system] {
     module is_move_constructible              { private header "__type_traits/is_move_constructible.h" }
     module is_nothrow_assignable              { private header "__type_traits/is_nothrow_assignable.h" }
     module is_nothrow_constructible           { private header "__type_traits/is_nothrow_constructible.h" }
+    module is_nothrow_convertible             { private header "__type_traits/is_nothrow_convertible.h" }
     module is_nothrow_copy_assignable         { private header "__type_traits/is_nothrow_copy_assignable.h" }
     module is_nothrow_copy_constructible      { private header "__type_traits/is_nothrow_copy_constructible.h" }
     module is_nothrow_default_constructible   { private header "__type_traits/is_nothrow_default_constructible.h" }
@@ -1146,6 +1153,7 @@ module std [system] {
     module is_pod                             { private header "__type_traits/is_pod.h" }
     module is_pointer                         { private header "__type_traits/is_pointer.h" }
     module is_polymorphic                     { private header "__type_traits/is_polymorphic.h" }
+    module is_primary_template                { private header "__type_traits/is_primary_template.h" }
     module is_reference                       { private header "__type_traits/is_reference.h" }
     module is_reference_wrapper               { private header "__type_traits/is_reference_wrapper.h" }
     module is_referenceable                   { private header "__type_traits/is_referenceable.h" }
@@ -1153,6 +1161,7 @@ module std [system] {
     module is_scalar                          { private header "__type_traits/is_scalar.h" }
     module is_scoped_enum                     { private header "__type_traits/is_scoped_enum.h" }
     module is_signed                          { private header "__type_traits/is_signed.h" }
+    module is_signed_integer                  { private header "__type_traits/is_signed_integer.h" }
     module is_standard_layout                 { private header "__type_traits/is_standard_layout.h" }
     module is_trivial                         { private header "__type_traits/is_trivial.h" }
     module is_trivially_assignable            { private header "__type_traits/is_trivially_assignable.h" }
@@ -1167,18 +1176,28 @@ module std [system] {
     module is_unbounded_array                 { private header "__type_traits/is_unbounded_array.h" }
     module is_union                           { private header "__type_traits/is_union.h" }
     module is_unsigned                        { private header "__type_traits/is_unsigned.h" }
+    module is_unsigned_integer                { private header "__type_traits/is_unsigned_integer.h" }
+    module is_valid_expansion                 { private header "__type_traits/is_valid_expansion.h" }
     module is_void                            { private header "__type_traits/is_void.h" }
     module is_volatile                        { private header "__type_traits/is_volatile.h" }
+    module lazy                               { private header "__type_traits/lazy.h" }
+    module make_32_64_or_128_bit              { private header "__type_traits/make_32_64_or_128_bit.h" }
+    module make_signed                        { private header "__type_traits/make_signed.h" }
+    module make_unsigned                      { private header "__type_traits/make_unsigned.h" }
+    module nat                                { private header "__type_traits/nat.h" }
     module negation                           { private header "__type_traits/negation.h" }
+    module promote                            { private header "__type_traits/promote.h" }
     module rank                               { private header "__type_traits/rank.h" }
     module remove_all_extents                 { private header "__type_traits/remove_all_extents.h" }
     module remove_const                       { private header "__type_traits/remove_const.h" }
     module remove_cv                          { private header "__type_traits/remove_cv.h" }
+    module remove_cvref                       { private header "__type_traits/remove_cvref.h" }
     module remove_extent                      { private header "__type_traits/remove_extent.h" }
     module remove_pointer                     { private header "__type_traits/remove_pointer.h" }
     module remove_reference                   { private header "__type_traits/remove_reference.h" }
     module remove_volatile                    { private header "__type_traits/remove_volatile.h" }
     module type_identity                      { private header "__type_traits/type_identity.h" }
+    module type_list                          { private header "__type_traits/type_list.h" }
     module underlying_type                    { private header "__type_traits/underlying_type.h" }
     module void_t                             { private header "__type_traits/void_t.h" }
   }

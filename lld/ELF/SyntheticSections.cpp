@@ -498,7 +498,7 @@ void EhFrameSection::iterateFDEWithLSDA(
 static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
   memcpy(buf, d.data(), d.size());
 
-  size_t aligned = alignTo(d.size(), config->wordsize);
+  size_t aligned = alignToPowerOf2(d.size(), config->wordsize);
   assert(std::all_of(buf + d.size(), buf + aligned,
                      [](uint8_t c) { return c == 0; }));
 
@@ -533,11 +533,11 @@ void EhFrameSection::finalizeContents() {
   size_t off = 0;
   for (CieRecord *rec : cieRecords) {
     rec->cie->outputOff = off;
-    off += alignTo(rec->cie->size, config->wordsize);
+    off += alignToPowerOf2(rec->cie->size, config->wordsize);
 
     for (EhSectionPiece *fde : rec->fdes) {
       fde->outputOff = off;
-      off += alignTo(fde->size, config->wordsize);
+      off += alignToPowerOf2(fde->size, config->wordsize);
     }
   }
 
@@ -919,7 +919,7 @@ void MipsGotSection::build() {
       for (SectionCommand *cmd : os->commands) {
         if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
           for (InputSection *isec : isd->sections) {
-            uint64_t off = alignTo(secSize, isec->alignment);
+            uint64_t off = alignToPowerOf2(secSize, isec->alignment);
             secSize = off + isec->getSize();
           }
       }
@@ -3330,7 +3330,7 @@ void MergeNoTailSection::finalizeContents() {
   for (size_t i = 0; i < numShards; ++i) {
     shards[i].finalizeInOrder();
     if (shards[i].getSize() > 0)
-      off = alignTo(off, alignment);
+      off = alignToPowerOf2(off, alignment);
     shardOffsets[i] = off;
     off += shards[i].getSize();
   }
@@ -3612,7 +3612,7 @@ InputSection *ThunkSection::getTargetInputSection() const {
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
   for (Thunk *t : thunks) {
-    off = alignTo(off, t->alignment);
+    off = alignToPowerOf2(off, t->alignment);
     t->setOffset(off);
     uint32_t size = t->size();
     t->getThunkTargetSym()->size = size;

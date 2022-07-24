@@ -194,6 +194,8 @@ Bug Fixes
   move assignment operator. Fixes `Issue 56456 <https://github.com/llvm/llvm-project/issues/56456>`_.
 - Fixed a crash when a variable with a bool enum type that has no definition
   used in comparison operators. Fixes `Issue 56560 <https://github.com/llvm/llvm-project/issues/56560>`_.
+- Fix that ``if consteval`` could evaluate to ``true`` at runtime because it was incorrectly
+  constant folded. Fixes `Issue 55638 <https://github.com/llvm/llvm-project/issues/55638>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -516,10 +518,11 @@ C++2b Feature Support
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
 - Implemented `LWG3659: Consider ATOMIC_FLAG_INIT undeprecation <https://wg21.link/LWG3659>`_.
-- Implemented `P2290 Delimited escape sequences <https://wg21.link/P2290R3>`_.
+- Implemented `P2290R3 Delimited escape sequences <https://wg21.link/P2290R3>`_.
   This feature is available as an extension in all C and C++ language modes.
-- Implemented `P2071 Named universal character escapes <https://wg21.link/P2290R2>`_.
+- Implemented `P2071R2 Named universal character escapes <https://wg21.link/P2290R2>`_.
   This feature is available as an extension in all C and C++ language modes.
+- Implemented `P2327R1 De-deprecating volatile compound operations <https://wg21.link/P2327R1>`_
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
