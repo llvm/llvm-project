@@ -30,7 +30,6 @@ namespace llvm {
 class AllocaInst;
 class AAResults;
 class Argument;
-class CallInst;
 class ConstantPointerNull;
 class DataLayout;
 class ExtractElementInst;
