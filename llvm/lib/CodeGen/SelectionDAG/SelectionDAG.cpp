@@ -2529,8 +2529,7 @@ bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
 /// DemandedElts.  We use this predicate to simplify operations downstream.
 bool SelectionDAG::MaskedVectorIsZero(SDValue V, const APInt &DemandedElts,
                                       unsigned Depth /* = 0 */) const {
-  APInt Mask = APInt::getAllOnes(V.getScalarValueSizeInBits());
-  return Mask.isSubsetOf(computeKnownBits(V, DemandedElts, Depth).Zero);
+  return computeKnownBits(V, DemandedElts, Depth).isZero();
 }
 
 /// MaskedValueIsAllOnes - Return true if '(Op & Mask) == Mask'.
