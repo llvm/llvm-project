@@ -10,6 +10,8 @@
 #define _LIBCPP___CONCEPTS_ARITHMETIC_H
 
 #include <__config>
+#include <__type_traits/is_signed_integer.h>
+#include <__type_traits/is_unsigned_integer.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

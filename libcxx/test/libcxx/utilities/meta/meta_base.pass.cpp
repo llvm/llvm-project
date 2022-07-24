@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
+#include <__type_traits/is_valid_expansion.h>
 #include <type_traits>
 #include <cassert>
-
-#include "test_macros.h"
 
 struct Bomb;
 template <int N, class T = Bomb >
