@@ -6,6 +6,11 @@ target triple = "systemz"
 
 @ARR = internal global [100 x i32] zeroinitializer, align 4
 
+; This test uses 'sub' instructions for gep offsets to allow
+; codegen (LSR) to create optimal asm. If 'sub' is canonicalized
+; to 'xor', then the backend needs to be able to see through
+; that transform to produce optimal asm.
+
 define dso_local zeroext i32 @foo(ptr noundef %a) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
