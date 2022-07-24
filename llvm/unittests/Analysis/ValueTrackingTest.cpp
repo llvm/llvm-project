@@ -1354,7 +1354,7 @@ TEST_F(ValueTrackingTest, IsImpliedConditionAndVec) {
     }
   )");
   const DataLayout &DL = M->getDataLayout();
-  EXPECT_EQ(isImpliedCondition(A, A2, DL), None);
+  EXPECT_EQ(isImpliedCondition(A, A2, DL), true);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionOr) {
