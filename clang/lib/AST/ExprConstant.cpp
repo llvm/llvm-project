@@ -5266,10 +5266,14 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       }
     }
     bool Cond;
-    if (IS->isConsteval())
+    if (IS->isConsteval()) {
       Cond = IS->isNonNegatedConsteval();
-    else if (!EvaluateCond(Info, IS->getConditionVariable(), IS->getCond(),
-                           Cond))
+      // If we are not in a constant context, if consteval should not evaluate
+      // to true.
+      if (!Info.InConstantContext)
+        Cond = !Cond;
+    } else if (!EvaluateCond(Info, IS->getConditionVariable(), IS->getCond(),
+                             Cond))
       return ESR_Failed;
 
     if (const Stmt *SubStmt = Cond ? IS->getThen() : IS->getElse()) {
