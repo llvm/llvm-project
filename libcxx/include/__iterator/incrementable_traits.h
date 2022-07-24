@@ -11,6 +11,7 @@
 #define _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H
 
 #include <__config>
+#include <__type_traits/is_primary_template.h>
 #include <concepts>
 #include <type_traits>
 
