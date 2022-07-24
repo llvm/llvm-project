@@ -187,7 +187,7 @@ CommandObjectExpression::CommandObjectExpression(
       m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,
                     true),
-      m_command_options(), m_expr_line_count(0) {
+      m_expr_line_count(0) {
   SetHelpLong(
       R"(
 Single and multi-line expressions:
