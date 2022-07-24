@@ -3364,6 +3364,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    TLO, Depth + 1))
       return true;
 
+    // If every element pair has a zero/undef then just fold to zero.
+    // fold (and x, undef) -> 0  /  (and x, 0) -> 0
+    // fold (mul x, undef) -> 0  /  (mul x, 0) -> 0
+    if (DemandedElts.isSubsetOf(SrcZero | KnownZero | SrcUndef | KnownUndef))
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
+
     // If either side has a zero element, then the result element is zero, even
     // if the other is an UNDEF.
     // TODO: Extend getKnownUndefForVectorBinop to also deal with known zeros
@@ -3373,7 +3379,6 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef &= ~KnownZero;
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
-    // TODO - use KnownUndef to relax the demandedelts?
     if (!DemandedElts.isAllOnes())
       if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
         return true;

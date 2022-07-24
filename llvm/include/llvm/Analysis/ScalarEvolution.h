@@ -1374,11 +1374,11 @@ private:
     /// Expression indicating the least constant maximum backedge-taken count of
     /// the loop that is known, or a SCEVCouldNotCompute. This expression is
     /// only valid if the redicates associated with all loop exits are true.
-    const SCEV *ConstantMax;
+    const SCEV *ConstantMax = nullptr;
 
     /// Indicating if \c ExitNotTaken has an element for every exiting block in
     /// the loop.
-    bool IsComplete;
+    bool IsComplete = false;
 
     /// Expression indicating the least maximum backedge-taken count of the loop
     /// that is known, or a SCEVCouldNotCompute. Lazily computed on first query.
@@ -1391,7 +1391,7 @@ private:
     const SCEV *getConstantMax() const { return ConstantMax; }
 
   public:
-    BackedgeTakenInfo() : ConstantMax(nullptr), IsComplete(false) {}
+    BackedgeTakenInfo() = default;
     BackedgeTakenInfo(BackedgeTakenInfo &&) = default;
     BackedgeTakenInfo &operator=(BackedgeTakenInfo &&) = default;
 
