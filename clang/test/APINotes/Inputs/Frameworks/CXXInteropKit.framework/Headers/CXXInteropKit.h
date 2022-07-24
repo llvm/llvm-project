@@ -30,6 +30,8 @@ struct GlobalStruct {
 namespace ParentNS {
 namespace ChildNS {
 
+void gloablFnInNS();
+
 struct ParentStruct {
   int x;
   struct ChildStruct {

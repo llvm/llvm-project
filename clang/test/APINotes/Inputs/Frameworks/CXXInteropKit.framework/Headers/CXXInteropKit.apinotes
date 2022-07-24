@@ -21,3 +21,6 @@ Tags:
   Methods:
     - Name: 'method'
       SwiftName: nestedMethod()
+Functions:
+- Name: ParentNS.ChildNS.gloablFnInNS
+  SwiftName: childFnInNS()

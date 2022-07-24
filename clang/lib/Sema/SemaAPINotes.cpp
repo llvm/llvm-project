@@ -835,18 +835,6 @@ void Sema::ProcessAPINotes(Decl *D) {
       return;
     }
 
-    // Global functions.
-    if (auto FD = dyn_cast<FunctionDecl>(D)) {
-      if (FD->getDeclName().isIdentifier()) {
-        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-          auto Info = Reader->lookupGlobalFunction(FD->getName());
-          ProcessVersionedAPINotes(*this, FD, Info);
-        }
-      }
-
-      return;
-    }
-
     // Objective-C classes.
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
@@ -946,6 +934,31 @@ void Sema::ProcessAPINotes(Decl *D) {
       auto Info = Reader->lookupMemberFunction(Name);
       ProcessVersionedAPINotes(*this, Method, Info);
     }
+
+    return;
+  }
+
+  // Global functions.
+  if (auto FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->getDeclName().isIdentifier()) {
+      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        std::string Name = FD->getName().str();
+
+        auto parent = FD->getParent();
+        while (isa<clang::NamespaceDecl>(parent)) {
+          if (auto Namespace = dyn_cast<clang::NamespaceDecl>(parent)) {
+            Name = Namespace->getNameAsString() + "." + Name;
+          }
+
+          parent = parent->getParent();
+        }
+
+        auto Info = Reader->lookupGlobalFunction(Name);
+        ProcessVersionedAPINotes(*this, FD, Info);
+      }
+    }
+
+    return;
   }
 
   if (auto Namespace = dyn_cast<NamespaceDecl>(D)) {
@@ -954,6 +967,8 @@ void Sema::ProcessAPINotes(Decl *D) {
         ProcessAPINotes(Member);
       }
     }
+
+    return;
   }
 
   // Enumerators.
