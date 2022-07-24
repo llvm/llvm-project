@@ -39,7 +39,6 @@ namespace llvm {
 
 extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
-class AAResults;
 class BitVector;
 class LiveIntervalCalc;
 class MachineBlockFrequencyInfo;
