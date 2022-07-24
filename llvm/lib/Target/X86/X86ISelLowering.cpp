@@ -51134,6 +51134,9 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
+  MVT SVT = VT.getScalarType();
+  int NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
   // ANDNP(undef, x) -> 0
   // ANDNP(x, undef) -> 0
@@ -51152,6 +51155,19 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = IsNOT(N0, DAG))
     return DAG.getNode(ISD::AND, SDLoc(N), VT, DAG.getBitcast(VT, Not), N1);
 
+  // Constant Folding
+  APInt Undefs0, Undefs1;
+  SmallVector<APInt> EltBits0, EltBits1;
+  if (getTargetConstantBitsFromNode(N0, EltSizeInBits, Undefs0, EltBits0) &&
+      getTargetConstantBitsFromNode(N1, EltSizeInBits, Undefs1, EltBits1)) {
+    SDLoc DL(N);
+    SmallVector<APInt> ResultBits;
+    for (int I = 0; I != NumElts; ++I)
+      ResultBits.push_back(~EltBits0[I] & EltBits1[I]);
+    APInt ResultUndefs = APInt::getZero(NumElts);
+    return getConstVector(ResultBits, ResultUndefs, VT, DAG, DL);
+  }
+
   // TODO: Constant fold NOT(N0) to allow us to use AND.
   // TODO: Do this in IsNOT with suitable oneuse checks?
 
@@ -51166,8 +51182,6 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     auto GetDemandedMasks = [&](SDValue Op, bool Invert = false) {
       APInt UndefElts;
       SmallVector<APInt> EltBits;
-      int NumElts = VT.getVectorNumElements();
-      int EltSizeInBits = VT.getScalarSizeInBits();
       APInt DemandedBits = APInt::getAllOnes(EltSizeInBits);
       APInt DemandedElts = APInt::getAllOnes(NumElts);
       if (getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts,

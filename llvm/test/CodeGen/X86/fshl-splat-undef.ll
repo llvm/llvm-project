@@ -22,12 +22,11 @@ define void @test_fshl(<8 x i64> %lo, <8 x i64> %hi, <8 x i64>* %arr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12]
-; CHECK-NEXT:    vpandnq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %zmm2
-; CHECK-NEXT:    vpsrlq $1, %zmm0, %zmm0
-; CHECK-NEXT:    vpsrlvq %zmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vpsllq $12, %zmm1, %zmm1
-; CHECK-NEXT:    vpternlogq $168, {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm1
-; CHECK-NEXT:    vmovdqa64 %zmm1, (%eax)
+; CHECK-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm2, %zmm2
+; CHECK-NEXT:    vpsllvq %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpsrlq $52, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogq $168, {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
+; CHECK-NEXT:    vmovdqa64 %zmm0, (%eax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:
