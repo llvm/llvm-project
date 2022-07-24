@@ -17,10 +17,16 @@ Tags:
   Methods:
   - Name: 'method'
     SwiftName: globalMethod()
+    ImportAs: unsafe
 - Name: ParentNS.ChildNS.ParentStruct.ChildStruct
   Methods:
     - Name: 'method'
       SwiftName: nestedMethod()
+- Name: ImportAsReference
+  ImportAs: reference
+  Retain: IARetain
+  Release: IARelease
 Functions:
 - Name: ParentNS.ChildNS.gloablFnInNS
   SwiftName: childFnInNS()
+  ImportAs: unsafe

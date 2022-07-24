@@ -509,6 +509,8 @@ public:
   /// The function parameters.
   std::vector<ParamInfo> Params;
 
+  llvm::Optional<std::string> ImportAs;
+
   FunctionInfo()
       : NullabilityAudited(false), NumAdjustedNullable(0),
         RawRetainCountConvention() {}
@@ -659,7 +661,11 @@ class TagInfo : public CommonTypeInfo {
 public:
   llvm::Optional<EnumExtensibilityKind> EnumExtensibility;
 
-  TagInfo() : HasFlagEnum(0), IsFlagEnum(0) {}
+  llvm::Optional<std::string> ImportAs;
+  llvm::Optional<std::string> RetainOp;
+  llvm::Optional<std::string> ReleaseOp;
+
+  TagInfo() : CommonTypeInfo(), HasFlagEnum(0), IsFlagEnum(0) {}
 
   llvm::Optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
@@ -671,6 +677,27 @@ public:
     IsFlagEnum = Value.value_or(false);
   }
 
+  void setImportAs(llvm::Optional<std::string> Value) {
+    ImportAs = Value;
+  }
+  llvm::Optional<std::string> getImportAs() const {
+    return ImportAs;
+  }
+
+  void setRetainOp(llvm::Optional<std::string> Value) {
+    RetainOp = Value;
+  }
+  llvm::Optional<std::string> getRetainOp() const {
+    return RetainOp;
+  }
+
+  void setReleaseOp(llvm::Optional<std::string> Value) {
+    ReleaseOp = Value;
+  }
+  llvm::Optional<std::string> getReleaseOp() const {
+    return ReleaseOp;
+  }
+
   TagInfo &operator|=(const TagInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
@@ -679,6 +706,13 @@ public:
 
     if (!EnumExtensibility)
       EnumExtensibility = RHS.EnumExtensibility;
+
+    if (!getImportAs())
+      setImportAs(RHS.getImportAs());
+    if (!getRetainOp())
+      setImportAs(RHS.getRetainOp());
+    if (!getReleaseOp())
+      setImportAs(RHS.getReleaseOp());
 
     return *this;
   }
@@ -691,7 +725,10 @@ public:
 inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
   return static_cast<const CommonTypeInfo &>(LHS) == RHS &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
-         LHS.EnumExtensibility == RHS.EnumExtensibility;
+         LHS.EnumExtensibility == RHS.EnumExtensibility &&
+         LHS.getImportAs() == RHS.getImportAs() &&
+         LHS.getRetainOp() == RHS.getRetainOp() &&
+         LHS.getReleaseOp() == RHS.getReleaseOp();
 }
 
 inline bool operator!=(const TagInfo &LHS, const TagInfo &RHS) {

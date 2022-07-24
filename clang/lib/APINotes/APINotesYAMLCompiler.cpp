@@ -402,6 +402,7 @@ struct Function {
   StringRef SwiftName;
   StringRef Type;
   StringRef ResultType;
+  Optional<StringRef> ImportAs;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -424,6 +425,7 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
+    IO.mapOptional("ImportAs", F.ImportAs);
   }
 };
 } // namespace yaml
@@ -530,6 +532,9 @@ struct Tag {
   Optional<EnumExtensibilityKind> EnumExtensibility;
   Optional<bool> FlagEnum;
   Optional<EnumConvenienceAliasKind> EnumConvenienceKind;
+  Optional<StringRef> ImportAs;
+  Optional<StringRef> RetainOp;
+  Optional<StringRef> ReleaseOp;
   FunctionsSeq MemberFuncs;
 };
 
@@ -561,6 +566,9 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
+    IO.mapOptional("ImportAs", T.ImportAs);
+    IO.mapOptional("Retain", T.RetainOp);
+    IO.mapOptional("Release", T.ReleaseOp);
     IO.mapOptional("Methods", T.MemberFuncs);
   }
 };
@@ -1032,6 +1040,9 @@ namespace {
                            info, function.Name);
         info.ResultType = std::string(function.ResultType);
         info.setRetainCountConvention(function.RetainCountConvention);
+        if (function.ImportAs)
+          info.ImportAs = function.ImportAs->str();
+
         Writer->addGlobalFunction(function.Name, info, swiftVersion);
       }
 
@@ -1100,6 +1111,13 @@ namespace {
           tagInfo.setFlagEnum(t.FlagEnum);          
         }
 
+        if (t.ImportAs)
+          tagInfo.setImportAs(t.ImportAs->str());
+        if (t.RetainOp)
+          tagInfo.setRetainOp(t.RetainOp->str());
+        if (t.ReleaseOp)
+          tagInfo.setReleaseOp(t.ReleaseOp->str());
+
         Writer->addTag(t.Name, tagInfo, swiftVersion);
 
         for (auto Member : t.MemberFuncs) {
@@ -1115,6 +1133,8 @@ namespace {
                              info, MemberName);
           info.ResultType = std::string(Member.ResultType);
           info.setRetainCountConvention(Member.RetainCountConvention);
+          if (Member.ImportAs)
+            info.ImportAs = Member.ImportAs->str();
 
           Writer->addMemberFunction(MemberName, info, swiftVersion);
         }

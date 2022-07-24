@@ -351,6 +351,14 @@ namespace {
       = endian::readNext<uint16_t, little, unaligned>(data);
     info.ResultType = std::string(data, data + resultTypeLen);
     data += resultTypeLen;
+
+    unsigned importAsLength =
+        endian::readNext<uint16_t, little, unaligned>(data);
+    if (importAsLength > 0) {
+      info.ImportAs =
+          std::string(reinterpret_cast<const char *>(data), importAsLength-1);
+      data += importAsLength-1;
+    }
   }
 
   /// Used to deserialize the on-disk Objective-C method table.
@@ -522,6 +530,28 @@ namespace {
       if (payload > 0) {
         info.EnumExtensibility =
             static_cast<EnumExtensibilityKind>((payload & 0x3) - 1);
+      }
+
+      unsigned importAsLength =
+          endian::readNext<uint16_t, little, unaligned>(data);
+      if (importAsLength > 0) {
+        info.setImportAs(
+            std::string(reinterpret_cast<const char *>(data), importAsLength-1));
+        data += importAsLength-1;
+      }
+      unsigned retainOpLength =
+          endian::readNext<uint16_t, little, unaligned>(data);
+      if (retainOpLength > 0) {
+        info.setRetainOp(
+            std::string(reinterpret_cast<const char *>(data), retainOpLength-1));
+        data += retainOpLength-1;
+      }
+      unsigned releaseOpLength =
+          endian::readNext<uint16_t, little, unaligned>(data);
+      if (releaseOpLength > 0) {
+        info.setReleaseOp(
+            std::string(reinterpret_cast<const char *>(data), releaseOpLength-1));
+        data += releaseOpLength-1;
       }
 
       readCommonTypeInfo(data, info);

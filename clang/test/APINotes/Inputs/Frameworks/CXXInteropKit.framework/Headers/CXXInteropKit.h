@@ -42,3 +42,5 @@ struct ParentStruct {
 
 }
 }
+
+struct ImportAsReference { int x; };

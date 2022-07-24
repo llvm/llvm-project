@@ -739,7 +739,8 @@ namespace {
   /// Retrieve the serialized size of the given FunctionInfo, for use in
   /// on-disk hash tables.
   static unsigned getFunctionInfoSize(const FunctionInfo &info) {
-    unsigned size = 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 2;
+    unsigned size = 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 2 +
+                    2 + (info.ImportAs ? info.ImportAs->size() : 0);
 
     for (const auto &param : info.Params)
       size += getParamInfoSize(param);
@@ -773,6 +774,13 @@ namespace {
     // Result type.
     writer.write<uint16_t>(info.ResultType.size());
     out.write(info.ResultType.data(), info.ResultType.size());
+
+    if (auto importAs = info.ImportAs) {
+      writer.write<uint16_t>(importAs->size() + 1);
+      out.write(importAs->c_str(), importAs->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
   }
 
   /// Used to serialize the on-disk Objective-C method table.
@@ -1132,7 +1140,10 @@ namespace {
   class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
   public:
     unsigned getUnversionedInfoSize(const TagInfo &info) {
-      return 1 + getCommonTypeInfoSize(info);
+      return 2 + (info.getImportAs() ? info.getImportAs()->size() : 0) +
+             2 + (info.getRetainOp() ? info.getRetainOp()->size() : 0) +
+             2 + (info.getReleaseOp() ? info.getReleaseOp()->size() : 0) +
+          1 + getCommonTypeInfoSize(info);
     }
 
     void emitUnversionedInfo(raw_ostream &out, const TagInfo &info) {
@@ -1151,6 +1162,27 @@ namespace {
       }
 
       writer.write<uint8_t>(payload);
+
+      if (auto importAs = info.getImportAs()) {
+        writer.write<uint16_t>(importAs->size() + 1);
+        out.write(importAs->c_str(), importAs->size());
+      } else {
+        writer.write<uint16_t>(0);
+      }
+
+      if (auto retainOp = info.getRetainOp()) {
+        writer.write<uint16_t>(retainOp->size() + 1);
+        out.write(retainOp->c_str(), retainOp->size());
+      } else {
+        writer.write<uint16_t>(0);
+      }
+
+      if (auto releaseOp = info.getReleaseOp()) {
+        writer.write<uint16_t>(releaseOp->size() + 1);
+        out.write(releaseOp->c_str(), releaseOp->size());
+      } else {
+        writer.write<uint16_t>(0);
+      }
 
       emitCommonTypeInfo(out, info);
     }

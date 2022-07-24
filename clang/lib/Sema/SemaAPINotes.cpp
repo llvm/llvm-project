@@ -583,6 +583,12 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     }
   }
 
+  if (auto importAs = info.ImportAs) {
+    auto str = "import_" + importAs.getValue();
+    auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
+    D->addAttr(attr);
+  }
+
   // Retain count convention
   handleAPINotedRetainCountConvention(S, D, metadata,
                                       info.getRetainCountConvention());
@@ -665,6 +671,22 @@ static void ProcessAPINotes(Sema &S, TagDecl *D,
                                           [&] {
       return new (S.Context) FlagEnumAttr(S.Context, getDummyAttrInfo());
     });
+  }
+
+  if (auto importAs = info.getImportAs()) {
+    auto str = "import_" + importAs.getValue();
+    auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
+    D->addAttr(attr);
+  }
+  if (auto retainOp = info.getRetainOp()) {
+    auto str = "retain:" + retainOp.getValue();
+    auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
+    D->addAttr(attr);
+  }
+  if (auto releaseOp = info.getReleaseOp()) {
+    auto str = "release:" + releaseOp.getValue();
+    auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
+    D->addAttr(attr);
   }
 
   // Handle common type information.
