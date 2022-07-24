@@ -28,12 +28,12 @@ public:
   // We should be able to switch this back to member initialization once that
   // issue is fixed.
   struct SegInfo {
-    SegInfo() : WorkingMem(nullptr), ContentSize(0), ZeroFillSize(0) {}
+    SegInfo() = default;
 
-    char *WorkingMem;
+    char *WorkingMem = nullptr;
     ExecutorAddr Addr;
-    uint64_t ContentSize;
-    uint64_t ZeroFillSize;
+    uint64_t ContentSize = 0;
+    uint64_t ZeroFillSize = 0;
   };
 
   using SegInfoMap = AllocGroupSmallMap<SegInfo>;
