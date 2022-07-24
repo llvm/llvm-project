@@ -90,7 +90,7 @@ struct OpPassManagerImpl {
       : name(name == OpPassManager::getAnyOpAnchorName() ? "" : name.str()),
         initializationGeneration(0), nesting(nesting) {}
   OpPassManagerImpl(OpPassManager::Nesting nesting)
-      : name(""), initializationGeneration(0), nesting(nesting) {}
+      : initializationGeneration(0), nesting(nesting) {}
   OpPassManagerImpl(const OpPassManagerImpl &rhs)
       : name(rhs.name), opName(rhs.opName),
         initializationGeneration(rhs.initializationGeneration),
