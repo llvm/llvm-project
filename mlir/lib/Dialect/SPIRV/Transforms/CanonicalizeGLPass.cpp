@@ -1,4 +1,4 @@
-//===- CanonicalizeGLSLPass.cpp - GLSL Related Canonicalization Pass ------===//
+//===- CanonicalizeGLPass.cpp - GLSL Related Canonicalization Pass ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVGLSLCanonicalization.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVGLCanonicalization.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
@@ -16,12 +16,12 @@
 using namespace mlir;
 
 namespace {
-class CanonicalizeGLSLPass final
-    : public SPIRVCanonicalizeGLSLBase<CanonicalizeGLSLPass> {
+class CanonicalizeGLPass final
+    : public SPIRVCanonicalizeGLBase<CanonicalizeGLPass> {
 public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    spirv::populateSPIRVGLSLCanonicalizationPatterns(patterns);
+    spirv::populateSPIRVGLCanonicalizationPatterns(patterns);
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
@@ -29,6 +29,6 @@ public:
 };
 } // namespace
 
-std::unique_ptr<OperationPass<>> spirv::createCanonicalizeGLSLPass() {
-  return std::make_unique<CanonicalizeGLSLPass>();
+std::unique_ptr<OperationPass<>> spirv::createCanonicalizeGLPass() {
+  return std::make_unique<CanonicalizeGLPass>();
 }

@@ -48,7 +48,7 @@ public:
       if (Size == 0)
         continue;
       const uint64_t StartAddr = Sect.getAddress();
-      TextAddressRanges[{StartAddr}] = {StartAddr + Size, 0};
+      TextAddressRanges.insert({StartAddr, StartAddr + Size});
     }
 
     // Check CU address ranges for tombstone value.
@@ -59,7 +59,7 @@ public:
         for (auto &Range : *ARanges) {
           if (!isDeadAddressRange(Range.LowPC, Range.HighPC, CU->getVersion(),
                                   Options.Tombstone, CU->getAddressByteSize()))
-            DWARFAddressRanges[{Range.LowPC}] = {Range.HighPC, 0};
+            DWARFAddressRanges.insert({Range.LowPC, Range.HighPC}, 0);
         }
       }
     }
@@ -146,17 +146,13 @@ protected:
   // of executable sections.
   bool isInsideExecutableSectionsAddressRange(uint64_t LowPC,
                                               Optional<uint64_t> HighPC) {
-    auto Range = TextAddressRanges.lower_bound(LowPC);
-    if ((Range == TextAddressRanges.end() || Range->first != LowPC) &&
-        Range != TextAddressRanges.begin())
-      --Range;
+    Optional<AddressRange> Range =
+        TextAddressRanges.getRangeThatContains(LowPC);
 
-    if (Range != TextAddressRanges.end() && Range->first <= LowPC &&
-        (HighPC ? Range->second.HighPC >= HighPC
-                : Range->second.HighPC >= LowPC))
-      return true;
+    if (HighPC)
+      return Range.hasValue() && Range->end() >= *HighPC;
 
-    return false;
+    return Range.hasValue();
   }
 
   uint64_t isBFDDeadAddressRange(uint64_t LowPC, Optional<uint64_t> HighPC,
@@ -210,7 +206,7 @@ protected:
 
 private:
   RangesTy DWARFAddressRanges;
-  RangesTy TextAddressRanges;
+  AddressRanges TextAddressRanges;
   const Options &Opts;
 };
 

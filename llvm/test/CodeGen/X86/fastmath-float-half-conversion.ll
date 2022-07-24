@@ -14,10 +14,8 @@ define zeroext i16 @test1_fast(double %d) #0 {
 ; AVX-LABEL: test1_fast:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    callq __truncdfhf2@PLT
 ; AVX-NEXT:    popq %rcx
-; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %d)
@@ -38,12 +36,10 @@ define zeroext i16 @test2_fast(x86_fp80 %d) #0 {
 ; AVX-LABEL: test2_fast:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    subq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 32
 ; AVX-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    fstpt (%rsp)
 ; AVX-NEXT:    callq __truncxfhf2@PLT
 ; AVX-NEXT:    addq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f80(x86_fp80 %d)
@@ -54,10 +50,8 @@ define zeroext i16 @test1(double %d) #1 {
 ; ALL-LABEL: test1:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    pushq %rax
-; ALL-NEXT:    .cfi_def_cfa_offset 16
 ; ALL-NEXT:    callq __truncdfhf2@PLT
 ; ALL-NEXT:    popq %rcx
-; ALL-NEXT:    .cfi_def_cfa_offset 8
 ; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %d)
@@ -68,12 +62,10 @@ define zeroext i16 @test2(x86_fp80 %d) #1 {
 ; ALL-LABEL: test2:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    subq $24, %rsp
-; ALL-NEXT:    .cfi_def_cfa_offset 32
 ; ALL-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    fstpt (%rsp)
 ; ALL-NEXT:    callq __truncxfhf2@PLT
 ; ALL-NEXT:    addq $24, %rsp
-; ALL-NEXT:    .cfi_def_cfa_offset 8
 ; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f80(x86_fp80 %d)
@@ -83,5 +75,5 @@ entry:
 declare i16 @llvm.convert.to.fp16.f64(double)
 declare i16 @llvm.convert.to.fp16.f80(x86_fp80)
 
-attributes #0 = { nounwind readnone uwtable "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone uwtable "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #1 = { nounwind readnone "unsafe-fp-math"="false" "use-soft-float"="false" }

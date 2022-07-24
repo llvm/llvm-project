@@ -81,13 +81,6 @@ else()
   string(REPLACE "," ";" nvptx_sm_list "${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES}")
 endif()
 
-# If user set LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES to empty, we disable the
-# build.
-if (NOT nvptx_sm_list)
-  libomptarget_say("Not building CUDA offloading DeviceRTL: empty compute capability list")
-  return()
-endif()
-
 # Check all SM values
 foreach(sm ${nvptx_sm_list})
   if (NOT ${sm} IN_LIST all_capabilities)

@@ -903,7 +903,6 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     if (sym.n_type & N_STAB)
       continue;
 
-    StringRef name = strtab + sym.n_strx;
     if ((sym.n_type & N_TYPE) == N_SECT) {
       Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
@@ -913,7 +912,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     } else if (isUndef(sym)) {
       undefineds.push_back(i);
     } else {
-      symbols[i] = parseNonSectionSymbol(sym, name);
+      symbols[i] = parseNonSectionSymbol(sym, StringRef(strtab + sym.n_strx));
     }
   }
 
@@ -1529,6 +1528,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     Defined *funcSym;
     if (funcAddrRelocIt != isec->relocs.end()) {
       funcSym = targetSymFromCanonicalSubtractor(isec, funcAddrRelocIt);
+      // Canonicalize the symbol. If there are multiple symbols at the same
+      // address, we want both `registerEhFrame` and `registerCompactUnwind`
+      // to register the unwind entry under same symbol.
+      // This is not particularly efficient, but we should run into this case
+      // infrequently (only when handling the output of `ld -r`).
+      funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
+                                   funcSym->value);
     } else {
       funcSym = findSymbolAtAddress(sections, funcAddr);
       ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);
