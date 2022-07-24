@@ -470,8 +470,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   // Sort by offset.
   SmallVector<std::pair<uint64_t, Type *>, 16> TypesVector;
   append_range(TypesVector, Types);
-  sort(TypesVector,
-       [](const auto &A, const auto &B) { return A.first < B.first; });
+  sort(TypesVector, llvm::less_first());
 
   // Check that the types are non-overlapping.
   uint64_t Offset = 0;
