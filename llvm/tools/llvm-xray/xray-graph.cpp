@@ -232,10 +232,11 @@ Error GraphRenderer::accountRecord(const XRayRecord &Record) {
       if (!DeduceSiblingCalls)
         return make_error<StringError>("No matching ENTRY record",
                                        make_error_code(errc::invalid_argument));
-      auto Parent = std::find_if(
-          ThreadStack.rbegin(), ThreadStack.rend(),
-          [&](const FunctionAttr &A) { return A.FuncId == Record.FuncId; });
-      if (Parent == ThreadStack.rend())
+      bool FoundParent =
+          llvm::any_of(llvm::reverse(ThreadStack), [&](const FunctionAttr &A) {
+            return A.FuncId == Record.FuncId;
+          });
+      if (!FoundParent)
         return make_error<StringError>(
             "No matching Entry record in stack",
             make_error_code(errc::invalid_argument)); // There is no matching

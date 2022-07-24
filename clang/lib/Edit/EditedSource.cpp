@@ -84,11 +84,11 @@ bool EditedSource::canInsertInOffset(SourceLocation OrigLoc, FileOffset Offs) {
     deconstructMacroArgLoc(OrigLoc, ExpLoc, ArgUse);
     auto I = ExpansionToArgMap.find(ExpLoc);
     if (I != ExpansionToArgMap.end() &&
-        find_if(I->second, [&](const MacroArgUse &U) {
+        llvm::any_of(I->second, [&](const MacroArgUse &U) {
           return ArgUse.Identifier == U.Identifier &&
                  std::tie(ArgUse.ImmediateExpansionLoc, ArgUse.UseLoc) !=
                      std::tie(U.ImmediateExpansionLoc, U.UseLoc);
-        }) != I->second.end()) {
+        })) {
       // Trying to write in a macro argument input that has already been
       // written by a previous commit for another expansion of the same macro
       // argument name. For example:
