@@ -1345,6 +1345,18 @@ TEST_F(ValueTrackingTest, IsImpliedConditionAnd2) {
   EXPECT_EQ(isImpliedCondition(A, A4, DL), None);
 }
 
+TEST_F(ValueTrackingTest, IsImpliedConditionAndVec) {
+  parseAssembly(R"(
+    define void @test(<2 x i8> %x, <2 x i8> %y) {
+      %A = icmp ult <2 x i8> %x, %y
+      %A2 = icmp ule <2 x i8> %x, %y
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_EQ(isImpliedCondition(A, A2, DL), None);
+}
+
 TEST_F(ValueTrackingTest, IsImpliedConditionOr) {
   parseAssembly(R"(
     define void @test(i32 %x, i32 %y) {
