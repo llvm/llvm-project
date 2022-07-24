@@ -1392,7 +1392,7 @@ Expr ScriptParser::readPrimary() {
     Expr e = readExpr();
     if (consume(")")) {
       e = checkAlignment(e, location);
-      return [=] { return alignTo(script->getDot(), e().getValue()); };
+      return [=] { return alignToPowerOf2(script->getDot(), e().getValue()); };
     }
     expect(",");
     Expr e2 = checkAlignment(readExpr(), location);
@@ -1423,7 +1423,8 @@ Expr ScriptParser::readPrimary() {
     expect(")");
     seenDataAlign = true;
     return [=] {
-      return alignTo(script->getDot(), std::max((uint64_t)1, e().getValue()));
+      uint64_t align = std::max(uint64_t(1), e().getValue());
+      return (script->getDot() + align - 1) & -align;
     };
   }
   if (tok == "DATA_SEGMENT_END") {
@@ -1443,7 +1444,7 @@ Expr ScriptParser::readPrimary() {
     expect(")");
     seenRelroEnd = true;
     Expr e = getPageSize();
-    return [=] { return alignTo(script->getDot(), e().getValue()); };
+    return [=] { return alignToPowerOf2(script->getDot(), e().getValue()); };
   }
   if (tok == "DEFINED") {
     StringRef name = unquote(readParenLiteral());
