@@ -1330,7 +1330,7 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
   const MachineOperand &MO = MI.getOperand(0);
   unsigned InstrNum = MI.getOperand(1).getImm();
 
-  auto EmitBadPHI = [this, &MI, InstrNum](void) -> bool {
+  auto EmitBadPHI = [this, &MI, InstrNum]() -> bool {
     // Helper lambda to do any accounting when we fail to find a location for
     // a DBG_PHI. This can happen if DBG_PHIs are malformed, or refer to a
     // dead stack slot, for example.
