@@ -411,7 +411,8 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
     }
   }
 
-  if (Symbol.getStorageClass() == COFF::IMAGE_SYM_CLASS_STATIC) {
+  if (Symbol.getStorageClass() == COFF::IMAGE_SYM_CLASS_STATIC ||
+      Symbol.getStorageClass() == COFF::IMAGE_SYM_CLASS_LABEL) {
     const object::coff_aux_section_definition *Definition =
         Symbol.getSectionDefinition();
     if (!Definition || !isComdatSection(Section)) {
