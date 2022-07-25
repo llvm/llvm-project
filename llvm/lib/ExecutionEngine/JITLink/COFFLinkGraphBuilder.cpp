@@ -190,6 +190,7 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
   LLVM_DEBUG(dbgs() << "  Creating graph symbols...\n");
 
   SymbolSets.resize(Obj.getNumberOfSections() + 1);
+  PendingComdatExports.resize(Obj.getNumberOfSections() + 1);
   GraphSymbols.resize(Obj.getNumberOfSymbols());
 
   for (COFFSymbolIndex SymIndex = 0;
@@ -396,18 +397,16 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
   Block *B = getGraphBlock(Symbol.getSectionNumber());
   if (Symbol.isExternal()) {
     // This is not a comdat sequence, export the symbol as it is
-    if (!isComdatSection(Section))
+    if (!isComdatSection(Section)) {
+
       return &G->addDefinedSymbol(
           *B, Symbol.getValue(), SymbolName, 0, Linkage::Strong, Scope::Default,
           Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION, false);
-    else {
-      if (!PendingComdatExport)
+    } else {
+      if (!PendingComdatExports[Symbol.getSectionNumber()])
         return make_error<JITLinkError>("No pending COMDAT export for symbol " +
                                         formatv("{0:d}", SymIndex));
-      if (PendingComdatExport->SectionIndex != Symbol.getSectionNumber())
-        return make_error<JITLinkError>(
-            "COMDAT export section number mismatch for symbol " +
-            formatv("{0:d}", SymIndex));
+
       return exportCOMDATSymbol(SymIndex, SymbolName, Symbol);
     }
   }
@@ -429,7 +428,7 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
       getGraphBlock(Target)->addEdge(Edge::KeepAlive, 0, *GSym, 0);
       return GSym;
     }
-    if (PendingComdatExport)
+    if (PendingComdatExports[Symbol.getSectionNumber()])
       return make_error<JITLinkError>(
           "COMDAT export request already exists before symbol " +
           formatv("{0:d}", SymIndex));
@@ -491,7 +490,7 @@ Expected<Symbol *> COFFLinkGraphBuilder::createCOMDATExportRequest(
                                     formatv("{0:d}", Definition->Selection));
   }
   }
-  PendingComdatExport = {SymIndex, Symbol.getSectionNumber(), L};
+  PendingComdatExports[Symbol.getSectionNumber()] = {SymIndex, L};
   return &G->addAnonymousSymbol(*B, Symbol.getValue(), Definition->Length,
                                 false, false);
 }
@@ -501,6 +500,7 @@ Expected<Symbol *>
 COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
                                          StringRef SymbolName,
                                          object::COFFSymbolRef Symbol) {
+  auto &PendingComdatExport = PendingComdatExports[Symbol.getSectionNumber()];
   COFFSymbolIndex TargetIndex = PendingComdatExport->SymbolIndex;
   Linkage L = PendingComdatExport->Linkage;
   jitlink::Symbol *Target = getGraphSymbol(TargetIndex);
