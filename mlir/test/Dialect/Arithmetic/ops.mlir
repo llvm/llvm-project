@@ -958,9 +958,3 @@ func.func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
   %min_unsigned = arith.minui %i1, %i2 : i32
   return
 }
-
-// CHECK-LABEL: func @delinearize
-func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) -> (index, index) {
-  %1:2 = arith.delinearize_index %idx (%basis0, %basis1) : index, index
-  return %1#0, %1#1 : index, index
-}

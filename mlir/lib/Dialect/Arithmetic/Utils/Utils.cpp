@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
@@ -115,48 +114,4 @@ Value ArithBuilder::slt(Value lhs, Value rhs) {
 }
 Value ArithBuilder::select(Value cmp, Value lhs, Value rhs) {
   return b.create<arith::SelectOp>(loc, cmp, lhs, rhs);
-}
-
-DivModValue mlir::getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs) {
-  DivModValue result;
-  result.quotient = b.create<arith::DivUIOp>(loc, lhs, rhs);
-  result.remainder = b.create<arith::RemUIOp>(loc, lhs, rhs);
-  return result;
-}
-
-/// Create IR that computes the product of all elements in the set.
-static FailureOr<OpFoldResult> getIndexProduct(OpBuilder &b, Location loc,
-                                               ArrayRef<Value> set) {
-  if (set.empty())
-    return failure();
-  OpFoldResult result = set[0];
-  for (unsigned i = 1; i < set.size(); i++)
-    result = b.createOrFold<arith::MulIOp>(
-        loc, getValueOrCreateConstantIndexOp(b, loc, result), set[i]);
-  return result;
-}
-
-FailureOr<SmallVector<Value>> mlir::delinearizeIndex(OpBuilder &b, Location loc,
-                                                     Value linearIndex,
-                                                     ArrayRef<Value> dimSizes) {
-  unsigned numDims = dimSizes.size();
-
-  SmallVector<Value> divisors;
-  for (unsigned i = 1; i < numDims; i++) {
-    ArrayRef<Value> slice(dimSizes.begin() + i, dimSizes.end());
-    FailureOr<OpFoldResult> prod = getIndexProduct(b, loc, slice);
-    if (failed(prod))
-      return failure();
-    divisors.push_back(getValueOrCreateConstantIndexOp(b, loc, *prod));
-  }
-
-  SmallVector<Value> results;
-  Value residual = linearIndex;
-  for (Value divisor : divisors) {
-    DivModValue divMod = getDivMod(b, loc, residual, divisor);
-    results.push_back(divMod.quotient);
-    residual = divMod.remainder;
-  }
-  results.push_back(residual);
-  return results;
 }
