@@ -15,17 +15,11 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Sequence.h"
 
 namespace mlir {
-class OperandRange;
-class ResultRange;
-class Type;
-class Value;
-class ValueRange;
-template <typename ValueRangeT>
-class ValueTypeRange;
 
 //===----------------------------------------------------------------------===//
 // TypeRange
