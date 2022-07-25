@@ -1249,6 +1249,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // flattening of blocks.
   OptimizePM.addPass(DivRemPairsPass());
 
+  // Try to annotate calls that were created during optimization.
+  OptimizePM.addPass(TailCallElimPass());
+
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   OptimizePM.addPass(

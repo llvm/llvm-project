@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svuzp2_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.uzp2.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.uzp2.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svuzp2_bf16u14__SVBFloat16_tu14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.uzp2.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.uzp2.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_svuzp2_bf16(svbfloat16_t op1, svbfloat16_t op2)

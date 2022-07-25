@@ -16,12 +16,12 @@
 
 // CHECK-LABEL: @test_svrsqrte_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.frsqrte.x.nxv8f16(<vscale x 8 x half> [[OP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frsqrte.x.nxv8f16(<vscale x 8 x half> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svrsqrte_f16u13__SVFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.frsqrte.x.nxv8f16(<vscale x 8 x half> [[OP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frsqrte.x.nxv8f16(<vscale x 8 x half> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svrsqrte_f16(svfloat16_t op)
@@ -31,12 +31,12 @@ svfloat16_t test_svrsqrte_f16(svfloat16_t op)
 
 // CHECK-LABEL: @test_svrsqrte_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.frsqrte.x.nxv4f32(<vscale x 4 x float> [[OP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frsqrte.x.nxv4f32(<vscale x 4 x float> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svrsqrte_f32u13__SVFloat32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.frsqrte.x.nxv4f32(<vscale x 4 x float> [[OP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frsqrte.x.nxv4f32(<vscale x 4 x float> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_svrsqrte_f32(svfloat32_t op)
@@ -46,12 +46,12 @@ svfloat32_t test_svrsqrte_f32(svfloat32_t op)
 
 // CHECK-LABEL: @test_svrsqrte_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.frsqrte.x.nxv2f64(<vscale x 2 x double> [[OP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frsqrte.x.nxv2f64(<vscale x 2 x double> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svrsqrte_f64u13__SVFloat64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.frsqrte.x.nxv2f64(<vscale x 2 x double> [[OP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frsqrte.x.nxv2f64(<vscale x 2 x double> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 svfloat64_t test_svrsqrte_f64(svfloat64_t op)

@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svcmla_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z14test_svcmla_s8u10__SVInt8_tu10__SVInt8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svcmla_s8(svint8_t op1, svint8_t op2, svint8_t op3)
@@ -32,12 +32,12 @@ svint8_t test_svcmla_s8(svint8_t op1, svint8_t op2, svint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_s8_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svcmla_s8_1u10__SVInt8_tu10__SVInt8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svcmla_s8_1(svint8_t op1, svint8_t op2, svint8_t op3)
@@ -47,12 +47,12 @@ svint8_t test_svcmla_s8_1(svint8_t op1, svint8_t op2, svint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_s8_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svcmla_s8_2u10__SVInt8_tu10__SVInt8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svcmla_s8_2(svint8_t op1, svint8_t op2, svint8_t op3)
@@ -62,12 +62,12 @@ svint8_t test_svcmla_s8_2(svint8_t op1, svint8_t op2, svint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_s8_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svcmla_s8_3u10__SVInt8_tu10__SVInt8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svcmla_s8_3(svint8_t op1, svint8_t op2, svint8_t op3)
@@ -77,12 +77,12 @@ svint8_t test_svcmla_s8_3(svint8_t op1, svint8_t op2, svint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svcmla_s16u11__SVInt16_tu11__SVInt16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svcmla_s16(svint16_t op1, svint16_t op2, svint16_t op3)
@@ -92,12 +92,12 @@ svint16_t test_svcmla_s16(svint16_t op1, svint16_t op2, svint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_s16_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s16_1u11__SVInt16_tu11__SVInt16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svcmla_s16_1(svint16_t op1, svint16_t op2, svint16_t op3)
@@ -107,12 +107,12 @@ svint16_t test_svcmla_s16_1(svint16_t op1, svint16_t op2, svint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_s16_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s16_2u11__SVInt16_tu11__SVInt16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svcmla_s16_2(svint16_t op1, svint16_t op2, svint16_t op3)
@@ -122,12 +122,12 @@ svint16_t test_svcmla_s16_2(svint16_t op1, svint16_t op2, svint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_s16_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s16_3u11__SVInt16_tu11__SVInt16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svcmla_s16_3(svint16_t op1, svint16_t op2, svint16_t op3)
@@ -137,12 +137,12 @@ svint16_t test_svcmla_s16_3(svint16_t op1, svint16_t op2, svint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svcmla_s32u11__SVInt32_tu11__SVInt32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svcmla_s32(svint32_t op1, svint32_t op2, svint32_t op3)
@@ -152,12 +152,12 @@ svint32_t test_svcmla_s32(svint32_t op1, svint32_t op2, svint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_s32_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s32_1u11__SVInt32_tu11__SVInt32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svcmla_s32_1(svint32_t op1, svint32_t op2, svint32_t op3)
@@ -167,12 +167,12 @@ svint32_t test_svcmla_s32_1(svint32_t op1, svint32_t op2, svint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_s32_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s32_2u11__SVInt32_tu11__SVInt32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svcmla_s32_2(svint32_t op1, svint32_t op2, svint32_t op3)
@@ -182,12 +182,12 @@ svint32_t test_svcmla_s32_2(svint32_t op1, svint32_t op2, svint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_s32_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s32_3u11__SVInt32_tu11__SVInt32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svcmla_s32_3(svint32_t op1, svint32_t op2, svint32_t op3)
@@ -197,12 +197,12 @@ svint32_t test_svcmla_s32_3(svint32_t op1, svint32_t op2, svint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svcmla_s64u11__SVInt64_tu11__SVInt64_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svint64_t test_svcmla_s64(svint64_t op1, svint64_t op2, svint64_t op3)
@@ -212,12 +212,12 @@ svint64_t test_svcmla_s64(svint64_t op1, svint64_t op2, svint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_s64_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s64_1u11__SVInt64_tu11__SVInt64_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svint64_t test_svcmla_s64_1(svint64_t op1, svint64_t op2, svint64_t op3)
@@ -227,12 +227,12 @@ svint64_t test_svcmla_s64_1(svint64_t op1, svint64_t op2, svint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_s64_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s64_2u11__SVInt64_tu11__SVInt64_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svint64_t test_svcmla_s64_2(svint64_t op1, svint64_t op2, svint64_t op3)
@@ -242,12 +242,12 @@ svint64_t test_svcmla_s64_2(svint64_t op1, svint64_t op2, svint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_s64_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_s64_3u11__SVInt64_tu11__SVInt64_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svint64_t test_svcmla_s64_3(svint64_t op1, svint64_t op2, svint64_t op3)
@@ -257,12 +257,12 @@ svint64_t test_svcmla_s64_3(svint64_t op1, svint64_t op2, svint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z14test_svcmla_u8u11__SVUint8_tu11__SVUint8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svcmla_u8(svuint8_t op1, svuint8_t op2, svuint8_t op3)
@@ -272,12 +272,12 @@ svuint8_t test_svcmla_u8(svuint8_t op1, svuint8_t op2, svuint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_u8_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svcmla_u8_1u11__SVUint8_tu11__SVUint8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svcmla_u8_1(svuint8_t op1, svuint8_t op2, svuint8_t op3)
@@ -287,12 +287,12 @@ svuint8_t test_svcmla_u8_1(svuint8_t op1, svuint8_t op2, svuint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_u8_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svcmla_u8_2u11__SVUint8_tu11__SVUint8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svcmla_u8_2(svuint8_t op1, svuint8_t op2, svuint8_t op3)
@@ -302,12 +302,12 @@ svuint8_t test_svcmla_u8_2(svuint8_t op1, svuint8_t op2, svuint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_u8_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svcmla_u8_3u11__SVUint8_tu11__SVUint8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cmla.x.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svcmla_u8_3(svuint8_t op1, svuint8_t op2, svuint8_t op3)
@@ -317,12 +317,12 @@ svuint8_t test_svcmla_u8_3(svuint8_t op1, svuint8_t op2, svuint8_t op3)
 
 // CHECK-LABEL: @test_svcmla_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svcmla_u16u12__SVUint16_tu12__SVUint16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svcmla_u16(svuint16_t op1, svuint16_t op2, svuint16_t op3)
@@ -332,12 +332,12 @@ svuint16_t test_svcmla_u16(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_u16_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u16_1u12__SVUint16_tu12__SVUint16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svcmla_u16_1(svuint16_t op1, svuint16_t op2, svuint16_t op3)
@@ -347,12 +347,12 @@ svuint16_t test_svcmla_u16_1(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_u16_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u16_2u12__SVUint16_tu12__SVUint16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svcmla_u16_2(svuint16_t op1, svuint16_t op2, svuint16_t op3)
@@ -362,12 +362,12 @@ svuint16_t test_svcmla_u16_2(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_u16_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u16_3u12__SVUint16_tu12__SVUint16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svcmla_u16_3(svuint16_t op1, svuint16_t op2, svuint16_t op3)
@@ -377,12 +377,12 @@ svuint16_t test_svcmla_u16_3(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svcmla_u32u12__SVUint32_tu12__SVUint32_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svcmla_u32(svuint32_t op1, svuint32_t op2, svuint32_t op3)
@@ -392,12 +392,12 @@ svuint32_t test_svcmla_u32(svuint32_t op1, svuint32_t op2, svuint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_u32_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u32_1u12__SVUint32_tu12__SVUint32_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svcmla_u32_1(svuint32_t op1, svuint32_t op2, svuint32_t op3)
@@ -407,12 +407,12 @@ svuint32_t test_svcmla_u32_1(svuint32_t op1, svuint32_t op2, svuint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_u32_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u32_2u12__SVUint32_tu12__SVUint32_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svcmla_u32_2(svuint32_t op1, svuint32_t op2, svuint32_t op3)
@@ -422,12 +422,12 @@ svuint32_t test_svcmla_u32_2(svuint32_t op1, svuint32_t op2, svuint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_u32_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u32_3u12__SVUint32_tu12__SVUint32_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svcmla_u32_3(svuint32_t op1, svuint32_t op2, svuint32_t op3)
@@ -437,12 +437,12 @@ svuint32_t test_svcmla_u32_3(svuint32_t op1, svuint32_t op2, svuint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svcmla_u64u12__SVUint64_tu12__SVUint64_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svcmla_u64(svuint64_t op1, svuint64_t op2, svuint64_t op3)
@@ -452,12 +452,12 @@ svuint64_t test_svcmla_u64(svuint64_t op1, svuint64_t op2, svuint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_u64_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u64_1u12__SVUint64_tu12__SVUint64_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svcmla_u64_1(svuint64_t op1, svuint64_t op2, svuint64_t op3)
@@ -467,12 +467,12 @@ svuint64_t test_svcmla_u64_1(svuint64_t op1, svuint64_t op2, svuint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_u64_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u64_2u12__SVUint64_tu12__SVUint64_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svcmla_u64_2(svuint64_t op1, svuint64_t op2, svuint64_t op3)
@@ -482,12 +482,12 @@ svuint64_t test_svcmla_u64_2(svuint64_t op1, svuint64_t op2, svuint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_u64_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcmla_u64_3u12__SVUint64_tu12__SVUint64_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.cmla.x.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]], i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svcmla_u64_3(svuint64_t op1, svuint64_t op2, svuint64_t op3)
@@ -497,12 +497,12 @@ svuint64_t test_svcmla_u64_3(svuint64_t op1, svuint64_t op2, svuint64_t op3)
 
 // CHECK-LABEL: @test_svcmla_lane_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svcmla_lane_s16u11__SVInt16_tu11__SVInt16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svcmla_lane_s16(svint16_t op1, svint16_t op2, svint16_t op3)
@@ -512,12 +512,12 @@ svint16_t test_svcmla_lane_s16(svint16_t op1, svint16_t op2, svint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_lane_s16_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svcmla_lane_s16_1u11__SVInt16_tu11__SVInt16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svcmla_lane_s16_1(svint16_t op1, svint16_t op2, svint16_t op3)
@@ -527,12 +527,12 @@ svint16_t test_svcmla_lane_s16_1(svint16_t op1, svint16_t op2, svint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_lane_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svcmla_lane_s32u11__SVInt32_tu11__SVInt32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svcmla_lane_s32(svint32_t op1, svint32_t op2, svint32_t op3)
@@ -542,12 +542,12 @@ svint32_t test_svcmla_lane_s32(svint32_t op1, svint32_t op2, svint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_lane_s32_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svcmla_lane_s32_1u11__SVInt32_tu11__SVInt32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svcmla_lane_s32_1(svint32_t op1, svint32_t op2, svint32_t op3)
@@ -557,12 +557,12 @@ svint32_t test_svcmla_lane_s32_1(svint32_t op1, svint32_t op2, svint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_lane_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svcmla_lane_u16u12__SVUint16_tu12__SVUint16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0, i32 90)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svcmla_lane_u16(svuint16_t op1, svuint16_t op2, svuint16_t op3)
@@ -572,12 +572,12 @@ svuint16_t test_svcmla_lane_u16(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 
 // CHECK-LABEL: @test_svcmla_lane_u16_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svcmla_lane_u16_1u12__SVUint16_tu12__SVUint16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cmla.lane.x.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3, i32 180)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svcmla_lane_u16_1(svuint16_t op1, svuint16_t op2, svuint16_t op3)
@@ -587,12 +587,12 @@ svuint16_t test_svcmla_lane_u16_1(svuint16_t op1, svuint16_t op2, svuint16_t op3
 
 // CHECK-LABEL: @test_svcmla_lane_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svcmla_lane_u32u12__SVUint32_tu12__SVUint32_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 0, i32 270)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svcmla_lane_u32(svuint32_t op1, svuint32_t op2, svuint32_t op3)
@@ -602,12 +602,12 @@ svuint32_t test_svcmla_lane_u32(svuint32_t op1, svuint32_t op2, svuint32_t op3)
 
 // CHECK-LABEL: @test_svcmla_lane_u32_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svcmla_lane_u32_1u12__SVUint32_tu12__SVUint32_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.cmla.lane.x.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]], i32 1, i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svcmla_lane_u32_1(svuint32_t op1, svuint32_t op2, svuint32_t op3)

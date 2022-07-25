@@ -8,7 +8,7 @@ define void @PR47852(ptr noundef %d, i32 noundef %c) {
 ; CHECK-NEXT:    br i1 [[CMP_NOT1]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[C]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[D:%.*]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 [[D:%.*]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void

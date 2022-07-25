@@ -17,16 +17,16 @@
 
 // CHECK-LABEL: @test_svtbl2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z14test_svtbl2_s810svint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
 //
 svint8_t test_svtbl2_s8(svint8x2_t data, svuint8_t indices)
@@ -36,16 +36,16 @@ svint8_t test_svtbl2_s8(svint8x2_t data, svuint8_t indices)
 
 // CHECK-LABEL: @test_svtbl2_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_s1611svint16x2_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
 svint16_t test_svtbl2_s16(svint16x2_t data, svuint16_t indices)
@@ -55,16 +55,16 @@ svint16_t test_svtbl2_s16(svint16x2_t data, svuint16_t indices)
 
 // CHECK-LABEL: @test_svtbl2_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_s3211svint32x2_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 svint32_t test_svtbl2_s32(svint32x2_t data, svuint32_t indices)
@@ -74,16 +74,16 @@ svint32_t test_svtbl2_s32(svint32x2_t data, svuint32_t indices)
 
 // CHECK-LABEL: @test_svtbl2_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_s6411svint64x2_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
 svint64_t test_svtbl2_s64(svint64x2_t data, svuint64_t indices)
@@ -93,16 +93,16 @@ svint64_t test_svtbl2_s64(svint64x2_t data, svuint64_t indices)
 
 // CHECK-LABEL: @test_svtbl2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z14test_svtbl2_u811svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv16i8.nxv32i8(<vscale x 32 x i8> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
 //
 svuint8_t test_svtbl2_u8(svuint8x2_t data, svuint8_t indices)
@@ -112,16 +112,16 @@ svuint8_t test_svtbl2_u8(svuint8x2_t data, svuint8_t indices)
 
 // CHECK-LABEL: @test_svtbl2_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_u1612svuint16x2_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tuple.get.nxv8i16.nxv16i16(<vscale x 16 x i16> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
 svuint16_t test_svtbl2_u16(svuint16x2_t data, svuint16_t indices)
@@ -131,16 +131,16 @@ svuint16_t test_svtbl2_u16(svuint16x2_t data, svuint16_t indices)
 
 // CHECK-LABEL: @test_svtbl2_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_u3212svuint32x2_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv4i32.nxv8i32(<vscale x 8 x i32> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 svuint32_t test_svtbl2_u32(svuint32x2_t data, svuint32_t indices)
@@ -150,16 +150,16 @@ svuint32_t test_svtbl2_u32(svuint32x2_t data, svuint32_t indices)
 
 // CHECK-LABEL: @test_svtbl2_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_u6412svuint64x2_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv2i64.nxv4i64(<vscale x 4 x i64> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
 svuint64_t test_svtbl2_u64(svuint64x2_t data, svuint64_t indices)
@@ -169,16 +169,16 @@ svuint64_t test_svtbl2_u64(svuint64x2_t data, svuint64_t indices)
 
 // CHECK-LABEL: @test_svtbl2_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tbl2.nxv8f16(<vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.tbl2.nxv8f16(<vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_f1613svfloat16x2_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tbl2.nxv8f16(<vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.tuple.get.nxv8f16.nxv16f16(<vscale x 16 x half> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.tbl2.nxv8f16(<vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
 //
 svfloat16_t test_svtbl2_f16(svfloat16x2_t data, svuint16_t indices)
@@ -188,16 +188,16 @@ svfloat16_t test_svtbl2_f16(svfloat16x2_t data, svuint16_t indices)
 
 // CHECK-LABEL: @test_svtbl2_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tbl2.nxv4f32(<vscale x 4 x float> [[TMP0]], <vscale x 4 x float> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.tbl2.nxv4f32(<vscale x 4 x float> [[TMP0]], <vscale x 4 x float> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_f3213svfloat32x2_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tbl2.nxv4f32(<vscale x 4 x float> [[TMP0]], <vscale x 4 x float> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv4f32.nxv8f32(<vscale x 8 x float> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.tbl2.nxv4f32(<vscale x 4 x float> [[TMP0]], <vscale x 4 x float> [[TMP1]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP2]]
 //
 svfloat32_t test_svtbl2_f32(svfloat32x2_t data, svuint32_t indices)
@@ -207,16 +207,16 @@ svfloat32_t test_svtbl2_f32(svfloat32x2_t data, svuint32_t indices)
 
 // CHECK-LABEL: @test_svtbl2_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tbl2.nxv2f64(<vscale x 2 x double> [[TMP0]], <vscale x 2 x double> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tbl2.nxv2f64(<vscale x 2 x double> [[TMP0]], <vscale x 2 x double> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbl2_f6413svfloat64x2_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tbl2.nxv2f64(<vscale x 2 x double> [[TMP0]], <vscale x 2 x double> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv4f64(<vscale x 4 x double> [[DATA]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tbl2.nxv2f64(<vscale x 2 x double> [[TMP0]], <vscale x 2 x double> [[TMP1]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 //
 svfloat64_t test_svtbl2_f64(svfloat64x2_t data, svuint64_t indices)

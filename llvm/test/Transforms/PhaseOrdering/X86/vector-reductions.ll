@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define i32 @ext_ext_or_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @ext_ext_or_reduction_v4i32(
 ; CHECK-NEXT:    [[Z:%.*]] = and <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[Z]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[Z]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %z = and <4 x i32> %x, %y
@@ -42,7 +42,7 @@ define i32 @ext_ext_partial_add_reduction_v4i32(<4 x i32> %x) {
 define i32 @ext_ext_partial_add_reduction_and_extra_add_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @ext_ext_partial_add_reduction_and_extra_add_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 6>
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %y0 = extractelement <4 x i32> %y, i32 0
@@ -66,8 +66,8 @@ define i32 @TestVectorsEqual(i32* noalias %Vec0, i32* noalias %Vec1, i32 %Tolera
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[VEC1:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP4]], i1 true)
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP4]], i1 true)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp sle i32 [[TMP6]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND6:%.*]] = zext i1 [[CMP5_NOT]] to i32
 ; CHECK-NEXT:    ret i32 [[COND6]]
@@ -126,7 +126,7 @@ define i32 @TestVectorsEqual_alt(i32* noalias %Vec0, i32* noalias %Vec1, i32 %To
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[VEC1:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp ule i32 [[TMP5]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP3_NOT]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
@@ -173,8 +173,8 @@ define i32 @TestVectorsEqualFP(float* noalias %Vec0, float* noalias %Vec1, float
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[VEC1:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = fcmp fast ole float [[TMP6]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND5:%.*]] = zext i1 [[CMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[COND5]]
@@ -233,7 +233,7 @@ define i32 @TestVectorsEqualFP_alt(float* noalias %Vec0, float* noalias %Vec1, f
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[VEC1:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP4]])
 ; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast ole float [[TMP5]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]

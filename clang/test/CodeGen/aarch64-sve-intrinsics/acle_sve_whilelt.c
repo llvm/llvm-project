@@ -16,12 +16,12 @@
 
 // CHECK-LABEL: @test_svwhilelt_b8_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svwhilelt_b8_s32ii(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 svbool_t test_svwhilelt_b8_s32(int32_t op1, int32_t op2)
@@ -31,14 +31,14 @@ svbool_t test_svwhilelt_b8_s32(int32_t op1, int32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b16_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b16_s32ii(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b16_s32(int32_t op1, int32_t op2)
@@ -48,14 +48,14 @@ svbool_t test_svwhilelt_b16_s32(int32_t op1, int32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b32_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b32_s32ii(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b32_s32(int32_t op1, int32_t op2)
@@ -65,14 +65,14 @@ svbool_t test_svwhilelt_b32_s32(int32_t op1, int32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b64_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b64_s32ii(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b64_s32(int32_t op1, int32_t op2)
@@ -82,12 +82,12 @@ svbool_t test_svwhilelt_b64_s32(int32_t op1, int32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b8_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svwhilelt_b8_u32jj(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 svbool_t test_svwhilelt_b8_u32(uint32_t op1, uint32_t op2)
@@ -97,14 +97,14 @@ svbool_t test_svwhilelt_b8_u32(uint32_t op1, uint32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b16_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b16_u32jj(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b16_u32(uint32_t op1, uint32_t op2)
@@ -114,14 +114,14 @@ svbool_t test_svwhilelt_b16_u32(uint32_t op1, uint32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b32_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b32_u32jj(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b32_u32(uint32_t op1, uint32_t op2)
@@ -131,14 +131,14 @@ svbool_t test_svwhilelt_b32_u32(uint32_t op1, uint32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b64_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b64_u32jj(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i32(i32 [[OP1:%.*]], i32 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b64_u32(uint32_t op1, uint32_t op2)
@@ -148,12 +148,12 @@ svbool_t test_svwhilelt_b64_u32(uint32_t op1, uint32_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b8_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svwhilelt_b8_s64ll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 svbool_t test_svwhilelt_b8_s64(int64_t op1, int64_t op2)
@@ -163,14 +163,14 @@ svbool_t test_svwhilelt_b8_s64(int64_t op1, int64_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b16_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b16_s64ll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b16_s64(int64_t op1, int64_t op2)
@@ -180,14 +180,14 @@ svbool_t test_svwhilelt_b16_s64(int64_t op1, int64_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b32_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b32_s64ll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b32_s64(int64_t op1, int64_t op2)
@@ -197,14 +197,14 @@ svbool_t test_svwhilelt_b32_s64(int64_t op1, int64_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b64_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b64_s64ll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b64_s64(int64_t op1, int64_t op2)
@@ -214,12 +214,12 @@ svbool_t test_svwhilelt_b64_s64(int64_t op1, int64_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b8_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svwhilelt_b8_u64mm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 svbool_t test_svwhilelt_b8_u64(uint64_t op1, uint64_t op2)
@@ -229,14 +229,14 @@ svbool_t test_svwhilelt_b8_u64(uint64_t op1, uint64_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b16_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b16_u64mm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilelo.nxv8i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b16_u64(uint64_t op1, uint64_t op2)
@@ -246,14 +246,14 @@ svbool_t test_svwhilelt_b16_u64(uint64_t op1, uint64_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b32_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b32_u64mm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b32_u64(uint64_t op1, uint64_t op2)
@@ -263,14 +263,14 @@ svbool_t test_svwhilelt_b32_u64(uint64_t op1, uint64_t op2)
 
 // CHECK-LABEL: @test_svwhilelt_b64_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svwhilelt_b64_u64mm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i64(i64 [[OP1:%.*]], i64 [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t test_svwhilelt_b64_u64(uint64_t op1, uint64_t op2)

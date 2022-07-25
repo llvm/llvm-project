@@ -17,16 +17,16 @@
 
 // CHECK-LABEL: @test_svst1_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
-// CHECK-NEXT:    call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]]), !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z15test_svst1_bf16u10__SVBool_tPu6__bf16u14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
-// CPP-CHECK-NEXT:    call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]]), !tbaa [[TBAA6:![0-9]+]]
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1_bf16(svbool_t pg, bfloat16_t *base, svbfloat16_t data)
@@ -36,20 +36,20 @@ void test_svst1_bf16(svbool_t pg, bfloat16_t *base, svbfloat16_t data)
 
 // CHECK-LABEL: @test_svst1_vnum_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast bfloat* [[TMP2]] to <vscale x 8 x bfloat>*
-// CHECK-NEXT:    call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z20test_svst1_vnum_bf16u10__SVBool_tPu6__bf16lu14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = bitcast bfloat* [[TMP2]] to <vscale x 8 x bfloat>*
-// CPP-CHECK-NEXT:    call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x bfloat>* [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1_vnum_bf16(svbool_t pg, bfloat16_t *base, int64_t vnum, svbfloat16_t data)

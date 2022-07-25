@@ -16,12 +16,12 @@
 
 // CHECK-LABEL: @test_svadrw_u32base_s32index(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svadrw_u32base_s32indexu12__SVUint32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svadrw_u32base_s32index(svuint32_t bases, svint32_t indices)
@@ -31,12 +31,12 @@ svuint32_t test_svadrw_u32base_s32index(svuint32_t bases, svint32_t indices)
 
 // CHECK-LABEL: @test_svadrw_u64base_s64index(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svadrw_u64base_s64indexu12__SVUint64_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svadrw_u64base_s64index(svuint64_t bases, svint64_t indices)
@@ -46,12 +46,12 @@ svuint64_t test_svadrw_u64base_s64index(svuint64_t bases, svint64_t indices)
 
 // CHECK-LABEL: @test_svadrw_u32base_u32index(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svadrw_u32base_u32indexu12__SVUint32_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.adrw.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svadrw_u32base_u32index(svuint32_t bases, svuint32_t indices)
@@ -61,12 +61,12 @@ svuint32_t test_svadrw_u32base_u32index(svuint32_t bases, svuint32_t indices)
 
 // CHECK-LABEL: @test_svadrw_u64base_u64index(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z28test_svadrw_u64base_u64indexu12__SVUint64_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.adrw.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svadrw_u64base_u64index(svuint64_t bases, svuint64_t indices)
