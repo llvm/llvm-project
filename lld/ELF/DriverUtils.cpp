@@ -180,6 +180,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       break;
     case OPT_call_graph_ordering_file:
     case OPT_dynamic_list:
+    case OPT_export_dynamic_symbol_list:
     case OPT_just_symbols:
     case OPT_library_path:
     case OPT_retain_symbols_file:

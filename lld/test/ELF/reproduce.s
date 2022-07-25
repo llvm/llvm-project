@@ -31,13 +31,14 @@
 # RUN: cd %t.dir/build3
 # RUN: echo "{ local: *; };" >  ver
 # RUN: echo "{};" > dyn
+# RUN: cp dyn dyn2
 # RUN: echo > file
 # RUN: echo > file2
 # RUN: echo "_start" > order
 # RUN: mkdir "sysroot with spaces"
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o 'foo bar'
 # RUN: ld.lld --reproduce repro3.tar 'foo bar' -L"foo bar" -Lfile -Tfile2 \
-# RUN:   --dynamic-list dyn -rpath file --script=file --symbol-ordering-file order \
+# RUN:   --dynamic-list dyn --export-dynamic-symbol-list dyn2 -rpath file --script=file --symbol-ordering-file order \
 # RUN:   --sysroot "sysroot with spaces" --sysroot="sysroot with spaces" \
 # RUN:   --version-script ver --dynamic-linker "some unusual/path" -soname 'foo bar' \
 # RUN:   -soname='foo bar'
@@ -48,6 +49,7 @@
 # RSP3-NEXT: -L [[BASEDIR]]/file
 # RSP3-NEXT: --script [[BASEDIR]]/file2
 # RSP3-NEXT: --dynamic-list [[BASEDIR]]/dyn
+# RSP3-NEXT: --export-dynamic-symbol-list [[BASEDIR]]/dyn2
 # RSP3-NEXT: -rpath [[BASEDIR]]/file
 # RSP3-NEXT: --script [[BASEDIR]]/file
 # RSP3-NEXT: --symbol-ordering-file [[BASEDIR]]/order
@@ -63,6 +65,7 @@
 # CHECK-NEXT: repro3/version.txt
 # CHECK-NEXT: repro3/{{.*}}/order
 # CHECK-NEXT: repro3/{{.*}}/dyn
+# CHECK-NEXT: repro3/{{.*}}/dyn2
 # CHECK-NEXT: repro3/{{.*}}/ver
 # CHECK-NEXT: repro3/{{.*}}/foo bar
 # CHECK-NEXT: repro3/{{.*}}/file2
