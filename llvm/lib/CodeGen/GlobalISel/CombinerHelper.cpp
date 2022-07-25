@@ -4935,6 +4935,108 @@ void CombinerHelper::applyUDivByConst(MachineInstr &MI) {
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 
+bool CombinerHelper::matchSDivByConst(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SDIV && "Expected SDIV");
+  Register Dst = MI.getOperand(0).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  auto &MF = *MI.getMF();
+  AttributeList Attr = MF.getFunction().getAttributes();
+  const auto &TLI = getTargetLowering();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+    return false;
+
+  // Don't do this for minsize because the instruction sequence is usually
+  // larger.
+  if (MF.getFunction().hasMinSize())
+    return false;
+
+  // If the sdiv has an 'exact' flag we can use a simpler lowering.
+  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
+    return matchUnaryPredicate(
+        MRI, RHS, [](const Constant *C) { return C && !C->isZeroValue(); });
+  }
+
+  // Don't support the general case for now.
+  return false;
+}
+
+void CombinerHelper::applySDivByConst(MachineInstr &MI) {
+  auto *NewMI = buildSDivUsingMul(MI);
+  replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
+}
+
+MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SDIV && "Expected SDIV");
+  auto &SDiv = cast<GenericMachineInstr>(MI);
+  Register Dst = SDiv.getReg(0);
+  Register LHS = SDiv.getReg(1);
+  Register RHS = SDiv.getReg(2);
+  LLT Ty = MRI.getType(Dst);
+  LLT ScalarTy = Ty.getScalarType();
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  LLT ScalarShiftAmtTy = ShiftAmtTy.getScalarType();
+  auto &MIB = Builder;
+  MIB.setInstrAndDebugLoc(MI);
+
+  bool UseSRA = false;
+  SmallVector<Register, 16> Shifts, Factors;
+
+  auto *RHSDef = cast<GenericMachineInstr>(getDefIgnoringCopies(RHS, MRI));
+  bool IsSplat = getIConstantSplatVal(*RHSDef, MRI).hasValue();
+
+  auto BuildSDIVPattern = [&](const Constant *C) {
+    // Don't recompute inverses for each splat element.
+    if (IsSplat && !Factors.empty()) {
+      Shifts.push_back(Shifts[0]);
+      Factors.push_back(Factors[0]);
+      return true;
+    }
+
+    auto *CI = cast<ConstantInt>(C);
+    APInt Divisor = CI->getValue();
+    unsigned Shift = Divisor.countTrailingZeros();
+    if (Shift) {
+      Divisor.ashrInPlace(Shift);
+      UseSRA = true;
+    }
+
+    // Calculate the multiplicative inverse modulo BW.
+    // 2^W requires W + 1 bits, so we have to extend and then truncate.
+    unsigned W = Divisor.getBitWidth();
+    APInt Factor = Divisor.zext(W + 1)
+                       .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
+                       .trunc(W);
+    Shifts.push_back(MIB.buildConstant(ScalarShiftAmtTy, Shift).getReg(0));
+    Factors.push_back(MIB.buildConstant(ScalarTy, Factor).getReg(0));
+    return true;
+  };
+
+  // Collect all magic values from the build vector.
+  bool Matched = matchUnaryPredicate(MRI, RHS, BuildSDIVPattern);
+  (void)Matched;
+  assert(Matched && "Expected unary predicate match to succeed");
+
+  Register Shift, Factor;
+  if (Ty.isVector()) {
+    Shift = MIB.buildBuildVector(ShiftAmtTy, Shifts).getReg(0);
+    Factor = MIB.buildBuildVector(Ty, Factors).getReg(0);
+  } else {
+    Shift = Shifts[0];
+    Factor = Factors[0];
+  }
+
+  Register Res = LHS;
+
+  if (UseSRA)
+    Res = MIB.buildAShr(Ty, Res, Shift, MachineInstr::IsExact).getReg(0);
+
+  return MIB.buildMul(Ty, Res, Factor);
+}
+
 bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UMULH);
   Register RHS = MI.getOperand(2).getReg();
