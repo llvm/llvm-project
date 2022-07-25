@@ -536,12 +536,12 @@ module-partition := : module-name-qualifier_opt IDENTIFIER
 module-name-qualifier := IDENTIFIER .
 module-name-qualifier := module-name-qualifier IDENTIFIER .
 export-declaration := EXPORT declaration
-export-declaration := EXPORT ( declaration-seq_opt )
+export-declaration := EXPORT { declaration-seq_opt }
 export-declaration := export-keyword module-import-declaration
-module-import-declaration := import-keyword module-name
-module-import-declaration := import-keyword module-partition
+module-import-declaration := import-keyword module-name ;
+module-import-declaration := import-keyword module-partition ;
 # FIXME: we don't have header-name in the grammar. Handle these in PP?
-# module-import-declaration := import-keyword header-name
+# module-import-declaration := import-keyword header-name ;
 global-module-fragment := module-keyword ; declaration-seq_opt
 private-module-fragment := module-keyword : PRIVATE ; declaration-seq_opt
 
