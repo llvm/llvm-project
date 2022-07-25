@@ -20,7 +20,7 @@
 #include "lldb/Utility/Status.h"
 
 #include <elf.h>
-#include <sys/socket.h>
+#include <sys/uio.h>
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr))
 
