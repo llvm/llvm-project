@@ -237,10 +237,8 @@ public:
 
   static Error createUnknownObjectError(const CASID &ID);
 
-  /// Create ObjectProxy from CASID. If the object doesn't exit, get an error.
+  /// Create ObjectProxy from CASID. If the object doesn't exist, get an error.
   Expected<ObjectProxy> getProxy(const CASID &ID);
-  /// Create ObjectProxy from CASID. If the object doesn't exit, get None..
-  Expected<Optional<ObjectProxy>> getProxyOrNone(const CASID &ID);
   /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
   /// error.
   Expected<ObjectProxy> getProxy(ObjectRef Ref);
@@ -366,6 +364,27 @@ void getDefaultOnDiskCASStableID(SmallVectorImpl<char> &Path);
 
 /// FIXME: Remove.
 std::string getDefaultOnDiskCASStableID();
+
+/// Create ObjectStore from a string identifier.
+/// Currently the string identifier is using URL scheme with following supported
+/// schemes:
+///  * InMemory CAS: mem://
+///  * OnDisk CAS: file://${PATH_TO_ONDISK_CAS}
+///  * PlugIn CAS: plugin://${PATH_TO_PLUGIN}
+/// If no URL scheme is used, it defaults to following (but might change in
+/// future)
+///  * empty string: Error!
+///  * "auto": default OnDiskCAS location
+///  * Other: path to OnDiskCAS.
+/// FIXME: Need to implement proper URL encoding scheme that allows "%". Also
+/// considering encode plugin CAS arguments as following:
+/// "plugin://${PATH_TO_PLUGIN}?${ARG1},${ARG2}..."
+Expected<std::unique_ptr<ObjectStore>> createCASFromIdentifier(StringRef Path);
+
+/// Register a URL scheme to CAS Identifier.
+using ObjectStoreCreateFuncTy =
+    Expected<std::unique_ptr<ObjectStore>>(const Twine &);
+void registerCASURLScheme(StringRef Prefix, ObjectStoreCreateFuncTy *Func);
 
 } // namespace cas
 } // namespace llvm

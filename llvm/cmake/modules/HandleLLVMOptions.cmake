@@ -1308,6 +1308,9 @@ if(LLVM_ENABLE_EXPERIMENTAL_DEPSCAN)
     append("-fdepscan-prefix-map-toolchain=/^toolchain" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     append("-fdepscan-prefix-map=${source_root}=/^source" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     append("-fdepscan-prefix-map=${CMAKE_BINARY_DIR}=/^build" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    if(LLVM_CAS_BUILTIN_PATH)
+      append("-Xclang -fcas-path -Xclang ${LLVM_CAS_BUILTIN_PATH}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    endif()
 
     # Create a LLDB init file to remap prefix map back to original path.
     # TODO: Remap SDK and toolchain path.

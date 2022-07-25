@@ -18,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/RemoteCachingService/RemoteCacheServer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -26,7 +27,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-using namespace remote_cache_test;
+using namespace llvm::cas;
+using namespace llvm::cas::remote;
 using namespace compilation_cache_service::cas::v1;
 using namespace compilation_cache_service::keyvalue::v1;
 
@@ -47,7 +49,8 @@ class LLVMCASCacheProvider final : public RemoteCacheProvider {
   std::unique_ptr<cas::ActionCache> ActCache;
 
 public:
-  Error initialize(StringRef CachePath);
+  void initialize(StringRef TempPath, std::unique_ptr<cas::ObjectStore> CAS,
+                  std::unique_ptr<cas::ActionCache> Cache);
 
   void GetValueAsync(
       const GetValueRequest &Request,
@@ -62,12 +65,20 @@ public:
   void
   CASSaveAsync(const CASSaveRequest &Request,
                std::function<void(const CASSaveResponse &)> Receiver) override;
+  void
+  CASGetAsync(const CASGetRequest &Request,
+              std::function<void(const CASGetResponse &)> Receiver) override;
+  void
+  CASPutAsync(const CASPutRequest &Request,
+              std::function<void(const CASPutResponse &)> Receiver) override;
 
   GetValueResponse GetValue(const GetValueRequest &Request);
   PutValueResponse PutValue(const PutValueRequest &Request);
 
   CASLoadResponse CASLoad(const CASLoadRequest &Request);
   CASSaveResponse CASSave(const CASSaveRequest &Request);
+  CASGetResponse CASGet(const CASGetRequest &Request);
+  CASPutResponse CASPut(const CASPutRequest &Request);
 };
 
 } // namespace
@@ -98,22 +109,25 @@ static CASSaveResponse CASSaveWithError(Error &&E) {
   return Response;
 }
 
-Error LLVMCASCacheProvider::initialize(StringRef CachePath) {
-  TempDir = (Twine(CachePath) + "/tmp").str();
-  if (std::error_code EC = sys::fs::create_directories(TempDir))
-    return createFileError(TempDir, EC);
+static CASGetResponse CASGetWithError(Error &&E) {
+  CASGetResponse Response;
+  Response.set_outcome(CASGetResponse_Outcome_ERROR);
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
 
-  auto CAS = cas::createOnDiskCAS(Twine(CachePath) + "/cas");
-  if (!CAS)
-    return CAS.takeError();
-  this->CAS = std::move(*CAS);
-  auto ActCache =
-      cas::createOnDiskActionCache((Twine(CachePath) + "/cas").str());
-  if (!ActCache)
-    return ActCache.takeError();
-  this->ActCache = std::move(*ActCache);
+static CASPutResponse CASPutWithError(Error &&E) {
+  CASPutResponse Response;
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
 
-  return Error::success();
+void LLVMCASCacheProvider::initialize(StringRef TempPath,
+                                      std::unique_ptr<cas::ObjectStore> CAS,
+                                      std::unique_ptr<cas::ActionCache> Cache) {
+  TempDir = TempPath.str();
+  this->CAS = std::move(CAS);
+  this->ActCache = std::move(Cache);
 }
 
 void LLVMCASCacheProvider::GetValueAsync(
@@ -138,6 +152,18 @@ void LLVMCASCacheProvider::CASSaveAsync(
     const CASSaveRequest &Request,
     std::function<void(const CASSaveResponse &)> Receiver) {
   Pool.async([this, Request, Receiver]() { Receiver(CASSave(Request)); });
+}
+
+void LLVMCASCacheProvider::CASGetAsync(
+    const CASGetRequest &Request,
+    std::function<void(const CASGetResponse &)> Receiver) {
+  Pool.async([this, Request, Receiver]() { Receiver(CASGet(Request)); });
+}
+
+void LLVMCASCacheProvider::CASPutAsync(
+    const CASPutRequest &Request,
+    std::function<void(const CASPutResponse &)> Receiver) {
+  Pool.async([this, Request, Receiver]() { Receiver(CASPut(Request)); });
 }
 
 GetValueResponse
@@ -187,7 +213,7 @@ CASLoadResponse LLVMCASCacheProvider::CASLoad(const CASLoadRequest &Request) {
 
   if (Request.write_to_disk()) {
     SmallString<128> ModelPath{TempDir};
-    sys::path::append(ModelPath, "%%%%%.blob");
+    sys::path::append(ModelPath, "%%%%%%%.blob");
     int FD;
     SmallString<256> TempPath;
     std::error_code EC = sys::fs::createUniqueFile(ModelPath, FD, TempPath);
@@ -230,10 +256,90 @@ CASSaveResponse LLVMCASCacheProvider::CASSave(const CASSaveRequest &Request) {
   return Response;
 }
 
-Expected<std::unique_ptr<RemoteCacheProvider>>
-remote_cache_test::createLLVMCASCacheProvider(StringRef CachePath) {
+CASGetResponse LLVMCASCacheProvider::CASGet(const CASGetRequest &Request) {
+  Expected<cas::CASID> ID = CAS->parseID(Request.cas_id().id());
+  if (!ID)
+    return CASGetWithError(ID.takeError());
+  Expected<cas::ObjectProxy> Obj = CAS->getProxy(*ID);
+  if (!Obj)
+    return CASGetWithError(Obj.takeError());
+  StringRef BlobData = Obj->getData();
+
+  CASGetResponse Response;
+  Response.set_outcome(CASGetResponse_Outcome_SUCCESS);
+
+  if (Request.write_to_disk()) {
+    SmallString<128> ModelPath{TempDir};
+    sys::path::append(ModelPath, "%%%%%%%.blob");
+    int FD;
+    SmallString<256> TempPath;
+    std::error_code EC = sys::fs::createUniqueFile(ModelPath, FD, TempPath);
+    if (EC)
+      return CASGetWithError(createStringError(
+          EC, "failed creating '" + ModelPath + "': " + EC.message()));
+    raw_fd_ostream OS(FD, /*shouldClose=*/true);
+    OS << BlobData;
+    OS.close();
+    Response.mutable_data()->mutable_blob()->set_file_path(
+        TempPath.str().str());
+  } else {
+    Response.mutable_data()->mutable_blob()->set_data(BlobData.str());
+  }
+
+  auto Err = Obj->forEachReference([&](ObjectRef Ref) {
+    std::string Hash = toStringRef(CAS->getID(Ref).getHash()).str();
+    Response.mutable_data()->add_references()->set_id(Hash);
+    return Error::success();
+  });
+
+  if (Err)
+    return CASGetWithError(std::move(Err));
+
+  return Response;
+}
+
+CASPutResponse LLVMCASCacheProvider::CASPut(const CASPutRequest &Request) {
+  const CASBytes &Blob = Request.data().blob();
+
+  SmallVector<ObjectRef> Refs;
+  for (auto &Ref : Request.data().references()) {
+    auto ID = CAS->parseID(Ref.id());
+    if (!ID)
+      return CASPutWithError(ID.takeError());
+    auto CASRef = CAS->getReference(*ID);
+    if (!CASRef)
+      return CASPutWithError(createStringError(
+          inconvertibleErrorCode(), "cannot get ObjectRef from CASID "));
+
+    Refs.push_back(*CASRef);
+  }
+
+  Optional<cas::ObjectRef> Ref;
+  if (Blob.has_file_path()) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
+        MemoryBuffer::getFile(Blob.file_path());
+    if (!FileBuf)
+      return CASPutWithError(createStringError(
+          FileBuf.getError(), "failed reading '" + Blob.file_path() +
+                                  "': " + FileBuf.getError().message()));
+    if (Error E =
+            CAS->storeFromString(Refs, (*FileBuf)->getBuffer()).moveInto(Ref))
+      return CASPutWithError(std::move(E));
+  } else {
+    if (Error E = CAS->storeFromString(Refs, Blob.data()).moveInto(Ref))
+      return CASPutWithError(std::move(E));
+  }
+
+  CASPutResponse Response;
+  Response.mutable_cas_id()->set_id(CAS->getID(*Ref).toString());
+  return Response;
+}
+
+std::unique_ptr<RemoteCacheProvider>
+cas::remote::createLLVMCASCacheProvider(StringRef TempPath,
+                                        std::unique_ptr<ObjectStore> CAS,
+                                        std::unique_ptr<ActionCache> Cache) {
   auto Provider = std::make_unique<LLVMCASCacheProvider>();
-  if (Error E = Provider->initialize(CachePath))
-    return E;
+  Provider->initialize(TempPath, std::move(CAS), std::move(Cache));
   return Provider;
 }

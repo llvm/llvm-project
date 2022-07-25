@@ -14,6 +14,7 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/CAS/Utils.h"
+#include "llvm/RemoteCachingService/RemoteCachingService.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -54,6 +55,7 @@ static int validateObject(ObjectStore &CAS, const CASID &ID);
 
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
+  RegisterGRPCCAS Y;
 
   cl::list<std::string> Objects(cl::Positional, cl::desc("<object>..."));
   cl::opt<std::string> CASPath("cas", cl::desc("Path to CAS on disk."),
@@ -112,12 +114,9 @@ int main(int Argc, char **Argv) {
   if (CASPath.empty())
     ExitOnErr(
         createStringError(inconvertibleErrorCode(), "missing --cas=<path>"));
-  std::unique_ptr<ObjectStore> CAS;
-  if (CASPath == "auto")
-    CAS = ExitOnErr(
-        llvm::cas::createOnDiskCAS(llvm::cas::getDefaultOnDiskCASPath()));
-  else
-    CAS = ExitOnErr(llvm::cas::createOnDiskCAS(CASPath));
+
+  std::unique_ptr<ObjectStore> CAS =
+      ExitOnErr(createCASFromIdentifier(CASPath));
   assert(CAS);
 
   if (Command == Dump)

@@ -90,8 +90,7 @@ TEST(CASProvidingFileSystemTest, WithCASSupportingFS) {
 
   CASID ID = UnderlyingDB->getID(**Ref);
   Optional<ObjectProxy> Proxy;
-  ASSERT_THAT_ERROR(DB->getProxyOrNone(ID).moveInto(Proxy), Succeeded());
   // It didn't have to ingest in DB because the underlying FS provided a CAS
   // reference.
-  EXPECT_FALSE(Proxy);
+  ASSERT_THAT_ERROR(DB->getProxy(ID).moveInto(Proxy), Failed());
 }

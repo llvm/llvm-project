@@ -1189,6 +1189,14 @@ std::error_code
 tryLockFile(int FD,
             std::chrono::milliseconds Timeout = std::chrono::milliseconds(0));
 
+/// Get RealPath from file handle.
+///
+/// @param Handle      The descriptor representing the file.
+/// @param RealPath    RealPath is stored in this location on success.
+/// @returns errc::success if RealPath is successfully obtained.
+std::error_code getRealPathFromHandle(file_t Handle,
+                                      SmallVectorImpl<char> &RealPath);
+
 /// Lock the file.
 ///
 /// This function acts as @ref tryLockFile but it waits infinitely.

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -90,9 +89,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   std::unique_ptr<ObjectStore> CAS2 = createObjectStore();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     Optional<ObjectProxy> Proxy;
-    EXPECT_THAT_ERROR(CAS2->getProxyOrNone(IDs[I]).moveInto(Proxy),
-                      Succeeded());
-    ASSERT_FALSE(Proxy);
+    EXPECT_THAT_ERROR(CAS2->getProxy(IDs[I]).moveInto(Proxy), Failed());
   }
 
   // Insert into the second CAS and confirm the IDs are stable. Getting them
@@ -216,9 +213,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   std::unique_ptr<ObjectStore> CAS2 = createObjectStore();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     Optional<ObjectProxy> Object;
-    EXPECT_THAT_ERROR(CAS2->getProxyOrNone(IDs[I]).moveInto(Object),
-                      Succeeded());
-    EXPECT_FALSE(Object);
+    EXPECT_THAT_ERROR(CAS2->getProxy(IDs[I]).moveInto(Object), Failed());
   }
 
   // Insert into the second CAS and confirm the IDs are stable. Getting them

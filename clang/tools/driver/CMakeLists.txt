@@ -1,9 +1,3 @@
-if(LLVM_CAS_ENABLE_REMOTE_CACHE)
-  add_subdirectory(RemoteCache)
-else()
-  add_subdirectory(NullRemoteCache)
-endif()
-
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
@@ -18,6 +12,7 @@ set( LLVM_LINK_COMPONENTS
   MCParser
   ObjCARCOpts
   Option
+  RemoteCachingService
   ScalarOpts
   Support
   TransformUtils
@@ -43,12 +38,6 @@ add_clang_tool(clang
   ${support_plugins}
   GENERATE_DRIVER
   )
-
-if(LLVM_CAS_ENABLE_REMOTE_CACHE)
-  set(REMOTE_CACHE_TARGET clangRemoteCache)
-else()
-  set(REMOTE_CACHE_TARGET clangNullRemoteCache)
-endif()
 
 clang_target_link_libraries(clang
   PRIVATE

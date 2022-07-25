@@ -1,7 +1,14 @@
+if (LLVM_CAS_ENABLE_REMOTE_CACHE)
+  add_definitions(-DLLVM_CAS_ENABLE_REMOTE_CACHE=1)
+  set(ADDITIONAL_CAS_TEST_DEPS "RemoteCacheServer")
+endif()
+
 set(LLVM_LINK_COMPONENTS
   Support
   CAS
+  RemoteCachingService
   TestingSupport
+  ${ADDITIONAL_CAS_TEST_DEPS}
   )
 
 add_llvm_unittest(CASTests
@@ -13,6 +20,7 @@ add_llvm_unittest(CASTests
   CachingOnDiskFileSystemTest.cpp
   HashMappedTrieTest.cpp
   HierarchicalTreeBuilderTest.cpp
+  MockGRPCServer.cpp
   ObjectStoreTest.cpp
   OnDiskHashMappedTrieTest.cpp
   ThreadSafeAllocatorTest.cpp

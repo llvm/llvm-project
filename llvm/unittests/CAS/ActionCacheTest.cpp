@@ -9,7 +9,6 @@
 #include "llvm/CAS/ActionCache.h"
 #include "CASTestConfig.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"

@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RemoteCache/Client.h"
 #include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
@@ -50,6 +49,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/RemoteCachingService/Client.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
@@ -330,12 +330,12 @@ private:
   }
 };
 
-/// Store and retrieve compilation artifacts using \p remote_cache::CASDBClient
-/// and \p remote_cache::KeyValueDBClient.
+/// Store and retrieve compilation artifacts using \p llvm::cas::CASDBClient
+/// and \p llvm::cas::KeyValueDBClient.
 class RemoteCachingOutputs : public CachingOutputs {
 public:
   RemoteCachingOutputs(CompilerInstance &Clang,
-                       remote_cache::ClientServices Clients)
+                       llvm::cas::remote::ClientServices Clients)
       : CachingOutputs(Clang) {
     RemoteKVClient = std::move(Clients.KVDB);
     RemoteCASClient = std::move(Clients.CASDB);
@@ -351,9 +351,9 @@ private:
   Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
                              bool SkipCache) override;
 
-  Expected<bool>
-  replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
-                     const remote_cache::KeyValueDBClient::ValueTy &CompResult);
+  Expected<bool> replayCachedResult(
+      const llvm::cas::CASID &ResultCacheKey,
+      const llvm::cas::remote::KeyValueDBClient::ValueTy &CompResult);
 
   void tryReleaseLLBuildExecutionLane();
 
@@ -361,8 +361,8 @@ private:
   /// \returns \p None if \p Name doesn't match one of the output kind names.
   static Optional<OutputKind> getOutputKindForName(StringRef Name);
 
-  std::unique_ptr<remote_cache::KeyValueDBClient> RemoteKVClient;
-  std::unique_ptr<remote_cache::CASDBClient> RemoteCASClient;
+  std::unique_ptr<llvm::cas::remote::KeyValueDBClient> RemoteKVClient;
+  std::unique_ptr<llvm::cas::remote::CASDBClient> RemoteCASClient;
   IntrusiveRefCntPtr<CollectingOutputBackend> CollectingOutputs;
   bool TriedReleaseLLBuildExecutionLane = false;
 };
@@ -507,8 +507,8 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   DisableCachedCompileJobReplay = CacheOpts.DisableCachedCompileJobReplay;
 
   if (!CacheOpts.CompilationCachingServicePath.empty()) {
-    Expected<remote_cache::ClientServices> Clients =
-        remote_cache::createCompilationCachingRemoteClient(
+    Expected<llvm::cas::remote::ClientServices> Clients =
+        llvm::cas::remote::createCompilationCachingRemoteClient(
             CacheOpts.CompilationCachingServicePath);
     if (!Clients)
       return reportCachingBackendError(Clang.getDiagnostics(),
@@ -952,7 +952,7 @@ Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
   RemoteKVClient->getValueQueue().getValueAsync(ResultCacheKey.getHash());
-  Expected<remote_cache::KeyValueDBClient::GetValueAsyncQueue::Response>
+  Expected<llvm::cas::remote::KeyValueDBClient::GetValueAsyncQueue::Response>
       Response = RemoteKVClient->getValueQueue().receiveNext();
   if (!Response)
     return Response.takeError();
@@ -1005,7 +1005,7 @@ RemoteCachingOutputs::getOutputKindForName(StringRef Name) {
 
 Expected<bool> RemoteCachingOutputs::replayCachedResult(
     const llvm::cas::CASID &ResultCacheKey,
-    const remote_cache::KeyValueDBClient::ValueTy &CompResult) {
+    const llvm::cas::remote::KeyValueDBClient::ValueTy &CompResult) {
   // It would be nice to release the llbuild execution lane while we wait to
   // receive remote data, but if some data are missing (e.g. due to garbage
   // collection), we'll fallback to normal compilation and it would be badness
@@ -1031,7 +1031,7 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
   // Replay outputs.
 
   auto &LoadQueue = RemoteCASClient->loadQueue();
-  struct CallCtx : public remote_cache::AsyncCallerContext {
+  struct CallCtx : public llvm::cas::remote::AsyncCallerContext {
     StringRef OutputName;
     StringRef CASID;
     bool IsStderr;
@@ -1041,7 +1041,7 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
   auto makeCtx =
       [](StringRef OutputName, StringRef CASID,
          bool IsStderr =
-             false) -> std::shared_ptr<remote_cache::AsyncCallerContext> {
+             false) -> std::shared_ptr<llvm::cas::remote::AsyncCallerContext> {
     return std::make_shared<CallCtx>(OutputName, CASID, IsStderr);
   };
 
@@ -1127,12 +1127,12 @@ Error RemoteCachingOutputs::finishComputedResult(
   tryReleaseLLBuildExecutionLane();
 
   auto &SaveQueue = RemoteCASClient->saveQueue();
-  struct CallCtx : public remote_cache::AsyncCallerContext {
+  struct CallCtx : public llvm::cas::remote::AsyncCallerContext {
     StringRef OutputName;
     CallCtx(StringRef OutputName) : OutputName(OutputName) {}
   };
   auto makeCtx = [](StringRef OutputName)
-      -> std::shared_ptr<remote_cache::AsyncCallerContext> {
+      -> std::shared_ptr<llvm::cas::remote::AsyncCallerContext> {
     return std::make_shared<CallCtx>(OutputName);
   };
 
@@ -1163,7 +1163,7 @@ Error RemoteCachingOutputs::finishComputedResult(
 
   // Cache the result.
 
-  remote_cache::KeyValueDBClient::ValueTy CompResult;
+  llvm::cas::remote::KeyValueDBClient::ValueTy CompResult;
   while (SaveQueue.hasPending()) {
     auto Response = SaveQueue.receiveNext();
     if (!Response)

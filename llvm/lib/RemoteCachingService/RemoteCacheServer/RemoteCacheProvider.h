@@ -6,16 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_REMOTECACHETEST_REMOTECACHEPROVIDER_H
-#define LLVM_TOOLS_REMOTECACHETEST_REMOTECACHEPROVIDER_H
+#ifndef LLVM_REMOTECACHINGSERVICE_REMOTECACHEPROVIDER_H
+#define LLVM_REMOTECACHINGSERVICE_REMOTECACHEPROVIDER_H
 
 #include "compilation_caching_cas.grpc.pb.h"
 #include "compilation_caching_kv.grpc.pb.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 
-namespace llvm {
-namespace remote_cache_test {
+namespace llvm::cas {
+
+class ActionCache;
+class ObjectStore;
+
+namespace remote {
 
 /// A caching backend that provides the underlying functionality for
 /// implementing the remote cache protocol.
@@ -47,14 +52,25 @@ public:
       std::function<
           void(const compilation_cache_service::cas::v1::CASSaveResponse &)>
           Receiver) = 0;
+  virtual void CASGetAsync(
+      const compilation_cache_service::cas::v1::CASGetRequest &Request,
+      std::function<
+          void(const compilation_cache_service::cas::v1::CASGetResponse &)>
+          Receiver) = 0;
+  virtual void CASPutAsync(
+      const compilation_cache_service::cas::v1::CASPutRequest &Request,
+      std::function<
+          void(const compilation_cache_service::cas::v1::CASPutResponse &)>
+          Receiver) = 0;
 };
 
 /// Returns a \p RemoteCacheProvider that is implemented using an on-disk \p
 /// cas::ObjectStore and \p cas::ActionCache.
-Expected<std::unique_ptr<RemoteCacheProvider>>
-createLLVMCASCacheProvider(StringRef CachePath);
+std::unique_ptr<RemoteCacheProvider>
+createLLVMCASCacheProvider(StringRef TempPath, std::unique_ptr<ObjectStore> CAS,
+                           std::unique_ptr<ActionCache> Cache);
 
-} // namespace remote_cache_test
-} // namespace llvm
+} // namespace remote
+} // namespace llvm::cas
 
 #endif

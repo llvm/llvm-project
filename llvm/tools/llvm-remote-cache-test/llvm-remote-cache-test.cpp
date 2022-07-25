@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RemoteCacheProvider.h"
-#include "RemoteCacheServer.h"
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/ObjectStore.h"
+#include "llvm/RemoteCachingService/RemoteCacheServer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
@@ -24,7 +25,7 @@
 #endif
 
 using namespace llvm;
-using namespace remote_cache_test;
+using namespace llvm::cas;
 
 int main(int Argc, const char **Argv) {
   InitLLVM X(Argc, Argv);
@@ -66,11 +67,27 @@ int main(int Argc, const char **Argv) {
 
   static ExitOnError ExitOnErr("llvm-remote-cache-test: ");
 
+  SmallString<256> TempPath(CachePath);
+  sys::path::append(TempPath, "tmp");
+  if (std::error_code EC = sys::fs::create_directories(TempPath))
+    ExitOnErr(errorCodeToError(EC));
+
+  SmallString<256> CASPath(CachePath);
+  sys::path::append(CASPath, "cas");
+  auto CAS = createOnDiskCAS(CASPath);
+  if (!CAS)
+    ExitOnErr(CAS.takeError());
+
+  auto Cache = createOnDiskActionCache(CASPath);
+  if (!Cache)
+    ExitOnErr(Cache.takeError());
+
   if (ServerMode) {
     outs() << "Server listening on " << SocketPath << '\n';
-    RemoteCacheServer Server = createServer(
-        SocketPath, ExitOnErr(createLLVMCASCacheProvider(CachePath)));
-    Server.Run();
+    remote::RemoteCacheServer Server(SocketPath, TempPath, std::move(*CAS),
+                                     std::move(*Cache));
+    Server.Start();
+    Server.Listen();
     return 0;
   }
 
@@ -95,9 +112,12 @@ int main(int Argc, const char **Argv) {
     RefArgs.push_back(Arg);
   }
 
-  RemoteCacheServer Server = createServer(
-      SocketPath, ExitOnErr(createLLVMCASCacheProvider(CachePath)));
-  std::thread ServerThread([&Server]() { Server.Run(); });
+  remote::RemoteCacheServer Server(SocketPath, TempPath, std::move(*CAS),
+                                   std::move(*Cache));
+  std::thread ServerThread([&Server]() {
+    Server.Start();
+    Server.Listen();
+  });
 
   setenv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH", SocketPath.c_str(), true);
 

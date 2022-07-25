@@ -1,4 +1,4 @@
-//===-- RemoteCache/Client.h - Remote Client --------------------*- C++ -*-===//
+//===-- llvm/RemoteCachingService/Client.h ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,15 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_DRIVER_REMOTECACHE_CLIENT_H
-#define LLVM_CLANG_TOOLS_DRIVER_REMOTECACHE_CLIENT_H
+#ifndef LLVM_REMOTECACHINGSERVICE_CLIENT_H
+#define LLVM_REMOTECACHINGSERVICE_CLIENT_H
 
-#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
+#include <memory>
+#include <string>
 
-namespace clang {
-namespace remote_cache {
+namespace llvm::cas::remote {
 
 /// Used to optionally associate additional context with a particular request.
 class AsyncCallerContext {
@@ -57,7 +59,7 @@ class KeyValueDBClient {
 public:
   virtual ~KeyValueDBClient() = default;
 
-  using ValueTy = llvm::StringMap<std::string>;
+  using ValueTy = StringMap<std::string>;
 
   class GetValueAsyncQueue : public AsyncQueueBase {
     virtual void anchor() override;
@@ -136,8 +138,6 @@ protected:
 /// An asynchronous gRPC client for the CAS service of the remote cache
 /// protocol.
 ///
-/// FIXME: This only implements the \p CASSave and \p CASLoad APIs.
-///
 /// Example usage:
 /// \code
 ///   auto &LoadQueue = CASClient->loadQueue();
@@ -161,7 +161,8 @@ public:
   public:
     virtual ~LoadAsyncQueue() = default;
 
-    void loadAsync(std::string CASID, Optional<std::string> OutFilePath = None,
+    void loadAsync(std::string CASID,
+                   Optional<std::string> OutFilePath = None,
                    std::shared_ptr<AsyncCallerContext> CallCtx = nullptr) {
       loadAsyncImpl(std::move(CASID), std::move(OutFilePath),
                     std::move(CallCtx));
@@ -224,22 +225,103 @@ public:
     virtual Expected<Response> receiveNextImpl() = 0;
   };
 
+  class GetAsyncQueue : public AsyncQueueBase {
+    virtual void anchor() override;
+
+  public:
+    virtual ~GetAsyncQueue() = default;
+
+    void getAsync(std::string CASID,
+                  Optional<std::string> OutFilePath = None,
+                  std::shared_ptr<AsyncCallerContext> CallCtx = nullptr) {
+      getAsyncImpl(std::move(CASID), std::move(OutFilePath),
+                   std::move(CallCtx));
+      ++NumPending;
+    }
+
+    struct Response {
+      std::shared_ptr<AsyncCallerContext> CallCtx;
+      bool KeyNotFound = false;
+      Optional<std::string> BlobData;
+      std::vector<std::string> Refs;
+    };
+    Expected<Response> receiveNext() {
+      assert(NumPending);
+      --NumPending;
+      return receiveNextImpl();
+    }
+
+  protected:
+    virtual void getAsyncImpl(std::string CASID,
+                              Optional<std::string> OutFilePath,
+                              std::shared_ptr<AsyncCallerContext> CallCtx) = 0;
+    virtual Expected<Response> receiveNextImpl() = 0;
+  };
+
+  class PutAsyncQueue : public AsyncQueueBase {
+    virtual void anchor() override;
+
+  public:
+    virtual ~PutAsyncQueue() = default;
+
+    void putDataAsync(std::string BlobData, ArrayRef<std::string> Refs,
+                      std::shared_ptr<AsyncCallerContext> CallCtx = nullptr) {
+      putDataAsyncImpl(std::move(BlobData), Refs, std::move(CallCtx));
+      ++NumPending;
+    }
+
+    void putFileAsync(std::string FilePath, ArrayRef<std::string> Refs,
+                      std::shared_ptr<AsyncCallerContext> CallCtx = nullptr) {
+      putFileAsyncImpl(std::move(FilePath), Refs, std::move(CallCtx));
+      ++NumPending;
+    }
+
+    struct Response {
+      std::shared_ptr<AsyncCallerContext> CallCtx;
+      std::string CASID;
+    };
+    Expected<Response> receiveNext() {
+      assert(NumPending);
+      --NumPending;
+      return receiveNextImpl();
+    }
+
+  protected:
+    virtual void
+    putDataAsyncImpl(std::string BlobData, ArrayRef<std::string> Refs,
+                     std::shared_ptr<AsyncCallerContext> CallCtx) = 0;
+    virtual void
+    putFileAsyncImpl(std::string FilePath, ArrayRef<std::string> Refs,
+                     std::shared_ptr<AsyncCallerContext> CallCtx) = 0;
+    virtual Expected<Response> receiveNextImpl() = 0;
+  };
+
   LoadAsyncQueue &loadQueue() const { return *LoadQueue; }
   SaveAsyncQueue &saveQueue() const { return *SaveQueue; }
+  GetAsyncQueue &getQueue() const { return *GetQueue; }
+  PutAsyncQueue &putQueue() const { return *PutQueue; }
 
 protected:
   std::unique_ptr<LoadAsyncQueue> LoadQueue;
   std::unique_ptr<SaveAsyncQueue> SaveQueue;
+  std::unique_ptr<GetAsyncQueue> GetQueue;
+  std::unique_ptr<PutAsyncQueue> PutQueue;
 };
 
 struct ClientServices {
   std::unique_ptr<KeyValueDBClient> KVDB;
   std::unique_ptr<CASDBClient> CASDB;
 };
+
+Expected<std::unique_ptr<CASDBClient>>
+createRemoteCASDBClient(StringRef SocketPath);
+
+Expected<std::unique_ptr<KeyValueDBClient>>
+createRemoteKeyValueClient(StringRef SocketPath);
+
 Expected<ClientServices>
 createCompilationCachingRemoteClient(StringRef SocketPath);
 
-} // namespace remote_cache
-} // namespace clang
+} // namespace llvm::cas::remote
 
 #endif

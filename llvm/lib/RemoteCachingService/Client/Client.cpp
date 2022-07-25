@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Client.h"
+#include "llvm/RemoteCachingService/Client.h"
 #include "compilation_caching_cas.grpc.pb.h"
 #include "compilation_caching_kv.grpc.pb.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <grpcpp/grpcpp.h>
+#include <memory>
 
-using namespace clang;
-using namespace clang::remote_cache;
 using namespace compilation_cache_service::cas::v1;
 using namespace compilation_cache_service::keyvalue::v1;
 using namespace llvm;
+using namespace llvm::cas;
+using namespace llvm::cas::remote;
 
 void AsyncCallerContext::anchor() {}
 void AsyncQueueBase::anchor() {}
@@ -29,6 +30,8 @@ void KeyValueDBClient::anchor() {}
 
 void CASDBClient::LoadAsyncQueue::anchor() {}
 void CASDBClient::SaveAsyncQueue::anchor() {}
+void CASDBClient::GetAsyncQueue::anchor() {}
+void CASDBClient::PutAsyncQueue::anchor() {}
 void CASDBClient::anchor() {}
 
 static Error errorFromGRPCStatus(const grpc::Status &Status) {
@@ -297,6 +300,162 @@ public:
   }
 };
 
+struct CASGetBlobClientCall : public AsyncClientCall<CASGetResponse> {
+  Optional<std::string> OutFilePath;
+};
+
+class CASGetAsyncQueueImpl : public CASDBClient::GetAsyncQueue {
+  CASDBService::Stub &Stub;
+  grpc::CompletionQueue CQ;
+
+public:
+  CASGetAsyncQueueImpl(CASDBService::Stub &Stub) : Stub(Stub) {}
+
+  void getAsyncImpl(std::string CASID, Optional<std::string> OutFilePath,
+                     std::shared_ptr<AsyncCallerContext> CallCtx) override {
+    assert(!OutFilePath || !OutFilePath->empty());
+    CASGetRequest Request;
+    Request.mutable_cas_id()->set_id(std::move(CASID));
+    Request.set_write_to_disk(OutFilePath.has_value());
+
+    auto *call = new CASGetBlobClientCall();
+    call->OutFilePath = std::move(OutFilePath);
+    call->CallCtx = std::move(CallCtx);
+    call->Reader = Stub.AsyncGet(&call->Context, Request, &CQ);
+    call->Reader->Finish(&call->Response, &call->Status, call);
+  }
+
+  Expected<Response> receiveNextImpl() override {
+    void *got_tag;
+    bool ok = false;
+
+    // Block until the next result is available in the completion queue.
+    CQ.Next(&got_tag, &ok);
+    // The tag in this example is the memory location of the call object
+    auto *call = static_cast<CASGetBlobClientCall *>(got_tag);
+    auto _ = llvm::make_scope_exit([&]() { delete call; });
+
+    if (!call->Status.ok())
+      return errorFromGRPCStatus(call->Status);
+    if (!ok)
+      return createStringError(inconvertibleErrorCode(),
+                               "service channel shutdown");
+
+    Response Resp;
+    Resp.CallCtx = std::move(call->CallCtx);
+    switch (call->Response.outcome()) {
+    case CASGetResponse_Outcome_OBJECT_NOT_FOUND:
+      Resp.KeyNotFound = true;
+      return Resp;
+    case CASGetResponse_Outcome_ERROR:
+      return createStringError(inconvertibleErrorCode(),
+                               call->Response.error().description());
+    default:
+      break;
+    }
+    assert(call->Response.outcome() == CASGetResponse_Outcome_SUCCESS);
+    const auto &Blob = call->Response.data().blob();
+    if (call->OutFilePath.has_value()) {
+      if (Blob.has_file_path()) {
+        if (std::error_code EC =
+                sys::fs::rename(Blob.file_path(), *call->OutFilePath))
+          return createStringError(EC, "failed rename '" + Blob.file_path() +
+                                           "' to '" + *call->OutFilePath +
+                                           "': " + EC.message());
+      } else {
+        std::error_code EC;
+        raw_fd_ostream OS(*call->OutFilePath, EC);
+        if (EC)
+          return createStringError(EC, "failed creating ''" +
+                                           *call->OutFilePath +
+                                           "': " + EC.message());
+        OS << Blob.data();
+        OS.close();
+      }
+    } else {
+      if (Blob.has_file_path()) {
+        ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
+            MemoryBuffer::getFile(Blob.file_path());
+        if (!FileBuf)
+          return createStringError(FileBuf.getError(),
+                                   "failed reading '" + Blob.file_path() +
+                                       "': " + FileBuf.getError().message());
+        Resp.BlobData = (*FileBuf)->getBuffer().str();
+      } else {
+        Resp.BlobData = Blob.data();
+      }
+    }
+    for (const CASDataID &ID : call->Response.data().references())
+      Resp.Refs.emplace_back(ID.id());
+
+    return Resp;
+  }
+};
+
+class CASPutAsyncQueueImpl : public CASDBClient::PutAsyncQueue {
+  CASDBService::Stub &Stub;
+  grpc::CompletionQueue CQ;
+
+public:
+  CASPutAsyncQueueImpl(CASDBService::Stub &Stub) : Stub(Stub) {}
+
+  void putDataAsyncImpl(std::string BlobData, ArrayRef<std::string> Refs,
+                        std::shared_ptr<AsyncCallerContext> CallCtx) override {
+    CASPutRequest Request;
+    Request.mutable_data()->mutable_blob()->set_data(std::move(BlobData));
+    for (auto &Ref : Refs) {
+      CASDataID *NewRef = Request.mutable_data()->add_references();
+      NewRef->set_id(Ref);
+    }
+    casPutAsync(Request, std::move(CallCtx));
+  }
+
+  void putFileAsyncImpl(std::string FilePath, ArrayRef<std::string> Refs,
+                        std::shared_ptr<AsyncCallerContext> CallCtx) override {
+    assert(!FilePath.empty());
+    CASPutRequest Request;
+    Request.mutable_data()->mutable_blob()->set_file_path(std::move(FilePath));
+    for (auto &Ref : Refs) {
+      CASDataID *NewRef = Request.mutable_data()->add_references();
+      NewRef->set_id(Ref);
+    }
+    casPutAsync(Request, std::move(CallCtx));
+  }
+
+  void casPutAsync(const CASPutRequest &Request,
+                   std::shared_ptr<AsyncCallerContext> CallCtx) {
+    auto *call = new AsyncClientCall<CASPutResponse>();
+    call->CallCtx = std::move(CallCtx);
+    call->Reader = Stub.AsyncPut(&call->Context, Request, &CQ);
+    call->Reader->Finish(&call->Response, &call->Status, call);
+  }
+
+  Expected<Response> receiveNextImpl() override {
+    void *got_tag;
+    bool ok = false;
+
+    // Block until the next result is available in the completion queue.
+    CQ.Next(&got_tag, &ok);
+    // The tag in this example is the memory location of the call object
+    auto *call = static_cast<AsyncClientCall<CASPutResponse> *>(got_tag);
+    auto _ = llvm::make_scope_exit([&]() { delete call; });
+
+    if (!call->Status.ok())
+      return errorFromGRPCStatus(call->Status);
+    if (!ok)
+      return createStringError(inconvertibleErrorCode(),
+                               "service channel shutdown");
+
+    Response Resp;
+    Resp.CallCtx = std::move(call->CallCtx);
+    if (call->Response.has_error())
+      return createStringError(inconvertibleErrorCode(),
+                               call->Response.error().description());
+    Resp.CASID = call->Response.cas_id().id();
+    return Resp;
+  }
+};
+
 class KeyValueDBClientImpl : public KeyValueDBClient {
   std::unique_ptr<KeyValueDB::Stub> Stub;
 
@@ -316,13 +475,15 @@ public:
       : Stub(CASDBService::NewStub(std::move(Channel))) {
     LoadQueue = std::make_unique<CASLoadAsyncQueueImpl>(*Stub);
     SaveQueue = std::make_unique<CASSaveAsyncQueueImpl>(*Stub);
+    GetQueue = std::make_unique<CASGetAsyncQueueImpl>(*Stub);
+    PutQueue = std::make_unique<CASPutAsyncQueueImpl>(*Stub);
   }
 };
 
 } // namespace
 
 Expected<ClientServices>
-remote_cache::createCompilationCachingRemoteClient(StringRef SocketPath) {
+cas::remote::createCompilationCachingRemoteClient(StringRef SocketPath) {
   std::string Address("unix:");
   Address += SocketPath;
   const auto Channel = grpc::CreateChannel(std::move(Address),
@@ -330,4 +491,22 @@ remote_cache::createCompilationCachingRemoteClient(StringRef SocketPath) {
   auto KVClient = std::make_unique<KeyValueDBClientImpl>(Channel);
   auto CASClient = std::make_unique<CASDBClientImpl>(std::move(Channel));
   return ClientServices{std::move(KVClient), std::move(CASClient)};
+}
+
+Expected<std::unique_ptr<CASDBClient>>
+cas::remote::createRemoteCASDBClient(StringRef SocketPath) {
+  std::string Address("unix:");
+  Address += SocketPath;
+  const auto Channel = grpc::CreateChannel(std::move(Address),
+                                           grpc::InsecureChannelCredentials());
+  return std::make_unique<CASDBClientImpl>(std::move(Channel));
+}
+
+Expected<std::unique_ptr<KeyValueDBClient>>
+cas::remote::createRemoteKeyValueClient(StringRef SocketPath) {
+  std::string Address("unix:");
+  Address += SocketPath;
+  const auto Channel = grpc::CreateChannel(std::move(Address),
+                                           grpc::InsecureChannelCredentials());
+  return std::make_unique<KeyValueDBClientImpl>(Channel);
 }

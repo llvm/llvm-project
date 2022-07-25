@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 using namespace llvm;
@@ -85,18 +87,6 @@ Expected<ObjectProxy> ObjectStore::getProxy(const CASID &ID) {
   return ObjectProxy::load(*this, *H);
 }
 
-Expected<Optional<ObjectProxy>> ObjectStore::getProxyOrNone(const CASID &ID) {
-  Optional<ObjectRef> Ref = getReference(ID);
-  if (!Ref)
-    return None;
-
-  Optional<ObjectHandle> H;
-  if (Error E = load(*Ref).moveInto(H))
-    return std::move(E);
-
-  return ObjectProxy::load(*this, *H);
-}
-
 Expected<ObjectProxy> ObjectStore::getProxy(ObjectRef Ref) {
   return getProxy(load(Ref));
 }
@@ -134,4 +124,43 @@ std::unique_ptr<MemoryBuffer>
 ObjectProxy::getMemoryBuffer(StringRef Name,
                              bool RequiresNullTerminator) const {
   return CAS->getMemoryBuffer(H, Name, RequiresNullTerminator);
+}
+
+static Expected<std::unique_ptr<ObjectStore>>
+createInMemoryCASImpl(const Twine &) {
+  return createInMemoryCAS();
+}
+
+static ManagedStatic<StringMap<ObjectStoreCreateFuncTy *>> RegisteredScheme;
+
+static StringMap<ObjectStoreCreateFuncTy *> &getRegisteredScheme() {
+  if (!RegisteredScheme.isConstructed()) {
+    RegisteredScheme->insert({"mem://", &createInMemoryCASImpl});
+    RegisteredScheme->insert({"file://", &createOnDiskCAS});
+  }
+  return *RegisteredScheme;
+}
+
+Expected<std::unique_ptr<ObjectStore>>
+cas::createCASFromIdentifier(StringRef Path) {
+  for (auto &Scheme : getRegisteredScheme()) {
+    if (Path.consume_front(Scheme.getKey()))
+      return Scheme.getValue()(Path);
+  }
+
+  if (Path.empty())
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "No CAS identifier is provided");
+
+  // FIXME: some current default behavior.
+  if (Path == "auto")
+    return createOnDiskCAS(getDefaultOnDiskCASPath());
+
+  // Fallback is to create OnDiskCAS.
+  return createOnDiskCAS(Path);
+}
+
+void cas::registerCASURLScheme(StringRef Prefix,
+                               ObjectStoreCreateFuncTy *Func) {
+  getRegisteredScheme().insert({Prefix, Func});
 }
