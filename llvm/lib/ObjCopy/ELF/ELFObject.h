@@ -115,13 +115,13 @@ public:
   Error visit(const OwnedDataSection &Sec) override;
   Error visit(const StringTableSection &Sec) override;
   Error visit(const DynamicRelocationSection &Sec) override;
-  virtual Error visit(const SymbolTableSection &Sec) override = 0;
-  virtual Error visit(const RelocationSection &Sec) override = 0;
-  virtual Error visit(const GnuDebugLinkSection &Sec) override = 0;
-  virtual Error visit(const GroupSection &Sec) override = 0;
-  virtual Error visit(const SectionIndexSection &Sec) override = 0;
-  virtual Error visit(const CompressedSection &Sec) override = 0;
-  virtual Error visit(const DecompressedSection &Sec) override = 0;
+  Error visit(const SymbolTableSection &Sec) override = 0;
+  Error visit(const RelocationSection &Sec) override = 0;
+  Error visit(const GnuDebugLinkSection &Sec) override = 0;
+  Error visit(const GroupSection &Sec) override = 0;
+  Error visit(const SectionIndexSection &Sec) override = 0;
+  Error visit(const CompressedSection &Sec) override = 0;
+  Error visit(const DecompressedSection &Sec) override = 0;
 
   explicit SectionWriter(WritableMemoryBuffer &Buf) : Out(Buf) {}
 };
