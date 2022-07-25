@@ -1678,7 +1678,7 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__126__libcpp_assertion_handlerEPKciS1_S1_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__126__libcpp_assertion_handlerEPKcz', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIddEEPdEEbT0_S5_T_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
