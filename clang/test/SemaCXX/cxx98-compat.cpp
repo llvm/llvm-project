@@ -152,7 +152,7 @@ __decltype(const_expr) decl_type2 = 0; // ok
 void no_except() noexcept; // expected-warning {{noexcept specifications are incompatible with C++98}}
 bool no_except_expr = noexcept(1 + 1); // expected-warning {{noexcept expressions are incompatible with C++98}}
 void *null = nullptr; // expected-warning {{'nullptr' is incompatible with C++98}}
-static_assert(true, "!"); // expected-warning {{static_assert declarations are incompatible with C++98}}
+static_assert(true, "!"); // expected-warning {{'static_assert' declarations are incompatible with C++98}}
 
 struct InhCtorBase {
   InhCtorBase(int);
