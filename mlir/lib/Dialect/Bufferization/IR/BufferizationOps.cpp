@@ -204,22 +204,8 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   }
 
   // Should the buffer be deallocated?
-  AnalysisState analysisState(options);
-  bool dealloc;
-  if (op->hasAttr(BufferizationDialect::kEscapeAttrName)) {
-    // AllocTensorOp has one result.
-    ArrayAttr escapeAttr =
-        op->getAttr(BufferizationDialect::kEscapeAttrName).cast<ArrayAttr>();
-    dealloc = !escapeAttr[0].cast<BoolAttr>().getValue();
-  } else {
-    // No "escape" annotation found.
-    if (options.createDeallocs) {
-      // Perform an ad-hoc analysis.
-      dealloc = !analysisState.isTensorYielded(getResult());
-    } else {
-      dealloc = false;
-    }
-  }
+  bool dealloc =
+      shouldDeallocateOpResult(getResult().cast<OpResult>(), options);
 
   // Replace op.
   replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
