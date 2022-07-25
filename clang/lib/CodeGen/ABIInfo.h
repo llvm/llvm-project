@@ -127,7 +127,7 @@ namespace CodeGen {
   public:
     SwiftABIInfo(CodeGen::CodeGenTypes &cgt) : ABIInfo(cgt) {}
 
-    bool supportsSwift() const final override { return true; }
+    bool supportsSwift() const final { return true; }
 
     virtual bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> types,
                                               bool asReturnValue) const = 0;

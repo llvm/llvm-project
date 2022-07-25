@@ -109,7 +109,7 @@ class b {
 
 template <int>
 struct Impossible {
-  static_assert(false, ""); // expected-error {{static_assert failed}}
+  static_assert(false, ""); // expected-error {{static assertion failed}}
 };
 
 // verify "no member named 'value'" bogus diagnostic is not emitted.

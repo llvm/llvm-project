@@ -147,27 +147,27 @@ XorOpnd::XorOpnd(Value *V) {
 /// Instruction::isAssociative() because it includes operations like fsub.
 /// (This routine is only intended to be called for floating-point operations.)
 static bool hasFPAssociativeFlags(Instruction *I) {
-  assert(I && I->getType()->isFPOrFPVectorTy() && "Should only check FP ops");
+  assert(I && isa<FPMathOperator>(I) && "Should only check FP ops");
   return I->hasAllowReassoc() && I->hasNoSignedZeros();
 }
 
 /// Return true if V is an instruction of the specified opcode and if it
 /// only has one use.
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode) {
-  auto *I = dyn_cast<Instruction>(V);
-  if (I && I->hasOneUse() && I->getOpcode() == Opcode)
-    if (!isa<FPMathOperator>(I) || hasFPAssociativeFlags(I))
-      return cast<BinaryOperator>(I);
+  auto *BO = dyn_cast<BinaryOperator>(V);
+  if (BO && BO->hasOneUse() && BO->getOpcode() == Opcode)
+    if (!isa<FPMathOperator>(BO) || hasFPAssociativeFlags(BO))
+      return BO;
   return nullptr;
 }
 
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
                                         unsigned Opcode2) {
-  auto *I = dyn_cast<Instruction>(V);
-  if (I && I->hasOneUse() &&
-      (I->getOpcode() == Opcode1 || I->getOpcode() == Opcode2))
-    if (!isa<FPMathOperator>(I) || hasFPAssociativeFlags(I))
-      return cast<BinaryOperator>(I);
+  auto *BO = dyn_cast<BinaryOperator>(V);
+  if (BO && BO->hasOneUse() &&
+      (BO->getOpcode() == Opcode1 || BO->getOpcode() == Opcode2))
+    if (!isa<FPMathOperator>(BO) || hasFPAssociativeFlags(BO))
+      return BO;
   return nullptr;
 }
 
@@ -778,7 +778,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       Constant *Undef = UndefValue::get(I->getType());
       NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode),
                                      Undef, Undef, "", I);
-      if (NewOp->getType()->isFPOrFPVectorTy())
+      if (isa<FPMathOperator>(NewOp))
         NewOp->setFastMathFlags(I->getFastMathFlags());
     } else {
       NewOp = NodesToRewrite.pop_back_val();
@@ -2227,7 +2227,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
 
   // Don't optimize floating-point instructions unless they have the
   // appropriate FastMathFlags for reassociation enabled.
-  if (I->getType()->isFPOrFPVectorTy() && !hasFPAssociativeFlags(I))
+  if (isa<FPMathOperator>(I) && !hasFPAssociativeFlags(I))
     return;
 
   // Do not reassociate boolean (i1) expressions.  We want to preserve the

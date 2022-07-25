@@ -137,7 +137,7 @@ private:
               int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
       }
     }
-    virtual ~AddressManager() override { clear(); }
+    ~AddressManager() override { clear(); }
 
     bool hasValidRelocs() override {
       return !ValidDebugInfoRelocs.empty() || !ValidDebugAddrRelocs.empty();

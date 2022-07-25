@@ -355,6 +355,14 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Scale16)(
     CppTypeFor<TypeCategory::Real, 16>, std::int64_t);
 #endif
 
+// SELECTED_INT_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedIntKind)(
+    const char *, int, void *, int);
+
+// SELECTED_REAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedRealKind)(
+    const char *, int, void *, int, void *, int, void *, int);
+
 // SPACING
 CppTypeFor<TypeCategory::Real, 4> RTNAME(Spacing4)(
     CppTypeFor<TypeCategory::Real, 4>);
