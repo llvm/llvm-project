@@ -132,12 +132,11 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
   SmallVector<OpFoldResult> allShapes =
       op.createFlatListOfOperandDims(b, b.getLoc());
   AffineMap shapesToLoops = op.getShapesToLoopsMap();
-  IRRewriter rewriter(b);
   SmallVector<OpFoldResult> loopRanges =
-      makeComposedFoldedMultiResultAffineApply(rewriter, op.getLoc(),
-                                               shapesToLoops, allShapes);
+      makeComposedFoldedMultiResultAffineApply(b, op.getLoc(), shapesToLoops,
+                                               allShapes);
   Value tripCount =
-      materializeOpFoldResult(rewriter, op.getLoc(), loopRanges[dimension]);
+      materializeOpFoldResult(b, op.getLoc(), loopRanges[dimension]);
 
   // Compute the tile sizes and the respective numbers of tiles.
   AffineExpr s0 = b.getAffineSymbolExpr(0);
@@ -206,19 +205,17 @@ static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
 /// Build an `affine_max` of all the `vals`.
 static OpFoldResult buildMax(OpBuilder &b, Location loc,
                              ArrayRef<OpFoldResult> vals) {
-  IRRewriter rewriter(b);
   return makeComposedFoldedAffineMax(
-      rewriter, loc,
-      AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()), vals);
+      b, loc, AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()),
+      vals);
 }
 
 /// Build an `affine_min` of all the `vals`.
 static OpFoldResult buildMin(OpBuilder &b, Location loc,
                              ArrayRef<OpFoldResult> vals) {
-  IRRewriter rewriter(b);
   return makeComposedFoldedAffineMin(
-      rewriter, loc,
-      AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()), vals);
+      b, loc, AffineMap::getMultiDimIdentityMap(vals.size(), loc.getContext()),
+      vals);
 }
 
 /// Rewrite a TilingInterface `op` to a tiled `scf.foreach_thread`. The
@@ -386,7 +383,7 @@ linalg::tileToForeachThreadOpUsingTileSizes(
 // Insert a tile `source` into the destination tensor `dest`. The position at
 // which the tile is inserted (as well as size of tile) is taken from a given
 // ExtractSliceOp `sliceOp`.
-static Value insertSliceIntoTensor(RewriterBase &b, Location loc,
+static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
                                    tensor::ExtractSliceOp sliceOp, Value source,
                                    Value dest) {
   return b.create<tensor::InsertSliceOp>(
@@ -478,10 +475,9 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
                static_cast<size_t>(op.getNumInputsAndOutputs()) &&
            "expect the number of operands and inputs and outputs to match");
     SmallVector<Value> valuesToTile = operandValuesToUse;
-    IRRewriter rewriter(b);
     SmallVector<OpFoldResult> sizeBounds =
-        makeComposedFoldedMultiResultAffineApply(
-            rewriter, loc, shapeSizesToLoopsMap, allShapeSizes);
+        makeComposedFoldedMultiResultAffineApply(b, loc, shapeSizesToLoopsMap,
+                                                 allShapeSizes);
     SmallVector<Value> tiledOperands = makeTiledShapes(
         b, loc, op, valuesToTile, getAsOpFoldResult(interchangedIvs), tileSizes,
         sizeBounds,
@@ -616,10 +612,8 @@ static LogicalResult tilePadOp(RewriterBase &builder, tensor::PadOp op,
         auto sliceOp = tiledOutput.getDefiningOp<tensor::ExtractSliceOp>();
         assert(sliceOp && "expected ExtractSliceOp");
         // Insert the tile into the output tensor.
-        // TODO: Propagate RewriterBase everywhere.
-        IRRewriter rewriter(b);
         Value yieldValue =
-            insertSliceIntoTensor(rewriter, loc, sliceOp, sliceOp, iterArgs[0]);
+            insertSliceIntoTensor(b, loc, sliceOp, sliceOp, iterArgs[0]);
         return scf::ValueVector({yieldValue});
       });
   return success();
