@@ -156,7 +156,7 @@ struct FDE {
 class ObjFile final : public InputFile {
 public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-          bool lazy = false);
+          bool lazy = false, bool forceHidden = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   template <class LP> void parse();
 
@@ -171,6 +171,7 @@ public:
   std::unique_ptr<lld::DWARFCache> dwarfCache;
   Section *addrSigSection = nullptr;
   const uint32_t modTime;
+  bool forceHidden;
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
@@ -259,7 +260,8 @@ private:
 // .a file
 class ArchiveFile final : public InputFile {
 public:
-  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file);
+  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file,
+                       bool forceHidden);
   void addLazySymbols();
   void fetch(const llvm::object::Archive::Symbol &);
   // LLD normally doesn't use Error for error-handling, but the underlying
@@ -273,16 +275,20 @@ private:
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
   llvm::DenseSet<uint64_t> seen;
+  // Load all symbols with hidden visibility (-load_hidden).
+  bool forceHidden;
 };
 
 class BitcodeFile final : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                       uint64_t offsetInArchive, bool lazy = false);
+                       uint64_t offsetInArchive, bool lazy = false,
+                       bool forceHidden = false);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
 
   std::unique_ptr<llvm::lto::InputFile> obj;
+  bool forceHidden;
 
 private:
   void parseLazy();
