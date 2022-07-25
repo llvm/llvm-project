@@ -1630,11 +1630,12 @@ private:
     // no collapse requested.
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
     if (ompLoop) {
-      const auto &wsLoopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
+      loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
           std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
       int64_t collapseValue =
-          Fortran::lower::getCollapseValue(wsLoopOpClauseList);
+          Fortran::lower::getCollapseValue(*loopOpClauseList);
 
       curEval = &curEval->getFirstNestedEvaluation();
       for (int64_t i = 1; i < collapseValue; i++) {
@@ -1644,6 +1645,10 @@ private:
 
     for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
+
+    if (ompLoop)
+      genOpenMPReduction(*this, *loopOpClauseList);
+
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
   }
