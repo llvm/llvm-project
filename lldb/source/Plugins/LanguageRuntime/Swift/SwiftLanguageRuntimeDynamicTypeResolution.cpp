@@ -247,17 +247,23 @@ public:
   bool addImage(
       llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
           swift::ReflectionSectionKind)>
-          find_section) override {
-    return m_reflection_ctx.addImage(find_section);
+          find_section,
+      llvm::SmallVector<llvm::StringRef, 1> likely_module_names) override {
+    return m_reflection_ctx.addImage(find_section, likely_module_names);
   }
 
-  bool addImage(swift::remote::RemoteAddress image_start) override {
-    return m_reflection_ctx.addImage(image_start);
+  bool
+  addImage(swift::remote::RemoteAddress image_start,
+           llvm::SmallVector<llvm::StringRef, 1> likely_module_names) override {
+    return m_reflection_ctx.addImage(image_start, likely_module_names);
   }
 
-  bool readELF(swift::remote::RemoteAddress ImageStart,
-               llvm::Optional<llvm::sys::MemoryBlock> FileBuffer) override {
-    return m_reflection_ctx.readELF(ImageStart, FileBuffer);
+  bool readELF(
+      swift::remote::RemoteAddress ImageStart,
+      llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
+      llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) override {
+    return m_reflection_ctx.readELF(ImageStart, FileBuffer,
+                                    likely_module_names);
   }
 
   const swift::reflection::TypeInfo *
