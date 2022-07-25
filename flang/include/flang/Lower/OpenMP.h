@@ -38,6 +38,8 @@ void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
+void genOpenMPReduction(AbstractConverter &,
+                        const Fortran::parser::OmpClauseList &clauseList);
 
 } // namespace lower
 } // namespace Fortran

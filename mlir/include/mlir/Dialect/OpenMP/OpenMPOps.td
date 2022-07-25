@@ -1312,7 +1312,8 @@ def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 
-def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
+def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol, 
+                                                         IsolatedFromAbove]> {
   let summary = "declares a reduction kind";
 
   let description = [{
