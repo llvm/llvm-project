@@ -47,9 +47,9 @@ public:
       : CFCtx(CFCtx), BlockToState(BlockToState) {}
 
   const Environment *getEnvironment(const Stmt &S) const override {
-    auto BlockIT = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-    assert(BlockIT != CFCtx.getStmtToBlock().end());
-    const auto &State = BlockToState[BlockIT->getSecond()->getBlockID()];
+    auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
+    assert(BlockIt != CFCtx.getStmtToBlock().end());
+    const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
     assert(State);
     return &State.value().Env;
   }
