@@ -19,13 +19,13 @@
 // CHECK-NEXT:   [[vtable:%[a-z0-9]+]] = load i8*, i8** [[c]], align 8
 
 // Offset 0 to get first method
-// CHECK-NEXT:   [[ptr1:%[0-9]+]] = call i8* @llvm.load.relative.i32(i8* [[vtable]], i32 0)
+// CHECK-NEXT:   [[ptr1:%[0-9]+]] = tail call i8* @llvm.load.relative.i32(i8* [[vtable]], i32 0)
 // CHECK-NEXT:   [[method1:%[0-9]+]] = bitcast i8* [[ptr1]] to void (%class.C*)*
 // CHECK-NEXT:   call void [[method1]](%class.C* {{[^,]*}} %c)
 // CHECK-NEXT:   [[vtable:%[a-z0-9]+]] = load i8*, i8** [[c]], align 8
 
 // Offset by 4 to get the next bar()
-// CHECK-NEXT:   [[ptr2:%[0-9]+]] = call i8* @llvm.load.relative.i32(i8* [[vtable]], i32 4)
+// CHECK-NEXT:   [[ptr2:%[0-9]+]] = tail call i8* @llvm.load.relative.i32(i8* [[vtable]], i32 4)
 // CHECK-NEXT:   [[method2:%[0-9]+]] = bitcast i8* [[ptr2]] to void (%class.C*)*
 // CHECK-NEXT:   call void [[method2]](%class.C* {{[^,]*}} %c)
 // CHECK-NEXT:   ret void
