@@ -162,8 +162,8 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
 }
 
 Type::Type()
-    : std::enable_shared_from_this<Type>(), UserID(0),
-      m_name("<INVALID TYPE>") {
+    : std::enable_shared_from_this<Type>(), UserID(0), m_name("<INVALID TYPE>"),
+      m_payload(0) {
   m_byte_size = 0;
   m_byte_size_has_value = false;
 }

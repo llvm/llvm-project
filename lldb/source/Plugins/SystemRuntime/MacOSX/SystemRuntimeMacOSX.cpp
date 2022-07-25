@@ -747,7 +747,7 @@ void SystemRuntimeMacOSX::PopulateQueueList(
 
 SystemRuntimeMacOSX::PendingItemsForQueue
 SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
-  PendingItemsForQueue pending_item_refs;
+  PendingItemsForQueue pending_item_refs = {};
   AppleGetPendingItemsHandler::GetPendingItemsReturnInfo pending_items_pointer;
   ThreadSP cur_thread_sp(
       m_process->GetThreadList().GetExpressionExecutionThread());
