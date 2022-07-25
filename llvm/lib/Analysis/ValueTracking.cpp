@@ -6753,8 +6753,8 @@ llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
   if (RHSOp0->getType()->isVectorTy() != LHS->getType()->isVectorTy())
     return None;
 
-  Type *OpTy = LHS->getType();
-  assert(OpTy->isIntOrIntVectorTy(1) && "Expected integer type only!");
+  assert(LHS->getType()->isIntOrIntVectorTy(1) &&
+         "Expected integer type only!");
 
   // Both LHS and RHS are icmps.
   const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
