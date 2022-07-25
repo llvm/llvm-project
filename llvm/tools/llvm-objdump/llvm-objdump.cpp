@@ -914,7 +914,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
     return 2;
   }
   dumpBytes(Bytes.slice(Index, 1), OS);
-  OS << "\t\t.byte\t" << format_hex(Bytes[0], 4);
+  OS << "\t\t.byte\t" << format_hex(Bytes[Index], 4);
   return 1;
 }
 
