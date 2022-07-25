@@ -11,9 +11,9 @@
 #
 # CHECK: section weakfunc:
 # CHECK-EMPTY:
-# CHECK-NEXT:  block 0xfff02000 size = 0x00000001, align = 16, alignment-offset = 0
+# CHECK-NEXT:  block 0xfff01000 size = 0x00000001, align = 16, alignment-offset = 0
 # CHECK-NEXT:    symbols:
-# CHECK-NEXT:      0xfff02000 (block + 0x00000000): size: 0x00000001, linkage: weak, scope: default, live  -   func
+# CHECK-NEXT:      0xfff01000 (block + 0x00000000): size: 0x00000001, linkage: weak, scope: default, live  -   func
 # CHECK-NEXT:    no edges
 
 	.text
