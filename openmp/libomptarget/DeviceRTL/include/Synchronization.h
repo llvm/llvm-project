@@ -29,15 +29,13 @@ void threads();
 
 /// Synchronizing threads is allowed even if they all hit different instances of
 /// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
-/// restrictive in that it requires all threads to hit the same instance. The
-/// noinline is removed by the openmp-opt pass and helps to preserve the
-/// information till then.
+/// restrictive in that it requires all threads to hit the same instance.
 ///{
 #pragma omp begin assumes ext_aligned_barrier
 
 /// Synchronize all threads in a block, they are are reaching the same
 /// instruction (hence all threads in the block are "aligned").
-__attribute__((noinline)) void threadsAligned();
+void threadsAligned();
 
 #pragma omp end assumes
 ///}
