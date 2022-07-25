@@ -1523,13 +1523,15 @@ bool DAGCombiner::PromoteLoad(SDValue Op) {
 
     LLVM_DEBUG(dbgs() << "\nPromoting "; N->dump(&DAG); dbgs() << "\nTo: ";
                Result.dump(&DAG); dbgs() << '\n');
-    WorklistRemover DeadNodes(*this);
+
     DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
     DAG.ReplaceAllUsesOfValueWith(SDValue(N, 1), NewLD.getValue(1));
-    deleteAndRecombine(N);
+
     AddToWorklist(Result.getNode());
+    recursivelyDeleteUnusedNodes(N);
     return true;
   }
+
   return false;
 }
 
