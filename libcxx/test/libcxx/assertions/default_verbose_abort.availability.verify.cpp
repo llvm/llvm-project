@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that we diagnose any usage of the default assertion handler on a platform
-// that doesn't support it at compile-time.
+// Make sure that we diagnose any usage of the default verbose termination function
+// on a platform that doesn't support it at compile-time.
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
@@ -16,5 +16,5 @@
 #include <version> // any header would work
 
 void f() {
-  _LIBCPP_ASSERT(true, "message"); // expected-error {{'__libcpp_assertion_handler' is unavailable}}
+  _LIBCPP_ASSERT(true, "message"); // expected-error {{'__libcpp_verbose_abort' is unavailable}}
 }

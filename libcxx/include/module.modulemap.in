@@ -1294,6 +1294,7 @@ module std [system] {
   module __tree              {         header "__tree"              export * }
   module __tuple             { private header "__tuple"             export * }
   module __undef_macros      {         header "__undef_macros"      export * }
+  module __verbose_abort     {         header "__verbose_abort"     export * }
 
   module experimental {
     requires cplusplus11

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__assert>
 #include <__config>
+#include <__verbose_abort>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
@@ -29,7 +29,7 @@ extern "C" void android_set_abort_message(const char* msg);
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_WEAK
-void __libcpp_assertion_handler(char const* format, ...) {
+void __libcpp_verbose_abort(char const* format, ...) {
   // Write message to stderr. We do this before formatting into a
   // buffer so that we still get some information out if that fails.
   {

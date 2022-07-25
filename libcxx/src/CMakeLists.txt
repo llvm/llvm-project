@@ -4,7 +4,6 @@ set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 set(LIBCXX_SOURCES
   algorithm.cpp
   any.cpp
-  assert.cpp
   atomic.cpp
   barrier.cpp
   bind.cpp
@@ -62,6 +61,7 @@ set(LIBCXX_SOURCES
   valarray.cpp
   variant.cpp
   vector.cpp
+  verbose_abort.cpp
   )
 
 if (LIBCXX_ENABLE_DEBUG_MODE OR LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS)
