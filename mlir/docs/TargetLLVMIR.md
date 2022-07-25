@@ -553,6 +553,17 @@ llvm.func @caller(%arg0: !llvm.ptr<f32>) {
 The "bare pointer" calling convention does not support unranked memrefs as their
 shape cannot be known at compile time.
 
+### Generic alloction and deallocation functions
+
+When converting the Memref dialect, allocations and deallocations are converted
+into calls to `malloc` (`aligned_alloc` if aligned allocations are requested)
+and `free`. However, it is possible to convert them to more generic functions
+which can be implemented by a runtime library, thus allowing custom allocation
+strategies or runtime profiling. When the conversion pass is  instructed to
+perform such operation, the names of the calles are `_mlir_alloc`,
+`_mlir_aligned_alloc` and `_mlir_free`. Their signatures are the same of
+`malloc`, `aligned_alloc` and `free`.
+
 ### C-compatible wrapper emission
 
 In practical cases, it may be desirable to have externally-facing functions with

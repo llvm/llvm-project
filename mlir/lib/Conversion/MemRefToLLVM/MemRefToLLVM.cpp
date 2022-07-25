@@ -35,6 +35,15 @@ struct AllocOpLowering : public AllocLikeOpLLVMLowering {
       : AllocLikeOpLLVMLowering(memref::AllocOp::getOperationName(),
                                 converter) {}
 
+  LLVM::LLVMFuncOp getAllocFn(ModuleOp module) const {
+    bool useGenericFn = getTypeConverter()->getOptions().useGenericFunctions;
+
+    if (useGenericFn)
+      return LLVM::lookupOrCreateGenericAllocFn(module, getIndexType());
+
+    return LLVM::lookupOrCreateMallocFn(module, getIndexType());
+  }
+
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
                                           Location loc, Value sizeBytes,
                                           Operation *op) const override {
@@ -61,8 +70,7 @@ struct AllocOpLowering : public AllocLikeOpLLVMLowering {
     // Allocate the underlying buffer and store a pointer to it in the MemRef
     // descriptor.
     Type elementPtrType = this->getElementPtrType(memRefType);
-    auto allocFuncOp = LLVM::lookupOrCreateMallocFn(
-        allocOp->getParentOfType<ModuleOp>(), getIndexType());
+    auto allocFuncOp = getAllocFn(allocOp->getParentOfType<ModuleOp>());
     auto results = createLLVMCall(rewriter, loc, allocFuncOp, {sizeBytes},
                                   getVoidPtrType());
     Value allocatedPtr =
@@ -135,6 +143,15 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
                     llvm::PowerOf2Ceil(eltSizeBytes));
   }
 
+  LLVM::LLVMFuncOp getAllocFn(ModuleOp module) const {
+    bool useGenericFn = getTypeConverter()->getOptions().useGenericFunctions;
+
+    if (useGenericFn)
+      return LLVM::lookupOrCreateGenericAlignedAllocFn(module, getIndexType());
+
+    return LLVM::lookupOrCreateAlignedAllocFn(module, getIndexType());
+  }
+
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
                                           Location loc, Value sizeBytes,
                                           Operation *op) const override {
@@ -150,8 +167,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
       sizeBytes = createAligned(rewriter, loc, sizeBytes, allocAlignment);
 
     Type elementPtrType = this->getElementPtrType(memRefType);
-    auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
-        allocOp->getParentOfType<ModuleOp>(), getIndexType());
+    auto allocFuncOp = getAllocFn(allocOp->getParentOfType<ModuleOp>());
     auto results =
         createLLVMCall(rewriter, loc, allocFuncOp, {allocAlignment, sizeBytes},
                        getVoidPtrType());
@@ -300,11 +316,20 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
   explicit DeallocOpLowering(LLVMTypeConverter &converter)
       : ConvertOpToLLVMPattern<memref::DeallocOp>(converter) {}
 
+  LLVM::LLVMFuncOp getFreeFn(ModuleOp module) const {
+    bool useGenericFn = getTypeConverter()->getOptions().useGenericFunctions;
+
+    if (useGenericFn)
+      return LLVM::lookupOrCreateGenericFreeFn(module);
+
+    return LLVM::lookupOrCreateFreeFn(module);
+  }
+
   LogicalResult
   matchAndRewrite(memref::DeallocOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Insert the `free` declaration if it is not already present.
-    auto freeFunc = LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
+    auto freeFunc = getFreeFn(op->getParentOfType<ModuleOp>());
     MemRefDescriptor memref(adaptor.getMemref());
     Value casted = rewriter.create<LLVM::BitcastOp>(
         op.getLoc(), getVoidPtrType(),
@@ -2047,6 +2072,9 @@ struct MemRefToLLVMPass : public ConvertMemRefToLLVMBase<MemRefToLLVMPass> {
     options.allocLowering =
         (useAlignedAlloc ? LowerToLLVMOptions::AllocLowering::AlignedAlloc
                          : LowerToLLVMOptions::AllocLowering::Malloc);
+
+    options.useGenericFunctions = useGenericFunctions;
+
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
