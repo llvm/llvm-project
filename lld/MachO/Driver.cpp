@@ -266,8 +266,7 @@ static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
-                          bool isBundleLoader = false,
-                          bool isForceHidden = false) {
+                          bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -294,7 +293,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 
       if (!archive->isEmpty() && !archive->hasSymbolTable())
         error(path + ": archive has no index; run ranlib to add one");
-      file = make<ArchiveFile>(std::move(archive), isForceHidden);
+      file = make<ArchiveFile>(std::move(archive));
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
@@ -1035,11 +1034,6 @@ static void createFiles(const InputArgList &args) {
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
-      break;
-    case OPT_load_hidden:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLine,
-              /*isLazy=*/false, /*isExplicit=*/true, /*isBundleLoader=*/false,
-              /*isForceHidden=*/true);
       break;
     case OPT_l:
     case OPT_needed_l:

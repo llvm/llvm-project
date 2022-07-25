@@ -768,7 +768,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
-                                    uint64_t size, bool forceHidden) {
+                                    uint64_t size) {
   // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
   // N_EXT: Global symbols. These go in the symbol table during the link,
   //        and also in the export table of the output so that the dynamic
@@ -787,10 +787,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
       (sym.n_desc & (N_WEAK_DEF | N_WEAK_REF)) == (N_WEAK_DEF | N_WEAK_REF);
 
   if (sym.n_type & N_EXT) {
-    // -load_hidden makes us treat global symbols as linkage unit scoped.
-    // Duplicates are reported but the symbol does not go in the export trie.
-    bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
-
+    bool isPrivateExtern = sym.n_type & N_PEXT;
     // lld's behavior for merging symbols is slightly different from ld64:
     // ld64 picks the winning symbol based on several criteria (see
     // pickBetweenRegularAtoms() in ld64's SymbolTable.cpp), while lld
@@ -847,12 +844,11 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 // InputSection. They cannot be weak.
 template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
-                                     StringRef name, bool forceHidden) {
+                                     StringRef name) {
   if (sym.n_type & N_EXT) {
-    bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
     return symtab->addDefined(
         name, file, nullptr, sym.n_value, /*size=*/0,
-        /*isWeakDef=*/false, isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
+        /*isWeakDef=*/false, sym.n_type & N_PEXT, sym.n_desc & N_ARM_THUMB_DEF,
         /*isReferencedDynamically=*/false, sym.n_desc & N_NO_DEAD_STRIP,
         /*isWeakDefCanBeHidden=*/false);
   }
@@ -868,16 +864,15 @@ template <class NList>
 macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
                                               StringRef name) {
   uint8_t type = sym.n_type & N_TYPE;
-  bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
   switch (type) {
   case N_UNDF:
     return sym.n_value == 0
                ? symtab->addUndefined(name, this, sym.n_desc & N_WEAK_REF)
                : symtab->addCommon(name, this, sym.n_value,
                                    1 << GET_COMM_ALIGN(sym.n_desc),
-                                   isPrivateExtern);
+                                   sym.n_type & N_PEXT);
   case N_ABS:
-    return createAbsolute(sym, this, name, forceHidden);
+    return createAbsolute(sym, this, name);
   case N_PBUD:
   case N_INDR:
     error("TODO: support symbols of type " + std::to_string(type));
@@ -949,8 +944,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                 " at misaligned offset");
           continue;
         }
-        symbols[symIndex] =
-            createDefined(sym, name, isec, 0, isec->getSize(), forceHidden);
+        symbols[symIndex] = createDefined(sym, name, isec, 0, isec->getSize());
       }
       continue;
     }
@@ -985,8 +979,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       //   4. If we have a literal section (e.g. __cstring and __literal4).
       if (!subsectionsViaSymbols || symbolOffset == 0 ||
           sym.n_desc & N_ALT_ENTRY || !isa<ConcatInputSection>(isec)) {
-        symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
-                                          symbolSize, forceHidden);
+        symbols[symIndex] =
+            createDefined(sym, name, isec, symbolOffset, symbolSize);
         continue;
       }
       auto *concatIsec = cast<ConcatInputSection>(isec);
@@ -1004,8 +998,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
       // By construction, the symbol will be at offset zero in the new
       // subsection.
-      symbols[symIndex] = createDefined(sym, name, nextIsec, /*value=*/0,
-                                        symbolSize, forceHidden);
+      symbols[symIndex] =
+          createDefined(sym, name, nextIsec, /*value=*/0, symbolSize);
       // TODO: ld64 appears to preserve the original alignment as well as each
       // subsection's offset from the last aligned address. We should consider
       // emulating that behavior.
@@ -1042,8 +1036,8 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
 }
 
 ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                 bool lazy, bool forceHidden)
-    : InputFile(ObjKind, mb, lazy), modTime(modTime), forceHidden(forceHidden) {
+                 bool lazy)
+    : InputFile(ObjKind, mb, lazy), modTime(modTime) {
   this->archiveName = std::string(archiveName);
   if (lazy) {
     if (target->wordSize == 8)
@@ -2067,27 +2061,26 @@ void DylibFile::checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const {
     warn("using '-application_extension' with unsafe dylib: " + toString(this));
 }
 
-ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
-    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)),
-      forceHidden(forceHidden) {}
+ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
+    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {}
 
 void ArchiveFile::addLazySymbols() {
   for (const object::Archive::Symbol &sym : file->symbols())
     symtab->addLazyArchive(sym.getName(), this, sym);
 }
 
-static Expected<InputFile *>
-loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                  uint64_t offsetInArchive, bool forceHidden) {
+static Expected<InputFile *> loadArchiveMember(MemoryBufferRef mb,
+                                               uint32_t modTime,
+                                               StringRef archiveName,
+                                               uint64_t offsetInArchive) {
   if (config->zeroModTime)
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
-    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden);
+    return make<ObjFile>(mb, modTime, archiveName);
   case file_magic::bitcode:
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false,
-                             forceHidden);
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
   default:
     return createStringError(inconvertibleErrorCode(),
                              mb.getBufferIdentifier() +
@@ -2111,8 +2104,8 @@ Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!modTime)
     return modTime.takeError();
 
-  Expected<InputFile *> file = loadArchiveMember(
-      *mb, toTimeT(*modTime), getName(), c.getChildOffset(), forceHidden);
+  Expected<InputFile *> file =
+      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset());
 
   if (!file)
     return file.takeError();
@@ -2175,8 +2168,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive, bool lazy, bool forceHidden)
-    : InputFile(BitcodeKind, mb, lazy), forceHidden(forceHidden) {
+                         uint64_t offsetInArchive, bool lazy)
+    : InputFile(BitcodeKind, mb, lazy) {
   this->archiveName = std::string(archiveName);
   std::string path = mb.getBufferIdentifier().str();
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
