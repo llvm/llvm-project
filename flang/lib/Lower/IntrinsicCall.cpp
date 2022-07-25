@@ -545,6 +545,7 @@ struct IntrinsicLibrary {
                            llvm::ArrayRef<mlir::Value> args);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genSelectedIntKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
@@ -920,6 +921,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"selected_int_kind",
+     &I::genSelectedIntKind,
+     {{{"scalar", asAddr}}},
+     /*isElemental=*/false},
     {"selected_real_kind",
      &I::genSelectedRealKind,
      {{{"precision", asAddr, handleDynamicOptional},
@@ -3767,6 +3772,17 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 }
 
 // SELECTED_INT_KIND
+mlir::Value
+IntrinsicLibrary::genSelectedIntKind(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSelectedIntKind(builder, loc, fir::getBase(args[0])));
+}
+
+// SELECTED_REAL_KIND
 mlir::Value
 IntrinsicLibrary::genSelectedRealKind(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
