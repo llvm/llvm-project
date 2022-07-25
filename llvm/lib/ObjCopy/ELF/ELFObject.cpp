@@ -501,7 +501,7 @@ Error BinarySectionWriter::visit(const CompressedSection &Sec) {
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  Elf_Chdr_Impl<ELFT> Chdr;
+  Elf_Chdr_Impl<ELFT> Chdr = {};
   switch (Sec.CompressionType) {
   case DebugCompressionType::None:
     std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
