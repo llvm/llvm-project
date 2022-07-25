@@ -1,11 +1,9 @@
-# REQUIRES: asserts
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc %s -o %t
-# RUN: llvm-jitlink -abs var=0xcafef00d --debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
+# RUN: not llvm-jitlink -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN: -abs var=0x7fff00000000 -noexec %t
 #
-# Check an external symbol to a variable is created.
+# Check data access to a external variable out of reach causes an error.
 #
-# CHECK: Creating graph symbols...
-# CHECK:   7: Creating external graph symbol for COFF symbol "var" in (external) (index: 0)
 
 	.text
 

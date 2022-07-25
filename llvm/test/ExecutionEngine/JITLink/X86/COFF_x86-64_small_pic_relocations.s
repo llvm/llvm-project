@@ -40,26 +40,6 @@ test_rel32_func:
 test_rel32_data:
     leaq named_data(%rip), %rax
 
-# Check that calls to external functions out-of-range from the callsite trigger 
-# the generation of stubs and GOT entries. This produces a BranchPCRel32 edge, 
-# but STUB table manager will create a STUB sequence because external function 
-# is out-of-range from the callsite.
-#
-# jitlink-check: decode_operand(test_call_extern_out_of_range32, 0) = \
-# jitlink-check:     stub_addr(coff_sm_reloc.o, extern_out_of_range32) - \
-# jitlink-check:        next_pc(test_call_extern_out_of_range32)
-# jitlink-check: *{8}(got_addr(coff_sm_reloc.o, extern_out_of_range32)) = \
-# jitlink-check:     extern_out_of_range32
-	.def test_call_extern_out_of_range32;
-	.scl 2;
-	.type 32;
-	.endef
-	.globl main
-	.p2align 4, 0x90
-test_call_extern_out_of_range32:
-	callq extern_out_of_range32
-	retq
-
 # Local named data/func that is used in conjunction with other test cases
 	.text
 	.def named_func;
