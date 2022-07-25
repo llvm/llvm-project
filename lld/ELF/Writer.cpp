@@ -2487,7 +2487,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
            (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
           cmd->type == SHT_LLVM_PART_EHDR)
         cmd->addrExpr = [] {
-          return alignTo(script->getDot(), config->maxPageSize);
+          return alignToPowerOf2(script->getDot(), config->maxPageSize);
         };
       // PT_TLS is at the start of the first RW PT_LOAD. If `p` includes PT_TLS,
       // it must be the RW. Align to p_align(PT_TLS) to make sure
@@ -2504,13 +2504,13 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // blocks correctly. We need to keep the workaround for a while.
       else if (Out::tlsPhdr && Out::tlsPhdr->firstSec == p->firstSec)
         cmd->addrExpr = [] {
-          return alignTo(script->getDot(), config->maxPageSize) +
-                 alignTo(script->getDot() % config->maxPageSize,
-                         Out::tlsPhdr->p_align);
+          return alignToPowerOf2(script->getDot(), config->maxPageSize) +
+                 alignToPowerOf2(script->getDot() % config->maxPageSize,
+                                 Out::tlsPhdr->p_align);
         };
       else
         cmd->addrExpr = [] {
-          return alignTo(script->getDot(), config->maxPageSize) +
+          return alignToPowerOf2(script->getDot(), config->maxPageSize) +
                  script->getDot() % config->maxPageSize;
         };
     }
@@ -2544,7 +2544,7 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
 
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
-    return alignTo(off, os->alignment);
+     return alignToPowerOf2(off, os->alignment);
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
@@ -2603,15 +2603,15 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     // following section to avoid loading non-segments parts of the file.
     if (config->zSeparate != SeparateSegmentKind::None && lastRX &&
         lastRX->lastSec == sec)
-      off = alignTo(off, config->maxPageSize);
+      off = alignToPowerOf2(off, config->maxPageSize);
   }
   for (OutputSection *osec : outputSections)
     if (!(osec->flags & SHF_ALLOC)) {
-      osec->offset = alignTo(off, osec->alignment);
+      osec->offset = alignToPowerOf2(off, osec->alignment);
       off = osec->offset + osec->size;
     }
 
-  sectionHeaderOff = alignTo(off, config->wordsize);
+  sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);
 
   // Our logic assumes that sections have rising VA within the same segment.
@@ -2663,8 +2663,9 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
       // musl/glibc ld.so rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
       // rounds up.
-      p->p_memsz = alignTo(p->p_offset + p->p_memsz, config->commonPageSize) -
-                   p->p_offset;
+      p->p_memsz =
+          alignToPowerOf2(p->p_offset + p->p_memsz, config->commonPageSize) -
+          p->p_offset;
     }
   }
 }
@@ -2884,8 +2885,9 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
         fillTrap(Out::bufferStart +
                      alignDown(p->firstSec->offset + p->p_filesz, 4),
-                 Out::bufferStart + alignTo(p->firstSec->offset + p->p_filesz,
-                                            config->maxPageSize));
+                 Out::bufferStart +
+                     alignToPowerOf2(p->firstSec->offset + p->p_filesz,
+                                     config->maxPageSize));
 
     // Round up the file size of the last segment to the page boundary iff it is
     // an executable segment to ensure that other tools don't accidentally
@@ -2897,7 +2899,7 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
     if (last && (last->p_flags & PF_X))
       last->p_memsz = last->p_filesz =
-          alignTo(last->p_filesz, config->maxPageSize);
+          alignToPowerOf2(last->p_filesz, config->maxPageSize);
   }
 }
 

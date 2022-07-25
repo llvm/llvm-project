@@ -216,8 +216,7 @@ CommandObjectDisassemble::CommandObjectDisassemble(
           "Disassemble specified instructions in the current target.  "
           "Defaults to the current function for the current thread and "
           "stack frame.",
-          "disassemble [<cmd-options>]", eCommandRequiresTarget),
-      m_options() {}
+          "disassemble [<cmd-options>]", eCommandRequiresTarget) {}
 
 CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 

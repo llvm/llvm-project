@@ -2531,8 +2531,7 @@ bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
 /// DemandedElts.  We use this predicate to simplify operations downstream.
 bool SelectionDAG::MaskedVectorIsZero(SDValue V, const APInt &DemandedElts,
                                       unsigned Depth /* = 0 */) const {
-  APInt Mask = APInt::getAllOnes(V.getScalarValueSizeInBits());
-  return Mask.isSubsetOf(computeKnownBits(V, DemandedElts, Depth).Zero);
+  return computeKnownBits(V, DemandedElts, Depth).isZero();
 }
 
 /// MaskedValueIsAllOnes - Return true if '(Op & Mask) == Mask'.
@@ -9089,6 +9088,15 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
       SDValue ZeroOverFlow = getConstant(0, DL, VTList.VTs[1]);
       return getNode(ISD::MERGE_VALUES, DL, VTList, {N1, ZeroOverFlow}, Flags);
     }
+    break;
+  }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI: {
+    assert(VTList.NumVTs == 2 && Ops.size() == 2 && "Invalid mul lo/hi op!");
+    assert(VTList.VTs[0].isInteger() && VTList.VTs[0] == VTList.VTs[1] &&
+           VTList.VTs[0] == Ops[0].getValueType() &&
+           VTList.VTs[0] == Ops[1].getValueType() &&
+           "Binary operator types must match!");
     break;
   }
   case ISD::STRICT_FP_EXTEND:

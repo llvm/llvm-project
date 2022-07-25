@@ -654,6 +654,14 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
 SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     SelectionDAG &DAG, unsigned Depth) const {
+  EVT VT = Op.getValueType();
+
+  // Pretend we don't know anything about scalable vectors for now.
+  // TODO: We can probably do more work on simplifying the operations for
+  // scalable vectors, but for now we just bail out.
+  if (VT.isScalableVector())
+    return SDValue();
+
   // Limit search depth.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
@@ -664,7 +672,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
   // Not demanding any bits/elts from Op.
   if (DemandedBits == 0 || DemandedElts == 0)
-    return DAG.getUNDEF(Op.getValueType());
+    return DAG.getUNDEF(VT);
 
   bool IsLE = DAG.getDataLayout().isLittleEndian();
   unsigned NumElts = DemandedElts.getBitWidth();
@@ -894,6 +902,13 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, SelectionDAG &DAG,
     unsigned Depth) const {
   EVT VT = Op.getValueType();
+
+  // Pretend we don't know anything about scalable vectors for now.
+  // TODO: We can probably do more work on simplifying the operations for
+  // scalable vectors, but for now we just bail out.
+  if (VT.isScalableVector())
+    return SDValue();
+
   APInt DemandedElts = VT.isVector()
                            ? APInt::getAllOnes(VT.getVectorNumElements())
                            : APInt(1, 1);
@@ -3364,6 +3379,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    TLO, Depth + 1))
       return true;
 
+    // If every element pair has a zero/undef then just fold to zero.
+    // fold (and x, undef) -> 0  /  (and x, 0) -> 0
+    // fold (mul x, undef) -> 0  /  (mul x, 0) -> 0
+    if (DemandedElts.isSubsetOf(SrcZero | KnownZero | SrcUndef | KnownUndef))
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
+
     // If either side has a zero element, then the result element is zero, even
     // if the other is an UNDEF.
     // TODO: Extend getKnownUndefForVectorBinop to also deal with known zeros
@@ -3373,7 +3394,6 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef &= ~KnownZero;
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
-    // TODO - use KnownUndef to relax the demandedelts?
     if (!DemandedElts.isAllOnes())
       if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
         return true;

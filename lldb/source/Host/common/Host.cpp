@@ -172,7 +172,7 @@ MonitorChildProcessThreadFunction(::pid_t pid,
   ::sigaction(SIGUSR1, &sigUsr1Action, nullptr);
 #endif // __linux__
 
-  while(1) {
+  while (true) {
     log = GetLog(LLDBLog::Process);
     LLDB_LOG(log, "::waitpid({0}, &status, 0)...", pid);
 
