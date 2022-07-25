@@ -239,9 +239,8 @@ private:
         cmpOp.getPredicate(), rhsAffine.getValue() - lhsAffine.getValue());
     if (!constraintPair)
       return;
-    integerSet = mlir::IntegerSet::get(dimCount, symCount,
-                                       {constraintPair.getValue().first},
-                                       {constraintPair.getValue().second});
+    integerSet = mlir::IntegerSet::get(
+        dimCount, symCount, {constraintPair->first}, {constraintPair->second});
   }
 
   llvm::Optional<std::pair<AffineExpr, bool>>
