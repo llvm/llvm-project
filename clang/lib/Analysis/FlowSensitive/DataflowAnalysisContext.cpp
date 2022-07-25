@@ -199,18 +199,18 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
   if (!Res.second)
     return;
 
-  auto ConstraintsIT = FlowConditionConstraints.find(&Token);
-  if (ConstraintsIT == FlowConditionConstraints.end()) {
+  auto ConstraintsIt = FlowConditionConstraints.find(&Token);
+  if (ConstraintsIt == FlowConditionConstraints.end()) {
     Constraints.insert(&Token);
   } else {
     // Bind flow condition token via `iff` to its set of constraints:
     // FC <=> (C1 ^ C2 ^ ...), where Ci are constraints
-    Constraints.insert(&getOrCreateIff(Token, *ConstraintsIT->second));
+    Constraints.insert(&getOrCreateIff(Token, *ConstraintsIt->second));
   }
 
-  auto DepsIT = FlowConditionDeps.find(&Token);
-  if (DepsIT != FlowConditionDeps.end()) {
-    for (AtomicBoolValue *DepToken : DepsIT->second) {
+  auto DepsIt = FlowConditionDeps.find(&Token);
+  if (DepsIt != FlowConditionDeps.end()) {
+    for (AtomicBoolValue *DepToken : DepsIt->second) {
       addTransitiveFlowConditionConstraints(*DepToken, Constraints,
                                             VisitedTokens);
     }
@@ -220,10 +220,10 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 BoolValue &DataflowAnalysisContext::substituteBoolValue(
     BoolValue &Val,
     llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache) {
-  auto IT = SubstitutionsCache.find(&Val);
-  if (IT != SubstitutionsCache.end()) {
+  auto It = SubstitutionsCache.find(&Val);
+  if (It != SubstitutionsCache.end()) {
     // Return memoized result of substituting this boolean value.
-    return *IT->second;
+    return *It->second;
   }
 
   // Handle substitution on the boolean value (and its subvalues), saving the
@@ -280,19 +280,19 @@ BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowCondition(
 BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowConditionWithCache(
     AtomicBoolValue &Token,
     llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache) {
-  auto ConstraintsIT = FlowConditionConstraints.find(&Token);
-  if (ConstraintsIT == FlowConditionConstraints.end()) {
+  auto ConstraintsIt = FlowConditionConstraints.find(&Token);
+  if (ConstraintsIt == FlowConditionConstraints.end()) {
     return getBoolLiteralValue(true);
   }
-  auto DepsIT = FlowConditionDeps.find(&Token);
-  if (DepsIT != FlowConditionDeps.end()) {
-    for (AtomicBoolValue *DepToken : DepsIT->second) {
+  auto DepsIt = FlowConditionDeps.find(&Token);
+  if (DepsIt != FlowConditionDeps.end()) {
+    for (AtomicBoolValue *DepToken : DepsIt->second) {
       auto &NewDep = buildAndSubstituteFlowConditionWithCache(
           *DepToken, SubstitutionsCache);
       SubstitutionsCache[DepToken] = &NewDep;
     }
   }
-  return substituteBoolValue(*ConstraintsIT->second, SubstitutionsCache);
+  return substituteBoolValue(*ConstraintsIt->second, SubstitutionsCache);
 }
 
 void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token) {
