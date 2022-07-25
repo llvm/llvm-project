@@ -244,6 +244,10 @@ def load_hidden : Separate<["-"], "load_hidden">,
     MetaVarName<"<path>">,
     HelpText<"Load all symbols from static library with hidden visibility">,
     Group<grp_libs>;
+def hidden_l : Joined<["-"], "hidden-l">,
+    MetaVarName<"<name>">,
+    HelpText<"Like -l<name>, but load all symbols with hidden visibility">,
+    Group<grp_libs>;
 
 def grp_content : OptionGroup<"content">, HelpText<"ADDITIONAL CONTENT">;
 
