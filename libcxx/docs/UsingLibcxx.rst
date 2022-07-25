@@ -152,18 +152,18 @@ where the static or shared library was compiled **with** assertions but the user
 disable them). However, most of the code in libc++ is in the headers, so the user-selected
 value for ``_LIBCPP_ENABLE_ASSERTIONS`` (if any) will usually be respected.
 
-When an assertion fails, an assertion handler function is called. The library provides a default
-assertion handler that prints an error message and calls ``std::abort()``. Note that this assertion
-handler is provided by the static or shared library, so it is only available when deploying to a
-platform where the compiled library is sufficiently recent. However, users can also override that
-assertion handler with their own, which can be useful to provide custom behavior, or when deploying
-to older platforms where the default assertion handler isn't available.
+When an assertion fails, the program is aborted through a special verbose termination function. The
+library provides a default function that prints an error message and calls ``std::abort()``. Note
+that this function is provided by the static or shared library, so it is only available when deploying
+to a platform where the compiled library is sufficiently recent. However, users can also override that
+function with their own, which can be useful to provide custom behavior, or when deploying to older
+platforms where the default function isn't available.
 
-Replacing the default assertion handler is done by defining the following function:
+Replacing the default verbose termination function is done by defining the following function:
 
 .. code-block:: cpp
 
-  void __libcpp_assertion_handler(char const* format, ...)
+  void __libcpp_verbose_abort(char const* format, ...)
 
 This mechanism is similar to how one can replace the default definition of ``operator new``
 and ``operator delete``. For example:
@@ -171,9 +171,9 @@ and ``operator delete``. For example:
 .. code-block:: cpp
 
   // In HelloWorldHandler.cpp
-  #include <version> // must include any libc++ header before defining the handler (C compatibility headers excluded)
+  #include <version> // must include any libc++ header before defining the function (C compatibility headers excluded)
 
-  void std::__libcpp_assertion_handler(char const* format, ...) {
+  void std::__libcpp_verbose_abort(char const* format, ...) {
     va_list list;
     va_start(list, format);
     std::vfprintf(stderr, format, list);
@@ -187,30 +187,29 @@ and ``operator delete``. For example:
 
   int main() {
     std::vector<int> v;
-    int& x = v[0]; // Your assertion handler will be called here if _LIBCPP_ENABLE_ASSERTIONS=1
+    int& x = v[0]; // Your termination function will be called here if _LIBCPP_ENABLE_ASSERTIONS=1
   }
 
-Also note that the assertion handler should usually not return. Since the assertions in libc++
-catch undefined behavior, your code will proceed with undefined behavior if your assertion
-handler is called and does return.
+Also note that the verbose termination function should never return. Since assertions in libc++
+catch undefined behavior, your code will proceed with undefined behavior if your function is called
+and does return.
 
-Furthermore, throwing an exception from the assertion handler is not recommended. Indeed, many
-functions in the library are ``noexcept``, and any exception thrown from the assertion handler
-will result in ``std::terminate`` being called.
+Furthermore, exceptions should not be thrown from the function. Indeed, many functions in the
+library are ``noexcept``, and any exception thrown from the termination function will result
+in ``std::terminate`` being called.
 
-Back-deploying with a custom assertion handler
-----------------------------------------------
-When deploying to an older platform that does not provide a default assertion handler, the
-compiler will diagnose the usage of ``std::__libcpp_assertion_handler`` with an error. This
-is done to avoid the load-time error that would otherwise happen if the code was being deployed
-on the older system.
+Back-deploying with a custom verbose termination function
+---------------------------------------------------------
+When deploying to an older platform that does not provide a default verbose termination function,
+the compiler will diagnose the usage of ``std::__libcpp_verbose_abort`` with an error. This is done
+to avoid the load-time error that would otherwise happen if the code was being deployed on older
+systems.
 
-If you are providing a custom assertion handler, this error is effectively a false positive.
-To let the library know that you are providing a custom assertion handler in back-deployment
-scenarios, you must define the ``_LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED`` macro,
-and the library will assume that you are providing your own definition. If no definition is
-provided and the code is back-deployed to the older platform, it will fail to load when the
-dynamic linker fails to find a definition for ``std::__libcpp_assertion_handler``, so you
+If you are providing a custom verbose termination function, this error is effectively a false positive.
+To let the library know that you are providing a custom function in back-deployment scenarios, you must
+define the ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro, and the library will assume that
+you are providing your own definition. If no definition is provided and the code is back-deployed to an older
+platform, it will fail to load when the dynamic linker fails to find a definition of the function, so you
 should only remove the guard rails if you really mean it!
 
 Libc++ Configuration Macros
