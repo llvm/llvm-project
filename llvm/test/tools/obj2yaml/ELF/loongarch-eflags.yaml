@@ -1,0 +1,29 @@
+## Check obj2yaml is able to decode all possible LoongArch e_flags field values.
+
+# RUN: yaml2obj %s -o %t-lp64s -DCLASS=64 -DFLAG=LP64S
+# RUN: obj2yaml %t-lp64s | FileCheck -DFLAG=LP64S %s
+
+# RUN: yaml2obj %s -o %t-lp64f -DCLASS=64 -DFLAG=LP64F
+# RUN: obj2yaml %t-lp64f | FileCheck -DFLAG=LP64F %s
+
+# RUN: yaml2obj %s -o %t-lp64d -DCLASS=64 -DFLAG=LP64D
+# RUN: obj2yaml %t-lp64d | FileCheck -DFLAG=LP64D %s
+
+# RUN: yaml2obj %s -o %t-ilp32s -DCLASS=32 -DFLAG=ILP32S
+# RUN: obj2yaml %t-ilp32s | FileCheck -DFLAG=ILP32S %s
+
+# RUN: yaml2obj %s -o %t-ilp32f -DCLASS=32 -DFLAG=ILP32F
+# RUN: obj2yaml %t-ilp32f | FileCheck -DFLAG=ILP32F %s
+
+# RUN: yaml2obj %s -o %t-ilp32d -DCLASS=32 -DFLAG=ILP32D
+# RUN: obj2yaml %t-ilp32d | FileCheck -DFLAG=ILP32D %s
+
+# CHECK: Flags: [ EF_LOONGARCH_BASE_ABI_[[FLAG]] ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS[[CLASS]]
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_LOONGARCH
+  Flags:           [ EF_LOONGARCH_BASE_ABI_[[FLAG]] ]

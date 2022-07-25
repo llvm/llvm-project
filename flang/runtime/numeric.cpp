@@ -16,6 +16,38 @@
 
 namespace Fortran::runtime {
 
+template <typename RES>
+inline RES getIntArgValue(const char *source, int line, void *arg, int kind,
+    std::int64_t defaultValue, int resKind) {
+  RES res;
+  if (!arg) {
+    res = static_cast<RES>(defaultValue);
+  } else if (kind == 1) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 1> *>(arg));
+  } else if (kind == 2) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 2> *>(arg));
+  } else if (kind == 4) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 4> *>(arg));
+  } else if (kind == 8) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 8> *>(arg));
+#ifdef __SIZEOF_INT128__
+  } else if (kind == 16) {
+    if (resKind != 16) {
+      Terminator{source, line}.Crash("Unexpected integer kind in runtime");
+    }
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 16> *>(arg));
+#endif
+  } else {
+    Terminator{source, line}.Crash("Unexpected integer kind in runtime");
+  }
+  return res;
+}
+
 // NINT (16.9.141)
 template <typename RESULT, typename ARG> inline RESULT Nint(ARG x) {
   if (x >= 0) {
@@ -108,6 +140,54 @@ template <typename T> inline T Scale(T x, std::int64_t p) {
                : std::numeric_limits<int>::max();
   }
   return std::ldexp(x, p); // x*2**p
+}
+
+// SELECTED_REAL_KIND (16.9.170)
+template <typename P, typename R, typename D>
+inline CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(P p, R r, D d) {
+  if (d != 2) {
+    return -5;
+  }
+
+  int error{0};
+  int kind{0};
+  if (p <= 3) {
+    kind = 2;
+  } else if (p <= 6) {
+    kind = 4;
+  } else if (p <= 15) {
+    kind = 8;
+#if LDBL_MANT_DIG == 64
+  } else if (p <= 18) {
+    kind = 10;
+  } else if (p <= 33) {
+    kind = 16;
+#elif LDBL_MANT_DIG == 113
+  } else if (p <= 33) {
+    kind = 16;
+#endif
+  } else {
+    error -= 1;
+  }
+
+  if (r <= 4) {
+    kind = kind < 2 ? 2 : kind;
+  } else if (r <= 37) {
+    kind = kind < 3 ? (p == 3 ? 4 : 3) : kind;
+  } else if (r <= 307) {
+    kind = kind < 8 ? 8 : kind;
+#if LDBL_MANT_DIG == 64
+  } else if (r <= 4931) {
+    kind = kind < 10 ? 10 : kind;
+#elif LDBL_MANT_DIG == 113
+  } else if (r <= 4931) {
+    kind = kind < 16 ? 16 : kind;
+#endif
+  } else {
+    error -= 2;
+  }
+
+  return error ? error : kind;
 }
 
 // SET_EXPONENT (16.9.171)
@@ -713,6 +793,31 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Scale16)(
   return Scale(x, p);
 }
 #endif
+
+// SELECTED_REAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedRealKind)(
+    const char *source, int line, void *precision, int pKind, void *range,
+    int rKind, void *radix, int dKind) {
+#ifdef __SIZEOF_INT128__
+  CppTypeFor<TypeCategory::Integer, 16> p =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 16);
+  CppTypeFor<TypeCategory::Integer, 16> r =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 16);
+  CppTypeFor<TypeCategory::Integer, 16> d =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 16);
+#else
+  std::int64_t p = getIntArgValue<std::int64_t>(
+      source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 8);
+  std::int64_t r = getIntArgValue<std::int64_t>(
+      source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 8);
+  std::int64_t d = getIntArgValue<std::int64_t>(
+      source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 8);
+#endif
+  return SelectedRealKind(p, r, d);
+}
 
 CppTypeFor<TypeCategory::Real, 4> RTNAME(Spacing4)(
     CppTypeFor<TypeCategory::Real, 4> x) {

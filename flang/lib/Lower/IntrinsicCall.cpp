@@ -545,6 +545,7 @@ struct IntrinsicLibrary {
                            llvm::ArrayRef<mlir::Value> args);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
   template <typename Shift>
@@ -919,6 +920,12 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"selected_real_kind",
+     &I::genSelectedRealKind,
+     {{{"precision", asAddr, handleDynamicOptional},
+       {"range", asAddr, handleDynamicOptional},
+       {"radix", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"set_exponent", &I::genSetExponent},
     {"shifta", &I::genShift<mlir::arith::ShRSIOp>},
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
@@ -3757,6 +3764,38 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
+// SELECTED_INT_KIND
+mlir::Value
+IntrinsicLibrary::genSelectedRealKind(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+
+  // Handle optional precision(P) argument
+  mlir::Value precision =
+      isStaticallyAbsent(args[0])
+          ? builder.create<fir::AbsentOp>(
+                loc, fir::ReferenceType::get(builder.getI1Type()))
+          : fir::getBase(args[0]);
+
+  // Handle optional range(R) argument
+  mlir::Value range =
+      isStaticallyAbsent(args[1])
+          ? builder.create<fir::AbsentOp>(
+                loc, fir::ReferenceType::get(builder.getI1Type()))
+          : fir::getBase(args[1]);
+
+  // Handle optional radix(RADIX) argument
+  mlir::Value radix =
+      isStaticallyAbsent(args[2])
+          ? builder.create<fir::AbsentOp>(
+                loc, fir::ReferenceType::get(builder.getI1Type()))
+          : fir::getBase(args[2]);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSelectedRealKind(builder, loc, precision, range, radix));
 }
 
 // SET_EXPONENT

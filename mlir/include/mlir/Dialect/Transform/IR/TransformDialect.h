@@ -52,6 +52,26 @@ namespace transform {
 /// expected to derive this class and register operations in the constructor.
 /// They can be registered with the DialectRegistry and automatically applied
 /// to the Transform dialect when it is loaded.
+///
+/// Derived classes are expected to define a `void init()` function in which
+/// they can call various protected methods of the base class to register
+/// extension operations and declare their dependencies.
+///
+/// By default, the extension is configured both for construction of the
+/// Transform IR and for its application to some payload. If only the
+/// construction is desired, the extension can be switched to "build-only" mode
+/// that avoids loading the dialects that are only necessary for transforming
+/// the payload. To perform the switch, the extension must be wrapped into the
+/// `BuildOnly` class template (see below) when it is registered, as in:
+///
+///    dialectRegistry.addExtension<BuildOnly<MyTransformDialectExt>>();
+///
+/// instead of:
+///
+///    dialectRegistry.addExtension<MyTransformDialectExt>();
+///
+/// Derived classes must reexport the constructor of this class or otherwise
+/// forward its boolean argument to support this behavior.
 template <typename DerivedTy, typename... ExtraDialects>
 class TransformDialectExtension
     : public DialectExtension<DerivedTy, TransformDialect, ExtraDialects...> {
@@ -65,12 +85,31 @@ public:
              ExtraDialects *...) const final {
     for (const DialectLoader &loader : dialectLoaders)
       loader(context);
+
+    // Only load generated dialects if the user intends to apply
+    // transformations specified by the extension.
+    if (!buildOnly)
+      for (const DialectLoader &loader : generatedDialectLoaders)
+        loader(context);
+
     for (const Initializer &init : opInitializers)
       init(transformDialect);
     transformDialect->mergeInPDLMatchHooks(std::move(pdlMatchConstraintFns));
   }
 
 protected:
+  using Base = TransformDialectExtension<DerivedTy, ExtraDialects...>;
+
+  /// Extension constructor. The argument indicates whether to skip generated
+  /// dialects when applying the extension.
+  explicit TransformDialectExtension(bool buildOnly = false)
+      : buildOnly(buildOnly) {
+    static_cast<DerivedTy *>(this)->init();
+  }
+
+  /// Hook for derived classes to inject constructor behavior.
+  void init() {}
+
   /// Injects the operations into the Transform dialect. The operations must
   /// implement the TransformOpInterface and MemoryEffectsOpInterface, and the
   /// implementations must be already available when the operation is injected.
@@ -85,10 +124,25 @@ protected:
   /// provided as template parameter. When the Transform dialect is loaded,
   /// dependent dialects will be loaded as well. This is intended for dialects
   /// that contain attributes and types used in creation and canonicalization of
-  /// the injected operations.
+  /// the injected operations, similarly to how the dialect definition may list
+  /// dependent dialects. This is *not* intended for dialects entities from
+  /// which may be produced when applying the transformations specified by ops
+  /// registered by this extension.
   template <typename DialectTy>
   void declareDependentDialect() {
     dialectLoaders.push_back(
+        [](MLIRContext *context) { context->loadDialect<DialectTy>(); });
+  }
+
+  /// Declares that the transformations associated with the operations
+  /// registered by this dialect extension may produce operations from the
+  /// dialect provided as template parameter while processing payload IR that
+  /// does not contain the operations from said dialect. This is similar to
+  /// dependent dialects of a pass. These dialects will be loaded along with the
+  /// transform dialect unless the extension is in the build-only mode.
+  template <typename DialectTy>
+  void declareGeneratedDialect() {
+    generatedDialectLoaders.push_back(
         [](MLIRContext *context) { context->loadDialect<DialectTy>(); });
   }
 
@@ -108,14 +162,32 @@ protected:
 
 private:
   SmallVector<Initializer> opInitializers;
+
+  /// Callbacks loading the dependent dialects, i.e. the dialect needed for the
+  /// extension ops.
   SmallVector<DialectLoader> dialectLoaders;
 
-  /// A list of constraints that should be made availble to PDL patterns
+  /// Callbacks loading the generated dialects, i.e. the dialects produced when
+  /// applying the transformations.
+  SmallVector<DialectLoader> generatedDialectLoaders;
+
+  /// A list of constraints that should be made available to PDL patterns
   /// processed by PDLMatchOp in the Transform dialect.
   ///
   /// Declared as mutable so its contents can be moved in the `apply` const
   /// method, which is only called once.
   mutable llvm::StringMap<PDLConstraintFunction> pdlMatchConstraintFns;
+
+  /// Indicates that the extension is in build-only mode.
+  bool buildOnly;
+};
+
+/// A wrapper for transform dialect extensions that forces them to be
+/// constructed in the build-only mode.
+template <typename DerivedTy>
+class BuildOnly : public DerivedTy {
+public:
+  BuildOnly() : DerivedTy(/*buildOnly=*/true) {}
 };
 
 } // namespace transform
