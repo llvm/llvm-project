@@ -39,10 +39,6 @@
 # RUN: tar xf %t/repro4.tar -C %t
 # RUN: cd %t/repro4; %no-arg-lld @response.txt | FileCheck %s -DDIR="%:t/%:t"
 
-# RUN: %lld --reproduce %t/repro7.tar -lSystem -syslibroot %t -force_load %t/foo.a -force_load %t/bar.a %t/test.o -o /dev/null -t | FileCheck %s -DDIR="%t/%:t"
-# RUN: tar xf %t/repro7.tar -C %t
-# RUN: cd %t/repro7; %no-arg-lld @response.txt | FileCheck %s -DDIR="%:t/%:t"
-
 # RUN: echo "%t/libfoo.dylib" > %t/filelist
 # RUN: echo "%t/libbar.dylib" >> %t/filelist
 # RUN: %lld --reproduce %t/repro5.tar -lSystem -syslibroot %t -filelist %t/filelist %t/test.o -o /dev/null -t | FileCheck %s -DDIR="%t/%:t"
