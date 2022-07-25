@@ -1259,9 +1259,8 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
     return Result;
 
   getFunctionNameAndStartLineForAddress(
-      CU, Address.Address,
-                                        Spec.FNKind, Spec.FLIKind, Result.ShortFunctionName,
-                                        Result.LinkageFunctionName,
+      CU, Address.Address, Spec.FNKind, Spec.FLIKind, 
+      Result.ShortFunctionName, Result.LinkageFunctionName, 
       Result.StartFileName, Result.StartLine, Result.StartAddress);
   if (Spec.FLIKind != FileLineInfoKind::None) {
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {

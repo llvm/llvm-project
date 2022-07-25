@@ -275,18 +275,19 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress Module
       DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
 
   // HACK: Always provide symbol table function name
-  std::string FunctionName, FileName;
+  std::string SymbolTableFunctionName, FileName;
   uint64_t Start, Size;
-  if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
+  if (getNameFromSymbolTable(ModuleOffset.Address, SymbolTableFunctionName, Start, Size,
                               FileName)) {
-    LineInfo.SymbolTableFunctionName = FunctionName;
+    LineInfo.SymbolTableFunctionName = SymbolTableFunctionName;
     LineInfo.StartAddress = Start;
     if (LineInfo.FileName == DILineInfo::BadString && !FileName.empty()) {
       LineInfo.FileName = FileName;
     }
   }
 
-  // Strip compilation directory from filenames
+  // HACK:CI This strips projectRoot in the bugsnag-expected manner.
+  // HACK: Upstream doesn't have the getCompilationDirectory() function.
   std::string FullPath = LineInfo.FileName;
   std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
   if (Prefix.back() != '/') {
@@ -314,20 +315,18 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
   if (InlinedContext.getNumberOfFrames() == 0)
     InlinedContext.addFrame(DILineInfo());
 
-  // Override the function name in lower frame with name from symbol table.
-  if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
-    std::string FunctionName, FileName;
-    uint64_t Start, Size;
-    if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
-                               FileName)) {
-      DILineInfo *LI = InlinedContext.getMutableFrame(
-          InlinedContext.getNumberOfFrames() - 1);
-      LI->SymbolTableFunctionName = FunctionName;
-      LI->StartAddress = Start;
-      if (LI->FileName == DILineInfo::BadString && !FileName.empty())
-        LI->FileName = FileName;
-    }
+  // HACK: Always provide symbol table function name
+  std::string SymbolTableFunctionName, FileName;
+  uint64_t Start, Size;
+  if (getNameFromSymbolTable(ModuleOffset.Address, SymbolTableFunctionName, Start, Size, FileName)) {
+    DILineInfo *LI = InlinedContext.getMutableFrame(
+        InlinedContext.getNumberOfFrames() - 1);
+    LI->SymbolTableFunctionName = SymbolTableFunctionName;
+    LI->StartAddress = Start;
+    if (LI->FileName == DILineInfo::BadString && !FileName.empty())
+      LI->FileName = FileName;
   }
+
 
   return InlinedContext;
 }

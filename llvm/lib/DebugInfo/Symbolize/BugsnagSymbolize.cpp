@@ -64,8 +64,9 @@ SymbolizeResult getSymbolizeResult(const DILineInfo &info, std::string address, 
 }
 
 SymbolizeResults BugsnagSymbolize(const char* filePath, bool includeInline, char* addresses[], int addressCount) {
-  //symbolize::LLVMSymbolizer::Options Opts(symbolize::FunctionNameKind::LinkageName, true, true, false, "");
-  symbolize::LLVMSymbolizer Symbolizer;
+  symbolize::LLVMSymbolizer::Options Opt;
+  Opt.Demangle = false;
+  symbolize::LLVMSymbolizer Symbolizer(Opt);
 
   SymbolizeResults retVal = {0};
 

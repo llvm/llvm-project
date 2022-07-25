@@ -53,7 +53,7 @@ public:
     FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName;
     FileLineInfoKind PathStyle = FileLineInfoKind::AbsoluteFilePath;
     bool UseSymbolTable = true;
-    bool Demangle = false;
+    bool Demangle = true;
     bool RelativeAddresses = false;
     bool UntagAddresses = false;
     bool UseDIA = false;

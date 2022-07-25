@@ -48,8 +48,8 @@ struct DILineInfo {
   uint32_t Discriminator = 0;
 
   DILineInfo()
-      : FileName(BadString), ShortFunctionName("<invalid>"),
-    LinkageFunctionName("<invalid>"), SymbolTableFunctionName(BadString), StartFileName(BadString) {
+      : FileName(BadString), ShortFunctionName(BadString),
+    LinkageFunctionName(BadString), SymbolTableFunctionName(BadString), StartFileName(BadString) {
   }
 
   bool operator==(const DILineInfo &RHS) const {
