@@ -20,6 +20,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gmock/gmock.h"
