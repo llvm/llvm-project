@@ -107,17 +107,7 @@ static InstructionCost selectCost(const Value *Cond,
   if (AI && BI) {
     uint64_t AV = AI->getZExtValue(), BV = BI->getZExtValue();
     if ((AV == 0 && BV == 1) || (AV == 1 && BV == 0)) {
-      // If the comparison can be implemented as a a SLT[UI], then the
-      // result of the Select will be the same as the value of the
-      // comparison itself, making the Select operation free.
-      const CmpInst *CondI = dyn_cast<CmpInst>(Cond);
-      if (CondI != nullptr && CondI->getOpcode() == Instruction::ICmp) {
-        CmpInst::Predicate Pred = CondI->getPredicate();
-        if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_SGT ||
-            Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_SLT) {
-          return TTI::TCC_Free;
-        }
-      }
+      return TTI::TCC_Free;
     }
   }
   return TTI::TCC_Basic;
