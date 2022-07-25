@@ -290,6 +290,7 @@ MemoryTagManagerAArch64MTE::UnpackTagsFromCoreFileSegment(
   const size_t bytes_copied =
       reader(tag_segment_data_address + file_offset_in_bytes, tag_bytes_to_read,
              tag_data.data());
+  (void)bytes_copied;
   assert(bytes_copied == tag_bytes_to_read);
 
   std::vector<lldb::addr_t> tags;
