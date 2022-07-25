@@ -17,7 +17,7 @@ template<int N> struct T {
 
 #else
 
-// expected-error@15 {{static_assert failed due to requirement '1 == 2': N is not 2!}}
+// expected-error@15 {{static assertion failed due to requirement '1 == 2': N is not 2!}}
 T<1> t1; // expected-note {{in instantiation of template class 'T<1>' requested here}}
 T<2> t2;
 
