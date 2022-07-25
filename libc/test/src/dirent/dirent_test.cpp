@@ -27,18 +27,19 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
   // greater than 2.
   ASSERT_GT(__llvm_libc::dirfd(dir), 2);
 
-  struct ::dirent *file1, *file2, *dir1, *dir2;
+  struct ::dirent *file1 = nullptr, *file2 = nullptr, *dir1 = nullptr,
+                  *dir2 = nullptr;
   while (true) {
     struct ::dirent *d = __llvm_libc::readdir(dir);
     if (d == nullptr)
       break;
-    if (StringView(d->d_name).equals("file1.txt"))
+    if (StringView(&d->d_name[0]).equals("file1.txt"))
       file1 = d;
-    if (StringView(d->d_name).equals("file2.txt"))
+    if (StringView(&d->d_name[0]).equals("file2.txt"))
       file2 = d;
-    if (StringView(d->d_name).equals("dir1"))
+    if (StringView(&d->d_name[0]).equals("dir1"))
       dir1 = d;
-    if (StringView(d->d_name).equals("dir2.txt"))
+    if (StringView(&d->d_name[0]).equals("dir2"))
       dir2 = d;
   }
 
