@@ -796,7 +796,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
 
 class ExtractFunction : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override { return "Extract to function"; }

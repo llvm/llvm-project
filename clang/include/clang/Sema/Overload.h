@@ -795,6 +795,10 @@ class Sema;
     /// This candidate was not viable because its associated constraints were
     /// not satisfied.
     ovl_fail_constraints_not_satisfied,
+
+    /// This candidate was not viable because it has internal linkage and is
+    /// from a different module unit than the use.
+    ovl_fail_module_mismatched,
   };
 
   /// A list of implicit conversion sequences for the arguments of an

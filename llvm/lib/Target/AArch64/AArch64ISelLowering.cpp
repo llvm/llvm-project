@@ -879,6 +879,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->supportsAddressTopByteIgnored())
     setTargetDAGCombine(ISD::LOAD);
 
+  setTargetDAGCombine(ISD::MSTORE);
+
   setTargetDAGCombine(ISD::MUL);
 
   setTargetDAGCombine({ISD::SELECT, ISD::VSELECT});
@@ -974,6 +976,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(Op, VT, Custom);
 
     if (Subtarget->hasFullFP16()) {
+      setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
+
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i8, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v8i8, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v16i8, Custom);
@@ -17142,7 +17146,8 @@ static SDValue performSpliceCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG,
+                                    const AArch64Subtarget *Subtarget) {
   assert((N->getOpcode() == AArch64ISD::UUNPKHI ||
           N->getOpcode() == AArch64ISD::UUNPKLO) &&
          "Unexpected Opcode!");
@@ -17150,6 +17155,42 @@ static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG) {
   // uunpklo/hi undef -> undef
   if (N->getOperand(0).isUndef())
     return DAG.getUNDEF(N->getValueType(0));
+
+  // If this is a masked load followed by an UUNPKLO, fold this into a masked
+  // extending load.  We can do this even if this is already a masked
+  // {z,}extload.
+  if (N->getOperand(0).getOpcode() == ISD::MLOAD &&
+      N->getOpcode() == AArch64ISD::UUNPKLO) {
+    MaskedLoadSDNode *MLD = cast<MaskedLoadSDNode>(N->getOperand(0));
+    SDValue Mask = MLD->getMask();
+    SDLoc DL(N);
+
+    if (MLD->isUnindexed() && MLD->getExtensionType() != ISD::SEXTLOAD &&
+        SDValue(MLD, 0).hasOneUse() && Mask->getOpcode() == AArch64ISD::PTRUE &&
+        (MLD->getPassThru()->isUndef() ||
+         isZerosVector(MLD->getPassThru().getNode()))) {
+      unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
+      unsigned PgPattern = Mask->getConstantOperandVal(0);
+      EVT VT = N->getValueType(0);
+
+      // Ensure we can double the size of the predicate pattern
+      unsigned NumElts = getNumElementsFromSVEPredPattern(PgPattern);
+      if (NumElts &&
+          NumElts * VT.getVectorElementType().getSizeInBits() <= MinSVESize) {
+        Mask =
+            getPTrue(DAG, DL, VT.changeVectorElementType(MVT::i1), PgPattern);
+        SDValue PassThru = DAG.getConstant(0, DL, VT);
+        SDValue NewLoad = DAG.getMaskedLoad(
+            VT, DL, MLD->getChain(), MLD->getBasePtr(), MLD->getOffset(), Mask,
+            PassThru, MLD->getMemoryVT(), MLD->getMemOperand(),
+            MLD->getAddressingMode(), ISD::ZEXTLOAD);
+
+        DAG.ReplaceAllUsesOfValueWith(SDValue(MLD, 1), NewLoad.getValue(1));
+
+        return NewLoad;
+      }
+    }
+  }
 
   return SDValue();
 }
@@ -17480,6 +17521,50 @@ static SDValue performSTORECombine(SDNode *N,
 
   if (SDValue Store = foldTruncStoreOfExt(DAG, N))
     return Store;
+
+  return SDValue();
+}
+
+static SDValue performMSTORECombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    SelectionDAG &DAG,
+                                    const AArch64Subtarget *Subtarget) {
+  MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
+  SDValue Value = MST->getValue();
+  SDValue Mask = MST->getMask();
+  SDLoc DL(N);
+
+  // If this is a UZP1 followed by a masked store, fold this into a masked
+  // truncating store.  We can do this even if this is already a masked
+  // truncstore.
+  if (Value.getOpcode() == AArch64ISD::UZP1 && Value->hasOneUse() &&
+      MST->isUnindexed() && Mask->getOpcode() == AArch64ISD::PTRUE &&
+      Value.getValueType().isInteger()) {
+    Value = Value.getOperand(0);
+    if (Value.getOpcode() == ISD::BITCAST) {
+      EVT HalfVT =
+          Value.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
+      EVT InVT = Value.getOperand(0).getValueType();
+
+      if (HalfVT.widenIntegerVectorElementType(*DAG.getContext()) == InVT) {
+        unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
+        unsigned PgPattern = Mask->getConstantOperandVal(0);
+
+        // Ensure we can double the size of the predicate pattern
+        unsigned NumElts = getNumElementsFromSVEPredPattern(PgPattern);
+        if (NumElts && NumElts * InVT.getVectorElementType().getSizeInBits() <=
+                           MinSVESize) {
+          Mask = getPTrue(DAG, DL, InVT.changeVectorElementType(MVT::i1),
+                          PgPattern);
+          return DAG.getMaskedStore(MST->getChain(), DL, Value.getOperand(0),
+                                    MST->getBasePtr(), MST->getOffset(), Mask,
+                                    MST->getMemoryVT(), MST->getMemOperand(),
+                                    MST->getAddressingMode(),
+                                    /*IsTruncating=*/true);
+        }
+      }
+    }
+  }
 
   return SDValue();
 }
@@ -18191,7 +18276,9 @@ static SDValue tryToWidenSetCCOperands(SDNode *Op, SelectionDAG &DAG) {
                      Op0ExtV, Op1ExtV, Op->getOperand(2));
 }
 
-static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performSETCCCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::SETCC && "Unexpected opcode!");
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -18231,6 +18318,21 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
       SDValue TST = DAG.getNode(ISD::AND, DL, TstVT, LHS->getOperand(0),
                                 DAG.getConstant(TstImm, DL, TstVT));
       return DAG.getNode(ISD::SETCC, DL, VT, TST, RHS, N->getOperand(2));
+    }
+  }
+
+  // setcc (iN (bitcast (vNi1 X))), 0, (eq|ne)
+  //   ==> setcc (iN (zext (i1 (vecreduce_or (vNi1 X))))), 0, (eq|ne)
+  if (DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+      (Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
+      LHS->getOpcode() == ISD::BITCAST) {
+    EVT ToVT = LHS->getValueType(0);
+    EVT FromVT = LHS->getOperand(0).getValueType();
+    if (FromVT.isFixedLengthVector() &&
+        FromVT.getVectorElementType() == MVT::i1) {
+      LHS = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, LHS->getOperand(0));
+      LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ToVT, LHS);
+      return DAG.getSetCC(DL, VT, LHS, RHS, Cond);
     }
   }
 
@@ -19376,13 +19478,15 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::VSELECT:
     return performVSelectCombine(N, DCI.DAG);
   case ISD::SETCC:
-    return performSETCCCombine(N, DAG);
+    return performSETCCCombine(N, DCI, DAG);
   case ISD::LOAD:
     if (performTBISimplification(N->getOperand(1), DCI, DAG))
       return SDValue(N, 0);
     break;
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
+  case ISD::MSTORE:
+    return performMSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:
     return performMaskedGatherScatterCombine(N, DCI, DAG);
@@ -19407,7 +19511,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performSpliceCombine(N, DAG);
   case AArch64ISD::UUNPKLO:
   case AArch64ISD::UUNPKHI:
-    return performUnpackCombine(N, DAG);
+    return performUnpackCombine(N, DAG, Subtarget);
   case AArch64ISD::UZP1:
     return performUzpCombine(N, DAG);
   case AArch64ISD::SETCC_MERGE_ZERO:

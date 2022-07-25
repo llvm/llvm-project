@@ -21,6 +21,10 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+static cl::opt<bool> EnableAddPhiTranslation(
+    "gvn-add-phi-translation", cl::init(false), cl::Hidden,
+    cl::desc("Enable phi-translation of add instructions"));
+
 static bool CanPHITrans(Instruction *Inst) {
   if (isa<PHINode>(Inst) ||
       isa<GetElementPtrInst>(Inst))
@@ -410,14 +414,14 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
     return Result;
   }
 
-#if 0
-  // FIXME: This code works, but it is unclear that we actually want to insert
-  // a big chain of computation in order to make a value available in a block.
-  // This needs to be evaluated carefully to consider its cost trade offs.
-
   // Handle add with a constant RHS.
-  if (Inst->getOpcode() == Instruction::Add &&
+  if (EnableAddPhiTranslation && Inst->getOpcode() == Instruction::Add &&
       isa<ConstantInt>(Inst->getOperand(1))) {
+
+    // FIXME: This code works, but it is unclear that we actually want to insert
+    // a big chain of computation in order to make a value available in a block.
+    // This needs to be evaluated carefully to consider its cost trade offs.
+
     // PHI translate the LHS.
     Value *OpVal = InsertPHITranslatedSubExpr(Inst->getOperand(0),
                                               CurBB, PredBB, DT, NewInsts);
@@ -431,7 +435,6 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
     NewInsts.push_back(Res);
     return Res;
   }
-#endif
 
   return nullptr;
 }

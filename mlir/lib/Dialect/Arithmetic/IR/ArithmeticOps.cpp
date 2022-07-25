@@ -10,7 +10,6 @@
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -95,10 +94,10 @@ void arith::ConstantOp::getAsmResultNames(
     if (intType && intType.getWidth() == 1)
       return setNameFn(getResult(), (intCst.getInt() ? "true" : "false"));
 
-    // Otherwise, build a compex name with the value and type.
+    // Otherwise, build a complex name with the value and type.
     SmallString<32> specialNameBuffer;
     llvm::raw_svector_ostream specialName(specialNameBuffer);
-    specialName << 'c' << intCst.getInt();
+    specialName << 'c' << intCst.getValue();
     if (intType)
       specialName << '_' << type;
     setNameFn(getResult(), specialName.str());
@@ -2039,35 +2038,6 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     break;
   }
   return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// DelinearizeIndexOp
-//===----------------------------------------------------------------------===//
-
-void arith::DelinearizeIndexOp::build(OpBuilder &builder,
-                                      OperationState &result,
-                                      Value linear_index,
-                                      ArrayRef<OpFoldResult> basis) {
-  result.addTypes(SmallVector<Type>(basis.size(), builder.getIndexType()));
-  result.addOperands(linear_index);
-  SmallVector<Value> basisValues =
-      llvm::to_vector(llvm::map_range(basis, [&](OpFoldResult ofr) -> Value {
-        Optional<int64_t> staticDim = getConstantIntValue(ofr);
-        if (staticDim.has_value())
-          return builder.create<arith::ConstantIndexOp>(result.location,
-                                                        *staticDim);
-        return ofr.dyn_cast<Value>();
-      }));
-  result.addOperands(basisValues);
-}
-
-LogicalResult arith::DelinearizeIndexOp::verify() {
-  if (getBasis().empty())
-    return emitOpError("basis should not be empty");
-  if (getNumResults() != getBasis().size())
-    return emitOpError("should return an index for each basis element");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -217,3 +217,22 @@ func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tenso
   // CHECK: }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @dealloc_generate_buffer
+func.func @dealloc_generate_buffer(%arg: tensor<*xf32>, %sz: index, %idx: index)
+  -> index
+{
+  // CHECK: memref.alloc
+  // CHECK: scf.parallel
+  // CHECK: memref.load
+  // CHECK: memref.dealloc
+  %0 = tensor.generate %sz {
+  ^bb0(%i : index):
+    %elem = tensor.dim %arg, %i : tensor<*xf32>
+    tensor.yield %elem : index
+  } : tensor<?xindex>
+  %r = tensor.extract %0[%idx] : tensor<?xindex>
+  return %r : index
+}

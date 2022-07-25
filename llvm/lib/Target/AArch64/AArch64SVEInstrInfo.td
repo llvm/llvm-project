@@ -287,6 +287,8 @@ def AArch64fadda_p_node : SDNode<"AArch64ISD::FADDA_PRED", SDT_AArch64ReduceWith
 def AArch64fadda_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
     [(AArch64fadda_p_node node:$op1, node:$op2, node:$op3),
      (AArch64fadda_p_node (SVEAllActive), node:$op2,
+             (vselect node:$op1, node:$op3, (splat_vector (f16 fpimm_minus0)))),
+     (AArch64fadda_p_node (SVEAllActive), node:$op2,
              (vselect node:$op1, node:$op3, (splat_vector (f32 fpimm_minus0)))),
      (AArch64fadda_p_node (SVEAllActive), node:$op2,
              (vselect node:$op1, node:$op3, (splat_vector (f64 fpimm_minus0))))]>;
@@ -337,6 +339,12 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
 
 def AArch64subr : PatFrag<(ops node:$op1, node:$op2),
                           (sub node:$op2, node:$op1)>;
+def AArch64add_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2),
+                             [(int_aarch64_sve_add node:$pred, node:$op1, node:$op2),
+                              (add node:$op1, (vselect node:$pred, node:$op2, (SVEDup0)))]>;
+def AArch64sub_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2),
+                             [(int_aarch64_sve_sub node:$pred, node:$op1, node:$op2),
+                              (sub node:$op1, (vselect node:$pred, node:$op2, (SVEDup0)))]>;
 
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -359,8 +367,8 @@ let Predicates = [HasSVEorSME] in {
   defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
   defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", AArch64bic>;
 
-  defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add",  "ADD_ZPZZ", int_aarch64_sve_add, DestructiveBinaryComm>;
-  defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub",  "SUB_ZPZZ", int_aarch64_sve_sub, DestructiveBinaryCommWithRev, "SUBR_ZPmZ">;
+  defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add",  "ADD_ZPZZ", AArch64add_m1, DestructiveBinaryComm>;
+  defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub",  "SUB_ZPZZ", AArch64sub_m1, DestructiveBinaryCommWithRev, "SUBR_ZPmZ">;
   defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", "SUBR_ZPZZ", int_aarch64_sve_subr, DestructiveBinaryCommWithRev, "SUB_ZPmZ", /*isReverseInstr*/ 1>;
 
   defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr", "ORR_ZPZZ", int_aarch64_sve_orr, DestructiveBinaryComm>;
@@ -712,6 +720,12 @@ let Predicates = [HasSVEorSME] in {
             (DUP_ZI_D $a, $b)>;
 
   // Duplicate immediate FP into all vector elements.
+  def : Pat<(nxv2f16 (splat_vector (f16 fpimm:$val))),
+            (DUP_ZR_H (MOVi32imm (bitcast_fpimm_to_i32 f16:$val)))>;
+  def : Pat<(nxv4f16 (splat_vector (f16 fpimm:$val))),
+            (DUP_ZR_H (MOVi32imm (bitcast_fpimm_to_i32 f16:$val)))>;
+  def : Pat<(nxv8f16 (splat_vector (f16 fpimm:$val))),
+            (DUP_ZR_H (MOVi32imm (bitcast_fpimm_to_i32 f16:$val)))>;
   def : Pat<(nxv2f32 (splat_vector (f32 fpimm:$val))),
             (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
   def : Pat<(nxv4f32 (splat_vector (f32 fpimm:$val))),

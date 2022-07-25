@@ -44,9 +44,7 @@ typedef SmallVector<InputInfo, 4> InputInfoList;
 
 class Command;
 class Compilation;
-class JobList;
 class JobAction;
-class SanitizerArgs;
 class ToolChain;
 
 /// Describes the kind of LTO mode selected via -f(no-)?lto(=.*)? options.

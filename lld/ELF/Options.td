@@ -50,10 +50,9 @@ def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">
 
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
-def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
-
-def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">,
+def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
+def : F<"build-id">, Alias<build_id>, AliasArgs<["fast"]>, HelpText<"Alias for --build-id=fast">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
@@ -119,12 +118,13 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
 
-defm color_diagnostics: BB<"color-diagnostics",
-  "Alias for --color-diagnostics=always",
-  "Alias for --color-diagnostics=never">;
-def color_diagnostics_eq: JJ<"color-diagnostics=">,
+def color_diagnostics: JJ<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
+def : Flag<["--"], "color-diagnostics">, Alias<color_diagnostics>, AliasArgs<["always"]>,
+  HelpText<"Alias for --color-diagnostics=always">;
+def : Flag<["--"], "no-color-diagnostics">, Alias<color_diagnostics>, AliasArgs<["never"]>,
+  HelpText<"Alias for --color-diagnostics=never">;
 
 def cref: FF<"cref">,
   HelpText<"Output cross reference table. If -Map is specified, print to the map file">;

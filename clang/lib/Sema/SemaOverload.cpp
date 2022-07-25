@@ -6400,6 +6400,17 @@ void Sema::AddOverloadCandidate(
     return;
   }
 
+  // Functions with internal linkage are only viable in the same module unit.
+  if (auto *MF = Function->getOwningModule()) {
+    if (getLangOpts().CPlusPlusModules && !MF->isModuleMapModule() &&
+        Function->getFormalLinkage() <= Linkage::InternalLinkage &&
+        !isModuleUnitOfCurrentTU(MF)) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_module_mismatched;
+      return;
+    }
+  }
+
   if (Function->isMultiVersion() && Function->hasAttr<TargetAttr>() &&
       !Function->getAttr<TargetAttr>()->isDefaultVersion()) {
     Candidate.Viable = false;

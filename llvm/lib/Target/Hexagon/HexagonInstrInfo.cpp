@@ -2253,15 +2253,6 @@ bool HexagonInstrInfo::isDuplexPair(const MachineInstr &MIa,
   return (isDuplexPairMatch(MIaG, MIbG) || isDuplexPairMatch(MIbG, MIaG));
 }
 
-bool HexagonInstrInfo::isEarlySourceInstr(const MachineInstr &MI) const {
-  if (MI.mayLoadOrStore() || MI.isCompare())
-    return true;
-
-  // Multiply
-  unsigned SchedClass = MI.getDesc().getSchedClass();
-  return is_TC4x(SchedClass) || is_TC3x(SchedClass);
-}
-
 bool HexagonInstrInfo::isEndLoopN(unsigned Opcode) const {
   return (Opcode == Hexagon::ENDLOOP0 ||
           Opcode == Hexagon::ENDLOOP1);
@@ -2415,43 +2406,6 @@ bool HexagonInstrInfo::isJumpWithinBranchRange(const MachineInstr &MI,
   case Hexagon::J4_cmpeqn1_tp1_jump_nt:
     return isInt<11>(offset);
   }
-}
-
-bool HexagonInstrInfo::isLateInstrFeedsEarlyInstr(const MachineInstr &LRMI,
-      const MachineInstr &ESMI) const {
-  bool isLate = isLateResultInstr(LRMI);
-  bool isEarly = isEarlySourceInstr(ESMI);
-
-  LLVM_DEBUG(dbgs() << "V60" << (isLate ? "-LR  " : " --  "));
-  LLVM_DEBUG(LRMI.dump());
-  LLVM_DEBUG(dbgs() << "V60" << (isEarly ? "-ES  " : " --  "));
-  LLVM_DEBUG(ESMI.dump());
-
-  if (isLate && isEarly) {
-    LLVM_DEBUG(dbgs() << "++Is Late Result feeding Early Source\n");
-    return true;
-  }
-
-  return false;
-}
-
-bool HexagonInstrInfo::isLateResultInstr(const MachineInstr &MI) const {
-  switch (MI.getOpcode()) {
-  case TargetOpcode::EXTRACT_SUBREG:
-  case TargetOpcode::INSERT_SUBREG:
-  case TargetOpcode::SUBREG_TO_REG:
-  case TargetOpcode::REG_SEQUENCE:
-  case TargetOpcode::IMPLICIT_DEF:
-  case TargetOpcode::COPY:
-  case TargetOpcode::INLINEASM:
-  case TargetOpcode::PHI:
-    return false;
-  default:
-    break;
-  }
-
-  unsigned SchedClass = MI.getDesc().getSchedClass();
-  return !is_TC1(SchedClass);
 }
 
 bool HexagonInstrInfo::isLateSourceInstr(const MachineInstr &MI) const {

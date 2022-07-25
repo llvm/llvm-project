@@ -45,18 +45,11 @@ define double @pred_fadda_nxv2f64(double %x, <vscale x 2 x double> %y, <vscale x
   ret double %fadda
 }
 
-; Currently the folding doesn't work for f16 element types, since -0.0 is not treated as a legal f16 immediate.
-
 define half @pred_fadda_nxv2f16(half %x, <vscale x 2 x half> %y, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: pred_fadda_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI3_0
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    ld1rh { z2.d }, p1/z, [x8]
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    fadda h0, p1, h0, z1.h
+; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %i = insertelement <vscale x 2 x half> poison, half -0.000000e+00, i32 0
@@ -69,13 +62,8 @@ define half @pred_fadda_nxv2f16(half %x, <vscale x 2 x half> %y, <vscale x 2 x i
 define half @pred_fadda_nxv4f16(half %x, <vscale x 4 x half> %y, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: pred_fadda_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI4_0
-; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    ld1rh { z2.s }, p1/z, [x8]
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    fadda h0, p1, h0, z1.h
+; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %i = insertelement <vscale x 4 x half> poison, half -0.000000e+00, i32 0
@@ -88,13 +76,8 @@ define half @pred_fadda_nxv4f16(half %x, <vscale x 4 x half> %y, <vscale x 4 x i
 define half @pred_fadda_nxv8f16(half %x, <vscale x 8 x half> %y, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: pred_fadda_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI5_0
-; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    ld1rh { z2.h }, p1/z, [x8]
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    fadda h0, p1, h0, z1.h
+; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %i = insertelement <vscale x 8 x half> poison, half -0.000000e+00, i32 0
