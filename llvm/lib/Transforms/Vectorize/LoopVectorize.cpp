@@ -798,8 +798,7 @@ public:
 
   // Override this function to handle the more complex control flow around the
   // three loops.
-  std::pair<BasicBlock *, Value *>
-  createVectorizedLoopSkeleton() final override {
+  std::pair<BasicBlock *, Value *> createVectorizedLoopSkeleton() final {
     return createEpilogueVectorizedLoopSkeleton();
   }
 
@@ -835,8 +834,7 @@ public:
                                        EPI, LVL, CM, BFI, PSI, Check) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
-  std::pair<BasicBlock *, Value *>
-  createEpilogueVectorizedLoopSkeleton() final override;
+  std::pair<BasicBlock *, Value *> createEpilogueVectorizedLoopSkeleton() final;
 
 protected:
   /// Emits an iteration count bypass check once for the main loop (when \p
@@ -866,8 +864,7 @@ public:
   }
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (ie the second pass of vplan execution).
-  std::pair<BasicBlock *, Value *>
-  createEpilogueVectorizedLoopSkeleton() final override;
+  std::pair<BasicBlock *, Value *> createEpilogueVectorizedLoopSkeleton() final;
 
 protected:
   /// Emits an iteration count bypass check after the main vector loop has

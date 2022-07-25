@@ -52,7 +52,7 @@ using RefactoringActionRules =
 class SourceChangeRefactoringRule : public RefactoringActionRuleBase {
 public:
   void invoke(RefactoringResultConsumer &Consumer,
-              RefactoringRuleContext &Context) final override {
+              RefactoringRuleContext &Context) final {
     Expected<AtomicChanges> Changes = createSourceReplacements(Context);
     if (!Changes)
       Consumer.handleError(Changes.takeError());
@@ -74,7 +74,7 @@ private:
 class FindSymbolOccurrencesRefactoringRule : public RefactoringActionRuleBase {
 public:
   void invoke(RefactoringResultConsumer &Consumer,
-              RefactoringRuleContext &Context) final override {
+              RefactoringRuleContext &Context) final {
     Expected<SymbolOccurrences> Occurrences = findSymbolOccurrences(Context);
     if (!Occurrences)
       Consumer.handleError(Occurrences.takeError());
