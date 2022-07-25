@@ -40,7 +40,6 @@ class LabelDecl;
 
 namespace ento {
 
-class BasicValueFactory;
 class CompoundValData;
 class LazyCompoundValData;
 class MemRegion;
