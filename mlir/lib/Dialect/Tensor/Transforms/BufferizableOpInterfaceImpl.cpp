@@ -1063,5 +1063,8 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
         *ctx);
     RankOp::attachInterface<RankOpInterface>(*ctx);
     ReshapeOp::attachInterface<ReshapeOpInterface>(*ctx);
+
+    // Load additional dialects of which ops may get created.
+    ctx->loadDialect<arith::ArithmeticDialect, scf::SCFDialect>();
   });
 }
