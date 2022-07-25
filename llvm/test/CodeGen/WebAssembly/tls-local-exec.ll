@@ -1,6 +1,13 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics | FileCheck %s --check-prefixes=CHECK,TLS
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics -fast-isel | FileCheck %s --check-prefixes=CHECK,TLS
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=-bulk-memory,atomics | FileCheck %s --check-prefixes=CHECK,NO-TLS
+; Run the tests with the `localexec` TLS mode specified.
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,TLS %s
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS %s
+
+; Also, run the same tests without a specified TLS mode--this should still emit `localexec` code on non-Emscripten targtes which don't currently support dynamic linking.
+; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,TLS %s
+; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS %s
+
+; Finally, when bulk memory is disabled, no TLS code should be generated.
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=-bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,NO-TLS %s
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: address_of_tls:
@@ -89,8 +96,8 @@ define i32 @tls_size() {
 ; CHECK-NEXT: .p2align 2
 ; CHECK-NEXT: tls:
 ; CHECK-NEXT: .int32 0
-@tls = internal thread_local(localexec) global i32 0
+@tls = internal thread_local[[TLS_MODE]] global i32 0
 
-@tls_external = external thread_local(localexec) global i32, align 4
+@tls_external = external thread_local[[TLS_MODE]] global i32, align 4
 
 declare i32 @llvm.wasm.tls.size.i32()
