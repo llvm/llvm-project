@@ -25,7 +25,6 @@ namespace mlir {
 class AffineApplyOp;
 class AffineBound;
 class AffineValueMap;
-class RewriterBase;
 
 /// TODO: These should be renamed if they are on the mlir namespace.
 ///       Ideally, they should go in a mlir::affine:: namespace.
@@ -384,21 +383,20 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
 /// Constructs an AffineApplyOp that applies `map` to `operands` after composing
 /// the map with the maps of any other AffineApplyOp supplying the operands,
 /// then immediately attempts to fold it. If folding results in a constant
-/// value, erases all created ops. The `map` must be a single-result affine map.
-OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+/// value, no ops are actually created. The `map` must be a single-result affine
+/// map.
+OpFoldResult makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                            AffineMap map,
                                            ArrayRef<OpFoldResult> operands);
 /// Variant of `makeComposedFoldedAffineApply` that applies to an expression.
-OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+OpFoldResult makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                            AffineExpr expr,
                                            ArrayRef<OpFoldResult> operands);
 /// Variant of `makeComposedFoldedAffineApply` suitable for multi-result maps.
 /// Note that this may create as many affine.apply operations as the map has
 /// results given that affine.apply must be single-result.
-SmallVector<OpFoldResult>
-makeComposedFoldedMultiResultAffineApply(RewriterBase &b, Location loc,
-                                         AffineMap map,
-                                         ArrayRef<OpFoldResult> operands);
+SmallVector<OpFoldResult> makeComposedFoldedMultiResultAffineApply(
+    OpBuilder &b, Location loc, AffineMap map, ArrayRef<OpFoldResult> operands);
 
 /// Returns an AffineMinOp obtained by composing `map` and `operands` with
 /// AffineApplyOps supplying those operands.
@@ -407,15 +405,15 @@ Value makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
 
 /// Constructs an AffineMinOp that computes a minimum across the results of
 /// applying `map` to `operands`, then immediately attempts to fold it. If
-/// folding results in a constant value, erases all created ops.
-OpFoldResult makeComposedFoldedAffineMin(RewriterBase &b, Location loc,
+/// folding results in a constant value, no ops are actually created.
+OpFoldResult makeComposedFoldedAffineMin(OpBuilder &b, Location loc,
                                          AffineMap map,
                                          ArrayRef<OpFoldResult> operands);
 
 /// Constructs an AffineMinOp that computes a maximum across the results of
 /// applying `map` to `operands`, then immediately attempts to fold it. If
-/// folding results in a constant value, erases all created ops.
-OpFoldResult makeComposedFoldedAffineMax(RewriterBase &b, Location loc,
+/// folding results in a constant value, no ops are actually created.
+OpFoldResult makeComposedFoldedAffineMax(OpBuilder &b, Location loc,
                                          AffineMap map,
                                          ArrayRef<OpFoldResult> operands);
 
