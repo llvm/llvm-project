@@ -262,8 +262,9 @@ information) and construct our function definition:
   DISubprogram *SP = DBuilder->createFunction(
       FContext, P.getName(), StringRef(), Unit, LineNo,
       CreateFunctionType(TheFunction->arg_size()),
-      false /* internal linkage */, true /* definition */, ScopeLine,
-      DINode::FlagPrototyped, false);
+      ScopeLine,
+      DINode::FlagPrototyped,
+      DISubprogram::SPFlagDefinition);
   TheFunction->setSubprogram(SP);
 
 and we now have an DISubprogram that contains a reference to all of our
