@@ -483,6 +483,8 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.polyeval
     libc.include.math
   COMPILE_OPTIONS
