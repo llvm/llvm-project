@@ -522,6 +522,11 @@ def ConvertMemRefToLLVM : Pass<"convert-memref-to-llvm", "ModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"useGenericFunctions", "use-generic-functions",
+           "bool",
+           /*default=*/"false",
+           "Use generic allocation and deallocation functions instead of the "
+           "classic 'malloc', 'aligned_alloc' and 'free' functions">
   ];
 }
 

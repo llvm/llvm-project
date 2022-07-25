@@ -253,7 +253,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
 
   CsectGroup &getCsectGroup(const MCSectionXCOFF *MCSec);
 
-  virtual void reset() override;
+  void reset() override;
 
   void executePostLayoutBinding(MCAssembler &, const MCAsmLayout &) override;
 

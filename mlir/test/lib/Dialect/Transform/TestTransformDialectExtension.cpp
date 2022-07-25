@@ -198,6 +198,16 @@ DiagnosedSilenceableFailure mlir::test::TestRemoveTestExtensionOp::apply(
   state.removeExtension<TestTransformStateExtension>();
   return DiagnosedSilenceableFailure::success();
 }
+
+DiagnosedSilenceableFailure
+mlir::test::TestReversePayloadOpsOp::apply(transform::TransformResults &results,
+                                           transform::TransformState &state) {
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  auto reversedOps = llvm::to_vector(llvm::reverse(payloadOps));
+  results.set(getResult().cast<OpResult>(), reversedOps);
+  return DiagnosedSilenceableFailure::success();
+}
+
 DiagnosedSilenceableFailure mlir::test::TestTransformOpWithRegions::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   return DiagnosedSilenceableFailure::success();
@@ -295,7 +305,9 @@ class TestTransformDialectExtension
     : public transform::TransformDialectExtension<
           TestTransformDialectExtension> {
 public:
-  TestTransformDialectExtension() {
+  using Base::Base;
+
+  void init() {
     declareDependentDialect<pdl::PDLDialect>();
     registerTransformOps<TestTransformOp,
                          TestTransformUnrestrictedOpNoInterface,

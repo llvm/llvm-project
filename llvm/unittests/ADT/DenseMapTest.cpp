@@ -607,6 +607,15 @@ TEST(DenseMapCustomTest, LargeSmallDenseMapCompaction) {
   EXPECT_TRUE(map.find(0) == map.end());
 }
 
+TEST(DenseMapCustomTest, SmallDenseMapWithNumBucketsNonPowerOf2) {
+  // Is not power of 2.
+  const unsigned NumInitBuckets = 33;
+  // Power of 2 less then NumInitBuckets.
+  constexpr unsigned InlineBuckets = 4;
+  // Constructor should not trigger assert.
+  SmallDenseMap<int, int, InlineBuckets> map(NumInitBuckets);
+}
+
 TEST(DenseMapCustomTest, TryEmplaceTest) {
   DenseMap<int, std::unique_ptr<int>> Map;
   std::unique_ptr<int> P(new int(2));

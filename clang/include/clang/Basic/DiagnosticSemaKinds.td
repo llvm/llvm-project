@@ -1526,12 +1526,12 @@ def err_messaging_class_with_direct_method : Error<
 
 // C++ declarations
 def err_static_assert_expression_is_not_constant : Error<
-  "static_assert expression is not an integral constant expression">;
+  "static assertion expression is not an integral constant expression">;
 def err_constexpr_if_condition_expression_is_not_constant : Error<
   "constexpr if condition is not a constant expression">;
-def err_static_assert_failed : Error<"static_assert failed%select{: %1|}0">;
+def err_static_assert_failed : Error<"static assertion failed%select{: %1|}0">;
 def err_static_assert_requirement_failed : Error<
-  "static_assert failed due to requirement '%0'%select{: %2|}1">;
+  "static assertion failed due to requirement '%0'%select{: %2|}1">;
 
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
@@ -5774,6 +5774,8 @@ def warn_forward_class_redefinition : Warning<
 def err_redefinition_different_typedef : Error<
   "%select{typedef|type alias|type alias template}0 "
   "redefinition with different types%diff{ ($ vs $)|}1,2">;
+def err_redefinition_different_concept : Error<
+  "redefinition of concept %0 with different template parameters or requirements">;
 def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "
   "type|typedef|type alias|template|type alias template|template "

@@ -511,6 +511,12 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   return newOp;
 }
 
+/// Return `true` if the buffer of given OpResult should be deallocated. This
+/// function should be called during `BufferizableOpInterface::bufferize`
+/// implementations that allocate a new buffer for the given OpResult.
+bool shouldDeallocateOpResult(OpResult opResult,
+                              const BufferizationOptions &options);
+
 /// Return a MemRefType to which the type of the given value can be bufferized.
 ///
 /// If possible, op bufferization implementations should not use this function
