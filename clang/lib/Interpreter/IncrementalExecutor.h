@@ -21,7 +21,6 @@
 
 namespace llvm {
 class Error;
-class Module;
 namespace orc {
 class LLJIT;
 class ThreadSafeContext;

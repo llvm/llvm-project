@@ -6320,6 +6320,24 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 
 struct ImportAutoFunctions : ASTImporterOptionSpecificTestBase {};
 
+TEST_P(ImportAutoFunctions, ReturnWithTemplateWithIntegerArgDeclaredInside) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template<int> struct Tmpl {};
+      auto foo() {
+        constexpr int X = 1;
+        return Tmpl<X>();
+      }
+      )",
+      Lang_CXX14, "input0.cc");
+  FunctionDecl *From = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("foo")));
+
+  FunctionDecl *To = Import(From, Lang_CXX14);
+  EXPECT_TRUE(To);
+  EXPECT_TRUE(isa<AutoType>(To->getReturnType()));
+}
+
 TEST_P(ImportAutoFunctions, ReturnWithTemplateWithStructDeclaredInside1) {
   Decl *FromTU = getTuDecl(
       R"(

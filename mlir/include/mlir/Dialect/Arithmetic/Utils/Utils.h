@@ -108,22 +108,6 @@ private:
   OpBuilder &b;
   Location loc;
 };
-
-/// Holds the result of (div a, b)  and (mod a, b)
-struct DivModValue {
-  Value quotient;
-  Value remainder;
-};
-
-/// Create IR to calculate (div a, b)  and (mod a, b)
-DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
-
-/// Generate the IR to delinearize `linearIndex` given the `basis` and return
-/// the multi-index.
-FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
-                                               Value linearIndex,
-                                               ArrayRef<Value> dimSizes);
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_ARITHMETIC_UTILS_UTILS_H

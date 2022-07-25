@@ -192,8 +192,8 @@ TEST_F(FIRBuilderTest, createGlobal1) {
   EXPECT_TRUE(global.getConstant().has_value());
   EXPECT_EQ(i64Type, global.getType());
   EXPECT_TRUE(global.getLinkName().has_value());
-  EXPECT_EQ(builder.createInternalLinkage().getValue(),
-      global.getLinkName().getValue());
+  EXPECT_EQ(
+      builder.createInternalLinkage().getValue(), global.getLinkName().value());
   EXPECT_FALSE(global.getInitVal().has_value());
 
   auto g1 = builder.getNamedGlobal("global1");
@@ -216,12 +216,12 @@ TEST_F(FIRBuilderTest, createGlobal2) {
   EXPECT_FALSE(global.getConstant().has_value());
   EXPECT_EQ(i32Type, global.getType());
   EXPECT_TRUE(global.getInitVal().has_value());
-  EXPECT_TRUE(global.getInitVal().getValue().isa<mlir::IntegerAttr>());
+  EXPECT_TRUE(global.getInitVal().value().isa<mlir::IntegerAttr>());
   EXPECT_EQ(
-      16, global.getInitVal().getValue().cast<mlir::IntegerAttr>().getValue());
+      16, global.getInitVal().value().cast<mlir::IntegerAttr>().getValue());
   EXPECT_TRUE(global.getLinkName().has_value());
-  EXPECT_EQ(builder.createLinkOnceLinkage().getValue(),
-      global.getLinkName().getValue());
+  EXPECT_EQ(
+      builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
 }
 
 TEST_F(FIRBuilderTest, uniqueCFIdent) {
@@ -310,8 +310,8 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
   auto addrOp = dyn_cast<fir::AddrOfOp>(addr.getDefiningOp());
   auto symbol = addrOp.getSymbol().getRootReference().getValue();
   auto global = builder.getNamedGlobal(symbol);
-  EXPECT_EQ(builder.createLinkOnceLinkage().getValue(),
-      global.getLinkName().getValue());
+  EXPECT_EQ(
+      builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
   EXPECT_EQ(fir::CharacterType::get(builder.getContext(), 1, strValue.size()),
       global.getType());
 
@@ -334,7 +334,7 @@ TEST_F(FIRBuilderTest, allocateLocal) {
   auto allocaOp = dyn_cast<fir::AllocaOp>(var.getDefiningOp());
   EXPECT_EQ(builder.getI64Type(), allocaOp.getInType());
   EXPECT_TRUE(allocaOp.getBindcName().has_value());
-  EXPECT_EQ(varName, allocaOp.getBindcName().getValue());
+  EXPECT_EQ(varName, allocaOp.getBindcName().value());
   EXPECT_FALSE(allocaOp.getUniqName().has_value());
   EXPECT_FALSE(allocaOp.getPinned());
   EXPECT_EQ(0u, allocaOp.getTypeparams().size());

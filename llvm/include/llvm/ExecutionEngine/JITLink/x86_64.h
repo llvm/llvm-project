@@ -126,6 +126,24 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///
   BranchPCRel32,
 
+  /// A 32-bit PC-relative relocation.
+  ///
+  /// Represents a data/control flow instruction using PC-relative addressing
+  /// to a target.
+  ///
+  /// The fixup expression for this kind includes an implicit offset to account
+  /// for the PC (unlike the Delta edges) so that a PCRel32 with a target
+  /// T and addend zero is a call/branch to the start (offset zero) of T.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - (Fixup + 4) + Addend : int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  PCRel32,
+
   /// A 32-bit PC-relative branch to a pointer jump stub.
   ///
   /// The target of this relocation should be a pointer jump stub of the form:
@@ -343,7 +361,9 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
   ///     phase will result in an assert/unreachable during the fixup phase.
   ///
-  RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable
+  RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable,
+  // First platform specific relocation.
+  FirstPlatformRelocation
 };
 
 /// Returns a string name for the given x86-64 edge. For debugging purposes
@@ -395,6 +415,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
 
+  case PCRel32:
   case BranchPCRel32:
   case BranchPCRel32ToPtrJumpStub:
   case BranchPCRel32ToPtrJumpStubBypassable:

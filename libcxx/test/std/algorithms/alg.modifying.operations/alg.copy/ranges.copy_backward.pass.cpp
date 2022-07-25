@@ -56,7 +56,7 @@ static_assert(!HasCopyBackwardR<InputRangeNotSentinelEqualityComparableWith, int
 
 static_assert(std::is_same_v<std::ranges::copy_result<int, long>, std::ranges::in_out_result<int, long>>);
 
-template <class In, class Out, class Sent = In>
+template <class In, class Out, class Sent>
 constexpr void test_iterators() {
   { // simple test
     {
@@ -100,18 +100,25 @@ constexpr void test_iterators() {
   }
 }
 
+template <class InIter, class OutIter>
+constexpr void test_sentinels() {
+  test_iterators<InIter, OutIter, InIter>();
+  test_iterators<InIter, OutIter, sentinel_wrapper<InIter>>();
+  test_iterators<InIter, OutIter, sized_sentinel<InIter>>();
+}
+
 template <class Out>
 constexpr void test_in_iterators() {
-  test_iterators<bidirectional_iterator<int*>, Out>();
-  test_iterators<random_access_iterator<int*>, Out>();
-  test_iterators<contiguous_iterator<int*>, Out>();
+  test_sentinels<bidirectional_iterator<int*>, Out>();
+  test_sentinels<random_access_iterator<int*>, Out>();
+  test_sentinels<contiguous_iterator<int*>, Out>();
 }
 
 template <class Out>
 constexpr void test_proxy_in_iterators() {
-  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
+  test_sentinels<ProxyIterator<bidirectional_iterator<int*>>, Out>();
+  test_sentinels<ProxyIterator<random_access_iterator<int*>>, Out>();
+  test_sentinels<ProxyIterator<contiguous_iterator<int*>>, Out>();
 }
 
 constexpr bool test() {
