@@ -5774,6 +5774,8 @@ def warn_forward_class_redefinition : Warning<
 def err_redefinition_different_typedef : Error<
   "%select{typedef|type alias|type alias template}0 "
   "redefinition with different types%diff{ ($ vs $)|}1,2">;
+def err_redefinition_different_concept : Error<
+  "redefinition of concept %0 with different template parameters or requirements">;
 def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "
   "type|typedef|type alias|template|type alias template|template "
