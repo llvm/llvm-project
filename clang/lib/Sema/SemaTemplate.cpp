@@ -20,6 +20,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/Stack.h"
@@ -8707,21 +8708,57 @@ Decl *Sema::ActOnConceptDefinition(Scope *S,
   // Check for conflicting previous declaration.
   DeclarationNameInfo NameInfo(NewDecl->getDeclName(), NameLoc);
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                        ForVisibleRedeclaration);
+                        forRedeclarationInCurContext());
   LookupName(Previous, S);
-
   FilterLookupForScope(Previous, DC, S, /*ConsiderLinkage=*/false,
                        /*AllowInlineNamespace*/false);
-  if (!Previous.empty()) {
-    auto *Old = Previous.getRepresentativeDecl();
-    Diag(NameLoc, isa<ConceptDecl>(Old) ? diag::err_redefinition :
-         diag::err_redefinition_different_kind) << NewDecl->getDeclName();
-    Diag(Old->getLocation(), diag::note_previous_definition);
-  }
+  bool AddToScope = true;
+  CheckConceptRedefinition(NewDecl, Previous, AddToScope);
 
   ActOnDocumentableDecl(NewDecl);
-  PushOnScopeChains(NewDecl, S);
+  if (AddToScope)
+    PushOnScopeChains(NewDecl, S);
   return NewDecl;
+}
+
+void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
+                                    LookupResult &Previous, bool &AddToScope) {
+  AddToScope = true;
+
+  if (Previous.empty())
+    return;
+
+  auto *OldConcept = dyn_cast<ConceptDecl>(Previous.getRepresentativeDecl());
+  if (!OldConcept) {
+    auto *Old = Previous.getRepresentativeDecl();
+    Diag(NewDecl->getLocation(), diag::err_redefinition_different_kind)
+        << NewDecl->getDeclName();
+    notePreviousDefinition(Old, NewDecl->getLocation());
+    AddToScope = false;
+    return;
+  }
+  // Check if we can merge with a concept declaration.
+  bool IsSame = Context.isSameEntity(NewDecl, OldConcept);
+  if (!IsSame) {
+    Diag(NewDecl->getLocation(), diag::err_redefinition_different_concept)
+        << NewDecl->getDeclName();
+    notePreviousDefinition(OldConcept, NewDecl->getLocation());
+    AddToScope = false;
+    return;
+  }
+  if (hasReachableDefinition(OldConcept)) {
+    Diag(NewDecl->getLocation(), diag::err_redefinition)
+        << NewDecl->getDeclName();
+    notePreviousDefinition(OldConcept, NewDecl->getLocation());
+    AddToScope = false;
+    return;
+  }
+  if (!Previous.isSingleResult()) {
+    // FIXME: we should produce an error in case of ambig and failed lookups.
+    //        Other decls (e.g. namespaces) also have this shortcoming.
+    return;
+  }
+  Context.setPrimaryMergedDecl(NewDecl, OldConcept);
 }
 
 /// \brief Strips various properties off an implicit instantiation
