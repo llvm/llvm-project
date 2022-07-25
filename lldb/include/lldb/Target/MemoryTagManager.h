@@ -113,6 +113,21 @@ public:
   UnpackTagsData(const std::vector<uint8_t> &tags,
                  size_t granules = 0) const = 0;
 
+  // Unpack tags from a corefile segment containing compressed tags
+  // (compression that may be different from the one used for GDB transport).
+  //
+  // This method asumes that:
+  // * addr and len have been granule aligned by a tag manager
+  // * addr >= tag_segment_virtual_address
+  //
+  // 'reader' will always be a wrapper around a CoreFile in real use
+  // but allows testing without having to mock a CoreFile.
+  typedef std::function<size_t(lldb::offset_t, size_t, void *)> CoreReaderFn;
+  std::vector<lldb::addr_t> virtual UnpackTagsFromCoreFileSegment(
+      CoreReaderFn reader, lldb::addr_t tag_segment_virtual_address,
+      lldb::addr_t tag_segment_data_address, lldb::addr_t addr,
+      size_t len) const = 0;
+
   // Pack uncompressed tags into their storage format (e.g. for gdb QMemTags).
   // Checks that each tag is within the expected value range.
   // We do not check the number of tags or range they apply to because

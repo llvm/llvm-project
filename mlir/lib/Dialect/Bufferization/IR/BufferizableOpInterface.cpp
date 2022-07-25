@@ -206,6 +206,29 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   return success();
 }
 
+bool bufferization::shouldDeallocateOpResult(
+    OpResult opResult, const BufferizationOptions &options) {
+  Operation *op = opResult.getOwner();
+  assert(options.dynCastBufferizableOp(op).bufferizesToAllocation(opResult) &&
+         "expected that op allocates");
+
+  AnalysisState analysisState(options);
+  if (op->hasAttr(BufferizationDialect::kEscapeAttrName)) {
+    // AllocTensorOp has one result.
+    ArrayAttr escapeAttr =
+        op->getAttr(BufferizationDialect::kEscapeAttrName).cast<ArrayAttr>();
+    return !escapeAttr[0].cast<BoolAttr>().getValue();
+  }
+
+  // No "escape" annotation found.
+  if (options.createDeallocs) {
+    // Perform an ad-hoc analysis.
+    return !analysisState.isTensorYielded(opResult);
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // OpFilter
 //===----------------------------------------------------------------------===//

@@ -1,6 +1,9 @@
 ! Test the MLIR pass pipeline
 
 ! RUN: bbc --mlir-pass-statistics --mlir-pass-statistics-display=pipeline %s 2>&1 | FileCheck %s
+
+! REQUIRES: asserts
+
 end program
 
 ! CHECK: Pass statistics report
@@ -29,6 +32,7 @@ end program
 ! CHECK-NEXT:   MemoryAllocationOpt
 
 ! CHECK-NEXT: Inliner
+! CHECK-NEXT: SimplifyRegionLite
 ! CHECK-NEXT: CSE
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd

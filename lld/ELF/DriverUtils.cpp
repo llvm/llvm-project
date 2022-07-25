@@ -52,23 +52,16 @@ ELFOptTable::ELFOptTable() : OptTable(optInfo) {}
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
 static void handleColorDiagnostics(opt::InputArgList &args) {
-  auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
-                              OPT_no_color_diagnostics);
+  auto *arg = args.getLastArg(OPT_color_diagnostics);
   if (!arg)
     return;
-  if (arg->getOption().getID() == OPT_color_diagnostics) {
+  StringRef s = arg->getValue();
+  if (s == "always")
     lld::errs().enable_colors(true);
-  } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
+  else if (s == "never")
     lld::errs().enable_colors(false);
-  } else {
-    StringRef s = arg->getValue();
-    if (s == "always")
-      lld::errs().enable_colors(true);
-    else if (s == "never")
-      lld::errs().enable_colors(false);
-    else if (s != "auto")
-      error("unknown option: --color-diagnostics=" + s);
-  }
+  else if (s != "auto")
+    error("unknown option: --color-diagnostics=" + s);
 }
 
 static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
@@ -187,6 +180,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       break;
     case OPT_call_graph_ordering_file:
     case OPT_dynamic_list:
+    case OPT_export_dynamic_symbol_list:
     case OPT_just_symbols:
     case OPT_library_path:
     case OPT_retain_symbols_file:

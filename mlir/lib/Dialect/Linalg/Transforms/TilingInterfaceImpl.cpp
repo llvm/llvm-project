@@ -160,12 +160,12 @@ struct LinalgOpTilingInterface
     if (!indexingMap.isPermutation()) {
       SmallVector<Range> iterationDomain =
           tilingInterfaceOp.getIterationDomain(b);
-      for (auto range : llvm::enumerate(iterationDomain)) {
+      for (const auto &range : llvm::enumerate(iterationDomain)) {
         iterationTileOffsets[range.index()] = range.value().offset;
         iterationTileSizes[range.index()] = range.value().size;
       }
     }
-    for (auto resultExpr : llvm::enumerate(indexingMap.getResults())) {
+    for (const auto &resultExpr : llvm::enumerate(indexingMap.getResults())) {
       unsigned dimPosition =
           resultExpr.value().cast<AffineDimExpr>().getPosition();
       iterationTileOffsets[dimPosition] = offsets[resultExpr.index()];

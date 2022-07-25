@@ -42,9 +42,12 @@ set(MLIR_CONFIG_INCLUDE_DIRS)
 
 # For compatibility with projects that include(MLIRConfig)
 # via CMAKE_MODULE_PATH, place API modules next to it.
+# Copy without source permissions because the source could be read-only,
+# but we need to write into the copied folder.
 # This should be removed in the future.
 file(COPY .
   DESTINATION ${mlir_cmake_builddir}
+  NO_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN *.cmake
   PATTERN CMakeFiles EXCLUDE
   )

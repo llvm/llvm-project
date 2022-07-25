@@ -629,35 +629,6 @@ static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2]) {
   return false;
 }
 
-static bool FindRacyAddress(const RacyAddress &ra0) {
-  for (uptr i = 0; i < ctx->racy_addresses.Size(); i++) {
-    RacyAddress ra2 = ctx->racy_addresses[i];
-    uptr maxbeg = max(ra0.addr_min, ra2.addr_min);
-    uptr minend = min(ra0.addr_max, ra2.addr_max);
-    if (maxbeg < minend) {
-      VPrintf(2, "ThreadSanitizer: suppressing report as doubled (addr)\n");
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool HandleRacyAddress(ThreadState *thr, uptr addr_min, uptr addr_max) {
-  if (!flags()->suppress_equal_addresses)
-    return false;
-  RacyAddress ra0 = {addr_min, addr_max};
-  {
-    ReadLock lock(&ctx->racy_mtx);
-    if (FindRacyAddress(ra0))
-      return true;
-  }
-  Lock lock(&ctx->racy_mtx);
-  if (FindRacyAddress(ra0))
-    return true;
-  ctx->racy_addresses.PushBack(ra0);
-  return false;
-}
-
 bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
   // These should have been checked in ShouldReport.
   // It's too late to check them here, we have already taken locks.
@@ -730,6 +701,11 @@ static bool IsFiredSuppression(Context *ctx, ReportType type, uptr addr) {
   return false;
 }
 
+static bool SpuriousRace(Shadow old) {
+  Shadow last(LoadShadow(&ctx->last_spurious_race));
+  return last.sid() == old.sid() && last.epoch() == old.epoch();
+}
+
 void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
                 AccessType typ0) {
   CheckedMutex::CheckNoLocks();
@@ -750,6 +726,8 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
       ((typ0 & kAccessAtomic) || (typ1 & kAccessAtomic)) &&
       !(typ0 & kAccessFree) && !(typ1 & kAccessFree))
     return;
+  if (SpuriousRace(old))
+    return;
 
   const uptr kMop = 2;
   Shadow s[kMop] = {cur, old};
@@ -760,8 +738,6 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   uptr addr_min = min(addr0, addr1);
   uptr addr_max = max(end0, end1);
   if (IsExpectedReport(addr_min, addr_max - addr_min))
-    return;
-  if (HandleRacyAddress(thr, addr_min, addr_max))
     return;
 
   ReportType rep_typ = ReportTypeRace;
@@ -791,9 +767,13 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   Lock slot_lock(&ctx->slots[static_cast<uptr>(s[1].sid())].mtx);
   ThreadRegistryLock l0(&ctx->thread_registry);
   Lock slots_lock(&ctx->slot_mtx);
-  if (!RestoreStack(EventType::kAccessExt, s[1].sid(), s[1].epoch(), addr1,
-                    size1, typ1, &tids[1], &traces[1], mset[1], &tags[1]))
+  if (SpuriousRace(old))
     return;
+  if (!RestoreStack(EventType::kAccessExt, s[1].sid(), s[1].epoch(), addr1,
+                    size1, typ1, &tids[1], &traces[1], mset[1], &tags[1])) {
+    StoreShadow(&ctx->last_spurious_race, old.raw());
+    return;
+  }
 
   if (IsFiredSuppression(ctx, rep_typ, traces[1]))
     return;

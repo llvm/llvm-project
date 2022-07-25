@@ -748,7 +748,7 @@ inline uint64_t alignTo(uint64_t Value, uint64_t Align) {
 }
 
 inline uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
-  assert(Align != 0 && (Align & Align - 1) == 0 &&
+  assert(Align != 0 && (Align & (Align - 1)) == 0 &&
          "Align must be a power of 2");
   return (Value + Align - 1) & -Align;
 }

@@ -53,7 +53,7 @@ public:
                      bool GenerateOnExit);
   ~ReproducerGenerate() override;
 
-  virtual void generate() override;
+  void generate() override;
 
 private:
   /// The path to the reproducer.

@@ -521,6 +521,8 @@ public:
 
   bool GetSaveCoreSupported() const;
 
+  llvm::Expected<int> KillProcess(lldb::pid_t pid);
+
 protected:
   LazyBool m_supports_not_sending_acks = eLazyBoolCalculate;
   LazyBool m_supports_thread_suffix = eLazyBoolCalculate;
