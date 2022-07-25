@@ -32,15 +32,12 @@ public:
 
 template <typename ChildType>
 class NullEnumerator : public IPDBEnumChildren<ChildType> {
-  virtual uint32_t getChildCount() const override { return 0; }
-  virtual std::unique_ptr<ChildType>
-  getChildAtIndex(uint32_t Index) const override {
+  uint32_t getChildCount() const override { return 0; }
+  std::unique_ptr<ChildType> getChildAtIndex(uint32_t Index) const override {
     return nullptr;
   }
-  virtual std::unique_ptr<ChildType> getNext() override {
-    return nullptr;
-  }
-  virtual void reset() override {}
+  std::unique_ptr<ChildType> getNext() override { return nullptr; }
+  void reset() override {}
 };
 
 } // end namespace pdb

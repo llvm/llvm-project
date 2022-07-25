@@ -102,9 +102,9 @@ struct AutoInitRemark : public MemoryOpRemark {
   static bool canHandle(const Instruction *I);
 
 protected:
-  virtual std::string explainSource(StringRef Type) const override;
-  virtual StringRef remarkName(RemarkKind RK) const override;
-  virtual DiagnosticKind diagnosticKind() const override {
+  std::string explainSource(StringRef Type) const override;
+  StringRef remarkName(RemarkKind RK) const override;
+  DiagnosticKind diagnosticKind() const override {
     return DK_OptimizationRemarkMissed;
   }
 };

@@ -28,7 +28,7 @@ public:
 
   void endModule() override;
   void beginFunction(const MachineFunction *MF) override {}
-  virtual void markFunctionEnd() override;
+  void markFunctionEnd() override;
   void endFunction(const MachineFunction *MF) override;
 
 protected:
