@@ -154,20 +154,20 @@ static bool hasFPAssociativeFlags(Instruction *I) {
 /// Return true if V is an instruction of the specified opcode and if it
 /// only has one use.
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode) {
-  auto *I = dyn_cast<Instruction>(V);
-  if (I && I->hasOneUse() && I->getOpcode() == Opcode)
-    if (!isa<FPMathOperator>(I) || hasFPAssociativeFlags(I))
-      return cast<BinaryOperator>(I);
+  auto *BO = dyn_cast<BinaryOperator>(V);
+  if (BO && BO->hasOneUse() && BO->getOpcode() == Opcode)
+    if (!isa<FPMathOperator>(BO) || hasFPAssociativeFlags(BO))
+      return BO;
   return nullptr;
 }
 
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
                                         unsigned Opcode2) {
-  auto *I = dyn_cast<Instruction>(V);
-  if (I && I->hasOneUse() &&
-      (I->getOpcode() == Opcode1 || I->getOpcode() == Opcode2))
-    if (!isa<FPMathOperator>(I) || hasFPAssociativeFlags(I))
-      return cast<BinaryOperator>(I);
+  auto *BO = dyn_cast<BinaryOperator>(V);
+  if (BO && BO->hasOneUse() &&
+      (BO->getOpcode() == Opcode1 || BO->getOpcode() == Opcode2))
+    if (!isa<FPMathOperator>(BO) || hasFPAssociativeFlags(BO))
+      return BO;
   return nullptr;
 }
 
