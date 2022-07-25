@@ -1278,8 +1278,9 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       Type::eEncodingIsUID, &attrs.decl, clang_type, Type::ResolveState::Full);
 }
 
-TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
-                                           ParsedDWARFTypeAttributes &attrs) {
+TypeSP
+DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
+                                    const ParsedDWARFTypeAttributes &attrs) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
 
   DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
@@ -1292,17 +1293,18 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
     return nullptr;
 
   llvm::Optional<SymbolFile::ArrayInfo> array_info = ParseChildArrayInfo(die);
+  uint32_t byte_stride = attrs.byte_stride;
+  uint32_t bit_stride = attrs.bit_stride;
   if (array_info) {
-    attrs.byte_stride = array_info->byte_stride;
-    attrs.bit_stride = array_info->bit_stride;
+    byte_stride = array_info->byte_stride;
+    bit_stride = array_info->bit_stride;
   }
-  if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
-    attrs.byte_stride = element_type->GetByteSize(nullptr).value_or(0);
+  if (byte_stride == 0 && bit_stride == 0)
+    byte_stride = element_type->GetByteSize(nullptr).value_or(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
   RequireCompleteType(array_element_type);
 
-  uint64_t array_element_bit_stride =
-      attrs.byte_stride * 8 + attrs.bit_stride;
+  uint64_t array_element_bit_stride = byte_stride * 8 + bit_stride;
   CompilerType clang_type;
   if (array_info && array_info->element_orders.size() > 0) {
     uint64_t num_elements = 0;
