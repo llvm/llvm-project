@@ -363,9 +363,17 @@ static void createStores(RewriterBase &rewriter, Location loc, int dim,
 struct FromElementsOpInterface
     : public BufferizableOpInterface::ExternalModel<FromElementsOpInterface,
                                                     tensor::FromElementsOp> {
+
+  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+    return true;
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
+    // Should the buffer be deallocated?
+    bool dealloc = shouldDeallocateOpResult(
+        fromElementsOp.getResult().cast<OpResult>(), options);
 
     // TODO: Implement memory space for this op.
     if (options.defaultMemorySpace != static_cast<unsigned>(0))
@@ -376,11 +384,10 @@ struct FromElementsOpInterface
     auto tensorType = fromElementsOp.getType().cast<RankedTensorType>();
     auto shape = tensorType.getShape();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
-    AnalysisState analysisState(options);
-    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
-        rewriter, loc, fromElementsOp.getResult(),
-        analysisState.isTensorYielded(fromElementsOp.getResult()), options,
-        /*copy=*/false);
+    FailureOr<Value> tensorAlloc =
+        allocateTensorForShapedValue(rewriter, loc, fromElementsOp.getResult(),
+                                     /*escape=*/!dealloc, options,
+                                     /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
     auto memrefType =
@@ -416,6 +423,7 @@ struct FromElementsOpInterface
                  indices);
 
     replaceOpWithBufferizedValues(rewriter, op, buffer);
+
     return success();
   }
 };
@@ -424,9 +432,17 @@ struct FromElementsOpInterface
 struct GenerateOpInterface
     : public BufferizableOpInterface::ExternalModel<GenerateOpInterface,
                                                     tensor::GenerateOp> {
+
+  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+    return true;
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
+    // Should the buffer be deallocated?
+    bool dealloc = shouldDeallocateOpResult(
+        generateOp.getResult().cast<OpResult>(), options);
 
     // TODO: Implement memory space for this op.
     if (options.defaultMemorySpace != static_cast<unsigned>(0))
@@ -436,11 +452,10 @@ struct GenerateOpInterface
     // Allocate memory.
     Location loc = op->getLoc();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
-    AnalysisState analysisState(options);
-    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
-        rewriter, loc, generateOp.getResult(),
-        analysisState.isTensorYielded(generateOp.getResult()), options,
-        /*copy=*/false);
+    FailureOr<Value> tensorAlloc =
+        allocateTensorForShapedValue(rewriter, loc, generateOp.getResult(),
+                                     /*escape=*/!dealloc, options,
+                                     /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
     auto memrefType =
@@ -484,6 +499,7 @@ struct GenerateOpInterface
         parallelBody->getArguments());
 
     replaceOpWithBufferizedValues(rewriter, op, buffer);
+
     return success();
   }
 };
