@@ -508,7 +508,6 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
 bool LiveIntervals::computeDeadValues(LiveInterval &LI,
                                       SmallVectorImpl<MachineInstr*> *dead) {
   bool MayHaveSplitComponents = false;
-  bool HaveDeadDef = false;
 
   for (VNInfo *VNI : LI.valnos) {
     if (VNI->isUnused())
@@ -534,21 +533,18 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
       VNI->markUnused();
       LI.removeSegment(I);
       LLVM_DEBUG(dbgs() << "Dead PHI at " << Def << " may separate interval\n");
-      MayHaveSplitComponents = true;
     } else {
       // This is a dead def. Make sure the instruction knows.
       MachineInstr *MI = getInstructionFromIndex(Def);
       assert(MI && "No instruction defining live value");
       MI->addRegisterDead(LI.reg(), TRI);
-      if (HaveDeadDef)
-        MayHaveSplitComponents = true;
-      HaveDeadDef = true;
 
       if (dead && MI->allDefsAreDead()) {
         LLVM_DEBUG(dbgs() << "All defs dead: " << Def << '\t' << *MI);
         dead->push_back(MI);
       }
     }
+    MayHaveSplitComponents = true;
   }
   return MayHaveSplitComponents;
 }
