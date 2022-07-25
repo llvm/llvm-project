@@ -95,10 +95,10 @@ void arith::ConstantOp::getAsmResultNames(
     if (intType && intType.getWidth() == 1)
       return setNameFn(getResult(), (intCst.getInt() ? "true" : "false"));
 
-    // Otherwise, build a compex name with the value and type.
+    // Otherwise, build a complex name with the value and type.
     SmallString<32> specialNameBuffer;
     llvm::raw_svector_ostream specialName(specialNameBuffer);
-    specialName << 'c' << intCst.getInt();
+    specialName << 'c' << intCst.getValue();
     if (intType)
       specialName << '_' << type;
     setNameFn(getResult(), specialName.str());

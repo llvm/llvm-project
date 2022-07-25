@@ -434,41 +434,24 @@ Error SectionWriter::visit(const OwnedDataSection &Sec) {
   return Error::success();
 }
 
-static constexpr std::array<uint8_t, 4> ZlibGnuMagic = {{'Z', 'L', 'I', 'B'}};
-
-static bool isDataGnuCompressed(ArrayRef<uint8_t> Data) {
-  return Data.size() > ZlibGnuMagic.size() &&
-         std::equal(ZlibGnuMagic.begin(), ZlibGnuMagic.end(), Data.data());
-}
-
 template <class ELFT>
 static std::tuple<uint64_t, uint64_t>
 getDecompressedSizeAndAlignment(ArrayRef<uint8_t> Data) {
-  const bool IsGnuDebug = isDataGnuCompressed(Data);
   const uint64_t DecompressedSize =
-      IsGnuDebug
-          ? support::endian::read64be(Data.data() + ZlibGnuMagic.size())
-          : reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_size;
+      reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_size;
   const uint64_t DecompressedAlign =
-      IsGnuDebug ? 1
-                 : reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())
-                       ->ch_addralign;
+      reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_addralign;
 
   return std::make_tuple(DecompressedSize, DecompressedAlign);
 }
 
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
-  const size_t DataOffset = isDataGnuCompressed(Sec.OriginalData)
-                                ? (ZlibGnuMagic.size() + sizeof(Sec.Size))
-                                : sizeof(Elf_Chdr_Impl<ELFT>);
-
-  ArrayRef<uint8_t> CompressedContent(Sec.OriginalData.data() + DataOffset,
-                                      Sec.OriginalData.size() - DataOffset);
+  ArrayRef<uint8_t> Compressed =
+      Sec.OriginalData.slice(sizeof(Elf_Chdr_Impl<ELFT>));
   SmallVector<uint8_t, 128> DecompressedContent;
-  if (Error Err =
-          compression::zlib::uncompress(CompressedContent, DecompressedContent,
-                                        static_cast<size_t>(Sec.Size)))
+  if (Error Err = compression::zlib::uncompress(Compressed, DecompressedContent,
+                                                static_cast<size_t>(Sec.Size)))
     return createStringError(errc::invalid_argument,
                              "'" + Sec.Name + "': " + toString(std::move(Err)));
 
@@ -1731,7 +1714,7 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     if (!Name)
       return Name.takeError();
 
-    if (Name->startswith(".zdebug") || (Shdr.sh_flags & ELF::SHF_COMPRESSED)) {
+    if (Shdr.sh_flags & ELF::SHF_COMPRESSED) {
       uint64_t DecompressedSize, DecompressedAlign;
       std::tie(DecompressedSize, DecompressedAlign) =
           getDecompressedSizeAndAlignment<ELFT>(*Data);
