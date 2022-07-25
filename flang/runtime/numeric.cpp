@@ -142,6 +142,25 @@ template <typename T> inline T Scale(T x, std::int64_t p) {
   return std::ldexp(x, p); // x*2**p
 }
 
+// SELECTED_INT_KIND (16.9.169)
+template <typename T>
+inline CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
+  if (x <= 2) {
+    return 1;
+  } else if (x <= 4) {
+    return 2;
+  } else if (x <= 9) {
+    return 4;
+  } else if (x <= 18) {
+    return 8;
+#ifdef __SIZEOF_INT128__
+  } else if (x <= 38) {
+    return 16;
+#endif
+  }
+  return -1;
+}
+
 // SELECTED_REAL_KIND (16.9.170)
 template <typename P, typename R, typename D>
 inline CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(P p, R r, D d) {
@@ -793,6 +812,20 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Scale16)(
   return Scale(x, p);
 }
 #endif
+
+// SELECTED_INT_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedIntKind)(
+    const char *source, int line, void *x, int xKind) {
+#ifdef __SIZEOF_INT128__
+  CppTypeFor<TypeCategory::Integer, 16> r =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
+#else
+  std::int64_t r = getIntArgValue<std::int64_t>(
+      source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
+#endif
+  return SelectedIntKind(r);
+}
 
 // SELECTED_REAL_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedRealKind)(

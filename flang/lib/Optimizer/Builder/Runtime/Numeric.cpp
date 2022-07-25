@@ -360,6 +360,27 @@ mlir::Value fir::runtime::genScale(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
+/// Generate call to Selected_int_kind intrinsic runtime routine.
+mlir::Value fir::runtime::genSelectedIntKind(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             mlir::Value x) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(SelectedIntKind)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(1));
+  if (!fir::isa_ref_type(x.getType()))
+    fir::emitFatalError(loc, "argument address for runtime not found");
+  mlir::Type eleTy = fir::unwrapRefType(x.getType());
+  mlir::Value xKind = builder.createIntegerConstant(
+      loc, fTy.getInput(3), eleTy.getIntOrFloatBitWidth() / 8);
+  auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
+                                            sourceLine, x, xKind);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 /// Generate call to Selected_real_kind intrinsic runtime routine.
 mlir::Value fir::runtime::genSelectedRealKind(fir::FirOpBuilder &builder,
                                               mlir::Location loc,

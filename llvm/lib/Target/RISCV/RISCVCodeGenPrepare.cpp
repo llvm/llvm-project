@@ -18,6 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -71,6 +72,20 @@ bool RISCVCodeGenPrepare::optimizeZExt(ZExtInst *ZExt) {
   if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
                               Constant::getNullValue(Src->getType()), ZExt,
                               *DL)) {
+    auto *SExt = new SExtInst(Src, ZExt->getType(), "", ZExt);
+    SExt->takeName(ZExt);
+    SExt->setDebugLoc(ZExt->getDebugLoc());
+
+    ZExt->replaceAllUsesWith(SExt);
+    ZExt->eraseFromParent();
+    ++NumZExtToSExt;
+    return true;
+  }
+
+  // Convert (zext (abs(i32 X, i1 1))) -> (sext (abs(i32 X, i1 1))). If abs of
+  // INT_MIN is poison, the sign bit is zero.
+  using namespace PatternMatch;
+  if (match(Src, m_Intrinsic<Intrinsic::abs>(m_Value(), m_One()))) {
     auto *SExt = new SExtInst(Src, ZExt->getType(), "", ZExt);
     SExt->takeName(ZExt);
     SExt->setDebugLoc(ZExt->getDebugLoc());
