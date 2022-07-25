@@ -67,7 +67,7 @@ std::string InputSection::getLocation(uint64_t off) const {
   // First, try to find a symbol that's near the offset. Use it as a reference
   // point.
   if (auto *sym = getContainingSymbol(off))
-    return (toString(getFile()) + ":(symbol " + sym->getName() + "+0x" +
+    return (toString(getFile()) + ":(symbol " + toString(*sym) + "+0x" +
             Twine::utohexstr(off - sym->value) + ")")
         .str();
 
