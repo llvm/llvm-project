@@ -731,7 +731,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BR,
-                                   PathSensitiveBugReport &R) override final;
+                                   PathSensitiveBugReport &R) final;
 };
 
 } // namespace ento

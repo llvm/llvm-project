@@ -924,6 +924,12 @@ func.func @test_constant() -> () {
   // CHECK: %false = arith.constant false
   %8 = arith.constant false
 
+  // CHECK: %c-1_i128 = arith.constant -1 : i128
+  %9 = arith.constant 340282366920938463463374607431768211455 : i128
+
+  // CHECK: %c85070591730234615865843651857942052864_i128 = arith.constant 85070591730234615865843651857942052864 : i128
+  %10 = arith.constant 85070591730234615865843651857942052864 : i128
+
   return
 }
 
@@ -951,10 +957,4 @@ func.func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
   %min_signed = arith.minsi %i1, %i2 : i32
   %min_unsigned = arith.minui %i1, %i2 : i32
   return
-}
-
-// CHECK-LABEL: func @delinearize
-func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) -> (index, index) {
-  %1:2 = arith.delinearize_index %idx (%basis0, %basis1) : index, index
-  return %1#0, %1#1 : index, index
 }

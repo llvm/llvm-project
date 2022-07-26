@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare dso_local noalias noundef i8* @malloc(i64 noundef) local_unnamed_addr
+declare dso_local noalias noundef i8* @malloc(i64 noundef) local_unnamed_addr allocsize(0)
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1 immarg, i1 immarg, i1 immarg)
 
 @buffer = dso_local global [4 x i8] zeroinitializer, align 1

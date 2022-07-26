@@ -31,10 +31,7 @@ define void @masked_gather_v4i8(<4 x i8>* %a, <4 x i8*>* %b) vscale_range(2,0) #
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <4 x i8*>, <4 x i8*>* %b
   %vals = call <4 x i8> @llvm.masked.gather.v4i8(<4 x i8*> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
@@ -99,11 +96,7 @@ define void @masked_gather_v32i8(<32 x i8>* %a, <32 x i8*>* %b) vscale_range(16,
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <32 x i8*>, <32 x i8*>* %b
   %vals = call <32 x i8> @llvm.masked.gather.v32i8(<32 x i8*> %ptrs, i32 8, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
@@ -188,10 +181,7 @@ define void @masked_gather_v16i16(<16 x i16>* %a, <16 x i16*>* %b) vscale_range(
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
-; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <16 x i16*>, <16 x i16*>* %b
   %vals = call <16 x i16> @llvm.masked.gather.v16i16(<16 x i16*> %ptrs, i32 8, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
@@ -206,10 +196,7 @@ define void @masked_gather_v32i16(<32 x i16>* %a, <32 x i16*>* %b) vscale_range(
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
-; CHECK-NEXT:    ptrue p0.h, vl32
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <32 x i16*>, <32 x i16*>* %b
   %vals = call <32 x i16> @llvm.masked.gather.v32i16(<32 x i16*> %ptrs, i32 8, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
@@ -276,9 +263,7 @@ define void @masked_gather_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
-; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %ptrs = load <8 x i32*>, <8 x i32*>* %b
   %vals = call <8 x i32> @llvm.masked.gather.v8i32(<8 x i32*> %ptrs, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
@@ -292,9 +277,7 @@ define void @masked_gather_v16i32(<16 x i32>* %a, <16 x i32*>* %b) vscale_range(
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
-; CHECK-NEXT:    ptrue p0.s, vl16
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <16 x i32*>, <16 x i32*>* %b
   %vals = call <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*> %ptrs, i32 8, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
@@ -309,9 +292,7 @@ define void @masked_gather_v32i32(<32 x i32>* %a, <32 x i32*>* %b) vscale_range(
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
-; CHECK-NEXT:    ptrue p0.s, vl32
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <32 x i32*>, <32 x i32*>* %b
   %vals = call <32 x i32> @llvm.masked.gather.v32i32(<32 x i32*> %ptrs, i32 8, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,

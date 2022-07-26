@@ -17,7 +17,7 @@ define void @t() {
   ret void
 }
 
-declare noalias i8* @malloc(i64)
+declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 define void @foo(i64 %Size) nounwind noinline #0 {
 ; CHECK-LABEL: @foo(

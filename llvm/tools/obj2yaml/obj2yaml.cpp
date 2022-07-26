@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> Out(
-      new ToolOutputFile(OutputFilename, EC, sys::fs::OF_None));
+      new ToolOutputFile(OutputFilename, EC, sys::fs::OF_Text));
   if (EC) {
     WithColor::error(errs(), "obj2yaml")
         << "failed to open '" + OutputFilename + "': " + EC.message() << '\n';

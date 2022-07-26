@@ -1,6 +1,6 @@
 ; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
 
-declare noalias i8* @calloc(i64, i64) inaccessiblememonly
+declare noalias i8* @calloc(i64, i64) inaccessiblememonly allockind("alloc,zeroed")
 
 define i32* @test1() {
 ; CHECK-LABEL: test1

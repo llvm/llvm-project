@@ -240,6 +240,10 @@ def force_load : Separate<["-"], "force_load">,
 def force_load_swift_libs : Flag<["-"], "force_load_swift_libs">,
     HelpText<"Apply -force_load to libraries listed in LC_LINKER_OPTIONS whose names start with 'swift'">,
     Group<grp_libs>;
+def load_hidden : Separate<["-"], "load_hidden">,
+    MetaVarName<"<path>">,
+    HelpText<"Load all symbols from static library with hidden visibility">,
+    Group<grp_libs>;
 
 def grp_content : OptionGroup<"content">, HelpText<"ADDITIONAL CONTENT">;
 

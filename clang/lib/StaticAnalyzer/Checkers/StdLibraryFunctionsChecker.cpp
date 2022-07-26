@@ -240,7 +240,7 @@ class StdLibraryFunctionsChecker
     ArgNo OtherArgN;
 
   public:
-    virtual StringRef getName() const override { return "Comparison"; };
+    StringRef getName() const override { return "Comparison"; };
     ComparisonConstraint(ArgNo ArgN, BinaryOperator::Opcode Opcode,
                          ArgNo OtherArgN)
         : ValueConstraint(ArgN), Opcode(Opcode), OtherArgN(OtherArgN) {}

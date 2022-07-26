@@ -16,6 +16,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <initializer_list>
 
@@ -440,9 +441,11 @@ static std::optional<Procedure> CharacterizeProcedure(
     return std::nullopt;
   }
   seenProcs.insert(symbol);
+  if (IsElementalProcedure(symbol)) {
+    result.attrs.set(Procedure::Attr::Elemental);
+  }
   CopyAttrs<Procedure, Procedure::Attr>(symbol, result,
       {
-          {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
           {semantics::Attr::BIND_C, Procedure::Attr::BindC},
       });
   if (IsPureProcedure(symbol) || // works for ENTRY too
@@ -498,8 +501,13 @@ static std::optional<Procedure> CharacterizeProcedure(
             }
             const semantics::ProcInterface &interface { proc.interface() };
             if (const semantics::Symbol * interfaceSymbol{interface.symbol()}) {
-              return CharacterizeProcedure(
-                  *interfaceSymbol, context, seenProcs);
+              auto interface {
+                CharacterizeProcedure(*interfaceSymbol, context, seenProcs)
+              };
+              if (interface && IsPointer(symbol)) {
+                interface->attrs.reset(Procedure::Attr::Elemental);
+              }
+              return interface;
             } else {
               result.attrs.set(Procedure::Attr::ImplicitInterface);
               const semantics::DeclTypeSpec *type{interface.type()};
@@ -938,15 +946,15 @@ bool Procedure::operator==(const Procedure &that) const {
       dummyArguments == that.dummyArguments;
 }
 
-bool Procedure::IsCompatibleWith(
-    const Procedure &actual, std::string *whyNot) const {
+bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
+    const SpecificIntrinsic *specificIntrinsic) const {
   // 15.5.2.9(1): if dummy is not pure, actual need not be.
   // Ditto with elemental.
   Attrs actualAttrs{actual.attrs};
   if (!attrs.test(Attr::Pure)) {
     actualAttrs.reset(Attr::Pure);
   }
-  if (!attrs.test(Attr::Elemental)) {
+  if (!attrs.test(Attr::Elemental) && specificIntrinsic) {
     actualAttrs.reset(Attr::Elemental);
   }
   Attrs differences{attrs ^ actualAttrs};

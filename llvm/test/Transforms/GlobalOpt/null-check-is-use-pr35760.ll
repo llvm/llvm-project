@@ -42,6 +42,6 @@ define internal void @_ZL13PutsSomethingv() {
   ret void
 }
 
-declare dso_local noalias i8* @malloc(i64)
+declare dso_local noalias i8* @malloc(i64) inaccessiblememonly allockind("alloc,uninitialized") allocsize(0)
 
 declare dso_local i32 @puts(i8* nocapture readonly)

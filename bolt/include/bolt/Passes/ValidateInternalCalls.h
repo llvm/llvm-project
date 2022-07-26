@@ -61,7 +61,7 @@ private:
   /// return, but are only used as a trick to perform Position Independent
   /// Code (PIC) computations. This will change internal calls to be treated
   /// as unconditional jumps.
-  bool fixCFGForPIC(BinaryFunction &Function) const;
+  void fixCFGForPIC(BinaryFunction &Function) const;
 
   /// Fix the CFG to take into consideration real internal calls (whole
   /// functions that got inlined inside its caller, but the CALL instruction

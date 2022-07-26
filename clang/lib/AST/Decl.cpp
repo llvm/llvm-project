@@ -394,7 +394,6 @@ void LinkageComputer::mergeTemplateLV(
     shouldConsiderTemplateVisibility(fn, specInfo);
 
   FunctionTemplateDecl *temp = specInfo->getTemplate();
-
   // Merge information from the template declaration.
   LinkageInfo tempLV = getLVForDecl(temp, computation);
   // The linkage of the specialization should be consistent with the
@@ -468,11 +467,16 @@ void LinkageComputer::mergeTemplateLV(
 
   // Merge information from the template parameters, but ignore
   // visibility if we're only considering template arguments.
-
   ClassTemplateDecl *temp = spec->getSpecializedTemplate();
-  LinkageInfo tempLV =
+  // Merge information from the template declaration.
+  LinkageInfo tempLV = getLVForDecl(temp, computation);
+  // The linkage of the specialization should be consistent with the
+  // template declaration.
+  LV.setLinkage(tempLV.getLinkage());
+
+  LinkageInfo paramsLV =
     getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-  LV.mergeMaybeWithVisibility(tempLV,
+  LV.mergeMaybeWithVisibility(paramsLV,
            considerVisibility && !hasExplicitVisibilityAlready(computation));
 
   // Merge information from the template arguments.  We ignore
@@ -520,7 +524,6 @@ void LinkageComputer::mergeTemplateLV(LinkageInfo &LV,
 
   // Merge information from the template parameters, but ignore
   // visibility if we're only considering template arguments.
-
   VarTemplateDecl *temp = spec->getSpecializedTemplate();
   LinkageInfo tempLV =
     getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
@@ -1077,7 +1080,6 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
   // Finally, merge in information from the class.
   LV.mergeMaybeWithVisibility(classLV, considerClassVisibility);
-
   return LV;
 }
 

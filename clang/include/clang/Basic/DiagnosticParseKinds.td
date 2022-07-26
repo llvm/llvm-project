@@ -282,7 +282,7 @@ def err_inline_nested_namespace_definition : Error<
 def err_expected_semi_after_attribute_list : Error<
   "expected ';' after attribute list">;
 def err_expected_semi_after_static_assert : Error<
-  "expected ';' after static_assert">;
+  "expected ';' after '%0'">;
 def err_expected_semi_for : Error<"expected ';' in 'for' statement specifier">;
 def err_single_decl_assign_in_for_range : Error<
   "range-based 'for' statement uses ':', not '='">;
@@ -425,7 +425,7 @@ def err_unexpected_token_in_nested_name_spec : Error<
 def err_bool_redeclaration : Error<
   "redeclaration of C++ built-in type 'bool'">;
 def warn_cxx98_compat_static_assert : Warning<
-  "static_assert declarations are incompatible with C++98">,
+  "'static_assert' declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def ext_ms_static_assert : ExtWarn<
   "use of 'static_assert' without inclusion of <assert.h> is a Microsoft "
@@ -538,6 +538,8 @@ def err_invalid_operator_on_type : Error<
   "cannot use %select{dot|arrow}0 operator on a type">;
 def err_expected_unqualified_id : Error<
   "expected %select{identifier|unqualified-id}0">;
+def err_while_loop_outside_of_a_function : Error<
+  "while loop outside of a function">; 
 def err_brackets_go_after_unqualified_id : Error<
   "brackets are not allowed here; to declare an array, "
   "place the brackets after the %select{identifier|name}0">;

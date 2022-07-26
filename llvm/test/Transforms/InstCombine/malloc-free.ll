@@ -26,10 +26,10 @@ define i32 @dead_aligned_alloc(i32 %size, i32 %alignment, i8 %value) {
   ret i32 0
 }
 
-declare noalias i8* @calloc(i32, i32) nounwind
-declare noalias i8* @malloc(i32)
-declare noalias i8* @aligned_alloc(i32, i32)
-declare void @free(i8*)
+declare noalias i8* @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+declare noalias i8* @malloc(i32) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias i8* @aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
+declare void @free(i8*) allockind("free") "alloc-family"="malloc"
 
 define i1 @foo() {
 ; CHECK-LABEL: @foo(

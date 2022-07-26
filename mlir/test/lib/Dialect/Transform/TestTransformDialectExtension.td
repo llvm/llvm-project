@@ -101,6 +101,16 @@ def TestRemoveTestExtensionOp
   let cppNamespace = "::mlir::test";
 }
 
+def TestReversePayloadOpsOp
+  : Op<Transform_Dialect, "test_reverse_payload_ops",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$result);
+  let assemblyFormat = "$target attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 def TestTransformOpWithRegions
   : Op<Transform_Dialect, "test_transform_op_with_regions",
        [DeclareOpInterfaceMethods<TransformOpInterface>,

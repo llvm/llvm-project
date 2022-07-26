@@ -8,13 +8,16 @@
 
 static void *glob_ptr;
 
-extern "C" {
-void __sanitizer_free_hook(const volatile void *ptr) {
+// Required for dyld macOS 12.0+
+#if (__APPLE__)
+__attribute__((weak))
+#endif
+extern "C" void
+__sanitizer_free_hook(const volatile void *ptr) {
   if (ptr == glob_ptr) {
     *(int*)ptr = 0;
     write(1, "FreeHook\n", sizeof("FreeHook\n"));
   }
-}
 }
 
 int main() {

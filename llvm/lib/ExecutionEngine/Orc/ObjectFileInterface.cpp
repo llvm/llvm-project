@@ -150,16 +150,39 @@ static Expected<MaterializationUnit::Interface>
 getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
                             const object::COFFObjectFile &Obj) {
   MaterializationUnit::Interface I;
-
+  std::vector<Optional<object::coff_aux_section_definition>> ComdatDefs(
+      Obj.getNumberOfSections() + 1);
   for (auto &Sym : Obj.symbols()) {
     Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
     if (!SymFlagsOrErr)
       // TODO: Test this error.
       return SymFlagsOrErr.takeError();
 
-    // Skip symbols not defined in this object file.
-    if (*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined)
-      continue;
+    // Handle comdat symbols
+    auto COFFSym = Obj.getCOFFSymbol(Sym);
+    bool IsWeak = false;
+    if (auto *Def = COFFSym.getSectionDefinition()) {
+      auto Sec = Obj.getSection(COFFSym.getSectionNumber());
+      if (!Sec)
+        return Sec.takeError();
+      if (((*Sec)->Characteristics & COFF::IMAGE_SCN_LNK_COMDAT) &&
+          Def->Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+        ComdatDefs[COFFSym.getSectionNumber()] = *Def;
+        continue;
+      }
+    }
+    if (!COFF::isReservedSectionNumber(COFFSym.getSectionNumber()) &&
+        ComdatDefs[COFFSym.getSectionNumber()]) {
+      auto Def = ComdatDefs[COFFSym.getSectionNumber()];
+      if (Def->Selection != COFF::IMAGE_COMDAT_SELECT_NODUPLICATES) {
+        IsWeak = true;
+      }
+      ComdatDefs[COFFSym.getSectionNumber()] = None;
+    } else {
+      // Skip symbols not defined in this object file.
+      if (*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined)
+        continue;
+    }
 
     // Skip symbols that are not global.
     if (!(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
@@ -180,12 +203,13 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
     if (!SymFlags)
       return SymFlags.takeError();
     *SymFlags |= JITSymbolFlags::Exported;
-    auto COFFSym = Obj.getCOFFSymbol(Sym);
 
     // Weak external is always a function
-    if (COFFSym.isWeakExternal()) {
+    if (COFFSym.isWeakExternal())
       *SymFlags |= JITSymbolFlags::Callable;
-    }
+
+    if (IsWeak)
+      *SymFlags |= JITSymbolFlags::Weak;
 
     I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
   }

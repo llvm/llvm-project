@@ -358,14 +358,12 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
   impl::namedBarrier();
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
-                                                          int32_t TId) {
+void __kmpc_barrier_simple_spmd(IdentTy *Loc, int32_t TId) {
   FunctionTracingRAII();
   synchronize::threadsAligned();
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
-                                                             int32_t TId) {
+void __kmpc_barrier_simple_generic(IdentTy *Loc, int32_t TId) {
   FunctionTracingRAII();
   synchronize::threads();
 }

@@ -1430,9 +1430,7 @@ static bool ImportOffsetMap(llvm::DenseMap<const D *, O> &destination_map,
   std::vector<PairType> sorted_items;
   sorted_items.reserve(source_map.size());
   sorted_items.assign(source_map.begin(), source_map.end());
-  llvm::sort(sorted_items, [](const PairType &lhs, const PairType &rhs) {
-    return lhs.second < rhs.second;
-  });
+  llvm::sort(sorted_items, llvm::less_second());
 
   for (const auto &item : sorted_items) {
     DeclFromUser<D> user_decl(const_cast<D *>(item.first));

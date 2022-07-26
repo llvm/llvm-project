@@ -18,8 +18,8 @@
 int main(int, char**)
 {
 	std::basic_fstream<char, std::char_traits<wchar_t> > f;
-//  expected-error-re@ios:* {{static_assert failed{{.*}}traits_type::char_type must be the same type as CharT}}
-//  expected-error-re@streambuf:* {{static_assert failed{{.*}}traits_type::char_type must be the same type as CharT}}
+//  expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+//  expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
 // FIXME: As of commit r324062 Clang incorrectly generates a diagnostic about mismatching
 // exception specifications for types which are already invalid for one reason or another.

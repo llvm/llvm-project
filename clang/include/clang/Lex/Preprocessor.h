@@ -67,7 +67,6 @@ namespace clang {
 class CodeCompletionHandler;
 class CommentHandler;
 class DirectoryEntry;
-class DirectoryLookup;
 class EmptylineHandler;
 class ExternalPreprocessorSource;
 class FileEntry;

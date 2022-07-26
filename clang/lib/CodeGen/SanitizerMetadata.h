@@ -20,7 +20,6 @@
 namespace llvm {
 class GlobalVariable;
 class Instruction;
-class MDNode;
 } // namespace llvm
 
 namespace clang {

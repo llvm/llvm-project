@@ -36,6 +36,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "NegDelta32";
   case Delta64FromGOT:
     return "Delta64FromGOT";
+  case PCRel32:
+    return "PCRel32";
   case BranchPCRel32:
     return "BranchPCRel32";
   case BranchPCRel32ToPtrJumpStub:

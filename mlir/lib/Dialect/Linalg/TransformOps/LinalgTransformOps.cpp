@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -1069,12 +1070,16 @@ class LinalgTransformDialectExtension
     : public transform::TransformDialectExtension<
           LinalgTransformDialectExtension> {
 public:
-  LinalgTransformDialectExtension() {
-    declareDependentDialect<AffineDialect>();
-    declareDependentDialect<arith::ArithmeticDialect>();
+  using Base::Base;
+
+  void init() {
     declareDependentDialect<pdl::PDLDialect>();
-    declareDependentDialect<scf::SCFDialect>();
-    declareDependentDialect<vector::VectorDialect>();
+
+    declareGeneratedDialect<AffineDialect>();
+    declareGeneratedDialect<arith::ArithmeticDialect>();
+    declareGeneratedDialect<scf::SCFDialect>();
+    declareGeneratedDialect<vector::VectorDialect>();
+
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.cpp.inc"

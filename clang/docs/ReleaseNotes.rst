@@ -196,6 +196,12 @@ Bug Fixes
   used in comparison operators. Fixes `Issue 56560 <https://github.com/llvm/llvm-project/issues/56560>`_.
 - Fix that ``if consteval`` could evaluate to ``true`` at runtime because it was incorrectly
   constant folded. Fixes `Issue 55638 <https://github.com/llvm/llvm-project/issues/55638>`_.
+- Fixed incompatibility of Clang's ``<stdatomic.h>`` with MSVC ``<atomic>``.
+  Fixes `MSVC STL Issue 2862 <https://github.com/microsoft/STL/issues/2862>`_.
+- Empty enums and enums with a single enumerator with value zero will be
+  considered to have one positive bit in order to represent the underlying
+  value. This effects whether we consider the store of the value one to be well
+  defined.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
