@@ -7,7 +7,7 @@
 #  CHECK-NEXT:       4: d503201f     |nop
 # CHECK-EMPTY:
 #  CHECK-NEXT:0000000000000008 <$d.1>:
-#  CHECK-NEXT:       8:|ff ff 00 00|.word|0x0000ffff
+#  CHECK-NEXT:       8: ff ff 00 00  |.word|0x0000ffff
 
   add x2, x3, #4
   nop
