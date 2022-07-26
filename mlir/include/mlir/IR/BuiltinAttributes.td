@@ -72,8 +72,7 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_ArrayAttr : Builtin_Attr<"Array", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface,
-        ["replaceImmediateSubAttribute"]>
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
   ]> {
   let summary = "A collection of other Attribute values";
   let description = [{
@@ -425,8 +424,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface,
-        ["replaceImmediateSubAttribute"]>
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
   ]> {
   let summary = "An dictionary of named Attribute values";
   let description = [{
@@ -1046,7 +1044,9 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
 // SymbolRefAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
+def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+  ]> {
   let summary = "An Attribute containing a symbolic reference to an Operation";
   let description = [{
     Syntax:

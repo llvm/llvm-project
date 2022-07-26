@@ -173,25 +173,10 @@ void TestSubElementsAccessAttr::walkImmediateSubElements(
   walkAttrsFn(getThird());
 }
 
-SubElementAttrInterface TestSubElementsAccessAttr::replaceImmediateSubAttribute(
-    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
-  Attribute first = getFirst();
-  Attribute second = getSecond();
-  Attribute third = getThird();
-  for (auto &it : replacements) {
-    switch (it.first) {
-    case 0:
-      first = it.second;
-      break;
-    case 1:
-      second = it.second;
-      break;
-    case 2:
-      third = it.second;
-      break;
-    }
-  }
-  return get(getContext(), first, second, third);
+Attribute TestSubElementsAccessAttr::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  assert(replAttrs.size() == 3 && "invalid number of replacement attributes");
+  return get(getContext(), replAttrs[0], replAttrs[1], replAttrs[2]);
 }
 
 //===----------------------------------------------------------------------===//

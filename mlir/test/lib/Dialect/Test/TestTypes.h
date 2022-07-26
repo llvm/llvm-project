@@ -154,6 +154,12 @@ public:
       ::llvm::function_ref<void(::mlir::Type)> walkTypesFn) const {
     walkTypesFn(getBody());
   }
+  Type replaceImmediateSubElements(llvm::ArrayRef<mlir::Attribute> replAttrs,
+                                   llvm::ArrayRef<mlir::Type> replTypes) const {
+    // TODO: It's not clear how we support replacing sub-elements of mutable
+    // types.
+    return nullptr;
+  }
 };
 
 } // namespace test
