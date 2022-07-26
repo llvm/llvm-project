@@ -7,6 +7,8 @@
 
 #include "ocml.h"
 #include "builtins.h"
+#include "opts.h"
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #define ATTR __attribute__((const))
 #define AATTR(S) __attribute__((const, alias(S)))
@@ -197,7 +199,12 @@ OCML_MANGLE_F64(cvtrtn_f32)(double a)
 #else
     float r = (float)a;
     float p = OCML_MANGLE_F32(pred)(r);
-    return (double)r > a ? p : r;
+    r = (double)r > a ? p : r;
+    if (DAZ_OPT()) {
+        float z = AS_FLOAT(AS_INT2(a).hi & 0x80000000);
+        r = a >= -0x1.fffffcp-127 && a < 0x1.0p-126 ? z : r;
+    }
+    return r;
 #endif
 }
 
@@ -224,7 +231,12 @@ OCML_MANGLE_F64(cvtrtp_f32)(double a)
 #else
     float r = (float)a;
     float s = OCML_MANGLE_F32(succ)(r);
-    return (double)r < a ? s : r;
+    r = (double)r < a ? s : r;
+    if (DAZ_OPT()) {
+        float z = AS_FLOAT(AS_INT2(a).hi & 0x80000000);
+        r = a <= 0x1.fffffcp-127 && a > -0x1.0p-126 ? z : r;
+    }
+    return r;
 #endif
 }
 
