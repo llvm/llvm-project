@@ -527,6 +527,135 @@ define i64 @mul288(i64 %a) {
   ret i64 %c
 }
 
+define i64 @zext_mul96(i32 signext %a) {
+; RV64I-LABEL: zext_mul96:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    slli a1, a1, 37
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul96:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 5
+; RV64ZBA-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 96
+  ret i64 %c
+}
+
+define i64 @zext_mul160(i32 signext %a) {
+; RV64I-LABEL: zext_mul160:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 5
+; RV64I-NEXT:    slli a1, a1, 37
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul160:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 5
+; RV64ZBA-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 160
+  ret i64 %c
+}
+
+define i64 @zext_mul288(i32 signext %a) {
+; RV64I-LABEL: zext_mul288:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 9
+; RV64I-NEXT:    slli a1, a1, 37
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul288:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 5
+; RV64ZBA-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 288
+  ret i64 %c
+}
+
+; We can't use slli.uw becaues the shift amount is more than 31.
+; FIXME: The zext.w is unneeded.
+define i64 @zext_mul12884901888(i32 signext %a) {
+; RV64I-LABEL: zext_mul12884901888:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul12884901888:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 32
+; RV64ZBA-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 12884901888
+  ret i64 %c
+}
+
+; We can't use slli.uw becaues the shift amount is more than 31.
+; FIXME: The zext.w is unneeded.
+define i64 @zext_mul21474836480(i32 signext %a) {
+; RV64I-LABEL: zext_mul21474836480:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    li a1, 5
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul21474836480:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 32
+; RV64ZBA-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 21474836480
+  ret i64 %c
+}
+
+; We can't use slli.uw becaues the shift amount is more than 31.
+; FIXME: The zext.w is unneeded.
+define i64 @zext_mul38654705664(i32 signext %a) {
+; RV64I-LABEL: zext_mul38654705664:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    li a1, 9
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul38654705664:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 32
+; RV64ZBA-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 38654705664
+  ret i64 %c
+}
+
 define i64 @sh1add_imm(i64 %0) {
 ; CHECK-LABEL: sh1add_imm:
 ; CHECK:       # %bb.0:

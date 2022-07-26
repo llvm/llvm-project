@@ -15,6 +15,7 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -75,5 +76,41 @@ TEST(CodeGenTest, CodeGenFromIRMemBuffer) {
   EmitLLVMOnlyAction Action;
   bool Success = Compiler.ExecuteAction(Action);
   EXPECT_TRUE(Success);
+}
+
+TEST(CodeGenTest, DebugInfoCWDCodeGen) {
+  // Check that debug info is accessing the current working directory from the
+  // VFS instead of calling \p llvm::sys::fs::current_path() directly.
+
+  auto VFS = std::make_unique<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory("/in-memory-fs-cwd");
+  auto Sept = llvm::sys::path::get_separator();
+  std::string TestPath =
+      std::string(llvm::formatv("{0}in-memory-fs-cwd{0}test.cpp", Sept));
+  VFS->addFile(TestPath, 0, llvm::MemoryBuffer::getMemBuffer("int x;\n"));
+
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  Invocation->getFrontendOpts().Inputs.push_back(
+      FrontendInputFile("test.cpp", Language::CXX));
+  Invocation->getFrontendOpts().ProgramAction = EmitLLVM;
+  Invocation->getTargetOpts().Triple = "x86_64-unknown-linux-gnu";
+  Invocation->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
+  CompilerInstance Compiler;
+
+  SmallString<256> IRBuffer;
+  Compiler.setOutputStream(std::make_unique<raw_svector_ostream>(IRBuffer));
+  Compiler.setInvocation(std::move(Invocation));
+  Compiler.createDiagnostics();
+  Compiler.createFileManager(std::move(VFS));
+
+  EmitLLVMAction Action;
+  bool Success = Compiler.ExecuteAction(Action);
+  EXPECT_TRUE(Success);
+
+  SmallString<128> RealCWD;
+  llvm::sys::fs::current_path(RealCWD);
+  EXPECT_TRUE(!RealCWD.empty());
+  EXPECT_FALSE(IRBuffer.str().contains(RealCWD));
+  EXPECT_TRUE(IRBuffer.str().contains("in-memory-fs-cwd"));
 }
 }
