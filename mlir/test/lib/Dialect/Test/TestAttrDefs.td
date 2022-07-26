@@ -246,7 +246,7 @@ def TestExtern1DI64ElementsAttr : Test_Attr<"TestExtern1DI64Elements", [
   let mnemonic = "e1di64_elements";
   let parameters = (ins
     AttributeSelfTypeParameter<"", "::mlir::ShapedType">:$type,
-    ResourceHandleParameter<"TestExternalElementsDataHandle">:$handle
+    ResourceHandleParameter<"TestDialectResourceBlobHandle">:$handle
   );
   let extraClassDeclaration = [{
     /// Return the elements referenced by this attribute.

@@ -77,6 +77,154 @@ class AsmStateImpl;
 //===----------------------------------------------------------------------===//
 // Resource Entry
 
+/// This class represents a processed binary blob of data. A resource blob is
+/// essentially a collection of data, potentially mutable, with an associated
+/// deleter function (used if the data needs to be destroyed).
+class AsmResourceBlob {
+public:
+  /// A deleter function that frees a blob given the data, allocation size, and
+  /// allocation aligment.
+  using DeleterFn =
+      llvm::unique_function<void(void *data, size_t size, size_t align)>;
+
+  //===--------------------------------------------------------------------===//
+  // Construction
+  //===--------------------------------------------------------------------===//
+
+  AsmResourceBlob() = default;
+  AsmResourceBlob(ArrayRef<char> data, size_t dataAlignment, DeleterFn deleter,
+                  bool dataIsMutable)
+      : data(data), dataAlignment(dataAlignment), deleter(std::move(deleter)),
+        dataIsMutable(dataIsMutable) {}
+  /// Utility constructor that initializes a blob with a non-char type T.
+  template <typename T, typename DelT>
+  AsmResourceBlob(ArrayRef<T> data, DelT &&deleteFn, bool dataIsMutable)
+      : data((const char *)data.data(), data.size() * sizeof(T)),
+        dataAlignment(alignof(T)),
+        deleter([deleteFn = std::forward<DelT>(deleteFn)](
+                    void *data, size_t size, size_t align) {
+          return deleteFn((T *)data, size, align);
+        }),
+        dataIsMutable(dataIsMutable) {}
+  AsmResourceBlob(AsmResourceBlob &&) = default;
+  AsmResourceBlob &operator=(AsmResourceBlob &&rhs) {
+    // Delete the current blob if necessary.
+    if (deleter)
+      deleter(const_cast<char *>(data.data()), data.size(), dataAlignment);
+
+    // Take the data entries from rhs.
+    data = rhs.data;
+    dataAlignment = rhs.dataAlignment;
+    deleter = std::move(rhs.deleter);
+    dataIsMutable = rhs.dataIsMutable;
+    return *this;
+  }
+  AsmResourceBlob(const AsmResourceBlob &) = delete;
+  AsmResourceBlob &operator=(const AsmResourceBlob &) = delete;
+  ~AsmResourceBlob() {
+    if (deleter)
+      deleter(const_cast<char *>(data.data()), data.size(), dataAlignment);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Data Access
+  //===--------------------------------------------------------------------===//
+
+  /// Return the alignment of the underlying data.
+  size_t getDataAlignment() const { return dataAlignment; }
+
+  /// Return the raw underlying data of this blob.
+  ArrayRef<char> getData() const { return data; }
+
+  /// Return the underlying data as an array of the given type. This is an
+  /// inherrently unsafe operation, and should only be used when the data is
+  /// known to be of the correct type.
+  template <typename T>
+  ArrayRef<T> getDataAs() const {
+    return llvm::makeArrayRef<T>((const T *)data.data(),
+                                 data.size() / sizeof(T));
+  }
+
+  /// Return a mutable reference to the raw underlying data of this blob.
+  /// Asserts that the blob `isMutable`.
+  MutableArrayRef<char> getMutableData() {
+    assert(isMutable() &&
+           "cannot access mutable reference to non-mutable data");
+    return MutableArrayRef<char>(const_cast<char *>(data.data()), data.size());
+  }
+
+  /// Return if the data of this blob is mutable.
+  bool isMutable() const { return dataIsMutable; }
+
+  /// Return the deleter function of this blob.
+  DeleterFn &getDeleter() { return deleter; }
+  const DeleterFn &getDeleter() const { return deleter; }
+
+private:
+  /// The raw, properly aligned, blob data.
+  ArrayRef<char> data;
+
+  /// The alignment of the data.
+  size_t dataAlignment = 0;
+
+  /// An optional deleter function used to deallocate the underlying data when
+  /// necessary.
+  DeleterFn deleter;
+
+  /// Whether the data is mutable.
+  bool dataIsMutable;
+};
+
+/// This class provides a simple utility wrapper for creating heap allocated
+/// AsmResourceBlobs.
+class HeapAsmResourceBlob {
+public:
+  /// Create a new heap allocated blob with the given size and alignment.
+  /// `dataIsMutable` indicates if the allocated data can be mutated. By
+  /// default, we treat heap allocated blobs as mutable.
+  static AsmResourceBlob allocate(size_t size, size_t align,
+                                  bool dataIsMutable = true) {
+    return AsmResourceBlob(
+        ArrayRef<char>((char *)llvm::allocate_buffer(size, align), size), align,
+        llvm::deallocate_buffer, dataIsMutable);
+  }
+  /// Create a new heap allocated blob and copy the provided data into it.
+  static AsmResourceBlob allocateAndCopy(ArrayRef<char> data, size_t align,
+                                         bool dataIsMutable = true) {
+    AsmResourceBlob blob = allocate(data.size(), align, dataIsMutable);
+    std::memcpy(blob.getMutableData().data(), data.data(), data.size());
+    return blob;
+  }
+  template <typename T>
+  static std::enable_if_t<!std::is_same<T, char>::value, AsmResourceBlob>
+  allocateAndCopy(ArrayRef<T> data, bool dataIsMutable = true) {
+    return allocateAndCopy(
+        ArrayRef<char>((const char *)data.data(), data.size() * sizeof(T)),
+        alignof(T));
+  }
+};
+/// This class provides a simple utility wrapper for creating "unmanaged"
+/// AsmResourceBlobs. The lifetime of the data provided to these blobs is
+/// guaranteed to persist beyond the lifetime of this reference.
+class UnmanagedAsmResourceBlob {
+public:
+  /// Create a new unmanaged resource directly referencing the provided data.
+  /// `dataIsMutable` indicates if the allocated data can be mutated. By
+  /// default, we treat unmanaged blobs as immutable.
+  static AsmResourceBlob allocate(ArrayRef<char> data, size_t align,
+                                  bool dataIsMutable = false) {
+    return AsmResourceBlob(data, align, /*deleter=*/{},
+                           /*dataIsMutable=*/false);
+  }
+  template <typename T>
+  static std::enable_if_t<!std::is_same<T, char>::value, AsmResourceBlob>
+  allocate(ArrayRef<T> data, bool dataIsMutable = false) {
+    return allocate(
+        ArrayRef<char>((const char *)data.data(), data.size() * sizeof(T)),
+        alignof(T));
+  }
+};
+
 /// This class is used to build resource entries for use by the printer. Each
 /// resource entry is represented using a key/value pair. The provided key must
 /// be unique within the current context, which allows for a client to provide
@@ -106,65 +254,11 @@ public:
         key, ArrayRef<char>((const char *)data.data(), data.size() * sizeof(T)),
         alignof(T));
   }
-};
-
-/// This class represents a processed binary blob of data. A resource blob is
-/// essentially a collection of data, potentially mutable, with an associated
-/// deleter function (used if the data needs to be destroyed).
-class AsmResourceBlob {
-public:
-  /// A deleter function that frees a blob given the data and allocation size.
-  using DeleterFn = llvm::unique_function<void(const void *data, size_t size)>;
-
-  AsmResourceBlob() = default;
-  AsmResourceBlob(ArrayRef<char> data, DeleterFn deleter, bool dataIsMutable)
-      : data(data), deleter(std::move(deleter)), dataIsMutable(dataIsMutable) {}
-  /// Utility constructor that initializes a blob with a non-char type T.
-  template <typename T, typename DelT>
-  AsmResourceBlob(ArrayRef<T> data, DelT &&deleteFn, bool dataIsMutable)
-      : data((const char *)data.data(), data.size() * sizeof(T)),
-        deleter([deleteFn = std::forward<DelT>(deleteFn)](const void *data,
-                                                          size_t size) {
-          return deleteFn((const T *)data, size);
-        }),
-        dataIsMutable(dataIsMutable) {}
-  AsmResourceBlob(AsmResourceBlob &&) = default;
-  AsmResourceBlob &operator=(AsmResourceBlob &&) = default;
-  AsmResourceBlob(const AsmResourceBlob &) = delete;
-  AsmResourceBlob &operator=(const AsmResourceBlob &) = delete;
-  ~AsmResourceBlob() {
-    if (deleter)
-      deleter(data.data(), data.size());
+  /// Build an resource entry represented by the given resource blob. This is
+  /// a useful overload if a blob already exists in-memory.
+  void buildBlob(StringRef key, const AsmResourceBlob &blob) {
+    buildBlob(key, blob.getData(), blob.getDataAlignment());
   }
-
-  /// Return the raw underlying data of this blob.
-  ArrayRef<char> getData() const { return data; }
-
-  /// Return a mutable reference to the raw underlying data of this blob.
-  /// Asserts that the blob `isMutable`.
-  MutableArrayRef<char> getMutableData() {
-    assert(isMutable() &&
-           "cannot access mutable reference to non-mutable data");
-    return MutableArrayRef<char>(const_cast<char *>(data.data()), data.size());
-  }
-
-  /// Return if the data of this blob is mutable.
-  bool isMutable() const { return dataIsMutable; }
-
-  /// Return the deleter function of this blob.
-  DeleterFn &getDeleter() { return deleter; }
-  const DeleterFn &getDeleter() const { return deleter; }
-
-private:
-  /// The raw, properly aligned, blob data.
-  ArrayRef<char> data;
-
-  /// An optional deleter function used to deallocate the underlying data when
-  /// necessary.
-  DeleterFn deleter;
-
-  /// Whether the data is mutable.
-  bool dataIsMutable;
 };
 
 /// This class represents a single parsed resource entry.
@@ -186,17 +280,24 @@ public:
   /// failure if the entry does not correspond to a string.
   virtual FailureOr<std::string> parseAsString() const = 0;
 
-  /// The type of an allocator function used to allocate memory for a blob when
-  /// required. The function is provided a size and alignment, and should return
-  /// an aligned allocation buffer.
+  /// An allocator function used to allocate memory for a blob when required.
+  /// The function is provided a size and alignment, and should return an
+  /// aligned allocation buffer.
   using BlobAllocatorFn =
-      function_ref<AsmResourceBlob(unsigned size, unsigned align)>;
+      function_ref<AsmResourceBlob(size_t size, size_t align)>;
 
   /// Parse the resource entry represented by a binary blob. Returns failure if
   /// the entry does not correspond to a blob. If the blob needed to be
   /// allocated, the given allocator function is invoked.
   virtual FailureOr<AsmResourceBlob>
   parseAsBlob(BlobAllocatorFn allocator) const = 0;
+  /// Parse the resource entry represented by a binary blob using heap
+  /// allocation.
+  FailureOr<AsmResourceBlob> parseAsBlob() const {
+    return parseAsBlob([](size_t size, size_t align) {
+      return HeapAsmResourceBlob::allocate(size, align);
+    });
+  }
 };
 
 //===----------------------------------------------------------------------===//
