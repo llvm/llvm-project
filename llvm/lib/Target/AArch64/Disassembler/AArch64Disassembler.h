@@ -30,6 +30,9 @@ public:
   MCDisassembler::DecodeStatus
   getInstruction(MCInst &Instr, uint64_t &Size, ArrayRef<uint8_t> Bytes,
                  uint64_t Address, raw_ostream &CStream) const override;
+
+  uint64_t suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
+                              uint64_t Address) const override;
 };
 
 } // end namespace llvm
