@@ -52,5 +52,5 @@ private:
                  const DebugLoc &DL, Register DestReg, Register SrcReg,
                  int64_t Val, MachineInstr::MIFlag Flag) const;
 };
-} // namespace llvm
+} // end namespace llvm
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCHFRAMELOWERING_H

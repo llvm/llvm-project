@@ -33,6 +33,6 @@ bool lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
                                              const AsmPrinter &AP);
 
 FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM);
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCH_H

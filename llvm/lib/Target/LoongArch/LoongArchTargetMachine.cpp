@@ -103,7 +103,7 @@ public:
   void addIRPasses() override;
   bool addInstSelector() override;
 };
-} // namespace
+} // end namespace
 
 TargetPassConfig *
 LoongArchTargetMachine::createPassConfig(PassManagerBase &PM) {

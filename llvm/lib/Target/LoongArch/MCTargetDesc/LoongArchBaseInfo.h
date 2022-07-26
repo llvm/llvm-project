@@ -37,8 +37,8 @@ ABI getTargetABI(StringRef ABIName);
 
 // Returns the register used to hold the stack pointer after realignment.
 MCRegister getBPReg();
-} // namespace LoongArchABI
+} // end namespace LoongArchABI
 
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHBASEINFO_H

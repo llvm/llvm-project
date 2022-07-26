@@ -95,7 +95,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // end namespace
 
 static MCInstrAnalysis *createLoongArchInstrAnalysis(const MCInstrInfo *Info) {
   return new LoongArchMCInstrAnalysis(Info);
