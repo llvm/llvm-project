@@ -14,7 +14,9 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Debug.h"
 #include <utility>
+#define DEBUG_TYPE "CXX.cpp"
 
 namespace clang {
 namespace pseudo {
@@ -160,7 +162,106 @@ bool guardNextTokenNotElse(const GuardParams &P) {
   return symbolToToken(P.Lookahead) != tok::kw_else;
 }
 
+// Whether this e.g. decl-specifier contains an "exclusive" type such as a class
+// name, and thus can't combine with a second exclusive type.
+//
+// Returns false for
+//  - non-types
+//  - "unsigned" etc that may suffice as types but may modify others
+//  - cases of uncertainty (e.g. due to ambiguity)
+bool hasExclusiveType(const ForestNode *N) {
+  // FIXME: every time we apply this check, we walk the whole subtree.
+  // Add per-node caching instead.
+  while (true) {
+    assert(N->symbol() == (SymbolID)Symbol::decl_specifier_seq ||
+           N->symbol() == (SymbolID)Symbol::type_specifier_seq ||
+           N->symbol() == (SymbolID)Symbol::defining_type_specifier_seq ||
+           N->symbol() == (SymbolID)Symbol::decl_specifier ||
+           N->symbol() == (SymbolID)Symbol::type_specifier ||
+           N->symbol() == (SymbolID)Symbol::defining_type_specifier ||
+           N->symbol() == (SymbolID)Symbol::simple_type_specifier);
+    if (N->kind() == ForestNode::Opaque)
+      return false; // conservative
+    if (N->kind() == ForestNode::Ambiguous)
+      return llvm::all_of(N->alternatives(), hasExclusiveType); // conservative
+    // All supported symbols are nonterminals.
+    assert(N->kind() == ForestNode::Sequence);
+    switch (N->rule()) {
+      // seq := element seq: check element then continue into seq
+      case (RuleID)Rule::decl_specifier_seq_0decl_specifier_1decl_specifier_seq:
+      case (RuleID)Rule::defining_type_specifier_seq_0defining_type_specifier_1defining_type_specifier_seq:
+      case (RuleID)Rule::type_specifier_seq_0type_specifier_1type_specifier_seq:
+        if (hasExclusiveType(N->children()[0]))
+          return true;
+        N = N->children()[1];
+        continue;
+      // seq := element: continue into element
+      case (RuleID)Rule::decl_specifier_seq_0decl_specifier:
+      case (RuleID)Rule::type_specifier_seq_0type_specifier:
+      case (RuleID)Rule::defining_type_specifier_seq_0defining_type_specifier:
+        N = N->children()[0];
+        continue;
+
+      // defining-type-specifier
+      case (RuleID)Rule::defining_type_specifier_0type_specifier:
+        N = N->children()[0];
+        continue;
+      case (RuleID)Rule::defining_type_specifier_0class_specifier:
+      case (RuleID)Rule::defining_type_specifier_0enum_specifier:
+        return true;
+
+      // decl-specifier
+      case (RuleID)Rule::decl_specifier_0defining_type_specifier:
+        N = N->children()[0];
+        continue;
+      case (RuleID)Rule::decl_specifier_0consteval:
+      case (RuleID)Rule::decl_specifier_0constexpr:
+      case (RuleID)Rule::decl_specifier_0constinit:
+      case (RuleID)Rule::decl_specifier_0inline:
+      case (RuleID)Rule::decl_specifier_0friend:
+      case (RuleID)Rule::decl_specifier_0storage_class_specifier:
+      case (RuleID)Rule::decl_specifier_0typedef:
+      case (RuleID)Rule::decl_specifier_0function_specifier:
+        return false;
+
+      // type-specifier
+      case (RuleID)Rule::type_specifier_0elaborated_type_specifier:
+      case (RuleID)Rule::type_specifier_0typename_specifier:
+        return true;
+      case (RuleID)Rule::type_specifier_0simple_type_specifier:
+        N = N->children()[0];
+        continue;
+      case (RuleID)Rule::type_specifier_0cv_qualifier:
+        return false;
+
+      // simple-type-specifier
+      case (RuleID)Rule::simple_type_specifier_0type_name:
+      case (RuleID)Rule::simple_type_specifier_0template_name:
+      case (RuleID)Rule::simple_type_specifier_0builtin_type:
+      case (RuleID)Rule::simple_type_specifier_0nested_name_specifier_1template_2simple_template_id:
+      case (RuleID)Rule::simple_type_specifier_0nested_name_specifier_1template_name:
+      case (RuleID)Rule::simple_type_specifier_0nested_name_specifier_1type_name:
+      case (RuleID)Rule::simple_type_specifier_0decltype_specifier:
+      case (RuleID)Rule::simple_type_specifier_0placeholder_type_specifier:
+        return true;
+      case (RuleID)Rule::simple_type_specifier_0long:
+      case (RuleID)Rule::simple_type_specifier_0short:
+      case (RuleID)Rule::simple_type_specifier_0signed:
+      case (RuleID)Rule::simple_type_specifier_0unsigned:
+        return false;
+
+      default:
+        LLVM_DEBUG(llvm::errs() << "Unhandled rule " << N->rule() << "\n");
+        llvm_unreachable("hasExclusiveType be exhaustive!");
+    }
+  }
+}
+
 llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
+#define GUARD(cond)                                                            \
+  {                                                                            \
+    [](const GuardParams &P) { return cond; }                                  \
+  }
 #define TOKEN_GUARD(kind, cond)                                                \
   [](const GuardParams& P) {                                                   \
     const Token &Tok = onlyToken(tok::kind, P.RHS, P.Tokens);                  \
@@ -177,6 +278,16 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
       {(RuleID)Rule::non_function_declarator_0declarator,
        SYMBOL_GUARD(declarator, !isFunctionDeclarator(&N))},
 
+      // A {decl,type,defining-type}-specifier-sequence cannot have multiple
+      // "exclusive" types (like class names): a value has only one type.
+      {(RuleID)Rule::
+           defining_type_specifier_seq_0defining_type_specifier_1defining_type_specifier_seq,
+       GUARD(!hasExclusiveType(P.RHS[0]) || !hasExclusiveType(P.RHS[1]))},
+      {(RuleID)Rule::type_specifier_seq_0type_specifier_1type_specifier_seq,
+       GUARD(!hasExclusiveType(P.RHS[0]) || !hasExclusiveType(P.RHS[1]))},
+      {(RuleID)Rule::decl_specifier_seq_0decl_specifier_1decl_specifier_seq,
+       GUARD(!hasExclusiveType(P.RHS[0]) || !hasExclusiveType(P.RHS[1]))},
+
       {(RuleID)Rule::contextual_override_0identifier,
        TOKEN_GUARD(identifier, Tok.text() == "override")},
       {(RuleID)Rule::contextual_final_0identifier,
@@ -190,10 +301,12 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
       {(RuleID)Rule::contextual_zero_0numeric_constant,
        TOKEN_GUARD(numeric_constant, Tok.text() == "0")},
 
-      {(RuleID)Rule::selection_statement_0if_1l_paren_2condition_3r_paren_4statement,
-        guardNextTokenNotElse},
-      {(RuleID)Rule::selection_statement_0if_1constexpr_2l_paren_3condition_4r_paren_5statement,
-        guardNextTokenNotElse},
+      {(RuleID)Rule::
+           selection_statement_0if_1l_paren_2condition_3r_paren_4statement,
+       guardNextTokenNotElse},
+      {(RuleID)Rule::
+           selection_statement_0if_1constexpr_2l_paren_3condition_4r_paren_5statement,
+       guardNextTokenNotElse},
 
       // The grammar distinguishes (only) user-defined vs plain string literals,
       // where the clang lexer distinguishes (only) encoding types.
