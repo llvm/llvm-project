@@ -45,7 +45,7 @@ enum NodeType : unsigned {
   BSTRPICK,
 
 };
-} // namespace LoongArchISD
+} // end namespace LoongArchISD
 
 class LoongArchTargetLowering : public TargetLowering {
   const LoongArchSubtarget &Subtarget;
