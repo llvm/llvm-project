@@ -38,6 +38,11 @@ mlir::Value genRRSpacing(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genScale(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value x, mlir::Value i);
 
+/// Generate call to Selected_real_kind intrinsic runtime routine.
+mlir::Value genSelectedRealKind(fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::Value precision, mlir::Value range,
+                                mlir::Value radix);
+
 /// Generate call to Set_exponent intrinsic runtime routine.
 mlir::Value genSetExponent(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value x, mlir::Value i);
