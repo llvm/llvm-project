@@ -66,6 +66,12 @@ public:
   ///   The total number of PSB blocks in all cores.
   size_t GetTotalPSBBlocksCount() const;
 
+  /// \return
+  ///     The lowest TSC value in this trace if available, \a llvm::None if the
+  ///     trace is empty or the trace contains no timing information, or an \a
+  ///     llvm::Error if it was not possible to set up the decoder.
+  llvm::Expected<llvm::Optional<uint64_t>> FindLowestTSC();
+
 private:
   /// Traverse the context switch traces and the basic intel pt continuous
   /// subtraces and produce a list of continuous executions for each process and

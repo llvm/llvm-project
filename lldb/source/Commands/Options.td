@@ -1146,15 +1146,17 @@ let Command = "thread trace dump instructions" in {
     Desc<"Dump in simple JSON format.">;
   def thread_trace_dump_instructions_pretty_print: Option<"pretty-json", "J">,
     Group<1>,
-    Desc<"Dump in JSON format but pretty printing the output for easier readability.">;
+    Desc<"Dump in JSON format but pretty printing the output for easier "
+    "readability.">;
   def thread_trace_dump_instructions_show_kind : Option<"kind", "k">, Group<1>,
     Desc<"Show instruction control flow kind. Refer to the enum "
     "`InstructionControlFlowKind` for a list of control flow kind. "
     "As an important note, far jumps, far calls and far returns often indicate "
     "calls to and from kernel.">;
-  def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
-    Desc<"For each instruction, print the corresponding timestamp counter if "
-    "available.">;
+  def thread_trace_dump_instructions_show_timestamps: Option<"time", "t">,
+    Group<1>,
+    Desc<"For each trace item, print the corresponding wall clock timestamp "
+    "if available.">;
   def thread_trace_dump_instructions_show_events : Option<"events", "e">,
     Group<1>,
     Desc<"Dump the events that happened during the execution of the target.">;
