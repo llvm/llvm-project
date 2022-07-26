@@ -92,9 +92,9 @@ x:
 
 
 // CHECK-LABEL: 000101f8 <func>:
-// CHECK-NEXT:    101f8:      00 f0 20 e3     nop
-// CHECK-NEXT:    101fc:      00 f0 20 e3     nop
-// CHECK-NEXT:    10200:      00 f0 20 e3     nop
+// CHECK-NEXT:    101f8:      e320f000        nop
+// CHECK-NEXT:    101fc:      e320f000        nop
+// CHECK-NEXT:    10200:      e320f000        nop
 
 /// (0x20264 - 0x1204) + (0x10204 - 0x101f8 - 8) = 0x1f064
 // CHECK:         10204: 64 00 01 00

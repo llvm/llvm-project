@@ -43,10 +43,10 @@ function:
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
 // CODE-NEXT: <_start>:
-// CODE-NEXT:    101a0:        08 30 9f e5    ldr     r3, [pc, #8]
-// CODE-NEXT:    101a4:        08 20 9f e5    ldr     r2, [pc, #8]
-// CODE-NEXT:    101a8:        03 00 8f e0    add     r0, pc, r3
-// CODE-NEXT:    101ac:        1e ff 2f e1    bx      lr
+// CODE-NEXT:    101a0:        e59f3008       ldr     r3, [pc, #8]
+// CODE-NEXT:    101a4:        e59f2008       ldr     r2, [pc, #8]
+// CODE-NEXT:    101a8:        e08f0003       add     r0, pc, r3
+// CODE-NEXT:    101ac:        e12fff1e       bx      lr
 // CODE: <$d.1>:
 // (_GLOBAL_OFFSET_TABLE_ = 0x220c) - (0x11a8 + 8) = 0x105c
 // CODE-NEXT:    101b0:        5c 00 01 00

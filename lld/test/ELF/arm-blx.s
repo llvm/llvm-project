@@ -75,44 +75,44 @@ callee_arm_high:
 // CHECK: Disassembly of section .callee1:
 // CHECK-EMPTY:
 // CHECK-NEXT: <callee_low>:
-// CHECK-NEXT:    b4:       70 47   bx      lr
+// CHECK-NEXT:    b4:       4770    bx      lr
 // CHECK: <callee_low2>:
-// CHECK-NEXT:    b6:       70 47   bx      lr
+// CHECK-NEXT:    b6:       4770    bx      lr
 
 // CHECK: Disassembly of section .callee2:
 // CHECK-EMPTY:
 // CHECK-NEXT: <callee_arm_low>:
-// CHECK-NEXT:    100:        1e ff 2f e1     bx      lr
+// CHECK-NEXT:    100:        e12fff1e        bx      lr
 
 // CHECK: Disassembly of section .caller:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:   10000:       2b c0 ff fa     blx     0xb4 <callee_low>
-// CHECK-NEXT:   10004:       2a c0 ff fa     blx     0xb4 <callee_low>
-// CHECK-NEXT:   10008:       29 c0 ff fb     blx     0xb6 <callee_low2>
-// CHECK-NEXT:   1000c:       28 c0 ff fb     blx     0xb6 <callee_low2>
-// CHECK-NEXT:   10010:       3a 00 00 fa     blx     0x10100 <callee_high>
-// CHECK-NEXT:   10014:       39 00 00 fa     blx     0x10100 <callee_high>
-// CHECK-NEXT:   10018:       38 00 00 fb     blx     0x10102 <callee_high2>
-// CHECK-NEXT:   1001c:       37 00 00 fb     blx     0x10102 <callee_high2>
-/// 0x2010024 = blx_far
-// CHECK-NEXT:   10020:       ff ff 7f fa     blx     0x2010024
-/// 0x2010028 = blx_far2
-// CHECK-NEXT:   10024:       ff ff 7f fa     blx     0x2010028
-// CHECK-NEXT:   10028:       34 c0 ff eb     bl      0x100 <callee_arm_low>
-// CHECK-NEXT:   1002c:       33 c0 ff eb     bl      0x100 <callee_arm_low>
-// CHECK-NEXT:   10030:       72 00 00 eb     bl      0x10200 <callee_arm_high>
-// CHECK-NEXT:   10034:       71 00 00 eb     bl      0x10200 <callee_arm_high>
-// CHECK-NEXT:   10038:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   10000:       faffc02b        blx     0xb4 <callee_low>
+// CHECK-NEXT:   10004:       faffc02a        blx     0xb4 <callee_low>
+// CHECK-NEXT:   10008:       fbffc029        blx     0xb6 <callee_low2>
+// CHECK-NEXT:   1000c:       fbffc028        blx     0xb6 <callee_low2>
+// CHECK-NEXT:   10010:       fa00003a        blx     0x10100 <callee_high>
+// CHECK-NEXT:   10014:       fa000039        blx     0x10100 <callee_high>
+// CHECK-NEXT:   10018:       fb000038        blx     0x10102 <callee_high2>
+// CHECK-NEXT:   1001c:       fb000037        blx     0x10102 <callee_high2>
+/// 0x2010024 = blx_far           
+// CHECK-NEXT:   10020:       fa7fffff        blx     0x2010024
+/// 0x2010028 = blx_far2          
+// CHECK-NEXT:   10024:       fa7fffff        blx     0x2010028
+// CHECK-NEXT:   10028:       ebffc034        bl      0x100 <callee_arm_low>
+// CHECK-NEXT:   1002c:       ebffc033        bl      0x100 <callee_arm_low>
+// CHECK-NEXT:   10030:       eb000072        bl      0x10200 <callee_arm_high>
+// CHECK-NEXT:   10034:       eb000071        bl      0x10200 <callee_arm_high>
+// CHECK-NEXT:   10038:       e12fff1e        bx      lr
 
 // CHECK: Disassembly of section .callee3:
 // CHECK-EMPTY:
 // CHECK: <callee_high>:
-// CHECK-NEXT:    10100:       70 47   bx      lr
+// CHECK-NEXT:    10100:       4770    bx      lr
 // CHECK: <callee_high2>:
-// CHECK-NEXT:    10102:       70 47   bx      lr
+// CHECK-NEXT:    10102:       4770    bx      lr
 
 // CHECK: Disassembly of section .callee4:
 // CHECK-EMPTY:
 // CHECK-NEXT: <callee_arm_high>:
-// CHECK-NEXT:   10200:     1e ff 2f e1     bx      lr
+// CHECK-NEXT:   10200:     e12fff1e        bx      lr

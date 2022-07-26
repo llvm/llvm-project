@@ -13,7 +13,7 @@
 ##   llvm-objdump --mattr=+ext1
 
 # CHECK:        00000000 <.text>:
-# CHECK-NEXT:       0: cb f3 f7 8b   <unknown>
+# CHECK-NEXT:       0: f3cb 8bf7     <unknown>
 # CHECK-NEXT:       4: be            <unknown>
 
 --- !ELF

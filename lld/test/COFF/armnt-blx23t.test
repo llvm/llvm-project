@@ -7,25 +7,25 @@
 
 # BEFORE: Disassembly of section .text:
 # BEFORE-EMPTY:
-# BEFORE:        0: 70 47         bx lr
-# BEFORE:        2: 00 bf         nop
-# BEFORE:        4: 2d e9 00 48   push.w {r11, lr}
-# BEFORE:        8: eb 46         mov r11, sp
-# BEFORE:        a: 20 20         movs r0, #32
-# BEFORE:        c: 00 f0 00 f8   bl {{.+}} @ imm = #0
-# BEFORE:       10: 01 30         adds r0, #1
-# BEFORE:       12: bd e8 00 88   pop.w {r11, pc}
+# BEFORE:        0: 4770          bx lr
+# BEFORE:        2: bf00          nop
+# BEFORE:        4: e92d 4800     push.w {r11, lr}
+# BEFORE:        8: 46eb          mov r11, sp
+# BEFORE:        a: 2020          movs r0, #32
+# BEFORE:        c: f000 f800     bl {{.+}} @ imm = #0
+# BEFORE:       10: 3001          adds r0, #1
+# BEFORE:       12: e8bd 8800     pop.w {r11, pc}
 
 # AFTER: Disassembly of section .text:
 # AFTER-EMPTY:
-# AFTER:   401000: 70 47         bx lr
-# AFTER:   401002: 00 bf         nop
-# AFTER:   401004: 2d e9 00 48   push.w {r11, lr}
-# AFTER:   401008: eb 46         mov r11, sp
-# AFTER:   40100a: 20 20         movs r0, #32
-# AFTER:   40100c: ff f7 f8 ff   bl 0x401000 <.text>
-# AFTER:   401010: 01 30         adds r0, #1
-# AFTER:   401012: bd e8 00 88   pop.w {r11, pc}
+# AFTER:   401000: 4770          bx lr
+# AFTER:   401002: bf00          nop
+# AFTER:   401004: e92d 4800     push.w {r11, lr}
+# AFTER:   401008: 46eb          mov r11, sp
+# AFTER:   40100a: 2020          movs r0, #32
+# AFTER:   40100c: f7ff fff8     bl 0x401000 <.text>
+# AFTER:   401010: 3001          adds r0, #1
+# AFTER:   401012: e8bd 8800     pop.w {r11, pc}
 
 --- !COFF
 header:

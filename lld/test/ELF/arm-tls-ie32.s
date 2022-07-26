@@ -85,9 +85,9 @@ x:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <func>:
-// CHECK-NEXT:    101e8: 00 f0 20 e3     nop
-// CHECK-NEXT:    101ec: 00 f0 20 e3     nop
-// CHECK-NEXT:    101f0: 00 f0 20 e3     nop
+// CHECK-NEXT:    101e8: e320f000        nop
+// CHECK-NEXT:    101ec: e320f000        nop
+// CHECK-NEXT:    101f0: e320f000        nop
 
 /// (0x20254 - 0x101f4) + (0x101f4 - 0x101e8 - 8) = 0x10064
 // CHECK:         101f4: 64 00 01 00

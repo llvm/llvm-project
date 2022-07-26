@@ -9,18 +9,18 @@ vfp2:
   vmla.f32 s0, s1, s2
 
 @CHECK-LABEL: vfp2
-@CHECK: 00 ee 81 0a vmla.f32 s0, s1, s2
+@CHECK: ee00 0a81   vmla.f32 s0, s1, s2
 
 .thumb
 vfp4:
   vmov.f32 s0, #0.5
 
 @CHECK-LABEL: vfp4
-@CHECK: b6 ee 00 0a vmov.f32 s0, #5.000000e-01
+@CHECK: eeb6 0a00   vmov.f32 s0, #5.000000e-01
 
 .thumb
 div:
   udiv r0, r1, r2
 
 @CHECK-LABEL: div
-@CHECK: b1 fb f2 f0 udiv r0, r1, r2
+@CHECK: fbb1 f0f2   udiv r0, r1, r2
