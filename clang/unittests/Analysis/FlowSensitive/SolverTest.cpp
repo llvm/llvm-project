@@ -206,6 +206,20 @@ TEST(SolverTest, DeepConflict) {
   expectUnsatisfiable(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}));
 }
 
+TEST(SolverTest, IffIsEquivalentToDNF) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto NotX = Ctx.neg(X);
+  auto NotY = Ctx.neg(Y);
+  auto XIffY = Ctx.iff(X, Y);
+  auto XIffYDNF = Ctx.disj(Ctx.conj(X, Y), Ctx.conj(NotX, NotY));
+  auto NotEquivalent = Ctx.neg(Ctx.iff(XIffY, XIffYDNF));
+
+  // !((X <=> Y) <=> ((X ^ Y) v (!X ^ !Y)))
+  expectUnsatisfiable(solve({NotEquivalent}));
+}
+
 TEST(SolverTest, IffSameVars) {
   ConstraintContext Ctx;
   auto X = Ctx.atom();
@@ -295,6 +309,18 @@ TEST(SolverTest, RespectsAdditionalConstraints) {
 
   // (X <=> Y) ^ X ^ !Y
   expectUnsatisfiable(solve({XEqY, X, NotY}));
+}
+
+TEST(SolverTest, ImplicationIsEquivalentToDNF) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XImpliesY = Ctx.impl(X, Y);
+  auto XImpliesYDNF = Ctx.disj(Ctx.neg(X), Y);
+  auto NotEquivalent = Ctx.neg(Ctx.iff(XImpliesY, XImpliesYDNF));
+
+  // !((X => Y) <=> (!X v Y))
+  expectUnsatisfiable(solve({NotEquivalent}));
 }
 
 TEST(SolverTest, ImplicationConflict) {
