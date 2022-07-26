@@ -58,6 +58,7 @@ jobs:
           --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           release-workflow \
           --issue-number ${{ github.event.issue.number }} \
+          --phab-token ${{ secrets.RELEASE_WORKFLOW_PHAB_TOKEN }} \
           auto
 
   create-pull-request:
