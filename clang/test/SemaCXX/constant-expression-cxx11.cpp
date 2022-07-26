@@ -580,7 +580,7 @@ constexpr int fail(const int &p) {
   return (&p)[64]; // expected-note {{cannot refer to element 64 of array of 2 elements}}
 }
 static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, ""); // \
-expected-error {{static_assert expression is not an integral constant expression}} \
+expected-error {{static assertion expression is not an integral constant expression}} \
 expected-note {{in call to 'fail(zs[1][0][1][0])'}}
 
 constexpr int arr[40] = { 1, 2, 3, [8] = 4 };
@@ -1596,11 +1596,11 @@ namespace CompoundLiteral {
   // Matching GCC, file-scope array compound literals initialized by constants
   // are lifetime-extended.
   constexpr int *p = (int*)(int[1]){3}; // expected-warning {{C99}}
-  static_assert(*p == 3, "");           // expected-error {{static_assert expression is not an integral constant expression}}
+  static_assert(*p == 3, "");           // expected-error {{static assertion expression is not an integral constant expression}}
                                         // expected-note@-1 {{subexpression not valid}}
                                         // expected-note@-3 {{declared here}}
   static_assert((int[2]){1, 2}[1] == 2, ""); // expected-warning {{C99}}
-  // expected-error@-1 {{static_assert expression is not an integral constant expression}}
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   // expected-note@-2 {{subexpression not valid}}
   // expected-note@-3 {{declared here}}
 
@@ -1912,12 +1912,12 @@ namespace VirtualFromBase {
   static_assert(p->f() == sizeof(X<S1>), "");
   // cxx11-error@-1    {{not an integral constant expression}}
   // cxx11-note@-2     {{call to virtual function}}
-  // cxx20_2b-error@-3 {{static_assert failed}}
+  // cxx20_2b-error@-3 {{static assertion failed}}
 
   // Non-virtual f(), OK.
   constexpr X<X<S2>> xxs2;
   constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
-  static_assert(q->f() == sizeof(S2), ""); // cxx20_2b-error {{static_assert failed}}
+  static_assert(q->f() == sizeof(S2), ""); // cxx20_2b-error {{static assertion failed}}
 }
 
 namespace ConstexprConstructorRecovery {

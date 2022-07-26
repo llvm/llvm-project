@@ -21,8 +21,8 @@
 int main(int, char**)
 {
 	std::basic_stringbuf<char, std::char_traits<wchar_t> > sb;
-//  expected-error-re@streambuf:* {{static_assert failed{{.*}}traits_type::char_type must be the same type as CharT}}
-//  expected-error-re@string:* {{static_assert failed{{.*}}traits_type::char_type must be the same type as CharT}}
+//  expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+//  expected-error-re@string:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
   return 0;
 }

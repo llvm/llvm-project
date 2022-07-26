@@ -25,6 +25,6 @@ void test(std::discrete_distribution<int> dist)
   G<int> badg;
   G<unsigned> okg;
 
-  dist(badg); //expected-error@*:* 2 {{static_assert failed}} //expected-note {{in instantiation}}
+  dist(badg); //expected-error-re@*:* 2 {{{{(static_assert|static assertion)}} failed}} //expected-note {{in instantiation}}
   dist(okg);
 }

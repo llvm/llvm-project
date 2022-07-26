@@ -158,7 +158,7 @@ bool Parser::ExpectAndConsume(tok::TokenKind ExpectedTok, unsigned DiagID,
   return true;
 }
 
-bool Parser::ExpectAndConsumeSemi(unsigned DiagID) {
+bool Parser::ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed) {
   if (TryConsumeToken(tok::semi))
     return false;
 
@@ -177,7 +177,7 @@ bool Parser::ExpectAndConsumeSemi(unsigned DiagID) {
     return false;
   }
 
-  return ExpectAndConsume(tok::semi, DiagID);
+  return ExpectAndConsume(tok::semi, DiagID , TokenUsed);
 }
 
 void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {

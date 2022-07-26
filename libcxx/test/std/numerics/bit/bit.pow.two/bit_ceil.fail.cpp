@@ -34,19 +34,19 @@ constexpr bool toobig()
 int main(int, char**)
 {
 //	Make sure we generate a compile-time error for UB
-	static_assert(toobig<unsigned char>(),      ""); // expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<unsigned short>(),     ""); // expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<unsigned>(),           ""); // expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<unsigned long>(),      ""); // expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<unsigned long long>(), ""); // expected-error {{static_assert expression is not an integral constant expression}}
+	static_assert(toobig<unsigned char>(),      ""); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<unsigned short>(),     ""); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<unsigned>(),           ""); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<unsigned long>(),      ""); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<unsigned long long>(), ""); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
 
-	static_assert(toobig<uint8_t>(), ""); 	// expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<uint16_t>(), ""); 	// expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<uint32_t>(), ""); 	// expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<uint64_t>(), ""); 	// expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<size_t>(), ""); 	// expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<uintmax_t>(), "");	// expected-error {{static_assert expression is not an integral constant expression}}
-	static_assert(toobig<uintptr_t>(), "");	// expected-error {{static_assert expression is not an integral constant expression}}
+	static_assert(toobig<uint8_t>(), ""); 	// expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<uint16_t>(), ""); 	// expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<uint32_t>(), ""); 	// expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<uint64_t>(), ""); 	// expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<size_t>(), ""); 	// expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<uintmax_t>(), "");	// expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+	static_assert(toobig<uintptr_t>(), "");	// expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
 
 	return 0;
 }

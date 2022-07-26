@@ -25,7 +25,7 @@ struct test_ostream
 
 int main(int, char**)
 {
-//  expected-error-re@ios:* {{static_assert failed{{.*}}traits_type::char_type must be the same type as CharT}}
+//  expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
   return 0;
 }
