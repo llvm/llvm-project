@@ -35,6 +35,9 @@ static constexpr llvm::StringRef kPrintNewline = "printNewline";
 static constexpr llvm::StringRef kMalloc = "malloc";
 static constexpr llvm::StringRef kAlignedAlloc = "aligned_alloc";
 static constexpr llvm::StringRef kFree = "free";
+static constexpr llvm::StringRef kGenericAlloc = "_mlir_alloc";
+static constexpr llvm::StringRef kGenericAlignedAlloc = "_mlir_aligned_alloc";
+static constexpr llvm::StringRef kGenericFree = "_mlir_free";
 static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 
 /// Generic print function lookupOrCreate helper.
@@ -111,6 +114,28 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateAlignedAllocFn(ModuleOp moduleOp,
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFreeFn(ModuleOp moduleOp) {
   return LLVM::lookupOrCreateFn(
       moduleOp, kFree,
+      LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateGenericAllocFn(ModuleOp moduleOp,
+                                                          Type indexType) {
+  return LLVM::lookupOrCreateFn(
+      moduleOp, kGenericAlloc, indexType,
+      LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)));
+}
+
+LLVM::LLVMFuncOp
+mlir::LLVM::lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp,
+                                                Type indexType) {
+  return LLVM::lookupOrCreateFn(
+      moduleOp, kGenericAlignedAlloc, {indexType, indexType},
+      LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)));
+}
+
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateGenericFreeFn(ModuleOp moduleOp) {
+  return LLVM::lookupOrCreateFn(
+      moduleOp, kGenericFree,
       LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)),
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
