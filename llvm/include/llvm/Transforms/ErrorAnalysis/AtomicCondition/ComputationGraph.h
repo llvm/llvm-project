@@ -693,7 +693,7 @@ void fCGStoreResult() {
   FILE *FP = fopen(FileName, "w");
   fprintf(FP, "{\n");
 
-  fprintf(FP, "\t\"Nodes\": [");
+  fprintf(FP, "\t\"Nodes\": [\n");
   CGNode *CurrentNode = CG->NodesLinkedListHead;
   while (CurrentNode!=NULL) {
     fprintf(FP,
@@ -702,7 +702,7 @@ void fCGStoreResult() {
             "\t\t\t\"Instruction\":\"%s\",\n"
             "\t\t\t\"NodeKind\": %d,\n"
             "\t\t\t\"Height\": %d,\n"
-            "\t\t\t\"RootNode\": %d, \n"
+            "\t\t\t\"RootNode\": %d,\n"
             "\t\t\t\"LeftNode\": %d,\n"
             "\t\t\t\"RightNode\": %d\n",
             CurrentNode->NodeId,
@@ -724,6 +724,8 @@ void fCGStoreResult() {
   fprintf(FP, "}\n");
 
   fclose(FP);
+
+  printf("\nComputation Graph written to file: %s\n", FileName);
 #endif
 }
 
@@ -804,6 +806,8 @@ void fCGDotGraph() {
   fprintf(FP, "}\n");
 
   fclose(FP);
+
+  printf("\nDot Graph written to file: %s\n", FileName);
 #endif
 }
 

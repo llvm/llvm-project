@@ -77,9 +77,11 @@ public:
   static bool isUnwantedFunction(const Function *Func);
 
   // Utility Functions
-  Value *createBBNameString(BasicBlock *BB);
-  Value *createRegisterNameString(Instruction *Inst);
-  Value *createInstructionString(Instruction *Inst);
+  Value *createBBNameGlobalString(BasicBlock *BB);
+  Value *createRegisterNameGlobalString(Instruction *Inst);
+  Value *createInstructionGlobalString(Instruction *Inst);
+  std::string getInstructionAsString(Instruction *Inst);
+  static bool isInstructionOfInterest(Instruction *Inst);
 };
 
 } // namespace atomiccondition

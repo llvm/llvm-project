@@ -621,6 +621,8 @@ void fACStoreResult() {
   fprintf(FP, "}\n");
 
   fclose(FP);
+
+  printf("\nAtomic Conditions written to file: %s\n", FileName);
 #endif
 }
 

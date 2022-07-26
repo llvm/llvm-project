@@ -35,7 +35,7 @@ typedef struct DoubleAFItem {
   int ResultNodeID;
   char *WRTInstructionString;
   int WRTNodeID;
-  float AF;
+  double AF;
 } DoubleAFItem;
 
 typedef struct AnalysisResult {
@@ -177,11 +177,13 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
   NodeProcessingQItem *WRTNode = QItem;
 
   // Store Amplification factor of NodeToAnalyse with Itself in table as 1
-  AFResult->FloatAFItemPointer->ResultInstructionString = NodeToAnalyse->InstructionString;
-  AFResult->FloatAFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-  AFResult->FloatAFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
-  AFResult->FloatAFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
-  AFResult->FloatAFItemPointer->AF = 1;
+  FloatAFItem *AFItemPointer = &AFResult->FloatAFItemPointer[AFResult->FloatAFRecords];
+
+  AFItemPointer->ResultInstructionString = NodeToAnalyse->InstructionString;
+  AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
+  AFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
+  AFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
+  AFItemPointer->AF = 1;
   AFResult->FloatAFRecords++;
 
   // Amplification Factor Calculation
@@ -196,6 +198,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
     printf("\tQ Back - Node Id: %d, Instruction String: %s\n",
            ProcessingQ.Back->Node->NodeId,
            ProcessingQ.Back->Node->InstructionString);
+    printf("\tQueue:\n");
     for (ProcessingQItemPointer = ProcessingQ.Front;
          ProcessingQItemPointer!=NULL;
          ProcessingQItemPointer = ProcessingQItemPointer->NextItem) {
@@ -208,7 +211,6 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
     WRTNode = ProcessingQ.Front;
 
     // From AF Table, get AF at NodeToAnalyse for WRTNode
-    FloatAFItem *AFItemPointer;
     uint64_t RecordCounter;
 
 #if FAF_DEBUG==2
@@ -289,6 +291,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           ProcessingQ.Back = ProcessingQ.Back->NextItem;
 
           ProcessingQ.Size++;
+          printf("Here\n");
         }
       }
       break;
@@ -394,12 +397,12 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           ProcessingQ.Size++;
         }
       }
-
-      // Popping off Front of Q
-      ProcessingQ.Front = ProcessingQ.Front->NextItem;
-      ProcessingQ.Size--;
       break;
     }
+
+    // Popping off Front of Q
+    ProcessingQ.Front = ProcessingQ.Front->NextItem;
+    ProcessingQ.Size--;
     free(WRTNode);
   }
 
@@ -477,11 +480,13 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
   NodeProcessingQItem *WRTNode = QItem;
 
   // Store Amplification factor of NodeToAnalyse with Itself in table as 1
-  AFResult->DoubleAFItemPointer->ResultInstructionString = NodeToAnalyse->InstructionString;
-  AFResult->DoubleAFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-  AFResult->DoubleAFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
-  AFResult->DoubleAFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
-  AFResult->DoubleAFItemPointer->AF = 1;
+  DoubleAFItem *AFItemPointer = &AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords];
+
+  AFItemPointer->ResultInstructionString = NodeToAnalyse->InstructionString;
+  AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
+  AFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
+  AFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
+  AFItemPointer->AF = 1;
   AFResult->DoubleAFRecords++;
 
   // Amplification Factor Calculation
@@ -496,6 +501,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
     printf("\tQ Back - Node Id: %d, Instruction String: %s\n",
            ProcessingQ.Back->Node->NodeId,
            ProcessingQ.Back->Node->InstructionString);
+    printf("\tQueue:\n");
     for (ProcessingQItemPointer = ProcessingQ.Front;
          ProcessingQItemPointer!=NULL;
          ProcessingQItemPointer = ProcessingQItemPointer->NextItem) {
@@ -508,7 +514,6 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
     WRTNode = ProcessingQ.Front;
 
     // From AF Table, get AF at NodeToAnalyse for WRTNode
-    DoubleAFItem *AFItemPointer;
     uint64_t RecordCounter;
 
 #if FAF_DEBUG==2
@@ -799,6 +804,8 @@ void fAFStoreResult() {
   fprintf(FP, "}\n");
 
   fclose(FP);
+
+  printf("\nAmplification Factors written to file: %s\n", FileName);
 }
 
 #endif // LLVM_AMPLIFICATIONFACTOR_H

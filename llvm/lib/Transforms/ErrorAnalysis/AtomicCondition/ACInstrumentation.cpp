@@ -135,7 +135,7 @@ void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
 
   CallInst *BBRecordingCallInstruction = nullptr;
 
-  Args.push_back(createBBNameString(CurrentBB));
+  Args.push_back(createBBNameGlobalString(CurrentBB));
 
   BBRecordingCallInstruction = InstructionBuilder.CreateCall(CGRecordBasicBlock, Args);
 
@@ -158,8 +158,8 @@ void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* Curre
        CurrPhi != CurrentBB->phis().end();
        CurrPhi++) {
     std::vector<Value *> Args;
-    Args.push_back(createInstructionString(&*CurrPhi));
-    Args.push_back(createBBNameString(CurrentBB));
+    Args.push_back(createInstructionGlobalString(&*CurrPhi));
+    Args.push_back(createBBNameGlobalString(CurrentBB));
     ArrayRef<Value *> ArgsRef(Args);
 
     InstructionBuilder.CreateCall(CGRecordPHIInstruction, ArgsRef);
@@ -192,7 +192,7 @@ void ACInstrumentation::instrumentCallsForMemoryLoadOperation(
                                                       GlobalValue::InternalLinkage,
                                                       EmptyValue);
 
-  Args.push_back(createInstructionString(BaseInstruction));
+  Args.push_back(createInstructionGlobalString(BaseInstruction));
   Args.push_back(EmptyValuePointer);
   Args.push_back(EmptyValuePointer);
   Args.push_back(InstructionBuilder.getInt32(NodeKind::Register));
@@ -277,7 +277,7 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
 
   Value *LeftOpRegisterNamePointer;
   if(!isa<Constant>(BaseInstruction->getOperand(0)))
-    LeftOpRegisterNamePointer = createRegisterNameString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
+    LeftOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpRegisterNamePointer = EmptyValuePointer;
 
@@ -311,11 +311,11 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
 
   Value *LeftOpInstructionValuePointer;
   if(!isa<Constant>(BaseInstruction->getOperand(0)))
-    LeftOpInstructionValuePointer = createInstructionString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
+    LeftOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpInstructionValuePointer = EmptyValuePointer;
 
-  CGArgs.push_back(createInstructionString(BaseInstruction));
+  CGArgs.push_back(createInstructionGlobalString(BaseInstruction));
   CGArgs.push_back(LeftOpInstructionValuePointer);
   CGArgs.push_back(EmptyValuePointer);
   CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::UnaryInstruction));
@@ -375,13 +375,13 @@ void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
 
   Value *LeftOpRegisterNamePointer;
   if(!isa<Constant>(BaseInstruction->getOperand(0)))
-    LeftOpRegisterNamePointer = createRegisterNameString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
+    LeftOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpRegisterNamePointer = EmptyValuePointer;
 
   Value *RightOpRegisterNamePointer;
   if(!isa<Constant>(BaseInstruction->getOperand(1)))
-    RightOpRegisterNamePointer = createRegisterNameString(static_cast<Instruction*>(BaseInstruction->getOperand(1)));
+    RightOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(1)));
   else
     RightOpRegisterNamePointer = EmptyValuePointer;
 
@@ -416,17 +416,17 @@ void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
 
   Value *LeftOpInstructionValuePointer;
   if(!isa<Constant>(BaseInstruction->getOperand(0)))
-    LeftOpInstructionValuePointer = createInstructionString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
+    LeftOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpInstructionValuePointer = EmptyValuePointer;
 
   Value *RightOpInstructionValuePointer;
   if(!isa<Constant>(BaseInstruction->getOperand(1)))
-    RightOpInstructionValuePointer = createInstructionString(static_cast<Instruction*>(BaseInstruction->getOperand(1)));
+    RightOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(1)));
   else
     RightOpInstructionValuePointer = EmptyValuePointer;
 
-  CGArgs.push_back(createInstructionString(BaseInstruction));
+  CGArgs.push_back(createInstructionGlobalString(BaseInstruction));
   CGArgs.push_back(LeftOpInstructionValuePointer);
   CGArgs.push_back(RightOpInstructionValuePointer);
   CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::BinaryInstruction));
@@ -447,12 +447,20 @@ void ACInstrumentation::instrumentCallsForAFAnalysis(
          (AFfp64AnalysisFunction!=nullptr) &&
          "Function not initialized!");
 
+  // Backtracking till you get a function of interest.
+  // NOTE: Assuming following the usedef chain of just the first operands back
+  // will give the function of interest
+  while(!isInstructionOfInterest(BaseInstruction) &&
+         static_cast<Instruction*>(BaseInstruction->getOperand(0))) {
+    BaseInstruction = static_cast<Instruction*>(BaseInstruction->getOperand(0));
+  }
+
   BasicBlock::iterator NextInst(LocationToInstrument);
   NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 
   std::vector<Value *> Args;
-  Args.push_back(createInstructionString(BaseInstruction));
+  Args.push_back(createInstructionGlobalString(BaseInstruction));
   ArrayRef<Value *> ArgsRef(Args);
 
   CallInst *AFComputingCallInstruction = nullptr;
@@ -708,7 +716,7 @@ bool ACInstrumentation::isUnwantedFunction(const Function *Func) {
          Func->getName().str().find("ACItem") != std::string::npos;
 }
 
-Value *ACInstrumentation::createBBNameString(BasicBlock *BB) {
+Value *ACInstrumentation::createBBNameGlobalString(BasicBlock *BB) {
   string BasicBlockString;
   raw_string_ostream RawBasicBlockString(BasicBlockString);
   BB->printAsOperand(RawBasicBlockString, false);
@@ -725,7 +733,7 @@ Value *ACInstrumentation::createBBNameString(BasicBlock *BB) {
   return BBValuePointer;
 }
 
-Value *ACInstrumentation::createRegisterNameString(Instruction *Inst) {
+Value *ACInstrumentation::createRegisterNameGlobalString(Instruction *Inst) {
   string InstructionString;
   raw_string_ostream RawRegisterString(InstructionString);
   Inst->printAsOperand(RawRegisterString, false);
@@ -743,7 +751,7 @@ Value *ACInstrumentation::createRegisterNameString(Instruction *Inst) {
   return InstructionValuePointer;
 }
 
-Value *ACInstrumentation::createInstructionString(Instruction *Inst) {
+Value *ACInstrumentation::createInstructionGlobalString(Instruction *Inst) {
   string InstructionString;
   raw_string_ostream RawInstructionString(InstructionString);
   RawInstructionString << *Inst;
@@ -762,4 +770,31 @@ Value *ACInstrumentation::createInstructionString(Instruction *Inst) {
                                                       InstructionValue);
 
   return InstructionValuePointer;
+}
+
+string ACInstrumentation::getInstructionAsString(Instruction *Inst) {
+  string InstructionString;
+  raw_string_ostream RawInstructionString(InstructionString);
+  RawInstructionString << *Inst;
+  unsigned long NonEmptyPosition= RawInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+  string InstructionAsString = (NonEmptyPosition == std::string::npos) ? "" :
+                                                               RawInstructionString.str().substr(NonEmptyPosition);
+  return InstructionAsString;
+}
+
+bool ACInstrumentation::isInstructionOfInterest(Instruction *Inst) {
+  switch (Inst->getOpcode()) {
+  case 14:
+  case 16:
+  case 18:
+  case 21:
+  case 31:
+  case 32:
+  case 33:
+//  case 45:
+  case 55:
+  case 56:
+    return true;
+  }
+  return false;
 }

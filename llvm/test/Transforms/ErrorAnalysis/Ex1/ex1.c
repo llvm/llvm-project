@@ -18,10 +18,15 @@ int main() {
   v4 = v2/v3;
 //  v4 = (1.0-cos(x))/(x*x);
 
-  printf("v1 = %lf\n", v1);
-  printf("v2 = %lf\n", v2);
-  printf("v3 = %lf\n", v3);
-  printf("v4 = %lf\n", v4);
+  printf("v1 = %0.18lf\n", v1);
+  printf("v2 = %0.18lf\n", v2);
+  printf("v3 = %0.18lf\n", v3);
+  printf("v4 = %0.18lf\n\n", v4);
+
+  printf("v1 = %0.18e\n", v1);
+  printf("v2 = %0.18e\n", v2);
+  printf("v3 = %0.18e\n", v3);
+  printf("v4 = %0.18e\n", v4);
   fAFfp64markForResult(v4);
 
   return 0;
