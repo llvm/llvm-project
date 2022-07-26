@@ -787,8 +787,9 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
       uint64_t ThisAddr = SectionAddr + Index;
       if (!DisAsm->getInstruction(Inst, Size, ThisBytes, ThisAddr, nulls())) {
         if (Size == 0)
-          Size = std::min(ThisBytes.size(),
-                          DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
+          Size = std::min<uint64_t>(
+              ThisBytes.size(),
+              DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
         continue;
       }
       uint64_t Addr = Index + SectionAddr;
