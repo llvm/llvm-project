@@ -176,6 +176,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   llvm::StringMap<mlir::OpPassManager> pipelines;
   pm.addPass(
       mlir::createInlinerPass(pipelines, defaultFlangInlinerOptPipeline));
+  pm.addPass(fir::createSimplifyRegionLitePass());
   pm.addPass(mlir::createCSEPass());
 
   // convert control flow to CFG form
