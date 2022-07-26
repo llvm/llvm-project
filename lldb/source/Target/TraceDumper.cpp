@@ -286,7 +286,7 @@ TraceDumper::TraceDumper(lldb::TraceCursorUP &&cursor_up, Stream &s,
 }
 
 TraceDumper::TraceItem TraceDumper::CreatRawTraceItem() {
-  TraceItem item = {};
+  TraceItem item;
   item.id = m_cursor_up->GetId();
 
   if (m_options.show_tsc)

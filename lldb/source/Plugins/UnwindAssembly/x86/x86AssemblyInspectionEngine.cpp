@@ -968,7 +968,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
   UnwindPlan::RowSP prologue_completed_row; // copy of prologue row of CFI
   int prologue_completed_sp_bytes_offset_from_cfa; // The sp value before the
                                                    // epilogue started executed
-  bool prologue_completed_is_aligned = false;
+  bool prologue_completed_is_aligned;
   std::vector<bool> prologue_completed_saved_registers;
 
   while (current_func_text_offset < size) {
