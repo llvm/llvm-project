@@ -29,6 +29,7 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
@@ -234,7 +235,9 @@ private:
     performOptimizedStructLayout(LayoutFields);
 
     std::vector<GlobalVariable *> LocalVars;
+    BitVector IsPaddingField;
     LocalVars.reserve(LDSVarsToTransform.size()); // will be at least this large
+    IsPaddingField.reserve(LDSVarsToTransform.size());
     {
       // This usually won't need to insert any padding, perhaps avoid the alloc
       uint64_t CurrentOffset = 0;
@@ -256,10 +259,12 @@ private:
               M, ATy, false, GlobalValue::InternalLinkage, UndefValue::get(ATy),
               "", nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
               false));
+          IsPaddingField.push_back(true);
           CurrentOffset += Padding;
         }
 
         LocalVars.push_back(FGV);
+        IsPaddingField.push_back(false);
         CurrentOffset += LayoutFields[I].Size;
       }
     }
@@ -316,7 +321,7 @@ private:
       GlobalVariable *GV = LocalVars[I];
       Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
       Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx);
-      if (F) {
+      if (F && !IsPaddingField[I]) {
         // Replace all constant uses with instructions if they belong to the
         // current kernel.
         for (User *U : make_early_inc_range(GV->users())) {
@@ -333,7 +338,7 @@ private:
       } else {
         GV->replaceAllUsesWith(GEP);
       }
-      if (GV->use_empty()) {
+      if (GV->use_empty() && !IsPaddingField[I]) {
         GV->eraseFromParent();
       }
 
@@ -347,7 +352,17 @@ private:
       MDNode *AliasScope =
           AliasScopes.empty() ? nullptr : MDNode::get(Ctx, {AliasScopes[I]});
 
-      refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
+      if (!IsPaddingField[I]) {
+        refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
+      }
+    }
+
+    for (size_t I = 0; I < LocalVars.size(); I++) {
+      if (IsPaddingField[I]) {
+        GlobalVariable *GV = LocalVars[I];
+        assert(GV->use_empty());
+        GV->eraseFromParent();
+      }
     }
 
     // This ensures the variable is allocated when called functions access it.
