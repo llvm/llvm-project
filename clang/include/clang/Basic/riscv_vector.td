@@ -186,7 +186,7 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // HasPolicyOperand: Has a policy operand. 0 is tail and mask undisturbed, 1 is
   // tail agnostic, 2 is mask undisturbed, and 3 is tail and mask agnostic. The
   // policy operand is located at the last position.
-  Policy MaskedPolicy = HasPolicyOperand;
+  Policy MaskedPolicyScheme = HasPolicyOperand;
 
   // The policy scheme for unmasked intrinsic IR.
   // It could be NonePolicy, HasPassthruOperand or HasPolicyOperand.
@@ -194,7 +194,7 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // undef, tail policy is tail agnostic, otherwise policy is tail undisturbed.
   // HasPolicyOperand: Has a policy operand. 1 is tail agnostic and 0 is tail
   // undisturbed.
-  Policy UnMaskedPolicy = NonePolicy;
+  Policy UnMaskedPolicyScheme = NonePolicy;
 
   // This builtin supports non-masked function overloading api.
   // All masked operations support overloading api.
@@ -443,7 +443,7 @@ class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
   let HasMaskedOffOperand = false;
 }
 
-let UnMaskedPolicy = HasPolicyOperand,
+let UnMaskedPolicyScheme = HasPolicyOperand,
     HasMaskedOffOperand = false in {
   multiclass RVVSlideBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
@@ -582,7 +582,7 @@ class IsFloat<string type> {
 }
 
 let HasUnMaskedOverloaded = false,
-    MaskedPolicy = NonePolicy in {
+    MaskedPolicyScheme = NonePolicy in {
   class RVVVLEMaskBuiltin : RVVOutBuiltin<"m", "mPCUe", "c"> {
     let Name = "vlm_v";
     let IRName = "vlm";
@@ -591,7 +591,7 @@ let HasUnMaskedOverloaded = false,
 }
 
 let HasUnMaskedOverloaded = false,
-    UnMaskedPolicy = HasPassthruOperand in {
+    UnMaskedPolicyScheme = HasPassthruOperand in {
   multiclass RVVVLEBuiltin<list<string> types> {
     let Name = NAME # "_v",
         IRName = "vle",
@@ -664,7 +664,7 @@ multiclass RVVVLSEBuiltin<list<string> types> {
       IRName = "vlse",
       MaskedIRName ="vlse_mask",
       HasUnMaskedOverloaded = false,
-      UnMaskedPolicy = HasPassthruOperand in {
+      UnMaskedPolicyScheme = HasPassthruOperand in {
     foreach type = types in {
       def : RVVOutBuiltin<"v", "vPCet", type>;
       if !not(IsFloat<type>.val) then {
@@ -675,7 +675,7 @@ multiclass RVVVLSEBuiltin<list<string> types> {
 }
 
 multiclass RVVIndexedLoad<string op> {
-  let UnMaskedPolicy = HasPassthruOperand in {
+  let UnMaskedPolicyScheme = HasPassthruOperand in {
     foreach type = TypeList in {
       foreach eew_list = EEWList[0-2] in {
         defvar eew = eew_list[0];
@@ -701,7 +701,7 @@ multiclass RVVIndexedLoad<string op> {
 }
 
 let HasMaskedOffOperand = false,
-    MaskedPolicy = NonePolicy,
+    MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       // Builtin: (ptr, value, vl). Intrinsic: (value, ptr, vl)
       std::swap(Ops[0], Ops[1]);
@@ -738,7 +738,7 @@ multiclass RVVVSSEBuiltin<list<string> types> {
       IRName = "vsse",
       MaskedIRName = "vsse_mask",
       HasMaskedOffOperand = false,
-      MaskedPolicy = NonePolicy,
+      MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
         // Builtin: (ptr, stride, value, vl). Intrinsic: (value, ptr, stride, vl)
         std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
@@ -762,7 +762,7 @@ multiclass RVVVSSEBuiltin<list<string> types> {
 
 multiclass RVVIndexedStore<string op> {
   let HasMaskedOffOperand = false,
-      MaskedPolicy = NonePolicy,
+      MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
         // Builtin: (ptr, index, value, vl). Intrinsic: (value, ptr, index, vl)
         std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
@@ -1141,7 +1141,7 @@ multiclass RVVUnitStridedSegStore<string op> {
             MaskedIRName = op # nf # "_mask",
             NF = nf,
             HasMaskedOffOperand = false,
-            MaskedPolicy = NonePolicy,
+            MaskedPolicyScheme = NonePolicy,
             ManualCodegen = [{
     {
       // Builtin: (ptr, val0, val1, ..., vl)
@@ -1187,7 +1187,7 @@ multiclass RVVStridedSegStore<string op> {
             MaskedIRName = op # nf # "_mask",
             NF = nf,
             HasMaskedOffOperand = false,
-            MaskedPolicy = NonePolicy,
+            MaskedPolicyScheme = NonePolicy,
             ManualCodegen = [{
     {
       // Builtin: (ptr, stride, val0, val1, ..., vl).
@@ -1229,7 +1229,7 @@ multiclass RVVIndexedSegStore<string op> {
             MaskedIRName = op # nf # "_mask",
             NF = nf,
             HasMaskedOffOperand = false,
-            MaskedPolicy = NonePolicy,
+            MaskedPolicyScheme = NonePolicy,
             ManualCodegen = [{
     {
       // Builtin: (ptr, index, val0, val1, ..., vl)
@@ -1568,7 +1568,7 @@ def vsetvl_macro: RVVHeader;
 let HasBuiltinAlias = false,
     HasVL = false,
     HasMasked = false,
-    MaskedPolicy = NonePolicy,
+    MaskedPolicyScheme = NonePolicy,
     Log2LMUL = [0],
     ManualCodegen = [{IntrinsicTypes = {ResultType};}] in // Set XLEN type
 {
@@ -1627,7 +1627,7 @@ defm : RVVIndexedSegStore<"vsoxseg">;
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vadd : RVVIntBinBuiltinSet;
 defm vsub : RVVIntBinBuiltinSet;
 defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
@@ -1638,7 +1638,7 @@ defm vneg_v : RVVPseudoUnaryBuiltin<"vrsub", "csil">;
 
 // 12.2. Vector Widening Integer Add/Subtract
 // Widening unsigned integer add/subtract, 2*SEW = SEW +/- SEW
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vwaddu : RVVUnsignedWidenBinBuiltinSet;
 defm vwsubu : RVVUnsignedWidenBinBuiltinSet;
 // Widening signed integer add/subtract, 2*SEW = SEW +/- SEW
@@ -1657,7 +1657,7 @@ defm vwcvt_x_x_v : RVVPseudoVWCVTBuiltin<"vwadd", "vwcvt_x", "csi",
                                          [["w", "wv"]]>;
 
 // 12.3. Vector Integer Extension
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
   def vzext_vf2 : RVVIntExt<"vzext", "Uw", "UwUv", "csi">;
@@ -1673,8 +1673,8 @@ let Log2LMUL = [-3, -2, -1, 0] in {
 }
 
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-let HasMasked = false, MaskedPolicy = NonePolicy in {
-  let UnMaskedPolicy = HasPassthruOperand in {
+let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
+  let UnMaskedPolicyScheme = HasPassthruOperand in {
     defm vadc : RVVCarryinBuiltinSet;
     defm vsbc : RVVCarryinBuiltinSet;
   }
@@ -1685,7 +1685,7 @@ let HasMasked = false, MaskedPolicy = NonePolicy in {
 }
 
 // 12.5. Vector Bitwise Logical Instructions
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vand : RVVIntBinBuiltinSet;
 defm vxor : RVVIntBinBuiltinSet;
 defm vor : RVVIntBinBuiltinSet;
@@ -1693,7 +1693,7 @@ defm vor : RVVIntBinBuiltinSet;
 defm vnot_v : RVVPseudoVNotBuiltin<"vxor", "csil">;
 
 // 12.6. Vector Single-Width Bit Shift Instructions
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsll : RVVShiftBuiltinSet;
 defm vsrl : RVVUnsignedShiftBuiltinSet;
 defm vsra : RVVSignedShiftBuiltinSet;
@@ -1707,7 +1707,7 @@ defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
                                           ["Uv", "UvUw"]]>;
 
 // 12.8. Vector Integer Comparison Instructions
-let MaskedPolicy = NonePolicy in {
+let MaskedPolicyScheme = NonePolicy in {
 defm vmseq : RVVIntMaskOutBuiltinSet;
 defm vmsne : RVVIntMaskOutBuiltinSet;
 defm vmsltu : RVVUnsignedMaskOutBuiltinSet;
@@ -1721,7 +1721,7 @@ defm vmsge : RVVSignedMaskOutBuiltinSet;
 }
 
 // 12.9. Vector Integer Min/Max Instructions
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vminu : RVVUnsignedBinBuiltinSet;
 defm vmin : RVVSignedBinBuiltinSet;
 defm vmaxu : RVVUnsignedBinBuiltinSet;
@@ -1745,7 +1745,7 @@ defm vrem : RVVSignedBinBuiltinSet;
 }
 
 // 12.12. Vector Widening Integer Multiply Instructions
-let Log2LMUL = [-3, -2, -1, 0, 1, 2], UnMaskedPolicy = HasPassthruOperand in {
+let Log2LMUL = [-3, -2, -1, 0, 1, 2], UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vwmul : RVVOutOp0Op1BuiltinSet<"vwmul", "csi",
                                     [["vv", "w", "wvv"],
                                      ["vx", "w", "wve"]]>;
@@ -1758,7 +1758,7 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 }
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
-let UnMaskedPolicy = HasPolicyOperand in {
+let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
@@ -1783,7 +1783,7 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 
 // 12.15. Vector Integer Merge Instructions
 // C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (op1, op2, mask, vl)
-let HasMasked = false, MaskedPolicy = NonePolicy,
+let HasMasked = false, MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
@@ -1798,7 +1798,9 @@ let HasMasked = false, MaskedPolicy = NonePolicy,
 }
 
 // 12.16. Vector Integer Move Instructions
-let HasMasked = false, UnMaskedPolicy = HasPassthruOperand, MaskedPolicy = NonePolicy in {
+let HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperand,
+    MaskedPolicyScheme = NonePolicy in {
   let OverloadedName = "vmv_v" in {
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csil",
                                    [["v", "Uv", "UvUv"]]>;
@@ -1813,7 +1815,7 @@ let HasMasked = false, UnMaskedPolicy = HasPassthruOperand, MaskedPolicy = NoneP
 
 // 13. Vector Fixed-Point Arithmetic Instructions
 // 13.1. Vector Single-Width Saturating Add and Subtract
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsaddu : RVVUnsignedBinBuiltinSet;
 defm vsadd : RVVSignedBinBuiltinSet;
 defm vssubu : RVVUnsignedBinBuiltinSet;
@@ -1866,7 +1868,7 @@ let Log2LMUL = [-2, -1, 0, 1, 2] in {
 }
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let UnMaskedPolicy = HasPolicyOperand in {
+let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vfmacc  : RVVFloatingTerBuiltinSet;
 defm vfnmacc : RVVFloatingTerBuiltinSet;
 defm vfmsac  : RVVFloatingTerBuiltinSet;
@@ -1884,7 +1886,7 @@ defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
 }
 
 // 14.8. Vector Floating-Point Square-Root Instruction
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 def vfsqrt : RVVFloatingUnaryVVBuiltin;
 
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
@@ -1906,7 +1908,7 @@ defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "xfd">;
 defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "xfd">;
 
 // 14.13. Vector Floating-Point Compare Instructions
-let MaskedPolicy = NonePolicy in {
+let MaskedPolicyScheme = NonePolicy in {
 defm vmfeq : RVVFloatingMaskOutBuiltinSet;
 defm vmfne : RVVFloatingMaskOutBuiltinSet;
 defm vmflt : RVVFloatingMaskOutBuiltinSet;
@@ -1916,12 +1918,12 @@ defm vmfge : RVVFloatingMaskOutBuiltinSet;
 }
 
 // 14.14. Vector Floating-Point Classify Instruction
-let Name = "vfclass_v", UnMaskedPolicy = HasPassthruOperand in
+let Name = "vfclass_v", UnMaskedPolicyScheme = HasPassthruOperand in
   def vfclass : RVVOp0Builtin<"Uv", "Uvv", "xfd">;
 
 // 14.15. Vector Floating-Point Merge Instructio
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
-let HasMasked = false, MaskedPolicy = NonePolicy,
+let HasMasked = false, MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
@@ -1935,13 +1937,13 @@ let HasMasked = false, MaskedPolicy = NonePolicy,
 }
 
 // 14.16. Vector Floating-Point Move Instruction
-let HasMasked = false, UnMaskedPolicy = HasPassthruOperand,
-    HasUnMaskedOverloaded = false, MaskedPolicy = NonePolicy in
+let HasMasked = false, UnMaskedPolicyScheme = HasPassthruOperand,
+    HasUnMaskedOverloaded = false, MaskedPolicyScheme = NonePolicy in
   defm vfmv_v : RVVOutBuiltinSet<"vfmv_v_f", "xfd",
                                   [["f", "v", "ve"]]>;
 
 // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 def vfcvt_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_xu">;
 def vfcvt_x_f_v : RVVConvToSignedBuiltin<"vfcvt_x">;
 def vfcvt_rtz_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_rtz_xu">;
@@ -1975,7 +1977,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 
 // 15. Vector Reduction Operations
 // 15.1. Vector Single-Width Integer Reduction Instructions
-let MaskedPolicy = NonePolicy in {
+let MaskedPolicyScheme = NonePolicy in {
 defm vredsum : RVVIntReductionBuiltinSet;
 defm vredmaxu : RVVUnsignedReductionBuiltin;
 defm vredmax : RVVSignedReductionBuiltin;
@@ -2021,7 +2023,7 @@ def vmset    : RVVMaskNullaryBuiltin;
 defm vmmv_m : RVVPseudoMaskBuiltin<"vmand", "c">;
 defm vmnot_m : RVVPseudoMaskBuiltin<"vmnand", "c">;
 
-let MaskedPolicy = NonePolicy in {
+let MaskedPolicyScheme = NonePolicy in {
 // 16.2. Vector count population in mask vcpop.m
 def vcpop : RVVMaskOp0Builtin<"um">;
 
@@ -2038,7 +2040,7 @@ def vmsif : RVVMaskUnaryBuiltin;
 def vmsof : RVVMaskUnaryBuiltin;
 }
 
-let UnMaskedPolicy = HasPassthruOperand, HasUnMaskedOverloaded = false in {
+let UnMaskedPolicyScheme = HasPassthruOperand, HasUnMaskedOverloaded = false in {
   // 16.8. Vector Iota Instruction
   defm viota : RVVOutBuiltinSet<"viota", "csil", [["m", "Uv", "Uvm"]]>;
 
@@ -2049,7 +2051,7 @@ let UnMaskedPolicy = HasPassthruOperand, HasUnMaskedOverloaded = false in {
 
 // 17. Vector Permutation Instructions
 // 17.1. Integer Scalar Move Instructions
-let HasMasked = false, MaskedPolicy = NonePolicy in {
+let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vmv_x" in
     defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
                                    [["s", "ve", "ev"],
@@ -2061,7 +2063,7 @@ let HasMasked = false, MaskedPolicy = NonePolicy in {
 }
 
 // 17.2. Floating-Point Scalar Move Instructions
-let HasMasked = false, MaskedPolicy = NonePolicy in {
+let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vfmv_f" in
     defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "xfd",
                                      [["s", "ve", "ev"]]>;
@@ -2078,7 +2080,7 @@ defm vslideup   : RVVSlideBuiltinSet;
 defm vslidedown : RVVSlideBuiltinSet;
 
 // 17.3.3. Vector Slide1up Instructions
-let UnMaskedPolicy = HasPassthruOperand in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vslide1up : RVVSlideOneBuiltinSet;
 defm vfslide1up : RVVFloatingBinVFBuiltinSet;
 
@@ -2104,7 +2106,7 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
 }
 
 // 17.5. Vector Compress Instruction
-let HasMasked = false, MaskedPolicy = NonePolicy,
+let HasMasked = false, MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[3]->getType()};
@@ -2119,7 +2121,7 @@ let HasMasked = false, MaskedPolicy = NonePolicy,
 
 // Miscellaneous
 let HasMasked = false, HasVL = false, IRName = "" in {
-  let Name = "vreinterpret_v", MaskedPolicy = NonePolicy,
+  let Name = "vreinterpret_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
         return Builder.CreateBitCast(Ops[0], ResultType);
       }] in {
@@ -2141,7 +2143,8 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     }
   }
 
-  let Name = "vundefined", HasUnMaskedOverloaded = false, MaskedPolicy = NonePolicy,
+  let Name = "vundefined", HasUnMaskedOverloaded = false,
+      MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
         return llvm::UndefValue::get(ResultType);
       }] in {
@@ -2151,7 +2154,8 @@ let HasMasked = false, HasVL = false, IRName = "" in {
 
   // LMUL truncation
   // C/C++ Operand: VecTy, IR Operand: VecTy, Index
-  let Name = "vlmul_trunc_v", OverloadedName = "vlmul_trunc", MaskedPolicy = NonePolicy,
+  let Name = "vlmul_trunc_v", OverloadedName = "vlmul_trunc",
+      MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{ {
         ID = Intrinsic::vector_extract;
         IntrinsicTypes = {ResultType, Ops[0]->getType()};
@@ -2169,7 +2173,8 @@ let HasMasked = false, HasVL = false, IRName = "" in {
 
   // LMUL extension
   // C/C++ Operand: SubVecTy, IR Operand: VecTy, SubVecTy, Index
-  let Name = "vlmul_ext_v", OverloadedName = "vlmul_ext", MaskedPolicy = NonePolicy,
+  let Name = "vlmul_ext_v", OverloadedName = "vlmul_ext",
+      MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
         ID = Intrinsic::vector_insert;
         IntrinsicTypes = {ResultType, Ops[0]->getType()};
@@ -2187,7 +2192,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     }
   }
 
-  let Name = "vget_v", MaskedPolicy = NonePolicy,
+  let Name = "vget_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
         ID = Intrinsic::vector_extract;
@@ -2211,7 +2216,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     }
   }
 
-  let Name = "vset_v", Log2LMUL = [0, 1, 2], MaskedPolicy = NonePolicy,
+  let Name = "vset_v", Log2LMUL = [0, 1, 2], MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
         ID = Intrinsic::vector_insert;

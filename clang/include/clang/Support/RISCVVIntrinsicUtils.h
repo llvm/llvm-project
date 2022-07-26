@@ -341,6 +341,11 @@ public:
   static std::string
   getSuffixStr(BasicType Type, int Log2LMUL,
                llvm::ArrayRef<PrototypeDescriptor> PrototypeDescriptors);
+
+  static llvm::SmallVector<PrototypeDescriptor>
+      computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
+                          bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
+                          unsigned NF);
 };
 
 // RVVRequire should be sync'ed with target features, but only
