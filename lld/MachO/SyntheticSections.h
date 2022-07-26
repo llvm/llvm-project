@@ -70,7 +70,7 @@ public:
   // Sections in __LINKEDIT are special: their offsets are recorded in the
   // load commands like LC_DYLD_INFO_ONLY and LC_SYMTAB, instead of in section
   // headers.
-  bool isHidden() const override final { return true; }
+  bool isHidden() const final { return true; }
 
   virtual uint64_t getRawSize() const = 0;
 
@@ -80,9 +80,7 @@ public:
   //
   // NOTE: This assumes that the extra bytes required for alignment can be
   // zero-valued bytes.
-  uint64_t getSize() const override final {
-    return llvm::alignTo(getRawSize(), align);
-  }
+  uint64_t getSize() const final { return llvm::alignTo(getRawSize(), align); }
 };
 
 // The header of the Mach-O file, which must have a file offset of zero.
