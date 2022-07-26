@@ -76,8 +76,11 @@ def TilingInterface : OpInterface<"TilingInterface"> {
             operation is to be inserted into. The type of the `dest`
             Values is same as the types returned by
             `getDestinationOperands` method.
-          - `offsets` provides the offset of the tile within the
-            iteration space
+          - `offsets` provides the offset of the tile in the coordinate system
+            of the original iteration space, i.e., if an iteration space
+            dimension had non-zero offset, it must be included in the offset
+            provided here (as opposed to zero-based offset "relative" to the
+            iteration space).
           - `sizes` provides the size of the tile.
           - `tileDestOperands` specifies whether to also tile `dest` operands
             or not. Avoiding tiling `dest` operands can be useful for 
@@ -141,8 +144,11 @@ def TilingInterface : OpInterface<"TilingInterface"> {
             operation is to be inserted into. The type of the `dest`
             Values is same as the types returned by
             `getDestinationOperands` method.
-          - `offsets` provides the offset of the tile within the
-            iteration space
+          - `offsets` provides the offset of the tile in the coordinate system
+            of the original iteration space, i.e., if an iteration space
+            dimension had non-zero offset, it must be included in the offset
+            provided here (as opposed to zero-based offset "relative" to the
+            iteration space).
           - `sizes` provides the size of the tile.
           - `tileDestOperands` specifies whether to also tile `dest` operands
             or not. Avoiding tiling `dest` operands can be useful for 

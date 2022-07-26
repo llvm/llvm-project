@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -134,9 +135,10 @@ void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 ///
 /// Note that there is no simplification other than constant propagation applied
 /// to slice extraction and insertion.
-std::pair<LinalgOp, LinalgOp> splitOp(RewriterBase &rewriter, LinalgOp op,
-                                      unsigned dimension,
-                                      OpFoldResult splitPoint);
+std::pair<TilingInterface, TilingInterface> splitOp(RewriterBase &rewriter,
+                                                    TilingInterface op,
+                                                    unsigned dimension,
+                                                    OpFoldResult splitPoint);
 
 /// Perform standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
