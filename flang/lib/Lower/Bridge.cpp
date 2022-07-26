@@ -556,19 +556,12 @@ public:
       Fortran::lower::pft::Evaluation &eval,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
       Fortran::semantics::Symbol::Flag flag,
-      bool checkHostAssoicatedSymbols) override final {
+      bool isUltimateSymbol) override final {
     auto addToList = [&](const Fortran::semantics::Symbol &sym) {
-      std::function<void(const Fortran::semantics::Symbol &)> insertSymbols =
-          [&](const Fortran::semantics::Symbol &oriSymbol) {
-            if (oriSymbol.test(flag))
-              symbolSet.insert(&oriSymbol);
-            if (checkHostAssoicatedSymbols)
-              if (const auto *details{
-                      oriSymbol
-                          .detailsIf<Fortran::semantics::HostAssocDetails>()})
-                insertSymbols(details->symbol());
-          };
-      insertSymbols(sym);
+      const Fortran::semantics::Symbol &symbol =
+          isUltimateSymbol ? sym.GetUltimate() : sym;
+      if (symbol.test(flag))
+        symbolSet.insert(&symbol);
     };
     Fortran::lower::pft::visitAllSymbols(eval, addToList);
   }
