@@ -53,6 +53,7 @@ add_clang_library(clangSema
   SemaOpenMP.cpp
   SemaOverload.cpp
   SemaPseudoObject.cpp
+  SemaRISCVVectorLookup.cpp
   SemaStmt.cpp
   SemaStmtAsm.cpp
   SemaStmtAttr.cpp
@@ -75,5 +76,6 @@ add_clang_library(clangSema
   clangBasic
   clangEdit
   clangLex
+  clangSupport
   clangAPINotes
   )

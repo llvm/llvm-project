@@ -13,16 +13,16 @@ faclt   p0.h, p0/z, z0.h, z1.h
 // CHECK-INST: facgt	p0.h, p0/z, z1.h, z0.h
 // CHECK-ENCODING: [0x30,0xe0,0x40,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 30 e0 40 65 <unknown>
+// CHECK-UNKNOWN: 6540e030 <unknown>
 
 faclt   p0.s, p0/z, z0.s, z1.s
 // CHECK-INST: facgt	p0.s, p0/z, z1.s, z0.s
 // CHECK-ENCODING: [0x30,0xe0,0x80,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 30 e0 80 65 <unknown>
+// CHECK-UNKNOWN: 6580e030 <unknown>
 
 faclt   p0.d, p0/z, z0.d, z1.d
 // CHECK-INST: facgt	p0.d, p0/z, z1.d, z0.d
 // CHECK-ENCODING: [0x30,0xe0,0xc0,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 30 e0 c0 65 <unknown>
+// CHECK-UNKNOWN: 65c0e030 <unknown>

@@ -13,25 +13,25 @@ srshl z0.b, p0/m, z0.b, z1.b
 // CHECK-INST: srshl z0.b, p0/m, z0.b, z1.b
 // CHECK-ENCODING: [0x20,0x80,0x02,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 80 02 44 <unknown>
+// CHECK-UNKNOWN: 44028020 <unknown>
 
 srshl z0.h, p0/m, z0.h, z1.h
 // CHECK-INST: srshl z0.h, p0/m, z0.h, z1.h
 // CHECK-ENCODING: [0x20,0x80,0x42,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 80 42 44 <unknown>
+// CHECK-UNKNOWN: 44428020 <unknown>
 
 srshl z29.s, p7/m, z29.s, z30.s
 // CHECK-INST: srshl z29.s, p7/m, z29.s, z30.s
 // CHECK-ENCODING: [0xdd,0x9f,0x82,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: dd 9f 82 44 <unknown>
+// CHECK-UNKNOWN: 44829fdd <unknown>
 
 srshl z31.d, p7/m, z31.d, z30.d
 // CHECK-INST: srshl z31.d, p7/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x9f,0xc2,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 9f c2 44 <unknown>
+// CHECK-UNKNOWN: 44c29fdf <unknown>
 
 // --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
@@ -40,22 +40,22 @@ movprfx z31.d, p0/z, z6.d
 // CHECK-INST: movprfx z31.d, p0/z, z6.d
 // CHECK-ENCODING: [0xdf,0x20,0xd0,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: df 20 d0 04 <unknown>
+// CHECK-UNKNOWN: 04d020df <unknown>
 
 srshl z31.d, p0/m, z31.d, z30.d
 // CHECK-INST: srshl z31.d, p0/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x83,0xc2,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 83 c2 44 <unknown>
+// CHECK-UNKNOWN: 44c283df <unknown>
 
 movprfx z31, z6
 // CHECK-INST: movprfx z31, z6
 // CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: df bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bcdf <unknown>
 
 srshl z31.d, p7/m, z31.d, z30.d
 // CHECK-INST: srshl z31.d, p7/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x9f,0xc2,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 9f c2 44 <unknown>
+// CHECK-UNKNOWN: 44c29fdf <unknown>

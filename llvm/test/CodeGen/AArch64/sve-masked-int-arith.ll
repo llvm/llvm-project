@@ -88,3 +88,99 @@ define <vscale x 2 x i64> @masked_sub_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2
   %ret = sub <vscale x 2 x i64> %a, %select
   ret <vscale x 2 x i64> %ret
 }
+
+;
+; Masked multiply-add
+;
+
+define <vscale x 16 x i8> @masked_mla_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i1> %mask) {
+; CHECK-LABEL: masked_mla_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 16 x i8> %b, %c
+  %sel = select <vscale x 16 x i1> %mask, <vscale x 16 x i8> %mul, <vscale x 16 x i8> zeroinitializer
+  %add = add <vscale x 16 x i8> %a, %sel
+  ret <vscale x 16 x i8> %add
+}
+
+define <vscale x 8 x i16> @masked_mla_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: masked_mla_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 8 x i16> %b, %c
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x i16> %mul, <vscale x 8 x i16> zeroinitializer
+  %add = add <vscale x 8 x i16> %a, %sel
+  ret <vscale x 8 x i16> %add
+}
+
+define <vscale x 4 x i32> @masked_mla_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: masked_mla_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 4 x i32> %b, %c
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %mul, <vscale x 4 x i32> zeroinitializer
+  %add = add <vscale x 4 x i32> %a, %sel
+  ret <vscale x 4 x i32> %add
+}
+
+define <vscale x 2 x i64> @masked_mla_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_mla_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 2 x i64> %b, %c
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x i64> %mul, <vscale x 2 x i64> zeroinitializer
+  %add = add <vscale x 2 x i64> %a, %sel
+  ret <vscale x 2 x i64> %add
+}
+
+;
+; Masked multiply-subtract
+;
+
+define <vscale x 16 x i8> @masked_mls_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i1> %mask) {
+; CHECK-LABEL: masked_mls_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 16 x i8> %b, %c
+  %sel = select <vscale x 16 x i1> %mask, <vscale x 16 x i8> %mul, <vscale x 16 x i8> zeroinitializer
+  %sub = sub <vscale x 16 x i8> %a, %sel
+  ret <vscale x 16 x i8> %sub
+}
+
+define <vscale x 8 x i16> @masked_mls_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: masked_mls_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 8 x i16> %b, %c
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x i16> %mul, <vscale x 8 x i16> zeroinitializer
+  %sub = sub <vscale x 8 x i16> %a, %sel
+  ret <vscale x 8 x i16> %sub
+}
+
+define <vscale x 4 x i32> @masked_mls_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: masked_mls_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 4 x i32> %b, %c
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %mul, <vscale x 4 x i32> zeroinitializer
+  %sub = sub <vscale x 4 x i32> %a, %sel
+  ret <vscale x 4 x i32> %sub
+}
+
+define <vscale x 2 x i64> @masked_mls_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_mls_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %mul = mul nsw <vscale x 2 x i64> %b, %c
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x i64> %mul, <vscale x 2 x i64> zeroinitializer
+  %sub = sub <vscale x 2 x i64> %a, %sel
+  ret <vscale x 2 x i64> %sub
+}

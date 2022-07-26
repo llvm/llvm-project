@@ -111,7 +111,8 @@ public:
   virtual void collectSymbolSet(
       pft::Evaluation &eval,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
-      Fortran::semantics::Symbol::Flag flag, bool isUltimateSymbol = true) = 0;
+      Fortran::semantics::Symbol::Flag flag,
+      bool checkHostAssoicatedSymbols = true) = 0;
 
   //===--------------------------------------------------------------------===//
   // Expressions

@@ -35,8 +35,8 @@ _func:
 // CHECK-ASM:        .{{long|word}}   3573751839
 // CHECK-ASM:        .inst   0xd503201f
 
-// CHECK-OBJ:        0:       1f 20 03 d5     nop
-// CHECK-OBJ-CODE:   4:       1f 20 03 d5     nop
+// CHECK-OBJ:        0:       d503201f     nop
+// CHECK-OBJ-CODE:   4:       d503201f     nop
 // CHECK-OBJ-DATA:   4:       1f 20 03 d5     .word 0xd503201f
 // CHECK-OBJ-BE:     4:       d5 03 20 1f     .word 0xd503201f
-// CHECK-OBJ:        8:       1f 20 03 d5     nop
+// CHECK-OBJ:        8:       d503201f     nop

@@ -1,0 +1,52 @@
+# RUN: yaml2obj %s | llvm-objdump -d --mcpu=cortex-a8 - | FileCheck %s
+
+# Test that unrecognized instructions are skipped in a way that makes
+# sense for the Arm instruction set encoding.
+#
+# The first three instructions in this file are marked by the mapping
+# symbols as in Arm state, with the one in the middle unknown, and we
+# expect the disassembler to skip 4 bytes because that's the width of
+# any Arm instruction.
+#
+# At address 0xc there's a mapping symbol that says we're now in Thumb
+# mode, and in that mode we include both a 16-bit and a 32-bit unknown
+# Thumb instruction, which the disassembler will identify by the simple
+# encoding criterion that tells you the instruction length without
+# having to recognize it specifically.
+#
+# Finally we end with a single byte, to ensure nothing gets confused
+# when the Thumb instruction stream doesn't contain enough data to
+# even do that check.
+
+# CHECK:       0: e3a00064      mov     r0, #100
+# CHECK-NEXT:  4: ffffffff      <unknown>
+# CHECK-NEXT:  8: e0810312      add     r0, r1, r2, lsl r3
+
+# CHECK:       c: 2064          movs    r0, #100
+# CHECK-NEXT:  e: b80e          <unknown>
+# CHECK-NEXT: 10: 1840          adds    r0, r0, r1
+# CHECK-NEXT: 12: f04f 0064     mov.w   r0, #100
+# CHECK-NEXT: 16: ffee ddcc     <unknown>
+# CHECK-NEXT: 1a: eb01 00c2     add.w   r0, r1, r2, lsl #3
+# CHECK-NEXT: 1e: 9a            <unknown>
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_EABI_VER5 ]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         6400a0e3ffffffff120381e064200eb840184ff06400eeffccdd01ebc2009a
+Symbols:
+  - Name:            '$a'
+    Section:         .text
+  - Name:            '$t'
+    Section:         .text
+    Value:           0x0c
+...

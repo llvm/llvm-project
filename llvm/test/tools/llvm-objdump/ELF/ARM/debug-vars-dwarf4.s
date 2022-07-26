@@ -51,15 +51,15 @@
 # RAW-NEXT:                                                                             ┃ ┠─ b = R1 
 # RAW-NEXT:                                                                             ┃ ┃ ┠─ c = R2 
 # RAW-NEXT:                                                                             ┃ ┃ ┃ ┌─ x = R0 
-# RAW-NEXT:        0: 00 00 81 e0  	add	r0, r1, r0                                  ┻ ┃ ┃ ╈   
+# RAW-NEXT:        0: e0810000     	add	r0, r1, r0                                  ┻ ┃ ┃ ╈   
 # RAW-NEXT:                                                                             ┌─ y = R0 
-# RAW-NEXT:        4: 02 00 80 e0  	add	r0, r0, r2                                  ╈ ┃ ┃ ┻   
-# RAW-NEXT:        8: 1e ff 2f e1  	bx	lr                                          ┻ ┻ ┻     
+# RAW-NEXT:        4: e0800002     	add	r0, r0, r2                                  ╈ ┃ ┃ ┻   
+# RAW-NEXT:        8: e12fff1e     	bx	lr                                          ┻ ┻ ┻     
 # RAW-EMPTY:
 # RAW-NEXT: 0000000c <bar>:
 # RAW-NEXT:                                                                             ┠─ a = R0 
-# RAW-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1                                  ┃         
-# RAW-NEXT:       10: 1e ff 2f e1  	bx	lr                                          ┻         
+# RAW-NEXT:        c: e2800001     	add	r0, r0, #1                                  ┃         
+# RAW-NEXT:       10: e12fff1e     	bx	lr                                          ┻         
 
 
 # INDENT: 00000000 <foo>:
@@ -67,15 +67,15 @@
 # INDENT-NEXT:                                                       ┃ ┠─ b = R1 
 # INDENT-NEXT:                                                       ┃ ┃ ┠─ c = R2 
 # INDENT-NEXT:                                                       ┃ ┃ ┃ ┌─ x = R0 
-# INDENT-NEXT:        0: 00 00 81 e0  	add	r0, r1, r0            ┻ ┃ ┃ ╈   
+# INDENT-NEXT:        0: e0810000     	add	r0, r1, r0            ┻ ┃ ┃ ╈   
 # INDENT-NEXT:                                                       ┌─ y = R0 
-# INDENT-NEXT:        4: 02 00 80 e0  	add	r0, r0, r2            ╈ ┃ ┃ ┻   
-# INDENT-NEXT:        8: 1e ff 2f e1  	bx	lr                    ┻ ┻ ┻     
+# INDENT-NEXT:        4: e0800002     	add	r0, r0, r2            ╈ ┃ ┃ ┻   
+# INDENT-NEXT:        8: e12fff1e     	bx	lr                    ┻ ┻ ┻     
 # INDENT-EMPTY:
 # INDENT-NEXT: 0000000c <bar>:
 # INDENT-NEXT:                                                       ┠─ a = R0 
-# INDENT-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1            ┃         
-# INDENT-NEXT:       10: 1e ff 2f e1  	bx	lr                    ┻         
+# INDENT-NEXT:        c: e2800001     	add	r0, r0, #1            ┃         
+# INDENT-NEXT:       10: e12fff1e     	bx	lr                    ┻         
 
 # NO-RAW: 00000000 <foo>:
 # NO-RAW-NEXT:                                                                     ┠─ a = R0
@@ -133,15 +133,15 @@
 # ASCII-NEXT:                                                                             | |- b = R1 
 # ASCII-NEXT:                                                                             | | |- c = R2 
 # ASCII-NEXT:                                                                             | | | /- x = R0 
-# ASCII-NEXT:        0: 00 00 81 e0  	add	r0, r1, r0                                  v | | ^   
+# ASCII-NEXT:        0: e0810000     	add	r0, r1, r0                                  v | | ^   
 # ASCII-NEXT:                                                                             /- y = R0 
-# ASCII-NEXT:        4: 02 00 80 e0  	add	r0, r0, r2                                  ^ | | v   
-# ASCII-NEXT:        8: 1e ff 2f e1  	bx	lr                                          v v v     
+# ASCII-NEXT:        4: e0800002     	add	r0, r0, r2                                  ^ | | v   
+# ASCII-NEXT:        8: e12fff1e     	bx	lr                                          v v v     
 # ASCII-EMPTY:
 # ASCII-NEXT: 0000000c <bar>:
 # ASCII-NEXT:                                                                             |- a = R0 
-# ASCII-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1                                  |         
-# ASCII-NEXT:       10: 1e ff 2f e1  	bx	lr                                          v         
+# ASCII-NEXT:        c: e2800001     	add	r0, r0, #1                                  |         
+# ASCII-NEXT:       10: e12fff1e     	bx	lr                                          v         
 
 # ERROR: error: 'bad_value' is not a valid value for '--debug-vars='
 

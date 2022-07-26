@@ -45,6 +45,6 @@ struct LoongArchRegisterInfo : public LoongArchGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 };
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCHREGISTERINFO_H

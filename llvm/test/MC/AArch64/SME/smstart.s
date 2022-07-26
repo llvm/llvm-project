@@ -11,28 +11,28 @@ smstart
 // CHECK-INST: smstart
 // CHECK-ENCODING: [0x7f,0x47,0x03,0xd5]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 7f 47 03 d5   msr   S0_3_C4_C7_3, xzr
+// CHECK-UNKNOWN: d503477f   msr   S0_3_C4_C7_3, xzr
 
 smstart sm
 // CHECK-INST: smstart sm
 // CHECK-ENCODING: [0x7f,0x43,0x03,0xd5]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 7f 43 03 d5   msr   S0_3_C4_C3_3, xzr
+// CHECK-UNKNOWN: d503437f   msr   S0_3_C4_C3_3, xzr
 
 smstart za
 // CHECK-INST: smstart za
 // CHECK-ENCODING: [0x7f,0x45,0x03,0xd5]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 7f 45 03 d5   msr   S0_3_C4_C5_3, xzr
+// CHECK-UNKNOWN: d503457f   msr   S0_3_C4_C5_3, xzr
 
 smstart SM
 // CHECK-INST: smstart sm
 // CHECK-ENCODING: [0x7f,0x43,0x03,0xd5]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 7f 43 03 d5   msr   S0_3_C4_C3_3, xzr
+// CHECK-UNKNOWN: d503437f   msr   S0_3_C4_C3_3, xzr
 
 smstart ZA
 // CHECK-INST: smstart za
 // CHECK-ENCODING: [0x7f,0x45,0x03,0xd5]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 7f 45 03 d5   msr   S0_3_C4_C5_3, xzr
+// CHECK-UNKNOWN: d503457f   msr   S0_3_C4_C5_3, xzr

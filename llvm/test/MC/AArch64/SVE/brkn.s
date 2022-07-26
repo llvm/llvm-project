@@ -13,10 +13,10 @@ brkn  p0.b, p15/z, p1.b, p0.b
 // CHECK-INST: brkn	p0.b, p15/z, p1.b, p0.b
 // CHECK-ENCODING: [0x20,0x7c,0x18,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 20 7c 18 25 <unknown>
+// CHECK-UNKNOWN: 25187c20 <unknown>
 
 brkn  p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: brkn	p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xef,0x7d,0x18,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef 7d 18 25 <unknown>
+// CHECK-UNKNOWN: 25187def <unknown>

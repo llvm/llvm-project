@@ -13,10 +13,10 @@ brka  p0.b, p15/m, p15.b
 // CHECK-INST: brka	p0.b, p15/m, p15.b
 // CHECK-ENCODING: [0xf0,0x7d,0x10,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: f0 7d 10 25 <unknown>
+// CHECK-UNKNOWN: 25107df0 <unknown>
 
 brka  p0.b, p15/z, p15.b
 // CHECK-INST: brka	p0.b, p15/z, p15.b
 // CHECK-ENCODING: [0xe0,0x7d,0x10,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 7d 10 25 <unknown>
+// CHECK-UNKNOWN: 25107de0 <unknown>

@@ -55,6 +55,6 @@ public:
 #include "LoongArchGenDAGISel.inc"
 };
 
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCHISELDAGTODAG_H

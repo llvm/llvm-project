@@ -30,9 +30,9 @@ thumbfunc:
 	b.w	armfunc
 
 // ARM-TO-THUMB:      <__ARMV7PILongThunk_thumbfunc>:
-// ARM-TO-THUMB-NEXT:     1004:        fd cf 0f e3         movw        r12, #65533
-// ARM-TO-THUMB-NEXT:     1008:        00 c0 40 e3         movt        r12, #0
+// ARM-TO-THUMB-NEXT:     1004:        e30fcffd            movw        r12, #65533
+// ARM-TO-THUMB-NEXT:     1008:        e340c000            movt        r12, #0
 
 // THUMB-TO-ARM:      <__ThumbV7PILongThunk_armfunc>:
-// THUMB-TO-ARM-NEXT:     1004:        4f f6 fc 7c         movw        r12, #65532
-// THUMB-TO-ARM-NEXT:     1008:        c0 f2 00 0c         movt        r12, #0
+// THUMB-TO-ARM-NEXT:     1004:        f64f 7cfc           movw        r12, #65532
+// THUMB-TO-ARM-NEXT:     1008:        f2c0 0c00           movt        r12, #0

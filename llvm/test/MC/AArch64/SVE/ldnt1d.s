@@ -13,28 +13,28 @@ ldnt1d  z0.d, p0/z, [x0]
 // CHECK-INST: ldnt1d  { z0.d }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0xe0,0x80,0xa5]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 e0 80 a5 <unknown>
+// CHECK-UNKNOWN: a580e000 <unknown>
 
 ldnt1d  { z0.d }, p0/z, [x0]
 // CHECK-INST: ldnt1d  { z0.d }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0xe0,0x80,0xa5]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 e0 80 a5 <unknown>
+// CHECK-UNKNOWN: a580e000 <unknown>
 
 ldnt1d  { z23.d }, p3/z, [x13, #-8, mul vl]
 // CHECK-INST: ldnt1d  { z23.d }, p3/z, [x13, #-8, mul vl]
 // CHECK-ENCODING: [0xb7,0xed,0x88,0xa5]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: b7 ed 88 a5 <unknown>
+// CHECK-UNKNOWN: a588edb7 <unknown>
 
 ldnt1d  { z21.d }, p5/z, [x10, #7, mul vl]
 // CHECK-INST: ldnt1d  { z21.d }, p5/z, [x10, #7, mul vl]
 // CHECK-ENCODING: [0x55,0xf5,0x87,0xa5]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 55 f5 87 a5 <unknown>
+// CHECK-UNKNOWN: a587f555 <unknown>
 
 ldnt1d  { z0.d }, p0/z, [x0, x0, lsl #3]
 // CHECK-INST: ldnt1d  { z0.d }, p0/z, [x0, x0, lsl #3]
 // CHECK-ENCODING: [0x00,0xc0,0x80,0xa5]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 c0 80 a5 <unknown>
+// CHECK-UNKNOWN: a580c000 <unknown>

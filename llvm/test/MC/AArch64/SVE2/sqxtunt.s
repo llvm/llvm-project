@@ -14,16 +14,16 @@ sqxtunt z0.b, z31.h
 // CHECK-INST: sqxtunt	z0.b, z31.h
 // CHECK-ENCODING: [0xe0,0x57,0x28,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e0 57 28 45 <unknown>
+// CHECK-UNKNOWN: 452857e0 <unknown>
 
 sqxtunt z0.h, z31.s
 // CHECK-INST: sqxtunt	z0.h, z31.s
 // CHECK-ENCODING: [0xe0,0x57,0x30,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e0 57 30 45 <unknown>
+// CHECK-UNKNOWN: 453057e0 <unknown>
 
 sqxtunt z0.s, z31.d
 // CHECK-INST: sqxtunt	z0.s, z31.d
 // CHECK-ENCODING: [0xe0,0x57,0x60,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e0 57 60 45 <unknown>
+// CHECK-UNKNOWN: 456057e0 <unknown>

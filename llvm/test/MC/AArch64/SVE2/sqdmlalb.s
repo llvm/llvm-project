@@ -14,31 +14,31 @@ sqdmlalb z0.h, z1.b, z31.b
 // CHECK-INST: sqdmlalb	z0.h, z1.b, z31.b
 // CHECK-ENCODING: [0x20,0x60,0x5f,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 60 5f 44 <unknown>
+// CHECK-UNKNOWN: 445f6020 <unknown>
 
 sqdmlalb z0.s, z1.h, z31.h
 // CHECK-INST: sqdmlalb	z0.s, z1.h, z31.h
 // CHECK-ENCODING: [0x20,0x60,0x9f,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 60 9f 44 <unknown>
+// CHECK-UNKNOWN: 449f6020 <unknown>
 
 sqdmlalb z0.d, z1.s, z31.s
 // CHECK-INST: sqdmlalb	z0.d, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0x60,0xdf,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 60 df 44 <unknown>
+// CHECK-UNKNOWN: 44df6020 <unknown>
 
 sqdmlalb z0.s, z1.h, z7.h[7]
 // CHECK-INST: sqdmlalb	z0.s, z1.h, z7.h[7]
 // CHECK-ENCODING: [0x20,0x28,0xbf,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 28 bf 44 <unknown>
+// CHECK-UNKNOWN: 44bf2820 <unknown>
 
 sqdmlalb z0.d, z1.s, z15.s[3]
 // CHECK-INST: sqdmlalb	z0.d, z1.s, z15.s[3]
 // CHECK-ENCODING: [0x20,0x28,0xff,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 28 ff 44 <unknown>
+// CHECK-UNKNOWN: 44ff2820 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -48,22 +48,22 @@ movprfx z21, z28
 // CHECK-INST: movprfx	z21, z28
 // CHECK-ENCODING: [0x95,0xbf,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 95 bf 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bf95 <unknown>
 
 sqdmlalb z21.d, z1.s, z31.s
 // CHECK-INST: sqdmlalb	z21.d, z1.s, z31.s
 // CHECK-ENCODING: [0x35,0x60,0xdf,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 35 60 df 44 <unknown>
+// CHECK-UNKNOWN: 44df6035 <unknown>
 
 movprfx z21, z28
 // CHECK-INST: movprfx	z21, z28
 // CHECK-ENCODING: [0x95,0xbf,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 95 bf 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bf95 <unknown>
 
 sqdmlalb   z21.d, z10.s, z5.s[1]
 // CHECK-INST: sqdmlalb   z21.d, z10.s, z5.s[1]
 // CHECK-ENCODING: [0x55,0x29,0xe5,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 55 29 e5 44 <unknown>
+// CHECK-UNKNOWN: 44e52955 <unknown>

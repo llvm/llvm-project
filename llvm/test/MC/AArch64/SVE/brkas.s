@@ -13,4 +13,4 @@ brkas  p0.b, p15/z, p15.b
 // CHECK-INST: brkas	p0.b, p15/z, p15.b
 // CHECK-ENCODING: [0xe0,0x7d,0x50,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 7d 50 25 <unknown>
+// CHECK-UNKNOWN: 25507de0 <unknown>
