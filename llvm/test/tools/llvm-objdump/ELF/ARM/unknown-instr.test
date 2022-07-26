@@ -13,8 +13,8 @@
 ##   llvm-objdump --mattr=+ext1
 
 # CHECK:        00000000 <.text>:
-# CHECK-NEXT:       0: cb              <unknown>
-# CHECK-NEXT:       1: f3 f7 8b be     b.w 0xffff3d1b <{{.+}}> @ imm = #-49898
+# CHECK-NEXT:       0: cb f3 f7 8b   <unknown>
+# CHECK-NEXT:       4: be            <unknown>
 
 --- !ELF
 FileHeader:

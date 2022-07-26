@@ -20,6 +20,11 @@ MCDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
   return None;
 }
 
+uint64_t MCDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
+                                            uint64_t Address) const {
+  return 1;
+}
+
 bool MCDisassembler::tryAddingSymbolicOperand(MCInst &Inst, int64_t Value,
                                               uint64_t Address, bool IsBranch,
                                               uint64_t Offset, uint64_t OpSize,

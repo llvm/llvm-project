@@ -350,6 +350,14 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   return MCDisassembler::Fail;
 }
 
+uint64_t AArch64Disassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
+                                                 uint64_t Address) const {
+  // AArch64 instructions are always 4 bytes wide, so there's no point
+  // in skipping any smaller number of bytes if an instruction can't
+  // be decoded.
+  return 4;
+}
+
 static MCSymbolizer *
 createAArch64ExternalSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                                 LLVMSymbolLookupCallback SymbolLookUp,

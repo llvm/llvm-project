@@ -1022,10 +1022,12 @@ static void collectLocalBranchTargets(
     // Disassemble a real instruction and record function-local branch labels.
     MCInst Inst;
     uint64_t Size;
-    bool Disassembled = DisAsm->getInstruction(
-        Inst, Size, Bytes.slice(Index - SectionAddr), Index, nulls());
+    ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index - SectionAddr);
+    bool Disassembled =
+        DisAsm->getInstruction(Inst, Size, ThisBytes, Index, nulls());
     if (Size == 0)
-      Size = 1;
+      Size = std::min(ThisBytes.size(),
+                      DisAsm->suggestBytesToSkip(ThisBytes, Index));
 
     if (Disassembled && MIA) {
       uint64_t Target;
@@ -1068,10 +1070,11 @@ static void addSymbolizer(
   for (size_t Index = 0; Index != Bytes.size();) {
     MCInst Inst;
     uint64_t Size;
-    DisAsm->getInstruction(Inst, Size, Bytes.slice(Index), SectionAddr + Index,
-                           nulls());
+    ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index - SectionAddr);
+    DisAsm->getInstruction(Inst, Size, ThisBytes, Index, nulls());
     if (Size == 0)
-      Size = 1;
+      Size = std::min(ThisBytes.size(),
+                      DisAsm->suggestBytesToSkip(ThisBytes, Index));
     Index += Size;
   }
   ArrayRef<uint64_t> LabelAddrsRef = SymbolizerPtr->getReferencedAddresses();
@@ -1538,11 +1541,13 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           // Disassemble a real instruction or a data when disassemble all is
           // provided
           MCInst Inst;
-          bool Disassembled =
-              DisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
-                                     SectionAddr + Index, CommentStream);
+          ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
+          uint64_t ThisAddr = SectionAddr + Index;
+          bool Disassembled = DisAsm->getInstruction(Inst, Size, ThisBytes,
+                                                     ThisAddr, CommentStream);
           if (Size == 0)
-            Size = 1;
+            Size = std::min(ThisBytes.size(),
+                            DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
 
           LVP.update({Index, Section.getIndex()},
                      {Index + Size, Section.getIndex()}, Index + Size != End);
