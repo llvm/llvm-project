@@ -96,9 +96,7 @@ define <vscale x 2 x i64> @masked_sub_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2
 define <vscale x 16 x i8> @masked_mla_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_mla_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mul z1.b, p1/m, z1.b, z2.b
-; CHECK-NEXT:    add z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    mla z0.b, p0/m, z1.b, z2.b
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 16 x i8> %b, %c
   %sel = select <vscale x 16 x i1> %mask, <vscale x 16 x i8> %mul, <vscale x 16 x i8> zeroinitializer
@@ -109,9 +107,7 @@ define <vscale x 16 x i8> @masked_mla_nxv16i8(<vscale x 16 x i8> %a, <vscale x 1
 define <vscale x 8 x i16> @masked_mla_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: masked_mla_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mul z1.h, p1/m, z1.h, z2.h
-; CHECK-NEXT:    add z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 8 x i16> %b, %c
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x i16> %mul, <vscale x 8 x i16> zeroinitializer
@@ -122,9 +118,7 @@ define <vscale x 8 x i16> @masked_mla_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8
 define <vscale x 4 x i32> @masked_mla_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_mla_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mul z1.s, p1/m, z1.s, z2.s
-; CHECK-NEXT:    add z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 4 x i32> %b, %c
   %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %mul, <vscale x 4 x i32> zeroinitializer
@@ -135,9 +129,7 @@ define <vscale x 4 x i32> @masked_mla_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4
 define <vscale x 2 x i64> @masked_mla_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_mla_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z2.d
-; CHECK-NEXT:    add z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 2 x i64> %b, %c
   %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x i64> %mul, <vscale x 2 x i64> zeroinitializer
@@ -152,9 +144,7 @@ define <vscale x 2 x i64> @masked_mla_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2
 define <vscale x 16 x i8> @masked_mls_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_mls_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mul z1.b, p1/m, z1.b, z2.b
-; CHECK-NEXT:    sub z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    mls z0.b, p0/m, z1.b, z2.b
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 16 x i8> %b, %c
   %sel = select <vscale x 16 x i1> %mask, <vscale x 16 x i8> %mul, <vscale x 16 x i8> zeroinitializer
@@ -165,9 +155,7 @@ define <vscale x 16 x i8> @masked_mls_nxv16i8(<vscale x 16 x i8> %a, <vscale x 1
 define <vscale x 8 x i16> @masked_mls_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: masked_mls_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mul z1.h, p1/m, z1.h, z2.h
-; CHECK-NEXT:    sub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 8 x i16> %b, %c
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x i16> %mul, <vscale x 8 x i16> zeroinitializer
@@ -178,9 +166,7 @@ define <vscale x 8 x i16> @masked_mls_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8
 define <vscale x 4 x i32> @masked_mls_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_mls_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mul z1.s, p1/m, z1.s, z2.s
-; CHECK-NEXT:    sub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mls z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 4 x i32> %b, %c
   %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %mul, <vscale x 4 x i32> zeroinitializer
@@ -191,9 +177,7 @@ define <vscale x 4 x i32> @masked_mls_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4
 define <vscale x 2 x i64> @masked_mls_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_mls_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z2.d
-; CHECK-NEXT:    sub z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mls z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %mul = mul nsw <vscale x 2 x i64> %b, %c
   %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x i64> %mul, <vscale x 2 x i64> zeroinitializer
