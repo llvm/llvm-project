@@ -255,7 +255,7 @@ void MainLoop::RunImpl::ProcessEvents() {
 }
 #endif
 
-MainLoop::MainLoop() {
+MainLoop::MainLoop() : m_terminate_request(false) {
 #if HAVE_SYS_EVENT_H
   m_kqueue = kqueue();
   assert(m_kqueue >= 0);
