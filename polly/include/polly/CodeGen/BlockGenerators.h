@@ -974,7 +974,7 @@ private:
   /// @param BBMap A mapping from old values to their new values in this block.
   /// @param LTS   A mapping from loops virtual canonical induction variable to
   /// their new values.
-  virtual void
+  void
   generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS, ValueMapT &BBMAp,
                        __isl_keep isl_id_to_ast_expr *NewAccesses) override;
 
@@ -988,9 +988,8 @@ private:
   /// @param BBMap     A mapping from old values to their new values
   ///                  (for values recalculated within this basic block).
   /// @param LTS       A map from old loops to new induction variables as SCEVs.
-  virtual void copyPHIInstruction(ScopStmt &Stmt, PHINode *Inst,
-                                  ValueMapT &BBMap,
-                                  LoopToScevMapT &LTS) override;
+  void copyPHIInstruction(ScopStmt &Stmt, PHINode *Inst, ValueMapT &BBMap,
+                          LoopToScevMapT &LTS) override;
 };
 } // namespace polly
 #endif

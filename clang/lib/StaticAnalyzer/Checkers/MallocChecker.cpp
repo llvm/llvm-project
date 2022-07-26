@@ -852,9 +852,8 @@ protected:
     return false;
   }
 
-  virtual bool
-  wasModifiedInFunction(const ExplodedNode *CallEnterN,
-                        const ExplodedNode *CallExitEndN) override {
+  bool wasModifiedInFunction(const ExplodedNode *CallEnterN,
+                             const ExplodedNode *CallExitEndN) override {
     if (!doesFnIntendToHandleOwnership(
             CallExitEndN->getFirstPred()->getLocationContext()->getDecl(),
             CallExitEndN->getState()->getAnalysisManager().getASTContext()))
@@ -885,7 +884,7 @@ protected:
            "later deallocation");
   }
 
-  virtual PathDiagnosticPieceRef
+  PathDiagnosticPieceRef
   maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
                            const ObjCMethodCall &Call,
                            const ExplodedNode *N) override {
@@ -893,7 +892,7 @@ protected:
     return nullptr;
   }
 
-  virtual PathDiagnosticPieceRef
+  PathDiagnosticPieceRef
   maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
                           const CXXConstructorCall &Call,
                           const ExplodedNode *N) override {
@@ -901,7 +900,7 @@ protected:
     return nullptr;
   }
 
-  virtual PathDiagnosticPieceRef
+  PathDiagnosticPieceRef
   maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
                              const ExplodedNode *N) override {
     // TODO: Factor the logic of "what constitutes as an entity being passed

@@ -530,9 +530,8 @@ public:
 private:
   /// \return Whether \c RegionOfInterest was modified at \p CurrN compared to
   /// the value it holds in \p CallExitBeginN.
-  virtual bool
-  wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
-                            const ExplodedNode *CallExitBeginN) override;
+  bool wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
+                                 const ExplodedNode *CallExitBeginN) override;
 
   /// Attempts to find the region of interest in a given record decl,
   /// by either following the base classes or fields.

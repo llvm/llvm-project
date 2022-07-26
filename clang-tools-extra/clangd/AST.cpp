@@ -368,7 +368,7 @@ std::string printType(const QualType QT, const DeclContext &CurContext,
   public:
     PrintCB(const DeclContext *CurContext) : CurContext(CurContext) {}
     virtual ~PrintCB() {}
-    virtual bool isScopeVisible(const DeclContext *DC) const override {
+    bool isScopeVisible(const DeclContext *DC) const override {
       return DC->Encloses(CurContext);
     }
 

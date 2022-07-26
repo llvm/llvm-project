@@ -229,12 +229,12 @@ public:
   bool validateInputSize(const llvm::StringMap<bool> &FeatureMap,
                          StringRef Constraint, unsigned Size) const override;
 
-  virtual bool
+  bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
     return true;
   };
 
-  virtual bool
+  bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override {
     return true;
   };

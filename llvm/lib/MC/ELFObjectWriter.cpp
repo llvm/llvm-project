@@ -293,9 +293,8 @@ public:
       : ELFObjectWriter(std::move(MOTW)), OS(OS), DwoOS(DwoOS),
         IsLittleEndian(IsLittleEndian) {}
 
-  virtual bool checkRelocation(MCContext &Ctx, SMLoc Loc,
-                               const MCSectionELF *From,
-                               const MCSectionELF *To) override {
+  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
+                       const MCSectionELF *To) override {
     if (isDwoSection(*From)) {
       Ctx.reportError(Loc, "A dwo section may not contain relocations");
       return false;
