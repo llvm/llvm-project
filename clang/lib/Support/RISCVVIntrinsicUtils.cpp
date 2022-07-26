@@ -909,6 +909,48 @@ std::string RVVIntrinsic::getSuffixStr(
   return join(SuffixStrs, "_");
 }
 
+llvm::SmallVector<PrototypeDescriptor>
+RVVIntrinsic::computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
+                                  bool IsMasked, bool HasMaskedOffOperand,
+                                  bool HasVL, unsigned NF) {
+  SmallVector<PrototypeDescriptor> NewPrototype(Prototype.begin(),
+                                                Prototype.end());
+  if (IsMasked) {
+    // If HasMaskedOffOperand, insert result type as first input operand.
+    if (HasMaskedOffOperand) {
+      if (NF == 1) {
+        NewPrototype.insert(NewPrototype.begin() + 1, NewPrototype[0]);
+      } else {
+        // Convert
+        // (void, op0 address, op1 address, ...)
+        // to
+        // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
+        PrototypeDescriptor MaskoffType = NewPrototype[1];
+        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+        for (unsigned I = 0; I < NF; ++I)
+          NewPrototype.insert(NewPrototype.begin() + NF + 1, MaskoffType);
+      }
+    }
+    if (HasMaskedOffOperand && NF > 1) {
+      // Convert
+      // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
+      // to
+      // (void, op0 address, op1 address, ..., mask, maskedoff0, maskedoff1,
+      // ...)
+      NewPrototype.insert(NewPrototype.begin() + NF + 1,
+                          PrototypeDescriptor::Mask);
+    } else {
+      // If IsMasked, insert PrototypeDescriptor:Mask as first input operand.
+      NewPrototype.insert(NewPrototype.begin() + 1, PrototypeDescriptor::Mask);
+    }
+  }
+
+  // If HasVL, append PrototypeDescriptor:VL to last operand
+  if (HasVL)
+    NewPrototype.push_back(PrototypeDescriptor::VL);
+  return NewPrototype;
+}
+
 SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   SmallVector<PrototypeDescriptor> PrototypeDescriptors;
   const StringRef Primaries("evwqom0ztul");

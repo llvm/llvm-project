@@ -479,12 +479,12 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasMasked = R->getValueAsBit("HasMasked");
     bool HasMaskedOffOperand = R->getValueAsBit("HasMaskedOffOperand");
     bool HasVL = R->getValueAsBit("HasVL");
-    Record *MaskedPolicyRecord = R->getValueAsDef("MaskedPolicy");
-    PolicyScheme MaskedPolicy =
-        static_cast<PolicyScheme>(MaskedPolicyRecord->getValueAsInt("Value"));
-    Record *UnMaskedPolicyRecord = R->getValueAsDef("UnMaskedPolicy");
-    PolicyScheme UnMaskedPolicy =
-        static_cast<PolicyScheme>(UnMaskedPolicyRecord->getValueAsInt("Value"));
+    Record *MPSRecord = R->getValueAsDef("MaskedPolicyScheme");
+    auto MaskedPolicyScheme =
+        static_cast<PolicyScheme>(MPSRecord->getValueAsInt("Value"));
+    Record *UMPSRecord = R->getValueAsDef("UnMaskedPolicyScheme");
+    auto UnMaskedPolicyScheme =
+        static_cast<PolicyScheme>(UMPSRecord->getValueAsInt("Value"));
     bool HasUnMaskedOverloaded = R->getValueAsBit("HasUnMaskedOverloaded");
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
     bool HasBuiltinAlias = R->getValueAsBit("HasBuiltinAlias");
@@ -500,50 +500,19 @@ void RVVEmitter::createRVVIntrinsics(
 
     // Parse prototype and create a list of primitive type with transformers
     // (operand) in Prototype. Prototype[0] is output operand.
-    SmallVector<PrototypeDescriptor> Prototype = parsePrototypes(Prototypes);
+    SmallVector<PrototypeDescriptor> BasicPrototype =
+        parsePrototypes(Prototypes);
 
     SmallVector<PrototypeDescriptor> SuffixDesc = parsePrototypes(SuffixProto);
     SmallVector<PrototypeDescriptor> OverloadedSuffixDesc =
         parsePrototypes(OverloadedSuffixProto);
 
     // Compute Builtin types
-    SmallVector<PrototypeDescriptor> MaskedPrototype = Prototype;
-    if (HasMasked) {
-      // If HasMaskedOffOperand, insert result type as first input operand.
-      if (HasMaskedOffOperand) {
-        if (NF == 1) {
-          MaskedPrototype.insert(MaskedPrototype.begin() + 1, Prototype[0]);
-        } else {
-          // Convert
-          // (void, op0 address, op1 address, ...)
-          // to
-          // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
-          PrototypeDescriptor MaskoffType = Prototype[1];
-          MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
-          for (unsigned I = 0; I < NF; ++I)
-            MaskedPrototype.insert(MaskedPrototype.begin() + NF + 1,
-                                   MaskoffType);
-        }
-      }
-      if (HasMaskedOffOperand && NF > 1) {
-        // Convert
-        // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
-        // to
-        // (void, op0 address, op1 address, ..., mask, maskedoff0, maskedoff1,
-        // ...)
-        MaskedPrototype.insert(MaskedPrototype.begin() + NF + 1,
-                               PrototypeDescriptor::Mask);
-      } else {
-        // If HasMasked, insert PrototypeDescriptor:Mask as first input operand.
-        MaskedPrototype.insert(MaskedPrototype.begin() + 1,
-                               PrototypeDescriptor::Mask);
-      }
-    }
-    // If HasVL, append PrototypeDescriptor:VL to last operand
-    if (HasVL) {
-      Prototype.push_back(PrototypeDescriptor::VL);
-      MaskedPrototype.push_back(PrototypeDescriptor::VL);
-    }
+    auto Prototype = RVVIntrinsic::computeBuiltinTypes(
+        BasicPrototype, /*IsMasked=*/false, /*HasMaskedOffOperand=*/false,
+        HasVL, NF);
+    auto MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
+        BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF);
 
     // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
@@ -562,7 +531,7 @@ void RVVEmitter::createRVVIntrinsics(
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
             /*IsMasked=*/false, /*HasMaskedOffOperand=*/false, HasVL,
-            UnMaskedPolicy, HasUnMaskedOverloaded, HasBuiltinAlias,
+            UnMaskedPolicyScheme, HasUnMaskedOverloaded, HasBuiltinAlias,
             ManualCodegen, *Types, IntrinsicTypes, RequiredFeatures, NF));
         if (HasMasked) {
           // Create a masked intrinsic
@@ -571,7 +540,7 @@ void RVVEmitter::createRVVIntrinsics(
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
               MaskedIRName,
-              /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicy,
+              /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
               HasUnMaskedOverloaded, HasBuiltinAlias, MaskedManualCodegen,
               *MaskTypes, IntrinsicTypes, RequiredFeatures, NF));
         }
