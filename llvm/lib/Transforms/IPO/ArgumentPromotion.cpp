@@ -249,7 +249,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
                              {LLVMContext::MD_range, LLVMContext::MD_nonnull,
                               LLVMContext::MD_dereferenceable,
                               LLVMContext::MD_dereferenceable_or_null,
-                              LLVMContext::MD_align, LLVMContext::MD_noundef});
+                              LLVMContext::MD_align, LLVMContext::MD_noundef,
+                              LLVMContext::MD_nontemporal});
           }
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());
