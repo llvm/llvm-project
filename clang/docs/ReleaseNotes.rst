@@ -435,6 +435,11 @@ Attribute Changes in Clang
   ``__attribute__((function_return("keep")))`` was added. This is intended to
   be used by the Linux kernel to mitigate RETBLEED.
 
+- Ignore the `__preferred_name__` attribute when writing for C++20 module interfaces.
+  This is a short-term workaround intentionally since clang doesn't take care of the
+  serialization and deserialization of `__preferred_name__`.  See
+  https://github.com/llvm/llvm-project/issues/56490 for example.
+
 Windows Support
 ---------------
 

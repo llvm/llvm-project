@@ -957,6 +957,46 @@ TEST(LocateSymbol, All) {
         Fo^o * getFoo() {
           return 0;
         }
+      )objc",
+
+      R"objc(// Method decl and definition for ObjC class.
+        @interface Cat
+        - (void)$decl[[meow]];
+        @end
+        @implementation Cat
+        - (void)$def[[meow]] {}
+        @end
+        void makeNoise(Cat *kitty) {
+          [kitty me^ow];
+        }
+      )objc",
+
+      R"objc(// Method decl and definition for ObjC category.
+        @interface Dog
+        @end
+        @interface Dog (Play)
+        - (void)$decl[[runAround]];
+        @end
+        @implementation Dog (Play)
+        - (void)$def[[runAround]] {}
+        @end
+        void play(Dog *dog) {
+          [dog run^Around];
+        }
+      )objc",
+
+      R"objc(// Method decl and definition for ObjC class extension.
+        @interface Dog
+        @end
+        @interface Dog ()
+        - (void)$decl[[howl]];
+        @end
+        @implementation Dog
+        - (void)$def[[howl]] {}
+        @end
+        void play(Dog *dog) {
+          [dog ho^wl];
+        }
       )objc"};
   for (const char *Test : Tests) {
     Annotations T(Test);
