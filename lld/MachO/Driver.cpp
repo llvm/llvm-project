@@ -407,10 +407,12 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 }
 
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
-                       bool isReexport, bool isExplicit, LoadType loadType) {
+                       bool isReexport, bool isHidden, bool isExplicit,
+                       LoadType loadType) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, loadType, /*isLazy=*/false, isExplicit))) {
+            addFile(*path, loadType, /*isLazy=*/false, isExplicit,
+                    /*isBundleLoader=*/false, isHidden))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -474,7 +476,7 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   StringRef arg = argv[i];
   if (arg.consume_front("-l")) {
     addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-               /*isReexport=*/false, /*isExplicit=*/false,
+               /*isReexport=*/false, /*isHidden=*/false, /*isExplicit=*/false,
                LoadType::LCLinkerOption);
   } else if (arg == "-framework") {
     StringRef name = argv[++i];
@@ -1045,8 +1047,10 @@ static void createFiles(const InputArgList &args) {
     case OPT_needed_l:
     case OPT_reexport_l:
     case OPT_weak_l:
+    case OPT_hidden_l:
       addLibrary(arg->getValue(), opt.getID() == OPT_needed_l,
                  opt.getID() == OPT_weak_l, opt.getID() == OPT_reexport_l,
+                 opt.getID() == OPT_hidden_l,
                  /*isExplicit=*/true, LoadType::CommandLine);
       break;
     case OPT_framework:
