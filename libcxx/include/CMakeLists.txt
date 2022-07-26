@@ -505,10 +505,16 @@ set(files
   __type_traits/add_pointer.h
   __type_traits/add_rvalue_reference.h
   __type_traits/add_volatile.h
+  __type_traits/aligned_storage.h
+  __type_traits/aligned_union.h
   __type_traits/alignment_of.h
   __type_traits/apply_cv.h
+  __type_traits/common_reference.h
+  __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/copy_cv.h
+  __type_traits/copy_cvref.h
   __type_traits/decay.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
@@ -550,6 +556,7 @@ set(files
   __type_traits/is_move_constructible.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
+  __type_traits/is_nothrow_convertible.h
   __type_traits/is_nothrow_copy_assignable.h
   __type_traits/is_nothrow_copy_constructible.h
   __type_traits/is_nothrow_default_constructible.h
@@ -561,6 +568,7 @@ set(files
   __type_traits/is_pod.h
   __type_traits/is_pointer.h
   __type_traits/is_polymorphic.h
+  __type_traits/is_primary_template.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
@@ -568,6 +576,7 @@ set(files
   __type_traits/is_scalar.h
   __type_traits/is_scoped_enum.h
   __type_traits/is_signed.h
+  __type_traits/is_signed_integer.h
   __type_traits/is_standard_layout.h
   __type_traits/is_trivial.h
   __type_traits/is_trivially_assignable.h
@@ -582,18 +591,28 @@ set(files
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unsigned.h
+  __type_traits/is_unsigned_integer.h
+  __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
+  __type_traits/lazy.h
+  __type_traits/make_32_64_or_128_bit.h
+  __type_traits/make_signed.h
+  __type_traits/make_unsigned.h
+  __type_traits/nat.h
   __type_traits/negation.h
+  __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
   __type_traits/remove_cv.h
+  __type_traits/remove_cvref.h
   __type_traits/remove_extent.h
   __type_traits/remove_pointer.h
   __type_traits/remove_reference.h
   __type_traits/remove_volatile.h
   __type_traits/type_identity.h
+  __type_traits/type_list.h
   __type_traits/underlying_type.h
   __type_traits/void_t.h
   __undef_macros

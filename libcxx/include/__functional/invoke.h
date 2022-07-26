@@ -24,6 +24,7 @@
 #include <__type_traits/is_reference_wrapper.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/nat.h>
 #include <__type_traits/remove_cv.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
@@ -39,16 +40,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 struct __any
 {
     __any(...);
-};
-
-struct __nat
-{
-#ifndef _LIBCPP_CXX03_LANG
-    __nat() = delete;
-    __nat(const __nat&) = delete;
-    __nat& operator=(const __nat&) = delete;
-    ~__nat() = delete;
-#endif
 };
 
 template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
