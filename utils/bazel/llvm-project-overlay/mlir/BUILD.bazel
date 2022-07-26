@@ -3609,8 +3609,8 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
-        ":AsyncDialect",
         ":AsmParser",
+        ":AsyncDialect",
         ":ControlFlowDialect",
         ":DLTIDialect",
         ":AffineUtils",
