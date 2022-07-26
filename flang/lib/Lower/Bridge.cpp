@@ -2283,9 +2283,9 @@ private:
               }
               if (lhsIsWholeAllocatable)
                 fir::factory::finalizeRealloc(
-                    *builder, loc, lhsMutableBox.getValue(),
+                    *builder, loc, lhsMutableBox.value(),
                     /*lbounds=*/llvm::None, /*takeLboundsIfRealloc=*/false,
-                    lhsRealloc.getValue());
+                    lhsRealloc.value());
             },
 
             // [2] User defined assignment. If the context is a scalar
