@@ -598,7 +598,7 @@ public:
       : PerfReaderBase(B, PerfTrace), PIDFilter(PID){};
 
   // Entry of the reader to parse multiple perf traces
-  virtual void parsePerfTraces() override;
+  void parsePerfTraces() override;
   // Generate perf script from perf data
   static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
                                               PerfInputFile &File,
@@ -678,7 +678,7 @@ public:
                 Optional<uint32_t> PID)
       : PerfScriptReader(Binary, PerfTrace, PID){};
   // Parse the LBR only sample.
-  virtual void parseSample(TraceStream &TraceIt, uint64_t Count) override;
+  void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
 
 /*

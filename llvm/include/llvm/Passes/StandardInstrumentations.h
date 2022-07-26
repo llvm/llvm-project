@@ -381,13 +381,13 @@ public:
 
 protected:
   // Create a representation of the IR.
-  virtual void generateIRRepresentation(Any IR, StringRef PassID,
-                                        IRDataT<EmptyData> &Output) override;
+  void generateIRRepresentation(Any IR, StringRef PassID,
+                                IRDataT<EmptyData> &Output) override;
 
   // Called when an interesting IR has changed.
-  virtual void handleAfter(StringRef PassID, std::string &Name,
-                           const IRDataT<EmptyData> &Before,
-                           const IRDataT<EmptyData> &After, Any) override;
+  void handleAfter(StringRef PassID, std::string &Name,
+                   const IRDataT<EmptyData> &Before,
+                   const IRDataT<EmptyData> &After, Any) override;
 
   void handleFunctionCompare(StringRef Name, StringRef Prefix, StringRef PassID,
                              StringRef Divider, bool InModule, unsigned Minor,
