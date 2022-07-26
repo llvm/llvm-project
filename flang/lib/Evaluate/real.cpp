@@ -765,9 +765,7 @@ Real<W, P> Real<W, P>::SET_EXPONENT(int expo) const {
   } else if (IsZero()) {
     return *this;
   } else {
-    Real result;
-    result.Normalize(IsNegative(), expo + exponentBias - 1, GetFraction());
-    return result;
+    return SCALE(Integer<32>(expo - UnbiasedExponent() - 1)).value;
   }
 }
 
