@@ -130,6 +130,21 @@ TEST(Numeric, SetExponent) {
       RTNAME(SetExponent8)(std::numeric_limits<Real<8>>::quiet_NaN(), 1)));
 }
 
+TEST(Numeric, SelectedIntKind) {
+  std::int8_t r0 = 1;
+  std::int16_t r1 = 3;
+  std::int32_t r2 = 8;
+  std::int64_t r3 = 10;
+  std::int32_t r4 = -10;
+  std::int32_t r5 = 100;
+  EXPECT_EQ(RTNAME(SelectedIntKind)(__FILE__, __LINE__, &r0, 1), 1);
+  EXPECT_EQ(RTNAME(SelectedIntKind)(__FILE__, __LINE__, &r1, 2), 2);
+  EXPECT_EQ(RTNAME(SelectedIntKind)(__FILE__, __LINE__, &r2, 4), 4);
+  EXPECT_EQ(RTNAME(SelectedIntKind)(__FILE__, __LINE__, &r3, 8), 8);
+  EXPECT_EQ(RTNAME(SelectedIntKind)(__FILE__, __LINE__, &r4, 4), 1);
+  EXPECT_EQ(RTNAME(SelectedIntKind)(__FILE__, __LINE__, &r5, 4), -1);
+}
+
 TEST(Numeric, SelectedRealKind) {
   std::int8_t p_s = 1;
   std::int16_t p[11] = {-10, 1, 1, 4, 50, 1, 1, 4, 1, 1, 50};
