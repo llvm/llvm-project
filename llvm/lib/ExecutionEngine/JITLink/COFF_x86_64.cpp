@@ -12,8 +12,8 @@
 
 #include "llvm/ExecutionEngine/JITLink/COFF_x86_64.h"
 #include "COFFLinkGraphBuilder.h"
-#include "EHFrameSupportImpl.h"
 #include "JITLinkGeneric.h"
+#include "SEHFrameSupport.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/COFF.h"
@@ -239,9 +239,10 @@ void link_COFF_x86_64(std::unique_ptr<LinkGraph> G,
   const Triple &TT = G->getTargetTriple();
   if (Ctx->shouldAddDefaultTargetPasses(TT)) {
     // Add a mark-live pass.
-    if (auto MarkLive = Ctx->getMarkLivePass(TT))
+    if (auto MarkLive = Ctx->getMarkLivePass(TT)) {
       Config.PrePrunePasses.push_back(std::move(MarkLive));
-    else
+      Config.PrePrunePasses.push_back(SEHFrameKeepAlivePass(".pdata"));
+    } else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
     // Add COFF edge lowering passes.

@@ -446,13 +446,12 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_profile_data_comm_mutex(), m_profile_data(), m_iohandler_sync(0),
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
-      m_private_run_lock(), m_finalizing(false),
-      m_clear_thread_plans_on_stop(false),
-      m_currently_handling_do_on_removals(false), m_resume_requested(false),
-      m_force_next_event_delivery(false), m_last_broadcast_state(eStateInvalid),
-      m_destroy_in_process(false), m_destroy_complete(false),
-      m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
-      m_can_jit(eCanJITDontKnow) {
+      m_private_run_lock(), m_currently_handling_do_on_removals(false),
+      m_resume_requested(false), m_finalizing(false),
+      m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
+      m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
+      m_destroy_complete(false), m_can_interpret_function_calls(false),
+      m_run_thread_plan_lock(), m_can_jit(eCanJITDontKnow) {
   CheckInWithManager();
 
   Log *log = GetLog(LLDBLog::Object);
@@ -2710,8 +2709,8 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 
   if (state == eStateStopped || state == eStateCrashed) {
     DidLaunch();
-    
-    // Now that we know the process type, update its signal responses from the 
+
+    // Now that we know the process type, update its signal responses from the
     // ones stored in the Target:
     if (m_unix_signals_sp) {
       StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
@@ -3079,7 +3078,7 @@ void Process::CompleteAttach() {
       }
     }
   }
-  // Now that we know the process type, update its signal responses from the 
+  // Now that we know the process type, update its signal responses from the
   // ones stored in the Target:
   if (m_unix_signals_sp) {
     StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();

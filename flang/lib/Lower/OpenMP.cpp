@@ -91,7 +91,6 @@ static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
   bool hasFirstPrivateOp = false;
   bool hasLastPrivateOp = false;
-  Block *lastPrivBlock = nullptr;
   // We need just one ICmpOp for multiple LastPrivate clauses.
   mlir::arith::CmpIOp cmpOp;
 

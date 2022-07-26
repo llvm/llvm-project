@@ -7002,4 +7002,6 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
          "Still have (unmerged) EmittedDeferredDecls deferred decls");
 
   NewBuilder->EmittedDeferredDecls = std::move(EmittedDeferredDecls);
+
+  NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
 }
