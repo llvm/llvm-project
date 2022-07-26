@@ -491,10 +491,16 @@ Expected<Symbol *> COFFLinkGraphBuilder::createCOMDATExportRequest(
     break;
   }
   case COFF::IMAGE_COMDAT_SELECT_LARGEST: {
-    // FIXME: Support IMAGE_COMDAT_SELECT_LARGEST when LinkGraph is able to
-    // handle this.
-    return make_error<JITLinkError>(
-        "IMAGE_COMDAT_SELECT_LARGEST is not supported.");
+    // FIXME: Support IMAGE_COMDAT_SELECT_LARGEST properly when LinkGraph is
+    // able to handle this.
+    LLVM_DEBUG({
+      dbgs() << "    " << SymIndex
+             << ": Partially supported IMAGE_COMDAT_SELECT_LARGEST was used"
+                " in section "
+             << Symbol.getSectionNumber() << "\n";
+    });
+    L = Linkage::Weak;
+    break;
   }
   case COFF::IMAGE_COMDAT_SELECT_NEWEST: {
     // Even link.exe doesn't support this selection properly.
