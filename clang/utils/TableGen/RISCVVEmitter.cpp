@@ -50,9 +50,6 @@ struct SemaRecord {
   // Prototype for this intrinsic.
   SmallVector<PrototypeDescriptor> Prototype;
 
-  // Prototype for masked intrinsic.
-  SmallVector<PrototypeDescriptor> MaskedPrototype;
-
   // Suffix of intrinsic name.
   SmallVector<PrototypeDescriptor> Suffix;
 
@@ -61,6 +58,10 @@ struct SemaRecord {
 
   // Number of field, large than 1 if it's segment load/store.
   unsigned NF;
+
+  bool HasMasked :1;
+  bool HasVL :1;
+  bool HasMaskedOffOperand :1;
 };
 
 // Compressed function signature table.
@@ -241,7 +242,6 @@ void SemaSignatureTable::init(ArrayRef<SemaRecord> SemaRecords) {
 
   llvm::for_each(SemaRecords, [&](const SemaRecord &SR) {
     InsertToSignatureSet(SR.Prototype);
-    InsertToSignatureSet(SR.MaskedPrototype);
     InsertToSignatureSet(SR.Suffix);
     InsertToSignatureSet(SR.OverloadedSuffix);
   });
@@ -583,12 +583,10 @@ void RVVEmitter::createRVVIntrinsics(
     }
 
     SR.NF = NF;
-
-    SR.Prototype = std::move(Prototype);
-
-    if (HasMasked)
-      SR.MaskedPrototype = std::move(MaskedPrototype);
-
+    SR.HasMasked = HasMasked;
+    SR.HasVL = HasVL;
+    SR.HasMaskedOffOperand = HasMaskedOffOperand;
+    SR.Prototype = std::move(BasicPrototype);
     SR.Suffix = parsePrototypes(SuffixProto);
     SR.OverloadedSuffix = parsePrototypes(OverloadedSuffixProto);
 
@@ -616,21 +614,20 @@ void RVVEmitter::createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
     R.Name = SR.Name.c_str();
     R.OverloadedName = SR.OverloadedName.c_str();
     R.PrototypeIndex = SST.getIndex(SR.Prototype);
-    R.MaskedPrototypeIndex = SST.getIndex(SR.MaskedPrototype);
     R.SuffixIndex = SST.getIndex(SR.Suffix);
     R.OverloadedSuffixIndex = SST.getIndex(SR.OverloadedSuffix);
     R.PrototypeLength = SR.Prototype.size();
-    R.MaskedPrototypeLength = SR.MaskedPrototype.size();
     R.SuffixLength = SR.Suffix.size();
     R.OverloadedSuffixSize = SR.OverloadedSuffix.size();
     R.RequiredExtensions = SR.RequiredExtensions;
     R.TypeRangeMask = SR.TypeRangeMask;
     R.Log2LMULMask = SR.Log2LMULMask;
     R.NF = SR.NF;
+    R.HasMasked = SR.HasMasked;
+    R.HasVL = SR.HasVL;
+    R.HasMaskedOffOperand = SR.HasMaskedOffOperand;
 
     assert(R.PrototypeIndex !=
-           static_cast<uint16_t>(SemaSignatureTable::INVALID_INDEX));
-    assert(R.MaskedPrototypeIndex !=
            static_cast<uint16_t>(SemaSignatureTable::INVALID_INDEX));
     assert(R.SuffixIndex !=
            static_cast<uint16_t>(SemaSignatureTable::INVALID_INDEX));

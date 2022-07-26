@@ -178,14 +178,23 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
   for (auto &Record : RVVIntrinsicRecords) {
     // Create Intrinsics for each type and LMUL.
     BasicType BaseType = BasicType::Unknown;
-    ArrayRef<PrototypeDescriptor> ProtoSeq =
+    ArrayRef<PrototypeDescriptor> BasicProtoSeq =
         ProtoSeq2ArrayRef(Record.PrototypeIndex, Record.PrototypeLength);
-    ArrayRef<PrototypeDescriptor> ProtoMaskSeq = ProtoSeq2ArrayRef(
-        Record.MaskedPrototypeIndex, Record.MaskedPrototypeLength);
     ArrayRef<PrototypeDescriptor> SuffixProto =
         ProtoSeq2ArrayRef(Record.SuffixIndex, Record.SuffixLength);
     ArrayRef<PrototypeDescriptor> OverloadedSuffixProto = ProtoSeq2ArrayRef(
         Record.OverloadedSuffixIndex, Record.OverloadedSuffixSize);
+
+    llvm::SmallVector<PrototypeDescriptor> ProtoSeq =
+        RVVIntrinsic::computeBuiltinTypes(BasicProtoSeq, /*IsMasked=*/false,
+                                          /*HasMaskedOffOperand=*/false,
+                                          Record.HasVL, Record.NF);
+
+    llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq =
+        RVVIntrinsic::computeBuiltinTypes(BasicProtoSeq, /*IsMasked=*/true,
+                                          Record.HasMaskedOffOperand,
+                                          Record.HasVL, Record.NF);
+
     for (unsigned int TypeRangeMaskShift = 0;
          TypeRangeMaskShift <= static_cast<unsigned int>(BasicType::MaxOffset);
          ++TypeRangeMaskShift) {
@@ -235,7 +244,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
         // Create non-masked intrinsic.
         InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr, false, *Types);
 
-        if (Record.MaskedPrototypeLength != 0) {
+        if (Record.HasMasked) {
           // Create masked intrinsic.
           Optional<RVVTypes> MaskTypes = RVVType::computeTypes(
               BaseType, Log2LMUL, Record.NF, ProtoMaskSeq);

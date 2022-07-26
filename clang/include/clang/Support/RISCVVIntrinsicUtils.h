@@ -371,9 +371,6 @@ struct RVVIntrinsicRecord {
   // Prototype for this intrinsic, index of RVVSignatureTable.
   uint16_t PrototypeIndex;
 
-  // Prototype for masked intrinsic, index of RVVSignatureTable.
-  uint16_t MaskedPrototypeIndex;
-
   // Suffix of intrinsic name, index of RVVSignatureTable.
   uint16_t SuffixIndex;
 
@@ -382,9 +379,6 @@ struct RVVIntrinsicRecord {
 
   // Length of the prototype.
   uint8_t PrototypeLength;
-
-  // Length of prototype of masked intrinsic.
-  uint8_t MaskedPrototypeLength;
 
   // Length of intrinsic name suffix.
   uint8_t SuffixLength;
@@ -403,6 +397,10 @@ struct RVVIntrinsicRecord {
 
   // Number of fields, greater than 1 if it's segment load/store.
   uint8_t NF;
+
+  bool HasMasked : 1;
+  bool HasVL : 1;
+  bool HasMaskedOffOperand : 1;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
