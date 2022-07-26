@@ -57,6 +57,7 @@ gcc ^
   -Wno-format ^
   -Wno-maybe-uninitialized ^
   -DSANITIZER_DEBUG=0 ^
+  -DSANITIZER_WINDOWS=1 ^
   -O3 ^
   -fomit-frame-pointer ^
   -msse3 ^
