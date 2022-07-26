@@ -7,12 +7,12 @@
 
 // CHECK-LABEL: @test_svindex_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svindex_s8aa(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svindex_s8(int8_t base, int8_t step)
@@ -22,12 +22,12 @@ svint8_t test_svindex_s8(int8_t base, int8_t step)
 
 // CHECK-LABEL: @test_svindex_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svindex_s16ss(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svindex_s16(int16_t base, int16_t step)
@@ -37,12 +37,12 @@ svint16_t test_svindex_s16(int16_t base, int16_t step)
 
 // CHECK-LABEL: @test_svindex_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svindex_s32ii(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svindex_s32(int32_t base, int32_t step)
@@ -52,12 +52,12 @@ svint32_t test_svindex_s32(int32_t base, int32_t step)
 
 // CHECK-LABEL: @test_svindex_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svindex_s64ll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svint64_t test_svindex_s64(int64_t base, int64_t step)
@@ -67,12 +67,12 @@ svint64_t test_svindex_s64(int64_t base, int64_t step)
 
 // CHECK-LABEL: @test_svindex_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svindex_u8hh(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.index.nxv16i8(i8 [[BASE:%.*]], i8 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svindex_u8(uint8_t base, uint8_t step)
@@ -82,12 +82,12 @@ svuint8_t test_svindex_u8(uint8_t base, uint8_t step)
 
 // CHECK-LABEL: @test_svindex_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svindex_u16tt(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 [[BASE:%.*]], i16 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svindex_u16(uint16_t base, uint16_t step)
@@ -97,12 +97,12 @@ svuint16_t test_svindex_u16(uint16_t base, uint16_t step)
 
 // CHECK-LABEL: @test_svindex_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svindex_u32jj(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 [[BASE:%.*]], i32 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svindex_u32(uint32_t base, uint32_t step)
@@ -112,12 +112,12 @@ svuint32_t test_svindex_u32(uint32_t base, uint32_t step)
 
 // CHECK-LABEL: @test_svindex_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svindex_u64mm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.index.nxv2i64(i64 [[BASE:%.*]], i64 [[STEP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svuint64_t test_svindex_u64(uint64_t base, uint64_t step)

@@ -291,7 +291,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_with_fast_math(
 ; AUTO_VEC-NEXT:  entry:
-; AUTO_VEC-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; AUTO_VEC-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
 ; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 16
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
@@ -451,7 +451,7 @@ for.end:
 define double @external_use_without_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_without_fast_math(
 ; AUTO_VEC-NEXT:  entry:
-; AUTO_VEC-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; AUTO_VEC-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[SMAX]], 7
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7

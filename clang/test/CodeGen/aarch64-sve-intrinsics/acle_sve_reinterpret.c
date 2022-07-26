@@ -498,6 +498,7 @@ svint32_t test_svreinterpret_s32_f64(svfloat64_t op)
   return SVE_ACLE_FUNC(svreinterpret_s32,_f64,,)(op);
 }
 
+//
 // CHECK-LABEL: @test_svreinterpret_s64_s8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i8> [[OP:%.*]] to <vscale x 2 x i64>
@@ -1348,7 +1349,6 @@ svfloat16_t test_svreinterpret_f16_s32(svint32_t op)
   return SVE_ACLE_FUNC(svreinterpret_f16,_s32,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_f16_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i64> [[OP:%.*]] to <vscale x 8 x half>
@@ -1364,7 +1364,6 @@ svfloat16_t test_svreinterpret_f16_s64(svint64_t op)
   return SVE_ACLE_FUNC(svreinterpret_f16,_s64,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_f16_u8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i8> [[OP:%.*]] to <vscale x 8 x half>
@@ -1380,7 +1379,6 @@ svfloat16_t test_svreinterpret_f16_u8(svuint8_t op)
   return SVE_ACLE_FUNC(svreinterpret_f16,_u8,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_f16_u16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i16> [[OP:%.*]] to <vscale x 8 x half>
@@ -1396,7 +1394,6 @@ svfloat16_t test_svreinterpret_f16_u16(svuint16_t op)
   return SVE_ACLE_FUNC(svreinterpret_f16,_u16,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_f16_u32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i32> [[OP:%.*]] to <vscale x 8 x half>
@@ -1412,7 +1409,6 @@ svfloat16_t test_svreinterpret_f16_u32(svuint32_t op)
   return SVE_ACLE_FUNC(svreinterpret_f16,_u32,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_f16_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i64> [[OP:%.*]] to <vscale x 8 x half>
@@ -1619,7 +1615,6 @@ svfloat32_t test_svreinterpret_f32_f32(svfloat32_t op)
   return SVE_ACLE_FUNC(svreinterpret_f32,_f32,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_f32_f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x double> [[OP:%.*]] to <vscale x 4 x float>
@@ -1755,7 +1750,6 @@ svfloat64_t test_svreinterpret_f64_u64(svuint64_t op)
   return SVE_ACLE_FUNC(svreinterpret_f64,_u64,,)(op);
 }
 
-//
 // CHECK-LABEL: @test_svreinterpret_f64_f16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x half> [[OP:%.*]] to <vscale x 2 x double>

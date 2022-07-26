@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svqxtnt_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqxtnt_s16u10__SVInt8_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svqxtnt_s16(svint8_t op, svint16_t op1)
@@ -32,12 +32,12 @@ svint8_t test_svqxtnt_s16(svint8_t op, svint16_t op1)
 
 // CHECK-LABEL: @test_svqxtnt_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.sqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqxtnt_s32u11__SVInt16_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.sqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svqxtnt_s32(svint16_t op, svint32_t op1)
@@ -47,12 +47,12 @@ svint16_t test_svqxtnt_s32(svint16_t op, svint32_t op1)
 
 // CHECK-LABEL: @test_svqxtnt_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqxtnt_s64u11__SVInt32_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svqxtnt_s64(svint32_t op, svint64_t op1)
@@ -62,12 +62,12 @@ svint32_t test_svqxtnt_s64(svint32_t op, svint64_t op1)
 
 // CHECK-LABEL: @test_svqxtnt_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.uqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.uqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqxtnt_u16u11__SVUint8_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.uqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.uqxtnt.nxv8i16(<vscale x 16 x i8> [[OP:%.*]], <vscale x 8 x i16> [[OP1:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svqxtnt_u16(svuint8_t op, svuint16_t op1)
@@ -77,12 +77,12 @@ svuint8_t test_svqxtnt_u16(svuint8_t op, svuint16_t op1)
 
 // CHECK-LABEL: @test_svqxtnt_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqxtnt_u32u12__SVUint16_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqxtnt.nxv4i32(<vscale x 8 x i16> [[OP:%.*]], <vscale x 4 x i32> [[OP1:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svqxtnt_u32(svuint16_t op, svuint32_t op1)
@@ -92,12 +92,12 @@ svuint16_t test_svqxtnt_u32(svuint16_t op, svuint32_t op1)
 
 // CHECK-LABEL: @test_svqxtnt_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.uqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqxtnt_u64u12__SVUint32_tu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.uqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqxtnt.nxv2i64(<vscale x 4 x i32> [[OP:%.*]], <vscale x 2 x i64> [[OP1:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svqxtnt_u64(svuint32_t op, svuint64_t op1)

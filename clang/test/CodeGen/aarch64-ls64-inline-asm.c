@@ -5,7 +5,7 @@ struct foo { unsigned long long x[8]; };
 
 // CHECK-LABEL: @load(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i512 asm sideeffect "ld64b $0,[$1]", "=r,r,~{memory}"(i8* [[ADDR:%.*]]) #[[ATTR1:[0-9]+]], !srcloc !6
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i512 asm sideeffect "ld64b $0,[$1]", "=r,r,~{memory}"(i8* [[ADDR:%.*]]) #[[ATTR1:[0-9]+]], !srcloc !6
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast %struct.foo* [[OUTPUT:%.*]] to i512*
 // CHECK-NEXT:    store i512 [[TMP0]], i512* [[TMP1]], align 8
 // CHECK-NEXT:    ret void
@@ -19,7 +19,7 @@ void load(struct foo *output, void *addr)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.foo* [[INPUT:%.*]] to i512*
 // CHECK-NEXT:    [[TMP1:%.*]] = load i512, i512* [[TMP0]], align 8
-// CHECK-NEXT:    call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 [[TMP1]], i8* [[ADDR:%.*]]) #[[ATTR1]], !srcloc !7
+// CHECK-NEXT:    tail call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 [[TMP1]], i8* [[ADDR:%.*]]) #[[ATTR1]], !srcloc !7
 // CHECK-NEXT:    ret void
 //
 void store(const struct foo *input, void *addr)
@@ -74,7 +74,7 @@ void store(const struct foo *input, void *addr)
 // CHECK-NEXT:    [[S_SROA_0_0_INSERT_EXT:%.*]] = zext i64 [[CONV]] to i512
 // CHECK-NEXT:    [[S_SROA_0_0_INSERT_MASK:%.*]] = or i512 [[S_SROA_4_0_INSERT_MASK]], [[S_SROA_4_0_INSERT_SHIFT]]
 // CHECK-NEXT:    [[S_SROA_0_0_INSERT_INSERT:%.*]] = or i512 [[S_SROA_0_0_INSERT_MASK]], [[S_SROA_0_0_INSERT_EXT]]
-// CHECK-NEXT:    call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 [[S_SROA_0_0_INSERT_INSERT]], i8* [[ADDR:%.*]]) #[[ATTR1]], !srcloc !12
+// CHECK-NEXT:    tail call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 [[S_SROA_0_0_INSERT_INSERT]], i8* [[ADDR:%.*]]) #[[ATTR1]], !srcloc !12
 // CHECK-NEXT:    ret void
 //
 void store2(int *in, void *addr)

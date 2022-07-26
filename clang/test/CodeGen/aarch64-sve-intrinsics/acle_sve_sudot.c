@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svsudot_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Z:%.*]], <vscale x 16 x i8> [[Y:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Z:%.*]], <vscale x 16 x i8> [[Y:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svsudot_s32u11__SVInt32_tu10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Z:%.*]], <vscale x 16 x i8> [[Y:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Z:%.*]], <vscale x 16 x i8> [[Y:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svsudot_s32(svint32_t x, svint8_t y, svuint8_t z) {
@@ -33,14 +33,14 @@ svint32_t test_svsudot_s32(svint32_t x, svint8_t y, svuint8_t z) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[Z:%.*]], i64 0
 // CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[Y:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[Y:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svsudot_n_s32u11__SVInt32_tu10__SVInt8_th(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[Z:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[Y:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.usdot.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[Y:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svsudot_n_s32(svint32_t x, svint8_t y, uint8_t z) {
@@ -49,12 +49,12 @@ svint32_t test_svsudot_n_s32(svint32_t x, svint8_t y, uint8_t z) {
 
 // CHECK-LABEL: @test_svsudot_lane_s32_0(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svsudot_lane_s32_0u11__SVInt32_tu10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svsudot_lane_s32_0(svint32_t x, svint8_t y, svuint8_t z) {
@@ -63,12 +63,12 @@ svint32_t test_svsudot_lane_s32_0(svint32_t x, svint8_t y, svuint8_t z) {
 
 // CHECK-LABEL: @test_svsudot_lane_s32_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 1)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svsudot_lane_s32_1u11__SVInt32_tu10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svsudot_lane_s32_1(svint32_t x, svint8_t y, svuint8_t z) {
@@ -77,12 +77,12 @@ svint32_t test_svsudot_lane_s32_1(svint32_t x, svint8_t y, svuint8_t z) {
 
 // CHECK-LABEL: @test_svsudot_lane_s32_2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 2)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 2)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svsudot_lane_s32_2u11__SVInt32_tu10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 2)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 2)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svsudot_lane_s32_2(svint32_t x, svint8_t y, svuint8_t z) {
@@ -91,12 +91,12 @@ svint32_t test_svsudot_lane_s32_2(svint32_t x, svint8_t y, svuint8_t z) {
 
 // CHECK-LABEL: @test_svsudot_lane_s32_3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 3)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 3)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svsudot_lane_s32_3u11__SVInt32_tu10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 3)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sudot.lane.nxv4i32(<vscale x 4 x i32> [[X:%.*]], <vscale x 16 x i8> [[Y:%.*]], <vscale x 16 x i8> [[Z:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svsudot_lane_s32_3(svint32_t x, svint8_t y, svuint8_t z) {
