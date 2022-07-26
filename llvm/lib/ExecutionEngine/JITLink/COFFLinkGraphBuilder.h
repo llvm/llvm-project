@@ -111,10 +111,9 @@ private:
   // COMDAT sequence.
   struct ComdatExportRequest {
     COFFSymbolIndex SymbolIndex;
-    COFFSectionIndex SectionIndex;
     jitlink::Linkage Linkage;
   };
-  Optional<ComdatExportRequest> PendingComdatExport;
+  std::vector<Optional<ComdatExportRequest>> PendingComdatExports;
 
   // This represents a pending request to create a weak external symbol with a
   // name.
