@@ -317,7 +317,7 @@ void Platform::GetStatus(Stream &strm) {
     strm.Format("   Sysroot: {0}\n", GetSDKRootDirectory());
   }
   if (GetWorkingDirectory()) {
-    strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetCString());
+    strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetPath().c_str());
   }
   if (!IsConnected())
     return;
@@ -434,12 +434,13 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
     if (!dst_dir.GetFilename())
-      dst_dir.GetFilename() = src.GetLastPathComponent();
+      dst_dir.SetFilename(src.GetLastPathComponent());
     Status error = rc_baton->platform_ptr->MakeDirectory(
         dst_dir, lldb::eFilePermissionsDirectoryDefault);
     if (error.Fail()) {
       rc_baton->error.SetErrorStringWithFormat(
-          "unable to setup directory %s on remote end", dst_dir.GetCString());
+          "unable to setup directory %s on remote end",
+          dst_dir.GetPath().c_str());
       return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
     }
 
@@ -449,7 +450,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // Make a filespec that only fills in the directory of a FileSpec so when
     // we enumerate we can quickly fill in the filename for dst copies
     FileSpec recurse_dst;
-    recurse_dst.GetDirectory().SetCString(dst_dir.GetPath().c_str());
+    recurse_dst.SetDirectory(dst_dir.GetPathAsConstString());
     RecurseCopyBaton rc_baton2 = {recurse_dst, rc_baton->platform_ptr,
                                   Status()};
     FileSystem::Instance().EnumerateDirectory(src_dir_path, true, true, true,
@@ -465,7 +466,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
     if (!dst_file.GetFilename())
-      dst_file.GetFilename() = src.GetFilename();
+      dst_file.SetFilename(src.GetFilename());
 
     FileSpec src_resolved;
 
@@ -487,7 +488,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
     if (!dst_file.GetFilename())
-      dst_file.GetFilename() = src.GetFilename();
+      dst_file.SetFilename(src.GetFilename());
     Status err = rc_baton->platform_ptr->PutFile(src, dst_file);
     if (err.Fail()) {
       rc_baton->error.SetErrorString(err.AsCString());
@@ -514,7 +515,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
   FileSpec fixed_dst(dst);
 
   if (!fixed_dst.GetFilename())
-    fixed_dst.GetFilename() = src.GetFilename();
+    fixed_dst.SetFilename(src.GetFilename());
 
   FileSpec working_dir = GetWorkingDirectory();
 
@@ -522,7 +523,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     if (dst.GetDirectory()) {
       const char first_dst_dir_char = dst.GetDirectory().GetCString()[0];
       if (first_dst_dir_char == '/' || first_dst_dir_char == '\\') {
-        fixed_dst.GetDirectory() = dst.GetDirectory();
+        fixed_dst.SetDirectory(dst.GetDirectory());
       }
       // If the fixed destination file doesn't have a directory yet, then we
       // must have a relative path. We will resolve this relative path against
@@ -533,7 +534,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         if (working_dir) {
           relative_spec = working_dir;
           relative_spec.AppendPathComponent(dst.GetPath());
-          fixed_dst.GetDirectory() = relative_spec.GetDirectory();
+          fixed_dst.SetDirectory(relative_spec.GetDirectory());
         } else {
           error.SetErrorStringWithFormat(
               "platform working directory must be valid for relative path '%s'",
@@ -543,7 +544,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
       }
     } else {
       if (working_dir) {
-        fixed_dst.GetDirectory().SetCString(working_dir.GetCString());
+        fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
       } else {
         error.SetErrorStringWithFormat(
             "platform working directory must be valid for relative path '%s'",
@@ -553,7 +554,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     }
   } else {
     if (working_dir) {
-      fixed_dst.GetDirectory().SetCString(working_dir.GetCString());
+      fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
     } else {
       error.SetErrorStringWithFormat("platform working directory must be valid "
                                      "when destination directory is empty");
@@ -580,7 +581,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         // Make a filespec that only fills in the directory of a FileSpec so
         // when we enumerate we can quickly fill in the filename for dst copies
         FileSpec recurse_dst;
-        recurse_dst.GetDirectory().SetCString(fixed_dst.GetCString());
+        recurse_dst.SetDirectory(fixed_dst.GetPathAsConstString());
         std::string src_dir_path(src.GetPath());
         RecurseCopyBaton baton = {recurse_dst, this, Status()};
         FileSystem::Instance().EnumerateDirectory(
@@ -737,7 +738,7 @@ ConstString Platform::GetFullNameForDylib(ConstString basename) {
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::SetRemoteWorkingDirectory('%s')",
-            working_dir.GetCString());
+            working_dir.GetPath().c_str());
   m_working_dir = working_dir;
   return true;
 }

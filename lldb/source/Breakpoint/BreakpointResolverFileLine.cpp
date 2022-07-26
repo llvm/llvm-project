@@ -236,7 +236,7 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   FileSpec search_file_spec = m_location_spec.GetFileSpec();
   const bool is_relative = search_file_spec.IsRelative();
   if (is_relative)
-    search_file_spec.GetDirectory().Clear();
+    search_file_spec.ClearDirectory();
   SourceLocationSpec search_location_spec(
       search_file_spec, m_location_spec.GetLine().value_or(0),
       m_location_spec.GetColumn(), m_location_spec.GetCheckInlines(),

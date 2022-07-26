@@ -1084,7 +1084,7 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     // with the help of the object file's directory.
     llvm::SmallString<128> dll_fullpath;
     FileSpec dll_specs(dll_name);
-    dll_specs.GetDirectory().SetString(m_file.GetDirectory().GetCString());
+    dll_specs.SetDirectory(m_file.GetDirectory());
 
     if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
       m_deps_filespec->EmplaceBack(dll_fullpath);

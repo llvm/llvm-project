@@ -745,9 +745,9 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                 "ProcessGDBRemote::%s provided with STDIO paths via "
                 "launch_info: stdin=%s, stdout=%s, stderr=%s",
                 __FUNCTION__,
-                stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
-                stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
-                stderr_file_spec ? stderr_file_spec.GetCString() : "<null>");
+                stdin_file_spec ? stdin_file_spec.GetPath().c_str() : "<null>",
+                stdout_file_spec ? stdout_file_spec.GetPath().c_str() : "<null>",
+                stderr_file_spec ? stderr_file_spec.GetPath().c_str() : "<null>");
     else
       LLDB_LOGF(log,
                 "ProcessGDBRemote::%s no STDIO paths given via launch_info",
@@ -810,18 +810,18 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
           "(IsHost() is true) using secondary: stdin=%s, stdout=%s, "
           "stderr=%s",
           __FUNCTION__,
-          stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
-          stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
-          stderr_file_spec ? stderr_file_spec.GetCString() : "<null>");
+          stdin_file_spec ? stdin_file_spec.GetPath().c_str() : "<null>",
+          stdout_file_spec ? stdout_file_spec.GetPath().c_str() : "<null>",
+          stderr_file_spec ? stderr_file_spec.GetPath().c_str() : "<null>");
     }
 
     LLDB_LOGF(log,
               "ProcessGDBRemote::%s final STDIO paths after all "
               "adjustments: stdin=%s, stdout=%s, stderr=%s",
               __FUNCTION__,
-              stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
-              stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
-              stderr_file_spec ? stderr_file_spec.GetCString() : "<null>");
+              stdin_file_spec ? stdin_file_spec.GetPath().c_str() : "<null>",
+              stdout_file_spec ? stdout_file_spec.GetPath().c_str() : "<null>",
+              stderr_file_spec ? stderr_file_spec.GetPath().c_str() : "<null>");
 
     if (stdin_file_spec)
       m_gdb_comm.SetSTDIN(stdin_file_spec);
@@ -962,12 +962,12 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
           entry.c_str(), response);
     }
   };
-  
+
   PlatformSP platform_sp = GetTarget().GetPlatform();
   if (platform_sp) {
     handle_cmds(platform_sp->GetExtraStartupCommands());
   }
-  
+
   // Then dispatch any process commands:
   handle_cmds(GetExtraStartupCommands());
 
