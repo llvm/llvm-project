@@ -1470,11 +1470,14 @@ gentbl(
 # We generate the set of builtin headers under a special subdirectory in the
 # 'bin' section of the bazel output so that they can be used as data
 # dependencies. It requires listing explicitly all the generated inputs here.
-builtin_headers = glob(["lib/Headers/**/*.h"], exclude = [
-    # FIXME: They are not handled in CMake side.
-    "lib/Headers/openmp_wrappers/time.h",
-    "lib/Headers/ppc_wrappers/nmmintrin.h",
-]) + [
+builtin_headers = glob(
+    ["lib/Headers/**/*.h"],
+    exclude = [
+        # FIXME: They are not handled in CMake side.
+        "lib/Headers/openmp_wrappers/time.h",
+        "lib/Headers/ppc_wrappers/nmmintrin.h",
+    ],
+) + [
     "lib/Headers/arm_cde.h",
     "lib/Headers/arm_fp16.h",
     "lib/Headers/arm_mve.h",
@@ -1950,7 +1953,7 @@ template_rule(
     src = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     out = "clang-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "clang"
+        "@TOOL_NAME@": "clang",
     },
 )
 
