@@ -577,8 +577,9 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     CallParams.removeOperand(0);
 
     // For funcrefs, call_indirect is done through __funcref_call_table and the
-    // funcref is always installed in slot 0 of the table, therefore instead of having
-    // the function pointer added at the end of the params list, a zero (the index in
+    // funcref is always installed in slot 0 of the table, therefore instead of
+    // having the function pointer added at the end of the params list, a zero
+    // (the index in
     // __funcref_call_table is added).
     if (IsFuncrefCall) {
       Register RegZero =
@@ -1156,7 +1157,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // If the callee is a GlobalAddress node (quite common, every direct call
     // is) turn it into a TargetGlobalAddress node so that LowerGlobalAddress
     // doesn't at MO_GOT which is not needed for direct calls.
-    GlobalAddressSDNode* GA = cast<GlobalAddressSDNode>(Callee);
+    GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Callee);
     Callee = DAG.getTargetGlobalAddress(GA->getGlobal(), DL,
                                         getPointerTy(DAG.getDataLayout()),
                                         GA->getOffset());
@@ -1719,20 +1720,12 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
   const GlobalValue *GV = GA->getGlobal();
 
-  // Currently Emscripten does not support dynamic linking with threads.
-  // Therefore, if we have thread-local storage, only the local-exec model
-  // is possible.
-  // TODO: remove this and implement proper TLS models once Emscripten
-  // supports dynamic linking with threads.
-  if (GV->getThreadLocalMode() != GlobalValue::LocalExecTLSModel &&
-      !Subtarget->getTargetTriple().isOSEmscripten()) {
-    report_fatal_error("only -ftls-model=local-exec is supported for now on "
-                       "non-Emscripten OSes: variable " +
-                           GV->getName(),
-                       false);
-  }
-
-  auto model = GV->getThreadLocalMode();
+  // Currently only Emscripten supports dynamic linking with threads. Therefore,
+  // on other targets, if we have thread-local storage, only the local-exec
+  // model is possible.
+  auto model = Subtarget->getTargetTriple().isOSEmscripten()
+                   ? GV->getThreadLocalMode()
+                   : GlobalValue::LocalExecTLSModel;
 
   // Unsupported TLS modes
   assert(model != GlobalValue::NotThreadLocal);
@@ -1791,8 +1784,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
       if (GV->getValueType()->isFunctionTy()) {
         BaseName = MF.createExternalSymbolName("__table_base");
         OperandFlags = WebAssemblyII::MO_TABLE_BASE_REL;
-      }
-      else {
+      } else {
         BaseName = MF.createExternalSymbolName("__memory_base");
         OperandFlags = WebAssemblyII::MO_MEMORY_BASE_REL;
       }
