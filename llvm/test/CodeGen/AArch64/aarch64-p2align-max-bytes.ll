@@ -16,14 +16,14 @@ define i32 @a(i32 %x, i32* nocapture readonly %y, i32* nocapture readonly %z) {
 ; CHECK-IMPLICIT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_8: // %for.body
 ; CHECK-OBJ;Disassembly of section .text:
-; CHECK-OBJ:               88: 2a 00 0a 8b   add
-; CHECK-OBJ-IMPLICIT-NEXT: 8c: 1f 20 03 d5   nop
-; CHECK-OBJ-IMPLICIT-NEXT: 90: 1f 20 03 d5   nop
-; CHECK-OBJ-IMPLICIT-NEXT: 94: 1f 20 03 d5   nop
-; CHECK-OBJ-IMPLICIT-NEXT: 98: 1f 20 03 d5   nop
-; CHECK-OBJ-IMPLICIT-NEXT: 9c: 1f 20 03 d5   nop
-; CHECK-OBJ-IMPLICIT-NEXT: a0: 4b 45 40 b8   ldr
-; CHECK-OBJ-EXPLICIT-NEXT: 8c: 4b 45 40 b8   ldr
+; CHECK-OBJ:               88: 8b0a002a      add
+; CHECK-OBJ-IMPLICIT-NEXT: 8c: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 90: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 94: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 98: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 9c: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: a0: b840454b      ldr
+; CHECK-OBJ-EXPLICIT-NEXT: 8c: b840454b      ldr
 entry:
   %cmp10 = icmp sgt i32 %x, 0
   br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
