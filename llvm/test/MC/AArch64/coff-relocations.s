@@ -104,14 +104,14 @@ tbz x0, #0, target
 // CHECK:   }
 // CHECK: ]
 
-// DISASM: 30:       20 1a 09 b0     adrp    x0, 0x12345000
-// DISASM: 34:       00 14 0d 91     add     x0, x0, #837
-// DISASM: 38:       00 14 4d 39     ldrb    w0, [x0, #837]
-// DISASM: 3c:       00 a4 41 f9     ldr     x0, [x0, #840]
-// DISASM: 40:       00 00 00 91     add     x0, x0, #0
-// DISASM: 44:       00 00 40 91     add     x0, x0, #0, lsl #12
-// DISASM: 48:       00 00 40 f9     ldr     x0, [x0]
-// DISASM: 4c:       20 1a 09 30     adr     x0, #74565
+// DISASM: 30:       b0091a20     adrp    x0, 0x12345000
+// DISASM: 34:       910d1400     add     x0, x0, #837
+// DISASM: 38:       394d1400     ldrb    w0, [x0, #837]
+// DISASM: 3c:       f941a400     ldr     x0, [x0, #840]
+// DISASM: 40:       91000000     add     x0, x0, #0
+// DISASM: 44:       91400000     add     x0, x0, #0, lsl #12
+// DISASM: 48:       f9400000     ldr     x0, [x0]
+// DISASM: 4c:       30091a20     adr     x0, #74565
 
 // DATA: Contents of section .rdata:
 // DATA-NEXT:  0000 30000000 08000000

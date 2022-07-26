@@ -13,7 +13,7 @@ urecpe z31.s, p7/m, z31.s
 // CHECK-INST: urecpe z31.s, p7/m, z31.s
 // CHECK-ENCODING: [0xff,0xbf,0x80,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff bf 80 44 <unknown>
+// CHECK-UNKNOWN: 4480bfff <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -23,22 +23,22 @@ movprfx z4.s, p7/z, z6.s
 // CHECK-INST: movprfx	z4.s, p7/z, z6.s
 // CHECK-ENCODING: [0xc4,0x3c,0x90,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: c4 3c 90 04 <unknown>
+// CHECK-UNKNOWN: 04903cc4 <unknown>
 
 urecpe z4.s, p7/m, z31.s
 // CHECK-INST: urecpe z4.s, p7/m, z31.s
 // CHECK-ENCODING: [0xe4,0xbf,0x80,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e4 bf 80 44 <unknown>
+// CHECK-UNKNOWN: 4480bfe4 <unknown>
 
 movprfx z4, z6
 // CHECK-INST: movprfx	z4, z6
 // CHECK-ENCODING: [0xc4,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: c4 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bcc4 <unknown>
 
 urecpe z4.s, p7/m, z31.s
 // CHECK-INST: urecpe z4.s, p7/m, z31.s
 // CHECK-ENCODING: [0xe4,0xbf,0x80,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e4 bf 80 44 <unknown>
+// CHECK-UNKNOWN: 4480bfe4 <unknown>

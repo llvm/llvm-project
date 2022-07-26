@@ -13,58 +13,58 @@ whilele  p15.b, xzr, x0
 // CHECK-INST: whilele	p15.b, xzr, x0
 // CHECK-ENCODING: [0xff,0x17,0x20,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 17 20 25 <unknown>
+// CHECK-UNKNOWN: 252017ff <unknown>
 
 whilele  p15.b, x0, xzr
 // CHECK-INST: whilele	p15.b, x0, xzr
 // CHECK-ENCODING: [0x1f,0x14,0x3f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 14 3f 25 <unknown>
+// CHECK-UNKNOWN: 253f141f <unknown>
 
 whilele  p15.b, wzr, w0
 // CHECK-INST: whilele	p15.b, wzr, w0
 // CHECK-ENCODING: [0xff,0x07,0x20,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 07 20 25 <unknown>
+// CHECK-UNKNOWN: 252007ff <unknown>
 
 whilele  p15.b, w0, wzr
 // CHECK-INST: whilele	p15.b, w0, wzr
 // CHECK-ENCODING: [0x1f,0x04,0x3f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 04 3f 25 <unknown>
+// CHECK-UNKNOWN: 253f041f <unknown>
 
 whilele  p15.h, x0, xzr
 // CHECK-INST: whilele	p15.h, x0, xzr
 // CHECK-ENCODING: [0x1f,0x14,0x7f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 14 7f 25 <unknown>
+// CHECK-UNKNOWN: 257f141f <unknown>
 
 whilele  p15.h, w0, wzr
 // CHECK-INST: whilele	p15.h, w0, wzr
 // CHECK-ENCODING: [0x1f,0x04,0x7f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 04 7f 25 <unknown>
+// CHECK-UNKNOWN: 257f041f <unknown>
 
 whilele  p15.s, x0, xzr
 // CHECK-INST: whilele	p15.s, x0, xzr
 // CHECK-ENCODING: [0x1f,0x14,0xbf,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 14 bf 25 <unknown>
+// CHECK-UNKNOWN: 25bf141f <unknown>
 
 whilele  p15.s, w0, wzr
 // CHECK-INST: whilele	p15.s, w0, wzr
 // CHECK-ENCODING: [0x1f,0x04,0xbf,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 04 bf 25 <unknown>
+// CHECK-UNKNOWN: 25bf041f <unknown>
 
 whilele  p15.d, w0, wzr
 // CHECK-INST: whilele	p15.d, w0, wzr
 // CHECK-ENCODING: [0x1f,0x04,0xff,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 04 ff 25 <unknown>
+// CHECK-UNKNOWN: 25ff041f <unknown>
 
 whilele  p15.d, x0, xzr
 // CHECK-INST: whilele	p15.d, x0, xzr
 // CHECK-ENCODING: [0x1f,0x14,0xff,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 1f 14 ff 25 <unknown>
+// CHECK-UNKNOWN: 25ff141f <unknown>

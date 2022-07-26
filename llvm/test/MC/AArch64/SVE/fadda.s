@@ -13,16 +13,16 @@ fadda h0, p7, h0, z31.h
 // CHECK-INST: fadda	h0, p7, h0, z31.h
 // CHECK-ENCODING: [0xe0,0x3f,0x58,0x65]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 3f 58 65 <unknown>
+// CHECK-UNKNOWN: 65583fe0 <unknown>
 
 fadda s0, p7, s0, z31.s
 // CHECK-INST: fadda	s0, p7, s0, z31.s
 // CHECK-ENCODING: [0xe0,0x3f,0x98,0x65]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 3f 98 65 <unknown>
+// CHECK-UNKNOWN: 65983fe0 <unknown>
 
 fadda d0, p7, d0, z31.d
 // CHECK-INST: fadda	d0, p7, d0, z31.d
 // CHECK-ENCODING: [0xe0,0x3f,0xd8,0x65]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 3f d8 65 <unknown>
+// CHECK-UNKNOWN: 65d83fe0 <unknown>

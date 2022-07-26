@@ -13,19 +13,19 @@ mls z0.h, z1.h, z7.h[7]
 // CHECK-INST: mls	z0.h, z1.h, z7.h[7]
 // CHECK-ENCODING: [0x20,0x0c,0x7f,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 0c 7f 44 <unknown>
+// CHECK-UNKNOWN: 447f0c20 <unknown>
 
 mls z0.s, z1.s, z7.s[3]
 // CHECK-INST: mls	z0.s, z1.s, z7.s[3]
 // CHECK-ENCODING: [0x20,0x0c,0xbf,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 0c bf 44 <unknown>
+// CHECK-UNKNOWN: 44bf0c20 <unknown>
 
 mls z0.d, z1.d, z7.d[1]
 // CHECK-INST: mls	z0.d, z1.d, z7.d[1]
 // CHECK-ENCODING: [0x20,0x0c,0xf7,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 0c f7 44 <unknown>
+// CHECK-UNKNOWN: 44f70c20 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -35,10 +35,10 @@ movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 mls z0.d, z1.d, z7.d[1]
 // CHECK-INST: mls	z0.d, z1.d, z7.d[1]
 // CHECK-ENCODING: [0x20,0x0c,0xf7,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 0c f7 44 <unknown>
+// CHECK-UNKNOWN: 44f70c20 <unknown>

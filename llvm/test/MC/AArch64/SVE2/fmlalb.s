@@ -14,19 +14,19 @@ fmlalb z29.s, z30.h, z31.h
 // CHECK-INST: fmlalb z29.s, z30.h, z31.h
 // CHECK-ENCODING: [0xdd,0x83,0xbf,0x64]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: dd 83 bf 64 <unknown>
+// CHECK-UNKNOWN: 64bf83dd <unknown>
 
 fmlalb z0.s, z1.h, z7.h[0]
 // CHECK-INST: fmlalb	z0.s, z1.h, z7.h[0]
 // CHECK-ENCODING: [0x20,0x40,0xa7,0x64]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 40 a7 64 <unknown>
+// CHECK-UNKNOWN: 64a74020 <unknown>
 
 fmlalb z30.s, z31.h, z7.h[7]
 // CHECK-INST: fmlalb z30.s, z31.h, z7.h[7]
 // CHECK-ENCODING: [0xfe,0x4b,0xbf,0x64]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: fe 4b bf 64 <unknown>
+// CHECK-UNKNOWN: 64bf4bfe <unknown>
 
 // --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
@@ -35,22 +35,22 @@ movprfx z29, z28
 // CHECK-INST: movprfx	z29, z28
 // CHECK-ENCODING: [0x9d,0xbf,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 9d bf 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bf9d <unknown>
 
 fmlalb z29.s, z30.h, z31.h
 // CHECK-INST: fmlalb z29.s, z30.h, z31.h
 // CHECK-ENCODING: [0xdd,0x83,0xbf,0x64]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: dd 83 bf 64 <unknown>
+// CHECK-UNKNOWN: 64bf83dd <unknown>
 
 movprfx z21, z28
 // CHECK-INST: movprfx	z21, z28
 // CHECK-ENCODING: [0x95,0xbf,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 95 bf 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bf95 <unknown>
 
 fmlalb z21.s, z1.h, z7.h[7]
 // CHECK-INST: fmlalb	z21.s, z1.h, z7.h[7]
 // CHECK-ENCODING: [0x35,0x48,0xbf,0x64]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 35 48 bf 64 <unknown>
+// CHECK-UNKNOWN: 64bf4835 <unknown>

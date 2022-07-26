@@ -8,6 +8,6 @@ func:
 nop; nop
 add x0, x0, #42
 
-// CHECK:  0:       1f 20 03 d5     nop
-// CHECK:  4:       1f 20 03 d5     nop
-// CHECK:  8:       00 a8 00 91     add x0, x0, #42
+// CHECK:  0:       d503201f     nop
+// CHECK:  4:       d503201f     nop
+// CHECK:  8:       9100a800     add x0, x0, #42

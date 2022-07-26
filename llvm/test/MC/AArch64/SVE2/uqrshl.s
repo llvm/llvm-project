@@ -13,25 +13,25 @@ uqrshl z0.b, p0/m, z0.b, z1.b
 // CHECK-INST: uqrshl z0.b, p0/m, z0.b, z1.b
 // CHECK-ENCODING: [0x20,0x80,0x0b,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 80 0b 44 <unknown>
+// CHECK-UNKNOWN: 440b8020 <unknown>
 
 uqrshl z0.h, p0/m, z0.h, z1.h
 // CHECK-INST: uqrshl z0.h, p0/m, z0.h, z1.h
 // CHECK-ENCODING: [0x20,0x80,0x4b,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 80 4b 44 <unknown>
+// CHECK-UNKNOWN: 444b8020 <unknown>
 
 uqrshl z29.s, p7/m, z29.s, z30.s
 // CHECK-INST: uqrshl z29.s, p7/m, z29.s, z30.s
 // CHECK-ENCODING: [0xdd,0x9f,0x8b,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: dd 9f 8b 44 <unknown>
+// CHECK-UNKNOWN: 448b9fdd <unknown>
 
 uqrshl z31.d, p7/m, z31.d, z30.d
 // CHECK-INST: uqrshl z31.d, p7/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x9f,0xcb,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 9f cb 44 <unknown>
+// CHECK-UNKNOWN: 44cb9fdf <unknown>
 
 // --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
@@ -40,22 +40,22 @@ movprfx z31.d, p0/z, z6.d
 // CHECK-INST: movprfx z31.d, p0/z, z6.d
 // CHECK-ENCODING: [0xdf,0x20,0xd0,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: df 20 d0 04 <unknown>
+// CHECK-UNKNOWN: 04d020df <unknown>
 
 uqrshl z31.d, p0/m, z31.d, z30.d
 // CHECK-INST: uqrshl z31.d, p0/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x83,0xcb,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 83 cb 44 <unknown>
+// CHECK-UNKNOWN: 44cb83df <unknown>
 
 movprfx z31, z6
 // CHECK-INST: movprfx z31, z6
 // CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: df bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bcdf <unknown>
 
 uqrshl z31.d, p7/m, z31.d, z30.d
 // CHECK-INST: uqrshl z31.d, p7/m, z31.d, z30.d
 // CHECK-ENCODING: [0xdf,0x9f,0xcb,0x44]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 9f cb 44 <unknown>
+// CHECK-UNKNOWN: 44cb9fdf <unknown>

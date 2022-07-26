@@ -13,4 +13,4 @@ setffr
 // CHECK-INST: setffr
 // CHECK-ENCODING: [0x00,0x90,0x2c,0x25]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 90 2c 25 <unknown>
+// CHECK-UNKNOWN: 252c9000 <unknown>

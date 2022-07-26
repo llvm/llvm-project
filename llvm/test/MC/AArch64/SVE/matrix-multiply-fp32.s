@@ -16,4 +16,4 @@ fmmla z0.s, z1.s, z2.s
 // CHECK-INST: fmmla z0.s, z1.s, z2.s
 // CHECK-ENCODING: [0x20,0xe4,0xa2,0x64]
 // CHECK-ERROR: instruction requires: f32mm sve
-// CHECK-UNKNOWN: 20 e4 a2 64 <unknown>
+// CHECK-UNKNOWN: 64a2e420 <unknown>

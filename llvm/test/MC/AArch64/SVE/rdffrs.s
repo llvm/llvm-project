@@ -13,10 +13,10 @@ rdffrs  p0.b, p0/z
 // CHECK-INST: rdffrs  p0.b, p0/z
 // CHECK-ENCODING: [0x00,0xf0,0x58,0x25]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f0 58 25 <unknown>
+// CHECK-UNKNOWN: 2558f000 <unknown>
 
 rdffrs  p15.b, p15/z
 // CHECK-INST: rdffrs  p15.b, p15/z
 // CHECK-ENCODING: [0xef,0xf1,0x58,0x25]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: ef f1 58 25 <unknown>
+// CHECK-UNKNOWN: 2558f1ef <unknown>

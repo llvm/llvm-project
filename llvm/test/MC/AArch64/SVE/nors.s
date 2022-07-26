@@ -13,10 +13,10 @@ nors    p0.b, p0/z, p0.b, p0.b
 // CHECK-INST: nors    p0.b, p0/z, p0.b, p0.b
 // CHECK-ENCODING: [0x00,0x42,0xc0,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 42 c0 25 <unknown>
+// CHECK-UNKNOWN: 25c04200 <unknown>
 
 nors    p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: nors    p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xef,0x7f,0xcf,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef 7f cf 25 <unknown>
+// CHECK-UNKNOWN: 25cf7fef <unknown>

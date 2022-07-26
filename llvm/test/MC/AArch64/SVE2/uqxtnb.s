@@ -14,16 +14,16 @@ uqxtnb z0.b, z31.h
 // CHECK-INST: uqxtnb	z0.b, z31.h
 // CHECK-ENCODING: [0xe0,0x4b,0x28,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e0 4b 28 45 <unknown>
+// CHECK-UNKNOWN: 45284be0 <unknown>
 
 uqxtnb z0.h, z31.s
 // CHECK-INST: uqxtnb	z0.h, z31.s
 // CHECK-ENCODING: [0xe0,0x4b,0x30,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e0 4b 30 45 <unknown>
+// CHECK-UNKNOWN: 45304be0 <unknown>
 
 uqxtnb z0.s, z31.d
 // CHECK-INST: uqxtnb	z0.s, z31.d
 // CHECK-ENCODING: [0xe0,0x4b,0x60,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: e0 4b 60 45 <unknown>
+// CHECK-UNKNOWN: 45604be0 <unknown>

@@ -13,10 +13,10 @@ brkpa  p0.b,  p15/z, p1.b,  p2.b
 // CHECK-INST: brkpa	p0.b, p15/z, p1.b, p2.b
 // CHECK-ENCODING: [0x20,0xfc,0x02,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 20 fc 02 25 <unknown>
+// CHECK-UNKNOWN: 2502fc20 <unknown>
 
 brkpa  p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: brkpa	p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xef,0xfd,0x0f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef fd 0f 25 <unknown>
+// CHECK-UNKNOWN: 250ffdef <unknown>
