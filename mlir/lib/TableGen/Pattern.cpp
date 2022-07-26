@@ -33,7 +33,7 @@ using llvm::formatv;
 //===----------------------------------------------------------------------===//
 
 bool DagLeaf::isUnspecified() const {
-  return dyn_cast_or_null<llvm::UnsetInit>(def);
+  return isa_and_nonnull<llvm::UnsetInit>(def);
 }
 
 bool DagLeaf::isOperandMatcher() const {
