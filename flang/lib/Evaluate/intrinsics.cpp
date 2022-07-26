@@ -2262,6 +2262,7 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                   if (std::optional<parser::MessageFixedText> msg{
                           CheckProcCompatibility(
                               isCall, pointerProc, &*targetProc, whyNot)}) {
+                    msg->set_severity(parser::Severity::Warning);
                     AttachDeclaration(
                         context.messages().Say(std::move(*msg),
                             "pointer '" + pointerSymbol->name().ToString() +
