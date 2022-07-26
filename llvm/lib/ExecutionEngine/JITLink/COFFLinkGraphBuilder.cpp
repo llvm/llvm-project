@@ -236,15 +236,11 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
             &G->addExternalSymbol(SymbolName, Sym->getValue(), Linkage::Strong);
       GSym = ExternalSymbols[SymbolName];
     } else if (Sym->isWeakExternal()) {
-      COFFSymbolIndex TagIndex =
-          Sym->getAux<object::coff_aux_weak_external>()->TagIndex;
-      assert(Sym->getAux<object::coff_aux_weak_external>()->Characteristics !=
-                 COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY &&
-             "IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY is not supported.");
-      assert(Sym->getAux<object::coff_aux_weak_external>()->Characteristics !=
-                 COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY &&
-             "IMAGE_WEAK_EXTERN_SEARCH_LIBRARY is not supported.");
-      WeakAliasRequests.push_back({SymIndex, TagIndex, SymbolName});
+      auto *WeakExternal = Sym->getAux<object::coff_aux_weak_external>();
+      COFFSymbolIndex TagIndex = WeakExternal->TagIndex;
+      uint32_t Characteristics = WeakExternal->Characteristics;
+      WeakExternalRequests.push_back(
+          {SymIndex, TagIndex, Characteristics, SymbolName});
     } else {
       Expected<jitlink::Symbol *> NewGSym =
           createDefinedSymbol(SymIndex, SymbolName, *Sym, Sec);
@@ -280,12 +276,19 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
 
 Error COFFLinkGraphBuilder::flushWeakAliasRequests() {
   // Export the weak external symbols and alias it
-  for (auto &WeakAlias : WeakAliasRequests) {
-    if (auto *Target = getGraphSymbol(WeakAlias.Target)) {
+  for (auto &WeakExternal : WeakExternalRequests) {
+    if (auto *Target = getGraphSymbol(WeakExternal.Target)) {
       Expected<object::COFFSymbolRef> AliasSymbol =
-          Obj.getSymbol(WeakAlias.Alias);
+          Obj.getSymbol(WeakExternal.Alias);
       if (!AliasSymbol)
         return AliasSymbol.takeError();
+
+      // FIXME: IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY and
+      // IMAGE_WEAK_EXTERN_SEARCH_LIBRARY are handled in the same way.
+      Scope S =
+          WeakExternal.Characteristics == COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+              ? Scope::Default
+              : Scope::Local;
 
       // FIXME: Support this when there's a way to handle this.
       if (!Target->isDefined())
@@ -293,22 +296,21 @@ Error COFFLinkGraphBuilder::flushWeakAliasRequests() {
                                         "symbol as alternative not supported.");
 
       jitlink::Symbol *NewSymbol = &G->addDefinedSymbol(
-          Target->getBlock(), Target->getOffset(), WeakAlias.SymbolName,
-          Target->getSize(), Linkage::Weak, Scope::Default,
-          Target->isCallable(), false);
-      setGraphSymbol(AliasSymbol->getSectionNumber(), WeakAlias.Alias,
+          Target->getBlock(), Target->getOffset(), WeakExternal.SymbolName,
+          Target->getSize(), Linkage::Weak, S, Target->isCallable(), false);
+      setGraphSymbol(AliasSymbol->getSectionNumber(), WeakExternal.Alias,
                      *NewSymbol);
       LLVM_DEBUG({
-        dbgs() << "    " << WeakAlias.Alias
+        dbgs() << "    " << WeakExternal.Alias
                << ": Creating weak external symbol for COFF symbol \""
-               << WeakAlias.SymbolName << "\" in section "
+               << WeakExternal.SymbolName << "\" in section "
                << AliasSymbol->getSectionNumber() << "\n";
         dbgs() << "      " << *NewSymbol << "\n";
       });
     } else
       return make_error<JITLinkError>("Weak symbol alias requested but actual "
                                       "symbol not found for symbol " +
-                                      formatv("{0:d}", WeakAlias.Alias));
+                                      formatv("{0:d}", WeakExternal.Alias));
   }
   return Error::success();
 }
