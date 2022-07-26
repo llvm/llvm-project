@@ -31,8 +31,8 @@ public:
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*EnableOpt*/ false,
                      /*EnableOptSize*/ false, /*EnableMinSize*/ false) {}
-  virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-                       MachineIRBuilder &B) const override;
+  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
+               MachineIRBuilder &B) const override;
 };
 
 bool MipsPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,

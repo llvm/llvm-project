@@ -1659,9 +1659,13 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   appendInitializer(Block, I);
 
   if (Init) {
+    // If the initializer is an ArrayInitLoopExpr, we want to extract the
+    // initializer, that's used for each element.
+    const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+
     findConstructionContexts(
         ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
-        Init);
+        AILE ? AILE->getSubExpr() : Init);
 
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
@@ -2931,9 +2935,13 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   autoCreateBlock();
   appendStmt(Block, DS);
 
+  // If the initializer is an ArrayInitLoopExpr, we want to extract the
+  // initializer, that's used for each element.
+  const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+
   findConstructionContexts(
       ConstructionContextLayer::create(cfg->getBumpVectorContext(), DS),
-      Init);
+      AILE ? AILE->getSubExpr() : Init);
 
   // Keep track of the last non-null block, as 'Block' can be nulled out
   // if the initializer expression is something like a 'while' in a
@@ -3340,9 +3348,20 @@ CFGBlock *CFGBuilder::VisitBlockExpr(BlockExpr *E, AddStmtChoice asc) {
 
 CFGBlock *CFGBuilder::VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc) {
   CFGBlock *LastBlock = VisitNoRecurse(E, asc);
+
+  unsigned Idx = 0;
   for (LambdaExpr::capture_init_iterator it = E->capture_init_begin(),
-       et = E->capture_init_end(); it != et; ++it) {
+                                         et = E->capture_init_end();
+       it != et; ++it, ++Idx) {
     if (Expr *Init = *it) {
+      // If the initializer is an ArrayInitLoopExpr, we want to extract the
+      // initializer, that's used for each element.
+      const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+
+      findConstructionContexts(ConstructionContextLayer::create(
+                                   cfg->getBumpVectorContext(), {E, Idx}),
+                               AILE ? AILE->getSubExpr() : Init);
+
       CFGBlock *Tmp = Visit(Init);
       if (Tmp)
         LastBlock = Tmp;
@@ -5615,6 +5634,12 @@ static void print_construction_context(raw_ostream &OS,
     Stmts.push_back(TOCC->getMaterializedTemporaryExpr());
     Stmts.push_back(TOCC->getConstructorAfterElision());
     break;
+  }
+  case ConstructionContext::LambdaCaptureKind: {
+    const auto *LCC = cast<LambdaCaptureConstructionContext>(CC);
+    Helper.handledStmt(const_cast<LambdaExpr *>(LCC->getLambdaExpr()), OS);
+    OS << "+" << LCC->getIndex();
+    return;
   }
   case ConstructionContext::ArgumentKind: {
     const auto *ACC = cast<ArgumentConstructionContext>(CC);

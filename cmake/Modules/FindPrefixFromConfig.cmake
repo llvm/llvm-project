@@ -32,7 +32,7 @@ function(find_prefix_from_config out_var prefix_var path_to_leave)
     # our way there relatively.
     set(config_code
       "# Installation prefix is fixed absolute path"
-      "set(${prefix_var} \"${CMAKE_INSTALL_PREFIX}\"")
+      "set(${prefix_var} \"${CMAKE_INSTALL_PREFIX}\")")
   else()
     # `path_to_leave` is relative. Relative to what? The install prefix.
     # We therefore go up enough parent directories to get back to the

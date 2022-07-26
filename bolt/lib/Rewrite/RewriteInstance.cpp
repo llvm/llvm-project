@@ -866,7 +866,9 @@ void RewriteInstance::discoverFileObjects() {
 
   llvm::stable_sort(SortedFileSymbols, CompareSymbols);
 
-  auto LastSymbol = SortedFileSymbols.end() - 1;
+  auto LastSymbol = SortedFileSymbols.end();
+  if (!SortedFileSymbols.empty())
+    --LastSymbol;
 
   // For aarch64, the ABI defines mapping symbols so we identify data in the
   // code section (see IHI0056B). $d identifies data contents.
@@ -912,13 +914,16 @@ void RewriteInstance::discoverFileObjects() {
     LastSymbol = std::stable_partition(
         SortedFileSymbols.begin(), SortedFileSymbols.end(),
         [this](const SymbolRef &Symbol) { return !BC->isMarker(Symbol); });
-    --LastSymbol;
+    if (!SortedFileSymbols.empty())
+      --LastSymbol;
   }
 
   BinaryFunction *PreviousFunction = nullptr;
   unsigned AnonymousId = 0;
 
-  const auto SortedSymbolsEnd = std::next(LastSymbol);
+  const auto SortedSymbolsEnd = LastSymbol == SortedFileSymbols.end()
+                                    ? LastSymbol
+                                    : std::next(LastSymbol);
   for (auto ISym = SortedFileSymbols.begin(); ISym != SortedSymbolsEnd;
        ++ISym) {
     const SymbolRef &Symbol = *ISym;

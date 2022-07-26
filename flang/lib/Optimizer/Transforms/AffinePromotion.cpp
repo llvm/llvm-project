@@ -175,7 +175,7 @@ struct AffineIfCondition {
 
   mlir::IntegerSet getIntegerSet() const {
     assert(hasIntegerSet() && "integer set is missing");
-    return integerSet.getValue();
+    return integerSet.value();
   }
 
   mlir::ValueRange getAffineArgs() const { return affineArgs; }
@@ -235,8 +235,8 @@ private:
     auto rhsAffine = toAffineExpr(cmpOp.getRhs());
     if (!lhsAffine || !rhsAffine)
       return;
-    auto constraintPair = constraint(
-        cmpOp.getPredicate(), rhsAffine.getValue() - lhsAffine.getValue());
+    auto constraintPair =
+        constraint(cmpOp.getPredicate(), *rhsAffine - *lhsAffine);
     if (!constraintPair)
       return;
     integerSet = mlir::IntegerSet::get(
@@ -481,8 +481,8 @@ private:
   std::pair<mlir::AffineForOp, mlir::Value>
   createAffineFor(fir::DoLoopOp op, mlir::PatternRewriter &rewriter) const {
     if (auto constantStep = constantIntegerLike(op.getStep()))
-      if (constantStep.getValue() > 0)
-        return positiveConstantStep(op, constantStep.getValue(), rewriter);
+      if (*constantStep > 0)
+        return positiveConstantStep(op, *constantStep, rewriter);
     return genericBounds(op, rewriter);
   }
 

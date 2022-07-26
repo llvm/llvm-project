@@ -670,7 +670,8 @@ clang-extdef-mapping
 libclang
 --------
 
-- ...
+- The soversion for libclang will now change for each new LLVM major release.  This matches
+  the behavior of clang <= 13.
 
 Static Analyzer
 ---------------
