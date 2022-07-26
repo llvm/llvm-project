@@ -213,10 +213,12 @@ bool LoopDataPrefetchLegacyPass::runOnFunction(Function &F) {
 bool LoopDataPrefetch::run() {
   // If PrefetchDistance is not set, don't run the pass.  This gives an
   // opportunity for targets to run this pass for selected subtargets only
-  // (whose TTI sets PrefetchDistance).
-  if (getPrefetchDistance() == 0)
+  // (whose TTI sets PrefetchDistance and CacheLineSize).
+  if (getPrefetchDistance() == 0 || TTI->getCacheLineSize() == 0) {
+    LLVM_DEBUG(dbgs() << "Please set both PrefetchDistance and CacheLineSize "
+                         "for loop data prefetch.\n");
     return false;
-  assert(TTI->getCacheLineSize() && "Cache line size is not set for target");
+  }
 
   bool MadeChange = false;
 
