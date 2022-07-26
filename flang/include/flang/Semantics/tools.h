@@ -88,6 +88,7 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Scope &maybeDescendent);
 bool DoesScopeContain(const Scope *, const Symbol &);
 bool IsUseAssociated(const Symbol &, const Scope &);
 bool IsHostAssociated(const Symbol &, const Scope &);
+bool IsHostAssociatedIntoSubprogram(const Symbol &, const Scope &);
 inline bool IsStmtFunction(const Symbol &symbol) {
   const auto *subprogram{symbol.detailsIf<SubprogramDetails>()};
   return subprogram && subprogram->stmtFunction();
