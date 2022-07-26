@@ -117,12 +117,13 @@ private:
 
   // This represents a pending request to create a weak external symbol with a
   // name.
-  struct WeakAliasRequest {
+  struct WeakExternalRequest {
     COFFSymbolIndex Alias;
     COFFSymbolIndex Target;
+    uint32_t Characteristics;
     StringRef SymbolName;
   };
-  std::vector<WeakAliasRequest> WeakAliasRequests;
+  std::vector<WeakExternalRequest> WeakExternalRequests;
 
   // Per COFF section jitlink symbol set sorted by offset.
   // Used for calculating implicit size of defined symbols.
