@@ -18,13 +18,19 @@ static const char *CommonSectionName = "__common";
 namespace llvm {
 namespace jitlink {
 
+static Triple createTripleWithCOFFFormat(Triple T) {
+  T.setObjectFormat(Triple::COFF);
+  return T;
+}
+
 COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     const object::COFFObjectFile &Obj, Triple TT,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(
-          Obj.getFileName().str(), Triple(std::move(TT)), getPointerSize(Obj),
-          getEndianness(Obj), std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(Obj.getFileName().str(),
+                                    createTripleWithCOFFFormat(TT),
+                                    getPointerSize(Obj), getEndianness(Obj),
+                                    std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
            << "\"\n";
@@ -128,22 +134,14 @@ Error COFFLinkGraphBuilder::graphifySections() {
     if (Expected<StringRef> SecNameOrErr = Obj.getSectionName(*Sec))
       SectionName = *SecNameOrErr;
 
-    bool IsDiscardable =
-        (*Sec)->Characteristics &
-        (COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_LNK_INFO);
-    if (IsDiscardable) {
-      LLVM_DEBUG(dbgs() << "    " << SecIndex << ": \"" << SectionName
-                        << "\" is discardable: "
-                           "No graph section will be created.\n");
-      continue;
-    }
-
     // FIXME: Skip debug info sections
 
     LLVM_DEBUG({
       dbgs() << "    "
              << "Creating section for \"" << SectionName << "\"\n";
     });
+
+    // FIXME: Revisit crash when dropping IMAGE_SCN_MEM_DISCARDABLE sections
 
     // Get the section's memory protection flags.
     MemProt Prot = MemProt::None;
@@ -325,6 +323,8 @@ Error COFFLinkGraphBuilder::calculateImplicitSizeOfSymbols() {
        SecIndex <= static_cast<COFFSectionIndex>(Obj.getNumberOfSections());
        SecIndex++) {
     auto &SymbolSet = SymbolSets[SecIndex];
+    if (SymbolSet.empty())
+      continue;
     jitlink::Block *B = getGraphBlock(SecIndex);
     orc::ExecutorAddrDiff LastOffset = B->getSize();
     orc::ExecutorAddrDiff LastDifferentOffset = B->getSize();
@@ -395,6 +395,17 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
         formatv("{0:d}", SymIndex));
 
   Block *B = getGraphBlock(Symbol.getSectionNumber());
+  if (!B) {
+    LLVM_DEBUG({
+      dbgs() << "    " << SymIndex
+             << ": Skipping graph symbol since section was not created for "
+                "COFF symbol \""
+             << SymbolName << "\" in section " << Symbol.getSectionNumber()
+             << "\n";
+    });
+    return nullptr;
+  }
+
   if (Symbol.isExternal()) {
     // This is not a comdat sequence, export the symbol as it is
     if (!isComdatSection(Section)) {
