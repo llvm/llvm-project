@@ -227,6 +227,12 @@ if(LLVM_LIBC_FULL_BUILD)
     # assert.h entrypoints
     # libc.src.assert.__assert_fail
 
+    # dirent.h entrypoints
+    libc.src.dirent.closedir
+    libc.src.dirent.dirfd
+    libc.src.dirent.opendir
+    libc.src.dirent.readdir
+
     # pthread.h entrypoints
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_init
