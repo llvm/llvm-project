@@ -37,6 +37,8 @@ c.sd a5, 248(a3)
 
 # CHECK-ASM-AND-OBJ: c.subw a3, a4
 # CHECK-ASM: encoding: [0x99,0x9e]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions)
+# CHECK-NO-RV64:  error: instruction requires the following: RV64I Base Instruction Set
 c.subw a3, a4
 # CHECK-ASM-AND-OBJ: c.addw a0, a2
 # CHECK-ASM: encoding: [0x31,0x9d]
@@ -55,14 +57,15 @@ c.addiw a3, -32
 # CHECK-NO-RV64:  error: instruction requires the following: RV64I Base Instruction Set
 c.addiw a3, 31
 
-# CHECK-ASM-AND-OBJ: c.slli s0, 1
-# CHECK-ASM: encoding: [0x06,0x04]
+# CHECK-ASM-AND-OBJ: c.slli s0, 63
+# CHECK-ASM: encoding: [0x7e,0x14]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions)
-# CHECK-NO-RV64:  error: instruction requires the following: RV64I Base Instruction Set
-c.slli s0, 1
+c.slli s0, 63
 # CHECK-ASM-AND-OBJ: c.srli a3, 63
 # CHECK-ASM: encoding: [0xfd,0x92]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions)
 c.srli a3, 63
 # CHECK-ASM-AND-OBJ: c.srai a2, 63
 # CHECK-ASM: encoding: [0x7d,0x96]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions)
 c.srai a2, 63
