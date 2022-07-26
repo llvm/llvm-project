@@ -203,11 +203,6 @@ string HipBinAmd::getHipInclude() const {
 void HipBinAmd::initializeHipCXXFlags() {
   string hipCXXFlags;
   const OsType& os = getOSInfo();
-  if (os == windows) {
-    hipCXXFlags = " -std=c++14 -fms-extensions -fms-compatibility";
-  } else {
-    hipCXXFlags = " -std=c++11";
-  }
   string hipClangIncludePath;
   hipClangIncludePath = getCompilerIncludePath();
   hipCXXFlags += " -isystem \"" + hipClangIncludePath;
