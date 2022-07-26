@@ -287,6 +287,8 @@ def AArch64fadda_p_node : SDNode<"AArch64ISD::FADDA_PRED", SDT_AArch64ReduceWith
 def AArch64fadda_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
     [(AArch64fadda_p_node node:$op1, node:$op2, node:$op3),
      (AArch64fadda_p_node (SVEAllActive), node:$op2,
+             (vselect node:$op1, node:$op3, (splat_vector (f16 fpimm_minus0)))),
+     (AArch64fadda_p_node (SVEAllActive), node:$op2,
              (vselect node:$op1, node:$op3, (splat_vector (f32 fpimm_minus0)))),
      (AArch64fadda_p_node (SVEAllActive), node:$op2,
              (vselect node:$op1, node:$op3, (splat_vector (f64 fpimm_minus0))))]>;
@@ -718,6 +720,12 @@ let Predicates = [HasSVEorSME] in {
             (DUP_ZI_D $a, $b)>;
 
   // Duplicate immediate FP into all vector elements.
+  def : Pat<(nxv2f16 (splat_vector (f16 fpimm:$val))),
+            (DUP_ZR_H (MOVi32imm (bitcast_fpimm_to_i32 f16:$val)))>;
+  def : Pat<(nxv4f16 (splat_vector (f16 fpimm:$val))),
+            (DUP_ZR_H (MOVi32imm (bitcast_fpimm_to_i32 f16:$val)))>;
+  def : Pat<(nxv8f16 (splat_vector (f16 fpimm:$val))),
+            (DUP_ZR_H (MOVi32imm (bitcast_fpimm_to_i32 f16:$val)))>;
   def : Pat<(nxv2f32 (splat_vector (f32 fpimm:$val))),
             (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
   def : Pat<(nxv4f32 (splat_vector (f32 fpimm:$val))),
