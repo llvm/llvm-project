@@ -1,9 +1,12 @@
+include(GNUInstallPackageDir)
 include(ExtendPath)
 include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
 
-set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
+  "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+set(llvm_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
 
 # First for users who use an installed LLVM, create the LLVMExports.cmake file.
 set(LLVM_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
