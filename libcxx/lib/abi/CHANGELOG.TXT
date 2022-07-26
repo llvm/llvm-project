@@ -64,7 +64,7 @@ Version 15.0
   Symbol removed: _ZTSNSt3__18__c_nodeE
   Symbol removed: _ZTVNSt3__18__c_nodeE
 
-* b0fd9497af6d and XXXXXXX - [libc++] Add a lightweight overridable assertion handler
+* b0fd9497af6d and 7de5aca84c54 - [libc++] Add a lightweight overridable assertion handler
 
   This patch adds a lightweight assertion handler mechanism that can be
   overriden at link-time in a fashion similar to `operator new`. A default
