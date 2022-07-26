@@ -270,6 +270,8 @@ private:
   /// machine function.
   bool RegClassPriorityTrumpsGlobalness;
 
+  bool ReverseLocalAssignment;
+
 public:
   RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
 
