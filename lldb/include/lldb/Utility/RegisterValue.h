@@ -263,8 +263,8 @@ protected:
     mutable uint8_t
         bytes[kMaxRegisterByteSize]; // This must be big enough to hold any
                                      // register for any supported target.
-    uint16_t length;
-    lldb::ByteOrder byte_order;
+    uint16_t length = 0;
+    lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
   } buffer;
 };
 

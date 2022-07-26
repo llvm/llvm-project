@@ -588,9 +588,10 @@ public:
   }
 
   Window(const char *name, const Rect &bounds)
-      : Surface(Surface::Type::Window), m_name(name), m_parent(nullptr),
-        m_subwindows(), m_delegate_sp(), m_curr_active_window_idx(UINT32_MAX),
-        m_prev_active_window_idx(UINT32_MAX), m_delete(true),
+      : Surface(Surface::Type::Window), m_name(name), m_panel(nullptr),
+        m_parent(nullptr), m_subwindows(), m_delegate_sp(),
+        m_curr_active_window_idx(UINT32_MAX),
+        m_prev_active_window_idx(UINT32_MAX), m_delete(false),
         m_needs_update(true), m_can_activate(true), m_is_subwin(false) {
     Reset(::newwin(bounds.size.height, bounds.size.width, bounds.origin.y,
                    bounds.origin.y));
@@ -5702,8 +5703,8 @@ protected:
   uint32_t m_selected_row_idx = 0;
   uint32_t m_first_visible_row = 0;
   uint32_t m_num_rows = 0;
-  int m_min_x;
-  int m_min_y;
+  int m_min_x = 0;
+  int m_min_y = 0;
   int m_max_x = 0;
   int m_max_y = 0;
 
