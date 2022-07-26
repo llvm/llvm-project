@@ -4186,6 +4186,24 @@ static SDValue addRequiredExtensionForVectorMULL(SDValue N, SelectionDAG &DAG,
   return DAG.getNode(ExtOpcode, SDLoc(N), NewVT, N);
 }
 
+static bool isOperandOfHigherHalf(SDValue &Op) {
+  SDNode *OpNode = Op.getNode();
+  if (OpNode->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return false;
+
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(OpNode->getOperand(1));
+  if (!C || C->getZExtValue() != 1)
+    return false;
+
+  EVT VT = OpNode->getOperand(0).getValueType();
+
+  return VT.isFixedLengthVector() && VT.getVectorNumElements() == 2;
+}
+
+static bool areOperandsOfHigherHalf(SDValue &Op1, SDValue &Op2) {
+  return isOperandOfHigherHalf(Op1) && isOperandOfHigherHalf(Op2);
+}
+
 static bool isExtendedBUILD_VECTOR(SDNode *N, SelectionDAG &DAG,
                                    bool isSigned) {
   EVT VT = N->getValueType(0);
@@ -4525,6 +4543,29 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     } else {
       report_fatal_error("Unexpected type for AArch64 NEON intrinic");
     }
+  }
+  case Intrinsic::aarch64_neon_pmull64: {
+    SDValue Op1 = Op.getOperand(1);
+    SDValue Op2 = Op.getOperand(2);
+
+    // If both operands are higher half of two source SIMD & FP registers,
+    // ISel could make use of tablegen patterns to emit PMULL2. So do not
+    // legalize i64 to v1i64.
+    if (areOperandsOfHigherHalf(Op1, Op2))
+      return SDValue();
+
+    // As a general convention, use "v1" types to represent scalar integer
+    // operations in vector registers. This helps ISel to make use of
+    // tablegen patterns and generate a load into SIMD & FP registers directly.
+    if (Op1.getValueType() == MVT::i64)
+      Op1 = DAG.getNode(ISD::BITCAST, dl, MVT::v1i64, Op1);
+    if (Op2.getValueType() == MVT::i64)
+      Op2 = DAG.getNode(ISD::BITCAST, dl, MVT::v1i64, Op2);
+
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, dl, Op.getValueType(),
+        DAG.getConstant(Intrinsic::aarch64_neon_pmull64, dl, MVT::i32), Op1,
+        Op2);
   }
   case Intrinsic::aarch64_neon_smax:
     return DAG.getNode(ISD::SMAX, dl, Op.getValueType(),
