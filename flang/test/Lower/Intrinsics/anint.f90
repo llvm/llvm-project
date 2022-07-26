@@ -42,16 +42,8 @@ subroutine anint_test_real10(a, b)
   b = anint(a)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPanint_test_real16(
-! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<f128> {fir.bindc_name = "a"},
-! CHECK-SAME:                                  %[[VAL_1:.*]]: !fir.ref<f128> {fir.bindc_name = "b"}) {
-! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f128>
-! CHECK:         %[[VAL_3:.*]] = "llvm.intr.round"(%[[VAL_2]]) : (f128) -> f128
-! CHECK:         fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f128>
-! CHECK:         return
-! CHECK:       }
-
-subroutine anint_test_real16(a, b)
-  real(16) :: a, b
-  b = anint(a)
-end subroutine
+! TODO: wait until fp128 is supported well in llvm.round
+!subroutine anint_test_real16(a, b)
+!  real(16) :: a, b
+!  b = anint(a)
+!end subroutine
