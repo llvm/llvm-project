@@ -38,7 +38,7 @@ MCAsmBackend *createLoongArchAsmBackend(const Target &T,
 std::unique_ptr<MCObjectTargetWriter>
 createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
 
-} // namespace llvm
+} // end namespace llvm
 
 // Defines symbolic names for LoongArch registers.
 #define GET_REGINFO_ENUM

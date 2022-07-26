@@ -120,7 +120,7 @@ TEST(SolverTest, NegatedConjunction) {
   expectUnsatisfiable(solve({NotXAndY, XAndY}));
 }
 
-TEST(SolverTest, DisjunctionSameVars) {
+TEST(SolverTest, DisjunctionSameVarWithNegation) {
   ConstraintContext Ctx;
   auto X = Ctx.atom();
   auto NotX = Ctx.neg(X);
@@ -128,6 +128,15 @@ TEST(SolverTest, DisjunctionSameVars) {
 
   // X v !X
   expectSatisfiable(solve({XOrNotX}), _);
+}
+
+TEST(SolverTest, DisjunctionSameVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto XOrX = Ctx.disj(X, X);
+
+  // X v X
+  expectSatisfiable(solve({XOrX}), _);
 }
 
 TEST(SolverTest, ConjunctionSameVarsConflict) {
@@ -138,6 +147,15 @@ TEST(SolverTest, ConjunctionSameVarsConflict) {
 
   // X ^ !X
   expectUnsatisfiable(solve({XAndNotX}));
+}
+
+TEST(SolverTest, ConjunctionSameVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto XAndX = Ctx.conj(X, X);
+
+  // X ^ X
+  expectSatisfiable(solve({XAndX}), _);
 }
 
 TEST(SolverTest, PureVar) {

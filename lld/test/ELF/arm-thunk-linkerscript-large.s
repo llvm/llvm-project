@@ -55,12 +55,12 @@ _start:
 // CHECK1: Disassembly of section .text:
 // CHECK1-EMPTY:
 // CHECK1-NEXT: <_start>:
-// CHECK1-NEXT:   100000:       ff f0 fe ff     bl      0x200000 <tfuncl00>
-// CHECK1-NEXT:   100004:       00 f0 00 f8     bl      0x100008 <__Thumbv7ABSLongThunk_tfunch31>
+// CHECK1-NEXT:   100000:       f0ff fffe       bl      0x200000 <tfuncl00>
+// CHECK1-NEXT:   100004:       f000 f800       bl      0x100008 <__Thumbv7ABSLongThunk_tfunch31>
 // CHECK1: <__Thumbv7ABSLongThunk_tfunch31>:
-// CHECK1-NEXT:   100008:       40 f2 01 0c     movw    r12, #1
-// CHECK1-NEXT:   10000c:       c0 f2 10 4c     movt    r12, #1040
-// CHECK1-NEXT:   100010:       60 47   bx      r12
+// CHECK1-NEXT:   100008:       f240 0c01       movw    r12, #1
+// CHECK1-NEXT:   10000c:       f2c0 4c10       movt    r12, #1040
+// CHECK1-NEXT:   100010:       4760    bx      r12
  FUNCTIONL 00
  // Create a range extension thunk in .textl
  bl tfuncl24
@@ -69,9 +69,9 @@ _start:
 // CHECK2: Disassembly of section .textl:
 // CHECK2-EMPTY:
 // CHECK2-NEXT: <tfuncl00>:
-// CHECK2-NEXT:   200000:	70 47 	bx	lr
-// CHECK2-NEXT:   200002:	ff f0 ff df 	bl	0xb00004 <__Thumbv7ABSLongThunk_tfuncl24>
-// CHECK2-NEXT:   200006:	ff f6 ff ff 	bl	0x100008 <__Thumbv7ABSLongThunk_tfunch31>
+// CHECK2-NEXT:   200000:	4770  	bx	lr
+// CHECK2-NEXT:   200002:	f0ff dfff   	bl	0xb00004 <__Thumbv7ABSLongThunk_tfuncl24>
+// CHECK2-NEXT:   200006:	f6ff ffff   	bl	0x100008 <__Thumbv7ABSLongThunk_tfunch31>
  FUNCTIONL 01
  FUNCTIONL 02
  FUNCTIONL 03
@@ -82,7 +82,7 @@ _start:
  FUNCTIONL 08
  FUNCTIONL 09
 // CHECK3: <__Thumbv7ABSLongThunk_tfuncl24>:
-// CHECK3-NEXT:   b00004:      ff f2 fc 97     b.w     0x1a00000 <tfuncl24>
+// CHECK3-NEXT:   b00004:      f2ff 97fc       b.w     0x1a00000 <tfuncl24>
  FUNCTIONL 10
  FUNCTIONL 11
  FUNCTIONL 12
@@ -110,13 +110,13 @@ _start:
  bl tfuncl24
  // Shouldn't need a thunk
  bl tfunch00
-// CHECK4:       2100002:       00 f0 05 f8     bl      0x2100010 <__Thumbv7ABSLongThunk_tfuncl00>
-// CHECK4-NEXT:  2100006:       ff f4 fb f7     bl      0x1a00000 <tfuncl24>
-// CHECK4-NEXT:  210000a:       ff f0 f9 ff     bl      0x2200000 <tfunch00>
+// CHECK4:       2100002:       f000 f805       bl      0x2100010 <__Thumbv7ABSLongThunk_tfuncl00>
+// CHECK4-NEXT:  2100006:       f4ff f7fb       bl      0x1a00000 <tfuncl24>
+// CHECK4-NEXT:  210000a:       f0ff fff9       bl      0x2200000 <tfunch00>
 // CHECK4: <__Thumbv7ABSLongThunk_tfuncl00>:
-// CHECK4-NEXT:  2100010:       40 f2 01 0c     movw    r12, #1
-// CHECK4-NEXT:  2100014:       c0 f2 20 0c     movt    r12, #32
-// CHECK4-NEXT:  2100018:       60 47   bx      r12
+// CHECK4-NEXT:  2100010:       f240 0c01       movw    r12, #1
+// CHECK4-NEXT:  2100014:       f2c0 0c20       movt    r12, #32
+// CHECK4-NEXT:  2100018:       4760    bx      r12
  FUNCTIONH 00
  // Can reuse existing thunks in .textl
  bl tfuncl00
@@ -126,10 +126,10 @@ _start:
 // CHECK5:  Disassembly of section .texth:
 // CHECK5-EMPTY:
 // CHECK5-NEXT: <tfunch00>:
-// CHECK5-NEXT:  2200000:       70 47   bx      lr
-// CHECK5-NEXT:  2200002:       00 f7 05 f8     bl      0x2100010 <__Thumbv7ABSLongThunk_tfuncl00>
-// CHECK5-NEXT:  2200006:       ff f7 fb df     bl      0x1a00000 <tfuncl24>
-// CHECK5-NEXT:  220000a:       ff f6 f9 ff     bl      0x2100000 <tfuncl31>
+// CHECK5-NEXT:  2200000:       4770    bx      lr
+// CHECK5-NEXT:  2200002:       f700 f805       bl      0x2100010 <__Thumbv7ABSLongThunk_tfuncl00>
+// CHECK5-NEXT:  2200006:       f7ff dffb       bl      0x1a00000 <tfuncl24>
+// CHECK5-NEXT:  220000a:       f6ff fff9       bl      0x2100000 <tfuncl31>
  FUNCTIONH 01
  FUNCTIONH 02
  FUNCTIONH 03
@@ -165,14 +165,14 @@ _start:
  bl tfuncl00
  bl tfunch00
 // CHECK6: <tfunch31>:
-// CHECK6-NEXT:  4100000:       70 47   bx      lr
-// CHECK6-NEXT:  4100002:       00 f0 03 f8     bl      0x410000c <__Thumbv7ABSLongThunk_tfuncl00>
-// CHECK6-NEXT:  4100006:       00 f0 06 f8     bl      0x4100016 <__Thumbv7ABSLongThunk_tfunch00>
+// CHECK6-NEXT:  4100000:       4770    bx      lr
+// CHECK6-NEXT:  4100002:       f000 f803       bl      0x410000c <__Thumbv7ABSLongThunk_tfuncl00>
+// CHECK6-NEXT:  4100006:       f000 f806       bl      0x4100016 <__Thumbv7ABSLongThunk_tfunch00>
 // CHECK6: <__Thumbv7ABSLongThunk_tfuncl00>:
-// CHECK6-NEXT:  410000c:       40 f2 01 0c     movw    r12, #1
-// CHECK6-NEXT:  4100010:       c0 f2 20 0c     movt    r12, #32
-// CHECK6-NEXT:  4100014:       60 47   bx      r12
+// CHECK6-NEXT:  410000c:       f240 0c01       movw    r12, #1
+// CHECK6-NEXT:  4100010:       f2c0 0c20       movt    r12, #32
+// CHECK6-NEXT:  4100014:       4760    bx      r12
 // CHECK6: <__Thumbv7ABSLongThunk_tfunch00>:
-// CHECK6-NEXT:  4100016:       40 f2 01 0c     movw    r12, #1
-// CHECK6-NEXT:  410001a:       c0 f2 20 2c     movt    r12, #544
-// CHECK6-NEXT:  410001e:       60 47   bx      r12
+// CHECK6-NEXT:  4100016:       f240 0c01       movw    r12, #1
+// CHECK6-NEXT:  410001a:       f2c0 2c20       movt    r12, #544
+// CHECK6-NEXT:  410001e:       4760    bx      r12

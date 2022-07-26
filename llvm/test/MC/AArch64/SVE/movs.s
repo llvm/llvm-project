@@ -13,22 +13,22 @@ movs    p0.b, p0.b
 // CHECK-INST: movs    p0.b, p0.b
 // CHECK-ENCODING: [0x00,0x40,0xc0,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 40 c0 25 <unknown>
+// CHECK-UNKNOWN: 25c04000 <unknown>
 
 movs    p15.b, p15.b
 // CHECK-INST: movs    p15.b, p15.b
 // CHECK-ENCODING: [0xef,0x7d,0xcf,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef 7d cf 25 <unknown>
+// CHECK-UNKNOWN: 25cf7def <unknown>
 
 movs    p0.b, p0/z, p0.b
 // CHECK-INST: movs    p0.b, p0/z, p0.b
 // CHECK-ENCODING: [0x00,0x40,0x40,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 40 40 25 <unknown>
+// CHECK-UNKNOWN: 25404000 <unknown>
 
 movs    p15.b, p15/z, p15.b
 // CHECK-INST: movs    p15.b, p15/z, p15.b
 // CHECK-ENCODING: [0xef,0x7d,0x4f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef 7d 4f 25 <unknown>
+// CHECK-UNKNOWN: 254f7def <unknown>

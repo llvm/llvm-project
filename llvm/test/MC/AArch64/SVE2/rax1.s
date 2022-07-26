@@ -14,4 +14,4 @@ rax1 z0.d, z1.d, z31.d
 // CHECK-INST: rax1 z0.d, z1.d, z31.d
 // CHECK-ENCODING: [0x20,0xf4,0x3f,0x45]
 // CHECK-ERROR: instruction requires: sve2-sha3
-// CHECK-UNKNOWN: 20 f4 3f 45 <unknown>
+// CHECK-UNKNOWN: 453ff420 <unknown>

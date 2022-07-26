@@ -15,17 +15,11 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Sequence.h"
 
 namespace mlir {
-class OperandRange;
-class ResultRange;
-class Type;
-class Value;
-class ValueRange;
-template <typename ValueRangeT>
-class ValueTypeRange;
 
 //===----------------------------------------------------------------------===//
 // TypeRange
@@ -46,13 +40,10 @@ public:
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
-  explicit TypeRange(ArrayRef<Value> values);
-  explicit TypeRange(ArrayRef<BlockArgument> values)
-      : TypeRange(ArrayRef<Value>(values.data(), values.size())) {}
   template <typename ValueRangeT>
   TypeRange(ValueTypeRange<ValueRangeT> values)
-      : TypeRange(ValueRangeT(values.begin().getCurrent(),
-                              values.end().getCurrent())) {}
+      : TypeRange(ValueRange(ValueRangeT(values.begin().getCurrent(),
+                                         values.end().getCurrent()))) {}
   template <typename Arg,
             typename = typename std::enable_if_t<
                 std::is_constructible<ArrayRef<Type>, Arg>::value>>

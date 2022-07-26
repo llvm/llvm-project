@@ -888,13 +888,11 @@ public:
   bool validateCFG() const;
 
   BinaryBasicBlock *getBasicBlockForLabel(const MCSymbol *Label) {
-    auto I = LabelToBB.find(Label);
-    return I == LabelToBB.end() ? nullptr : I->second;
+    return LabelToBB.lookup(Label);
   }
 
   const BinaryBasicBlock *getBasicBlockForLabel(const MCSymbol *Label) const {
-    auto I = LabelToBB.find(Label);
-    return I == LabelToBB.end() ? nullptr : I->second;
+    return LabelToBB.lookup(Label);
   }
 
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke

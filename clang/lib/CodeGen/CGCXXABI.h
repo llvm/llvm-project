@@ -41,6 +41,8 @@ struct CatchTypeInfo;
 
 /// Implements C++ ABI-specific code generation functions.
 class CGCXXABI {
+  friend class CodeGenModule;
+
 protected:
   CodeGenModule &CGM;
   std::unique_ptr<MangleContext> MangleCtx;

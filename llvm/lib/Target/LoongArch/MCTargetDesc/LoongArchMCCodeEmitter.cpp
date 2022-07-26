@@ -69,7 +69,7 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 };
-} // end anonymous namespace
+} // end namespace
 
 unsigned
 LoongArchMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,

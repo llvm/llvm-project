@@ -14,19 +14,19 @@ sabalb z0.h, z1.b, z31.b
 // CHECK-INST: sabalb	z0.h, z1.b, z31.b
 // CHECK-ENCODING: [0x20,0xc0,0x5f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 c0 5f 45 <unknown>
+// CHECK-UNKNOWN: 455fc020 <unknown>
 
 sabalb z0.s, z1.h, z31.h
 // CHECK-INST: sabalb	z0.s, z1.h, z31.h
 // CHECK-ENCODING: [0x20,0xc0,0x9f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 c0 9f 45 <unknown>
+// CHECK-UNKNOWN: 459fc020 <unknown>
 
 sabalb z0.d, z1.s, z31.s
 // CHECK-INST: sabalb	z0.d, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0xc0,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 c0 df 45 <unknown>
+// CHECK-UNKNOWN: 45dfc020 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -36,10 +36,10 @@ movprfx z21, z28
 // CHECK-INST: movprfx	z21, z28
 // CHECK-ENCODING: [0x95,0xbf,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 95 bf 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bf95 <unknown>
 
 sabalb z21.d, z1.s, z31.s
 // CHECK-INST: sabalb	z21.d, z1.s, z31.s
 // CHECK-ENCODING: [0x35,0xc0,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 35 c0 df 45 <unknown>
+// CHECK-UNKNOWN: 45dfc035 <unknown>

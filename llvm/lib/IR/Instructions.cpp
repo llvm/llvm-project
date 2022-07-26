@@ -1627,6 +1627,10 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
 void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
                          SyncScope::ID SSID) {
+  assert(Ordering != AtomicOrdering::NotAtomic &&
+         "atomicrmw instructions can only be atomic.");
+  assert(Ordering != AtomicOrdering::Unordered &&
+         "atomicrmw instructions cannot be unordered.");
   Op<0>() = Ptr;
   Op<1>() = Val;
   setOperation(Operation);

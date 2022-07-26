@@ -35,7 +35,7 @@ entry:
 
 declare i64 @strlen(i8* nocapture) nounwind readonly
 
-declare noalias i8* @malloc(i64) nounwind
+declare noalias i8* @malloc(i64) nounwind allockind("alloc,uninitialized") allocsize(0) inaccessiblememonly
 
 declare i32 @_ZN4llvm13StringMapImpl15LookupBucketForENS_9StringRefE(%"struct.llvm::StringMapImpl"*, i64, i64)
 

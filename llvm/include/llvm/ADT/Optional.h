@@ -318,7 +318,9 @@ public:
   template <typename U> constexpr T value_or(U &&alt) const & {
     return has_value() ? value() : std::forward<U>(alt);
   }
-  template <typename U> constexpr T getValueOr(U &&alt) const & {
+  template <typename U>
+  [[deprecated("Use value_or instead.")]] constexpr T
+  getValueOr(U &&alt) const & {
     return has_value() ? value() : std::forward<U>(alt);
   }
 
@@ -337,7 +339,8 @@ public:
   template <typename U> T value_or(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
-  template <typename U> T getValueOr(U &&alt) && {
+  template <typename U>
+  [[deprecated("Use value_or instead.")]] T getValueOr(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
 
