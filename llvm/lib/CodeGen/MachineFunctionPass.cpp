@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/PrintPasses.h"
 
 using namespace llvm;
 using namespace ore;
@@ -70,6 +71,17 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   if (ShouldEmitSizeRemarks)
     CountBefore = MF.getInstructionCount();
 
+  // For --print-changed, if the function name is a candidate, save the
+  // serialized MF to be compared later.
+  // TODO Implement --filter-passes.
+  SmallString<0> BeforeStr, AfterStr;
+  bool ShouldPrintChanged = PrintChanged != ChangePrinter::None &&
+                            isFunctionInPrintList(MF.getName());
+  if (ShouldPrintChanged) {
+    raw_svector_ostream OS(BeforeStr);
+    MF.print(OS);
+  }
+
   bool RV = runOnMachineFunction(MF);
 
   if (ShouldEmitSizeRemarks) {
@@ -97,6 +109,23 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
 
   MFProps.set(SetProperties);
   MFProps.reset(ClearedProperties);
+
+  // For --print-changed, print if the serialized MF has changed. Modes other
+  // than quiet/verbose are unimplemented and treated the same as 'quiet'.
+  if (ShouldPrintChanged) {
+    raw_svector_ostream OS(AfterStr);
+    MF.print(OS);
+    if (BeforeStr != AfterStr) {
+      StringRef Arg;
+      if (const PassInfo *PI = Pass::lookupPassInfo(getPassID()))
+        Arg = PI->getPassArgument();
+      errs() << ("*** IR Dump After " + getPassName() + " (" + Arg + ") on " +
+                 MF.getName() + " ***\n" + AfterStr);
+    } else if (PrintChanged == ChangePrinter::Verbose) {
+      errs() << ("*** IR Dump After " + getPassName() + " on " + MF.getName() +
+                 " omitted because no change ***\n");
+    }
+  }
   return RV;
 }
 

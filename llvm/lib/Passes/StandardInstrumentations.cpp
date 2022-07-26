@@ -53,64 +53,6 @@ cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
 #endif
     );
 
-// An option that prints out the IR after passes, similar to
-// -print-after-all except that it only prints the IR after passes that
-// change the IR.  Those passes that do not make changes to the IR are
-// reported as not making any changes.  In addition, the initial IR is
-// also reported.  Other hidden options affect the output from this
-// option.  -filter-passes will limit the output to the named passes
-// that actually change the IR and other passes are reported as filtered out.
-// The specified passes will either be reported as making no changes (with
-// no IR reported) or the changed IR will be reported.  Also, the
-// -filter-print-funcs and -print-module-scope options will do similar
-// filtering based on function name, reporting changed IRs as functions(or
-// modules if -print-module-scope is specified) for a particular function
-// or indicating that the IR has been filtered out.  The extra options
-// can be combined, allowing only changed IRs for certain passes on certain
-// functions to be reported in different formats, with the rest being
-// reported as filtered out.  The -print-before-changed option will print
-// the IR as it was before each pass that changed it.  The optional
-// value of quiet will only report when the IR changes, suppressing
-// all other messages, including the initial IR.  The values "diff" and
-// "diff-quiet" will present the changes in a form similar to a patch, in
-// either verbose or quiet mode, respectively.  The lines that are removed
-// and added are prefixed with '-' and '+', respectively.  The
-// -filter-print-funcs and -filter-passes can be used to filter the output.
-// This reporter relies on the linux diff utility to do comparisons and
-// insert the prefixes.  For systems that do not have the necessary
-// facilities, the error message will be shown in place of the expected output.
-//
-enum class ChangePrinter {
-  None,
-  Verbose,
-  Quiet,
-  DiffVerbose,
-  DiffQuiet,
-  ColourDiffVerbose,
-  ColourDiffQuiet,
-  DotCfgVerbose,
-  DotCfgQuiet,
-};
-static cl::opt<ChangePrinter> PrintChanged(
-    "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
-    cl::ValueOptional, cl::init(ChangePrinter::None),
-    cl::values(
-        clEnumValN(ChangePrinter::Quiet, "quiet", "Run in quiet mode"),
-        clEnumValN(ChangePrinter::DiffVerbose, "diff",
-                   "Display patch-like changes"),
-        clEnumValN(ChangePrinter::DiffQuiet, "diff-quiet",
-                   "Display patch-like changes in quiet mode"),
-        clEnumValN(ChangePrinter::ColourDiffVerbose, "cdiff",
-                   "Display patch-like changes with color"),
-        clEnumValN(ChangePrinter::ColourDiffQuiet, "cdiff-quiet",
-                   "Display patch-like changes in quiet mode with color"),
-        clEnumValN(ChangePrinter::DotCfgVerbose, "dot-cfg",
-                   "Create a website with graphical changes"),
-        clEnumValN(ChangePrinter::DotCfgQuiet, "dot-cfg-quiet",
-                   "Create a website with graphical changes in quiet mode"),
-        // Sentinel value for unspecified option.
-        clEnumValN(ChangePrinter::Verbose, "", "")));
-
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
 // of this option.  Note that this option has no effect without -print-changed.
