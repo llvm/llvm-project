@@ -994,12 +994,14 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                uint64_t End, const ObjectFile &Obj,
                                ArrayRef<uint8_t> Bytes,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
-                               raw_ostream &OS) {
+                               const MCSubtargetInfo &STI, raw_ostream &OS) {
   support::endianness Endian =
       Obj.isLittleEndian() ? support::little : support::big;
-  OS << format("%8" PRIx64 ":\t", SectionAddr + Index);
+  size_t Start = OS.tell();
+  OS << format("%8" PRIx64 ": ", SectionAddr + Index);
   if (Index + 4 <= End) {
     dumpBytes(Bytes.slice(Index, 4), OS);
+    AlignToInstStartColumn(Start, STI, OS);
     OS << "\t.word\t"
            << format_hex(support::endian::read32(Bytes.data() + Index, Endian),
                          10);
@@ -1007,13 +1009,14 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
   }
   if (Index + 2 <= End) {
     dumpBytes(Bytes.slice(Index, 2), OS);
-    OS << "\t\t.short\t"
-           << format_hex(support::endian::read16(Bytes.data() + Index, Endian),
-                         6);
+    AlignToInstStartColumn(Start, STI, OS);
+    OS << "\t.short\t"
+       << format_hex(support::endian::read16(Bytes.data() + Index, Endian), 6);
     return 2;
   }
   dumpBytes(Bytes.slice(Index, 1), OS);
-  OS << "\t\t.byte\t" << format_hex(Bytes[Index], 4);
+  AlignToInstStartColumn(Start, STI, OS);
+  OS << "\t.byte\t" << format_hex(Bytes[Index], 4);
   return 1;
 }
 
@@ -1606,7 +1609,7 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
 
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
-                                MappingSymbols, FOS);
+                                MappingSymbols, *STI, FOS);
         } else {
           // When -z or --disassemble-zeroes are given we always dissasemble
           // them. Otherwise we might want to skip zero bytes we see.
