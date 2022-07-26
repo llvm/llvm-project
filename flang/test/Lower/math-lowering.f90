@@ -85,13 +85,11 @@ end function
 ! ALL-LABEL: @_QPtest_real10
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @llvm.trunc.f80({{%[A-Za-z0-9._]+}}) : (f80) -> f80
 
-function test_real16(x)
-  real(16) :: x, test_real16
-  test_real16 = aint(x)
-end function
-
-! ALL-LABEL: @_QPtest_real16
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @llvm.trunc.f128({{%[A-Za-z0-9._]+}}) : (f128) -> f128
+! TODO: wait until fp128 is supported well in llvm.trunc
+!function test_real16(x)
+!  real(16) :: x, test_real16
+!  test_real16 = aint(x)
+!end function
 
 //--- anint.f90
 ! RUN: bbc -emit-fir %t/anint.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/anint.f90
@@ -131,15 +129,11 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f80) -> f80
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f80({{%[A-Za-z0-9._]+}}) : (f80) -> f80
 
-function test_real16(x)
-  real(16) :: x, test_real16
-  test_real16 = anint(x)
-end function
-
-! ALL-LABEL: @_QPtest_real16
-! FAST: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f128) -> f128
-! RELAXED: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f128) -> f128
-! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f128({{%[A-Za-z0-9._]+}}) : (f128) -> f128
+! TODO: wait until fp128 is supported well in llvm.round
+!function test_real16(x)
+!  real(16) :: x, test_real16
+!  test_real16 = anint(x)
+!end function
 
 //--- atan.f90
 ! RUN: bbc -emit-fir %t/atan.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/atan.f90
