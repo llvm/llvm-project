@@ -247,6 +247,70 @@ MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
   return unpacked;
 }
 
+std::vector<lldb::addr_t>
+MemoryTagManagerAArch64MTE::UnpackTagsFromCoreFileSegment(
+    CoreReaderFn reader, lldb::addr_t tag_segment_virtual_address,
+    lldb::addr_t tag_segment_data_address, lldb::addr_t addr,
+    size_t len) const {
+  // We can assume by now that addr and len have been granule aligned by a tag
+  // manager. However because we have 2 tags per byte we need to round the range
+  // up again to align to 2 granule boundaries.
+  const size_t granule = GetGranuleSize();
+  const size_t two_granules = granule * 2;
+  lldb::addr_t aligned_addr = addr;
+  size_t aligned_len = len;
+
+  // First align the start address down.
+  if (aligned_addr % two_granules) {
+    assert(aligned_addr % two_granules == granule);
+    aligned_addr -= granule;
+    aligned_len += granule;
+  }
+
+  // Then align the length up.
+  bool aligned_length_up = false;
+  if (aligned_len % two_granules) {
+    assert(aligned_len % two_granules == granule);
+    aligned_len += granule;
+    aligned_length_up = true;
+  }
+
+  // ProcessElfCore should have validated this when it found the segment.
+  assert(aligned_addr >= tag_segment_virtual_address);
+
+  // By now we know that aligned_addr is aligned to a 2 granule boundary.
+  const size_t offset_granules =
+      (aligned_addr - tag_segment_virtual_address) / granule;
+  // 2 tags per byte.
+  const size_t file_offset_in_bytes = offset_granules / 2;
+
+  // By now we know that aligned_len is at least 2 granules.
+  const size_t tag_bytes_to_read = aligned_len / granule / 2;
+  std::vector<uint8_t> tag_data(tag_bytes_to_read);
+  const size_t bytes_copied =
+      reader(tag_segment_data_address + file_offset_in_bytes, tag_bytes_to_read,
+             tag_data.data());
+  assert(bytes_copied == tag_bytes_to_read);
+
+  std::vector<lldb::addr_t> tags;
+  tags.reserve(2 * tag_data.size());
+  // No need to check the range of the tag value here as each occupies only 4
+  // bits.
+  for (auto tag_byte : tag_data) {
+    tags.push_back(tag_byte & 0xf);
+    tags.push_back(tag_byte >> 4);
+  }
+
+  // If we aligned the address down, don't return the extra first tag.
+  if (addr != aligned_addr)
+    tags.erase(tags.begin());
+  // If we aligned the length up, don't return the extra last tag.
+  if (aligned_length_up)
+    tags.pop_back();
+
+  return tags;
+}
+
 llvm::Expected<std::vector<uint8_t>> MemoryTagManagerAArch64MTE::PackTags(
     const std::vector<lldb::addr_t> &tags) const {
   std::vector<uint8_t> packed;
