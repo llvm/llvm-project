@@ -1490,34 +1490,6 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         }
       }
     }
-    std::vector<Symbol *> defaultDSASymbols;
-    for (int dirContextIndex = 0;
-         dirContextIndex <= (int)dirContext_.size() - 1; dirContextIndex++) {
-      DirContext &dirContext = dirContext_[dirContextIndex];
-      bool hasDataSharingAttr{false};
-      for (auto symMap : dirContext.objectWithDSA) {
-        // if the `symbol` already has a data-sharing attribute
-        if (symMap.first->name() == name.symbol->name()) {
-          hasDataSharingAttr = true;
-          break;
-        }
-      }
-      if (hasDataSharingAttr)
-        continue;
-
-      if (dirContext.defaultDSA == semantics::Symbol::Flag::OmpPrivate ||
-          dirContext.defaultDSA == semantics::Symbol::Flag::OmpFirstPrivate) {
-        if (!defaultDSASymbols.size())
-          defaultDSASymbols.push_back(DeclarePrivateAccessEntity(
-              symbol->GetUltimate(), dirContext.defaultDSA,
-              context_.FindScope(dirContext.directiveSource)));
-
-        else
-          defaultDSASymbols.push_back(DeclarePrivateAccessEntity(
-              *defaultDSASymbols.back(), dirContext.defaultDSA,
-              context_.FindScope(dirContext.directiveSource)));
-      }
-    }
   } // within OpenMP construct
 }
 
