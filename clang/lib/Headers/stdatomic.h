@@ -17,7 +17,8 @@
  * explicitly disallows `stdatomic.h` in the C mode via an `#error`.  Fallback
  * to the clang resource header until that is fully supported.
  */
-#if __STDC_HOSTED__ && __has_include_next(<stdatomic.h>) && !defined(_MSC_VER)
+#if __STDC_HOSTED__ &&                                                         \
+    __has_include_next(<stdatomic.h>) && !(defined(_MSC_VER) && !defined(__cplusplus))
 # include_next <stdatomic.h>
 #else
 
