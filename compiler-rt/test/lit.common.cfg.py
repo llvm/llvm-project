@@ -455,7 +455,11 @@ if config.host_os == 'Darwin':
   for vers in min_macos_deployment_target_substitutions:
     flag = config.apple_platform_min_deployment_target_flag
     major, minor = get_macos_aligned_version(vers)
-    config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '{}={}.{}'.format(flag, major, minor)) )
+    if 'mtargetos' in flag:
+      sim = '-simulator' if 'sim' in config.apple_platform else ''
+      config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '{}{}.{}{}'.format(flag, major, minor, sim)) )
+    else:
+      config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '{}={}.{}'.format(flag, major, minor)) )
 else:
   for vers in min_macos_deployment_target_substitutions:
     config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '') )
