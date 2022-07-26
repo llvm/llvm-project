@@ -2200,8 +2200,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     Builder.addRecord(Func);
 
     if (ShowCovered) {
-      if (std::any_of(Func.Counts.begin(), Func.Counts.end(),
-                      [](uint64_t C) { return C; }))
+      if (llvm::any_of(Func.Counts, [](uint64_t C) { return C; }))
         OS << Func.Name << "\n";
       continue;
     }

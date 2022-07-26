@@ -182,7 +182,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
       return isa<MemoryEffects::Free>(effect.getEffect()) &&
              effect.getValue() == target.get();
     };
-    if (llvm::find_if(effects, consumesTarget) != effects.end())
+    if (llvm::any_of(effects, consumesTarget))
       recordHandleInvalidation(target);
   }
   return success();
