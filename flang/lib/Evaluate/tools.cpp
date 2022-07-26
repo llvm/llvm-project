@@ -946,7 +946,7 @@ std::optional<std::string> FindImpureCall(
 std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure,
-    std::string &whyNotCompatible) {
+    const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible) {
   std::optional<parser::MessageFixedText> msg;
   if (!lhsProcedure) {
     msg = "In assignment to object %s, the target '%s' is a procedure"
@@ -954,7 +954,8 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   } else if (!rhsProcedure) {
     msg = "In assignment to procedure %s, the characteristics of the target"
           " procedure '%s' could not be determined"_err_en_US;
-  } else if (lhsProcedure->IsCompatibleWith(*rhsProcedure, &whyNotCompatible)) {
+  } else if (lhsProcedure->IsCompatibleWith(
+                 *rhsProcedure, &whyNotCompatible, specificIntrinsic)) {
     // OK
   } else if (isCall) {
     msg = "Procedure %s associated with result of reference to function '%s'"
@@ -971,8 +972,8 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   } else if (lhsProcedure->HasExplicitInterface() &&
       !rhsProcedure->HasExplicitInterface()) {
     // Section 10.2.2.4, paragraph 3 prohibits associating a procedure pointer
-    // with an explicit interface with a procedure whose characteristics don't
-    // match.  That's the case if the target procedure has an implicit
+    // that has an explicit interface with a procedure whose characteristics
+    // don't match.  That's the case if the target procedure has an implicit
     // interface.  But this case is allowed by several other compilers as long
     // as the explicit interface can be called via an implicit interface.
     if (!lhsProcedure->CanBeCalledViaImplicitInterface()) {
@@ -983,7 +984,8 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   } else if (!lhsProcedure->HasExplicitInterface() &&
       rhsProcedure->HasExplicitInterface()) {
     // OK if the target can be called via an implicit interface
-    if (!rhsProcedure->CanBeCalledViaImplicitInterface()) {
+    if (!rhsProcedure->CanBeCalledViaImplicitInterface() &&
+        !specificIntrinsic) {
       msg = "Procedure %s with implicit interface may not be associated "
             "with procedure designator '%s' with explicit interface that "
             "cannot be called via an implicit interface"_err_en_US;
