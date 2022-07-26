@@ -435,17 +435,6 @@ Error SectionWriter::visit(const OwnedDataSection &Sec) {
 }
 
 template <class ELFT>
-static std::tuple<uint64_t, uint64_t>
-getDecompressedSizeAndAlignment(ArrayRef<uint8_t> Data) {
-  const uint64_t DecompressedSize =
-      reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_size;
-  const uint64_t DecompressedAlign =
-      reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_addralign;
-
-  return std::make_tuple(DecompressedSize, DecompressedAlign);
-}
-
-template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
   ArrayRef<uint8_t> Compressed =
       Sec.OriginalData.slice(sizeof(Elf_Chdr_Impl<ELFT>));
@@ -1714,15 +1703,11 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     if (!Name)
       return Name.takeError();
 
-    if (Shdr.sh_flags & ELF::SHF_COMPRESSED) {
-      uint64_t DecompressedSize, DecompressedAlign;
-      std::tie(DecompressedSize, DecompressedAlign) =
-          getDecompressedSizeAndAlignment<ELFT>(*Data);
-      return Obj.addSection<CompressedSection>(
-          CompressedSection(*Data, DecompressedSize, DecompressedAlign));
-    }
-
-    return Obj.addSection<Section>(*Data);
+    if (!(Shdr.sh_flags & ELF::SHF_COMPRESSED))
+      return Obj.addSection<Section>(*Data);
+    auto *Chdr = reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data->data());
+    return Obj.addSection<CompressedSection>(
+        CompressedSection(*Data, Chdr->ch_size, Chdr->ch_addralign));
   }
   }
 }
