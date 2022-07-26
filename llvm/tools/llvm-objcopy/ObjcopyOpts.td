@@ -29,12 +29,13 @@ defm new_symbol_visibility : Eq<"new-symbol-visibility", "Visibility of "
                                 " with --add-symbol unless otherwise"
                                 " specified. The default value is 'default'.">;
 
-def compress_debug_sections : Flag<["--"], "compress-debug-sections">;
-def compress_debug_sections_eq
+def compress_debug_sections
     : Joined<["--"], "compress-debug-sections=">,
-      MetaVarName<"[ zlib ]">,
-      HelpText<"Compress DWARF debug sections using specified style. Supported "
-               "formats: 'zlib'">;
+      MetaVarName<"format">,
+      HelpText<"Compress DWARF debug sections using specified format. Supported "
+               "formats: zlib">;
+def : Flag<["--"], "compress-debug-sections">, Alias<compress_debug_sections>,
+      AliasArgs<["zlib"]>;
 def decompress_debug_sections : Flag<["--"], "decompress-debug-sections">,
                                 HelpText<"Decompress DWARF debug sections.">;
 defm split_dwo
