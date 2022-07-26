@@ -152,7 +152,6 @@ template <typename R, typename... Ts> struct log_t {
       return;
     }
     end = clock_ty::now();
-
     int64_t t =
         std::chrono::duration_cast<std::chrono::microseconds>(end - start)
             .count();

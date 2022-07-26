@@ -39,6 +39,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../plugins/amdgpu/src/print_tracing.h"
 
 // MAXVARGS is more than a static array size.
 // It is for user vargs functions only.
@@ -114,6 +115,8 @@ static hostrpc_status_t hostrpc_varfn_uint64_(char *buf, size_t bufsz,
                                               uint64_t *rc);
 static hostrpc_status_t hostrpc_varfn_double_(char *buf, size_t bufsz,
                                               double *rc);
+
+int rpcCallCount;
 
 static void hostrpc_handler_SERVICE_PRINTF(uint32_t device_id,
                                            uint64_t *payload) {
@@ -255,6 +258,8 @@ void hostrpc_abort(int rc) {
 // Host service functions are architecturally independent.
 extern void hostrpc_execute_service(uint32_t service_id, uint32_t *device_ptr,
                                     uint64_t *payload) {
+  if (print_kernel_trace >= HOST_SERVICE_TRACING)
+    rpcCallCount += 1;
   uint32_t device_id = *device_ptr;
   switch (service_id) {
   case HOSTRPC_SERVICE_PRINTF:

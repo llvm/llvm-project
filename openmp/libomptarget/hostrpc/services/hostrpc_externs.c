@@ -31,6 +31,7 @@ SOFTWARE.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../plugins/amdgpu/src/print_tracing.h"
 
 // FIXME, move some of this to hostrpc_internal.h
 typedef struct atl_hcq_element_s atl_hcq_element_t;
@@ -47,6 +48,8 @@ static int atl_hcq_count = 0;
 static amd_hostcall_consumer_t *atl_hcq_consumer = NULL;
 
 static int atl_hcq_size() { return atl_hcq_count; }
+
+extern int rpcCallCount;
 
 static atl_hcq_element_t *atl_hcq_push(buffer_t *hcb, hsa_queue_t *hsa_q,
                                        uint32_t devid) {
@@ -140,6 +143,27 @@ unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
 }
 
 hsa_status_t hostrpc_init() { return HSA_STATUS_SUCCESS; }
+
+//init hostrpc count per kernel
+char *kernName = NULL;
+bool printHostRPCFlag = false;
+
+//print host rpc counts for each kernel invocation on GPU
+void printHostRPCCallCount() {
+  bool TraceToStdout = print_kernel_trace & (RTL_TO_STDOUT | HOST_SERVICE_TRACING);
+  if (kernName && printHostRPCFlag) {
+    fprintf(TraceToStdout ? stdout : stderr, "HOSTSERV %s %d\n", kernName, rpcCallCount);
+    printHostRPCFlag = false;
+  }
+}
+
+//TODO: implement similar functionality for concurrent kernel launches
+void hostrpcStatInit(const char *kName){
+  printHostRPCCallCount();
+  rpcCallCount = 0;   //always init rpc count to 0 for each invocation of kernels
+  kernName = kName;
+  printHostRPCFlag = true;
+}
 
 hsa_status_t hostrpc_terminate() {
   atl_hcq_element_t *this_front = atl_hcq_front;

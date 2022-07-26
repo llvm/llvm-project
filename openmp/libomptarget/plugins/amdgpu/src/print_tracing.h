@@ -12,7 +12,8 @@ enum PrintTraceControlBits {
   LAUNCH = 1,          // print a message to stderr for each kernel launch
   RTL_TIMING = 2,      // Print timing info around each RTL step
   STARTUP_DETAILS = 4, // Details around loading up kernel
-  RTL_TO_STDOUT = 8    // Redirect RTL tracing to stdout
+  RTL_TO_STDOUT = 8,    // Redirect RTL tracing to stdout
+  HOST_SERVICE_TRACING = 16 // Print host tracing
 };
 
 extern int print_kernel_trace; // set by environment variable
