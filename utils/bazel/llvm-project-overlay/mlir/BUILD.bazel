@@ -3618,7 +3618,6 @@ cc_library(
         ":GPUPassIncGen",
         ":MemRefDialect",
         ":IR",
-        ":Parser",
         ":Pass",
         ":ROCDLToLLVMIRTranslation",
         ":SCFDialect",
@@ -6614,7 +6613,6 @@ cc_binary(
     deps = [
         ":AsmParser",
         ":IR",
-        ":Parser",
         ":Support",
         "//llvm:Support",
         "//llvm:TableGen",
