@@ -1,0 +1,54 @@
+## This test checks the warning message displayed if input file
+## contains .debug_macinfo section.
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-dwarfutil --garbage-collection %t.o %t1 2>&1 | FileCheck %s -DFILE=%t.o
+
+# CHECK: [[FILE]]: warning: '.debug_macinfo' is not currently supported: file will be skipped
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Content:        "FFFFFFFF"
+  - Name:            .debug_macinfo
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x1000
+            - Value:  0x4
+        - AbbrCode: 0
+...
