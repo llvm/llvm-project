@@ -26,10 +26,11 @@ Introduction
 
   string Program = "flang";
 
-  list<string> ExcludedFlags = [];
+  list<string> ExcludedFlags = ["HelpHidden", "NoDriverOption",
+                                "CLOption", "Unsupported", "Ignored"];
   list<string> IncludedFlags = ["FlangOption"];
 
 }
 
 
-include "../../../clang/include/clang/Driver/Options.td"
+include "Options.td"
