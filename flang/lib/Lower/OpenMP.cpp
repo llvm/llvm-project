@@ -85,66 +85,24 @@ static void createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
 
 template <typename Op>
 static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
-                          const Fortran::parser::OmpClauseList &opClauseList,
-                          Fortran::lower::pft::Evaluation &eval) {
+                          const Fortran::parser::OmpClauseList &opClauseList) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
   bool hasFirstPrivateOp = false;
   bool hasLastPrivateOp = false;
-  // The symbols in private/firstprivate clause or region under
-  // default(private/firstprivate) clause.
-  // TODO: Current implementation of default clause is very fragile. Implement
-  // it instead if a pre-FIR pass
-  llvm::SetVector<const Fortran::semantics::Symbol *> symbols;
-  llvm::SetVector<const Fortran::semantics::Symbol *> sharedSymbols;
-  std::map<Fortran::semantics::SourceName, const Fortran::semantics::Symbol *>
-      uniqueSymbolMap;
-  auto collectOmpObjectListSymbol =
-      [&](const Fortran::parser::OmpObjectList &ompObjectList,
-          llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet) {
-        for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
-          Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
-          symbolSet.insert(sym);
-        }
-      };
-
-  auto removeDuplicateSymbols =
-      [&](llvm::SetVector<const Fortran::semantics::Symbol *> &symbols) {
-        // default clause in nested directives can create two symbols belonging
-        // to the same entity resulting in double privatization. Reduce the
-        // count of such symbols to 1.
-        for (auto sym : symbols)
-          if (auto it{uniqueSymbolMap.find(sym->name())};
-              it == uniqueSymbolMap.end())
-            uniqueSymbolMap.insert(
-                std::pair<Fortran::semantics::SourceName,
-                          const Fortran::semantics::Symbol *>(sym->name(),
-                                                              sym));
-      };
   // We need just one ICmpOp for multiple LastPrivate clauses.
   mlir::arith::CmpIOp cmpOp;
-  // Collect the privatized symbols for private/firstprivate/default clause.
+
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (const auto &privateClause =
             std::get_if<Fortran::parser::OmpClause::Private>(&clause.u)) {
-      collectOmpObjectListSymbol(privateClause->v, symbols);
-      removeDuplicateSymbols(symbols);
+      createPrivateVarSyms(converter, privateClause);
     } else if (const auto &firstPrivateClause =
                    std::get_if<Fortran::parser::OmpClause::Firstprivate>(
                        &clause.u)) {
-      collectOmpObjectListSymbol(firstPrivateClause->v, symbols);
-      removeDuplicateSymbols(symbols);
+      createPrivateVarSyms(converter, firstPrivateClause);
       hasFirstPrivateOp = true;
-    } else if (const auto &sharedClause =
-                   std::get_if<Fortran::parser::OmpClause::Shared>(&clause.u)) {
-      // `shared(...)` does not define a privatization flag. In case of nested
-      // block constructs, presence of `default(firstprivate)` or
-      // `default(private)` in the inner block construct may lead to privatizing
-      // a shared variable in the outer block construct. To prevent that,
-      // explicitly collect the shared symbols and remove them from the list of
-      // symbols to be privatized.
-      collectOmpObjectListSymbol(sharedClause->v, sharedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<Fortran::parser::OmpClause::Lastprivate>(
                        &clause.u)) {
@@ -208,48 +166,7 @@ static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
       hasLastPrivateOp = true;
     }
   }
-
-  for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
-    if (const auto &defaultClause =
-            std::get_if<Fortran::parser::OmpClause::Default>(&clause.u)) {
-      if (defaultClause->v.v ==
-          Fortran::parser::OmpDefaultClause::Type::Private) {
-        converter.collectSymbolSet(eval, symbols,
-                                   Fortran::semantics::Symbol::Flag::OmpPrivate,
-                                   /*checkHostAssoicatedSymbols=*/true);
-        removeDuplicateSymbols(symbols);
-      } else if (defaultClause->v.v ==
-                 Fortran::parser::OmpDefaultClause::Type::Firstprivate) {
-        converter.collectSymbolSet(
-            eval, symbols, Fortran::semantics::Symbol::Flag::OmpFirstPrivate,
-            /*checkHostAssoicatedSymbols=*/true);
-        removeDuplicateSymbols(symbols);
-      }
-    }
-  }
-
-  for (auto sharedSymbol : sharedSymbols) {
-    auto it = uniqueSymbolMap.find(sharedSymbol->name());
-    if (it != uniqueSymbolMap.end()) {
-      uniqueSymbolMap.erase(it);
-    }
-  }
-  for (auto uniqueSymbolMapPair : uniqueSymbolMap) {
-    // Privatization for symbols which are pre-determined (like loop index
-    // variables) happen separately, for everything else privatize here.
-    const Fortran::semantics::Symbol *sym = uniqueSymbolMapPair.second;
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      continue;
-    bool success = converter.createHostAssociateVarClone(*sym);
-    (void)success;
-    assert(success && "Privatization failed due to existing binding");
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
-      converter.copyHostAssociateVar(*sym);
-      hasFirstPrivateOp = true;
-    }
-  }
-
-  if (hasFirstPrivateOp || hasLastPrivateOp)
+  if (hasFirstPrivateOp)
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
   firOpBuilder.restoreInsertionPoint(insPt);
   return hasLastPrivateOp;
@@ -541,7 +458,7 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
 
   // Handle privatization. Do not privatize if this is the outer operation.
   if (clauses && !outerCombined) {
-    bool lastPrivateOp = privatizeVars(op, converter, *clauses, eval);
+    bool lastPrivateOp = privatizeVars(op, converter, *clauses);
     // LastPrivatization, due to introduction of
     // new control flow, changes the insertion point,
     // thus restore it.

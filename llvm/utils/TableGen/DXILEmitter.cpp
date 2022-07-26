@@ -144,6 +144,7 @@ static std::string parameterKindToString(ParameterKind Kind) {
   case ParameterKind::DXIL_HANDLE:
     return "DXIL_HANDLE";
   }
+  llvm_unreachable("Unknown llvm::DXIL::ParameterKind enum");
 }
 
 static void emitDXILOpEnum(DXILOperationData &DXILOp, raw_ostream &OS) {

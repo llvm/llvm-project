@@ -941,9 +941,11 @@ the ``cmake`` command or by setting it directly in ``ccmake`` or ``cmake-gui``).
 
 This file is available in two different locations.
 
-* ``<INSTALL_PREFIX>/lib/cmake/llvm/LLVMConfig.cmake`` where
-  ``<INSTALL_PREFIX>`` is the install prefix of an installed version of LLVM.
-  On Linux typically this is ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
+* ``<LLVM_INSTALL_PACKAGE_DIR>/LLVMConfig.cmake`` where
+  ``<LLVM_INSTALL_PACKAGE_DIR>`` is the location where LLVM CMake modules are
+  installed as part of an installed version of LLVM. This is typically
+  ``cmake/llvm/`` within the lib directory. On Linux, this is typically
+  ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
 
 * ``<LLVM_BUILD_ROOT>/lib/cmake/llvm/LLVMConfig.cmake`` where
   ``<LLVM_BUILD_ROOT>`` is the root of the LLVM build tree. **Note: this is only

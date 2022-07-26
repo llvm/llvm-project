@@ -426,16 +426,14 @@ static Error applyCLOptions(const struct Options &Opts, ObjectFile &InputFile) {
     DebugInfoBits LinkedDebugInfo;
     raw_svector_ostream OutStream(LinkedDebugInfo);
 
-    if (linkDebugInfo(InputFile, Opts, OutStream)) {
-      if (Error Err =
-              saveLinkedDebugInfo(Opts, InputFile, std::move(LinkedDebugInfo)))
-        return Err;
+    if (Error Err = linkDebugInfo(InputFile, Opts, OutStream))
+      return Err;
 
-      return Error::success();
-    }
+    if (Error Err =
+            saveLinkedDebugInfo(Opts, InputFile, std::move(LinkedDebugInfo)))
+      return Err;
 
-    return createStringError(std::errc::invalid_argument,
-                             "possible broken debug info");
+    return Error::success();
   } else if (Opts.BuildSeparateDebugFile) {
     if (Error Err = splitDebugIntoSeparateFile(Opts, InputFile))
       return Err;

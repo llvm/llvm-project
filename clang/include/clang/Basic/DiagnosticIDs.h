@@ -45,18 +45,18 @@ namespace clang {
     // Start position for diagnostics.
     enum {
       DIAG_START_COMMON        =                          0,
-      DIAG_START_DRIVER        = DIAG_START_COMMON        + DIAG_SIZE_COMMON,
-      DIAG_START_FRONTEND      = DIAG_START_DRIVER        + DIAG_SIZE_DRIVER,
-      DIAG_START_SERIALIZATION = DIAG_START_FRONTEND      + DIAG_SIZE_FRONTEND,
-      DIAG_START_LEX           = DIAG_START_SERIALIZATION + DIAG_SIZE_SERIALIZATION,
-      DIAG_START_PARSE         = DIAG_START_LEX           + DIAG_SIZE_LEX,
-      DIAG_START_AST           = DIAG_START_PARSE         + DIAG_SIZE_PARSE,
-      DIAG_START_COMMENT       = DIAG_START_AST           + DIAG_SIZE_AST,
-      DIAG_START_CROSSTU       = DIAG_START_COMMENT       + DIAG_SIZE_COMMENT,
-      DIAG_START_SEMA          = DIAG_START_CROSSTU       + DIAG_SIZE_CROSSTU,
-      DIAG_START_ANALYSIS      = DIAG_START_SEMA          + DIAG_SIZE_SEMA,
-      DIAG_START_REFACTORING   = DIAG_START_ANALYSIS      + DIAG_SIZE_ANALYSIS,
-      DIAG_UPPER_LIMIT         = DIAG_START_REFACTORING   + DIAG_SIZE_REFACTORING
+      DIAG_START_DRIVER        = DIAG_START_COMMON        + static_cast<int>(DIAG_SIZE_COMMON),
+      DIAG_START_FRONTEND      = DIAG_START_DRIVER        + static_cast<int>(DIAG_SIZE_DRIVER),
+      DIAG_START_SERIALIZATION = DIAG_START_FRONTEND      + static_cast<int>(DIAG_SIZE_FRONTEND),
+      DIAG_START_LEX           = DIAG_START_SERIALIZATION + static_cast<int>(DIAG_SIZE_SERIALIZATION),
+      DIAG_START_PARSE         = DIAG_START_LEX           + static_cast<int>(DIAG_SIZE_LEX),
+      DIAG_START_AST           = DIAG_START_PARSE         + static_cast<int>(DIAG_SIZE_PARSE),
+      DIAG_START_COMMENT       = DIAG_START_AST           + static_cast<int>(DIAG_SIZE_AST),
+      DIAG_START_CROSSTU       = DIAG_START_COMMENT       + static_cast<int>(DIAG_SIZE_COMMENT),
+      DIAG_START_SEMA          = DIAG_START_CROSSTU       + static_cast<int>(DIAG_SIZE_CROSSTU),
+      DIAG_START_ANALYSIS      = DIAG_START_SEMA          + static_cast<int>(DIAG_SIZE_SEMA),
+      DIAG_START_REFACTORING   = DIAG_START_ANALYSIS      + static_cast<int>(DIAG_SIZE_ANALYSIS),
+      DIAG_UPPER_LIMIT         = DIAG_START_REFACTORING   + static_cast<int>(DIAG_SIZE_REFACTORING)
     };
 
     class CustomDiagInfo;

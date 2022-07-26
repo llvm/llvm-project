@@ -981,17 +981,18 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   else
     OS << "\"" << Record.OverloadedName << "\",";
   OS << Record.PrototypeIndex << ",";
-  OS << Record.MaskedPrototypeIndex << ",";
   OS << Record.SuffixIndex << ",";
   OS << Record.OverloadedSuffixIndex << ",";
   OS << (int)Record.PrototypeLength << ",";
-  OS << (int)Record.MaskedPrototypeLength << ",";
   OS << (int)Record.SuffixLength << ",";
   OS << (int)Record.OverloadedSuffixSize << ",";
   OS << (int)Record.RequiredExtensions << ",";
   OS << (int)Record.TypeRangeMask << ",";
   OS << (int)Record.Log2LMULMask << ",";
   OS << (int)Record.NF << ",";
+  OS << (int)Record.HasMasked << ",";
+  OS << (int)Record.HasVL << ",";
+  OS << (int)Record.HasMaskedOffOperand << ",";
   OS << "},\n";
   return OS;
 }

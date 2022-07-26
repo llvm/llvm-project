@@ -707,8 +707,12 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
       if (ShouldEmitCFICheck || ShouldEmitWPDInfo) {
         llvm::Value *VFPAddr =
             Builder.CreateGEP(CGF.Int8Ty, VTable, VTableOffset);
+        llvm::Intrinsic::ID IID = CGM.HasHiddenLTOVisibility(RD)
+                                      ? llvm::Intrinsic::type_test
+                                      : llvm::Intrinsic::public_type_test;
+
         CheckResult = Builder.CreateCall(
-            CGM.getIntrinsic(llvm::Intrinsic::type_test),
+            CGM.getIntrinsic(IID),
             {Builder.CreateBitCast(VFPAddr, CGF.Int8PtrTy), TypeId});
       }
 
