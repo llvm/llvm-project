@@ -161,6 +161,8 @@ private:
   Section *CommonSection = nullptr;
   std::vector<Block *> GraphBlocks;
   std::vector<Symbol *> GraphSymbols;
+
+  DenseMap<StringRef, Symbol *> ExternalSymbols;
 };
 
 template <typename RelocHandlerFunction>
