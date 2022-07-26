@@ -205,8 +205,7 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
     auto elementPtrType = this->getElementPtrType(allocaOp.getType());
 
     auto allocatedElementPtr = rewriter.create<LLVM::AllocaOp>(
-        loc, elementPtrType, sizeBytes,
-        allocaOp.getAlignment() ? *allocaOp.getAlignment() : 0);
+        loc, elementPtrType, sizeBytes, allocaOp.getAlignment().value_or(0));
 
     return std::make_tuple(allocatedElementPtr, allocatedElementPtr);
   }
