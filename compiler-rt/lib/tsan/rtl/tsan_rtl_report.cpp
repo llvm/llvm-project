@@ -701,6 +701,11 @@ static bool IsFiredSuppression(Context *ctx, ReportType type, uptr addr) {
   return false;
 }
 
+static bool SpuriousRace(Shadow old) {
+  Shadow last(LoadShadow(&ctx->last_spurious_race));
+  return last.sid() == old.sid() && last.epoch() == old.epoch();
+}
+
 void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
                 AccessType typ0) {
   CheckedMutex::CheckNoLocks();
@@ -720,6 +725,8 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   if (!flags()->report_atomic_races &&
       ((typ0 & kAccessAtomic) || (typ1 & kAccessAtomic)) &&
       !(typ0 & kAccessFree) && !(typ1 & kAccessFree))
+    return;
+  if (SpuriousRace(old))
     return;
 
   const uptr kMop = 2;
@@ -760,9 +767,13 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   Lock slot_lock(&ctx->slots[static_cast<uptr>(s[1].sid())].mtx);
   ThreadRegistryLock l0(&ctx->thread_registry);
   Lock slots_lock(&ctx->slot_mtx);
-  if (!RestoreStack(EventType::kAccessExt, s[1].sid(), s[1].epoch(), addr1,
-                    size1, typ1, &tids[1], &traces[1], mset[1], &tags[1]))
+  if (SpuriousRace(old))
     return;
+  if (!RestoreStack(EventType::kAccessExt, s[1].sid(), s[1].epoch(), addr1,
+                    size1, typ1, &tids[1], &traces[1], mset[1], &tags[1])) {
+    StoreShadow(&ctx->last_spurious_race, old.raw());
+    return;
+  }
 
   if (IsFiredSuppression(ctx, rep_typ, traces[1]))
     return;
