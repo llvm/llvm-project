@@ -592,6 +592,8 @@ ABI Changes in Clang
 
 OpenMP Support in Clang
 -----------------------
+* Added the support for ``atomic compare`` and ``atomic compare capture``
+  (``-fopenmp-version=51`` is required).
 
 ...
 
