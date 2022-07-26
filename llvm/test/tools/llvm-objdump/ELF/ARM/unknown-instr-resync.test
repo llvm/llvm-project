@@ -18,16 +18,16 @@
 # when the Thumb instruction stream doesn't contain enough data to
 # even do that check.
 
-# CHECK:       0: 64 00 a0 e3   mov     r0, #100
-# CHECK-NEXT:  4: ff ff ff ff   <unknown>
-# CHECK-NEXT:  8: 12 03 81 e0   add     r0, r1, r2, lsl r3
+# CHECK:       0: e3a00064      mov     r0, #100
+# CHECK-NEXT:  4: ffffffff      <unknown>
+# CHECK-NEXT:  8: e0810312      add     r0, r1, r2, lsl r3
 
-# CHECK:       c: 64 20         movs    r0, #100
-# CHECK-NEXT:  e: 0e b8         <unknown>
-# CHECK-NEXT: 10: 40 18         adds    r0, r0, r1
-# CHECK-NEXT: 12: 4f f0 64 00   mov.w   r0, #100
-# CHECK-NEXT: 16: ee ff cc dd   <unknown>
-# CHECK-NEXT: 1a: 01 eb c2 00   add.w   r0, r1, r2, lsl #3
+# CHECK:       c: 2064          movs    r0, #100
+# CHECK-NEXT:  e: b80e          <unknown>
+# CHECK-NEXT: 10: 1840          adds    r0, r0, r1
+# CHECK-NEXT: 12: f04f 0064     mov.w   r0, #100
+# CHECK-NEXT: 16: ffee ddcc     <unknown>
+# CHECK-NEXT: 1a: eb01 00c2     add.w   r0, r1, r2, lsl #3
 # CHECK-NEXT: 1e: 9a            <unknown>
 
 --- !ELF

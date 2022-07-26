@@ -466,6 +466,15 @@ static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
   OS << format(Fmt.data(), Address) << Name << "\t" << Val;
 }
 
+static void AlignToInstStartColumn(size_t Start, const MCSubtargetInfo &STI,
+                                   raw_ostream &OS) {
+  // The output of printInst starts with a tab. Print some spaces so that
+  // the tab has 1 column and advances to the target tab stop.
+  unsigned TabStop = getInstStartColumn(STI);
+  unsigned Column = OS.tell() - Start;
+  OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+}
+
 class PrettyPrinter {
 public:
   virtual ~PrettyPrinter() = default;
@@ -487,11 +496,7 @@ public:
       dumpBytes(Bytes, OS);
     }
 
-    // The output of printInst starts with a tab. Print some spaces so that
-    // the tab has 1 column and advances to the target tab stop.
-    unsigned TabStop = getInstStartColumn(STI);
-    unsigned Column = OS.tell() - Start;
-    OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+    AlignToInstStartColumn(Start, STI, OS);
 
     if (MI) {
       // See MCInstPrinter::printInst. On targets where a PC relative immediate
@@ -664,6 +669,91 @@ public:
 };
 BPFPrettyPrinter BPFPrettyPrinterInst;
 
+class ARMPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
+                 LiveVariablePrinter &LVP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printBetweenInsts(OS, false);
+
+    size_t Start = OS.tell();
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (ShowRawInsn) {
+      size_t Pos = 0, End = Bytes.size();
+      if (STI.checkFeatures("+thumb-mode")) {
+        for (; Pos + 2 <= End; Pos += 2)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint16_t>(
+                        Bytes.data() + Pos, llvm::support::little),
+                    4);
+      } else {
+        for (; Pos + 4 <= End; Pos += 4)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint32_t>(
+                        Bytes.data() + Pos, llvm::support::little),
+                    8);
+      }
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
+      }
+    }
+
+    AlignToInstStartColumn(Start, STI, OS);
+
+    if (MI) {
+      IP.printInst(MI, Address.Address, "", STI, OS);
+    } else
+      OS << "\t<unknown>";
+  }
+};
+ARMPrettyPrinter ARMPrettyPrinterInst;
+
+class AArch64PrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
+                 LiveVariablePrinter &LVP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printBetweenInsts(OS, false);
+
+    size_t Start = OS.tell();
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (ShowRawInsn) {
+      size_t Pos = 0, End = Bytes.size();
+      for (; Pos + 4 <= End; Pos += 4)
+        OS << ' '
+           << format_hex_no_prefix(
+                  llvm::support::endian::read<uint32_t>(Bytes.data() + Pos,
+                                                        llvm::support::little),
+                  8);
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
+      }
+    }
+
+    AlignToInstStartColumn(Start, STI, OS);
+
+    if (MI) {
+      IP.printInst(MI, Address.Address, "", STI, OS);
+    } else
+      OS << "\t<unknown>";
+  }
+};
+AArch64PrettyPrinter AArch64PrettyPrinterInst;
+
 PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   switch(Triple.getArch()) {
   default:
@@ -675,6 +765,15 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   case Triple::bpfel:
   case Triple::bpfeb:
     return BPFPrettyPrinterInst;
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    return ARMPrettyPrinterInst;
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+  case Triple::aarch64_32:
+    return AArch64PrettyPrinterInst;
   }
 }
 }

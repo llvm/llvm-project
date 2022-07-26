@@ -51,20 +51,20 @@ far_func\i:
 .endr
     bx lr
 
-// FUNC01: 403000:       41 f0 fc 87     bne.w   0x404ffc <.text+0x3ffc>
-// FUNC01: 403004:       41 f0 ff 87     bne.w   0x405006 <.text+0x4006>
+// FUNC01: 403000:       f041 87fc       bne.w   0x404ffc <.text+0x3ffc>
+// FUNC01: 403004:       f041 87ff       bne.w   0x405006 <.text+0x4006>
 
 // Check that we only have two thunks here, even if we created the first
 // thunk twice (once in the first pass, then thrown away and recreated
 // in the second pass).
 
-// FUNC01-THUNKS: 404ffa:       00 00           movs    r0,  r0
+// FUNC01-THUNKS: 404ffa:       0000            movs    r0,  r0
 // The instruction above is padding from the .space
-// FUNC01-THUNKS: 404ffc:       47 f2 1e 0c     movw    r12, #28702
-// FUNC01-THUNKS: 405000:       c0 f2 20 0c     movt    r12, #32
-// FUNC01-THUNKS: 405004:       e7 44           add     pc,  r12
-// FUNC01-THUNKS: 405006:       46 f6 f0 7c     movw    r12, #28656
-// FUNC01-THUNKS: 40500a:       c0 f2 10 0c     movt    r12, #16
-// FUNC01-THUNKS: 40500e:       e7 44           add     pc, r12
+// FUNC01-THUNKS: 404ffc:       f247 0c1e       movw    r12, #28702
+// FUNC01-THUNKS: 405000:       f2c0 0c20       movt    r12, #32
+// FUNC01-THUNKS: 405004:       44e7            add     pc,  r12
+// FUNC01-THUNKS: 405006:       f646 7cf0       movw    r12, #28656
+// FUNC01-THUNKS: 40500a:       f2c0 0c10       movt    r12, #16
+// FUNC01-THUNKS: 40500e:       44e7            add     pc, r12
 // The instruction below is padding from the .balign
-// FUNC01-THUNKS: 405010:       cc cc           ldm     r4!, {r2, r3, r6, r7}
+// FUNC01-THUNKS: 405010:       cccc            ldm     r4!, {r2, r3, r6, r7}
