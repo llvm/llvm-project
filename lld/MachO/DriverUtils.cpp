@@ -150,7 +150,6 @@ std::string macho::createResponseFile(const InputArgList &args) {
       break;
     case OPT_force_load:
     case OPT_weak_library:
-    case OPT_load_hidden:
       os << arg->getSpelling() << " "
          << quote(rewriteInputPath(arg->getValue())) << "\n";
       break;
