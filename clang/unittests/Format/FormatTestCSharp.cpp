@@ -574,6 +574,7 @@ TEST_F(FormatTestCSharp, CSharpEscapedQuotesInVerbatimStrings) {
   verifyFormat(R"(string str = @"""";)", Style);
   verifyFormat(R"(string str = @"""Hello world""";)", Style);
   verifyFormat(R"(string str = $@"""Hello {friend}""";)", Style);
+  verifyFormat(R"(return $@"Foo ""/foo?f={Request.Query["f"]}""";)", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpQuotesInInterpolatedStrings) {
