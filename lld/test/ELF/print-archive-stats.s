@@ -21,12 +21,12 @@
 # RUN: ld.lld a.o %t/weak.a 1.a --print-archive-stats=- -o /dev/null | diff a.txt -
 
 ## The second 1.a has 0 fetched member.
-# RUN: ld.lld a.o %t/weak.a 1.a 1.a --print-archive-stats=- -o /dev/null | \
+# RUN: ld.lld a.o %t/weak.a -L. -l:1.a -l:1.a --print-archive-stats=- -o /dev/null | \
 # RUN:   FileCheck --check-prefix=CHECK2 %s
 # CHECK2:      members	extracted	archive
 # CHECK2-NEXT: 1	0	{{.*}}weak.a
-# CHECK2-NEXT: 3	2	1.a
-# CHECK2-NEXT: 3	0	1.a
+# CHECK2-NEXT: 3	2	{{.*}}1.a
+# CHECK2-NEXT: 3	0	{{.*}}1.a
 
 # RUN: not ld.lld -shared a.o --print-archive-stats=/ -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 # ERR: error: --print-archive-stats=: cannot open /: {{.*}}
