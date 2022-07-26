@@ -37,12 +37,13 @@ public:
     Pointer,
     Struct,
 
-    // Synthetic boolean values are either atomic values or composites that
-    // represent conjunctions, disjunctions, and negations.
+    // Synthetic boolean values are either atomic values or logical connectives.
     AtomicBool,
     Conjunction,
     Disjunction,
-    Negation
+    Negation,
+    Implication,
+    Biconditional,
   };
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
@@ -84,7 +85,9 @@ public:
     return Val->getKind() == Kind::AtomicBool ||
            Val->getKind() == Kind::Conjunction ||
            Val->getKind() == Kind::Disjunction ||
-           Val->getKind() == Kind::Negation;
+           Val->getKind() == Kind::Negation ||
+           Val->getKind() == Kind::Implication ||
+           Val->getKind() == Kind::Biconditional;
   }
 };
 
@@ -160,6 +163,54 @@ public:
 
 private:
   BoolValue &SubVal;
+};
+
+/// Models a boolean implication.
+///
+/// Equivalent to `!LHS v RHS`.
+class ImplicationValue : public BoolValue {
+public:
+  explicit ImplicationValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Implication), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Implication;
+  }
+
+  /// Returns the left sub-value of the implication.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the implication.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
+/// Models a boolean biconditional.
+///
+/// Equivalent to `(LHS ^ RHS) v (!LHS ^ !RHS)`.
+class BiconditionalValue : public BoolValue {
+public:
+  explicit BiconditionalValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Biconditional), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Biconditional;
+  }
+
+  /// Returns the left sub-value of the biconditional.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the biconditional.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
 };
 
 /// Models an integer.

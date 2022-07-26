@@ -221,6 +221,18 @@ BooleanFormula buildBooleanFormula(const llvm::DenseSet<BoolValue *> &Vals) {
         UnprocessedSubVals.push(&N->getSubVal());
         break;
       }
+      case Value::Kind::Implication: {
+        auto *I = cast<ImplicationValue>(Val);
+        UnprocessedSubVals.push(&I->getLeftSubValue());
+        UnprocessedSubVals.push(&I->getRightSubValue());
+        break;
+      }
+      case Value::Kind::Biconditional: {
+        auto *B = cast<BiconditionalValue>(Val);
+        UnprocessedSubVals.push(&B->getLeftSubValue());
+        UnprocessedSubVals.push(&B->getRightSubValue());
+        break;
+      }
       case Value::Kind::AtomicBool: {
         Atomics[Var] = cast<AtomicBoolValue>(Val);
         break;
@@ -320,6 +332,46 @@ BooleanFormula buildBooleanFormula(const llvm::DenseSet<BoolValue *> &Vals) {
 
       // Visit the sub-values of `Val`.
       UnprocessedSubVals.push(&N->getSubVal());
+    } else if (auto *I = dyn_cast<ImplicationValue>(Val)) {
+      const Variable LeftSubVar = GetVar(&I->getLeftSubValue());
+      const Variable RightSubVar = GetVar(&I->getRightSubValue());
+
+      // `X <=> (A => B)` is equivalent to
+      // `(X v A) ^ (X v !B) ^ (!X v !A v B)` which is already in
+      // conjunctive normal form. Below we add each of the conjuncts of the
+      // latter expression to the result.
+      Formula.addClause(posLit(Var), posLit(LeftSubVar));
+      Formula.addClause(posLit(Var), negLit(RightSubVar));
+      Formula.addClause(negLit(Var), negLit(LeftSubVar), posLit(RightSubVar));
+
+      // Visit the sub-values of `Val`.
+      UnprocessedSubVals.push(&I->getLeftSubValue());
+      UnprocessedSubVals.push(&I->getRightSubValue());
+    } else if (auto *B = dyn_cast<BiconditionalValue>(Val)) {
+      const Variable LeftSubVar = GetVar(&B->getLeftSubValue());
+      const Variable RightSubVar = GetVar(&B->getRightSubValue());
+
+      if (LeftSubVar == RightSubVar) {
+        // `X <=> (A <=> A)` is equvalent to `X` which is already in
+        // conjunctive normal form. Below we add each of the conjuncts of the
+        // latter expression to the result.
+        Formula.addClause(posLit(Var));
+
+        // No need to visit the sub-values of `Val`.
+      } else {
+        // `X <=> (A <=> B)` is equivalent to
+        // `(X v A v B) ^ (X v !A v !B) ^ (!X v A v !B) ^ (!X v !A v B)` which is
+        // already in conjunctive normal form. Below we add each of the conjuncts
+        // of the latter expression to the result.
+        Formula.addClause(posLit(Var), posLit(LeftSubVar), posLit(RightSubVar));
+        Formula.addClause(posLit(Var), negLit(LeftSubVar), negLit(RightSubVar));
+        Formula.addClause(negLit(Var), posLit(LeftSubVar), negLit(RightSubVar));
+        Formula.addClause(negLit(Var), negLit(LeftSubVar), posLit(RightSubVar));
+
+        // Visit the sub-values of `Val`.
+        UnprocessedSubVals.push(&B->getLeftSubValue());
+        UnprocessedSubVals.push(&B->getRightSubValue());
+      }
     }
   }
 

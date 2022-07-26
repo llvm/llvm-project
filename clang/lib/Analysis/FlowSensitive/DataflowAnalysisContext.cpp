@@ -113,16 +113,27 @@ BoolValue &DataflowAnalysisContext::getOrCreateNegation(BoolValue &Val) {
 
 BoolValue &DataflowAnalysisContext::getOrCreateImplication(BoolValue &LHS,
                                                            BoolValue &RHS) {
-  return &LHS == &RHS ? getBoolLiteralValue(true)
-                      : getOrCreateDisjunction(getOrCreateNegation(LHS), RHS);
+  if (&LHS == &RHS)
+    return getBoolLiteralValue(true);
+
+  auto Res = ImplicationVals.try_emplace(std::make_pair(&LHS, &RHS), nullptr);
+  if (Res.second)
+    Res.first->second =
+        &takeOwnership(std::make_unique<ImplicationValue>(LHS, RHS));
+  return *Res.first->second;
 }
 
 BoolValue &DataflowAnalysisContext::getOrCreateIff(BoolValue &LHS,
                                                    BoolValue &RHS) {
-  return &LHS == &RHS
-             ? getBoolLiteralValue(true)
-             : getOrCreateConjunction(getOrCreateImplication(LHS, RHS),
-                                      getOrCreateImplication(RHS, LHS));
+  if (&LHS == &RHS)
+    return getBoolLiteralValue(true);
+
+  auto Res = BiconditionalVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
+                                           nullptr);
+  if (Res.second)
+    Res.first->second =
+        &takeOwnership(std::make_unique<BiconditionalValue>(LHS, RHS));
+  return *Res.first->second;
 }
 
 AtomicBoolValue &DataflowAnalysisContext::makeFlowConditionToken() {
@@ -256,6 +267,24 @@ BoolValue &DataflowAnalysisContext::substituteBoolValue(
     auto &RightSub =
         substituteBoolValue(Conjunct.getRightSubValue(), SubstitutionsCache);
     Result = &getOrCreateConjunction(LeftSub, RightSub);
+    break;
+  }
+  case Value::Kind::Implication: {
+    auto &IV = *cast<ImplicationValue>(&Val);
+    auto &LeftSub =
+        substituteBoolValue(IV.getLeftSubValue(), SubstitutionsCache);
+    auto &RightSub =
+        substituteBoolValue(IV.getRightSubValue(), SubstitutionsCache);
+    Result = &getOrCreateImplication(LeftSub, RightSub);
+    break;
+  }
+  case Value::Kind::Biconditional: {
+    auto &BV = *cast<BiconditionalValue>(&Val);
+    auto &LeftSub =
+        substituteBoolValue(BV.getLeftSubValue(), SubstitutionsCache);
+    auto &RightSub =
+        substituteBoolValue(BV.getRightSubValue(), SubstitutionsCache);
+    Result = &getOrCreateIff(LeftSub, RightSub);
     break;
   }
   default:
