@@ -55,8 +55,6 @@ template <typename T> struct ProgramStateTrait {
   }
 };
 
-class RangeSet;
-
 /// \class ProgramState
 /// ProgramState - This class encapsulates:
 ///
