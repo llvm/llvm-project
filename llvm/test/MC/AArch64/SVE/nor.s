@@ -13,10 +13,10 @@ nor     p0.b, p0/z, p0.b, p0.b
 // CHECK-INST: nor     p0.b, p0/z, p0.b, p0.b
 // CHECK-ENCODING: [0x00,0x42,0x80,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 42 80 25 <unknown>
+// CHECK-UNKNOWN: 25804200 <unknown>
 
 nor     p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: nor     p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xef,0x7f,0x8f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef 7f 8f 25 <unknown>
+// CHECK-UNKNOWN: 258f7fef <unknown>

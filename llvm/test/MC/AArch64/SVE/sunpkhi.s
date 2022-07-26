@@ -13,16 +13,16 @@ sunpkhi z31.h, z31.b
 // CHECK-INST: sunpkhi	z31.h, z31.b
 // CHECK-ENCODING: [0xff,0x3b,0x71,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 3b 71 05 <unknown>
+// CHECK-UNKNOWN: 05713bff <unknown>
 
 sunpkhi z31.s, z31.h
 // CHECK-INST: sunpkhi	z31.s, z31.h
 // CHECK-ENCODING: [0xff,0x3b,0xb1,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 3b b1 05 <unknown>
+// CHECK-UNKNOWN: 05b13bff <unknown>
 
 sunpkhi z31.d, z31.s
 // CHECK-INST: sunpkhi	z31.d, z31.s
 // CHECK-ENCODING: [0xff,0x3b,0xf1,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 3b f1 05 <unknown>
+// CHECK-UNKNOWN: 05f13bff <unknown>

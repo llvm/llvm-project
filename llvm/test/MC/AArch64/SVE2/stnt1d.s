@@ -13,34 +13,34 @@ stnt1d z0.d, p0, [z1.d]
 // CHECK-INST: stnt1d { z0.d }, p0, [z1.d]
 // CHECK-ENCODING: [0x20,0x20,0x9f,0xe5]
 // CHECK-ERROR: instruction requires: sve2
-// CHECK-UNKNOWN: 20 20 9f e5 <unknown>
+// CHECK-UNKNOWN: e59f2020 <unknown>
 
 stnt1d z31.d, p7, [z31.d, xzr]
 // CHECK-INST: stnt1d { z31.d }, p7, [z31.d]
 // CHECK-ENCODING: [0xff,0x3f,0x9f,0xe5]
 // CHECK-ERROR: instruction requires: sve2
-// CHECK-UNKNOWN: ff 3f 9f e5 <unknown>
+// CHECK-UNKNOWN: e59f3fff <unknown>
 
 stnt1d z31.d, p7, [z31.d, x0]
 // CHECK-INST: stnt1d { z31.d }, p7, [z31.d, x0]
 // CHECK-ENCODING: [0xff,0x3f,0x80,0xe5]
 // CHECK-ERROR: instruction requires: sve2
-// CHECK-UNKNOWN: ff 3f 80 e5 <unknown>
+// CHECK-UNKNOWN: e5803fff <unknown>
 
 stnt1d { z0.d }, p0, [z1.d]
 // CHECK-INST: stnt1d { z0.d }, p0, [z1.d]
 // CHECK-ENCODING: [0x20,0x20,0x9f,0xe5]
 // CHECK-ERROR: instruction requires: sve2
-// CHECK-UNKNOWN: 20 20 9f e5 <unknown>
+// CHECK-UNKNOWN: e59f2020 <unknown>
 
 stnt1d { z31.d }, p7, [z31.d, xzr]
 // CHECK-INST: stnt1d { z31.d }, p7, [z31.d]
 // CHECK-ENCODING: [0xff,0x3f,0x9f,0xe5]
 // CHECK-ERROR: instruction requires: sve2
-// CHECK-UNKNOWN: ff 3f 9f e5 <unknown>
+// CHECK-UNKNOWN: e59f3fff <unknown>
 
 stnt1d { z31.d }, p7, [z31.d, x0]
 // CHECK-INST: stnt1d { z31.d }, p7, [z31.d, x0]
 // CHECK-ENCODING: [0xff,0x3f,0x80,0xe5]
 // CHECK-ERROR: instruction requires: sve2
-// CHECK-UNKNOWN: ff 3f 80 e5 <unknown>
+// CHECK-UNKNOWN: e5803fff <unknown>

@@ -13,16 +13,16 @@ frecpe   z0.h, z31.h
 // CHECK-INST: frecpe	z0.h, z31.h
 // CHECK-ENCODING: [0xe0,0x33,0x4e,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 33 4e 65 <unknown>
+// CHECK-UNKNOWN: 654e33e0 <unknown>
 
 frecpe   z0.s, z31.s
 // CHECK-INST: frecpe	z0.s, z31.s
 // CHECK-ENCODING: [0xe0,0x33,0x8e,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 33 8e 65 <unknown>
+// CHECK-UNKNOWN: 658e33e0 <unknown>
 
 frecpe   z0.d, z31.d
 // CHECK-INST: frecpe	z0.d, z31.d
 // CHECK-ENCODING: [0xe0,0x33,0xce,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 33 ce 65 <unknown>
+// CHECK-UNKNOWN: 65ce33e0 <unknown>

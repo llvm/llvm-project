@@ -13,10 +13,10 @@ nands   p0.b, p0/z, p0.b, p0.b
 // CHECK-INST: nands   p0.b, p0/z, p0.b, p0.b
 // CHECK-ENCODING: [0x10,0x42,0xc0,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 10 42 c0 25 <unknown>
+// CHECK-UNKNOWN: 25c04210 <unknown>
 
 nands   p15.b, p15/z, p15.b, p15.b
 // CHECK-INST: nands   p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xff,0x7f,0xcf,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 7f cf 25 <unknown>
+// CHECK-UNKNOWN: 25cf7fff <unknown>

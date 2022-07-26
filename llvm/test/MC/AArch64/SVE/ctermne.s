@@ -13,22 +13,22 @@ ctermne w30, wzr
 // CHECK-INST: ctermne	w30, wzr
 // CHECK-ENCODING: [0xd0,0x23,0xbf,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: d0 23 bf 25 <unknown>
+// CHECK-UNKNOWN: 25bf23d0 <unknown>
 
 ctermne wzr, w30
 // CHECK-INST: ctermne	wzr, w30
 // CHECK-ENCODING: [0xf0,0x23,0xbe,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: f0 23 be 25 <unknown>
+// CHECK-UNKNOWN: 25be23f0 <unknown>
 
 ctermne x30, xzr
 // CHECK-INST: ctermne	x30, xzr
 // CHECK-ENCODING: [0xd0,0x23,0xff,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: d0 23 ff 25 <unknown>
+// CHECK-UNKNOWN: 25ff23d0 <unknown>
 
 ctermne xzr, x30
 // CHECK-INST: ctermne	xzr, x30
 // CHECK-ENCODING: [0xf0,0x23,0xfe,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: f0 23 fe 25 <unknown>
+// CHECK-UNKNOWN: 25fe23f0 <unknown>
