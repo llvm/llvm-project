@@ -49,3 +49,12 @@ transform.sequence {
   ^bb3(%arg3: !pdl.operation):
   }
 }
+
+// CHECK: transform.sequence
+// CHECK: foreach
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  transform.foreach %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+  }
+}
