@@ -1182,7 +1182,7 @@ def allow_simulator_linking_to_macosx_dylibs : Flag<["-"], "allow_simulator_link
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
-def bitcode_process_mode : Flag<["-"], "bitcode_process_mode">,
+def bitcode_process_mode : Separate<["-"], "bitcode_process_mode">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
