@@ -22,8 +22,8 @@ inline bool isDebugSection(StringRef SecName) {
          SecName == ".gdb_index";
 }
 
-bool linkDebugInfo(object::ObjectFile &file, const Options &Options,
-                   raw_pwrite_stream &OutStream);
+Error linkDebugInfo(object::ObjectFile &file, const Options &Options,
+                    raw_pwrite_stream &OutStream);
 
 } // end of namespace dwarfutil
 } // end of namespace llvm

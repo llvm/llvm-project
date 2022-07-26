@@ -1595,6 +1595,7 @@ example:
       will match that of the ``allocptr`` argument and the ``allocptr``
       argument is invalidated, even if the function returns the same address.
     * "free": the function frees the block of memory specified by ``allocptr``.
+      Functions marked as "free" ``allockind`` must return void.
     * "uninitialized": Any newly-allocated memory (either a new block from
       a "alloc" function or the enlarged capacity from a "realloc" function)
       will be uninitialized.

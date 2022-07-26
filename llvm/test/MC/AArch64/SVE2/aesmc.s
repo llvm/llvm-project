@@ -14,10 +14,10 @@ aesmc z0.b, z0.b
 // CHECK-INST: aesmc z0.b, z0.b
 // CHECK-ENCODING: [0x00,0xe0,0x20,0x45]
 // CHECK-ERROR: instruction requires: sve2-aes
-// CHECK-UNKNOWN: 00 e0 20 45 <unknown>
+// CHECK-UNKNOWN: 4520e000 <unknown>
 
 aesmc z31.b, z31.b
 // CHECK-INST: aesmc z31.b, z31.b
 // CHECK-ENCODING: [0x1f,0xe0,0x20,0x45]
 // CHECK-ERROR: instruction requires: sve2-aes
-// CHECK-UNKNOWN: 1f e0 20 45 <unknown>
+// CHECK-UNKNOWN: 4520e01f <unknown>

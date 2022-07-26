@@ -328,7 +328,7 @@ define void @test8() {
   ret void
 }
 
-declare noalias i8* @malloc(i32) willreturn
+declare noalias i8* @malloc(i32) willreturn allockind("alloc,uninitialized") allocsize(0)
 
 ; rdar://11341081
 %struct.big = type { [50 x i32] }

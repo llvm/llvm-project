@@ -299,8 +299,8 @@ cc_test(
         "//llvm:gtest_main",
         "//mlir:AffineAnalysis",
         "//mlir:Analysis",
-        "//mlir:IR",
         "//mlir:Parser",
+        "//mlir:IR",
     ],
 )
 

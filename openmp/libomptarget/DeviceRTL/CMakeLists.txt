@@ -20,6 +20,12 @@ if (NOT LIBOMPTARGET_BUILD_DEVICERTL_BCLIB)
   return()
 endif()
 
+# Check to ensure the host system is a supported host architecture.
+if(NOT ${CMAKE_SIZEOF_VOID_P} EQUAL "8")
+  libomptarget_say("Not building DeviceRTL: Runtime does not support 32-bit hosts")
+  return()
+endif()
+
 if (LLVM_DIR)
   # Builds that use pre-installed LLVM have LLVM_DIR set.
   # A standalone or LLVM_ENABLE_RUNTIMES=openmp build takes this route

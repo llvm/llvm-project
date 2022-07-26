@@ -216,17 +216,16 @@ public:
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
-  virtual void emitProcBindClause(CodeGenFunction &CGF,
-                                  llvm::omp::ProcBindKind ProcBind,
-                                  SourceLocation Loc) override;
+  void emitProcBindClause(CodeGenFunction &CGF,
+                          llvm::omp::ProcBindKind ProcBind,
+                          SourceLocation Loc) override;
 
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
   /// \param NumThreads An integer value of threads.
-  virtual void emitNumThreadsClause(CodeGenFunction &CGF,
-                                    llvm::Value *NumThreads,
-                                    SourceLocation Loc) override;
+  void emitNumThreadsClause(CodeGenFunction &CGF, llvm::Value *NumThreads,
+                            SourceLocation Loc) override;
 
   /// This function ought to emit, in the general case, a call to
   // the openmp runtime kmpc_push_num_teams. In NVPTX backend it is not needed
@@ -330,12 +329,12 @@ public:
   ///     SimpleReduction Emit reduction operation only. Used for omp simd
   ///     directive on the host.
   ///     ReductionKind The kind of reduction to perform.
-  virtual void emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
-                             ArrayRef<const Expr *> Privates,
-                             ArrayRef<const Expr *> LHSExprs,
-                             ArrayRef<const Expr *> RHSExprs,
-                             ArrayRef<const Expr *> ReductionOps,
-                             ReductionOptionsTy Options) override;
+  void emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
+                     ArrayRef<const Expr *> Privates,
+                     ArrayRef<const Expr *> LHSExprs,
+                     ArrayRef<const Expr *> RHSExprs,
+                     ArrayRef<const Expr *> ReductionOps,
+                     ReductionOptionsTy Options) override;
 
   /// Returns specified OpenMP runtime function for the current OpenMP
   /// implementation.  Specialized for the NVPTX device.

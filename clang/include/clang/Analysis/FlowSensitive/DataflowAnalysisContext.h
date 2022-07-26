@@ -340,6 +340,10 @@ private:
   llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, DisjunctionValue *>
       DisjunctionVals;
   llvm::DenseMap<BoolValue *, NegationValue *> NegationVals;
+  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ImplicationValue *>
+      ImplicationVals;
+  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, BiconditionalValue *>
+      BiconditionalVals;
 
   // Flow conditions are tracked symbolically: each unique flow condition is
   // associated with a fresh symbolic variable (token), bound to the clause that

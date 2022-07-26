@@ -182,9 +182,13 @@ void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
   for (const PlaceholderRecovery *Option : BestOptions) {
     const ForestNode &Placeholder =
         Params.Forest.createOpaque(Option->Symbol, RecoveryRange->Begin);
-    const GSS::Node *NewHead = Params.GSStack.addNode(
-        *Lang.Table.getGoToState(Option->RecoveryNode->State, Option->Symbol),
-        &Placeholder, {Option->RecoveryNode});
+    LRTable::StateID OldState = Option->RecoveryNode->State;
+    LRTable::StateID NewState =
+        isToken(Option->Symbol)
+            ? *Lang.Table.getShiftState(OldState, Option->Symbol)
+            : *Lang.Table.getGoToState(OldState, Option->Symbol);
+    const GSS::Node *NewHead =
+        Params.GSStack.addNode(NewState, &Placeholder, {Option->RecoveryNode});
     NewHeads.push_back(NewHead);
   }
   TokenIndex = RecoveryRange->End;

@@ -91,7 +91,7 @@ void Scope::Init(Scope *parent, unsigned flags) {
   UsingDirectives.clear();
   Entity = nullptr;
   ErrorTrap.reset();
-  NRVO.setPointerAndInt(nullptr, false);
+  NRVO = None;
 }
 
 bool Scope::containedInPrototypeScope() const {
@@ -118,19 +118,71 @@ void Scope::AddFlags(unsigned FlagsToSet) {
   Flags |= FlagsToSet;
 }
 
-void Scope::mergeNRVOIntoParent() {
-  if (VarDecl *Candidate = NRVO.getPointer()) {
-    if (isDeclScope(Candidate))
-      Candidate->setNRVOVariable(true);
+// The algorithm for updating NRVO candidate is as follows:
+//   1. All previous candidates become invalid because a new NRVO candidate is
+//      obtained. Therefore, we need to clear return slots for other
+//      variables defined before the current return statement in the current
+//      scope and in outer scopes.
+//   2. Store the new candidate if its return slot is available. Otherwise,
+//      there is no NRVO candidate so far.
+void Scope::updateNRVOCandidate(VarDecl *VD) {
+  auto UpdateReturnSlotsInScopeForVD = [VD](Scope *S) -> bool {
+    bool IsReturnSlotFound = S->ReturnSlots.contains(VD);
+
+    // We found a candidate variable that can be put into a return slot.
+    // Clear the set, because other variables cannot occupy a return
+    // slot in the same scope.
+    S->ReturnSlots.clear();
+
+    if (IsReturnSlotFound)
+      S->ReturnSlots.insert(VD);
+
+    return IsReturnSlotFound;
+  };
+
+  bool CanBePutInReturnSlot = false;
+
+  for (auto *S = this; S; S = S->getParent()) {
+    CanBePutInReturnSlot |= UpdateReturnSlotsInScopeForVD(S);
+
+    if (S->getEntity())
+      break;
   }
 
-  if (getEntity())
+  // Consider the variable as NRVO candidate if the return slot is available
+  // for it in the current scope, or if it can be available in outer scopes.
+  NRVO = CanBePutInReturnSlot ? VD : nullptr;
+}
+
+void Scope::applyNRVO() {
+  // There is no NRVO candidate in the current scope.
+  if (!NRVO.hasValue())
     return;
 
-  if (NRVO.getInt())
-    getParent()->setNoNRVO();
-  else if (NRVO.getPointer())
-    getParent()->addNRVOCandidate(NRVO.getPointer());
+  if (*NRVO && isDeclScope(*NRVO))
+    NRVO.getValue()->setNRVOVariable(true);
+
+  // It's necessary to propagate NRVO candidate to the parent scope for cases
+  // when the parent scope doesn't contain a return statement.
+  // For example:
+  //    X foo(bool b) {
+  //      X x;
+  //      if (b)
+  //        return x;
+  //      exit(0);
+  //    }
+  // Also, we need to propagate nullptr value that means NRVO is not
+  // allowed in this scope.
+  // For example:
+  //    X foo(bool b) {
+  //      X x;
+  //      if (b)
+  //        return x;
+  //      else
+  //        return X(); // NRVO is not allowed
+  //    }
+  if (!getEntity())
+    getParent()->NRVO = *NRVO;
 }
 
 LLVM_DUMP_METHOD void Scope::dump() const { dumpImpl(llvm::errs()); }
@@ -193,8 +245,10 @@ void Scope::dumpImpl(raw_ostream &OS) const {
   if (const DeclContext *DC = getEntity())
     OS << "Entity : (clang::DeclContext*)" << DC << '\n';
 
-  if (NRVO.getInt())
-    OS << "NRVO not allowed\n";
-  else if (NRVO.getPointer())
-    OS << "NRVO candidate : (clang::VarDecl*)" << NRVO.getPointer() << '\n';
+  if (!NRVO)
+    OS << "there is no NRVO candidate\n";
+  else if (*NRVO)
+    OS << "NRVO candidate : (clang::VarDecl*)" << *NRVO << '\n';
+  else
+    OS << "NRVO is not allowed\n";
 }

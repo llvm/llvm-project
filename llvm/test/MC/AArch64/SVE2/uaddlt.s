@@ -14,16 +14,16 @@ uaddlt z0.h, z1.b, z2.b
 // CHECK-INST: uaddlt z0.h, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x0c,0x42,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 0c 42 45 <unknown>
+// CHECK-UNKNOWN: 45420c20 <unknown>
 
 uaddlt z29.s, z30.h, z31.h
 // CHECK-INST: uaddlt z29.s, z30.h, z31.h
 // CHECK-ENCODING: [0xdd,0x0f,0x9f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: dd 0f 9f 45 <unknown>
+// CHECK-UNKNOWN: 459f0fdd <unknown>
 
 uaddlt z31.d, z31.s, z31.s
 // CHECK-INST: uaddlt z31.d, z31.s, z31.s
 // CHECK-ENCODING: [0xff,0x0f,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff 0f df 45 <unknown>
+// CHECK-UNKNOWN: 45df0fff <unknown>

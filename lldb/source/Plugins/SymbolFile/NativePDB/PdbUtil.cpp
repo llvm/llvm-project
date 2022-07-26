@@ -475,7 +475,7 @@ llvm::StringRef lldb_private::npdb::DropNameScope(llvm::StringRef name) {
 }
 
 VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
-  VariableInfo result;
+  VariableInfo result = {};
 
   if (sym.kind() == S_REGREL32) {
     RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);

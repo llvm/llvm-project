@@ -24,12 +24,12 @@ _start:
  ret
 
 // CHECK: <_start>:
-// CHECK-NEXT:   211ff8:        41 d0 3b d5     mrs     x1, TPIDR_EL0
-// CHECK-NEXT:   211ffc:        00 00 a0 d2     movz    x0, #0, lsl #16
-// CHECK-NEXT:   212000:        01 02 80 f2     movk    x1, #16
-// CHECK-NEXT:   212004:        00 00 a0 d2     movz    x0, #0, lsl #16
-// CHECK-NEXT:   212008:        01 02 80 f2     movk    x1, #16
-// CHECK-NEXT:   21200c:        c0 03 5f d6     ret
+// CHECK-NEXT:   211ff8:        d53bd041        mrs     x1, TPIDR_EL0
+// CHECK-NEXT:   211ffc:        d2a00000        movz    x0, #0, lsl #16
+// CHECK-NEXT:   212000:        f2800201        movk    x1, #16
+// CHECK-NEXT:   212004:        d2a00000        movz    x0, #0, lsl #16
+// CHECK-NEXT:   212008:        f2800201        movk    x1, #16
+// CHECK-NEXT:   21200c:        d65f03c0        ret
 
  .type  v,@object
  .section       .tbss,"awT",@nobits

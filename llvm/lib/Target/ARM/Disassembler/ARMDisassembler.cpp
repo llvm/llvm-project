@@ -139,6 +139,9 @@ public:
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
 
+  uint64_t suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
+                              uint64_t Address) const override;
+
 private:
   DecodeStatus getARMInstruction(MCInst &Instr, uint64_t &Size,
                                  ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -737,6 +740,33 @@ static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
       return Result;
     default: return Result;
   }
+}
+
+uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
+                                             uint64_t Address) const {
+  // In Arm state, instructions are always 4 bytes wide, so there's no
+  // point in skipping any smaller number of bytes if an instruction
+  // can't be decoded.
+  if (!STI.getFeatureBits()[ARM::ModeThumb])
+    return 4;
+
+  // In a Thumb instruction stream, a halfword is a standalone 2-byte
+  // instruction if and only if its value is less than 0xE800.
+  // Otherwise, it's the first halfword of a 4-byte instruction.
+  //
+  // So, if we can see the upcoming halfword, we can judge on that
+  // basis, and maybe skip a whole 4-byte instruction that we don't
+  // know how to decode, without accidentally trying to interpret its
+  // second half as something else.
+  //
+  // If we don't have the instruction data available, we just have to
+  // recommend skipping the minimum sensible distance, which is 2
+  // bytes.
+  if (Bytes.size() < 2)
+    return 2;
+
+  uint16_t Insn16 = (Bytes[1] << 8) | Bytes[0];
+  return Insn16 < 0xE800 ? 2 : 4;
 }
 
 DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,

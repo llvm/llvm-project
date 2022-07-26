@@ -9,6 +9,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"

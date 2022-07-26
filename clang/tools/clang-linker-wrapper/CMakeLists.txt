@@ -1,3 +1,5 @@
+include(GNUInstallDirs)
+
 set(LLVM_LINK_COMPONENTS 
   ${LLVM_TARGETS_TO_BUILD}
   BitWriter
@@ -42,4 +44,4 @@ target_link_libraries(clang-linker-wrapper
   ${CLANG_LINKER_WRAPPER_LIB_DEPS}
   )
 
-install(TARGETS clang-linker-wrapper RUNTIME DESTINATION bin)
+install(TARGETS clang-linker-wrapper RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

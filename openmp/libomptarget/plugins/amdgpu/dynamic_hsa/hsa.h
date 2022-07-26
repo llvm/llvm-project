@@ -58,7 +58,8 @@ typedef enum {
 } hsa_device_type_t;
 
 typedef enum {
-  HSA_ISA_INFO_NAME = 1,
+  HSA_ISA_INFO_NAME_LENGTH = 0,
+  HSA_ISA_INFO_NAME = 1
 } hsa_isa_info_t;
 
 typedef enum {
