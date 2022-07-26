@@ -1,6 +1,9 @@
 ! Test the MLIR pass pipeline
 
 ! RUN: bbc --mlir-pass-statistics --mlir-pass-statistics-display=pipeline %s 2>&1 | FileCheck %s
+
+! REQUIRES: asserts
+
 end program
 
 ! CHECK: Pass statistics report
