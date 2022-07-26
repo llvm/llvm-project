@@ -1128,8 +1128,8 @@ static void collectLocalBranchTargets(
     bool Disassembled =
         DisAsm->getInstruction(Inst, Size, ThisBytes, Index, nulls());
     if (Size == 0)
-      Size = std::min(ThisBytes.size(),
-                      DisAsm->suggestBytesToSkip(ThisBytes, Index));
+      Size = std::min<uint64_t>(ThisBytes.size(),
+                                DisAsm->suggestBytesToSkip(ThisBytes, Index));
 
     if (Disassembled && MIA) {
       uint64_t Target;
@@ -1175,8 +1175,8 @@ static void addSymbolizer(
     ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index - SectionAddr);
     DisAsm->getInstruction(Inst, Size, ThisBytes, Index, nulls());
     if (Size == 0)
-      Size = std::min(ThisBytes.size(),
-                      DisAsm->suggestBytesToSkip(ThisBytes, Index));
+      Size = std::min<uint64_t>(ThisBytes.size(),
+                                DisAsm->suggestBytesToSkip(ThisBytes, Index));
     Index += Size;
   }
   ArrayRef<uint64_t> LabelAddrsRef = SymbolizerPtr->getReferencedAddresses();
@@ -1648,8 +1648,9 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           bool Disassembled = DisAsm->getInstruction(Inst, Size, ThisBytes,
                                                      ThisAddr, CommentStream);
           if (Size == 0)
-            Size = std::min(ThisBytes.size(),
-                            DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
+            Size = std::min<uint64_t>(
+                ThisBytes.size(),
+                DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
 
           LVP.update({Index, Section.getIndex()},
                      {Index + Size, Section.getIndex()}, Index + Size != End);
