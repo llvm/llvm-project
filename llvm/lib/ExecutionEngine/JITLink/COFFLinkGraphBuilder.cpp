@@ -231,8 +231,10 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
                << getCOFFSectionName(SectionIndex, Sec, *Sym)
                << " (index: " << SectionIndex << ") \n";
       });
-      GSym =
-          &G->addExternalSymbol(SymbolName, Sym->getValue(), Linkage::Strong);
+      if (!ExternalSymbols.count(SymbolName))
+        ExternalSymbols[SymbolName] =
+            &G->addExternalSymbol(SymbolName, Sym->getValue(), Linkage::Strong);
+      GSym = ExternalSymbols[SymbolName];
     } else if (Sym->isWeakExternal()) {
       COFFSymbolIndex TagIndex =
           Sym->getAux<object::coff_aux_weak_external>()->TagIndex;
