@@ -74,9 +74,8 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
 class TerminatorVisitor : public ConstStmtVisitor<TerminatorVisitor> {
 public:
   TerminatorVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
-                    int BlockSuccIdx, TransferOptions TransferOptions)
-      : StmtToEnv(StmtToEnv), Env(Env), BlockSuccIdx(BlockSuccIdx),
-        TransferOptions(TransferOptions) {}
+                    int BlockSuccIdx)
+      : StmtToEnv(StmtToEnv), Env(Env), BlockSuccIdx(BlockSuccIdx) {}
 
   void VisitIfStmt(const IfStmt *S) {
     auto *Cond = S->getCond();
@@ -119,7 +118,7 @@ private:
   void extendFlowCondition(const Expr &Cond) {
     // The terminator sub-expression might not be evaluated.
     if (Env.getStorageLocation(Cond, SkipPast::None) == nullptr)
-      transfer(StmtToEnv, Cond, Env, TransferOptions);
+      transfer(StmtToEnv, Cond, Env);
 
     // FIXME: The flow condition must be an r-value, so `SkipPast::None` should
     // suffice.
@@ -151,7 +150,6 @@ private:
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
   int BlockSuccIdx;
-  TransferOptions TransferOptions;
 };
 
 /// Computes the input state for a given basic block by joining the output
@@ -219,8 +217,7 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
         const StmtToEnvMapImpl StmtToEnv(CFCtx, BlockStates);
         TerminatorVisitor(StmtToEnv, PredState.Env,
-                          blockIndexInPredecessor(*Pred, Block),
-                          Analysis.builtinTransferOptions())
+                          blockIndexInPredecessor(*Pred, Block))
             .Visit(PredTerminatorStmt);
       }
     }
@@ -256,8 +253,7 @@ static void transferCFGStmt(
   assert(S != nullptr);
 
   if (Analysis.applyBuiltinTransfer())
-    transfer(StmtToEnvMapImpl(CFCtx, BlockStates), *S, State.Env,
-             Analysis.builtinTransferOptions());
+    transfer(StmtToEnvMapImpl(CFCtx, BlockStates), *S, State.Env);
   Analysis.transferTypeErased(S, State.Lattice, State.Env);
 
   if (HandleTransferredStmt != nullptr)

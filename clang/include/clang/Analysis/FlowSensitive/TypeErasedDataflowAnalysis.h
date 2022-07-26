@@ -23,7 +23,6 @@
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
@@ -37,9 +36,6 @@ struct DataflowAnalysisOptions {
   // (at which point the built-in transfer functions can be simply a standalone
   // analysis).
   bool ApplyBuiltinTransfer = true;
-
-  /// Only has an effect if `ApplyBuiltinTransfer` is true.
-  TransferOptions BuiltinTransferOptions;
 };
 
 /// Type-erased lattice element container.
@@ -61,7 +57,7 @@ public:
 
   /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
   TypeErasedDataflowAnalysis(bool ApplyBuiltinTransfer)
-      : Options({ApplyBuiltinTransfer, TransferOptions{}}) {}
+      : Options({ApplyBuiltinTransfer}) {}
 
   TypeErasedDataflowAnalysis(DataflowAnalysisOptions Options)
       : Options(Options) {}
@@ -94,11 +90,6 @@ public:
   /// Determines whether to apply the built-in transfer functions, which model
   /// the heap and stack in the `Environment`.
   bool applyBuiltinTransfer() const { return Options.ApplyBuiltinTransfer; }
-
-  /// Returns the options to be passed to the built-in transfer functions.
-  TransferOptions builtinTransferOptions() const {
-    return Options.BuiltinTransferOptions;
-  }
 };
 
 /// Type-erased model of the program at a given program point.
