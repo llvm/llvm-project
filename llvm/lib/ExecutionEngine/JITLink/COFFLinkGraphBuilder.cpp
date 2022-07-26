@@ -422,10 +422,12 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
           Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION, false);
     }
     if (Definition->Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
-      // FIXME: don't dead strip this when parent section is alive
-      return &G->addDefinedSymbol(
+      auto Target = Definition->getNumber(Symbol.isBigObj());
+      auto GSym = &G->addDefinedSymbol(
           *B, Symbol.getValue(), SymbolName, 0, Linkage::Strong, Scope::Local,
           Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION, false);
+      getGraphBlock(Target)->addEdge(Edge::KeepAlive, 0, *GSym, 0);
+      return GSym;
     }
     if (PendingComdatExport)
       return make_error<JITLinkError>(
