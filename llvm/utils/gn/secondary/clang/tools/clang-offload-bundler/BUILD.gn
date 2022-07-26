@@ -2,6 +2,7 @@ executable("clang-offload-bundler") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/Basic",
+    "//clang/lib/Driver",
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
