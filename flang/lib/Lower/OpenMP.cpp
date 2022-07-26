@@ -22,6 +22,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using namespace mlir;
@@ -61,7 +62,8 @@ getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
 
 template <typename T>
 static void createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
-                                 const T *clause) {
+                                 const T *clause,
+                                 Block *lastPrivBlock = nullptr) {
   const Fortran::parser::OmpObjectList &ompObjectList = clause->v;
   for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
     Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
@@ -74,16 +76,25 @@ static void createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
     assert(success && "Privatization failed due to existing binding");
     if constexpr (std::is_same_v<T, Fortran::parser::OmpClause::Firstprivate>) {
       converter.copyHostAssociateVar(*sym);
+    } else if constexpr (std::is_same_v<
+                             T, Fortran::parser::OmpClause::Lastprivate>) {
+      converter.copyHostAssociateVar(*sym, lastPrivBlock);
     }
   }
 }
 
-static void privatizeVars(Fortran::lower::AbstractConverter &converter,
+template <typename Op>
+static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
                           const Fortran::parser::OmpClauseList &opClauseList) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
   bool hasFirstPrivateOp = false;
+  bool hasLastPrivateOp = false;
+  Block *lastPrivBlock = nullptr;
+  // We need just one ICmpOp for multiple LastPrivate clauses.
+  mlir::arith::CmpIOp cmpOp;
+
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (const auto &privateClause =
             std::get_if<Fortran::parser::OmpClause::Private>(&clause.u)) {
@@ -93,11 +104,73 @@ static void privatizeVars(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       createPrivateVarSyms(converter, firstPrivateClause);
       hasFirstPrivateOp = true;
+    } else if (const auto &lastPrivateClause =
+                   std::get_if<Fortran::parser::OmpClause::Lastprivate>(
+                       &clause.u)) {
+      // TODO: Add lastprivate support for sections construct, simd construct
+      if (std::is_same_v<Op, omp::WsLoopOp>) {
+        omp::WsLoopOp *wsLoopOp = dyn_cast<omp::WsLoopOp>(&op);
+        fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+        auto insPt = firOpBuilder.saveInsertionPoint();
+
+        // Our goal here is to introduce the following control flow
+        // just before exiting the worksharing loop.
+        // Say our wsloop is as follows:
+        //
+        // omp.wsloop {
+        //    ...
+        //    store
+        //    omp.yield
+        // }
+        //
+        // We want to convert it to the following:
+        //
+        // omp.wsloop {
+        //    ...
+        //    store
+        //    %cmp = llvm.icmp "eq" %iv %ub
+        //    scf.if %cmp {
+        //      ^%lpv_update_blk:
+        //    }
+        //    omp.yield
+        // }
+
+        Operation *lastOper = wsLoopOp->region().back().getTerminator();
+
+        firOpBuilder.setInsertionPoint(lastOper);
+
+        // TODO: The following will not work when there is collapse present.
+        // Have to modify this in future.
+        for (const Fortran::parser::OmpClause &clause : opClauseList.v)
+          if (const auto &collapseClause =
+                  std::get_if<Fortran::parser::OmpClause::Collapse>(&clause.u))
+            TODO(converter.getCurrentLocation(),
+                 "Collapse clause with lastprivate");
+        // Only generate the compare once in presence of multiple LastPrivate
+        // clauses
+        if (!hasLastPrivateOp) {
+          cmpOp = firOpBuilder.create<mlir::arith::CmpIOp>(
+              wsLoopOp->getLoc(), mlir::arith::CmpIPredicate::eq,
+              wsLoopOp->getRegion().front().getArguments()[0],
+              wsLoopOp->upperBound()[0]);
+        }
+        mlir::scf::IfOp ifOp = firOpBuilder.create<mlir::scf::IfOp>(
+            wsLoopOp->getLoc(), cmpOp, /*else*/ false);
+
+        firOpBuilder.restoreInsertionPoint(insPt);
+        createPrivateVarSyms(converter, lastPrivateClause,
+                             &(ifOp.getThenRegion().front()));
+      } else {
+        TODO(converter.getCurrentLocation(),
+             "lastprivate clause in constructs other than work-share loop");
+      }
+      hasLastPrivateOp = true;
     }
   }
   if (hasFirstPrivateOp)
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
   firOpBuilder.restoreInsertionPoint(insPt);
+  return hasLastPrivateOp;
 }
 
 /// The COMMON block is a global structure. \p commonValue is the base address
@@ -300,6 +373,14 @@ void createEmptyRegionBlocks(
   }
 }
 
+void resetBeforeTerminator(fir::FirOpBuilder &firOpBuilder,
+                           mlir::Operation *storeOp, mlir::Block &block) {
+  if (storeOp)
+    firOpBuilder.setInsertionPointAfter(storeOp);
+  else
+    firOpBuilder.setInsertionPointToStart(&block);
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]    op - the operation the body belongs to.
@@ -374,14 +455,18 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   }
 
   // Reset the insert point to before the terminator.
-  if (storeOp)
-    firOpBuilder.setInsertionPointAfter(storeOp);
-  else
-    firOpBuilder.setInsertionPointToStart(&block);
+  resetBeforeTerminator(firOpBuilder, storeOp, block);
 
   // Handle privatization. Do not privatize if this is the outer operation.
-  if (clauses && !outerCombined)
-    privatizeVars(converter, *clauses);
+  if (clauses && !outerCombined) {
+    bool lastPrivateOp = privatizeVars(op, converter, *clauses);
+    // LastPrivatization, due to introduction of
+    // new control flow, changes the insertion point,
+    // thus restore it.
+    // TODO: Clean up later a bit to avoid this many sets and resets.
+    if (lastPrivateOp)
+      resetBeforeTerminator(firOpBuilder, storeOp, block);
+  }
 
   if constexpr (std::is_same_v<Op, omp::ParallelOp>) {
     threadPrivatizeVars(converter, eval);
