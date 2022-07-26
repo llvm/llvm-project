@@ -629,35 +629,6 @@ static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2]) {
   return false;
 }
 
-static bool FindRacyAddress(const RacyAddress &ra0) {
-  for (uptr i = 0; i < ctx->racy_addresses.Size(); i++) {
-    RacyAddress ra2 = ctx->racy_addresses[i];
-    uptr maxbeg = max(ra0.addr_min, ra2.addr_min);
-    uptr minend = min(ra0.addr_max, ra2.addr_max);
-    if (maxbeg < minend) {
-      VPrintf(2, "ThreadSanitizer: suppressing report as doubled (addr)\n");
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool HandleRacyAddress(ThreadState *thr, uptr addr_min, uptr addr_max) {
-  if (!flags()->suppress_equal_addresses)
-    return false;
-  RacyAddress ra0 = {addr_min, addr_max};
-  {
-    ReadLock lock(&ctx->racy_mtx);
-    if (FindRacyAddress(ra0))
-      return true;
-  }
-  Lock lock(&ctx->racy_mtx);
-  if (FindRacyAddress(ra0))
-    return true;
-  ctx->racy_addresses.PushBack(ra0);
-  return false;
-}
-
 bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
   // These should have been checked in ShouldReport.
   // It's too late to check them here, we have already taken locks.
@@ -760,8 +731,6 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   uptr addr_min = min(addr0, addr1);
   uptr addr_max = max(end0, end1);
   if (IsExpectedReport(addr_min, addr_max - addr_min))
-    return;
-  if (HandleRacyAddress(thr, addr_min, addr_max))
     return;
 
   ReportType rep_typ = ReportTypeRace;
