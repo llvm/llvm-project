@@ -18,10 +18,10 @@ $_f2 = comdat any
 
 ; CHECK-LABEL: @test
 ; CHECK: store i8 3, i8 addrspace(3)* %0, align 4, !alias.scope !0, !noalias !3
-; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %2, i8 addrspace(3)* noundef align 1 dereferenceable(3) %1, i64 3, i1 false), !alias.scope !6, !noalias !7
-; CHECK: %4 = load i8, i8 addrspace(3)* %3, align 4, !alias.scope !8, !noalias !9
-; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %7, i8 addrspace(3)* noundef align 1 dereferenceable(3) %6, i64 3, i1 false), !alias.scope !6, !noalias !7
-; CHECK: %9 = load i8, i8 addrspace(3)* %8, align 4, !alias.scope !8, !noalias !9
+; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %2, i8 addrspace(3)* noundef align 1 dereferenceable(3) %1, i64 3, i1 false), !alias.scope !5, !noalias !6
+; CHECK: %4 = load i8, i8 addrspace(3)* %3, align 4, !alias.scope !3, !noalias !0
+; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %7, i8 addrspace(3)* noundef align 1 dereferenceable(3) %6, i64 3, i1 false), !alias.scope !5, !noalias !6
+; CHECK: %9 = load i8, i8 addrspace(3)* %8, align 4, !alias.scope !3, !noalias !0
 
 define protected amdgpu_kernel void @test(i8 addrspace(1)* nocapture %ptr.coerce) local_unnamed_addr #0 {
 entry:
@@ -44,10 +44,7 @@ declare void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noalias nocapture write
 ; CHECK:!0 = !{!1}
 ; CHECK:!1 = distinct !{!1, !2}
 ; CHECK:!2 = distinct !{!2}
-; CHECK:!3 = !{!4, !5}
+; CHECK:!3 = !{!4}
 ; CHECK:!4 = distinct !{!4, !2}
-; CHECK:!5 = distinct !{!5, !2}
-; CHECK:!6 = !{!5, !1}
-; CHECK:!7 = !{!4}
-; CHECK:!8 = !{!5}
-; CHECK:!9 = !{!1, !4}
+; CHECK:!5 = !{!4, !1}
+; CHECK:!6 = !{}
