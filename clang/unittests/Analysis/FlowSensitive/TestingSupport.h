@@ -251,12 +251,16 @@ public:
 
   // Creates a boolean implication value.
   BoolValue *impl(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    return disj(neg(LeftSubVal), RightSubVal);
+    Vals.push_back(
+        std::make_unique<ImplicationValue>(*LeftSubVal, *RightSubVal));
+    return Vals.back().get();
   }
 
   // Creates a boolean biconditional value.
   BoolValue *iff(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    return conj(impl(LeftSubVal, RightSubVal), impl(RightSubVal, LeftSubVal));
+    Vals.push_back(
+        std::make_unique<BiconditionalValue>(*LeftSubVal, *RightSubVal));
+    return Vals.back().get();
   }
 
 private:

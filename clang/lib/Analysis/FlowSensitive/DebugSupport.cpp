@@ -96,6 +96,20 @@ public:
       S = formatv("(not\n{0})", debugString(N.getSubVal(), Depth + 1));
       break;
     }
+    case Value::Kind::Implication: {
+      auto &IV = cast<ImplicationValue>(B);
+      auto L = debugString(IV.getLeftSubValue(), Depth + 1);
+      auto R = debugString(IV.getRightSubValue(), Depth + 1);
+      S = formatv("(=>\n{0}\n{1})", L, R);
+      break;
+    }
+    case Value::Kind::Biconditional: {
+      auto &BV = cast<BiconditionalValue>(B);
+      auto L = debugString(BV.getLeftSubValue(), Depth + 1);
+      auto R = debugString(BV.getRightSubValue(), Depth + 1);
+      S = formatv("(=\n{0}\n{1})", L, R);
+      break;
+    }
     default:
       llvm_unreachable("Unhandled value kind");
     }
