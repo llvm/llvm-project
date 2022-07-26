@@ -589,7 +589,7 @@ void ExprEngine::handleConstructor(const Expr *E,
 
     unsigned Idx = 0;
     if (CE->getType()->isArrayType() || AILE) {
-      Idx = getIndexOfElementToConstruct(State, CE, LCtx).getValueOr(0u);
+      Idx = getIndexOfElementToConstruct(State, CE, LCtx).value_or(0u);
       State = setIndexOfElementToConstruct(State, CE, LCtx, Idx + 1);
     }
 
