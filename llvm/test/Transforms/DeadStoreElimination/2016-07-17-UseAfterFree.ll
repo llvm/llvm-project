@@ -23,10 +23,10 @@ entry:
 }
 
 ; Function Attrs: nounwind
-declare void @free(i8* nocapture) local_unnamed_addr #0
+declare void @free(i8* nocapture allocptr) local_unnamed_addr #0
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind allockind("free")}
 attributes #1 = { argmemonly nounwind }

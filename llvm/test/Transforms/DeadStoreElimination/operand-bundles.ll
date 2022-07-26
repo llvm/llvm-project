@@ -42,7 +42,7 @@ define void @test3() {
   ret void
 }
 
-declare noalias i8* @calloc(i64, i64) inaccessiblememonly
+declare noalias i8* @calloc(i64, i64) inaccessiblememonly allockind("alloc,zeroed")
 
 define void @test4() {
 ; CHECK-LABEL: @test4

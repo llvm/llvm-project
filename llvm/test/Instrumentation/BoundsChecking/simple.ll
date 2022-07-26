@@ -6,9 +6,9 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-
 @.str_as1 = private addrspace(1) constant [8 x i8] c"abcdefg\00"   ; <[8 x i8] addrspace(1)*>
 
 
-declare noalias i8* @malloc(i64) nounwind
-declare noalias i8* @calloc(i64, i64) nounwind
-declare noalias i8* @realloc(i8* nocapture, i64) nounwind
+declare noalias i8* @malloc(i64) nounwind allocsize(0)
+declare noalias i8* @calloc(i64, i64) nounwind allocsize(0,1)
+declare noalias i8* @realloc(i8* nocapture allocptr, i64) nounwind allocsize(1)
 
 ; CHECK: @f1
 define void @f1() nounwind {
