@@ -2335,18 +2335,6 @@ bool TargetLoweringBase::shouldLocalize(const MachineInstr &MI,
     llvm_unreachable("Unexpected remat cost");
   };
 
-  // Helper to walk through uses and terminate if we've reached a limit. Saves
-  // us spending time traversing uses if all we want to know is if it's >= min.
-  auto isUsesAtMost = [&](unsigned Reg, unsigned MaxUses) {
-    unsigned NumUses = 0;
-    auto UI = MRI.use_instr_nodbg_begin(Reg), UE = MRI.use_instr_nodbg_end();
-    for (; UI != UE && NumUses < MaxUses; ++UI) {
-      NumUses++;
-    }
-    // If we haven't reached the end yet then there are more than MaxUses users.
-    return UI == UE;
-  };
-
   switch (MI.getOpcode()) {
   default:
     return false;
@@ -2363,8 +2351,7 @@ bool TargetLoweringBase::shouldLocalize(const MachineInstr &MI,
     unsigned MaxUses = maxUses(RematCost);
     if (MaxUses == UINT_MAX)
       return true; // Remats are "free" so always localize.
-    bool B = isUsesAtMost(Reg, MaxUses);
-    return B;
+    return MRI.hasAtMostUserInstrs(Reg, MaxUses);
   }
   }
 }
