@@ -913,21 +913,6 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
   return sliceOp->getResult(0);
 }
 
-Value createSlice(OpBuilder &builder, Location loc, Value value,
-                  ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
-                  ArrayRef<OpFoldResult> strides) {
-  if (value.getType().isa<MemRefType>()) {
-    return builder.create<memref::SubViewOp>(loc, value, offsets, sizes,
-                                             strides);
-  }
-
-  // This intentionally does not attempt to compose the extractslice operations.
-  assert(value.getType().isa<RankedTensorType>() &&
-         "expected a ranked tensor type");
-  return builder.create<tensor::ExtractSliceOp>(loc, value, offsets, sizes,
-                                                strides);
-}
-
 SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
                                       ValueRange ivs, ValueRange tileSizes) {
   SmallVector<Value> offsets;

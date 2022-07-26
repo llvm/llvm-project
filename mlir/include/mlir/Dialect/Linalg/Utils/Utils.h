@@ -177,12 +177,6 @@ bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
                    Value consumedView, LinalgOp producer);
 
-/// Creates either a memref.subview or a tensor.extract_slice with the given
-/// offsets/sizes/strides based on the type of `value`.
-Value createSlice(OpBuilder &builder, Location loc, Value value,
-                  ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
-                  ArrayRef<OpFoldResult> strides);
-
 /// Computes tile offsets, given a list of loop `ivs` and `tileSizes`. In case a
 /// tile size is zero (i.e., no tiling), the corresponding offset is also zero.
 SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
