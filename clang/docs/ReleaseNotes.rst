@@ -494,6 +494,9 @@ C++ Language Changes in Clang
   unsigned character literals. This fixes `Issue 54886 <https://github.com/llvm/llvm-project/issues/54886>`_.
 - Stopped allowing constraints on non-template functions to be compliant with
   dcl.decl.general p4.
+- Improved ``copy elision`` optimization. It's possible to apply ``NRVO`` for an object if at the moment when
+  any return statement of this object is executed, the ``return slot`` won't be occupied by another object.
+
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
