@@ -8,9 +8,7 @@
 define <vscale x 16 x i8> @masked_add_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_add_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    add z0.b, z0.b, z1.b
+; CHECK-NEXT:    add z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %select = select <vscale x 16 x i1> %mask, <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer
   %ret = add <vscale x 16 x i8> %a, %select
@@ -20,9 +18,7 @@ define <vscale x 16 x i8> @masked_add_nxv16i8(<vscale x 16 x i8> %a, <vscale x 1
 define <vscale x 8 x i16> @masked_add_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: masked_add_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    add z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %select = select <vscale x 8 x i1> %mask, <vscale x 8 x i16> %b, <vscale x 8 x i16> zeroinitializer
   %ret = add <vscale x 8 x i16> %a, %select
@@ -32,9 +28,7 @@ define <vscale x 8 x i16> @masked_add_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8
 define <vscale x 4 x i32> @masked_add_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_add_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    add z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %select = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %b, <vscale x 4 x i32> zeroinitializer
   %ret = add <vscale x 4 x i32> %a, %select
@@ -44,9 +38,7 @@ define <vscale x 4 x i32> @masked_add_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4
 define <vscale x 2 x i64> @masked_add_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_add_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    add z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %select = select <vscale x 2 x i1> %mask, <vscale x 2 x i64> %b, <vscale x 2 x i64> zeroinitializer
   %ret = add <vscale x 2 x i64> %a, %select
@@ -60,9 +52,7 @@ define <vscale x 2 x i64> @masked_add_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2
 define <vscale x 16 x i8> @masked_sub_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_sub_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    sub z0.b, z0.b, z1.b
+; CHECK-NEXT:    sub z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %select = select <vscale x 16 x i1> %mask, <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer
   %ret = sub <vscale x 16 x i8> %a, %select
@@ -72,9 +62,7 @@ define <vscale x 16 x i8> @masked_sub_nxv16i8(<vscale x 16 x i8> %a, <vscale x 1
 define <vscale x 8 x i16> @masked_sub_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: masked_sub_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    sub z0.h, z0.h, z1.h
+; CHECK-NEXT:    sub z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %select = select <vscale x 8 x i1> %mask, <vscale x 8 x i16> %b, <vscale x 8 x i16> zeroinitializer
   %ret = sub <vscale x 8 x i16> %a, %select
@@ -84,9 +72,7 @@ define <vscale x 8 x i16> @masked_sub_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8
 define <vscale x 4 x i32> @masked_sub_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_sub_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    sub z0.s, z0.s, z1.s
+; CHECK-NEXT:    sub z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %select = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %b, <vscale x 4 x i32> zeroinitializer
   %ret = sub <vscale x 4 x i32> %a, %select
@@ -96,9 +82,7 @@ define <vscale x 4 x i32> @masked_sub_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4
 define <vscale x 2 x i64> @masked_sub_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_sub_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    sub z0.d, z0.d, z1.d
+; CHECK-NEXT:    sub z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %select = select <vscale x 2 x i1> %mask, <vscale x 2 x i64> %b, <vscale x 2 x i64> zeroinitializer
   %ret = sub <vscale x 2 x i64> %a, %select
