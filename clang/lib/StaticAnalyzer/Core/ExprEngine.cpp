@@ -541,8 +541,6 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
   if (const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init))
     Init = AILE->getSubExpr();
 
-  const auto *E = dyn_cast_or_null<CXXConstructExpr>(Init);
-
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
   // The state will already contain the marker if we construct elements
@@ -552,7 +550,8 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
   assert((!State->get<ObjectsUnderConstruction>(Key) ||
           Key.getItem().getKind() ==
               ConstructionContextItem::TemporaryDestructorKind ||
-          State->contains<IndexOfElementToConstruct>({E, LC})) &&
+          State->contains<IndexOfElementToConstruct>(
+              {dyn_cast_or_null<CXXConstructExpr>(Init), LC})) &&
          "The object is already marked as `UnderConstruction`, when it's not "
          "supposed to!");
   return State->set<ObjectsUnderConstruction>(Key, V);
