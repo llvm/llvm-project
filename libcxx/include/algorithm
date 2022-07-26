@@ -380,6 +380,18 @@ namespace ranges {
   template<class T, output_iterator<const T&> O>
     constexpr O ranges::fill_n(O first, iter_difference_t<O> n, const T& value);            // since C++20
 
+  template<input_or_output_iterator O, sentinel_for<O> S, copy_constructible F>
+    requires invocable<F&> && indirectly_writable<O, invoke_result_t<F&>>
+    constexpr O generate(O first, S last, F gen);                                           // Since C++20
+
+  template<class R, copy_constructible F>
+    requires invocable<F&> && output_range<R, invoke_result_t<F&>>
+    constexpr borrowed_iterator_t<R> generate(R&& r, F gen);                                // Since C++20
+
+  template<input_or_output_iterator O, copy_constructible F>
+    requires invocable<F&> && indirectly_writable<O, invoke_result_t<F&>>
+    constexpr O generate_n(O first, iter_difference_t<O> n, F gen);                         // Since C++20
+
  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
           class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
    requires indirectly_comparable<I1, I2, Pred, Proj1, Proj2>
@@ -1575,6 +1587,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_find_if_not.h>
 #include <__algorithm/ranges_for_each.h>
 #include <__algorithm/ranges_for_each_n.h>
+#include <__algorithm/ranges_generate.h>
+#include <__algorithm/ranges_generate_n.h>
 #include <__algorithm/ranges_includes.h>
 #include <__algorithm/ranges_is_partitioned.h>
 #include <__algorithm/ranges_is_sorted.h>

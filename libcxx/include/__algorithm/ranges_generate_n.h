@@ -9,21 +9,16 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_GENERATE_N_H
 #define _LIBCPP___ALGORITHM_RANGES_GENERATE_N_H
 
-#include <__algorithm/generate_n.h>
-#include <__algorithm/make_projected.h>
 #include <__concepts/constructible.h>
 #include <__concepts/invocable.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
-#include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
-#include <__utility/forward.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -43,9 +38,12 @@ struct __fn {
   requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
   _LIBCPP_HIDE_FROM_ABI constexpr
   _OutIter operator()(_OutIter __first, iter_difference_t<_OutIter> __n, _Func __gen) const {
-    // TODO: implement
-    (void)__first; (void)__n; (void)__gen;
-    return {};
+    for (; __n > 0; --__n) {
+      *__first = __gen();
+      ++__first;
+    }
+
+    return __first;
   }
 
 };
