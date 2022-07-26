@@ -20,9 +20,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
-#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -48,9 +46,8 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
 public:
-  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
-                  TransferOptions Options)
-      : StmtToEnv(StmtToEnv), Env(Env), Options(Options) {}
+  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env)
+      : StmtToEnv(StmtToEnv), Env(Env) {}
 
   void VisitBinaryOperator(const BinaryOperator *S) {
     const Expr *LHS = S->getLHS();
@@ -506,35 +503,6 @@ public:
       if (ArgLoc == nullptr)
         return;
       Env.setStorageLocation(*S, *ArgLoc);
-    } else if (const FunctionDecl *F = S->getDirectCallee()) {
-      // This case is for context-sensitive analysis, which we only do if we
-      // have the callee body available in the translation unit.
-      if (!Options.ContextSensitive || F->getBody() == nullptr)
-        return;
-
-      auto &ASTCtx = F->getASTContext();
-
-      // FIXME: Cache these CFGs.
-      auto CFCtx = ControlFlowContext::build(F, F->getBody(), &ASTCtx);
-      // FIXME: Handle errors here and below.
-      assert(CFCtx);
-      auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
-
-      auto CalleeEnv = Env.pushCall(S);
-
-      // FIXME: Use the same analysis as the caller for the callee.
-      DataflowAnalysisOptions Options;
-      auto Analysis = NoopAnalysis(ASTCtx, Options);
-
-      auto BlockToOutputState =
-          dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);
-      assert(BlockToOutputState);
-      assert(ExitBlock < BlockToOutputState->size());
-
-      auto ExitState = (*BlockToOutputState)[ExitBlock];
-      assert(ExitState);
-
-      Env = ExitState->Env;
     }
   }
 
@@ -665,12 +633,10 @@ private:
 
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
-  TransferOptions Options;
 };
 
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
-              TransferOptions Options) {
-  TransferVisitor(StmtToEnv, Env, Options).Visit(&S);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
+  TransferVisitor(StmtToEnv, Env).Visit(&S);
 }
 
 } // namespace dataflow

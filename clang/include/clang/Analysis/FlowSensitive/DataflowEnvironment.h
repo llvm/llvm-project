@@ -128,21 +128,6 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
-  /// Creates and returns an environment to use for an inline analysis  of the
-  /// callee. Uses the storage location from each argument in the `Call` as the
-  /// storage location for the corresponding parameter in the callee.
-  ///
-  /// Requirements:
-  ///
-  ///  The callee of `Call` must be a `FunctionDecl` with a body.
-  ///
-  ///  The body of the callee must not reference globals.
-  ///
-  ///  The arguments of `Call` must map 1:1 to the callee's parameters.
-  ///
-  ///  Each argument of `Call` must already have a `StorageLocation`.
-  Environment pushCall(const CallExpr *Call) const;
-
   /// Returns true if and only if the environment is equivalent to `Other`, i.e
   /// the two environments:
   ///  - have the same mappings from declarations to storage locations,
