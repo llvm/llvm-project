@@ -150,12 +150,12 @@ end subroutine
 
 !CHECK: func.func @_QPfirstpriv_lastpriv_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
 !CHECK-DAG: omp.parallel  {
+! Lastprivate Allocation
+!CHECK-NEXT: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
 !CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
 ! Firstprivate update
 !CHECK-NEXT: %[[FPV_LD:.*]] = fir.load %[[ARG1]] : !fir.ref<i32>
 !CHECK-NEXT: fir.store %[[FPV_LD]] to %[[CLONE1]] : !fir.ref<i32>
-! Lastprivate Allocation
-!CHECK-NEXT: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
 !CHECK-NEXT: omp.barrier
 !CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
 
