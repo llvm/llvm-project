@@ -13,10 +13,10 @@ compact z31.s, p7, z31.s
 // CHECK-INST: compact z31.s, p7, z31.s
 // CHECK-ENCODING: [0xff,0x9f,0xa1,0x05]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: ff 9f a1 05 <unknown>
+// CHECK-UNKNOWN: 05a19fff <unknown>
 
 compact z31.d, p7, z31.d
 // CHECK-INST: compact z31.d, p7, z31.d
 // CHECK-ENCODING: [0xff,0x9f,0xe1,0x05]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: ff 9f e1 05 <unknown>
+// CHECK-UNKNOWN: 05e19fff <unknown>

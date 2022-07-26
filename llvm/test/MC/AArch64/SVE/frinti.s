@@ -13,19 +13,19 @@ frinti   z31.h, p7/m, z31.h
 // CHECK-INST: frinti	z31.h, p7/m, z31.h
 // CHECK-ENCODING: [0xff,0xbf,0x47,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff bf 47 65 <unknown>
+// CHECK-UNKNOWN: 6547bfff <unknown>
 
 frinti   z31.s, p7/m, z31.s
 // CHECK-INST: frinti	z31.s, p7/m, z31.s
 // CHECK-ENCODING: [0xff,0xbf,0x87,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff bf 87 65 <unknown>
+// CHECK-UNKNOWN: 6587bfff <unknown>
 
 frinti   z31.d, p7/m, z31.d
 // CHECK-INST: frinti	z31.d, p7/m, z31.d
 // CHECK-ENCODING: [0xff,0xbf,0xc7,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff bf c7 65 <unknown>
+// CHECK-UNKNOWN: 65c7bfff <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -35,22 +35,22 @@ movprfx z4.d, p7/z, z6.d
 // CHECK-INST: movprfx	z4.d, p7/z, z6.d
 // CHECK-ENCODING: [0xc4,0x3c,0xd0,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: c4 3c d0 04 <unknown>
+// CHECK-UNKNOWN: 04d03cc4 <unknown>
 
 frinti   z4.d, p7/m, z31.d
 // CHECK-INST: frinti	z4.d, p7/m, z31.d
 // CHECK-ENCODING: [0xe4,0xbf,0xc7,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e4 bf c7 65 <unknown>
+// CHECK-UNKNOWN: 65c7bfe4 <unknown>
 
 movprfx z4, z6
 // CHECK-INST: movprfx	z4, z6
 // CHECK-ENCODING: [0xc4,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: c4 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bcc4 <unknown>
 
 frinti   z4.d, p7/m, z31.d
 // CHECK-INST: frinti	z4.d, p7/m, z31.d
 // CHECK-ENCODING: [0xe4,0xbf,0xc7,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e4 bf c7 65 <unknown>
+// CHECK-UNKNOWN: 65c7bfe4 <unknown>

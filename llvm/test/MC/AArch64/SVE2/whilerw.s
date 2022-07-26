@@ -13,22 +13,22 @@ whilerw  p15.b, x30, x30
 // CHECK-INST: whilerw  p15.b, x30, x30
 // CHECK-ENCODING: [0xdf,0x33,0x3e,0x25]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 33 3e 25 <unknown>
+// CHECK-UNKNOWN: 253e33df <unknown>
 
 whilerw  p15.h, x30, x30
 // CHECK-INST: whilerw  p15.h, x30, x30
 // CHECK-ENCODING: [0xdf,0x33,0x7e,0x25]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 33 7e 25 <unknown>
+// CHECK-UNKNOWN: 257e33df <unknown>
 
 whilerw  p15.s, x30, x30
 // CHECK-INST: whilerw  p15.s, x30, x30
 // CHECK-ENCODING: [0xdf,0x33,0xbe,0x25]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 33 be 25 <unknown>
+// CHECK-UNKNOWN: 25be33df <unknown>
 
 whilerw  p15.d, x30, x30
 // CHECK-INST: whilerw  p15.d, x30, x30
 // CHECK-ENCODING: [0xdf,0x33,0xfe,0x25]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 33 fe 25 <unknown>
+// CHECK-UNKNOWN: 25fe33df <unknown>

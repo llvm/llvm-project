@@ -16,7 +16,7 @@ function:
   nop; nop @ This retains both instructions
   bx lr
 
-@ CHECK:  0: 4f f0 2a 00   mov.w   r0, #42
-@ CHECK:  4: 00 bf         nop
-@ CHECK:  6: 00 bf         nop
-@ CHECK:  8: 70 47         bx      lr
+@ CHECK:  0: f04f 002a     mov.w   r0, #42
+@ CHECK:  4: bf00          nop
+@ CHECK:  6: bf00          nop
+@ CHECK:  8: 4770          bx      lr

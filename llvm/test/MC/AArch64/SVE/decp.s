@@ -13,85 +13,85 @@ decp    x0, p0.b
 // CHECK-INST: decp    x0, p0.b
 // CHECK-ENCODING: [0x00,0x88,0x2d,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 88 2d 25 <unknown>
+// CHECK-UNKNOWN: 252d8800 <unknown>
 
 decp    x0, p0.h
 // CHECK-INST: decp    x0, p0.h
 // CHECK-ENCODING: [0x00,0x88,0x6d,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 88 6d 25 <unknown>
+// CHECK-UNKNOWN: 256d8800 <unknown>
 
 decp    x0, p0.s
 // CHECK-INST: decp    x0, p0.s
 // CHECK-ENCODING: [0x00,0x88,0xad,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 88 ad 25 <unknown>
+// CHECK-UNKNOWN: 25ad8800 <unknown>
 
 decp    x0, p0.d
 // CHECK-INST: decp    x0, p0.d
 // CHECK-ENCODING: [0x00,0x88,0xed,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 88 ed 25 <unknown>
+// CHECK-UNKNOWN: 25ed8800 <unknown>
 
 decp    xzr, p15.b
 // CHECK-INST: decp    xzr, p15.b
 // CHECK-ENCODING: [0xff,0x89,0x2d,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 89 2d 25 <unknown>
+// CHECK-UNKNOWN: 252d89ff <unknown>
 
 decp    xzr, p15.h
 // CHECK-INST: decp    xzr, p15.h
 // CHECK-ENCODING: [0xff,0x89,0x6d,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 89 6d 25 <unknown>
+// CHECK-UNKNOWN: 256d89ff <unknown>
 
 decp    xzr, p15.s
 // CHECK-INST: decp    xzr, p15.s
 // CHECK-ENCODING: [0xff,0x89,0xad,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 89 ad 25 <unknown>
+// CHECK-UNKNOWN: 25ad89ff <unknown>
 
 decp    xzr, p15.d
 // CHECK-INST: decp    xzr, p15.d
 // CHECK-ENCODING: [0xff,0x89,0xed,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 89 ed 25 <unknown>
+// CHECK-UNKNOWN: 25ed89ff <unknown>
 
 decp    z31.h, p15
 // CHECK-INST: decp    z31.h, p15.h
 // CHECK-ENCODING: [0xff,0x81,0x6d,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 81 6d 25 <unknown>
+// CHECK-UNKNOWN: 256d81ff <unknown>
 
 decp    z31.h, p15.h
 // CHECK-INST: decp    z31.h, p15.h
 // CHECK-ENCODING: [0xff,0x81,0x6d,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 81 6d 25 <unknown>
+// CHECK-UNKNOWN: 256d81ff <unknown>
 
 decp    z31.s, p15
 // CHECK-INST: decp    z31.s, p15.s
 // CHECK-ENCODING: [0xff,0x81,0xad,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 81 ad 25 <unknown>
+// CHECK-UNKNOWN: 25ad81ff <unknown>
 
 decp    z31.s, p15.s
 // CHECK-INST: decp    z31.s, p15.s
 // CHECK-ENCODING: [0xff,0x81,0xad,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 81 ad 25 <unknown>
+// CHECK-UNKNOWN: 25ad81ff <unknown>
 
 decp    z31.d, p15
 // CHECK-INST: decp    z31.d, p15.d
 // CHECK-ENCODING: [0xff,0x81,0xed,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 81 ed 25 <unknown>
+// CHECK-UNKNOWN: 25ed81ff <unknown>
 
 decp    z31.d, p15.d
 // CHECK-INST: decp    z31.d, p15.d
 // CHECK-ENCODING: [0xff,0x81,0xed,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 81 ed 25 <unknown>
+// CHECK-UNKNOWN: 25ed81ff <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -101,10 +101,10 @@ movprfx z31, z6
 // CHECK-INST: movprfx	z31, z6
 // CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: df bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bcdf <unknown>
 
 decp    z31.d, p15.d
 // CHECK-INST: decp	z31.d, p15
 // CHECK-ENCODING: [0xff,0x81,0xed,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 81 ed 25 <unknown>
+// CHECK-UNKNOWN: 25ed81ff <unknown>
