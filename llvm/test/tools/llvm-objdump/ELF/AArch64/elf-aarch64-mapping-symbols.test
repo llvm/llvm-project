@@ -11,8 +11,9 @@ msgend:
 .section .myothersection,"ax",@progbits
   adrp x1,mystr
 mystr:
-  .asciz "blah"
+  .ascii "blah"
   .size mystr, 4
+  .byte 0x9a
 
 # CHECK: Disassembly of section .mysection:
 # CHECK: <_start>:
@@ -27,4 +28,4 @@ mystr:
 # CHECK:        0:       01 00 00 90     adrp    x1, 0x0
 # CHECK: <mystr>:
 # CHECK:        4:       62 6c 61 68     .word
-# CHECK:        8:       00              .byte   0x01
+# CHECK:        8:       9a              .byte   0x9a
