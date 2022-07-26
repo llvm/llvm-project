@@ -420,6 +420,7 @@ def Math_ExpM1Op : Math_FloatUnaryOp<"expm1"> {
     %a = math.expm1 %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
