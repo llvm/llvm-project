@@ -825,6 +825,35 @@ static void PropagateCallSiteMetadata(CallBase &CB, Function::iterator FStart,
   }
 }
 
+/// Bundle operands of the inlined function must be added to inlined call sites.
+static void PropagateOperandBundles(Function::iterator InlinedBB,
+                                    Instruction *CallSiteEHPad) {
+  for (Instruction &II : llvm::make_early_inc_range(*InlinedBB)) {
+    CallBase *I = dyn_cast<CallBase>(&II);
+    if (!I)
+      continue;
+    // Skip call sites which already have a "funclet" bundle.
+    if (I->getOperandBundle(LLVMContext::OB_funclet))
+      continue;
+    // Skip call sites which are nounwind intrinsics (as long as they don't
+    // lower into regular function calls in the course of IR transformations).
+    auto *CalledFn =
+        dyn_cast<Function>(I->getCalledOperand()->stripPointerCasts());
+    if (CalledFn && CalledFn->isIntrinsic() && I->doesNotThrow() &&
+        !IntrinsicInst::mayLowerToFunctionCall(CalledFn->getIntrinsicID()))
+      continue;
+
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    I->getOperandBundlesAsDefs(OpBundles);
+    OpBundles.emplace_back("funclet", CallSiteEHPad);
+
+    Instruction *NewInst = CallBase::Create(I, OpBundles, I);
+    NewInst->takeName(I);
+    I->replaceAllUsesWith(NewInst);
+    I->eraseFromParent();
+  }
+}
+
 namespace {
 /// Utility for cloning !noalias and !alias.scope metadata. When a code region
 /// using scoped alias metadata is inlined, the aliasing relationships may not
@@ -2304,38 +2333,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // Update the lexical scopes of the new funclets and callsites.
   // Anything that had 'none' as its parent is now nested inside the callsite's
   // EHPad.
-
   if (CallSiteEHPad) {
     for (Function::iterator BB = FirstNewBlock->getIterator(),
                             E = Caller->end();
          BB != E; ++BB) {
-      // Add bundle operands to any top-level call sites.
-      SmallVector<OperandBundleDef, 1> OpBundles;
-      for (Instruction &II : llvm::make_early_inc_range(*BB)) {
-        CallBase *I = dyn_cast<CallBase>(&II);
-        if (!I)
-          continue;
-
-        // Skip call sites which are nounwind intrinsics.
-        auto *CalledFn =
-            dyn_cast<Function>(I->getCalledOperand()->stripPointerCasts());
-        if (CalledFn && CalledFn->isIntrinsic() && I->doesNotThrow())
-          continue;
-
-        // Skip call sites which already have a "funclet" bundle.
-        if (I->getOperandBundle(LLVMContext::OB_funclet))
-          continue;
-
-        I->getOperandBundlesAsDefs(OpBundles);
-        OpBundles.emplace_back("funclet", CallSiteEHPad);
-
-        Instruction *NewInst = CallBase::Create(I, OpBundles, I);
-        NewInst->takeName(I);
-        I->replaceAllUsesWith(NewInst);
-        I->eraseFromParent();
-
-        OpBundles.clear();
-      }
+      // Add bundle operands to inlined call sites.
+      PropagateOperandBundles(BB, CallSiteEHPad);
 
       // It is problematic if the inlinee has a cleanupret which unwinds to
       // caller and we inline it into a call site which doesn't unwind but into

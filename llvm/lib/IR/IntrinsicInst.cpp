@@ -32,6 +32,39 @@
 
 using namespace llvm;
 
+bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::objc_autorelease:
+  case Intrinsic::objc_autoreleasePoolPop:
+  case Intrinsic::objc_autoreleasePoolPush:
+  case Intrinsic::objc_autoreleaseReturnValue:
+  case Intrinsic::objc_copyWeak:
+  case Intrinsic::objc_destroyWeak:
+  case Intrinsic::objc_initWeak:
+  case Intrinsic::objc_loadWeak:
+  case Intrinsic::objc_loadWeakRetained:
+  case Intrinsic::objc_moveWeak:
+  case Intrinsic::objc_release:
+  case Intrinsic::objc_retain:
+  case Intrinsic::objc_retainAutorelease:
+  case Intrinsic::objc_retainAutoreleaseReturnValue:
+  case Intrinsic::objc_retainAutoreleasedReturnValue:
+  case Intrinsic::objc_retainBlock:
+  case Intrinsic::objc_storeStrong:
+  case Intrinsic::objc_storeWeak:
+  case Intrinsic::objc_unsafeClaimAutoreleasedReturnValue:
+  case Intrinsic::objc_retainedObject:
+  case Intrinsic::objc_unretainedObject:
+  case Intrinsic::objc_unretainedPointer:
+  case Intrinsic::objc_retain_autorelease:
+  case Intrinsic::objc_sync_enter:
+  case Intrinsic::objc_sync_exit:
+    return true;
+  default:
+    return false;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 /// DbgVariableIntrinsic - This is the common base class for debug info
 /// intrinsics for variables.
