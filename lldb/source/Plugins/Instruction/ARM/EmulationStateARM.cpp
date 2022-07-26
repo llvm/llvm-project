@@ -274,7 +274,8 @@ bool EmulationStateARM::CompareState(EmulationStateARM &other_state,
   for (int i = 0; match && i < 16; ++i) {
     if (m_vfp_regs.d_regs[i] != other_state.m_vfp_regs.d_regs[i]) {
       match = false;
-      out_stream->Printf("d%d: 0x%lx != 0x%lx\n", i + 16, m_vfp_regs.d_regs[i],
+      out_stream->Printf("d%d: 0x%" PRIx64 " != 0x%" PRIx64 "\n", i + 16,
+                         m_vfp_regs.d_regs[i],
                          other_state.m_vfp_regs.d_regs[i]);
     }
   }
@@ -285,10 +286,10 @@ bool EmulationStateARM::CompareState(EmulationStateARM &other_state,
     out_stream->Printf("memory does not match\n");
     out_stream->Printf("got memory:\n");
     for (auto p : m_memory)
-      out_stream->Printf("0x%08lx: 0x%08x\n", p.first, p.second);
+      out_stream->Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
     out_stream->Printf("expected memory:\n");
     for (auto p : other_state.m_memory)
-      out_stream->Printf("0x%08lx: 0x%08x\n", p.first, p.second);
+      out_stream->Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
   }
 
   return match;
