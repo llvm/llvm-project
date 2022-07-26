@@ -36,11 +36,11 @@ using namespace lldb_private;
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp(stream_sp), m_thread(nullptr) {}
+      m_enabled(false), m_stream_sp(stream_sp) {}
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp(), m_thread(nullptr) {}
+      m_enabled(false), m_stream_sp() {}
 
 Stream *ThreadPlanTracer::GetLogStream() {
   if (m_stream_sp)
