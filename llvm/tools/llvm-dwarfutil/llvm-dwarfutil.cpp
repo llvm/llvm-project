@@ -292,7 +292,7 @@ using DebugInfoBits = SmallString<10000>;
 static Error addSectionsFromLinkedData(objcopy::ConfigManager &Config,
                                        ObjectFile &InputFile,
                                        DebugInfoBits &LinkedDebugInfoBits) {
-  if (dyn_cast<ELFObjectFile<ELF32LE>>(&InputFile)) {
+  if (isa<ELFObjectFile<ELF32LE>>(&InputFile)) {
     Expected<ELFObjectFile<ELF32LE>> MemFile = ELFObjectFile<ELF32LE>::create(
         MemoryBufferRef(LinkedDebugInfoBits, ""));
     if (!MemFile)
@@ -300,7 +300,7 @@ static Error addSectionsFromLinkedData(objcopy::ConfigManager &Config,
 
     if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
       return Err;
-  } else if (dyn_cast<ELFObjectFile<ELF64LE>>(&InputFile)) {
+  } else if (isa<ELFObjectFile<ELF64LE>>(&InputFile)) {
     Expected<ELFObjectFile<ELF64LE>> MemFile = ELFObjectFile<ELF64LE>::create(
         MemoryBufferRef(LinkedDebugInfoBits, ""));
     if (!MemFile)
@@ -308,7 +308,7 @@ static Error addSectionsFromLinkedData(objcopy::ConfigManager &Config,
 
     if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
       return Err;
-  } else if (dyn_cast<ELFObjectFile<ELF32BE>>(&InputFile)) {
+  } else if (isa<ELFObjectFile<ELF32BE>>(&InputFile)) {
     Expected<ELFObjectFile<ELF32BE>> MemFile = ELFObjectFile<ELF32BE>::create(
         MemoryBufferRef(LinkedDebugInfoBits, ""));
     if (!MemFile)
@@ -316,7 +316,7 @@ static Error addSectionsFromLinkedData(objcopy::ConfigManager &Config,
 
     if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
       return Err;
-  } else if (dyn_cast<ELFObjectFile<ELF64BE>>(&InputFile)) {
+  } else if (isa<ELFObjectFile<ELF64BE>>(&InputFile)) {
     Expected<ELFObjectFile<ELF64BE>> MemFile = ELFObjectFile<ELF64BE>::create(
         MemoryBufferRef(LinkedDebugInfoBits, ""));
     if (!MemFile)

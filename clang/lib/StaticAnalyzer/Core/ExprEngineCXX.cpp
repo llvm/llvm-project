@@ -908,7 +908,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       // values are properly placed inside the required region, however if an
       // initializer list is used, this doesn't happen automatically.
       auto *Init = CNE->getInitializer();
-      bool isInitList = dyn_cast_or_null<InitListExpr>(Init);
+      bool isInitList = isa_and_nonnull<InitListExpr>(Init);
 
       QualType ObjTy =
           isInitList ? Init->getType() : CNE->getType()->getPointeeType();
