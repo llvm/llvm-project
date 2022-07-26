@@ -19,7 +19,7 @@
 #include <cassert>
 
 bool handler_called = false;
-void std::__libcpp_assertion_handler(char const*, int, char const*, char const*) {
+void std::__libcpp_assertion_handler(char const*, ...) {
   handler_called = true;
 }
 

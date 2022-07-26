@@ -10,6 +10,7 @@
 #define TEST_SUPPORT_CHECK_ASSERTION_H
 
 #include <cassert>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -235,8 +236,19 @@ private:
   std::string stderr_from_child_;
 };
 
-void std::__libcpp_assertion_handler(char const* file, int line, char const* /*expression*/, char const* message) {
+void std::__libcpp_assertion_handler(char const* format, ...) {
   assert(!GlobalMatcher().empty());
+
+  // Extract information from the error message. This has to stay synchronized with
+  // how we format assertions in the library.
+  va_list list;
+  va_start(list, format);
+  char const* file = va_arg(list, char const*);
+  int line = va_arg(list, int);
+  char const* expression = va_arg(list, char const*); (void)expression;
+  char const* message = va_arg(list, char const*);
+  va_end(list);
+
   if (GlobalMatcher().Matches(file, line, message)) {
     std::exit(DeathTest::RK_MatchFound);
   }

@@ -1534,7 +1534,7 @@
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__126__libcpp_assertion_handlerEPKciS1_S1_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__126__libcpp_assertion_handlerEPKcz', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIddEEPdEEbT0_S5_T_', 'type': 'FUNC'}

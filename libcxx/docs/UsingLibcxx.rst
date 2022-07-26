@@ -163,7 +163,7 @@ Replacing the default assertion handler is done by defining the following functi
 
 .. code-block:: cpp
 
-  void __libcpp_assertion_handler(char const* file, int line, char const* expression, char const* message)
+  void __libcpp_assertion_handler(char const* format, ...)
 
 This mechanism is similar to how one can replace the default definition of ``operator new``
 and ``operator delete``. For example:
@@ -173,8 +173,12 @@ and ``operator delete``. For example:
   // In HelloWorldHandler.cpp
   #include <version> // must include any libc++ header before defining the handler (C compatibility headers excluded)
 
-  void std::__libcpp_assertion_handler(char const* file, int line, char const* expression, char const* message) {
-    std::printf("Assertion %s failed at %s:%d, more info: %s", expression, file, line, message);
+  void std::__libcpp_assertion_handler(char const* format, ...) {
+    va_list list;
+    va_start(list, format);
+    std::vfprintf(stderr, format, list);
+    va_end(list);
+
     std::abort();
   }
 
