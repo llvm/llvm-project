@@ -114,8 +114,8 @@ constexpr bool test_all() {
   test(std::ranges::is_sorted, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::is_sorted_until, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::includes, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
-  //test(std::ranges::is_heap, in, &Foo::binary_pred, &Bar::val);
-  //test(std::ranges::is_heap_until, in, &Foo::binary_pred, &Bar::val);
+  test(std::ranges::is_heap, in, &Foo::binary_pred, &Bar::val);
+  test(std::ranges::is_heap_until, in, &Foo::binary_pred, &Bar::val);
   //std::ranges::clamp(b, a, c, &Foo::binary_pred);
   //test(std::ranges::is_permutation, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::for_each, in, &Foo::unary_pred, &Bar::val);

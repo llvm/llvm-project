@@ -125,7 +125,7 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::search_n, in, count, x);
   dangling_1st(std::ranges::find_end, in, in2);
   dangling_1st(std::ranges::is_sorted_until, in);
-  //dangling_1st(std::ranges::is_heap_until, in);
+  dangling_1st(std::ranges::is_heap_until, in);
   dangling_1st<for_each_result<dangling, decltype(unary_pred)>>(std::ranges::for_each, in, unary_pred);
   dangling_1st<copy_result<dangling, int*>>(std::ranges::copy, in, out);
   // TODO: uncomment `copy_backward` once https://reviews.llvm.org/D128864 lands.
