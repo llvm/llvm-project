@@ -14453,10 +14453,10 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
     return false;
   }
 
-  success = before_state.CompareState(after_state);
+  success = before_state.CompareState(after_state, out_stream);
   if (!success)
     out_stream->Printf(
-        "TestEmulation:  'before' and 'after' states do not match.\n");
+        "TestEmulation:  State after emulation does not match 'after' state.\n");
 
   return success;
 }
