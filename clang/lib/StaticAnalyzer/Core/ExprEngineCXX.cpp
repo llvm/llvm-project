@@ -462,6 +462,59 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
   llvm_unreachable("Unhandled construction context!");
 }
 
+static ProgramStateRef
+bindRequiredArrayElementToEnvironment(ProgramStateRef State,
+                                      const ArrayInitLoopExpr *AILE,
+                                      const LocationContext *LCtx, SVal Idx) {
+  // The ctor in this case is guaranteed to be a copy ctor, otherwise we hit a
+  // compile time error.
+  //
+  //  -ArrayInitLoopExpr                <-- we're here
+  //   |-OpaqueValueExpr
+  //   | `-DeclRefExpr                  <-- match this
+  //   `-CXXConstructExpr
+  //     `-ImplicitCastExpr
+  //       `-ArraySubscriptExpr
+  //         |-ImplicitCastExpr
+  //         | `-OpaqueValueExpr
+  //         |   `-DeclRefExpr
+  //         `-ArrayInitIndexExpr
+  //
+  // The resulting expression might look like the one below in an implicit
+  // copy/move ctor.
+  //
+  //   ArrayInitLoopExpr                <-- we're here
+  //   |-OpaqueValueExpr
+  //   | `-MemberExpr                   <-- match this
+  //   |  (`-CXXStaticCastExpr)         <-- move ctor only
+  //   |     `-DeclRefExpr
+  //   `-CXXConstructExpr
+  //     `-ArraySubscriptExpr
+  //       |-ImplicitCastExpr
+  //       | `-OpaqueValueExpr
+  //       |   `-MemberExpr
+  //       |     `-DeclRefExpr
+  //       `-ArrayInitIndexExpr
+  //
+  // HACK: There is no way we can put the index of the array element into the
+  // CFG unless we unroll the loop, so we manually select and bind the required
+  // parameter to the environment.
+  const auto *CE = cast<CXXConstructExpr>(AILE->getSubExpr());
+  const auto *OVESrc = AILE->getCommonExpr()->getSourceExpr();
+
+  SVal Base = UnknownVal();
+  if (const auto *ME = dyn_cast<MemberExpr>(OVESrc))
+    Base = State->getSVal(ME, LCtx);
+  else if (const auto *DRE = cast<DeclRefExpr>(OVESrc))
+    Base = State->getLValue(cast<VarDecl>(DRE->getDecl()), LCtx);
+  else
+    llvm_unreachable("ArrayInitLoopExpr contains unexpected source expression");
+
+  SVal NthElem = State->getLValue(CE->getType(), Idx, Base);
+
+  return State->BindExpr(CE->getArg(0), LCtx, NthElem);
+}
+
 void ExprEngine::handleConstructor(const Expr *E,
                                    ExplodedNode *Pred,
                                    ExplodedNodeSet &destNodes) {
@@ -502,10 +555,24 @@ void ExprEngine::handleConstructor(const Expr *E,
     // Inherited constructors are always base class constructors.
     assert(CE && !CIE && "A complete constructor is inherited?!");
 
+    // If the ctor is part of an ArrayInitLoopExpr, we want to handle it
+    // differently.
+    auto *AILE = CC ? CC->getArrayInitLoop() : nullptr;
+
     unsigned Idx = 0;
-    if (CE->getType()->isArrayType()) {
-      Idx = getIndexOfElementToConstruct(State, CE, LCtx).value_or(0u);
+    if (CE->getType()->isArrayType() || AILE) {
+      Idx = getIndexOfElementToConstruct(State, CE, LCtx).getValueOr(0u);
       State = setIndexOfElementToConstruct(State, CE, LCtx, Idx + 1);
+    }
+
+    if (AILE) {
+      // Only set this once even though we loop through it multiple times.
+      if (!getPendingInitLoop(State, CE, LCtx))
+        State = setPendingInitLoop(State, CE, LCtx,
+                                   AILE->getArraySize().getLimitedValue());
+
+      State = bindRequiredArrayElementToEnvironment(
+          State, AILE, LCtx, svalBuilder.makeArrayIndex(Idx));
     }
 
     // The target region is found from construction context.
