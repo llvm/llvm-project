@@ -1525,7 +1525,7 @@ RegisterContextUnwind::SavedLocationForRegister(
 
   // unwindplan_regloc has valid contents about where to retrieve the register
   if (unwindplan_regloc.IsUnspecified()) {
-    lldb_private::UnwindLLDB::RegisterLocation new_regloc;
+    lldb_private::UnwindLLDB::RegisterLocation new_regloc = {};
     new_regloc.type = UnwindLLDB::RegisterLocation::eRegisterNotSaved;
     m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = new_regloc;
     UnwindLogMsg("save location for %s (%d) is unspecified, continue searching",
@@ -1731,7 +1731,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
 
   addr_t old_caller_pc_value = LLDB_INVALID_ADDRESS;
   addr_t new_caller_pc_value = LLDB_INVALID_ADDRESS;
-  UnwindLLDB::RegisterLocation regloc;
+  UnwindLLDB::RegisterLocation regloc = {};
   if (SavedLocationForRegister(pc_regnum.GetAsKind(eRegisterKindLLDB),
                                regloc) ==
       UnwindLLDB::RegisterSearchResult::eRegisterFound) {
