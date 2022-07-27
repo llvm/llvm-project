@@ -318,7 +318,7 @@ DIBuilder::createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
                                       bool IsAddressDiscriminated,
                                       unsigned ExtraDiscriminator) {
   return DIDerivedType::get(
-      VMContext, dwarf::DW_TAG_APPLE_ptrauth_type, "", nullptr, 0, nullptr,
+      VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "", nullptr, 0, nullptr,
       FromTy, 0, 0, 0, None,
       Optional<DIDerivedType::PtrAuthData>(
           {Key, IsAddressDiscriminated, ExtraDiscriminator}),

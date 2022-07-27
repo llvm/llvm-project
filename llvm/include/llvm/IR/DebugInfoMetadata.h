@@ -1030,7 +1030,7 @@ public:
   Optional<unsigned> getDWARFAddressSpace() const { return DWARFAddressSpace; }
 
   Optional<PtrAuthData> getPtrAuthData() const {
-    return getTag() == dwarf::DW_TAG_APPLE_ptrauth_type
+    return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
                ? Optional<PtrAuthData>(PtrAuthData(SubclassData32))
                : None;
   }
