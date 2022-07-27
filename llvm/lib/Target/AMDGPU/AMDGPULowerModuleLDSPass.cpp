@@ -30,6 +30,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <tuple>
 #include <vector>
 
 #define DEBUG_TYPE "amdgpu-lower-module-lds"
@@ -213,16 +215,18 @@ private:
     return Changed;
   }
 
-  bool processUsedLDS(CallGraph const &CG, Module &M,
-                      std::vector<GlobalVariable *> const &LDSVarsToTransform,
-                      Function *F = nullptr) {
+  std::tuple<GlobalVariable *, DenseMap<GlobalVariable *, Constant *>>
+  createLDSVariableReplacement(
+      Module &M, std::string VarName,
+      std::vector<GlobalVariable *> const &LDSVarsToTransform) {
+    // Create a struct instance containing LDSVarsToTransform and map from those
+    // variables to ConstantExprGEP
+    // Variables may be introduced to meet alignment requirements. No aliasing
+    // metadata is useful for these as they have no uses. Erased before return.
+
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
-
-    if (LDSVarsToTransform.empty()) {
-      // No variables to rewrite, no changes made.
-      return false;
-    }
+    assert(!LDSVarsToTransform.empty());
 
     SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
     LayoutFields.reserve(LDSVarsToTransform.size());
@@ -239,7 +243,6 @@ private:
     LocalVars.reserve(LDSVarsToTransform.size()); // will be at least this large
     IsPaddingField.reserve(LDSVarsToTransform.size());
     {
-      // This usually won't need to insert any padding, perhaps avoid the alloc
       uint64_t CurrentOffset = 0;
       for (size_t I = 0; I < LayoutFields.size(); I++) {
         GlobalVariable *FGV = static_cast<GlobalVariable *>(
@@ -275,9 +278,6 @@ private:
         LocalVars.cbegin(), LocalVars.cend(), std::back_inserter(LocalVarTypes),
         [](const GlobalVariable *V) -> Type * { return V->getValueType(); });
 
-    std::string VarName(
-        F ? (Twine("llvm.amdgcn.kernel.") + F->getName() + ".lds").str()
-          : "llvm.amdgcn.module.lds");
     StructType *LDSTy = StructType::create(Ctx, LocalVarTypes, VarName + ".t");
 
     Align StructAlign =
@@ -288,6 +288,44 @@ private:
         VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
         false);
     SGV->setAlignment(StructAlign);
+
+    DenseMap<GlobalVariable *, Constant *> Map;
+    Type *I32 = Type::getInt32Ty(Ctx);
+    for (size_t I = 0; I < LocalVars.size(); I++) {
+      GlobalVariable *GV = LocalVars[I];
+      Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
+      Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx, true);
+      if (IsPaddingField[I]) {
+        assert(GV->use_empty());
+        GV->eraseFromParent();
+      } else {
+        Map[GV] = GEP;
+      }
+    }
+    assert(Map.size() == LDSVarsToTransform.size());
+    return {SGV, std::move(Map)};
+  }
+
+  bool processUsedLDS(CallGraph const &CG, Module &M,
+                      std::vector<GlobalVariable *> const &LDSVarsToTransform,
+                      Function *F = nullptr) {
+    LLVMContext &Ctx = M.getContext();
+    const DataLayout &DL = M.getDataLayout();
+
+    if (LDSVarsToTransform.empty()) {
+      // No variables to rewrite, no changes made.
+      return false;
+    }
+
+    std::string VarName(
+        F ? (Twine("llvm.amdgcn.kernel.") + F->getName() + ".lds").str()
+          : "llvm.amdgcn.module.lds");
+
+    GlobalVariable *SGV;
+    DenseMap<GlobalVariable *, Constant *> LDSVarToConstantGEP;
+    std::tie(SGV, LDSVarToConstantGEP) =
+        createLDSVariableReplacement(M, VarName, LDSVarsToTransform);
+
     if (!F) {
       appendToCompilerUsed(
           M, {static_cast<GlobalValue *>(
@@ -297,31 +335,31 @@ private:
 
     // The verifier rejects used lists containing an inttoptr of a constant
     // so remove the variables from these lists before replaceAllUsesWith
-    removeFromUsedLists(M, LocalVars);
+    removeFromUsedLists(M, LDSVarsToTransform);
 
     // Create alias.scope and their lists. Each field in the new structure
     // does not alias with all other fields.
     SmallVector<MDNode *> AliasScopes;
     SmallVector<Metadata *> NoAliasList;
-    if (LocalVars.size() > 1) {
+    const size_t NumberVars = LDSVarsToTransform.size();
+    if (NumberVars > 1) {
       MDBuilder MDB(Ctx);
-      AliasScopes.reserve(LocalVars.size());
+      AliasScopes.reserve(NumberVars);
       MDNode *Domain = MDB.createAnonymousAliasScopeDomain();
-      for (size_t I = 0; I < LocalVars.size(); I++) {
+      for (size_t I = 0; I < NumberVars; I++) {
         MDNode *Scope = MDB.createAnonymousAliasScope(Domain);
         AliasScopes.push_back(Scope);
       }
       NoAliasList.append(&AliasScopes[1], AliasScopes.end());
     }
 
-    // Replace uses of ith variable with a constantexpr to the ith field of the
-    // instance that will be allocated by AMDGPUMachineFunction
-    Type *I32 = Type::getInt32Ty(Ctx);
-    for (size_t I = 0; I < LocalVars.size(); I++) {
-      GlobalVariable *GV = LocalVars[I];
-      Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
-      Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx);
-      if (F && !IsPaddingField[I]) {
+    // Replace uses of ith variable with a constantexpr to the corresponding
+    // field of the instance that will be allocated by AMDGPUMachineFunction
+    for (size_t I = 0; I < NumberVars; I++) {
+      GlobalVariable *GV = LDSVarsToTransform[I];
+      Constant *GEP = LDSVarToConstantGEP[GV];
+
+      if (F) {
         // Replace all constant uses with instructions if they belong to the
         // current kernel.
         for (User *U : make_early_inc_range(GV->users())) {
@@ -338,12 +376,15 @@ private:
       } else {
         GV->replaceAllUsesWith(GEP);
       }
-      if (GV->use_empty() && !IsPaddingField[I]) {
+      if (GV->use_empty()) {
         GV->eraseFromParent();
       }
 
-      uint64_t Off = DL.getStructLayout(LDSTy)->getElementOffset(I);
-      Align A = commonAlignment(StructAlign, Off);
+      APInt APOff(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+      GEP->stripAndAccumulateInBoundsConstantOffsets(DL, APOff);
+      uint64_t Offset = APOff.getZExtValue();
+
+      Align A = commonAlignment(SGV->getAlign().valueOrOne(), Offset);
 
       if (I)
         NoAliasList[I - 1] = AliasScopes[I - 1];
@@ -352,17 +393,7 @@ private:
       MDNode *AliasScope =
           AliasScopes.empty() ? nullptr : MDNode::get(Ctx, {AliasScopes[I]});
 
-      if (!IsPaddingField[I]) {
-        refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
-      }
-    }
-
-    for (size_t I = 0; I < LocalVars.size(); I++) {
-      if (IsPaddingField[I]) {
-        GlobalVariable *GV = LocalVars[I];
-        assert(GV->use_empty());
-        GV->eraseFromParent();
-      }
+      refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
 
     // This ensures the variable is allocated when called functions access it.
