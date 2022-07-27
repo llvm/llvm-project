@@ -6107,8 +6107,8 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
-  SDValue CopySign =
-      DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Mag, Sign, Mask, VL);
+  SDValue CopySign = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Mag,
+                                 Sign, Mask, DAG.getUNDEF(ContainerVT), VL);
 
   return convertFromScalableVector(VT, CopySign, DAG, Subtarget);
 }
