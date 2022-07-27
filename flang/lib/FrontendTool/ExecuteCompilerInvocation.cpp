@@ -19,6 +19,7 @@
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
 #include "clang/Driver/Options.h"
@@ -142,6 +143,7 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   if (!flang->getFrontendOpts().mlirArgs.empty()) {
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
+    mlir::registerAsmPrinterCLOptions();
     unsigned numArgs = flang->getFrontendOpts().mlirArgs.size();
     auto args = std::make_unique<const char *[]>(numArgs + 2);
     args[0] = "flang (MLIR option parsing)";
