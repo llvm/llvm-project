@@ -422,12 +422,8 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
 
 bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,
                                               unsigned MaxUsers) const {
-  unsigned NumUsers = 0;
-  auto UI = use_instr_nodbg_begin(Reg), UE = use_instr_nodbg_end();
-  for (; UI != UE && NumUsers < MaxUsers; ++UI)
-    NumUsers++;
-  // If we haven't reached the end yet then there are more than MaxUses users.
-  return UI == UE;
+  return hasNItemsOrLess(use_instr_nodbg_begin(Reg), use_instr_nodbg_end(),
+                         MaxUsers);
 }
 
 /// clearKillFlags - Iterate over all the uses of the given register and
