@@ -47,7 +47,9 @@ public:
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
-                                     const llvm::Instruction *I = nullptr) {
+                                     const llvm::Instruction *I = nullptr,
+                                     ArrayRef<const Value *> Operands = 
+                                         ArrayRef<const Value *>()) {
     if (Opcode == Instruction::Select)
       return SCEVCheapExpansionBudget.getValue();
 

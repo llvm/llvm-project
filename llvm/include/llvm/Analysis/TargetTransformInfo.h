@@ -1097,7 +1097,9 @@ public:
   getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy = nullptr,
                      CmpInst::Predicate VecPred = CmpInst::BAD_ICMP_PREDICATE,
                      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-                     const Instruction *I = nullptr) const;
+                     const Instruction *I = nullptr,
+                     ArrayRef<const Value *> Operands =
+                       ArrayRef<const Value *>()) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
@@ -1620,7 +1622,8 @@ public:
                                              Type *CondTy,
                                              CmpInst::Predicate VecPred,
                                              TTI::TargetCostKind CostKind,
-                                             const Instruction *I) = 0;
+                                             const Instruction *I,
+                                             ArrayRef<const Value *> Operands) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              unsigned Index) = 0;
   virtual InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
@@ -2108,8 +2111,10 @@ public:
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
-                                     const Instruction *I) override {
-    return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+                                     const Instruction *I,
+                                     ArrayRef<const Value *> Operands) override {
+    return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I,
+                                   Operands);
   }
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index) override {

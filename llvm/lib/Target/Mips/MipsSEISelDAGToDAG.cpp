@@ -1519,7 +1519,155 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
   return true;
 }
 
+static bool isNot(const SDNode *N);
+static bool isBoolean(const SDNode *N)
+{
+  auto InstrNode = dyn_cast<MachineSDNode>(N);
+  if (InstrNode != nullptr) {
+    switch (InstrNode->getMachineOpcode()) {
+    case Mips::SLT_NM: case Mips::SLTI_NM:
+    case Mips::SLTU_NM: case Mips::SLTIU_NM:
+      return true;
+    case Mips::XORI_NM:
+      return isNot(N) && isBoolean(InstrNode->getOperand(0).getNode());
+    }
+  }
+  return false;
+}
+
+static bool isNot(const SDNode *N)
+{
+  auto XORInstr = dyn_cast<MachineSDNode>(N);
+
+  if (XORInstr != nullptr) {
+    if (XORInstr->getMachineOpcode() == Mips::XORI_NM && XORInstr->hasOneUse()) {
+      auto XOROperand1 = dyn_cast<ConstantSDNode>(XORInstr->getOperand(1));
+      if (XOROperand1 != nullptr && XOROperand1->getZExtValue() == 1) {
+        // This is a boolean 'not' only if the operand is also a boolean
+        return isBoolean(XORInstr->getOperand(0).getNode());
+      }
+    }
+  }
+  return false;
+}
+
+bool isCopyZero(const SDNode *N) {
+  if (N->getOpcode() == ISD::CopyFromReg) {
+    auto Operand = dyn_cast<RegisterSDNode>(N->getOperand(1));
+    return Operand->getReg() == Mips::ZERO_NM;
+  }
+  return false;
+}
+
+
+/// Postprocess the ISelDag to tidy up things created by the legalizer
+/// or by isolated instruction rules making sub-optimal decisions
+/// TODO: Refactor to NanoMips specific area, or generalise to other MIPS too.
+void MipsSEDAGToDAGISel::NanoMipsDAGPeepholes()
+{
+  bool IsModified;
+  do {
+    IsModified = false;
+
+    for (SDNode &N : CurDAG->allnodes()) {
+      if (N.use_empty() || !N.isMachineOpcode())
+        continue;
+
+      bool IsMovZ = false;
+      switch (N.getMachineOpcode()) {
+
+      case Mips::MOVZ_NM:
+        IsMovZ = true;
+        LLVM_FALLTHROUGH;
+      case Mips::MOVN_NM:
+
+        // (mov[nz] (not p) a b) -> (mov[zn] p b a)
+
+        assert(N.getNumOperands() == 3);
+        auto Cond = N.getOperand(1);
+        if (isNot(Cond.getNode())) {
+
+          // Morph to inverted conditional move
+          CurDAG->SelectNodeTo(&N, IsMovZ? Mips::MOVN_NM : Mips::MOVZ_NM,
+                               N.getValueType(0),
+                               N.getOperand(0), Cond.getOperand(0), N.getOperand(2));
+
+          IsModified = true;
+          LLVM_DEBUG(dbgs() << "Inverted cond move to avoid NOT of condition: ";
+                     N.dump(CurDAG));
+          break;
+        }
+
+        // (mov[nz] p (not a) (not b)) -> (not (mov[nz] p a b))
+        if (isNot(N.getOperand(0).getNode()) && isNot(N.getOperand(2).getNode())) {
+          SDLoc SL(&N);
+          MachineSDNode *NewMove =
+            CurDAG->getMachineNode(N.getMachineOpcode(),
+                                   SL, N.getValueType(0),
+                                   N.getOperand(0)->getOperand(0),
+                                   Cond,
+                                   N.getOperand(2)->getOperand(0));
+          MachineSDNode *NewNot =
+            CurDAG->getMachineNode(Mips::XORI_NM,
+                                   SL, N.getValueType(0),
+                                   SDValue(NewMove, 0),
+                                   CurDAG->getTargetConstant(1, SL, MVT::i32));
+          ReplaceUses(&N, NewNot);
+
+          IsModified = true;
+          LLVM_DEBUG(dbgs() << "Promoted cond move of 2 NOTS to NOT of cond move: ";
+                     NewMove->dump(CurDAG));
+          break;
+        }
+
+        // Commute (and invert) conditional move if the tied register
+        // operand has more than one use, but the non-tied operand has
+        // only a single use. This should eliminate the need for a
+        // deconstraining move.
+        // However, if either operand is a copy from the zero
+        // register, we always want that to be the unconstrained
+        // operand since it can always be trivially coalesced.
+        if (!isCopyZero(N.getOperand(0).getNode())) {
+          bool CommuteMove = false;
+          if (N.getOperand(0)->hasOneUse()
+              && !N.getOperand(2)->hasOneUse()) {
+            LLVM_DEBUG(dbgs() << "Commuting conditional move to avoid "
+                              << "potential copy: ";
+                       N.dump(CurDAG));
+            CommuteMove = true;
+          } else if (isCopyZero(N.getOperand(2).getNode())) {
+            LLVM_DEBUG(dbgs() << "Commuting conditional move to avoid potential"
+                              << " copy of zero register: ";
+                       N.dump(CurDAG));
+            CommuteMove = true;
+          }
+
+          if (CommuteMove) {
+            CurDAG->SelectNodeTo(&N, IsMovZ? Mips::MOVN_NM : Mips::MOVZ_NM,
+                                 N.getValueType(0),
+                                 N.getOperand(2), Cond,
+                                 N.getOperand(0));
+            IsModified = true;
+            break;
+          }
+        }
+        break;
+      }
+    }
+    if (IsModified)
+      CurDAG->RemoveDeadNodes();
+  } while (IsModified);
+}
+
+void MipsSEDAGToDAGISel::PostprocessISelDAG()
+{
+  if (Subtarget->hasNanoMips())
+    NanoMipsDAGPeepholes();
+}
+
+
 FunctionPass *llvm::createMipsSEISelDag(MipsTargetMachine &TM,
                                         CodeGenOpt::Level OptLevel) {
   return new MipsSEDAGToDAGISel(TM, OptLevel);
 }
+ 

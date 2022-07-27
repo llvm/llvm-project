@@ -42,6 +42,9 @@ def imm32SExt12  : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()); }]>;
 def immZExt12Plus1 : PatLeaf<(imm), [{
   return isUInt<13>(N->getZExtValue()) && isUInt<12>(N->getZExtValue() + 1);
 }]>;
+def immZExt7Plus1 : PatLeaf<(imm), [{
+  return isUInt<7>(N->getZExtValue()) && isUInt<12>(N->getZExtValue() + 1);
+}]>;
 // Immediate range covering both signed 12-bit and unsigned 16-bit immediates.
 def imm32SExt12OrZExt16 : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue())
                                            || isUInt<16>(Imm.getZExtValue()); }]>;
@@ -396,6 +399,12 @@ def MOVEBALC_NM : MoveBalcBase;
 let isReMaterializable = 1 in {
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
+
+def LAGPB_NM : RegImmNM<"addiu.b", simm32_relaxed, GPR32NMOpnd>, InstSize48 {
+    let AsmString = "addiu.b $rt, $$gp, %gprel( $imm )";
+    let isReMaterializable = 1;
+}
+
 } // isReMaterializable = 1
 
 def ALUIPC_NM : RegImmNM<"aluipc", simm32_relaxed, GPR32NMOpnd>, InstSize32;
@@ -443,7 +452,6 @@ def : NMPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>;
 
 def : NMPat<(MipsJmpLink (i32 texternalsym:$dst)), (BALC_NM texternalsym:$dst)>;
 
-def : NMPat<(MipsFullAddr tglobaladdr:$in), (LA_NM tglobaladdr:$in)>;
 def : NMPat<(MipsFullAddr tglobaltlsaddr:$in), (LA_NM tglobaltlsaddr:$in)>;
 def : NMPat<(MipsFullAddr tblockaddress:$in), (LA_NM tblockaddress:$in)>;
 def : NMPat<(MipsFullAddr tjumptable:$in), (LA_NM tjumptable:$in)>;
@@ -613,6 +621,12 @@ def : NMPat<(brcond (i32 (setule GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
 def : NMPat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
             (BGEC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;
 
+// Immediate comparison branches with offset
+def : NMPat<(brcond (i32 (setgt GPR32NM:$lhs, immZExt7Plus1:$imm)), bb:$dst),
+            (BGEIC_NM GPR32NM:$lhs, (Plus1 $imm), bb:$dst)>;
+def : NMPat<(brcond (i32 (setugt GPR32NM:$lhs, immZExt7Plus1:$imm)), bb:$dst),
+            (BGEIUC_NM GPR32NM:$lhs, (Plus1 $imm), bb:$dst)>;
+
 // Branch on integer value
 def : NMPat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
             (BNEC_NM GPR32NM:$lhs, ZERO_NM, bb:$dst)>;
@@ -767,6 +781,22 @@ def : NMPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
             (LWGP_NM GP_NM, tglobaladdr:$in)>;
 def : NMPat<(add GP_NM, (MipsGPRel tglobaladdr:$in)),
             (ADDiu_NM GP_NM, tglobaladdr:$in)>;
+
+// GP-relative address
+
+def alignedglobaladdr : PatFrag<(ops),
+                                (tglobaladdr),
+  [{ // Only match if aligned to at least word size
+      Align A = N->getGlobal()->getPointerAlignment(MF->getDataLayout());
+      return commonAlignment(A, 4).value() == 4;
+    }]>;
+
+def : NMPat<(MipsFullAddr alignedglobaladdr:$in),
+            (LA_NM  alignedglobaladdr:$in)>;
+
+def : NMPat<(MipsFullAddr tglobaladdr:$in),
+            (LAGPB_NM tglobaladdr:$in)>;
+
 
 // Atomic load patterns.
 def : NMPat<(atomic_load_8 addr:$a), (LB_NM addr:$a)>;
