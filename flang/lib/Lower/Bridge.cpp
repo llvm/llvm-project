@@ -44,6 +44,7 @@
 #include "flang/Runtime/iostat.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -491,8 +492,10 @@ public:
     return bindIfNewSymbol(sym, exv);
   }
 
+  // FIXME: Generalize this function, so that lastPrivBlock can be removed
   void
-  copyHostAssociateVar(const Fortran::semantics::Symbol &sym) override final {
+  copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                       mlir::Block *lastPrivBlock = nullptr) override final {
     // 1) Fetch the original copy of the variable.
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
@@ -509,22 +512,40 @@ public:
     fir::ExtendedValue exv = getExtendedValue(sb);
 
     // 3) Perform the assignment.
-    builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+    mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+    if (lastPrivBlock)
+      builder->setInsertionPointToStart(lastPrivBlock);
+    else
+      builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+
+    fir::ExtendedValue lhs, rhs;
+    if (lastPrivBlock) {
+      // lastprivate case
+      lhs = hexv;
+      rhs = exv;
+    } else {
+      lhs = exv;
+      rhs = hexv;
+    }
+
     mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::createSomeArrayAssignment(*this, exv, hexv, localSymbols,
+      Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
                                                 stmtCtx);
       stmtCtx.finalize();
     } else if (hexv.getBoxOf<fir::CharBoxValue>()) {
-      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(exv, hexv);
+      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
     } else if (hexv.getBoxOf<fir::MutableBoxValue>()) {
       TODO(loc, "firstprivatisation of allocatable variables");
     } else {
-      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(hexv));
-      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(exv));
+      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
+      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
     }
+
+    if (lastPrivBlock)
+      builder->restoreInsertionPoint(insPt);
   }
 
   //===--------------------------------------------------------------------===//
@@ -1630,11 +1651,12 @@ private:
     // no collapse requested.
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
     if (ompLoop) {
-      const auto &wsLoopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
+      loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
           std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
       int64_t collapseValue =
-          Fortran::lower::getCollapseValue(wsLoopOpClauseList);
+          Fortran::lower::getCollapseValue(*loopOpClauseList);
 
       curEval = &curEval->getFirstNestedEvaluation();
       for (int64_t i = 1; i < collapseValue; i++) {
@@ -1644,6 +1666,10 @@ private:
 
     for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
+
+    if (ompLoop)
+      genOpenMPReduction(*this, *loopOpClauseList);
+
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
   }
@@ -2257,9 +2283,9 @@ private:
               }
               if (lhsIsWholeAllocatable)
                 fir::factory::finalizeRealloc(
-                    *builder, loc, lhsMutableBox.getValue(),
+                    *builder, loc, lhsMutableBox.value(),
                     /*lbounds=*/llvm::None, /*takeLboundsIfRealloc=*/false,
-                    lhsRealloc.getValue());
+                    lhsRealloc.value());
             },
 
             // [2] User defined assignment. If the context is a scalar

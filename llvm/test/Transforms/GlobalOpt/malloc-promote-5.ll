@@ -44,5 +44,5 @@ entry:
   ret i32 %res
 }
 
-declare noalias align 16 i8* @malloc(i64)
+declare noalias align 16 i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 declare void @f1()

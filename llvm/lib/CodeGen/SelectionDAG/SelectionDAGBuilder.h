@@ -198,7 +198,7 @@ public:
     SDAGSwitchLowering(SelectionDAGBuilder *sdb, FunctionLoweringInfo &funcinfo)
         : SwitchCG::SwitchLowering(funcinfo), SDB(sdb) {}
 
-    virtual void addSuccessorWithProb(
+    void addSuccessorWithProb(
         MachineBasicBlock *Src, MachineBasicBlock *Dst,
         BranchProbability Prob = BranchProbability::getUnknown()) override {
       SDB->addSuccessorWithProb(Src, Dst, Prob);

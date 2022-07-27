@@ -480,6 +480,7 @@ libc_math_function(
     name = "expm1f",
     additional_deps = [
         ":__support_fputil_fma",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":common_constants",

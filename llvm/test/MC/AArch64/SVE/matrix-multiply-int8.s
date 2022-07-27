@@ -15,19 +15,19 @@ ummla z0.s, z1.b, z2.b
 // CHECK-INST: ummla z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x98,0xc2,0x45]
 // CHECK-ERROR: instruction requires: i8mm sve
-// CHECK-UNKNOWN: 20 98 c2 45 <unknown>
+// CHECK-UNKNOWN: 45c29820 <unknown>
 
 smmla z0.s, z1.b, z2.b
 // CHECK-INST: smmla z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x98,0x02,0x45]
 // CHECK-ERROR: instruction requires: i8mm sve
-// CHECK-UNKNOWN: 20 98 02 45 <unknown>
+// CHECK-UNKNOWN: 45029820 <unknown>
 
 usmmla z0.s, z1.b, z2.b
 // CHECK-INST: usmmla z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x98,0x82,0x45]
 // CHECK-ERROR: instruction requires: i8mm sve
-// CHECK-UNKNOWN: 20 98 82 45 <unknown>
+// CHECK-UNKNOWN: 45829820 <unknown>
 
 
 // Test compatibility with MOVPRFX instruction.
@@ -35,35 +35,35 @@ usmmla z0.s, z1.b, z2.b
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 ummla z0.s, z1.b, z2.b
 // CHECK-INST: ummla z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x98,0xc2,0x45]
 // CHECK-ERROR: instruction requires: i8mm sve
-// CHECK-UNKNOWN: 20 98 c2 45 <unknown>
+// CHECK-UNKNOWN: 45c29820 <unknown>
 
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 smmla z0.s, z1.b, z2.b
 // CHECK-INST: smmla z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x98,0x02,0x45]
 // CHECK-ERROR: instruction requires: i8mm sve
-// CHECK-UNKNOWN: 20 98 02 45 <unknown>
+// CHECK-UNKNOWN: 45029820 <unknown>
 
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 usmmla z0.s, z1.b, z2.b
 // CHECK-INST: usmmla z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x98,0x82,0x45]
 // CHECK-ERROR: instruction requires: i8mm sve
-// CHECK-UNKNOWN: 20 98 82 45 <unknown>
+// CHECK-UNKNOWN: 45829820 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -73,20 +73,20 @@ usdot z0.s, z1.b, z2.b
 // CHECK-INST: usdot z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x78,0x82,0x44]
 // CHECK-ERROR: instruction requires: i8mm sve or sme
-// CHECK-UNKNOWN: 20 78 82 44 <unknown>
+// CHECK-UNKNOWN: 44827820 <unknown>
 
 // Test compatibility with MOVPRFX instruction.
 
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 usdot z0.s, z1.b, z2.b
 // CHECK-INST: usdot z0.s, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x78,0x82,0x44]
 // CHECK-ERROR: instruction requires: i8mm sve or sme
-// CHECK-UNKNOWN: 20 78 82 44 <unknown>
+// CHECK-UNKNOWN: 44827820 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -96,34 +96,34 @@ usdot z0.s, z1.b, z2.b[0]
 // CHECK-INST: usdot z0.s, z1.b, z2.b[0]
 // CHECK-ENCODING: [0x20,0x18,0xa2,0x44]
 // CHECK-ERROR: instruction requires: i8mm sve or sme
-// CHECK-UNKNOWN: 20 18 a2 44 <unknown>
+// CHECK-UNKNOWN: 44a21820 <unknown>
 
 sudot z0.s, z1.b, z2.b[3]
 // CHECK-INST: sudot z0.s, z1.b, z2.b[3]
 // CHECK-ENCODING: [0x20,0x1c,0xba,0x44]
 // CHECK-ERROR: instruction requires: i8mm sve or sme
-// CHECK-UNKNOWN: 20 1c ba 44 <unknown>
+// CHECK-UNKNOWN: 44ba1c20 <unknown>
 
 // Test compatibility with MOVPRFX instruction.
 
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 usdot z0.s, z1.b, z2.b[0]
 // CHECK-INST: usdot z0.s, z1.b, z2.b[0]
 // CHECK-ENCODING: [0x20,0x18,0xa2,0x44]
 // CHECK-ERROR: instruction requires: i8mm sve or sme
-// CHECK-UNKNOWN: 20 18 a2 44 <unknown>
+// CHECK-UNKNOWN: 44a21820 <unknown>
 
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 sudot z0.s, z1.b, z2.b[0]
 // CHECK-INST: sudot z0.s, z1.b, z2.b[0]
 // CHECK-ENCODING: [0x20,0x1c,0xa2,0x44]
 // CHECK-ERROR: instruction requires: i8mm sve or sme
-// CHECK-UNKNOWN: 20 1c a2 44 <unknown>
+// CHECK-UNKNOWN: 44a21c20 <unknown>

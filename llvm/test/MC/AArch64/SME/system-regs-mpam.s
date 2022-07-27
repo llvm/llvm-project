@@ -22,7 +22,7 @@ mrs x3, MPAMSM_EL1
 // CHECK-INST: mrs x3, MPAMSM_EL1
 // CHECK-ENCODING: [0x63,0xa5,0x38,0xd5]
 // CHECK-ERROR: expected readable system register
-// CHECK-UNKNOWN: 63 a5 38 d5   mrs   x3, S3_0_C10_C5_3
+// CHECK-UNKNOWN: d538a563   mrs   x3, S3_0_C10_C5_3
 
 // --------------------------------------------------------------------------//
 // write
@@ -31,4 +31,4 @@ msr MPAMSM_EL1, x3
 // CHECK-INST: msr MPAMSM_EL1, x3
 // CHECK-ENCODING: [0x63,0xa5,0x18,0xd5]
 // CHECK-ERROR: expected writable system register or pstate
-// CHECK-UNKNOWN: 63 a5 18 d5   msr   S3_0_C10_C5_3, x3
+// CHECK-UNKNOWN: d518a563   msr   S3_0_C10_C5_3, x3

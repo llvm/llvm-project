@@ -466,6 +466,15 @@ static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
   OS << format(Fmt.data(), Address) << Name << "\t" << Val;
 }
 
+static void AlignToInstStartColumn(size_t Start, const MCSubtargetInfo &STI,
+                                   raw_ostream &OS) {
+  // The output of printInst starts with a tab. Print some spaces so that
+  // the tab has 1 column and advances to the target tab stop.
+  unsigned TabStop = getInstStartColumn(STI);
+  unsigned Column = OS.tell() - Start;
+  OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+}
+
 class PrettyPrinter {
 public:
   virtual ~PrettyPrinter() = default;
@@ -487,11 +496,7 @@ public:
       dumpBytes(Bytes, OS);
     }
 
-    // The output of printInst starts with a tab. Print some spaces so that
-    // the tab has 1 column and advances to the target tab stop.
-    unsigned TabStop = getInstStartColumn(STI);
-    unsigned Column = OS.tell() - Start;
-    OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+    AlignToInstStartColumn(Start, STI, OS);
 
     if (MI) {
       // See MCInstPrinter::printInst. On targets where a PC relative immediate
@@ -664,6 +669,91 @@ public:
 };
 BPFPrettyPrinter BPFPrettyPrinterInst;
 
+class ARMPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
+                 LiveVariablePrinter &LVP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printBetweenInsts(OS, false);
+
+    size_t Start = OS.tell();
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (ShowRawInsn) {
+      size_t Pos = 0, End = Bytes.size();
+      if (STI.checkFeatures("+thumb-mode")) {
+        for (; Pos + 2 <= End; Pos += 2)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint16_t>(
+                        Bytes.data() + Pos, llvm::support::little),
+                    4);
+      } else {
+        for (; Pos + 4 <= End; Pos += 4)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint32_t>(
+                        Bytes.data() + Pos, llvm::support::little),
+                    8);
+      }
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
+      }
+    }
+
+    AlignToInstStartColumn(Start, STI, OS);
+
+    if (MI) {
+      IP.printInst(MI, Address.Address, "", STI, OS);
+    } else
+      OS << "\t<unknown>";
+  }
+};
+ARMPrettyPrinter ARMPrettyPrinterInst;
+
+class AArch64PrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
+                 LiveVariablePrinter &LVP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printBetweenInsts(OS, false);
+
+    size_t Start = OS.tell();
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (ShowRawInsn) {
+      size_t Pos = 0, End = Bytes.size();
+      for (; Pos + 4 <= End; Pos += 4)
+        OS << ' '
+           << format_hex_no_prefix(
+                  llvm::support::endian::read<uint32_t>(Bytes.data() + Pos,
+                                                        llvm::support::little),
+                  8);
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
+      }
+    }
+
+    AlignToInstStartColumn(Start, STI, OS);
+
+    if (MI) {
+      IP.printInst(MI, Address.Address, "", STI, OS);
+    } else
+      OS << "\t<unknown>";
+  }
+};
+AArch64PrettyPrinter AArch64PrettyPrinterInst;
+
 PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   switch(Triple.getArch()) {
   default:
@@ -675,6 +765,15 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   case Triple::bpfel:
   case Triple::bpfeb:
     return BPFPrettyPrinterInst;
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    return ARMPrettyPrinterInst;
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+  case Triple::aarch64_32:
+    return AArch64PrettyPrinterInst;
   }
 }
 }
@@ -895,12 +994,14 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                uint64_t End, const ObjectFile &Obj,
                                ArrayRef<uint8_t> Bytes,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
-                               raw_ostream &OS) {
+                               const MCSubtargetInfo &STI, raw_ostream &OS) {
   support::endianness Endian =
       Obj.isLittleEndian() ? support::little : support::big;
-  OS << format("%8" PRIx64 ":\t", SectionAddr + Index);
+  size_t Start = OS.tell();
+  OS << format("%8" PRIx64 ": ", SectionAddr + Index);
   if (Index + 4 <= End) {
     dumpBytes(Bytes.slice(Index, 4), OS);
+    AlignToInstStartColumn(Start, STI, OS);
     OS << "\t.word\t"
            << format_hex(support::endian::read32(Bytes.data() + Index, Endian),
                          10);
@@ -908,13 +1009,14 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
   }
   if (Index + 2 <= End) {
     dumpBytes(Bytes.slice(Index, 2), OS);
-    OS << "\t\t.short\t"
-           << format_hex(support::endian::read16(Bytes.data() + Index, Endian),
-                         6);
+    AlignToInstStartColumn(Start, STI, OS);
+    OS << "\t.short\t"
+       << format_hex(support::endian::read16(Bytes.data() + Index, Endian), 6);
     return 2;
   }
   dumpBytes(Bytes.slice(Index, 1), OS);
-  OS << "\t\t.byte\t" << format_hex(Bytes[Index], 4);
+  AlignToInstStartColumn(Start, STI, OS);
+  OS << "\t.byte\t" << format_hex(Bytes[Index], 4);
   return 1;
 }
 
@@ -1022,10 +1124,12 @@ static void collectLocalBranchTargets(
     // Disassemble a real instruction and record function-local branch labels.
     MCInst Inst;
     uint64_t Size;
-    bool Disassembled = DisAsm->getInstruction(
-        Inst, Size, Bytes.slice(Index - SectionAddr), Index, nulls());
+    ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index - SectionAddr);
+    bool Disassembled =
+        DisAsm->getInstruction(Inst, Size, ThisBytes, Index, nulls());
     if (Size == 0)
-      Size = 1;
+      Size = std::min<uint64_t>(ThisBytes.size(),
+                                DisAsm->suggestBytesToSkip(ThisBytes, Index));
 
     if (Disassembled && MIA) {
       uint64_t Target;
@@ -1068,10 +1172,11 @@ static void addSymbolizer(
   for (size_t Index = 0; Index != Bytes.size();) {
     MCInst Inst;
     uint64_t Size;
-    DisAsm->getInstruction(Inst, Size, Bytes.slice(Index), SectionAddr + Index,
-                           nulls());
+    ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index - SectionAddr);
+    DisAsm->getInstruction(Inst, Size, ThisBytes, Index, nulls());
     if (Size == 0)
-      Size = 1;
+      Size = std::min<uint64_t>(ThisBytes.size(),
+                                DisAsm->suggestBytesToSkip(ThisBytes, Index));
     Index += Size;
   }
   ArrayRef<uint64_t> LabelAddrsRef = SymbolizerPtr->getReferencedAddresses();
@@ -1504,7 +1609,7 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
 
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
-                                MappingSymbols, FOS);
+                                MappingSymbols, *STI, FOS);
         } else {
           // When -z or --disassemble-zeroes are given we always dissasemble
           // them. Otherwise we might want to skip zero bytes we see.
@@ -1538,11 +1643,14 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           // Disassemble a real instruction or a data when disassemble all is
           // provided
           MCInst Inst;
-          bool Disassembled =
-              DisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
-                                     SectionAddr + Index, CommentStream);
+          ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
+          uint64_t ThisAddr = SectionAddr + Index;
+          bool Disassembled = DisAsm->getInstruction(Inst, Size, ThisBytes,
+                                                     ThisAddr, CommentStream);
           if (Size == 0)
-            Size = 1;
+            Size = std::min<uint64_t>(
+                ThisBytes.size(),
+                DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
 
           LVP.update({Index, Section.getIndex()},
                      {Index + Size, Section.getIndex()}, Index + Size != End);

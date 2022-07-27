@@ -13,10 +13,10 @@ nots    p0.b, p0/z, p0.b
 // CHECK-INST: nots    p0.b, p0/z, p0.b
 // CHECK-ENCODING: [0x00,0x42,0x40,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 42 40 25 <unknown>
+// CHECK-UNKNOWN: 25404200 <unknown>
 
 nots    p15.b, p15/z, p15.b
 // CHECK-INST: nots    p15.b, p15/z, p15.b
 // CHECK-ENCODING: [0xef,0x7f,0x4f,0x25]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef 7f 4f 25 <unknown>
+// CHECK-UNKNOWN: 254f7fef <unknown>

@@ -13,13 +13,13 @@ sbclb z0.s, z1.s, z31.s
 // CHECK-INST: sbclb z0.s, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0xd0,0x9f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 d0 9f 45 <unknown>
+// CHECK-UNKNOWN: 459fd020 <unknown>
 
 sbclb z0.d, z1.d, z31.d
 // CHECK-INST: sbclb z0.d, z1.d, z31.d
 // CHECK-ENCODING: [0x20,0xd0,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 d0 df 45 <unknown>
+// CHECK-UNKNOWN: 45dfd020 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -29,10 +29,10 @@ movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 sbclb z0.d, z1.d, z31.d
 // CHECK-INST: sbclb z0.d, z1.d, z31.d
 // CHECK-ENCODING: [0x20,0xd0,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 d0 df 45 <unknown>
+// CHECK-UNKNOWN: 45dfd020 <unknown>

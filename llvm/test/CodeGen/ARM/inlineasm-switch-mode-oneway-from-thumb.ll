@@ -10,7 +10,7 @@ define hidden i32 @bah(i8* %start) #0 align 2 {
 }
 ; CHECK: $a
 ; CHECK: $t
-; CHECK: 48 1c   adds    r0, r1, #1
+; CHECK: 1c48    adds    r0, r1, #1
 
 ; ASM: .code 16
 ; ASM-LABEL: bah:

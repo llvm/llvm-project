@@ -133,7 +133,8 @@ void CodeMetrics::analyzeBasicBlock(
         // When preparing for LTO, liberally consider calls as inline
         // candidates.
         if (!Call->isNoInline() && IsLoweredToCall &&
-            ((F->hasInternalLinkage() && F->hasOneUse()) || PrepareForLTO)) {
+            ((F->hasInternalLinkage() && F->hasOneLiveUse()) ||
+             PrepareForLTO)) {
           ++NumInlineCandidates;
         }
 

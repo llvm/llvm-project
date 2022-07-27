@@ -367,9 +367,9 @@ cleanup:                                          ; preds = %entry, %if.end5, %i
   ret %struct.BitfieldStruct* %retval.0
 }
 
-attributes #0 = { nofree nounwind allocsize(0) }
+attributes #0 = { nofree nounwind allocsize(0) allockind("alloc,uninitialized") }
 attributes #1 = { nofree nounwind }
-attributes #2 = { nounwind }
+attributes #2 = { nounwind allockind("free") }
 attributes #3 = { allocsize(0,1) }
 attributes #4 = { allocsize(0) }
-attributes #5 = { nofree nounwind allocsize(0,1) }
+attributes #5 = { nofree nounwind allocsize(0,1) allockind("alloc,zeroed") }
