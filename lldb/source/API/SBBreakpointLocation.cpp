@@ -374,7 +374,7 @@ const char *SBBreakpointLocation::GetQueueName() const {
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    loc_sp->GetQueueName();
+    return loc_sp->GetQueueName();
   }
   return nullptr;
 }
