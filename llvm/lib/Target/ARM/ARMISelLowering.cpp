@@ -1370,7 +1370,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     // instructions. (ARMv6 doesn't have dmb, but it has an equivalent
     // encoding; see ARMISD::MEMBARRIER_MCR.)
     setMaxAtomicSizeInBitsSupported(64);
-  } else if (Subtarget->isMClass() && Subtarget->hasV8MBaselineOps()) {
+  } else if ((Subtarget->isMClass() && Subtarget->hasV8MBaselineOps()) ||
+             Subtarget->hasForced32BitAtomics()) {
     // Cortex-M (besides Cortex-M0) have 32-bit atomics.
     setMaxAtomicSizeInBitsSupported(32);
   } else {
