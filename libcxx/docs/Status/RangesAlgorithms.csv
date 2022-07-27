@@ -45,8 +45,8 @@ Write,move_backward,Nikolas Klauser,`D126616 <https://llvm.org/D126616>`_,✅
 Write,fill,Nikolas Klauser,`D123462 <https://llvm.org/D123462>`_,✅
 Write,fill_n,Nikolas Klauser,`D123462 <https://llvm.org/D123462>`_,✅
 Write,transform,Nikolas Klauser,`D122173 <https://llvm.org/D122173>`_,✅
-Write,generate,Nikolas Klauser,n/a,Not started
-Write,generate_n,Nikolas Klauser,n/a,Not started
+Write,generate,Konstantin Varlamov,`D130552 <https://llvm.org/D130552>`_,✅
+Write,generate_n,Konstantin Varlamov,`D130552 <https://llvm.org/D130552>`_,✅
 Write,remove_copy,Nikolas Klauser,n/a,Not started
 Write,remove_copy_if,Nikolas Klauser,n/a,Not started
 Write,replace,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
