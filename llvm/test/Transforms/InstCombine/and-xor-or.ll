@@ -4205,3 +4205,133 @@ define i32 @trunc_trunc_xor_uses(i65 %x, i65 %y) {
   %r = xor i32 %sx, %sy
   ret i32 %r
 }
+
+define i16 @and_zext_zext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_zext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[ZY:%.*]] = zext i4 [[Y]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[ZX]], [[ZY]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i4 %y to i16
+  %r = and i16 %zx, %zy
+  ret i16 %r
+}
+
+define i16 @or_zext_zext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_zext_zext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[ZY:%.*]] = zext i4 [[Y]] to i16
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[ZY]], [[ZX]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i4 %y to i16
+  %r = or i16 %zy, %zx
+  ret i16 %r
+}
+
+define <2 x i16> @xor_zext_zext(<2 x i8> %x, <2 x i4> %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_zext_zext
+; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i8> [[X]] to <2 x i16>
+; CHECK-NEXT:    [[ZY:%.*]] = zext <2 x i4> [[Y]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i16> [[ZX]], [[ZY]]
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %zx = zext <2 x i8> %x to <2 x i16>
+  %zy = zext <2 x i4> %y to <2 x i16>
+  %r = xor <2 x i16> %zx, %zy
+  ret <2 x i16> %r
+}
+
+define i16 @and_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[SY]], [[SX]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = and i16 %sy, %sx
+  ret i16 %r
+}
+
+define i16 @or_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y]] to i16
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[SX]], [[SY]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = or i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @xor_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y]] to i16
+; CHECK-NEXT:    [[R:%.*]] = xor i16 [[SX]], [[SY]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = xor i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @and_zext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[ZX]], [[SY]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = and i16 %zx, %sy
+  ret i16 %r
+}
+
+define i32 @and_zext_zext_use1(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_zext_use1
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZX]])
+; CHECK-NEXT:    [[ZY:%.*]] = zext i4 [[Y]] to i32
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[ZX]], [[ZY]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  call void @use(i32 %zx)
+  %zy = zext i4 %y to i32
+  %r = and i32 %zx, %zy
+  ret i32 %r
+}
+
+define i32 @or_sext_sext_use1(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_sext_sext_use1
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SY]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SX]], [[SY]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i8 %x to i32
+  %sy = sext i4 %y to i32
+  call void @use(i32 %sy)
+  %r = or i32 %sx, %sy
+  ret i32 %r
+}
