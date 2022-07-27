@@ -13,46 +13,46 @@ sli     z0.b, z0.b, #0
 // CHECK-INST: sli	z0.b, z0.b, #0
 // CHECK-ENCODING: [0x00,0xf4,0x08,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 00 f4 08 45 <unknown>
+// CHECK-UNKNOWN: 4508f400 <unknown>
 
 sli     z31.b, z31.b, #7
 // CHECK-INST: sli	z31.b, z31.b, #7
 // CHECK-ENCODING: [0xff,0xf7,0x0f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff f7 0f 45 <unknown>
+// CHECK-UNKNOWN: 450ff7ff <unknown>
 
 sli     z0.h, z0.h, #0
 // CHECK-INST: sli	z0.h, z0.h, #0
 // CHECK-ENCODING: [0x00,0xf4,0x10,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 00 f4 10 45 <unknown>
+// CHECK-UNKNOWN: 4510f400 <unknown>
 
 sli     z31.h, z31.h, #15
 // CHECK-INST: sli	z31.h, z31.h, #15
 // CHECK-ENCODING: [0xff,0xf7,0x1f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff f7 1f 45 <unknown>
+// CHECK-UNKNOWN: 451ff7ff <unknown>
 
 sli     z0.s, z0.s, #0
 // CHECK-INST: sli	z0.s, z0.s, #0
 // CHECK-ENCODING: [0x00,0xf4,0x40,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 00 f4 40 45 <unknown>
+// CHECK-UNKNOWN: 4540f400 <unknown>
 
 sli     z31.s, z31.s, #31
 // CHECK-INST: sli	z31.s, z31.s, #31
 // CHECK-ENCODING: [0xff,0xf7,0x5f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff f7 5f 45 <unknown>
+// CHECK-UNKNOWN: 455ff7ff <unknown>
 
 sli     z0.d, z0.d, #0
 // CHECK-INST: sli	z0.d, z0.d, #0
 // CHECK-ENCODING: [0x00,0xf4,0x80,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 00 f4 80 45 <unknown>
+// CHECK-UNKNOWN: 4580f400 <unknown>
 
 sli     z31.d, z31.d, #63
 // CHECK-INST: sli	z31.d, z31.d, #63
 // CHECK-ENCODING: [0xff,0xf7,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff f7 df 45 <unknown>
+// CHECK-UNKNOWN: 45dff7ff <unknown>

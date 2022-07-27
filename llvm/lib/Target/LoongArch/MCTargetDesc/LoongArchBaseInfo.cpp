@@ -35,6 +35,6 @@ ABI getTargetABI(StringRef ABIName) {
 // FIXME: other register?
 MCRegister getBPReg() { return LoongArch::R31; }
 
-} // namespace LoongArchABI
+} // end namespace LoongArchABI
 
-} // namespace llvm
+} // end namespace llvm

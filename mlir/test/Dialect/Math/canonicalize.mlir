@@ -246,3 +246,21 @@ func.func @exp_fold_vec() -> (vector<4xf32>) {
   %0 = math.exp %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// CHECK-LABEL: @exp2_fold
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 4.000000e+00 : f32
+// CHECK-NEXT:   return %[[cst]]
+func.func @exp2_fold() -> f32 {
+  %c = arith.constant 2.0 : f32
+  %r = math.exp2 %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @exp2_fold_vec
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[2.000000e+00, 4.000000e+00, 8.000000e+00, 1.600000e+01]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @exp2_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
+  %0 = math.exp2 %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}

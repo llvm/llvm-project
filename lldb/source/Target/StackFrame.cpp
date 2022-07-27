@@ -1145,26 +1145,34 @@ bool StackFrame::HasDebugInformation() {
 ValueObjectSP
 StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
                                            DynamicValueType use_dynamic) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ValueObjectSP valobj_sp;
-  if (IsHistorical()) {
-    return valobj_sp;
-  }
-  VariableList *var_list = GetVariableList(true);
-  if (var_list) {
-    // Make sure the variable is a frame variable
-    const uint32_t var_idx = var_list->FindIndexForVariable(variable_sp.get());
-    const uint32_t num_variables = var_list->GetSize();
-    if (var_idx < num_variables) {
-      valobj_sp = m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
-      if (!valobj_sp) {
-        if (m_variable_list_value_objects.GetSize() < num_variables)
-          m_variable_list_value_objects.Resize(num_variables);
-        valobj_sp = ValueObjectVariable::Create(this, variable_sp);
-        m_variable_list_value_objects.SetValueObjectAtIndex(var_idx, valobj_sp);
+  { // Scope for stack frame mutex.  We need to drop this mutex before we figure
+    // out the dynamic value.  That will require converting the StackID in the 
+    // VO back to a StackFrame, which will in turn require locking the 
+    // StackFrameList.  If we still hold the StackFrame mutex, we could suffer 
+    // lock inversion against the pattern of getting the StackFrameList and 
+    // then the stack frame, which is fairly common.
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    if (IsHistorical()) {
+      return valobj_sp;
+    }
+    VariableList *var_list = GetVariableList(true);
+    if (var_list) {
+      // Make sure the variable is a frame variable
+      const uint32_t var_idx = var_list->FindIndexForVariable(variable_sp.get());
+      const uint32_t num_variables = var_list->GetSize();
+      if (var_idx < num_variables) {
+        valobj_sp = m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
+        if (!valobj_sp) {
+          if (m_variable_list_value_objects.GetSize() < num_variables)
+            m_variable_list_value_objects.Resize(num_variables);
+          valobj_sp = ValueObjectVariable::Create(this, variable_sp);
+          m_variable_list_value_objects.SetValueObjectAtIndex(var_idx,
+                                                              valobj_sp);
+        }
       }
     }
-  }
+  } // End of StackFrame mutex scope.
   if (use_dynamic != eNoDynamicValues && valobj_sp) {
     ValueObjectSP dynamic_sp = valobj_sp->GetDynamicValue(use_dynamic);
     if (dynamic_sp)

@@ -266,7 +266,8 @@ static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
-                          bool isBundleLoader = false) {
+                          bool isBundleLoader = false,
+                          bool isForceHidden = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -293,7 +294,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 
       if (!archive->isEmpty() && !archive->hasSymbolTable())
         error(path + ": archive has no index; run ranlib to add one");
-      file = make<ArchiveFile>(std::move(archive));
+      file = make<ArchiveFile>(std::move(archive), isForceHidden);
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
@@ -406,10 +407,12 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 }
 
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
-                       bool isReexport, bool isExplicit, LoadType loadType) {
+                       bool isReexport, bool isHidden, bool isExplicit,
+                       LoadType loadType) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, loadType, /*isLazy=*/false, isExplicit))) {
+            addFile(*path, loadType, /*isLazy=*/false, isExplicit,
+                    /*isBundleLoader=*/false, isHidden))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -473,7 +476,7 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   StringRef arg = argv[i];
   if (arg.consume_front("-l")) {
     addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-               /*isReexport=*/false, /*isExplicit=*/false,
+               /*isReexport=*/false, /*isHidden=*/false, /*isExplicit=*/false,
                LoadType::LCLinkerOption);
   } else if (arg == "-framework") {
     StringRef name = argv[++i];
@@ -1035,12 +1038,19 @@ static void createFiles(const InputArgList &args) {
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
       break;
+    case OPT_load_hidden:
+      addFile(rerootPath(arg->getValue()), LoadType::CommandLine,
+              /*isLazy=*/false, /*isExplicit=*/true, /*isBundleLoader=*/false,
+              /*isForceHidden=*/true);
+      break;
     case OPT_l:
     case OPT_needed_l:
     case OPT_reexport_l:
     case OPT_weak_l:
+    case OPT_hidden_l:
       addLibrary(arg->getValue(), opt.getID() == OPT_needed_l,
                  opt.getID() == OPT_weak_l, opt.getID() == OPT_reexport_l,
+                 opt.getID() == OPT_hidden_l,
                  /*isExplicit=*/true, LoadType::CommandLine);
       break;
     case OPT_framework:

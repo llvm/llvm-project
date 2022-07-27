@@ -120,7 +120,7 @@ TEST(SolverTest, NegatedConjunction) {
   expectUnsatisfiable(solve({NotXAndY, XAndY}));
 }
 
-TEST(SolverTest, DisjunctionSameVars) {
+TEST(SolverTest, DisjunctionSameVarWithNegation) {
   ConstraintContext Ctx;
   auto X = Ctx.atom();
   auto NotX = Ctx.neg(X);
@@ -128,6 +128,15 @@ TEST(SolverTest, DisjunctionSameVars) {
 
   // X v !X
   expectSatisfiable(solve({XOrNotX}), _);
+}
+
+TEST(SolverTest, DisjunctionSameVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto XOrX = Ctx.disj(X, X);
+
+  // X v X
+  expectSatisfiable(solve({XOrX}), _);
 }
 
 TEST(SolverTest, ConjunctionSameVarsConflict) {
@@ -138,6 +147,15 @@ TEST(SolverTest, ConjunctionSameVarsConflict) {
 
   // X ^ !X
   expectUnsatisfiable(solve({XAndNotX}));
+}
+
+TEST(SolverTest, ConjunctionSameVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto XAndX = Ctx.conj(X, X);
+
+  // X ^ X
+  expectSatisfiable(solve({XAndX}), _);
 }
 
 TEST(SolverTest, PureVar) {
@@ -186,6 +204,20 @@ TEST(SolverTest, DeepConflict) {
 
   // (X v Y) ^ (!X v Y) ^ (!X v !Y) ^ (X v !Y)
   expectUnsatisfiable(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}));
+}
+
+TEST(SolverTest, IffIsEquivalentToDNF) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto NotX = Ctx.neg(X);
+  auto NotY = Ctx.neg(Y);
+  auto XIffY = Ctx.iff(X, Y);
+  auto XIffYDNF = Ctx.disj(Ctx.conj(X, Y), Ctx.conj(NotX, NotY));
+  auto NotEquivalent = Ctx.neg(Ctx.iff(XIffY, XIffYDNF));
+
+  // !((X <=> Y) <=> ((X ^ Y) v (!X ^ !Y)))
+  expectUnsatisfiable(solve({NotEquivalent}));
 }
 
 TEST(SolverTest, IffSameVars) {
@@ -277,6 +309,18 @@ TEST(SolverTest, RespectsAdditionalConstraints) {
 
   // (X <=> Y) ^ X ^ !Y
   expectUnsatisfiable(solve({XEqY, X, NotY}));
+}
+
+TEST(SolverTest, ImplicationIsEquivalentToDNF) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XImpliesY = Ctx.impl(X, Y);
+  auto XImpliesYDNF = Ctx.disj(Ctx.neg(X), Y);
+  auto NotEquivalent = Ctx.neg(Ctx.iff(XImpliesY, XImpliesYDNF));
+
+  // !((X => Y) <=> (!X v Y))
+  expectUnsatisfiable(solve({NotEquivalent}));
 }
 
 TEST(SolverTest, ImplicationConflict) {

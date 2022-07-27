@@ -234,7 +234,7 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
 
   // Wait for the child process to trap on its call to execve.
-  int wstatus;
+  int wstatus = 0;
   ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
   assert(wpid == pid);
   (void)wpid;

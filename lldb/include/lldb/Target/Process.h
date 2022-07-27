@@ -1715,8 +1715,8 @@ public:
   ///     an error saying so.
   ///     If it does, either the memory tags or an error describing a
   ///     failure to read or unpack them.
-  llvm::Expected<std::vector<lldb::addr_t>> ReadMemoryTags(lldb::addr_t addr,
-                                                           size_t len);
+  virtual llvm::Expected<std::vector<lldb::addr_t>>
+  ReadMemoryTags(lldb::addr_t addr, size_t len);
 
   /// Write memory tags for a range of memory.
   /// (calls DoWriteMemoryTags to do the target specific work)

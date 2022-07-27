@@ -13,10 +13,10 @@ ext z0.b, { z1.b, z2.b }, #0
 // CHECK-INST: ext z0.b, { z1.b, z2.b }, #0
 // CHECK-ENCODING: [0x20,0x00,0x60,0x05]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 00 60 05 <unknown>
+// CHECK-UNKNOWN: 05600020 <unknown>
 
 ext z31.b, { z30.b, z31.b }, #255
 // CHECK-INST: ext z31.b, { z30.b, z31.b }, #255
 // CHECK-ENCODING: [0xdf,0x1f,0x7f,0x05]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: df 1f 7f 05 <unknown>
+// CHECK-UNKNOWN: 057f1fdf <unknown>

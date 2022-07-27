@@ -2,10 +2,6 @@
 // S + A - P = Value
 // S = P - A + Value
 
-// mul(D1,0x100) == << 8
-// mul(D2,0x10000) == << 16
-// mul(D3,0x1000000) == << 24
-
 // REQUIRES: system-linux
 
 // RUN: %clang %cflags -nostartfiles -nostdlib %s -o %t.exe -mlittle-endian \
@@ -21,22 +17,22 @@
 
 // CHECKPREL32: [[#%x,DATATABLEADDR:]] <datatable>:
 // CHECKPREL32-NEXT: 00:
-// CHECKPREL32-NEXT: 04: [[#%x,D0:]] [[#%x,D1:]] [[#%x,D2:]] [[#%x,D3:]]
+// CHECKPREL32-NEXT: 04: [[#%x,VALUE:]]
 
 // 4 is offset in datatable
 // 8 is addend
-// CHECKPREL32: [[#DATATABLEADDR + 4 - 8 + D0 + mul(D1,0x100) + mul(D2,0x10000) + mul(D3,0x1000000)]] <_start>:
+// CHECKPREL32: [[#DATATABLEADDR + 4 - 8 + VALUE]] <_start>:
 
 // RUN: llvm-objdump -D %t.bolt | FileCheck %s --check-prefix=CHECKPREL64
 // CHECKPREL64: [[#%x,DATATABLEADDR:]] <datatable>:
 // CHECKPREL64-NEXT: 00:
 // CHECKPREL64-NEXT: 04:
-// CHECKPREL64-NEXT: 08: [[#%x,D0:]] [[#%x,D1:]] [[#%x,D2:]] [[#%x,D3:]]
-// CHECKPREL64-NEXT: 0c: 00 00 00 00
+// CHECKPREL64-NEXT: 08: [[#%x,VALUE:]]
+// CHECKPREL64-NEXT: 0c: 00000000
 
 // 8 is offset in datatable
 // 12 is addend
-// CHECKPREL64: [[#DATATABLEADDR + 8 - 12 + D0 + mul(D1,0x100) + mul(D2,0x10000) + mul(D3,0x1000000)]] <_start>:
+// CHECKPREL64: [[#DATATABLEADDR + 8 - 12 + VALUE]] <_start>:
 
   .section .text
   .align 4

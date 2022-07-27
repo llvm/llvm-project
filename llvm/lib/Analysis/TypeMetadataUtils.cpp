@@ -75,7 +75,9 @@ void llvm::findDevirtualizableCallsForTypeTest(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI,
     DominatorTree &DT) {
-  assert(CI->getCalledFunction()->getIntrinsicID() == Intrinsic::type_test);
+  assert(CI->getCalledFunction()->getIntrinsicID() == Intrinsic::type_test ||
+         CI->getCalledFunction()->getIntrinsicID() ==
+             Intrinsic::public_type_test);
 
   const Module *M = CI->getParent()->getParent()->getParent();
 

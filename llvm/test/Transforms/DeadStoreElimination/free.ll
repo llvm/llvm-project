@@ -3,8 +3,8 @@
 
 target datalayout = "e-p:64:64:64"
 
-declare void @free(i8* nocapture)
-declare noalias i8* @malloc(i64)
+declare void @free(i8* nocapture) allockind("free")
+declare noalias i8* @malloc(i64) allockind("alloc,uninitialized")
 
 define void @test(i32* %Q, i32* %P) {
 ; CHECK-LABEL: @test(

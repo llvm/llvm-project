@@ -21,6 +21,7 @@
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__type_traits/is_callable.h>
 #include <__type_traits/is_copy_constructible.h>
 #include <__utility/move.h>

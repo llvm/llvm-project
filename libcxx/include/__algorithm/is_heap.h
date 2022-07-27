@@ -28,7 +28,7 @@ bool
 is_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
     typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-    return _VSTD::__is_heap_until<_Comp_ref>(__first, __last, __comp) == __last;
+    return std::__is_heap_until(__first, __last, static_cast<_Comp_ref>(__comp)) == __last;
 }
 
 template<class _RandomAccessIterator>

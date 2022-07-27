@@ -100,11 +100,11 @@ public:
 
   /// @name FunctionPass interface
   //@{
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 
-  virtual bool runOnFunction(llvm::Function &F) override {
+  bool runOnFunction(llvm::Function &F) override {
     runDumpFunction(F, Suffix);
     return false;
   }

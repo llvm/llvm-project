@@ -345,6 +345,16 @@ def AArch64add_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2),
 def AArch64sub_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2),
                              [(int_aarch64_sve_sub node:$pred, node:$op1, node:$op2),
                               (sub node:$op1, (vselect node:$pred, node:$op2, (SVEDup0)))]>;
+def AArch64mla_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
+                             [(int_aarch64_sve_mla node:$pred, node:$op1, node:$op2, node:$op3),
+                              (add node:$op1, (AArch64mul_p_oneuse node:$pred, node:$op2, node:$op3)),
+                              // add(a, select(mask, mul(b, c), splat(0))) -> mla(a, mask, b, c)
+                              (add node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0)))]>;
+def AArch64mls_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
+                             [(int_aarch64_sve_mls node:$pred, node:$op1, node:$op2, node:$op3),
+                              (sub node:$op1, (AArch64mul_p_oneuse node:$pred, node:$op2, node:$op3)),
+                              // sub(a, select(mask, mul(b, c), splat(0))) -> mls(a, mask, b, c)
+                              (sub node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0)))]>;
 
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -399,8 +409,8 @@ let Predicates = [HasSVEorSME] in {
 
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", int_aarch64_sve_mad>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", int_aarch64_sve_msb>;
-  defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", int_aarch64_sve_mla, add, AArch64mul_p_oneuse>;
-  defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls", int_aarch64_sve_mls, sub, AArch64mul_p_oneuse>;
+  defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", AArch64mla_m1>;
+  defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls", AArch64mls_m1>;
 
   // SVE predicated integer reductions.
   defm SADDV_VPZ : sve_int_reduce_0_saddv<0b000, "saddv", AArch64saddv_p>;

@@ -197,8 +197,24 @@ static void DoResetImpl(uptr epoch) {
   }
 
   DPrintf("Resetting shadow...\n");
-  if (!MmapFixedSuperNoReserve(ShadowBeg(), ShadowEnd() - ShadowBeg(),
-                               "shadow")) {
+  auto shadow_begin = ShadowBeg();
+  auto shadow_end = ShadowEnd();
+#if SANITIZER_GO
+  CHECK_NE(0, ctx->mapped_shadow_begin);
+  shadow_begin = ctx->mapped_shadow_begin;
+  shadow_end = ctx->mapped_shadow_end;
+  VPrintf(2, "shadow_begin-shadow_end: (0x%zx-0x%zx)\n",
+          shadow_begin, shadow_end);
+#endif
+
+#if SANITIZER_WINDOWS
+  auto resetFailed =
+      !ZeroMmapFixedRegion(shadow_begin, shadow_end - shadow_begin);
+#else
+  auto resetFailed =
+      !MmapFixedSuperNoReserve(shadow_begin, shadow_end-shadow_begin, "shadow");
+#endif
+  if (resetFailed) {
     Printf("failed to reset shadow memory\n");
     Die();
   }
@@ -557,18 +573,50 @@ void UnmapShadow(ThreadState *thr, uptr addr, uptr size) {
 #endif
 
 void MapShadow(uptr addr, uptr size) {
+  // Ensure thead registry lock held, so as to synchronize
+  // with DoReset, which also access the mapped_shadow_* ctxt fields.
+  ThreadRegistryLock lock0(&ctx->thread_registry);
+  static bool data_mapped = false;
+
+#if !SANITIZER_GO
   // Global data is not 64K aligned, but there are no adjacent mappings,
   // so we can get away with unaligned mapping.
   // CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
   const uptr kPageSize = GetPageSizeCached();
   uptr shadow_begin = RoundDownTo((uptr)MemToShadow(addr), kPageSize);
   uptr shadow_end = RoundUpTo((uptr)MemToShadow(addr + size), kPageSize);
-  if (!MmapFixedSuperNoReserve(shadow_begin, shadow_end - shadow_begin,
-                               "shadow"))
+  if (!MmapFixedNoReserve(shadow_begin, shadow_end - shadow_begin, "shadow"))
     Die();
+#else
+  uptr shadow_begin = RoundDownTo((uptr)MemToShadow(addr), (64 << 10));
+  uptr shadow_end = RoundUpTo((uptr)MemToShadow(addr + size), (64 << 10));
+  VPrintf(2, "MapShadow for (0x%zx-0x%zx), begin/end: (0x%zx-0x%zx)\n",
+          addr, addr + size, shadow_begin, shadow_end);
+
+  if (!data_mapped) {
+    // First call maps data+bss.
+    if (!MmapFixedSuperNoReserve(shadow_begin, shadow_end - shadow_begin, "shadow"))
+      Die();
+  } else {
+    VPrintf(2, "ctx->mapped_shadow_{begin,end} = (0x%zx-0x%zx)\n",
+            ctx->mapped_shadow_begin, ctx->mapped_shadow_end);
+    // Second and subsequent calls map heap.
+    if (shadow_end <= ctx->mapped_shadow_end)
+      return;
+    if (ctx->mapped_shadow_begin < shadow_begin)
+      ctx->mapped_shadow_begin = shadow_begin;
+    if (shadow_begin < ctx->mapped_shadow_end)
+      shadow_begin = ctx->mapped_shadow_end;
+    VPrintf(2, "MapShadow begin/end = (0x%zx-0x%zx)\n",
+            shadow_begin, shadow_end);
+    if (!MmapFixedSuperNoReserve(shadow_begin, shadow_end - shadow_begin,
+                                 "shadow"))
+      Die();
+    ctx->mapped_shadow_end = shadow_end;
+  }
+#endif
 
   // Meta shadow is 2:1, so tread carefully.
-  static bool data_mapped = false;
   static uptr mapped_meta_end = 0;
   uptr meta_begin = (uptr)MemToMeta(addr);
   uptr meta_end = (uptr)MemToMeta(addr + size);
@@ -585,8 +633,7 @@ void MapShadow(uptr addr, uptr size) {
     // Windows wants 64K alignment.
     meta_begin = RoundDownTo(meta_begin, 64 << 10);
     meta_end = RoundUpTo(meta_end, 64 << 10);
-    if (meta_end <= mapped_meta_end)
-      return;
+    CHECK_GT(meta_end, mapped_meta_end);
     if (meta_begin < mapped_meta_end)
       meta_begin = mapped_meta_end;
     if (!MmapFixedSuperNoReserve(meta_begin, meta_end - meta_begin,

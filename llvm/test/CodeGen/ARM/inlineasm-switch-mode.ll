@@ -8,6 +8,6 @@ define hidden i32 @bah(i8* %start) #0 align 2 {
 }
 
 ; CHECK: $a{{.*}}:
-; CHECK-NEXT: 04 70 2d e5     str     r7, [sp, #-4]!
+; CHECK-NEXT: e52d7004        str     r7, [sp, #-4]!
 ; CHECK: $t{{.*}}:
-; CHECK-NEXT: 48 1c   adds    r0, r1, #1
+; CHECK-NEXT: 1c48    adds    r0, r1, #1

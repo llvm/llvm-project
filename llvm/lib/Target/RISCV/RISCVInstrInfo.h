@@ -149,17 +149,15 @@ public:
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   // Return if/how a given MachineInstr should be outlined.
-  virtual outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MBBI,
-                   unsigned Flags) const override;
+  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MBBI,
+                                       unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
-  virtual void
-  buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
-                     const outliner::OutlinedFunction &OF) const override;
+  void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
+                          const outliner::OutlinedFunction &OF) const override;
 
   // Insert a call to an outlined function into a given basic block.
-  virtual MachineBasicBlock::iterator
+  MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;

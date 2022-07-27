@@ -58,4 +58,4 @@ define dso_local i32 @main() {
   ret i32 %1
 }
 
-declare dso_local noalias i8* @malloc(i64)
+declare dso_local noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0)

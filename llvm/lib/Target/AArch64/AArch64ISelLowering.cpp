@@ -255,6 +255,12 @@ static bool isZeroingInactiveLanes(SDValue Op) {
       return false;
     case Intrinsic::aarch64_sve_ptrue:
     case Intrinsic::aarch64_sve_pnext:
+    case Intrinsic::aarch64_sve_cmpeq:
+    case Intrinsic::aarch64_sve_cmpne:
+    case Intrinsic::aarch64_sve_cmpge:
+    case Intrinsic::aarch64_sve_cmpgt:
+    case Intrinsic::aarch64_sve_cmphs:
+    case Intrinsic::aarch64_sve_cmphi:
     case Intrinsic::aarch64_sve_cmpeq_wide:
     case Intrinsic::aarch64_sve_cmpne_wide:
     case Intrinsic::aarch64_sve_cmpge_wide:
@@ -265,6 +271,11 @@ static bool isZeroingInactiveLanes(SDValue Op) {
     case Intrinsic::aarch64_sve_cmphi_wide:
     case Intrinsic::aarch64_sve_cmplo_wide:
     case Intrinsic::aarch64_sve_cmpls_wide:
+    case Intrinsic::aarch64_sve_fcmpeq:
+    case Intrinsic::aarch64_sve_fcmpne:
+    case Intrinsic::aarch64_sve_fcmpge:
+    case Intrinsic::aarch64_sve_fcmpgt:
+    case Intrinsic::aarch64_sve_fcmpuo:
       return true;
     }
   }
@@ -1623,6 +1634,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::ANY_EXTEND, VT, Custom);
   setOperationAction(ISD::BITCAST, VT, Custom);
   setOperationAction(ISD::BITREVERSE, VT, Custom);
+  setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::BSWAP, VT, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
   setOperationAction(ISD::CTLZ, VT, Custom);
@@ -11130,6 +11142,20 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
+  if (useSVEForFixedLengthVectorVT(VT)) {
+    if (auto SeqInfo = cast<BuildVectorSDNode>(Op)->isConstantSequence()) {
+      SDLoc DL(Op);
+      EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+      SDValue Start = DAG.getConstant(SeqInfo->first, DL, ContainerVT);
+      SDValue Steps = DAG.getStepVector(DL, ContainerVT, SeqInfo->second);
+      SDValue Seq = DAG.getNode(ISD::ADD, DL, ContainerVT, Start, Steps);
+      return convertFromScalableVector(DAG, Op.getValueType(), Seq);
+    }
+
+    // Revert to common legalisation for all other variants.
+    return SDValue();
+  }
+
   // Try to build a simple constant vector.
   Op = NormalizeBuildVector(Op, DAG);
   if (VT.isInteger()) {
@@ -12775,6 +12801,12 @@ bool AArch64TargetLowering::shouldSinkOperands(
         Ops.push_back(&II->getOperandUse(0));
       if (isSplatShuffle(II->getOperand(1)))
         Ops.push_back(&II->getOperandUse(1));
+      return !Ops.empty();
+    case Intrinsic::aarch64_sve_ptest_first:
+    case Intrinsic::aarch64_sve_ptest_last:
+      if (auto *IIOp = dyn_cast<IntrinsicInst>(II->getOperand(0)))
+        if (IIOp->getIntrinsicID() == Intrinsic::aarch64_sve_ptrue)
+          Ops.push_back(&II->getOperandUse(0));
       return !Ops.empty();
     case Intrinsic::aarch64_sme_write_horiz:
     case Intrinsic::aarch64_sme_write_vert:

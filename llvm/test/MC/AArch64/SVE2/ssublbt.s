@@ -14,16 +14,16 @@ ssublbt z0.h, z1.b, z31.b
 // CHECK-INST: ssublbt	z0.h, z1.b, z31.b
 // CHECK-ENCODING: [0x20,0x88,0x5f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 88 5f 45 <unknown>
+// CHECK-UNKNOWN: 455f8820 <unknown>
 
 ssublbt z0.s, z1.h, z31.h
 // CHECK-INST: ssublbt	z0.s, z1.h, z31.h
 // CHECK-ENCODING: [0x20,0x88,0x9f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 88 9f 45 <unknown>
+// CHECK-UNKNOWN: 459f8820 <unknown>
 
 ssublbt z0.d, z1.s, z31.s
 // CHECK-INST: ssublbt	z0.d, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0x88,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 88 df 45 <unknown>
+// CHECK-UNKNOWN: 45df8820 <unknown>

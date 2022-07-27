@@ -782,7 +782,7 @@ public:
   LoadVTablePtr(CodeGenFunction &CGF, Address This,
                 const CXXRecordDecl *RD) override;
 
-  virtual bool
+  bool
   isPermittedToBeHomogeneousAggregate(const CXXRecordDecl *RD) const override;
 
 private:

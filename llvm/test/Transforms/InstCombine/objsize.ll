@@ -192,7 +192,7 @@ entry:
 
 declare i8* @__memset_chk(i8*, i32, i32, i32) nounwind
 
-declare noalias i8* @malloc(i32) nounwind
+declare noalias i8* @malloc(i32) nounwind allockind("alloc,uninitialized") allocsize(0)
 
 define i32 @test7(i8** %esc) {
 ; CHECK-LABEL: @test7(
@@ -207,7 +207,7 @@ define i32 @test7(i8** %esc) {
   ret i32 %objsize
 }
 
-declare noalias i8* @calloc(i32, i32) nounwind
+declare noalias i8* @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1)
 
 define i32 @test8(i8** %esc) {
 ; CHECK-LABEL: @test8(

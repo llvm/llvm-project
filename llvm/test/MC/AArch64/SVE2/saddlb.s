@@ -14,16 +14,16 @@ saddlb z0.h, z1.b, z2.b
 // CHECK-INST: saddlb z0.h, z1.b, z2.b
 // CHECK-ENCODING: [0x20,0x00,0x42,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 20 00 42 45 <unknown>
+// CHECK-UNKNOWN: 45420020 <unknown>
 
 saddlb z29.s, z30.h, z31.h
 // CHECK-INST: saddlb z29.s, z30.h, z31.h
 // CHECK-ENCODING: [0xdd,0x03,0x9f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: dd 03 9f 45 <unknown>
+// CHECK-UNKNOWN: 459f03dd <unknown>
 
 saddlb z31.d, z31.s, z31.s
 // CHECK-INST: saddlb z31.d, z31.s, z31.s
 // CHECK-ENCODING: [0xff,0x03,0xdf,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff 03 df 45 <unknown>
+// CHECK-UNKNOWN: 45df03ff <unknown>

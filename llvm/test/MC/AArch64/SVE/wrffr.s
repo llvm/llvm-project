@@ -13,10 +13,10 @@ wrffr   p0.b
 // CHECK-INST: wrffr   p0.b
 // CHECK-ENCODING: [0x00,0x90,0x28,0x25]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 90 28 25 <unknown>
+// CHECK-UNKNOWN: 25289000 <unknown>
 
 wrffr   p15.b
 // CHECK-INST: wrffr   p15.b
 // CHECK-ENCODING: [0xe0,0x91,0x28,0x25]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 91 28 25 <unknown>
+// CHECK-UNKNOWN: 252891e0 <unknown>

@@ -13,10 +13,10 @@ ld1rsw  { z0.d }, p0/z, [x0]
 // CHECK-INST: ld1rsw  { z0.d }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0x80,0xc0,0x84]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 80 c0 84 <unknown>
+// CHECK-UNKNOWN: 84c08000 <unknown>
 
 ld1rsw  { z31.d }, p7/z, [sp, #252]
 // CHECK-INST: ld1rsw  { z31.d }, p7/z, [sp, #252]
 // CHECK-ENCODING: [0xff,0x9f,0xff,0x84]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff 9f ff 84 <unknown>
+// CHECK-UNKNOWN: 84ff9fff <unknown>

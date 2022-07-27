@@ -1142,7 +1142,8 @@ bool CombinerHelper::matchCombineDivRem(MachineInstr &MI,
     if (MI.getParent() == UseMI.getParent() &&
         ((IsDiv && UseMI.getOpcode() == RemOpcode) ||
          (!IsDiv && UseMI.getOpcode() == DivOpcode)) &&
-        matchEqualDefs(MI.getOperand(2), UseMI.getOperand(2))) {
+        matchEqualDefs(MI.getOperand(2), UseMI.getOperand(2)) &&
+        matchEqualDefs(MI.getOperand(1), UseMI.getOperand(1))) {
       OtherMI = &UseMI;
       return true;
     }

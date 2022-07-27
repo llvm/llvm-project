@@ -7,15 +7,15 @@
 
 // CHECK-LABEL: @test_svldnf1uh_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 4 x i16> [[TMP1]] to <vscale x 4 x i32>
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svldnf1uh_s32u10__SVBool_tPKt(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6:![0-9]+]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 4 x i16> [[TMP1]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
@@ -26,15 +26,15 @@ svint32_t test_svldnf1uh_s32(svbool_t pg, const uint16_t *base)
 
 // CHECK-LABEL: @test_svldnf1uh_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 2 x i16> [[TMP1]] to <vscale x 2 x i64>
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svldnf1uh_s64u10__SVBool_tPKt(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 2 x i16> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
@@ -45,15 +45,15 @@ svint64_t test_svldnf1uh_s64(svbool_t pg, const uint16_t *base)
 
 // CHECK-LABEL: @test_svldnf1uh_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 4 x i16> [[TMP1]] to <vscale x 4 x i32>
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svldnf1uh_u32u10__SVBool_tPKt(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 4 x i16> [[TMP1]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
@@ -64,15 +64,15 @@ svuint32_t test_svldnf1uh_u32(svbool_t pg, const uint16_t *base)
 
 // CHECK-LABEL: @test_svldnf1uh_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 2 x i16> [[TMP1]] to <vscale x 2 x i64>
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svldnf1uh_u64u10__SVBool_tPKt(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[BASE:%.*]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = zext <vscale x 2 x i16> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
@@ -83,19 +83,19 @@ svuint64_t test_svldnf1uh_u64(svbool_t pg, const uint16_t *base)
 
 // CHECK-LABEL: @test_svldnf1uh_vnum_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 4 x i16>*
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 4 x i16>, <vscale x 4 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i16> [[TMP3]] to <vscale x 4 x i32>
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnf1uh_vnum_s32u10__SVBool_tPKtl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 4 x i16>*
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 4 x i16>, <vscale x 4 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i16> [[TMP3]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
@@ -106,19 +106,19 @@ svint32_t test_svldnf1uh_vnum_s32(svbool_t pg, const uint16_t *base, int64_t vnu
 
 // CHECK-LABEL: @test_svldnf1uh_vnum_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 2 x i16>*
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 2 x i16>, <vscale x 2 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 2 x i16> [[TMP3]] to <vscale x 2 x i64>
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnf1uh_vnum_s64u10__SVBool_tPKtl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 2 x i16>*
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 2 x i16>, <vscale x 2 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 2 x i16> [[TMP3]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
@@ -129,19 +129,19 @@ svint64_t test_svldnf1uh_vnum_s64(svbool_t pg, const uint16_t *base, int64_t vnu
 
 // CHECK-LABEL: @test_svldnf1uh_vnum_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 4 x i16>*
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 4 x i16>, <vscale x 4 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i16> [[TMP3]] to <vscale x 4 x i32>
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnf1uh_vnum_u32u10__SVBool_tPKtl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 4 x i16>*
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 4 x i16>, <vscale x 4 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i16> [[TMP3]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
 //
@@ -152,19 +152,19 @@ svuint32_t test_svldnf1uh_vnum_u32(svbool_t pg, const uint16_t *base, int64_t vn
 
 // CHECK-LABEL: @test_svldnf1uh_vnum_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 2 x i16>*
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 2 x i16>, <vscale x 2 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 2 x i16> [[TMP3]] to <vscale x 2 x i64>
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnf1uh_vnum_u64u10__SVBool_tPKtl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 2 x i16>*
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 2 x i16>, <vscale x 2 x i16>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1> [[TMP0]], i16* [[TMP2]]), !tbaa [[TBAA6]]
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 2 x i16> [[TMP3]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 //
