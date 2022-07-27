@@ -184,6 +184,8 @@ public:
   /// \returns information about the global function, if known.
   VersionedInfo<GlobalFunctionInfo> lookupGlobalFunction(llvm::StringRef name);
 
+  VersionedInfo<GlobalFunctionInfo> lookupMemberFunction(llvm::StringRef name);
+
   /// Look for information regarding the given enumerator.
   ///
   /// \param name The name of the enumerator.

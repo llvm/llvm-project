@@ -509,6 +509,8 @@ public:
   /// The function parameters.
   std::vector<ParamInfo> Params;
 
+  llvm::Optional<std::string> SwiftImportAs;
+
   FunctionInfo()
       : NullabilityAudited(false), NumAdjustedNullable(0),
         RawRetainCountConvention() {}
@@ -659,7 +661,11 @@ class TagInfo : public CommonTypeInfo {
 public:
   llvm::Optional<EnumExtensibilityKind> EnumExtensibility;
 
-  TagInfo() : HasFlagEnum(0), IsFlagEnum(0) {}
+  llvm::Optional<std::string> SwiftImportAs;
+  llvm::Optional<std::string> SwiftRetainOp;
+  llvm::Optional<std::string> SwiftReleaseOp;
+
+  TagInfo() : CommonTypeInfo(), HasFlagEnum(0), IsFlagEnum(0) {}
 
   llvm::Optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
@@ -680,6 +686,13 @@ public:
     if (!EnumExtensibility)
       EnumExtensibility = RHS.EnumExtensibility;
 
+    if (!SwiftImportAs)
+      SwiftImportAs = RHS.SwiftImportAs;
+    if (!SwiftRetainOp)
+      SwiftImportAs = RHS.SwiftRetainOp;
+    if (!SwiftReleaseOp)
+      SwiftImportAs = RHS.SwiftReleaseOp;
+
     return *this;
   }
 
@@ -691,7 +704,10 @@ public:
 inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
   return static_cast<const CommonTypeInfo &>(LHS) == RHS &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
-         LHS.EnumExtensibility == RHS.EnumExtensibility;
+         LHS.EnumExtensibility == RHS.EnumExtensibility &&
+         LHS.SwiftImportAs == RHS.SwiftImportAs &&
+         LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
+         LHS.SwiftReleaseOp == RHS.SwiftReleaseOp;
 }
 
 inline bool operator!=(const TagInfo &LHS, const TagInfo &RHS) {

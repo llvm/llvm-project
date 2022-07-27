@@ -351,6 +351,14 @@ namespace {
       = endian::readNext<uint16_t, little, unaligned>(data);
     info.ResultType = std::string(data, data + resultTypeLen);
     data += resultTypeLen;
+
+    unsigned importAsLength =
+        endian::readNext<uint16_t, little, unaligned>(data);
+    if (importAsLength > 0) {
+      info.SwiftImportAs =
+          std::string(reinterpret_cast<const char *>(data), importAsLength-1);
+      data += importAsLength-1;
+    }
   }
 
   /// Used to deserialize the on-disk Objective-C method table.
@@ -465,6 +473,24 @@ namespace {
     }
   };
 
+  /// Used to deserialize the on-disk global function table.
+  class MemberFunctionTableInfo
+      : public VersionedTableInfo<MemberFunctionTableInfo, unsigned,
+                                  GlobalFunctionInfo> {
+  public:
+    static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
+      return nameID;
+    }
+
+    static GlobalFunctionInfo readUnversioned(internal_key_type key,
+                                              const uint8_t *&data) {
+      GlobalFunctionInfo info;
+      readFunctionInfo(data, info);
+      return info;
+    }
+  };
+
   /// Used to deserialize the on-disk enumerator table.
   class EnumConstantTableInfo
     : public VersionedTableInfo<EnumConstantTableInfo, unsigned,
@@ -505,6 +531,26 @@ namespace {
         info.EnumExtensibility =
             static_cast<EnumExtensibilityKind>((payload & 0x3) - 1);
       }
+
+      auto readStringIfPresent = [&]() -> llvm::Optional<std::string> {
+        unsigned len =
+            endian::readNext<uint16_t, little, unaligned>(data);
+        if (len > 0) {
+          auto out = std::string(reinterpret_cast<const char *>(data), len-1);
+          data += len-1;
+          return out;
+        }
+        return None;
+      };
+
+      if (auto importAs = readStringIfPresent())
+        info.SwiftImportAs = importAs;
+
+      if (auto importAs = readStringIfPresent())
+        info.SwiftRetainOp = importAs;
+
+      if (auto importAs = readStringIfPresent())
+        info.SwiftReleaseOp = importAs;
 
       readCommonTypeInfo(data, info);
       return info;
@@ -604,6 +650,11 @@ public:
   /// The global function table.
   std::unique_ptr<SerializedGlobalFunctionTable> GlobalFunctionTable;
 
+  using SerializedMemberFunctionTable =
+      llvm::OnDiskIterableChainedHashTable<MemberFunctionTableInfo>;
+
+  std::unique_ptr<SerializedMemberFunctionTable> MemberFunctionTable;
+
   using SerializedEnumConstantTable =
       llvm::OnDiskIterableChainedHashTable<EnumConstantTableInfo>;
 
@@ -645,6 +696,8 @@ public:
   bool readGlobalVariableBlock(llvm::BitstreamCursor &cursor,
                                SmallVectorImpl<uint64_t> &scratch);
   bool readGlobalFunctionBlock(llvm::BitstreamCursor &cursor,
+                               SmallVectorImpl<uint64_t> &scratch);
+  bool readMemberFunctionBlock(llvm::BitstreamCursor &cursor,
                                SmallVectorImpl<uint64_t> &scratch);
   bool readEnumConstantBlock(llvm::BitstreamCursor &cursor,
                              SmallVectorImpl<uint64_t> &scratch);
@@ -1344,6 +1397,84 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
   return false;
 }
 
+bool APINotesReader::Implementation::readMemberFunctionBlock(
+    llvm::BitstreamCursor &cursor,
+    SmallVectorImpl<uint64_t> &scratch) {
+  if (cursor.EnterSubBlock(MEMBER_FUNCTION_BLOCK_ID))
+    return true;
+
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
+  while (next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (next.Kind == llvm::BitstreamEntry::Error)
+      return true;
+
+    if (next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (cursor.SkipBlock())
+        return true;
+
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
+      continue;
+    }
+
+    scratch.clear();
+    StringRef blobData;
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
+    switch (kind) {
+    case member_function_block::MEMBER_FUNCTION_DATA: {
+      // Already saw global function table.
+      if (MemberFunctionTable)
+        return true;
+
+      uint32_t tableOffset;
+      member_function_block::MemberFunctionDataLayout::readRecord(scratch,
+                                                                  tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(blobData.data());
+
+      MemberFunctionTable.reset(
+          SerializedMemberFunctionTable::Create(base + tableOffset,
+                                                base + sizeof(uint32_t),
+                                                base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
+  }
+
+  return false;
+}
+
 bool APINotesReader::Implementation::readEnumConstantBlock(
        llvm::BitstreamCursor &cursor, 
        SmallVectorImpl<uint64_t> &scratch) {
@@ -1697,6 +1828,14 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
       }
       break;
 
+    case MEMBER_FUNCTION_BLOCK_ID:
+      if (!hasValidControlBlock ||
+          Impl.readMemberFunctionBlock(cursor, scratch)) {
+        failed = true;
+        return;
+      }
+      break;
+
     case ENUM_CONSTANT_BLOCK_ID:
       if (!hasValidControlBlock || 
           Impl.readEnumConstantBlock(cursor, scratch)) {
@@ -1947,6 +2086,19 @@ auto APINotesReader::lookupGlobalFunction(StringRef name)
 
   auto known = Impl.GlobalFunctionTable->find(*nameID);
   if (known == Impl.GlobalFunctionTable->end())
+    return None;
+
+  return { Impl.SwiftVersion, *known };
+}
+
+auto APINotesReader::lookupMemberFunction(llvm::StringRef name)
+    -> VersionedInfo<GlobalFunctionInfo> {
+  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  if (!nameID)
+    return None;
+
+  auto known = Impl.MemberFunctionTable->find(*nameID);
+  if (known == Impl.MemberFunctionTable->end())
     return None;
 
   return { Impl.SwiftVersion, *known };
