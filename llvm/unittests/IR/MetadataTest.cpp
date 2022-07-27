@@ -1654,7 +1654,7 @@ TEST_F(DIDerivedTypeTest, get) {
   auto *N = DIDerivedType::get(
       Context, dwarf::DW_TAG_pointer_type, "something", File, 1, Scope,
       BaseType, 2, 3, 4, DWARFAddressSpace, None, Flags5, ExtraData);
-  auto *N1 = DIDerivedType::get(Context, dwarf::DW_TAG_APPLE_ptrauth_type, "",
+  auto *N1 = DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type, "",
                                 File, 1, Scope, N, 2, 3, 4, DWARFAddressSpace,
                                 PtrAuthData, Flags5, ExtraData);
   EXPECT_EQ(dwarf::DW_TAG_pointer_type, N->getTag());
@@ -1716,7 +1716,7 @@ TEST_F(DIDerivedTypeTest, get) {
                                   "something", File, 1, Scope, BaseType, 2, 3,
                                   4, DWARFAddressSpace + 1, None, Flags5,
                                   ExtraData));
-  EXPECT_NE(N1, DIDerivedType::get(Context, dwarf::DW_TAG_APPLE_ptrauth_type,
+  EXPECT_NE(N1, DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type,
                                    "", File, 1, Scope, N, 2, 3, 4,
                                    DWARFAddressSpace, None, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
@@ -1751,7 +1751,7 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   EXPECT_EQ(UINT32_MAX - 3, *N->getDWARFAddressSpace());
 
   auto *N1 = DIDerivedType::get(
-      Context, dwarf::DW_TAG_APPLE_ptrauth_type, "", File, 1, Scope, N,
+      Context, dwarf::DW_TAG_LLVM_ptrauth_type, "", File, 1, Scope, N,
       UINT64_MAX, UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
       DIDerivedType::PtrAuthData(7, true, 0xffff), Flags, ExtraData);
   EXPECT_EQ(7U, *N1->getPtrAuthKey());

@@ -801,12 +801,12 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
     addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
             *DTy->getDWARFAddressSpace());
   if (auto Key = DTy->getPtrAuthKey())
-    addUInt(Buffer, dwarf::DW_AT_APPLE_ptrauth_key, dwarf::DW_FORM_data1, *Key);
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_key, dwarf::DW_FORM_data1, *Key);
   if (auto AddrDisc = DTy->isPtrAuthAddressDiscriminated())
     if (AddrDisc)
-      addFlag(Buffer, dwarf::DW_AT_APPLE_ptrauth_address_discriminated);
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_address_discriminated);
   if (auto Disc = DTy->getPtrAuthExtraDiscriminator())
-    addUInt(Buffer, dwarf::DW_AT_APPLE_ptrauth_extra_discriminator,
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_extra_discriminator,
             dwarf::DW_FORM_data2, *Disc);
 }
 

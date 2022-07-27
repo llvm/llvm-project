@@ -5,7 +5,7 @@
 // Constant initializers for data pointers.
 extern int external_int;
 
-// CHECK: !DIDerivedType(tag: DW_TAG_APPLE_ptrauth_type,
+// CHECK: !DIDerivedType(tag: DW_TAG_LLVM_ptrauth_type,
 // CHECK-SAME:           ptrAuthKey: 1,
 // CHECK-SAME:           ptrAuthIsAddressDiscriminated: false,
 // CHECK-SAME:           ptrAuthExtraDiscriminator: 1234)
@@ -20,7 +20,7 @@ void f() {
   __block struct A * __ptrauth(1, 1, 1) ptr = createA();
   ^{ ptr->value; }();
 }
-// CHECK: !DIDerivedType(tag: DW_TAG_APPLE_ptrauth_type,
+// CHECK: !DIDerivedType(tag: DW_TAG_LLVM_ptrauth_type,
 // CHECK-SAME:           ptrAuthKey: 1,
 // CHECK-SAME:           ptrAuthIsAddressDiscriminated: true,
 // CHECK-SAME:           ptrAuthExtraDiscriminator: 1)
