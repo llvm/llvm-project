@@ -675,7 +675,7 @@ define amdgpu_kernel void @s_test_udiv24_i48(i48 addrspace(1)* %out, i48 %x, i48
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xe
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xd
 ; GCN-NEXT:    s_load_dword s6, s[0:1], 0xc
-; GCN-NEXT:    v_cvt_f32_ubyte3_e32 v2, 0xffff
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x4f800000
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s3, s2, 0xffff
@@ -687,7 +687,7 @@ define amdgpu_kernel void @s_test_udiv24_i48(i48 addrspace(1)* %out, i48 %x, i48
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0xb
 ; GCN-NEXT:    s_and_b32 s8, s6, 0xffff
 ; GCN-NEXT:    s_mov_b32 s6, -1
-; GCN-NEXT:    v_mac_f32_e32 v1, 0x4f800000, v2
+; GCN-NEXT:    v_mac_f32_e32 v1, 0, v2
 ; GCN-NEXT:    v_rcp_f32_e32 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s9, s0, 0xff000000
