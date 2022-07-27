@@ -3,13 +3,11 @@
 declare void @llvm.amdgcn.s.setprio(i16)
 declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
 
-; FIXME: setprio shall surround mfma instructions
-
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x1f32:
 ; GCN: s_setprio 1
+; GCN: v_mfma
+; GCN: v_mfma
 ; GCN: s_setprio 0
-; GCN: v_mfma
-; GCN: v_mfma
 define amdgpu_kernel void @test_mfma_f32_4x4x1f32(<4 x float> addrspace(1)* %arg) #0 {
 bb:
   %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
