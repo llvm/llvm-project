@@ -5717,7 +5717,8 @@ let isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
 
 
 class PACBTIHintSpaceInst<string asm, string ops, bits<8> imm>
-  : V8_1MI<(outs), (ins), AddrModeNone, NoItinerary, asm, ops, "", []> {
+  : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, !strconcat(asm, "\t", ops), "", []>,
+    Requires<[HasV7, IsMClass]> {
   let Inst{31-8} = 0b111100111010111110000000;
   let Inst{7-0}  = imm;
 
