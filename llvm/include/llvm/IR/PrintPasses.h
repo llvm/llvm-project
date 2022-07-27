@@ -10,9 +10,24 @@
 #define LLVM_IR_PRINTPASSES_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include <vector>
 
 namespace llvm {
+
+enum class ChangePrinter {
+  None,
+  Verbose,
+  Quiet,
+  DiffVerbose,
+  DiffQuiet,
+  ColourDiffVerbose,
+  ColourDiffQuiet,
+  DotCfgVerbose,
+  DotCfgQuiet
+};
+
+extern cl::opt<ChangePrinter> PrintChanged;
 
 // Returns true if printing before/after some pass is enabled, whether all
 // passes or a specific pass.
