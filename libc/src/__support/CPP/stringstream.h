@@ -63,7 +63,7 @@ public:
   }
 
   template <typename T, enable_if_t<is_floating_point_v<T>, int> = 0>
-  StringStream &operator<<(T val) {
+  StringStream &operator<<(T) {
     // If this specialization gets activated, then the static_assert will
     // trigger a compile error about missing floating point number support.
     static_assert(!is_floating_point_v<T>,

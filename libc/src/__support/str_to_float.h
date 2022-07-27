@@ -67,9 +67,7 @@ static inline uint64_t high64(const UInt128 &num) {
   return static_cast<uint64_t>(num >> 64);
 }
 
-template <class T> inline void set_implicit_bit(fputil::FPBits<T> &result) {
-  return;
-}
+template <class T> inline void set_implicit_bit(fputil::FPBits<T> &) { return; }
 
 #if defined(SPECIAL_X86_LONG_DOUBLE)
 template <>

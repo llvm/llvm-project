@@ -56,7 +56,7 @@ int close_func(File *f) {
   return cookie_file->ops.close(cookie_file->cookie);
 }
 
-int flush_func(File *f) { return 0; }
+int flush_func(File *) { return 0; }
 
 } // anonymous namespace
 
