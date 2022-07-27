@@ -3287,8 +3287,12 @@ public:
     return isa<TemplateTypeParmDecl>(getTemplateParameters()->getParam(0));
   }
 
-  ConceptDecl *getCanonicalDecl() override { return getFirstDecl(); }
-  const ConceptDecl *getCanonicalDecl() const { return getFirstDecl(); }
+  ConceptDecl *getCanonicalDecl() override {
+    return cast<ConceptDecl>(getPrimaryMergedDecl(this));
+  }
+  const ConceptDecl *getCanonicalDecl() const {
+    return const_cast<ConceptDecl *>(this)->getCanonicalDecl();
+  }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
