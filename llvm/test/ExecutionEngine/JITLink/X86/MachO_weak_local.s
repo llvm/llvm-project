@@ -14,3 +14,5 @@ _foo_weak:
   .p2align  4, 0x90
 _main:
   jmp _foo_weak
+
+  .subsections_via_symbols
