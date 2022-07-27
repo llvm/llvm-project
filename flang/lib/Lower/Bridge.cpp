@@ -478,6 +478,7 @@ public:
     // new copied value.
     // Not able to use replaceAllUsesWith() because uses outside
     // the loop body should not use the clone.
+    // FIXME: Call privatization before the loop operation.
     mlir::Region &curRegion = getFirOpBuilder().getRegion();
     mlir::Value oldVal = fir::getBase(hexv);
     mlir::Value cloneVal = fir::getBase(exv);
