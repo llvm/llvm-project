@@ -11,12 +11,7 @@
 // class month;
 
 // constexpr bool operator==(const month& x, const month& y) noexcept;
-// constexpr bool operator!=(const month& x, const month& y) noexcept;
-// constexpr bool operator< (const month& x, const month& y) noexcept;
-// constexpr bool operator> (const month& x, const month& y) noexcept;
-// constexpr bool operator<=(const month& x, const month& y) noexcept;
-// constexpr bool operator>=(const month& x, const month& y) noexcept;
-
+// constexpr strong_ordering operator<=>(const month& x, const month& y) noexcept;
 
 #include <chrono>
 #include <type_traits>
@@ -25,24 +20,30 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
+constexpr bool test() {
+  using month = std::chrono::month;
 
-int main(int, char**)
-{
-    using month = std::chrono::month;
+  // Validate invalid values. The range [0, 255] is guaranteed to be allowed.
+  assert(testOrderValues<month>(0U, 0U));
+  assert(testOrderValues<month>(0U, 1U));
+  assert(testOrderValues<month>(254U, 255U));
+  assert(testOrderValues<month>(255U, 255U));
 
-    AssertComparisonsAreNoexcept<month>();
-    AssertComparisonsReturnBool<month>();
+  // Validate some valid values.
+  for (unsigned i = 1; i <= 12; ++i)
+    for (unsigned j = 1; j <= 12; ++j)
+      assert(testOrderValues<month>(i, j));
 
-    static_assert(testComparisonsValues<month>(0U ,0U), "");
-    static_assert(testComparisonsValues<month>(0U, 1U), "");
+  return true;
+}
 
-    //  Some 'ok' values as well
-    static_assert(testComparisonsValues<month>( 5U,  5U), "");
-    static_assert(testComparisonsValues<month>( 5U, 10U), "");
+int main(int, char**) {
+  using month = std::chrono::month;
+  AssertOrderAreNoexcept<month>();
+  AssertOrderReturn<std::strong_ordering, month>();
 
-    for (unsigned i = 1; i <= 12; ++i)
-        for (unsigned j = 1; j <= 12; ++j)
-            assert(testComparisonsValues<month>(i, j));
+  test();
+  static_assert(test());
 
   return 0;
 }
