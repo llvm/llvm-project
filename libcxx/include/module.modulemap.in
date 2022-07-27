@@ -239,6 +239,7 @@ module std [system] {
 
     module __algorithm {
       module adjacent_find                   { private header "__algorithm/adjacent_find.h" }
+      module algorithm_family                { private header "__algorithm/algorithm_family.h" }
       module all_of                          { private header "__algorithm/all_of.h" }
       module any_of                          { private header "__algorithm/any_of.h" }
       module binary_search                   { private header "__algorithm/binary_search.h" }
