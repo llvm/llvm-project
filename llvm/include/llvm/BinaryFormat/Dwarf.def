@@ -241,6 +241,9 @@ HANDLE_DW_TAG(0x420c, SUN_f90_interface, 0, SUN, DW_KIND_NONE)
 HANDLE_DW_TAG(0x420d, SUN_fortran_vax_structure, 0, SUN, DW_KIND_NONE)
 HANDLE_DW_TAG(0x42ff, SUN_hi, 0, SUN, DW_KIND_NONE)
 
+// LLVM
+HANDLE_DW_TAG(0x4300, LLVM_ptrauth_type, 0, LLVM, DW_KIND_NONE)
+
 // DSP-C/Starcore __circ, _rev
 HANDLE_DW_TAG(0x5101, ALTIUM_circ_type, 0, ALTIUM, DW_KIND_NONE)
 HANDLE_DW_TAG(0x5102, ALTIUM_mwa_circ_type, 0, ALTIUM, DW_KIND_NONE)
@@ -597,8 +600,12 @@ HANDLE_DW_AT(0x3e00, LLVM_include_path, 0, LLVM)
 HANDLE_DW_AT(0x3e01, LLVM_config_macros, 0, LLVM)
 HANDLE_DW_AT(0x3e02, LLVM_sysroot, 0, LLVM)
 HANDLE_DW_AT(0x3e03, LLVM_tag_offset, 0, LLVM)
-// The missing numbers here are reserved for ptrauth support.
+HANDLE_DW_AT(0x3e04, LLVM_ptrauth_key, 0, LLVM)
+HANDLE_DW_AT(0x3e05, LLVM_ptrauth_address_discriminated, 0, LLVM)
+HANDLE_DW_AT(0x3e06, LLVM_ptrauth_extra_discriminator, 0, LLVM)
 HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
+HANDLE_DW_AT(0x3e08, LLVM_ptrauth_isa_pointer, 0, LLVM)
+HANDLE_DW_AT(0x3e09, LLVM_ptrauth_authenticates_null_values, 0, LLVM)
 
 // Apple extensions.
 
