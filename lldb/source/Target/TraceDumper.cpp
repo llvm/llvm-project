@@ -199,6 +199,7 @@ class OutputWriterJSON : public TraceDumper::OutputWriter {
       "column"?: decimal,
       "source"?: string,
       "mnemonic"?: string,
+      "controlFlowKind"?: string,
     }
   */
 public:
@@ -234,10 +235,18 @@ public:
           "symbol",
           ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
 
-      if (item.symbol_info->instruction) {
+      if (lldb::InstructionSP instruction = item.symbol_info->instruction) {
+        ExecutionContext exe_ctx = item.symbol_info->exe_ctx;
         m_j.attribute("mnemonic",
-                      ToOptionalString(item.symbol_info->instruction->GetMnemonic(
-                          &item.symbol_info->exe_ctx)));
+                      ToOptionalString(instruction->GetMnemonic(&exe_ctx)));
+        if (m_options.show_control_flow_kind) {
+          lldb::InstructionControlFlowKind instruction_control_flow_kind =
+              instruction->GetControlFlowKind(&exe_ctx);
+          m_j.attribute("controlFlowKind",
+                        ToOptionalString(
+                            Instruction::GetNameForInstructionControlFlowKind(
+                                instruction_control_flow_kind)));
+        }
       }
 
       if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
