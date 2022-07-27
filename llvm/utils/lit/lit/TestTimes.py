@@ -28,7 +28,7 @@ def record_test_times(tests, lit_config):
         # used as an actual path to a filesystem API, therefore we use '/' as
         # the canonical separator so that Unix and Windows machines can share
         # timing data.
-        times_by_suite[t.suite.exec_root]['/'.join(t.path_in_suite)] = t.result.elapsed
+        times_by_suite[t.suite.exec_root]['/'.join(t.path_in_suite)] = time
 
     for s, value in times_by_suite.items():
         try:
