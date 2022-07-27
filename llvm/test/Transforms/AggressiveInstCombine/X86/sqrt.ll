@@ -4,6 +4,7 @@
 declare float @sqrtf(float)
 declare double @sqrt(double)
 declare fp128 @sqrtl(fp128)
+declare float @llvm.fabs.f32(float)
 
 ; "nnan" implies no setting of errno and the target can lower this to an
 ; instruction, so transform to an intrinsic.
@@ -49,5 +50,27 @@ define float @sqrt_call_nnan_f32_nobuiltin(float %x) {
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %sqrt = call nnan float @sqrtf(float %x) nobuiltin
+  ret float %sqrt
+}
+
+define float @sqrt_call_f32_squared(float %x) {
+; CHECK-LABEL: @sqrt_call_f32_squared(
+; CHECK-NEXT:    [[X2:%.*]] = fmul float [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call float @sqrtf(float [[X2]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %x2 = fmul float %x, %x
+  %sqrt = call float @sqrtf(float %x2)
+  ret float %sqrt
+}
+
+define float @sqrt_call_f32_fabs(float %x) {
+; CHECK-LABEL: @sqrt_call_f32_fabs(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[SQRT:%.*]] = call float @sqrtf(float [[A]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %a = call float @llvm.fabs.f32(float %x)
+  %sqrt = call float @sqrtf(float %a)
   ret float %sqrt
 }
