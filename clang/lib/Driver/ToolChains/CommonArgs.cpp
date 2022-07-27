@@ -567,16 +567,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       isUseSeparateSections(ToolChain.getEffectiveTriple());
 
   if (Args.hasFlag(options::OPT_ffunction_sections,
-                   options::OPT_fno_function_sections, UseSeparateSections))
-    CmdArgs.push_back("-plugin-opt=-function-sections=1");
-  else if (Args.hasArg(options::OPT_fno_function_sections))
-    CmdArgs.push_back("-plugin-opt=-function-sections=0");
+                   options::OPT_fno_function_sections, UseSeparateSections)) {
+    CmdArgs.push_back("-plugin-opt=-function-sections");
+  }
 
   if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
-                   UseSeparateSections))
-    CmdArgs.push_back("-plugin-opt=-data-sections=1");
-  else if (Args.hasArg(options::OPT_fno_data_sections))
-    CmdArgs.push_back("-plugin-opt=-data-sections=0");
+                   UseSeparateSections)) {
+    CmdArgs.push_back("-plugin-opt=-data-sections");
+  }
 
   // Pass an option to enable split machine functions.
   if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
