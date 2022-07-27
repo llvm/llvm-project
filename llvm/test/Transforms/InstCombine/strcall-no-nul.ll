@@ -31,6 +31,14 @@ declare i8* @strpbrk(i8*, i8*)
 declare i64 @strspn(i8*, i8*)
 declare i64 @strcspn(i8*, i8*)
 
+declare i32 @atoi(i8*)
+declare i64 @atol(i8*)
+declare i64 @atoll(i8*)
+declare i64 @strtol(i8*, i8**, i32)
+declare i64 @strtoll(i8*, i8**, i32)
+declare i64 @strtoul(i8*, i8**, i32)
+declare i64 @strtoull(i8*, i8**, i32)
+
 declare i32 @sprintf(i8*, i8*, ...)
 declare i32 @snprintf(i8*, i64, i8*, ...)
 
@@ -262,6 +270,74 @@ define void @fold_strcspn_past_end(i64* %poff) {
   %o50 = call i64 @strcspn(i8* %p5, i8* %p0)
   %po50 = getelementptr i64, i64* %poff, i32 1
   store i64 %o50, i64* %po50
+
+  ret void
+}
+
+
+; TODO: Fold the 32-bit atoi(a5 + 5) to zero.
+; Verify that processing the invalid call doesn't run into trouble.
+
+define i32 @fold_atoi_past_end() {
+; CHECK-LABEL: @fold_atoi_past_end(
+; CHECK-NEXT:    [[I:%.*]] = call i32 @atoi(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %i = call i32 @atoi(i8* %p5)
+  ret i32 %i
+}
+
+; TODO: Likewise, fold the 64-bit atol(a5 + 5) to zero, and similarly
+; for atoll and strtrol and similar.
+; Verify that processing the invalid call doesn't run into trouble.
+
+define void @fold_atol_strtol_past_end(i64* %ps) {
+; CHECK-LABEL: @fold_atol_strtol_past_end(
+; CHECK-NEXT:    [[I0:%.*]] = call i64 @atol(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
+; CHECK-NEXT:    store i64 [[I0]], i64* [[PS:%.*]], align 4
+; CHECK-NEXT:    [[I1:%.*]] = call i64 @atoll(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, i64* [[PS]], i64 1
+; CHECK-NEXT:    store i64 [[I1]], i64* [[P1]], align 4
+; CHECK-NEXT:    [[I2:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 0)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i64, i64* [[PS]], i64 2
+; CHECK-NEXT:    store i64 [[I2]], i64* [[P2]], align 4
+; CHECK-NEXT:    [[I3:%.*]] = call i64 @strtoul(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 8)
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i64, i64* [[PS]], i64 3
+; CHECK-NEXT:    store i64 [[I3]], i64* [[P3]], align 4
+; CHECK-NEXT:    [[I4:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 10)
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i64, i64* [[PS]], i64 4
+; CHECK-NEXT:    store i64 [[I4]], i64* [[P4]], align 4
+; CHECK-NEXT:    [[I5:%.*]] = call i64 @strtoul(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 16)
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr i64, i64* [[PS]], i64 5
+; CHECK-NEXT:    store i64 [[I5]], i64* [[P5]], align 4
+; CHECK-NEXT:    ret void
+;
+  %pa5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+
+  %i0 = call i64 @atol(i8* %pa5)
+  %p0 = getelementptr i64, i64* %ps, i32 0
+  store i64 %i0, i64* %p0
+
+  %i1 = call i64 @atoll(i8* %pa5)
+  %p1 = getelementptr i64, i64* %ps, i32 1
+  store i64 %i1, i64* %p1
+
+  %i2 = call i64 @strtol(i8* %pa5, i8** null, i32 0)
+  %p2 = getelementptr i64, i64* %ps, i32 2
+  store i64 %i2, i64* %p2
+
+  %i3 = call i64 @strtoul(i8* %pa5, i8** null, i32 8)
+  %p3 = getelementptr i64, i64* %ps, i32 3
+  store i64 %i3, i64* %p3
+
+  %i4 = call i64 @strtoll(i8* %pa5, i8** null, i32 10)
+  %p4 = getelementptr i64, i64* %ps, i32 4
+  store i64 %i4, i64* %p4
+
+  %i5 = call i64 @strtoul(i8* %pa5, i8** null, i32 16)
+  %p5 = getelementptr i64, i64* %ps, i32 5
+  store i64 %i5, i64* %p5
 
   ret void
 }

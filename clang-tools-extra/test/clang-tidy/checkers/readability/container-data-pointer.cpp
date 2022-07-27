@@ -144,3 +144,14 @@ int *q(std::vector<int> ***v) {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
   // CHECK-FIXES: {{^  }}return (**v)->data();{{$}}
 }
+
+struct VectorHolder {
+  std::vector<int> v;
+};
+
+int *r() {
+  VectorHolder holder;
+  return &holder.v[0];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES: {{^  }}return holder.v.data();{{$}}
+}

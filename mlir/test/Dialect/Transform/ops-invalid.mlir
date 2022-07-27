@@ -184,3 +184,18 @@ transform.alternatives {
 ^bb0:
   transform.yield
 }
+
+// -----
+
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  // expected-error @below {{result #0 has more than one potential consumer}}
+  %0 = test_produce_param_or_forward_operand 42
+  // expected-note @below {{used here as operand #0}}
+  transform.foreach %0 {
+  ^bb1(%arg1: !pdl.operation):
+    transform.test_consume_operand %arg1
+  }
+  // expected-note @below {{used here as operand #0}}
+  transform.test_consume_operand %0
+}

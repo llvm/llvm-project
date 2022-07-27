@@ -29,9 +29,9 @@ struct TraceDumperOptions {
   bool json = false;
   /// When dumping in JSON format, pretty print the output.
   bool pretty_print_json = false;
-  /// For each instruction, print the corresponding timestamp counter if
+  /// For each trace item, print the corresponding timestamp in nanoseconds if
   /// available.
-  bool show_tsc = false;
+  bool show_timestamps = false;
   /// Dump the events that happened between instructions.
   bool show_events = false;
   /// For each instruction, print the instruction kind.
@@ -61,7 +61,8 @@ public:
   struct TraceItem {
     lldb::user_id_t id;
     lldb::addr_t load_address;
-    llvm::Optional<uint64_t> tsc;
+    llvm::Optional<double> timestamp;
+    llvm::Optional<uint64_t> hw_clock;
     llvm::Optional<llvm::StringRef> error;
     llvm::Optional<lldb::TraceEvent> event;
     llvm::Optional<SymbolInfo> symbol_info;

@@ -63,8 +63,9 @@ static ExprResult CreateFunctionRefExpr(
   // being used.
   if (FoundDecl != Fn && S.DiagnoseUseOfDecl(Fn, Loc))
     return ExprError();
-  DeclRefExpr *DRE = new (S.Context)
-      DeclRefExpr(S.Context, Fn, false, Fn->getType(), VK_LValue, Loc, LocInfo);
+  DeclRefExpr *DRE =
+      DeclRefExpr::Create(S.Context, Fn->getQualifierLoc(), SourceLocation(),
+                          Fn, false, Loc, Fn->getType(), VK_LValue, FoundDecl);
   if (HadMultipleCandidates)
     DRE->setHadMultipleCandidates(true);
 

@@ -274,6 +274,64 @@ LogicalResult transform::AlternativesOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ForeachOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ForeachOp::apply(transform::TransformResults &results,
+                            transform::TransformState &state) {
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  for (Operation *op : payloadOps) {
+    auto scope = state.make_region_scope(getBody());
+    if (failed(state.mapBlockArguments(getIterationVariable(), {op})))
+      return DiagnosedSilenceableFailure::definiteFailure();
+
+    for (Operation &transform : getBody().front().without_terminator()) {
+      DiagnosedSilenceableFailure result = state.applyTransform(
+          cast<transform::TransformOpInterface>(transform));
+      if (!result.succeeded())
+        return result;
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ForeachOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  BlockArgument iterVar = getIterationVariable();
+  if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
+        return isHandleConsumed(iterVar, cast<TransformOpInterface>(&op));
+      })) {
+    consumesHandle(getTarget(), effects);
+  } else {
+    onlyReadsHandle(getTarget(), effects);
+  }
+}
+
+void transform::ForeachOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  Region *bodyRegion = &getBody();
+  if (!index) {
+    regions.emplace_back(bodyRegion, bodyRegion->getArguments());
+    return;
+  }
+
+  // Branch back to the region or the parent.
+  assert(*index == 0 && "unexpected region index");
+  regions.emplace_back(bodyRegion, bodyRegion->getArguments());
+  regions.emplace_back();
+}
+
+OperandRange
+transform::ForeachOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+  // The iteration variable op handle is mapped to a subset (one op to be
+  // precise) of the payload ops of the ForeachOp operand.
+  assert(index && *index == 0 && "unexpected region index");
+  return getOperation()->getOperands();
+}
+
+//===----------------------------------------------------------------------===//
 // GetClosestIsolatedParentOp
 //===----------------------------------------------------------------------===//
 

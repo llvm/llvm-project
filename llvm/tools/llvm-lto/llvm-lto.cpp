@@ -261,6 +261,10 @@ static cl::opt<bool>
                      cl::desc("Print pass management debugging information"),
                      cl::cat(LTOCategory));
 
+static cl::opt<bool>
+    LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
+                     cl::desc("Save the IR before running optimizations"));
+
 namespace {
 
 struct ModuleInfo {
@@ -1069,6 +1073,9 @@ int main(int argc, char **argv) {
     CodeGen.setFileType(*FT);
 
   if (!OutputFilename.empty()) {
+    if (LTOSaveBeforeOpt)
+      CodeGen.setSaveIRBeforeOptPath(OutputFilename + ".0.preopt.bc");
+
     if (SaveLinkedModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".linked.bc";

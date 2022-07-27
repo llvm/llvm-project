@@ -208,7 +208,7 @@ private:
   Value *optimizeIsAscii(CallInst *CI, IRBuilderBase &B);
   Value *optimizeToAscii(CallInst *CI, IRBuilderBase &B);
   Value *optimizeAtoi(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeStrtol(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrToInt(CallInst *CI, IRBuilderBase &B, bool AsSigned);
 
   // Formatting and IO Library Call Optimizations
   Value *optimizeErrorReporting(CallInst *CI, IRBuilderBase &B,

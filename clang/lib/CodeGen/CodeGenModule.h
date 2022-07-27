@@ -49,6 +49,10 @@ class DataLayout;
 class FunctionType;
 class LLVMContext;
 class IndexedInstrProfReader;
+
+namespace vfs {
+class FileSystem;
+}
 }
 
 namespace clang {
@@ -311,6 +315,7 @@ public:
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
   const HeaderSearchOptions &HeaderSearchOpts; // Only used for debug info.
   const PreprocessorOptions &PreprocessorOpts; // Only used for debug info.
   const CodeGenOptions &CodeGenOpts;
@@ -605,7 +610,8 @@ private:
   llvm::DenseMap<const llvm::Constant *, llvm::GlobalVariable *> RTTIProxyMap;
 
 public:
-  CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
+  CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
                 const CodeGenOptions &CodeGenOpts, llvm::Module &M,
                 DiagnosticsEngine &Diags,
@@ -733,6 +739,9 @@ public:
 
   ASTContext &getContext() const { return Context; }
   const LangOptions &getLangOpts() const { return LangOpts; }
+  const IntrusiveRefCntPtr<llvm::vfs::FileSystem> &getFileSystem() const {
+    return FS;
+  }
   const HeaderSearchOptions &getHeaderSearchOpts()
     const { return HeaderSearchOpts; }
   const PreprocessorOptions &getPreprocessorOpts()
