@@ -31,6 +31,12 @@ extern const double EXP_M1[195];
 // > for i from 0 to 127 do { D(exp(i / 128)); };
 extern const double EXP_M2[128];
 
+// Lookup table for sin(k * pi / 16) with k = 0, ..., 31.
+// Table is generated with Sollya as follow:
+// > display = hexadecimal;
+// > for k from 0 to 31 do { D(sin(k * pi/16)); };
+extern const double SIN_K_PI_OVER_16[32];
+
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_COMMON_CONSTANTS_H
