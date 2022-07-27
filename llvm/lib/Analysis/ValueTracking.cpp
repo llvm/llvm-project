@@ -4266,9 +4266,10 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   return true;
 }
 
-/// This function computes the length of a null-terminated C string pointed to
-/// by V. If successful, it returns true and returns the string in Str.
-/// If unsuccessful, it returns false.
+/// Extract bytes from the initializer of the constant array V, which need
+/// not be a nul-terminated string.  On success, store the bytes in Str and
+/// return true.  When TrimAtNul is set, Str will contain only the bytes up
+/// to but not including the first nul.  Return false on failure.
 bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
                                  uint64_t Offset, bool TrimAtNul) {
   ConstantDataArraySlice Slice;
