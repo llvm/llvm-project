@@ -1232,7 +1232,9 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
        // dynamic alloca instrumentation for them as well.
        !AI.isUsedWithInAlloca() &&
        // swifterror allocas are register promoted by ISel
-       !AI.isSwiftError());
+       !AI.isSwiftError() &&
+       // safe allocas are not interesting
+       !(SSGI && SSGI->isSafe(AI)));
 
   ProcessedAllocas[&AI] = IsInteresting;
   return IsInteresting;
