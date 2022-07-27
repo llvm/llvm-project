@@ -6,21 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <vector>
-// class vector
-// vector();
+// UNSUPPORTED: c++03
+// XFAIL: libcpp-has-debug-mode
 
+#include <algorithm>
 #include <vector>
 
-#include "test_macros.h"
+std::vector<int> ca_allocs;
 
-struct X
-{
-    std::vector<X> q;
-};
+int main(int, char**) {
+  ca_allocs.push_back(0);
+  for ([[maybe_unused]] const auto& a : ca_allocs)
+    ;
 
-int main(int, char**)
-{
-
-    return 0;
+  return 0;
 }
