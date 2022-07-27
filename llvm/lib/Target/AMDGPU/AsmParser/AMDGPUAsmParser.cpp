@@ -3865,7 +3865,7 @@ bool AMDGPUAsmParser::validateMIMGDim(const MCInst &Inst) {
   if (DimIdx < 0)
     return true;
 
-  long Imm = Inst.getOperand(DimIdx).getImm();
+  int64_t Imm = Inst.getOperand(DimIdx).getImm();
   if (Imm < 0 || Imm >= 8)
     return false;
 

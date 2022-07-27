@@ -478,7 +478,7 @@ def HI16 : SDNodeXForm<imm, [{
 
 def HA16 : SDNodeXForm<imm, [{
   // Transformation function: shift the immediate value down into the low bits.
-  long Val = N->getZExtValue();
+  int64_t Val = N->getZExtValue();
   return getI32Imm((Val - (signed short)Val) >> 16, SDLoc(N));
 }]>;
 def MB : SDNodeXForm<imm, [{
