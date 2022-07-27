@@ -40,6 +40,8 @@ define void @debug_value(i32 %in) #0 !dbg !16 {
   call void @llvm.dbg.value(metadata float 1.000000e+00, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
 ; CHECK: DBG_VALUE $noreg, 0, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32* null, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+; CHECK: DBG_VALUE 42, 0, !17, !DIExpression(), debug-location !18
+  call void @llvm.dbg.value(metadata i32* inttoptr (i64 42 to i32*), i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   ret void
 }
 
