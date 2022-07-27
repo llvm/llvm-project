@@ -7788,7 +7788,7 @@ static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
     case bitc::FS_FLAGS: { // [flags]
       uint64_t Flags = Record[0];
       // Scan flags.
-      assert(Flags <= 0x7f && "Unexpected bits in flag");
+      assert(Flags <= 0xff && "Unexpected bits in flag");
 
       return Flags & 0x8;
     }

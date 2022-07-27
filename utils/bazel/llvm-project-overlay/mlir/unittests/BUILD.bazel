@@ -299,7 +299,7 @@ cc_test(
         "//llvm:gtest_main",
         "//mlir:AffineAnalysis",
         "//mlir:Analysis",
-        "//mlir:AsmParser",
+        "//mlir:Parser",
         "//mlir:IR",
     ],
 )

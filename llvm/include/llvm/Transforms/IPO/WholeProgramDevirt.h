@@ -239,7 +239,9 @@ struct VTableSlotSummary {
   StringRef TypeID;
   uint64_t ByteOffset;
 };
-
+bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO);
+void updatePublicTypeTestCalls(Module &M,
+                               bool WholeProgramVisibilityEnabledInLTO);
 void updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);
