@@ -10,14 +10,15 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: s8
     ; CHECK: liveins: $w0
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
-    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)
-    ; CHECK: $w0 = COPY [[COPY]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %val:_(s8) = G_IMPLICIT_DEF
     %cttz:_(s8) = G_CTTZ %val(s8)
     %ext:_(s32) = G_ANYEXT %cttz(s8)
@@ -33,14 +34,15 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: s16
     ; CHECK: liveins: $w0
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
-    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)
-    ; CHECK: $w0 = COPY [[COPY]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %val:_(s16) = G_IMPLICIT_DEF
     %cttz:_(s16) = G_CTTZ %val(s16)
     %ext:_(s32) = G_ANYEXT %cttz(s16)
@@ -58,11 +60,12 @@ body:             |
 
     ; CHECK-LABEL: name: s32
     ; CHECK: liveins: $w0
-    ; CHECK: %val:_(s32) = COPY $w0
-    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE %val
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
-    ; CHECK: $w0 = COPY [[CTLZ]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE %val
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[CTLZ]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %val:_(s32) = COPY $w0
     %1:_(s32) = G_CTTZ %val(s32)
     $w0 = COPY %1(s32)
@@ -79,11 +82,12 @@ body:             |
 
     ; CHECK-LABEL: name: s64
     ; CHECK: liveins: $x0
-    ; CHECK: %val:_(s64) = COPY $x0
-    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s64) = G_BITREVERSE %val
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[BITREVERSE]](s64)
-    ; CHECK: $x0 = COPY [[CTLZ]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s64) = G_BITREVERSE %val
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[BITREVERSE]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[CTLZ]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %val:_(s64) = COPY $x0
     %1:_(s64) = G_CTTZ %val(s64)
     $x0 = COPY %1(s64)
