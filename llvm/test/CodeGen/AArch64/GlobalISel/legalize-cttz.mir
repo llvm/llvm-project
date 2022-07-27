@@ -92,3 +92,29 @@ body:             |
     %1:_(s64) = G_CTTZ %val(s64)
     $x0 = COPY %1(s64)
     RET_ReallyLR implicit $x0
+...
+---
+name:            v4s32
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: v4s32
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x s32>) = G_XOR %val, [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<4 x s32>) = G_ADD %val, [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[XOR]], [[ADD]]
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<4 x s32>) = G_CTPOP [[AND]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[CTPOP]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %val:_(<4 x s32>) = COPY $q0
+    %1:_(<4 x s32>) = G_CTTZ %val(<4 x s32>)
+    $q0 = COPY %1(<4 x s32>)
+    RET_ReallyLR implicit $q0
+...
