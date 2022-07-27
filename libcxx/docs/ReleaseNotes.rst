@@ -50,6 +50,7 @@ almost complete. The ``ranges`` library is considered experimental.
 Implemented Papers
 ------------------
 
+- P1004R2 - Making ``std::vector`` constexpr
 - P0627R6 - Function to mark unreachable code
 - P1165R1 - Make stateful allocator propagation more consistent for ``operator+(basic_string)``
 - P0674R1 - Support arrays in ``make_shared`` and ``allocate_shared``
