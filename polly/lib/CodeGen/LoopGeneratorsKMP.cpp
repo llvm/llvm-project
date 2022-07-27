@@ -57,7 +57,8 @@ void ParallelLoopGeneratorKMP::createCallSpawnThreads(Value *SubFn,
                    Stride,
                    SubFnParam};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::deployParallelExecution(Function *SubFn,
@@ -329,7 +330,9 @@ Value *ParallelLoopGeneratorKMP::createCallGlobalThreadNum() {
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
-  return Builder.CreateCall(F, {SourceLocationInfo});
+  CallInst *Call = Builder.CreateCall(F, {SourceLocationInfo});
+  Call->setDebugLoc(DLGenerated);
+  return Call;
 }
 
 void ParallelLoopGeneratorKMP::createCallPushNumThreads(Value *GlobalThreadID,
@@ -352,7 +355,8 @@ void ParallelLoopGeneratorKMP::createCallPushNumThreads(Value *GlobalThreadID,
 
   Value *Args[] = {SourceLocationInfo, GlobalThreadID, NumThreads};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
@@ -397,7 +401,8 @@ void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
       ConstantInt::get(LongType, 1),
       ChunkSize};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::createCallStaticFini(Value *GlobalThreadID) {
@@ -416,7 +421,8 @@ void ParallelLoopGeneratorKMP::createCallStaticFini(Value *GlobalThreadID) {
 
   Value *Args[] = {SourceLocationInfo, GlobalThreadID};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorKMP::createCallDispatchInit(Value *GlobalThreadID,
@@ -456,7 +462,8 @@ void ParallelLoopGeneratorKMP::createCallDispatchInit(Value *GlobalThreadID,
       Inc,
       ChunkSize};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 Value *ParallelLoopGeneratorKMP::createCallDispatchNext(Value *GlobalThreadID,
@@ -488,7 +495,9 @@ Value *ParallelLoopGeneratorKMP::createCallDispatchNext(Value *GlobalThreadID,
   Value *Args[] = {SourceLocationInfo, GlobalThreadID, IsLastPtr, LBPtr, UBPtr,
                    StridePtr};
 
-  return Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
+  return Call;
 }
 
 // TODO: This function currently creates a source location dummy. It might be

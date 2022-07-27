@@ -44,7 +44,8 @@ void ParallelLoopGeneratorGOMP::createCallSpawnThreads(Value *SubFn,
   Value *Args[] = {SubFn, SubFnParam, Builder.getInt32(PollyNumThreads),
                    LB,    UB,         Stride};
 
-  Builder.CreateCall(F, Args);
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorGOMP::deployParallelExecution(Function *SubFn,
@@ -53,7 +54,8 @@ void ParallelLoopGeneratorGOMP::deployParallelExecution(Function *SubFn,
                                                         Value *Stride) {
   // Tell the runtime we start a parallel loop
   createCallSpawnThreads(SubFn, SubFnParam, LB, UB, Stride);
-  Builder.CreateCall(SubFn, SubFnParam);
+  CallInst *Call = Builder.CreateCall(SubFn, SubFnParam);
+  Call->setDebugLoc(DLGenerated);
   createCallJoinThreads();
 }
 
@@ -184,9 +186,10 @@ Value *ParallelLoopGeneratorGOMP::createCallGetWorkItem(Value *LBPtr,
   }
 
   Value *Args[] = {LBPtr, UBPtr};
-  Value *Return = Builder.CreateCall(F, Args);
-  Return = Builder.CreateICmpNE(
-      Return, Builder.CreateZExt(Builder.getFalse(), Return->getType()));
+  CallInst *Call = Builder.CreateCall(F, Args);
+  Call->setDebugLoc(DLGenerated);
+  Value *Return = Builder.CreateICmpNE(
+      Call, Builder.CreateZExt(Builder.getFalse(), Call->getType()));
   return Return;
 }
 
@@ -203,7 +206,8 @@ void ParallelLoopGeneratorGOMP::createCallJoinThreads() {
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
-  Builder.CreateCall(F, {});
+  CallInst *Call = Builder.CreateCall(F, {});
+  Call->setDebugLoc(DLGenerated);
 }
 
 void ParallelLoopGeneratorGOMP::createCallCleanupThread() {
@@ -219,5 +223,6 @@ void ParallelLoopGeneratorGOMP::createCallCleanupThread() {
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
-  Builder.CreateCall(F, {});
+  CallInst *Call = Builder.CreateCall(F, {});
+  Call->setDebugLoc(DLGenerated);
 }
