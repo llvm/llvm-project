@@ -1675,7 +1675,15 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       if (dispatch_queue_t != LLDB_INVALID_ADDRESS)
         gdb_thread->SetQueueLibdispatchQueueAddress(dispatch_queue_t);
 
-      // Make sure we update our thread stop reason just once
+      // Make sure we update our thread stop reason just once, but don't 
+      // overwrite the stop info for threads that haven't moved:
+      StopInfoSP current_stop_info_sp = thread_sp->GetPrivateStopInfo(false);
+      if (thread_sp->GetTemporaryResumeState() == eStateSuspended &&
+          current_stop_info_sp) {
+          thread_sp->SetStopInfo(current_stop_info_sp);
+          return thread_sp;
+      }
+
       if (!thread_sp->StopInfoIsUpToDate()) {
         thread_sp->SetStopInfo(StopInfoSP());
         // If there's a memory thread backed by this thread, we need to use it
