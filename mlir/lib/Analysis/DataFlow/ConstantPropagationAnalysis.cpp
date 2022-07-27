@@ -67,6 +67,7 @@ void SparseConstantPropagation::visitOperation(
   if (foldResults.empty()) {
     op->setOperands(originalOperands);
     op->setAttrs(originalAttrs);
+    markAllPessimisticFixpoint(results);
     return;
   }
 

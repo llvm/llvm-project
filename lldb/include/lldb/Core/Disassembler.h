@@ -83,7 +83,10 @@ public:
   ///    The control flow kind of this instruction, or
   ///    eInstructionControlFlowKindUnknown if the instruction
   ///    can't be classified.
-  lldb::InstructionControlFlowKind GetControlFlowKind(const ArchSpec &arch);
+  virtual lldb::InstructionControlFlowKind
+  GetControlFlowKind(const ExecutionContext *exe_ctx) {
+    return lldb::eInstructionControlFlowKindUnknown;
+  }
 
   virtual void
   CalculateMnemonicOperandsAndComment(const ExecutionContext *exe_ctx) = 0;
@@ -222,6 +225,9 @@ public:
   }
 
   virtual bool IsCall() { return false; }
+
+  static const char *GetNameForInstructionControlFlowKind(
+      lldb::InstructionControlFlowKind instruction_control_flow_kind);
 
 protected:
   Address m_address; // The section offset address of this instruction

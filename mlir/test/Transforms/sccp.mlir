@@ -216,3 +216,19 @@ func.func @simple_produced_operand() -> (i32, i32) {
 
   return %arg1, %arg2 : i32, i32
 }
+
+// CHECK-LABEL: inplace_fold
+func.func @inplace_fold(%arg: i1) -> (i32) {
+  %0 = "test.op_in_place_fold_success"() : () -> i1
+  %1 = arith.constant 5 : i32
+  cf.cond_br %0, ^a, ^b
+
+^a:
+  // CHECK-NOT: addi
+  %3 = arith.addi %1, %1 : i32
+  return %3 : i32
+
+^b:
+  return %1 : i32
+}
+

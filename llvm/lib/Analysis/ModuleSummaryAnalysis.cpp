@@ -164,7 +164,8 @@ static void addIntrinsicToSummary(
     SetVector<FunctionSummary::ConstVCall> &TypeCheckedLoadConstVCalls,
     DominatorTree &DT) {
   switch (CI->getCalledFunction()->getIntrinsicID()) {
-  case Intrinsic::type_test: {
+  case Intrinsic::type_test:
+  case Intrinsic::public_type_test: {
     auto *TypeMDVal = cast<MetadataAsValue>(CI->getArgOperand(1));
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
     if (!TypeId)

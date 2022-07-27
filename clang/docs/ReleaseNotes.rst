@@ -198,6 +198,14 @@ Bug Fixes
   constant folded. Fixes `Issue 55638 <https://github.com/llvm/llvm-project/issues/55638>`_.
 - Fixed incompatibility of Clang's ``<stdatomic.h>`` with MSVC ``<atomic>``.
   Fixes `MSVC STL Issue 2862 <https://github.com/microsoft/STL/issues/2862>`_.
+- Empty enums and enums with a single enumerator with value zero will be
+  considered to have one positive bit in order to represent the underlying
+  value. This effects whether we consider the store of the value one to be well
+  defined.
+- An operator introduced to the scope via a `using` statement now correctly references this
+  statement in clangd (hover over the symbol, jump to definition) as well as in the AST dump.
+  This also fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/#55095>`_ as a
+  side-effect.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -431,6 +439,11 @@ Attribute Changes in Clang
   ``__attribute__((function_return("keep")))`` was added. This is intended to
   be used by the Linux kernel to mitigate RETBLEED.
 
+- Ignore the `__preferred_name__` attribute when writing for C++20 module interfaces.
+  This is a short-term workaround intentionally since clang doesn't take care of the
+  serialization and deserialization of `__preferred_name__`.  See
+  https://github.com/llvm/llvm-project/issues/56490 for example.
+
 Windows Support
 ---------------
 
@@ -490,6 +503,9 @@ C++ Language Changes in Clang
   unsigned character literals. This fixes `Issue 54886 <https://github.com/llvm/llvm-project/issues/54886>`_.
 - Stopped allowing constraints on non-template functions to be compliant with
   dcl.decl.general p4.
+- Improved ``copy elision`` optimization. It's possible to apply ``NRVO`` for an object if at the moment when
+  any return statement of this object is executed, the ``return slot`` won't be occupied by another object.
+
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -508,6 +524,14 @@ C++20 Feature Support
   that was hoped for. C++20 since added ``extern "C++"`` semantics
   that can be used for such compatibility. The demangler now demangles
   symbols with named module attachment.
+
+- Enhanced the support for C++20 Modules, including: Partitions,
+  Reachability, Header Unit and ``extern "C++"`` semantics.
+
+- Implemented `P1103R3: Merging Modules <https://wg21.link/P1103R3>`_.
+- Implemented `P1779R3: ABI isolation for member functions <https://wg21.link/P1779R3>`_.
+- Implemented `P1874R1: Dynamic Initialization Order of Non-Local Variables in Modules <https://wg21.link/P1874R1>`_.
+- Partially implemented `P1815R2: Translation-unit-local entities <https://wg21.link/P1815R2>`_.
 
 - As per "Conditionally Trivial Special Member Functions" (P0848), it is
   now possible to overload destructors using concepts. Note that the rest
@@ -568,6 +592,8 @@ ABI Changes in Clang
 
 OpenMP Support in Clang
 -----------------------
+* Added the support for ``atomic compare`` and ``atomic compare capture``
+  (``-fopenmp-version=51`` is required).
 
 ...
 
@@ -666,7 +692,8 @@ clang-extdef-mapping
 libclang
 --------
 
-- ...
+- The soversion for libclang will now change for each new LLVM major release.  This matches
+  the behavior of clang <= 13.
 
 Static Analyzer
 ---------------

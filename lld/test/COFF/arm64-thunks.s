@@ -27,17 +27,17 @@ func2:
     ret
 
 // DISASM: 0000000140001000 <.text>:
-// DISASM: 140001000:      40 00 00 36     tbz     w0, #0, 0x140001008 <.text+0x8>
-// DISASM: 140001004:      c0 03 5f d6     ret
-// DISASM: 140001008:      50 00 00 90     adrp    x16, 0x140009000
-// DISASM: 14000100c:      10 52 00 91     add     x16, x16, #20
-// DISASM: 140001010:      00 02 1f d6     br      x16
+// DISASM: 140001000:      36000040        tbz     w0, #0, 0x140001008 <.text+0x8>
+// DISASM: 140001004:      d65f03c0        ret
+// DISASM: 140001008:      90000050        adrp    x16, 0x140009000
+// DISASM: 14000100c:      91005210        add     x16, x16, #20
+// DISASM: 140001010:      d61f0200        br      x16
 
-// DISASM: 140009014:      60 00 00 36     tbz     w0, #0, 0x140009020 <.text+0x8020>
-// DISASM: 140009018:      c0 03 5f d6     ret
+// DISASM: 140009014:      36000060        tbz     w0, #0, 0x140009020 <.text+0x8020>
+// DISASM: 140009018:      d65f03c0        ret
 
-// DISASM: 140009020:      50 00 00 90     adrp    x16, 0x140011000
-// DISASM: 140009024:      10 b2 00 91     add     x16, x16, #44
-// DISASM: 140009028:      00 02 1f d6     br      x16
+// DISASM: 140009020:      90000050        adrp    x16, 0x140011000
+// DISASM: 140009024:      9100b210        add     x16, x16, #44
+// DISASM: 140009028:      d61f0200        br      x16
 
-// DISASM: 14001102c:      c0 03 5f d6     ret
+// DISASM: 14001102c:      d65f03c0        ret

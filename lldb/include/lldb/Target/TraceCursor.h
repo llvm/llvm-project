@@ -215,7 +215,7 @@ public:
   ///   of this cursor.
   ExecutionContextRef &GetExecutionContextRef();
 
-  /// Instruction, event or error information
+  /// Trace item information (instructions, errors and events)
   /// \{
 
   /// \return
@@ -255,27 +255,35 @@ public:
   ///     The load address of the instruction the cursor is pointing at.
   virtual lldb::addr_t GetLoadAddress() const = 0;
 
-  /// Get the hardware counter of a given type associated with the current
-  /// instruction. Each architecture might support different counters. It might
-  /// happen that only some instructions of an entire trace have a given counter
-  /// associated with them.
-  ///
-  /// \param[in] counter_type
-  ///    The counter type.
-  /// \return
-  ///    The value of the counter or \b llvm::None if not available.
-  virtual llvm::Optional<uint64_t>
-  GetCounter(lldb::TraceCounter counter_type) const = 0;
-
   /// Get the CPU associated with the current trace item.
   ///
   /// This call might not be O(1), so it's suggested to invoke this method
-  /// whenever a cpu change event is fired.
+  /// whenever an eTraceEventCPUChanged event is fired.
   ///
   /// \return
   ///    The requested CPU id, or \a llvm::None if this information is
   ///    not available for the current item.
   virtual llvm::Optional<lldb::cpu_id_t> GetCPU() const = 0;
+
+  /// Get the last hardware clock value that was emitted before the current
+  /// trace item.
+  ///
+  /// This call might not be O(1), so it's suggested to invoke this method
+  /// whenever an eTraceEventHWClockTick event is fired.
+  ///
+  /// \return
+  ///     The requested HW clock value, or \a llvm::None if this information is
+  ///     not available for the current item.
+  virtual llvm::Optional<uint64_t> GetHWClock() const = 0;
+
+  /// Get the approximate wall clock time in nanoseconds at which the current
+  /// trace item was executed. Each trace plug-in has a different definition for
+  /// what time 0 means.
+  ///
+  /// \return
+  ///     The approximate wall clock time for the trace item, or \a llvm::None
+  ///     if not available.
+  virtual llvm::Optional<double> GetWallClockTime() const = 0;
   /// \}
 
 protected:

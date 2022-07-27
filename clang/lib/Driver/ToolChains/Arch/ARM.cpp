@@ -548,6 +548,11 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (CPUArg)
     checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, ExtensionFeatures,
                     Triple, CPUArgFPUID);
+
+  // TODO Handle -mtune=. Suppress -Wunused-command-line-argument as a
+  // longstanding behavior.
+  (void)Args.getLastArg(options::OPT_mtune_EQ);
+
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
   unsigned FPUID = llvm::ARM::FK_INVALID;
   const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ);

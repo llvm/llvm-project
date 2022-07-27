@@ -200,6 +200,44 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   }
 }
 
+Environment Environment::pushCall(const CallExpr *Call) const {
+  Environment Env(*this);
+
+  // FIXME: Currently this only works if the callee is never a method and the
+  // same callee is never analyzed from multiple separate callsites. To
+  // generalize this, we'll need to store a "context" field (probably a stack of
+  // `const CallExpr *`s) in the `Environment`, and then change the
+  // `DataflowAnalysisContext` class to hold a map from contexts to "frames",
+  // where each frame stores its own version of what are currently the
+  // `DeclToLoc`, `ExprToLoc`, and `ThisPointeeLoc` fields.
+
+  const auto *FuncDecl = Call->getDirectCallee();
+  assert(FuncDecl != nullptr);
+  const auto *Body = FuncDecl->getBody();
+  assert(Body != nullptr);
+  // FIXME: In order to allow the callee to reference globals, we probably need
+  // to call `initGlobalVars` here in some way.
+
+  auto ParamIt = FuncDecl->param_begin();
+  auto ParamEnd = FuncDecl->param_end();
+  auto ArgIt = Call->arg_begin();
+  auto ArgEnd = Call->arg_end();
+
+  // FIXME: Parameters don't always map to arguments 1:1; examples include
+  // overloaded operators implemented as member functions, and parameter packs.
+  for (; ArgIt != ArgEnd; ++ParamIt, ++ArgIt) {
+    assert(ParamIt != ParamEnd);
+
+    const VarDecl *Param = *ParamIt;
+    const Expr *Arg = *ArgIt;
+    auto *ArgLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
+    assert(ArgLoc != nullptr);
+    Env.setStorageLocation(*Param, *ArgLoc);
+  }
+
+  return Env;
+}
+
 bool Environment::equivalentTo(const Environment &Other,
                                Environment::ValueModel &Model) const {
   assert(DACtx == Other.DACtx);
@@ -352,16 +390,16 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     }
   }
 
-  auto IT = MemberLocToStruct.find(&Loc);
-  if (IT != MemberLocToStruct.end()) {
+  auto It = MemberLocToStruct.find(&Loc);
+  if (It != MemberLocToStruct.end()) {
     // `Loc` is the location of a struct member so we need to also update the
     // value of the member in the corresponding `StructValue`.
 
-    assert(IT->second.first != nullptr);
-    StructValue &StructVal = *IT->second.first;
+    assert(It->second.first != nullptr);
+    StructValue &StructVal = *It->second.first;
 
-    assert(IT->second.second != nullptr);
-    const ValueDecl &Member = *IT->second.second;
+    assert(It->second.second != nullptr);
+    const ValueDecl &Member = *It->second.second;
 
     StructVal.setChild(Member, Val);
   }

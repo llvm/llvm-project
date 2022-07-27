@@ -290,7 +290,7 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a configuration for the MLIR assembly parser. It
-/// contains all of the necessary state to parse a textual MLIR source file.
+/// contains all of the necessary state to parse a MLIR source file.
 class ParserConfig {
 public:
   ParserConfig(MLIRContext *context) : context(context) {

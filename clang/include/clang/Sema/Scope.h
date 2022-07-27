@@ -210,9 +210,19 @@ private:
   /// Used to determine if errors occurred in this scope.
   DiagnosticErrorTrap ErrorTrap;
 
-  /// A lattice consisting of undefined, a single NRVO candidate variable in
-  /// this scope, or over-defined. The bit is true when over-defined.
-  llvm::PointerIntPair<VarDecl *, 1, bool> NRVO;
+  /// A single NRVO candidate variable in this scope.
+  /// There are three possible values:
+  ///  1) pointer to VarDecl that denotes NRVO candidate itself.
+  ///  2) nullptr value means that NRVO is not allowed in this scope
+  ///     (e.g. return a function parameter).
+  ///  3) None value means that there is no NRVO candidate in this scope
+  ///     (i.e. there are no return statements in this scope).
+  Optional<VarDecl *> NRVO;
+
+  /// Represents return slots for NRVO candidates in the current scope.
+  /// If a variable is present in this set, it means that a return slot is
+  /// available for this variable in the current scope.
+  llvm::SmallPtrSet<VarDecl *, 8> ReturnSlots;
 
   void setFlags(Scope *Parent, unsigned F);
 
@@ -304,6 +314,10 @@ public:
   bool decl_empty() const { return DeclsInScope.empty(); }
 
   void AddDecl(Decl *D) {
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      if (!isa<ParmVarDecl>(VD))
+        ReturnSlots.insert(VD);
+
     DeclsInScope.insert(D);
   }
 
@@ -527,23 +541,9 @@ public:
                                   UsingDirectives.end());
   }
 
-  void addNRVOCandidate(VarDecl *VD) {
-    if (NRVO.getInt())
-      return;
-    if (NRVO.getPointer() == nullptr) {
-      NRVO.setPointer(VD);
-      return;
-    }
-    if (NRVO.getPointer() != VD)
-      setNoNRVO();
-  }
+  void updateNRVOCandidate(VarDecl *VD);
 
-  void setNoNRVO() {
-    NRVO.setInt(true);
-    NRVO.setPointer(nullptr);
-  }
-
-  void mergeNRVOIntoParent();
+  void applyNRVO();
 
   /// Init - This is used by the parser to implement scope caching.
   void Init(Scope *parent, unsigned flags);

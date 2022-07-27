@@ -13,7 +13,7 @@ bsl2n z0.d, z0.d, z1.d, z2.d
 // CHECK-INST: bsl2n z0.d, z0.d, z1.d, z2.d
 // CHECK-ENCODING: [0x40,0x3c,0xa1,0x04]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 40 3c a1 04 <unknown>
+// CHECK-UNKNOWN: 04a13c40 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -23,10 +23,10 @@ movprfx z31, z7
 // CHECK-INST: movprfx z31, z7
 // CHECK-ENCODING: [0xff,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bcff <unknown>
 
 bsl2n z31.d, z31.d, z30.d, z29.d
 // CHECK-INST: bsl2n z31.d, z31.d, z30.d, z29.d
 // CHECK-ENCODING: [0xbf,0x3f,0xbe,0x04]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: bf 3f be 04 <unknown>
+// CHECK-UNKNOWN: 04be3fbf <unknown>

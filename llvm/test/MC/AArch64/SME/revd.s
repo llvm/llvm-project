@@ -16,25 +16,25 @@ revd    z0.q, p0/m, z0.q
 // CHECK-INST: revd    z0.q, p0/m, z0.q
 // CHECK-ENCODING: [0x00,0x80,0x2e,0x05]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 00 80 2e 05 <unknown>
+// CHECK-UNKNOWN: 052e8000 <unknown>
 
 revd    z21.q, p5/m, z10.q
 // CHECK-INST: revd    z21.q, p5/m, z10.q
 // CHECK-ENCODING: [0x55,0x95,0x2e,0x05]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 55 95 2e 05 <unknown>
+// CHECK-UNKNOWN: 052e9555 <unknown>
 
 revd    z23.q, p3/m, z13.q
 // CHECK-INST: revd    z23.q, p3/m, z13.q
 // CHECK-ENCODING: [0xb7,0x8d,0x2e,0x05]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: b7 8d 2e 05 <unknown>
+// CHECK-UNKNOWN: 052e8db7 <unknown>
 
 revd    z31.q, p7/m, z31.q
 // CHECK-INST: revd    z31.q, p7/m, z31.q
 // CHECK-ENCODING: [0xff,0x9f,0x2e,0x05]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: ff 9f 2e 05 <unknown>
+// CHECK-UNKNOWN: 052e9fff <unknown>
 
 // --------------------------------------------------------------------------//
 // Test compatibility with MOVPRFX instruction.
@@ -43,10 +43,10 @@ movprfx z21, z25
 // CHECK-INST: movprfx  z21, z25
 // CHECK-ENCODING: [0x35,0xbf,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 35 bf 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bf35 <unknown>
 
 revd    z21.q, p5/m, z10.q
 // CHECK-INST: revd    z21.q, p5/m, z10.q
 // CHECK-ENCODING: [0x55,0x95,0x2e,0x05]
 // CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 55 95 2e 05 <unknown>
+// CHECK-UNKNOWN: 052e9555 <unknown>

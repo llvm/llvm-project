@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svmmla_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmmla.nxv2f64(<vscale x 2 x double> [[X:%.*]], <vscale x 2 x double> [[Y:%.*]], <vscale x 2 x double> [[Z:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fmmla.nxv2f64(<vscale x 2 x double> [[X:%.*]], <vscale x 2 x double> [[Y:%.*]], <vscale x 2 x double> [[Z:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svmmla_f64u13__SVFloat64_tu13__SVFloat64_tu13__SVFloat64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmmla.nxv2f64(<vscale x 2 x double> [[X:%.*]], <vscale x 2 x double> [[Y:%.*]], <vscale x 2 x double> [[Z:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fmmla.nxv2f64(<vscale x 2 x double> [[X:%.*]], <vscale x 2 x double> [[Y:%.*]], <vscale x 2 x double> [[Z:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 svfloat64_t test_svmmla_f64(svfloat64_t x, svfloat64_t y, svfloat64_t z) {

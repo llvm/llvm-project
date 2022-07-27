@@ -37,11 +37,11 @@ _func:
 // CHECK-ASM:        .short  42
 // CHECK-ASM:        .inst.w 0xf04f002a
 
-// CHECK-OBJ:        0:       70 47           bx lr
-// CHECK-OBJ-CODE:   2:       70 47           bx lr
+// CHECK-OBJ:        0:       4770            bx lr
+// CHECK-OBJ-CODE:   2:       4770            bx lr
 // CHECK-OBJ-DATA:   2:       70 47           .short 0x4770
-// CHECK-OBJ:        4:       70 47           bx lr
-// CHECK-OBJ:        6:       4f f0 2a 00     mov.w   r0, #42
-// CHECK-OBJ-CODE:   a:       4f f0 2a 00     mov.w   r0, #42
+// CHECK-OBJ:        4:       4770            bx lr
+// CHECK-OBJ:        6:       f04f 002a       mov.w   r0, #42
+// CHECK-OBJ-CODE:   a:       f04f 002a       mov.w   r0, #42
 // CHECK-OBJ-DATA:   a:       4f f0 2a 00     .word 0x002af04f
-// CHECK-OBJ:        e:       4f f0 2a 00     mov.w   r0, #42
+// CHECK-OBJ:        e:       f04f 002a       mov.w   r0, #42

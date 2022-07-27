@@ -2926,7 +2926,8 @@ Attr *ASTRecordReader::readAttr() {
 /// Reads attributes from the current stream position.
 void ASTRecordReader::readAttributes(AttrVec &Attrs) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
-    Attrs.push_back(readAttr());
+    if (auto *A = readAttr())
+      Attrs.push_back(A);
 }
 
 //===----------------------------------------------------------------------===//

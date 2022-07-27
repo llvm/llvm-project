@@ -10,11 +10,11 @@
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/SourceMgrUtils.h"
+#include "mlir/AsmParser/AsmParser.h"
+#include "mlir/AsmParser/AsmParserState.h"
+#include "mlir/AsmParser/CodeComplete.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Parser/AsmParserState.h"
-#include "mlir/Parser/CodeComplete.h"
-#include "mlir/Parser/Parser.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -325,8 +325,7 @@ MLIRDocument::MLIRDocument(MLIRContext &context, const lsp::URIForFile &uri,
   }
 
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  if (failed(parseSourceFile(sourceMgr, &parsedIR, &context, nullptr,
-                             &asmState))) {
+  if (failed(parseAsmSourceFile(sourceMgr, &parsedIR, &context, &asmState))) {
     // If parsing failed, clear out any of the current state.
     parsedIR.clear();
     asmState = AsmParserState();
@@ -799,9 +798,8 @@ MLIRDocument::getCodeCompletion(const lsp::URIForFile &uri,
 
   Block tmpIR;
   AsmParserState tmpState;
-  (void)parseSourceFile(sourceMgr, &tmpIR, &tmpContext,
-                        /*sourceFileLoc=*/nullptr, &tmpState,
-                        &lspCompleteContext);
+  (void)parseAsmSourceFile(sourceMgr, &tmpIR, &tmpContext, &tmpState,
+                           &lspCompleteContext);
   return completionList;
 }
 

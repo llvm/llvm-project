@@ -13,22 +13,22 @@ smaxv b0, p7, z31.b
 // CHECK-INST: smaxv	b0, p7, z31.b
 // CHECK-ENCODING: [0xe0,0x3f,0x08,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 3f 08 04 <unknown>
+// CHECK-UNKNOWN: 04083fe0 <unknown>
 
 smaxv h0, p7, z31.h
 // CHECK-INST: smaxv	h0, p7, z31.h
 // CHECK-ENCODING: [0xe0,0x3f,0x48,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 3f 48 04 <unknown>
+// CHECK-UNKNOWN: 04483fe0 <unknown>
 
 smaxv s0, p7, z31.s
 // CHECK-INST: smaxv	s0, p7, z31.s
 // CHECK-ENCODING: [0xe0,0x3f,0x88,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 3f 88 04 <unknown>
+// CHECK-UNKNOWN: 04883fe0 <unknown>
 
 smaxv d0, p7, z31.d
 // CHECK-INST: smaxv	d0, p7, z31.d
 // CHECK-ENCODING: [0xe0,0x3f,0xc8,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 3f c8 04 <unknown>
+// CHECK-UNKNOWN: 04c83fe0 <unknown>

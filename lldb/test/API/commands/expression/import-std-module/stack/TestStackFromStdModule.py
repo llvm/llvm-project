@@ -11,6 +11,7 @@ class TestStack(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIfLinux # Declaration in some Linux headers causes LLDB to crash.
+    @skipIf(bugnumber="rdar://97622854")
     def test(self):
         self.build()
 

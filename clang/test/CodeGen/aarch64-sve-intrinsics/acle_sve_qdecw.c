@@ -16,12 +16,12 @@
 
 // CHECK-LABEL: @test_svqdecw_n_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 1)
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svqdecw_n_s32i(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int32_t test_svqdecw_n_s32(int32_t op)
@@ -31,12 +31,12 @@ int32_t test_svqdecw_n_s32(int32_t op)
 
 // CHECK-LABEL: @test_svqdecw_n_s32_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svqdecw_n_s32_1i(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int32_t test_svqdecw_n_s32_1(int32_t op)
@@ -46,12 +46,12 @@ int32_t test_svqdecw_n_s32_1(int32_t op)
 
 // CHECK-LABEL: @test_svqdecw_n_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svqdecw_n_s64l(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 int64_t test_svqdecw_n_s64(int64_t op)
@@ -61,12 +61,12 @@ int64_t test_svqdecw_n_s64(int64_t op)
 
 // CHECK-LABEL: @test_svqdecw_n_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svqdecw_n_u32j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t test_svqdecw_n_u32(uint32_t op)
@@ -76,12 +76,12 @@ uint32_t test_svqdecw_n_u32(uint32_t op)
 
 // CHECK-LABEL: @test_svqdecw_n_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svqdecw_n_u64m(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svqdecw_n_u64(uint64_t op)
@@ -91,12 +91,12 @@ uint64_t test_svqdecw_n_u64(uint64_t op)
 
 // CHECK-LABEL: @test_svqdecw_pat_n_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svqdecw_pat_n_s32i(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqdecw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int32_t test_svqdecw_pat_n_s32(int32_t op)
@@ -106,12 +106,12 @@ int32_t test_svqdecw_pat_n_s32(int32_t op)
 
 // CHECK-LABEL: @test_svqdecw_pat_n_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 0, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 0, i32 1)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svqdecw_pat_n_s64l(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 0, i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqdecw.n64(i64 [[OP:%.*]], i32 0, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 int64_t test_svqdecw_pat_n_s64(int64_t op)
@@ -121,12 +121,12 @@ int64_t test_svqdecw_pat_n_s64(int64_t op)
 
 // CHECK-LABEL: @test_svqdecw_pat_n_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 1, i32 16)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 1, i32 16)
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svqdecw_pat_n_u32j(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 1, i32 16)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqdecw.n32(i32 [[OP:%.*]], i32 1, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t test_svqdecw_pat_n_u32(uint32_t op)
@@ -136,12 +136,12 @@ uint32_t test_svqdecw_pat_n_u32(uint32_t op)
 
 // CHECK-LABEL: @test_svqdecw_pat_n_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 2, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 2, i32 1)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_svqdecw_pat_n_u64m(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 2, i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqdecw.n64(i64 [[OP:%.*]], i32 2, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svqdecw_pat_n_u64(uint64_t op)
@@ -151,12 +151,12 @@ uint64_t test_svqdecw_pat_n_u64(uint64_t op)
 
 // CHECK-LABEL: @test_svqdecw_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 16)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 16)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqdecw_s32u11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 16)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svqdecw_s32(svint32_t op)
@@ -166,12 +166,12 @@ svint32_t test_svqdecw_s32(svint32_t op)
 
 // CHECK-LABEL: @test_svqdecw_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 1)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svqdecw_u32u12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svqdecw_u32(svuint32_t op)
@@ -181,12 +181,12 @@ svuint32_t test_svqdecw_u32(svuint32_t op)
 
 // CHECK-LABEL: @test_svqdecw_pat_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 3, i32 16)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 3, i32 16)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svqdecw_pat_s32u11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 3, i32 16)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 3, i32 16)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svint32_t test_svqdecw_pat_s32(svint32_t op)
@@ -196,12 +196,12 @@ svint32_t test_svqdecw_pat_s32(svint32_t op)
 
 // CHECK-LABEL: @test_svqdecw_pat_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 4, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 4, i32 1)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svqdecw_pat_u32u12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 4, i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqdecw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 4, i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svqdecw_pat_u32(svuint32_t op)

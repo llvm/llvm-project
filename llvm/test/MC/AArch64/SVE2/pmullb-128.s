@@ -14,4 +14,4 @@ pmullb z29.q, z30.d, z31.d
 // CHECK-INST: pmullb z29.q, z30.d, z31.d
 // CHECK-ENCODING: [0xdd,0x6b,0x1f,0x45]
 // CHECK-ERROR: instruction requires: sve2-aes
-// CHECK-UNKNOWN: dd 6b 1f 45 <unknown>
+// CHECK-UNKNOWN: 451f6bdd <unknown>

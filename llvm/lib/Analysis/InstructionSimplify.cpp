@@ -1591,12 +1591,6 @@ static Value *simplifyAndOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
       !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
     return nullptr;
 
-  // We have (icmp Pred0, A, B) & (icmp Pred1, A, B).
-  // If Op1 is always implied true by Op0, then Op0 is a subset of Op1, and we
-  // can eliminate Op1 from this 'and'.
-  if (ICmpInst::isImpliedTrueByMatchingCmp(Pred0, Pred1))
-    return Op0;
-
   // Check for any combination of predicates that are guaranteed to be disjoint.
   if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
       (Pred0 == ICmpInst::ICMP_EQ && ICmpInst::isFalseWhenEqual(Pred1)) ||
@@ -1615,12 +1609,6 @@ static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
   if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
       !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
     return nullptr;
-
-  // We have (icmp Pred0, A, B) | (icmp Pred1, A, B).
-  // If Op1 is always implied true by Op0, then Op0 is a subset of Op1, and we
-  // can eliminate Op0 from this 'or'.
-  if (ICmpInst::isImpliedTrueByMatchingCmp(Pred0, Pred1))
-    return Op1;
 
   // Check for any combination of predicates that cover the entire range of
   // possibilities.

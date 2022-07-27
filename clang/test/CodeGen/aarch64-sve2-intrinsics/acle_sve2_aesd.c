@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svaesd_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.aesd(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aesd(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z14test_svaesd_u8u11__SVUint8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.aesd(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aesd(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svaesd_u8(svuint8_t op1, svuint8_t op2)

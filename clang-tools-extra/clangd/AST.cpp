@@ -171,6 +171,9 @@ bool isImplementationDetail(const Decl *D) {
 
 SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM) {
   auto L = D.getLocation();
+  // For `- (void)foo` we want `foo` not the `-`.
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&D))
+    L = MD->getSelectorStartLoc();
   if (isSpelledInSource(L, SM))
     return SM.getSpellingLoc(L);
   return SM.getExpansionLoc(L);
@@ -356,6 +359,20 @@ SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
   return SymbolID(USR);
 }
 
+const ObjCImplDecl *getCorrespondingObjCImpl(const ObjCContainerDecl *D) {
+  if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(D))
+    return ID->getImplementation();
+  if (const auto *CD = dyn_cast<ObjCCategoryDecl>(D)) {
+    if (CD->IsClassExtension()) {
+      if (const auto *ID = CD->getClassInterface())
+        return ID->getImplementation();
+      return nullptr;
+    }
+    return CD->getImplementation();
+  }
+  return nullptr;
+}
+
 std::string printType(const QualType QT, const DeclContext &CurContext,
                       const llvm::StringRef Placeholder) {
   std::string Result;
@@ -368,7 +385,7 @@ std::string printType(const QualType QT, const DeclContext &CurContext,
   public:
     PrintCB(const DeclContext *CurContext) : CurContext(CurContext) {}
     virtual ~PrintCB() {}
-    virtual bool isScopeVisible(const DeclContext *DC) const override {
+    bool isScopeVisible(const DeclContext *DC) const override {
       return DC->Encloses(CurContext);
     }
 

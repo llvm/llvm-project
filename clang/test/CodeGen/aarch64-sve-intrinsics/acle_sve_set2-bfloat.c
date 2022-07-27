@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svset2_bf16_0(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 0, <vscale x 8 x bfloat> [[X:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 0, <vscale x 8 x bfloat> [[X:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svset2_bf16_014svbfloat16x2_tu14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 0, <vscale x 8 x bfloat> [[X:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 0, <vscale x 8 x bfloat> [[X:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 svbfloat16x2_t test_svset2_bf16_0(svbfloat16x2_t tuple, svbfloat16_t x)
@@ -32,12 +32,12 @@ svbfloat16x2_t test_svset2_bf16_0(svbfloat16x2_t tuple, svbfloat16_t x)
 
 // CHECK-LABEL: @test_svset2_bf16_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 1, <vscale x 8 x bfloat> [[X:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 1, <vscale x 8 x bfloat> [[X:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svset2_bf16_114svbfloat16x2_tu14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 1, <vscale x 8 x bfloat> [[X:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x bfloat> @llvm.aarch64.sve.tuple.set.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i32 1, <vscale x 8 x bfloat> [[X:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 svbfloat16x2_t test_svset2_bf16_1(svbfloat16x2_t tuple, svbfloat16_t x)
