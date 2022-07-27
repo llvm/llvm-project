@@ -239,9 +239,8 @@ private:
                          const DWARFDIE &die, ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
                                ParsedDWARFTypeAttributes &attrs);
-  // FIXME: attrs should be passed as a const reference.
   lldb::TypeSP ParseArrayType(const DWARFDIE &die,
-                              ParsedDWARFTypeAttributes &attrs);
+                              const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
 
