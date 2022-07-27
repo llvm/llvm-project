@@ -206,6 +206,33 @@ def C9LeftShift : PatLeaf<(imm), [{
   return C > 9 && ((C % 9) == 0) && isPowerOf2_64(C / 9);
 }]>;
 
+// Constant of the form (3 << C) where C is less than 32.
+def C3LeftShiftUW : PatLeaf<(imm), [{
+  uint64_t C = N->getZExtValue();
+  if (C <= 3 || (C % 3) != 0)
+    return false;
+  C /= 3;
+  return isPowerOf2_64(C) && C < (1ULL << 32);
+}]>;
+
+// Constant of the form (5 << C) where C is less than 32.
+def C5LeftShiftUW : PatLeaf<(imm), [{
+  uint64_t C = N->getZExtValue();
+  if (C <= 5 || (C % 5) != 0)
+    return false;
+  C /= 5;
+  return isPowerOf2_64(C) && C < (1ULL << 32);
+}]>;
+
+// Constant of the form (9 << C) where C is less than 32.
+def C9LeftShiftUW : PatLeaf<(imm), [{
+  uint64_t C = N->getZExtValue();
+  if (C <= 9 || (C % 9) != 0)
+    return false;
+  C /= 9;
+  return isPowerOf2_64(C) && C < (1ULL << 32);
+}]>;
+
 def CSImm12MulBy4 : PatLeaf<(imm), [{
   if (!N->hasOneUse())
     return false;
@@ -1202,6 +1229,16 @@ def : Pat<(i64 (add (and GPR:$rs1, 0x3FFFFFFFC), non_imm12:$rs2)),
           (SH2ADD_UW (SRLI GPR:$rs1, 2), GPR:$rs2)>;
 def : Pat<(i64 (add (and GPR:$rs1, 0x7FFFFFFF8), non_imm12:$rs2)),
           (SH3ADD_UW (SRLI GPR:$rs1, 3), GPR:$rs2)>;
+
+def : Pat<(mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C3LeftShiftUW:$i),
+          (SH1ADD (SLLI_UW GPR:$r, (TrailingZerosXForm C3LeftShiftUW:$i)),
+                  (SLLI_UW GPR:$r, (TrailingZerosXForm C3LeftShiftUW:$i)))>;
+def : Pat<(mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C5LeftShiftUW:$i),
+          (SH2ADD (SLLI_UW GPR:$r, (TrailingZerosXForm C5LeftShiftUW:$i)),
+                  (SLLI_UW GPR:$r, (TrailingZerosXForm C5LeftShiftUW:$i)))>;
+def : Pat<(mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C9LeftShiftUW:$i),
+          (SH3ADD (SLLI_UW GPR:$r, (TrailingZerosXForm C9LeftShiftUW:$i)),
+                  (SLLI_UW GPR:$r, (TrailingZerosXForm C9LeftShiftUW:$i)))>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZbcOrZbkc] in {
