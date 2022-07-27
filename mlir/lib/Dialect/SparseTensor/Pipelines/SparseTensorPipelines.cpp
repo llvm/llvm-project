@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 
 #include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
@@ -73,6 +74,8 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createMemRefToLLVMPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::arith::createArithmeticExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertMathToLibmPass());
   pm.addPass(createConvertComplexToLibmPass());
