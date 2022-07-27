@@ -74,7 +74,7 @@ struct Address {
     int FI;
   } Base;
 
-  long Offset;
+  int64_t Offset;
 
   // Innocuous defaults for our address.
   Address()
@@ -338,7 +338,7 @@ bool PPCFastISel::PPCComputeAddress(const Value *Obj, Address &Addr) {
       break;
     case Instruction::GetElementPtr: {
       Address SavedAddr = Addr;
-      long TmpOffset = Addr.Offset;
+      int64_t TmpOffset = Addr.Offset;
 
       // Iterate through the GEP folding the constants into offsets where
       // we can.
@@ -437,8 +437,7 @@ void PPCFastISel::PPCSimplifyAddress(Address &Addr, bool &UseOffset,
 
   if (!UseOffset) {
     IntegerType *OffsetTy = Type::getInt64Ty(*Context);
-    const ConstantInt *Offset =
-      ConstantInt::getSigned(OffsetTy, (int64_t)(Addr.Offset));
+    const ConstantInt *Offset = ConstantInt::getSigned(OffsetTy, Addr.Offset);
     IndexReg = PPCMaterializeInt(Offset, MVT::i64);
     assert(IndexReg && "Unexpected error in PPCMaterializeInt!");
   }
