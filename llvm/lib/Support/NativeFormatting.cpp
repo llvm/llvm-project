@@ -262,11 +262,5 @@ size_t llvm::getDefaultPrecision(FloatStyle Style) {
   case FloatStyle::Percent:
     return 2; // Number of decimal places.
   }
-  // Workaround for MSVC bug in VS2022:
-  // https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-  // llvm_unreachable expands to __assume(false) with MSVC which triggers the
-  // bug.
-#ifndef _MSC_VER
   llvm_unreachable("Unknown FloatStyle enum");
-#endif
 }
