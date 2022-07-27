@@ -2108,6 +2108,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::l_square:
       parseSquare();
       break;
+    case tok::kw_auto:
     case tok::kw_class:
     case tok::kw_template:
     case tok::kw_typename:
