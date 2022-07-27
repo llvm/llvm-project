@@ -3842,11 +3842,6 @@ public:
   ///                     -101     1001011                     8
   unsigned getNumNegativeBits() const { return EnumDeclBits.NumNegativeBits; }
 
-  /// Calculates the [Min,Max) values the enum can store based on the
-  /// NumPositiveBits and NumNegativeBits. This matters for enums that do not
-  /// have a fixed underlying type.
-  void getValueRange(llvm::APInt &Max, llvm::APInt &Min) const;
-
   /// Returns true if this is a C++11 scoped enumeration.
   bool isScoped() const { return EnumDeclBits.IsScoped; }
 
