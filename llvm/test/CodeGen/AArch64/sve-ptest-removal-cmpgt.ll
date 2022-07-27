@@ -20,10 +20,7 @@ define i32 @cmpgt_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale
 define i32 @cmpgt_nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: cmpgt_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    and p1.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpgt.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
