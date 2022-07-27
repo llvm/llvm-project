@@ -117,7 +117,6 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   SmallVector<Range, 8> loopRanges;
   Location loc = producer.getLoc();
   auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
-  auto one = b.create<arith::ConstantIndexOp>(loc, 1);
 
   for (unsigned i = 0, e = producer.getNumLoops(); i < e; ++i) {
     auto shapeDim = getShapeDefiningLoopRange(producer, i);
@@ -125,14 +124,14 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
     sizeBounds.push_back(dim);
     auto it = fusedLoopsAndRanges.find(i);
     if (it != fusedLoopsAndRanges.end()) {
-      ivs.push_back(it->second.offset);
-      tileSizes.push_back(it->second.size);
+      ivs.push_back(materializeOpFoldResult(b, loc, it->second.offset));
+      tileSizes.push_back(materializeOpFoldResult(b, loc, it->second.size));
       loopRanges.push_back(it->second);
       LLVM_DEBUG(llvm::dbgs() << "tiled loop#" << i << " with LoopRange "
                               << loopRanges.back() << "\n");
     } else {
       tileSizes.push_back(zero);
-      loopRanges.push_back(Range{zero, dim, one});
+      loopRanges.push_back(Range{b.getIndexAttr(0), dim, b.getIndexAttr(1)});
       LLVM_DEBUG(llvm::dbgs() << "full loop#" << i << " with LoopRange "
                               << loopRanges.back() << "\n");
     }
@@ -168,8 +167,9 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
 
   // Shift all IndexOp results by the tile offset.
   SmallVector<Value> allIvs;
-  llvm::transform(loopRanges, std::back_inserter(allIvs),
-                  [](Range range) { return range.offset; });
+  llvm::transform(loopRanges, std::back_inserter(allIvs), [&](Range range) {
+    return materializeOpFoldResult(b, loc, range.offset);
+  });
   offsetIndices(b, clonedOp, allIvs);
 
   return clonedOp;

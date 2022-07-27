@@ -66,8 +66,7 @@ mlir::linalg::makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
   // Create a new range with the applied tile sizes.
   SmallVector<Range, 4> res;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx)
-    res.push_back(Range{b.create<arith::ConstantIndexOp>(loc, 0),
-                        shapeSizes[idx], tileSizes[idx]});
+    res.push_back(Range{b.getIndexAttr(0), shapeSizes[idx], tileSizes[idx]});
   return std::make_tuple(res, loopIndexToRangeIndex);
 }
 
@@ -567,10 +566,12 @@ static LogicalResult tilePadOp(RewriterBase &builder, tensor::PadOp op,
   SmallVector<Range> ranges = tilingInterface.getIterationDomain(builder);
   SmallVector<Value> lbs, dims, allDims, steps;
   for (int64_t i = 0; i < rank; ++i) {
-    allDims.push_back(ranges[i].size);
+    Value materializedSize =
+        materializeOpFoldResult(builder, loc, ranges[i].size);
+    allDims.push_back(materializedSize);
     if (!isZero(tileSizes[i])) {
-      lbs.push_back(ranges[i].offset);
-      dims.push_back(ranges[i].size);
+      lbs.push_back(materializeOpFoldResult(builder, loc, ranges[i].offset));
+      dims.push_back(materializedSize);
       steps.push_back(tileSizes[i]);
     }
   }

@@ -1346,6 +1346,26 @@ static FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
         genericOp, "illegal to collapse specified dimensions");
   }
 
+  // Bail on non-canonical ranges.
+  SmallVector<Range> loopRanges =
+      cast<LinalgOp>(genericOp.getOperation())
+          .createLoopRanges(rewriter, genericOp.getLoc());
+  auto opFoldIsConstantValue = [](OpFoldResult ofr, int64_t value) {
+    if (auto attr = ofr.dyn_cast<Attribute>())
+      return attr.cast<IntegerAttr>().getInt() == value;
+    llvm::APInt actual;
+    return matchPattern(ofr.get<Value>(), m_ConstantInt(&actual)) &&
+           actual.getSExtValue() == value;
+  };
+  if (!llvm::all_of(loopRanges, [&](Range range) {
+        return opFoldIsConstantValue(range.offset, 0) &&
+               opFoldIsConstantValue(range.stride, 1);
+      })) {
+    return rewriter.notifyMatchFailure(
+        genericOp,
+        "expected all loop ranges to have zero start and unit stride");
+  }
+
   // Get the iterator types for the operand.
   SmallVector<StringRef> iteratorTypes = getCollapsedOpIteratorTypes(
       genericOp.iterator_types().getValue(), collapsingInfo);
@@ -1390,17 +1410,10 @@ static FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     // Collect the loop range of the generic op.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(collapsedGenericOp);
-    SmallVector<Range> loopRanges =
-        cast<LinalgOp>(genericOp.getOperation())
-            .createLoopRanges(rewriter, genericOp.getLoc());
-    assert(llvm::all_of(loopRanges,
-                        [](Range range) {
-                          return matchPattern(range.offset, m_Zero()) &&
-                                 matchPattern(range.stride, m_One());
-                        }) &&
-           "expected all loop ranges to have zero start and unit stride");
-    SmallVector<Value> loopBound = llvm::to_vector(
-        llvm::map_range(loopRanges, [](Range range) { return range.size; }));
+    SmallVector<Value> loopBound =
+        llvm::to_vector(llvm::map_range(loopRanges, [&](Range range) {
+          return materializeOpFoldResult(rewriter, loc, range.size);
+        }));
     generateCollapsedIndexingRegion(loc,
                                     &collapsedGenericOp->getRegion(0).front(),
                                     collapsingInfo, loopBound, rewriter);
