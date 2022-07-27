@@ -444,6 +444,15 @@ def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
 def CSR_Darwin_AArch64_AAVPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21,
                                                  X22, X23, X24, X25, X26, X27,
                                                  X28, (sequence "Q%u", 8, 23))>;
+
+// For Windows calling convention on a non-windows OS, where X18 is treated
+// as reserved, back up X18 when entering non-windows code (marked with the
+// Windows calling convention) and restore when returning regardless of
+// whether the individual function uses it - it might call other functions
+// that clobber it.
+def CSR_Darwin_AArch64_AAPCS_Win64
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X18)>;
+
 def CSR_Darwin_AArch64_AAPCS_ThisReturn
     : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X0)>;
 
