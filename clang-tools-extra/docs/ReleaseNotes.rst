@@ -255,6 +255,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/const-return-type>` when a pure virtual function
   overrided has a const return type. Removed the fix for a virtual function.
 
+- Skipped addition of extra parentheses around member accesses (``a.b``) in fix-it for
+  :doc:`readability-container-data-pointer <clang-tidy/checks/readability/container-data-pointer>`.
+
 - Fixed incorrect suggestions for :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` when smart pointers are involved.
 
