@@ -662,8 +662,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
-  // TODO: Handle vector types.
   getActionDefinitionsBuilder(G_CTTZ)
+      .lowerIf(isVector(0))
       .clampScalar(0, s32, s64)
       .scalarSameSizeAs(1, 0)
       .customFor({s32, s64});
