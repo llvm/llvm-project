@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=2,3" | FileCheck %s
 
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0)[s0, s1] -> (-d0 + s0 + s1 - 1, s0 + 1)>
-//  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0, s1] -> (-d0 + s0 + s1 - 1, s0 + 2)>
+//  CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0)[s0, s1] -> (-d0 + s0 + s1 - 1, s1 + 1)>
+//  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0, s1] -> (-d0 + s0 + s1 - 1, s1 + 2)>
 //  CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
 //  CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 3)>
 
@@ -24,8 +24,8 @@ func.func @conv(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>, %arg2 : memref
 //   CHECK-DAG:   %[[T3:.*]] = memref.dim %[[ARG2]], %[[C1]]
 //       CHECK:   scf.for %[[ARG3:.*]] = %[[C0]] to %[[T2]] step %[[C2]]
 //       CHECK:     scf.for %[[ARG4:.*]] = %[[C0]] to %[[T3]] step %[[C3]]
-//       CHECK:       %[[T4:.*]] = affine.min #[[MAP0]](%[[ARG3]])[%[[T0]], %[[T2]]]
-//       CHECK:       %[[T5:.*]] = affine.min #[[MAP1]](%[[ARG4]])[%[[T1]], %[[T3]]]
+//       CHECK:       %[[T4:.*]] = affine.min #[[MAP0]](%[[ARG3]])[%[[T2]], %[[T0]]]
+//       CHECK:       %[[T5:.*]] = affine.min #[[MAP1]](%[[ARG4]])[%[[T3]], %[[T1]]]
 //       CHECK:       %[[SV1:.*]] = memref.subview %[[ARG0]][%[[ARG3]], %[[ARG4]]] [%[[T4]], %[[T5]]]
 //       CHECK:       %[[T6:.*]] = affine.min #[[MAP2]](%[[ARG3]])[%[[T2]]
 //       CHECK:       %[[T7:.*]] = affine.min #[[MAP3]](%[[ARG4]])[%[[T3]]]

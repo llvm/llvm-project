@@ -392,6 +392,13 @@ OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
 OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
                                            AffineExpr expr,
                                            ArrayRef<OpFoldResult> operands);
+/// Variant of `makeComposedFoldedAffineApply` suitable for multi-result maps.
+/// Note that this may create as many affine.apply operations as the map has
+/// results given that affine.apply must be single-result.
+SmallVector<OpFoldResult>
+makeComposedFoldedMultiResultAffineApply(RewriterBase &b, Location loc,
+                                         AffineMap map,
+                                         ArrayRef<OpFoldResult> operands);
 
 /// Returns an AffineMinOp obtained by composing `map` and `operands` with
 /// AffineApplyOps supplying those operands.
@@ -405,15 +412,16 @@ OpFoldResult makeComposedFoldedAffineMin(RewriterBase &b, Location loc,
                                          AffineMap map,
                                          ArrayRef<OpFoldResult> operands);
 
+/// Constructs an AffineMinOp that computes a maximum across the results of
+/// applying `map` to `operands`, then immediately attempts to fold it. If
+/// folding results in a constant value, erases all created ops.
+OpFoldResult makeComposedFoldedAffineMax(RewriterBase &b, Location loc,
+                                         AffineMap map,
+                                         ArrayRef<OpFoldResult> operands);
+
 /// Returns the values obtained by applying `map` to the list of values.
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ValueRange values);
-
-/// Returns the values obtained by applying `map` to the list of values, which
-/// may be known constants.
-SmallVector<OpFoldResult> applyMapToValues(RewriterBase &b, Location loc,
-                                           AffineMap map,
-                                           ArrayRef<OpFoldResult> values);
 
 /// Given an affine map `map` and its input `operands`, this method composes
 /// into `map`, maps of AffineApplyOps whose results are the values in
