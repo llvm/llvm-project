@@ -56,8 +56,8 @@ define float @sqrt_call_nnan_f32_nobuiltin(float %x) {
 define float @sqrt_call_f32_squared(float %x) {
 ; CHECK-LABEL: @sqrt_call_f32_squared(
 ; CHECK-NEXT:    [[X2:%.*]] = fmul float [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call float @sqrtf(float [[X2]])
-; CHECK-NEXT:    ret float [[SQRT]]
+; CHECK-NEXT:    [[SQRT1:%.*]] = call float @llvm.sqrt.f32(float [[X2]])
+; CHECK-NEXT:    ret float [[SQRT1]]
 ;
   %x2 = fmul float %x, %x
   %sqrt = call float @sqrtf(float %x2)
@@ -67,8 +67,8 @@ define float @sqrt_call_f32_squared(float %x) {
 define float @sqrt_call_f32_fabs(float %x) {
 ; CHECK-LABEL: @sqrt_call_f32_fabs(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[SQRT:%.*]] = call float @sqrtf(float [[A]])
-; CHECK-NEXT:    ret float [[SQRT]]
+; CHECK-NEXT:    [[SQRT1:%.*]] = call float @llvm.sqrt.f32(float [[A]])
+; CHECK-NEXT:    ret float [[SQRT1]]
 ;
   %a = call float @llvm.fabs.f32(float %x)
   %sqrt = call float @sqrtf(float %a)
