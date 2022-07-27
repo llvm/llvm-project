@@ -1112,7 +1112,8 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
 }
 
 def AtomicUpdateOp : OpenMP_Op<"atomic.update",
-                               [SingleBlockImplicitTerminator<"YieldOp">]> {
+                               [SingleBlockImplicitTerminator<"YieldOp">,
+                                RecursiveSideEffects]> {
 
   let summary = "performs an atomic update";
 
@@ -1145,7 +1146,9 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
     operations.
   }];
 
-  let arguments = (ins OpenMP_PointerLikeType:$x,
+  let arguments = (ins Arg<OpenMP_PointerLikeType,
+                           "Address of variable to be updated",
+                           [MemRead, MemWrite]>:$x,
                        DefaultValuedAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let regions = (region SizedRegion<1>:$region);
@@ -1156,10 +1159,19 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
   }];
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+  let hasCanonicalizeMethod = 1;
   let extraClassDeclaration = [{
     Operation* getFirstOp() {
       return &getRegion().front().getOperations().front();
     }
+
+    /// Returns true if the new value is same as old value and the operation is
+    /// a no-op, false otherwise.
+    bool isNoOp();
+
+    /// Returns the new value if the operation is equivalent to just a write
+    /// operation. Otherwise, returns nullptr.
+    Value getWriteOpVal();
   }];
 }
 
