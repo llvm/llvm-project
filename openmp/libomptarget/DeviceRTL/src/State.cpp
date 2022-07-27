@@ -393,12 +393,12 @@ int omp_get_initial_device(void) { return -1; }
 }
 
 extern "C" {
-void *__kmpc_alloc_shared(uint64_t Bytes) {
+__attribute__((noinline)) void *__kmpc_alloc_shared(uint64_t Bytes) {
   FunctionTracingRAII();
   return memory::allocShared(Bytes, "Frontend alloc shared");
 }
 
-void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
+__attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
   FunctionTracingRAII();
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }
