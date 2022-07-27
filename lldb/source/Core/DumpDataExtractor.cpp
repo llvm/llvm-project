@@ -50,25 +50,6 @@ using namespace lldb;
 
 #define NON_PRINTABLE_CHAR '.'
 
-static float half2float(uint16_t half) {
-  union {
-    float f;
-    uint32_t u;
-  } u;
-  // Sign extend to 4 byte.
-  int32_t sign_extended = static_cast<int16_t>(half);
-  uint32_t v = static_cast<uint32_t>(sign_extended);
-
-  if (0 == (v & 0x7c00)) {
-    u.u = v & 0x80007FFFU;
-    return u.f * ldexpf(1, 125);
-  }
-
-  v <<= 13;
-  u.u = v | 0x70000000U;
-  return u.f * ldexpf(1, -112);
-}
-
 static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
                                             lldb::offset_t *offset_ptr,
                                             lldb::offset_t byte_size) {
@@ -334,6 +315,27 @@ printMemoryTags(const DataExtractor &DE, Stream *s, lldb::addr_t addr,
       s->PutCString(" <no tag>");
   }
   s->PutCString(")");
+}
+
+static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
+                                                   size_t byte_size) {
+  if (target_sp) {
+    if (auto type_system_or_err =
+            target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC))
+      return type_system_or_err->GetFloatTypeSemantics(byte_size);
+    else
+      llvm::consumeError(type_system_or_err.takeError());
+  }
+  // No target, just make a reasonable guess
+  switch(byte_size) {
+    case 2:
+      return llvm::APFloat::IEEEhalf();
+    case 4:
+      return llvm::APFloat::IEEEsingle();
+    case 8:
+      return llvm::APFloat::IEEEdouble();
+  }
+  return llvm::APFloat::Bogus();
 }
 
 lldb::offset_t lldb_private::DumpDataExtractor(
@@ -645,70 +647,38 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
     case eFormatFloat: {
       TargetSP target_sp;
-      bool used_upfloat = false;
       if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
-      if (target_sp) {
-        auto type_system_or_err =
-            target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
-        if (!type_system_or_err) {
-          llvm::consumeError(type_system_or_err.takeError());
-        } else {
-          auto &type_system = *type_system_or_err;
-          llvm::SmallVector<char, 256> sv;
-          // Show full precision when printing float values
-          const unsigned format_precision = 0;
-          const unsigned format_max_padding =
-              target_sp->GetMaxZeroPaddingInFloatFormat();
 
-          const auto &semantics =
-              type_system.GetFloatTypeSemantics(item_byte_size);
+      llvm::Optional<unsigned> format_max_padding;
+      if (target_sp)
+        format_max_padding = target_sp->GetMaxZeroPaddingInFloatFormat();
 
-          // Recalculate the byte size in case of a difference. This is possible
-          // when item_byte_size is 16 (128-bit), because you could get back the
-          // x87DoubleExtended semantics which has a byte size of 10 (80-bit).
-          const size_t semantics_byte_size =
-              (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
-          llvm::Optional<llvm::APInt> apint =
-              GetAPInt(DE, &offset, semantics_byte_size);
-          if (apint) {
-            llvm::APFloat apfloat(semantics, apint.value());
-            apfloat.toString(sv, format_precision, format_max_padding);
-            if (!sv.empty()) {
-              s->Printf("%*.*s", (int)sv.size(), (int)sv.size(), sv.data());
-              used_upfloat = true;
-            }
-          }
-        }
-      }
+      // Show full precision when printing float values
+      const unsigned format_precision = 0;
 
-      if (!used_upfloat) {
-        std::ostringstream ss;
-        if (item_byte_size == sizeof(float) || item_byte_size == 2) {
-          float f;
-          if (item_byte_size == 2) {
-            uint16_t half = DE.GetU16(&offset);
-            f = half2float(half);
-          } else {
-            f = DE.GetFloat(&offset);
-          }
-          ss.precision(std::numeric_limits<float>::digits10);
-          DumpFloatingPoint(ss, f);
-        } else if (item_byte_size == sizeof(double)) {
-          ss.precision(std::numeric_limits<double>::digits10);
-          DumpFloatingPoint(ss, DE.GetDouble(&offset));
-        } else if (item_byte_size == sizeof(long double) ||
-                   item_byte_size == 10) {
-          ss.precision(std::numeric_limits<long double>::digits10);
-          DumpFloatingPoint(ss, DE.GetLongDouble(&offset));
-        } else {
-          s->Printf("error: unsupported byte size (%" PRIu64
-                    ") for float format",
-                    (uint64_t)item_byte_size);
-          return offset;
-        }
-        ss.flush();
-        s->Printf("%s", ss.str().c_str());
+      const llvm::fltSemantics &semantics =
+          GetFloatSemantics(target_sp, item_byte_size);
+
+      // Recalculate the byte size in case of a difference. This is possible
+      // when item_byte_size is 16 (128-bit), because you could get back the
+      // x87DoubleExtended semantics which has a byte size of 10 (80-bit).
+      const size_t semantics_byte_size =
+          (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
+      llvm::Optional<llvm::APInt> apint =
+          GetAPInt(DE, &offset, semantics_byte_size);
+      if (apint) {
+        llvm::APFloat apfloat(semantics, apint.value());
+        llvm::SmallVector<char, 256> sv;
+        if (format_max_padding)
+          apfloat.toString(sv, format_precision, *format_max_padding);
+        else
+          apfloat.toString(sv, format_precision);
+        s->AsRawOstream() << sv;
+      } else {
+        s->Format("error: unsupported byte size ({0}) for float format",
+                  item_byte_size);
+        return offset;
       }
     } break;
 
