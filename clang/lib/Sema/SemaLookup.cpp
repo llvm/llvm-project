@@ -1920,12 +1920,7 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   // If D comes from a module and SemaRef doesn't own a module, it implies D
   // comes from another TU. In case SemaRef owns a module, we could judge if D
   // comes from another TU by comparing the module unit.
-  //
-  // FIXME: It would look better if we have direct method to judge whether D is
-  // in another TU.
-  if (SemaRef.getCurrentModule() &&
-      SemaRef.getCurrentModule()->getTopLevelModule() ==
-          DeclModule->getTopLevelModule())
+  if (SemaRef.isModuleUnitOfCurrentTU(DeclModule))
     return true;
 
   // [module.reach]/p3:
