@@ -583,7 +583,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     }
   }
 
-  if (auto importAs = info.ImportAs) {
+  if (auto importAs = info.SwiftImportAs) {
     auto str = "import_" + importAs.getValue();
     auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
     D->addAttr(attr);
@@ -673,17 +673,17 @@ static void ProcessAPINotes(Sema &S, TagDecl *D,
     });
   }
 
-  if (auto importAs = info.getImportAs()) {
+  if (auto importAs = info.SwiftImportAs) {
     auto str = "import_" + importAs.getValue();
     auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
     D->addAttr(attr);
   }
-  if (auto retainOp = info.getRetainOp()) {
+  if (auto retainOp = info.SwiftRetainOp) {
     auto str = "retain:" + retainOp.getValue();
     auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
     D->addAttr(attr);
   }
-  if (auto releaseOp = info.getReleaseOp()) {
+  if (auto releaseOp = info.SwiftReleaseOp) {
     auto str = "release:" + releaseOp.getValue();
     auto attr = SwiftAttrAttr::CreateImplicit(S.Context, str);
     D->addAttr(attr);

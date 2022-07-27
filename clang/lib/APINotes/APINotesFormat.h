@@ -23,7 +23,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 24; // EnumExtensibility + FlagEnum
+const uint16_t VERSION_MINOR = 25; // Member functions
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = llvm::BCVBR<16>;
@@ -72,8 +72,6 @@ enum BlockID {
   /// information about the global function.
   GLOBAL_FUNCTION_BLOCK_ID,
 
-  MEMBER_FUNCTION_BLOCK_ID,
-
   /// The tag data block, which maps tag names to information about
   /// the tags.
   TAG_BLOCK_ID,
@@ -85,6 +83,10 @@ enum BlockID {
   /// The enum constant data block, which maps enumerator names to
   /// information about the enumerators.
   ENUM_CONSTANT_BLOCK_ID,
+
+  /// The enum constant data block, which maps member function names to
+  /// information about the member function.
+  MEMBER_FUNCTION_BLOCK_ID,
 };
 
 namespace control_block {

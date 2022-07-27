@@ -355,7 +355,7 @@ namespace {
     unsigned importAsLength =
         endian::readNext<uint16_t, little, unaligned>(data);
     if (importAsLength > 0) {
-      info.ImportAs =
+      info.SwiftImportAs =
           std::string(reinterpret_cast<const char *>(data), importAsLength-1);
       data += importAsLength-1;
     }
@@ -532,27 +532,25 @@ namespace {
             static_cast<EnumExtensibilityKind>((payload & 0x3) - 1);
       }
 
-      unsigned importAsLength =
-          endian::readNext<uint16_t, little, unaligned>(data);
-      if (importAsLength > 0) {
-        info.setImportAs(
-            std::string(reinterpret_cast<const char *>(data), importAsLength-1));
-        data += importAsLength-1;
-      }
-      unsigned retainOpLength =
-          endian::readNext<uint16_t, little, unaligned>(data);
-      if (retainOpLength > 0) {
-        info.setRetainOp(
-            std::string(reinterpret_cast<const char *>(data), retainOpLength-1));
-        data += retainOpLength-1;
-      }
-      unsigned releaseOpLength =
-          endian::readNext<uint16_t, little, unaligned>(data);
-      if (releaseOpLength > 0) {
-        info.setReleaseOp(
-            std::string(reinterpret_cast<const char *>(data), releaseOpLength-1));
-        data += releaseOpLength-1;
-      }
+      auto readStringIfPresent = [&]() -> llvm::Optional<std::string> {
+        unsigned len =
+            endian::readNext<uint16_t, little, unaligned>(data);
+        if (len > 0) {
+          auto out = std::string(reinterpret_cast<const char *>(data), len-1);
+          data += len-1;
+          return out;
+        }
+        return None;
+      };
+
+      if (auto importAs = readStringIfPresent())
+        info.SwiftImportAs = importAs;
+
+      if (auto importAs = readStringIfPresent())
+        info.SwiftRetainOp = importAs;
+
+      if (auto importAs = readStringIfPresent())
+        info.SwiftReleaseOp = importAs;
 
       readCommonTypeInfo(data, info);
       return info;

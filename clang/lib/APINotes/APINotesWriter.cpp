@@ -740,7 +740,7 @@ namespace {
   /// on-disk hash tables.
   static unsigned getFunctionInfoSize(const FunctionInfo &info) {
     unsigned size = 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 2 +
-                    2 + (info.ImportAs ? info.ImportAs->size() : 0);
+                    2 + (info.SwiftImportAs ? info.SwiftImportAs->size() : 0);
 
     for (const auto &param : info.Params)
       size += getParamInfoSize(param);
@@ -775,7 +775,7 @@ namespace {
     writer.write<uint16_t>(info.ResultType.size());
     out.write(info.ResultType.data(), info.ResultType.size());
 
-    if (auto importAs = info.ImportAs) {
+    if (auto importAs = info.SwiftImportAs) {
       writer.write<uint16_t>(importAs->size() + 1);
       out.write(importAs->c_str(), importAs->size());
     } else {
@@ -1140,9 +1140,9 @@ namespace {
   class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
   public:
     unsigned getUnversionedInfoSize(const TagInfo &info) {
-      return 2 + (info.getImportAs() ? info.getImportAs()->size() : 0) +
-             2 + (info.getRetainOp() ? info.getRetainOp()->size() : 0) +
-             2 + (info.getReleaseOp() ? info.getReleaseOp()->size() : 0) +
+      return 2 + (info.SwiftImportAs ? info.SwiftImportAs->size() : 0) +
+             2 + (info.SwiftRetainOp ? info.SwiftRetainOp->size() : 0) +
+             2 + (info.SwiftReleaseOp ? info.SwiftReleaseOp->size() : 0) +
           1 + getCommonTypeInfoSize(info);
     }
 
@@ -1163,26 +1163,18 @@ namespace {
 
       writer.write<uint8_t>(payload);
 
-      if (auto importAs = info.getImportAs()) {
-        writer.write<uint16_t>(importAs->size() + 1);
-        out.write(importAs->c_str(), importAs->size());
-      } else {
-        writer.write<uint16_t>(0);
-      }
+      auto writeStringIfPresent = [&](llvm::Optional<std::string> opt) {
+        if (auto value = opt) {
+          writer.write<uint16_t>(value->size() + 1);
+          out.write(value->c_str(), value->size());
+        } else {
+          writer.write<uint16_t>(0);
+        }
+      };
 
-      if (auto retainOp = info.getRetainOp()) {
-        writer.write<uint16_t>(retainOp->size() + 1);
-        out.write(retainOp->c_str(), retainOp->size());
-      } else {
-        writer.write<uint16_t>(0);
-      }
-
-      if (auto releaseOp = info.getReleaseOp()) {
-        writer.write<uint16_t>(releaseOp->size() + 1);
-        out.write(releaseOp->c_str(), releaseOp->size());
-      } else {
-        writer.write<uint16_t>(0);
-      }
+      writeStringIfPresent(info.SwiftImportAs);
+      writeStringIfPresent(info.SwiftRetainOp);
+      writeStringIfPresent(info.SwiftReleaseOp);
 
       emitCommonTypeInfo(out, info);
     }
