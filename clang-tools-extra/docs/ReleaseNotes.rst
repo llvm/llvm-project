@@ -229,6 +229,11 @@ Changes in existing checks
   where invalid parameters were implicitly being treated as being unused. 
   This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
 
+- Fixed false positives in :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` where `using` statements bringing
+  operators into the scope where incorrectly marked as unused. 
+  This fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/55095>`_.
+
 - Fixed a false positive in :doc:`modernize-deprecated-headers
   <clang-tidy/checks/modernize/deprecated-headers>` involving including
   C header files from C++ files wrapped by ``extern "C" { ... }`` blocks.
