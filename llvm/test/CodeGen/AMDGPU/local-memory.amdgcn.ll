@@ -51,11 +51,10 @@ define amdgpu_kernel void @local_memory_two_objects(i32 addrspace(1)* %out) #0 {
 ; SI-NEXT:    s_mov_b32 m0, -1
 ; SI-NEXT:    ds_write2_b32 v1, v0, v2 offset1:4
 ; SI-NEXT:    v_sub_i32_e32 v0, vcc, 12, v1
-; SI-NEXT:    v_sub_i32_e32 v2, vcc, 16, v1
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_barrier
-; SI-NEXT:    v_add_i32_e32 v2, vcc, 12, v2
+; SI-NEXT:    v_sub_i32_e32 v2, vcc, 28, v1
 ; SI-NEXT:    ds_read_b32 v0, v0
 ; SI-NEXT:    ds_read_b32 v3, v2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -77,16 +76,13 @@ define amdgpu_kernel void @local_memory_two_objects(i32 addrspace(1)* %out) #0 {
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_barrier
-; CI-NEXT:    v_sub_i32_e32 v2, vcc, 16, v1
-; CI-NEXT:    ds_read_b32 v0, v0 offset:12
-; CI-NEXT:    ds_read_b32 v3, v2 offset:12
+; CI-NEXT:    ds_read2_b32 v[3:4], v0 offset0:3 offset1:7
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
 ; CI-NEXT:    v_mov_b32_e32 v2, 0
-; CI-NEXT:    s_waitcnt lgkmcnt(1)
-; CI-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    buffer_store_dword v3, v[1:2], s[0:3], 0 addr64 offset:16
+; CI-NEXT:    buffer_store_dword v3, v[1:2], s[0:3], 0 addr64
+; CI-NEXT:    buffer_store_dword v4, v[1:2], s[0:3], 0 addr64 offset:16
 ; CI-NEXT:    s_endpgm
 entry:
   %x.i = call i32 @llvm.amdgcn.workitem.id.x()

@@ -232,34 +232,33 @@ define arm_aapcs_vfpcc <4 x i64> @sext32_0213_ext0(<8 x i32> %src1, i32 %src2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vmov.f32 s4, s1
+; CHECK-NEXT:    vmov.f32 s6, s3
 ; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vmov.f32 s4, s5
-; CHECK-NEXT:    vmov.f32 s6, s7
-; CHECK-NEXT:    umull lr, r12, r1, r0
+; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    umull r2, r5, r3, r0
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, lr
+; CHECK-NEXT:    umull lr, r12, r1, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, lr
 ; CHECK-NEXT:    asrs r2, r0, #31
 ; CHECK-NEXT:    mla r4, r1, r2, r12
 ; CHECK-NEXT:    asrs r1, r1, #31
 ; CHECK-NEXT:    mla r5, r3, r2, r5
 ; CHECK-NEXT:    asrs r3, r3, #31
 ; CHECK-NEXT:    mla r1, r1, r0, r4
-; CHECK-NEXT:    vmov r4, s4
 ; CHECK-NEXT:    mla r3, r3, r0, r5
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    umull r5, lr, r4, r0
-; CHECK-NEXT:    umull r3, r12, r1, r0
-; CHECK-NEXT:    vmov q1[2], q1[0], r5, r3
-; CHECK-NEXT:    mla r3, r1, r2, r12
+; CHECK-NEXT:    vmov q1[3], q1[1], r3, r1
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    umull r3, r5, r1, r0
+; CHECK-NEXT:    mla r5, r1, r2, r5
 ; CHECK-NEXT:    asrs r1, r1, #31
-; CHECK-NEXT:    mla r2, r4, r2, lr
-; CHECK-NEXT:    mla r1, r1, r0, r3
-; CHECK-NEXT:    asrs r3, r4, #31
-; CHECK-NEXT:    mla r0, r3, r0, r2
-; CHECK-NEXT:    vmov q1[3], q1[1], r0, r1
+; CHECK-NEXT:    mla r12, r1, r0, r5
+; CHECK-NEXT:    vmov r5, s0
+; CHECK-NEXT:    umull r4, r1, r5, r0
+; CHECK-NEXT:    mla r1, r5, r2, r1
+; CHECK-NEXT:    asrs r2, r5, #31
+; CHECK-NEXT:    vmov q0[2], q0[0], r4, r3
+; CHECK-NEXT:    mla r0, r2, r0, r1
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r12
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %shuf1 = shufflevector <8 x i32> %src1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -276,34 +275,33 @@ define arm_aapcs_vfpcc <4 x i64> @sext32_ext0_0213(<8 x i32> %src1, i32 %src2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vmov.f32 s4, s1
 ; CHECK-NEXT:    asrs r4, r0, #31
-; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vmov.f32 s6, s3
 ; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vmov.f32 s4, s5
-; CHECK-NEXT:    vmov.f32 s6, s7
-; CHECK-NEXT:    umull lr, r12, r0, r1
+; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    umull r2, r5, r0, r3
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, lr
+; CHECK-NEXT:    umull lr, r12, r0, r1
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, lr
 ; CHECK-NEXT:    asrs r2, r1, #31
 ; CHECK-NEXT:    mla r2, r0, r2, r12
 ; CHECK-NEXT:    mla r1, r4, r1, r2
 ; CHECK-NEXT:    asrs r2, r3, #31
 ; CHECK-NEXT:    mla r2, r0, r2, r5
-; CHECK-NEXT:    vmov r5, s4
 ; CHECK-NEXT:    mla r2, r4, r3, r2
-; CHECK-NEXT:    vmov q0[3], q0[1], r2, r1
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    umull r3, lr, r0, r5
-; CHECK-NEXT:    umull r2, r12, r0, r1
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r2
-; CHECK-NEXT:    asrs r2, r1, #31
-; CHECK-NEXT:    mla r2, r0, r2, r12
-; CHECK-NEXT:    mla r1, r4, r1, r2
-; CHECK-NEXT:    asrs r2, r5, #31
-; CHECK-NEXT:    mla r0, r0, r2, lr
-; CHECK-NEXT:    mla r0, r4, r5, r0
-; CHECK-NEXT:    vmov q1[3], q1[1], r0, r1
+; CHECK-NEXT:    vmov q1[3], q1[1], r2, r1
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    umull r2, r3, r0, r1
+; CHECK-NEXT:    asrs r5, r1, #31
+; CHECK-NEXT:    mla r3, r0, r5, r3
+; CHECK-NEXT:    mla r12, r4, r1, r3
+; CHECK-NEXT:    vmov r3, s0
+; CHECK-NEXT:    umull r5, r1, r0, r3
+; CHECK-NEXT:    vmov q0[2], q0[0], r5, r2
+; CHECK-NEXT:    asrs r2, r3, #31
+; CHECK-NEXT:    mla r0, r0, r2, r1
+; CHECK-NEXT:    mla r0, r4, r3, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r12
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %shuf1 = shufflevector <8 x i32> %src1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>

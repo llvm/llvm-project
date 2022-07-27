@@ -8,21 +8,18 @@ define void @vst3_v2i32(<2 x i32> *%src, <6 x i32> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    ldrd lr, r12, [r0]
-; CHECK-NEXT:    ldrd r3, r2, [r0, #8]
+; CHECK-NEXT:    ldrd r12, r3, [r0]
+; CHECK-NEXT:    ldrd lr, r2, [r0, #8]
 ; CHECK-NEXT:    ldrd r4, r0, [r0, #16]
-; CHECK-NEXT:    vmov q1[2], q1[0], lr, r3
-; CHECK-NEXT:    vmov q1[3], q1[1], r12, r2
-; CHECK-NEXT:    vmov.32 q0[0], r4
-; CHECK-NEXT:    vmov.f32 s8, s7
-; CHECK-NEXT:    vmov.32 q0[1], r0
+; CHECK-NEXT:    vmov.32 q1[1], r3
+; CHECK-NEXT:    vmov q1[2], q1[0], r12, lr
+; CHECK-NEXT:    strd r2, r0, [r1, #16]
+; CHECK-NEXT:    vmov q0[2], q0[0], r4, r0
+; CHECK-NEXT:    vmov.f32 s8, s4
 ; CHECK-NEXT:    vmov.f32 s9, s6
 ; CHECK-NEXT:    vmov.f32 s10, s0
 ; CHECK-NEXT:    vmov.f32 s11, s5
-; CHECK-NEXT:    vmov r2, s8
-; CHECK-NEXT:    vmov.f32 s8, s4
 ; CHECK-NEXT:    vstrw.32 q2, [r1]
-; CHECK-NEXT:    strd r2, r0, [r1, #16]
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %s1 = getelementptr <2 x i32>, <2 x i32>* %src, i32 0
