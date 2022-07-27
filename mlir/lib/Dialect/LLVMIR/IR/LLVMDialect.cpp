@@ -2699,7 +2699,7 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(ArrayRef<Attribute> operands) {
 OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
   // gep %x:T, 0 -> %x
   if (getBase().getType() == getType() && getIndices().size() == 1 &&
-      matchPattern(getIndices()[0], m_Zero()))
+      getStructIndices().size() == 1 && matchPattern(getIndices()[0], m_Zero()))
     return getBase();
   return {};
 }
