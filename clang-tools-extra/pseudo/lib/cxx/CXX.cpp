@@ -300,11 +300,16 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
       {rule::contextual_zero::NUMERIC_CONSTANT,
        TOKEN_GUARD(numeric_constant, Tok.text() == "0")},
 
-      // FIXME: the init-statement variants are missing?
       {rule::selection_statement::IF__L_PAREN__condition__R_PAREN__statement,
        guardNextTokenNotElse},
       {rule::selection_statement::
+           IF__L_PAREN__init_statement__condition__R_PAREN__statement,
+       guardNextTokenNotElse},
+      {rule::selection_statement::
            IF__CONSTEXPR__L_PAREN__condition__R_PAREN__statement,
+       guardNextTokenNotElse},
+      {rule::selection_statement::
+           IF__CONSTEXPR__L_PAREN__init_statement__condition__R_PAREN__statement,
        guardNextTokenNotElse},
 
       // The grammar distinguishes (only) user-defined vs plain string literals,
