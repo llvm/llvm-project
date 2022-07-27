@@ -1,6 +1,0 @@
-## This test checks the warning message displayed if input file
-## contains type units.
-
-# RUN: llvm-dwarfutil --garbage-collection --tombstone=maxpc %p/Inputs/type-units.o %t1 2>&1 | FileCheck %s -DFILE=%p/Inputs/type-units.o
-
-# CHECK: [[FILE]]: warning: type units are not currently supported: file will be skipped

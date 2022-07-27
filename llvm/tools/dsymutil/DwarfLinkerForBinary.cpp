@@ -713,8 +713,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   }
 
   // link debug info for loaded object files.
-  if (Error E = GeneralLinker.link())
-    return error(toString(std::move(E)));
+  GeneralLinker.link();
 
   StringRef ArchName = Map.getTriple().getArchName();
   if (Error E = emitRemarks(Options, Map.getBinaryPath(), ArchName, RL))

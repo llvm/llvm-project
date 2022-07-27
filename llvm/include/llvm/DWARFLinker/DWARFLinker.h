@@ -245,7 +245,7 @@ public:
 
   /// Link debug info for added objFiles. Object
   /// files are linked all together.
-  Error link();
+  bool link();
 
   /// A number of methods setting various linking options:
 
