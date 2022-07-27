@@ -196,6 +196,10 @@
           "spelling": "int"
         },
         {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
           "kind": "identifier",
           "spelling": "myInterfaceTypeProp"
         }
@@ -282,6 +286,10 @@
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:I",
           "spelling": "int"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
         },
         {
           "kind": "identifier",
@@ -380,6 +388,10 @@
           "spelling": "int"
         },
         {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
           "kind": "identifier",
           "spelling": "myCategoryTypeProp"
         }
@@ -466,6 +478,10 @@
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:I",
           "spelling": "int"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
         },
         {
           "kind": "identifier",
@@ -614,6 +630,10 @@
           "spelling": "int"
         },
         {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
           "kind": "identifier",
           "spelling": "myProtocolTypeProp"
         }
@@ -700,6 +720,10 @@
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:I",
           "spelling": "int"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
         },
         {
           "kind": "identifier",
