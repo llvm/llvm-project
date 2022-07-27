@@ -29,7 +29,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -533,7 +532,7 @@ static void initBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
                               uint64_t &ExitWeight,
                               uint64_t &FallThroughWeight) {
   uint64_t TrueWeight, FalseWeight;
-  if (!extractBranchWeights(*LatchBR, TrueWeight, FalseWeight))
+  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
     return;
   unsigned HeaderIdx = LatchBR->getSuccessor(0) == Header ? 0 : 1;
   ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;

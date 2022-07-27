@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
@@ -758,7 +757,7 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       uint64_t TrueWeight = 0, FalseWeight = 0;
       if (!BI->isConditional() ||
-          !extractBranchWeights(BI, TrueWeight, FalseWeight))
+          !BI->extractProfMetadata(TrueWeight, FalseWeight))
         continue;
 
       // If the exit path is more frequent than the loop path,

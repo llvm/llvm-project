@@ -38,7 +38,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -790,7 +789,7 @@ getEstimatedTripCount(BranchInst *ExitingBranch, Loop *L,
   // know the number of times the backedge was taken, vs. the number of times
   // we exited the loop.
   uint64_t LoopWeight, ExitWeight;
-  if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
+  if (!ExitingBranch->extractProfMetadata(LoopWeight, ExitWeight))
     return None;
 
   if (L->contains(ExitingBranch->getSuccessor(1)))
