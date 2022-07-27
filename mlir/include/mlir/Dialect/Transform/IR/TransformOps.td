@@ -95,6 +95,46 @@ def AlternativesOp : TransformDialectOp<"alternatives",
   let hasVerifier = 1;
 }
 
+def ForeachOp : TransformDialectOp<"foreach",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+         "getSuccessorRegions", "getSuccessorEntryOperands"]>,
+     SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
+    ]> {
+  let summary = "Executes the body for each payload op";
+  let description = [{
+    This op has exactly one region with exactly one block ("body"). The body is
+    executed for each payload op that is associated to the target operand in an
+    unbatched fashion. I.e., the block argument ("iteration variable") is always
+    mapped to exactly one payload op.
+
+    This op always reads the target handle. Furthermore, it consumes the handle
+    if there is a transform op in the body that consumes the iteration variable.
+    This op does not return anything.
+
+    The transformations inside the body are applied in order of their
+    appearance. During application, if any transformation in the sequence fails,
+    the entire sequence fails immediately leaving the payload IR in potentially
+    invalid state, i.e., this operation offers no transformation rollback
+    capabilities.
+  }];
+
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "$target $body attr-dict";
+
+  let extraClassDeclaration = [{
+    /// Allow the dialect prefix to be omitted.
+    static StringRef getDefaultDialect() { return "transform"; }
+
+    BlockArgument getIterationVariable() {
+      return getBody().front().getArgument(0);
+    }
+  }];
+}
+
 def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
