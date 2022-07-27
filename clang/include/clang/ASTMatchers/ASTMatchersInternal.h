@@ -59,6 +59,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
 #include <cassert>
@@ -1930,8 +1931,8 @@ template <typename Matcher, Matcher (*Func)()> class MemoizedMatcher {
 
 public:
   static const Matcher &getInstance() {
-    static Wrapper Instance;
-    return Instance.M;
+    static llvm::ManagedStatic<Wrapper> Instance;
+    return Instance->M;
   }
 };
 
