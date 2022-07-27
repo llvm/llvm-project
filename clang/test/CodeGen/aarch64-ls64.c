@@ -21,35 +21,35 @@ uint64_t status;
 // CHECK-C-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-C-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-C-NEXT:    [[TMP0:%.*]] = load i8*, i8** @addr, align 8
-// CHECK-C-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
-// CHECK-C-NEXT:    store i8* [[TMP0]], i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
-// CHECK-C-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
+// CHECK-C-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META2:![0-9]+]])
+// CHECK-C-NEXT:    store i8* [[TMP0]], i8** [[__ADDR_ADDR_I]], align 8, !noalias !2
+// CHECK-C-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__ADDR_ADDR_I]], align 8, !noalias !2
 // CHECK-C-NEXT:    [[VAL_I:%.*]] = getelementptr inbounds [[STRUCT_DATA512_T]], %struct.data512_t* [[TMP]], i32 0, i32 0
 // CHECK-C-NEXT:    [[ARRAYDECAY_I:%.*]] = getelementptr inbounds [8 x i64], [8 x i64]* [[VAL_I]], i64 0, i64 0
-// CHECK-C-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]), !noalias !6
+// CHECK-C-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]), !noalias !2
 // CHECK-C-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 0
-// CHECK-C-NEXT:    store i64 [[TMP3]], i64* [[ARRAYDECAY_I]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP3]], i64* [[ARRAYDECAY_I]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 1
 // CHECK-C-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 1
-// CHECK-C-NEXT:    store i64 [[TMP5]], i64* [[TMP4]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP5]], i64* [[TMP4]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP6:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 2
 // CHECK-C-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 2
-// CHECK-C-NEXT:    store i64 [[TMP7]], i64* [[TMP6]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP7]], i64* [[TMP6]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP8:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 3
 // CHECK-C-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 3
-// CHECK-C-NEXT:    store i64 [[TMP9]], i64* [[TMP8]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP9]], i64* [[TMP8]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP10:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 4
 // CHECK-C-NEXT:    [[TMP11:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 4
-// CHECK-C-NEXT:    store i64 [[TMP11]], i64* [[TMP10]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP11]], i64* [[TMP10]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP12:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 5
 // CHECK-C-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 5
-// CHECK-C-NEXT:    store i64 [[TMP13]], i64* [[TMP12]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP13]], i64* [[TMP12]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP14:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 6
 // CHECK-C-NEXT:    [[TMP15:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 6
-// CHECK-C-NEXT:    store i64 [[TMP15]], i64* [[TMP14]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP15]], i64* [[TMP14]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-C-NEXT:    [[TMP17:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 7
-// CHECK-C-NEXT:    store i64 [[TMP17]], i64* [[TMP16]], align 8, !alias.scope !6
+// CHECK-C-NEXT:    store i64 [[TMP17]], i64* [[TMP16]], align 8, !alias.scope !2
 // CHECK-C-NEXT:    [[TMP18:%.*]] = bitcast %struct.data512_t* [[TMP]] to i8*
 // CHECK-C-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 bitcast (%struct.data512_t* @val to i8*), i8* align 8 [[TMP18]], i64 64, i1 false)
 // CHECK-C-NEXT:    ret void
@@ -59,35 +59,35 @@ uint64_t status;
 // CHECK-CXX-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-CXX-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = load i8*, i8** @addr, align 8
-// CHECK-CXX-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
-// CHECK-CXX-NEXT:    store i8* [[TMP0]], i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
+// CHECK-CXX-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META2:![0-9]+]])
+// CHECK-CXX-NEXT:    store i8* [[TMP0]], i8** [[__ADDR_ADDR_I]], align 8, !noalias !2
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__ADDR_ADDR_I]], align 8, !noalias !2
 // CHECK-CXX-NEXT:    [[VAL_I:%.*]] = getelementptr inbounds [[STRUCT_DATA512_T]], %struct.data512_t* [[REF_TMP]], i32 0, i32 0
 // CHECK-CXX-NEXT:    [[ARRAYDECAY_I:%.*]] = getelementptr inbounds [8 x i64], [8 x i64]* [[VAL_I]], i64 0, i64 0
-// CHECK-CXX-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]), !noalias !6
+// CHECK-CXX-NEXT:    [[TMP2:%.*]] = call { i64, i64, i64, i64, i64, i64, i64, i64 } @llvm.aarch64.ld64b(i8* [[TMP1]]), !noalias !2
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 0
-// CHECK-CXX-NEXT:    store i64 [[TMP3]], i64* [[ARRAYDECAY_I]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP3]], i64* [[ARRAYDECAY_I]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 1
 // CHECK-CXX-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 1
-// CHECK-CXX-NEXT:    store i64 [[TMP5]], i64* [[TMP4]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP5]], i64* [[TMP4]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP6:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 2
 // CHECK-CXX-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 2
-// CHECK-CXX-NEXT:    store i64 [[TMP7]], i64* [[TMP6]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP7]], i64* [[TMP6]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP8:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 3
 // CHECK-CXX-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 3
-// CHECK-CXX-NEXT:    store i64 [[TMP9]], i64* [[TMP8]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP9]], i64* [[TMP8]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP10:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 4
 // CHECK-CXX-NEXT:    [[TMP11:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 4
-// CHECK-CXX-NEXT:    store i64 [[TMP11]], i64* [[TMP10]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP11]], i64* [[TMP10]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP12:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 5
 // CHECK-CXX-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 5
-// CHECK-CXX-NEXT:    store i64 [[TMP13]], i64* [[TMP12]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP13]], i64* [[TMP12]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP14:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 6
 // CHECK-CXX-NEXT:    [[TMP15:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 6
-// CHECK-CXX-NEXT:    store i64 [[TMP15]], i64* [[TMP14]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP15]], i64* [[TMP14]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP16:%.*]] = getelementptr i64, i64* [[ARRAYDECAY_I]], i32 7
 // CHECK-CXX-NEXT:    [[TMP17:%.*]] = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64 } [[TMP2]], 7
-// CHECK-CXX-NEXT:    store i64 [[TMP17]], i64* [[TMP16]], align 8, !alias.scope !6
+// CHECK-CXX-NEXT:    store i64 [[TMP17]], i64* [[TMP16]], align 8, !alias.scope !2
 // CHECK-CXX-NEXT:    [[TMP18:%.*]] = bitcast %struct.data512_t* [[REF_TMP]] to i8*
 // CHECK-CXX-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 bitcast (%struct.data512_t* @val to i8*), i8* align 8 [[TMP18]], i64 64, i1 false)
 // CHECK-CXX-NEXT:    ret void
