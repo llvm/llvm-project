@@ -243,7 +243,8 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     __kmpc_end_sharing_variables();
 }
 
-bool __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
+__attribute__((noinline)) bool
+__kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
   FunctionTracingRAII();
   // Work function and arguments for L1 parallel region.
   *WorkFn = state::ParallelRegionFn;
@@ -258,7 +259,7 @@ bool __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
   return ThreadIsActive;
 }
 
-void __kmpc_kernel_end_parallel() {
+__attribute__((noinline)) void __kmpc_kernel_end_parallel() {
   FunctionTracingRAII();
   // In case we have modified an ICV for this thread before a ThreadState was
   // created. We drop it now to not contaminate the next parallel region.

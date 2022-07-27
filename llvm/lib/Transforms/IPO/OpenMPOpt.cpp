@@ -499,6 +499,18 @@ struct OMPInformationCache : public InformationCache {
   }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
+    // Remove the `noinline` attribute from `__kmpc`, `_OMP::` and `omp_`
+    // functions, except if `optnone` is present.
+    if (isOpenMPDevice(M)) {
+      for (Function &F : M) {
+        for (StringRef Prefix : {"__kmpc", "_ZN4_OMP", "omp_"})
+          if (F.hasFnAttribute(Attribute::NoInline) &&
+              F.getName().startswith(Prefix) &&
+              !F.hasFnAttribute(Attribute::OptimizeNone))
+            F.removeFnAttr(Attribute::NoInline);
+      }
+    }
+
     // TODO: We should attach the attributes defined in OMPKinds.def.
   }
 
