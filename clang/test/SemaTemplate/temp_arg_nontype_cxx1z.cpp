@@ -131,7 +131,7 @@ namespace DeduceDifferentType {
 
   struct X { constexpr operator int() { return 0; } } x;
   template<X &> struct C {};
-  template<int N> int c(C<N>); // expected-error {{value of type 'int' is not implicitly convertible to 'DeduceDifferentType::X &'}}
+  template<int N> int c(C<N>); // expected-error {{value of type 'int' is not implicitly convertible to 'X &'}}
   int c_imp = c(C<x>()); // expected-error {{no matching function}}
   int c_exp = c<x>(C<x>()); // expected-error {{no matching function}}
 

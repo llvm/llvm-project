@@ -10,7 +10,8 @@ using a::S;
 // CHECK-NEXT: `-RecordType {{.*}} 'a::S'
 typedef S f; // to dump the introduced type
 // CHECK:      TypedefDecl
-// CHECK-NEXT: `-UsingType {{.*}} 'a::S' sugar
-// CHECK-NEXT:   |-UsingShadow {{.*}} 'S'
-// CHECK-NEXT:   `-RecordType {{.*}} 'a::S'
+// CHECK-NEXT: `-ElaboratedType {{.*}} 'S' sugar
+// CHECK-NEXT:   `-UsingType {{.*}} 'a::S' sugar
+// CHECK-NEXT:     |-UsingShadow {{.*}} 'S'
+// CHECK-NEXT:     `-RecordType {{.*}} 'a::S'
 }

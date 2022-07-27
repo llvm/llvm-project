@@ -114,7 +114,7 @@ int test() {
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_44:0x[a-z0-9]*]] <line:18:3, col:11>
 // CHECK-NEXT: | |   | `-VarDecl [[ADDR_45:0x[a-z0-9]*]] <col:3, col:10> col:10 referenced t 'double'
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_46:0x[a-z0-9]*]] <line:19:3, col:16>
-// CHECK-NEXT: | |   | `-VarDecl [[ADDR_47:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>' callinit
+// CHECK-NEXT: | |   | `-VarDecl [[ADDR_47:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>':'S<T>' callinit
 // CHECK-NEXT: | |   |   `-ParenListExpr [[ADDR_48:0x[a-z0-9]*]] <col:9, col:15> 'NULL TYPE'
 // CHECK-NEXT: | |   |     |-IntegerLiteral [[ADDR_49:0x[a-z0-9]*]] <col:10> 'int' 1
 // CHECK-NEXT: | |   |     `-UnaryOperator [[ADDR_50:0x[a-z0-9]*]] <col:13, col:14> 'double *' prefix '&' cannot overflow
@@ -149,7 +149,7 @@ int test() {
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_72:0x[a-z0-9]*]] <line:24:3, col:6>
 // CHECK-NEXT: | |   | `-VarDecl [[ADDR_73:0x[a-z0-9]*]] <col:3, col:5> col:5 referenced t 'T'
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_74:0x[a-z0-9]*]] <line:25:3, col:16>
-// CHECK-NEXT: | |   | `-VarDecl [[ADDR_75:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>' callinit
+// CHECK-NEXT: | |   | `-VarDecl [[ADDR_75:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>':'S<T>' callinit
 // CHECK-NEXT: | |   |   `-ParenListExpr [[ADDR_76:0x[a-z0-9]*]] <col:9, col:15> 'NULL TYPE'
 // CHECK-NEXT: | |   |     |-IntegerLiteral [[ADDR_77:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | |   |     `-UnaryOperator [[ADDR_78:0x[a-z0-9]*]] <col:13, col:14> '<dependent type>' prefix '&' cannot overflow
@@ -185,7 +185,7 @@ int test() {
 // CHECK-NEXT: |     |-DeclStmt [[ADDR_101:0x[a-z0-9]*]] <line:31:3, col:11>
 // CHECK-NEXT: |     | `-VarDecl [[ADDR_102:0x[a-z0-9]*]] <col:3, col:10> col:10 referenced t 'double'
 // CHECK-NEXT: |     |-DeclStmt [[ADDR_103:0x[a-z0-9]*]] <line:32:3, col:18>
-// CHECK-NEXT: |     | `-VarDecl [[ADDR_104:0x[a-z0-9]*]] <col:3, col:17> col:8 q 'S<T>' callinit
+// CHECK-NEXT: |     | `-VarDecl [[ADDR_104:0x[a-z0-9]*]] <col:3, col:17> col:8 q 'S<T>':'S<T>' callinit
 // CHECK-NEXT: |     |   `-ParenListExpr [[ADDR_105:0x[a-z0-9]*]] <col:9, col:17> 'NULL TYPE'
 // CHECK-NEXT: |     |     |-FloatingLiteral [[ADDR_106:0x[a-z0-9]*]] <col:10> 'double' 2.000000e+00
 // CHECK-NEXT: |     |     `-UnaryOperator [[ADDR_107:0x[a-z0-9]*]] <col:15, col:16> 'double *' prefix '&' cannot overflow

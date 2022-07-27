@@ -97,7 +97,9 @@ public:
     if (TL.getQualifierLoc() &&
         !TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()))
       return false;
-    return TraverseTypeLoc(TL.getNamedTypeLoc(), true);
+    const auto *T = TL.getTypePtr();
+    return TraverseTypeLoc(TL.getNamedTypeLoc(),
+                           T->getKeyword() != ETK_None || T->getQualifier());
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *S) {

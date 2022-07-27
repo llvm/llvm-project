@@ -318,6 +318,10 @@
           "spelling": "int"
         },
         {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
           "kind": "identifier",
           "spelling": "Property"
         }

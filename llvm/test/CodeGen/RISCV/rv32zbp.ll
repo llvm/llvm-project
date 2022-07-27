@@ -1110,29 +1110,28 @@ define i64 @gorc2b_i64(i64 %a) nounwind {
 ;
 ; RV32ZBP-LABEL: gorc2b_i64:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    srli a2, a1, 2
-; RV32ZBP-NEXT:    srli a3, a0, 2
-; RV32ZBP-NEXT:    lui a4, 209715
-; RV32ZBP-NEXT:    addi a4, a4, 819
-; RV32ZBP-NEXT:    and a3, a3, a4
-; RV32ZBP-NEXT:    or a3, a3, a0
-; RV32ZBP-NEXT:    or a2, a2, a1
-; RV32ZBP-NEXT:    orc2.n a1, a1
+; RV32ZBP-NEXT:    srli a2, a0, 2
+; RV32ZBP-NEXT:    srli a3, a1, 2
+; RV32ZBP-NEXT:    or a3, a3, a1
+; RV32ZBP-NEXT:    or a2, a2, a0
 ; RV32ZBP-NEXT:    orc2.n a0, a0
+; RV32ZBP-NEXT:    orc2.n a1, a1
 ; RV32ZBP-NEXT:    slli a2, a2, 2
 ; RV32ZBP-NEXT:    slli a3, a3, 2
-; RV32ZBP-NEXT:    lui a5, 838861
-; RV32ZBP-NEXT:    addi a5, a5, -820
-; RV32ZBP-NEXT:    and a3, a3, a5
-; RV32ZBP-NEXT:    and a2, a2, a5
+; RV32ZBP-NEXT:    lui a4, 838861
+; RV32ZBP-NEXT:    addi a4, a4, -820
+; RV32ZBP-NEXT:    and a3, a3, a4
+; RV32ZBP-NEXT:    and a2, a2, a4
+; RV32ZBP-NEXT:    srli a4, a1, 2
 ; RV32ZBP-NEXT:    srli a5, a0, 2
-; RV32ZBP-NEXT:    srli a6, a1, 2
-; RV32ZBP-NEXT:    and a6, a6, a4
-; RV32ZBP-NEXT:    and a4, a5, a4
-; RV32ZBP-NEXT:    or a0, a4, a0
-; RV32ZBP-NEXT:    or a1, a6, a1
-; RV32ZBP-NEXT:    or a1, a1, a2
-; RV32ZBP-NEXT:    or a0, a0, a3
+; RV32ZBP-NEXT:    lui a6, 209715
+; RV32ZBP-NEXT:    addi a6, a6, 819
+; RV32ZBP-NEXT:    and a5, a5, a6
+; RV32ZBP-NEXT:    and a4, a4, a6
+; RV32ZBP-NEXT:    or a1, a4, a1
+; RV32ZBP-NEXT:    or a0, a5, a0
+; RV32ZBP-NEXT:    or a0, a0, a2
+; RV32ZBP-NEXT:    or a1, a1, a3
 ; RV32ZBP-NEXT:    ret
   %and1 = shl i64 %a, 2
   %shl1 = and i64 %and1, -3689348814741910324

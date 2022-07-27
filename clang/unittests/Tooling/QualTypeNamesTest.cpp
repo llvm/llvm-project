@@ -33,7 +33,7 @@ struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
         ADD_FAILURE() << "Typename::getFullyQualifiedName failed for "
                       << VD->getQualifiedNameAsString() << std::endl
                       << "   Actual: " << ActualName << std::endl
-                      << " Exepcted: " << ExpectedName;
+                      << " Expected: " << ExpectedName;
       }
     }
     return true;
@@ -42,7 +42,7 @@ struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
 
 // named namespaces inside anonymous namespaces
 
-TEST(QualTypeNameTest, getFullyQualifiedName) {
+TEST(QualTypeNameTest, Simple) {
   TypeNameVisitor Visitor;
   // Simple case to test the test framework itself.
   Visitor.ExpectedQualTypeNames["CheckInt"] = "int";
@@ -170,7 +170,9 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "};\n"
       "EnumScopeClass::AnEnum AnEnumVar;\n",
       TypeNameVisitor::Lang_CXX11);
+}
 
+TEST(QualTypeNameTest, Complex) {
   TypeNameVisitor Complex;
   Complex.ExpectedQualTypeNames["CheckTX"] = "B::TX";
   Complex.runOver(
@@ -187,7 +189,9 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "  TX CheckTX;"
       "  struct A { typedef int X; };"
       "}");
+}
 
+TEST(QualTypeNameTest, DoubleUsing) {
   TypeNameVisitor DoubleUsing;
   DoubleUsing.ExpectedQualTypeNames["direct"] = "a::A<0>";
   DoubleUsing.ExpectedQualTypeNames["indirect"] = "b::B";
@@ -206,7 +210,9 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       B double_indirect;
     }
   )cpp");
+}
 
+TEST(QualTypeNameTest, GlobalNsPrefix) {
   TypeNameVisitor GlobalNsPrefix;
   GlobalNsPrefix.WithGlobalNsPrefix = true;
   GlobalNsPrefix.ExpectedQualTypeNames["IntVal"] = "int";
@@ -244,7 +250,9 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "  }\n"
       "}\n"
   );
+}
 
+TEST(QualTypeNameTest, InlineNamespace) {
   TypeNameVisitor InlineNamespace;
   InlineNamespace.ExpectedQualTypeNames["c"] = "B::C";
   InlineNamespace.runOver("inline namespace A {\n"
@@ -255,7 +263,9 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
                           "using namespace A::B;\n"
                           "C c;\n",
                           TypeNameVisitor::Lang_CXX11);
+}
 
+TEST(QualTypeNameTest, AnonStrucs) {
   TypeNameVisitor AnonStrucs;
   AnonStrucs.ExpectedQualTypeNames["a"] = "short";
   AnonStrucs.ExpectedQualTypeNames["un_in_st_1"] =
