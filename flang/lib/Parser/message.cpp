@@ -234,18 +234,33 @@ static std::string Prefix(Severity severity) {
   return "";
 }
 
+static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
+  switch (severity) {
+  case Severity::Error:
+  case Severity::Todo:
+    return llvm::raw_ostream::RED;
+  case Severity::Warning:
+  case Severity::Portability:
+    return llvm::raw_ostream::MAGENTA;
+  default:
+    // TODO: Set the color.
+    break;
+  }
+  return llvm::raw_ostream::SAVEDCOLOR;
+}
+
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   const AllSources &sources{allCooked.allSources()};
-  sources.EmitMessage(
-      o, provenanceRange, Prefix(severity()) + ToString(), echoSourceLine);
+  sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
+      PrefixColor(severity()), echoSourceLine);
   bool isContext{attachmentIsContext_};
   for (const Message *attachment{attachment_.get()}; attachment;
        attachment = attachment->attachment_.get()) {
+    Severity severity = isContext ? Severity::Context : attachment->severity();
     sources.EmitMessage(o, attachment->GetProvenanceRange(allCooked),
-        Prefix(isContext ? Severity::Context : attachment->severity()) +
-            attachment->ToString(),
+        attachment->ToString(), Prefix(severity), PrefixColor(severity),
         echoSourceLine);
   }
 }
