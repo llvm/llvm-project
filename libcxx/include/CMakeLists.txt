@@ -1,5 +1,6 @@
 set(files
   __algorithm/adjacent_find.h
+  __algorithm/algorithm_family.h
   __algorithm/all_of.h
   __algorithm/any_of.h
   __algorithm/binary_search.h

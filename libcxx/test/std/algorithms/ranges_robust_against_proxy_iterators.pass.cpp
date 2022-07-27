@@ -164,6 +164,7 @@ constexpr void run_tests() {
   //  test(std::ranges::stable_sort, in);
   test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
+  // TODO(ranges): `inplace_merge` requires `ranges::rotate` to be implemented.
   //if (!std::is_constant_evaluated())
   //  test_mid(std::ranges::inplace_merge, in, mid);
   test(std::ranges::make_heap, in);
