@@ -35,7 +35,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -119,6 +118,34 @@ void emitMisexpectDiagnostic(Instruction *I, LLVMContext &Ctx,
 namespace llvm {
 namespace misexpect {
 
+// Helper function to extract branch weights into a vector
+Optional<SmallVector<uint32_t, 4>> extractWeights(Instruction *I,
+                                                  LLVMContext &Ctx) {
+  assert(I && "MisExpect::extractWeights given invalid pointer");
+
+  auto *ProfileData = I->getMetadata(LLVMContext::MD_prof);
+  if (!ProfileData)
+    return None;
+
+  unsigned NOps = ProfileData->getNumOperands();
+  if (NOps < 3)
+    return None;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || !ProfDataName->getString().equals("branch_weights"))
+    return None;
+
+  SmallVector<uint32_t, 4> Weights(NOps - 1);
+  for (unsigned Idx = 1; Idx < NOps; Idx++) {
+    ConstantInt *Value =
+        mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
+    uint32_t V = Value->getZExtValue();
+    Weights[Idx - 1] = V;
+  }
+
+  return Weights;
+}
+
 // TODO: when clang allows c++17, use std::clamp instead
 uint32_t clamp(uint64_t value, uint32_t low, uint32_t hi) {
   if (value > hi)
@@ -191,17 +218,19 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
 
 void checkBackendInstrumentation(Instruction &I,
                                  const ArrayRef<uint32_t> RealWeights) {
-  SmallVector<uint32_t> ExpectedWeights;
-  if (!extractBranchWeights(I, ExpectedWeights))
+  auto ExpectedWeightsOpt = extractWeights(&I, I.getContext());
+  if (!ExpectedWeightsOpt)
     return;
+  auto ExpectedWeights = ExpectedWeightsOpt.value();
   verifyMisExpect(I, RealWeights, ExpectedWeights);
 }
 
 void checkFrontendInstrumentation(Instruction &I,
                                   const ArrayRef<uint32_t> ExpectedWeights) {
-  SmallVector<uint32_t> RealWeights;
-  if (!extractBranchWeights(I, RealWeights))
+  auto RealWeightsOpt = extractWeights(&I, I.getContext());
+  if (!RealWeightsOpt)
     return;
+  auto RealWeights = RealWeightsOpt.value();
   verifyMisExpect(I, RealWeights, ExpectedWeights);
 }
 
