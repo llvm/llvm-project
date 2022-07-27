@@ -13,12 +13,19 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
 
       self.expect("thread trace dump instructions 3 -e --forward -c 5",
         substrs=['''thread #3: tid = 3497496
-    0: (event) CPU core changed [new CPU=51]
+    0: (event) HW clock tick [40450075477621505]
+    1: (event) CPU core changed [new CPU=51]
+    2: (event) HW clock tick [40450075477657246]
   m.out`foo() + 65 at multi_thread.cpp:12:21'''])
 
       self.expect("thread trace dump instructions 3 -e --forward -c 5 -J",
         substrs=['''{
     "id": 0,
+    "event": "HW clock tick",
+    "hwClock": 40450075477621505
+  },
+  {
+    "id": 1,
     "event": "CPU core changed",
     "cpuId": 51
   }'''])
