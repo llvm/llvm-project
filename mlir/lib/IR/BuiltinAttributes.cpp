@@ -54,13 +54,10 @@ void ArrayAttr::walkImmediateSubElements(
     walkAttrsFn(attr);
 }
 
-SubElementAttrInterface ArrayAttr::replaceImmediateSubAttribute(
-    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
-  std::vector<Attribute> vector = getValue().vec();
-  for (auto &it : replacements) {
-    vector[it.first] = it.second;
-  }
-  return get(getContext(), vector);
+Attribute
+ArrayAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                       ArrayRef<Type> replTypes) const {
+  return get(getContext(), replAttrs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -227,11 +224,12 @@ void DictionaryAttr::walkImmediateSubElements(
     walkAttrsFn(attr.getValue());
 }
 
-SubElementAttrInterface DictionaryAttr::replaceImmediateSubAttribute(
-    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
+Attribute
+DictionaryAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                            ArrayRef<Type> replTypes) const {
   std::vector<NamedAttribute> vec = getValue().vec();
-  for (auto &it : replacements)
-    vec[it.first].setValue(it.second);
+  for (auto &it : llvm::enumerate(replAttrs))
+    vec[it.index()].setValue(it.value());
 
   // The above only modifies the mapped value, but not the key, and therefore
   // not the order of the elements. It remains sorted
@@ -324,6 +322,24 @@ FlatSymbolRefAttr SymbolRefAttr::get(Operation *symbol) {
 StringAttr SymbolRefAttr::getLeafReference() const {
   ArrayRef<FlatSymbolRefAttr> nestedRefs = getNestedReferences();
   return nestedRefs.empty() ? getRootReference() : nestedRefs.back().getAttr();
+}
+
+void SymbolRefAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkAttrsFn(getRootReference());
+  for (FlatSymbolRefAttr ref : getNestedReferences())
+    walkAttrsFn(ref);
+}
+
+Attribute
+SymbolRefAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                           ArrayRef<Type> replTypes) const {
+  ArrayRef<Attribute> rawNestedRefs = replAttrs.drop_front();
+  ArrayRef<FlatSymbolRefAttr> nestedRefs(
+      static_cast<const FlatSymbolRefAttr *>(rawNestedRefs.data()),
+      rawNestedRefs.size());
+  return get(replAttrs[0].cast<StringAttr>(), nestedRefs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1710,4 +1726,10 @@ void TypeAttr::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
   walkTypesFn(getValue());
+}
+
+Attribute
+TypeAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                      ArrayRef<Type> replTypes) const {
+  return get(replTypes[0]);
 }

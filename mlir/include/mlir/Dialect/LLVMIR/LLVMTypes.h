@@ -116,6 +116,8 @@ public:
 
   void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
                                 function_ref<void(Type)> walkTypesFn) const;
+  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -177,6 +179,8 @@ public:
 
   void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
                                 function_ref<void(Type)> walkTypesFn) const;
+  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -244,6 +248,8 @@ public:
 
   void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
                                 function_ref<void(Type)> walkTypesFn) const;
+  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -375,6 +381,8 @@ public:
 
   void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
                                 function_ref<void(Type)> walkTypesFn) const;
+  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -408,7 +416,7 @@ public:
   Type getElementType() const;
 
   /// Returns the number of elements in the fixed vector.
-  unsigned getNumElements();
+  unsigned getNumElements() const;
 
   /// Verifies that the type about to be constructed is well-formed.
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
@@ -416,6 +424,8 @@ public:
 
   void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
                                 function_ref<void(Type)> walkTypesFn) const;
+  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -450,7 +460,7 @@ public:
   /// Returns the scaling factor of the number of elements in the vector. The
   /// vector contains at least the resulting number of elements, or any non-zero
   /// multiple of this number.
-  unsigned getMinNumElements();
+  unsigned getMinNumElements() const;
 
   /// Verifies that the type about to be constructed is well-formed.
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
@@ -458,6 +468,8 @@ public:
 
   void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
                                 function_ref<void(Type)> walkTypesFn) const;
+  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const;
 };
 
 //===----------------------------------------------------------------------===//
