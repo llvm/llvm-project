@@ -42,7 +42,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __construct_at(_Tp* __location, _Ar
 #if _LIBCPP_STD_VER > 17
   return std::construct_at(__location, std::forward<_Args>(__args)...);
 #else
-  return ::new (std::__voidify(*__location)) _Tp(std::forward<_Args>(__args)...);
+  return _LIBCPP_ASSERT(__location != nullptr, "null pointer given to construct_at"),
+         ::new (std::__voidify(*__location)) _Tp(std::forward<_Args>(__args)...);
 #endif
 }
 

@@ -22,7 +22,7 @@
 #include "min_allocator.h"
 
 template <class Vector>
-void check_vector_reverse_iterators() {
+TEST_CONSTEXPR_CXX20 void check_vector_reverse_iterators() {
     {
         Vector vec;
         assert(vec.rbegin() == vec.rend());
@@ -67,10 +67,19 @@ void check_vector_reverse_iterators() {
     }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
     check_vector_reverse_iterators<std::vector<int> >();
 #if TEST_STD_VER >= 11
     check_vector_reverse_iterators<std::vector<int, min_allocator<int> > >();
+#endif
+
+    return true;
+}
+
+int main(int, char**) {
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
 #endif
 
     return 0;

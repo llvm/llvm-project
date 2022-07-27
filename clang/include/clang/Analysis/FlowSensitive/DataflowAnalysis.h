@@ -66,7 +66,8 @@ public:
 
   /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
   explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : TypeErasedDataflowAnalysis(ApplyBuiltinTransfer), Context(Context) {}
+      : DataflowAnalysis(Context, DataflowAnalysisOptions{ApplyBuiltinTransfer,
+                                                          TransferOptions{}}) {}
 
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)

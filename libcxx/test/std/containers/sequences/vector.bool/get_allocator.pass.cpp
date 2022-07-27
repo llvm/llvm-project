@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
     {
         std::allocator<bool> alloc;
         const std::vector<bool> vb(alloc);
@@ -29,6 +29,15 @@ int main(int, char**) {
         const std::vector<bool, other_allocator<bool> > vb(alloc);
         assert(vb.get_allocator() == alloc);
     }
+
+    return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
 
     return 0;
 }

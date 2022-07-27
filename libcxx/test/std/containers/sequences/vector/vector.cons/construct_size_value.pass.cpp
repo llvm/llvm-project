@@ -19,7 +19,7 @@
 #include "asan_testing.h"
 
 template <class C>
-void
+TEST_CONSTEXPR_CXX20 void
 test(typename C::size_type n, const typename C::value_type& x)
 {
     C c(n, x);
@@ -30,8 +30,7 @@ test(typename C::size_type n, const typename C::value_type& x)
         assert(*i == x);
 }
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     test<std::vector<int> >(0, 3);
     test<std::vector<int> >(50, 3);
     // Add 1 for implementations that dynamically allocate a container proxy.
@@ -43,5 +42,14 @@ int main(int, char**)
     test<std::vector<int, min_allocator<int>> >(50, 3);
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }
