@@ -8118,6 +8118,24 @@ td_library(
 )
 
 gentbl_cc_library(
+    name = "ComplexAttributesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Complex/IR/ComplexAttributes.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Complex/IR/ComplexAttributes.td",
+    deps = [":ComplexOpsTdFiles"],
+)
+
+gentbl_cc_library(
     name = "ComplexBaseIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
@@ -8171,6 +8189,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
+        ":ComplexAttributesIncGen",
         ":ComplexBaseIncGen",
         ":ComplexOpsIncGen",
         ":IR",
