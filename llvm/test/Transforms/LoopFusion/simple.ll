@@ -487,8 +487,9 @@ for.second.exit:
 }
 
 ; Test that `%add` cannot be moved to basic block entry, as it uses %i, which
-; defined after basic block entry. And the two loops for.first and for.second
-; are not fused.
+; defined after basic block entry. It also cannot be moved to for.second.exit 
+; since it is used in for.second. Check also that the two loops for.first and
+; for.second are not fused.
 
 define i64 @unsafe_preheader(i32* %A, i64 %x) {
 ; CHECK-LABEL: @unsafe_preheader(
@@ -505,7 +506,7 @@ define i64 @unsafe_preheader(i32* %A, i64 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[X:%.*]], [[I]]
 ; CHECK-NEXT:    br label [[FOR_SECOND:%.*]]
 ; CHECK:       for.second:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, [[FOR_FIRST_EXIT]] ], [ [[INC_J:%.*]], [[FOR_SECOND]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[ADD]], [[FOR_FIRST_EXIT]] ], [ [[INC_J:%.*]], [[FOR_SECOND]] ]
 ; CHECK-NEXT:    [[AJ:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[J]]
 ; CHECK-NEXT:    store i32 2, i32* [[AJ]], align 4
 ; CHECK-NEXT:    [[INC_J]] = add nsw i64 [[J]], 1
@@ -530,7 +531,7 @@ for.first.exit:
   br label %for.second
 
 for.second:
-  %j = phi i64 [ 0, %for.first.exit ], [ %inc.j, %for.second ]
+  %j = phi i64 [ %add, %for.first.exit ], [ %inc.j, %for.second ]
   %Aj = getelementptr inbounds i32, i32* %A, i64 %j
   store i32 2, i32* %Aj, align 4
   %inc.j = add nsw i64 %j, 1

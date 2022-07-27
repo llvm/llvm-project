@@ -1,0 +1,46 @@
+; RUN: opt -S -loop-fusion < %s | FileCheck %s
+
+define void @sink_preheader(i32 %N) {
+; CHECK-LABEL: @sink_preheader(
+; CHECK-NEXT:  pre1:
+; CHECK-NEXT:    br label [[BODY1:%.*]]
+; CHECK:       body1:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[BODY1]] ], [ 0, [[PRE1:%.*]] ]
+; CHECK-NEXT:    [[I2:%.*]] = phi i32 [ [[I_NEXT2:%.*]], [[BODY1]] ], [ 0, [[PRE1]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 1, [[I]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    [[BARRIER:%.*]] = add i32 1, [[N]]
+; CHECK-NEXT:    [[I_NEXT2]] = add i32 1, [[I2]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i32 [[I2]], [[N]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[BODY1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SINKME:%.*]] = add i32 1, [[BARRIER]]
+; CHECK-NEXT:    [[SINKME2:%.*]] = add i32 1, [[BARRIER]]
+; CHECK-NEXT:    [[SINKME3:%.*]] = add i32 1, [[SINKME2]]
+; CHECK-NEXT:    ret void
+;
+pre1:
+  br label %body1
+
+body1:  ; preds = %pre1, %body1
+  %i = phi i32 [%i_next, %body1], [0, %pre1]
+  %i_next = add i32 1, %i
+  %cond = icmp ne i32 %i, %N
+  %barrier = add i32 1, %N
+  br i1 %cond, label %body1, label %pre2
+
+pre2:
+  %sinkme = add i32 1, %barrier
+  %sinkme2 = add i32 1, %barrier
+  %sinkme3 = add i32 1, %sinkme2
+  br label %body2
+
+body2:  ; preds = %pre2, %body2
+  %i2 = phi i32 [%i_next2, %body2], [0, %pre2]
+  %i_next2 = add i32 1, %i2
+  %cond2 = icmp ne i32 %i2, %N
+  br i1 %cond2, label %body2, label %exit
+
+exit:
+  ret void
+}
