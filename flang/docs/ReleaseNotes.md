@@ -41,9 +41,7 @@ page](https://llvm.org/releases/).
   In particular, both `-fcolor-diagnostics` and `-fno-color-diagnostics` are
   now available in `flang-new` (the diagnostics are formatted by default). In
   the frontend driver, `flang-new -fc1`, only `-fcolor-diagnostics` is
-  available (by default, the diagnostics are not formatted). Note that this
-  will only affect the diagnostics printed by driver (scanning, parsing and
-  semantic diagnostics are not affected).
+  available (by default, the diagnostics are not formatted).
 
 ## Windows Support
 

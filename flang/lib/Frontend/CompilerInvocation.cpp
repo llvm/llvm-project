@@ -769,6 +769,9 @@ void CompilerInvocation::setFortranOpts() {
   if (frontendOptions.instrumentedParse)
     fortranOptions.instrumentedParse = true;
 
+  if (frontendOptions.showColors)
+    fortranOptions.showColors = true;
+
   if (frontendOptions.needProvenanceRangeToCharBlockMappings)
     fortranOptions.needProvenanceRangeToCharBlockMappings = true;
 
