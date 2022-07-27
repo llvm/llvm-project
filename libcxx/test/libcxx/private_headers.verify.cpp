@@ -218,6 +218,7 @@ END-SCRIPT
 #include <__algorithm/unique.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unique.h'}}
 #include <__algorithm/unique_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unique_copy.h'}}
 #include <__algorithm/unwrap_iter.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unwrap_iter.h'}}
+#include <__algorithm/unwrap_range.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unwrap_range.h'}}
 #include <__algorithm/upper_bound.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/upper_bound.h'}}
 #include <__availability> // expected-error@*:* {{use of private header from outside its module: '__availability'}}
 #include <__bit/bit_cast.h> // expected-error@*:* {{use of private header from outside its module: '__bit/bit_cast.h'}}
