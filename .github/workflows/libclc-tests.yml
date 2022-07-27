@@ -1,0 +1,39 @@
+name: libclc Tests
+
+on:
+  workflow_dispatch:
+  push:
+    ignore-forks: true
+    branches:
+      - 'release/**'
+    paths:
+      - 'libclc/**'
+      - '.github/workflows/libclc-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+      - '!clang/**'
+      - '!llvm/**'
+  pull_request:
+    ignore-forks: true
+    branches:
+      - 'release/**'
+    paths:
+      - 'libclc/**'
+      - '.github/workflows/libclc-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+      - '!clang/**'
+      - '!llvm/**'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check_libclc:
+    if: github.repository_owner == 'llvm'
+    name: Test libclc
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: ''
+      projects: clang;libclc
