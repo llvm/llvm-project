@@ -1,8 +1,8 @@
 // Test rewrite of functions that return fir.array<>, fir.type<>, fir.box<> to
 // functions that take an additional argument for the result.
 
-// RUN: fir-opt %s --abstract-result-opt | FileCheck %s
-// RUN: fir-opt %s --abstract-result-opt=abstract-result-as-box | FileCheck %s --check-prefix=CHECK-BOX
+// RUN: fir-opt %s --abstract-result-on-func-opt | FileCheck %s
+// RUN: fir-opt %s --abstract-result-on-func-opt=abstract-result-as-box | FileCheck %s --check-prefix=CHECK-BOX
 
 // ----------------------- Test declaration rewrite ----------------------------
 
