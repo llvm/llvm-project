@@ -22,15 +22,13 @@ double RTNAME(CpuTime)();
 
 void RTNAME(ProgramStart)(int, const char *[], const char *[]);
 int32_t RTNAME(ArgumentCount)();
-int32_t RTNAME(ArgumentValue)(
-    int32_t, const struct Descriptor *, const struct Descriptor *);
-int64_t RTNAME(ArgumentLength)(int32_t);
+int32_t RTNAME(GetCommandArgument)(int32_t, const struct Descriptor *,
+    const struct Descriptor *, const struct Descriptor *);
 
 int main() {
   double x = RTNAME(CpuTime)();
   RTNAME(ProgramStart)(0, 0, 0);
   int32_t c = RTNAME(ArgumentCount)();
-  int32_t v = RTNAME(ArgumentValue)(0, 0, 0);
-  int32_t l = RTNAME(ArgumentLength)(0);
-  return x + c + l;
+  int32_t v = RTNAME(GetCommandArgument)(0, 0, 0, 0);
+  return x + c + v;
 }
