@@ -39,7 +39,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
 
 ; CHECKSYM:        Symbol {
 ; CHECKSYM-NEXT:     Index: 0
-; CHECKSYM-NEXT:     Name: .file
+; CHECKSYM-NEXT:     Name: <stdin>
 ; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECKSYM-NEXT:     Section: N_DEBUG
 ; CHECKSYM-NEXT:     Source Language ID: TB_C (0x0)

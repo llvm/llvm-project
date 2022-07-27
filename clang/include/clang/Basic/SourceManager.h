@@ -1479,24 +1479,35 @@ public:
 
   /// Returns whether \p Loc is located in a <built-in> file.
   bool isWrittenInBuiltinFile(SourceLocation Loc) const {
-    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
     return Filename.equals("<built-in>");
   }
 
   /// Returns whether \p Loc is located in a <command line> file.
   bool isWrittenInCommandLineFile(SourceLocation Loc) const {
-    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
     return Filename.equals("<command line>");
   }
 
   /// Returns whether \p Loc is located in a <scratch space> file.
   bool isWrittenInScratchSpace(SourceLocation Loc) const {
-    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
     return Filename.equals("<scratch space>");
   }
 
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
+    if (Loc.isInvalid())
+      return false;
     return isSystem(getFileCharacteristic(Loc));
   }
 

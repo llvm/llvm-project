@@ -250,12 +250,12 @@ define <4 x double> @shuffle_v4f64_0022(<4 x double> %a, <4 x double> %b) {
   ret <4 x double> %shuffle
 }
 
-define <4 x double> @shuffle_v4f64mem_0022(<4 x double>* %ptr, <4 x double> %b) {
+define <4 x double> @shuffle_v4f64mem_0022(ptr %ptr, <4 x double> %b) {
 ; ALL-LABEL: shuffle_v4f64mem_0022:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
 ; ALL-NEXT:    retq
-  %a = load  <4 x double>,  <4 x double>* %ptr
+  %a = load  <4 x double>,  ptr %ptr
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   ret <4 x double> %shuffle
 }
@@ -1574,12 +1574,12 @@ define <4 x i64> @insert_reg_and_zero_v4i64(i64 %a) {
   ret <4 x i64> %shuffle
 }
 
-define <4 x i64> @insert_mem_and_zero_v4i64(i64* %ptr) {
+define <4 x i64> @insert_mem_and_zero_v4i64(ptr %ptr) {
 ; ALL-LABEL: insert_mem_and_zero_v4i64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    retq
-  %a = load i64, i64* %ptr
+  %a = load i64, ptr %ptr
   %v = insertelement <4 x i64> undef, i64 %a, i64 0
   %shuffle = shufflevector <4 x i64> %v, <4 x i64> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x i64> %shuffle
@@ -1595,45 +1595,45 @@ define <4 x double> @insert_reg_and_zero_v4f64(double %a) {
   ret <4 x double> %shuffle
 }
 
-define <4 x double> @insert_mem_and_zero_v4f64(double* %ptr) {
+define <4 x double> @insert_mem_and_zero_v4f64(ptr %ptr) {
 ; ALL-LABEL: insert_mem_and_zero_v4f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    retq
-  %a = load double, double* %ptr
+  %a = load double, ptr %ptr
   %v = insertelement <4 x double> undef, double %a, i32 0
   %shuffle = shufflevector <4 x double> %v, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x double> %shuffle
 }
 
-define <4 x double> @splat_mem_v4f64(double* %ptr) {
+define <4 x double> @splat_mem_v4f64(ptr %ptr) {
 ; ALL-LABEL: splat_mem_v4f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %a = load double, double* %ptr
+  %a = load double, ptr %ptr
   %v = insertelement <4 x double> undef, double %a, i32 0
   %shuffle = shufflevector <4 x double> %v, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x double> %shuffle
 }
 
-define <4 x i64> @splat_mem_v4i64(i64* %ptr) {
+define <4 x i64> @splat_mem_v4i64(ptr %ptr) {
 ; ALL-LABEL: splat_mem_v4i64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %a = load i64, i64* %ptr
+  %a = load i64, ptr %ptr
   %v = insertelement <4 x i64> undef, i64 %a, i64 0
   %shuffle = shufflevector <4 x i64> %v, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i64> %shuffle
 }
 
-define <4 x double> @splat_mem_v4f64_2(double* %p) {
+define <4 x double> @splat_mem_v4f64_2(ptr %p) {
 ; ALL-LABEL: splat_mem_v4f64_2:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %1 = load double, double* %p
+  %1 = load double, ptr %p
   %2 = insertelement <2 x double> undef, double %1, i32 0
   %3 = shufflevector <2 x double> %2, <2 x double> undef, <4 x i32> zeroinitializer
   ret <4 x double> %3
@@ -1659,27 +1659,27 @@ define <4 x double> @splat_v4f64(<2 x double> %r) {
   ret <4 x double> %1
 }
 
-define <4 x i64> @splat_mem_v4i64_from_v2i64(<2 x i64>* %ptr) {
+define <4 x i64> @splat_mem_v4i64_from_v2i64(ptr %ptr) {
 ; ALL-LABEL: splat_mem_v4i64_from_v2i64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %v = load <2 x i64>, <2 x i64>* %ptr
+  %v = load <2 x i64>, ptr %ptr
   %shuffle = shufflevector <2 x i64> %v, <2 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i64> %shuffle
 }
 
-define <4 x double> @splat_mem_v4f64_from_v2f64(<2 x double>* %ptr) {
+define <4 x double> @splat_mem_v4f64_from_v2f64(ptr %ptr) {
 ; ALL-LABEL: splat_mem_v4f64_from_v2f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %v = load <2 x double>, <2 x double>* %ptr
+  %v = load <2 x double>, ptr %ptr
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x double> %shuffle
 }
 
-define <4 x i64> @splat128_mem_v4i64_from_v2i64(<2 x i64>* %ptr) {
+define <4 x i64> @splat128_mem_v4i64_from_v2i64(ptr %ptr) {
 ; AVX1OR2-LABEL: splat128_mem_v4i64_from_v2i64:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
@@ -1689,17 +1689,17 @@ define <4 x i64> @splat128_mem_v4i64_from_v2i64(<2 x i64>* %ptr) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    retq
-  %v = load <2 x i64>, <2 x i64>* %ptr
+  %v = load <2 x i64>, ptr %ptr
   %shuffle = shufflevector <2 x i64> %v, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x i64> %shuffle
 }
 
-define <4 x double> @splat128_mem_v4f64_from_v2f64(<2 x double>* %ptr) {
+define <4 x double> @splat128_mem_v4f64_from_v2f64(ptr %ptr) {
 ; ALL-LABEL: splat128_mem_v4f64_from_v2f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; ALL-NEXT:    retq
-  %v = load <2 x double>, <2 x double>* %ptr
+  %v = load <2 x double>, ptr %ptr
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x double> %shuffle
 }
@@ -1765,12 +1765,12 @@ define <4 x i64> @concat_v4i64_0145_bc(<4 x i64> %a0, <4 x i64> %a1) {
   ret <4 x i64> %shuffle64
 }
 
-define <4 x i64> @insert_dup_mem_v4i64(i64* %ptr) {
+define <4 x i64> @insert_dup_mem_v4i64(ptr %ptr) {
 ; ALL-LABEL: insert_dup_mem_v4i64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %tmp = load i64, i64* %ptr, align 1
+  %tmp = load i64, ptr %ptr, align 1
   %tmp1 = insertelement <2 x i64> undef, i64 %tmp, i32 0
   %tmp2 = shufflevector <2 x i64> %tmp1, <2 x i64> undef, <4 x i32> zeroinitializer
   ret <4 x i64> %tmp2

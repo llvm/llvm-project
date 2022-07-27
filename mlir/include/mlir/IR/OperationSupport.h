@@ -36,6 +36,7 @@ class Dialect;
 class DictionaryAttr;
 class ElementsAttr;
 class MutableOperandRangeRange;
+class NamedAttrList;
 class Operation;
 struct OperationState;
 class OpAsmParser;
@@ -69,6 +70,10 @@ public:
   using HasTraitFn = llvm::unique_function<bool(TypeID) const>;
   using ParseAssemblyFn =
       llvm::unique_function<ParseResult(OpAsmParser &, OperationState &) const>;
+  // Note: RegisteredOperationName is passed as reference here as the derived
+  // class is defined below.
+  using PopulateDefaultAttrsFn = llvm::unique_function<void(
+      const RegisteredOperationName &, NamedAttrList &) const>;
   using PrintAssemblyFn =
       llvm::unique_function<void(Operation *, OpAsmPrinter &, StringRef) const>;
   using VerifyInvariantsFn =
@@ -112,6 +117,7 @@ protected:
     GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
     HasTraitFn hasTraitFn;
     ParseAssemblyFn parseAssemblyFn;
+    PopulateDefaultAttrsFn populateDefaultAttrsFn;
     PrintAssemblyFn printAssemblyFn;
     VerifyInvariantsFn verifyInvariantsFn;
     VerifyRegionInvariantsFn verifyRegionInvariantsFn;
@@ -135,7 +141,8 @@ public:
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>(). Returns false if the operation
   /// is unregistered.
-  template <template <typename T> class Trait> bool hasTrait() const {
+  template <template <typename T> class Trait>
+  bool hasTrait() const {
     return hasTrait(TypeID::get<Trait>());
   }
   bool hasTrait(TypeID traitID) const {
@@ -145,7 +152,8 @@ public:
   /// Returns true if the operation *might* have the provided trait. This
   /// means that either the operation is unregistered, or it was registered with
   /// the provide trait.
-  template <template <typename T> class Trait> bool mightHaveTrait() const {
+  template <template <typename T> class Trait>
+  bool mightHaveTrait() const {
     return mightHaveTrait(TypeID::get<Trait>());
   }
   bool mightHaveTrait(TypeID traitID) const {
@@ -155,12 +163,14 @@ public:
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this operation, null otherwise. This should not be used
   /// directly.
-  template <typename T> typename T::Concept *getInterface() const {
+  template <typename T>
+  typename T::Concept *getInterface() const {
     return impl->interfaceMap.lookup<T>();
   }
 
   /// Returns true if this operation has the given interface registered to it.
-  template <typename T> bool hasInterface() const {
+  template <typename T>
+  bool hasInterface() const {
     return hasInterface(TypeID::get<T>());
   }
   bool hasInterface(TypeID interfaceID) const {
@@ -254,7 +264,8 @@ public:
            T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
            T::getVerifyInvariantsFn(), T::getVerifyRegionInvariantsFn(),
            T::getFoldHookFn(), T::getGetCanonicalizationPatternsFn(),
-           T::getInterfaceMap(), T::getHasTraitFn(), T::getAttributeNames());
+           T::getInterfaceMap(), T::getHasTraitFn(), T::getAttributeNames(),
+           T::getPopulateDefaultAttrsFn());
   }
   /// The use of this method is in general discouraged in favor of
   /// 'insert<CustomOp>(dialect)'.
@@ -266,7 +277,8 @@ public:
          FoldHookFn &&foldHook,
          GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
          detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
-         ArrayRef<StringRef> attrNames);
+         ArrayRef<StringRef> attrNames,
+         PopulateDefaultAttrsFn &&populateDefaultAttrs);
 
   /// Return the dialect this operation is registered to.
   Dialect &getDialect() const { return *impl->dialect; }
@@ -337,7 +349,8 @@ public:
   }
 
   /// Returns true if the operation has a particular trait.
-  template <template <typename T> class Trait> bool hasTrait() const {
+  template <template <typename T> class Trait>
+  bool hasTrait() const {
     return hasTrait(TypeID::get<Trait>());
   }
 
@@ -363,6 +376,10 @@ public:
   ArrayRef<StringAttr> getAttributeNames() const {
     return impl->attributeNames;
   }
+
+  /// This hook implements the method to populate defaults attributes that are
+  /// unset.
+  void populateDefaultAttrs(NamedAttrList &attrs) const;
 
   /// Represent the operation name as an opaque pointer. (Used to support
   /// PointerLikeTypeTraits).
@@ -473,9 +490,14 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
+  NamedAttrList(llvm::NoneType none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
   NamedAttrList(const_iterator inStart, const_iterator inEnd);
+
+  template <typename Container>
+  NamedAttrList(const Container &vec)
+      : NamedAttrList(ArrayRef<NamedAttribute>(vec)) {}
 
   bool operator!=(const NamedAttrList &other) const {
     return !(*this == other);
@@ -810,366 +832,6 @@ private:
 
   /// Print users of values.
   bool printValueUsersFlag : 1;
-};
-
-//===----------------------------------------------------------------------===//
-// Operation Value-Iterators
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// OperandRange
-
-/// This class implements the operand iterators for the Operation class.
-class OperandRange final : public llvm::detail::indexed_accessor_range_base<
-                               OperandRange, OpOperand *, Value, Value, Value> {
-public:
-  using RangeBaseT::RangeBaseT;
-
-  /// Returns the types of the values within this range.
-  using type_iterator = ValueTypeIterator<iterator>;
-  using type_range = ValueTypeRange<OperandRange>;
-  type_range getTypes() const { return {begin(), end()}; }
-  auto getType() const { return getTypes(); }
-
-  /// Return the operand index of the first element of this range. The range
-  /// must not be empty.
-  unsigned getBeginOperandIndex() const;
-
-  /// Split this range into a set of contiguous subranges using the given
-  /// elements attribute, which contains the sizes of the sub ranges.
-  OperandRangeRange split(ElementsAttr segmentSizes) const;
-
-private:
-  /// See `llvm::detail::indexed_accessor_range_base` for details.
-  static OpOperand *offset_base(OpOperand *object, ptrdiff_t index) {
-    return object + index;
-  }
-  /// See `llvm::detail::indexed_accessor_range_base` for details.
-  static Value dereference_iterator(OpOperand *object, ptrdiff_t index) {
-    return object[index].get();
-  }
-
-  /// Allow access to `offset_base` and `dereference_iterator`.
-  friend RangeBaseT;
-};
-
-//===----------------------------------------------------------------------===//
-// OperandRangeRange
-
-/// This class represents a contiguous range of operand ranges, e.g. from a
-/// VariadicOfVariadic operand group.
-class OperandRangeRange final
-    : public llvm::indexed_accessor_range<
-          OperandRangeRange, std::pair<OpOperand *, Attribute>, OperandRange,
-          OperandRange, OperandRange> {
-  using OwnerT = std::pair<OpOperand *, Attribute>;
-  using RangeBaseT =
-      llvm::indexed_accessor_range<OperandRangeRange, OwnerT, OperandRange,
-                                   OperandRange, OperandRange>;
-
-public:
-  using RangeBaseT::RangeBaseT;
-
-  /// Returns the range of types of the values within this range.
-  TypeRangeRange getTypes() const { return TypeRangeRange(*this); }
-  auto getType() const { return getTypes(); }
-
-  /// Construct a range given a parent set of operands, and an I32 elements
-  /// attribute containing the sizes of the sub ranges.
-  OperandRangeRange(OperandRange operands, Attribute operandSegments);
-
-  /// Flatten all of the sub ranges into a single contiguous operand range.
-  OperandRange join() const;
-
-private:
-  /// See `llvm::indexed_accessor_range` for details.
-  static OperandRange dereference(const OwnerT &object, ptrdiff_t index);
-
-  /// Allow access to `dereference_iterator`.
-  friend RangeBaseT;
-};
-
-//===----------------------------------------------------------------------===//
-// MutableOperandRange
-
-/// This class provides a mutable adaptor for a range of operands. It allows for
-/// setting, inserting, and erasing operands from the given range.
-class MutableOperandRange {
-public:
-  /// A pair of a named attribute corresponding to an operand segment attribute,
-  /// and the index within that attribute. The attribute should correspond to an
-  /// i32 DenseElementsAttr.
-  using OperandSegment = std::pair<unsigned, NamedAttribute>;
-
-  /// Construct a new mutable range from the given operand, operand start index,
-  /// and range length. `operandSegments` is an optional set of operand segments
-  /// to be updated when mutating the operand list.
-  MutableOperandRange(Operation *owner, unsigned start, unsigned length,
-                      ArrayRef<OperandSegment> operandSegments = llvm::None);
-  MutableOperandRange(Operation *owner);
-
-  /// Slice this range into a sub range, with the additional operand segment.
-  MutableOperandRange
-  slice(unsigned subStart, unsigned subLen,
-        Optional<OperandSegment> segment = llvm::None) const;
-
-  /// Append the given values to the range.
-  void append(ValueRange values);
-
-  /// Assign this range to the given values.
-  void assign(ValueRange values);
-
-  /// Assign the range to the given value.
-  void assign(Value value);
-
-  /// Erase the operands within the given sub-range.
-  void erase(unsigned subStart, unsigned subLen = 1);
-
-  /// Clear this range and erase all of the operands.
-  void clear();
-
-  /// Returns the current size of the range.
-  unsigned size() const { return length; }
-
-  /// Returns if the current range is empty.
-  bool empty() const { return size() == 0; }
-
-  /// Allow implicit conversion to an OperandRange.
-  operator OperandRange() const;
-
-  /// Returns the owning operation.
-  Operation *getOwner() const { return owner; }
-
-  /// Split this range into a set of contiguous subranges using the given
-  /// elements attribute, which contains the sizes of the sub ranges.
-  MutableOperandRangeRange split(NamedAttribute segmentSizes) const;
-
-  /// Returns the value at the given index.
-  Value operator[](unsigned index) const {
-    return operator OperandRange()[index];
-  }
-
-private:
-  /// Update the length of this range to the one provided.
-  void updateLength(unsigned newLength);
-
-  /// The owning operation of this range.
-  Operation *owner;
-
-  /// The start index of the operand range within the owner operand list, and
-  /// the length starting from `start`.
-  unsigned start, length;
-
-  /// Optional set of operand segments that should be updated when mutating the
-  /// length of this range.
-  SmallVector<OperandSegment, 1> operandSegments;
-};
-
-//===----------------------------------------------------------------------===//
-// MutableOperandRangeRange
-
-/// This class represents a contiguous range of mutable operand ranges, e.g.
-/// from a VariadicOfVariadic operand group.
-class MutableOperandRangeRange final
-    : public llvm::indexed_accessor_range<
-          MutableOperandRangeRange,
-          std::pair<MutableOperandRange, NamedAttribute>, MutableOperandRange,
-          MutableOperandRange, MutableOperandRange> {
-  using OwnerT = std::pair<MutableOperandRange, NamedAttribute>;
-  using RangeBaseT =
-      llvm::indexed_accessor_range<MutableOperandRangeRange, OwnerT,
-                                   MutableOperandRange, MutableOperandRange,
-                                   MutableOperandRange>;
-
-public:
-  using RangeBaseT::RangeBaseT;
-
-  /// Construct a range given a parent set of operands, and an I32 tensor
-  /// elements attribute containing the sizes of the sub ranges.
-  MutableOperandRangeRange(const MutableOperandRange &operands,
-                           NamedAttribute operandSegmentAttr);
-
-  /// Flatten all of the sub ranges into a single contiguous mutable operand
-  /// range.
-  MutableOperandRange join() const;
-
-  /// Allow implicit conversion to an OperandRangeRange.
-  operator OperandRangeRange() const;
-
-private:
-  /// See `llvm::indexed_accessor_range` for details.
-  static MutableOperandRange dereference(const OwnerT &object, ptrdiff_t index);
-
-  /// Allow access to `dereference_iterator`.
-  friend RangeBaseT;
-};
-
-//===----------------------------------------------------------------------===//
-// ResultRange
-
-/// This class implements the result iterators for the Operation class.
-class ResultRange final
-    : public llvm::detail::indexed_accessor_range_base<
-          ResultRange, detail::OpResultImpl *, OpResult, OpResult, OpResult> {
-public:
-  using RangeBaseT::RangeBaseT;
-  ResultRange(OpResult result);
-
-  //===--------------------------------------------------------------------===//
-  // Types
-  //===--------------------------------------------------------------------===//
-
-  /// Returns the types of the values within this range.
-  using type_iterator = ValueTypeIterator<iterator>;
-  using type_range = ValueTypeRange<ResultRange>;
-  type_range getTypes() const { return {begin(), end()}; }
-  auto getType() const { return getTypes(); }
-
-  //===--------------------------------------------------------------------===//
-  // Uses
-  //===--------------------------------------------------------------------===//
-
-  class UseIterator;
-  using use_iterator = UseIterator;
-  using use_range = iterator_range<use_iterator>;
-
-  /// Returns a range of all uses of results within this range, which is useful
-  /// for iterating over all uses.
-  use_range getUses() const;
-  use_iterator use_begin() const;
-  use_iterator use_end() const;
-
-  /// Returns true if no results in this range have uses.
-  bool use_empty() const {
-    return llvm::all_of(*this,
-                        [](OpResult result) { return result.use_empty(); });
-  }
-
-  /// Replace all uses of results of this range with the provided 'values'. The
-  /// size of `values` must match the size of this range.
-  template <typename ValuesT>
-  std::enable_if_t<!std::is_convertible<ValuesT, Operation *>::value>
-  replaceAllUsesWith(ValuesT &&values) {
-    assert(static_cast<size_t>(std::distance(values.begin(), values.end())) ==
-               size() &&
-           "expected 'values' to correspond 1-1 with the number of results");
-
-    for (auto it : llvm::zip(*this, values))
-      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
-  }
-
-  /// Replace all uses of results of this range with results of 'op'.
-  void replaceAllUsesWith(Operation *op);
-
-  //===--------------------------------------------------------------------===//
-  // Users
-  //===--------------------------------------------------------------------===//
-
-  using user_iterator = ValueUserIterator<use_iterator, OpOperand>;
-  using user_range = iterator_range<user_iterator>;
-
-  /// Returns a range of all users.
-  user_range getUsers();
-  user_iterator user_begin();
-  user_iterator user_end();
-
-private:
-  /// See `llvm::detail::indexed_accessor_range_base` for details.
-  static detail::OpResultImpl *offset_base(detail::OpResultImpl *object,
-                                           ptrdiff_t index) {
-    return object->getNextResultAtOffset(index);
-  }
-  /// See `llvm::detail::indexed_accessor_range_base` for details.
-  static OpResult dereference_iterator(detail::OpResultImpl *object,
-                                       ptrdiff_t index) {
-    return offset_base(object, index);
-  }
-
-  /// Allow access to `offset_base` and `dereference_iterator`.
-  friend RangeBaseT;
-};
-
-/// This class implements a use iterator for a range of operation results.
-/// This iterates over all uses of all results within the given result range.
-class ResultRange::UseIterator final
-    : public llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
-                                        OpOperand> {
-public:
-  /// Initialize the UseIterator. Specify `end` to return iterator to last
-  /// use, otherwise this is an iterator to the first use.
-  explicit UseIterator(ResultRange results, bool end = false);
-
-  using llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
-                                   OpOperand>::operator++;
-  UseIterator &operator++();
-  OpOperand *operator->() const { return use.getOperand(); }
-  OpOperand &operator*() const { return *use.getOperand(); }
-
-  bool operator==(const UseIterator &rhs) const { return use == rhs.use; }
-  bool operator!=(const UseIterator &rhs) const { return !(*this == rhs); }
-
-private:
-  void skipOverResultsWithNoUsers();
-
-  /// The range of results being iterated over.
-  ResultRange::iterator it, endIt;
-  /// The use of the result.
-  Value::use_iterator use;
-};
-
-//===----------------------------------------------------------------------===//
-// ValueRange
-
-/// This class provides an abstraction over the different types of ranges over
-/// Values. In many cases, this prevents the need to explicitly materialize a
-/// SmallVector/std::vector. This class should be used in places that are not
-/// suitable for a more derived type (e.g. ArrayRef) or a template range
-/// parameter.
-class ValueRange final
-    : public llvm::detail::indexed_accessor_range_base<
-          ValueRange,
-          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
-          Value, Value, Value> {
-public:
-  /// The type representing the owner of a ValueRange. This is either a list of
-  /// values, operands, or results.
-  using OwnerT =
-      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
-
-  using RangeBaseT::RangeBaseT;
-
-  template <typename Arg,
-            typename = typename std::enable_if_t<
-                std::is_constructible<ArrayRef<Value>, Arg>::value &&
-                !std::is_convertible<Arg, Value>::value>>
-  ValueRange(Arg &&arg) : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
-  ValueRange(const Value &value) : ValueRange(&value, /*count=*/1) {}
-  ValueRange(const std::initializer_list<Value> &values)
-      : ValueRange(ArrayRef<Value>(values)) {}
-  ValueRange(iterator_range<OperandRange::iterator> values)
-      : ValueRange(OperandRange(values)) {}
-  ValueRange(iterator_range<ResultRange::iterator> values)
-      : ValueRange(ResultRange(values)) {}
-  ValueRange(ArrayRef<BlockArgument> values)
-      : ValueRange(ArrayRef<Value>(values.data(), values.size())) {}
-  ValueRange(ArrayRef<Value> values = llvm::None);
-  ValueRange(OperandRange values);
-  ValueRange(ResultRange values);
-
-  /// Returns the types of the values within this range.
-  using type_iterator = ValueTypeIterator<iterator>;
-  using type_range = ValueTypeRange<ValueRange>;
-  type_range getTypes() const { return {begin(), end()}; }
-  auto getType() const { return getTypes(); }
-
-private:
-  /// See `llvm::detail::indexed_accessor_range_base` for details.
-  static OwnerT offset_base(const OwnerT &owner, ptrdiff_t index);
-  /// See `llvm::detail::indexed_accessor_range_base` for details.
-  static Value dereference_iterator(const OwnerT &owner, ptrdiff_t index);
-
-  /// Allow access to `offset_base` and `dereference_iterator`.
-  friend RangeBaseT;
 };
 
 //===----------------------------------------------------------------------===//

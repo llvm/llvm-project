@@ -125,7 +125,7 @@ struct CacheSignature {
   /// that can uniquely identify the file. Some build systems play with
   /// modification times of file so we can not trust them without using valid
   /// unique idenifier like the UUID being valid.
-  bool IsValid() const { return m_uuid.hasValue(); }
+  bool IsValid() const { return m_uuid.has_value(); }
 
   /// Check if two signatures are the same.
   bool operator==(const CacheSignature &rhs) const {

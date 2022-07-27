@@ -1252,7 +1252,7 @@ define <32 x i8> @splatvar_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %
 ; Harder PR37426 - https://bugs.llvm.org/show_bug.cgi?id=37426
 ; CGP should sink splatted select operands through the funnel shift.
 
-define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
+define void @fancierRotate2(ptr %arr, ptr %control, i32 %rot0, i32 %rot1) {
 ; AVX1-LABEL: fancierRotate2:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovd %edx, %xmm1
@@ -1521,16 +1521,14 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
-  %t0 = getelementptr inbounds i8, i8* %control, i64 %index
-  %t1 = bitcast i8* %t0 to <8 x i8>*
-  %wide.load = load <8 x i8>, <8 x i8>* %t1, align 1
+  %t0 = getelementptr inbounds i8, ptr %control, i64 %index
+  %wide.load = load <8 x i8>, ptr %t0, align 1
   %t2 = icmp eq <8 x i8> %wide.load, zeroinitializer
   %shamt = select <8 x i1> %t2, <8 x i32> %s0, <8 x i32> %s1
-  %t4 = getelementptr inbounds i32, i32* %arr, i64 %index
-  %t5 = bitcast i32* %t4 to <8 x i32>*
-  %wide.load21 = load <8 x i32>, <8 x i32>* %t5, align 4
+  %t4 = getelementptr inbounds i32, ptr %arr, i64 %index
+  %wide.load21 = load <8 x i32>, ptr %t4, align 4
   %rot = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> %wide.load21, <8 x i32> %wide.load21, <8 x i32> %shamt)
-  store <8 x i32> %rot, <8 x i32>* %t5, align 4
+  store <8 x i32> %rot, ptr %t4, align 4
   %index.next = add i64 %index, 8
   %t7 = icmp eq i64 %index.next, 1024
   br i1 %t7, label %exit, label %loop

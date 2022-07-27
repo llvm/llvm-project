@@ -103,29 +103,6 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 // Useful predicates
 //===----------------------------------------------------------------------===//
 
-/// Returns true if the pointer is one which would have been considered an
-/// escape by isNonEscapingLocalObject.
-static bool isEscapeSource(const Value *V) {
-  if (isa<CallBase>(V))
-    return true;
-
-  // The load case works because isNonEscapingLocalObject considers all
-  // stores to be escapes (it passes true for the StoreCaptures argument
-  // to PointerMayBeCaptured).
-  if (isa<LoadInst>(V))
-    return true;
-
-  // The inttoptr case works because isNonEscapingLocalObject considers all
-  // means of converting or equating a pointer to an int (ptrtoint, ptr store
-  // which could be followed by an integer load, ptr<->int compare) as
-  // escaping, and objects located at well-known addresses via platform-specific
-  // means cannot be considered non-escaping local objects.
-  if (isa<IntToPtrInst>(V))
-    return true;
-
-  return false;
-}
-
 /// Returns the size of the object specified by V or UnknownSize if unknown.
 static uint64_t getObjectSize(const Value *V, const DataLayout &DL,
                               const TargetLibraryInfo &TLI,
@@ -1787,7 +1764,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   // Make sure that the visited phis cannot reach the Value. This ensures that
   // the Values cannot come from different iterations of a potential cycle the
   // phi nodes could be involved in.
-  for (auto *P : VisitedPhiBBs)
+  for (const auto *P : VisitedPhiBBs)
     if (isPotentiallyReachable(&P->front(), Inst, nullptr, DT))
       return false;
 

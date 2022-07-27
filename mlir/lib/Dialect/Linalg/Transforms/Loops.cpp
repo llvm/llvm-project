@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -77,7 +77,7 @@ template <typename SingleInputPoolingOp>
 static InputAndOutputIndices
 getInputAndOutputIndices(OpBuilder &b, Location loc, ArrayRef<Value> allIvs,
                          SingleInputPoolingOp op) {
-  auto mapsRange = op.indexing_maps().template getAsRange<AffineMapAttr>();
+  auto mapsRange = op.getIndexingMapsArray();
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   return InputAndOutputIndices{

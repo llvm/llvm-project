@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NoopAnalysis.h"
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
@@ -37,33 +37,37 @@ using ::testing::NotNull;
 using ::testing::Pair;
 using ::testing::SizeIs;
 
-class TransferTest : public ::testing::Test {
-protected:
-  template <typename Matcher>
-  void runDataflow(llvm::StringRef Code, Matcher Match,
-                   LangStandard::Kind Std = LangStandard::lang_cxx17,
-                   bool ApplyBuiltinTransfer = true,
-                   llvm::StringRef TargetFun = "target") {
-    ASSERT_THAT_ERROR(
-        test::checkDataflow<NoopAnalysis>(
-            Code, TargetFun,
-            [ApplyBuiltinTransfer](ASTContext &C, Environment &) {
-              return NoopAnalysis(C, ApplyBuiltinTransfer);
-            },
-            [&Match](
-                llvm::ArrayRef<
-                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                    Results,
-                ASTContext &ASTCtx) { Match(Results, ASTCtx); },
-            {"-fsyntax-only", "-fno-delayed-template-parsing",
-             "-std=" +
-                 std::string(
-                     LangStandard::getLangStandardForKind(Std).getName())}),
-        llvm::Succeeded());
-  }
-};
+template <typename Matcher>
+void runDataflow(llvm::StringRef Code, Matcher Match,
+                 DataflowAnalysisOptions Options,
+                 LangStandard::Kind Std = LangStandard::lang_cxx17,
+                 llvm::StringRef TargetFun = "target") {
+  ASSERT_THAT_ERROR(
+      test::checkDataflow<NoopAnalysis>(
+          Code, TargetFun,
+          [Options](ASTContext &C, Environment &) {
+            return NoopAnalysis(C, Options);
+          },
+          [&Match](
+              llvm::ArrayRef<
+                  std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                  Results,
+              ASTContext &ASTCtx) { Match(Results, ASTCtx); },
+          {"-fsyntax-only", "-fno-delayed-template-parsing",
+           "-std=" + std::string(
+                         LangStandard::getLangStandardForKind(Std).getName())}),
+      llvm::Succeeded());
+}
 
-TEST_F(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
+template <typename Matcher>
+void runDataflow(llvm::StringRef Code, Matcher Match,
+                 LangStandard::Kind Std = LangStandard::lang_cxx17,
+                 bool ApplyBuiltinTransfer = true,
+                 llvm::StringRef TargetFun = "target") {
+  runDataflow(Code, Match, {ApplyBuiltinTransfer, {}}, Std, TargetFun);
+}
+
+TEST(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -88,7 +92,7 @@ TEST_F(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
       /*ApplyBuiltinTransfer=*/false);
 }
 
-TEST_F(TransferTest, BoolVarDecl) {
+TEST(TransferTest, BoolVarDecl) {
   std::string Code = R"(
     void target() {
       bool Foo;
@@ -115,7 +119,7 @@ TEST_F(TransferTest, BoolVarDecl) {
               });
 }
 
-TEST_F(TransferTest, IntVarDecl) {
+TEST(TransferTest, IntVarDecl) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -142,7 +146,7 @@ TEST_F(TransferTest, IntVarDecl) {
               });
 }
 
-TEST_F(TransferTest, StructVarDecl) {
+TEST(TransferTest, StructVarDecl) {
   std::string Code = R"(
     struct A {
       int Bar;
@@ -188,7 +192,7 @@ TEST_F(TransferTest, StructVarDecl) {
       });
 }
 
-TEST_F(TransferTest, StructVarDeclWithInit) {
+TEST(TransferTest, StructVarDeclWithInit) {
   std::string Code = R"(
     struct A {
       int Bar;
@@ -236,7 +240,7 @@ TEST_F(TransferTest, StructVarDeclWithInit) {
       });
 }
 
-TEST_F(TransferTest, ClassVarDecl) {
+TEST(TransferTest, ClassVarDecl) {
   std::string Code = R"(
     class A {
       int Bar;
@@ -282,7 +286,7 @@ TEST_F(TransferTest, ClassVarDecl) {
       });
 }
 
-TEST_F(TransferTest, ReferenceVarDecl) {
+TEST(TransferTest, ReferenceVarDecl) {
   std::string Code = R"(
     struct A {};
 
@@ -318,7 +322,7 @@ TEST_F(TransferTest, ReferenceVarDecl) {
       });
 }
 
-TEST_F(TransferTest, SelfReferentialReferenceVarDecl) {
+TEST(TransferTest, SelfReferentialReferenceVarDecl) {
   std::string Code = R"(
     struct A;
 
@@ -427,7 +431,7 @@ TEST_F(TransferTest, SelfReferentialReferenceVarDecl) {
   });
 }
 
-TEST_F(TransferTest, PointerVarDecl) {
+TEST(TransferTest, PointerVarDecl) {
   std::string Code = R"(
     struct A {};
 
@@ -462,7 +466,7 @@ TEST_F(TransferTest, PointerVarDecl) {
       });
 }
 
-TEST_F(TransferTest, SelfReferentialPointerVarDecl) {
+TEST(TransferTest, SelfReferentialPointerVarDecl) {
   std::string Code = R"(
     struct A;
 
@@ -584,7 +588,7 @@ TEST_F(TransferTest, SelfReferentialPointerVarDecl) {
       });
 }
 
-TEST_F(TransferTest, MultipleVarsDecl) {
+TEST(TransferTest, MultipleVarsDecl) {
   std::string Code = R"(
     void target() {
       int Foo, Bar;
@@ -622,7 +626,7 @@ TEST_F(TransferTest, MultipleVarsDecl) {
               });
 }
 
-TEST_F(TransferTest, JoinVarDecl) {
+TEST(TransferTest, JoinVarDecl) {
   std::string Code = R"(
     void target(bool B) {
       int Foo;
@@ -677,7 +681,7 @@ TEST_F(TransferTest, JoinVarDecl) {
   });
 }
 
-TEST_F(TransferTest, BinaryOperatorAssign) {
+TEST(TransferTest, BinaryOperatorAssign) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -707,7 +711,7 @@ TEST_F(TransferTest, BinaryOperatorAssign) {
               });
 }
 
-TEST_F(TransferTest, VarDeclInitAssign) {
+TEST(TransferTest, VarDeclInitAssign) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -736,7 +740,7 @@ TEST_F(TransferTest, VarDeclInitAssign) {
               });
 }
 
-TEST_F(TransferTest, VarDeclInitAssignChained) {
+TEST(TransferTest, VarDeclInitAssignChained) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -770,7 +774,7 @@ TEST_F(TransferTest, VarDeclInitAssignChained) {
               });
 }
 
-TEST_F(TransferTest, VarDeclInitAssignPtrDeref) {
+TEST(TransferTest, VarDeclInitAssignPtrDeref) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -808,7 +812,7 @@ TEST_F(TransferTest, VarDeclInitAssignPtrDeref) {
               });
 }
 
-TEST_F(TransferTest, AssignToAndFromReference) {
+TEST(TransferTest, AssignToAndFromReference) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -860,7 +864,7 @@ TEST_F(TransferTest, AssignToAndFromReference) {
       });
 }
 
-TEST_F(TransferTest, MultipleParamDecls) {
+TEST(TransferTest, MultipleParamDecls) {
   std::string Code = R"(
     void target(int Foo, int Bar) {
       (void)0;
@@ -897,7 +901,7 @@ TEST_F(TransferTest, MultipleParamDecls) {
               });
 }
 
-TEST_F(TransferTest, StructParamDecl) {
+TEST(TransferTest, StructParamDecl) {
   std::string Code = R"(
     struct A {
       int Bar;
@@ -943,7 +947,7 @@ TEST_F(TransferTest, StructParamDecl) {
       });
 }
 
-TEST_F(TransferTest, ReferenceParamDecl) {
+TEST(TransferTest, ReferenceParamDecl) {
   std::string Code = R"(
     struct A {};
 
@@ -979,7 +983,7 @@ TEST_F(TransferTest, ReferenceParamDecl) {
       });
 }
 
-TEST_F(TransferTest, PointerParamDecl) {
+TEST(TransferTest, PointerParamDecl) {
   std::string Code = R"(
     struct A {};
 
@@ -1012,7 +1016,7 @@ TEST_F(TransferTest, PointerParamDecl) {
       });
 }
 
-TEST_F(TransferTest, StructMember) {
+TEST(TransferTest, StructMember) {
   std::string Code = R"(
     struct A {
       int Bar;
@@ -1059,7 +1063,7 @@ TEST_F(TransferTest, StructMember) {
       });
 }
 
-TEST_F(TransferTest, DerivedBaseMemberClass) {
+TEST(TransferTest, DerivedBaseMemberClass) {
   std::string Code = R"(
     class A {
       int ADefault;
@@ -1211,7 +1215,7 @@ static void derivedBaseMemberExpectations(
   EXPECT_EQ(Env.getValue(FooLoc.getChild(*BarDecl)), FooVal.getChild(*BarDecl));
 }
 
-TEST_F(TransferTest, DerivedBaseMemberStructDefault) {
+TEST(TransferTest, DerivedBaseMemberStructDefault) {
   std::string Code = R"(
     struct A {
       int Bar;
@@ -1227,7 +1231,7 @@ TEST_F(TransferTest, DerivedBaseMemberStructDefault) {
   runDataflow(Code, derivedBaseMemberExpectations);
 }
 
-TEST_F(TransferTest, DerivedBaseMemberPrivateFriend) {
+TEST(TransferTest, DerivedBaseMemberPrivateFriend) {
   // Include an access to `Foo.Bar` to verify the analysis doesn't crash on that
   // access.
   std::string Code = R"(
@@ -1248,7 +1252,7 @@ TEST_F(TransferTest, DerivedBaseMemberPrivateFriend) {
   runDataflow(Code, derivedBaseMemberExpectations);
 }
 
-TEST_F(TransferTest, ClassMember) {
+TEST(TransferTest, ClassMember) {
   std::string Code = R"(
     class A {
     public:
@@ -1296,7 +1300,7 @@ TEST_F(TransferTest, ClassMember) {
       });
 }
 
-TEST_F(TransferTest, BaseClassInitializer) {
+TEST(TransferTest, BaseClassInitializer) {
   using ast_matchers::cxxConstructorDecl;
   using ast_matchers::hasName;
   using ast_matchers::ofClass;
@@ -1339,7 +1343,7 @@ TEST_F(TransferTest, BaseClassInitializer) {
       llvm::Succeeded());
 }
 
-TEST_F(TransferTest, ReferenceMember) {
+TEST(TransferTest, ReferenceMember) {
   std::string Code = R"(
     struct A {
       int &Bar;
@@ -1388,7 +1392,7 @@ TEST_F(TransferTest, ReferenceMember) {
       });
 }
 
-TEST_F(TransferTest, StructThisMember) {
+TEST(TransferTest, StructThisMember) {
   std::string Code = R"(
     struct A {
       int Bar;
@@ -1464,7 +1468,7 @@ TEST_F(TransferTest, StructThisMember) {
       });
 }
 
-TEST_F(TransferTest, ClassThisMember) {
+TEST(TransferTest, ClassThisMember) {
   std::string Code = R"(
     class A {
       int Bar;
@@ -1540,7 +1544,7 @@ TEST_F(TransferTest, ClassThisMember) {
       });
 }
 
-TEST_F(TransferTest, StructThisInLambda) {
+TEST(TransferTest, StructThisInLambda) {
   std::string ThisCaptureCode = R"(
     struct A {
       void frob() {
@@ -1646,7 +1650,7 @@ TEST_F(TransferTest, StructThisInLambda) {
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator()");
 }
 
-TEST_F(TransferTest, ConstructorInitializer) {
+TEST(TransferTest, ConstructorInitializer) {
   std::string Code = R"(
     struct target {
       int Bar;
@@ -1681,7 +1685,7 @@ TEST_F(TransferTest, ConstructorInitializer) {
               });
 }
 
-TEST_F(TransferTest, DefaultInitializer) {
+TEST(TransferTest, DefaultInitializer) {
   std::string Code = R"(
     struct target {
       int Bar;
@@ -1717,7 +1721,7 @@ TEST_F(TransferTest, DefaultInitializer) {
               });
 }
 
-TEST_F(TransferTest, DefaultInitializerReference) {
+TEST(TransferTest, DefaultInitializerReference) {
   std::string Code = R"(
     struct target {
       int &Bar;
@@ -1756,7 +1760,7 @@ TEST_F(TransferTest, DefaultInitializerReference) {
       });
 }
 
-TEST_F(TransferTest, TemporaryObject) {
+TEST(TransferTest, TemporaryObject) {
   std::string Code = R"(
     struct A {
       int Bar;
@@ -1792,7 +1796,7 @@ TEST_F(TransferTest, TemporaryObject) {
       });
 }
 
-TEST_F(TransferTest, ElidableConstructor) {
+TEST(TransferTest, ElidableConstructor) {
   // This test is effectively the same as TransferTest.TemporaryObject, but
   // the code is compiled as C++ 14.
   std::string Code = R"(
@@ -1832,7 +1836,7 @@ TEST_F(TransferTest, ElidableConstructor) {
       LangStandard::lang_cxx14);
 }
 
-TEST_F(TransferTest, AssignmentOperator) {
+TEST(TransferTest, AssignmentOperator) {
   std::string Code = R"(
     struct A {
       int Baz;
@@ -1896,7 +1900,7 @@ TEST_F(TransferTest, AssignmentOperator) {
       });
 }
 
-TEST_F(TransferTest, CopyConstructor) {
+TEST(TransferTest, CopyConstructor) {
   std::string Code = R"(
     struct A {
       int Baz;
@@ -1942,7 +1946,7 @@ TEST_F(TransferTest, CopyConstructor) {
       });
 }
 
-TEST_F(TransferTest, CopyConstructorWithParens) {
+TEST(TransferTest, CopyConstructorWithParens) {
   std::string Code = R"(
     struct A {
       int Baz;
@@ -1988,7 +1992,7 @@ TEST_F(TransferTest, CopyConstructorWithParens) {
       });
 }
 
-TEST_F(TransferTest, MoveConstructor) {
+TEST(TransferTest, MoveConstructor) {
   std::string Code = R"(
     namespace std {
 
@@ -2060,7 +2064,7 @@ TEST_F(TransferTest, MoveConstructor) {
       });
 }
 
-TEST_F(TransferTest, BindTemporary) {
+TEST(TransferTest, BindTemporary) {
   std::string Code = R"(
     struct A {
       virtual ~A() = default;
@@ -2098,7 +2102,7 @@ TEST_F(TransferTest, BindTemporary) {
               });
 }
 
-TEST_F(TransferTest, StaticCast) {
+TEST(TransferTest, StaticCast) {
   std::string Code = R"(
     void target(int Foo) {
       int Bar = static_cast<int>(Foo);
@@ -2127,7 +2131,7 @@ TEST_F(TransferTest, StaticCast) {
               });
 }
 
-TEST_F(TransferTest, IntegralCast) {
+TEST(TransferTest, IntegralCast) {
   std::string Code = R"(
     void target(int Foo) {
       long Bar = Foo;
@@ -2156,7 +2160,7 @@ TEST_F(TransferTest, IntegralCast) {
               });
 }
 
-TEST_F(TransferTest, IntegraltoBooleanCast) {
+TEST(TransferTest, IntegraltoBooleanCast) {
   std::string Code = R"(
     void target(int Foo) {
       bool Bar = Foo;
@@ -2184,7 +2188,7 @@ TEST_F(TransferTest, IntegraltoBooleanCast) {
               });
 }
 
-TEST_F(TransferTest, IntegralToBooleanCastFromBool) {
+TEST(TransferTest, IntegralToBooleanCastFromBool) {
   std::string Code = R"(
     void target(bool Foo) {
       int Zab = Foo;
@@ -2214,7 +2218,106 @@ TEST_F(TransferTest, IntegralToBooleanCastFromBool) {
               });
 }
 
-TEST_F(TransferTest, AddrOfValue) {
+TEST(TransferTest, NullToPointerCast) {
+  std::string Code = R"(
+    using my_nullptr_t = decltype(nullptr);
+    struct Baz {};
+    void target() {
+      int *FooX = nullptr;
+      int *FooY = nullptr;
+      bool **Bar = nullptr;
+      Baz *Baz = nullptr;
+      my_nullptr_t Null = 0;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooXDecl = findValueDecl(ASTCtx, "FooX");
+                ASSERT_THAT(FooXDecl, NotNull());
+
+                const ValueDecl *FooYDecl = findValueDecl(ASTCtx, "FooY");
+                ASSERT_THAT(FooYDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+                ASSERT_THAT(BazDecl, NotNull());
+
+                const ValueDecl *NullDecl = findValueDecl(ASTCtx, "Null");
+                ASSERT_THAT(NullDecl, NotNull());
+
+                const auto *FooXVal =
+                    cast<PointerValue>(Env.getValue(*FooXDecl, SkipPast::None));
+                const auto *FooYVal =
+                    cast<PointerValue>(Env.getValue(*FooYDecl, SkipPast::None));
+                const auto *BarVal =
+                    cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
+                const auto *BazVal =
+                    cast<PointerValue>(Env.getValue(*BazDecl, SkipPast::None));
+                const auto *NullVal =
+                    cast<PointerValue>(Env.getValue(*NullDecl, SkipPast::None));
+
+                EXPECT_EQ(FooXVal, FooYVal);
+                EXPECT_NE(FooXVal, BarVal);
+                EXPECT_NE(FooXVal, BazVal);
+                EXPECT_NE(BarVal, BazVal);
+
+                const StorageLocation &FooPointeeLoc = FooXVal->getPointeeLoc();
+                EXPECT_TRUE(isa<ScalarStorageLocation>(FooPointeeLoc));
+                EXPECT_THAT(Env.getValue(FooPointeeLoc), IsNull());
+
+                const StorageLocation &BarPointeeLoc = BarVal->getPointeeLoc();
+                EXPECT_TRUE(isa<ScalarStorageLocation>(BarPointeeLoc));
+                EXPECT_THAT(Env.getValue(BarPointeeLoc), IsNull());
+
+                const StorageLocation &BazPointeeLoc = BazVal->getPointeeLoc();
+                EXPECT_TRUE(isa<AggregateStorageLocation>(BazPointeeLoc));
+                EXPECT_THAT(Env.getValue(BazPointeeLoc), IsNull());
+
+                const StorageLocation &NullPointeeLoc =
+                    NullVal->getPointeeLoc();
+                EXPECT_TRUE(isa<ScalarStorageLocation>(NullPointeeLoc));
+                EXPECT_THAT(Env.getValue(NullPointeeLoc), IsNull());
+              });
+}
+
+TEST(TransferTest, NullToMemberPointerCast) {
+  std::string Code = R"(
+    struct Foo {};
+    void target(Foo *Foo) {
+      int Foo::*MemberPointer = nullptr;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *MemberPointerDecl =
+            findValueDecl(ASTCtx, "MemberPointer");
+        ASSERT_THAT(MemberPointerDecl, NotNull());
+
+        const auto *MemberPointerVal = cast<PointerValue>(
+            Env.getValue(*MemberPointerDecl, SkipPast::None));
+
+        const StorageLocation &MemberLoc = MemberPointerVal->getPointeeLoc();
+        EXPECT_THAT(Env.getValue(MemberLoc), IsNull());
+      });
+}
+
+TEST(TransferTest, AddrOfValue) {
   std::string Code = R"(
     void target() {
       int Foo;
@@ -2244,7 +2347,7 @@ TEST_F(TransferTest, AddrOfValue) {
               });
 }
 
-TEST_F(TransferTest, AddrOfReference) {
+TEST(TransferTest, AddrOfReference) {
   std::string Code = R"(
     void target(int *Foo) {
       int *Bar = &(*Foo);
@@ -2273,7 +2376,7 @@ TEST_F(TransferTest, AddrOfReference) {
               });
 }
 
-TEST_F(TransferTest, DerefDependentPtr) {
+TEST(TransferTest, DerefDependentPtr) {
   std::string Code = R"(
     template <typename T>
     void target(T *Foo) {
@@ -2303,7 +2406,7 @@ TEST_F(TransferTest, DerefDependentPtr) {
       });
 }
 
-TEST_F(TransferTest, VarDeclInitAssignConditionalOperator) {
+TEST(TransferTest, VarDeclInitAssignConditionalOperator) {
   std::string Code = R"(
     struct A {};
 
@@ -2343,7 +2446,7 @@ TEST_F(TransferTest, VarDeclInitAssignConditionalOperator) {
       });
 }
 
-TEST_F(TransferTest, VarDeclInDoWhile) {
+TEST(TransferTest, VarDeclInDoWhile) {
   std::string Code = R"(
     void target(int *Foo) {
       do {
@@ -2380,7 +2483,7 @@ TEST_F(TransferTest, VarDeclInDoWhile) {
               });
 }
 
-TEST_F(TransferTest, AggregateInitialization) {
+TEST(TransferTest, AggregateInitialization) {
   std::string BracesCode = R"(
     struct A {
       int Foo;
@@ -2467,7 +2570,7 @@ TEST_F(TransferTest, AggregateInitialization) {
   }
 }
 
-TEST_F(TransferTest, AssignToUnionMember) {
+TEST(TransferTest, AssignToUnionMember) {
   std::string Code = R"(
     union A {
       int Foo;
@@ -2500,7 +2603,7 @@ TEST_F(TransferTest, AssignToUnionMember) {
               });
 }
 
-TEST_F(TransferTest, AssignFromBoolLiteral) {
+TEST(TransferTest, AssignFromBoolLiteral) {
   std::string Code = R"(
     void target() {
       bool Foo = true;
@@ -2535,7 +2638,7 @@ TEST_F(TransferTest, AssignFromBoolLiteral) {
               });
 }
 
-TEST_F(TransferTest, AssignFromCompositeBoolExpression) {
+TEST(TransferTest, AssignFromCompositeBoolExpression) {
   {
     std::string Code = R"(
     void target(bool Foo, bool Bar, bool Qux) {
@@ -2701,7 +2804,7 @@ TEST_F(TransferTest, AssignFromCompositeBoolExpression) {
   }
 }
 
-TEST_F(TransferTest, AssignFromBoolNegation) {
+TEST(TransferTest, AssignFromBoolNegation) {
   std::string Code = R"(
     void target() {
       bool Foo = true;
@@ -2735,7 +2838,7 @@ TEST_F(TransferTest, AssignFromBoolNegation) {
               });
 }
 
-TEST_F(TransferTest, BuiltinExpect) {
+TEST(TransferTest, BuiltinExpect) {
   std::string Code = R"(
     void target(long Foo) {
       long Bar = __builtin_expect(Foo, true);
@@ -2764,7 +2867,7 @@ TEST_F(TransferTest, BuiltinExpect) {
 // `__builtin_expect` takes and returns a `long` argument, so other types
 // involve casts. This verifies that we identify the input and output in that
 // case.
-TEST_F(TransferTest, BuiltinExpectBoolArg) {
+TEST(TransferTest, BuiltinExpectBoolArg) {
   std::string Code = R"(
     void target(bool Foo) {
       bool Bar = __builtin_expect(Foo, true);
@@ -2790,7 +2893,7 @@ TEST_F(TransferTest, BuiltinExpectBoolArg) {
               });
 }
 
-TEST_F(TransferTest, BuiltinUnreachable) {
+TEST(TransferTest, BuiltinUnreachable) {
   std::string Code = R"(
     void target(bool Foo) {
       bool Bar = false;
@@ -2824,7 +2927,7 @@ TEST_F(TransferTest, BuiltinUnreachable) {
               });
 }
 
-TEST_F(TransferTest, BuiltinTrap) {
+TEST(TransferTest, BuiltinTrap) {
   std::string Code = R"(
     void target(bool Foo) {
       bool Bar = false;
@@ -2857,7 +2960,7 @@ TEST_F(TransferTest, BuiltinTrap) {
               });
 }
 
-TEST_F(TransferTest, BuiltinDebugTrap) {
+TEST(TransferTest, BuiltinDebugTrap) {
   std::string Code = R"(
     void target(bool Foo) {
       bool Bar = false;
@@ -2889,7 +2992,7 @@ TEST_F(TransferTest, BuiltinDebugTrap) {
               });
 }
 
-TEST_F(TransferTest, StaticIntSingleVarDecl) {
+TEST(TransferTest, StaticIntSingleVarDecl) {
   std::string Code = R"(
     void target() {
       static int Foo;
@@ -2916,7 +3019,7 @@ TEST_F(TransferTest, StaticIntSingleVarDecl) {
               });
 }
 
-TEST_F(TransferTest, StaticIntGroupVarDecl) {
+TEST(TransferTest, StaticIntGroupVarDecl) {
   std::string Code = R"(
     void target() {
       static int Foo, Bar;
@@ -2956,7 +3059,7 @@ TEST_F(TransferTest, StaticIntGroupVarDecl) {
               });
 }
 
-TEST_F(TransferTest, GlobalIntVarDecl) {
+TEST(TransferTest, GlobalIntVarDecl) {
   std::string Code = R"(
     static int Foo;
 
@@ -2988,7 +3091,7 @@ TEST_F(TransferTest, GlobalIntVarDecl) {
               });
 }
 
-TEST_F(TransferTest, StaticMemberIntVarDecl) {
+TEST(TransferTest, StaticMemberIntVarDecl) {
   std::string Code = R"(
     struct A {
       static int Foo;
@@ -3022,7 +3125,7 @@ TEST_F(TransferTest, StaticMemberIntVarDecl) {
               });
 }
 
-TEST_F(TransferTest, StaticMemberRefVarDecl) {
+TEST(TransferTest, StaticMemberRefVarDecl) {
   std::string Code = R"(
     struct A {
       static int &Foo;
@@ -3056,7 +3159,7 @@ TEST_F(TransferTest, StaticMemberRefVarDecl) {
               });
 }
 
-TEST_F(TransferTest, AssignMemberBeforeCopy) {
+TEST(TransferTest, AssignMemberBeforeCopy) {
   std::string Code = R"(
     struct A {
       int Foo;
@@ -3100,7 +3203,7 @@ TEST_F(TransferTest, AssignMemberBeforeCopy) {
               });
 }
 
-TEST_F(TransferTest, BooleanEquality) {
+TEST(TransferTest, BooleanEquality) {
   std::string Code = R"(
     void target(bool Bar) {
       bool Foo = true;
@@ -3135,7 +3238,7 @@ TEST_F(TransferTest, BooleanEquality) {
       });
 }
 
-TEST_F(TransferTest, BooleanInequality) {
+TEST(TransferTest, BooleanInequality) {
   std::string Code = R"(
     void target(bool Bar) {
       bool Foo = true;
@@ -3170,7 +3273,7 @@ TEST_F(TransferTest, BooleanInequality) {
       });
 }
 
-TEST_F(TransferTest, CorrelatedBranches) {
+TEST(TransferTest, CorrelatedBranches) {
   std::string Code = R"(
     void target(bool B, bool C) {
       if (B) {
@@ -3224,7 +3327,7 @@ TEST_F(TransferTest, CorrelatedBranches) {
       });
 }
 
-TEST_F(TransferTest, LoopWithAssignmentConverges) {
+TEST(TransferTest, LoopWithAssignmentConverges) {
   std::string Code = R"(
 
     bool &foo();
@@ -3257,7 +3360,7 @@ TEST_F(TransferTest, LoopWithAssignmentConverges) {
       });
 }
 
-TEST_F(TransferTest, LoopWithReferenceAssignmentConverges) {
+TEST(TransferTest, LoopWithReferenceAssignmentConverges) {
   std::string Code = R"(
 
     bool &foo();
@@ -3291,7 +3394,7 @@ TEST_F(TransferTest, LoopWithReferenceAssignmentConverges) {
       });
 }
 
-TEST_F(TransferTest, LoopWithStructReferenceAssignmentConverges) {
+TEST(TransferTest, LoopWithStructReferenceAssignmentConverges) {
   std::string Code = R"(
     struct Lookup {
       int x;
@@ -3346,7 +3449,7 @@ TEST_F(TransferTest, LoopWithStructReferenceAssignmentConverges) {
       });
 }
 
-TEST_F(TransferTest, DoesNotCrashOnUnionThisExpr) {
+TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
   std::string Code = R"(
     union Union {
       int A;
@@ -3369,7 +3472,7 @@ TEST_F(TransferTest, DoesNotCrashOnUnionThisExpr) {
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator=");
 }
 
-TEST_F(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {
+TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {
   std::string Code = R"(
     struct A {
       int Foo;
@@ -3432,7 +3535,7 @@ TEST_F(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {
       });
 }
 
-TEST_F(TransferTest, StructuredBindingAssignFromStructRefMembersToRefs) {
+TEST(TransferTest, StructuredBindingAssignFromStructRefMembersToRefs) {
   std::string Code = R"(
     struct A {
       int &Foo;
@@ -3494,7 +3597,7 @@ TEST_F(TransferTest, StructuredBindingAssignFromStructRefMembersToRefs) {
       });
 }
 
-TEST_F(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
+TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
   std::string Code = R"(
     struct A {
       int Foo;
@@ -3557,7 +3660,7 @@ TEST_F(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
       });
 }
 
-TEST_F(TransferTest, BinaryOperatorComma) {
+TEST(TransferTest, BinaryOperatorComma) {
   std::string Code = R"(
     void target(int Foo, int Bar) {
       int &Baz = (Foo, Bar);
@@ -3586,6 +3689,275 @@ TEST_F(TransferTest, BinaryOperatorComma) {
                     Env.getStorageLocation(*BazDecl, SkipPast::Reference);
                 EXPECT_EQ(BazLoc, BarLoc);
               });
+}
+
+TEST(TransferTest, IfStmtBranchExtendsFlowCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      if (Foo) {
+        (void)0;
+        // [[if_then]]
+      } else {
+        (void)0;
+        // [[if_else]]
+      }
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("if_else", _), Pair("if_then", _)));
+        const Environment &ThenEnv = Results[1].second.Env;
+        const Environment &ElseEnv = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        BoolValue &ThenFooVal =
+            *cast<BoolValue>(ThenEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(ThenEnv.flowConditionImplies(ThenFooVal));
+
+        BoolValue &ElseFooVal =
+            *cast<BoolValue>(ElseEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(ElseEnv.flowConditionImplies(ElseEnv.makeNot(ElseFooVal)));
+      });
+}
+
+TEST(TransferTest, WhileStmtBranchExtendsFlowCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      while (Foo) {
+        (void)0;
+        // [[loop_body]]
+      }
+      (void)0;
+      // [[after_loop]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("after_loop", _), Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[1].second.Env;
+        const Environment &AfterLoopEnv = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+
+        BoolValue &AfterLoopFooVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+      });
+}
+
+TEST(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      bool Bar = true;
+      do {
+        (void)0;
+        // [[loop_body]]
+        Bar = false;
+      } while (Foo);
+      (void)0;
+      // [[after_loop]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("after_loop", _), Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[1].second.Env;
+        const Environment &AfterLoopEnv = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        BoolValue &LoopBodyBarVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(
+            LoopBodyEnv.makeOr(LoopBodyBarVal, LoopBodyFooVal)));
+
+        BoolValue &AfterLoopFooVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+        BoolValue &AfterLoopBarVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopBarVal)));
+      });
+}
+
+TEST(TransferTest, ForStmtBranchExtendsFlowCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      for (; Foo;) {
+        (void)0;
+        // [[loop_body]]
+      }
+      (void)0;
+      // [[after_loop]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("after_loop", _), Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[1].second.Env;
+        const Environment &AfterLoopEnv = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+
+        BoolValue &AfterLoopFooVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+      });
+}
+
+TEST(TransferTest, ForStmtBranchWithoutConditionDoesNotExtendFlowCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      for (;;) {
+        (void)0;
+        // [[loop_body]]
+      }
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_FALSE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+      });
+}
+
+TEST(TransferTest, ContextSensitiveOptionDisabled) {
+  std::string Code = R"(
+    bool GiveBool();
+    void SetBool(bool &Var) { Var = true; }
+
+    void target() {
+      bool Foo = GiveBool();
+      SetBool(Foo);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                auto &FooVal =
+                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+                EXPECT_FALSE(Env.flowConditionImplies(FooVal));
+                EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+              },
+              {/*.ApplyBuiltinTransfer=*/true,
+               /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/false}});
+}
+
+TEST(TransferTest, ContextSensitiveSetTrue) {
+  std::string Code = R"(
+    bool GiveBool();
+    void SetBool(bool &Var) { Var = true; }
+
+    void target() {
+      bool Foo = GiveBool();
+      SetBool(Foo);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                auto &FooVal =
+                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+                EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+              },
+              {/*.ApplyBuiltinTransfer=*/true,
+               /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
+}
+
+TEST(TransferTest, ContextSensitiveSetFalse) {
+  std::string Code = R"(
+    bool GiveBool();
+    void SetBool(bool &Var) { Var = false; }
+
+    void target() {
+      bool Foo = GiveBool();
+      SetBool(Foo);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                auto &FooVal =
+                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+                EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+              },
+              {/*.ApplyBuiltinTransfer=*/true,
+               /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
 }
 
 } // namespace

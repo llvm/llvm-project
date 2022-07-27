@@ -43,29 +43,28 @@ entry:
   %arg0_var = alloca i32
   %arg1_var = alloca i32
   %arg2_var = alloca i32
-  store i32 %hp, i32* %hp_var
-  store i32 %p, i32* %p_var
-  store i32 %arg0, i32* %arg0_var
-  store i32 %arg1, i32* %arg1_var
-  store i32 %arg2, i32* %arg2_var
+  store i32 %hp, ptr %hp_var
+  store i32 %p, ptr %p_var
+  store i32 %arg0, ptr %arg0_var
+  store i32 %arg1, ptr %arg1_var
+  store i32 %arg2, ptr %arg2_var
   ; These loads are loading the values from their previous stores and are optimized away.
-  %0 = load i32, i32* %hp_var
-  %1 = load i32, i32* %p_var
-  %2 = load i32, i32* %arg0_var
-  %3 = load i32, i32* %arg1_var
-  %4 = load i32, i32* %arg2_var
+  %0 = load i32, ptr %hp_var
+  %1 = load i32, ptr %p_var
+  %2 = load i32, ptr %arg0_var
+  %3 = load i32, ptr %arg1_var
+  %4 = load i32, ptr %arg2_var
   ; CHECK:      jmp bar
   tail call cc 11 void @bar(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4) nounwind
   ret void
 }
 
 define cc 11 void @baz() nounwind {
-  %tmp_clos = load i32, i32* @clos
-  %tmp_clos2 = inttoptr i32 %tmp_clos to i32*
-  %indirect_call = bitcast i32* %tmp_clos2 to void (i32, i32, i32)*
+  %tmp_clos = load i32, ptr @clos
+  %tmp_clos2 = inttoptr i32 %tmp_clos to ptr
   ; CHECK:      movl $42, %eax
   ; CHECK-NEXT: jmpl *clos
-  tail call cc 11 void %indirect_call(i32 undef, i32 undef, i32 42) nounwind
+  tail call cc 11 void %tmp_clos2(i32 undef, i32 undef, i32 42) nounwind
   ret void
 }
 

@@ -190,11 +190,12 @@ public:
       RawTable.append(std::string(S));
       RawTable.push_back(0);
     }
-    if (llvm::zlib::isAvailable()) {
-      llvm::SmallString<1> Compressed;
-      llvm::zlib::compress(RawTable, Compressed);
+    if (llvm::compression::zlib::isAvailable()) {
+      llvm::SmallVector<uint8_t, 0> Compressed;
+      llvm::compression::zlib::compress(llvm::arrayRefFromStringRef(RawTable),
+                                        Compressed);
       write32(RawTable.size(), OS);
-      OS << Compressed;
+      OS << llvm::toStringRef(Compressed);
     } else {
       write32(0, OS); // No compression.
       OS << RawTable;
@@ -220,10 +221,10 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
     return error("Truncated string table");
 
   llvm::StringRef Uncompressed;
-  llvm::SmallString<1> UncompressedStorage;
+  llvm::SmallVector<uint8_t, 0> UncompressedStorage;
   if (UncompressedSize == 0) // No compression
     Uncompressed = R.rest();
-  else if (llvm::zlib::isAvailable()) {
+  else if (llvm::compression::zlib::isAvailable()) {
     // Don't allocate a massive buffer if UncompressedSize was corrupted
     // This is effective for sharded index, but not big monolithic ones, as
     // once compressed size reaches 4MB nothing can be ruled out.
@@ -233,10 +234,11 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
       return error("Bad stri table: uncompress {0} -> {1} bytes is implausible",
                    R.rest().size(), UncompressedSize);
 
-    if (llvm::Error E = llvm::zlib::uncompress(R.rest(), UncompressedStorage,
-                                               UncompressedSize))
+    if (llvm::Error E = llvm::compression::zlib::uncompress(
+            llvm::arrayRefFromStringRef(R.rest()), UncompressedStorage,
+            UncompressedSize))
       return std::move(E);
-    Uncompressed = UncompressedStorage;
+    Uncompressed = toStringRef(UncompressedStorage);
   } else
     return error("Compressed string table, but zlib is unavailable");
 

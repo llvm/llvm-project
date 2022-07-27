@@ -14,6 +14,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
@@ -44,6 +45,55 @@ void test::registerTestDialect(DialectRegistry &registry) {
 }
 
 //===----------------------------------------------------------------------===//
+// External Elements Data
+//===----------------------------------------------------------------------===//
+
+ArrayRef<uint64_t> TestExternalElementsData::getData() const {
+  ArrayRef<char> data = AsmResourceBlob::getData();
+  return ArrayRef<uint64_t>((const uint64_t *)data.data(),
+                            data.size() / sizeof(uint64_t));
+}
+
+TestExternalElementsData
+TestExternalElementsData::allocate(size_t numElements) {
+  return TestExternalElementsData(
+      llvm::ArrayRef<uint64_t>(new uint64_t[numElements], numElements),
+      [](const uint64_t *data, size_t) { delete[] data; },
+      /*dataIsMutable=*/true);
+}
+
+const TestExternalElementsData *
+TestExternalElementsDataManager::getData(StringRef name) const {
+  auto it = dataMap.find(name);
+  return it != dataMap.end() ? &*it->second : nullptr;
+}
+
+std::pair<TestExternalElementsDataManager::DataMap::iterator, bool>
+TestExternalElementsDataManager::insert(StringRef name) {
+  auto it = dataMap.try_emplace(name, nullptr);
+  if (it.second)
+    return it;
+
+  llvm::SmallString<32> nameStorage(name);
+  nameStorage.push_back('_');
+  size_t nameCounter = 1;
+  do {
+    nameStorage += std::to_string(nameCounter++);
+    auto it = dataMap.try_emplace(nameStorage, nullptr);
+    if (it.second)
+      return it;
+    nameStorage.resize(name.size() + 1);
+  } while (true);
+}
+
+void TestExternalElementsDataManager::setData(StringRef name,
+                                              TestExternalElementsData &&data) {
+  auto it = dataMap.find(name);
+  assert(it != dataMap.end() && "data not registered");
+  it->second = std::make_unique<TestExternalElementsData>(std::move(data));
+}
+
+//===----------------------------------------------------------------------===//
 // TestDialect Interfaces
 //===----------------------------------------------------------------------===//
 
@@ -62,6 +112,10 @@ static_assert(OpTrait::hasSingleBlockImplicitTerminator<
 // Test support for interacting with the AsmPrinter.
 struct TestOpAsmInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  //===------------------------------------------------------------------===//
+  // Aliases
+  //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
     StringAttr strAttr = attr.dyn_cast<StringAttr>();
@@ -106,7 +160,60 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         return AliasResult::FinalAlias;
       }
     }
+    if (auto recType = type.dyn_cast<TestRecursiveType>()) {
+      if (recType.getName() == "type_to_alias") {
+        // We only make alias for a specific recursive type.
+        os << "testrec";
+        return AliasResult::FinalAlias;
+      }
+    }
     return AliasResult::NoAlias;
+  }
+
+  //===------------------------------------------------------------------===//
+  // Resources
+  //===------------------------------------------------------------------===//
+
+  std::string
+  getResourceKey(const AsmDialectResourceHandle &handle) const override {
+    return cast<TestExternalElementsDataHandle>(handle).getKey().str();
+  }
+
+  FailureOr<AsmDialectResourceHandle>
+  declareResource(StringRef key) const final {
+    TestDialect *dialect = cast<TestDialect>(getDialect());
+    TestExternalElementsDataManager &mgr = dialect->getExternalDataManager();
+
+    // Resolve the reference by inserting a new entry into the manager.
+    auto it = mgr.insert(key).first;
+    return TestExternalElementsDataHandle(&*it, dialect);
+  }
+
+  LogicalResult parseResource(AsmParsedResourceEntry &entry) const final {
+    TestDialect *dialect = cast<TestDialect>(getDialect());
+    TestExternalElementsDataManager &mgr = dialect->getExternalDataManager();
+
+    // The resource entries are external constant data.
+    auto blobAllocFn = [](unsigned size, unsigned align) {
+      assert(align == alignof(uint64_t) && "unexpected data alignment");
+      return TestExternalElementsData::allocate(size / sizeof(uint64_t));
+    };
+    FailureOr<AsmResourceBlob> blob = entry.parseAsBlob(blobAllocFn);
+    if (failed(blob))
+      return failure();
+
+    mgr.setData(entry.getKey(), std::move(*blob));
+    return success();
+  }
+
+  void
+  buildResources(Operation *op,
+                 const SetVector<AsmDialectResourceHandle> &referencedResources,
+                 AsmResourceBuilder &provider) const final {
+    for (const AsmDialectResourceHandle &handle : referencedResources) {
+      const auto &testHandle = cast<TestExternalElementsDataHandle>(handle);
+      provider.buildBlob(testHandle.getKey(), testHandle.getData()->getData());
+    }
   }
 };
 
@@ -616,7 +723,7 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
   if (parser.parseInteger(operandCount))
     return failure();
   bool expectedOptionalOperand = operandCount == 0;
-  return success(expectedOptionalOperand != optOperand.hasValue());
+  return success(expectedOptionalOperand != optOperand.has_value());
 }
 
 //===----------------------------------------------------------------------===//
@@ -865,7 +972,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
 
   // If location of the op is explicitly provided, then use it; Else use
   // the parser's current location.
-  Location opLoc = explicitLoc.getValueOr(currLocation);
+  Location opLoc = explicitLoc.value_or(currLocation);
 
   // Derive the SSA-values for op's operands.
   if (parser.resolveOperands(operands, opFntype.getInputs(), loc,
@@ -1018,6 +1125,36 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
                              operands[1].getType());
   }
   inferredReturnTypes.assign({operands[0].getType()});
+  return success();
+}
+
+// TODO: We should be able to only define either inferReturnType or
+// refineReturnType, currently only refineReturnType can be omitted.
+LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &returnTypes) {
+  returnTypes.clear();
+  return OpWithRefineTypeInterfaceOp::refineReturnTypes(
+      context, location, operands, attributes, regions, returnTypes);
+}
+
+LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
+    MLIRContext *, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &returnTypes) {
+  if (operands[0].getType() != operands[1].getType()) {
+    return emitOptionalError(location, "operand type mismatch ",
+                             operands[0].getType(), " vs ",
+                             operands[1].getType());
+  }
+  // TODO: Add helper to make this more concise to write.
+  if (returnTypes.empty())
+    returnTypes.resize(1, nullptr);
+  if (returnTypes[0] && returnTypes[0] != operands[0].getType())
+    return emitOptionalError(location,
+                             "required first operand and result to match");
+  returnTypes[0] = operands[0].getType();
   return success();
 }
 
@@ -1310,8 +1447,8 @@ void RegionIfOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
-  if (index.hasValue()) {
-    if (index.getValue() < 2)
+  if (index.has_value()) {
+    if (index.value() < 2)
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
       regions.push_back(RegionSuccessor(getResults()));
@@ -1465,7 +1602,6 @@ void TestReflectBoundsOp::inferResultRanges(
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpInterfaces.cpp.inc"
-#include "TestOpStructs.cpp.inc"
 #include "TestTypeInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES

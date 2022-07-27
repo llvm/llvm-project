@@ -13,16 +13,16 @@ frsqrte  z0.h, z31.h
 // CHECK-INST: frsqrte	z0.h, z31.h
 // CHECK-ENCODING: [0xe0,0x33,0x4f,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 33 4f 65 <unknown>
+// CHECK-UNKNOWN: 654f33e0 <unknown>
 
 frsqrte  z0.s, z31.s
 // CHECK-INST: frsqrte	z0.s, z31.s
 // CHECK-ENCODING: [0xe0,0x33,0x8f,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 33 8f 65 <unknown>
+// CHECK-UNKNOWN: 658f33e0 <unknown>
 
 frsqrte  z0.d, z31.d
 // CHECK-INST: frsqrte	z0.d, z31.d
 // CHECK-ENCODING: [0xe0,0x33,0xcf,0x65]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 33 cf 65 <unknown>
+// CHECK-UNKNOWN: 65cf33e0 <unknown>

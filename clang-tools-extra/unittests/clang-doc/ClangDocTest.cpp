@@ -95,8 +95,8 @@ void CheckBaseInfo(Info *Expected, Info *Actual) {
 
 void CheckSymbolInfo(SymbolInfo *Expected, SymbolInfo *Actual) {
   CheckBaseInfo(Expected, Actual);
-  EXPECT_EQ(Expected->DefLoc.hasValue(), Actual->DefLoc.hasValue());
-  if (Expected->DefLoc.hasValue() && Actual->DefLoc.hasValue()) {
+  EXPECT_EQ(Expected->DefLoc.has_value(), Actual->DefLoc.has_value());
+  if (Expected->DefLoc && Actual->DefLoc.has_value()) {
     EXPECT_EQ(Expected->DefLoc->LineNumber, Actual->DefLoc->LineNumber);
     EXPECT_EQ(Expected->DefLoc->Filename, Actual->DefLoc->Filename);
   }

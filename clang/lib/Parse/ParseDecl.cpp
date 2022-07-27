@@ -1216,7 +1216,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
       // Also reject wide string literals.
       if (StringLiteral *MessageStringLiteral =
               cast_or_null<StringLiteral>(MessageExpr.get())) {
-        if (!MessageStringLiteral->isAscii()) {
+        if (!MessageStringLiteral->isOrdinary()) {
           Diag(MessageStringLiteral->getSourceRange().getBegin(),
                diag::err_expected_string_literal)
             << /*Source='availability attribute'*/ 2;
@@ -1873,8 +1873,8 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
     DeclEnd = Tok.getLocation();
     if (RequireSemi) ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
-                                                       DS, AnonRecord);
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
+        getCurScope(), AS_none, DS, ParsedAttributesView::none(), AnonRecord);
     DS.complete(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
@@ -4380,8 +4380,8 @@ void Parser::ParseStructDeclaration(
     // declarator list is omitted."
     ProhibitAttributes(Attrs);
     RecordDecl *AnonRecord = nullptr;
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
-                                                       DS, AnonRecord);
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
+        getCurScope(), AS_none, DS, ParsedAttributesView::none(), AnonRecord);
     assert(!AnonRecord && "Did not expect anonymous struct or union here");
     DS.complete(TheDecl);
     return;
@@ -6366,23 +6366,27 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
            diag::err_expected_member_name_or_semi)
           << (D.getDeclSpec().isEmpty() ? SourceRange()
                                         : D.getDeclSpec().getSourceRange());
-    } else if (getLangOpts().CPlusPlus) {
-      if (Tok.isOneOf(tok::period, tok::arrow))
-        Diag(Tok, diag::err_invalid_operator_on_type) << Tok.is(tok::arrow);
-      else {
-        SourceLocation Loc = D.getCXXScopeSpec().getEndLoc();
-        if (Tok.isAtStartOfLine() && Loc.isValid())
-          Diag(PP.getLocForEndOfToken(Loc), diag::err_expected_unqualified_id)
-              << getLangOpts().CPlusPlus;
-        else
-          Diag(getMissingDeclaratorIdLoc(D, Tok.getLocation()),
-               diag::err_expected_unqualified_id)
-              << getLangOpts().CPlusPlus;
-      }
     } else {
-      Diag(getMissingDeclaratorIdLoc(D, Tok.getLocation()),
-           diag::err_expected_either)
-          << tok::identifier << tok::l_paren;
+      if (Tok.getKind() == tok::TokenKind::kw_while) {
+        Diag(Tok, diag::err_while_loop_outside_of_a_function);
+      } else if (getLangOpts().CPlusPlus) {
+        if (Tok.isOneOf(tok::period, tok::arrow))
+          Diag(Tok, diag::err_invalid_operator_on_type) << Tok.is(tok::arrow);
+        else {
+          SourceLocation Loc = D.getCXXScopeSpec().getEndLoc();
+          if (Tok.isAtStartOfLine() && Loc.isValid())
+            Diag(PP.getLocForEndOfToken(Loc), diag::err_expected_unqualified_id)
+                << getLangOpts().CPlusPlus;
+          else
+            Diag(getMissingDeclaratorIdLoc(D, Tok.getLocation()),
+                 diag::err_expected_unqualified_id)
+                << getLangOpts().CPlusPlus;
+        }
+      } else {
+        Diag(getMissingDeclaratorIdLoc(D, Tok.getLocation()),
+             diag::err_expected_either)
+            << tok::identifier << tok::l_paren;
+      }
     }
     D.SetIdentifier(nullptr, Tok.getLocation());
     D.setInvalidType(true);

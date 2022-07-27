@@ -8,11 +8,16 @@
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.z
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.w
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr1.x
+; GFX11: s_waitcnt expcnt(4)
 ; GFX11: v_add_f32
 ; GFX11: buffer_store_b32
+; GFX11: s_waitcnt expcnt(3)
 ; GFX11: buffer_store_b32
+; GFX11: s_waitcnt expcnt(2)
 ; GFX11: buffer_store_b32
+; GFX11: s_waitcnt expcnt(1)
 ; GFX11: buffer_store_b32
+; GFX11: s_waitcnt expcnt(0)
 ; GFX11: buffer_store_b32
 ; GFX11: buffer_store_b32
 define amdgpu_ps void @lds_param_load(<4 x i32> inreg %buf, i32 inreg %arg) #0 {

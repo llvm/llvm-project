@@ -772,7 +772,7 @@ void CXXInstanceCall::getInitialStackFrameContents(
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
       Optional<SVal> V =
           StateMgr.getStoreManager().evalBaseToDerived(ThisVal, Ty);
-      if (!V.hasValue()) {
+      if (!V) {
         // We might have suffered some sort of placement new earlier, so
         // we're constructing in a completely unexpected storage.
         // Fall back to a generic pointer cast for this-value.
@@ -1192,7 +1192,7 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
       PMC[{Interface, LookupSelector, InstanceMethod}];
 
   // Query lookupPrivateMethod() if the cache does not hit.
-  if (!Val.hasValue()) {
+  if (!Val) {
     Val = Interface->lookupPrivateMethod(LookupSelector, InstanceMethod);
 
     if (!*Val) {
@@ -1201,7 +1201,7 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
     }
   }
 
-  return Val.getValue();
+  return *Val;
 }
 
 RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
@@ -1406,7 +1406,7 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     Trigger = Dtor->getBody();
 
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
-                              E.getAs<CFGBaseDtor>().hasValue(), State,
+                              E.getAs<CFGBaseDtor>().has_value(), State,
                               CallerCtx);
 }
 

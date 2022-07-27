@@ -1001,7 +1001,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body) {
     } else if (auto *operand = dyn_cast<OperandVariable>(param)) {
       const NamedTypeConstraint *var = operand->getVar();
       if (var->isOptional()) {
-        body << llvm::formatv("    if ({0}Operand.hasValue())\n"
+        body << llvm::formatv("    if ({0}Operand.has_value())\n"
                               "      {0}Operands.push_back(*{0}Operand);\n",
                               var->name);
       } else if (var->isVariadicOfVariadic()) {
@@ -1043,7 +1043,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
   {
     llvm::raw_string_ostream os(attrBuilderStr);
     os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
-                "attrOptional.getValue()");
+                "attrOptional.value()");
   }
 
   // Build a string containing the cases that can be formatted as a keyword.
@@ -2147,7 +2147,8 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
 
 /// Function to find an element within the given range that has the same name as
 /// 'name'.
-template <typename RangeT> static auto findArg(RangeT &&range, StringRef name) {
+template <typename RangeT>
+static auto findArg(RangeT &&range, StringRef name) {
   auto it = llvm::find_if(range, [=](auto &arg) { return arg.name == name; });
   return it != range.end() ? &*it : nullptr;
 }
@@ -2304,7 +2305,7 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       //    DeclareOpInterfaceMethods<InferTypeOpInterface>
       // and the like.
       // TODO: Add hasCppInterface check.
-      if (auto name = def.getValueAsOptionalString("cppClassName")) {
+      if (auto name = def.getValueAsOptionalString("cppInterfaceName")) {
         if (*name == "InferTypeOpInterface" &&
             def.getValueAsString("cppNamespace") == "::mlir")
           canInferResultTypes = true;

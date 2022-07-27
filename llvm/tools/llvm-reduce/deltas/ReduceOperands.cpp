@@ -23,9 +23,10 @@ extractOperandsFromModule(Oracle &O, Module &Program,
   for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
       for (auto &Op : I.operands()) {
-        Value *Reduced = ReduceValue(Op);
-        if (Reduced && !O.shouldKeep())
-          Op.set(Reduced);
+        if (!O.shouldKeep()) {
+          if (Value *Reduced = ReduceValue(Op))
+            Op.set(Reduced);
+        }
       }
     }
   }
@@ -62,19 +63,6 @@ static bool shouldReduceOperand(Use &Op) {
   return true;
 }
 
-void llvm::reduceOperandsUndefDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Operands to undef...\n";
-  auto ReduceValue = [](Use &Op) -> Value * {
-    if (!shouldReduceOperand(Op))
-      return nullptr;
-    // Don't replace existing ConstantData Uses.
-    return isa<ConstantData>(*Op) ? nullptr : UndefValue::get(Op->getType());
-  };
-  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
-    extractOperandsFromModule(O, Program, ReduceValue);
-  });
-}
-
 void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Operands to one...\n";
   auto ReduceValue = [](Use &Op) -> Value * {
@@ -91,8 +79,12 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
       return isZeroOrOneFP(Op) ? nullptr : ConstantFP::get(Ty, 1.0);
 
     if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
-      if (isZeroOrOneFP(Op))
+      if (isOne(Op) || isZero(Op) || isZeroOrOneFP(Op))
         return nullptr;
+
+      if (auto *IntTy = dyn_cast<IntegerType>(VT->getElementType()))
+        return ConstantVector::getSplat(VT->getElementCount(),
+                                        ConstantInt::get(IntTy, 1));
 
       return ConstantVector::getSplat(
           VT->getElementCount(), ConstantFP::get(VT->getElementType(), 1.0));
@@ -112,6 +104,32 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
       return nullptr;
     // Don't replace existing zeroes.
     return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
+  };
+  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
+    extractOperandsFromModule(O, Program, ReduceValue);
+  });
+}
+
+void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
+  errs() << "*** Reducing Operands to NaN...\n";
+  auto ReduceValue = [](Use &Op) -> Value * {
+    Type *Ty = Op->getType();
+    if (!Ty->isFPOrFPVectorTy())
+      return nullptr;
+
+    // Prefer 0.0 or 1.0 over NaN.
+    //
+    // TODO: Preferring NaN may make more sense because FP operations are more
+    // universally foldable.
+    if (match(Op.get(), m_NaN()) || isZeroOrOneFP(Op.get()))
+      return nullptr;
+
+    if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
+      return ConstantVector::getSplat(VT->getElementCount(),
+                                      ConstantFP::getQNaN(VT->getElementType()));
+    }
+
+    return ConstantFP::getQNaN(Ty);
   };
   runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
     extractOperandsFromModule(O, Program, ReduceValue);

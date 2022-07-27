@@ -1,4 +1,6 @@
 // RUN: fir-opt --external-name-interop %s | FileCheck %s
+// RUN: tco --external-name-interop %s | FileCheck %s
+// RUN: tco --external-name-interop %s | tco --fir-to-llvm-ir | FileCheck %s --check-prefix=LLVMIR
 
 func.func @_QPfoo() {  
   %c0 = arith.constant 0 : index
@@ -27,3 +29,13 @@ func.func private @_QPbar2(!fir.ref<f32>)
 // CHECK: fir.global common @a_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
 // CHECK: fir.global common @__BLNK__(dense<0> : vector<4xi8>) : !fir.array<4xi8>
 // CHECK: func private @bar_(!fir.ref<i32>)
+
+// LLVMIR: %{{.*}} = llvm.mlir.addressof @a_ : !llvm.ptr<array<4 x i8>>
+// LLVMIR: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr<array<4 x i8>>
+// LLVMIR: llvm.call @bar_(%{{.*}}) : (!llvm.ptr<i32>) -> ()
+// LLVMIR: llvm.call @bar2_(%{{.*}}) : (!llvm.ptr<f32>) -> ()
+
+// LLVMIR: llvm.mlir.global common @a_(dense<0> : vector<4xi8>) : !llvm.array<4 x i8>
+// LLVMIR: llvm.mlir.global common @__BLNK__(dense<0> : vector<4xi8>) : !llvm.array<4 x i8>
+// LLVMIR: llvm.func @bar_(!llvm.ptr<i32>) attributes {sym_visibility = "private"}
+// LLVMIR: llvm.func @bar2_(!llvm.ptr<f32>) attributes {sym_visibility = "private"}

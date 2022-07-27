@@ -2732,7 +2732,7 @@ public:
   }
 
   /// Return whether this is a piece of an aggregate variable.
-  bool isFragment() const { return getFragmentInfo().hasValue(); }
+  bool isFragment() const { return getFragmentInfo().has_value(); }
 
   /// Return whether this is an implicit location description.
   bool isImplicit() const;
@@ -3644,7 +3644,7 @@ public:
   const DILocation *getInlinedAt() const { return InlinedAt; }
 
   FragmentInfo getFragmentOrDefault() const {
-    return Fragment.getValueOr(DefaultFragment);
+    return Fragment.value_or(DefaultFragment);
   }
 
   static bool isDefaultFragment(const FragmentInfo F) {

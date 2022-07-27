@@ -865,7 +865,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
       MF->getFunction().getCallingConv() ==
           CallingConv::AArch64_SVE_VectorCall ||
-      STI->getRegisterInfo()->hasSVEArgsOrReturn(MF)) {
+      MF->getInfo<AArch64FunctionInfo>()->isSVECC()) {
     auto *TS =
         static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitDirectiveVariantPCS(CurrentFnSym);
@@ -1173,6 +1173,8 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
 #include "AArch64GenMCPseudoLowering.inc"
 
 void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
+  AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
+
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;

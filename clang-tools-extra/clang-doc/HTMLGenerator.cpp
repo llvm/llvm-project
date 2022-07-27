@@ -312,7 +312,7 @@ genReference(const Reference &Type, StringRef CurrentDirectory,
     if (!JumpToSection)
       return std::make_unique<TextNode>(Type.Name);
     else
-      return genLink(Type.Name, "#" + JumpToSection.getValue());
+      return genLink(Type.Name, "#" + *JumpToSection);
   }
   llvm::SmallString<64> Path = Type.getRelativeFilePath(CurrentDirectory);
   llvm::sys::path::append(Path, Type.getFileBaseName() + ".html");
@@ -320,7 +320,7 @@ genReference(const Reference &Type, StringRef CurrentDirectory,
   // Paths in HTML must be in posix-style
   llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
   if (JumpToSection)
-    Path += ("#" + JumpToSection.getValue()).str();
+    Path += ("#" + *JumpToSection).str();
   return genLink(Type.Name, Path);
 }
 
@@ -440,7 +440,7 @@ writeFileDefinition(const Location &L,
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
-  SmallString<128> FileURL(RepositoryUrl.getValue());
+  SmallString<128> FileURL(*RepositoryUrl);
   llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
   auto Node = std::make_unique<TagNode>(HTMLTag::TAG_P);
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
@@ -580,7 +580,7 @@ genHTML(const Index &Index, StringRef InfoPath, bool IsOutermostList) {
       SpanBody->Children.emplace_back(genReference(Index, InfoPath));
     else
       SpanBody->Children.emplace_back(
-          genReference(Index, InfoPath, Index.JumpToSection.getValue().str()));
+          genReference(Index, InfoPath, Index.JumpToSection->str()));
   }
   if (Index.Children.empty())
     return Out;
@@ -653,10 +653,10 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.getValue()));
+      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.getValue(), StringRef{CDCtx.RepositoryUrl.getValue()}));
+          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
   }
 
   std::string Description;
@@ -702,10 +702,10 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.getValue()));
+      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.getValue(), StringRef{CDCtx.RepositoryUrl.getValue()}));
+          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
   }
 
   std::string Description;
@@ -768,10 +768,10 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.getValue()));
+      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.getValue(), StringRef{CDCtx.RepositoryUrl.getValue()}));
+          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
   }
 
   std::string Description;

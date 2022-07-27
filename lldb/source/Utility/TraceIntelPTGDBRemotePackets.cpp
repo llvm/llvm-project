@@ -19,7 +19,7 @@ const char *IntelPTDataKinds::kPerfContextSwitchTrace =
     "perfContextSwitchTrace";
 
 bool TraceIntelPTStartRequest::IsPerCpuTracing() const {
-  return per_cpu_tracing.getValueOr(false);
+  return per_cpu_tracing.value_or(false);
 }
 
 json::Value toJSON(const JSONUINT64 &uint64, bool hex) {
@@ -53,7 +53,8 @@ bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
 
   if (packet.IsProcessTracing()) {
     if (!o.map("processBufferSizeLimit", packet.process_buffer_size_limit) ||
-        !o.map("perCpuTracing", packet.per_cpu_tracing))
+        !o.map("perCpuTracing", packet.per_cpu_tracing) ||
+        !o.map("disableCgroupTracing", packet.disable_cgroup_filtering))
       return false;
   }
   return true;
@@ -67,6 +68,7 @@ json::Value toJSON(const TraceIntelPTStartRequest &packet) {
   obj.try_emplace("psbPeriod", packet.psb_period);
   obj.try_emplace("enableTsc", packet.enable_tsc);
   obj.try_emplace("perCpuTracing", packet.per_cpu_tracing);
+  obj.try_emplace("disableCgroupTracing", packet.disable_cgroup_filtering);
   return base;
 }
 
@@ -108,13 +110,15 @@ bool fromJSON(const json::Value &value, TraceIntelPTGetStateResponse &packet,
               json::Path path) {
   ObjectMapper o(value, path);
   return o && fromJSON(value, (TraceGetStateResponse &)packet, path) &&
-         o.map("tscPerfZeroConversion", packet.tsc_perf_zero_conversion);
+         o.map("tscPerfZeroConversion", packet.tsc_perf_zero_conversion) &&
+         o.map("usingCgroupFiltering", packet.using_cgroup_filtering);
 }
 
 json::Value toJSON(const TraceIntelPTGetStateResponse &packet) {
   json::Value base = toJSON((const TraceGetStateResponse &)packet);
-  base.getAsObject()->insert(
-      {"tscPerfZeroConversion", packet.tsc_perf_zero_conversion});
+  json::Object &obj = *base.getAsObject();
+  obj.insert({"tscPerfZeroConversion", packet.tsc_perf_zero_conversion});
+  obj.insert({"usingCgroupFiltering", packet.using_cgroup_filtering});
   return base;
 }
 

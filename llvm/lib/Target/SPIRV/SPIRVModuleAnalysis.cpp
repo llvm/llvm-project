@@ -28,6 +28,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spirv-module-analysis"
 
+static cl::opt<bool>
+    SPVDumpDeps("spv-dump-deps",
+                cl::desc("Dump MIR with SPIR-V dependencies info"),
+                cl::Optional, cl::init(false));
+
 char llvm::SPIRVModuleAnalysis::ID = 0;
 
 namespace llvm {
@@ -55,25 +60,127 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.InstrsToDelete.clear();
   MAI.FuncNameMap.clear();
   MAI.GlobalVarList.clear();
+  MAI.ExtInstSetMap.clear();
 
   // TODO: determine memory model and source language from the configuratoin.
-  MAI.Mem = SPIRV::MemoryModel::OpenCL;
-  MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_C;
-  unsigned PtrSize = ST->getPointerSize();
-  MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32
-             : PtrSize == 64 ? SPIRV::AddressingModel::Physical64
-                             : SPIRV::AddressingModel::Logical;
+  if (auto MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
+    auto MemMD = MemModel->getOperand(0);
+    MAI.Addr = static_cast<SPIRV::AddressingModel>(getMetadataUInt(MemMD, 0));
+    MAI.Mem = static_cast<SPIRV::MemoryModel>(getMetadataUInt(MemMD, 1));
+  } else {
+    MAI.Mem = SPIRV::MemoryModel::OpenCL;
+    unsigned PtrSize = ST->getPointerSize();
+    MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32
+               : PtrSize == 64 ? SPIRV::AddressingModel::Physical64
+                               : SPIRV::AddressingModel::Logical;
+  }
   // Get the OpenCL version number from metadata.
   // TODO: support other source languages.
-  MAI.SrcLangVersion = 0;
   if (auto VerNode = M.getNamedMetadata("opencl.ocl.version")) {
-    // Construct version literal according to OpenCL 2.2 environment spec.
+    MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_C;
+    // Construct version literal in accordance with SPIRV-LLVM-Translator.
+    // TODO: support multiple OCL version metadata.
+    assert(VerNode->getNumOperands() > 0 && "Invalid SPIR");
     auto VersionMD = VerNode->getOperand(0);
     unsigned MajorNum = getMetadataUInt(VersionMD, 0, 2);
     unsigned MinorNum = getMetadataUInt(VersionMD, 1);
     unsigned RevNum = getMetadataUInt(VersionMD, 2);
-    MAI.SrcLangVersion = 0 | (MajorNum << 16) | (MinorNum << 8) | RevNum;
+    MAI.SrcLangVersion = (MajorNum * 100 + MinorNum) * 1000 + RevNum;
+  } else {
+    MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
+    MAI.SrcLangVersion = 0;
   }
+
+  if (auto ExtNode = M.getNamedMetadata("opencl.used.extensions")) {
+    for (unsigned I = 0, E = ExtNode->getNumOperands(); I != E; ++I) {
+      MDNode *MD = ExtNode->getOperand(I);
+      if (!MD || MD->getNumOperands() == 0)
+        continue;
+      for (unsigned J = 0, N = MD->getNumOperands(); J != N; ++J)
+        MAI.SrcExt.insert(cast<MDString>(MD->getOperand(J))->getString());
+    }
+  }
+
+  // TODO: check if it's required by default.
+  MAI.ExtInstSetMap[static_cast<unsigned>(SPIRV::InstructionSet::OpenCL_std)] =
+      Register::index2VirtReg(MAI.getNextID());
+}
+
+// Collect MI which defines the register in the given machine function.
+static void collectDefInstr(Register Reg, const MachineFunction *MF,
+                            SPIRV::ModuleAnalysisInfo *MAI,
+                            SPIRV::ModuleSectionType MSType,
+                            bool DoInsert = true) {
+  assert(MAI->hasRegisterAlias(MF, Reg) && "Cannot find register alias");
+  MachineInstr *MI = MF->getRegInfo().getUniqueVRegDef(Reg);
+  assert(MI && "There should be an instruction that defines the register");
+  MAI->setSkipEmission(MI);
+  if (DoInsert)
+    MAI->MS[MSType].push_back(MI);
+}
+
+void SPIRVModuleAnalysis::collectGlobalEntities(
+    const std::vector<SPIRV::DTSortableEntry *> &DepsGraph,
+    SPIRV::ModuleSectionType MSType,
+    std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
+    bool UsePreOrder = false) {
+  DenseSet<const SPIRV::DTSortableEntry *> Visited;
+  for (const auto *E : DepsGraph) {
+    std::function<void(const SPIRV::DTSortableEntry *)> RecHoistUtil;
+    // NOTE: here we prefer recursive approach over iterative because
+    // we don't expect depchains long enough to cause SO.
+    RecHoistUtil = [MSType, UsePreOrder, &Visited, &Pred,
+                    &RecHoistUtil](const SPIRV::DTSortableEntry *E) {
+      if (Visited.count(E) || !Pred(E))
+        return;
+      Visited.insert(E);
+
+      // Traversing deps graph in post-order allows us to get rid of
+      // register aliases preprocessing.
+      // But pre-order is required for correct processing of function
+      // declaration and arguments processing.
+      if (!UsePreOrder)
+        for (auto *S : E->getDeps())
+          RecHoistUtil(S);
+
+      Register GlobalReg = Register::index2VirtReg(MAI.getNextID());
+      bool IsFirst = true;
+      for (auto &U : *E) {
+        const MachineFunction *MF = U.first;
+        Register Reg = U.second;
+        MAI.setRegisterAlias(MF, Reg, GlobalReg);
+        if (!MF->getRegInfo().getUniqueVRegDef(Reg))
+          continue;
+        collectDefInstr(Reg, MF, &MAI, MSType, IsFirst);
+        IsFirst = false;
+        if (E->getIsGV())
+          MAI.GlobalVarList.push_back(MF->getRegInfo().getUniqueVRegDef(Reg));
+      }
+
+      if (UsePreOrder)
+        for (auto *S : E->getDeps())
+          RecHoistUtil(S);
+    };
+    RecHoistUtil(E);
+  }
+}
+
+// The function initializes global register alias table for types, consts,
+// global vars and func decls and collects these instruction for output
+// at module level. Also it collects explicit OpExtension/OpCapability
+// instructions.
+void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
+  std::vector<SPIRV::DTSortableEntry *> DepsGraph;
+
+  GR->buildDepsGraph(DepsGraph, SPVDumpDeps ? MMI : nullptr);
+
+  collectGlobalEntities(
+      DepsGraph, SPIRV::MB_TypeConstVars,
+      [](const SPIRV::DTSortableEntry *E) { return !E->getIsFunc(); });
+
+  collectGlobalEntities(
+      DepsGraph, SPIRV::MB_ExtFuncDecls,
+      [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
 }
 
 // True if there is an instruction in the MS list with all the same operands as
@@ -82,33 +189,24 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
 static bool findSameInstrInMS(const MachineInstr &A,
                               SPIRV::ModuleSectionType MSType,
                               SPIRV::ModuleAnalysisInfo &MAI,
-                              bool UpdateRegAliases,
                               unsigned StartOpIndex = 0) {
   for (const auto *B : MAI.MS[MSType]) {
     const unsigned NumAOps = A.getNumOperands();
-    if (NumAOps == B->getNumOperands() && A.getNumDefs() == B->getNumDefs()) {
-      bool AllOpsMatch = true;
-      for (unsigned i = StartOpIndex; i < NumAOps && AllOpsMatch; ++i) {
-        if (A.getOperand(i).isReg() && B->getOperand(i).isReg()) {
-          Register RegA = A.getOperand(i).getReg();
-          Register RegB = B->getOperand(i).getReg();
-          AllOpsMatch = MAI.getRegisterAlias(A.getMF(), RegA) ==
-                        MAI.getRegisterAlias(B->getMF(), RegB);
-        } else {
-          AllOpsMatch = A.getOperand(i).isIdenticalTo(B->getOperand(i));
-        }
-      }
-      if (AllOpsMatch) {
-        if (UpdateRegAliases) {
-          assert(A.getOperand(0).isReg() && B->getOperand(0).isReg());
-          Register LocalReg = A.getOperand(0).getReg();
-          Register GlobalReg =
-              MAI.getRegisterAlias(B->getMF(), B->getOperand(0).getReg());
-          MAI.setRegisterAlias(A.getMF(), LocalReg, GlobalReg);
-        }
-        return true;
+    if (NumAOps != B->getNumOperands() || A.getNumDefs() != B->getNumDefs())
+      continue;
+    bool AllOpsMatch = true;
+    for (unsigned i = StartOpIndex; i < NumAOps && AllOpsMatch; ++i) {
+      if (A.getOperand(i).isReg() && B->getOperand(i).isReg()) {
+        Register RegA = A.getOperand(i).getReg();
+        Register RegB = B->getOperand(i).getReg();
+        AllOpsMatch = MAI.getRegisterAlias(A.getMF(), RegA) ==
+                      MAI.getRegisterAlias(B->getMF(), RegB);
+      } else {
+        AllOpsMatch = A.getOperand(i).isIdenticalTo(B->getOperand(i));
       }
     }
+    if (AllOpsMatch)
+      return true;
   }
   return false;
 }
@@ -147,12 +245,15 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
 // arguments when detecting duplicates.
 static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
                               SPIRV::ModuleSectionType MSType,
-                              bool IsConstOrType = false) {
+                              bool Append = true) {
   MAI.setSkipEmission(&MI);
-  if (findSameInstrInMS(MI, MSType, MAI, IsConstOrType, IsConstOrType ? 1 : 0))
+  if (findSameInstrInMS(MI, MSType, MAI))
     return; // Found a duplicate, so don't add it.
   // No duplicates, so add it.
-  MAI.MS[MSType].push_back(&MI);
+  if (Append)
+    MAI.MS[MSType].push_back(&MI);
+  else
+    MAI.MS[MSType].insert(MAI.MS[MSType].begin(), &MI);
 }
 
 // Some global instructions make reference to function-local ID regs, so cannot
@@ -163,18 +264,11 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);
-    unsigned FCounter = 0;
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
-        if (MI.getOpcode() == SPIRV::OpFunction)
-          FCounter++;
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
-        const bool IsFuncOrParm =
-            OpCode == SPIRV::OpFunction || OpCode == SPIRV::OpFunctionParameter;
-        const bool IsConstOrType =
-            TII->isConstantInstr(MI) || TII->isTypeDeclInstr(MI);
         if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames);
         } else if (OpCode == SPIRV::OpEntryPoint) {
@@ -182,21 +276,22 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
           collectFuncNames(MI, *F);
-        } else if (IsConstOrType || (FCounter > 1 && IsFuncOrParm)) {
+        } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
-          enum SPIRV::ModuleSectionType Type =
-              IsFuncOrParm ? SPIRV::MB_ExtFuncDecls : SPIRV::MB_TypeConstVars;
-          collectOtherInstr(MI, MAI, Type, IsConstOrType);
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars);
         } else if (OpCode == SPIRV::OpFunction) {
           collectFuncNames(MI, *F);
+        } else if (OpCode == SPIRV::OpTypeForwardPointer) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, false);
         }
       }
   }
 }
 
 // Number registers in all functions globally from 0 onwards and store
-// the result in global register alias table.
+// the result in global register alias table. Some registers are already
+// numbered in collectGlobalEntities.
 void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     if ((*F).isDeclaration())
@@ -214,8 +309,47 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
           Register NewReg = Register::index2VirtReg(MAI.getNextID());
           MAI.setRegisterAlias(MF, Reg, NewReg);
         }
+        if (MI.getOpcode() != SPIRV::OpExtInst)
+          continue;
+        auto Set = MI.getOperand(2).getImm();
+        if (MAI.ExtInstSetMap.find(Set) == MAI.ExtInstSetMap.end())
+          MAI.ExtInstSetMap[Set] = Register::index2VirtReg(MAI.getNextID());
       }
     }
+  }
+}
+
+// Find OpIEqual and OpBranchConditional instructions originating from
+// OpSwitches, mark them skipped for emission. Also mark MBB skipped if it
+// contains only these instructions.
+static void processSwitches(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
+                            MachineModuleInfo *MMI) {
+  DenseSet<Register> SwitchRegs;
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    for (MachineBasicBlock &MBB : *MF)
+      for (MachineInstr &MI : MBB) {
+        if (MAI.getSkipEmission(&MI))
+          continue;
+        if (MI.getOpcode() == SPIRV::OpSwitch) {
+          assert(MI.getOperand(0).isReg());
+          SwitchRegs.insert(MI.getOperand(0).getReg());
+        }
+        if (MI.getOpcode() != SPIRV::OpIEqual || !MI.getOperand(2).isReg() ||
+            !SwitchRegs.contains(MI.getOperand(2).getReg()))
+          continue;
+        Register CmpReg = MI.getOperand(0).getReg();
+        MachineInstr *CBr = MI.getNextNode();
+        assert(CBr && CBr->getOpcode() == SPIRV::OpBranchConditional &&
+               CBr->getOperand(0).isReg() &&
+               CBr->getOperand(0).getReg() == CmpReg);
+        MAI.setSkipEmission(&MI);
+        MAI.setSkipEmission(CBr);
+        if (&MBB.front() == &MI && &MBB.back() == CBr)
+          MAI.MBBsToSkip.insert(&MBB);
+      }
   }
 }
 
@@ -237,8 +371,11 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   setBaseInfo(M);
 
-  // TODO: Process type/const/global var/func decl instructions, number their
+  processSwitches(M, MAI, MMI);
+
+  // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
+  processDefInstrs(M);
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);

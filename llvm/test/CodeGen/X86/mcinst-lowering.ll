@@ -5,7 +5,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 declare i32 @foo();
 
-define i32 @f0(i32* nocapture %x) nounwind readonly ssp {
+define i32 @f0(ptr nocapture %x) nounwind readonly ssp {
 entry:
   %tmp1 = call i32 @foo()
 ; CHECK: cmpl $16777216, %eax

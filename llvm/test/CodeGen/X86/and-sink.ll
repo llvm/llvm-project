@@ -35,7 +35,7 @@ bb0:
 ; CHECK-CGP-NEXT: store
 ; CHECK-CGP-NEXT: br
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb1, label %bb2
 bb1:
   ret i32 1
@@ -51,7 +51,7 @@ define i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB1_5
 ; CHECK-NEXT:  # %bb.1: # %bb0.preheader
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # %bb0
@@ -74,14 +74,14 @@ define i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-CGP-LABEL: @and_sink2(
 ; CHECK-CGP-NOT: and i32
   %and = and i32 %a, 4
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %c, label %bb0, label %bb3
 bb0:
 ; CHECK-CGP-LABEL: bb0:
 ; CHECK-CGP-NOT: and i32
 ; CHECK-CGP-NOT: icmp
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @B
+  store i32 0, ptr @B
   br i1 %c2, label %bb1, label %bb3
 bb1:
 ; CHECK-CGP-LABEL: bb1:
@@ -89,7 +89,7 @@ bb1:
 ; CHECK-CGP-NEXT: icmp eq i32
 ; CHECK-CGP-NEXT: store
 ; CHECK-CGP-NEXT: br
-  store i32 0, i32* @C
+  store i32 0, ptr @C
   br i1 %cmp, label %bb2, label %bb0
 bb2:
   ret i32 1
@@ -98,7 +98,7 @@ bb3:
 }
 
 ; Test that CodeGenPrepare doesn't get stuck in a loop sinking and hoisting a masked load.
-define i32 @and_sink3(i1 %c, i32* %p) {
+define i32 @and_sink3(i1 %c, ptr %p) {
 ; CHECK-LABEL: and_sink3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
@@ -119,7 +119,7 @@ define i32 @and_sink3(i1 %c, i32* %p) {
 ; CHECK-CGP-LABEL: @and_sink3(
 ; CHECK-CGP: load i32
 ; CHECK-CGP-NEXT: and i32
-  %load = load i32, i32* %p
+  %load = load i32, ptr %p
   %and = and i32 %load, 255
   br i1 %c, label %bb0, label %bb2
 bb0:
@@ -127,7 +127,7 @@ bb0:
 ; CHECK-CGP-NOT: and i32
 ; CHECK-CGP: icmp eq i32
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb1, label %bb2
 bb1:
   ret i32 1
@@ -169,14 +169,14 @@ bb0:
 ; CHECK-CGP-LABEL: bb0:
 ; CHECK-CGP: and i32
 ; CHECK-CGP-NEXT: icmp eq i32
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb1, label %bb3
 bb1:
 ; CHECK-CGP-LABEL: bb1:
 ; CHECK-CGP: and i32
 ; CHECK-CGP-NEXT: icmp eq i32
   %add = add i32 %a, %b
-  store i32 %add, i32* @B
+  store i32 %add, ptr @B
   br i1 %cmp, label %bb2, label %bb3
 bb2:
   ret i32 1
@@ -220,14 +220,14 @@ bb0:
 ; CHECK-CGP-LABEL: bb0:
 ; CHECK-CGP-NOT: and i32
 ; CHECK-CGP: icmp eq i32
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb1, label %bb3
 bb1:
 ; CHECK-CGP-LABEL: bb1:
 ; CHECK-CGP-NOT: and i32
 ; CHECK-CGP: icmp eq i32
   %add = add i32 %a2, %b2
-  store i32 %add, i32* @B
+  store i32 %add, ptr @B
   br i1 %cmp, label %bb2, label %bb3
 bb2:
   ret i32 1

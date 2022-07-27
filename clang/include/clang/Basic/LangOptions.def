@@ -155,7 +155,7 @@ LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
 LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
 LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template template arguments")
-LANGOPT(Unstable          , 1, 0, "Enable unstable and experimental features")
+LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 
@@ -195,6 +195,7 @@ VALUE_LANGOPT(DoubleSize            , 32, 0, "width of double")
 VALUE_LANGOPT(LongDoubleSize        , 32, 0, "width of long double")
 LANGOPT(PPCIEEELongDouble            , 1, 0, "use IEEE 754 quadruple-precision for long double")
 LANGOPT(EnableAIXExtendedAltivecABI  , 1, 0, "__EXTABI__  predefined macro")
+LANGOPT(EnableAIXQuadwordAtomicsABI  , 1, 0, "Use 16-byte atomic lock free semantics")
 COMPATIBLE_VALUE_LANGOPT(PICLevel    , 2, 0, "__PIC__ level")
 COMPATIBLE_VALUE_LANGOPT(PIE         , 1, 0, "is pie")
 LANGOPT(ROPI                         , 1, 0, "Read-only position independence")
@@ -311,8 +312,8 @@ COMPATIBLE_LANGOPT(CLFiniteMathOnly , 1, 0, "__FINITE_MATH_ONLY__ predefined mac
 /// FP_CONTRACT mode (on/off/fast).
 BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contraction type")
 COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")
-BENIGN_ENUM_LANGOPT(FPRoundingMode, RoundingMode, 3, RoundingMode::NearestTiesToEven, "FP Rounding Mode type")
-BENIGN_ENUM_LANGOPT(FPExceptionMode, FPExceptionModeKind, 2, FPE_Ignore, "FP Exception Behavior Mode type")
+BENIGN_LANGOPT(RoundingMath, 1, false, "Do not assume default floating-point rounding behavior")
+BENIGN_ENUM_LANGOPT(FPExceptionMode, FPExceptionModeKind, 2, FPE_Default, "FP Exception Behavior Mode type")
 BENIGN_ENUM_LANGOPT(FPEvalMethod, FPEvalMethodKind, 2, FEM_UnsetOnCommandLine, "FP type used for floating point arithmetic")
 LANGOPT(NoBitFieldTypeAlign , 1, 0, "bit-field type alignment")
 LANGOPT(HexagonQdsp6Compat , 1, 0, "hexagon-qdsp6 backward compatibility")
@@ -424,6 +425,7 @@ LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
 LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
 
 LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
+LANGOPT(StrictFlexArrays, 2, 0, "Rely on strict definition of flexible arrays")
 
 COMPATIBLE_VALUE_LANGOPT(MaxTokens, 32, 0, "Max number of tokens per TU or 0")
 

@@ -128,7 +128,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableGEPOpt("aarch64-enable-gep-opt", cl::Hidden,
                  cl::desc("Enable optimizations on complex GEPs"),
-                 cl::init(false));
+                 cl::init(true));
 
 static cl::opt<bool>
     BranchRelaxation("aarch64-enable-branch-relax", cl::Hidden, cl::init(true),
@@ -274,7 +274,7 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   // On ELF platforms the default static relocation model has a smart enough
   // linker to cope with referencing external symbols defined in a shared
   // library. Hence DynamicNoPIC doesn't need to be promoted to PIC.
-  if (!RM.hasValue() || *RM == Reloc::DynamicNoPIC)
+  if (!RM || *RM == Reloc::DynamicNoPIC)
     return Reloc::Static;
   return *RM;
 }
@@ -392,7 +392,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   if (VScaleRangeAttr.isValid()) {
     Optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
     MinSVEVectorSize = VScaleRangeAttr.getVScaleRangeMin() * 128;
-    MaxSVEVectorSize = VScaleMax ? VScaleMax.getValue() * 128 : 0;
+    MaxSVEVectorSize = VScaleMax ? *VScaleMax * 128 : 0;
   } else {
     MinSVEVectorSize = SVEVectorBitsMinOpt;
     MaxSVEVectorSize = SVEVectorBitsMaxOpt;
@@ -563,17 +563,6 @@ void AArch64PassConfig::addIRPasses() {
       addPass(createFalkorMarkStridedAccessesPass());
   }
 
-  TargetPassConfig::addIRPasses();
-
-  addPass(createAArch64StackTaggingPass(
-      /*IsOptNone=*/TM->getOptLevel() == CodeGenOpt::None));
-
-  // Match interleaved memory accesses to ldN/stN intrinsics.
-  if (TM->getOptLevel() != CodeGenOpt::None) {
-    addPass(createInterleavedLoadCombinePass());
-    addPass(createInterleavedAccessPass());
-  }
-
   if (TM->getOptLevel() == CodeGenOpt::Aggressive && EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
@@ -585,6 +574,17 @@ void AArch64PassConfig::addIRPasses() {
     // Do loop invariant code motion in case part of the lowered result is
     // invariant.
     addPass(createLICMPass());
+  }
+
+  TargetPassConfig::addIRPasses();
+
+  addPass(createAArch64StackTaggingPass(
+      /*IsOptNone=*/TM->getOptLevel() == CodeGenOpt::None));
+
+  // Match interleaved memory accesses to ldN/stN intrinsics.
+  if (TM->getOptLevel() != CodeGenOpt::None) {
+    addPass(createInterleavedLoadCombinePass());
+    addPass(createInterleavedAccessPass());
   }
 
   // Add Control Flow Guard checks.

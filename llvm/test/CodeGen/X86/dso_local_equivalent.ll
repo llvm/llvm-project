@@ -57,8 +57,8 @@ entry:
   ret void
 }
 
-@alias_func = alias void (), void ()* @aliasee_func
-@dso_local_alias_func = dso_local alias void (), void ()* @aliasee_func
+@alias_func = alias void (), ptr @aliasee_func
+@dso_local_alias_func = dso_local alias void (), ptr @aliasee_func
 
 ; CHECK: call_alias_func:
 ; CHECK:   callq alias_func@PLT
@@ -74,12 +74,12 @@ define void @call_dso_local_alias_func() {
   ret void
 }
 
-@ifunc_func = ifunc void (), void ()* ()* @resolver
-@dso_local_ifunc_func = dso_local ifunc void (), void ()* ()* @resolver
+@ifunc_func = ifunc void (), ptr @resolver
+@dso_local_ifunc_func = dso_local ifunc void (), ptr @resolver
 
-define internal void ()* @resolver() {
+define internal ptr @resolver() {
 entry:
-  ret void ()* null
+  ret ptr null
 }
 
 ; If an ifunc is not dso_local already, then we should still emit a stub for it

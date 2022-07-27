@@ -18,11 +18,11 @@ def A64FXModel : SchedMachineModel {
   // Determined via a mix of micro-arch details and experimentation.
   let LoopMicroOpBufferSize = 128;
   let PostRAScheduler       =   1; // Using PostRA sched.
-  let CompleteModel         =   1;
+  let CompleteModel         =   0;
 
   list<Predicate> UnsupportedFeatures =
     [HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3, HasSVE2BitPerm, HasPAuth,
-     HasSVE2orSME];
+     HasSVE2orSME, HasMTE, HasMatMulInt8, HasBF16];
 
   let FullInstRWOverlapCheck = 0;
 }
@@ -3348,7 +3348,7 @@ def : InstRW<[A64FXWrite_6Cyc_GI56], (instrs PRFH_PRI)>;
 def : InstRW<[A64FXWrite_10Cyc_GI056], (instrs PRFH_D_PZI, PRFH_S_PZI)>;
 
 // [351]   "prfw        $prfop, $Pg, [$Rn, $Rm]";
-def : InstRW<[A64FXWrite_6Cyc_GI56], (instrs PRFS_PRR)>;
+def : InstRW<[A64FXWrite_6Cyc_GI56], (instrs PRFW_PRR)>;
 
 // [352]   "prfw        $prfop, $Pg, [$Rn, $Zm]";
 def : InstRW<[A64FXWrite_14Cyc_GI0256], (instrs PRFW_D_SCALED, PRFW_D_SXTW_SCALED, PRFW_D_UXTW_SCALED, PRFW_S_SXTW_SCALED, PRFW_S_UXTW_SCALED)>;

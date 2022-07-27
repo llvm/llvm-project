@@ -143,6 +143,9 @@ void SystemZAsmPrinter::emitCallInformation(CallType CT) {
 }
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  SystemZ_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                          getSubtargetInfo().getFeatureBits());
+
   SystemZMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
@@ -663,8 +666,7 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 }
 
 void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
-  const SystemZInstrInfo *TII =
-    static_cast<const SystemZInstrInfo *>(MF->getSubtarget().getInstrInfo());
+  auto *TII = MF->getSubtarget<SystemZSubtarget>().getInstrInfo();
 
   unsigned NumNOPBytes = MI.getOperand(1).getImm();
 

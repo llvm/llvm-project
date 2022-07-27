@@ -61,7 +61,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*methodName=*/"isRowMajorMatmul",
     /*args=*/(ins),
     /*methodBody=*/[{
-        return mlir::isRowMajorMatmul($_op.indexing_maps());
+        return mlir::isRowMajorMatmul($_op.getIndexingMaps());
     }]>,
     InterfaceMethod<
     /*desc=*/[{
@@ -72,7 +72,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*methodName=*/"isColumnMajorMatmul",
     /*args=*/(ins),
     /*methodBody=*/[{
-        return mlir::isColumnMajorMatmul($_op.indexing_maps());
+        return mlir::isColumnMajorMatmul($_op.getIndexingMaps());
     }]>,
     InterfaceMethod<
     /*desc=*/[{
@@ -83,7 +83,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*methodName=*/"isRowMajorBatchMatmul",
     /*args=*/(ins),
     /*methodBody=*/[{
-        return mlir::isRowMajorBatchMatmul($_op.indexing_maps());
+        return mlir::isRowMajorBatchMatmul($_op.getIndexingMaps());
     }]>,
   ];
 }
@@ -701,6 +701,20 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the operand for a `blockArgument`.
+      }],
+      /*retTy=*/"OpOperand *",
+      /*methodName=*/"getTiedOpOperand",
+      /*args=*/(ins "BlockArgument":$blockArgument),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        assert(blockArgument.getOwner() == getBlock());
+        return &this->getOperation()->getOpOperand(
+            blockArgument.getArgNumber());
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the input or output indexing map for `opOperand`.
       }],
       /*retTy=*/"AffineMap",
@@ -710,7 +724,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == this->getOperation());
         auto indexingMaps =
-          $_op.indexing_maps().template getAsValueRange<AffineMapAttr>();
+          $_op.getIndexingMaps().template getAsValueRange<AffineMapAttr>();
         return *(indexingMaps.begin() + opOperand->getOperandNumber());
       }]
     >,
@@ -725,7 +739,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         assert(result.getOwner() == this->getOperation());
         auto indexingMaps =
-          $_op.indexing_maps().template getAsValueRange<AffineMapAttr>();
+          $_op.getIndexingMaps().template getAsValueRange<AffineMapAttr>();
           return *(indexingMaps.begin() + getNumInputs() +
               result.getResultNumber());
       }]
@@ -822,18 +836,18 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the indexing maps attribute within the current operation.
       }],
       /*retTy=*/"ArrayAttr",
-      /*methodName=*/"indexing_maps"
+      /*methodName=*/"getIndexingMaps"
     >,
     InterfaceMethod<
       /*desc=*/[{
         Return the indexing maps within the current operation.
       }],
       /*retTy=*/"SmallVector<AffineMap>",
-      /*methodName=*/"getIndexingMaps",
+      /*methodName=*/"getIndexingMapsArray",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto range = $_op.indexing_maps()
+        auto range = $_op.getIndexingMaps()
           .template getAsValueRange<AffineMapAttr>();
         return {range.begin(), range.end()};
       }]
@@ -928,9 +942,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto r = $_op.indexing_maps().template getAsRange<AffineMapAttr>();
-        auto maps = llvm::to_vector<8>(
-            llvm::map_range(r, [](AffineMapAttr a) { return a.getValue(); }));
+        auto maps =  $_op.getIndexingMapsArray();
         return concatAffineMaps(maps);
       }]
     >,
@@ -1112,7 +1124,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodName=*/"hasOnlyProjectedPermutations",
       (ins),
       [{
-        return llvm::all_of($_op.getIndexingMaps(),
+        return llvm::all_of($_op.getIndexingMapsArray(),
                             [](AffineMap map) { return map.isProjectedPermutation(); });
       }]
     >
@@ -1121,7 +1133,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
   let extraClassDeclaration = [{
     /// Return the flat list of all operand dimension sizes in the order they
     /// appear in the operands.
-    SmallVector<Value, 4> createFlatListOfOperandDims(OpBuilder &, Location);
+    SmallVector<OpFoldResult> createFlatListOfOperandDims(OpBuilder &, Location);
 
     /// Return the flat list of all operands' static dimension sizes in the
     /// order they appear in the operands. All operand dimension sizes have to

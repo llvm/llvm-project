@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/Float16bits.h"
+#include <cmath>
 
 namespace {
 
@@ -106,14 +107,17 @@ const uint32_t kF32BfMantiBitDiff = 16;
 // Constructs the 16 bit representation for a bfloat value from a float value.
 // This implementation is adapted from Eigen.
 uint16_t float2bfloat(float floatValue) {
+  if (std::isnan(floatValue))
+    return std::signbit(floatValue) ? 0xFFC0 : 0x7FC0;
+
   Float32Bits floatBits;
   floatBits.f = floatValue;
   uint16_t bfloatBits;
 
   // Least significant bit of resulting bfloat.
   uint32_t lsb = (floatBits.u >> kF32BfMantiBitDiff) & 1;
-  uint32_t rounding_bias = 0x7fff + lsb;
-  floatBits.u += rounding_bias;
+  uint32_t roundingBias = 0x7fff + lsb;
+  floatBits.u += roundingBias;
   bfloatBits = static_cast<uint16_t>(floatBits.u >> kF32BfMantiBitDiff);
   return bfloatBits;
 }

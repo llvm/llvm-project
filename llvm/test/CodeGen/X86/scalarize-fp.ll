@@ -17,7 +17,7 @@ define <4 x float> @fadd_op1_constant_v4f32(float %x) nounwind {
   ret <4 x float> %b
 }
 
-define <4 x float> @load_fadd_op1_constant_v4f32(float* %p) nounwind {
+define <4 x float> @load_fadd_op1_constant_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: load_fadd_op1_constant_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -29,7 +29,7 @@ define <4 x float> @load_fadd_op1_constant_v4f32(float* %p) nounwind {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %v = insertelement <4 x float> undef, float %x, i32 0
   %b = fadd <4 x float> %v, <float 42.0, float undef, float undef, float undef>
   ret <4 x float> %b
@@ -53,7 +53,7 @@ define <4 x float> @fsub_op0_constant_v4f32(float %x) nounwind {
   ret <4 x float> %b
 }
 
-define <4 x float> @load_fsub_op0_constant_v4f32(float* %p) nounwind {
+define <4 x float> @load_fsub_op0_constant_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: load_fsub_op0_constant_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -65,7 +65,7 @@ define <4 x float> @load_fsub_op0_constant_v4f32(float* %p) nounwind {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vsubss (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %v = insertelement <4 x float> undef, float %x, i32 0
   %b = fsub <4 x float> <float 42.0, float undef, float undef, float undef>, %v
   ret <4 x float> %b
@@ -86,7 +86,7 @@ define <4 x float> @fmul_op1_constant_v4f32(float %x) nounwind {
   ret <4 x float> %b
 }
 
-define <4 x float> @load_fmul_op1_constant_v4f32(float* %p) nounwind {
+define <4 x float> @load_fmul_op1_constant_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: load_fmul_op1_constant_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -98,7 +98,7 @@ define <4 x float> @load_fmul_op1_constant_v4f32(float* %p) nounwind {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %v = insertelement <4 x float> undef, float %x, i32 0
   %b = fmul <4 x float> %v, <float 42.0, float undef, float undef, float undef>
   ret <4 x float> %b
@@ -119,7 +119,7 @@ define <4 x float> @fdiv_op1_constant_v4f32(float %x) nounwind {
   ret <4 x float> %b
 }
 
-define <4 x float> @load_fdiv_op1_constant_v4f32(float* %p) nounwind {
+define <4 x float> @load_fdiv_op1_constant_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: load_fdiv_op1_constant_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -131,7 +131,7 @@ define <4 x float> @load_fdiv_op1_constant_v4f32(float* %p) nounwind {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vdivss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %v = insertelement <4 x float> undef, float %x, i32 0
   %b = fdiv <4 x float> %v, <float 42.0, float undef, float undef, float undef>
   ret <4 x float> %b
@@ -155,7 +155,7 @@ define <4 x float> @fdiv_op0_constant_v4f32(float %x) nounwind {
   ret <4 x float> %b
 }
 
-define <4 x float> @load_fdiv_op0_constant_v4f32(float* %p) nounwind {
+define <4 x float> @load_fdiv_op0_constant_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: load_fdiv_op0_constant_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -167,7 +167,7 @@ define <4 x float> @load_fdiv_op0_constant_v4f32(float* %p) nounwind {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vdivss (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %v = insertelement <4 x float> undef, float %x, i32 0
   %b = fdiv <4 x float> <float 42.0, float undef, float undef, float undef>, %v
   ret <4 x float> %b
@@ -188,7 +188,7 @@ define <4 x double> @fadd_op1_constant_v4f64(double %x) nounwind {
   ret <4 x double> %b
 }
 
-define <4 x double> @load_fadd_op1_constant_v4f64(double* %p) nounwind {
+define <4 x double> @load_fadd_op1_constant_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: load_fadd_op1_constant_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -200,7 +200,7 @@ define <4 x double> @load_fadd_op1_constant_v4f64(double* %p) nounwind {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %v = insertelement <4 x double> undef, double %x, i32 0
   %b = fadd <4 x double> %v, <double 42.0, double undef, double undef, double undef>
   ret <4 x double> %b
@@ -224,7 +224,7 @@ define <4 x double> @fsub_op0_constant_v4f64(double %x) nounwind {
   ret <4 x double> %b
 }
 
-define <4 x double> @load_fsub_op0_constant_v4f64(double* %p) nounwind {
+define <4 x double> @load_fsub_op0_constant_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: load_fsub_op0_constant_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -236,7 +236,7 @@ define <4 x double> @load_fsub_op0_constant_v4f64(double* %p) nounwind {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vsubsd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %v = insertelement <4 x double> undef, double %x, i32 0
   %b = fsub <4 x double> <double 42.0, double undef, double undef, double undef>, %v
   ret <4 x double> %b
@@ -257,7 +257,7 @@ define <4 x double> @fmul_op1_constant_v4f64(double %x) nounwind {
   ret <4 x double> %b
 }
 
-define <4 x double> @load_fmul_op1_constant_v4f64(double* %p) nounwind {
+define <4 x double> @load_fmul_op1_constant_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: load_fmul_op1_constant_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -269,7 +269,7 @@ define <4 x double> @load_fmul_op1_constant_v4f64(double* %p) nounwind {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %v = insertelement <4 x double> undef, double %x, i32 0
   %b = fmul <4 x double> %v, <double 42.0, double undef, double undef, double undef>
   ret <4 x double> %b
@@ -290,7 +290,7 @@ define <4 x double> @fdiv_op1_constant_v4f64(double %x) nounwind {
   ret <4 x double> %b
 }
 
-define <4 x double> @load_fdiv_op1_constant_v4f64(double* %p) nounwind {
+define <4 x double> @load_fdiv_op1_constant_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: load_fdiv_op1_constant_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -302,7 +302,7 @@ define <4 x double> @load_fdiv_op1_constant_v4f64(double* %p) nounwind {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vdivsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %v = insertelement <4 x double> undef, double %x, i32 0
   %b = fdiv <4 x double> %v, <double 42.0, double undef, double undef, double undef>
   ret <4 x double> %b
@@ -326,7 +326,7 @@ define <4 x double> @fdiv_op0_constant_v4f64(double %x) nounwind {
   ret <4 x double> %b
 }
 
-define <4 x double> @load_fdiv_op0_constant_v4f64(double* %p) nounwind {
+define <4 x double> @load_fdiv_op0_constant_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: load_fdiv_op0_constant_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -338,7 +338,7 @@ define <4 x double> @load_fdiv_op0_constant_v4f64(double* %p) nounwind {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vdivsd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %v = insertelement <4 x double> undef, double %x, i32 0
   %b = fdiv <4 x double> <double 42.0, double undef, double undef, double undef>, %v
   ret <4 x double> %b

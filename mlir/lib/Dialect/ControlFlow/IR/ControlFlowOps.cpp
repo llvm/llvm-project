@@ -745,7 +745,7 @@ static LogicalResult simplifyPassThroughSwitch(SwitchOp op,
     return failure();
 
   rewriter.replaceOpWithNewOp<SwitchOp>(op, op.getFlag(), defaultDest,
-                                        defaultOperands, caseValues.getValue(),
+                                        defaultOperands, *caseValues,
                                         newCaseDests, newCaseOperands);
   return success();
 }

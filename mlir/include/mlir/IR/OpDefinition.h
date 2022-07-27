@@ -44,10 +44,10 @@ public:
   OptionalParseResult(llvm::NoneType) : impl(llvm::None) {}
 
   /// Returns true if we contain a valid ParseResult value.
-  bool hasValue() const { return impl.hasValue(); }
+  bool hasValue() const { return impl.has_value(); }
 
   /// Access the internal ParseResult value.
-  ParseResult getValue() const { return impl.getValue(); }
+  ParseResult getValue() const { return impl.value(); }
   ParseResult operator*() const { return getValue(); }
 
 private:
@@ -181,6 +181,10 @@ public:
   /// supports, for use by the canonicalization pass.
   static void getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {}
+
+  /// This hook populates any unset default attrs.
+  static void populateDefaultAttrs(const RegisteredOperationName &,
+                                   NamedAttrList &) {}
 
 protected:
   /// If the concrete type didn't implement a custom verifier hook, just fall
@@ -1728,14 +1732,16 @@ private:
   struct InterfaceTargetOrOpT {
     using type = typename T::ConcreteEntity;
   };
-  template <typename T> struct InterfaceTargetOrOpT<T, false> {
+  template <typename T>
+  struct InterfaceTargetOrOpT<T, false> {
     using type = ConcreteType;
   };
 
   /// A hook for static assertion that the external interface model T is
   /// targeting the concrete type of this op. The model can also be a fallback
   /// model that works for every op.
-  template <typename T> static void checkInterfaceTarget() {
+  template <typename T>
+  static void checkInterfaceTarget() {
     static_assert(std::is_same<typename InterfaceTargetOrOpT<T>::type,
                                ConcreteType>::value,
                   "attaching an interface to the wrong op kind");
@@ -1869,6 +1875,10 @@ private:
     OpState::printOpName(op, p, defaultDialect);
     return cast<ConcreteType>(op).print(p);
   }
+  /// Implementation of `PopulateDefaultAttrsFn` OperationName hook.
+  static OperationName::PopulateDefaultAttrsFn getPopulateDefaultAttrsFn() {
+    return ConcreteType::populateDefaultAttrs;
+  }
   /// Implementation of `VerifyInvariantsFn` OperationName hook.
   static LogicalResult verifyInvariants(Operation *op) {
     static_assert(hasNoDataMembers(),
@@ -1963,8 +1973,9 @@ LogicalResult verifyCastInterfaceOp(
 namespace llvm {
 
 template <typename T>
-struct DenseMapInfo<
-    T, std::enable_if_t<std::is_base_of<mlir::OpState, T>::value>> {
+struct DenseMapInfo<T,
+                    std::enable_if_t<std::is_base_of<mlir::OpState, T>::value &&
+                                     !mlir::detail::IsInterface<T>::value>> {
   static inline T getEmptyKey() {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return T::getFromOpaquePointer(pointer);

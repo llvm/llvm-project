@@ -280,46 +280,6 @@ def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
   }];
 }
 
-def fir_CharConvertOp : fir_Op<"char_convert", []> {
-  let summary = [{
-    Primitive to convert an entity of type CHARACTER from one KIND to a
-    different KIND.
-  }];
-
-  let description = [{
-    Copy a CHARACTER (must be in memory) of KIND _k1_ to a CHARACTER (also must
-    be in memory) of KIND _k2_ where _k1_ != _k2_ and the buffers do not
-    overlap. This latter restriction is unchecked, as the Fortran language
-    definition eliminates the overlapping in memory case.
-
-    The number of code points copied is specified explicitly as the second
-    argument. The length of the !fir.char type is ignored.
-
-    ```mlir
-      fir.char_convert %1 for %2 to %3 : !fir.ref<!fir.char<1,?>>, i32,
-          !fir.ref<!fir.char<2,20>>
-    ```
-
-    Should future support for encodings other than ASCII be supported, codegen
-    can generate a call to a runtime helper routine which will map the code
-    points from UTF-8 to UCS-2, for example. Such remappings may not always
-    be possible as they may involve the creation of more code points than the
-    `count` limit. These details are left as future to-dos.
-  }];
-
-  let arguments = (ins
-    Arg<AnyReferenceLike, "", [MemRead]>:$from,
-    AnyIntegerType:$count,
-    Arg<AnyReferenceLike, "", [MemWrite]>:$to
-  );
-
-  let assemblyFormat = [{
-    $from `for` $count `to` $to attr-dict `:` type(operands)
-  }];
-
-  let hasVerifier = 1;
-}
-
 def fir_StoreOp : fir_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let summary = "store an SSA-value to a memory location";
 
@@ -357,7 +317,7 @@ def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
 
   let description = [{
     Save the result of a function returning an array, box, or record type value
-    into a memory location given the shape and length parameters of the result.
+    into a memory location given the shape and LEN parameters of the result.
 
     Function results of type fir.box, fir.array, or fir.rec are abstract values
     that require a storage to be manipulated on the caller side. This operation
@@ -366,8 +326,8 @@ def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
     memory.
 
     For arrays, result, it is required to provide the shape of the result. For
-    character arrays and derived types with length parameters, the length
-    parameter values must be provided.
+    character arrays and derived types with LEN parameters, the LEN parameter
+    values must be provided.
 
     The fir.save_result associated to a function call must immediately follow
     the call and be in the same block.
@@ -394,6 +354,46 @@ def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
   let assemblyFormat = [{
     $value `to` $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
     attr-dict `:` type(operands)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CharConvertOp : fir_Op<"char_convert", []> {
+  let summary = [{
+    Primitive to convert an entity of type CHARACTER from one KIND to a
+    different KIND.
+  }];
+
+  let description = [{
+    Copy a CHARACTER (must be in memory) of KIND _k1_ to a CHARACTER (also must
+    be in memory) of KIND _k2_ where _k1_ != _k2_ and the buffers do not
+    overlap. This latter restriction is unchecked, as the Fortran language
+    definition eliminates the overlapping in memory case.
+
+    The number of code points copied is specified explicitly as the second
+    argument. The length of the !fir.char type is ignored.
+
+    ```mlir
+      fir.char_convert %1 for %2 to %3 : !fir.ref<!fir.char<1,?>>, i32,
+          !fir.ref<!fir.char<2,20>>
+    ```
+
+    Should future support for encodings other than ASCII be supported, codegen
+    can generate a call to a runtime helper routine which will map the code
+    points from UTF-8 to UCS-2, for example. Such remappings may not always
+    be possible as they may involve the creation of more code points than the
+    `count` limit. These details are left as future to-dos.
+  }];
+
+  let arguments = (ins
+    Arg<AnyReferenceLike, "", [MemRead]>:$from,
+    AnyIntegerType:$count,
+    Arg<AnyReferenceLike, "", [MemWrite]>:$to
+  );
+
+  let assemblyFormat = [{
+    $from `for` $count `to` $to attr-dict `:` type(operands)
   }];
 
   let hasVerifier = 1;
@@ -1716,8 +1716,8 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
       "mlir::Type":$recTy, CArg<"mlir::ValueRange","{}">:$operands)>];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef fieldAttrName() { return "field_id"; }
-    static constexpr llvm::StringRef typeAttrName() { return "on_type"; }
+    static constexpr llvm::StringRef getFieldAttrName() { return "field_id"; }
+    static constexpr llvm::StringRef getTypeAttrName() { return "on_type"; }
     llvm::StringRef getFieldName() { return getFieldId(); }
     llvm::SmallVector<mlir::Attribute> getAttributes();
   }];
@@ -1970,21 +1970,22 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins StrAttr:$field_id, TypeAttr:$on_type);
+  let arguments = (ins
+    StrAttr:$field_id,
+    TypeAttr:$on_type,
+    Variadic<AnyIntegerType>:$typeparams
+  );
 
   let hasCustomAssemblyFormat = 1;
 
   let builders = [OpBuilder<(ins "llvm::StringRef":$fieldName,
-      "mlir::Type":$recTy),
-    [{
-      $_state.addAttribute(fieldAttrName(), $_builder.getStringAttr(fieldName));
-      $_state.addAttribute(typeAttrName(), mlir::TypeAttr::get(recTy));
-    }]
-  >];
+      "mlir::Type":$recTy, CArg<"mlir::ValueRange","{}">:$operands)>];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef fieldAttrName() { return "field_id"; }
-    static constexpr llvm::StringRef typeAttrName() { return "on_type"; }
+    static constexpr llvm::StringRef getFieldAttrName() { return "field_id"; }
+    static constexpr llvm::StringRef getTypeAttrName() { return "on_type"; }
+    llvm::StringRef getParamName() { return getFieldId(); }
+    llvm::SmallVector<mlir::Attribute> getAttributes();
   }];
 }
 
@@ -2352,7 +2353,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     // operand[0] is the object (of box type)
     operand_iterator arg_operand_begin() { return operand_begin() + 1; }
     operand_iterator arg_operand_end() { return operand_end(); }
-    static constexpr llvm::StringRef passArgAttrName() {
+    static constexpr llvm::StringRef getPassArgAttrName() {
       return "pass_arg_pos";
     }
     static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
@@ -2445,11 +2446,11 @@ def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef realAttrName() { return "real"; }
-    static constexpr llvm::StringRef imagAttrName() { return "imaginary"; }
+    static constexpr llvm::StringRef getRealAttrName() { return "real"; }
+    static constexpr llvm::StringRef getImagAttrName() { return "imaginary"; }
 
-    mlir::Attribute getReal() { return (*this)->getAttr(realAttrName()); }
-    mlir::Attribute getImaginary() { return (*this)->getAttr(imagAttrName()); }
+    mlir::Attribute getReal() { return (*this)->getAttr(getRealAttrName()); }
+    mlir::Attribute getImaginary() { return (*this)->getAttr(getImagAttrName()); }
   }];
 }
 
@@ -2676,17 +2677,19 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
   ];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef symbolAttrNameStr() { return "symref"; }
+    static constexpr llvm::StringRef getSymbolAttrNameStr() { return "symref"; }
     static constexpr llvm::StringRef getConstantAttrNameStr() {
       return "constant";
     }
-    static constexpr llvm::StringRef linkageAttrName() { return "linkName"; }
+    static constexpr llvm::StringRef getLinkageAttrNameStr() {
+      return "linkName";
+    }
 
     /// The semantic type of the global
     mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
-    mlir::Attribute getValueOrNull() { return getInitVal().getValueOr(mlir::Attribute()); }
+    mlir::Attribute getValueOrNull() { return getInitVal().value_or(mlir::Attribute()); }
 
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.
@@ -2732,8 +2735,8 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef lenParamAttrName() { return "lenparam"; }
-    static constexpr llvm::StringRef intAttrName() { return "intval"; }
+    static constexpr llvm::StringRef getLenParamAttrName() { return "lenparam"; }
+    static constexpr llvm::StringRef getIntAttrName() { return "intval"; }
   }];
 }
 

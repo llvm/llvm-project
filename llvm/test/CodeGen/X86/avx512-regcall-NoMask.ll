@@ -579,7 +579,7 @@ define dso_local x86_regcallcc double @test_CallargParamf80(x86_fp80 %a)  {
 }
 
 ; Test regcall when receiving/returning pointer
-define dso_local x86_regcallcc [4 x i32]* @test_argRetPointer([4 x i32]* %a)  {
+define dso_local x86_regcallcc ptr @test_argRetPointer(ptr %a)  {
 ; X32-LABEL: test_argRetPointer:
 ; X32:       # %bb.0:
 ; X32-NEXT:    incl %eax
@@ -594,14 +594,14 @@ define dso_local x86_regcallcc [4 x i32]* @test_argRetPointer([4 x i32]* %a)  {
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    incl %eax
 ; LINUXOSX64-NEXT:    retq
-  %b = ptrtoint [4 x i32]* %a to i32
+  %b = ptrtoint ptr %a to i32
   %c = add i32 %b, 1
-  %d = inttoptr i32 %c to [4 x i32]*
-  ret [4 x i32]* %d
+  %d = inttoptr i32 %c to ptr
+  ret ptr %d
 }
 
 ; Test regcall when passing/retrieving pointer
-define dso_local x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)  {
+define dso_local x86_regcallcc ptr @test_CallargRetPointer(ptr %a)  {
 ; X32-LABEL: test_CallargRetPointer:
 ; X32:       # %bb.0:
 ; X32-NEXT:    incl %eax
@@ -631,14 +631,14 @@ define dso_local x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)
 ; LINUXOSX64-NEXT:    popq %rcx
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 8
 ; LINUXOSX64-NEXT:    retq
-  %b = ptrtoint [4 x i32]* %a to i32
+  %b = ptrtoint ptr %a to i32
   %c = add i32 %b, 1
-  %d = inttoptr i32 %c to [4 x i32]*
-  %e = call x86_regcallcc [4 x i32]* @test_argRetPointer([4 x i32]* %d)
-  %f = ptrtoint [4 x i32]* %e to i32
+  %d = inttoptr i32 %c to ptr
+  %e = call x86_regcallcc ptr @test_argRetPointer(ptr %d)
+  %f = ptrtoint ptr %e to i32
   %g = add i32 %f, 1
-  %h = inttoptr i32 %g to [4 x i32]*
-  ret [4 x i32]* %h
+  %h = inttoptr i32 %g to ptr
+  ret ptr %h
 }
 
 ; Test regcall when receiving/returning 128 bit vector
@@ -1197,7 +1197,7 @@ define dso_local x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a0, <32
 }
 
 ; Test regcall when passing/retrieving mixed types
-define dso_local x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signext, i32, i64, i16 signext, i32*) #0 {
+define dso_local x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signext, i32, i64, i16 signext, ptr) #0 {
 ; X32-LABEL: test_argRetMixTypes:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
@@ -1264,7 +1264,7 @@ define dso_local x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signex
   %15 = fadd double %13, %14
   %16 = sitofp i16 %5 to double
   %17 = fadd double %15, %16
-  %18 = load i32, i32* %6, align 4
+  %18 = load i32, ptr %6, align 4
   %19 = sitofp i32 %18 to double
   %20 = fadd double %17, %19
   %21 = fptosi double %20 to i32

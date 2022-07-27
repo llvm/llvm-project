@@ -51,6 +51,8 @@
 // CHECK-TEMP-BINDINGS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_OBJ:.+]]"], output: "[[BINARY:.+.out]]"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda --offload-arch=sm_52 --offload-arch=sm_70 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-ARCH-BINDINGS
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda --offload-arch=sm_52,sm_70 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-ARCH-BINDINGS
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda --offload-arch=sm_52,sm_70,sm_35,sm_80 --no-offload-arch=sm_35,sm_80 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-ARCH-BINDINGS
 // CHECK-ARCH-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.*]]"], output: "[[HOST_BC:.*]]"
 // CHECK-ARCH-BINDINGS: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_BC_SM_52:.*]]"
 // CHECK-ARCH-BINDINGS: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_BC_SM_52]]"], output: "[[DEVICE_OBJ_SM_52:.*]]"
@@ -103,13 +105,29 @@
 // RUN:     --offload-device-only -E -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY-PP
 // CHECK-DEVICE-ONLY-PP: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.*]]"], output: "-"
 
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 -nogpulib \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBRARY %s
 
 // CHECK-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 -nogpulib \
+// RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-NO-LIBRARY %s
+
+// CHECK-NO-LIBRARY-NOT: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 -nogpulib \
 // RUN:     -Xoffload-linker a -Xoffload-linker-nvptx64-nvidia-cuda b -Xoffload-linker-nvptx64 c \
 // RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-XLINKER %s
 
 // CHECK-XLINKER: -device-linker=a{{.*}}-device-linker=nvptx64-nvidia-cuda=b{{.*}}-device-linker=nvptx64-nvidia-cuda=c{{.*}}--
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 -nogpulib \
+// RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-FEATURES %s
+
+// CHECK-LTO-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx{{[0-9]+}}
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 -nogpulib \
+// RUN:     -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx64 -foffload-lto %s 2>&1 \
+// RUN:    | FileCheck --check-prefix=CHECK-SET-FEATURES %s
+
+// CHECK-SET-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx64

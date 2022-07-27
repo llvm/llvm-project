@@ -6,24 +6,24 @@
 
 declare i64 @subfn(i8*) #0
 
-declare noalias i8* @malloc(i64)
-declare noalias i8* @calloc(i64, i64)
-declare void @free(i8*)
+declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias i8* @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+declare void @free(i8*) allockind("free") "alloc-family"="malloc"
 
 define i64 @f(i64 %len) {
 ; IS________OPM-LABEL: define {{[^@]+}}@f
 ; IS________OPM-SAME: (i64 [[LEN:%.*]]) {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[MEM:%.*]] = call noalias i8* @malloc(i64 [[LEN]])
-; IS________OPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM]]) #[[ATTR1:[0-9]+]]
+; IS________OPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM]]) #[[ATTR4:[0-9]+]]
 ; IS________OPM-NEXT:    call void @free(i8* [[MEM]])
 ; IS________OPM-NEXT:    ret i64 [[RES]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@f
 ; IS________NPM-SAME: (i64 [[LEN:%.*]]) {
 ; IS________NPM-NEXT:  entry:
-; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 [[LEN]], align 1
-; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[TMP0]]) #[[ATTR2:[0-9]+]]
+; IS________NPM-NEXT:    [[MEM_H2S:%.*]] = alloca i8, i64 [[LEN]], align 1
+; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM_H2S]]) #[[ATTR5:[0-9]+]]
 ; IS________NPM-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -39,7 +39,7 @@ define i64 @g(i64 %len) {
 ; IS________OPM-SAME: (i64 [[LEN:%.*]]) {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[MEM:%.*]] = call noalias i8* @calloc(i64 [[LEN]], i64 noundef 8)
-; IS________OPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM]]) #[[ATTR1]]
+; IS________OPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    call void @free(i8* [[MEM]])
 ; IS________OPM-NEXT:    ret i64 [[RES]]
 ;
@@ -47,9 +47,9 @@ define i64 @g(i64 %len) {
 ; IS________NPM-SAME: (i64 [[LEN:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = mul i64 [[LEN]], 8
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 1
-; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP1]], i8 0, i64 [[TMP0]], i1 false)
-; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[TMP1]]) #[[ATTR2]]
+; IS________NPM-NEXT:    [[MEM_H2S:%.*]] = alloca i8, i64 [[TMP0]], align 1
+; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[MEM_H2S]], i8 0, i64 [[TMP0]], i1 false)
+; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[MEM_H2S]]) #[[ATTR5]]
 ; IS________NPM-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -62,9 +62,15 @@ entry:
 attributes #0 = { nounwind willreturn }
 ;.
 ; IS________OPM: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
-; IS________OPM: attributes #[[ATTR1]] = { nounwind }
+; IS________OPM: attributes #[[ATTR1:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; IS________OPM: attributes #[[ATTR2:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; IS________OPM: attributes #[[ATTR3:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
+; IS________OPM: attributes #[[ATTR4]] = { nounwind }
 ;.
 ; IS________NPM: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
-; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
-; IS________NPM: attributes #[[ATTR2]] = { nounwind }
+; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; IS________NPM: attributes #[[ATTR2:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; IS________NPM: attributes #[[ATTR3:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
+; IS________NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
+; IS________NPM: attributes #[[ATTR5]] = { nounwind }
 ;.

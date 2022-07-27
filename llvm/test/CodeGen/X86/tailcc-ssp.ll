@@ -1,14 +1,14 @@
 ; RUN: llc -mtriple=x86_64-windows-msvc %s -o - -verify-machineinstrs | FileCheck %s
 
-declare void @h(i8*, i64, i8*)
+declare void @h(ptr, i64, ptr)
 
-define tailcc void @tailcall_frame(i8* %0, i64 %1) sspreq {
+define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; CHECK-LABEL: tailcall_frame:
 ; CHECK: callq __security_check_cookie
 ; CHECK: xorl %ecx, %ecx
 ; CHECK: jmp h
 
-   tail call tailcc void @h(i8* null, i64 0, i8* null)
+   tail call tailcc void @h(ptr null, i64 0, ptr null)
    ret void
 }
 

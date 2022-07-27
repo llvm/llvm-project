@@ -12,6 +12,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
@@ -35,11 +36,11 @@ using namespace mlir::detail;
 //===----------------------------------------------------------------------===//
 
 void BuiltinDialect::registerAttributes() {
-  addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
-                DenseStringElementsAttr, DictionaryAttr, FloatAttr,
-                SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
-                OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
-                UnitAttr>();
+  addAttributes<AffineMapAttr, ArrayAttr, DenseArrayBaseAttr,
+                DenseIntOrFPElementsAttr, DenseStringElementsAttr,
+                DictionaryAttr, FloatAttr, SymbolRefAttr, IntegerAttr,
+                IntegerSetAttr, OpaqueAttr, OpaqueElementsAttr,
+                SparseElementsAttr, StringAttr, TypeAttr, UnitAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -53,13 +54,10 @@ void ArrayAttr::walkImmediateSubElements(
     walkAttrsFn(attr);
 }
 
-SubElementAttrInterface ArrayAttr::replaceImmediateSubAttribute(
-    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
-  std::vector<Attribute> vector = getValue().vec();
-  for (auto &it : replacements) {
-    vector[it.first] = it.second;
-  }
-  return get(getContext(), vector);
+Attribute
+ArrayAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                       ArrayRef<Type> replTypes) const {
+  return get(getContext(), replAttrs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -226,11 +224,12 @@ void DictionaryAttr::walkImmediateSubElements(
     walkAttrsFn(attr.getValue());
 }
 
-SubElementAttrInterface DictionaryAttr::replaceImmediateSubAttribute(
-    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
+Attribute
+DictionaryAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                            ArrayRef<Type> replTypes) const {
   std::vector<NamedAttribute> vec = getValue().vec();
-  for (auto &it : replacements)
-    vec[it.first].setValue(it.second);
+  for (auto &it : llvm::enumerate(replAttrs))
+    vec[it.index()].setValue(it.value());
 
   // The above only modifies the mapped value, but not the key, and therefore
   // not the order of the elements. It remains sorted
@@ -323,6 +322,24 @@ FlatSymbolRefAttr SymbolRefAttr::get(Operation *symbol) {
 StringAttr SymbolRefAttr::getLeafReference() const {
   ArrayRef<FlatSymbolRefAttr> nestedRefs = getNestedReferences();
   return nestedRefs.empty() ? getRootReference() : nestedRefs.back().getAttr();
+}
+
+void SymbolRefAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkAttrsFn(getRootReference());
+  for (FlatSymbolRefAttr ref : getNestedReferences())
+    walkAttrsFn(ref);
+}
+
+Attribute
+SymbolRefAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                           ArrayRef<Type> replTypes) const {
+  ArrayRef<Attribute> rawNestedRefs = replAttrs.drop_front();
+  ArrayRef<FlatSymbolRefAttr> nestedRefs(
+      static_cast<const FlatSymbolRefAttr *>(rawNestedRefs.data()),
+      rawNestedRefs.size());
+  return get(replAttrs[0].cast<StringAttr>(), nestedRefs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -663,6 +680,284 @@ DenseElementsAttr::ComplexIntElementIterator::operator*() const {
   return {readBits(getData(), offset, bitWidth),
           readBits(getData(), offset + storageWidth, bitWidth)};
 }
+
+//===----------------------------------------------------------------------===//
+// DenseArrayAttr
+//===----------------------------------------------------------------------===//
+
+/// Custom storage to ensure proper memory alignment for the allocation of
+/// DenseArray of any element type.
+struct mlir::detail::DenseArrayBaseAttrStorage : public AttributeStorage {
+  using KeyTy = std::tuple<ShapedType, DenseArrayBaseAttr::EltType,
+                           ::llvm::ArrayRef<char>>;
+  DenseArrayBaseAttrStorage(ShapedType type,
+                            DenseArrayBaseAttr::EltType eltType,
+                            ::llvm::ArrayRef<char> elements)
+      : AttributeStorage(type), eltType(eltType), elements(elements) {}
+
+  bool operator==(const KeyTy &tblgenKey) const {
+    return (getType() == std::get<0>(tblgenKey)) &&
+           (eltType == std::get<1>(tblgenKey)) &&
+           (elements == std::get<2>(tblgenKey));
+  }
+
+  static ::llvm::hash_code hashKey(const KeyTy &tblgenKey) {
+    return ::llvm::hash_combine(std::get<0>(tblgenKey), std::get<1>(tblgenKey),
+                                std::get<2>(tblgenKey));
+  }
+
+  static DenseArrayBaseAttrStorage *
+  construct(AttributeStorageAllocator &allocator, const KeyTy &tblgenKey) {
+    auto type = std::get<0>(tblgenKey);
+    auto eltType = std::get<1>(tblgenKey);
+    auto elements = std::get<2>(tblgenKey);
+    if (!elements.empty()) {
+      char *alloc = static_cast<char *>(
+          allocator.allocate(elements.size(), alignof(uint64_t)));
+      std::uninitialized_copy(elements.begin(), elements.end(), alloc);
+      elements = ArrayRef<char>(alloc, elements.size());
+    }
+    return new (allocator.allocate<DenseArrayBaseAttrStorage>())
+        DenseArrayBaseAttrStorage(type, eltType, elements);
+  }
+
+  DenseArrayBaseAttr::EltType eltType;
+  ::llvm::ArrayRef<char> elements;
+};
+
+DenseArrayBaseAttr::EltType DenseArrayBaseAttr::getElementType() const {
+  return getImpl()->eltType;
+}
+
+const int8_t *
+DenseArrayBaseAttr::value_begin_impl(OverloadToken<int8_t>) const {
+  return cast<DenseI8ArrayAttr>().asArrayRef().begin();
+}
+const int16_t *
+DenseArrayBaseAttr::value_begin_impl(OverloadToken<int16_t>) const {
+  return cast<DenseI16ArrayAttr>().asArrayRef().begin();
+}
+const int32_t *
+DenseArrayBaseAttr::value_begin_impl(OverloadToken<int32_t>) const {
+  return cast<DenseI32ArrayAttr>().asArrayRef().begin();
+}
+const int64_t *
+DenseArrayBaseAttr::value_begin_impl(OverloadToken<int64_t>) const {
+  return cast<DenseI64ArrayAttr>().asArrayRef().begin();
+}
+const float *DenseArrayBaseAttr::value_begin_impl(OverloadToken<float>) const {
+  return cast<DenseF32ArrayAttr>().asArrayRef().begin();
+}
+const double *
+DenseArrayBaseAttr::value_begin_impl(OverloadToken<double>) const {
+  return cast<DenseF64ArrayAttr>().asArrayRef().begin();
+}
+
+void DenseArrayBaseAttr::print(AsmPrinter &printer) const {
+  print(printer.getStream());
+}
+
+void DenseArrayBaseAttr::printWithoutBraces(raw_ostream &os) const {
+  switch (getElementType()) {
+  case DenseArrayBaseAttr::EltType::I8:
+    this->cast<DenseI8ArrayAttr>().printWithoutBraces(os);
+    return;
+  case DenseArrayBaseAttr::EltType::I16:
+    this->cast<DenseI16ArrayAttr>().printWithoutBraces(os);
+    return;
+  case DenseArrayBaseAttr::EltType::I32:
+    this->cast<DenseI32ArrayAttr>().printWithoutBraces(os);
+    return;
+  case DenseArrayBaseAttr::EltType::I64:
+    this->cast<DenseI64ArrayAttr>().printWithoutBraces(os);
+    return;
+  case DenseArrayBaseAttr::EltType::F32:
+    this->cast<DenseF32ArrayAttr>().printWithoutBraces(os);
+    return;
+  case DenseArrayBaseAttr::EltType::F64:
+    this->cast<DenseF64ArrayAttr>().printWithoutBraces(os);
+    return;
+  }
+  llvm_unreachable("<unknown DenseArrayBaseAttr>");
+}
+
+void DenseArrayBaseAttr::print(raw_ostream &os) const {
+  os << "[";
+  printWithoutBraces(os);
+  os << "]";
+}
+
+template <typename T>
+void DenseArrayAttr<T>::print(AsmPrinter &printer) const {
+  print(printer.getStream());
+}
+
+template <typename T>
+void DenseArrayAttr<T>::printWithoutBraces(raw_ostream &os) const {
+  ArrayRef<T> values{*this};
+  llvm::interleaveComma(values, os);
+}
+
+/// Specialization for int8_t for forcing printing as number instead of chars.
+template <>
+void DenseArrayAttr<int8_t>::printWithoutBraces(raw_ostream &os) const {
+  ArrayRef<int8_t> values{*this};
+  llvm::interleaveComma(values, os, [&](int64_t v) { os << v; });
+}
+
+template <typename T>
+void DenseArrayAttr<T>::print(raw_ostream &os) const {
+  os << "[";
+  printWithoutBraces(os);
+  os << "]";
+}
+
+/// Parse a single element: generic template for int types, specialized for
+/// floating points below.
+template <typename T>
+static ParseResult parseDenseArrayAttrElt(AsmParser &parser, T &value) {
+  return parser.parseInteger(value);
+}
+
+template <>
+ParseResult parseDenseArrayAttrElt<float>(AsmParser &parser, float &value) {
+  double doubleVal;
+  if (parser.parseFloat(doubleVal))
+    return failure();
+  value = doubleVal;
+  return success();
+}
+
+template <>
+ParseResult parseDenseArrayAttrElt<double>(AsmParser &parser, double &value) {
+  return parser.parseFloat(value);
+}
+
+/// Parse a DenseArrayAttr without the braces: `1, 2, 3`
+template <typename T>
+Attribute DenseArrayAttr<T>::parseWithoutBraces(AsmParser &parser,
+                                                Type odsType) {
+  SmallVector<T> data;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        T value;
+        if (parseDenseArrayAttrElt(parser, value))
+          return failure();
+        data.push_back(value);
+        return success();
+      })))
+    return {};
+  return get(parser.getContext(), data);
+}
+
+/// Parse a DenseArrayAttr: `[ 1, 2, 3 ]`
+template <typename T>
+Attribute DenseArrayAttr<T>::parse(AsmParser &parser, Type odsType) {
+  if (parser.parseLSquare())
+    return {};
+  // Handle empty list case.
+  if (succeeded(parser.parseOptionalRSquare()))
+    return get(parser.getContext(), {});
+  Attribute result = parseWithoutBraces(parser, odsType);
+  if (parser.parseRSquare())
+    return {};
+  return result;
+}
+
+/// Conversion from DenseArrayAttr<T> to ArrayRef<T>.
+template <typename T>
+DenseArrayAttr<T>::operator ArrayRef<T>() const {
+  ArrayRef<char> raw = getImpl()->elements;
+  assert((raw.size() % sizeof(T)) == 0);
+  return ArrayRef<T>(reinterpret_cast<const T *>(raw.data()),
+                     raw.size() / sizeof(T));
+}
+
+namespace {
+/// Mapping from C++ element type to MLIR DenseArrayAttr internals.
+template <typename T>
+struct denseArrayAttrEltTypeBuilder;
+template <>
+struct denseArrayAttrEltTypeBuilder<int8_t> {
+  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I8;
+  static ShapedType getShapedType(MLIRContext *context,
+                                  ArrayRef<int64_t> shape) {
+    return VectorType::get(shape, IntegerType::get(context, 8));
+  }
+};
+template <>
+struct denseArrayAttrEltTypeBuilder<int16_t> {
+  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I16;
+  static ShapedType getShapedType(MLIRContext *context,
+                                  ArrayRef<int64_t> shape) {
+    return VectorType::get(shape, IntegerType::get(context, 16));
+  }
+};
+template <>
+struct denseArrayAttrEltTypeBuilder<int32_t> {
+  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I32;
+  static ShapedType getShapedType(MLIRContext *context,
+                                  ArrayRef<int64_t> shape) {
+    return VectorType::get(shape, IntegerType::get(context, 32));
+  }
+};
+template <>
+struct denseArrayAttrEltTypeBuilder<int64_t> {
+  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I64;
+  static ShapedType getShapedType(MLIRContext *context,
+                                  ArrayRef<int64_t> shape) {
+    return VectorType::get(shape, IntegerType::get(context, 64));
+  }
+};
+template <>
+struct denseArrayAttrEltTypeBuilder<float> {
+  constexpr static auto eltType = DenseArrayBaseAttr::EltType::F32;
+  static ShapedType getShapedType(MLIRContext *context,
+                                  ArrayRef<int64_t> shape) {
+    return VectorType::get(shape, Float32Type::get(context));
+  }
+};
+template <>
+struct denseArrayAttrEltTypeBuilder<double> {
+  constexpr static auto eltType = DenseArrayBaseAttr::EltType::F64;
+  static ShapedType getShapedType(MLIRContext *context,
+                                  ArrayRef<int64_t> shape) {
+    return VectorType::get(shape, Float64Type::get(context));
+  }
+};
+} // namespace
+
+/// Builds a DenseArrayAttr<T> from an ArrayRef<T>.
+template <typename T>
+DenseArrayAttr<T> DenseArrayAttr<T>::get(MLIRContext *context,
+                                         ArrayRef<T> content) {
+  auto size = static_cast<int64_t>(content.size());
+  auto shapedType = denseArrayAttrEltTypeBuilder<T>::getShapedType(
+      context, size ? ArrayRef<int64_t>{size} : ArrayRef<int64_t>{});
+  auto eltType = denseArrayAttrEltTypeBuilder<T>::eltType;
+  auto rawArray = ArrayRef<char>(reinterpret_cast<const char *>(content.data()),
+                                 content.size() * sizeof(T));
+  return Base::get(context, shapedType, eltType, rawArray)
+      .template cast<DenseArrayAttr<T>>();
+}
+
+template <typename T>
+bool DenseArrayAttr<T>::classof(Attribute attr) {
+  return attr.isa<DenseArrayBaseAttr>() &&
+         attr.cast<DenseArrayBaseAttr>().getElementType() ==
+             denseArrayAttrEltTypeBuilder<T>::eltType;
+}
+
+namespace mlir {
+namespace detail {
+// Explicit instantiation for all the supported DenseArrayAttr.
+template class DenseArrayAttr<int8_t>;
+template class DenseArrayAttr<int16_t>;
+template class DenseArrayAttr<int32_t>;
+template class DenseArrayAttr<int64_t>;
+template class DenseArrayAttr<float>;
+template class DenseArrayAttr<double>;
+} // namespace detail
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // DenseElementsAttr
@@ -1320,6 +1615,18 @@ Attribute SparseElementsAttr::getZeroAttr() const {
   if (eltType.isa<FloatType>())
     return FloatAttr::get(eltType, 0);
 
+  // Handle complex elements.
+  if (auto complexTy = eltType.dyn_cast<ComplexType>()) {
+    auto eltType = complexTy.getElementType();
+    Attribute zero;
+    if (eltType.isa<FloatType>())
+      zero = FloatAttr::get(eltType, 0);
+    else // must be integer
+      zero = IntegerAttr::get(eltType, 0);
+    return ArrayAttr::get(complexTy.getContext(),
+                          ArrayRef<Attribute>{zero, zero});
+  }
+
   // Handle string type.
   if (getValues().isa<DenseStringElementsAttr>())
     return StringAttr::get("", eltType);
@@ -1419,4 +1726,10 @@ void TypeAttr::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
   walkTypesFn(getValue());
+}
+
+Attribute
+TypeAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
+                                      ArrayRef<Type> replTypes) const {
+  return get(replTypes[0]);
 }

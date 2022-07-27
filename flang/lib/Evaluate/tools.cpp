@@ -939,26 +939,14 @@ std::optional<std::string> FindImpureCall(
   return FindImpureCallHelper{context}(proc);
 }
 
-// Compare procedure characteristics for equality except that rhs may be
-// Pure or Elemental when lhs is not.
-static bool CharacteristicsMatch(const characteristics::Procedure &lhs,
-    const characteristics::Procedure &rhs) {
-  using Attr = characteristics::Procedure::Attr;
-  auto lhsAttrs{lhs.attrs};
-  lhsAttrs.set(
-      Attr::Pure, lhs.attrs.test(Attr::Pure) || rhs.attrs.test(Attr::Pure));
-  lhsAttrs.set(Attr::Elemental,
-      lhs.attrs.test(Attr::Elemental) || rhs.attrs.test(Attr::Elemental));
-  return lhsAttrs == rhs.attrs && lhs.functionResult == rhs.functionResult &&
-      lhs.dummyArguments == rhs.dummyArguments;
-}
-
 // Common handling for procedure pointer compatibility of left- and right-hand
 // sides.  Returns nullopt if they're compatible.  Otherwise, it returns a
 // message that needs to be augmented by the names of the left and right sides
+// and the content of the "whyNotCompatible" string.
 std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
-    const characteristics::Procedure *rhsProcedure) {
+    const characteristics::Procedure *rhsProcedure,
+    const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible) {
   std::optional<parser::MessageFixedText> msg;
   if (!lhsProcedure) {
     msg = "In assignment to object %s, the target '%s' is a procedure"
@@ -966,25 +954,26 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   } else if (!rhsProcedure) {
     msg = "In assignment to procedure %s, the characteristics of the target"
           " procedure '%s' could not be determined"_err_en_US;
-  } else if (CharacteristicsMatch(*lhsProcedure, *rhsProcedure)) {
+  } else if (lhsProcedure->IsCompatibleWith(
+                 *rhsProcedure, &whyNotCompatible, specificIntrinsic)) {
     // OK
   } else if (isCall) {
     msg = "Procedure %s associated with result of reference to function '%s'"
-          " that is an incompatible procedure pointer"_err_en_US;
+          " that is an incompatible procedure pointer: %s"_err_en_US;
   } else if (lhsProcedure->IsPure() && !rhsProcedure->IsPure()) {
     msg = "PURE procedure %s may not be associated with non-PURE"
           " procedure designator '%s'"_err_en_US;
-  } else if (lhsProcedure->IsFunction() && !rhsProcedure->IsFunction()) {
+  } else if (lhsProcedure->IsFunction() && rhsProcedure->IsSubroutine()) {
     msg = "Function %s may not be associated with subroutine"
           " designator '%s'"_err_en_US;
-  } else if (!lhsProcedure->IsFunction() && rhsProcedure->IsFunction()) {
+  } else if (lhsProcedure->IsSubroutine() && rhsProcedure->IsFunction()) {
     msg = "Subroutine %s may not be associated with function"
           " designator '%s'"_err_en_US;
   } else if (lhsProcedure->HasExplicitInterface() &&
       !rhsProcedure->HasExplicitInterface()) {
     // Section 10.2.2.4, paragraph 3 prohibits associating a procedure pointer
-    // with an explicit interface with a procedure whose characteristics don't
-    // match.  That's the case if the target procedure has an implicit
+    // that has an explicit interface with a procedure whose characteristics
+    // don't match.  That's the case if the target procedure has an implicit
     // interface.  But this case is allowed by several other compilers as long
     // as the explicit interface can be called via an implicit interface.
     if (!lhsProcedure->CanBeCalledViaImplicitInterface()) {
@@ -995,14 +984,15 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   } else if (!lhsProcedure->HasExplicitInterface() &&
       rhsProcedure->HasExplicitInterface()) {
     // OK if the target can be called via an implicit interface
-    if (!rhsProcedure->CanBeCalledViaImplicitInterface()) {
+    if (!rhsProcedure->CanBeCalledViaImplicitInterface() &&
+        !specificIntrinsic) {
       msg = "Procedure %s with implicit interface may not be associated "
             "with procedure designator '%s' with explicit interface that "
             "cannot be called via an implicit interface"_err_en_US;
     }
   } else {
     msg = "Procedure %s associated with incompatible procedure"
-          " designator '%s'"_err_en_US;
+          " designator '%s': %s"_err_en_US;
   }
   return msg;
 }
@@ -1213,7 +1203,7 @@ bool IsPureProcedure(const Symbol &original) {
   const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (const Symbol * procInterface{procDetails->interface().symbol()}) {
-      // procedure component with a pure interface
+      // procedure with a pure interface
       return IsPureProcedure(*procInterface);
     }
   } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
@@ -1244,6 +1234,24 @@ bool IsPureProcedure(const Symbol &original) {
 bool IsPureProcedure(const Scope &scope) {
   const Symbol *symbol{scope.GetSymbol()};
   return symbol && IsPureProcedure(*symbol);
+}
+
+bool IsElementalProcedure(const Symbol &original) {
+  // An ENTRY is elemental if its containing subprogram is
+  const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
+  if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (const Symbol * procInterface{procDetails->interface().symbol()}) {
+      // procedure with an elemental interface, ignoring the elemental
+      // aspect of intrinsic functions
+      return !procInterface->attrs().test(Attr::INTRINSIC) &&
+          IsElementalProcedure(*procInterface);
+    }
+  } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
+    return IsElementalProcedure(details->symbol());
+  } else if (!IsProcedure(symbol)) {
+    return false;
+  }
+  return symbol.attrs().test(Attr::ELEMENTAL);
 }
 
 bool IsFunction(const Symbol &symbol) {
@@ -1296,8 +1304,7 @@ const Symbol *FindCommonBlockContaining(const Symbol &original) {
 
 bool IsProcedurePointer(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
-  return IsPointer(symbol) &&
-      (symbol.has<ProcEntityDetails>() || symbol.has<SubprogramDetails>());
+  return IsPointer(symbol) && IsProcedure(symbol);
 }
 
 // 3.11 automatic data object

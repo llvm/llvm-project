@@ -119,7 +119,7 @@ public:
     auto m = specifics->complexReturnType(loc, ty.getElementType());
     // Currently targets mandate COMPLEX is a single aggregate or packed
     // scalar, including the sret case.
-    assert(m.size() == 1 && "target lowering of complex return not supported");
+    assert(m.size() == 1 && "target of complex return not supported");
     auto resTy = std::get<mlir::Type>(m[0]);
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
     if (attr.isSRet()) {
@@ -199,7 +199,7 @@ public:
     // to call.
     int dropFront = 0;
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
-      if (!callOp.getCallee().hasValue()) {
+      if (!callOp.getCallee()) {
         newInTys.push_back(fnTy.getInput(0));
         newOpers.push_back(callOp.getOperand(0));
         dropFront = 1;
@@ -294,7 +294,8 @@ public:
               }
               mlir::Type funcPointerType = tuple.getType(0);
               mlir::Type lenType = tuple.getType(1);
-              fir::FirOpBuilder builder(*rewriter, fir::getKindMapping(module));
+              fir::KindMapping kindMap = fir::getKindMapping(module);
+              fir::FirOpBuilder builder(*rewriter, kindMap);
               auto [funcPointer, len] =
                   fir::factory::extractCharacterProcedureTuple(builder, loc,
                                                                oper);
@@ -316,9 +317,9 @@ public:
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
-      if (callOp.getCallee().hasValue()) {
-        newCall = rewriter->create<A>(loc, callOp.getCallee().getValue(),
-                                      newResTys, newOpers);
+      if (callOp.getCallee()) {
+        newCall =
+            rewriter->create<A>(loc, *callOp.getCallee(), newResTys, newOpers);
       } else {
         // Force new type on the input operand.
         newOpers[0].setType(mlir::FunctionType::get(
@@ -327,7 +328,7 @@ public:
         newCall = rewriter->create<A>(loc, newResTys, newOpers);
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
-      if (wrap.hasValue())
+      if (wrap)
         replaceOp(callOp, (*wrap)(newCall.getOperation()));
       else
         replaceOp(callOp, newCall.getResults());
@@ -697,8 +698,8 @@ public:
               func.front().addArgument(trailingTys[fixup.second], loc);
           auto tupleType = oldArgTys[fixup.index - offset];
           rewriter->setInsertionPointToStart(&func.front());
-          fir::FirOpBuilder builder(*rewriter,
-                                    fir::getKindMapping(getModule()));
+          fir::KindMapping kindMap = fir::getKindMapping(getModule());
+          fir::FirOpBuilder builder(*rewriter, kindMap);
           auto tuple = fir::factory::createCharacterProcedureTuple(
               builder, loc, tupleType, newProcPointerArg, newLenArg);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(tuple);
@@ -744,14 +745,33 @@ public:
     auto argTy = std::get<mlir::Type>(tup);
     if (attr.isSRet()) {
       unsigned argNo = newInTys.size();
-      fixups.emplace_back(
-          FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::func::FuncOp func) {
-            func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());
-          });
+      if (auto align = attr.getAlignment())
+        fixups.emplace_back(
+            FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::func::FuncOp func) {
+              func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());
+              func.setArgAttr(argNo, "llvm.align",
+                              rewriter->getIntegerAttr(
+                                  rewriter->getIntegerType(32), align));
+            });
+      else
+        fixups.emplace_back(
+            FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::func::FuncOp func) {
+              func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());
+            });
       newInTys.push_back(argTy);
       return;
+    } else {
+      if (auto align = attr.getAlignment())
+        fixups.emplace_back(FixupTy::Codes::ReturnType, newResTys.size(),
+                            [=](mlir::func::FuncOp func) {
+                              func.setArgAttr(
+                                  newResTys.size(), "llvm.align",
+                                  rewriter->getIntegerAttr(
+                                      rewriter->getIntegerType(32), align));
+                            });
+      else
+        fixups.emplace_back(FixupTy::Codes::ReturnType, newResTys.size());
     }
-    fixups.emplace_back(FixupTy::Codes::ReturnType, newResTys.size());
     newResTys.push_back(argTy);
   }
 

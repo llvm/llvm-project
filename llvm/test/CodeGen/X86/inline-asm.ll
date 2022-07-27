@@ -38,18 +38,18 @@ entry:
   ret void
 }
 
-define void @test7(i1 zeroext %desired, i32* %p) nounwind {
+define void @test7(i1 zeroext %desired, ptr %p) nounwind {
 entry:
-  %0 = tail call i8 asm sideeffect "xchg $0, $1", "=r,*m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %p, i1 %desired) nounwind
+  %0 = tail call i8 asm sideeffect "xchg $0, $1", "=r,*m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %p, i1 %desired) nounwind
   ret void
 }
 
 ; <rdar://problem/11542429>
 ; The constrained GR32_ABCD register class of the 'q' constraint requires
 ; special handling after the preceding outputs used up eax-edx.
-define void @constrain_abcd(i8* %h) nounwind ssp {
+define void @constrain_abcd(ptr %h) nounwind ssp {
 entry:
-  %0 = call { i32, i32, i32, i32, i32 } asm sideeffect "", "=&r,=&r,=&r,=&r,=&q,r,~{ecx},~{memory},~{dirflag},~{fpsr},~{flags}"(i8* %h) nounwind
+  %0 = call { i32, i32, i32, i32, i32 } asm sideeffect "", "=&r,=&r,=&r,=&r,=&q,r,~{ecx},~{memory},~{dirflag},~{fpsr},~{flags}"(ptr %h) nounwind
   ret void
 }
 
@@ -63,12 +63,12 @@ entry:
 @test8_v = global i32 42
 
 define void @test8() {
-  call void asm sideeffect "${0:P}", "i"( i32* @test8_v )
+  call void asm sideeffect "${0:P}", "i"( ptr @test8_v )
   ret void
 }
 
 define void @test9() {
-  call void asm sideeffect "${0:P}", "X"( i8* blockaddress(@test9, %bb) )
+  call void asm sideeffect "${0:P}", "X"( ptr blockaddress(@test9, %bb) )
   br label %bb
 
 bb:

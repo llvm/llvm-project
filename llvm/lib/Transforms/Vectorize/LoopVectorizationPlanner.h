@@ -33,7 +33,6 @@ class LoopInfo;
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
-class LoopVectorizationRequirements;
 class LoopVectorizeHints;
 class OptimizationRemarkEmitter;
 class TargetTransformInfo;
@@ -46,8 +45,9 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   VPInstruction *createInstruction(unsigned Opcode,
-                                   ArrayRef<VPValue *> Operands, DebugLoc DL) {
-    VPInstruction *Instr = new VPInstruction(Opcode, Operands, DL);
+                                   ArrayRef<VPValue *> Operands, DebugLoc DL,
+                                   const Twine &Name = "") {
+    VPInstruction *Instr = new VPInstruction(Opcode, Operands, DL, Name);
     if (BB)
       BB->insert(Instr, InsertPt);
     return Instr;
@@ -55,8 +55,8 @@ class VPBuilder {
 
   VPInstruction *createInstruction(unsigned Opcode,
                                    std::initializer_list<VPValue *> Operands,
-                                   DebugLoc DL) {
-    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL);
+                                   DebugLoc DL, const Twine &Name = "") {
+    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name);
   }
 
 public:
@@ -124,34 +124,37 @@ public:
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Instruction *Inst = nullptr) {
+                        Instruction *Inst = nullptr, const Twine &Name = "") {
     DebugLoc DL;
     if (Inst)
       DL = Inst->getDebugLoc();
-    VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL);
+    VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL, Name);
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        DebugLoc DL) {
-    return createInstruction(Opcode, Operands, DL);
+                        DebugLoc DL, const Twine &Name = "") {
+    return createInstruction(Opcode, Operands, DL, Name);
   }
 
-  VPValue *createNot(VPValue *Operand, DebugLoc DL) {
-    return createInstruction(VPInstruction::Not, {Operand}, DL);
+  VPValue *createNot(VPValue *Operand, DebugLoc DL, const Twine &Name = "") {
+    return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
-  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
-    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL);
+  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+                     const Twine &Name = "") {
+    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
   }
 
-  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
-    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL);
+  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+                    const Twine &Name = "") {
+    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL, Name);
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-                        DebugLoc DL) {
-    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL);
+                        DebugLoc DL, const Twine &Name = "") {
+    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL,
+                        Name);
   }
 
   //===--------------------------------------------------------------------===//
@@ -188,12 +191,20 @@ struct VectorizationFactor {
   /// Cost of the loop with that width.
   InstructionCost Cost;
 
-  VectorizationFactor(ElementCount Width, InstructionCost Cost)
-      : Width(Width), Cost(Cost) {}
+  /// Cost of the scalar loop.
+  InstructionCost ScalarCost;
+
+  /// The minimum trip count required to make vectorization profitable, e.g. due
+  /// to runtime checks.
+  ElementCount MinProfitableTripCount;
+
+  VectorizationFactor(ElementCount Width, InstructionCost Cost,
+                      InstructionCost ScalarCost)
+      : Width(Width), Cost(Cost), ScalarCost(ScalarCost) {}
 
   /// Width 1 means no vectorization, cost 0 means uncomputed cost.
   static VectorizationFactor Disabled() {
-    return {ElementCount::getFixed(1), 0};
+    return {ElementCount::getFixed(1), 0, 0};
   }
 
   bool operator==(const VectorizationFactor &rhs) const {
@@ -264,8 +275,6 @@ class LoopVectorizationPlanner {
 
   const LoopVectorizeHints &Hints;
 
-  LoopVectorizationRequirements &Requirements;
-
   OptimizationRemarkEmitter *ORE;
 
   SmallVector<VPlanPtr, 4> VPlans;
@@ -281,10 +290,9 @@ public:
                            InterleavedAccessInfo &IAI,
                            PredicatedScalarEvolution &PSE,
                            const LoopVectorizeHints &Hints,
-                           LoopVectorizationRequirements &Requirements,
                            OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM), IAI(IAI),
-        PSE(PSE), Hints(Hints), Requirements(Requirements), ORE(ORE) {}
+        PSE(PSE), Hints(Hints), ORE(ORE) {}
 
   /// Plan how to best vectorize, return the best VF and its cost, or None if
   /// vectorization and interleaving should be avoided up front.
@@ -299,8 +307,12 @@ public:
 
   /// Generate the IR code for the body of the vectorized loop according to the
   /// best selected \p VF, \p UF and VPlan \p BestPlan.
+  /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
+  /// vectorization re-using plans for both the main and epilogue vector loops.
+  /// It should be removed once the re-use issue has been fixed.
   void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-                   InnerLoopVectorizer &LB, DominatorTree *DT);
+                   InnerLoopVectorizer &LB, DominatorTree *DT,
+                   bool IsEpilogueVectorization);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -324,11 +336,6 @@ public:
   bool requiresTooManyRuntimeChecks() const;
 
 protected:
-  /// Collect the instructions from the original loop that would be trivially
-  /// dead in the vectorized loop if generated.
-  void collectTriviallyDeadInstructions(
-      SmallPtrSetImpl<Instruction *> &DeadInstructions);
-
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop.

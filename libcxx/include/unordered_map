@@ -531,6 +531,12 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <tuple>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <bit>
+#  include <iterator>
+#endif
+
 // standard-mandated includes
 
 // [iterator.range]
@@ -870,9 +876,7 @@ public:
     }
 
     template <class _ValueTp,
-              class = typename enable_if<
-                    __is_same_uncvref<_ValueTp, value_type>::value
-                 >::type
+              class = __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value>
              >
     _LIBCPP_INLINE_VISIBILITY
     __hash_value_type& operator=(_ValueTp&& __v)
@@ -1231,13 +1235,13 @@ public:
     }
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> insert(_Pp&& __x)
             {return __table_.__insert_unique(_VSTD::forward<_Pp>(__x));}
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
         _LIBCPP_INLINE_VISIBILITY
         iterator insert(const_iterator __p, _Pp&& __x)
         {
@@ -1521,9 +1525,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void max_load_factor(float __mlf) {__table_.max_load_factor(__mlf);}
     _LIBCPP_INLINE_VISIBILITY
-    void rehash(size_type __n) {__table_.rehash(__n);}
+    void rehash(size_type __n) {__table_.__rehash_unique(__n);}
     _LIBCPP_INLINE_VISIBILITY
-    void reserve(size_type __n) {__table_.reserve(__n);}
+    void reserve(size_type __n) {__table_.__reserve_unique(__n);}
 
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
@@ -1622,7 +1626,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__hf, __eql)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1632,7 +1636,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1661,7 +1665,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__hf, __eql)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
     insert(__first, __last);
 }
 
@@ -1673,7 +1677,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
     insert(__first, __last);
 }
 
@@ -1683,7 +1687,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__u.__table_)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__u.bucket_count());
+    __table_.__rehash_unique(__u.bucket_count());
     insert(__u.begin(), __u.end());
 }
 
@@ -1693,7 +1697,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__u.__table_, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__u.bucket_count());
+    __table_.__rehash_unique(__u.bucket_count());
     insert(__u.begin(), __u.end());
 }
 
@@ -1743,7 +1747,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__hf, __eql)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
     insert(__il.begin(), __il.end());
 }
 
@@ -1754,7 +1758,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
     insert(__il.begin(), __il.end());
 }
 
@@ -2108,13 +2112,13 @@ public:
         {return __table_.__insert_multi(__p.__i_, _VSTD::move(__x));}
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(_Pp&& __x)
         {return __table_.__insert_multi(_VSTD::forward<_Pp>(__x));}
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, _Pp&& __x)
         {return __table_.__insert_multi(__p.__i_, _VSTD::forward<_Pp>(__x));}
@@ -2297,9 +2301,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void max_load_factor(float __mlf) {__table_.max_load_factor(__mlf);}
     _LIBCPP_INLINE_VISIBILITY
-    void rehash(size_type __n) {__table_.rehash(__n);}
+    void rehash(size_type __n) {__table_.__rehash_multi(__n);}
     _LIBCPP_INLINE_VISIBILITY
-    void reserve(size_type __n) {__table_.reserve(__n);}
+    void reserve(size_type __n) {__table_.__reserve_multi(__n);}
 
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
@@ -2394,7 +2398,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__hf, __eql)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -2404,7 +2408,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -2424,7 +2428,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__hf, __eql)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
     insert(__first, __last);
 }
 
@@ -2436,7 +2440,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
     insert(__first, __last);
 }
 
@@ -2455,7 +2459,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__u.__table_)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__u.bucket_count());
+    __table_.__rehash_multi(__u.bucket_count());
     insert(__u.begin(), __u.end());
 }
 
@@ -2465,7 +2469,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__u.__table_, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__u.bucket_count());
+    __table_.__rehash_multi(__u.bucket_count());
     insert(__u.begin(), __u.end());
 }
 
@@ -2516,7 +2520,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__hf, __eql)
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
     insert(__il.begin(), __il.end());
 }
 
@@ -2527,7 +2531,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
     _VSTD::__debug_db_insert_c(this);
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
     insert(__il.begin(), __il.end());
 }
 

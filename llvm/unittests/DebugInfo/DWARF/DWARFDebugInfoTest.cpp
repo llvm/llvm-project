@@ -252,32 +252,32 @@ void TestAllForms() {
   FormValue = DieDG.find(Attr_DW_FORM_block);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = BlockDataOpt.value();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
   FormValue = DieDG.find(Attr_DW_FORM_block1);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = BlockDataOpt.value();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
   FormValue = DieDG.find(Attr_DW_FORM_block2);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = BlockDataOpt.value();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
   FormValue = DieDG.find(Attr_DW_FORM_block4);
   EXPECT_TRUE((bool)FormValue);
   BlockDataOpt = FormValue->getAsBlock();
-  EXPECT_TRUE(BlockDataOpt.hasValue());
-  ExtractedBlockData = BlockDataOpt.getValue();
+  EXPECT_TRUE(BlockDataOpt.has_value());
+  ExtractedBlockData = BlockDataOpt.value();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
@@ -286,8 +286,8 @@ void TestAllForms() {
     FormValue = DieDG.find(Attr_DW_FORM_data16);
     EXPECT_TRUE((bool)FormValue);
     BlockDataOpt = FormValue->getAsBlock();
-    EXPECT_TRUE(BlockDataOpt.hasValue());
-    ExtractedBlockData = BlockDataOpt.getValue();
+    EXPECT_TRUE(BlockDataOpt.has_value());
+    ExtractedBlockData = BlockDataOpt.value();
     EXPECT_EQ(ExtractedBlockData.size(), 16u);
     EXPECT_TRUE(memcmp(ExtractedBlockData.data(), Data16, 16) == 0);
   }
@@ -964,7 +964,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_EQ(SubprogramDieLowPC.getTag(), DW_TAG_subprogram);
   OptU64 = toAddress(SubprogramDieLowPC.find(DW_AT_low_pc));
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  EXPECT_EQ(*OptU64, ActualLowPC);
   OptU64 = toAddress(SubprogramDieLowPC.find(DW_AT_high_pc));
   EXPECT_FALSE((bool)OptU64);
   OptU64 = toUnsigned(SubprogramDieLowPC.find(DW_AT_high_pc));
@@ -981,7 +981,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_EQ(SubprogramDieLowHighPC.getTag(), DW_TAG_subprogram);
   OptU64 = toAddress(SubprogramDieLowHighPC.find(DW_AT_low_pc));
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  EXPECT_EQ(*OptU64, ActualLowPC);
   // Get the high PC as an address. This should succeed if the high PC was
   // encoded as an address and fail if the high PC was encoded as an offset.
   OptU64 = toAddress(SubprogramDieLowHighPC.find(DW_AT_high_pc));
@@ -989,21 +989,21 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
     EXPECT_FALSE((bool)OptU64);
   } else {
     EXPECT_TRUE((bool)OptU64);
-    EXPECT_EQ(OptU64.getValue(), ActualHighPC);
+    EXPECT_EQ(OptU64.value(), ActualHighPC);
   }
   // Get the high PC as an unsigned constant. This should succeed if the high PC
   // was encoded as an offset and fail if the high PC was encoded as an address.
   OptU64 = toUnsigned(SubprogramDieLowHighPC.find(DW_AT_high_pc));
   if (SupportsHighPCAsOffset) {
     EXPECT_TRUE((bool)OptU64);
-    EXPECT_EQ(OptU64.getValue(), ActualHighPCOffset);
+    EXPECT_EQ(OptU64.value(), ActualHighPCOffset);
   } else {
     EXPECT_FALSE((bool)OptU64);
   }
 
   OptU64 = SubprogramDieLowHighPC.getHighPC(ActualLowPC);
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualHighPC);
+  EXPECT_EQ(OptU64.value(), ActualHighPC);
 
   EXPECT_TRUE(SubprogramDieLowHighPC.getLowAndHighPC(LowPC, HighPC, SectionIndex));
   EXPECT_EQ(LowPC, ActualLowPC);
@@ -1607,12 +1607,12 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   // Test the dwarf::toString() helper function.
   auto StringOpt = toString(NameOpt);
   EXPECT_TRUE(StringOpt);
-  EXPECT_EQ(SpecDieName, StringOpt.getValueOr(nullptr));
+  EXPECT_EQ(SpecDieName, StringOpt.value_or(nullptr));
   // Test the dwarf::toString() helper function with a default value specified.
   EXPECT_EQ(SpecDieName, toString(NameOpt, nullptr));
 
   auto LinkageNameOpt = FuncDie.findRecursively(DW_AT_linkage_name);
-  EXPECT_EQ(SpecLinkageName, toString(LinkageNameOpt).getValueOr(nullptr));
+  EXPECT_EQ(SpecLinkageName, toString(LinkageNameOpt).value_or(nullptr));
 
   // Make sure we can't extract the name from the abstract origin die when using
   // DWARFDie::find() since it won't check the DW_AT_abstract_origin DIE.
@@ -1626,7 +1626,7 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   // Test the dwarf::toString() helper function.
   StringOpt = toString(NameOpt);
   EXPECT_TRUE(StringOpt);
-  EXPECT_EQ(AbsDieName, StringOpt.getValueOr(nullptr));
+  EXPECT_EQ(AbsDieName, StringOpt.value_or(nullptr));
 }
 
 TEST(DWARFDebugInfo, TestDwarfToFunctions) {
@@ -1638,13 +1638,13 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   // First test that we don't get valid values back when using an optional with
   // no value.
   Optional<DWARFFormValue> FormValOpt1 = DWARFFormValue();
-  EXPECT_FALSE(toString(FormValOpt1).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt1).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt1).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt1).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt1).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt1).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt1).hasValue());
+  EXPECT_FALSE(toString(FormValOpt1).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt1).has_value());
+  EXPECT_FALSE(toReference(FormValOpt1).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt1).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt1).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt1).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt1).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt1, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt1, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt1, InvalidU64));
@@ -1657,13 +1657,13 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   Optional<DWARFFormValue> FormValOpt2 =
       DWARFFormValue::createFromUValue(DW_FORM_addr, Address);
 
-  EXPECT_FALSE(toString(FormValOpt2).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt2).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt2).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt2).hasValue());
-  EXPECT_TRUE(toAddress(FormValOpt2).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt2).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt2).hasValue());
+  EXPECT_FALSE(toString(FormValOpt2).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt2).has_value());
+  EXPECT_FALSE(toReference(FormValOpt2).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt2).has_value());
+  EXPECT_TRUE(toAddress(FormValOpt2).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt2).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt2).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt2, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt2, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt2, InvalidU64));
@@ -1676,13 +1676,13 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   Optional<DWARFFormValue> FormValOpt3 =
       DWARFFormValue::createFromUValue(DW_FORM_udata, UData8);
 
-  EXPECT_FALSE(toString(FormValOpt3).hasValue());
-  EXPECT_TRUE(toUnsigned(FormValOpt3).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt3).hasValue());
-  EXPECT_TRUE(toSigned(FormValOpt3).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt3).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt3).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt3).hasValue());
+  EXPECT_FALSE(toString(FormValOpt3).has_value());
+  EXPECT_TRUE(toUnsigned(FormValOpt3).has_value());
+  EXPECT_FALSE(toReference(FormValOpt3).has_value());
+  EXPECT_TRUE(toSigned(FormValOpt3).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt3).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt3).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt3).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt3, nullptr));
   EXPECT_EQ(UData8, toUnsigned(FormValOpt3, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt3, InvalidU64));
@@ -1695,13 +1695,13 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   Optional<DWARFFormValue> FormValOpt4 =
       DWARFFormValue::createFromUValue(DW_FORM_ref_addr, RefData);
 
-  EXPECT_FALSE(toString(FormValOpt4).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt4).hasValue());
-  EXPECT_TRUE(toReference(FormValOpt4).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt4).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt4).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt4).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt4).hasValue());
+  EXPECT_FALSE(toString(FormValOpt4).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt4).has_value());
+  EXPECT_TRUE(toReference(FormValOpt4).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt4).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt4).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt4).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt4).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt4, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt4, InvalidU64));
   EXPECT_EQ(RefData, toReference(FormValOpt4, InvalidU64));
@@ -1714,13 +1714,13 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   Optional<DWARFFormValue> FormValOpt5 =
       DWARFFormValue::createFromSValue(DW_FORM_udata, SData8);
 
-  EXPECT_FALSE(toString(FormValOpt5).hasValue());
-  EXPECT_TRUE(toUnsigned(FormValOpt5).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt5).hasValue());
-  EXPECT_TRUE(toSigned(FormValOpt5).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt5).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt5).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt5).hasValue());
+  EXPECT_FALSE(toString(FormValOpt5).has_value());
+  EXPECT_TRUE(toUnsigned(FormValOpt5).has_value());
+  EXPECT_FALSE(toReference(FormValOpt5).has_value());
+  EXPECT_TRUE(toSigned(FormValOpt5).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt5).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt5).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt5).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt5, nullptr));
   EXPECT_EQ((uint64_t)SData8, toUnsigned(FormValOpt5, InvalidU64));
   EXPECT_EQ(InvalidU64, toReference(FormValOpt5, InvalidU64));
@@ -1734,14 +1734,14 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   Optional<DWARFFormValue> FormValOpt6 =
       DWARFFormValue::createFromBlockValue(DW_FORM_block1, Array);
 
-  EXPECT_FALSE(toString(FormValOpt6).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt6).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt6).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt6).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt6).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt6).hasValue());
+  EXPECT_FALSE(toString(FormValOpt6).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt6).has_value());
+  EXPECT_FALSE(toReference(FormValOpt6).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt6).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt6).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt6).has_value());
   auto BlockOpt = toBlock(FormValOpt6);
-  EXPECT_TRUE(BlockOpt.hasValue());
+  EXPECT_TRUE(BlockOpt.has_value());
   EXPECT_EQ(*BlockOpt, Array);
   EXPECT_EQ(nullptr, toString(FormValOpt6, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt6, InvalidU64));
@@ -1799,24 +1799,24 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   auto FuncDie = FuncSpecDie.getSibling();
 
   // Make sure that passing in an empty attribute list behave correctly.
-  EXPECT_FALSE(FuncDie.find(ArrayRef<dwarf::Attribute>()).hasValue());
+  EXPECT_FALSE(FuncDie.find(ArrayRef<dwarf::Attribute>()).has_value());
 
   // Make sure that passing in a list of attribute that are not contained
   // in the DIE returns nothing.
-  EXPECT_FALSE(FuncDie.find({DW_AT_low_pc, DW_AT_entry_pc}).hasValue());
+  EXPECT_FALSE(FuncDie.find({DW_AT_low_pc, DW_AT_entry_pc}).has_value());
 
   const dwarf::Attribute Attrs[] = {DW_AT_linkage_name,
                                     DW_AT_MIPS_linkage_name};
 
   // Make sure we can't extract the linkage name attributes when using
   // DWARFDie::find() since it won't check the DW_AT_specification DIE.
-  EXPECT_FALSE(FuncDie.find(Attrs).hasValue());
+  EXPECT_FALSE(FuncDie.find(Attrs).has_value());
 
   // Make sure we can extract the name from the specification die when using
   // DWARFDie::findRecursively() since it should recurse through the
   // DW_AT_specification DIE.
   auto NameOpt = FuncDie.findRecursively(Attrs);
-  EXPECT_TRUE(NameOpt.hasValue());
+  EXPECT_TRUE(NameOpt.has_value());
   EXPECT_EQ(DieMangled, toString(NameOpt, ""));
 }
 
@@ -1877,8 +1877,7 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
     EXPECT_EQ(*AttrIndex, 0u);
     uint64_t OffsetVal =
         it->getAttributeOffsetFromIndex(*AttrIndex, /* offset */ 0, *U);
-    EXPECT_TRUE(
-        it->getAttributeValueFromOffset(*AttrIndex, OffsetVal, *U).hasValue());
+    EXPECT_TRUE(it->getAttributeValueFromOffset(*AttrIndex, OffsetVal, *U));
 
     auto FormValue = it->getAttributeValue(/* offset */ 0, A, *U);
     EXPECT_TRUE((bool)FormValue);
@@ -1947,40 +1946,6 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
   for (auto it = Val1Range.first; it != Val1Range.second; ++it)
     EXPECT_EQ(it->second, AbbrevPtrVal1);
   EXPECT_EQ(DIEs.find(Val2)->second, AbbrevPtrVal2);
-}
-
-TEST(DWARFDebugInfo, TestErrorReporting) {
-  Triple Triple("x86_64-pc-linux");
-  if (!isConfigurationSupported(Triple))
-    GTEST_SKIP();
-
-  auto ExpectedDG = dwarfgen::Generator::create(Triple, 4 /*DwarfVersion*/);
-  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
-  dwarfgen::Generator *DG = ExpectedDG.get().get();
-  AsmPrinter *AP = DG->getAsmPrinter();
-  MCContext *MC = DG->getMCContext();
-
-  // Emit two compressed sections with broken headers.
-  AP->OutStreamer->switchSection(
-      MC->getELFSection(".zdebug_foo", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->emitBytes("0");
-  AP->OutStreamer->switchSection(
-      MC->getELFSection(".zdebug_bar", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->emitBytes("0");
-
-  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
-  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
-  EXPECT_TRUE((bool)Obj);
-
-  // DWARFContext parses whole file and finds the two errors we expect.
-  int Errors = 0;
-  std::unique_ptr<DWARFContext> Ctx1 = DWARFContext::create(
-      **Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
-      [&](Error E) {
-        ++Errors;
-        consumeError(std::move(E));
-      });
-  EXPECT_TRUE(Errors == 2);
 }
 
 TEST(DWARFDebugInfo, TestDWARFDieRangeInfoContains) {

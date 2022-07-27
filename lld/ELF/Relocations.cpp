@@ -958,8 +958,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
                                                  const Symbol &sym,
                                                  uint64_t relOff) const {
   // These expressions always compute a constant
-  if (oneof<R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
-            R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
+  if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, R_MIPS_GOT_LOCAL_PAGE,
+            R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
             R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
             R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE>(e))
@@ -1695,7 +1695,7 @@ void elf::postScanRelocations() {
 
   // Local symbols may need the aforementioned non-preemptible ifunc and GOT
   // handling. They don't need regular PLT.
-  for (ELFFileBase *file : objectFiles)
+  for (ELFFileBase *file : ctx->objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
 }
@@ -2118,7 +2118,9 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
 // made no changes. If the target requires range extension thunks, currently
 // ARM, then any future change in offset between caller and callee risks a
 // relocation out of range error.
-bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
+bool ThunkCreator::createThunks(uint32_t pass,
+                                ArrayRef<OutputSection *> outputSections) {
+  this->pass = pass;
   bool addressesChanged = false;
 
   if (pass == 0 && target->getThunkSectionSpacing())
@@ -2180,7 +2182,6 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
 
   // Merge all created synthetic ThunkSections back into OutputSection
   mergeThunks(outputSections);
-  ++pass;
   return addressesChanged;
 }
 

@@ -8,11 +8,14 @@ add_mlir_dialect_library(MLIRLinalgTransformOps
   MLIRLinalgTransformOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
+  MLIRArithmeticDialect
   MLIRIR
   MLIRLinalgDialect
   MLIRLinalgTransforms
   MLIRParser
   MLIRPDLDialect
+  MLIRSCFDialect
   MLIRSideEffectInterfaces
   MLIRTransformDialect
   MLIRVectorDialect

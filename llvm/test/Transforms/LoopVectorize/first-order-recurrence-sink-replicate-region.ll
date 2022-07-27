@@ -65,7 +65,6 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT: Successor(s): loop.1.split
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1.split:
-; CHECK-NEXT:   WIDEN ir<%add> = add ir<%conv>, vp<[[PRED2]]>
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -310,9 +309,6 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT: }
 
 ; CHECK:      loop.2:
-; CHECK-NEXT:   WIDEN ir<%add.1> = add ir<%conv>, vp<[[PRED1]]>
-; CHECK-NEXT:   WIDEN ir<%conv.lv.2> = sext vp<[[PRED2]]>
-; CHECK-NEXT:   WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -435,5 +431,70 @@ loop:                                             ; preds = %loop, %entry
   br i1 %C, label %exit, label %loop
 
 exit:                                             ; preds = %loop
+  ret void
+}
+
+define void @need_new_block_after_sinking_pr56146(i32 %x, i32* %src) {
+; CHECK-LABEL: need_new_block_after_sinking_pr56146
+; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%.pn> = phi ir<0>, ir<%l>
+; CHECK-NEXT:     EMIT vp<[[WIDE_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule vp<[[WIDE_IV]]> vp<[[BTC]]>
+; CHECK-NEXT:      Successor(s): loop.0
+; CHECK-EMPTY:     
+; CHECK-NEXT:       loop.0:
+; CHECK-NEXT:         REPLICATE ir<%l> = load ir<%src>
+; CHECK-NEXT:         EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%.pn> ir<%l>
+; CHECK-NEXT:   Successor(s): pred.sdiv
+; CHECK-EMPTY:
+; CHECK-NEXT:   <xVFxUF> pred.sdiv: {
+; CHECK-NEXT:     pred.sdiv.entry:
+; CHECK-NEXT:       BRANCH-ON-MASK vp<[[CMP]]>
+; CHECK-NEXT:     Successor(s): pred.sdiv.if, pred.sdiv.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.sdiv.if:
+; CHECK-NEXT:       REPLICATE ir<%val> = sdiv vp<[[SPLICE]]>, ir<%x>
+; CHECK-NEXT:     Successor(s): pred.sdiv.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.sdiv.continue:
+; CHECK-NEXT:       PHI-PREDICATED-INSTRUCTION vp<[[P_VAL:%.+]]> = ir<%val>
+; CHECK-NEXT:     No successors
+; CHECK-NEXT:   }
+; CHECK-NEXT:   Successor(s): loop.0.split
+; CHECK-EMPTY:
+; CHECK-NEXT:   loop.0.split:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +  vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 2, %entry ], [ %iv.next, %loop ]
+  %.pn = phi i32 [ 0, %entry ], [ %l, %loop ]
+  %val = sdiv i32 %.pn, %x
+  %l = load i32, i32* %src, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ugt i64 %iv, 3
+  br i1 %ec, label %exit, label %loop
+
+exit:
   ret void
 }

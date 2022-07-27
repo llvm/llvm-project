@@ -124,8 +124,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     break;
   case llvm::Triple::aarch64:
     ArchName = "aarch64";
-    FeaturesStr = "+fp-armv8,+neon,+crypto,+dotprod,+crc,+lse,+ras,+rdm,"
-                  "+fullfp16,+spe,+fuse-aes,+rcpc";
+    FeaturesStr = "+all";
     break;
   default:
     return createStringError(std::errc::not_supported,
@@ -416,7 +415,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
             BF.addEntryPointAtOffset(Address - BF.getAddress()), Addend);
       }
     } else {
-      BF.InterproceduralReferences.insert(Address);
+      addInterproceduralReference(&BF, Address);
     }
   }
 
@@ -491,21 +490,19 @@ bool isPotentialFragmentByName(BinaryFunction &Fragment,
   return false;
 }
 
-bool BinaryContext::analyzeJumpTable(const uint64_t Address,
-                                     const JumpTable::JumpTableType Type,
-                                     BinaryFunction &BF,
-                                     const uint64_t NextJTAddress,
-                                     JumpTable::OffsetsType *Offsets) {
+bool BinaryContext::analyzeJumpTable(
+    const uint64_t Address, const JumpTable::JumpTableType Type,
+    BinaryFunction &BF, const uint64_t NextJTAddress,
+    JumpTable::AddressesType *EntriesAsAddress) {
   // Is one of the targets __builtin_unreachable?
   bool HasUnreachable = false;
 
   // Number of targets other than __builtin_unreachable.
   uint64_t NumRealEntries = 0;
 
-  constexpr uint64_t INVALID_OFFSET = std::numeric_limits<uint64_t>::max();
-  auto addOffset = [&](uint64_t Offset) {
-    if (Offsets)
-      Offsets->emplace_back(Offset);
+  auto addEntryAddress = [&](uint64_t EntryAddress) {
+    if (EntriesAsAddress)
+      EntriesAsAddress->emplace_back(EntryAddress);
   };
 
   auto doesBelongToFunction = [&](const uint64_t Addr,
@@ -571,7 +568,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
 
     // __builtin_unreachable() case.
     if (Value == BF.getAddress() + BF.getSize()) {
-      addOffset(Value - BF.getAddress());
+      addEntryAddress(Value);
       HasUnreachable = true;
       LLVM_DEBUG(dbgs() << "OK: __builtin_unreachable\n");
       continue;
@@ -611,18 +608,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
 
     ++NumRealEntries;
 
-    if (TargetBF == &BF) {
-      // Address inside the function.
-      addOffset(Value - TargetBF->getAddress());
-      LLVM_DEBUG(dbgs() << "OK: real entry\n");
-    } else {
-      // Address in split fragment.
-      BF.setHasSplitJumpTable(true);
-      // Add invalid offset for proper identification of jump table size.
-      addOffset(INVALID_OFFSET);
-      LLVM_DEBUG(dbgs() << "OK: address in split fragment "
-                        << TargetBF->getPrintName() << '\n');
-    }
+    if (TargetBF != &BF)
+      BF.setHasIndirectTargetToSplitFragment(true);
+    addEntryAddress(Value);
   }
 
   // It's a jump table if the number of real entries is more than 1, or there's
@@ -637,9 +625,11 @@ void BinaryContext::populateJumpTables() {
   for (auto JTI = JumpTables.begin(), JTE = JumpTables.end(); JTI != JTE;
        ++JTI) {
     JumpTable *JT = JTI->second;
-    BinaryFunction &BF = *JT->Parent;
 
-    if (!BF.isSimple())
+    bool NonSimpleParent = false;
+    for (BinaryFunction *BF : JT->Parents)
+      NonSimpleParent |= !BF->isSimple();
+    if (NonSimpleParent)
       continue;
 
     uint64_t NextJTAddress = 0;
@@ -647,25 +637,40 @@ void BinaryContext::populateJumpTables() {
     if (NextJTI != JTE)
       NextJTAddress = NextJTI->second->getAddress();
 
-    const bool Success = analyzeJumpTable(JT->getAddress(), JT->Type, BF,
-                                          NextJTAddress, &JT->OffsetEntries);
+    const bool Success =
+        analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
+                         NextJTAddress, &JT->EntriesAsAddress);
     if (!Success) {
-      dbgs() << "failed to analyze jump table in function " << BF << '\n';
+      LLVM_DEBUG(ListSeparator LS;
+                 dbgs() << "failed to analyze jump table in function ";
+                 for (BinaryFunction *Frag
+                      : JT->Parents) dbgs()
+                 << LS << *Frag;
+                 dbgs() << '\n';);
       JT->print(dbgs());
       if (NextJTI != JTE) {
-        dbgs() << "next jump table at 0x"
-               << Twine::utohexstr(NextJTI->second->getAddress())
-               << " belongs to function " << *NextJTI->second->Parent << '\n';
+        LLVM_DEBUG(ListSeparator LS;
+                   dbgs() << "next jump table at 0x"
+                          << Twine::utohexstr(NextJTI->second->getAddress())
+                          << " belongs to function ";
+                   for (BinaryFunction *Frag
+                        : NextJTI->second->Parents) dbgs()
+                   << LS << *Frag;
+                   dbgs() << "\n";);
         NextJTI->second->print(dbgs());
       }
       llvm_unreachable("jump table heuristic failure");
     }
-
-    for (uint64_t EntryOffset : JT->OffsetEntries) {
-      if (EntryOffset == BF.getSize())
-        BF.IgnoredBranches.emplace_back(EntryOffset, BF.getSize());
-      else
-        BF.registerReferencedOffset(EntryOffset);
+    for (BinaryFunction *Frag : JT->Parents) {
+      for (uint64_t EntryAddress : JT->EntriesAsAddress)
+        // if target is builtin_unreachable
+        if (EntryAddress == Frag->getAddress() + Frag->getSize()) {
+          Frag->IgnoredBranches.emplace_back(EntryAddress - Frag->getAddress(),
+                                             Frag->getSize());
+        } else if (EntryAddress >= Frag->getAddress() &&
+                   EntryAddress < Frag->getAddress() + Frag->getSize()) {
+          Frag->registerReferencedOffset(EntryAddress - Frag->getAddress());
+        }
     }
 
     // In strict mode, erase PC-relative relocation record. Later we check that
@@ -679,8 +684,9 @@ void BinaryContext::populateJumpTables() {
     }
 
     // Mark to skip the function and all its fragments.
-    if (BF.hasSplitJumpTable())
-      FragmentsToSkip.push_back(&BF);
+    for (BinaryFunction *Frag : JT->Parents)
+      if (Frag->hasIndirectTargetToSplitFragment())
+        addFragmentsToSkip(Frag);
   }
 
   if (opts::StrictMode && DataPCRelocations.size()) {
@@ -696,37 +702,33 @@ void BinaryContext::populateJumpTables() {
 }
 
 void BinaryContext::skipMarkedFragments() {
-  // Unique functions in the vector.
-  std::unordered_set<BinaryFunction *> UniqueFunctions(FragmentsToSkip.begin(),
-                                                       FragmentsToSkip.end());
-  // Copy the functions back to FragmentsToSkip.
-  FragmentsToSkip.assign(UniqueFunctions.begin(), UniqueFunctions.end());
+  std::vector<BinaryFunction *> FragmentQueue;
+  // Copy the functions to FragmentQueue.
+  FragmentQueue.assign(FragmentsToSkip.begin(), FragmentsToSkip.end());
   auto addToWorklist = [&](BinaryFunction *Function) -> void {
-    if (UniqueFunctions.count(Function))
+    if (FragmentsToSkip.count(Function))
       return;
-    FragmentsToSkip.push_back(Function);
-    UniqueFunctions.insert(Function);
+    FragmentQueue.push_back(Function);
+    addFragmentsToSkip(Function);
   };
   // Functions containing split jump tables need to be skipped with all
   // fragments (transitively).
-  for (size_t I = 0; I != FragmentsToSkip.size(); I++) {
-    BinaryFunction *BF = FragmentsToSkip[I];
-    assert(UniqueFunctions.count(BF) &&
+  for (size_t I = 0; I != FragmentQueue.size(); I++) {
+    BinaryFunction *BF = FragmentQueue[I];
+    assert(FragmentsToSkip.count(BF) &&
            "internal error in traversing function fragments");
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: Ignoring " << BF->getPrintName() << '\n';
     BF->setSimple(false);
-    BF->setHasSplitJumpTable(true);
+    BF->setHasIndirectTargetToSplitFragment(true);
 
-    std::for_each(BF->Fragments.begin(), BF->Fragments.end(), addToWorklist);
-    std::for_each(BF->ParentFragments.begin(), BF->ParentFragments.end(),
-                  addToWorklist);
+    llvm::for_each(BF->Fragments, addToWorklist);
+    llvm::for_each(BF->ParentFragments, addToWorklist);
   }
   if (!FragmentsToSkip.empty())
     errs() << "BOLT-WARNING: skipped " << FragmentsToSkip.size() << " function"
            << (FragmentsToSkip.size() == 1 ? "" : "s")
            << " due to cold fragments\n";
-  FragmentsToSkip.clear();
 }
 
 MCSymbol *BinaryContext::getOrCreateGlobalSymbol(uint64_t Address, Twine Prefix,
@@ -768,27 +770,37 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     return (Fragment->isFragment() && Fragment->isParentFragment(Parent));
   };
 
+  // Two fragments of same function access same jump table
   if (JumpTable *JT = getJumpTableContainingAddress(Address)) {
     assert(JT->Type == Type && "jump table types have to match");
-    bool HasMultipleParents = isFragmentOf(JT->Parent, &Function) ||
-                              isFragmentOf(&Function, JT->Parent);
-    assert((JT->Parent == &Function || HasMultipleParents) &&
-           "cannot re-use jump table of a different function");
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
 
-    // Flush OffsetEntries with INVALID_OFFSET if multiple parents
-    // Duplicate the entry for the parent function for easy access
-    if (HasMultipleParents) {
+    // Prevent associating a jump table to a specific fragment twice.
+    // This simple check arises from the assumption: no more than 2 fragments.
+    if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
+      bool SameFunction = isFragmentOf(JT->Parents[0], &Function) ||
+                          isFragmentOf(&Function, JT->Parents[0]);
+      assert(SameFunction &&
+             "cannot re-use jump table of a different function");
+      // Duplicate the entry for the parent function for easy access
+      JT->Parents.push_back(&Function);
       if (opts::Verbosity > 2) {
-        outs() << "BOLT-WARNING: Multiple fragments access same jump table: "
-               << JT->Parent->getPrintName() << "; " << Function.getPrintName()
-               << "\n";
+        outs() << "BOLT-INFO: Multiple fragments access same jump table: "
+               << JT->Parents[0]->getPrintName() << "; "
+               << Function.getPrintName() << "\n";
+        JT->print(outs());
       }
-      constexpr uint64_t INVALID_OFFSET = std::numeric_limits<uint64_t>::max();
-      for (unsigned I = 0; I < JT->OffsetEntries.size(); ++I)
-        JT->OffsetEntries[I] = INVALID_OFFSET;
       Function.JumpTables.emplace(Address, JT);
+      JT->Parents[0]->setHasIndirectTargetToSplitFragment(true);
+      JT->Parents[1]->setHasIndirectTargetToSplitFragment(true);
     }
+
+    bool IsJumpTableParent = false;
+    for (BinaryFunction *Frag : JT->Parents)
+      if (Frag == &Function)
+        IsJumpTableParent = true;
+    assert(IsJumpTableParent &&
+           "cannot re-use jump table of a different function");
     return JT->getFirstLabel();
   }
 
@@ -809,13 +821,15 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
                     << " in function " << Function << '\n');
 
   JumpTable *JT = new JumpTable(*JTLabel, Address, EntrySize, Type,
-                                JumpTable::LabelMapType{{0, JTLabel}}, Function,
+                                JumpTable::LabelMapType{{0, JTLabel}},
                                 *getSectionForAddress(Address));
+  JT->Parents.push_back(&Function);
+  if (opts::Verbosity > 2)
+    JT->print(outs());
   JumpTables.emplace(Address, JT);
 
   // Duplicate the entry for the parent function for easy access.
   Function.JumpTables.emplace(Address, JT);
-
   return JTLabel;
 }
 
@@ -837,8 +851,9 @@ BinaryContext::duplicateJumpTable(BinaryFunction &Function, JumpTable *JT,
   MCSymbol *NewLabel = Ctx->createNamedTempSymbol("duplicatedJT");
   JumpTable *NewJT =
       new JumpTable(*NewLabel, JT->getAddress(), JT->EntrySize, JT->Type,
-                    JumpTable::LabelMapType{{Offset, NewLabel}}, Function,
+                    JumpTable::LabelMapType{{Offset, NewLabel}},
                     *getSectionForAddress(JT->getAddress()));
+  NewJT->Parents = JT->Parents;
   NewJT->Entries = JT->Entries;
   NewJT->Counts = JT->Counts;
   uint64_t JumpTableID = ++DuplicatedJumpTables;
@@ -1059,10 +1074,9 @@ void BinaryContext::generateSymbolHashes() {
 
     // First check if a non-anonymous alias exists and move it to the front.
     if (BD.getSymbols().size() > 1) {
-      auto Itr = std::find_if(BD.getSymbols().begin(), BD.getSymbols().end(),
-                              [&](const MCSymbol *Symbol) {
-                                return !isInternalSymbolName(Symbol->getName());
-                              });
+      auto Itr = llvm::find_if(BD.getSymbols(), [&](const MCSymbol *Symbol) {
+        return !isInternalSymbolName(Symbol->getName());
+      });
       if (Itr != BD.getSymbols().end()) {
         size_t Idx = std::distance(BD.getSymbols().begin(), Itr);
         std::swap(BD.getSymbols()[0], BD.getSymbols()[Idx]);
@@ -1123,9 +1137,106 @@ bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
   return true;
 }
 
-void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
-  for (uint64_t Address : Function.InterproceduralReferences) {
-    if (!Address)
+void BinaryContext::addAdrpAddRelocAArch64(BinaryFunction &BF,
+                                           MCInst &LoadLowBits,
+                                           MCInst &LoadHiBits,
+                                           uint64_t Target) {
+  const MCSymbol *TargetSymbol;
+  uint64_t Addend = 0;
+  std::tie(TargetSymbol, Addend) = handleAddressRef(Target, BF,
+                                                    /*IsPCRel*/ true);
+  int64_t Val;
+  MIB->replaceImmWithSymbolRef(LoadHiBits, TargetSymbol, Addend, Ctx.get(), Val,
+                               ELF::R_AARCH64_ADR_PREL_PG_HI21);
+  MIB->replaceImmWithSymbolRef(LoadLowBits, TargetSymbol, Addend, Ctx.get(),
+                               Val, ELF::R_AARCH64_ADD_ABS_LO12_NC);
+}
+
+bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
+  BinaryFunction *TargetFunction = getBinaryFunctionContainingAddress(Address);
+  if (TargetFunction)
+    return false;
+
+  ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
+  assert(Section && "cannot get section for referenced address");
+  if (!Section->isText())
+    return false;
+
+  bool Ret = false;
+  StringRef SectionContents = Section->getContents();
+  uint64_t Offset = Address - Section->getAddress();
+  const uint64_t MaxSize = SectionContents.size() - Offset;
+  const uint8_t *Bytes =
+      reinterpret_cast<const uint8_t *>(SectionContents.data());
+  ArrayRef<uint8_t> Data(Bytes + Offset, MaxSize);
+
+  auto matchVeneer = [&](BinaryFunction::InstrMapType &Instructions,
+                         MCInst &Instruction, uint64_t Offset,
+                         uint64_t AbsoluteInstrAddr,
+                         uint64_t TotalSize) -> bool {
+    MCInst *TargetHiBits, *TargetLowBits;
+    uint64_t TargetAddress, Count;
+    Count = MIB->matchLinkerVeneer(Instructions.begin(), Instructions.end(),
+                                   AbsoluteInstrAddr, Instruction, TargetHiBits,
+                                   TargetLowBits, TargetAddress);
+    if (!Count)
+      return false;
+
+    if (MatchOnly)
+      return true;
+
+    // NOTE The target symbol was created during disassemble's
+    // handleExternalReference
+    const MCSymbol *VeneerSymbol = getOrCreateGlobalSymbol(Address, "FUNCat");
+    BinaryFunction *Veneer = createBinaryFunction(VeneerSymbol->getName().str(),
+                                                  *Section, Address, TotalSize);
+    addAdrpAddRelocAArch64(*Veneer, *TargetLowBits, *TargetHiBits,
+                           TargetAddress);
+    MIB->addAnnotation(Instruction, "AArch64Veneer", true);
+    Veneer->addInstruction(Offset, std::move(Instruction));
+    --Count;
+    for (auto It = std::prev(Instructions.end()); Count != 0;
+         It = std::prev(It), --Count) {
+      MIB->addAnnotation(It->second, "AArch64Veneer", true);
+      Veneer->addInstruction(It->first, std::move(It->second));
+    }
+
+    Veneer->getOrCreateLocalLabel(Address);
+    Veneer->setMaxSize(TotalSize);
+    Veneer->updateState(BinaryFunction::State::Disassembled);
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x" << Address
+                      << "\n");
+    return true;
+  };
+
+  uint64_t Size = 0, TotalSize = 0;
+  BinaryFunction::InstrMapType VeneerInstructions;
+  for (Offset = 0; Offset < MaxSize; Offset += Size) {
+    MCInst Instruction;
+    const uint64_t AbsoluteInstrAddr = Address + Offset;
+    if (!SymbolicDisAsm->getInstruction(Instruction, Size, Data.slice(Offset),
+                                        AbsoluteInstrAddr, nulls()))
+      break;
+
+    TotalSize += Size;
+    if (MIB->isBranch(Instruction)) {
+      Ret = matchVeneer(VeneerInstructions, Instruction, Offset,
+                        AbsoluteInstrAddr, TotalSize);
+      break;
+    }
+
+    VeneerInstructions.emplace(Offset, std::move(Instruction));
+  }
+
+  return Ret;
+}
+
+void BinaryContext::processInterproceduralReferences() {
+  for (const std::pair<BinaryFunction *, uint64_t> &It :
+       InterproceduralReferences) {
+    BinaryFunction &Function = *It.first;
+    uint64_t Address = It.second;
+    if (!Address || Function.isIgnored())
       continue;
 
     BinaryFunction *TargetFunction =
@@ -1134,7 +1245,7 @@ void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
       continue;
 
     if (TargetFunction) {
-      if (TargetFunction->IsFragment &&
+      if (TargetFunction->isFragment() &&
           !registerFragment(*TargetFunction, Function)) {
         errs() << "BOLT-WARNING: interprocedural reference between unrelated "
                   "fragments: "
@@ -1160,6 +1271,10 @@ void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
     if (SectionName == ".plt" || SectionName == ".plt.got")
       continue;
 
+    // Check if it is aarch64 veneer written at Address
+    if (isAArch64() && handleAArch64Veneer(Address))
+      continue;
+
     if (opts::processAllFunctions()) {
       errs() << "BOLT-ERROR: cannot process binaries with unmarked "
              << "object in code at address 0x" << Twine::utohexstr(Address)
@@ -1180,7 +1295,7 @@ void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
     }
   }
 
-  clearList(Function.InterproceduralReferences);
+  InterproceduralReferences.clear();
 }
 
 void BinaryContext::postProcessSymbolTable() {
@@ -1224,8 +1339,7 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   ChildBF.getSymbols().clear();
 
   // Move other names the child function is known under.
-  std::move(ChildBF.Aliases.begin(), ChildBF.Aliases.end(),
-            std::back_inserter(ParentBF.Aliases));
+  llvm::move(ChildBF.Aliases, std::back_inserter(ParentBF.Aliases));
   ChildBF.Aliases.clear();
 
   if (HasRelocations) {
@@ -1392,32 +1506,29 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
 
 std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
   std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
-  std::transform(BinaryFunctions.begin(), BinaryFunctions.end(),
-                 SortedFunctions.begin(),
-                 [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                   return &BFI.second;
-                 });
+  llvm::transform(BinaryFunctions, SortedFunctions.begin(),
+                  [](std::pair<const uint64_t, BinaryFunction> &BFI) {
+                    return &BFI.second;
+                  });
 
-  std::stable_sort(SortedFunctions.begin(), SortedFunctions.end(),
-                   [](const BinaryFunction *A, const BinaryFunction *B) {
-                     if (A->hasValidIndex() && B->hasValidIndex()) {
-                       return A->getIndex() < B->getIndex();
-                     }
-                     return A->hasValidIndex();
-                   });
+  llvm::stable_sort(SortedFunctions,
+                    [](const BinaryFunction *A, const BinaryFunction *B) {
+                      if (A->hasValidIndex() && B->hasValidIndex()) {
+                        return A->getIndex() < B->getIndex();
+                      }
+                      return A->hasValidIndex();
+                    });
   return SortedFunctions;
 }
 
 std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
   std::vector<BinaryFunction *> AllFunctions;
   AllFunctions.reserve(BinaryFunctions.size() + InjectedBinaryFunctions.size());
-  std::transform(BinaryFunctions.begin(), BinaryFunctions.end(),
-                 std::back_inserter(AllFunctions),
-                 [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                   return &BFI.second;
-                 });
-  std::copy(InjectedBinaryFunctions.begin(), InjectedBinaryFunctions.end(),
-            std::back_inserter(AllFunctions));
+  llvm::transform(BinaryFunctions, std::back_inserter(AllFunctions),
+                  [](std::pair<const uint64_t, BinaryFunction> &BFI) {
+                    return &BFI.second;
+                  });
+  llvm::copy(InjectedBinaryFunctions, std::back_inserter(AllFunctions));
 
   return AllFunctions;
 }
@@ -1490,21 +1601,15 @@ void BinaryContext::preprocessDebugInfo() {
     ContainsDwarfLegacy |= CU->getVersion() < 5;
   }
 
-  if (ContainsDwarf5 && ContainsDwarfLegacy)
-    llvm::errs() << "BOLT-WARNING: BOLT does not support mix mode binary with "
-                    "DWARF5 and DWARF{2,3,4}.\n";
-
-  std::sort(AllRanges.begin(), AllRanges.end());
+  llvm::sort(AllRanges);
   for (auto &KV : BinaryFunctions) {
     const uint64_t FunctionAddress = KV.first;
     BinaryFunction &Function = KV.second;
 
-    auto It = std::partition_point(
-        AllRanges.begin(), AllRanges.end(),
-        [=](CURange R) { return R.HighPC <= FunctionAddress; });
-    if (It != AllRanges.end() && It->LowPC <= FunctionAddress) {
+    auto It = llvm::partition_point(
+        AllRanges, [=](CURange R) { return R.HighPC <= FunctionAddress; });
+    if (It != AllRanges.end() && It->LowPC <= FunctionAddress)
       Function.setDWARFUnit(It->Unit);
-    }
   }
 
   // Discover units with debug info that needs to be updated.
@@ -2218,8 +2323,7 @@ DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(
         break;
       const DebugAddressRangesVector FunctionRanges =
           Function.getOutputAddressRanges();
-      std::move(std::begin(FunctionRanges), std::end(FunctionRanges),
-                std::back_inserter(OutputRanges));
+      llvm::move(FunctionRanges, std::back_inserter(OutputRanges));
       std::advance(BFI, 1);
     }
   }

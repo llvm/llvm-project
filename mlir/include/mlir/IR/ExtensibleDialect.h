@@ -362,7 +362,8 @@ public:
       OperationName::PrintAssemblyFn &&printFn,
       OperationName::FoldHookFn &&foldHookFn,
       OperationName::GetCanonicalizationPatternsFn
-          &&getCanonicalizationPatternsFn);
+          &&getCanonicalizationPatternsFn,
+      OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
 
   /// Returns the op typeID.
   TypeID getTypeID() { return typeID; }
@@ -405,15 +406,23 @@ public:
     getCanonicalizationPatternsFn = std::move(getCanonicalizationPatterns);
   }
 
+  /// Set the hook populating default attributes.
+  void setPopulateDefaultAttrsFn(
+      OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrs) {
+    populateDefaultAttrsFn = std::move(populateDefaultAttrs);
+  }
+
 private:
-  DynamicOpDefinition(StringRef name, ExtensibleDialect *dialect,
-                      OperationName::VerifyInvariantsFn &&verifyFn,
-                      OperationName::VerifyRegionInvariantsFn &&verifyRegionFn,
-                      OperationName::ParseAssemblyFn &&parseFn,
-                      OperationName::PrintAssemblyFn &&printFn,
-                      OperationName::FoldHookFn &&foldHookFn,
-                      OperationName::GetCanonicalizationPatternsFn
-                          &&getCanonicalizationPatternsFn);
+  DynamicOpDefinition(
+      StringRef name, ExtensibleDialect *dialect,
+      OperationName::VerifyInvariantsFn &&verifyFn,
+      OperationName::VerifyRegionInvariantsFn &&verifyRegionFn,
+      OperationName::ParseAssemblyFn &&parseFn,
+      OperationName::PrintAssemblyFn &&printFn,
+      OperationName::FoldHookFn &&foldHookFn,
+      OperationName::GetCanonicalizationPatternsFn
+          &&getCanonicalizationPatternsFn,
+      OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
 
   /// Unique identifier for this operation.
   TypeID typeID;
@@ -431,6 +440,7 @@ private:
   OperationName::PrintAssemblyFn printFn;
   OperationName::FoldHookFn foldHookFn;
   OperationName::GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
+  OperationName::PopulateDefaultAttrsFn populateDefaultAttrsFn;
 
   friend ExtensibleDialect;
 };

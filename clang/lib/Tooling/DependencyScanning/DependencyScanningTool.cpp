@@ -9,16 +9,19 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
 
-namespace clang {
-namespace tooling {
-namespace dependencies {
+using namespace clang;
+using namespace tooling;
+using namespace dependencies;
 
 std::vector<std::string> FullDependencies::getCommandLine(
-    std::function<StringRef(ModuleID)> LookupPCMPath) const {
+    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
+        LookupModuleOutput) const {
   std::vector<std::string> Ret = getCommandLineWithoutModulePaths();
 
-  for (ModuleID MID : ClangModuleDeps)
-    Ret.push_back(("-fmodule-file=" + LookupPCMPath(MID)).str());
+  for (ModuleID MID : ClangModuleDeps) {
+    auto PCM = LookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+    Ret.push_back("-fmodule-file=" + PCM);
+  }
 
   return Ret;
 }
@@ -47,8 +50,9 @@ FullDependencies::getCommandLineWithoutModulePaths() const {
 }
 
 DependencyScanningTool::DependencyScanningTool(
-    DependencyScanningService &Service)
-    : Worker(Service) {}
+    DependencyScanningService &Service,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+    : Worker(Service, std::move(FS)) {}
 
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     const std::vector<std::string> &CommandLine, StringRef CWD,
@@ -192,7 +196,3 @@ DependencyScanningTool::getFullDependencies(
     return std::move(Result);
   return Consumer.getFullDependencies(CommandLine);
 }
-
-} // end namespace dependencies
-} // end namespace tooling
-} // end namespace clang

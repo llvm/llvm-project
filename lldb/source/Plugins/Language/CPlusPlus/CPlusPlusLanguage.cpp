@@ -218,10 +218,10 @@ void CPlusPlusLanguage::MethodName::Parse() {
     } else {
       CPlusPlusNameParser parser(m_full.GetStringRef());
       if (auto function = parser.ParseAsFunctionDefinition()) {
-        m_basename = function.getValue().name.basename;
-        m_context = function.getValue().name.context;
-        m_arguments = function.getValue().arguments;
-        m_qualifiers = function.getValue().qualifiers;
+        m_basename = function.value().name.basename;
+        m_context = function.value().name.context;
+        m_arguments = function.value().arguments;
+        m_qualifiers = function.value().qualifiers;
         m_parse_error = false;
       } else {
         m_parse_error = true;
@@ -329,8 +329,8 @@ bool CPlusPlusLanguage::ExtractContextAndIdentifier(
 
   CPlusPlusNameParser parser(name);
   if (auto full_name = parser.ParseAsFullName()) {
-    identifier = full_name.getValue().basename;
-    context = full_name.getValue().context;
+    identifier = full_name.value().basename;
+    context = full_name.value().context;
     return true;
   }
   return false;
@@ -409,12 +409,12 @@ protected:
 private:
   /// Input character until which we have constructed the respective output
   /// already.
-  const char *Written;
+  const char *Written = "";
 
   llvm::SmallString<128> Result;
 
   /// Whether we have performed any substitutions.
-  bool Substituted;
+  bool Substituted = false;
 
   const char *currentParserPos() const { return this->First; }
 
@@ -909,8 +909,16 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp,
       lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEndCreator,
       "std::map iterator synthetic children",
-      ConstString("^std::__[[:alnum:]]+::__map_iterator<.+>$"), stl_synth_flags,
+      ConstString("^std::__[[:alnum:]]+::__map_(const_)?iterator<.+>$"), stl_synth_flags,
       true);
+
+  AddCXXSynthetic(
+      cpp_category_sp,
+      lldb_private::formatters::
+          LibCxxUnorderedMapIteratorSyntheticFrontEndCreator,
+      "std::unordered_map iterator synthetic children",
+      ConstString("^std::__[[:alnum:]]+::__hash_map_(const_)?iterator<.+>$"),
+      stl_synth_flags, true);
 }
 
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

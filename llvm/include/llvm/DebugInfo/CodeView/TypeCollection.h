@@ -34,7 +34,7 @@ public:
   template <typename TFunc> void ForEachRecord(TFunc Func) {
     Optional<TypeIndex> Next = getFirst();
 
-    while (Next.hasValue()) {
+    while (Next) {
       TypeIndex N = *Next;
       Func(N, getType(N));
       Next = getNext(N);

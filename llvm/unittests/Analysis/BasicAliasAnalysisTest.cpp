@@ -58,7 +58,7 @@ protected:
   TestAnalyses &setupAnalyses() {
     assert(F);
     Analyses.emplace(*this);
-    return Analyses.getValue();
+    return *Analyses;
   }
 
 public:

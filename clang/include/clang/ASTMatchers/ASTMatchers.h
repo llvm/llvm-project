@@ -1515,6 +1515,15 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXMemberCallExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCMessageExpr>
     objcMessageExpr;
 
+/// Matches ObjectiveC String literal expressions.
+///
+/// Example matches @"abcd"
+/// \code
+///   NSString *s = @"abcd";
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCStringLiteral>
+    objcStringLiteral;
+
 /// Matches Objective-C interface declarations.
 ///
 /// Example matches Foo
@@ -3829,8 +3838,9 @@ AST_MATCHER_P(CallExpr, callee, internal::Matcher<Stmt>,
           InnerMatcher.matches(*ExprNode, Finder, Builder));
 }
 
-/// Matches if the call expression's callee's declaration matches the
-/// given matcher.
+/// Matches 1) if the call expression's callee's declaration matches the
+/// given matcher; or 2) if the Obj-C message expression's callee's method
+/// declaration matches the given matcher.
 ///
 /// Example matches y.x() (matcher = callExpr(callee(
 ///                                    cxxMethodDecl(hasName("x")))))
@@ -3838,9 +3848,31 @@ AST_MATCHER_P(CallExpr, callee, internal::Matcher<Stmt>,
 ///   class Y { public: void x(); };
 ///   void z() { Y y; y.x(); }
 /// \endcode
-AST_MATCHER_P_OVERLOAD(CallExpr, callee, internal::Matcher<Decl>, InnerMatcher,
-                       1) {
-  return callExpr(hasDeclaration(InnerMatcher)).matches(Node, Finder, Builder);
+///
+/// Example 2. Matches [I foo] with
+/// objcMessageExpr(callee(objcMethodDecl(hasName("foo"))))
+///
+/// \code
+///   @interface I: NSObject
+///   +(void)foo;
+///   @end
+///   ...
+///   [I foo]
+/// \endcode
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
+    callee, AST_POLYMORPHIC_SUPPORTED_TYPES(ObjCMessageExpr, CallExpr),
+    internal::Matcher<Decl>, InnerMatcher, 1) {
+  if (const auto *CallNode = dyn_cast<CallExpr>(&Node))
+    return callExpr(hasDeclaration(InnerMatcher))
+        .matches(Node, Finder, Builder);
+  else {
+    // The dynamic cast below is guaranteed to succeed as there are only 2
+    // supported return types.
+    const auto *MsgNode = cast<ObjCMessageExpr>(&Node);
+    const Decl *DeclNode = MsgNode->getMethodDecl();
+    return (DeclNode != nullptr &&
+            InnerMatcher.matches(*DeclNode, Finder, Builder));
+  }
 }
 
 /// Matches if the expression's or declaration's type matches a type

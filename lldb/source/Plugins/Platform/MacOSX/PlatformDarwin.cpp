@@ -135,8 +135,8 @@ public:
   const char *GetIgnoredExceptions() const {
     const uint32_t idx = ePropertyIgnoredExceptions;
     const OptionValueString *option_value =
-        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
-            NULL, false, idx);
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(nullptr, false,
+                                                               idx);
     assert(option_value);
     return option_value->GetCurrentValue();
   }
@@ -144,8 +144,8 @@ public:
   OptionValueString *GetIgnoredExceptionValue() {
     const uint32_t idx = ePropertyIgnoredExceptions;
     OptionValueString *option_value =
-        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
-            NULL, false, idx);
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(nullptr, false,
+                                                               idx);
     assert(option_value);
     return option_value;
   }
@@ -824,7 +824,7 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
         FileSpec native_sdk_spec = sdks_spec;
         StreamString native_sdk_name;
         native_sdk_name.Printf("MacOSX%u.%u.sdk", version.getMajor(),
-                               version.getMinor().getValueOr(0));
+                               version.getMinor().value_or(0));
         native_sdk_spec.AppendPathComponent(native_sdk_name.GetString());
 
         if (FileSystem::Instance().Exists(native_sdk_spec)) {
@@ -1031,7 +1031,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     minimum_version_option << '-';
     switch (sdk_type) {
     case XcodeSDK::Type::MacOSX:
-      minimum_version_option << opt_mmacosx_version_min_EQ;
+      minimum_version_option << opt_mmacos_version_min_EQ;
       break;
     case XcodeSDK::Type::iPhoneSimulator:
       minimum_version_option << opt_mios_simulator_version_min_EQ;

@@ -35,7 +35,7 @@ def NVGPU_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 /// Device-side synchronization token.
@@ -53,8 +53,10 @@ def NVGPU_DeviceAsyncToken : DialectType<
 class NVGPU_Op<string mnemonic, list<Trait> traits = []> :
   Op<NVGPU_Dialect, mnemonic, traits> {}
 
-def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix",
-                                [MemoryEffects<[MemRead]>]> {
+def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
+                                MemoryEffects<[MemRead]>,
+                                PredOpTrait<"srcMemref and res have same element type", 
+                                            TCresVTEtIsSameAsOp<0, 0>>]> {
   let description = [{
   The `nvgpu.ldmatrix` op represents loading a matrix fragment from
   memory. The load source and result type must be compatible with lowering
@@ -79,9 +81,14 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix",
   let assemblyFormat = [{
     $srcMemref`[` $indices `]` attr-dict `:` type($srcMemref) `->` type($res)
   }];
+
+  let hasVerifier = 1;
 }
 
-def NVGPU_MmaSyncOp : NVGPU_Op<"mma.sync", [NoSideEffect]> {
+def NVGPU_MmaSyncOp : NVGPU_Op<"mma.sync", [
+                               NoSideEffect,
+                               PredOpTrait<"matrixA and matrixB have same element type", 
+                                           TCopVTEtIsSameAs<0, 1>>]> {
   let description = [{
   The `nvgpu.mma.sync` op represents the distributed form of a collective
   matrix-multiply-and-accumulate (mma) operation that is compatible with
@@ -112,11 +119,13 @@ def NVGPU_MmaSyncOp : NVGPU_Op<"mma.sync", [NoSideEffect]> {
     `(` $matrixA`,` $matrixB`,` $matrixC `)` attr-dict
     `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
   }];
+
+  let hasVerifier = 1;
 }
 
 
-def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy",
-  [AttrSizedOperandSegments]> {
+def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
+                                       AttrSizedOperandSegments]> {
   let summary = "device-side asynchronous copy";
   let description = [{
     The `gpu.device_async_copy` op initiates an asynchronous copy operation of

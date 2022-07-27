@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=ALL,SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=ALL,AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=ALL,AVX
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX512,AVX512BW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=ALL,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX512,AVX512F
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=ALL,AVX512,AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16,+avx512vl | FileCheck %s --check-prefixes=ALL,AVX512,AVX512FP16
 
 ;
@@ -370,10 +370,11 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; SSE-NEXT:    pushq %rbp
 ; SSE-NEXT:    pushq %rbx
 ; SSE-NEXT:    subq $40, %rsp
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pextrw $0, %xmm1, %ebx
-; SSE-NEXT:    pextrw $0, %xmm0, %ebp
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psrld $16, %xmm0
+; SSE-NEXT:    pextrw $0, %xmm0, %ebx
+; SSE-NEXT:    pextrw $0, %xmm1, %ebp
 ; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -391,10 +392,11 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    pushq %rbx
 ; AVX-NEXT:    subq $40, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, %xmm1
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpextrw $0, %xmm1, %ebx
-; AVX-NEXT:    vpextrw $0, %xmm0, %ebp
-; AVX-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX-NEXT:    vpextrw $0, %xmm0, %ebx
+; AVX-NEXT:    vpextrw $0, %xmm1, %ebp
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -407,20 +409,47 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
 ;
-; AVX512BW-LABEL: test_v2f16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BW-NEXT:    movzwl %cx, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm0
-; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512BW-NEXT:    movzwl %ax, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm1
-; AVX512BW-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512BW-NEXT:    vucomiss %xmm0, %xmm1
-; AVX512BW-NEXT:    cmoval %eax, %ecx
-; AVX512BW-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
-; AVX512BW-NEXT:    retq
+; AVX512F-LABEL: test_v2f16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX512F-NEXT:    movzwl %ax, %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm2
+; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512F-NEXT:    vpextrw $0, %xmm1, %eax
+; AVX512F-NEXT:    movzwl %ax, %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm3
+; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512F-NEXT:    xorl %eax, %eax
+; AVX512F-NEXT:    vucomiss %xmm3, %xmm2
+; AVX512F-NEXT:    movl $255, %ecx
+; AVX512F-NEXT:    cmovbel %eax, %ecx
+; AVX512F-NEXT:    kmovd %ecx, %k1
+; AVX512F-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v2f16:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX512VL-NEXT:    movzwl %ax, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm2
+; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512VL-NEXT:    vpextrw $0, %xmm1, %eax
+; AVX512VL-NEXT:    movzwl %ax, %eax
+; AVX512VL-NEXT:    vmovd %eax, %xmm3
+; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; AVX512VL-NEXT:    xorl %eax, %eax
+; AVX512VL-NEXT:    vucomiss %xmm3, %xmm2
+; AVX512VL-NEXT:    movl $255, %ecx
+; AVX512VL-NEXT:    cmovbel %eax, %ecx
+; AVX512VL-NEXT:    kmovd %ecx, %k1
+; AVX512VL-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512VL-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: test_v2f16:
 ; AVX512FP16:       # %bb.0:

@@ -9,7 +9,7 @@
 ; type should be split 8/6 and not 7/7. This also accounts for hi masked
 ; store that get zero storage size (and are unused).
 
-define void @mstore_split9(<9 x float> %value, <9 x float>* %addr, <9 x i1> %mask) {
+define void @mstore_split9(<9 x float> %value, ptr %addr, <9 x i1> %mask) {
 ; CHECK-LABEL: mstore_split9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
@@ -43,11 +43,11 @@ define void @mstore_split9(<9 x float> %value, <9 x float>* %addr, <9 x i1> %mas
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  call void @llvm.masked.store.v9f32.p0v9f32(<9 x float> %value, <9 x float>* %addr, i32 4, <9 x i1>%mask)
+  call void @llvm.masked.store.v9f32.p0(<9 x float> %value, ptr %addr, i32 4, <9 x i1>%mask)
   ret void
 }
 
-define void @mstore_split13(<13 x float> %value, <13 x float>* %addr, <13 x i1> %mask) {
+define void @mstore_split13(<13 x float> %value, ptr %addr, <13 x i1> %mask) {
 ; CHECK-LABEL: mstore_split13:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
@@ -98,11 +98,11 @@ define void @mstore_split13(<13 x float> %value, <13 x float>* %addr, <13 x i1> 
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  call void @llvm.masked.store.v13f32.p0v13f32(<13 x float> %value, <13 x float>* %addr, i32 4, <13 x i1>%mask)
+  call void @llvm.masked.store.v13f32.p0(<13 x float> %value, ptr %addr, i32 4, <13 x i1>%mask)
   ret void
 }
 
-define void @mstore_split14(<14 x float> %value, <14 x float>* %addr, <14 x i1> %mask) {
+define void @mstore_split14(<14 x float> %value, ptr %addr, <14 x i1> %mask) {
 ; CHECK-LABEL: mstore_split14:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
@@ -156,11 +156,11 @@ define void @mstore_split14(<14 x float> %value, <14 x float>* %addr, <14 x i1> 
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  call void @llvm.masked.store.v14f32.p0v14f32(<14 x float> %value, <14 x float>* %addr, i32 4, <14 x i1>%mask)
+  call void @llvm.masked.store.v14f32.p0(<14 x float> %value, ptr %addr, i32 4, <14 x i1>%mask)
   ret void
 }
 
-define void @mstore_split17(<17 x float> %value, <17 x float>* %addr, <17 x i1> %mask) {
+define void @mstore_split17(<17 x float> %value, ptr %addr, <17 x i1> %mask) {
 ; CHECK-LABEL: mstore_split17:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
@@ -215,11 +215,11 @@ define void @mstore_split17(<17 x float> %value, <17 x float>* %addr, <17 x i1> 
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  call void @llvm.masked.store.v17f32.p0v17f32(<17 x float> %value, <17 x float>* %addr, i32 4, <17 x i1>%mask)
+  call void @llvm.masked.store.v17f32.p0(<17 x float> %value, ptr %addr, i32 4, <17 x i1>%mask)
   ret void
 }
 
-define void @mstore_split23(<23 x float> %value, <23 x float>* %addr, <23 x i1> %mask) {
+define void @mstore_split23(<23 x float> %value, ptr %addr, <23 x i1> %mask) {
 ; CHECK-LABEL: mstore_split23:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
@@ -290,12 +290,12 @@ define void @mstore_split23(<23 x float> %value, <23 x float>* %addr, <23 x i1> 
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  call void @llvm.masked.store.v23f32.p0v23f32(<23 x float> %value, <23 x float>* %addr, i32 4, <23 x i1>%mask)
+  call void @llvm.masked.store.v23f32.p0(<23 x float> %value, ptr %addr, i32 4, <23 x i1>%mask)
   ret void
 }
 
-declare void @llvm.masked.store.v9f32.p0v9f32(<9 x float>, <9 x float>*, i32, <9 x i1>)
-declare void @llvm.masked.store.v13f32.p0v13f32(<13 x float>, <13 x float>*, i32, <13 x i1>)
-declare void @llvm.masked.store.v14f32.p0v14f32(<14 x float>, <14 x float>*, i32, <14 x i1>)
-declare void @llvm.masked.store.v17f32.p0v17f32(<17 x float>, <17 x float>*, i32, <17 x i1>)
-declare void @llvm.masked.store.v23f32.p0v23f32(<23 x float>, <23 x float>*, i32, <23 x i1>)
+declare void @llvm.masked.store.v9f32.p0(<9 x float>, ptr, i32, <9 x i1>)
+declare void @llvm.masked.store.v13f32.p0(<13 x float>, ptr, i32, <13 x i1>)
+declare void @llvm.masked.store.v14f32.p0(<14 x float>, ptr, i32, <14 x i1>)
+declare void @llvm.masked.store.v17f32.p0(<17 x float>, ptr, i32, <17 x i1>)
+declare void @llvm.masked.store.v23f32.p0(<23 x float>, ptr, i32, <23 x i1>)

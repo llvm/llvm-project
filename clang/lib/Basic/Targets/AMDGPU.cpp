@@ -250,6 +250,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       break;
     case GK_GFX940:
       Features["gfx940-insts"] = true;
+      Features["fp8-insts"] = true;
       LLVM_FALLTHROUGH;
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
@@ -418,8 +419,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__amdgcn_processor__",
                           Twine("\"") + Twine(CanonName) + Twine("\""));
       Builder.defineMacro("__amdgcn_target_id__",
-                          Twine("\"") + Twine(getTargetID().getValue()) +
-                              Twine("\""));
+                          Twine("\"") + Twine(*getTargetID()) + Twine("\""));
       for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
         auto Loc = OffloadArchFeatures.find(F);
         if (Loc != OffloadArchFeatures.end()) {

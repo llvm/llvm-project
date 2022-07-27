@@ -1345,6 +1345,18 @@ TEST_F(ValueTrackingTest, IsImpliedConditionAnd2) {
   EXPECT_EQ(isImpliedCondition(A, A4, DL), None);
 }
 
+TEST_F(ValueTrackingTest, IsImpliedConditionAndVec) {
+  parseAssembly(R"(
+    define void @test(<2 x i8> %x, <2 x i8> %y) {
+      %A = icmp ult <2 x i8> %x, %y
+      %A2 = icmp ule <2 x i8> %x, %y
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_EQ(isImpliedCondition(A, A2, DL), true);
+}
+
 TEST_F(ValueTrackingTest, IsImpliedConditionOr) {
   parseAssembly(R"(
     define void @test(i32 %x, i32 %y) {
@@ -1709,20 +1721,6 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   // with the masks of zeros and ones, not the ranges.
   EXPECT_EQ(Known.getMinValue(), 544);
   EXPECT_EQ(Known.getMaxValue(), 575);
-}
-
-TEST_F(ComputeKnownBitsTest, ComputeKnownBitsCrash) {
-  parseAssembly(
-      "@g.a = external global i16, align 1\n"
-      "define i16 @test(i16 %i) {\n"
-      "entry:\n"
-      "  %0 = icmp slt i16 sub (i16 0, i16 trunc (i32 udiv (i32 ptrtoint (i16* @g.a to i32), i32 -1) to i16)), 0\n"
-      "  %A = select i1 %0, i16 trunc (i32 udiv (i32 ptrtoint (i16* @g.a to i32), i32 -1) to i16), i16 sub (i16 0, i16 trunc (i32 udiv (i32 ptrtoint (i16* @g.a to i32), i32 -1) to i16))\n"
-      "  ret i16 %A\n"
-      "}\n");
-  AssumptionCache AC(*F);
-  KnownBits Known = computeKnownBits(
-      A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
 }
 
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {

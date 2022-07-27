@@ -542,6 +542,8 @@ Example: ::
     lldb::SBError
     RunREPL (lldb::LanguageType language, const char *repl_options);
 
+    SBTrace LoadTraceFromFile(SBError &error, const SBFileSpec &trace_description_file);
+
 #ifdef SWIGPYTHON
     %pythoncode%{
     def __iter__(self):

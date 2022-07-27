@@ -1,10 +1,10 @@
 # RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
 # RUN:     -start-before aarch64-sls-hardening -o - %s \
-# RUN:     -mattr=harden-sls-retbr \
+# RUN:     -mattr=+pauth,+harden-sls-retbr \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,ISBDSB
 # RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
 # RUN:     -start-before aarch64-sls-hardening -o - %s \
-# RUN:     -mattr=harden-sls-retbr -mattr=+sb \
+# RUN:     -mattr=+pauth,+harden-sls-retbr -mattr=+sb \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,SB
 
 # Check that the SLS hardening pass also protects BRA* indirect branches that

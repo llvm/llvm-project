@@ -868,8 +868,11 @@ int main(int argc, char **argv) {
   StringSaver Saver(A);
   SizeOptTable Tbl;
   ToolName = argv[0];
-  opt::InputArgList Args = Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver,
-                                         [&](StringRef Msg) { error(Msg); });
+  opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        error(Msg);
+        exit(1);
+      });
   if (Args.hasArg(OPT_help)) {
     Tbl.printHelp(
         outs(),

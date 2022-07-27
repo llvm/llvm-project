@@ -6,7 +6,7 @@ target triple = "i386-apple-darwin9.0.0"
 
 declare %0 @llvm.umul.with.overflow.i32(i32, i32) nounwind readnone
 
-define linkonce_odr hidden void @_ZN2js5QueueINS_7SlotMap8SlotInfoEE6ensureEj(i8* nocapture %this, i32 %size) nounwind align 2 {
+define linkonce_odr hidden void @_ZN2js5QueueINS_7SlotMap8SlotInfoEE6ensureEj(ptr nocapture %this, i32 %size) nounwind align 2 {
   br i1 undef, label %14, label %1
 
 ; <label>:1                                       ; preds = %0
@@ -31,7 +31,7 @@ define linkonce_odr hidden void @_ZN2js5QueueINS_7SlotMap8SlotInfoEE6ensureEj(i8
   br label %_ZnamRN7nanojit9AllocatorE.exit
 
 ; <label>:10                                      ; preds = %4
-  %11 = tail call i8* @_ZN7nanojit9Allocator9allocSlowEmb(i8* undef, i32 %8, i1 zeroext false) nounwind
+  %11 = tail call ptr @_ZN7nanojit9Allocator9allocSlowEmb(ptr undef, i32 %8, i1 zeroext false) nounwind
   br label %_ZnamRN7nanojit9AllocatorE.exit
 
 _ZnamRN7nanojit9AllocatorE.exit:                  ; preds = %10, %9
@@ -53,4 +53,4 @@ _ZnamRN7nanojit9AllocatorE.exit:                  ; preds = %10, %9
   ret void
 }
 
-declare i8* @_ZN7nanojit9Allocator9allocSlowEmb(i8*, i32, i1 zeroext)
+declare ptr @_ZN7nanojit9Allocator9allocSlowEmb(ptr, i32, i1 zeroext)

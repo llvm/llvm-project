@@ -399,8 +399,8 @@ int f() {
 // CHECK:   Succs (1): B1
 // CHECK: [B1]
 // CHECK:   1: x
-// CHECK:   2: [B1.1] (ImplicitCastExpr, NoOp, const struct X)
-// CHECK:   3: [B1.2] (CXXConstructExpr, struct X)
+// CHECK:   2: [B1.1] (ImplicitCastExpr, NoOp, const X)
+// CHECK:   3: [B1.2] (CXXConstructExpr[B1.4]+0, X)
 // CHECK:   4: [x]     {
 // CHECK:    }
 // CHECK:   5: (void)[B1.4] (CStyleCastExpr, ToVoid, void)
@@ -408,4 +408,3 @@ int f() {
 // CHECK:   Succs (1): B0
 // CHECK: [B0 (EXIT)]
 // CHECK:   Preds (1): B1
-

@@ -158,9 +158,21 @@ dotest_cmd = [os.path.join(config.lldb_src_root, 'test', 'API', 'dotest.py')]
 if is_configured('dotest_args_str'):
   dotest_cmd.extend(config.dotest_args_str.split(';'))
 
-# Library path may be needed to locate just-built clang.
+# Library path may be needed to locate just-built clang and libcxx.
 if is_configured('llvm_libs_dir'):
   dotest_cmd += ['--env', 'LLVM_LIBS_DIR=' + config.llvm_libs_dir]
+
+# Include path may be needed to locate just-built libcxx.
+if is_configured('llvm_include_dir'):
+  dotest_cmd += ['--env', 'LLVM_INCLUDE_DIR=' + config.llvm_include_dir]
+
+# This path may be needed to locate required llvm tools
+if is_configured('llvm_tools_dir'):
+  dotest_cmd += ['--env', 'LLVM_TOOLS_DIR=' + config.llvm_tools_dir]
+
+# If we have a just-built libcxx, prefer it over the system one.
+if is_configured('has_libcxx') and platform.system() != 'Windows':
+  dotest_cmd += ['--hermetic-libcxx']
 
 # Forward ASan-specific environment variables to tests, as a test may load an
 # ASan-ified dylib.

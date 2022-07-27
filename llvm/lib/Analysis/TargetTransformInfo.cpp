@@ -58,14 +58,16 @@ bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(
-    Intrinsic::ID Id, const CallBase &CI, InstructionCost ScalarizationCost)
+    Intrinsic::ID Id, const CallBase &CI, InstructionCost ScalarizationCost,
+    bool TypeBasedOnly)
     : II(dyn_cast<IntrinsicInst>(&CI)), RetTy(CI.getType()), IID(Id),
       ScalarizationCost(ScalarizationCost) {
 
   if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
-  Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
+  if (!TypeBasedOnly)
+    Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
   FunctionType *FTy = CI.getCalledFunction()->getFunctionType();
   ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
 }
@@ -294,11 +296,11 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
 bool TargetTransformInfo::preferPredicateOverEpilogue(
     Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
     TargetLibraryInfo *TLI, DominatorTree *DT,
-    const LoopAccessInfo *LAI) const {
-  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
+    LoopVectorizationLegality *LVL) const {
+  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL);
 }
 
-bool TargetTransformInfo::emitGetActiveLaneMask() const {
+PredicationStyle TargetTransformInfo::emitGetActiveLaneMask() const {
   return TTIImpl->emitGetActiveLaneMask();
 }
 
@@ -412,6 +414,12 @@ bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
   return TTIImpl->isLegalMaskedGather(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalAltInstr(
+    VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+    const SmallBitVector &OpcodeMask) const {
+  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask);
+}
+
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
                                                Align Alignment) const {
   return TTIImpl->isLegalMaskedScatter(DataType, Alignment);
@@ -514,6 +522,10 @@ InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
 
 bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
   return TTIImpl->supportsEfficientVectorElementLoadStore();
+}
+
+bool TargetTransformInfo::supportsTailCalls() const {
+  return TTIImpl->supportsTailCalls();
 }
 
 bool TargetTransformInfo::enableAggressiveInterleaving(

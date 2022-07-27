@@ -90,7 +90,7 @@ struct OpPassManagerImpl {
       : name(name == OpPassManager::getAnyOpAnchorName() ? "" : name.str()),
         initializationGeneration(0), nesting(nesting) {}
   OpPassManagerImpl(OpPassManager::Nesting nesting)
-      : name(""), initializationGeneration(0), nesting(nesting) {}
+      : initializationGeneration(0), nesting(nesting) {}
   OpPassManagerImpl(const OpPassManagerImpl &rhs)
       : name(rhs.name), opName(rhs.opName),
         initializationGeneration(rhs.initializationGeneration),
@@ -145,7 +145,7 @@ struct OpPassManagerImpl {
   /// of an operation, or the result of `getAnyOpAnchorName()` in the case of an
   /// op-agnostic pass manager.
   StringRef getOpAnchorName() const {
-    return getOpName().getValueOr(OpPassManager::getAnyOpAnchorName());
+    return getOpName().value_or(OpPassManager::getAnyOpAnchorName());
   }
 
   /// Indicate if the current pass manager can be scheduled on the given

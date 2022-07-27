@@ -69,6 +69,14 @@ public:
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
+  using TargetInstrInfo::foldMemoryOperandImpl;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
+
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
               const DebugLoc &DL, Register DstReg, uint64_t Val,
@@ -126,14 +134,13 @@ public:
   getSerializableDirectMachineOperandTargetFlags() const override;
 
   // Return true if the function can safely be outlined from.
-  virtual bool
-  isFunctionSafeToOutlineFrom(MachineFunction &MF,
-                              bool OutlineFromLinkOnceODRs) const override;
+  bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                                   bool OutlineFromLinkOnceODRs) const override;
 
   // Return true if MBB is safe to outline from, and return any target-specific
   // information in Flags.
-  virtual bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
-                                      unsigned &Flags) const override;
+  bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                              unsigned &Flags) const override;
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
@@ -142,17 +149,15 @@ public:
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   // Return if/how a given MachineInstr should be outlined.
-  virtual outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MBBI,
-                   unsigned Flags) const override;
+  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MBBI,
+                                       unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
-  virtual void
-  buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
-                     const outliner::OutlinedFunction &OF) const override;
+  void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
+                          const outliner::OutlinedFunction &OF) const override;
 
   // Insert a call to an outlined function into a given basic block.
-  virtual MachineBasicBlock::iterator
+  MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
@@ -183,10 +188,14 @@ protected:
 
 namespace RISCV {
 
+// Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
+bool isSEXT_W(const MachineInstr &MI);
+bool isZEXT_W(const MachineInstr &MI);
+bool isZEXT_B(const MachineInstr &MI);
+
 // Returns true if the given MI is an RVV instruction opcode for which we may
-// expect to see a FrameIndex operand. When CheckFIs is true, the instruction
-// must contain at least one FrameIndex operand.
-bool isRVVSpill(const MachineInstr &MI, bool CheckFIs);
+// expect to see a FrameIndex operand.
+bool isRVVSpill(const MachineInstr &MI);
 
 Optional<std::pair<unsigned, unsigned>> isRVVSpillForZvlsseg(unsigned Opcode);
 

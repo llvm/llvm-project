@@ -473,6 +473,23 @@ MachineInstrBuilder MachineIRBuilder::buildBoolExt(const DstOp &Res,
   return buildInstr(ExtOp, Res, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildBoolExtInReg(const DstOp &Res,
+                                                        const SrcOp &Op,
+                                                        bool IsVector,
+                                                        bool IsFP) {
+  const auto *TLI = getMF().getSubtarget().getTargetLowering();
+  switch (TLI->getBooleanContents(IsVector, IsFP)) {
+  case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+    return buildSExtInReg(Res, Op, 1);
+  case TargetLoweringBase::ZeroOrOneBooleanContent:
+    return buildZExtInReg(Res, Op, 1);
+  case TargetLoweringBase::UndefinedBooleanContent:
+    return buildCopy(Res, Op);
+  }
+
+  llvm_unreachable("unexpected BooleanContent");
+}
+
 MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
                                                       const DstOp &Res,
                                                       const SrcOp &Op) {
@@ -629,7 +646,7 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   SmallVector<SrcOp> TmpVec;
   TmpVec.reserve(Ops.size());
   LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
-  for (auto &Op : Ops)
+  for (const auto &Op : Ops)
     TmpVec.push_back(buildConstant(EltTy, Op));
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
@@ -934,6 +951,20 @@ MachineInstrBuilder
 MachineIRBuilder::buildAtomicRMWFSub(const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
                                      MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FSUB, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFMax(const DstOp &OldValRes, const SrcOp &Addr,
+                                     const SrcOp &Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FMAX, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFMin(const DstOp &OldValRes, const SrcOp &Addr,
+                                     const SrcOp &Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FMIN, OldValRes, Addr, Val,
                         MMO);
 }
 

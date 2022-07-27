@@ -121,6 +121,14 @@ Status TargetList::CreateTargetInternal(
   if (!user_exe_path.empty()) {
     ModuleSpec module_spec(FileSpec(user_exe_path, FileSpec::Style::native));
     FileSystem::Instance().Resolve(module_spec.GetFileSpec());
+
+    // Try to resolve the exe based on PATH and/or platform-specific suffixes,
+    // but only if using the host platform.
+    if (platform_sp->IsHost() &&
+        !FileSystem::Instance().Exists(module_spec.GetFileSpec()))
+      FileSystem::Instance().ResolveExecutableLocation(
+          module_spec.GetFileSpec());
+
     // Resolve the executable in case we are given a path to a application
     // bundle like a .app bundle on MacOSX.
     Host::ResolveExecutableInBundle(module_spec.GetFileSpec());
@@ -501,8 +509,7 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
 }
 
 void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
-  lldbassert(std::find(m_target_list.begin(), m_target_list.end(), target_sp) ==
-                 m_target_list.end() &&
+  lldbassert(!llvm::is_contained(m_target_list, target_sp) &&
              "target already exists it the list");
   m_target_list.push_back(std::move(target_sp));
   if (do_select)

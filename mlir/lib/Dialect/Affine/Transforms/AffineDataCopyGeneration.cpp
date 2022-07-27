@@ -142,8 +142,8 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
         Optional<int64_t> footprint =
             getMemoryFootprintBytes(forOp,
                                     /*memorySpace=*/0);
-        return (footprint.hasValue() &&
-                static_cast<uint64_t>(footprint.getValue()) >
+        return (footprint.has_value() &&
+                static_cast<uint64_t>(footprint.value()) >
                     fastMemCapacityBytes);
       };
 

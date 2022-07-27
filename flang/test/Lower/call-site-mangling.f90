@@ -104,3 +104,15 @@ subroutine test_bindmodule_call
   call somecproc()
   call somecproc_1()
 end subroutine
+
+! CHECK-LABEL: func @_QPtest_bind_interface() {
+subroutine test_bind_interface()
+  interface
+    subroutine some_bindc_iface() bind(C, name="some_name_some_foo_does_not_inherit")
+    end subroutine
+  end interface
+ procedure(some_bindc_iface) :: foo5
+ external :: foo5
+ ! CHECK: fir.call @foo5
+ call foo5()
+end

@@ -519,7 +519,7 @@ int main(int argc, char *argv[]) {
     // TODO: Remove OutputFormat flag in the next revision.
     WithColor::warning() << "--output-format option is deprecated, please use "
                             "--output-{FILE_FORMAT} options instead\n";
-    switch (Config.OutputFormat.getValue()) {
+    switch (*Config.OutputFormat) {
     case FileFormat::TBD: {
       std::error_code SysErr;
       raw_fd_ostream Out(*Config.Output, SysErr);
@@ -533,34 +533,33 @@ int main(int argc, char *argv[]) {
             << "Triple should be defined when output format is TBD";
         return -1;
       }
-      return writeTbdStub(llvm::Triple(Stub.Target.Triple.getValue()),
+      return writeTbdStub(llvm::Triple(Stub.Target.Triple.value()),
                           Stub.Symbols, "TBD", Out);
     }
     case FileFormat::IFS: {
       Stub.IfsVersion = IfsVersionCurrent;
-      if (Config.InputFormat.getValue() == FileFormat::ELF &&
+      if (Config.InputFormat.value() == FileFormat::ELF &&
           Config.HintIfsTarget) {
         std::error_code HintEC(1, std::generic_category());
         IFSTarget HintTarget = parseTriple(*Config.HintIfsTarget);
-        if (Stub.Target.Arch.getValue() != HintTarget.Arch.getValue())
+        if (Stub.Target.Arch.value() != HintTarget.Arch.value())
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual architecture", HintEC));
-        if (Stub.Target.Endianness.getValue() !=
-            HintTarget.Endianness.getValue())
+        if (Stub.Target.Endianness.value() != HintTarget.Endianness.value())
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual endianness", HintEC));
-        if (Stub.Target.BitWidth.getValue() != HintTarget.BitWidth.getValue())
+        if (Stub.Target.BitWidth.value() != HintTarget.BitWidth.value())
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual bit width", HintEC));
 
         stripIFSTarget(Stub, true, false, false, false);
-        Stub.Target.Triple = Config.HintIfsTarget.getValue();
+        Stub.Target.Triple = Config.HintIfsTarget.value();
       } else {
         stripIFSTarget(Stub, Config.StripIfsTarget, Config.StripIfsArch,
                        Config.StripIfsEndianness, Config.StripIfsBitwidth);
       }
       Error IFSWriteError =
-          writeIFS(Config.Output.getValue(), Stub, Config.WriteIfChanged);
+          writeIFS(Config.Output.value(), Stub, Config.WriteIfChanged);
       if (IFSWriteError)
         fatalError(std::move(IFSWriteError));
       break;
@@ -589,29 +588,28 @@ int main(int argc, char *argv[]) {
     }
     if (Config.OutputIfs) {
       Stub.IfsVersion = IfsVersionCurrent;
-      if (Config.InputFormat.getValue() == FileFormat::ELF &&
+      if (Config.InputFormat.value() == FileFormat::ELF &&
           Config.HintIfsTarget) {
         std::error_code HintEC(1, std::generic_category());
         IFSTarget HintTarget = parseTriple(*Config.HintIfsTarget);
-        if (Stub.Target.Arch.getValue() != HintTarget.Arch.getValue())
+        if (Stub.Target.Arch.value() != HintTarget.Arch.value())
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual architecture", HintEC));
-        if (Stub.Target.Endianness.getValue() !=
-            HintTarget.Endianness.getValue())
+        if (Stub.Target.Endianness.value() != HintTarget.Endianness.value())
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual endianness", HintEC));
-        if (Stub.Target.BitWidth.getValue() != HintTarget.BitWidth.getValue())
+        if (Stub.Target.BitWidth.value() != HintTarget.BitWidth.value())
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual bit width", HintEC));
 
         stripIFSTarget(Stub, true, false, false, false);
-        Stub.Target.Triple = Config.HintIfsTarget.getValue();
+        Stub.Target.Triple = Config.HintIfsTarget.value();
       } else {
         stripIFSTarget(Stub, Config.StripIfsTarget, Config.StripIfsArch,
                        Config.StripIfsEndianness, Config.StripIfsBitwidth);
       }
       Error IFSWriteError =
-          writeIFS(Config.OutputIfs.getValue(), Stub, Config.WriteIfChanged);
+          writeIFS(Config.OutputIfs.value(), Stub, Config.WriteIfChanged);
       if (IFSWriteError)
         fatalError(std::move(IFSWriteError));
     }
@@ -628,7 +626,7 @@ int main(int argc, char *argv[]) {
             << "Triple should be defined when output format is TBD";
         return -1;
       }
-      return writeTbdStub(llvm::Triple(Stub.Target.Triple.getValue()),
+      return writeTbdStub(llvm::Triple(Stub.Target.Triple.value()),
                           Stub.Symbols, "TBD", Out);
     }
   }

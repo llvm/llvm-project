@@ -206,7 +206,7 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
           RawSec->EntSize)
         return true;
 
-      ELFYAML::ELF_SHF ShFlags = RawSec->Flags.getValueOr(ELFYAML::ELF_SHF(0));
+      ELFYAML::ELF_SHF ShFlags = RawSec->Flags.value_or(ELFYAML::ELF_SHF(0));
 
       if (SecName == "debug_str")
         return ShFlags != ELFYAML::ELF_SHF(ELF::SHF_MERGE | ELF::SHF_STRINGS);
@@ -226,7 +226,7 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   // are empty, which should not normally happen.
   if (S.Type == ELF::SHT_STRTAB || S.Type == ELF::SHT_SYMTAB ||
       S.Type == ELF::SHT_DYNSYM) {
-    return S.Size || S.Flags.getValueOr(ELFYAML::ELF_SHF(0)) & ELF::SHF_ALLOC;
+    return S.Size || S.Flags.value_or(ELFYAML::ELF_SHF(0)) & ELF::SHF_ALLOC;
   }
 
   return true;
@@ -626,6 +626,7 @@ ELFDumper<ELFT>::dumpSections() {
     case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
       return
           [this](const Elf_Shdr *S) { return dumpCallGraphProfileSection(S); };
+    case ELF::SHT_LLVM_BB_ADDR_MAP_V0:
     case ELF::SHT_LLVM_BB_ADDR_MAP:
       return [this](const Elf_Shdr *S) { return dumpBBAddrMapSection(S); };
     case ELF::SHT_STRTAB:
@@ -889,7 +890,18 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
 
   std::vector<ELFYAML::BBAddrMapEntry> Entries;
   DataExtractor::Cursor Cur(0);
+  uint8_t Version = 0;
+  uint8_t Feature = 0;
   while (Cur && Cur.tell() < Content.size()) {
+    if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
+      Version = Data.getU8(Cur);
+      if (Cur && Version > 1)
+        return createStringError(
+            errc::invalid_argument,
+            "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
+                Twine(static_cast<int>(Version)));
+      Feature = Data.getU8(Cur);
+    }
     uint64_t Address = Data.getAddress(Cur);
     uint64_t NumBlocks = Data.getULEB128(Cur);
     std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
@@ -900,7 +912,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
       uint64_t Metadata = Data.getULEB128(Cur);
       BBEntries.push_back({Offset, Size, Metadata});
     }
-    Entries.push_back({Address, /*NumBlocks=*/{}, BBEntries});
+    Entries.push_back(
+        {Version, Feature, Address, /*NumBlocks=*/{}, std::move(BBEntries)});
   }
 
   if (!Cur) {

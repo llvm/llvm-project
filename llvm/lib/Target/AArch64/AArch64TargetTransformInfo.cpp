@@ -22,6 +22,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -36,6 +37,74 @@ static cl::opt<unsigned> SVEGatherOverhead("sve-gather-overhead", cl::init(10),
 
 static cl::opt<unsigned> SVEScatterOverhead("sve-scatter-overhead",
                                             cl::init(10), cl::Hidden);
+
+class TailFoldingKind {
+private:
+  uint8_t Bits = 0; // Currently defaults to disabled.
+
+public:
+  enum TailFoldingOpts {
+    TFDisabled = 0x0,
+    TFReductions = 0x01,
+    TFRecurrences = 0x02,
+    TFSimple = 0x80,
+    TFAll = TFReductions | TFRecurrences | TFSimple
+  };
+
+  void operator=(const std::string &Val) {
+    if (Val.empty())
+      return;
+    SmallVector<StringRef, 6> TailFoldTypes;
+    StringRef(Val).split(TailFoldTypes, '+', -1, false);
+    for (auto TailFoldType : TailFoldTypes) {
+      if (TailFoldType == "disabled")
+        Bits = 0;
+      else if (TailFoldType == "all")
+        Bits = TFAll;
+      else if (TailFoldType == "default")
+        Bits = 0; // Currently defaults to never tail-folding.
+      else if (TailFoldType == "simple")
+        add(TFSimple);
+      else if (TailFoldType == "reductions")
+        add(TFReductions);
+      else if (TailFoldType == "recurrences")
+        add(TFRecurrences);
+      else if (TailFoldType == "noreductions")
+        remove(TFReductions);
+      else if (TailFoldType == "norecurrences")
+        remove(TFRecurrences);
+      else {
+        errs()
+            << "invalid argument " << TailFoldType.str()
+            << " to -sve-tail-folding=; each element must be one of: disabled, "
+               "all, default, simple, reductions, noreductions, recurrences, "
+               "norecurrences\n";
+      }
+    }
+  }
+
+  operator uint8_t() const { return Bits; }
+
+  void add(uint8_t Flag) { Bits |= Flag; }
+  void remove(uint8_t Flag) { Bits &= ~Flag; }
+};
+
+TailFoldingKind TailFoldingKindLoc;
+
+cl::opt<TailFoldingKind, true, cl::parser<std::string>> SVETailFolding(
+    "sve-tail-folding",
+    cl::desc(
+        "Control the use of vectorisation using tail-folding for SVE:"
+        "\ndisabled    No loop types will vectorize using tail-folding"
+        "\ndefault     Uses the default tail-folding settings for the target "
+        "CPU"
+        "\nall         All legal loop types will vectorize using tail-folding"
+        "\nsimple      Use tail-folding for simple loops (not reductions or "
+        "recurrences)"
+        "\nreductions  Use tail-folding for loops containing reductions"
+        "\nrecurrences Use tail-folding for loops containing first order "
+        "recurrences"),
+    cl::location(TailFoldingKindLoc));
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
@@ -652,8 +721,7 @@ static Optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
     return None;
 
   auto *VecIns = dyn_cast<IntrinsicInst>(DupQLane->getArgOperand(0));
-  if (!VecIns ||
-      VecIns->getIntrinsicID() != Intrinsic::experimental_vector_insert)
+  if (!VecIns || VecIns->getIntrinsicID() != Intrinsic::vector_insert)
     return None;
 
   // Where the vector insert is a fixed constant vector insert into undef at
@@ -795,6 +863,50 @@ static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   Extract->insertBefore(&II);
   Extract->takeName(&II);
   return IC.replaceInstUsesWith(II, Extract);
+}
+
+static Optional<Instruction *> instCombineSVECondLast(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // The SIMD&FP variant of CLAST[AB] is significantly faster than the scalar
+  // integer variant across a variety of micro-architectures. Replace scalar
+  // integer CLAST[AB] intrinsic with optimal SIMD&FP variant. A simple
+  // bitcast-to-fp + clast[ab] + bitcast-to-int will cost a cycle or two more
+  // depending on the micro-architecture, but has been observed as generally
+  // being faster, particularly when the CLAST[AB] op is a loop-carried
+  // dependency.
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+  Value *Pg = II.getArgOperand(0);
+  Value *Fallback = II.getArgOperand(1);
+  Value *Vec = II.getArgOperand(2);
+  Type *Ty = II.getType();
+
+  if (!Ty->isIntegerTy())
+    return None;
+
+  Type *FPTy;
+  switch (cast<IntegerType>(Ty)->getBitWidth()) {
+  default:
+    return None;
+  case 16:
+    FPTy = Builder.getHalfTy();
+    break;
+  case 32:
+    FPTy = Builder.getFloatTy();
+    break;
+  case 64:
+    FPTy = Builder.getDoubleTy();
+    break;
+  }
+
+  Value *FPFallBack = Builder.CreateBitCast(Fallback, FPTy);
+  auto *FPVTy = VectorType::get(
+      FPTy, cast<VectorType>(Vec->getType())->getElementCount());
+  Value *FPVec = Builder.CreateBitCast(Vec, FPVTy);
+  auto *FPII = Builder.CreateIntrinsic(II.getIntrinsicID(), {FPVec->getType()},
+                                       {Pg, FPFallBack, FPVec});
+  Value *FPIItoInt = Builder.CreateBitCast(FPII, II.getType());
+  return IC.replaceInstUsesWith(II, FPIItoInt);
 }
 
 static Optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
@@ -1295,6 +1407,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
+  case Intrinsic::aarch64_sve_clasta_n:
+  case Intrinsic::aarch64_sve_clastb_n:
+    return instCombineSVECondLast(IC, II);
   case Intrinsic::aarch64_sve_cntd:
     return instCombineSVECntElts(IC, II, 2);
   case Intrinsic::aarch64_sve_cntw:
@@ -2908,4 +3023,21 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   }
 
   return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
+}
+
+bool AArch64TTIImpl::preferPredicateOverEpilogue(
+    Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
+    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL) {
+  if (!ST->hasSVE() || TailFoldingKindLoc == TailFoldingKind::TFDisabled)
+    return false;
+
+  TailFoldingKind Required; // Defaults to 0.
+  if (LVL->getReductionVars().size())
+    Required.add(TailFoldingKind::TFReductions);
+  if (LVL->getFirstOrderRecurrences().size())
+    Required.add(TailFoldingKind::TFRecurrences);
+  if (!Required)
+    Required.add(TailFoldingKind::TFSimple);
+
+  return (TailFoldingKindLoc & Required) == Required;
 }

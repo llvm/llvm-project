@@ -243,6 +243,10 @@ template <class T>
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iosfwd>
+#endif
+
 // standard-mandated includes
 #include <compare>
 #include <initializer_list>

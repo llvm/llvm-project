@@ -80,6 +80,72 @@ TEST(MemoryTagManagerAArch64MTETest, PackTags) {
   ASSERT_THAT(expected, testing::ContainerEq(*packed));
 }
 
+TEST(MemoryTagManagerAArch64MTETest, UnpackTagsFromCoreFileSegment) {
+  MemoryTagManagerAArch64MTE manager;
+  // This is our fake segment data where tags are compressed as 2 4 bit tags
+  // per byte.
+  std::vector<uint8_t> tags_data;
+  MemoryTagManager::CoreReaderFn reader =
+      [&tags_data](lldb::offset_t offset, size_t length, void *dst) {
+        std::memcpy(dst, tags_data.data() + offset, length);
+        return length;
+      };
+
+  // Zero length is ok.
+  std::vector<lldb::addr_t> tags =
+      manager.UnpackTagsFromCoreFileSegment(reader, 0, 0, 0, 0);
+  ASSERT_EQ(tags.size(), (size_t)0);
+
+  // In the simplest case we read 2 tags which are in the same byte.
+  tags_data.push_back(0x21);
+  // The least significant bits are the first tag in memory.
+  std::vector<lldb::addr_t> expected{1, 2};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 0, 0, 0, 32);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+
+  // If we read just one then it will have to trim off the second one.
+  expected = std::vector<lldb::addr_t>{1};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 0, 0, 0, 16);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+
+  // If we read the second tag only then the first one must be trimmed.
+  expected = std::vector<lldb::addr_t>{2};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 0, 0, 16, 16);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+
+  // This trimming logic applies if you read a larger set of tags.
+  tags_data = std::vector<uint8_t>{0x21, 0x43, 0x65, 0x87};
+
+  // Trailing tag should be trimmed.
+  expected = std::vector<lldb::addr_t>{1, 2, 3};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 0, 0, 0, 48);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+
+  // Leading tag should be trimmed.
+  expected = std::vector<lldb::addr_t>{2, 3, 4};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 0, 0, 16, 48);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+
+  // Leading and trailing trimmmed.
+  expected = std::vector<lldb::addr_t>{2, 3, 4, 5};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 0, 0, 16, 64);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+
+  // The address given is an offset into the whole file so the address requested
+  // from the reader should be beyond that.
+  tags_data = std::vector<uint8_t>{0xFF, 0xFF, 0x21, 0x43, 0x65, 0x87};
+  expected = std::vector<lldb::addr_t>{1, 2};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 0, 2, 0, 32);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+
+  // addr is a virtual address that we expect to be >= the tag segment's
+  // starting virtual address. So again an offset must be made from the
+  // difference.
+  expected = std::vector<lldb::addr_t>{3, 4};
+  tags = manager.UnpackTagsFromCoreFileSegment(reader, 32, 2, 64, 32);
+  ASSERT_THAT(expected, testing::ContainerEq(tags));
+}
+
 TEST(MemoryTagManagerAArch64MTETest, GetLogicalTag) {
   MemoryTagManagerAArch64MTE manager;
 
@@ -134,8 +200,10 @@ TEST(MemoryTagManagerAArch64MTETest, ExpandToGranule) {
 static MemoryRegionInfo MakeRegionInfo(lldb::addr_t base, lldb::addr_t size,
                                        bool tagged) {
   return MemoryRegionInfo(
-      MemoryRegionInfo::RangeType(base, size), MemoryRegionInfo::eYes,
+      MemoryRegionInfo::RangeType(base, size),
       MemoryRegionInfo::eYes, MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
+      MemoryRegionInfo::eNo,
+      MemoryRegionInfo::eYes,
       ConstString(), MemoryRegionInfo::eNo, 0,
       /*memory_tagged=*/
       tagged ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo,

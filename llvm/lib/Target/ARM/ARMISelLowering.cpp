@@ -450,6 +450,14 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::TRUNCATE, VT, Custom);
     setOperationAction(ISD::VSELECT, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
+    setOperationAction(ISD::SELECT_CC, VT, Expand);
+
+    if (!HasMVEFP) {
+      setOperationAction(ISD::SINT_TO_FP, VT, Expand);
+      setOperationAction(ISD::UINT_TO_FP, VT, Expand);
+      setOperationAction(ISD::FP_TO_SINT, VT, Expand);
+      setOperationAction(ISD::FP_TO_UINT, VT, Expand);
+    }
   }
   setOperationAction(ISD::SETCC, MVT::v2i1, Expand);
   setOperationAction(ISD::TRUNCATE, MVT::v2i1, Expand);
@@ -1362,7 +1370,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     // instructions. (ARMv6 doesn't have dmb, but it has an equivalent
     // encoding; see ARMISD::MEMBARRIER_MCR.)
     setMaxAtomicSizeInBitsSupported(64);
-  } else if (Subtarget->isMClass() && Subtarget->hasV8MBaselineOps()) {
+  } else if ((Subtarget->isMClass() && Subtarget->hasV8MBaselineOps()) ||
+             Subtarget->hasForced32BitAtomics()) {
     // Cortex-M (besides Cortex-M0) have 32-bit atomics.
     setMaxAtomicSizeInBitsSupported(32);
   } else {
@@ -4386,7 +4395,7 @@ void ARMTargetLowering::VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
 bool ARMTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.hasValue();
+  bool IsABIRegCopy = CC.has_value();
   EVT ValueVT = Val.getValueType();
   if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
       PartVT == MVT::f32) {
@@ -4404,7 +4413,7 @@ bool ARMTargetLowering::splitValueIntoRegisterParts(
 SDValue ARMTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.hasValue();
+  bool IsABIRegCopy = CC.has_value();
   if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
       PartVT == MVT::f32) {
     unsigned ValueBits = ValueVT.getSizeInBits();
@@ -13350,14 +13359,14 @@ static SDValue TryDistrubutionADDVecReduce(SDNode *N, SelectionDAG &DAG) {
     // to make better use of vaddva style instructions.
     if (VT == MVT::i32 && N1.getOpcode() == ISD::ADD && !IsVecReduce(N0) &&
         IsVecReduce(N1.getOperand(0)) && IsVecReduce(N1.getOperand(1)) &&
-        !isa<ConstantSDNode>(N0)) {
+        !isa<ConstantSDNode>(N0) && N1->hasOneUse()) {
       SDValue Add0 = DAG.getNode(ISD::ADD, dl, VT, N0, N1.getOperand(0));
       return DAG.getNode(ISD::ADD, dl, VT, Add0, N1.getOperand(1));
     }
     // And turn add(add(A, reduce(B)), add(C, reduce(D))) ->
     //   add(add(add(A, C), reduce(B)), reduce(D))
     if (VT == MVT::i32 && N0.getOpcode() == ISD::ADD &&
-        N1.getOpcode() == ISD::ADD) {
+        N1.getOpcode() == ISD::ADD && N0->hasOneUse() && N1->hasOneUse()) {
       unsigned N0RedOp = 0;
       if (!IsVecReduce(N0.getOperand(N0RedOp))) {
         N0RedOp = 1;
@@ -13424,7 +13433,7 @@ static SDValue TryDistrubutionADDVecReduce(SDNode *N, SelectionDAG &DAG) {
     };
 
     SDValue X;
-    if (N0.getOpcode() == ISD::ADD) {
+    if (N0.getOpcode() == ISD::ADD && N0->hasOneUse()) {
       if (IsVecReduce(N0.getOperand(0)) && IsVecReduce(N0.getOperand(1))) {
         int IsBefore = IsKnownOrderedLoad(N0.getOperand(0).getOperand(0),
                                          N0.getOperand(1).getOperand(0));
@@ -13564,6 +13573,10 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
 bool
 ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                  CombineLevel Level) const {
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
   if (Level == BeforeLegalizeTypes)
     return true;
 
@@ -13597,8 +13610,38 @@ ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   return false;
 }
 
+bool ARMTargetLowering::isDesirableToCommuteXorWithShift(
+    const SDNode *N) const {
+  assert(N->getOpcode() == ISD::XOR &&
+         (N->getOperand(0).getOpcode() == ISD::SHL ||
+          N->getOperand(0).getOpcode() == ISD::SRL) &&
+         "Expected XOR(SHIFT) pattern");
+
+  // Only commute if the entire NOT mask is a hidden shifted mask.
+  auto *XorC = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  auto *ShiftC = dyn_cast<ConstantSDNode>(N->getOperand(0).getOperand(1));
+  if (XorC && ShiftC) {
+    unsigned MaskIdx, MaskLen;
+    if (XorC->getAPIntValue().isShiftedMask(MaskIdx, MaskLen)) {
+      unsigned ShiftAmt = ShiftC->getZExtValue();
+      unsigned BitWidth = N->getValueType(0).getScalarSizeInBits();
+      if (N->getOperand(0).getOpcode() == ISD::SHL)
+        return MaskIdx == ShiftAmt && MaskLen == (BitWidth - ShiftAmt);
+      return MaskIdx == 0 && MaskLen == (BitWidth - ShiftAmt);
+    }
+  }
+
+  return false;
+}
+
 bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
     const SDNode *N, CombineLevel Level) const {
+  assert(((N->getOpcode() == ISD::SHL &&
+           N->getOperand(0).getOpcode() == ISD::SRL) ||
+          (N->getOpcode() == ISD::SRL &&
+           N->getOperand(0).getOpcode() == ISD::SHL)) &&
+         "Expected shift-shift mask");
+
   if (!Subtarget->isThumb1Only())
     return true;
 
@@ -19953,6 +19996,14 @@ bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
                     TLO.DAG.getConstant(32 - ShAmt, SDLoc(Op), MVT::i32)));
     }
     break;
+  }
+  case ARMISD::VBICIMM: {
+    SDValue Op0 = Op.getOperand(0);
+    unsigned ModImm = Op.getConstantOperandVal(1);
+    unsigned EltBits = 0;
+    uint64_t Mask = ARM_AM::decodeVMOVModImm(ModImm, EltBits);
+    if ((OriginalDemandedBits & Mask) == 0)
+      return TLO.CombineTo(Op, Op0);
   }
   }
 

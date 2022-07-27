@@ -496,6 +496,7 @@ class FunctionTestBuilder:
     self._func_dict = {}
     self._func_order = {}
     self._global_var_dict = {}
+    self._processed_prefixes = set()
     for tuple in run_list:
       for prefix in tuple[0]:
         self._func_dict.update({prefix:dict()})
@@ -584,30 +585,43 @@ class FunctionTestBuilder:
                                    scrubbed_body)
 
         if func in self._func_dict[prefix]:
-          if (self._func_dict[prefix][func] is None or
-              str(self._func_dict[prefix][func]) != scrubbed_body or
-              self._func_dict[prefix][func].args_and_sig != args_and_sig or
-                  self._func_dict[prefix][func].attrs != attrs):
-            if (self._func_dict[prefix][func] is not None and
-                self._func_dict[prefix][func].is_same_except_arg_names(
+          if (self._func_dict[prefix][func] is not None and
+              (str(self._func_dict[prefix][func]) != scrubbed_body or
+               self._func_dict[prefix][func].args_and_sig != args_and_sig or
+               self._func_dict[prefix][func].attrs != attrs)):
+            if self._func_dict[prefix][func].is_same_except_arg_names(
                 scrubbed_extra,
                 args_and_sig,
                 attrs,
-                is_backend)):
+                is_backend):
               self._func_dict[prefix][func].scrub = scrubbed_extra
               self._func_dict[prefix][func].args_and_sig = args_and_sig
-              continue
             else:
               # This means a previous RUN line produced a body for this function
               # that is different from the one produced by this current RUN line,
               # so the body can't be common accross RUN lines. We use None to
               # indicate that.
               self._func_dict[prefix][func] = None
-              continue
+        else:
+          if prefix not in self._processed_prefixes:
+            self._func_dict[prefix][func] = function_body(
+                scrubbed_body, scrubbed_extra, args_and_sig, attrs,
+                func_name_separator)
+            self._func_order[prefix].append(func)
+          else:
+            # An earlier RUN line used this check prefixes but didn't produce
+            # a body for this function. This happens in Clang tests that use
+            # preprocesser directives to exclude individual functions from some
+            # RUN lines.
+            self._func_dict[prefix][func] = None
 
-        self._func_dict[prefix][func] = function_body(
-            scrubbed_body, scrubbed_extra, args_and_sig, attrs, func_name_separator)
-        self._func_order[prefix].append(func)
+  def processed_prefixes(self, prefixes):
+    """
+    Mark a set of prefixes as having had at least one applicable RUN line fully
+    processed. This is used to filter out function bodies that don't have
+    outputs for all RUN lines.
+    """
+    self._processed_prefixes.update(prefixes)
 
   def get_failed_prefixes(self):
     # This returns the list of those prefixes that failed to match any function,
@@ -719,18 +733,19 @@ class NamelessValue:
 # Description of the different "unnamed" values we match in the IR, e.g.,
 # (local) ssa values, (debug) metadata, etc.
 ir_nameless_values = [
-    NamelessValue(r'TMP'  , '%' , r'%'           , None            , None                   , r'[\w$.-]+?' , None                 , False) ,
-    NamelessValue(r'ATTR' , '#' , r'#'           , None            , None                   , r'[0-9]+'    , None                 , False) ,
-    NamelessValue(r'ATTR' , '#' , None           , r'attributes #' , r'[0-9]+'              , None         , r'{[^}]*}'           , False) ,
-    NamelessValue(r'GLOB' , '@' , r'@'           , None            , None                   , r'[0-9]+'    , None                 , False) ,
-    NamelessValue(r'GLOB' , '@' , None           , r'@'            , r'[a-zA-Z0-9_$"\\.-]+' , None         , r'.+'                , True)  ,
-    NamelessValue(r'DBG'  , '!' , r'!dbg '       , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'PROF' , '!' , r'!prof '      , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'TBAA' , '!' , r'!tbaa '      , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'RNG'  , '!' , r'!range '     , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'LOOP' , '!' , r'!llvm.loop ' , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'META' , '!' , r'metadata '   , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'META' , '!' , None           , r''             , r'![0-9]+'             , None         , r'(?:distinct |)!.*' , False) ,
+    NamelessValue(r'TMP'     , '%' , r'%'                   , None            , None                   , r'[\w$.-]+?' , None                 , False) ,
+    NamelessValue(r'ATTR'    , '#' , r'#'                   , None            , None                   , r'[0-9]+'    , None                 , False) ,
+    NamelessValue(r'ATTR'    , '#' , None                   , r'attributes #' , r'[0-9]+'              , None         , r'{[^}]*}'           , False) ,
+    NamelessValue(r'GLOB'    , '@' , r'@'                   , None            , None                   , r'[0-9]+'    , None                 , False) ,
+    NamelessValue(r'GLOB'    , '@' , None                   , r'@'            , r'[a-zA-Z0-9_$"\\.-]+' , None         , r'.+'                , True)  ,
+    NamelessValue(r'DBG'     , '!' , r'!dbg '               , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'PROF'    , '!' , r'!prof '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'TBAA'    , '!' , r'!tbaa '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'RNG'     , '!' , r'!range '             , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'LOOP'    , '!' , r'!llvm.loop '         , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'META'    , '!' , r'metadata '           , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'META'    , '!' , None                   , r''             , r'![0-9]+'             , None         , r'(?:distinct |)!.*' , False) ,
+    NamelessValue(r'ACC_GRP' , '!' , r'!llvm.access.group ' , None            , None                   , r'![0-9]+'   , None                 , False) ,
 ]
 
 asm_nameless_values = [
@@ -1221,15 +1236,18 @@ def dump_input_lines(output_lines, test_info, prefix_set, comment_string):
 def add_checks_at_end(output_lines, prefix_list, func_order,
                       comment_string, check_generator):
   added = set()
-  generated_prefixes = []
+  generated_prefixes = set()
   for prefix in prefix_list:
     prefixes = prefix[0]
     tool_args = prefix[1]
     for prefix in prefixes:
       for func in func_order[prefix]:
+        # The func order can contain the same functions multiple times.
+        # If we see one again we are done.
+        if (func, prefix) in added:
+            continue
         if added:
           output_lines.append(comment_string)
-        added.add(func)
 
         # The add_*_checks routines expect a run list whose items are
         # tuples that have a list of prefixes as their first element and
@@ -1245,7 +1263,8 @@ def add_checks_at_end(output_lines, prefix_list, func_order,
         # single prefix before moving on to the next prefix.  So checks
         # are ordered by prefix instead of by function as in "normal"
         # mode.
-        generated_prefixes.extend(check_generator(output_lines,
-                        [([prefix], tool_args)],
-                        func))
+        for generated_prefix in check_generator(output_lines,
+                        [([prefix], tool_args)], func):
+            added.add((func, generated_prefix))
+            generated_prefixes.add(generated_prefix)
   return generated_prefixes

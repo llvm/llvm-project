@@ -373,7 +373,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   // later load/stores assume that alignment, and we are going to replace
   // the use of the byval parameter with this alloca instruction.
   AllocA->setAlignment(Func->getParamAlign(Arg->getArgNo())
-                           .getValueOr(DL.getPrefTypeAlign(StructType)));
+                           .value_or(DL.getPrefTypeAlign(StructType)));
   Arg->replaceAllUsesWith(AllocA);
 
   Value *ArgInParam = new AddrSpaceCastInst(

@@ -106,13 +106,18 @@ static cl::opt<bool> VerifyIndvars(
 static cl::opt<ReplaceExitVal> ReplaceExitValue(
     "replexitval", cl::Hidden, cl::init(OnlyCheapRepl),
     cl::desc("Choose the strategy to replace exit value in IndVarSimplify"),
-    cl::values(clEnumValN(NeverRepl, "never", "never replace exit value"),
-               clEnumValN(OnlyCheapRepl, "cheap",
-                          "only replace exit value when the cost is cheap"),
-               clEnumValN(NoHardUse, "noharduse",
-                          "only replace exit values when loop def likely dead"),
-               clEnumValN(AlwaysRepl, "always",
-                          "always replace exit value whenever possible")));
+    cl::values(
+        clEnumValN(NeverRepl, "never", "never replace exit value"),
+        clEnumValN(OnlyCheapRepl, "cheap",
+                   "only replace exit value when the cost is cheap"),
+        clEnumValN(
+            UnusedIndVarInLoop, "unusedindvarinloop",
+            "only replace exit value when it is an unused "
+            "induction variable in the loop and has cheap replacement cost"),
+        clEnumValN(NoHardUse, "noharduse",
+                   "only replace exit values when loop def likely dead"),
+        clEnumValN(AlwaysRepl, "always",
+                   "always replace exit value whenever possible")));
 
 static cl::opt<bool> UsePostIncrementRanges(
   "indvars-post-increment-ranges", cl::Hidden,
@@ -382,7 +387,7 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   RecursivelyDeleteTriviallyDeadInstructions(Compare, TLI, MSSAU.get());
 
   // Delete the old floating point increment.
-  Incr->replaceAllUsesWith(UndefValue::get(Incr->getType()));
+  Incr->replaceAllUsesWith(PoisonValue::get(Incr->getType()));
   RecursivelyDeleteTriviallyDeadInstructions(Incr, TLI, MSSAU.get());
 
   // If the FP induction variable still has uses, this is because something else
@@ -1302,14 +1307,38 @@ static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
 }
 
 static void replaceLoopPHINodesWithPreheaderValues(
-    Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+    LoopInfo *LI, Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   assert(L->isLoopSimplifyForm() && "Should only do it in simplify form!");
   auto *LoopPreheader = L->getLoopPreheader();
   auto *LoopHeader = L->getHeader();
+  SmallVector<Instruction *> Worklist;
   for (auto &PN : LoopHeader->phis()) {
     auto *PreheaderIncoming = PN.getIncomingValueForBlock(LoopPreheader);
+    for (User *U : PN.users())
+      Worklist.push_back(cast<Instruction>(U));
     PN.replaceAllUsesWith(PreheaderIncoming);
     DeadInsts.emplace_back(&PN);
+  }
+
+  // Replacing with the preheader value will often allow IV users to simplify
+  // (especially if the preheader value is a constant).
+  SmallPtrSet<Instruction *, 16> Visited;
+  while (!Worklist.empty()) {
+    auto *I = cast<Instruction>(Worklist.pop_back_val());
+    if (!Visited.insert(I).second)
+      continue;
+
+    // Don't simplify instructions outside the loop.
+    if (!L->contains(I))
+      continue;
+
+    Value *Res = simplifyInstruction(I, I->getModule()->getDataLayout());
+    if (Res && LI->replacementPreservesLCSSAForm(I, Res)) {
+      for (User *U : I->users())
+        Worklist.push_back(cast<Instruction>(U));
+      I->replaceAllUsesWith(Res);
+      DeadInsts.emplace_back(I);
+    }
   }
 }
 
@@ -1549,13 +1578,18 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (!BI)
       return true;
 
-    // If already constant, nothing to do.
-    if (isa<Constant>(BI->getCondition()))
-      return true;
-
     // Likewise, the loop latch must be dominated by the exiting BB.
     if (!DT->dominates(ExitingBB, L->getLoopLatch()))
       return true;
+
+    if (auto *CI = dyn_cast<ConstantInt>(BI->getCondition())) {
+      // If already constant, nothing to do. However, if this is an
+      // unconditional exit, we can still replace header phis with their
+      // preheader value.
+      if (!L->contains(BI->getSuccessor(CI->isNullValue())))
+        replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts);
+      return true;
+    }
 
     return false;
   });
@@ -1640,7 +1674,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // the header PHIs with values coming from the preheader.
     if (ExitCount->isZero()) {
       foldExit(L, ExitingBB, true, DeadInsts);
-      replaceLoopPHINodesWithPreheaderValues(L, DeadInsts);
+      replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts);
       Changed = true;
       continue;
     }
@@ -1704,7 +1738,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // through *explicit* control flow.  We have to eliminate the possibility of
   // implicit exits (see below) before we know it's truly exact.
   const SCEV *ExactBTC = SE->getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(ExactBTC) || !isSafeToExpand(ExactBTC, *SE))
+  if (isa<SCEVCouldNotCompute>(ExactBTC) || !Rewriter.isSafeToExpand(ExactBTC))
     return false;
 
   assert(SE->isLoopInvariant(ExactBTC, L) && "BTC must be loop invariant");
@@ -1735,7 +1769,8 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-    if (isa<SCEVCouldNotCompute>(ExitCount) || !isSafeToExpand(ExitCount, *SE))
+    if (isa<SCEVCouldNotCompute>(ExitCount) ||
+        !Rewriter.isSafeToExpand(ExitCount))
       return true;
 
     assert(SE->isLoopInvariant(ExitCount, L) &&

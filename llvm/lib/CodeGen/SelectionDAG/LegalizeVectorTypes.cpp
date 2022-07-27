@@ -4015,7 +4015,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   EVT WidenEltVT = WidenVT.getVectorElementType();
   EVT VT = WidenVT;
-  unsigned NumElts =  VT.getVectorNumElements();
+  unsigned NumElts = VT.getVectorMinNumElements();
   const SDNodeFlags Flags = N->getFlags();
   while (!TLI.isTypeLegal(VT) && NumElts != 1) {
     NumElts = NumElts / 2;
@@ -4028,6 +4028,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
     SDValue InOp2 = GetWidenedVector(N->getOperand(1));
     return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, Flags);
   }
+
+  // FIXME: Improve support for scalable vectors.
+  assert(!VT.isScalableVector() && "Scalable vectors not handled yet.");
 
   // No legal vector version so unroll the vector operation and then widen.
   if (NumElts == 1)
@@ -4728,11 +4731,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_INSERT_SUBVECTOR(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
-  EVT      VT = N->getValueType(0);
-  EVT      EltVT = VT.getVectorElementType();
-  EVT      WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  SDValue  InOp = N->getOperand(0);
-  SDValue  Idx  = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT EltVT = VT.getVectorElementType();
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue InOp = N->getOperand(0);
+  SDValue Idx = N->getOperand(1);
   SDLoc dl(N);
 
   auto InOpTypeAction = getTypeAction(InOp.getValueType());
@@ -4749,6 +4752,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
   // Check if we can extract from the vector.
   unsigned WidenNumElts = WidenVT.getVectorMinNumElements();
   unsigned InNumElts = InVT.getVectorMinNumElements();
+  unsigned VTNumElts = VT.getVectorMinNumElements();
+  assert(IdxVal % VTNumElts == 0 &&
+         "Expected Idx to be a multiple of subvector minimum vector length");
   if (IdxVal % WidenNumElts == 0 && IdxVal + WidenNumElts < InNumElts)
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, WidenVT, InOp, Idx);
 
@@ -4762,8 +4768,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
     //    nxv2i64 extract_subvector(nxv16i64, 8)
     //    nxv2i64 extract_subvector(nxv16i64, 10)
     //    undef)
-    unsigned VTNElts = VT.getVectorMinNumElements();
-    unsigned GCD = greatestCommonDivisor(VTNElts, WidenNumElts);
+    unsigned GCD = greatestCommonDivisor(VTNumElts, WidenNumElts);
     assert((IdxVal % GCD) == 0 && "Expected Idx to be a multiple of the broken "
                                   "down type's element count");
     EVT PartVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
@@ -4772,7 +4777,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
     if (getTypeAction(PartVT) != TargetLowering::TypeWidenVector) {
       SmallVector<SDValue> Parts;
       unsigned I = 0;
-      for (; I < VTNElts / GCD; ++I)
+      for (; I < VTNumElts / GCD; ++I)
         Parts.push_back(
             DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, PartVT, InOp,
                         DAG.getVectorIdxConstant(IdxVal + I * GCD, dl)));
@@ -4789,9 +4794,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
   // We could try widening the input to the right length but for now, extract
   // the original elements, fill the rest with undefs and build a vector.
   SmallVector<SDValue, 16> Ops(WidenNumElts);
-  unsigned NumElts = VT.getVectorNumElements();
   unsigned i;
-  for (i = 0; i < NumElts; ++i)
+  for (i = 0; i < VTNumElts; ++i)
     Ops[i] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, InOp,
                          DAG.getVectorIdxConstant(IdxVal + i, dl));
 
@@ -5623,7 +5627,6 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
   SDLoc dl(N);
-  unsigned NumElts = VT.getVectorNumElements();
   SDValue InOp = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
   assert(getTypeAction(InOp.getValueType()) ==
              TargetLowering::TypeWidenVector &&
@@ -5635,7 +5638,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
   // See if a widened result type would be legal, if so widen the node.
   // FIXME: This isn't safe for StrictFP. Other optimization here is needed.
   EVT WideVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                InVT.getVectorNumElements());
+                                InVT.getVectorElementCount());
   if (TLI.isTypeLegal(WideVT) && !N->isStrictFPOpcode()) {
     SDValue Res;
     if (N->isStrictFPOpcode()) {
@@ -5661,6 +5664,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
   EVT InEltVT = InVT.getVectorElementType();
 
   // Unroll the convert into some scalar code and create a nasty build vector.
+  unsigned NumElts = VT.getVectorNumElements();
   SmallVector<SDValue, 16> Ops(NumElts);
   if (N->isStrictFPOpcode()) {
     SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
@@ -6051,7 +6055,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
   // The result type is legal, if its vXi1, keep vXi1 for the new SETCC.
   if (VT.getScalarType() == MVT::i1)
     SVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                           SVT.getVectorNumElements());
+                           SVT.getVectorElementCount());
 
   SDValue WideSETCC = DAG.getNode(ISD::SETCC, SDLoc(N),
                                   SVT, InOp0, InOp1, N->getOperand(2));
@@ -6059,7 +6063,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
   // Extract the needed results from the result vector.
   EVT ResVT = EVT::getVectorVT(*DAG.getContext(),
                                SVT.getVectorElementType(),
-                               VT.getVectorNumElements());
+                               VT.getVectorElementCount());
   SDValue CC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResVT, WideSETCC,
                            DAG.getVectorIdxConstant(0, dl));
 
@@ -6119,8 +6123,20 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   assert(NeutralElem && "Neutral element must exist");
 
   // Pad the vector with the neutral element.
-  unsigned OrigElts = OrigVT.getVectorNumElements();
-  unsigned WideElts = WideVT.getVectorNumElements();
+  unsigned OrigElts = OrigVT.getVectorMinNumElements();
+  unsigned WideElts = WideVT.getVectorMinNumElements();
+
+  if (WideVT.isScalableVector()) {
+    unsigned GCD = greatestCommonDivisor(OrigElts, WideElts);
+    EVT SplatVT = EVT::getVectorVT(*DAG.getContext(), ElemVT,
+                                   ElementCount::getScalable(GCD));
+    SDValue SplatNeutral = DAG.getSplatVector(SplatVT, dl, NeutralElem);
+    for (unsigned Idx = OrigElts; Idx < WideElts; Idx = Idx + GCD)
+      Op = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideVT, Op, SplatNeutral,
+                       DAG.getVectorIdxConstant(Idx, dl));
+    return DAG.getNode(Opc, dl, N->getValueType(0), Op, Flags);
+  }
+
   for (unsigned Idx = OrigElts; Idx < WideElts; Idx++)
     Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
                      DAG.getVectorIdxConstant(Idx, dl));
@@ -6144,8 +6160,20 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
   SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
 
   // Pad the vector with the neutral element.
-  unsigned OrigElts = OrigVT.getVectorNumElements();
-  unsigned WideElts = WideVT.getVectorNumElements();
+  unsigned OrigElts = OrigVT.getVectorMinNumElements();
+  unsigned WideElts = WideVT.getVectorMinNumElements();
+
+  if (WideVT.isScalableVector()) {
+    unsigned GCD = greatestCommonDivisor(OrigElts, WideElts);
+    EVT SplatVT = EVT::getVectorVT(*DAG.getContext(), ElemVT,
+                                   ElementCount::getScalable(GCD));
+    SDValue SplatNeutral = DAG.getSplatVector(SplatVT, dl, NeutralElem);
+    for (unsigned Idx = OrigElts; Idx < WideElts; Idx = Idx + GCD)
+      Op = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideVT, Op, SplatNeutral,
+                       DAG.getVectorIdxConstant(Idx, dl));
+    return DAG.getNode(Opc, dl, N->getValueType(0), AccOp, Op, Flags);
+  }
+
   for (unsigned Idx = OrigElts; Idx < WideElts; Idx++)
     Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
                      DAG.getVectorIdxConstant(Idx, dl));
@@ -6625,7 +6653,7 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
   EVT InVT = InOp.getValueType();
   assert(InVT.getVectorElementType() == NVT.getVectorElementType() &&
          "input and widen element type must match");
-  assert(!InVT.isScalableVector() && !NVT.isScalableVector() &&
+  assert(InVT.isScalableVector() == NVT.isScalableVector() &&
          "cannot modify scalable vectors in this way");
   SDLoc dl(InOp);
 
@@ -6633,10 +6661,10 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
   if (InVT == NVT)
     return InOp;
 
-  unsigned InNumElts = InVT.getVectorNumElements();
-  unsigned WidenNumElts = NVT.getVectorNumElements();
-  if (WidenNumElts > InNumElts && WidenNumElts % InNumElts == 0) {
-    unsigned NumConcat = WidenNumElts / InNumElts;
+  ElementCount InEC = InVT.getVectorElementCount();
+  ElementCount WidenEC = NVT.getVectorElementCount();
+  if (WidenEC.hasKnownScalarFactor(InEC)) {
+    unsigned NumConcat = WidenEC.getKnownScalarFactor(InEC);
     SmallVector<SDValue, 16> Ops(NumConcat);
     SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, InVT) :
       DAG.getUNDEF(InVT);
@@ -6647,9 +6675,15 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, NVT, Ops);
   }
 
-  if (WidenNumElts < InNumElts && InNumElts % WidenNumElts)
+  if (InEC.hasKnownScalarFactor(WidenEC))
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NVT, InOp,
                        DAG.getVectorIdxConstant(0, dl));
+
+  assert(!InVT.isScalableVector() && !NVT.isScalableVector() &&
+         "Scalable vectors should have been handled already.");
+
+  unsigned InNumElts = InEC.getFixedValue();
+  unsigned WidenNumElts = WidenEC.getFixedValue();
 
   // Fall back to extract and build.
   SmallVector<SDValue, 16> Ops(WidenNumElts);

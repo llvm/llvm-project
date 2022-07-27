@@ -549,8 +549,8 @@ Scanner::tryLexIdentifierOrSkipLine(const char *&First, const char *const End) {
 
 StringRef Scanner::lexIdentifier(const char *&First, const char *const End) {
   Optional<StringRef> Id = tryLexIdentifierOrSkipLine(First, End);
-  assert(Id.hasValue() && "expected identifier token");
-  return Id.getValue();
+  assert(Id && "expected identifier token");
+  return Id.value();
 }
 
 bool Scanner::isNextIdentifierOrSkipLine(StringRef Id, const char *&First,
@@ -625,7 +625,7 @@ bool Scanner::lexPragma(const char *&First, const char *const End) {
   if (!FoundId)
     return false;
 
-  StringRef Id = FoundId.getValue();
+  StringRef Id = *FoundId;
   auto Kind = llvm::StringSwitch<DirectiveKind>(Id)
                   .Case("once", pp_pragma_once)
                   .Case("push_macro", pp_pragma_push_macro)
@@ -740,7 +740,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   if (!FoundId)
     return false;
 
-  StringRef Id = FoundId.getValue();
+  StringRef Id = *FoundId;
 
   if (Id == "pragma")
     return lexPragma(First, End);

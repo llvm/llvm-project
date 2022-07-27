@@ -396,7 +396,7 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::MutableBoxValue &box,
                                 bool mayBePolymorphic) {
   if (box.hasAssumedRank())
-    TODO(loc, "Assumed rank allocatables or pointers");
+    TODO(loc, "assumed rank allocatables or pointers");
   llvm::SmallVector<mlir::Value> lbounds;
   llvm::SmallVector<mlir::Value> extents;
   llvm::SmallVector<mlir::Value> lengths;
@@ -526,7 +526,7 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
                             "Cannot write MutableBox to another MutableBox");
       },
       [&](const fir::ProcBoxValue &) {
-        TODO(loc, "Procedure pointer assignment");
+        TODO(loc, "procedure pointer assignment");
       });
 }
 
@@ -623,7 +623,7 @@ void fir::factory::associateMutableBoxWithRemap(
                             "Cannot write MutableBox to another MutableBox");
       },
       [&](const fir::ProcBoxValue &) {
-        TODO(loc, "Procedure pointer assignment");
+        TODO(loc, "procedure pointer assignment");
       });
 }
 
@@ -710,17 +710,38 @@ void fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
 }
 
-fir::factory::MutableBoxReallocation
-fir::factory::genReallocIfNeeded(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 const fir::MutableBoxValue &box,
-                                 mlir::ValueRange shape,
-                                 mlir::ValueRange lengthParams) {
+fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box, mlir::ValueRange shape,
+    mlir::ValueRange lengthParams,
+    fir::factory::ReallocStorageHandlerFunc storageHandler) {
   // Implement 10.2.1.3 point 3 logic when lhs is an array.
   auto reader = MutablePropertyReader(builder, loc, box);
   auto addr = reader.readBaseAddress();
   auto i1Type = builder.getI1Type();
   auto addrType = addr.getType();
   auto isAllocated = builder.genIsNotNullAddr(loc, addr);
+  auto getExtValForStorage = [&](mlir::Value newAddr) -> fir::ExtendedValue {
+    mlir::SmallVector<mlir::Value> extents;
+    if (box.hasRank()) {
+      if (shape.empty())
+        extents = reader.readShape();
+      else
+        extents.append(shape.begin(), shape.end());
+    }
+    if (box.isCharacter()) {
+      auto len = box.hasNonDeferredLenParams() ? reader.readCharacterLength()
+                                               : lengthParams[0];
+      if (box.hasRank())
+        return fir::CharArrayBoxValue{newAddr, len, extents};
+      return fir::CharBoxValue{newAddr, len};
+    }
+    if (box.isDerivedWithLenParameters())
+      TODO(loc, "reallocation of derived type entities with length parameters");
+    if (box.hasRank())
+      return fir::ArrayBoxValue{newAddr, extents};
+    return newAddr;
+  };
   auto ifOp =
       builder
           .genIfOp(loc, {i1Type, addrType}, isAllocated,
@@ -768,10 +789,15 @@ fir::factory::genReallocIfNeeded(fir::FirOpBuilder &builder, mlir::Location loc,
                       auto heap = allocateAndInitNewStorage(
                           builder, loc, box, extents, lengthParams,
                           ".auto.alloc");
+                      if (storageHandler)
+                        storageHandler(getExtValForStorage(heap));
                       builder.create<fir::ResultOp>(loc, heap);
                     })
-                    .genElse(
-                        [&]() { builder.create<fir::ResultOp>(loc, addr); });
+                    .genElse([&]() {
+                      if (storageHandler)
+                        storageHandler(getExtValForStorage(addr));
+                      builder.create<fir::ResultOp>(loc, addr);
+                    });
             ifOp.end();
             auto newAddr = ifOp.getResults()[0];
             builder.create<fir::ResultOp>(
@@ -791,6 +817,8 @@ fir::factory::genReallocIfNeeded(fir::FirOpBuilder &builder, mlir::Location loc,
             } else {
               auto heap = allocateAndInitNewStorage(
                   builder, loc, box, shape, lengthParams, ".auto.alloc");
+              if (storageHandler)
+                storageHandler(getExtValForStorage(heap));
               builder.create<fir::ResultOp>(loc,
                                             mlir::ValueRange{trueValue, heap});
             }
@@ -799,27 +827,7 @@ fir::factory::genReallocIfNeeded(fir::FirOpBuilder &builder, mlir::Location loc,
   auto wasReallocated = ifOp.getResults()[0];
   auto newAddr = ifOp.getResults()[1];
   // Create an ExtentedValue for the new storage.
-  auto newValue = [&]() -> fir::ExtendedValue {
-    mlir::SmallVector<mlir::Value> extents;
-    if (box.hasRank()) {
-      if (shape.empty())
-        extents = reader.readShape();
-      else
-        extents.append(shape.begin(), shape.end());
-    }
-    if (box.isCharacter()) {
-      auto len = box.hasNonDeferredLenParams() ? reader.readCharacterLength()
-                                               : lengthParams[0];
-      if (box.hasRank())
-        return fir::CharArrayBoxValue{newAddr, len, extents};
-      return fir::CharBoxValue{newAddr, len};
-    }
-    if (box.isDerivedWithLenParameters())
-      TODO(loc, "reallocation of derived type entities with length parameters");
-    if (box.hasRank())
-      return fir::ArrayBoxValue{newAddr, extents};
-    return newAddr;
-  }();
+  auto newValue = getExtValForStorage(newAddr);
   return {newValue, addr, wasReallocated, isAllocated};
 }
 

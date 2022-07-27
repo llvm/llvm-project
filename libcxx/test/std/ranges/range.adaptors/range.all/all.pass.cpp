@@ -49,6 +49,17 @@ struct CopyableView : std::ranges::view_base {
 static_assert(std::ranges::view<CopyableView<true>>);
 static_assert(std::ranges::view<CopyableView<false>>);
 
+struct MoveOnlyView : std::ranges::view_base{
+  MoveOnlyView() = default;
+  MoveOnlyView(const MoveOnlyView&) = delete;
+  MoveOnlyView& operator=(const MoveOnlyView&) = delete;
+  MoveOnlyView(MoveOnlyView&&) = default;
+  MoveOnlyView& operator=(MoveOnlyView&&) = default;
+
+  int* begin() const;
+  int* end() const;
+};
+
 struct Range {
   int start_;
   constexpr explicit Range(int start) noexcept : start_(start) {}
@@ -139,6 +150,11 @@ constexpr bool test() {
   {
     static_assert(!std::is_invocable_v<decltype(std::views::all)>);
     static_assert(!std::is_invocable_v<decltype(std::views::all), RandomAccessRange, RandomAccessRange>);
+
+    // `views::all(v)` is expression equivalent to `decay-copy(v)` if the decayed type 
+    // of `v` models `view`. If `v` is an lvalue-reference to a move-only view, the 
+    // expression should be ill-formed because `v` is not copyable
+    static_assert(!std::is_invocable_v<decltype(std::views::all), MoveOnlyView&>);
   }
 
   // Test that std::views::all is a range adaptor

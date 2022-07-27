@@ -10,7 +10,7 @@ declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
 
 ; FIXME: All four versions are semantically equivalent and should produce same asm as scalar version.
 
-define i1 @intrinsic_v4i8(i8* align 1 %arg, i8* align 1 %arg1) {
+define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; SSE2-LABEL: intrinsic_v4i8:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -52,16 +52,14 @@ define i1 @intrinsic_v4i8(i8* align 1 %arg, i8* align 1 %arg1) {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
-  %ptr1 = bitcast i8* %arg1 to <4 x i8>*
-  %ptr2 = bitcast i8* %arg to <4 x i8>*
-  %lhs = load <4 x i8>, <4 x i8>* %ptr1, align 1
-  %rhs = load <4 x i8>, <4 x i8>* %ptr2, align 1
+  %lhs = load <4 x i8>, ptr %arg1, align 1
+  %rhs = load <4 x i8>, ptr %arg, align 1
   %cmp = icmp eq <4 x i8> %lhs, %rhs
   %all_eq = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %cmp)
   ret i1 %all_eq
 }
 
-define i1 @intrinsic_v8i8(i8* align 1 %arg, i8* align 1 %arg1) {
+define i1 @intrinsic_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; SSE-LABEL: intrinsic_v8i8:
 ; SSE:       # %bb.0: # %bb
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -94,16 +92,14 @@ define i1 @intrinsic_v8i8(i8* align 1 %arg, i8* align 1 %arg1) {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
-  %ptr1 = bitcast i8* %arg1 to <8 x i8>*
-  %ptr2 = bitcast i8* %arg to <8 x i8>*
-  %lhs = load <8 x i8>, <8 x i8>* %ptr1, align 1
-  %rhs = load <8 x i8>, <8 x i8>* %ptr2, align 1
+  %lhs = load <8 x i8>, ptr %arg1, align 1
+  %rhs = load <8 x i8>, ptr %arg, align 1
   %cmp = icmp eq <8 x i8> %lhs, %rhs
   %all_eq = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %cmp)
   ret i1 %all_eq
 }
 
-define i1 @vector_version(i8* align 1 %arg, i8* align 1 %arg1) {
+define i1 @vector_version(ptr align 1 %arg, ptr align 1 %arg1) {
 ; SSE2-LABEL: vector_version:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -147,17 +143,15 @@ define i1 @vector_version(i8* align 1 %arg, i8* align 1 %arg1) {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
-  %ptr1 = bitcast i8* %arg1 to <4 x i8>*
-  %ptr2 = bitcast i8* %arg to <4 x i8>*
-  %lhs = load <4 x i8>, <4 x i8>* %ptr1, align 1
-  %rhs = load <4 x i8>, <4 x i8>* %ptr2, align 1
+  %lhs = load <4 x i8>, ptr %arg1, align 1
+  %rhs = load <4 x i8>, ptr %arg, align 1
   %any_ne = icmp ne <4 x i8> %lhs, %rhs
   %any_ne_scalar = bitcast <4 x i1> %any_ne to i4
   %all_eq = icmp eq i4 %any_ne_scalar, 0
   ret i1 %all_eq
 }
 
-define i1 @mixed_version_v4i8(i8* align 1 %arg, i8* align 1 %arg1) {
+define i1 @mixed_version_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; CHECK-LABEL: mixed_version_v4i8:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movl (%rsi), %eax
@@ -174,17 +168,15 @@ define i1 @mixed_version_v4i8(i8* align 1 %arg, i8* align 1 %arg1) {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
-  %ptr1 = bitcast i8* %arg1 to <4 x i8>*
-  %ptr2 = bitcast i8* %arg to <4 x i8>*
-  %lhs = load <4 x i8>, <4 x i8>* %ptr1, align 1
-  %rhs = load <4 x i8>, <4 x i8>* %ptr2, align 1
+  %lhs = load <4 x i8>, ptr %arg1, align 1
+  %rhs = load <4 x i8>, ptr %arg, align 1
   %lhs_s = bitcast <4 x i8> %lhs to i32
   %rhs_s = bitcast <4 x i8> %rhs to i32
   %all_eq = icmp eq i32 %lhs_s, %rhs_s
   ret i1 %all_eq
 }
 
-define i1 @mixed_version_v8i8(i8* align 1 %arg, i8* align 1 %arg1) {
+define i1 @mixed_version_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; CHECK-LABEL: mixed_version_v8i8:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq (%rsi), %rax
@@ -204,17 +196,15 @@ define i1 @mixed_version_v8i8(i8* align 1 %arg, i8* align 1 %arg1) {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
-  %ptr1 = bitcast i8* %arg1 to <8 x i8>*
-  %ptr2 = bitcast i8* %arg to <8 x i8>*
-  %lhs = load <8 x i8>, <8 x i8>* %ptr1, align 1
-  %rhs = load <8 x i8>, <8 x i8>* %ptr2, align 1
+  %lhs = load <8 x i8>, ptr %arg1, align 1
+  %rhs = load <8 x i8>, ptr %arg, align 1
   %lhs_s = bitcast <8 x i8> %lhs to i64
   %rhs_s = bitcast <8 x i8> %rhs to i64
   %all_eq = icmp eq i64 %lhs_s, %rhs_s
   ret i1 %all_eq
 }
 
-define i1 @scalar_version(i8* align 1 %arg, i8* align 1 %arg1) {
+define i1 @scalar_version(ptr align 1 %arg, ptr align 1 %arg1) {
 ; CHECK-LABEL: scalar_version:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movl (%rsi), %eax
@@ -231,10 +221,8 @@ define i1 @scalar_version(i8* align 1 %arg, i8* align 1 %arg1) {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
-  %ptr1 = bitcast i8* %arg1 to i32*
-  %ptr2 = bitcast i8* %arg to i32*
-  %lhs = load i32, i32* %ptr1, align 1
-  %rhs = load i32, i32* %ptr2, align 1
+  %lhs = load i32, ptr %arg1, align 1
+  %rhs = load i32, ptr %arg, align 1
   %all_eq = icmp eq i32 %lhs, %rhs
   ret i1 %all_eq
 }

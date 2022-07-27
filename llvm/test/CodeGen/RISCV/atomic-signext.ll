@@ -628,8 +628,7 @@ define signext i8 @atomicrmw_max_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV32IA-NEXT:    slli a1, a1, 24
 ; RV32IA-NEXT:    srai a1, a1, 24
 ; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    li a5, 24
-; RV32IA-NEXT:    sub a3, a5, a3
+; RV32IA-NEXT:    xori a3, a3, 24
 ; RV32IA-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; RV32IA-NEXT:    lr.w a5, (a2)
 ; RV32IA-NEXT:    and a7, a5, a4
@@ -703,8 +702,7 @@ define signext i8 @atomicrmw_max_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    srai a1, a1, 56
 ; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    li a5, 56
-; RV64IA-NEXT:    sub a3, a5, a3
+; RV64IA-NEXT:    xori a3, a3, 56
 ; RV64IA-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; RV64IA-NEXT:    lr.w a5, (a2)
 ; RV64IA-NEXT:    and a7, a5, a4
@@ -782,8 +780,7 @@ define signext i8 @atomicrmw_min_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV32IA-NEXT:    slli a1, a1, 24
 ; RV32IA-NEXT:    srai a1, a1, 24
 ; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    li a5, 24
-; RV32IA-NEXT:    sub a3, a5, a3
+; RV32IA-NEXT:    xori a3, a3, 24
 ; RV32IA-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
 ; RV32IA-NEXT:    lr.w a5, (a2)
 ; RV32IA-NEXT:    and a7, a5, a4
@@ -857,8 +854,7 @@ define signext i8 @atomicrmw_min_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    srai a1, a1, 56
 ; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    li a5, 56
-; RV64IA-NEXT:    sub a3, a5, a3
+; RV64IA-NEXT:    xori a3, a3, 56
 ; RV64IA-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
 ; RV64IA-NEXT:    lr.w a5, (a2)
 ; RV64IA-NEXT:    and a7, a5, a4
@@ -3746,4 +3742,460 @@ define signext i64 @atomicrmw_umin_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw umin i64* %a, i64 %b monotonic
   ret i64 %1
+}
+
+define signext i8 @cmpxchg_i8_monotonic_monotonic_val0(i8* %ptr, i8 signext %cmp, i8 signext %val) nounwind {
+; RV32I-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    addi a1, sp, 11
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    li a4, 0
+; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    lb a0, 11(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    li a4, 255
+; RV32IA-NEXT:    sll a4, a4, a0
+; RV32IA-NEXT:    andi a1, a1, 255
+; RV32IA-NEXT:    sll a1, a1, a0
+; RV32IA-NEXT:    andi a2, a2, 255
+; RV32IA-NEXT:    sll a2, a2, a0
+; RV32IA-NEXT:  .LBB47_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NEXT:    lr.w a5, (a3)
+; RV32IA-NEXT:    and a6, a5, a4
+; RV32IA-NEXT:    bne a6, a1, .LBB47_3
+; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB47_1 Depth=1
+; RV32IA-NEXT:    xor a6, a5, a2
+; RV32IA-NEXT:    and a6, a6, a4
+; RV32IA-NEXT:    xor a6, a5, a6
+; RV32IA-NEXT:    sc.w a6, a6, (a3)
+; RV32IA-NEXT:    bnez a6, .LBB47_1
+; RV32IA-NEXT:  .LBB47_3:
+; RV32IA-NEXT:    srl a0, a5, a0
+; RV32IA-NEXT:    slli a0, a0, 24
+; RV32IA-NEXT:    srai a0, a0, 24
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    addi a1, sp, 7
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    lb a0, 7(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
+; RV64IA:       # %bb.0:
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    li a4, 255
+; RV64IA-NEXT:    sllw a4, a4, a0
+; RV64IA-NEXT:    andi a1, a1, 255
+; RV64IA-NEXT:    sllw a1, a1, a0
+; RV64IA-NEXT:    andi a2, a2, 255
+; RV64IA-NEXT:    sllw a2, a2, a0
+; RV64IA-NEXT:  .LBB47_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NEXT:    lr.w a5, (a3)
+; RV64IA-NEXT:    and a6, a5, a4
+; RV64IA-NEXT:    bne a6, a1, .LBB47_3
+; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB47_1 Depth=1
+; RV64IA-NEXT:    xor a6, a5, a2
+; RV64IA-NEXT:    and a6, a6, a4
+; RV64IA-NEXT:    xor a6, a5, a6
+; RV64IA-NEXT:    sc.w a6, a6, (a3)
+; RV64IA-NEXT:    bnez a6, .LBB47_1
+; RV64IA-NEXT:  .LBB47_3:
+; RV64IA-NEXT:    srlw a0, a5, a0
+; RV64IA-NEXT:    slli a0, a0, 56
+; RV64IA-NEXT:    srai a0, a0, 56
+; RV64IA-NEXT:    ret
+  %1 = cmpxchg i8* %ptr, i8 %cmp, i8 %val monotonic monotonic
+  %2 = extractvalue { i8, i1 } %1, 0
+  ret i8 %2
+}
+
+define i1 @cmpxchg_i8_monotonic_monotonic_val1(i8* %ptr, i8 signext %cmp, i8 signext %val) nounwind {
+; RV32I-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    addi a1, sp, 11
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    li a4, 0
+; RV32I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    li a4, 255
+; RV32IA-NEXT:    sll a4, a4, a0
+; RV32IA-NEXT:    andi a1, a1, 255
+; RV32IA-NEXT:    sll a1, a1, a0
+; RV32IA-NEXT:    andi a2, a2, 255
+; RV32IA-NEXT:    sll a0, a2, a0
+; RV32IA-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NEXT:    lr.w a2, (a3)
+; RV32IA-NEXT:    and a5, a2, a4
+; RV32IA-NEXT:    bne a5, a1, .LBB48_3
+; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB48_1 Depth=1
+; RV32IA-NEXT:    xor a5, a2, a0
+; RV32IA-NEXT:    and a5, a5, a4
+; RV32IA-NEXT:    xor a5, a2, a5
+; RV32IA-NEXT:    sc.w a5, a5, (a3)
+; RV32IA-NEXT:    bnez a5, .LBB48_1
+; RV32IA-NEXT:  .LBB48_3:
+; RV32IA-NEXT:    and a0, a2, a4
+; RV32IA-NEXT:    xor a0, a1, a0
+; RV32IA-NEXT:    seqz a0, a0
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    addi a1, sp, 7
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    call __atomic_compare_exchange_1@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
+; RV64IA:       # %bb.0:
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    li a4, 255
+; RV64IA-NEXT:    sllw a4, a4, a0
+; RV64IA-NEXT:    andi a1, a1, 255
+; RV64IA-NEXT:    sllw a1, a1, a0
+; RV64IA-NEXT:    andi a2, a2, 255
+; RV64IA-NEXT:    sllw a0, a2, a0
+; RV64IA-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NEXT:    lr.w a2, (a3)
+; RV64IA-NEXT:    and a5, a2, a4
+; RV64IA-NEXT:    bne a5, a1, .LBB48_3
+; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB48_1 Depth=1
+; RV64IA-NEXT:    xor a5, a2, a0
+; RV64IA-NEXT:    and a5, a5, a4
+; RV64IA-NEXT:    xor a5, a2, a5
+; RV64IA-NEXT:    sc.w a5, a5, (a3)
+; RV64IA-NEXT:    bnez a5, .LBB48_1
+; RV64IA-NEXT:  .LBB48_3:
+; RV64IA-NEXT:    and a0, a2, a4
+; RV64IA-NEXT:    sext.w a0, a0
+; RV64IA-NEXT:    xor a0, a1, a0
+; RV64IA-NEXT:    seqz a0, a0
+; RV64IA-NEXT:    ret
+  %1 = cmpxchg i8* %ptr, i8 %cmp, i8 %val monotonic monotonic
+  %2 = extractvalue { i8, i1 } %1, 1
+  ret i1 %2
+}
+
+define signext i16 @cmpxchg_i16_monotonic_monotonic_val0(i16* %ptr, i16 signext %cmp, i16 signext %val) nounwind {
+; RV32I-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    li a4, 0
+; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    lh a0, 10(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    lui a4, 16
+; RV32IA-NEXT:    addi a4, a4, -1
+; RV32IA-NEXT:    sll a5, a4, a0
+; RV32IA-NEXT:    and a1, a1, a4
+; RV32IA-NEXT:    sll a1, a1, a0
+; RV32IA-NEXT:    and a2, a2, a4
+; RV32IA-NEXT:    sll a2, a2, a0
+; RV32IA-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NEXT:    lr.w a4, (a3)
+; RV32IA-NEXT:    and a6, a4, a5
+; RV32IA-NEXT:    bne a6, a1, .LBB49_3
+; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB49_1 Depth=1
+; RV32IA-NEXT:    xor a6, a4, a2
+; RV32IA-NEXT:    and a6, a6, a5
+; RV32IA-NEXT:    xor a6, a4, a6
+; RV32IA-NEXT:    sc.w a6, a6, (a3)
+; RV32IA-NEXT:    bnez a6, .LBB49_1
+; RV32IA-NEXT:  .LBB49_3:
+; RV32IA-NEXT:    srl a0, a4, a0
+; RV32IA-NEXT:    slli a0, a0, 16
+; RV32IA-NEXT:    srai a0, a0, 16
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    lh a0, 6(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
+; RV64IA:       # %bb.0:
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    lui a4, 16
+; RV64IA-NEXT:    addiw a4, a4, -1
+; RV64IA-NEXT:    sllw a5, a4, a0
+; RV64IA-NEXT:    and a1, a1, a4
+; RV64IA-NEXT:    sllw a1, a1, a0
+; RV64IA-NEXT:    and a2, a2, a4
+; RV64IA-NEXT:    sllw a2, a2, a0
+; RV64IA-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NEXT:    lr.w a4, (a3)
+; RV64IA-NEXT:    and a6, a4, a5
+; RV64IA-NEXT:    bne a6, a1, .LBB49_3
+; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB49_1 Depth=1
+; RV64IA-NEXT:    xor a6, a4, a2
+; RV64IA-NEXT:    and a6, a6, a5
+; RV64IA-NEXT:    xor a6, a4, a6
+; RV64IA-NEXT:    sc.w a6, a6, (a3)
+; RV64IA-NEXT:    bnez a6, .LBB49_1
+; RV64IA-NEXT:  .LBB49_3:
+; RV64IA-NEXT:    srlw a0, a4, a0
+; RV64IA-NEXT:    slli a0, a0, 48
+; RV64IA-NEXT:    srai a0, a0, 48
+; RV64IA-NEXT:    ret
+  %1 = cmpxchg i16* %ptr, i16 %cmp, i16 %val monotonic monotonic
+  %2 = extractvalue { i16, i1 } %1, 0
+  ret i16 %2
+}
+
+define i1 @cmpxchg_i16_monotonic_monotonic_val1(i16* %ptr, i16 signext %cmp, i16 signext %val) nounwind {
+; RV32I-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    li a4, 0
+; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    slli a0, a0, 3
+; RV32IA-NEXT:    lui a4, 16
+; RV32IA-NEXT:    addi a4, a4, -1
+; RV32IA-NEXT:    sll a5, a4, a0
+; RV32IA-NEXT:    and a1, a1, a4
+; RV32IA-NEXT:    sll a1, a1, a0
+; RV32IA-NEXT:    and a2, a2, a4
+; RV32IA-NEXT:    sll a0, a2, a0
+; RV32IA-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NEXT:    lr.w a2, (a3)
+; RV32IA-NEXT:    and a4, a2, a5
+; RV32IA-NEXT:    bne a4, a1, .LBB50_3
+; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB50_1 Depth=1
+; RV32IA-NEXT:    xor a4, a2, a0
+; RV32IA-NEXT:    and a4, a4, a5
+; RV32IA-NEXT:    xor a4, a2, a4
+; RV32IA-NEXT:    sc.w a4, a4, (a3)
+; RV32IA-NEXT:    bnez a4, .LBB50_1
+; RV32IA-NEXT:  .LBB50_3:
+; RV32IA-NEXT:    and a0, a2, a5
+; RV32IA-NEXT:    xor a0, a1, a0
+; RV32IA-NEXT:    seqz a0, a0
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    call __atomic_compare_exchange_2@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
+; RV64IA:       # %bb.0:
+; RV64IA-NEXT:    andi a3, a0, -4
+; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    lui a4, 16
+; RV64IA-NEXT:    addiw a4, a4, -1
+; RV64IA-NEXT:    sllw a5, a4, a0
+; RV64IA-NEXT:    and a1, a1, a4
+; RV64IA-NEXT:    sllw a1, a1, a0
+; RV64IA-NEXT:    and a2, a2, a4
+; RV64IA-NEXT:    sllw a0, a2, a0
+; RV64IA-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NEXT:    lr.w a2, (a3)
+; RV64IA-NEXT:    and a4, a2, a5
+; RV64IA-NEXT:    bne a4, a1, .LBB50_3
+; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB50_1 Depth=1
+; RV64IA-NEXT:    xor a4, a2, a0
+; RV64IA-NEXT:    and a4, a4, a5
+; RV64IA-NEXT:    xor a4, a2, a4
+; RV64IA-NEXT:    sc.w a4, a4, (a3)
+; RV64IA-NEXT:    bnez a4, .LBB50_1
+; RV64IA-NEXT:  .LBB50_3:
+; RV64IA-NEXT:    and a0, a2, a5
+; RV64IA-NEXT:    sext.w a0, a0
+; RV64IA-NEXT:    xor a0, a1, a0
+; RV64IA-NEXT:    seqz a0, a0
+; RV64IA-NEXT:    ret
+  %1 = cmpxchg i16* %ptr, i16 %cmp, i16 %val monotonic monotonic
+  %2 = extractvalue { i16, i1 } %1, 1
+  ret i1 %2
+}
+
+define signext i32 @cmpxchg_i32_monotonic_monotonic_val0(i32* %ptr, i32 signext %cmp, i32 signext %val) nounwind {
+; RV32I-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    addi a1, sp, 8
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    li a4, 0
+; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    lw a0, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:  .LBB51_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NEXT:    lr.w a3, (a0)
+; RV32IA-NEXT:    bne a3, a1, .LBB51_3
+; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB51_1 Depth=1
+; RV32IA-NEXT:    sc.w a4, a2, (a0)
+; RV32IA-NEXT:    bnez a4, .LBB51_1
+; RV32IA-NEXT:  .LBB51_3:
+; RV32IA-NEXT:    mv a0, a3
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    addi a1, sp, 4
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    lw a0, 4(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV64IA:       # %bb.0:
+; RV64IA-NEXT:  .LBB51_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NEXT:    lr.w a3, (a0)
+; RV64IA-NEXT:    bne a3, a1, .LBB51_3
+; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB51_1 Depth=1
+; RV64IA-NEXT:    sc.w a4, a2, (a0)
+; RV64IA-NEXT:    bnez a4, .LBB51_1
+; RV64IA-NEXT:  .LBB51_3:
+; RV64IA-NEXT:    mv a0, a3
+; RV64IA-NEXT:    ret
+  %1 = cmpxchg i32* %ptr, i32 %cmp, i32 %val monotonic monotonic
+  %2 = extractvalue { i32, i1 } %1, 0
+  ret i32 %2
+}
+
+define i1 @cmpxchg_i32_monotonic_monotonic_val1(i32* %ptr, i32 signext %cmp, i32 signext %val) nounwind {
+; RV32I-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    addi a1, sp, 8
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    li a4, 0
+; RV32I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NEXT:    lr.w a3, (a0)
+; RV32IA-NEXT:    bne a3, a1, .LBB52_3
+; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB52_1 Depth=1
+; RV32IA-NEXT:    sc.w a4, a2, (a0)
+; RV32IA-NEXT:    bnez a4, .LBB52_1
+; RV32IA-NEXT:  .LBB52_3:
+; RV32IA-NEXT:    xor a0, a3, a1
+; RV32IA-NEXT:    seqz a0, a0
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    addi a1, sp, 4
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    li a4, 0
+; RV64I-NEXT:    call __atomic_compare_exchange_4@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV64IA:       # %bb.0:
+; RV64IA-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NEXT:    lr.w a3, (a0)
+; RV64IA-NEXT:    bne a3, a1, .LBB52_3
+; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB52_1 Depth=1
+; RV64IA-NEXT:    sc.w a4, a2, (a0)
+; RV64IA-NEXT:    bnez a4, .LBB52_1
+; RV64IA-NEXT:  .LBB52_3:
+; RV64IA-NEXT:    xor a0, a3, a1
+; RV64IA-NEXT:    seqz a0, a0
+; RV64IA-NEXT:    ret
+  %1 = cmpxchg i32* %ptr, i32 %cmp, i32 %val monotonic monotonic
+  %2 = extractvalue { i32, i1 } %1, 1
+  ret i1 %2
 }

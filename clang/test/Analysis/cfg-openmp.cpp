@@ -688,6 +688,78 @@ void tl(int argc) {
     argc = x;
 }
 
+// CHECK-LABEL:  void maskedtaskloop(int argc)
+void maskedtaskloop(int argc) {
+  int x, cond, fp, rd, lin, step, map;
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#MTLB:]]: x
+// CHECK-DAG:  [[#MTLB+1]]: [B3.[[#MTLB]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#MTLB+2]]: argc
+// CHECK-DAG:  [[#MTLB+3]]: [B3.[[#MTLB+2]]] = [B3.[[#MTLB+1]]]
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#MTL:]]: cond
+// CHECK-DAG:  [[#MTL+1]]: [B1.[[#MTL]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#MTL+2]]: [B1.[[#MTL+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-DAG:  [[#MTL+3]]: fp
+// CHECK-DAG:  [[#MTL+4]]: rd
+// CHECK-DAG:  [[#MTL+5]]: [B3.[[#MTLB+2]]]
+// CHECK-DAG:  [[#MTL+6]]: [B3.[[#MTLB]]]
+// CHECK-DAG:  [[#MTL+7]]: #pragma omp masked taskloop if(cond) firstprivate(fp) reduction(+: rd)
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#MTLB+3]]];
+#pragma omp masked taskloop if(cond) firstprivate(fp) reduction(+:rd)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
+
+// CHECK-LABEL:  void parallelmaskedtaskloop(int argc)
+void parallelmaskedtaskloop(int argc) {
+  int x, cond, fp, rd, lin, step, map;
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#PMTLB:]]: x
+// CHECK-DAG:  [[#PMTLB+1]]: [B3.[[#PMTLB]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PMTLB+2]]: argc
+// CHECK-DAG:  [[#PMTLB+3]]: [B3.[[#PMTLB+2]]] = [B3.[[#PMTLB+1]]]
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#PMTL:]]: cond
+// CHECK-DAG:  [[#PMTL+1]]: [B1.[[#PMTL]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PMTL+2]]: [B1.[[#PMTL+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-DAG:  [[#PMTL+3]]: fp
+// CHECK-DAG:  [[#PMTL+4]]: rd
+// CHECK-DAG:  [[#PMTL+5]]: [B3.[[#PMTLB+2]]]
+// CHECK-DAG:  [[#PMTL+6]]: [B3.[[#PMTLB]]]
+// CHECK-DAG:  [[#PMTL+7]]: #pragma omp parallel masked taskloop if(cond) firstprivate(fp) reduction(+: rd)
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#PMTLB+3]]];
+#pragma omp parallel masked taskloop if(cond) firstprivate(fp) reduction(+:rd)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
+
+// CHECK-LABEL:  void parallelmaskedtasksimdloop(int argc)
+void parallelmaskedtasksimdloop(int argc) {
+  int x, cond, fp, rd, lin, step, map;
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#PMTLSB:]]: x
+// CHECK-DAG:  [[#PMTLSB+1]]: [B3.[[#PMTLSB]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PMTLSB+2]]: argc
+// CHECK-DAG:  [[#PMTLSB+3]]: [B3.[[#PMTLSB+2]]] = [B3.[[#PMTLSB+1]]]
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#PMTLS:]]: cond
+// CHECK-DAG:  [[#PMTLS+1]]: [B1.[[#PMTLS]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PMTLS+2]]: [B1.[[#PMTLS+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-DAG:  [[#PMTLS+3]]: fp
+// CHECK-DAG:  [[#PMTLS+4]]: rd
+// CHECK-DAG:  [[#PMTLS+5]]: [B3.[[#PMTLSB+2]]]
+// CHECK-DAG:  [[#PMTLS+6]]: [B3.[[#PMTLSB]]]
+// CHECK-DAG:  [[#PMTLS+7]]: #pragma omp parallel masked taskloop simd if(cond) firstprivate(fp) reduction(+: rd)
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#PMTLSB+3]]];
+#pragma omp parallel masked taskloop simd if(cond) firstprivate(fp) reduction(+:rd)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
+
 // CHECK-LABEL:  void tls(int argc)
 void tls(int argc) {
   int x, cond, fp, rd, lin, step, map;
@@ -711,6 +783,33 @@ void tls(int argc) {
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TLSB+3]]];
 #pragma omp taskloop simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
+
+// CHECK-LABEL:  void maskedtaskloopsimd(int argc)
+void maskedtaskloopsimd(int argc) {
+  int x, cond, fp, rd, lin, step, map;
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#MTLSB:]]: x
+// CHECK-DAG:  [[#MTLSB+1]]: [B3.[[#MTLSB]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#MTLSB+2]]: argc
+// CHECK-DAG:  [[#MTLSB+3]]: [B3.[[#MTLSB+2]]] = [B3.[[#MTLSB+1]]]
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#MTLS:]]: cond
+// CHECK-DAG:  [[#MTLS+1]]: [B1.[[#MTLS]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#MTLS+2]]: [B1.[[#MTLS+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-DAG:  [[#MTLS+3]]: fp
+// CHECK-DAG:  [[#MTLS+4]]: rd
+// CHECK-DAG:  [[#MTLS+5]]: lin
+// CHECK-DAG:  [[#MTLS+6]]: step
+// CHECK-DAG:  [[#MTLS+7]]: [B1.[[#MTLS+6]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#MTLS+8]]: [B3.[[#MTLSB+2]]]
+// CHECK-DAG:  [[#MTLS+9]]: [B3.[[#MTLSB]]]
+// CHECK-DAG:  [[#MTLS+10]]: #pragma omp masked taskloop simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step)
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#MTLSB+3]]];
+#pragma omp masked taskloop simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }

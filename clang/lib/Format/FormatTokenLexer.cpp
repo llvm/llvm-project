@@ -239,55 +239,6 @@ bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
   if (Tokens.size() < 2)
     return false;
 
-  // Interpolated strings could contain { } with " characters inside.
-  // $"{x ?? "null"}"
-  // should not be split into $"{x ?? ", null, "}" but should treated as a
-  // single string-literal.
-  //
-  // We opt not to try and format expressions inside {} within a C#
-  // interpolated string. Formatting expressions within an interpolated string
-  // would require similar work as that done for JavaScript template strings
-  // in `handleTemplateStrings()`.
-  auto &CSharpInterpolatedString = *(Tokens.end() - 2);
-  if (CSharpInterpolatedString->getType() == TT_CSharpStringLiteral &&
-      (CSharpInterpolatedString->TokenText.startswith(R"($")") ||
-       CSharpInterpolatedString->TokenText.startswith(R"($@")"))) {
-    int UnmatchedOpeningBraceCount = 0;
-
-    auto TokenTextSize = CSharpInterpolatedString->TokenText.size();
-    for (size_t Index = 0; Index < TokenTextSize; ++Index) {
-      char C = CSharpInterpolatedString->TokenText[Index];
-      if (C == '{') {
-        // "{{"  inside an interpolated string is an escaped '{' so skip it.
-        if (Index + 1 < TokenTextSize &&
-            CSharpInterpolatedString->TokenText[Index + 1] == '{') {
-          ++Index;
-          continue;
-        }
-        ++UnmatchedOpeningBraceCount;
-      } else if (C == '}') {
-        // "}}"  inside an interpolated string is an escaped '}' so skip it.
-        if (Index + 1 < TokenTextSize &&
-            CSharpInterpolatedString->TokenText[Index + 1] == '}') {
-          ++Index;
-          continue;
-        }
-        --UnmatchedOpeningBraceCount;
-      }
-    }
-
-    if (UnmatchedOpeningBraceCount > 0) {
-      auto &NextToken = *(Tokens.end() - 1);
-      CSharpInterpolatedString->TokenText =
-          StringRef(CSharpInterpolatedString->TokenText.begin(),
-                    NextToken->TokenText.end() -
-                        CSharpInterpolatedString->TokenText.begin());
-      CSharpInterpolatedString->ColumnWidth += NextToken->ColumnWidth;
-      Tokens.erase(Tokens.end() - 1);
-      return true;
-    }
-  }
-
   // Look for @"aaaaaa" or $"aaaaaa".
   auto &String = *(Tokens.end() - 1);
   if (!String->is(tok::string_literal))
@@ -571,45 +522,105 @@ void FormatTokenLexer::tryParseJSRegexLiteral() {
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset)));
 }
 
-void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
-  FormatToken *CSharpStringLiteral = Tokens.back();
-
-  if (CSharpStringLiteral->getType() != TT_CSharpStringLiteral)
-    return;
-
-  // Deal with multiline strings.
-  if (!(CSharpStringLiteral->TokenText.startswith(R"(@")") ||
-        CSharpStringLiteral->TokenText.startswith(R"($@")"))) {
-    return;
-  }
-
-  const char *StrBegin =
-      Lex->getBufferLocation() - CSharpStringLiteral->TokenText.size();
-  const char *Offset = StrBegin;
-  if (CSharpStringLiteral->TokenText.startswith(R"(@")"))
-    Offset += 2;
-  else // CSharpStringLiteral->TokenText.startswith(R"($@")")
-    Offset += 3;
+static auto lexCSharpString(const char *Begin, const char *End, bool Verbatim,
+                            bool Interpolated) {
+  auto Repeated = [&Begin, End]() {
+    return Begin + 1 < End && Begin[1] == Begin[0];
+  };
 
   // Look for a terminating '"' in the current file buffer.
   // Make no effort to format code within an interpolated or verbatim string.
-  for (; Offset != Lex->getBuffer().end(); ++Offset) {
-    if (Offset[0] == '"') {
-      // "" within a verbatim string is an escaped double quote: skip it.
-      if (Offset + 1 < Lex->getBuffer().end() && Offset[1] == '"')
-        ++Offset;
-      else
+  //
+  // Interpolated strings could contain { } with " characters inside.
+  // $"{x ?? "null"}"
+  // should not be split into $"{x ?? ", null, "}" but should be treated as a
+  // single string-literal.
+  //
+  // We opt not to try and format expressions inside {} within a C#
+  // interpolated string. Formatting expressions within an interpolated string
+  // would require similar work as that done for JavaScript template strings
+  // in `handleTemplateStrings()`.
+  for (int UnmatchedOpeningBraceCount = 0; Begin < End; ++Begin) {
+    switch (*Begin) {
+    case '\\':
+      if (!Verbatim)
+        ++Begin;
+      break;
+    case '{':
+      if (Interpolated) {
+        // {{ inside an interpolated string is escaped, so skip it.
+        if (Repeated())
+          ++Begin;
+        else
+          ++UnmatchedOpeningBraceCount;
+      }
+      break;
+    case '}':
+      if (Interpolated) {
+        // }} inside an interpolated string is escaped, so skip it.
+        if (Repeated())
+          ++Begin;
+        else if (UnmatchedOpeningBraceCount > 0)
+          --UnmatchedOpeningBraceCount;
+        else
+          return End;
+      }
+      break;
+    case '"':
+      if (UnmatchedOpeningBraceCount > 0)
         break;
+      // "" within a verbatim string is an escaped double quote: skip it.
+      if (Verbatim && Repeated()) {
+        ++Begin;
+        break;
+      }
+      return Begin;
     }
   }
 
+  return End;
+}
+
+void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
+  FormatToken *CSharpStringLiteral = Tokens.back();
+
+  if (CSharpStringLiteral->isNot(TT_CSharpStringLiteral))
+    return;
+
+  auto &TokenText = CSharpStringLiteral->TokenText;
+
+  bool Verbatim = false;
+  bool Interpolated = false;
+  if (TokenText.startswith(R"($@")")) {
+    Verbatim = true;
+    Interpolated = true;
+  } else if (TokenText.startswith(R"(@")")) {
+    Verbatim = true;
+  } else if (TokenText.startswith(R"($")")) {
+    Interpolated = true;
+  }
+
+  // Deal with multiline strings.
+  if (!Verbatim && !Interpolated)
+    return;
+
+  const char *StrBegin = Lex->getBufferLocation() - TokenText.size();
+  const char *Offset = StrBegin;
+  if (Verbatim && Interpolated)
+    Offset += 3;
+  else
+    Offset += 2;
+
+  const auto End = Lex->getBuffer().end();
+  Offset = lexCSharpString(Offset, End, Verbatim, Interpolated);
+
   // Make no attempt to format code properly if a verbatim string is
   // unterminated.
-  if (Offset == Lex->getBuffer().end())
+  if (Offset >= End)
     return;
 
   StringRef LiteralText(StrBegin, Offset - StrBegin + 1);
-  CSharpStringLiteral->TokenText = LiteralText;
+  TokenText = LiteralText;
 
   // Adjust width for potentially multiline string literals.
   size_t FirstBreak = LiteralText.find('\n');
@@ -628,10 +639,8 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
                                       StartColumn, Style.TabWidth, Encoding);
   }
 
-  SourceLocation loc = Offset < Lex->getBuffer().end()
-                           ? Lex->getSourceLocation(Offset + 1)
-                           : SourceMgr.getLocForEndOfFile(ID);
-  resetLexer(SourceMgr.getFileOffset(loc));
+  assert(Offset < End);
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset + 1)));
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
@@ -840,6 +849,58 @@ FormatToken *FormatTokenLexer::getStashedToken() {
   return FormatTok;
 }
 
+/// Truncate the current token to the new length and make the lexer continue
+/// from the end of the truncated token. Used for other languages that have
+/// different token boundaries, like JavaScript in which a comment ends at a
+/// line break regardless of whether the line break follows a backslash. Also
+/// used to set the lexer to the end of whitespace if the lexer regards
+/// whitespace and an unrecognized symbol as one token.
+void FormatTokenLexer::truncateToken(size_t NewLen) {
+  assert(NewLen <= FormatTok->TokenText.size());
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(
+      Lex->getBufferLocation() - FormatTok->TokenText.size() + NewLen)));
+  FormatTok->TokenText = FormatTok->TokenText.substr(0, NewLen);
+  FormatTok->ColumnWidth = encoding::columnWidthWithTabs(
+      FormatTok->TokenText, FormatTok->OriginalColumn, Style.TabWidth,
+      Encoding);
+  FormatTok->Tok.setLength(NewLen);
+}
+
+/// Count the length of leading whitespace in a token.
+static size_t countLeadingWhitespace(StringRef Text) {
+  // Basically counting the length matched by this regex.
+  // "^([\n\r\f\v \t]|(\\\\|\\?\\?/)[\n\r])+"
+  // Directly using the regex turned out to be slow. With the regex
+  // version formatting all files in this directory took about 1.25
+  // seconds. This version took about 0.5 seconds.
+  const unsigned char *const Begin = Text.bytes_begin();
+  const unsigned char *const End = Text.bytes_end();
+  const unsigned char *Cur = Begin;
+  while (Cur < End) {
+    if (isspace(Cur[0])) {
+      ++Cur;
+    } else if (Cur[0] == '\\' && (Cur[1] == '\n' || Cur[1] == '\r')) {
+      // A '\' followed by a newline always escapes the newline, regardless
+      // of whether there is another '\' before it.
+      // The source has a null byte at the end. So the end of the entire input
+      // isn't reached yet. Also the lexer doesn't break apart an escaped
+      // newline.
+      assert(End - Cur >= 2);
+      Cur += 2;
+    } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
+               (Cur[3] == '\n' || Cur[3] == '\r')) {
+      // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
+      // characters are quoted individually in this comment because if we write
+      // them together some compilers warn that we have a trigraph in the code.
+      assert(End - Cur >= 4);
+      Cur += 4;
+    } else {
+      break;
+    }
+  }
+  return Cur - Begin;
+}
+
 FormatToken *FormatTokenLexer::getNextToken() {
   if (StateStack.top() == LexerState::TOKEN_STASHED) {
     StateStack.pop();
@@ -854,34 +915,33 @@ FormatToken *FormatTokenLexer::getNextToken() {
   IsFirstToken = false;
 
   // Consume and record whitespace until we find a significant token.
+  // Some tok::unknown tokens are not just whitespace, e.g. whitespace
+  // followed by a symbol such as backtick. Those symbols may be
+  // significant in other languages.
   unsigned WhitespaceLength = TrailingWhitespace;
-  while (FormatTok->is(tok::unknown)) {
+  while (FormatTok->isNot(tok::eof)) {
+    auto LeadingWhitespace = countLeadingWhitespace(FormatTok->TokenText);
+    if (LeadingWhitespace == 0)
+      break;
+    if (LeadingWhitespace < FormatTok->TokenText.size())
+      truncateToken(LeadingWhitespace);
     StringRef Text = FormatTok->TokenText;
-    auto EscapesNewline = [&](int pos) {
-      // A '\r' here is just part of '\r\n'. Skip it.
-      if (pos >= 0 && Text[pos] == '\r')
-        --pos;
-      // See whether there is an odd number of '\' before this.
-      // FIXME: This is wrong. A '\' followed by a newline is always removed,
-      // regardless of whether there is another '\' before it.
-      // FIXME: Newlines can also be escaped by a '?' '?' '/' trigraph.
-      unsigned count = 0;
-      for (; pos >= 0; --pos, ++count)
-        if (Text[pos] != '\\')
-          break;
-      return count & 1;
-    };
-    // FIXME: This miscounts tok:unknown tokens that are not just
-    // whitespace, e.g. a '`' character.
+    bool InEscape = false;
     for (int i = 0, e = Text.size(); i != e; ++i) {
       switch (Text[i]) {
+      case '\r':
+        // If this is a CRLF sequence, break here and the LF will be handled on
+        // the next loop iteration. Otherwise, this is a single Mac CR, treat it
+        // the same as a single LF.
+        if (i + 1 < e && Text[i + 1] == '\n')
+          break;
+        LLVM_FALLTHROUGH;
       case '\n':
         ++FormatTok->NewlinesBefore;
-        FormatTok->HasUnescapedNewline = !EscapesNewline(i - 1);
-        FormatTok->LastNewlineOffset = WhitespaceLength + i + 1;
-        Column = 0;
-        break;
-      case '\r':
+        if (!InEscape)
+          FormatTok->HasUnescapedNewline = true;
+        else
+          InEscape = false;
         FormatTok->LastNewlineOffset = WhitespaceLength + i + 1;
         Column = 0;
         break;
@@ -897,23 +957,31 @@ FormatToken *FormatTokenLexer::getNextToken() {
             Style.TabWidth - (Style.TabWidth ? Column % Style.TabWidth : 0);
         break;
       case '\\':
-        if (i + 1 == e || (Text[i + 1] != '\r' && Text[i + 1] != '\n'))
-          FormatTok->setType(TT_ImplicitStringLiteral);
+      case '?':
+      case '/':
+        // The text was entirely whitespace when this loop was entered. Thus
+        // this has to be an escape sequence.
+        assert(Text.substr(i, 2) == "\\\r" || Text.substr(i, 2) == "\\\n" ||
+               Text.substr(i, 4) == "\?\?/\r" ||
+               Text.substr(i, 4) == "\?\?/\n" ||
+               (i >= 1 && (Text.substr(i - 1, 4) == "\?\?/\r" ||
+                           Text.substr(i - 1, 4) == "\?\?/\n")) ||
+               (i >= 2 && (Text.substr(i - 2, 4) == "\?\?/\r" ||
+                           Text.substr(i - 2, 4) == "\?\?/\n")));
+        InEscape = true;
         break;
       default:
-        FormatTok->setType(TT_ImplicitStringLiteral);
+        // This shouldn't happen.
+        assert(false);
         break;
       }
-      if (FormatTok->getType() == TT_ImplicitStringLiteral)
-        break;
     }
-
-    if (FormatTok->is(TT_ImplicitStringLiteral))
-      break;
-    WhitespaceLength += FormatTok->Tok.getLength();
-
+    WhitespaceLength += Text.size();
     readRawToken(*FormatTok);
   }
+
+  if (FormatTok->is(tok::unknown))
+    FormatTok->setType(TT_ImplicitStringLiteral);
 
   // JavaScript and Java do not allow to escape the end of the line with a
   // backslash. Backslashes are syntax errors in plain source, but can occur in
@@ -928,40 +996,30 @@ FormatToken *FormatTokenLexer::getNextToken() {
     while (BackslashPos != StringRef::npos) {
       if (BackslashPos + 1 < FormatTok->TokenText.size() &&
           FormatTok->TokenText[BackslashPos + 1] == '\n') {
-        const char *Offset = Lex->getBufferLocation();
-        Offset -= FormatTok->TokenText.size();
-        Offset += BackslashPos + 1;
-        resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset)));
-        FormatTok->TokenText = FormatTok->TokenText.substr(0, BackslashPos + 1);
-        FormatTok->ColumnWidth = encoding::columnWidthWithTabs(
-            FormatTok->TokenText, FormatTok->OriginalColumn, Style.TabWidth,
-            Encoding);
+        truncateToken(BackslashPos + 1);
         break;
       }
       BackslashPos = FormatTok->TokenText.find('\\', BackslashPos + 1);
     }
   }
 
-  // In case the token starts with escaped newlines, we want to
-  // take them into account as whitespace - this pattern is quite frequent
-  // in macro definitions.
-  // FIXME: Add a more explicit test.
-  while (FormatTok->TokenText.size() > 1 && FormatTok->TokenText[0] == '\\') {
-    unsigned SkippedWhitespace = 0;
-    if (FormatTok->TokenText.size() > 2 &&
-        (FormatTok->TokenText[1] == '\r' && FormatTok->TokenText[2] == '\n')) {
-      SkippedWhitespace = 3;
-    } else if (FormatTok->TokenText[1] == '\n') {
-      SkippedWhitespace = 2;
-    } else {
-      break;
+  if (Style.isVerilog()) {
+    // Verilog uses the backtick instead of the hash for preprocessor stuff.
+    // And it uses the hash for delays and parameter lists. In order to continue
+    // using `tok::hash` in other places, the backtick gets marked as the hash
+    // here.  And in order to tell the backtick and hash apart for
+    // Verilog-specific stuff, the hash becomes an identifier.
+    if (FormatTok->isOneOf(tok::hash, tok::hashhash)) {
+      FormatTok->Tok.setKind(tok::raw_identifier);
+    } else if (FormatTok->is(tok::raw_identifier)) {
+      if (FormatTok->TokenText == "`") {
+        FormatTok->Tok.setIdentifierInfo(nullptr);
+        FormatTok->Tok.setKind(tok::hash);
+      } else if (FormatTok->TokenText == "``") {
+        FormatTok->Tok.setIdentifierInfo(nullptr);
+        FormatTok->Tok.setKind(tok::hashhash);
+      }
     }
-
-    ++FormatTok->NewlinesBefore;
-    WhitespaceLength += SkippedWhitespace;
-    FormatTok->LastNewlineOffset = SkippedWhitespace;
-    Column = 0;
-    FormatTok->TokenText = FormatTok->TokenText.substr(SkippedWhitespace);
   }
 
   FormatTok->WhitespaceRange = SourceRange(
@@ -1051,8 +1109,52 @@ FormatToken *FormatTokenLexer::getNextToken() {
   return FormatTok;
 }
 
+bool FormatTokenLexer::readRawTokenVerilogSpecific(Token &Tok) {
+  // In Verilog the quote is not a character literal.
+  //
+  // Make the backtick and double backtick identifiers to match against them
+  // more easily.
+  //
+  // In Verilog an escaped identifier starts with backslash and ends with
+  // whitespace. Unless that whitespace is an escaped newline. A backslash can
+  // also begin an escaped newline outside of an escaped identifier. We check
+  // for that outside of the Regex since we can't use negative lookhead
+  // assertions. Simply changing the '*' to '+' breaks stuff as the escaped
+  // identifier may have a length of 0 according to Section A.9.3.
+  // FIXME: If there is an escaped newline in the middle of an escaped
+  // identifier, allow for pasting the two lines together, But escaped
+  // identifiers usually occur only in generated code anyway.
+  static const llvm::Regex VerilogToken(R"re(^('|``?|\\(\\)re"
+                                        "(\r?\n|\r)|[^[:space:]])*)");
+
+  SmallVector<StringRef, 4> Matches;
+  const char *Start = Lex->getBufferLocation();
+  if (!VerilogToken.match(StringRef(Start, Lex->getBuffer().end() - Start),
+                          &Matches)) {
+    return false;
+  }
+  // There is a null byte at the end of the buffer, so we don't have to check
+  // Start[1] is within the buffer.
+  if (Start[0] == '\\' && (Start[1] == '\r' || Start[1] == '\n'))
+    return false;
+  size_t Len = Matches[0].size();
+
+  // The kind has to be an identifier so we can match it against those defined
+  // in Keywords. The kind has to be set before the length because the setLength
+  // function checks that the kind is not an annotation.
+  Tok.setKind(tok::raw_identifier);
+  Tok.setLength(Len);
+  Tok.setLocation(Lex->getSourceLocation(Start, Len));
+  Tok.setRawIdentifierData(Start);
+  Lex->seek(Lex->getCurrentBufferOffset() + Len, /*IsAtStartofline=*/false);
+  return true;
+}
+
 void FormatTokenLexer::readRawToken(FormatToken &Tok) {
-  Lex->LexFromRawLexer(Tok.Tok);
+  // For Verilog, first see if there is a special token, and fall back to the
+  // normal lexer if there isn't one.
+  if (!Style.isVerilog() || !readRawTokenVerilogSpecific(Tok.Tok))
+    Lex->LexFromRawLexer(Tok.Tok);
   Tok.TokenText = StringRef(SourceMgr.getCharacterData(Tok.Tok.getLocation()),
                             Tok.Tok.getLength());
   // For formatting, treat unterminated string literals like normal string

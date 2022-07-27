@@ -10,6 +10,6 @@ define i32 @main() nounwind {
 entry:
 	%0 = fcmp oeq float undef, 0x7FF0000000000000		; <i1> [#uses=1]
 	%1 = zext i1 %0 to i32		; <i32> [#uses=1]
-	store i32 %1, i32* undef, align 4
+	store i32 %1, ptr undef, align 4
 	ret i32 undef
 }

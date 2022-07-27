@@ -194,6 +194,7 @@ template <class T, class Allocator, class Predicate>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/swap_allocator.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -201,6 +202,12 @@ template <class T, class Allocator, class Predicate>
 #include <memory>
 #include <type_traits>
 #include <version>
+
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <functional>
+#  include <iterator>
+#endif
 
 // standard-mandated includes
 
@@ -864,10 +871,10 @@ public:
 
     template <class _InpIter>
         list(_InpIter __f, _InpIter __l,
-             typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type* = 0);
+             __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
     template <class _InpIter>
         list(_InpIter __f, _InpIter __l, const allocator_type& __a,
-             typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type* = 0);
+             __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
 
     list(const list& __c);
     list(const list& __c, const __type_identity_t<allocator_type>& __a);
@@ -899,7 +906,7 @@ public:
 
     template <class _InpIter>
         void assign(_InpIter __f, _InpIter __l,
-             typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type* = 0);
+                    __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
     void assign(size_type __n, const value_type& __x);
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1016,7 +1023,7 @@ public:
     iterator insert(const_iterator __p, size_type __n, const value_type& __x);
     template <class _InpIter>
         iterator insert(const_iterator __p, _InpIter __f, _InpIter __l,
-             typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type* = 0);
+                        __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(list& __c)
@@ -1214,7 +1221,7 @@ list<_Tp, _Alloc>::list(size_type __n, const value_type& __x)
 template <class _Tp, class _Alloc>
 template <class _InpIter>
 list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l,
-                        typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type*)
+                        __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
 {
     _VSTD::__debug_db_insert_c(this);
     for (; __f != __l; ++__f)
@@ -1224,7 +1231,7 @@ list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l,
 template <class _Tp, class _Alloc>
 template <class _InpIter>
 list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l, const allocator_type& __a,
-                        typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type*)
+                        __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
     : base(__a)
 {
     _VSTD::__debug_db_insert_c(this);
@@ -1349,7 +1356,7 @@ template <class _Tp, class _Alloc>
 template <class _InpIter>
 void
 list<_Tp, _Alloc>::assign(_InpIter __f, _InpIter __l,
-                          typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type*)
+                          __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
 {
     iterator __i = begin();
     iterator __e = end();
@@ -1454,7 +1461,7 @@ template <class _Tp, class _Alloc>
 template <class _InpIter>
 typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
-             typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type*)
+                          __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
 {
     _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                          "list::insert(iterator, range) called with an iterator not referring to this list");

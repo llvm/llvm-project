@@ -218,8 +218,8 @@ static bool importContext(Scop &S, const json::Object &JScop) {
     return false;
   }
 
-  isl::set NewContext = isl::set{S.getIslCtx().get(),
-                                 JScop.getString("context").getValue().str()};
+  isl::set NewContext =
+      isl::set{S.getIslCtx().get(), JScop.getString("context").value().str()};
 
   // Check whether the context was parsed successfully.
   if (NewContext.is_null()) {
@@ -290,10 +290,10 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
     }
     Optional<StringRef> Schedule =
         statements[Index].getAsObject()->getString("schedule");
-    assert(Schedule.hasValue() &&
+    assert(Schedule.has_value() &&
            "Schedules that contain extension nodes require special handling.");
     isl_map *Map = isl_map_read_from_str(S.getIslCtx().get(),
-                                         Schedule.getValue().str().c_str());
+                                         Schedule.value().str().c_str());
 
     // Check whether the schedule was parsed successfully
     if (!Map) {
@@ -397,7 +397,7 @@ importAccesses(Scop &S, const json::Object &JScop, const DataLayout &DL,
                << StatementIdx << ".\n";
         return false;
       }
-      StringRef Accesses = JsonMemoryAccess->getString("relation").getValue();
+      StringRef Accesses = *JsonMemoryAccess->getString("relation");
       isl_map *NewAccessMap =
           isl_map_read_from_str(S.getIslCtx().get(), Accesses.str().c_str());
 
@@ -566,7 +566,7 @@ static bool areArraysEqual(ScopArrayInfo *SAI, const json::Object &Array) {
     return false;
   }
 
-  if (SAI->getName() != Array.getString("name").getValue())
+  if (SAI->getName() != *Array.getString("name"))
     return false;
 
   if (SAI->getNumberOfDimensions() != Array.getArray("sizes")->size())
@@ -575,14 +575,14 @@ static bool areArraysEqual(ScopArrayInfo *SAI, const json::Object &Array) {
   for (unsigned i = 1; i < Array.getArray("sizes")->size(); i++) {
     SAI->getDimensionSize(i)->print(RawStringOstream);
     const json::Array &SizesArray = *Array.getArray("sizes");
-    if (RawStringOstream.str() != SizesArray[i].getAsString().getValue())
+    if (RawStringOstream.str() != SizesArray[i].getAsString().value())
       return false;
     Buffer.clear();
   }
 
   // Check if key 'type' differs from the current one or is not valid.
   SAI->getElementType()->print(RawStringOstream);
-  if (RawStringOstream.str() != Array.getString("type").getValue()) {
+  if (RawStringOstream.str() != Array.getString("type").value()) {
     errs() << "Array has not a valid type.\n";
     return false;
   }
@@ -653,7 +653,7 @@ static bool importArrays(Scop &S, const json::Object &JScop) {
   for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
     const json::Object &Array = *Arrays[ArrayIdx].getAsObject();
     auto *ElementType =
-        parseTextType(Array.get("type")->getAsString().getValue().str(),
+        parseTextType(Array.get("type")->getAsString().value().str(),
                       S.getSE()->getContext());
     if (!ElementType) {
       errs() << "Error while parsing element type for new array.\n";
@@ -662,7 +662,7 @@ static bool importArrays(Scop &S, const json::Object &JScop) {
     const json::Array &SizesArray = *Array.getArray("sizes");
     std::vector<unsigned> DimSizes;
     for (unsigned i = 0; i < SizesArray.size(); i++) {
-      auto Size = std::stoi(SizesArray[i].getAsString().getValue().str());
+      auto Size = std::stoi(SizesArray[i].getAsString()->str());
 
       // Check if the size if positive.
       if (Size <= 0) {
@@ -674,10 +674,10 @@ static bool importArrays(Scop &S, const json::Object &JScop) {
     }
 
     auto NewSAI = S.createScopArrayInfo(
-        ElementType, Array.getString("name").getValue().str(), DimSizes);
+        ElementType, Array.getString("name").value().str(), DimSizes);
 
     if (Array.get("allocation")) {
-      NewSAI->setIsOnHeap(Array.getString("allocation").getValue() == "heap");
+      NewSAI->setIsOnHeap(Array.getString("allocation").value() == "heap");
     }
   }
 

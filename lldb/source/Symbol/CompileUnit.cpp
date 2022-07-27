@@ -63,7 +63,7 @@ void CompileUnit::ForeachFunction(
   sorted_functions.reserve(m_functions_by_uid.size());
   for (auto &p : m_functions_by_uid)
     sorted_functions.push_back(p.second);
-  llvm::sort(sorted_functions.begin(), sorted_functions.end(),
+  llvm::sort(sorted_functions,
              [](const lldb::FunctionSP &a, const lldb::FunctionSP &b) {
                return a->GetID() < b->GetID();
              });
@@ -249,7 +249,7 @@ void CompileUnit::ResolveSymbolContext(
     const SourceLocationSpec &src_location_spec,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
   const FileSpec file_spec = src_location_spec.GetFileSpec();
-  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
+  const uint32_t line = src_location_spec.GetLine().value_or(0);
   const bool check_inlines = src_location_spec.GetCheckInlines();
 
   // First find all of the file indexes that match our "file_spec". If
@@ -323,7 +323,7 @@ void CompileUnit::ResolveSymbolContext(
   const bool inlines = false;
   const bool exact = true;
   const llvm::Optional<uint16_t> column =
-      src_location_spec.GetColumn().hasValue()
+      src_location_spec.GetColumn()
           ? llvm::Optional<uint16_t>(line_entry.column)
           : llvm::None;
 

@@ -180,12 +180,14 @@ void DWARFRewriter::updateDebugInfo() {
 
   if (BC.isDWARF5Used()) {
     AddrWriter = std::make_unique<DebugAddrWriterDwarf5>(&BC);
-    RangesSectionWriter = std::make_unique<DebugRangeListsSectionWriter>();
+    RangeListsSectionWriter = std::make_unique<DebugRangeListsSectionWriter>();
     DebugRangeListsSectionWriter::setAddressWriter(AddrWriter.get());
   } else {
     AddrWriter = std::make_unique<DebugAddrWriter>(&BC);
-    RangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
   }
+
+  if (BC.isDWARFLegacyUsed())
+    LegacyRangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
 
   DebugLoclistWriter::setAddressWriter(AddrWriter.get());
 
@@ -263,6 +265,9 @@ void DWARFRewriter::updateDebugInfo() {
       SplitCU = BC.getDWOCU(*DWOId);
 
     DebugLocWriter *DebugLocWriter = nullptr;
+    DebugRangesSectionWriter *RangesSectionWriter =
+        Unit->getVersion() >= 5 ? RangeListsSectionWriter.get()
+                                : LegacyRangesSectionWriter.get();
     // Skipping CUs that failed to load.
     if (SplitCU) {
       updateDWONameCompDir(*Unit);
@@ -279,8 +284,7 @@ void DWARFRewriter::updateDebugInfo() {
         std::lock_guard<std::mutex> Lock(AccessMutex);
         DebugLocWriter = LocListWritersByCU[*DWOId].get();
       }
-      DebugRangesSectionWriter *TempRangesSectionWriter =
-          RangesSectionWriter.get();
+      DebugRangesSectionWriter *TempRangesSectionWriter = RangesSectionWriter;
       if (Unit->getVersion() >= 5) {
         TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
       } else {
@@ -312,7 +316,7 @@ void DWARFRewriter::updateDebugInfo() {
     if (Unit->getVersion() >= 5) {
       RangesBase = RangesSectionWriter->getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
-      RangesSectionWriter.get()->initSection(*Unit);
+      RangesSectionWriter->initSection(*Unit);
       StrOffstsWriter->finalizeSection();
     }
 
@@ -321,16 +325,13 @@ void DWARFRewriter::updateDebugInfo() {
                         *DebugLocWriter, *RangesSectionWriter, RangesBase);
     DebugLocWriter->finalize(*DebugInfoPatcher, *AbbrevWriter);
     if (Unit->getVersion() >= 5)
-      RangesSectionWriter.get()->finalizeSection();
+      RangesSectionWriter->finalizeSection();
   };
 
   CUIndex = 0;
   if (opts::NoThreads || opts::DeterministicDebugInfo) {
-    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units()) {
-      processUnitDIE(CUIndex, CU.get());
-      if (CU->getVersion() >= 5)
-        ++CUIndex;
-    }
+    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
+      processUnitDIE(CUIndex++, CU.get());
   } else {
     // Update unit debug info in parallel
     ThreadPool &ThreadPool = ParallelUtilities::getThreadPool();
@@ -477,6 +478,31 @@ void DWARFRewriter::updateUnitDebugInfo(
       }
       updateDWARFObjectAddressRanges(DIE, RangesSectionOffset, DebugInfoPatcher,
                                      AbbrevWriter);
+      break;
+    }
+    case dwarf::DW_TAG_call_site: {
+      auto patchPC = [&](AttrInfo &AttrVal, StringRef Entry) -> void {
+        Optional<uint64_t> Address = AttrVal.V.getAsAddress();
+        const BinaryFunction *Function =
+            BC.getBinaryFunctionContainingAddress(*Address);
+        const uint64_t UpdatedAddress =
+            Function->translateInputToOutputAddress(*Address);
+        const uint32_t Index =
+            AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+        if (AttrVal.V.getForm() == dwarf::DW_FORM_addrx)
+          DebugInfoPatcher.addUDataPatch(AttrVal.Offset, Index, AttrVal.Size);
+        else
+          errs() << "BOLT-ERROR: unsupported form for " << Entry << "\n";
+      };
+
+      if (Optional<AttrInfo> AttrVal =
+              findAttributeInfo(DIE, dwarf::DW_AT_call_pc))
+        patchPC(*AttrVal, "DW_AT_call_pc");
+
+      if (Optional<AttrInfo> AttrVal =
+              findAttributeInfo(DIE, dwarf::DW_AT_call_return_pc))
+        patchPC(*AttrVal, "DW_AT_call_return_pc");
+
       break;
     }
     default: {
@@ -942,13 +968,21 @@ DWARFRewriter::finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher) {
         DebugStrOffsetsSectionContents->size());
   }
 
-  std::unique_ptr<DebugBufferVector> RangesSectionContents =
-      RangesSectionWriter->releaseBuffer();
-  BC.registerOrUpdateNoteSection(
-      llvm::isa<DebugRangeListsSectionWriter>(*RangesSectionWriter)
-          ? ".debug_rnglists"
-          : ".debug_ranges",
-      copyByteArray(*RangesSectionContents), RangesSectionContents->size());
+  if (BC.isDWARFLegacyUsed()) {
+    std::unique_ptr<DebugBufferVector> RangesSectionContents =
+        LegacyRangesSectionWriter->releaseBuffer();
+    BC.registerOrUpdateNoteSection(".debug_ranges",
+                                   copyByteArray(*RangesSectionContents),
+                                   RangesSectionContents->size());
+  }
+
+  if (BC.isDWARF5Used()) {
+    std::unique_ptr<DebugBufferVector> RangesSectionContents =
+        RangeListsSectionWriter->releaseBuffer();
+    BC.registerOrUpdateNoteSection(".debug_rnglists",
+                                   copyByteArray(*RangesSectionContents),
+                                   RangesSectionContents->size());
+  }
 
   if (BC.isDWARF5Used()) {
     std::unique_ptr<DebugBufferVector> LocationListSectionContents =
@@ -1243,10 +1277,9 @@ static std::string extractDWOTUFromDWP(
 
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
-  std::sort(TUContributions.begin(), TUContributions.end(),
-            [](const TUEntry &V1, const TUEntry &V2) -> bool {
-              return V1.second->Offset < V2.second->Offset;
-            });
+  llvm::sort(TUContributions, [](const TUEntry &V1, const TUEntry &V2) -> bool {
+    return V1.second->Offset < V2.second->Offset;
+  });
 
   for (auto &PairEntry : TUContributions) {
     const DWARFUnitIndex::Entry::SectionContribution *C = PairEntry.second;
@@ -1289,11 +1322,11 @@ static void extractTypesFromDWPDWARF5(
   }
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
-  std::sort(TUContributions.begin(), TUContributions.end(),
-            [](const DWARFUnitIndex::Entry::SectionContribution *V1,
-               const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
-              return V1->Offset < V2->Offset;
-            });
+  llvm::sort(TUContributions,
+             [](const DWARFUnitIndex::Entry::SectionContribution *V1,
+                const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
+               return V1->Offset < V2->Offset;
+             });
   Streamer.switchSection(MCOFI.getDwarfInfoDWOSection());
   for (const auto *C : TUContributions)
     Streamer.emitBytes(Contents.slice(C->Offset, C->Offset + C->Length));

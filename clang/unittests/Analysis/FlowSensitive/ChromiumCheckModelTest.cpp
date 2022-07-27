@@ -8,10 +8,10 @@
 // FIXME: Move this to clang/unittests/Analysis/FlowSensitive/Models.
 
 #include "clang/Analysis/FlowSensitive/Models/ChromiumCheckModel.h"
-#include "NoopAnalysis.h"
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -128,31 +128,28 @@ private:
   Model M;
 };
 
-class ChromiumCheckModelTest : public ::testing::TestWithParam<std::string> {
-protected:
-  template <typename Matcher>
-  void runDataflow(llvm::StringRef Code, Matcher Match) {
-    const tooling::FileContentMappings FileContents = {
-        {"check.h", ChromiumCheckHeader}, {"othercheck.h", OtherCheckHeader}};
+template <typename Matcher>
+void runDataflow(llvm::StringRef Code, Matcher Match) {
+  const tooling::FileContentMappings FileContents = {
+      {"check.h", ChromiumCheckHeader}, {"othercheck.h", OtherCheckHeader}};
 
-    ASSERT_THAT_ERROR(
-        test::checkDataflow<ModelAdaptorAnalysis<ChromiumCheckModel>>(
-            Code, "target",
-            [](ASTContext &C, Environment &) {
-              return ModelAdaptorAnalysis<ChromiumCheckModel>(C);
-            },
-            [&Match](
-                llvm::ArrayRef<
-                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                    Results,
-                ASTContext &ASTCtx) { Match(Results, ASTCtx); },
-            {"-fsyntax-only", "-fno-delayed-template-parsing", "-std=c++17"},
-            FileContents),
-        llvm::Succeeded());
-  }
-};
+  ASSERT_THAT_ERROR(
+      test::checkDataflow<ModelAdaptorAnalysis<ChromiumCheckModel>>(
+          Code, "target",
+          [](ASTContext &C, Environment &) {
+            return ModelAdaptorAnalysis<ChromiumCheckModel>(C);
+          },
+          [&Match](
+              llvm::ArrayRef<
+                  std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                  Results,
+              ASTContext &ASTCtx) { Match(Results, ASTCtx); },
+          {"-fsyntax-only", "-fno-delayed-template-parsing", "-std=c++17"},
+          FileContents),
+      llvm::Succeeded());
+}
 
-TEST_F(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
+TEST(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
   auto Expectations =
       [](llvm::ArrayRef<
              std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
@@ -185,7 +182,7 @@ TEST_F(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
   runDataflow(ReplacePattern(Code, "$check", "DPCHECK"), Expectations);
 }
 
-TEST_F(ChromiumCheckModelTest, UnrelatedCheckIgnored) {
+TEST(ChromiumCheckModelTest, UnrelatedCheckIgnored) {
   auto Expectations =
       [](llvm::ArrayRef<
              std::pair<std::string, DataflowAnalysisState<NoopLattice>>>

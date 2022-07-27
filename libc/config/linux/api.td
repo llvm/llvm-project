@@ -255,6 +255,14 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
   ];
 }
 
+def DirentAPI : PublicAPI<"dirent.h"> {
+  let Types = [
+    "ino_t",
+    "DIR",
+    "struct dirent",
+  ];
+}
+
 def UniStdAPI : PublicAPI<"unistd.h"> {
   let Types = ["off_t", "size_t", "ssize_t"];
 }

@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is contains the interface to the MLIR parser library.
+// This file is contains a unified interface for parsing serialized MLIR.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_PARSER_PARSER_H
 #define MLIR_PARSER_PARSER_H
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OwningOpRef.h"
 #include <cstddef>
 
 namespace llvm {
@@ -24,8 +25,6 @@ class StringRef;
 } // namespace llvm
 
 namespace mlir {
-class AsmParserState;
-
 namespace detail {
 
 /// Given a block containing operations that have just been parsed, if the block
@@ -79,14 +78,10 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
 /// returned. Otherwise, an error message is emitted through the error handler
 /// registered in the context, and failure is returned. If `sourceFileLoc` is
 /// non-null, it is populated with a file location representing the start of the
-/// source file that is being parsed. If `asmState` is non-null, it is populated
-/// with detailed information about the parsed IR (including exact locations for
-/// SSA uses and definitions). `asmState` should only be provided if this
-/// detailed information is desired.
+/// source file that is being parsed.
 LogicalResult parseSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
-                              MLIRContext *context,
-                              LocationAttr *sourceFileLoc = nullptr,
-                              AsmParserState *asmState = nullptr);
+                              const ParserConfig &config,
+                              LocationAttr *sourceFileLoc = nullptr);
 
 /// This parses the file specified by the indicated filename and appends parsed
 /// operations to the given block. If the block is non-empty, the operations are
@@ -96,7 +91,7 @@ LogicalResult parseSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
 /// non-null, it is populated with a file location representing the start of the
 /// source file that is being parsed.
 LogicalResult parseSourceFile(llvm::StringRef filename, Block *block,
-                              MLIRContext *context,
+                              const ParserConfig &config,
                               LocationAttr *sourceFileLoc = nullptr);
 
 /// This parses the file specified by the indicated filename using the provided
@@ -105,15 +100,11 @@ LogicalResult parseSourceFile(llvm::StringRef filename, Block *block,
 /// parsing is successful, success is returned. Otherwise, an error message is
 /// emitted through the error handler registered in the context, and failure is
 /// returned. If `sourceFileLoc` is non-null, it is populated with a file
-/// location representing the start of the source file that is being parsed. If
-/// `asmState` is non-null, it is populated with detailed information about the
-/// parsed IR (including exact locations for SSA uses and definitions).
-/// `asmState` should only be provided if this detailed information is desired.
+/// location representing the start of the source file that is being parsed.
 LogicalResult parseSourceFile(llvm::StringRef filename,
                               llvm::SourceMgr &sourceMgr, Block *block,
-                              MLIRContext *context,
-                              LocationAttr *sourceFileLoc = nullptr,
-                              AsmParserState *asmState = nullptr);
+                              const ParserConfig &config,
+                              LocationAttr *sourceFileLoc = nullptr);
 
 /// This parses the IR string and appends parsed operations to the given block.
 /// If the block is non-empty, the operations are placed before the current
@@ -123,22 +114,22 @@ LogicalResult parseSourceFile(llvm::StringRef filename,
 /// populated with a file location representing the start of the source file
 /// that is being parsed.
 LogicalResult parseSourceString(llvm::StringRef sourceStr, Block *block,
-                                MLIRContext *context,
+                                const ParserConfig &config,
                                 LocationAttr *sourceFileLoc = nullptr);
 
 namespace detail {
 /// The internal implementation of the templated `parseSourceFile` methods
 /// below, that simply forwards to the non-templated version.
 template <typename ContainerOpT, typename... ParserArgs>
-inline OwningOpRef<ContainerOpT> parseSourceFile(MLIRContext *ctx,
+inline OwningOpRef<ContainerOpT> parseSourceFile(const ParserConfig &config,
                                                  ParserArgs &&...args) {
   LocationAttr sourceFileLoc;
   Block block;
-  if (failed(parseSourceFile(std::forward<ParserArgs>(args)..., &block, ctx,
+  if (failed(parseSourceFile(std::forward<ParserArgs>(args)..., &block, config,
                              &sourceFileLoc)))
     return OwningOpRef<ContainerOpT>();
   return detail::constructContainerOpForParserIfNecessary<ContainerOpT>(
-      &block, ctx, sourceFileLoc);
+      &block, config.getContext(), sourceFileLoc);
 }
 } // namespace detail
 
@@ -152,8 +143,8 @@ inline OwningOpRef<ContainerOpT> parseSourceFile(MLIRContext *ctx,
 /// `SingleBlockImplicitTerminator` trait.
 template <typename ContainerOpT>
 inline OwningOpRef<ContainerOpT>
-parseSourceFile(const llvm::SourceMgr &sourceMgr, MLIRContext *context) {
-  return detail::parseSourceFile<ContainerOpT>(context, sourceMgr);
+parseSourceFile(const llvm::SourceMgr &sourceMgr, const ParserConfig &config) {
+  return detail::parseSourceFile<ContainerOpT>(config, sourceMgr);
 }
 
 /// This parses the file specified by the indicated filename. If the source IR
@@ -166,8 +157,8 @@ parseSourceFile(const llvm::SourceMgr &sourceMgr, MLIRContext *context) {
 /// `SingleBlockImplicitTerminator` trait.
 template <typename ContainerOpT>
 inline OwningOpRef<ContainerOpT> parseSourceFile(StringRef filename,
-                                                 MLIRContext *context) {
-  return detail::parseSourceFile<ContainerOpT>(context, filename);
+                                                 const ParserConfig &config) {
+  return detail::parseSourceFile<ContainerOpT>(config, filename);
 }
 
 /// This parses the file specified by the indicated filename using the provided
@@ -181,8 +172,8 @@ inline OwningOpRef<ContainerOpT> parseSourceFile(StringRef filename,
 template <typename ContainerOpT>
 inline OwningOpRef<ContainerOpT> parseSourceFile(llvm::StringRef filename,
                                                  llvm::SourceMgr &sourceMgr,
-                                                 MLIRContext *context) {
-  return detail::parseSourceFile<ContainerOpT>(context, filename, sourceMgr);
+                                                 const ParserConfig &config) {
+  return detail::parseSourceFile<ContainerOpT>(config, filename, sourceMgr);
 }
 
 /// This parses the provided string containing MLIR. If the source IR contained
@@ -195,56 +186,14 @@ inline OwningOpRef<ContainerOpT> parseSourceFile(llvm::StringRef filename,
 /// `SingleBlockImplicitTerminator` trait.
 template <typename ContainerOpT>
 inline OwningOpRef<ContainerOpT> parseSourceString(llvm::StringRef sourceStr,
-                                                   MLIRContext *context) {
+                                                   const ParserConfig &config) {
   LocationAttr sourceFileLoc;
   Block block;
-  if (failed(parseSourceString(sourceStr, &block, context, &sourceFileLoc)))
+  if (failed(parseSourceString(sourceStr, &block, config, &sourceFileLoc)))
     return OwningOpRef<ContainerOpT>();
   return detail::constructContainerOpForParserIfNecessary<ContainerOpT>(
-      &block, context, sourceFileLoc);
+      &block, config.getContext(), sourceFileLoc);
 }
-
-/// This parses a single MLIR attribute to an MLIR context if it was valid.  If
-/// not, an error message is emitted through a new SourceMgrDiagnosticHandler
-/// constructed from a new SourceMgr with a single a MemoryBuffer wrapping
-/// `attrStr`. If the passed `attrStr` has additional tokens that were not part
-/// of the type, an error is emitted.
-// TODO: Improve diagnostic reporting.
-Attribute parseAttribute(llvm::StringRef attrStr, MLIRContext *context);
-Attribute parseAttribute(llvm::StringRef attrStr, Type type);
-
-/// This parses a single MLIR attribute to an MLIR context if it was valid.  If
-/// not, an error message is emitted through a new SourceMgrDiagnosticHandler
-/// constructed from a new SourceMgr with a single a MemoryBuffer wrapping
-/// `attrStr`. The number of characters of `attrStr` parsed in the process is
-/// returned in `numRead`.
-Attribute parseAttribute(llvm::StringRef attrStr, MLIRContext *context,
-                         size_t &numRead);
-Attribute parseAttribute(llvm::StringRef attrStr, Type type, size_t &numRead);
-
-/// This parses a single MLIR type to an MLIR context if it was valid.  If not,
-/// an error message is emitted through a new SourceMgrDiagnosticHandler
-/// constructed from a new SourceMgr with a single a MemoryBuffer wrapping
-/// `typeStr`. If the passed `typeStr` has additional tokens that were not part
-/// of the type, an error is emitted.
-// TODO: Improve diagnostic reporting.
-Type parseType(llvm::StringRef typeStr, MLIRContext *context);
-
-/// This parses a single MLIR type to an MLIR context if it was valid.  If not,
-/// an error message is emitted through a new SourceMgrDiagnosticHandler
-/// constructed from a new SourceMgr with a single a MemoryBuffer wrapping
-/// `typeStr`. The number of characters of `typeStr` parsed in the process is
-/// returned in `numRead`.
-Type parseType(llvm::StringRef typeStr, MLIRContext *context, size_t &numRead);
-
-/// This parses a single IntegerSet to an MLIR context if it was valid. If not,
-/// an error message is emitted through a new SourceMgrDiagnosticHandler
-/// constructed from a new SourceMgr with a single MemoryBuffer wrapping
-/// `str`. If the passed `str` has additional tokens that were not part of the
-/// IntegerSet, a failure is returned. Diagnostics are printed on failure if
-/// `printDiagnosticInfo` is true.
-IntegerSet parseIntegerSet(llvm::StringRef str, MLIRContext *context,
-                           bool printDiagnosticInfo = true);
 
 } // namespace mlir
 

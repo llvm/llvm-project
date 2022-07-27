@@ -274,6 +274,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
       // SQRT(-0) == -0 in IEEE-754.
       result.value = NegativeZero();
     } else {
+      result.flags.set(RealFlag::InvalidArgument);
       result.value = NotANumber();
     }
   } else if (IsInfinite()) {
@@ -297,53 +298,31 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
           result.value.GetFraction());
       return result;
     }
-    // Compute the square root of the reduced value with the slow but
-    // reliable bit-at-a-time method.  Start with a clear significand and
-    // half of the unbiased exponent, and then try to set significand bits
-    // in descending order of magnitude without exceeding the exact result.
-    expo = expo / 2 + exponentBias;
-    result.value.Normalize(false, expo, Fraction::MASKL(1));
-    Real initialSq{result.value.Multiply(result.value).value};
-    if (Compare(initialSq) == Relation::Less) {
-      // Initial estimate is too large; this can happen for values just
-      // under 1.0.
-      --expo;
-      result.value.Normalize(false, expo, Fraction::MASKL(1));
-    }
-    for (int bit{significandBits - 1}; bit >= 0; --bit) {
-      Word word{result.value.word_};
-      result.value.word_ = word.IBSET(bit);
-      auto squared{result.value.Multiply(result.value, rounding)};
-      if (squared.flags.test(RealFlag::Overflow) ||
-          squared.flags.test(RealFlag::Underflow) ||
-          Compare(squared.value) == Relation::Less) {
-        result.value.word_ = word;
+    // (-1) <= expo <= 1; use it as a shift to set the desired square.
+    using Extended = typename value::Integer<(binaryPrecision + 2)>;
+    Extended goal{
+        Extended::ConvertUnsigned(GetFraction()).value.SHIFTL(expo + 1)};
+    // Calculate the exact square root by maximizing a value whose square
+    // does not exceed the goal.  Use two extra bits of precision for
+    // rounding.
+    bool sticky{true};
+    Extended extFrac{};
+    for (int bit{Extended::bits - 1}; bit >= 0; --bit) {
+      Extended next{extFrac.IBSET(bit)};
+      auto squared{next.MultiplyUnsigned(next)};
+      auto cmp{squared.upper.CompareUnsigned(goal)};
+      if (cmp == Ordering::Less) {
+        extFrac = next;
+      } else if (cmp == Ordering::Equal && squared.lower.IsZero()) {
+        extFrac = next;
+        sticky = false;
+        break; // exact result
       }
     }
-    // The computed square root has a square that's not greater than the
-    // original argument.  Check this square against the square of the next
-    // larger Real and return that one if its square is closer in magnitude to
-    // the original argument.
-    Real resultSq{result.value.Multiply(result.value).value};
-    Real diff{Subtract(resultSq).value.ABS()};
-    if (diff.IsZero()) {
-      return result; // exact
-    }
-    Real ulp;
-    ulp.Normalize(false, expo, Fraction::MASKR(1));
-    Real nextAfter{result.value.Add(ulp).value};
-    auto nextAfterSq{nextAfter.Multiply(nextAfter)};
-    if (!nextAfterSq.flags.test(RealFlag::Overflow) &&
-        !nextAfterSq.flags.test(RealFlag::Underflow)) {
-      Real nextAfterDiff{Subtract(nextAfterSq.value).value.ABS()};
-      if (nextAfterDiff.Compare(diff) == Relation::Less) {
-        result.value = nextAfter;
-        if (nextAfterDiff.IsZero()) {
-          return result; // exact
-        }
-      }
-    }
-    result.flags.set(RealFlag::Inexact);
+    RoundingBits roundingBits{extFrac.BTEST(1), extFrac.BTEST(0), sticky};
+    NormalizeAndRound(result, false, exponentBias,
+        Fraction::ConvertUnsigned(extFrac.SHIFTR(2)).value, rounding,
+        roundingBits);
   }
   return result;
 }
@@ -427,11 +406,21 @@ template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::MOD(
     const Real &y, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
-  Real quotient{Divide(y, rounding).AccumulateFlags(result.flags)};
-  Real toInt{quotient.ToWholeNumber(common::RoundingMode::ToZero)
-                 .AccumulateFlags(result.flags)};
-  Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
-  result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+  auto quotient{Divide(y, rounding)};
+  if (quotient.value.IsInfinite() && IsFinite() && y.IsFinite() &&
+      !y.IsZero()) {
+    // x/y overflowed -- so it must be an integer in this representation and
+    // the result must be a zero.
+    if (IsNegative()) {
+      result.value = Real{}.Negate(); // -0.
+    }
+  } else {
+    Real toInt{quotient.AccumulateFlags(result.flags)
+                   .ToWholeNumber(common::RoundingMode::ToZero)
+                   .AccumulateFlags(result.flags)};
+    Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
+    result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+  }
   return result;
 }
 
@@ -440,11 +429,21 @@ template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::MODULO(
     const Real &y, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
-  Real quotient{Divide(y, rounding).AccumulateFlags(result.flags)};
-  Real toInt{quotient.ToWholeNumber(common::RoundingMode::Down)
-                 .AccumulateFlags(result.flags)};
-  Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
-  result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+  auto quotient{Divide(y, rounding)};
+  if (quotient.value.IsInfinite() && IsFinite() && y.IsFinite() &&
+      !y.IsZero()) {
+    // x/y overflowed -- so it must be an integer in this representation and
+    // the result must be a zero.
+    if (y.IsNegative()) {
+      result.value = Real{}.Negate(); // -0.
+    }
+  } else {
+    Real toInt{quotient.AccumulateFlags(result.flags)
+                   .ToWholeNumber(common::RoundingMode::Down)
+                   .AccumulateFlags(result.flags)};
+    Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
+    result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+  }
   return result;
 }
 
@@ -754,6 +753,27 @@ template <typename W, int P> Real<W, P> Real<W, P>::SPACING() const {
         false, Exponent() - binaryPrecision + 1, Fraction::MASKL(1));
     return result;
   }
+}
+
+// 16.9.171
+template <typename W, int P>
+Real<W, P> Real<W, P>::SET_EXPONENT(int expo) const {
+  if (IsNotANumber()) {
+    return *this;
+  } else if (IsInfinite()) {
+    return NotANumber();
+  } else if (IsZero()) {
+    return *this;
+  } else {
+    Real result;
+    result.Normalize(IsNegative(), expo + exponentBias - 1, GetFraction());
+    return result;
+  }
+}
+
+// 16.9.171
+template <typename W, int P> Real<W, P> Real<W, P>::FRACTION() const {
+  return SET_EXPONENT(0);
 }
 
 template class Real<Integer<16>, 11>;

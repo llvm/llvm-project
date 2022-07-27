@@ -111,7 +111,9 @@ public:
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);
-      log("Compile command from CDB is: {0}", printArgv(Cmd.CommandLine));
+      log("Compile command {0} is: {1}",
+          Cmd.Heuristic.empty() ? "from CDB" : Cmd.Heuristic,
+          printArgv(Cmd.CommandLine));
     } else {
       Cmd = CDB->getFallbackCommand(File);
       log("Generic fallback command is: {0}", printArgv(Cmd.CommandLine));
@@ -130,7 +132,7 @@ public:
     Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
     Inputs.Opts.PreambleParseForwardingFunctions =
         Opts.PreambleParseForwardingFunctions;
-    if (Contents.hasValue()) {
+    if (Contents) {
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);
     } else {
@@ -253,7 +255,7 @@ public:
       vlog("    definition: {0}", Definitions);
 
       auto Hover = getHover(*AST, Pos, Style, &Index);
-      vlog("    hover: {0}", Hover.hasValue());
+      vlog("    hover: {0}", Hover.has_value());
 
       unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
       vlog("    documentHighlight: {0}", DocHighlights);

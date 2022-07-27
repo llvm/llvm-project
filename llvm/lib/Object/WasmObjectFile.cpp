@@ -204,7 +204,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
 
   if (Expr.Extended) {
     Ctx.Ptr = Start;
-    while (1) {
+    while (true) {
       uint8_t Opcode = readOpcode(Ctx);
       switch (Opcode) {
       case wasm::WASM_OPCODE_I32_CONST:
@@ -451,10 +451,6 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
   llvm::DenseSet<uint64_t> SeenFunctions;
   llvm::DenseSet<uint64_t> SeenGlobals;
   llvm::DenseSet<uint64_t> SeenSegments;
-  if (Functions.size() && !SeenCodeSection) {
-    return make_error<GenericBinaryError>("names must come after code section",
-                                          object_error::parse_failed);
-  }
 
   while (Ctx.Ptr < Ctx.End) {
     uint8_t Type = readUint8(Ctx);
@@ -474,7 +470,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
             return make_error<GenericBinaryError>(
                 "function named more than once", object_error::parse_failed);
           if (!isValidFunctionIndex(Index) || Name.empty())
-            return make_error<GenericBinaryError>("invalid name entry",
+            return make_error<GenericBinaryError>("invalid function name entry",
                                                   object_error::parse_failed);
 
           if (isDefinedFunctionIndex(Index))
@@ -485,7 +481,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
             return make_error<GenericBinaryError>("global named more than once",
                                                   object_error::parse_failed);
           if (!isValidGlobalIndex(Index) || Name.empty())
-            return make_error<GenericBinaryError>("invalid name entry",
+            return make_error<GenericBinaryError>("invalid global name entry",
                                                   object_error::parse_failed);
         } else {
           nameType = wasm::NameType::DATA_SEGMENT;
@@ -493,7 +489,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
           if (Index > DataSegments.size())
-            return make_error<GenericBinaryError>("invalid named data segment",
+            return make_error<GenericBinaryError>("invalid data segment name entry",
                                                   object_error::parse_failed);
         }
         DebugNames.push_back(wasm::WasmDebugName{nameType, Index, Name});
@@ -519,11 +515,6 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
   HasLinkingSection = true;
-  if (Functions.size() && !SeenCodeSection) {
-    return make_error<GenericBinaryError>(
-        "linking data must come after code section",
-        object_error::parse_failed);
-  }
 
   LinkingData.Version = readVaruint32(Ctx);
   if (LinkingData.Version != wasm::WasmMetadataVersion) {
@@ -1410,7 +1401,6 @@ Error WasmObjectFile::parseStartSection(ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
-  SeenCodeSection = true;
   CodeSection = Sections.size();
   uint32_t FunctionCount = readVaruint32(Ctx);
   if (FunctionCount != Functions.size()) {
@@ -1520,7 +1510,7 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
   DataSection = Sections.size();
   uint32_t Count = readVaruint32(Ctx);
-  if (DataCount && Count != DataCount.getValue())
+  if (DataCount && Count != *DataCount)
     return make_error<GenericBinaryError>(
         "number of data segments does not match DataCount section");
   DataSegments.reserve(Count);

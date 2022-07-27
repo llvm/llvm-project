@@ -53,6 +53,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+
 #include <list>
 #include <map>
 #include <string>
@@ -2782,7 +2783,7 @@ static void findTypeLocationForBlockDecl(const TypeSourceInfo *TSInfo,
   while (true) {
     // Look through typedefs.
     if (!SuppressBlock) {
-      if (TypedefTypeLoc TypedefTL = TL.getAs<TypedefTypeLoc>()) {
+      if (TypedefTypeLoc TypedefTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
         if (TypeSourceInfo *InnerTSInfo =
                 TypedefTL.getTypedefNameDecl()->getTypeSourceInfo()) {
           TL = InnerTSInfo->getTypeLoc().getUnqualifiedLoc();
@@ -3722,13 +3723,11 @@ static void AddOverloadAggregateChunks(const RecordDecl *RD,
 
 /// Add function overload parameter chunks to the given code completion
 /// string.
-static void AddOverloadParameterChunks(ASTContext &Context,
-                                       const PrintingPolicy &Policy,
-                                       const FunctionDecl *Function,
-                                       const FunctionProtoType *Prototype,
-                                       CodeCompletionBuilder &Result,
-                                       unsigned CurrentArg, unsigned Start = 0,
-                                       bool InOptional = false) {
+static void AddOverloadParameterChunks(
+    ASTContext &Context, const PrintingPolicy &Policy,
+    const FunctionDecl *Function, const FunctionProtoType *Prototype,
+    FunctionProtoTypeLoc PrototypeLoc, CodeCompletionBuilder &Result,
+    unsigned CurrentArg, unsigned Start = 0, bool InOptional = false) {
   if (!Function && !Prototype) {
     Result.AddChunk(CodeCompletionString::CK_CurrentParameter, "...");
     return;
@@ -3747,8 +3746,9 @@ static void AddOverloadParameterChunks(ASTContext &Context,
       if (!FirstParameter)
         Opt.AddChunk(CodeCompletionString::CK_Comma);
       // Optional sections are nested.
-      AddOverloadParameterChunks(Context, Policy, Function, Prototype, Opt,
-                                 CurrentArg, P, /*InOptional=*/true);
+      AddOverloadParameterChunks(Context, Policy, Function, Prototype,
+                                 PrototypeLoc, Opt, CurrentArg, P,
+                                 /*InOptional=*/true);
       Result.AddOptionalChunk(Opt.TakeString());
       return;
     }
@@ -3762,8 +3762,10 @@ static void AddOverloadParameterChunks(ASTContext &Context,
 
     // Format the placeholder string.
     std::string Placeholder;
-    if (Function) {
-      const ParmVarDecl *Param = Function->getParamDecl(P);
+    assert(P < Prototype->getNumParams());
+    if (Function || PrototypeLoc) {
+      const ParmVarDecl *Param =
+          Function ? Function->getParamDecl(P) : PrototypeLoc.getParam(P);
       Placeholder = FormatFunctionParameter(Policy, Param);
       if (Param->hasDefaultArg())
         Placeholder += GetDefaultValueString(Param, Context.getSourceManager(),
@@ -3916,8 +3918,8 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
   if (getKind() == CK_Aggregate)
     AddOverloadAggregateChunks(getAggregate(), Policy, Result, CurrentArg);
   else
-    AddOverloadParameterChunks(S.getASTContext(), Policy, FDecl, Proto, Result,
-                               CurrentArg);
+    AddOverloadParameterChunks(S.getASTContext(), Policy, FDecl, Proto,
+                               getFunctionProtoTypeLoc(), Result, CurrentArg);
   Result.AddChunk(Braced ? CodeCompletionString::CK_RightBrace
                          : CodeCompletionString::CK_RightParen);
 
@@ -5054,7 +5056,7 @@ static void AddRecordMembersCompletionResults(
   Results.allowNestedNameSpecifiers();
   std::vector<FixItHint> FixIts;
   if (AccessOpFixIt)
-    FixIts.emplace_back(AccessOpFixIt.getValue());
+    FixIts.emplace_back(*AccessOpFixIt);
   CodeCompletionDeclConsumer Consumer(Results, RD, BaseType, std::move(FixIts));
   SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
                              SemaRef.CodeCompleter->includeGlobals(),
@@ -5362,8 +5364,8 @@ private:
       // Overwrite existing if the new member has more info.
       // The preference of . vs :: vs -> is fairly arbitrary.
       if (/*Inserted*/ R.second ||
-          std::make_tuple(M.ArgTypes.hasValue(), M.ResultType != nullptr,
-                          M.Operator) > std::make_tuple(O.ArgTypes.hasValue(),
+          std::make_tuple(M.ArgTypes.has_value(), M.ResultType != nullptr,
+                          M.Operator) > std::make_tuple(O.ArgTypes.has_value(),
                                                         O.ResultType != nullptr,
                                                         O.Operator))
         O = std::move(M);
@@ -5645,7 +5647,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       // Objective-C property reference. Bail if we're performing fix-it code
       // completion since Objective-C properties are normally backed by ivars,
       // most Objective-C fix-its here would have little value.
-      if (AccessOpFixIt.hasValue()) {
+      if (AccessOpFixIt) {
         return false;
       }
       AddedPropertiesSet AddedProperties;
@@ -5670,7 +5672,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       // Objective-C instance variable access. Bail if we're performing fix-it
       // code completion since Objective-C properties are normally backed by
       // ivars, most Objective-C fix-its here would have little value.
-      if (AccessOpFixIt.hasValue()) {
+      if (AccessOpFixIt) {
         return false;
       }
       ObjCInterfaceDecl *Class = nullptr;
@@ -5998,6 +6000,39 @@ ProduceSignatureHelp(Sema &SemaRef, MutableArrayRef<ResultCandidate> Candidates,
   return getParamType(SemaRef, Candidates, CurrentArg);
 }
 
+// Given a callee expression `Fn`, if the call is through a function pointer,
+// try to find the declaration of the corresponding function pointer type,
+// so that we can recover argument names from it.
+static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
+  TypeLoc Target;
+  if (const auto *T = Fn->getType().getTypePtr()->getAs<TypedefType>()) {
+    Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
+
+  } else if (const auto *DR = dyn_cast<DeclRefExpr>(Fn)) {
+    const auto *D = DR->getDecl();
+    if (const auto *const VD = dyn_cast<VarDecl>(D)) {
+      Target = VD->getTypeSourceInfo()->getTypeLoc();
+    }
+  }
+
+  if (!Target)
+    return {};
+
+  if (auto P = Target.getAs<PointerTypeLoc>()) {
+    Target = P.getPointeeLoc();
+  }
+
+  if (auto P = Target.getAs<ParenTypeLoc>()) {
+    Target = P.getInnerLoc();
+  }
+
+  if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
+    return F;
+  }
+
+  return {};
+}
+
 QualType Sema::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
                                         SourceLocation OpenParLoc) {
   Fn = unwrapParenList(Fn);
@@ -6079,6 +6114,8 @@ QualType Sema::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
     } else {
       // Lastly we check whether expression's type is function pointer or
       // function.
+
+      FunctionProtoTypeLoc P = GetPrototypeLoc(NakedFn);
       QualType T = NakedFn->getType();
       if (!T->getPointeeType().isNull())
         T = T->getPointeeType();
@@ -6087,8 +6124,13 @@ QualType Sema::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
         if (!TooManyArguments(FP->getNumParams(),
                               ArgsWithoutDependentTypes.size(),
                               /*PartialOverloading=*/true) ||
-            FP->isVariadic())
-          Results.push_back(ResultCandidate(FP));
+            FP->isVariadic()) {
+          if (P) {
+            Results.push_back(ResultCandidate(P));
+          } else {
+            Results.push_back(ResultCandidate(FP));
+          }
+        }
       } else if (auto FT = T->getAs<FunctionType>())
         // No prototype and declaration, it may be a K & R style function.
         Results.push_back(ResultCandidate(FT));

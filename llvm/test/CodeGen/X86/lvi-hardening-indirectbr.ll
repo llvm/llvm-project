@@ -6,7 +6,7 @@
 declare dso_local void @bar(i32)
 
 ; Test a simple indirect call and tail call.
-define void @icall_reg(void (i32)* %fp, i32 %x) {
+define void @icall_reg(ptr %fp, i32 %x) {
 entry:
   tail call void @bar(i32 %x)
   tail call void %fp(i32 %x)
@@ -36,13 +36,13 @@ entry:
 ; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
-@global_fp = external dso_local global void (i32)*
+@global_fp = external dso_local global ptr
 
 ; Test an indirect call through a global variable.
-define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
-  %fp1 = load void (i32)*, void (i32)** @global_fp
+define void @icall_global_fp(i32 %x, ptr %fpp) #0 {
+  %fp1 = load ptr, ptr @global_fp
   call void %fp1(i32 %x)
-  %fp2 = load void (i32)*, void (i32)** @global_fp
+  %fp2 = load ptr, ptr @global_fp
   tail call void %fp2(i32 %x)
   ret void
 }
@@ -62,16 +62,15 @@ define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
 ; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
-%struct.Foo = type { void (%struct.Foo*)** }
+%struct.Foo = type { ptr }
 
 ; Test an indirect call through a vtable.
-define void @vcall(%struct.Foo* %obj) #0 {
-  %vptr_field = getelementptr %struct.Foo, %struct.Foo* %obj, i32 0, i32 0
-  %vptr = load void (%struct.Foo*)**, void (%struct.Foo*)*** %vptr_field
-  %vslot = getelementptr void(%struct.Foo*)*, void(%struct.Foo*)** %vptr, i32 1
-  %fp = load void(%struct.Foo*)*, void(%struct.Foo*)** %vslot
-  tail call void %fp(%struct.Foo* %obj)
-  tail call void %fp(%struct.Foo* %obj)
+define void @vcall(ptr %obj) #0 {
+  %vptr = load ptr, ptr %obj
+  %vslot = getelementptr ptr, ptr %vptr, i32 1
+  %fp = load ptr, ptr %vslot
+  tail call void %fp(ptr %obj)
+  tail call void %fp(ptr %obj)
   ret void
 }
 
@@ -125,14 +124,14 @@ define void @nonlazybind_caller() #0 {
 
 
 ; Check that a switch gets lowered using a jump table
-define void @switch_jumptable(i32* %ptr, i64* %sink) #0 {
+define void @switch_jumptable(ptr %ptr, ptr %sink) #0 {
 ; X64-LABEL: switch_jumptable:
 ; X64-NOT:      jmpq *
 entry:
   br label %header
 
 header:
-  %i = load volatile i32, i32* %ptr
+  %i = load volatile i32, ptr %ptr
   switch i32 %i, label %bb0 [
     i32 1, label %bb1
     i32 2, label %bb2
@@ -146,117 +145,117 @@ header:
   ]
 
 bb0:
-  store volatile i64 0, i64* %sink
+  store volatile i64 0, ptr %sink
   br label %header
 
 bb1:
-  store volatile i64 1, i64* %sink
+  store volatile i64 1, ptr %sink
   br label %header
 
 bb2:
-  store volatile i64 2, i64* %sink
+  store volatile i64 2, ptr %sink
   br label %header
 
 bb3:
-  store volatile i64 3, i64* %sink
+  store volatile i64 3, ptr %sink
   br label %header
 
 bb4:
-  store volatile i64 4, i64* %sink
+  store volatile i64 4, ptr %sink
   br label %header
 
 bb5:
-  store volatile i64 5, i64* %sink
+  store volatile i64 5, ptr %sink
   br label %header
 
 bb6:
-  store volatile i64 6, i64* %sink
+  store volatile i64 6, ptr %sink
   br label %header
 
 bb7:
-  store volatile i64 7, i64* %sink
+  store volatile i64 7, ptr %sink
   br label %header
 
 bb8:
-  store volatile i64 8, i64* %sink
+  store volatile i64 8, ptr %sink
   br label %header
 
 bb9:
-  store volatile i64 9, i64* %sink
+  store volatile i64 9, ptr %sink
   br label %header
 }
 
 
-@indirectbr_rewrite.targets = constant [10 x i8*] [i8* blockaddress(@indirectbr_rewrite, %bb0),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb1),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb2),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb3),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb4),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb5),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb6),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb7),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb8),
-                                                   i8* blockaddress(@indirectbr_rewrite, %bb9)]
+@indirectbr_rewrite.targets = constant [10 x ptr] [ptr blockaddress(@indirectbr_rewrite, %bb0),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb1),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb2),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb3),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb4),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb5),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb6),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb7),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb8),
+                                                   ptr blockaddress(@indirectbr_rewrite, %bb9)]
 
 ; Check that when thunks are enabled the indirectbr instruction gets
 ; rewritten to use switch, and that in turn doesn't get lowered as a jump
 ; table.
-define void @indirectbr_rewrite(i64* readonly %p, i64* %sink) #0 {
+define void @indirectbr_rewrite(ptr readonly %p, ptr %sink) #0 {
 ; X64-LABEL: indirectbr_rewrite:
 ; X64-NOT:     jmpq *
 entry:
-  %i0 = load i64, i64* %p
-  %target.i0 = getelementptr [10 x i8*], [10 x i8*]* @indirectbr_rewrite.targets, i64 0, i64 %i0
-  %target0 = load i8*, i8** %target.i0
-  indirectbr i8* %target0, [label %bb1, label %bb3]
+  %i0 = load i64, ptr %p
+  %target.i0 = getelementptr [10 x ptr], ptr @indirectbr_rewrite.targets, i64 0, i64 %i0
+  %target0 = load ptr, ptr %target.i0
+  indirectbr ptr %target0, [label %bb1, label %bb3]
 
 bb0:
-  store volatile i64 0, i64* %sink
+  store volatile i64 0, ptr %sink
   br label %latch
 
 bb1:
-  store volatile i64 1, i64* %sink
+  store volatile i64 1, ptr %sink
   br label %latch
 
 bb2:
-  store volatile i64 2, i64* %sink
+  store volatile i64 2, ptr %sink
   br label %latch
 
 bb3:
-  store volatile i64 3, i64* %sink
+  store volatile i64 3, ptr %sink
   br label %latch
 
 bb4:
-  store volatile i64 4, i64* %sink
+  store volatile i64 4, ptr %sink
   br label %latch
 
 bb5:
-  store volatile i64 5, i64* %sink
+  store volatile i64 5, ptr %sink
   br label %latch
 
 bb6:
-  store volatile i64 6, i64* %sink
+  store volatile i64 6, ptr %sink
   br label %latch
 
 bb7:
-  store volatile i64 7, i64* %sink
+  store volatile i64 7, ptr %sink
   br label %latch
 
 bb8:
-  store volatile i64 8, i64* %sink
+  store volatile i64 8, ptr %sink
   br label %latch
 
 bb9:
-  store volatile i64 9, i64* %sink
+  store volatile i64 9, ptr %sink
   br label %latch
 
 latch:
-  %i.next = load i64, i64* %p
-  %target.i.next = getelementptr [10 x i8*], [10 x i8*]* @indirectbr_rewrite.targets, i64 0, i64 %i.next
-  %target.next = load i8*, i8** %target.i.next
+  %i.next = load i64, ptr %p
+  %target.i.next = getelementptr [10 x ptr], ptr @indirectbr_rewrite.targets, i64 0, i64 %i.next
+  %target.next = load ptr, ptr %target.i.next
   ; Potentially hit a full 10 successors here so that even if we rewrite as
   ; a switch it will try to be lowered with a jump table.
-  indirectbr i8* %target.next, [label %bb0,
+  indirectbr ptr %target.next, [label %bb0,
                                 label %bb1,
                                 label %bb2,
                                 label %bb3,

@@ -50,6 +50,12 @@ struct hash<type_index>
 #include <typeinfo>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iosfwd>
+#  include <new>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 #include <compare>
 
@@ -95,7 +101,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<type_index>
-    : public unary_function<type_index, size_t>
+    : public __unary_function<type_index, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(type_index __index) const _NOEXCEPT

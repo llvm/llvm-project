@@ -251,7 +251,7 @@ spv.module Logical GLSL450 {
 //     CHECK:   %[[AC1:.+]] = spv.AccessChain %[[ADDR]][%[[ZERO]], %[[ADD]]]
 //     CHECK:   %[[LOAD1:.+]] = spv.Load "StorageBuffer" %[[AC1]] : f32
 
-//     CHECK:   %[[CC:.+]] = spv.CompositeConstruct %[[LOAD1]], %[[LOAD0]]
+//     CHECK:   %[[CC:.+]] = spv.CompositeConstruct %[[LOAD0]], %[[LOAD1]]
 //     CHECK:   %[[CAST:.+]] = spv.Bitcast %[[CC]] : vector<2xf32> to i64
 //     CHECK:   spv.ReturnValue %[[CAST]]
 

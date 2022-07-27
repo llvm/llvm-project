@@ -13,186 +13,185 @@
 using namespace mlir;
 using namespace presburger;
 
-unsigned PresburgerSpace::getNumIdKind(IdKind kind) const {
-  if (kind == IdKind::Domain)
-    return getNumDomainIds();
-  if (kind == IdKind::Range)
-    return getNumRangeIds();
-  if (kind == IdKind::Symbol)
-    return getNumSymbolIds();
-  if (kind == IdKind::Local)
+unsigned PresburgerSpace::getNumVarKind(VarKind kind) const {
+  if (kind == VarKind::Domain)
+    return getNumDomainVars();
+  if (kind == VarKind::Range)
+    return getNumRangeVars();
+  if (kind == VarKind::Symbol)
+    return getNumSymbolVars();
+  if (kind == VarKind::Local)
     return numLocals;
-  llvm_unreachable("IdKind does not exist!");
+  llvm_unreachable("VarKind does not exist!");
 }
 
-unsigned PresburgerSpace::getIdKindOffset(IdKind kind) const {
-  if (kind == IdKind::Domain)
+unsigned PresburgerSpace::getVarKindOffset(VarKind kind) const {
+  if (kind == VarKind::Domain)
     return 0;
-  if (kind == IdKind::Range)
-    return getNumDomainIds();
-  if (kind == IdKind::Symbol)
-    return getNumDimIds();
-  if (kind == IdKind::Local)
-    return getNumDimAndSymbolIds();
-  llvm_unreachable("IdKind does not exist!");
+  if (kind == VarKind::Range)
+    return getNumDomainVars();
+  if (kind == VarKind::Symbol)
+    return getNumDimVars();
+  if (kind == VarKind::Local)
+    return getNumDimAndSymbolVars();
+  llvm_unreachable("VarKind does not exist!");
 }
 
-unsigned PresburgerSpace::getIdKindEnd(IdKind kind) const {
-  return getIdKindOffset(kind) + getNumIdKind(kind);
+unsigned PresburgerSpace::getVarKindEnd(VarKind kind) const {
+  return getVarKindOffset(kind) + getNumVarKind(kind);
 }
 
-unsigned PresburgerSpace::getIdKindOverlap(IdKind kind, unsigned idStart,
-                                           unsigned idLimit) const {
-  unsigned idRangeStart = getIdKindOffset(kind);
-  unsigned idRangeEnd = getIdKindEnd(kind);
+unsigned PresburgerSpace::getVarKindOverlap(VarKind kind, unsigned varStart,
+                                            unsigned varLimit) const {
+  unsigned varRangeStart = getVarKindOffset(kind);
+  unsigned varRangeEnd = getVarKindEnd(kind);
 
-  // Compute number of elements in intersection of the ranges [idStart, idLimit)
-  // and [idRangeStart, idRangeEnd).
-  unsigned overlapStart = std::max(idStart, idRangeStart);
-  unsigned overlapEnd = std::min(idLimit, idRangeEnd);
+  // Compute number of elements in intersection of the ranges [varStart,
+  // varLimit) and [varRangeStart, varRangeEnd).
+  unsigned overlapStart = std::max(varStart, varRangeStart);
+  unsigned overlapEnd = std::min(varLimit, varRangeEnd);
 
   if (overlapStart > overlapEnd)
     return 0;
   return overlapEnd - overlapStart;
 }
 
-IdKind PresburgerSpace::getIdKindAt(unsigned pos) const {
-  assert(pos < getNumIds() && "`pos` should represent a valid id position");
-  if (pos < getIdKindEnd(IdKind::Domain))
-    return IdKind::Domain;
-  if (pos < getIdKindEnd(IdKind::Range))
-    return IdKind::Range;
-  if (pos < getIdKindEnd(IdKind::Symbol))
-    return IdKind::Symbol;
-  if (pos < getIdKindEnd(IdKind::Local))
-    return IdKind::Local;
-  llvm_unreachable("`pos` should represent a valid id position");
+VarKind PresburgerSpace::getVarKindAt(unsigned pos) const {
+  assert(pos < getNumVars() && "`pos` should represent a valid var position");
+  if (pos < getVarKindEnd(VarKind::Domain))
+    return VarKind::Domain;
+  if (pos < getVarKindEnd(VarKind::Range))
+    return VarKind::Range;
+  if (pos < getVarKindEnd(VarKind::Symbol))
+    return VarKind::Symbol;
+  if (pos < getVarKindEnd(VarKind::Local))
+    return VarKind::Local;
+  llvm_unreachable("`pos` should represent a valid var position");
 }
 
-unsigned PresburgerSpace::insertId(IdKind kind, unsigned pos, unsigned num) {
-  assert(pos <= getNumIdKind(kind));
+unsigned PresburgerSpace::insertVar(VarKind kind, unsigned pos, unsigned num) {
+  assert(pos <= getNumVarKind(kind));
 
-  unsigned absolutePos = getIdKindOffset(kind) + pos;
+  unsigned absolutePos = getVarKindOffset(kind) + pos;
 
-  if (kind == IdKind::Domain)
+  if (kind == VarKind::Domain)
     numDomain += num;
-  else if (kind == IdKind::Range)
+  else if (kind == VarKind::Range)
     numRange += num;
-  else if (kind == IdKind::Symbol)
+  else if (kind == VarKind::Symbol)
     numSymbols += num;
   else
     numLocals += num;
 
-  // Insert NULL attachments if `usingAttachments` and variables inserted are
+  // Insert NULL identifiers if `usingIds` and variables inserted are
   // not locals.
-  if (usingAttachments && kind != IdKind::Local)
-    attachments.insert(attachments.begin() + absolutePos, num, nullptr);
+  if (usingIds && kind != VarKind::Local)
+    identifiers.insert(identifiers.begin() + absolutePos, num, nullptr);
 
   return absolutePos;
 }
 
-void PresburgerSpace::removeIdRange(IdKind kind, unsigned idStart,
-                                    unsigned idLimit) {
-  assert(idLimit <= getNumIdKind(kind) && "invalid id limit");
+void PresburgerSpace::removeVarRange(VarKind kind, unsigned varStart,
+                                     unsigned varLimit) {
+  assert(varLimit <= getNumVarKind(kind) && "invalid var limit");
 
-  if (idStart >= idLimit)
+  if (varStart >= varLimit)
     return;
 
-  unsigned numIdsEliminated = idLimit - idStart;
-  if (kind == IdKind::Domain)
-    numDomain -= numIdsEliminated;
-  else if (kind == IdKind::Range)
-    numRange -= numIdsEliminated;
-  else if (kind == IdKind::Symbol)
-    numSymbols -= numIdsEliminated;
+  unsigned numVarsEliminated = varLimit - varStart;
+  if (kind == VarKind::Domain)
+    numDomain -= numVarsEliminated;
+  else if (kind == VarKind::Range)
+    numRange -= numVarsEliminated;
+  else if (kind == VarKind::Symbol)
+    numSymbols -= numVarsEliminated;
   else
-    numLocals -= numIdsEliminated;
+    numLocals -= numVarsEliminated;
 
-  // Remove attachments if `usingAttachments` and variables removed are not
+  // Remove identifiers if `usingIds` and variables removed are not
   // locals.
-  if (usingAttachments && kind != IdKind::Local)
-    attachments.erase(attachments.begin() + getIdKindOffset(kind) + idStart,
-                      attachments.begin() + getIdKindOffset(kind) + idLimit);
+  if (usingIds && kind != VarKind::Local)
+    identifiers.erase(identifiers.begin() + getVarKindOffset(kind) + varStart,
+                      identifiers.begin() + getVarKindOffset(kind) + varLimit);
 }
 
-void PresburgerSpace::swapId(IdKind kindA, IdKind kindB, unsigned posA,
-                             unsigned posB) {
+void PresburgerSpace::swapVar(VarKind kindA, VarKind kindB, unsigned posA,
+                              unsigned posB) {
 
-  if (!usingAttachments)
+  if (!usingIds)
     return;
 
-  if (kindA == IdKind::Local && kindB == IdKind::Local)
+  if (kindA == VarKind::Local && kindB == VarKind::Local)
     return;
 
-  if (kindA == IdKind::Local) {
-    atAttachment(kindB, posB) = nullptr;
-    return;
-  }
-
-  if (kindB == IdKind::Local) {
-    atAttachment(kindA, posA) = nullptr;
+  if (kindA == VarKind::Local) {
+    atId(kindB, posB) = nullptr;
     return;
   }
 
-  std::swap(atAttachment(kindA, posA), atAttachment(kindB, posB));
+  if (kindB == VarKind::Local) {
+    atId(kindA, posA) = nullptr;
+    return;
+  }
+
+  std::swap(atId(kindA, posA), atId(kindB, posB));
 }
 
 bool PresburgerSpace::isCompatible(const PresburgerSpace &other) const {
-  return getNumDomainIds() == other.getNumDomainIds() &&
-         getNumRangeIds() == other.getNumRangeIds() &&
-         getNumSymbolIds() == other.getNumSymbolIds();
+  return getNumDomainVars() == other.getNumDomainVars() &&
+         getNumRangeVars() == other.getNumRangeVars() &&
+         getNumSymbolVars() == other.getNumSymbolVars();
 }
 
 bool PresburgerSpace::isEqual(const PresburgerSpace &other) const {
-  return isCompatible(other) && getNumLocalIds() == other.getNumLocalIds();
+  return isCompatible(other) && getNumLocalVars() == other.getNumLocalVars();
 }
 
 bool PresburgerSpace::isAligned(const PresburgerSpace &other) const {
-  assert(isUsingAttachments() && other.isUsingAttachments() &&
-         "Both spaces should be using attachments to check for "
+  assert(isUsingIds() && other.isUsingIds() &&
+         "Both spaces should be using identifiers to check for "
          "alignment.");
-  return isCompatible(other) && attachments == other.attachments;
+  return isCompatible(other) && identifiers == other.identifiers;
 }
 
 bool PresburgerSpace::isAligned(const PresburgerSpace &other,
-                                IdKind kind) const {
-  assert(isUsingAttachments() && other.isUsingAttachments() &&
-         "Both spaces should be using attachments to check for "
+                                VarKind kind) const {
+  assert(isUsingIds() && other.isUsingIds() &&
+         "Both spaces should be using identifiers to check for "
          "alignment.");
 
   ArrayRef<void *> kindAttachments =
-      makeArrayRef(attachments)
-          .slice(getIdKindOffset(kind), getNumIdKind(kind));
+      makeArrayRef(identifiers)
+          .slice(getVarKindOffset(kind), getNumVarKind(kind));
   ArrayRef<void *> otherKindAttachments =
-      makeArrayRef(other.attachments)
-          .slice(other.getIdKindOffset(kind), other.getNumIdKind(kind));
+      makeArrayRef(other.identifiers)
+          .slice(other.getVarKindOffset(kind), other.getNumVarKind(kind));
   return kindAttachments == otherKindAttachments;
 }
 
-void PresburgerSpace::setDimSymbolSeparation(unsigned newSymbolCount) {
-  assert(newSymbolCount <= getNumDimAndSymbolIds() &&
+void PresburgerSpace::setVarSymbolSeperation(unsigned newSymbolCount) {
+  assert(newSymbolCount <= getNumDimAndSymbolVars() &&
          "invalid separation position");
   numRange = numRange + numSymbols - newSymbolCount;
   numSymbols = newSymbolCount;
-  // We do not need to change `attachments` since the ordering of
-  // `attachments` remains same.
+  // We do not need to change `identifiers` since the ordering of
+  // `identifiers` remains same.
 }
 
 void PresburgerSpace::print(llvm::raw_ostream &os) const {
-  os << "Domain: " << getNumDomainIds() << ", "
-     << "Range: " << getNumRangeIds() << ", "
-     << "Symbols: " << getNumSymbolIds() << ", "
-     << "Locals: " << getNumLocalIds() << "\n";
+  os << "Domain: " << getNumDomainVars() << ", "
+     << "Range: " << getNumRangeVars() << ", "
+     << "Symbols: " << getNumSymbolVars() << ", "
+     << "Locals: " << getNumLocalVars() << "\n";
 
-  if (usingAttachments) {
+  if (usingIds) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    os << "TypeID of attachments: " << attachmentType.getAsOpaquePointer()
-       << "\n";
+    os << "TypeID of identifiers: " << idType.getAsOpaquePointer() << "\n";
 #endif
 
     os << "(";
-    for (void *attachment : attachments)
-      os << attachment << " ";
+    for (void *identifier : identifiers)
+      os << identifier << " ";
     os << ")\n";
   }
 }

@@ -18,6 +18,12 @@ if (NOT LIBOMPTARGET_BUILD_DEVICERTL_BCLIB)
   return()
 endif()
 
+# Check to ensure the host system is a supported host architecture.
+if(NOT ${CMAKE_SIZEOF_VOID_P} EQUAL "8")
+  libomptarget_say("Not building DeviceRTL: Runtime does not support 32-bit hosts")
+  return()
+endif()
+
 if (LLVM_DIR)
   # Builds that use pre-installed LLVM have LLVM_DIR set.
   # A standalone or LLVM_ENABLE_RUNTIMES=openmp build takes this route
@@ -43,21 +49,6 @@ else()
   return()
 endif()
 
-# TODO: This part needs to be refined when libomptarget is going to support
-# Windows!
-# TODO: This part can also be removed if we can change the clang driver to make
-# it support device only compilation.
-if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64")
-  set(aux_triple x86_64-unknown-linux-gnu)
-elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "ppc64le")
-  set(aux_triple powerpc64le-unknown-linux-gnu)
-elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
-  set(aux_triple aarch64-unknown-linux-gnu)
-else()
-  libomptarget_say("Not building DeviceRTL: unknown host arch: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-  return()
-endif()
-
 set(devicertl_base_directory ${CMAKE_CURRENT_SOURCE_DIR})
 set(include_directory ${devicertl_base_directory}/include)
 set(source_directory ${devicertl_base_directory}/src)
@@ -79,13 +70,6 @@ else()
   string(REPLACE "," ";" nvptx_sm_list "${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES}")
 endif()
 
-# If user set LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES to empty, we disable the
-# build.
-if (NOT nvptx_sm_list)
-  libomptarget_say("Not building CUDA offloading DeviceRTL: empty compute capability list")
-  return()
-endif()
-
 # Check all SM values
 foreach(sm ${nvptx_sm_list})
   if (NOT ${sm} IN_LIST all_capabilities)
@@ -97,7 +81,6 @@ set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a 
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
-
 
 # Activate RTL message dumps if requested by the user.
 set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
@@ -129,19 +112,19 @@ set(src_files
   ${source_directory}/Workshare.cpp
 )
 
-set(clang_opt_flags -O1 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
-set(link_opt_flags  -O1        -openmp-opt-disable)
+set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
+set(link_opt_flags  -O3        -openmp-opt-disable)
+set(link_export_flag -passes=internalize -internalize-public-api-file=${source_directory}/exports)
 
 # Prepend -I to each list element
 set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -S -x c++ -std=c++17 -fvisibility=hidden
-              ${clang_opt_flags}
-             -Xclang -emit-llvm-bc
-             -Xclang -aux-triple -Xclang ${aux_triple}
-             -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
+set(bc_flags -c -emit-llvm -std=c++17 -fvisibility=hidden
+              ${clang_opt_flags} --offload-device-only
+             -nocudalib -nogpulib -nostdinc
+             -fopenmp -fopenmp-cuda-mode
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
@@ -165,7 +148,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
     add_custom_command(OUTPUT ${outfile}
       COMMAND ${CLANG_TOOL}
       ${bc_flags}
-      -Xclang -target-cpu -Xclang ${target_cpu}
+      --offload-arch=${target_cpu}
       ${target_bc_flags}
       ${infile} -o ${outfile}
       DEPENDS ${infile} ${include_files}
@@ -197,10 +180,17 @@ function(compileDeviceRTLLibrary target_cpu target_name)
       COMMENT "Linking LLVM bitcode ${bclib_name}"
   )
 
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
+      COMMAND ${OPT_TOOL} ${link_export_flag} ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
+                      -o ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
+      DEPENDS ${source_directory}/exports ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
+      COMMENT "Internalizing LLVM bitcode ${bclib_name}"
+  )
+
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
-      COMMAND ${OPT_TOOL} ${link_opt_flags} ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
+      COMMAND ${OPT_TOOL} ${link_opt_flags} ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
                       -o ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
-      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
+      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
       COMMENT "Optimizing LLVM bitcode ${bclib_name}"
   )
 
@@ -236,23 +226,16 @@ endfunction()
 # Generate a Bitcode library for all the compute capabilities the user requested
 add_custom_target(omptarget.devicertl.nvptx)
 foreach(sm ${nvptx_sm_list})
-  compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64-nvidia-cuda -DLIBOMPTARGET_BC_TARGET -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
+  compileDeviceRTLLibrary(sm_${sm} nvptx -fopenmp-targets=nvptx64-nvidia-cuda -DLIBOMPTARGET_BC_TARGET --cuda-feature=+ptx61)
 endforeach()
 
 add_custom_target(omptarget.devicertl.amdgpu)
 foreach(mcpu ${amdgpu_mcpus})
-  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -DLIBOMPTARGET_BC_TARGET -D__AMDGCN__ -nogpulib)
+  compileDeviceRTLLibrary(${mcpu} amdgpu -fopenmp-targets=amdgcn-amd-amdhsa -DLIBOMPTARGET_BC_TARGET -D__AMDGCN__ -nogpulib)
 endforeach()
 
-set(LIBOMPTARGET_LLVM_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
-if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL LIBOMPTARGET_LLVM_VERSION))
-  libomptarget_say("Not building static library, CMake compiler '${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' is not 'Clang ${LIBOMPTARGET_LLVM_VERSION}'.")
-  libomptarget_say("  Use the 'LLVM_ENABLE_RUNTIMES=openmp' option instead")
-  return()
-endif()
-
 # Set the flags to build the device runtime from clang.
-set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -mllvm -openmp-opt-disable -nocudalib -nogpulib -nostdinc -DSHARED_SCRATCHPAD_SIZE=512)
+set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -nocudalib -nogpulib -nostdinc ${clang_opt_flags})
 foreach(arch ${nvptx_sm_list})
   set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
 endforeach()
@@ -261,11 +244,43 @@ foreach(arch ${amdgpu_mcpus})
 endforeach()
 
 # Build the static library version of the device runtime.
+# first create an object target
+add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
+foreach(src ${src_files})
+  get_filename_component(infile ${src} ABSOLUTE)
+  get_filename_component(outfile ${src} NAME)
+  set(outfile "${outfile}.o")
+  set(outfile_full_path "${CMAKE_CURRENT_BINARY_DIR}/${outfile}")
+
+  add_custom_command(OUTPUT ${outfile_full_path}
+    COMMAND ${CLANG_TOOL} ${clang_lib_flags} --std=c++17 -c
+            -o ${outfile_full_path}
+            -I${include_directory}
+            -I${devicertl_base_directory}/../include
+            ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
+            ${infile}
+    DEPENDS ${infile} ${include_files}
+    IMPLICIT_DEPENDS CXX ${infile}
+    COMMENT "Building device code ${outfile}"
+    VERBATIM
+  )
+  if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+    # Add a file-level dependency to ensure that clang is up-to-date.
+    # By default, add_custom_command only builds clang if the
+    # executable is missing.
+    add_custom_command(OUTPUT ${outfile_full_path}
+      DEPENDS clang
+      APPEND
+    )
+  endif()
+  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${outfile_full_path})
+
+  set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${outfile_full_path})
+endforeach()
+
+# second archive all the object files into a static library
 add_library(omptarget.devicertl STATIC)
-target_compile_features(omptarget.devicertl PRIVATE cxx_std_17)
-target_include_directories(omptarget.devicertl PRIVATE ${include_directory} ${devicertl_base_directory}/../include)
-target_compile_options(omptarget.devicertl PRIVATE ${clang_lib_flags})
+set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 
 install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
-
-add_subdirectory(src)

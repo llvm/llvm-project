@@ -15,6 +15,12 @@ IntOrAttrList = Sequence[Union[IntegerAttr, int]]
 OptionalIntList = Optional[Union[ArrayAttr, IntOrAttrList]]
 
 
+def _get_int64_attr(value: Union[int, Attribute]) -> IntegerAttr:
+  if isinstance(value, int):
+    return IntegerAttr.get(IntegerType.get_signless(64), value)
+  return value
+
+
 def _get_array_attr(
     values: Optional[Union[ArrayAttr, Sequence[Attribute]]]) -> ArrayAttr:
   """Creates an array attribute from its operand."""
@@ -41,13 +47,7 @@ def _get_int_array_attr(
   if isinstance(values, ArrayAttr):
     return values
 
-  attributes = []
-  for value in values:
-    if isinstance(value, IntegerAttr):
-      attributes.append(value)
-    else:
-      attributes.append(IntegerAttr.get(IntegerType.get_signless(64), value))
-  return ArrayAttr.get(attributes)
+  return ArrayAttr.get([_get_int64_attr(v) for v in values])
 
 
 def _get_int_int_array_attr(
@@ -110,6 +110,29 @@ class InterchangeOp:
         ip=ip)
 
 
+class MultiTileSizesOp:
+  """Specialization for MultitileSizesOp class."""
+
+  def __init__(self,
+               target: Union[Operation, Value],
+               *,
+               dimension: Union[int, IntegerAttr],
+               target_size: Union[int, IntegerAttr],
+               divisor: Optional[Union[int, IntegerAttr]] = None,
+               loc=None,
+               ip=None):
+    super().__init__(
+        pdl.OperationType.get(),
+        pdl.OperationType.get(),
+        pdl.OperationType.get(),
+        _get_op_result_or_value(target),
+        dimension=_get_int64_attr(dimension),
+        target_size=_get_int64_attr(target_size),
+        divisor=_get_int64_attr(divisor if divisor else 1),
+        loc=loc,
+        ip=ip)
+
+
 class PadOp:
   """Specialization for PadOp class."""
 
@@ -152,24 +175,79 @@ class ScalarizeOp:
         pdl_operation_type, _get_op_result_or_value(target), loc=loc, ip=ip)
 
 
+class SplitOp:
+  """Specialization for SplitOp class."""
+
+  def __init__(self,
+               target: Union[Operation, Value],
+               dimension: Union[int, Attribute],
+               split_point: Union[int, Operation, Value, Attribute],
+               *,
+               loc=None,
+               ip=None):
+    dimension = _get_int64_attr(dimension)
+    if isinstance(split_point, int):
+      split_point = _get_int64_attr(split_point)
+
+    if isinstance(split_point, Attribute):
+      static_split_point = split_point
+      dynamic_split_point = None
+    else:
+      static_split_point = _get_int64_attr(ShapedType._get_dynamic_size())
+      dynamic_split_point = _get_op_result_or_value(split_point)
+
+    pdl_operation_type = pdl.OperationType.get()
+    super().__init__(
+        pdl_operation_type,
+        pdl_operation_type,
+        _get_op_result_or_value(target),
+        dimension=dimension,
+        static_split_point=static_split_point,
+        dynamic_split_point=dynamic_split_point,
+        loc=loc,
+        ip=ip)
+
+
 class TileOp:
   """Specialization for TileOp class."""
 
   def __init__(self,
                target: Union[Operation, Value],
                *,
-               sizes: OptionalIntList = None,
+               sizes: Optional[Union[Sequence[Union[int, IntegerAttr, Operation,
+                                                    Value]], ArrayAttr]] = None,
                interchange: OptionalIntList = None,
                loc=None,
                ip=None):
     pdl_operation_type = pdl.OperationType.get()
-    sizes_attr = _get_int_array_attr(sizes)
+    i64_type = IntegerType.get_signless(64)
+
+    if sizes is None:
+      sizes = []
+
+    static_sizes = []
+    dynamic_sizes = []
+    if isinstance(sizes, ArrayAttr):
+      sizes_attr = sizes
+    else:
+      for size in sizes:
+        if isinstance(size, int):
+          static_sizes.append(IntegerAttr.get(i64_type, size))
+        elif isinstance(size, IntegerAttr):
+          static_sizes.append(size)
+        else:
+          static_sizes.append(
+              IntegerAttr.get(i64_type, ShapedType._get_dynamic_size()))
+          dynamic_sizes.append(_get_op_result_or_value(size))
+      sizes_attr = ArrayAttr.get(static_sizes)
+
     num_loops = sum(
         v if v == 0 else 1 for v in self.__extract_values(sizes_attr))
     super().__init__(
         pdl_operation_type, [pdl_operation_type] * num_loops,
         _get_op_result_or_value(target),
-        sizes=sizes_attr,
+        dynamic_sizes=dynamic_sizes,
+        static_sizes=sizes_attr,
         interchange=_get_int_array_attr(interchange) if interchange else None,
         loc=loc,
         ip=ip)

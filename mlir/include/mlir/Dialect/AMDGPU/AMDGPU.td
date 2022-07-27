@@ -22,7 +22,7 @@ def AMDGPU_Dialect : Dialect {
     that will eventually be executed on AMD hardware.
   }];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -37,7 +37,6 @@ def AMDGPU_RawBufferLoadOp :
     AMDGPU_Op<"raw_buffer_load", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to load from", [MemRead]>:$memref,
-                   BoolAttr:$targetIsRDNA,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
@@ -53,14 +52,17 @@ def AMDGPU_RawBufferLoadOp :
     available on AMD GPUs, including extensions in newer GPUs.
 
     The index into the buffer is computed as for `memref.load` with the additon
-    of `indexOffset` and `sgprOffset` (which is added after bounds checks and
-    includes any offset present on the memref type if it's non-zero).
+    of `indexOffset` and `sgprOffset` (which **may or may not** be considered
+    in bounds checks and includes any offset present on the memref type if it's
+    non-zero).
 
     All indices and offsets are in units of the memref's data type and are
     converted to bytes during lowering.
 
     When a load is out of bounds, the instruction returns zero.
-    Vector instructions bounds check each component's address.
+    Partially-out of bounds have chipset-dependent behavior: whether reading
+    2 elements starting at index 7 of a `memref<8xf32>` returns the last element
+    in the first vector component depends on the architecture.
 
     The memref struct is converted into a buffer resource (a V#) and the arguments
     are translated to intrinsic arguments as follows:
@@ -71,11 +73,9 @@ def AMDGPU_RawBufferLoadOp :
       as max_d (size(d) * stride(d)) * sizeof(elementType(memref))
     - The offset enable bit is 1, the index enable bit is 0.
     - The thread ID addition bit is off
-    - If `boundsCheck` is false and the target is RDNA, OOB_SELECT is set to 2
-      to disable bounds checks, otherwise it is 0
+    - If `boundsCheck` is false and the target chipset is RDNA, OOB_SELECT is set
+      to 2 to disable bounds checks, otherwise it is 3
     - The cache coherency bits are off
-    - `targetIsRDNA` controls the setting of some reserved values that differ
-       between RDNA and CDNA cores
   }];
   let assemblyFormat = [{
     attr-dict $memref `[` $indices `]`
@@ -94,7 +94,6 @@ def AMDGPU_RawBufferStoreOp :
                               VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
                               VectorOfLengthAndType<[2, 4, 8, 16], [I8]>]>:$value,
                    Arg<AnyMemRef, "buffer to store to", [MemWrite]>:$memref,
-                   BoolAttr:$targetIsRDNA,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
@@ -112,8 +111,9 @@ def AMDGPU_RawBufferStoreOp :
     All index components are in terms of the elements of the memref, not bytes,
     and are scaled up appropriately.
 
-    Out of bounds stores are ignored in hardware, including the out of bounds
-    components of vector writes.
+    Out of bounds stores are ignored in hardware.
+    Wthether a vector write that includes some in-bounds and soeme out-of-bounds
+    components is partically completed is chipset-dependent.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -132,7 +132,6 @@ def AMDGPU_RawBufferAtomicFaddOp :
       AttrSizedOperandSegments]>,
     Arguments<(ins F32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
-                   BoolAttr:$targetIsRDNA,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
@@ -164,5 +163,24 @@ def AMDGPU_RawBufferAtomicFaddOp :
   }];
   let hasVerifier = 1;
 }
+
+def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
+  let summary = "Barrier that includes a wait for LDS memory operations.";
+  let description = [{
+    `amdgpu.lds_barrier` is both a barrier (all workitems in a workgroup must reach
+    the barrier before any of them may proceed past it) and a wait for all
+    operations that affect the Local Data Store (LDS) issued from that wrokgroup
+    to complete before the workgroup may continue. Since the LDS is per-workgroup
+    memory, this barrier may be used, for example, to ensure all workitems have
+    written data to LDS before any workitem attempts to read from it.
+
+    Note that `lds_barrier` does **not** force reads to or from global memory
+    to complete before execution continues. Therefore, it should be used when
+    operations on global memory can be issued far in advance of when their results
+    are used (for example, by writing them to LDS).
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 
 #endif // AMDGPU

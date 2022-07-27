@@ -1249,7 +1249,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   }
 
   // Get the result value.  A result of true means the file exists.
-  return File.hasValue();
+  return File.has_value();
 }
 
 bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {
@@ -1317,7 +1317,7 @@ already_lexed:
 
       case tok::l_paren:
         ++ParenDepth;
-        if (Result.hasValue())
+        if (Result)
           break;
         if (!SuppressDiagnostic) {
           PP.Diag(Tok.getLocation(), diag::err_pp_nested_paren) << II;
@@ -1331,11 +1331,11 @@ already_lexed:
 
         // The last ')' has been reached; return the value if one found or
         // a diagnostic and a dummy value.
-        if (Result.hasValue()) {
-          OS << Result.getValue();
+        if (Result) {
+          OS << Result.value();
           // For strict conformance to __has_cpp_attribute rules, use 'L'
           // suffix for dated literals.
-          if (Result.getValue() > 1)
+          if (Result.value() > 1)
             OS << 'L';
         } else {
           OS << 0;
@@ -1347,7 +1347,7 @@ already_lexed:
 
       default: {
         // Parse the macro argument, if one not found so far.
-        if (Result.hasValue())
+        if (Result)
           break;
 
         bool HasLexedNextToken = false;

@@ -885,7 +885,7 @@ ExpandMemCmpPass::runImpl(Function &F, const TargetLibraryInfo *TLI,
   bool MadeChanges = false;
   for (auto BBIt = F.begin(); BBIt != F.end();) {
     if (runOnBlock(*BBIt, TLI, TTI, TL, DL, PSI, BFI,
-                   DTU.hasValue() ? DTU.getPointer() : nullptr)) {
+                   DTU ? DTU.getPointer() : nullptr)) {
       MadeChanges = true;
       // If changes were made, restart the function from the beginning, since
       // the structure of the function was changed.

@@ -67,11 +67,36 @@ static cl::opt<std::string> AAPipeline("aa-pipeline",
 
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
+static cl::list<std::string> SelectSaveTemps(
+    "select-save-temps",
+    cl::value_desc("One, or multiple of: "
+                   "resolution,preopt,promote,internalize,import,opt,precodegen"
+                   ",combinedindex"),
+    cl::desc("Save selected temporary files. Cannot be specified together with "
+             "-save-temps"),
+    cl::CommaSeparated);
+
+constexpr const char *SaveTempsValues[] = {
+    "resolution", "preopt", "promote",    "internalize",
+    "import",     "opt",    "precodegen", "combinedindex"};
+
 static cl::opt<bool>
-    ThinLTODistributedIndexes("thinlto-distributed-indexes", cl::init(false),
+    ThinLTODistributedIndexes("thinlto-distributed-indexes",
                               cl::desc("Write out individual index and "
                                        "import files for the "
                                        "distributed backend case"));
+
+static cl::opt<bool>
+    ThinLTOEmitIndexes("thinlto-emit-indexes",
+                       cl::desc("Write out individual index files via "
+                                "InProcessThinLTO"));
+
+static cl::opt<bool>
+    ThinLTOEmitImports("thinlto-emit-imports",
+                       cl::desc("Write out individual imports files via "
+                                "InProcessThinLTO. Has no effect unless "
+                                "specified with -thinlto-emit-indexes or "
+                                "-thinlto-distributed-indexes"));
 
 // Default to using all available threads in the system, but using only one
 // thread per core (no SMT).
@@ -141,14 +166,14 @@ static cl::opt<std::string>
 static cl::opt<bool>
     RunCSIRInstr("lto-cspgo-gen",
                  cl::desc("Run PGO context sensitive IR instrumentation"),
-                 cl::init(false), cl::Hidden);
+                 cl::Hidden);
 
 static cl::opt<bool> LtoOpaquePointers("lto-opaque-pointers",
                                        cl::desc("Enable opaque pointer types"),
                                        cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-    DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
+    DebugPassManager("debug-pass-manager", cl::Hidden,
                      cl::desc("Print pass management debugging information"));
 
 static cl::opt<std::string>
@@ -161,7 +186,7 @@ static cl::list<std::string>
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding",
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
-    cl::init(false), cl::Hidden);
+    cl::Hidden);
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -241,14 +266,27 @@ static int run(int argc, char **argv) {
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
   Conf.MAttrs = codegen::getMAttrs();
   if (auto RM = codegen::getExplicitRelocModel())
-    Conf.RelocModel = RM.getValue();
+    Conf.RelocModel = *RM;
   Conf.CodeModel = codegen::getExplicitCodeModel();
 
   Conf.DebugPassManager = DebugPassManager;
 
-  if (SaveTemps)
-    check(Conf.addSaveTemps(OutputFilename + "."),
+  if (SaveTemps && !SelectSaveTemps.empty()) {
+    llvm::errs() << "-save-temps cannot be specified with -select-save-temps\n";
+    return 1;
+  }
+  if (SaveTemps || !SelectSaveTemps.empty()) {
+    DenseSet<StringRef> SaveTempsArgs;
+    for (auto &S : SelectSaveTemps)
+      if (is_contained(SaveTempsValues, S))
+        SaveTempsArgs.insert(S);
+      else {
+        llvm::errs() << ("invalid -select-save-temps argument: " + S) << '\n';
+        return 1;
+      }
+    check(Conf.addSaveTemps(OutputFilename + ".", false, SaveTempsArgs),
           "Config::addSaveTemps failed");
+  }
 
   // Optimization remarks.
   Conf.RemarksFilename = RemarksFilename;
@@ -288,7 +326,7 @@ static int run(int argc, char **argv) {
   }
 
   if (auto FT = codegen::getExplicitFileType())
-    Conf.CGFileType = FT.getValue();
+    Conf.CGFileType = *FT;
 
   Conf.OverrideTriple = OverrideTriple;
   Conf.DefaultTriple = DefaultTriple;
@@ -299,14 +337,16 @@ static int run(int argc, char **argv) {
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
-    Backend = createWriteIndexesThinBackend(/* OldPrefix */ "",
-                                            /* NewPrefix */ "",
-                                            /* ShouldEmitImportsFiles */ true,
-                                            /* LinkedObjectsFile */ nullptr,
-                                            /* OnWrite */ {});
+    Backend =
+        createWriteIndexesThinBackend(/* OldPrefix */ "",
+                                      /* NewPrefix */ "", ThinLTOEmitImports,
+                                      /* LinkedObjectsFile */ nullptr,
+                                      /* OnWrite */ {});
   else
     Backend = createInProcessThinBackend(
-        llvm::heavyweight_hardware_concurrency(Threads));
+        llvm::heavyweight_hardware_concurrency(Threads),
+        /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
+
   // Track whether we hit an error; in particular, in the multi-threaded case,
   // we can't exit() early because the rest of the threads wouldn't have had a
   // change to be join-ed, and that would result in a "terminate called without

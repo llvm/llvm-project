@@ -812,11 +812,9 @@ define i16 @test_v4i16_v4i8(<4 x i16> %a0) {
 ; SSE2-LABEL: test_v4i16_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm1
 ; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    paddw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0

@@ -1046,8 +1046,13 @@ public:
   /// Return handler and action info for invoke instruction if present.
   Optional<MCPlus::MCLandingPad> getEHInfo(const MCInst &Inst) const;
 
-  // Add handler and action info for call instruction.
+  /// Add handler and action info for call instruction.
   void addEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
+
+  /// Update exception-handling info for the invoke instruction \p Inst.
+  /// Return true on success and false otherwise, e.g. if the instruction is
+  /// not an invoke.
+  bool updateEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
 
   /// Return non-negative GNU_args_size associated with the instruction
   /// or -1 if there's no associated info.
@@ -1379,7 +1384,7 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Return true if the instruction CurInst, in combination with the recent
+  /// Return not 0 if the instruction CurInst, in combination with the recent
   /// history of disassembled instructions supplied by [Begin, End), is a linker
   /// generated veneer/stub that needs patching. This happens in AArch64 when
   /// the code is large and the linker needs to generate stubs, but it does
@@ -1389,11 +1394,14 @@ public:
   /// is put in TgtLowBits, and its pair in TgtHiBits. If the instruction in
   /// TgtHiBits does not have an immediate operand, but an expression, then
   /// this expression is put in TgtHiSym and Tgt only contains the lower bits.
-  virtual bool matchLinkerVeneer(InstructionIterator Begin,
-                                 InstructionIterator End, uint64_t Address,
-                                 const MCInst &CurInst, MCInst *&TargetHiBits,
-                                 MCInst *&TargetLowBits,
-                                 uint64_t &Target) const {
+  /// Return value is a total number of instructions that were used to create
+  /// a veneer.
+  virtual uint64_t matchLinkerVeneer(InstructionIterator Begin,
+                                     InstructionIterator End, uint64_t Address,
+                                     const MCInst &CurInst,
+                                     MCInst *&TargetHiBits,
+                                     MCInst *&TargetLowBits,
+                                     uint64_t &Target) const {
     llvm_unreachable("not implemented");
   }
 

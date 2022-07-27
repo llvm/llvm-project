@@ -10,6 +10,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
@@ -20,6 +21,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <string>
 #include <utility>
@@ -622,7 +624,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"modulo", {{"a", OperandIntOrReal}, {"p", OperandIntOrReal}},
         OperandIntOrReal},
     {"nearest", {{"x", SameReal}, {"s", AnyReal}}, SameReal},
-    {"new_line", {{"x", SameChar, Rank::anyOrAssumedRank}}, SameChar,
+    {"new_line", {{"a", SameChar, Rank::anyOrAssumedRank}}, SameChar,
         Rank::scalar, IntrinsicClass::inquiryFunction},
     {"nint", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"norm2", {{"x", SameReal, Rank::array}, OptionalDIM}, SameReal,
@@ -1561,14 +1563,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             (std::strcmp(name, "shape") == 0 ||
                 std::strcmp(name, "size") == 0 ||
                 std::strcmp(name, "ubound") == 0)) {
-          // Check for an assumed-size array argument.
+          // Check for a whole assumed-size array argument.
           // These are disallowed for SHAPE, and require DIM= for
           // SIZE and UBOUND.
           // (A previous error message for UBOUND will take precedence
           // over this one, as this error is caught by the second entry
           // for UBOUND.)
-          if (const Symbol * argSym{GetLastSymbol(*arg)}) {
-            if (semantics::IsAssumedSizeArray(*argSym)) {
+          if (auto named{ExtractNamedEntity(*arg)}) {
+            if (semantics::IsAssumedSizeArray(named->GetLastSymbol())) {
               if (strcmp(name, "shape") == 0) {
                 messages.Say(arg->sourceLocation(),
                     "The '%s=' argument to the intrinsic function '%s' may not be assumed-size"_err_en_US,
@@ -1679,7 +1681,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (auto *expr{kindArg->UnwrapExpr()}) {
           CHECK(expr->Rank() == 0);
           if (auto code{ToInt64(*expr)}) {
-            if (IsValidKindOfIntrinsicType(*category, *code)) {
+            if (context.targetCharacteristics().IsTypeEnabled(
+                    *category, *code)) {
               if (*category == TypeCategory::Character) { // ACHAR & CHAR
                 resultType = DynamicType{static_cast<int>(*code), 1};
               } else {
@@ -2144,10 +2147,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
     CHECK(arguments.size() == 3);
     if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
-      if (expr->Rank() > 0) {
-        context.messages().Say(arguments[0]->sourceLocation(),
-            "CPTR= argument to C_F_POINTER() must be scalar"_err_en_US);
-      }
+      // General semantic checks will catch an actual argument that's not
+      // scalar.
       if (auto type{expr->GetType()}) {
         if (type->category() != TypeCategory::Derived ||
             type->IsPolymorphic() ||
@@ -2228,6 +2229,8 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
           if (const auto &targetArg{call.arguments[1]}) {
             if (const auto *targetExpr{targetArg->UnwrapExpr()}) {
               std::optional<characteristics::Procedure> pointerProc, targetProc;
+              const auto *targetProcDesignator{
+                  UnwrapExpr<ProcedureDesignator>(*targetExpr)};
               const Symbol *targetSymbol{GetLastSymbol(*targetExpr)};
               bool isCall{false};
               std::string targetName;
@@ -2240,6 +2243,10 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                   targetName = targetProcRef->proc().GetName() + "()";
                   isCall = true;
                 }
+              } else if (targetProcDesignator) {
+                targetProc = characteristics::Procedure::Characterize(
+                    *targetProcDesignator, context);
+                targetName = targetProcDesignator->GetName();
               } else if (targetSymbol) {
                 // proc that's not a call
                 if (IsProcedure(*targetSymbol)) {
@@ -2255,14 +2262,21 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
               if (pointerProc) {
                 if (targetProc) {
                   // procedure pointer and procedure target
+                  std::string whyNot;
+                  const SpecificIntrinsic *specificIntrinsic{nullptr};
+                  if (targetProcDesignator) {
+                    specificIntrinsic =
+                        targetProcDesignator->GetSpecificIntrinsic();
+                  }
                   if (std::optional<parser::MessageFixedText> msg{
-                          CheckProcCompatibility(
-                              isCall, pointerProc, &*targetProc)}) {
+                          CheckProcCompatibility(isCall, pointerProc,
+                              &*targetProc, specificIntrinsic, whyNot)}) {
+                    msg->set_severity(parser::Severity::Warning);
                     AttachDeclaration(
                         context.messages().Say(std::move(*msg),
                             "pointer '" + pointerSymbol->name().ToString() +
                                 "'",
-                            targetName),
+                            targetName, whyNot),
                         *pointerSymbol);
                   }
                 } else {
@@ -2321,6 +2335,45 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
   return ok;
 }
 
+static bool CheckForNonPositiveValues(FoldingContext &context,
+    const ActualArgument &arg, const std::string &procName,
+    const std::string &argName) {
+  bool ok{true};
+  if (arg.Rank() > 0) {
+    if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
+      if (const auto *intExpr{std::get_if<Expr<SomeInteger>>(&expr->u)}) {
+        std::visit(
+            [&](const auto &kindExpr) {
+              using IntType = typename std::decay_t<decltype(kindExpr)>::Result;
+              if (const auto *constArray{
+                      UnwrapConstantValue<IntType>(kindExpr)}) {
+                for (std::size_t j{0}; j < constArray->size(); ++j) {
+                  auto arrayExpr{constArray->values().at(j)};
+                  if (arrayExpr.IsNegative() || arrayExpr.IsZero()) {
+                    ok = false;
+                    context.messages().Say(arg.sourceLocation(),
+                        "'%s=' argument for intrinsic '%s' must contain all positive values"_err_en_US,
+                        argName, procName);
+                  }
+                }
+              }
+            },
+            intExpr->u);
+      }
+    }
+  } else {
+    if (auto val{ToInt64(arg.UnwrapExpr())}) {
+      if (*val <= 0) {
+        ok = false;
+        context.messages().Say(arg.sourceLocation(),
+            "'%s=' argument for intrinsic '%s' must be a positive value, but is %jd"_err_en_US,
+            argName, procName, static_cast<std::intmax_t>(*val));
+      }
+    }
+  }
+  return ok;
+}
+
 // Applies any semantic checks peculiar to an intrinsic.
 static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
@@ -2339,6 +2392,28 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
+  } else if (name == "image_status") {
+    if (const auto &arg{call.arguments[0]}) {
+      ok = CheckForNonPositiveValues(context, *arg, name, "image");
+    }
+  } else if (name == "ishftc") {
+    if (const auto &sizeArg{call.arguments[2]}) {
+      ok = CheckForNonPositiveValues(context, *sizeArg, name, "size");
+      if (ok) {
+        if (auto sizeVal{ToInt64(sizeArg->UnwrapExpr())}) {
+          if (const auto &shiftArg{call.arguments[1]}) {
+            if (auto shiftVal{ToInt64(shiftArg->UnwrapExpr())}) {
+              if (std::abs(*shiftVal) > *sizeVal) {
+                ok = false;
+                context.messages().Say(shiftArg->sourceLocation(),
+                    "The absolute value of the 'shift=' argument for intrinsic '%s' must be less than or equal to the 'size=' argument"_err_en_US,
+                    name);
+              }
+            }
+          }
+        }
+      }
+    }
   } else if (name == "loc") {
     const auto &arg{call.arguments[0]};
     ok =

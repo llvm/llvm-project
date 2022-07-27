@@ -15,59 +15,41 @@ declare i64 @strlen(i8*)
 
 define void @fold_strlen_A(i64* %plen) {
 ; CHECK-LABEL: @fold_strlen_A(
-; CHECK-NEXT:    [[LENA0A:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0))
-; CHECK-NEXT:    store i64 [[LENA0A]], i64* [[PLEN:%.*]], align 4
-; CHECK-NEXT:    [[LENA0AP1:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1))
+; CHECK-NEXT:    store i64 1, i64* [[PLEN:%.*]], align 4
 ; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i64, i64* [[PLEN]], i64 1
-; CHECK-NEXT:    store i64 [[LENA0AP1]], i64* [[PLEN1]], align 4
-; CHECK-NEXT:    [[LENA0AP2:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 2))
+; CHECK-NEXT:    store i64 0, i64* [[PLEN1]], align 4
 ; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i64, i64* [[PLEN]], i64 2
-; CHECK-NEXT:    store i64 [[LENA0AP2]], i64* [[PLEN2]], align 4
-; CHECK-NEXT:    [[LENA0AP3:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 3))
+; CHECK-NEXT:    store i64 0, i64* [[PLEN2]], align 4
 ; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i64, i64* [[PLEN]], i64 3
-; CHECK-NEXT:    store i64 [[LENA0AP3]], i64* [[PLEN3]], align 4
-; CHECK-NEXT:    [[LENA0B:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0))
+; CHECK-NEXT:    store i64 0, i64* [[PLEN3]], align 4
 ; CHECK-NEXT:    [[PLEN4:%.*]] = getelementptr i64, i64* [[PLEN]], i64 4
-; CHECK-NEXT:    store i64 [[LENA0B]], i64* [[PLEN4]], align 4
-; CHECK-NEXT:    [[LENA0BP1:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1))
+; CHECK-NEXT:    store i64 2, i64* [[PLEN4]], align 4
 ; CHECK-NEXT:    [[PLEN5:%.*]] = getelementptr i64, i64* [[PLEN]], i64 5
-; CHECK-NEXT:    store i64 [[LENA0BP1]], i64* [[PLEN5]], align 4
-; CHECK-NEXT:    [[LENA0BP2:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 2))
+; CHECK-NEXT:    store i64 1, i64* [[PLEN5]], align 4
 ; CHECK-NEXT:    [[PLEN6:%.*]] = getelementptr i64, i64* [[PLEN]], i64 6
-; CHECK-NEXT:    store i64 [[LENA0BP2]], i64* [[PLEN6]], align 4
-; CHECK-NEXT:    [[LENA0BP3:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 3))
+; CHECK-NEXT:    store i64 0, i64* [[PLEN6]], align 4
 ; CHECK-NEXT:    [[PLEN7:%.*]] = getelementptr i64, i64* [[PLEN]], i64 7
-; CHECK-NEXT:    store i64 [[LENA0BP3]], i64* [[PLEN7]], align 4
-; CHECK-NEXT:    [[LENA0BP4:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 4))
+; CHECK-NEXT:    store i64 0, i64* [[PLEN7]], align 4
 ; CHECK-NEXT:    [[PLEN8:%.*]] = getelementptr i64, i64* [[PLEN]], i64 8
-; CHECK-NEXT:    store i64 [[LENA0BP4]], i64* [[PLEN8]], align 4
-; CHECK-NEXT:    [[LENA1A:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 0))
+; CHECK-NEXT:    store i64 0, i64* [[PLEN8]], align 4
 ; CHECK-NEXT:    [[PLEN9:%.*]] = getelementptr i64, i64* [[PLEN]], i64 9
-; CHECK-NEXT:    store i64 [[LENA1A]], i64* [[PLEN9]], align 4
-; CHECK-NEXT:    [[LENA1AP1:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 1))
+; CHECK-NEXT:    store i64 3, i64* [[PLEN9]], align 4
 ; CHECK-NEXT:    [[PLEN10:%.*]] = getelementptr i64, i64* [[PLEN]], i64 10
-; CHECK-NEXT:    store i64 [[LENA1AP1]], i64* [[PLEN10]], align 4
-; CHECK-NEXT:    [[LENA1AP2:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 2))
+; CHECK-NEXT:    store i64 2, i64* [[PLEN10]], align 4
 ; CHECK-NEXT:    [[PLEN11:%.*]] = getelementptr i64, i64* [[PLEN]], i64 11
-; CHECK-NEXT:    store i64 [[LENA1AP2]], i64* [[PLEN11]], align 4
-; CHECK-NEXT:    [[LENA1AP3:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 3))
+; CHECK-NEXT:    store i64 1, i64* [[PLEN11]], align 4
 ; CHECK-NEXT:    [[PLEN12:%.*]] = getelementptr i64, i64* [[PLEN]], i64 12
-; CHECK-NEXT:    store i64 [[LENA1AP3]], i64* [[PLEN12]], align 4
-; CHECK-NEXT:    [[LENA1B:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 0))
+; CHECK-NEXT:    store i64 0, i64* [[PLEN12]], align 4
 ; CHECK-NEXT:    [[PLEN14:%.*]] = getelementptr i64, i64* [[PLEN]], i64 14
-; CHECK-NEXT:    store i64 [[LENA1B]], i64* [[PLEN14]], align 4
-; CHECK-NEXT:    [[LENA1BP1:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 1))
+; CHECK-NEXT:    store i64 4, i64* [[PLEN14]], align 4
 ; CHECK-NEXT:    [[PLEN15:%.*]] = getelementptr i64, i64* [[PLEN]], i64 15
-; CHECK-NEXT:    store i64 [[LENA1BP1]], i64* [[PLEN15]], align 4
-; CHECK-NEXT:    [[LENA1BP2:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 2))
+; CHECK-NEXT:    store i64 3, i64* [[PLEN15]], align 4
 ; CHECK-NEXT:    [[PLEN16:%.*]] = getelementptr i64, i64* [[PLEN]], i64 16
-; CHECK-NEXT:    store i64 [[LENA1BP2]], i64* [[PLEN16]], align 4
-; CHECK-NEXT:    [[LENA1BP3:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 3))
+; CHECK-NEXT:    store i64 2, i64* [[PLEN16]], align 4
 ; CHECK-NEXT:    [[PLEN17:%.*]] = getelementptr i64, i64* [[PLEN]], i64 17
-; CHECK-NEXT:    store i64 [[LENA1BP3]], i64* [[PLEN17]], align 4
-; CHECK-NEXT:    [[LENA1BP4:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 4))
+; CHECK-NEXT:    store i64 1, i64* [[PLEN17]], align 4
 ; CHECK-NEXT:    [[PLEN18:%.*]] = getelementptr i64, i64* [[PLEN]], i64 18
-; CHECK-NEXT:    store i64 [[LENA1BP4]], i64* [[PLEN18]], align 4
+; CHECK-NEXT:    store i64 0, i64* [[PLEN18]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Fold strlen(a[0].a) to 1.

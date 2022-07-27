@@ -170,6 +170,8 @@ public:
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
 
+  bool isModuleMapModule() const { return Kind == ModuleMapModule; }
+
 private:
   /// The submodules of this module, indexed by name.
   std::vector<Module *> SubModules;
@@ -536,6 +538,10 @@ public:
     return Kind == ModuleInterfaceUnit || isModulePartition();
   }
 
+  bool isModuleInterfaceUnit() const {
+    return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface;
+  }
+
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {
     // Technically, global module fragment belongs to global module. And global
@@ -658,6 +664,18 @@ public:
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
   Module *findOrInferSubmodule(StringRef Name);
+
+  /// Get the Global Module Fragment (sub-module) for this module, it there is
+  /// one.
+  ///
+  /// \returns The GMF sub-module if found, or NULL otherwise.
+  Module *getGlobalModuleFragment() { return findSubmodule("<global>"); }
+
+  /// Get the Private Module Fragment (sub-module) for this module, it there is
+  /// one.
+  ///
+  /// \returns The PMF sub-module if found, or NULL otherwise.
+  Module *getPrivateModuleFragment() { return findSubmodule("<private>"); }
 
   /// Determine whether the specified module would be visible to
   /// a lookup at the end of this module.

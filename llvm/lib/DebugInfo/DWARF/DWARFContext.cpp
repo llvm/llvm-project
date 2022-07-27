@@ -121,7 +121,7 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
                 const Optional<StrOffsetsContributionDescriptor> &R) {
                if (L && R)
                  return L->Base < R->Base;
-               return R.hasValue();
+               return R.has_value();
              });
 
   // Uniquify contributions, as it is possible that units (specifically
@@ -389,7 +389,7 @@ void DWARFContext::dump(
     OS << '\n' << Name << " contents:\n";
     if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
       for (const auto &U : Units)
-        U->getDIEForOffset(DumpOffset.getValue())
+        U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
     else
       for (const auto &U : Units)
@@ -1205,13 +1205,13 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
     if (auto DeclFileAttr = Die.find(DW_AT_decl_file)) {
       if (const auto *LT = CU->getContext().getLineTableForUnit(CU))
         LT->getFileNameByIndex(
-            DeclFileAttr->getAsUnsignedConstant().getValue(),
+            DeclFileAttr->getAsUnsignedConstant().value(),
             CU->getCompilationDir(),
             DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
             Local.DeclFile);
     }
     if (auto DeclLineAttr = Die.find(DW_AT_decl_line))
-      Local.DeclLine = DeclLineAttr->getAsUnsignedConstant().getValue();
+      Local.DeclLine = DeclLineAttr->getAsUnsignedConstant().value();
 
     Result.push_back(Local);
     return;
@@ -1645,7 +1645,7 @@ class DWARFObjInMemory final : public DWARFObject {
   /// provided by Data. Otherwise leaves it unchanged.
   Error maybeDecompress(const object::SectionRef &Sec, StringRef Name,
                         StringRef &Data) {
-    if (!Decompressor::isCompressed(Sec))
+    if (!Sec.isCompressed())
       return Error::success();
 
     Expected<Decompressor> Decompressor =

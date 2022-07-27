@@ -553,16 +553,6 @@ public:
     }
   }
 
-  // Promote context by removing top frames with the length of
-  // `ContextFramesToRemove`. Note that with array representation of context,
-  // the promotion is effectively a slice operation with first
-  // `ContextFramesToRemove` elements removed from left.
-  void promoteOnPath(uint32_t ContextFramesToRemove) {
-    assert(ContextFramesToRemove <= FullContext.size() &&
-           "Cannot remove more than the whole context");
-    FullContext = FullContext.drop_front(ContextFramesToRemove);
-  }
-
   // Decode context string for a frame to get function name and location.
   // `ContextStr` is in the form of `FuncName:StartLine.Discriminator`.
   static void decodeContextString(StringRef ContextStr, StringRef &FName,
@@ -884,16 +874,20 @@ public:
   /// Return the total number of samples collected inside the function.
   uint64_t getTotalSamples() const { return TotalSamples; }
 
-  /// Return the total number of branch samples that have the function as the
-  /// branch target. This should be equivalent to the sample of the first
-  /// instruction of the symbol. But as we directly get this info for raw
-  /// profile without referring to potentially inaccurate debug info, this
+  /// For top-level functions, return the total number of branch samples that
+  /// have the function as the branch target (or 0 otherwise). This is the raw
+  /// data fetched from the profile. This should be equivalent to the sample of
+  /// the first instruction of the symbol. But as we directly get this info for
+  /// raw profile without referring to potentially inaccurate debug info, this
   /// gives more accurate profile data and is preferred for standalone symbols.
   uint64_t getHeadSamples() const { return TotalHeadSamples; }
 
-  /// Return the sample count of the first instruction of the function.
+  /// Return an estimate of the sample count of the function entry basic block.
   /// The function can be either a standalone symbol or an inlined function.
-  uint64_t getEntrySamples() const {
+  /// For Context-Sensitive profiles, this will prefer returning the head
+  /// samples (i.e. getHeadSamples()), if non-zero. Otherwise it estimates from
+  /// the function body's samples or callsite samples.
+  uint64_t getHeadSamplesEstimate() const {
     if (FunctionSamples::ProfileIsCS && getHeadSamples()) {
       // For CS profile, if we already have more accurate head samples
       // counted by branch sample from caller, use them as entry samples.
@@ -910,7 +904,7 @@ public:
       // An indirect callsite may be promoted to several inlined direct calls.
       // We need to get the sum of them.
       for (const auto &N_FS : CallsiteSamples.begin()->second)
-        Count += N_FS.second.getEntrySamples();
+        Count += N_FS.second.getHeadSamplesEstimate();
     }
     // Return at least 1 if total sample is not 0.
     return Count ? Count : TotalSamples > 0;

@@ -42,11 +42,15 @@ struct IntelPTThreadContinousExecution {
   bool operator<(const IntelPTThreadContinousExecution &o) const;
 };
 
-/// Decode a raw Intel PT trace for a single thread given in \p buffer and append the decoded
-/// instructions and errors in \p decoded_thread. It uses the low level libipt
-/// library underneath.
-void DecodeSingleTraceForThread(DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
-                 llvm::ArrayRef<uint8_t> buffer);
+/// Decode a raw Intel PT trace for a single thread given in \p buffer and
+/// append the decoded instructions and errors in \p decoded_thread. It uses the
+/// low level libipt library underneath.
+///
+/// \return
+///   An \a llvm::Error if the decoder couldn't be properly set up.
+llvm::Error DecodeSingleTraceForThread(DecodedThread &decoded_thread,
+                                       TraceIntelPT &trace_intel_pt,
+                                       llvm::ArrayRef<uint8_t> buffer);
 
 /// Decode a raw Intel PT trace for a single thread that was collected in a per
 /// cpu core basis.
@@ -66,7 +70,11 @@ void DecodeSingleTraceForThread(DecodedThread &decoded_thread, TraceIntelPT &tra
 ///   A list of chunks of timed executions of the same given thread. It is used
 ///   to identify if some executions have missing intel pt data and also to
 ///   determine in which core a certain part of the execution ocurred.
-void DecodeSystemWideTraceForThread(
+///
+/// \return
+///   An \a llvm::Error if the decoder couldn't be properly set up, i.e. no
+///   instructions were attempted to be decoded.
+llvm::Error DecodeSystemWideTraceForThread(
     DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
     const llvm::DenseMap<lldb::cpu_id_t, llvm::ArrayRef<uint8_t>> &buffers,
     const std::vector<IntelPTThreadContinousExecution> &executions);
@@ -85,6 +93,16 @@ void DecodeSystemWideTraceForThread(
 llvm::Expected<std::vector<IntelPTThreadSubtrace>>
 SplitTraceInContinuousExecutions(TraceIntelPT &trace_intel_pt,
                                  llvm::ArrayRef<uint8_t> buffer);
+
+/// Find the lowest TSC in the given trace.
+///
+/// \return
+///     The lowest TSC value in this trace if available, \a llvm::None if the
+///     trace is empty or the trace contains no timing information, or an \a
+///     llvm::Error if it was not possible to set up the decoder.
+llvm::Expected<llvm::Optional<uint64_t>>
+FindLowestTSCInTrace(TraceIntelPT &trace_intel_pt,
+                     llvm::ArrayRef<uint8_t> buffer);
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

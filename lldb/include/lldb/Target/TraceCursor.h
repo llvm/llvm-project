@@ -15,7 +15,8 @@
 
 namespace lldb_private {
 
-/// Class used for iterating over the instructions of a thread's trace.
+/// Class used for iterating over the instructions of a thread's trace, among
+/// other kinds of information.
 ///
 /// This class attempts to be a generic interface for accessing the instructions
 /// of the trace so that each Trace plug-in can reconstruct, represent and store
@@ -23,53 +24,72 @@ namespace lldb_private {
 /// technology.
 ///
 /// Live processes:
-///  In the case of a live process trace, an instance of a \a TraceCursor should
-///  point to the trace at the moment it was collected. If the process is later
-///  resumed and new trace data is collected, that should leave that old cursor
-///  unaffected.
+///   In the case of a live process trace, an instance of a \a TraceCursor
+///   should point to the trace at the moment it was collected. If the process
+///   is later resumed and new trace data is collected, then it's up to each
+///   trace plug-in to decide whether to leave the old cursor unaffected or not.
 ///
-/// Errors in the trace:
-///  As there could be errors when reconstructing the instructions of a trace,
-///  these errors are represented as failed instructions, and the cursor can
-///  point at them. The consumer should invoke \a TraceCursor::GetError() to
-///  check if the cursor is pointing to either a valid instruction or an error.
+/// Cursor items:
+///   A \a TraceCursor can point at one of the following items:
 ///
-/// Instructions:
-///  A \a TraceCursor always points to a specific instruction or error in the
-///  trace.
+///   Errors:
+///     As there could be errors when reconstructing the instructions of a
+///     trace, these errors are represented as failed instructions, and the
+///     cursor can point at them.
+///
+///   Events:
+///     The cursor can also point at events in the trace, which aren't errors
+///     nor instructions. An example of an event could be a context switch in
+///     between two instructions.
+///
+///   Instruction:
+///     An actual instruction with a memory address.
 ///
 /// Defaults:
-///   By default, the cursor points at the end item of the trace, moves
-///   backwards, has a move granularity of \a
-///   eTraceInstructionControlFlowTypeInstruction (i.e. visit every instruction)
-///   and stops at every error (the "ignore errors" flag is \b false). See the
-///   \a TraceCursor::Next() method for more documentation.
+///   By default, the cursor points at the most recent item in the trace and is
+///   set up to iterate backwards. See the \a TraceCursor::Next() method for
+///   more documentation.
 ///
 /// Sample usage:
 ///
 ///  TraceCursorUP cursor = trace.GetTrace(thread);
 ///
-///  cursor->SetGranularity(eTraceInstructionControlFlowTypeCall |
-///    eTraceInstructionControlFlowTypeReturn);
+///  for (; cursor->HasValue(); cursor->Next()) {
+///     TraceItemKind kind = cursor->GetItemKind();
+///     switch (cursor->GetItemKind()):
+///       case eTraceItemKindError:
+///         cout << "error found: " << cursor->GetError() << endl;
+///         break;
+///       case eTraceItemKindEvent:
+///         cout << "event found: " << cursor->GetEventTypeAsString() << endl;
+///         break;
+///       case eTraceItemKindInstruction:
+///         std::cout << "instructions found at " << cursor->GetLoadAddress() <<
+///         std::endl; break;
+///     }
+///  }
 ///
-///  do {
-///     if (llvm::Error error = cursor->GetError())
-///       cout << "error found at: " << llvm::toString(error) << endl;
-///     else if (cursor->GetInstructionControlFlowType() &
-///         eTraceInstructionControlFlowTypeCall)
-///       std::cout << "call found at " << cursor->GetLoadAddress() <<
-///       std::endl;
-///     else if (cursor->GetInstructionControlFlowType() &
-///         eTraceInstructionControlFlowTypeReturn)
-///       std::cout << "return found at " << cursor->GetLoadAddress() <<
-///       std::endl;
-///  } while(cursor->Next());
+///  As the trace might be empty or the cursor might have reached the end of the
+///  trace, you should always invoke \a HasValue() to make sure you don't access
+///  invalid memory.
 ///
-/// Low level traversal:
-///   Unlike the \a TraceCursor::Next() API, which uses a given granularity and
-///   direction to advance the cursor, the \a TraceCursor::Seek() method can be
-///   used to reposition the cursor to an offset of the end, beginning, or
-///   current position of the trace.
+/// Random accesses:
+///
+///   The Trace Cursor offer random acesses in the trace via two APIs:
+///
+///     TraceCursor::Seek():
+///       Unlike the \a TraceCursor::Next() API, which moves instruction by
+///       instruction, the \a TraceCursor::Seek() method can be used to
+///       reposition the cursor to an offset of the end, beginning, or current
+///       position of the trace.
+///
+///     TraceCursor::GetId() / TraceCursor::SetId(id):
+///       Each item (error or instruction) in the trace has a numeric identifier
+///       which is defined by the trace plug-in. It's possible to access the id
+///       of the current item using GetId(), and to reposition the cursor to a
+///       given id using SetId(id).
+///
+///   You can read more in the documentation of these methods.
 class TraceCursor {
 public:
   /// Helper enum to indicate the reference point when invoking
@@ -90,12 +110,6 @@ public:
 
   virtual ~TraceCursor() = default;
 
-  /// Set the granularity to use in the \a TraceCursor::Next() method.
-  void SetGranularity(lldb::TraceInstructionControlFlowType granularity);
-
-  /// Set the "ignore errors" flag to use in the \a TraceCursor::Next() method.
-  void SetIgnoreErrors(bool ignore_errors);
-
   /// Set the direction to use in the \a TraceCursor::Next() method.
   ///
   /// \param[in] forwards
@@ -109,8 +123,7 @@ public:
   ///     \b true if the current direction is forwards, \b false if backwards.
   bool IsForwards() const;
 
-  /// Move the cursor to the next instruction that matches the current
-  /// granularity.
+  /// Move the cursor to the next item (instruction or error).
   ///
   /// Direction:
   ///     The traversal is done following the current direction of the trace. If
@@ -118,21 +131,12 @@ public:
   ///     chronologically. Otherwise, the traversal is done in
   ///     the opposite direction. By default, a cursor moves backwards unless
   ///     changed with \a TraceCursor::SetForwards().
-  ///
-  /// Granularity:
-  ///     The cursor will traverse the trace looking for the first instruction
-  ///     that matches the current granularity. If there aren't any matching
-  ///     instructions, the cursor won't move, to give the opportunity of
-  ///     changing granularities.
-  ///
-  /// Ignore errors:
-  ///     If the "ignore errors" flags is \b false, the traversal will stop as
-  ///     soon as it finds an error in the trace and the cursor will point at
-  ///     it.
-  ///
+  virtual void Next() = 0;
+
   /// \return
-  ///     \b true if the cursor effectively moved, \b false otherwise.
-  virtual bool Next() = 0;
+  ///     \b true if the cursor is pointing to a valid item. \b false if the
+  ///     cursor has reached the end of the trace.
+  virtual bool HasValue() const = 0;
 
   /// Instruction identifiers:
   ///
@@ -169,9 +173,14 @@ public:
   ///
   /// \return
   ///     \b true if the given identifier exists and the cursor effectively
-  ///     moved. Otherwise, \b false is returned and the cursor doesn't change
-  ///     its position.
+  ///     moved to it. Otherwise, \b false is returned and the cursor now points
+  ///     to an invalid item, i.e. calling \a HasValue() will return \b false.
   virtual bool GoToId(lldb::user_id_t id) = 0;
+
+  /// \return
+  ///     \b true if and only if there's an instruction item with the given \p
+  ///     id.
+  virtual bool HasId(lldb::user_id_t id) const = 0;
 
   /// \return
   ///     A unique identifier for the instruction or error this cursor is
@@ -180,111 +189,107 @@ public:
   /// \}
 
   /// Make the cursor point to an item in the trace based on an origin point and
-  /// an offset. This API doesn't distinguishes instruction types nor errors in
-  /// the trace, unlike the \a TraceCursor::Next() method.
+  /// an offset.
   ///
   /// The resulting position of the trace is
   ///     origin + offset
   ///
-  /// If this resulting position would be out of bounds, it will be adjusted to
-  /// the last or first item in the trace correspondingly.
+  /// If this resulting position would be out of bounds, the trace then points
+  /// to an invalid item, i.e. calling \a HasValue() returns \b false.
   ///
   /// \param[in] offset
   ///     How many items to move forwards (if positive) or backwards (if
-  ///     negative) from the given origin point.
+  ///     negative) from the given origin point. For example, if origin is \b
+  ///     End, then a negative offset would move backward in the trace, but a
+  ///     positive offset would move past the trace to an invalid item.
   ///
   /// \param[in] origin
   ///     The reference point to use when moving the cursor.
   ///
   /// \return
-  ///     The number of trace items moved from the origin.
-  virtual uint64_t Seek(int64_t offset, SeekType origin) = 0;
+  ///     \b true if and only if the cursor ends up pointing to a valid item.
+  virtual bool Seek(int64_t offset, SeekType origin) = 0;
 
   /// \return
   ///   The \a ExecutionContextRef of the backing thread from the creation time
   ///   of this cursor.
   ExecutionContextRef &GetExecutionContextRef();
 
-  /// Instruction or error information
+  /// Trace item information (instructions, errors and events)
   /// \{
 
   /// \return
+  ///     The kind of item the cursor is pointing at.
+  virtual lldb::TraceItemKind GetItemKind() const = 0;
+
+  /// \return
   ///     Whether the cursor points to an error or not.
-  virtual bool IsError() = 0;
+  bool IsError() const;
 
-  /// Get the corresponding error message if the cursor points to an error in
-  /// the trace.
+  /// \return
+  ///     The error message the cursor is pointing at.
+  virtual const char *GetError() const = 0;
+
+  /// \return
+  ///     Whether the cursor points to an event or not.
+  bool IsEvent() const;
+
+  /// \return
+  ///     The specific kind of event the cursor is pointing at, or \b
+  ///     TraceEvent::eTraceEventNone if the cursor not pointing to an event.
+  virtual lldb::TraceEvent GetEventType() const = 0;
+
+  /// \return
+  ///     A human-readable description of the event this cursor is pointing at.
+  const char *GetEventTypeAsString() const;
+
+  /// \return
+  ///     A human-readable description of the given event.
+  static const char *EventKindToString(lldb::TraceEvent event_kind);
+
+  /// \return
+  ///     Whether the cursor points to an instruction.
+  bool IsInstruction() const;
+
+  /// \return
+  ///     The load address of the instruction the cursor is pointing at.
+  virtual lldb::addr_t GetLoadAddress() const = 0;
+
+  /// Get the CPU associated with the current trace item.
+  ///
+  /// This call might not be O(1), so it's suggested to invoke this method
+  /// whenever an eTraceEventCPUChanged event is fired.
   ///
   /// \return
-  ///     \b nullptr if the cursor is not pointing to an error in
-  ///     the trace. Otherwise return the actual error message.
-  virtual const char *GetError() = 0;
+  ///    The requested CPU id, or \a llvm::None if this information is
+  ///    not available for the current item.
+  virtual llvm::Optional<lldb::cpu_id_t> GetCPU() const = 0;
 
-  /// \return
-  ///     The load address of the instruction the cursor is pointing at. If the
-  ///     cursor points to an error in the trace, return \b
-  ///     LLDB_INVALID_ADDRESS.
-  virtual lldb::addr_t GetLoadAddress() = 0;
-
-  /// Get the hardware counter of a given type associated with the current
-  /// instruction. Each architecture might support different counters. It might
-  /// happen that only some instructions of an entire trace have a given counter
-  /// associated with them.
+  /// Get the last hardware clock value that was emitted before the current
+  /// trace item.
   ///
-  /// \param[in] counter_type
-  ///    The counter type.
-  /// \return
-  ///    The value of the counter or \b llvm::None if not available.
-  virtual llvm::Optional<uint64_t> GetCounter(lldb::TraceCounter counter_type) = 0;
-
-  /// Get a bitmask with a list of events that happened chronologically right
-  /// before the current instruction or error, but after the previous
-  /// instruction.
+  /// This call might not be O(1), so it's suggested to invoke this method
+  /// whenever an eTraceEventHWClockTick event is fired.
   ///
   /// \return
-  ///   The bitmask of events.
-  virtual lldb::TraceEvents GetEvents() = 0;
+  ///     The requested HW clock value, or \a llvm::None if this information is
+  ///     not available for the current item.
+  virtual llvm::Optional<uint64_t> GetHWClock() const = 0;
 
+  /// Get the approximate wall clock time in nanoseconds at which the current
+  /// trace item was executed. Each trace plug-in has a different definition for
+  /// what time 0 means.
+  ///
   /// \return
-  ///     The \a lldb::TraceInstructionControlFlowType categories the
-  ///     instruction the cursor is pointing at falls into. If the cursor points
-  ///     to an error in the trace, return \b 0.
-  virtual lldb::TraceInstructionControlFlowType
-  GetInstructionControlFlowType() = 0;
+  ///     The approximate wall clock time for the trace item, or \a llvm::None
+  ///     if not available.
+  virtual llvm::Optional<double> GetWallClockTime() const = 0;
   /// \}
 
 protected:
   ExecutionContextRef m_exe_ctx_ref;
-
-  lldb::TraceInstructionControlFlowType m_granularity =
-      lldb::eTraceInstructionControlFlowTypeInstruction;
-  bool m_ignore_errors = false;
   bool m_forwards = false;
 };
-
-namespace trace_event_utils {
-/// Convert an individual event to a display string.
-///
-/// \param[in] event
-///     An individual event.
-///
-/// \return
-///     A display string for that event, or nullptr if wrong data is passed
-///     in.
-const char *EventToDisplayString(lldb::TraceEvents event);
-
-/// Invoke the given callback for each individual event of the given events
-/// bitmask.
-///
-/// \param[in] events
-///     A list of events to inspect.
-///
-/// \param[in] callback
-///     The callback to invoke for each event.
-void ForEachEvent(lldb::TraceEvents events,
-                  std::function<void(lldb::TraceEvents event)> callback);
-} // namespace trace_event_utils
-
 } // namespace lldb_private
 
 #endif // LLDB_TARGET_TRACE_CURSOR_H

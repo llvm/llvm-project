@@ -1058,7 +1058,7 @@ define <16 x float> @var_shuffle_v16f32(<16 x float> %v, <16 x i32> %indices) no
   ret <16 x float> %ret15
 }
 
-define void @var_cvt_shuffle_v64f32_v64i8_idx(<64 x float>* %dst, <64 x i8> %src, i32 %b) nounwind {
+define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) nounwind {
 ; AVX512F-LABEL: var_cvt_shuffle_v64f32_v64i8_idx:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
@@ -1842,6 +1842,6 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(<64 x float>* %dst, <64 x i8> %src
   %dst_62.i.i = insertelement <64 x i8> %dst_61.i.i, i8 %v_62.i.i, i32 62
   %dst_63.i.i = insertelement <64 x i8> %dst_62.i.i, i8 %v_63.i.i, i32 63
   %shuf_load_to_float = sitofp <64 x i8> %dst_63.i.i to <64 x float>
-  store <64 x float> %shuf_load_to_float, <64 x float>* %dst
+  store <64 x float> %shuf_load_to_float, ptr %dst
   ret void
 }

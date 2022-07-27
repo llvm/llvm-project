@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mcpu=yonah -mtriple=i386-linux-gnu -o - | FileCheck %s --check-prefix=X32
 
 ; PR7518
-define void @test1(<2 x float> %Q, float *%P2) nounwind {
+define void @test1(<2 x float> %Q, ptr%P2) nounwind {
 ; X64-LABEL: test1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
@@ -21,11 +21,11 @@ define void @test1(<2 x float> %Q, float *%P2) nounwind {
   %a = extractelement <2 x float> %Q, i32 0
   %b = extractelement <2 x float> %Q, i32 1
   %c = fadd float %a, %b
-  store float %c, float* %P2
+  store float %c, ptr %P2
   ret void
 }
 
-define <2 x float> @test2(<2 x float> %Q, <2 x float> %R, <2 x float> *%P) nounwind {
+define <2 x float> @test2(<2 x float> %Q, <2 x float> %R, ptr%P) nounwind {
 ; X64-LABEL: test2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    addps %xmm1, %xmm0

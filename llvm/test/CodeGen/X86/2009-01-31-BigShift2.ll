@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 ; PR3449
 
-define void @test(<8 x double>* %P, i64* %Q) nounwind {
+define void @test(ptr %P, ptr %Q) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -12,10 +12,10 @@ define void @test(<8 x double>* %P, i64* %Q) nounwind {
 ; CHECK-NEXT:    movl %ecx, 4(%eax)
 ; CHECK-NEXT:    movl %edx, (%eax)
 ; CHECK-NEXT:    retl
-	%A = load <8 x double>, <8 x double>* %P		; <<8 x double>> [#uses=1]
+	%A = load <8 x double>, ptr %P		; <<8 x double>> [#uses=1]
 	%B = bitcast <8 x double> %A to i512		; <i512> [#uses=1]
 	%C = lshr i512 %B, 448		; <i512> [#uses=1]
 	%D = trunc i512 %C to i64		; <i64> [#uses=1]
-	store volatile i64 %D, i64* %Q
+	store volatile i64 %D, ptr %Q
 	ret void
 }

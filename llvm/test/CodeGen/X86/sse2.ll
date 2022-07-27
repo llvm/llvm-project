@@ -8,7 +8,7 @@
 
 ; Tests for SSE2 and below, without SSE3+.
 
-define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
+define void @test1(ptr %r, ptr %A, double %B) nounwind  {
 ; X86-SSE-LABEL: test1:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -38,14 +38,14 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X64-AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
-	%tmp3 = load <2 x double>, <2 x double>* %A, align 16
+	%tmp3 = load <2 x double>, ptr %A, align 16
 	%tmp7 = insertelement <2 x double> undef, double %B, i32 0
 	%tmp9 = shufflevector <2 x double> %tmp3, <2 x double> %tmp7, <2 x i32> < i32 2, i32 1 >
-	store <2 x double> %tmp9, <2 x double>* %r, align 16
+	store <2 x double> %tmp9, ptr %r, align 16
 	ret void
 }
 
-define void @test2(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
+define void @test2(ptr %r, ptr %A, double %B) nounwind  {
 ; X86-SSE-LABEL: test2:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -77,15 +77,15 @@ define void @test2(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
-	%tmp3 = load <2 x double>, <2 x double>* %A, align 16
+	%tmp3 = load <2 x double>, ptr %A, align 16
 	%tmp7 = insertelement <2 x double> undef, double %B, i32 0
 	%tmp9 = shufflevector <2 x double> %tmp3, <2 x double> %tmp7, <2 x i32> < i32 0, i32 2 >
-	store <2 x double> %tmp9, <2 x double>* %r, align 16
+	store <2 x double> %tmp9, ptr %r, align 16
 	ret void
 }
 
 
-define void @test3(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B) nounwind {
+define void @test3(ptr %res, ptr %A, ptr %B) nounwind {
 ; X86-SSE-LABEL: test3:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -119,8 +119,8 @@ define void @test3(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B) nounwind
 ; X64-AVX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
-	%tmp = load <4 x float>, <4 x float>* %B		; <<4 x float>> [#uses=2]
-	%tmp3 = load <4 x float>, <4 x float>* %A		; <<4 x float>> [#uses=2]
+	%tmp = load <4 x float>, ptr %B		; <<4 x float>> [#uses=2]
+	%tmp3 = load <4 x float>, ptr %A		; <<4 x float>> [#uses=2]
 	%tmp.upgrd.1 = extractelement <4 x float> %tmp3, i32 0		; <float> [#uses=1]
 	%tmp7 = extractelement <4 x float> %tmp, i32 0		; <float> [#uses=1]
 	%tmp8 = extractelement <4 x float> %tmp3, i32 1		; <float> [#uses=1]
@@ -129,11 +129,11 @@ define void @test3(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B) nounwind
 	%tmp11 = insertelement <4 x float> %tmp10, float %tmp7, i32 1		; <<4 x float>> [#uses=1]
 	%tmp12 = insertelement <4 x float> %tmp11, float %tmp8, i32 2		; <<4 x float>> [#uses=1]
 	%tmp13 = insertelement <4 x float> %tmp12, float %tmp9, i32 3		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp13, <4 x float>* %res
+	store <4 x float> %tmp13, ptr %res
 	ret void
 }
 
-define void @test4(<4 x float> %X, <4 x float>* %res) nounwind {
+define void @test4(<4 x float> %X, ptr %res) nounwind {
 ; X86-SSE-LABEL: test4:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -160,11 +160,11 @@ define void @test4(<4 x float> %X, <4 x float>* %res) nounwind {
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
 	%tmp5 = shufflevector <4 x float> %X, <4 x float> undef, <4 x i32> < i32 2, i32 6, i32 3, i32 7 >		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp5, <4 x float>* %res
+	store <4 x float> %tmp5, ptr %res
 	ret void
 }
 
-define <4 x i32> @test5(i8** %ptr) nounwind {
+define <4 x i32> @test5(ptr %ptr) nounwind {
 ; X86-SSE-LABEL: test5:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -202,9 +202,8 @@ define <4 x i32> @test5(i8** %ptr) nounwind {
 ; X64-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; X64-AVX-NEXT:    retq
-	%tmp = load i8*, i8** %ptr		; <i8*> [#uses=1]
-	%tmp.upgrd.1 = bitcast i8* %tmp to float*		; <float*> [#uses=1]
-	%tmp.upgrd.2 = load float, float* %tmp.upgrd.1		; <float> [#uses=1]
+	%tmp = load ptr, ptr %ptr		; <ptr> [#uses=1]
+	%tmp.upgrd.2 = load float, ptr %tmp		; <float> [#uses=1]
 	%tmp.upgrd.3 = insertelement <4 x float> undef, float %tmp.upgrd.2, i32 0		; <<4 x float>> [#uses=1]
 	%tmp9 = insertelement <4 x float> %tmp.upgrd.3, float 0.000000e+00, i32 1		; <<4 x float>> [#uses=1]
 	%tmp10 = insertelement <4 x float> %tmp9, float 0.000000e+00, i32 2		; <<4 x float>> [#uses=1]
@@ -217,7 +216,7 @@ define <4 x i32> @test5(i8** %ptr) nounwind {
 	ret <4 x i32> %tmp36
 }
 
-define void @test6(<4 x float>* %res, <4 x float>* %A) nounwind {
+define void @test6(ptr %res, ptr %A) nounwind {
 ; X86-SSE-LABEL: test6:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -245,9 +244,9 @@ define void @test6(<4 x float>* %res, <4 x float>* %A) nounwind {
 ; X64-AVX-NEXT:    vmovaps (%rsi), %xmm0
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
-  %tmp1 = load <4 x float>, <4 x float>* %A            ; <<4 x float>> [#uses=1]
+  %tmp1 = load <4 x float>, ptr %A            ; <<4 x float>> [#uses=1]
   %tmp2 = shufflevector <4 x float> %tmp1, <4 x float> undef, <4 x i32> < i32 0, i32 5, i32 6, i32 7 >          ; <<4 x float>> [#uses=1]
-  store <4 x float> %tmp2, <4 x float>* %res
+  store <4 x float> %tmp2, ptr %res
   ret void
 }
 
@@ -265,7 +264,7 @@ define void @test7() nounwind {
 ; AVX-NEXT:    ret{{[l|q]}}
   bitcast <4 x i32> zeroinitializer to <4 x float>                ; <<4 x float>>:1 [#uses=1]
   shufflevector <4 x float> %1, <4 x float> zeroinitializer, <4 x i32> zeroinitializer         ; <<4 x float>>:2 [#uses=1]
-  store <4 x float> %2, <4 x float>* null
+  store <4 x float> %2, ptr null
   ret void
 }
 
@@ -291,10 +290,10 @@ define <2 x i64> @test8() nounwind {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovups x(%rip), %xmm0
 ; X64-AVX-NEXT:    retq
-	%tmp = load i32, i32* getelementptr ([4 x i32], [4 x i32]* @x, i32 0, i32 0)		; <i32> [#uses=1]
-	%tmp3 = load i32, i32* getelementptr ([4 x i32], [4 x i32]* @x, i32 0, i32 1)		; <i32> [#uses=1]
-	%tmp5 = load i32, i32* getelementptr ([4 x i32], [4 x i32]* @x, i32 0, i32 2)		; <i32> [#uses=1]
-	%tmp7 = load i32, i32* getelementptr ([4 x i32], [4 x i32]* @x, i32 0, i32 3)		; <i32> [#uses=1]
+	%tmp = load i32, ptr @x		; <i32> [#uses=1]
+	%tmp3 = load i32, ptr getelementptr ([4 x i32], ptr @x, i32 0, i32 1)		; <i32> [#uses=1]
+	%tmp5 = load i32, ptr getelementptr ([4 x i32], ptr @x, i32 0, i32 2)		; <i32> [#uses=1]
+	%tmp7 = load i32, ptr getelementptr ([4 x i32], ptr @x, i32 0, i32 3)		; <i32> [#uses=1]
 	%tmp.upgrd.1 = insertelement <4 x i32> undef, i32 %tmp, i32 0		; <<4 x i32>> [#uses=1]
 	%tmp13 = insertelement <4 x i32> %tmp.upgrd.1, i32 %tmp3, i32 1		; <<4 x i32>> [#uses=1]
 	%tmp14 = insertelement <4 x i32> %tmp13, i32 %tmp5, i32 2		; <<4 x i32>> [#uses=1]
@@ -422,15 +421,15 @@ define void @test12() nounwind {
 ; AVX512-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vmovaps %xmm0, 0
 ; AVX512-NEXT:    ret{{[l|q]}}
-  %tmp1 = load <4 x float>, <4 x float>* null          ; <<4 x float>> [#uses=2]
+  %tmp1 = load <4 x float>, ptr null          ; <<4 x float>> [#uses=2]
   %tmp2 = shufflevector <4 x float> %tmp1, <4 x float> < float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00 >, <4 x i32> < i32 0, i32 1, i32 6, i32 7 >             ; <<4 x float>> [#uses=1]
   %tmp3 = shufflevector <4 x float> %tmp1, <4 x float> zeroinitializer, <4 x i32> < i32 2, i32 3, i32 6, i32 7 >                ; <<4 x float>> [#uses=1]
   %tmp4 = fadd <4 x float> %tmp2, %tmp3            ; <<4 x float>> [#uses=1]
-  store <4 x float> %tmp4, <4 x float>* null
+  store <4 x float> %tmp4, ptr null
   ret void
 }
 
-define void @test13(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B, <4 x float>* %C) nounwind {
+define void @test13(ptr %res, ptr %A, ptr %B, ptr %C) nounwind {
 ; X86-SSE-LABEL: test13:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -468,14 +467,14 @@ define void @test13(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B, <4 x fl
 ; X64-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
-  %tmp3 = load <4 x float>, <4 x float>* %B            ; <<4 x float>> [#uses=1]
-  %tmp5 = load <4 x float>, <4 x float>* %C            ; <<4 x float>> [#uses=1]
+  %tmp3 = load <4 x float>, ptr %B            ; <<4 x float>> [#uses=1]
+  %tmp5 = load <4 x float>, ptr %C            ; <<4 x float>> [#uses=1]
   %tmp11 = shufflevector <4 x float> %tmp3, <4 x float> %tmp5, <4 x i32> < i32 1, i32 4, i32 1, i32 5 >         ; <<4 x float>> [#uses=1]
-  store <4 x float> %tmp11, <4 x float>* %res
+  store <4 x float> %tmp11, ptr %res
   ret void
 }
 
-define <4 x float> @test14(<4 x float>* %x, <4 x float>* %y) nounwind {
+define <4 x float> @test14(ptr %x, ptr %y) nounwind {
 ; X86-SSE-LABEL: test14:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -517,15 +516,15 @@ define <4 x float> @test14(<4 x float>* %x, <4 x float>* %y) nounwind {
 ; X64-AVX-NEXT:    vsubps %xmm0, %xmm1, %xmm0
 ; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm2[0],xmm0[0]
 ; X64-AVX-NEXT:    retq
-  %tmp = load <4 x float>, <4 x float>* %y             ; <<4 x float>> [#uses=2]
-  %tmp5 = load <4 x float>, <4 x float>* %x            ; <<4 x float>> [#uses=2]
+  %tmp = load <4 x float>, ptr %y             ; <<4 x float>> [#uses=2]
+  %tmp5 = load <4 x float>, ptr %x            ; <<4 x float>> [#uses=2]
   %tmp9 = fadd <4 x float> %tmp5, %tmp             ; <<4 x float>> [#uses=1]
   %tmp21 = fsub <4 x float> %tmp5, %tmp            ; <<4 x float>> [#uses=1]
   %tmp27 = shufflevector <4 x float> %tmp9, <4 x float> %tmp21, <4 x i32> < i32 0, i32 1, i32 4, i32 5 >                ; <<4 x float>> [#uses=1]
   ret <4 x float> %tmp27
 }
 
-define <4 x float> @test15(<4 x float>* %x, <4 x float>* %y) nounwind {
+define <4 x float> @test15(ptr %x, ptr %y) nounwind {
 ; X86-SSE-LABEL: test15:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -554,15 +553,15 @@ define <4 x float> @test15(<4 x float>* %x, <4 x float>* %y) nounwind {
 ; X64-AVX-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],mem[1]
 ; X64-AVX-NEXT:    retq
 entry:
-  %tmp = load <4 x float>, <4 x float>* %y             ; <<4 x float>> [#uses=1]
-  %tmp3 = load <4 x float>, <4 x float>* %x            ; <<4 x float>> [#uses=1]
+  %tmp = load <4 x float>, ptr %y             ; <<4 x float>> [#uses=1]
+  %tmp3 = load <4 x float>, ptr %x            ; <<4 x float>> [#uses=1]
   %tmp4 = shufflevector <4 x float> %tmp3, <4 x float> %tmp, <4 x i32> < i32 2, i32 3, i32 6, i32 7 >           ; <<4 x float>> [#uses=1]
   ret <4 x float> %tmp4
 }
 
 ; PR8900
 
-define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocapture %dst) {
+define  <2 x double> @test16(ptr nocapture %srcA, ptr nocapture %dst) {
 ; X86-SSE-LABEL: test16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -588,8 +587,8 @@ define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocap
 ; X64-AVX-NEXT:    vmovaps 96(%rdi), %xmm0
 ; X64-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X64-AVX-NEXT:    retq
-  %i5 = getelementptr inbounds <4 x double>, <4 x double>* %srcA, i32 3
-  %i6 = load <4 x double>, <4 x double>* %i5, align 32
+  %i5 = getelementptr inbounds <4 x double>, ptr %srcA, i32 3
+  %i6 = load <4 x double>, ptr %i5, align 32
   %i7 = shufflevector <4 x double> %i6, <4 x double> undef, <2 x i32> <i32 0, i32 2>
   ret <2 x double> %i7
 }
@@ -635,7 +634,7 @@ entry:
   %0 = insertelement <4 x i32> undef, i32 undef, i32 1
   %1 = shufflevector <4 x i32> <i32 undef, i32 undef, i32 32768, i32 32768>, <4 x i32> %0, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   %2 = bitcast <4 x i32> %1 to <4 x float>
-  store <4 x float> %2, <4 x float> * undef
+  store <4 x float> %2, ptr undef
   ret void
 }
 

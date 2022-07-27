@@ -96,30 +96,38 @@ class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 // This is necessary because the `body` is also used to generate `getChecked`
 // methods, which have a different underlying `Base::get*` call.
 //
-class AttrOrTypeBuilder<dag parameters, code bodyCode = ""> {
+class AttrOrTypeBuilder<dag parameters, code bodyCode = "",
+                        string returnTypeStr = ""> {
   dag dagParams = parameters;
   code body = bodyCode;
+
+  // Change the return type of the builder. By default, it is the type of the
+  // attribute or type.
+  string returnType = returnTypeStr;
 
   // The context parameter can be inferred from one of the other parameters and
   // is not implicitly added to the parameter list.
   bit hasInferredContextParam = 0;
 }
-class AttrBuilder<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilder<parameters, bodyCode>;
-class TypeBuilder<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilder<parameters, bodyCode>;
+class AttrBuilder<dag parameters, code bodyCode = "", string returnType = "">
+  : AttrOrTypeBuilder<parameters, bodyCode, returnType>;
+class TypeBuilder<dag parameters, code bodyCode = "", string returnType = "">
+  : AttrOrTypeBuilder<parameters, bodyCode, returnType>;
 
 // A class of AttrOrTypeBuilder that is able to infer the MLIRContext parameter
 // from one of the other builder parameters. Instances of this builder do not
 // have `MLIRContext *` implicitly added to the parameter list.
-class AttrOrTypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : TypeBuilder<parameters, bodyCode> {
+class AttrOrTypeBuilderWithInferredContext<dag parameters, code bodyCode = "",
+                                           string returnType = "">
+  : TypeBuilder<parameters, bodyCode, returnType> {
   let hasInferredContextParam = 1;
 }
-class AttrBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
-class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
+class AttrBuilderWithInferredContext<dag parameters, code bodyCode = "",
+                                     string returnType = "">
+  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode, returnType>;
+class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "",
+                                     string returnType = "">
+  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode, returnType>;
 
 //===----------------------------------------------------------------------===//
 // Definitions
@@ -215,6 +223,11 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
 
   // Extra code to include in the class declaration.
   code extraClassDeclaration = [{}];
+
+  // Additional code that will be added to the generated source file. The
+  // generated code is placed inside the class's C++ namespace. `$cppClass` is
+  // replaced by the class name.
+  code extraClassDefinition = [{}];
 }
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits
@@ -295,6 +308,8 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // The C++ storage type of of this parameter if it is a reference, e.g.
   // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
   string cppStorageType = ?;
+  // The C++ code to convert from the storage type to the parameter type.
+  string convertFromStorage = "$_self";
   // One-line human-readable description of the argument.
   string summary = desc;
   // The format string for the asm syntax (documentation only).
@@ -317,7 +332,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // will be set to the default value. Parameters equal to their default values
   // are elided when printing. Equality is checked using the `comparator` field,
   // which by default is the C++ equality operator. The current MLIR context is
-  // made available through `$_ctx`, e.g., for constructing default values for
+  // made available through `$_ctxt`, e.g., for constructing default values for
   // attributes and types.
   string defaultValue = ?;
 }

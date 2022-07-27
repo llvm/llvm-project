@@ -196,7 +196,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
          "Only NoInit can have no initializer!");
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
-  CXXNewExprBits.IsArray = ArraySize.hasValue();
+  CXXNewExprBits.IsArray = ArraySize.has_value();
   CXXNewExprBits.ShouldPassAlignment = ShouldPassAlignment;
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.StoredInitializationStyle =
@@ -248,7 +248,7 @@ CXXNewExpr::Create(const ASTContext &Ctx, bool IsGlobalNew,
                    InitializationStyle InitializationStyle, Expr *Initializer,
                    QualType Ty, TypeSourceInfo *AllocatedTypeInfo,
                    SourceRange Range, SourceRange DirectInitRange) {
-  bool IsArray = ArraySize.hasValue();
+  bool IsArray = ArraySize.has_value();
   bool HasInit = Initializer != nullptr;
   unsigned NumPlacementArgs = PlacementArgs.size();
   bool IsParenTypeId = TypeIdParens.isValid();
@@ -314,7 +314,7 @@ QualType CXXDeleteExpr::getDestroyedType() const {
 // CXXPseudoDestructorExpr
 PseudoDestructorTypeStorage::PseudoDestructorTypeStorage(TypeSourceInfo *Info)
     : Type(Info) {
-  Location = Info->getTypeLoc().getLocalSourceRange().getBegin();
+  Location = Info->getTypeLoc().getBeginLoc();
 }
 
 CXXPseudoDestructorExpr::CXXPseudoDestructorExpr(
@@ -341,7 +341,7 @@ QualType CXXPseudoDestructorExpr::getDestroyedType() const {
 SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   SourceLocation End = DestroyedType.getLocation();
   if (TypeSourceInfo *TInfo = DestroyedType.getTypeSourceInfo())
-    End = TInfo->getTypeLoc().getLocalSourceRange().getEnd();
+    End = TInfo->getTypeLoc().getSourceRange().getEnd();
   return End;
 }
 

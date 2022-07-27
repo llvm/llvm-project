@@ -730,7 +730,7 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
 
   // (Repeatedly) merging blocks into their predecessors can create redundant
   // debug intrinsics.
-  for (auto &Pred : Preds)
+  for (const auto &Pred : Preds)
     if (auto *BB = cast_or_null<BasicBlock>(Pred))
       RemoveRedundantDbgInstrs(BB);
 
@@ -2568,8 +2568,6 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
   }
 };
 
-} // end anonymous namespace
-
 #ifndef NDEBUG
 static inline raw_ostream &operator<<(raw_ostream &OS, const ExtAddrMode &AM) {
   AM.print(OS);
@@ -2616,6 +2614,8 @@ LLVM_DUMP_METHOD void ExtAddrMode::dump() const {
   dbgs() << '\n';
 }
 #endif
+
+} // end anonymous namespace
 
 namespace {
 
@@ -3440,7 +3440,7 @@ public:
 
   void destroyNewNodes(Type *CommonType) {
     // For safe erasing, replace the uses with dummy value first.
-    auto *Dummy = UndefValue::get(CommonType);
+    auto *Dummy = PoisonValue::get(CommonType);
     for (auto *I : AllPhiNodes) {
       I->replaceAllUsesWith(Dummy);
       I->eraseFromParent();
@@ -3684,7 +3684,7 @@ private:
       // Phi we added (subject to match) and both of them is in the same basic
       // block then we can match our pair if values match. So we state that
       // these values match and add it to work list to verify that.
-      for (auto B : Item.first->blocks()) {
+      for (auto *B : Item.first->blocks()) {
         Value *FirstValue = Item.first->getIncomingValueForBlock(B);
         Value *SecondValue = Item.second->getIncomingValueForBlock(B);
         if (FirstValue == SecondValue)
@@ -3809,7 +3809,7 @@ private:
     SmallVector<Value *, 32> Worklist;
     assert((isa<PHINode>(Original) || isa<SelectInst>(Original)) &&
            "Address must be a Phi or Select node");
-    auto *Dummy = UndefValue::get(CommonType);
+    auto *Dummy = PoisonValue::get(CommonType);
     Worklist.push_back(Original);
     while (!Worklist.empty()) {
       Value *Current = Worklist.pop_back_val();
@@ -5181,8 +5181,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       // GEP, collect the GEP.  Skip the GEPs that are the new bases of
       // previously split data structures.
       LargeOffsetGEPMap[GEP->getPointerOperand()].push_back(LargeOffsetGEP);
-      if (LargeOffsetGEPID.find(GEP) == LargeOffsetGEPID.end())
-        LargeOffsetGEPID[GEP] = LargeOffsetGEPID.size();
+      LargeOffsetGEPID.insert(std::make_pair(GEP, LargeOffsetGEPID.size()));
     }
 
     NewAddrMode.OriginalValue = V;
@@ -5228,18 +5227,31 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   WeakTrackingVH SunkAddrVH = SunkAddrs[Addr];
 
   Value * SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
+  Type *IntPtrTy = DL->getIntPtrType(Addr->getType());
   if (SunkAddr) {
     LLVM_DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode
                       << " for " << *MemoryInst << "\n");
-    if (SunkAddr->getType() != Addr->getType())
-      SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
+    if (SunkAddr->getType() != Addr->getType()) {
+      if (SunkAddr->getType()->getPointerAddressSpace() !=
+              Addr->getType()->getPointerAddressSpace() &&
+          !DL->isNonIntegralPointerType(Addr->getType())) {
+        // There are two reasons the address spaces might not match: a no-op
+        // addrspacecast, or a ptrtoint/inttoptr pair. Either way, we emit a
+        // ptrtoint/inttoptr pair to ensure we match the original semantics.
+        // TODO: allow bitcast between different address space pointers with the
+        // same size.
+        SunkAddr = Builder.CreatePtrToInt(SunkAddr, IntPtrTy, "sunkaddr");
+        SunkAddr =
+            Builder.CreateIntToPtr(SunkAddr, Addr->getType(), "sunkaddr");
+      } else
+        SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
+    }
   } else if (AddrSinkUsingGEPs || (!AddrSinkUsingGEPs.getNumOccurrences() &&
                                    SubtargetInfo->addrSinkUsingGEPs())) {
     // By default, we use the GEP-based method when AA is used later. This
     // prevents new inttoptr/ptrtoint pairs from degrading AA capabilities.
     LLVM_DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode
                       << " for " << *MemoryInst << "\n");
-    Type *IntPtrTy = DL->getIntPtrType(Addr->getType());
     Value *ResultPtr = nullptr, *ResultIndex = nullptr;
 
     // First, find the pointer.
@@ -5362,8 +5374,21 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
                                      AddrMode.InBounds);
       }
 
-      if (SunkAddr->getType() != Addr->getType())
-        SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
+      if (SunkAddr->getType() != Addr->getType()) {
+        if (SunkAddr->getType()->getPointerAddressSpace() !=
+                Addr->getType()->getPointerAddressSpace() &&
+            !DL->isNonIntegralPointerType(Addr->getType())) {
+          // There are two reasons the address spaces might not match: a no-op
+          // addrspacecast, or a ptrtoint/inttoptr pair. Either way, we emit a
+          // ptrtoint/inttoptr pair to ensure we match the original semantics.
+          // TODO: allow bitcast between different address space pointers with
+          // the same size.
+          SunkAddr = Builder.CreatePtrToInt(SunkAddr, IntPtrTy, "sunkaddr");
+          SunkAddr =
+              Builder.CreateIntToPtr(SunkAddr, Addr->getType(), "sunkaddr");
+        } else
+          SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
+      }
     }
   } else {
     // We'd require a ptrtoint/inttoptr down the line, which we can't do for
@@ -6139,7 +6164,7 @@ bool CodeGenPrepare::optimizePhiTypes(Function &F) {
 
   // Remove any old phi's that have been converted.
   for (auto *I : DeletedInstrs) {
-    I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     I->eraseFromParent();
   }
 
@@ -7794,9 +7819,11 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   }
   // After unmerging, verify that GEPIOp is actually only used in SrcBlock (not
   // alive on IndirectBr edges).
-  assert(find_if(GEPIOp->users(), [&](User *Usr) {
-        return cast<Instruction>(Usr)->getParent() != SrcBlock;
-      }) == GEPIOp->users().end() && "GEPIOp is used outside SrcBlock");
+  assert(llvm::none_of(GEPIOp->users(),
+                       [&](User *Usr) {
+                         return cast<Instruction>(Usr)->getParent() != SrcBlock;
+                       }) &&
+         "GEPIOp is used outside SrcBlock");
   return true;
 }
 

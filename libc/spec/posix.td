@@ -12,6 +12,15 @@ def ConstRestrictedStructSigactionPtr : ConstType<RestrictedStructSigactionPtr>;
 
 def PThreadStartT : NamedType<"__pthread_start_t">;
 
+def InoT : NamedType<"ino_t">;
+def DIR : NamedType<"DIR">;
+def DIRPtr : PtrType<DIR>;
+def DIRRestrictedPtr : RestrictedPtrType<DIR>;
+def StructDirent : NamedType<"struct dirent">;
+def StructDirentPtr : PtrType<StructDirent>;
+def StructDirentPtrPtr : PtrType<StructDirentPtr>;
+def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -467,6 +476,16 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<PThreadTType>]
       >,
       FunctionSpec<
+          "pthread_self",
+          RetValSpec<PThreadTType>,
+          [ArgSpec<VoidType>]
+      >,
+      FunctionSpec<
+          "pthread_equal",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadTType>, ArgSpec<PThreadTType>]
+      >,
+      FunctionSpec<
           "pthread_mutexattr_init",
           RetValSpec<IntType>,
           [ArgSpec<PThreadMutexAttrTPtr>]
@@ -568,8 +587,48 @@ def POSIX : StandardSpec<"POSIX"> {
       ]
   >;
 
+  HeaderSpec Dirent = HeaderSpec<
+      "dirent.h",
+      [], // Macros
+      [InoT, StructDirent, DIR], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "alphasort",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstStructDirentPtrPtr>, ArgSpec<ConstStructDirentPtrPtr>]
+          >,
+          FunctionSpec<
+              "closedir",
+              RetValSpec<IntType>,
+              [ArgSpec<DIRPtr>]
+          >,
+          FunctionSpec<
+              "dirfd",
+              RetValSpec<IntType>,
+              [ArgSpec<DIRPtr>]
+          >,
+          FunctionSpec<
+              "fdopendir",
+              RetValSpec<DIRPtr>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "opendir",
+              RetValSpec<DIRPtr>,
+              [ArgSpec<ConstCharPtr>]
+          >,
+          FunctionSpec<
+              "readdir",
+              RetValSpec<StructDirentPtr>,
+              [ArgSpec<DIRPtr>]
+          >,
+      ]
+  >;
+
   let Headers = [
     CType,
+    Dirent,
     Errno,
     FCntl,
     PThread,

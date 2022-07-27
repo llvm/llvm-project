@@ -127,7 +127,7 @@ multiple file formats.
 
 .. option:: --set-section-alignment <section>=<align>
 
- Set the alignment of section ``<section>`` to `<align>``. Can be specified
+ Set the alignment of section ``<section>`` to ``<align>``. Can be specified
  multiple times to update multiple sections.
 
 .. option:: --set-section-flags <section>=<flag>[,<flag>,...]
@@ -296,11 +296,10 @@ them.
  Add ``<incr>`` to the program's start address. Can be specified multiple
  times, in which case the values will be applied cumulatively.
 
-.. option:: --compress-debug-sections [<style>]
+.. option:: --compress-debug-sections [<format>]
 
- Compress DWARF debug sections in the output, using the specified style.
- Supported styles are `zlib-gnu` and `zlib`. Defaults to `zlib` if no style is
- specified.
+ Compress DWARF debug sections in the output, using the specified format.
+ Supported formats are ``zlib``. Use ``zlib`` if ``<format>`` is omitted.
 
 .. option:: --decompress-debug-sections
 
@@ -427,6 +426,11 @@ them.
  Rename sections called ``<old>`` to ``<new>`` in the output, and apply any
  specified ``<flag>`` values. See :option:`--set-section-flags` for a list of
  supported flags. Can be specified multiple times to rename multiple sections.
+
+.. option:: --set-section-type <section>=<type>
+
+ Set the type of section ``<section>`` to the integer ``<type>``. Can be
+ specified multiple times to update multiple sections.
 
 .. option:: --set-start-addr <addr>
 

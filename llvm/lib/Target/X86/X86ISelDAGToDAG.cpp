@@ -3499,7 +3499,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   const bool AllowExtraUsesByDefault = Subtarget->hasBMI2();
   auto checkUses = [AllowExtraUsesByDefault](SDValue Op, unsigned NUses,
                                              Optional<bool> AllowExtraUses) {
-    return AllowExtraUses.getValueOr(AllowExtraUsesByDefault) ||
+    return AllowExtraUses.value_or(AllowExtraUsesByDefault) ||
            Op.getNode()->hasNUsesOfValue(NUses, Op.getResNo());
   };
   auto checkOneUse = [checkUses](SDValue Op,

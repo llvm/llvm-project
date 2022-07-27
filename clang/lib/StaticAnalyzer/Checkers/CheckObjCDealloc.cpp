@@ -286,7 +286,7 @@ void ObjCDeallocChecker::checkBeginFunction(
     if (!LValLoc)
       continue;
 
-    SVal InitialVal = State->getSVal(LValLoc.getValue());
+    SVal InitialVal = State->getSVal(*LValLoc);
     SymbolRef Symbol = InitialVal.getAsSymbol();
     if (!Symbol || !isa<SymbolRegionValue>(Symbol))
       continue;
@@ -957,7 +957,7 @@ ObjCDeallocChecker::getValueReleasedByNillingOut(const ObjCMethodCall &M,
   if (!LValLoc)
     return nullptr;
 
-  SVal CurrentValInIvar = State->getSVal(LValLoc.getValue());
+  SVal CurrentValInIvar = State->getSVal(*LValLoc);
   return CurrentValInIvar.getAsSymbol();
 }
 

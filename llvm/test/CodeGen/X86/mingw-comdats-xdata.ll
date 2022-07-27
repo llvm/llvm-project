@@ -26,21 +26,21 @@ entry:
 ; GNU: main:
 
 ; Function Attrs: inlinehint uwtable
-define linkonce_odr dso_local i32 @_Z3fooi(i32 %x) #1 comdat personality i8* bitcast (i32 (...)* @__gxx_personality_seh0 to i8*) {
+define linkonce_odr dso_local i32 @_Z3fooi(i32 %x) #1 comdat personality ptr @__gxx_personality_seh0 {
 entry:
   %call = invoke i32 @_Z3bari(i32 %x)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
-  %0 = load i32, i32* @gv, align 4
+  %0 = load i32, ptr @gv, align 4
   %add = add nsw i32 %0, %call
   br label %return
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
-          catch i8* null
-  %2 = extractvalue { i8*, i32 } %1, 0
-  %3 = tail call i8* @__cxa_begin_catch(i8* %2) #3
+  %1 = landingpad { ptr, i32 }
+          catch ptr null
+  %2 = extractvalue { ptr, i32 } %1, 0
+  %3 = tail call ptr @__cxa_begin_catch(ptr %2) #3
   tail call void @__cxa_end_catch()
   br label %return
 
@@ -72,7 +72,7 @@ declare dso_local i32 @_Z3bari(i32)
 
 declare dso_local i32 @__gxx_personality_seh0(...)
 
-declare dso_local i8* @__cxa_begin_catch(i8*) local_unnamed_addr
+declare dso_local ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 
 declare dso_local void @__cxa_end_catch() local_unnamed_addr
 

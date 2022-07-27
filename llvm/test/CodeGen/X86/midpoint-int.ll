@@ -113,7 +113,7 @@ define i32 @scalar_i32_unsigned_reg_reg(i32 %a1, i32 %a2) nounwind {
 
 ; Values are loaded. Only check signed case.
 
-define i32 @scalar_i32_signed_mem_reg(i32* %a1_addr, i32 %a2) nounwind {
+define i32 @scalar_i32_signed_mem_reg(ptr %a1_addr, i32 %a2) nounwind {
 ; X64-LABEL: scalar_i32_signed_mem_reg:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %ecx
@@ -154,7 +154,7 @@ define i32 @scalar_i32_signed_mem_reg(i32* %a1_addr, i32 %a2) nounwind {
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-  %a1 = load i32, i32* %a1_addr
+  %a1 = load i32, ptr %a1_addr
   %t3 = icmp sgt i32 %a1, %a2 ; signed
   %t4 = select i1 %t3, i32 -1, i32 1
   %t5 = select i1 %t3, i32 %a2, i32 %a1
@@ -166,7 +166,7 @@ define i32 @scalar_i32_signed_mem_reg(i32* %a1_addr, i32 %a2) nounwind {
   ret i32 %a10
 }
 
-define i32 @scalar_i32_signed_reg_mem(i32 %a1, i32* %a2_addr) nounwind {
+define i32 @scalar_i32_signed_reg_mem(i32 %a1, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i32_signed_reg_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rsi), %eax
@@ -207,7 +207,7 @@ define i32 @scalar_i32_signed_reg_mem(i32 %a1, i32* %a2_addr) nounwind {
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-  %a2 = load i32, i32* %a2_addr
+  %a2 = load i32, ptr %a2_addr
   %t3 = icmp sgt i32 %a1, %a2 ; signed
   %t4 = select i1 %t3, i32 -1, i32 1
   %t5 = select i1 %t3, i32 %a2, i32 %a1
@@ -219,7 +219,7 @@ define i32 @scalar_i32_signed_reg_mem(i32 %a1, i32* %a2_addr) nounwind {
   ret i32 %a10
 }
 
-define i32 @scalar_i32_signed_mem_mem(i32* %a1_addr, i32* %a2_addr) nounwind {
+define i32 @scalar_i32_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i32_signed_mem_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %ecx
@@ -262,8 +262,8 @@ define i32 @scalar_i32_signed_mem_mem(i32* %a1_addr, i32* %a2_addr) nounwind {
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-  %a1 = load i32, i32* %a1_addr
-  %a2 = load i32, i32* %a2_addr
+  %a1 = load i32, ptr %a1_addr
+  %a2 = load i32, ptr %a2_addr
   %t3 = icmp sgt i32 %a1, %a2 ; signed
   %t4 = select i1 %t3, i32 -1, i32 1
   %t5 = select i1 %t3, i32 %a2, i32 %a1
@@ -423,7 +423,7 @@ define i64 @scalar_i64_unsigned_reg_reg(i64 %a1, i64 %a2) nounwind {
 
 ; Values are loaded. Only check signed case.
 
-define i64 @scalar_i64_signed_mem_reg(i64* %a1_addr, i64 %a2) nounwind {
+define i64 @scalar_i64_signed_mem_reg(ptr %a1_addr, i64 %a2) nounwind {
 ; X64-LABEL: scalar_i64_signed_mem_reg:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rcx
@@ -487,7 +487,7 @@ define i64 @scalar_i64_signed_mem_reg(i64* %a1_addr, i64 %a2) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
-  %a1 = load i64, i64* %a1_addr
+  %a1 = load i64, ptr %a1_addr
   %t3 = icmp sgt i64 %a1, %a2 ; signed
   %t4 = select i1 %t3, i64 -1, i64 1
   %t5 = select i1 %t3, i64 %a2, i64 %a1
@@ -499,7 +499,7 @@ define i64 @scalar_i64_signed_mem_reg(i64* %a1_addr, i64 %a2) nounwind {
   ret i64 %a10
 }
 
-define i64 @scalar_i64_signed_reg_mem(i64 %a1, i64* %a2_addr) nounwind {
+define i64 @scalar_i64_signed_reg_mem(i64 %a1, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i64_signed_reg_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rsi), %rax
@@ -560,7 +560,7 @@ define i64 @scalar_i64_signed_reg_mem(i64 %a1, i64* %a2_addr) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
-  %a2 = load i64, i64* %a2_addr
+  %a2 = load i64, ptr %a2_addr
   %t3 = icmp sgt i64 %a1, %a2 ; signed
   %t4 = select i1 %t3, i64 -1, i64 1
   %t5 = select i1 %t3, i64 %a2, i64 %a1
@@ -572,7 +572,7 @@ define i64 @scalar_i64_signed_reg_mem(i64 %a1, i64* %a2_addr) nounwind {
   ret i64 %a10
 }
 
-define i64 @scalar_i64_signed_mem_mem(i64* %a1_addr, i64* %a2_addr) nounwind {
+define i64 @scalar_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i64_signed_mem_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rcx
@@ -638,8 +638,8 @@ define i64 @scalar_i64_signed_mem_mem(i64* %a1_addr, i64* %a2_addr) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
-  %a1 = load i64, i64* %a1_addr
-  %a2 = load i64, i64* %a2_addr
+  %a1 = load i64, ptr %a1_addr
+  %a2 = load i64, ptr %a2_addr
   %t3 = icmp sgt i64 %a1, %a2 ; signed
   %t4 = select i1 %t3, i64 -1, i64 1
   %t5 = select i1 %t3, i64 %a2, i64 %a1
@@ -767,7 +767,7 @@ define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 
 ; Values are loaded. Only check signed case.
 
-define i16 @scalar_i16_signed_mem_reg(i16* %a1_addr, i16 %a2) nounwind {
+define i16 @scalar_i16_signed_mem_reg(ptr %a1_addr, i16 %a2) nounwind {
 ; X64-LABEL: scalar_i16_signed_mem_reg:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %ecx
@@ -812,7 +812,7 @@ define i16 @scalar_i16_signed_mem_reg(i16* %a1_addr, i16 %a2) nounwind {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-  %a1 = load i16, i16* %a1_addr
+  %a1 = load i16, ptr %a1_addr
   %t3 = icmp sgt i16 %a1, %a2 ; signed
   %t4 = select i1 %t3, i16 -1, i16 1
   %t5 = select i1 %t3, i16 %a2, i16 %a1
@@ -824,7 +824,7 @@ define i16 @scalar_i16_signed_mem_reg(i16* %a1_addr, i16 %a2) nounwind {
   ret i16 %a10
 }
 
-define i16 @scalar_i16_signed_reg_mem(i16 %a1, i16* %a2_addr) nounwind {
+define i16 @scalar_i16_signed_reg_mem(i16 %a1, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i16_signed_reg_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rsi), %eax
@@ -869,7 +869,7 @@ define i16 @scalar_i16_signed_reg_mem(i16 %a1, i16* %a2_addr) nounwind {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-  %a2 = load i16, i16* %a2_addr
+  %a2 = load i16, ptr %a2_addr
   %t3 = icmp sgt i16 %a1, %a2 ; signed
   %t4 = select i1 %t3, i16 -1, i16 1
   %t5 = select i1 %t3, i16 %a2, i16 %a1
@@ -881,7 +881,7 @@ define i16 @scalar_i16_signed_reg_mem(i16 %a1, i16* %a2_addr) nounwind {
   ret i16 %a10
 }
 
-define i16 @scalar_i16_signed_mem_mem(i16* %a1_addr, i16* %a2_addr) nounwind {
+define i16 @scalar_i16_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i16_signed_mem_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %ecx
@@ -928,8 +928,8 @@ define i16 @scalar_i16_signed_mem_mem(i16* %a1_addr, i16* %a2_addr) nounwind {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-  %a1 = load i16, i16* %a1_addr
-  %a2 = load i16, i16* %a2_addr
+  %a1 = load i16, ptr %a1_addr
+  %a2 = load i16, ptr %a2_addr
   %t3 = icmp sgt i16 %a1, %a2 ; signed
   %t4 = select i1 %t3, i16 -1, i16 1
   %t5 = select i1 %t3, i16 %a2, i16 %a1
@@ -967,8 +967,8 @@ define i8 @scalar_i8_signed_reg_reg(i8 %a1, i8 %a2) nounwind {
 ;
 ; X86-LABEL: scalar_i8_signed_reg_reg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB15_1
@@ -1017,8 +1017,8 @@ define i8 @scalar_i8_unsigned_reg_reg(i8 %a1, i8 %a2) nounwind {
 ;
 ; X86-LABEL: scalar_i8_unsigned_reg_reg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setbe %dl
 ; X86-NEXT:    ja .LBB16_1
@@ -1049,7 +1049,7 @@ define i8 @scalar_i8_unsigned_reg_reg(i8 %a1, i8 %a2) nounwind {
 
 ; Values are loaded. Only check signed case.
 
-define i8 @scalar_i8_signed_mem_reg(i8* %a1_addr, i8 %a2) nounwind {
+define i8 @scalar_i8_signed_mem_reg(ptr %a1_addr, i8 %a2) nounwind {
 ; X64-LABEL: scalar_i8_signed_mem_reg:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl (%rdi), %ecx
@@ -1070,9 +1070,9 @@ define i8 @scalar_i8_signed_mem_reg(i8* %a1_addr, i8 %a2) nounwind {
 ;
 ; X86-LABEL: scalar_i8_signed_mem_reg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb (%ecx), %cl
+; X86-NEXT:    movzbl (%ecx), %ecx
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB17_1
@@ -1090,7 +1090,7 @@ define i8 @scalar_i8_signed_mem_reg(i8* %a1_addr, i8 %a2) nounwind {
 ; X86-NEXT:    mulb %dl
 ; X86-NEXT:    addb %cl, %al
 ; X86-NEXT:    retl
-  %a1 = load i8, i8* %a1_addr
+  %a1 = load i8, ptr %a1_addr
   %t3 = icmp sgt i8 %a1, %a2 ; signed
   %t4 = select i1 %t3, i8 -1, i8 1
   %t5 = select i1 %t3, i8 %a2, i8 %a1
@@ -1102,7 +1102,7 @@ define i8 @scalar_i8_signed_mem_reg(i8* %a1_addr, i8 %a2) nounwind {
   ret i8 %a10
 }
 
-define i8 @scalar_i8_signed_reg_mem(i8 %a1, i8* %a2_addr) nounwind {
+define i8 @scalar_i8_signed_reg_mem(i8 %a1, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i8_signed_reg_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl (%rsi), %eax
@@ -1122,9 +1122,9 @@ define i8 @scalar_i8_signed_reg_mem(i8 %a1, i8* %a2_addr) nounwind {
 ;
 ; X86-LABEL: scalar_i8_signed_reg_mem:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB18_1
@@ -1142,7 +1142,7 @@ define i8 @scalar_i8_signed_reg_mem(i8 %a1, i8* %a2_addr) nounwind {
 ; X86-NEXT:    mulb %dl
 ; X86-NEXT:    addb %cl, %al
 ; X86-NEXT:    retl
-  %a2 = load i8, i8* %a2_addr
+  %a2 = load i8, ptr %a2_addr
   %t3 = icmp sgt i8 %a1, %a2 ; signed
   %t4 = select i1 %t3, i8 -1, i8 1
   %t5 = select i1 %t3, i8 %a2, i8 %a1
@@ -1154,7 +1154,7 @@ define i8 @scalar_i8_signed_reg_mem(i8 %a1, i8* %a2_addr) nounwind {
   ret i8 %a10
 }
 
-define i8 @scalar_i8_signed_mem_mem(i8* %a1_addr, i8* %a2_addr) nounwind {
+define i8 @scalar_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X64-LABEL: scalar_i8_signed_mem_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl (%rdi), %ecx
@@ -1177,8 +1177,8 @@ define i8 @scalar_i8_signed_mem_mem(i8* %a1_addr, i8* %a2_addr) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb (%ecx), %cl
-; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl (%ecx), %ecx
+; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    cmpb %al, %cl
 ; X86-NEXT:    setle %dl
 ; X86-NEXT:    jg .LBB19_1
@@ -1196,8 +1196,8 @@ define i8 @scalar_i8_signed_mem_mem(i8* %a1_addr, i8* %a2_addr) nounwind {
 ; X86-NEXT:    mulb %dl
 ; X86-NEXT:    addb %cl, %al
 ; X86-NEXT:    retl
-  %a1 = load i8, i8* %a1_addr
-  %a2 = load i8, i8* %a2_addr
+  %a1 = load i8, ptr %a1_addr
+  %a2 = load i8, ptr %a2_addr
   %t3 = icmp sgt i8 %a1, %a2 ; signed
   %t4 = select i1 %t3, i8 -1, i8 1
   %t5 = select i1 %t3, i8 %a2, i8 %a1

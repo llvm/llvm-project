@@ -23,10 +23,10 @@ ASM_FUNCTION_X86_RE = re.compile(
     flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_RE = re.compile(
-    r'^(?P<func>[0-9a-zA-Z_]+):\n' # f: (name of function)
+    r'^(?P<func>[0-9a-zA-Z_$]+):\n' # f: (name of function)
     r'\s+\.fnstart\n' # .fnstart
-    r'(?P<body>.*?)\n' # (body of the function)
-    r'.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
+    r'(?P<body>.*?)' # (body of the function)
+    r'^.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
     flags=(re.M | re.S))
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
@@ -34,7 +34,7 @@ ASM_FUNCTION_AARCH64_RE = re.compile(
      r'(?:[ \t]+.cfi_startproc\n)?'  # drop optional cfi noise
      r'(?P<body>.*?)\n'
      # This list is incomplete
-     r'.Lfunc_end[0-9]+:\n',
+     r'^\s*(\.Lfunc_end[0-9]+|// -- End function)',
      flags=(re.M | re.S))
 
 ASM_FUNCTION_AMDGPU_RE = re.compile(
@@ -128,7 +128,8 @@ ASM_FUNCTION_AARCH64_DARWIN_RE = re.compile(
     flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
-    r'^[ \t]*\.globl[ \t]*_(?P<func>[^ \t])[ \t]*@[ \t]--[ \t]Begin[ \t]function[ \t]"?(?P=func)"?'
+    r'@[ \t]--[ \t]Begin[ \t]function[ \t](?P<func>[^ \t]+?)\n'
+    r'^[ \t]*\.globl[ \t]*_(?P=func)[ \t]*'
     r'(?P<directives>.*?)'
     r'^_(?P=func):\n[ \t]*'
     r'(?P<body>.*?)'
@@ -201,6 +202,13 @@ ASM_FUNCTION_NVPTX_RE = re.compile(
 
     # function body end marker
     r'\s*// -- End function',
+    flags=(re.M | re.S))
+
+ASM_FUNCTION_LOONGARCH_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
+    r'(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?'
+    r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
+    r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))
 
 SCRUB_X86_SHUFFLES_RE = (
@@ -423,6 +431,16 @@ def scrub_asm_nvptx(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
+def scrub_asm_loongarch(asm, args):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip trailing whitespace.
+  asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
 # Returns a tuple of a scrub function and a function regex. Scrub function is
 # used to alter function body in some way, for example, remove trailing spaces.
 # Function regex is used to match function name, body, etc. in raw llc output.
@@ -432,6 +450,7 @@ def get_run_handler(triple):
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'arm64_32-apple-ios': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
+      'arm64_32-apple-watchos2.0.0': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
       'aarch64': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
       'aarch64-apple-darwin': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
       'aarch64-apple-ios': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
@@ -464,7 +483,9 @@ def get_run_handler(triple):
       'wasm32': (scrub_asm_wasm32, ASM_FUNCTION_WASM32_RE),
       've': (scrub_asm_ve, ASM_FUNCTION_VE_RE),
       'csky': (scrub_asm_csky, ASM_FUNCTION_CSKY_RE),
-      'nvptx': (scrub_asm_nvptx, ASM_FUNCTION_NVPTX_RE)
+      'nvptx': (scrub_asm_nvptx, ASM_FUNCTION_NVPTX_RE),
+      'loongarch32': (scrub_asm_loongarch, ASM_FUNCTION_LOONGARCH_RE),
+      'loongarch64': (scrub_asm_loongarch, ASM_FUNCTION_LOONGARCH_RE)
   }
   handler = None
   best_prefix = ''

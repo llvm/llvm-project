@@ -136,6 +136,11 @@
 // RDPID: "-target-feature" "+rdpid"
 // NO-RDPID: "-target-feature" "-rdpid"
 
+// RUN: %clang --target=i386 -march=i386 -mrdpru %s -### 2>&1 | FileCheck -check-prefix=RDPRU %s
+// RUN: %clang --target=i386 -march=i386 -mno-rdpru %s -### 2>&1 | FileCheck -check-prefix=NO-RDPRU %s
+// RDPRU: "-target-feature" "+rdpru"
+// NO-RDPRU: "-target-feature" "-rdpru"
+
 // RUN: %clang -target i386-linux-gnu -mretpoline %s -### 2>&1 | FileCheck -check-prefix=RETPOLINE %s
 // RUN: %clang -target i386-linux-gnu -mno-retpoline %s -### 2>&1 | FileCheck -check-prefix=NO-RETPOLINE %s
 // RETPOLINE: "-target-feature" "+retpoline-indirect-calls" "-target-feature" "+retpoline-indirect-branches"

@@ -79,6 +79,15 @@ public:
     return m_comment.c_str();
   }
 
+  /// \return
+  ///    The control flow kind of this instruction, or
+  ///    eInstructionControlFlowKindUnknown if the instruction
+  ///    can't be classified.
+  virtual lldb::InstructionControlFlowKind
+  GetControlFlowKind(const ExecutionContext *exe_ctx) {
+    return lldb::eInstructionControlFlowKindUnknown;
+  }
+
   virtual void
   CalculateMnemonicOperandsAndComment(const ExecutionContext *exe_ctx) = 0;
 
@@ -104,6 +113,9 @@ public:
   ///
   /// \param[in] show_bytes
   ///     Whether the bytes of the assembly instruction should be printed.
+  ///
+  /// \param[in] show_control_flow_kind
+  ///     Whether the control flow kind of the instruction should be printed.
   ///
   /// \param[in] max_opcode_byte_size
   ///     The size (in bytes) of the largest instruction in the list that
@@ -140,7 +152,8 @@ public:
   ///     so this method can properly align the instruction opcodes.
   ///     May be 0 to indicate no indentation/alignment of the opcodes.
   virtual void Dump(Stream *s, uint32_t max_opcode_byte_size, bool show_address,
-                    bool show_bytes, const ExecutionContext *exe_ctx,
+                    bool show_bytes, bool show_control_flow_kind,
+                    const ExecutionContext *exe_ctx,
                     const SymbolContext *sym_ctx,
                     const SymbolContext *prev_sym_ctx,
                     const FormatEntity::Entry *disassembly_addr_format,
@@ -212,6 +225,9 @@ public:
   }
 
   virtual bool IsCall() { return false; }
+
+  static const char *GetNameForInstructionControlFlowKind(
+      lldb::InstructionControlFlowKind instruction_control_flow_kind);
 
 protected:
   Address m_address; // The section offset address of this instruction
@@ -320,7 +336,7 @@ public:
   void Append(lldb::InstructionSP &inst_sp);
 
   void Dump(Stream *s, bool show_address, bool show_bytes,
-            const ExecutionContext *exe_ctx);
+            bool show_control_flow_kind, const ExecutionContext *exe_ctx);
 
 private:
   typedef std::vector<lldb::InstructionSP> collection;
@@ -375,7 +391,8 @@ public:
     eOptionMarkPCSourceLine = (1u << 2), // Mark the source line that contains
                                          // the current PC (mixed mode only)
     eOptionMarkPCAddress =
-        (1u << 3) // Mark the disassembly line the contains the PC
+        (1u << 3), // Mark the disassembly line the contains the PC
+    eOptionShowControlFlowKind = (1u << 4),
   };
 
   enum HexImmediateStyle {

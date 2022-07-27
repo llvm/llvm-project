@@ -47,6 +47,10 @@ class DataLayout;
 class FunctionType;
 class LLVMContext;
 class IndexedInstrProfReader;
+
+namespace vfs {
+class FileSystem;
+}
 }
 
 namespace clang {
@@ -293,6 +297,7 @@ public:
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
   const HeaderSearchOptions &HeaderSearchOpts; // Only used for debug info.
   const PreprocessorOptions &PreprocessorOpts; // Only used for debug info.
   const CodeGenOptions &CodeGenOpts;
@@ -303,7 +308,7 @@ private:
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
-
+  bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
@@ -344,6 +349,20 @@ private:
   std::vector<GlobalDecl> DeferredDeclsToEmit;
   void addDeferredDeclToEmit(GlobalDecl GD) {
     DeferredDeclsToEmit.emplace_back(GD);
+    addEmittedDeferredDecl(GD);
+  }
+
+  /// Decls that were DeferredDecls and have now been emitted.
+  llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
+
+  void addEmittedDeferredDecl(GlobalDecl GD) {
+    if (!llvm::isa<FunctionDecl>(GD.getDecl()))
+      return;
+    llvm::GlobalVariable::LinkageTypes L = getFunctionLinkage(GD);
+    if (llvm::GlobalValue::isLinkOnceLinkage(L) ||
+        llvm::GlobalValue::isWeakLinkage(L)) {
+      EmittedDeferredDecls[getMangledName(GD)] = GD;
+    }
   }
 
   /// List of alias we have emitted. Used to make sure that what they point to
@@ -567,8 +586,11 @@ private:
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
 
+  llvm::DenseMap<const llvm::Constant *, llvm::GlobalVariable *> RTTIProxyMap;
+
 public:
-  CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
+  CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
                 const CodeGenOptions &CodeGenOpts, llvm::Module &M,
                 DiagnosticsEngine &Diags,
@@ -696,6 +718,9 @@ public:
 
   ASTContext &getContext() const { return Context; }
   const LangOptions &getLangOpts() const { return LangOpts; }
+  const IntrusiveRefCntPtr<llvm::vfs::FileSystem> &getFileSystem() const {
+    return FS;
+  }
   const HeaderSearchOptions &getHeaderSearchOpts()
     const { return HeaderSearchOpts; }
   const PreprocessorOptions &getPreprocessorOpts()
@@ -1324,9 +1349,15 @@ public:
   bool imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
                       StringRef Category = StringRef()) const;
 
-  /// Returns true if function at the given location should be excluded from
-  /// profile instrumentation.
-  bool isProfileInstrExcluded(llvm::Function *Fn, SourceLocation Loc) const;
+  /// \returns true if \p Fn at \p Loc should be excluded from profile
+  /// instrumentation by the SCL passed by \p -fprofile-list.
+  bool isFunctionBlockedByProfileList(llvm::Function *Fn,
+                                      SourceLocation Loc) const;
+
+  /// \returns true if \p Fn at \p Loc should be excluded from profile
+  /// instrumentation.
+  bool isFunctionBlockedFromProfileInstr(llvm::Function *Fn,
+                                         SourceLocation Loc) const;
 
   SanitizerMetadata *getSanitizerMetadata() {
     return SanitizerMD.get();
@@ -1442,6 +1473,9 @@ public:
   std::vector<const CXXRecordDecl *>
   getMostBaseClasses(const CXXRecordDecl *RD);
 
+  llvm::GlobalVariable *
+  GetOrCreateRTTIProxyGlobalVariable(llvm::Constant *Addr);
+
   /// Get the declaration of std::terminate for the platform.
   llvm::FunctionCallee getTerminateFn();
 
@@ -1460,7 +1494,7 @@ public:
   /// \param FN is a pointer to IR function being generated.
   /// \param FD is a pointer to function declaration if any.
   /// \param CGF is a pointer to CodeGenFunction that generates this function.
-  void GenOpenCLArgMetadata(llvm::Function *FN,
+  void GenKernelArgMetadata(llvm::Function *FN,
                             const FunctionDecl *FD = nullptr,
                             CodeGenFunction *CGF = nullptr);
 
@@ -1489,29 +1523,7 @@ public:
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
-  void moveLazyEmissionStates(CodeGenModule *NewBuilder) {
-    assert(DeferredDeclsToEmit.empty() &&
-           "Should have emitted all decls deferred to emit.");
-    assert(NewBuilder->DeferredDecls.empty() &&
-           "Newly created module should not have deferred decls");
-    NewBuilder->DeferredDecls = std::move(DeferredDecls);
-
-    assert(NewBuilder->DeferredVTables.empty() &&
-           "Newly created module should not have deferred vtables");
-    NewBuilder->DeferredVTables = std::move(DeferredVTables);
-
-    assert(NewBuilder->MangledDeclNames.empty() &&
-           "Newly created module should not have mangled decl names");
-    assert(NewBuilder->Manglings.empty() &&
-           "Newly created module should not have manglings");
-    NewBuilder->Manglings = std::move(Manglings);
-
-    assert(WeakRefReferences.empty() &&
-           "Not all WeakRefRefs have been applied");
-    NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
-
-    NewBuilder->TBAA = std::move(TBAA);
-  }
+  void moveLazyEmissionStates(CodeGenModule *NewBuilder);
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -1568,6 +1580,9 @@ private:
 
   /// Emit the function that initializes C++ thread_local variables.
   void EmitCXXThreadLocalInitFunc();
+
+  /// Emit the function that initializes global variables for a C++ Module.
+  void EmitCXXModuleInitFunc(clang::Module *Primary);
 
   /// Emit the function that initializes C++ globals.
   void EmitCXXGlobalInitFunc();
@@ -1635,6 +1650,9 @@ private:
 
   /// Emit the llvm.used and llvm.compiler.used metadata.
   void emitLLVMUsed();
+
+  /// For C++20 Itanium ABI, emit the initializers for the module.
+  void EmitModuleInitializers(clang::Module *Primary);
 
   /// Emit the link options introduced by imported modules.
   void EmitModuleLinkOptions();

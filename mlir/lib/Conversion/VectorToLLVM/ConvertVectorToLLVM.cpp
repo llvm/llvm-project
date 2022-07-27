@@ -16,6 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -362,6 +363,58 @@ public:
   }
 };
 
+/// Helper method to lower a `vector.reduction` op that performs an arithmetic
+/// operation like add,mul, etc.. `VectorOp` is the LLVM vector intrinsic to use
+/// and `ScalarOp` is the scalar operation used to add the accumulation value if
+/// non-null.
+template <class VectorOp, class ScalarOp>
+static Value createIntegerReductionArithmeticOpLowering(
+    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
+    Value vectorOperand, Value accumulator) {
+  Value result = rewriter.create<VectorOp>(loc, llvmType, vectorOperand);
+  if (accumulator)
+    result = rewriter.create<ScalarOp>(loc, accumulator, result);
+  return result;
+}
+
+/// Helper method to lower a `vector.reduction` operation that performs
+/// a comparison operation like `min`/`max`. `VectorOp` is the LLVM vector
+/// intrinsic to use and `predicate` is the predicate to use to compare+combine
+/// the accumulator value if non-null.
+template <class VectorOp>
+static Value createIntegerReductionComparisonOpLowering(
+    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
+    Value vectorOperand, Value accumulator, LLVM::ICmpPredicate predicate) {
+  Value result = rewriter.create<VectorOp>(loc, llvmType, vectorOperand);
+  if (accumulator) {
+    Value cmp =
+        rewriter.create<LLVM::ICmpOp>(loc, predicate, accumulator, result);
+    result = rewriter.create<LLVM::SelectOp>(loc, cmp, accumulator, result);
+  }
+  return result;
+}
+
+/// Create lowering of minf/maxf op. We cannot use llvm.maximum/llvm.minimum
+/// with vector types.
+static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
+                           Value rhs, bool isMin) {
+  auto floatType = getElementTypeOrSelf(lhs.getType()).cast<FloatType>();
+  Type i1Type = builder.getI1Type();
+  if (auto vecType = lhs.getType().dyn_cast<VectorType>())
+    i1Type = VectorType::get(vecType.getShape(), i1Type);
+  Value cmp = builder.create<LLVM::FCmpOp>(
+      loc, i1Type, isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt,
+      lhs, rhs);
+  Value sel = builder.create<LLVM::SelectOp>(loc, cmp, lhs, rhs);
+  Value isNan = builder.create<LLVM::FCmpOp>(
+      loc, i1Type, LLVM::FCmpPredicate::uno, lhs, rhs);
+  Value nan = builder.create<LLVM::ConstantOp>(
+      loc, lhs.getType(),
+      builder.getFloatAttr(floatType,
+                           APFloat::getQNaN(floatType.getFloatSemantics())));
+  return builder.create<LLVM::SelectOp>(loc, isNan, nan, sel);
+}
+
 /// Conversion pattern for all vector reductions.
 class VectorReductionOpConversion
     : public ConvertOpToLLVMPattern<vector::ReductionOp> {
@@ -377,38 +430,68 @@ public:
     auto kind = reductionOp.getKind();
     Type eltType = reductionOp.getDest().getType();
     Type llvmType = typeConverter->convertType(eltType);
-    Value operand = adaptor.getOperands()[0];
+    Value operand = adaptor.getVector();
+    Value acc = adaptor.getAcc();
+    Location loc = reductionOp.getLoc();
     if (eltType.isIntOrIndex()) {
       // Integer reductions: add/mul/min/max/and/or/xor.
-      if (kind == vector::CombiningKind::ADD)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_add>(reductionOp,
-                                                             llvmType, operand);
-      else if (kind == vector::CombiningKind::MUL)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_mul>(reductionOp,
-                                                             llvmType, operand);
-      else if (kind == vector::CombiningKind::MINUI)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umin>(
-            reductionOp, llvmType, operand);
-      else if (kind == vector::CombiningKind::MINSI)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smin>(
-            reductionOp, llvmType, operand);
-      else if (kind == vector::CombiningKind::MAXUI)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umax>(
-            reductionOp, llvmType, operand);
-      else if (kind == vector::CombiningKind::MAXSI)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smax>(
-            reductionOp, llvmType, operand);
-      else if (kind == vector::CombiningKind::AND)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_and>(reductionOp,
-                                                             llvmType, operand);
-      else if (kind == vector::CombiningKind::OR)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_or>(reductionOp,
-                                                            llvmType, operand);
-      else if (kind == vector::CombiningKind::XOR)
-        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_xor>(reductionOp,
-                                                             llvmType, operand);
-      else
+      Value result;
+      switch (kind) {
+      case vector::CombiningKind::ADD:
+        result =
+            createIntegerReductionArithmeticOpLowering<LLVM::vector_reduce_add,
+                                                       LLVM::AddOp>(
+                rewriter, loc, llvmType, operand, acc);
+        break;
+      case vector::CombiningKind::MUL:
+        result =
+            createIntegerReductionArithmeticOpLowering<LLVM::vector_reduce_mul,
+                                                       LLVM::MulOp>(
+                rewriter, loc, llvmType, operand, acc);
+        break;
+      case vector::CombiningKind::MINUI:
+        result = createIntegerReductionComparisonOpLowering<
+            LLVM::vector_reduce_umin>(rewriter, loc, llvmType, operand, acc,
+                                      LLVM::ICmpPredicate::ule);
+        break;
+      case vector::CombiningKind::MINSI:
+        result = createIntegerReductionComparisonOpLowering<
+            LLVM::vector_reduce_smin>(rewriter, loc, llvmType, operand, acc,
+                                      LLVM::ICmpPredicate::sle);
+        break;
+      case vector::CombiningKind::MAXUI:
+        result = createIntegerReductionComparisonOpLowering<
+            LLVM::vector_reduce_umax>(rewriter, loc, llvmType, operand, acc,
+                                      LLVM::ICmpPredicate::uge);
+        break;
+      case vector::CombiningKind::MAXSI:
+        result = createIntegerReductionComparisonOpLowering<
+            LLVM::vector_reduce_smax>(rewriter, loc, llvmType, operand, acc,
+                                      LLVM::ICmpPredicate::sge);
+        break;
+      case vector::CombiningKind::AND:
+        result =
+            createIntegerReductionArithmeticOpLowering<LLVM::vector_reduce_and,
+                                                       LLVM::AndOp>(
+                rewriter, loc, llvmType, operand, acc);
+        break;
+      case vector::CombiningKind::OR:
+        result =
+            createIntegerReductionArithmeticOpLowering<LLVM::vector_reduce_or,
+                                                       LLVM::OrOp>(
+                rewriter, loc, llvmType, operand, acc);
+        break;
+      case vector::CombiningKind::XOR:
+        result =
+            createIntegerReductionArithmeticOpLowering<LLVM::vector_reduce_xor,
+                                                       LLVM::XOrOp>(
+                rewriter, loc, llvmType, operand, acc);
+        break;
+      default:
         return failure();
+      }
+      rewriter.replaceOp(reductionOp, result);
+
       return success();
     }
 
@@ -436,18 +519,25 @@ public:
       rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmul>(
           reductionOp, llvmType, acc, operand,
           rewriter.getBoolAttr(reassociateFPReductions));
-    } else if (kind == vector::CombiningKind::MINF)
+    } else if (kind == vector::CombiningKind::MINF) {
       // FIXME: MLIR's 'minf' and LLVM's 'vector_reduce_fmin' do not handle
       // NaNs/-0.0/+0.0 in the same way.
-      rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmin>(reductionOp,
-                                                            llvmType, operand);
-    else if (kind == vector::CombiningKind::MAXF)
+      Value result =
+          rewriter.create<LLVM::vector_reduce_fmin>(loc, llvmType, operand);
+      if (acc)
+        result = createMinMaxF(rewriter, loc, result, acc, /*isMin=*/true);
+      rewriter.replaceOp(reductionOp, result);
+    } else if (kind == vector::CombiningKind::MAXF) {
       // FIXME: MLIR's 'maxf' and LLVM's 'vector_reduce_fmax' do not handle
       // NaNs/-0.0/+0.0 in the same way.
-      rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmax>(reductionOp,
-                                                            llvmType, operand);
-    else
+      Value result =
+          rewriter.create<LLVM::vector_reduce_fmax>(loc, llvmType, operand);
+      if (acc)
+        result = createMinMaxF(rewriter, loc, result, acc, /*isMin=*/false);
+      rewriter.replaceOp(reductionOp, result);
+    } else
       return failure();
+
     return success();
   }
 
@@ -858,9 +948,7 @@ public:
     if (!targetStrides)
       return failure();
     // Only support static strides for now, regardless of contiguity.
-    if (llvm::any_of(*targetStrides, [](int64_t stride) {
-          return ShapedType::isDynamicStrideOrOffset(stride);
-        }))
+    if (llvm::any_of(*targetStrides, ShapedType::isDynamicStrideOrOffset))
       return failure();
 
     auto int64Ty = IntegerType::get(rewriter.getContext(), 64);

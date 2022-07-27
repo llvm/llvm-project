@@ -123,10 +123,7 @@ function(add_benchmark_test name source_file)
   else()
     target_link_libraries(${libcxx_target} PRIVATE cxx_static)
   endif()
-  if (TARGET cxx_experimental)
-    target_link_libraries(${libcxx_target} PRIVATE cxx_experimental)
-  endif()
-  target_link_libraries(${libcxx_target} PRIVATE -lbenchmark)
+  target_link_libraries(${libcxx_target} PRIVATE cxx_experimental benchmark)
   if (LLVM_USE_SANITIZER)
     target_link_libraries(${libcxx_target} PRIVATE -ldl)
   endif()
@@ -160,23 +157,36 @@ endfunction()
 # Register Benchmark tests
 #==============================================================================
 set(BENCHMARK_TESTS
+    algorithms.partition_point.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
     algorithms/min_max_element.bench.cpp
     algorithms/pop_heap.bench.cpp
     algorithms/push_heap.bench.cpp
+    algorithms/ranges_make_heap.bench.cpp
+    algorithms/ranges_make_heap_then_sort_heap.bench.cpp
+    algorithms/ranges_pop_heap.bench.cpp
+    algorithms/ranges_push_heap.bench.cpp
     algorithms/ranges_sort.bench.cpp
+    algorithms/ranges_sort_heap.bench.cpp
+    algorithms/ranges_stable_sort.bench.cpp
     algorithms/sort.bench.cpp
     algorithms/sort_heap.bench.cpp
     algorithms/stable_sort.bench.cpp
-    algorithms.partition_point.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
     filesystem.bench.cpp
+    format_to_n.bench.cpp
+    format_to.bench.cpp
+    format.bench.cpp
+    formatted_size.bench.cpp
+    formatter_float.bench.cpp
+    formatter_int.bench.cpp
     function.bench.cpp
     map.bench.cpp
     ordered_set.bench.cpp
+    std_format_spec_string_unicode.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp
     to_chars.bench.cpp
@@ -187,17 +197,6 @@ set(BENCHMARK_TESTS
     variant_visit_3.bench.cpp
     vector_operations.bench.cpp
     )
-
-if (LIBCXX_ENABLE_INCOMPLETE_FEATURES)
-  set(BENCHMARK_TESTS
-      ${BENCHMARK_TESTS}
-      format_to_n.bench.cpp
-      format_to.bench.cpp
-      format.bench.cpp
-      formatted_size.bench.cpp
-      formatter_float.bench.cpp
-      std_format_spec_string_unicode.bench.cpp)
-endif()
 
 foreach(test_path ${BENCHMARK_TESTS})
   get_filename_component(test_file "${test_path}" NAME)

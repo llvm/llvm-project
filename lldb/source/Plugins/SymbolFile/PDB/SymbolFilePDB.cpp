@@ -797,7 +797,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t old_size = sc_list.GetSize();
   const FileSpec &file_spec = src_location_spec.GetFileSpec();
-  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
+  const uint32_t line = src_location_spec.GetLine().value_or(0);
   if (resolve_scope & lldb::eSymbolContextCompUnit) {
     // Locate all compilation units with line numbers referencing the specified
     // file.  For example, if `file_spec` is <vector>, then this should return
@@ -1023,8 +1023,11 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
   auto mangled_cstr = mangled.empty() ? nullptr : mangled.c_str();
 
   bool is_constant;
-  DWARFExpression location = ConvertPDBLocationToDWARFExpression(
-      GetObjectFile()->GetModule(), pdb_data, ranges, is_constant);
+  ModuleSP module_sp = GetObjectFile()->GetModule();
+  DWARFExpressionList location(module_sp,
+                               ConvertPDBLocationToDWARFExpression(
+                                   module_sp, pdb_data, ranges, is_constant),
+                               nullptr);
 
   var_sp = std::make_shared<Variable>(
       var_uid, var_name.c_str(), mangled_cstr, type_sp, scope, context_scope,

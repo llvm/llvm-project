@@ -2,7 +2,7 @@
 
 define i64 @foo() nounwind {
 entry:
-	%t0 = load i32, i32* null, align 8
+	%t0 = load i32, ptr null, align 8
 	switch i32 %t0, label %bb65 [
 		i32 16, label %bb
 		i32 12, label %bb56

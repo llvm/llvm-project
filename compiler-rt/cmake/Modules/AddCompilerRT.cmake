@@ -83,8 +83,7 @@ function(add_compiler_rt_object_libraries name)
         "${libname}" MATCHES ".*\.osx.*")
       foreach(arch ${LIB_ARCHS_${libname}})
         list(APPEND target_flags
-          -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
-          -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+          "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
       endforeach()
     endif()
 
@@ -251,11 +250,9 @@ function(add_compiler_rt_runtime name type)
           "${os}" MATCHES "^(osx)$")
         foreach(arch ${LIB_ARCHS_${libname}})
           list(APPEND extra_cflags_${libname}
-            -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
-            -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+            "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
           list(APPEND extra_link_flags_${libname}
-            -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
-            -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+            "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
         endforeach()
       endif()
     endforeach()
@@ -688,7 +685,6 @@ macro(add_custom_libcxx name prefix)
                -DLIBCXXABI_HERMETIC_STATIC_LIBRARY=ON
                -DLIBCXXABI_INCLUDE_TESTS=OFF
                -DLIBCXX_CXX_ABI=libcxxabi
-               -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
                -DLIBCXX_ENABLE_SHARED=OFF
                -DLIBCXX_HERMETIC_STATIC_LIBRARY=ON
                -DLIBCXX_INCLUDE_BENCHMARKS=OFF

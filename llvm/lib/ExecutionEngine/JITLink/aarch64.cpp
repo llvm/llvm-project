@@ -48,8 +48,12 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "TLVPage21";
   case TLVPageOffset12:
     return "TLVPageOffset12";
-  case PointerToGOT:
-    return "PointerToGOT";
+  case TLSDescPage21:
+    return "TLSDescPage21";
+  case TLSDescPageOffset12:
+    return "TLSDescPageOffset12";
+  case Delta32ToGOT:
+    return "Delta32ToGOT";
   case PairedAddend:
     return "PairedAddend";
   case LDRLiteral19:

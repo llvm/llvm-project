@@ -124,7 +124,7 @@ main:                                   # @main
 	.long	.Linfo_string3                  # DW_AT_name
 	.byte	1                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	67                              # DW_AT_type
+	.long	64                              # DW_AT_type
                                         # DW_AT_external
 	.byte	3                               # Abbrev [3] 0x43:0x7 DW_TAG_base_type
 	.long	.Linfo_string4                  # DW_AT_name

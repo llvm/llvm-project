@@ -19,7 +19,7 @@
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
@@ -553,9 +553,9 @@ public:
       Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.getRhs());
       Optional<Value> mult = createContractArithOp(loc, op.getLhs(), b, acc,
                                                    kind, rewriter, isInt);
-      if (!mult.hasValue())
+      if (!mult.has_value())
         return failure();
-      rewriter.replaceOp(op, mult.getValue());
+      rewriter.replaceOp(op, mult.value());
       return success();
     }
 
@@ -571,9 +571,9 @@ public:
         r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
       Optional<Value> m =
           createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
-      if (!m.hasValue())
+      if (!m.has_value())
         return failure();
-      result = rewriter.create<vector::InsertOp>(loc, resType, m.getValue(),
+      result = rewriter.create<vector::InsertOp>(loc, resType, m.value(),
                                                  result, pos);
     }
     rewriter.replaceOp(op, result);
@@ -612,8 +612,8 @@ struct ContractOpToElementwise
       return failure();
     ArrayRef<int64_t> lhsShape = contractOp.getLhsType().getShape();
     ArrayRef<int64_t> rhsShape = contractOp.getRhsType().getShape();
-    AffineMap lhsMap = contractOp.getIndexingMaps()[0];
-    AffineMap rhsMap = contractOp.getIndexingMaps()[1];
+    AffineMap lhsMap = contractOp.getIndexingMapsArray()[0];
+    AffineMap rhsMap = contractOp.getIndexingMapsArray()[1];
     SmallVector<int64_t> lhsReductionDims =
         getReductionIndex(lhsMap, contractOp.getIteratorTypes());
     SmallVector<int64_t> rhsReductionDims =
@@ -627,7 +627,7 @@ struct ContractOpToElementwise
       if (rhsShape[dim] != 1)
         return failure();
     }
-    AffineMap accMap = contractOp.getIndexingMaps()[2];
+    AffineMap accMap = contractOp.getIndexingMapsArray()[2];
     unsigned numParallelDims = accMap.getNumResults();
     unsigned numLhsDimToBroadcast =
         numParallelDims - (lhsMap.getNumResults() - lhsReductionDims.size());
@@ -997,11 +997,8 @@ struct MultiReduceToContract
     }
     auto dstMap = AffineMap::get(/*dimCount=*/reductionMask.size(),
                                  /*symCount=*/0, exprs, reduceOp.getContext());
-    Value zero = rewriter.create<arith::ConstantOp>(
-        reduceOp.getLoc(), reduceOp.getDestType(),
-        rewriter.getZeroAttr(reduceOp.getDestType()));
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
-        reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), zero,
+        reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
         rewriter.getStrArrayAttr(iteratorTypes));
     return success();
@@ -1038,7 +1035,7 @@ struct CombineContractTranspose
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<AffineMap, 4> maps =
-        llvm::to_vector<4>(contractOp.getIndexingMaps());
+        llvm::to_vector<4>(contractOp.getIndexingMapsArray());
     Value lhs = contractOp.getLhs();
     Value rhs = contractOp.getRhs();
     size_t index = 0;
@@ -1095,7 +1092,7 @@ struct CombineContractBroadcast
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<AffineMap, 4> maps =
-        llvm::to_vector<4>(contractOp.getIndexingMaps());
+        llvm::to_vector<4>(contractOp.getIndexingMapsArray());
     Value lhs = contractOp.getLhs();
     Value rhs = contractOp.getRhs();
     size_t index = 0;
@@ -1126,6 +1123,21 @@ struct CombineContractBroadcast
       // relaxed we can remove this case.
       if (innerDimBroadcast)
         continue;
+
+      // It would be incorrect to fold a broadcast onto a reduction dimension
+      // of non-unit size.
+      bool nonUnitDimReductionBroadcast = false;
+      for (int64_t i = 0; i < rankDiff; ++i) {
+        if (broadcast.getVectorType().getDimSize(i) != 1 &&
+            isReductionIterator(contractOp.getIteratorTypes()
+                                    .getValue()[map.getDimPosition(i)])) {
+          nonUnitDimReductionBroadcast = true;
+          break;
+        }
+      }
+      if (nonUnitDimReductionBroadcast)
+        continue;
+
       AffineMap broadcastMap =
           AffineMap::get(broadcast.getVectorType().getRank(), 0, originalDims,
                          contractOp.getContext());
@@ -1133,11 +1145,46 @@ struct CombineContractBroadcast
       *operand = broadcast.getSource();
       changed = true;
     }
+
     if (!changed)
+      return failure();
+
+    // Determine which dims are usused, now that the maps have been composed
+    // with the broadcast maps.
+    llvm::SmallBitVector unusedDimsBitVector = getUnusedDimsBitVector(maps);
+    // Compress unused dims.
+    for (auto &m : maps)
+      m = compressDims(m, unusedDimsBitVector);
+    // Compute the combined iterators.
+    SmallVector<Attribute, 4> iterators;
+    for (unsigned i = 0; i < unusedDimsBitVector.size(); ++i) {
+      if (!unusedDimsBitVector.test(i))
+        iterators.push_back(contractOp.getIteratorTypes().getValue()[i]);
+    }
+    // Check that compressing unused dims isn't removing all reduction dimension
+    // pairs. For example, if the vector.contract had only one reduction
+    // iterator and that was a unit-dimension created by a broadcast,
+    // then we should bail here, otherwise we would create a contract without
+    // a reduction dimension pair.
+    bool hasReductionIteratorApplyingOnBothSides = false;
+    for (unsigned i = 0; i < iterators.size(); ++i) {
+      if (!isReductionIterator(iterators[i]))
+        continue;
+      if (getResultIndex(maps[0], i) && getResultIndex(maps[1], i)) {
+        hasReductionIteratorApplyingOnBothSides = true;
+        break;
+      }
+    }
+    if (!hasReductionIteratorApplyingOnBothSides)
+      return failure();
+
+    // If the compressed maps have a dimension that is not used by either LHS or
+    // RHS then the ContractionOp verifier would fail.
+    if (getUnusedDimsBitVector({maps[0], maps[1]}).any())
       return failure();
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhs, rhs, contractOp.getAcc(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));
     return success();
   }
 };
@@ -1338,7 +1385,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
   bindDims(rew.getContext(), m, n, k);
   // LHS must be A(m, k) or A(k, m).
   Value lhs = op.getLhs();
-  auto lhsMap = op.getIndexingMaps()[0];
+  auto lhsMap = op.getIndexingMapsArray()[0];
   if (lhsMap == AffineMap::get(3, 0, {k, m}, ctx))
     lhs = rew.create<vector::TransposeOp>(loc, lhs, ArrayRef<int64_t>{1, 0});
   else if (lhsMap != AffineMap::get(3, 0, {m, k}, ctx))
@@ -1346,7 +1393,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
 
   // RHS must be B(k, n) or B(n, k).
   Value rhs = op.getRhs();
-  auto rhsMap = op.getIndexingMaps()[1];
+  auto rhsMap = op.getIndexingMapsArray()[1];
   if (rhsMap == AffineMap::get(3, 0, {n, k}, ctx))
     rhs = rew.create<vector::TransposeOp>(loc, rhs, ArrayRef<int64_t>{1, 0});
   else if (rhsMap != AffineMap::get(3, 0, {k, n}, ctx))
@@ -1376,7 +1423,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
       mul);
 
   // ACC must be C(m, n) or C(n, m).
-  auto accMap = op.getIndexingMaps()[2];
+  auto accMap = op.getIndexingMapsArray()[2];
   if (accMap == AffineMap::get(3, 0, {n, m}, ctx))
     mul = rew.create<vector::TransposeOp>(loc, mul, ArrayRef<int64_t>{1, 0});
   else if (accMap != AffineMap::get(3, 0, {m, n}, ctx))
@@ -1612,7 +1659,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
   AffineExpr m, n, k;
   bindDims(rewriter.getContext(), m, n, k);
-  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
   //
   // In the following we wish to make the reduction dimension innermost so we
   // can load vectors and just fmul + reduce into a scalar.
@@ -1757,7 +1804,10 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   if (!batchDimMap.empty()) {
     int64_t lhsIndex = batchDimMap[0].first;
     int64_t rhsIndex = batchDimMap[0].second;
-    rewriter.replaceOp(op, lowerParallel(op, lhsIndex, rhsIndex, rewriter));
+    auto newOp = lowerParallel(op, lhsIndex, rhsIndex, rewriter);
+    if (failed(newOp))
+      return failure();
+    rewriter.replaceOp(op, newOp.value());
     return success();
   }
 
@@ -1775,8 +1825,10 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   VectorType lhsType = op.getLhsType();
   for (int64_t lhsIndex = 0, e = lhsType.getRank(); lhsIndex < e; ++lhsIndex) {
     if (lhsContractingDimSet.count(lhsIndex) == 0) {
-      rewriter.replaceOp(
-          op, lowerParallel(op, lhsIndex, /*rhsIndex=*/-1, rewriter));
+      auto newOp = lowerParallel(op, lhsIndex, /*rhsIndex=*/-1, rewriter);
+      if (failed(newOp))
+        return failure();
+      rewriter.replaceOp(op, newOp.value());
       return success();
     }
   }
@@ -1785,15 +1837,20 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   VectorType rhsType = op.getRhsType();
   for (int64_t rhsIndex = 0, e = rhsType.getRank(); rhsIndex < e; ++rhsIndex) {
     if (rhsContractingDimSet.count(rhsIndex) == 0) {
-      rewriter.replaceOp(
-          op, lowerParallel(op, /*lhsIndex=*/-1, rhsIndex, rewriter));
+      auto newOp = lowerParallel(op, /*lhsIndex=*/-1, rhsIndex, rewriter);
+      if (failed(newOp))
+        return failure();
+      rewriter.replaceOp(op, newOp.value());
       return success();
     }
   }
 
   // Lower the first remaining reduction dimension.
   if (!contractingDimMap.empty()) {
-    rewriter.replaceOp(op, lowerReduction(op, rewriter));
+    auto newOp = lowerReduction(op, rewriter);
+    if (failed(newOp))
+      return failure();
+    rewriter.replaceOp(op, newOp.value());
     return success();
   }
 
@@ -1801,31 +1858,49 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
 }
 
 // Lower one parallel dimension.
+// Incidentally also tolerates unit-size (hence trivial) reduction dimensions.
 // TODO: consider reusing existing contract unrolling
-Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
-                                           int64_t lhsIndex, int64_t rhsIndex,
-                                           PatternRewriter &rewriter) const {
+FailureOr<Value>
+ContractionOpLowering::lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
+                                     int64_t rhsIndex,
+                                     PatternRewriter &rewriter) const {
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   VectorType resType = op.getResultType().cast<VectorType>();
   // Find the iterator type index and result index.
-  SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> iMap = op.getIndexingMapsArray();
   int64_t iterIndex = -1;
   int64_t dimSize = -1;
   if (lhsIndex >= 0) {
     iterIndex = iMap[0].getDimPosition(lhsIndex);
-    assert((rhsIndex < 0 || iterIndex == iMap[1].getDimPosition(rhsIndex)) &&
-           "parallel index should be free in LHS or batch in LHS/RHS");
+    if (rhsIndex >= 0 && iterIndex != iMap[1].getDimPosition(rhsIndex))
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "expected lhsIndex=" << lhsIndex << " and rhsIndex=" << rhsIndex
+             << " to map to the same dimension";
+      });
     dimSize = lhsType.getDimSize(lhsIndex);
-  } else {
-    assert(rhsIndex >= 0 && "missing parallel index");
+  } else if (rhsIndex >= 0) {
     iterIndex = iMap[1].getDimPosition(rhsIndex);
     dimSize = rhsType.getDimSize(rhsIndex);
   }
-  assert(iterIndex >= 0 && "parallel index not listed in operand mapping");
-  Optional<int64_t> lookup = getResultIndex(iMap[2], iterIndex);
-  assert(lookup.hasValue() && "parallel index not listed in reduction");
-  int64_t resIndex = lookup.getValue();
+  if (iterIndex < 0)
+    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+      diag << "expected either lhsIndex=" << lhsIndex
+           << " or rhsIndex=" << rhsIndex << " to be nonnegative";
+    });
+  // value_or(-1) means that we tolerate a dimension not appearing
+  // in the result map. That can't happen for actual parallel iterators, but
+  // the caller ContractionOpLowering::matchAndRewrite is currently calling
+  // lowerParallel also for the case of unit-size reduction dims appearing only
+  // on one of LHS or RHS, not both. At the moment, such cases are created by
+  // CastAwayContractionLeadingOneDim, so we need to either support that or
+  // modify that pattern.
+  int64_t resIndex = getResultIndex(iMap[2], iterIndex).value_or(-1);
+  if (resIndex == -1 && dimSize != 1)
+    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+      diag << "expected the dimension for iterIndex=" << iterIndex
+           << " to either appear in the result map, or to be a unit dimension";
+    });
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
       adjustMap(iMap[0], iterIndex, rewriter),
@@ -1851,34 +1926,49 @@ Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
 }
 
 // Lower one reduction dimension.
-Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
-                                            PatternRewriter &rewriter) const {
+FailureOr<Value>
+ContractionOpLowering::lowerReduction(vector::ContractionOp op,
+                                      PatternRewriter &rewriter) const {
   auto loc = op.getLoc();
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
-  assert(!resType.isa<VectorType>());
+  if (resType.isa<VectorType>())
+    return rewriter.notifyMatchFailure(op,
+                                       "did not expect a VectorType result");
   bool isInt = resType.isa<IntegerType>();
   // Use iterator index 0.
   int64_t iterIndex = 0;
-  SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> iMap = op.getIndexingMapsArray();
   Optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
   Optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
-  assert(lookupLhs.hasValue() && "missing LHS parallel index");
-  assert(lookupRhs.hasValue() && "missing RHS parallel index");
-  int64_t lhsIndex = lookupLhs.getValue();
-  int64_t rhsIndex = lookupRhs.getValue();
+  if (!lookupLhs.has_value())
+    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+      diag << "expected iterIndex=" << iterIndex << "to map to a LHS dimension";
+    });
+  if (!lookupRhs.has_value())
+    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+      diag << "expected iterIndex=" << iterIndex << "to map to a RHS dimension";
+    });
+  int64_t lhsIndex = lookupLhs.value();
+  int64_t rhsIndex = lookupRhs.value();
   int64_t dimSize = lhsType.getDimSize(lhsIndex);
-  assert(dimSize == rhsType.getDimSize(rhsIndex) && "corrupt shape");
+  if (dimSize != rhsType.getDimSize(rhsIndex))
+    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+      diag << "expect LHS dimension " << lhsIndex
+           << " to have the same size as RHS dimension " << rhsIndex;
+    });
   // Base case.
   if (lhsType.getRank() == 1) {
-    assert(rhsType.getRank() == 1 && "corrupt contraction");
+    if (rhsType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "When LHS has rank 1, expected also RHS to have rank 1");
     Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter);
     auto kind = vector::CombiningKind::ADD;
-    Value res = rewriter.create<vector::ReductionOp>(loc, kind, m);
     if (auto acc = op.getAcc())
-      res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
-    return res;
+      return rewriter.create<vector::ReductionOp>(loc, kind, m, acc)
+          .getResult();
+    return rewriter.create<vector::ReductionOp>(loc, kind, m).getResult();
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {

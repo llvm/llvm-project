@@ -57,8 +57,8 @@ define void @widen_f16_build_vector(half* %addr) {
 ; CHECK-LABEL: widen_f16_build_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #13294
-; CHECK-NEXT:    dup.4h v0, w8
-; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    movk w8, #13294, lsl #16
+; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
   %1 = bitcast half* %addr to <2 x half>*
   store <2 x half> <half 0xH33EE, half 0xH33EE>, <2 x half>* %1, align 2

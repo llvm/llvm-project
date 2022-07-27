@@ -18,6 +18,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 namespace llvm {
 class SmallBitVector;
@@ -238,6 +239,22 @@ public:
                                                       offset);
                               })),
                           getContext());
+  }
+
+  /// Returns a new AffineMap with the same number of dims and symbols and one
+  /// less result at `pos`, dropped.
+  AffineMap dropResult(unsigned pos) {
+    auto exprs = llvm::to_vector<4>(getResults());
+    exprs.erase(exprs.begin() + pos);
+    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+  }
+
+  /// Returns a new AffineMap with the same number of dims and symbols and an
+  /// extra result inserted at `pos`.
+  AffineMap insertResult(AffineExpr expr, unsigned pos) {
+    auto exprs = llvm::to_vector<4>(getResults());
+    exprs.insert(exprs.begin() + pos, expr);
+    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
   }
 
   /// Folds the results of the application of an affine map on the provided
@@ -568,6 +585,11 @@ inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);
   return os;
 }
+
+// Return a bitvector where each bit set indicates a dimension that is not used
+// by any of the maps in the input array `maps`.
+llvm::SmallBitVector getUnusedDimsBitVector(ArrayRef<AffineMap> maps);
+
 } // namespace mlir
 
 namespace llvm {

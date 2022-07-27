@@ -23,17 +23,21 @@
 #include "src/stdio/printf_core/int_converter.h"
 
 // defines convert_oct
+#include "src/stdio/printf_core/oct_converter.h"
 // defines convert_hex
 #include "src/stdio/printf_core/hex_converter.h"
 
-// TODO(michaelrj): add a flag to disable float point values here
+#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
 // defines convert_float_decimal
 // defines convert_float_dec_exp
 // defines convert_float_hex_exp
+#include "src/stdio/printf_core/float_hex_converter.h"
 // defines convert_float_mixed
+#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
 
-// TODO(michaelrj): add a flag to disable writing an int here
-// defines convert_write_int
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+#include "src/stdio/printf_core/write_int_converter.h"
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
 
 // defines convert_pointer
 #include "src/stdio/printf_core/ptr_converter.h"

@@ -25,7 +25,7 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ 0, %vector.body ]
   %vec.phi = phi <8 x i64> [ zeroinitializer, %entry ], [ %i2, %vector.body ]
-  %wide.load23 = load <8 x i8>, <8 x i8>* undef, align 1
+  %wide.load23 = load <8 x i8>, ptr undef, align 1
   %i = icmp eq <8 x i8> zeroinitializer, %wide.load23
   %i1 = zext <8 x i1> %i to <8 x i64>
   %i2 = add <8 x i64> %vec.phi, %i1

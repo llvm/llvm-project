@@ -61,13 +61,14 @@ protected:
 };
 
 /// Type trait detector that checks if a given type T is a complex type.
-template <typename T> struct is_complex_t : public std::false_type {};
+template <typename T>
+struct is_complex_t : public std::false_type {};
 template <typename T>
 struct is_complex_t<std::complex<T>> : public std::true_type {};
 } // namespace detail
 
-/// An attribute that represents a reference to a dense vector or tensor object.
-///
+/// An attribute that represents a reference to a dense vector or tensor
+/// object.
 class DenseElementsAttr : public Attribute {
 public:
   using Attribute::Attribute;
@@ -81,7 +82,8 @@ public:
   /// floating point type that can be used to access the underlying element
   /// types of a DenseElementsAttr.
   // TODO: Use std::disjunction when C++17 is supported.
-  template <typename T> struct is_valid_cpp_fp_type {
+  template <typename T>
+  struct is_valid_cpp_fp_type {
     /// The type is a valid floating point type if it is a builtin floating
     /// point type, or is a potentially user defined floating point type. The
     /// latter allows for supporting users that have custom types defined for
@@ -743,6 +745,55 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+namespace detail {
+/// Base class for DenseArrayAttr that is instantiated and specialized for each
+/// supported element type below.
+template <typename T>
+class DenseArrayAttr : public DenseArrayBaseAttr {
+public:
+  using DenseArrayBaseAttr::DenseArrayBaseAttr;
+
+  /// Implicit conversion to ArrayRef<T>.
+  operator ArrayRef<T>() const;
+  ArrayRef<T> asArrayRef() { return ArrayRef<T>{*this}; }
+
+  /// Builder from ArrayRef<T>.
+  static DenseArrayAttr get(MLIRContext *context, ArrayRef<T> content);
+
+  /// Print the short form `[42, 100, -1]` without any type prefix.
+  void print(AsmPrinter &printer) const;
+  void print(raw_ostream &os) const;
+  /// Print the short form `42, 100, -1` without any braces or type prefix.
+  void printWithoutBraces(raw_ostream &os) const;
+
+  /// Parse the short form `[42, 100, -1]` without any type prefix.
+  static Attribute parse(AsmParser &parser, Type odsType);
+
+  /// Parse the short form `42, 100, -1` without any type prefix or braces.
+  static Attribute parseWithoutBraces(AsmParser &parser, Type odsType);
+
+  /// Support for isa<>/cast<>.
+  static bool classof(Attribute attr);
+};
+template <>
+void DenseArrayAttr<int8_t>::printWithoutBraces(raw_ostream &os) const;
+
+extern template class DenseArrayAttr<int8_t>;
+extern template class DenseArrayAttr<int16_t>;
+extern template class DenseArrayAttr<int32_t>;
+extern template class DenseArrayAttr<int64_t>;
+extern template class DenseArrayAttr<float>;
+extern template class DenseArrayAttr<double>;
+} // namespace detail
+
+// Public name for all the supported DenseArrayAttr
+using DenseI8ArrayAttr = detail::DenseArrayAttr<int8_t>;
+using DenseI16ArrayAttr = detail::DenseArrayAttr<int16_t>;
+using DenseI32ArrayAttr = detail::DenseArrayAttr<int32_t>;
+using DenseI64ArrayAttr = detail::DenseArrayAttr<int64_t>;
+using DenseF32ArrayAttr = detail::DenseArrayAttr<float>;
+using DenseF64ArrayAttr = detail::DenseArrayAttr<double>;
+
 //===----------------------------------------------------------------------===//
 // BoolAttr
 //===----------------------------------------------------------------------===//

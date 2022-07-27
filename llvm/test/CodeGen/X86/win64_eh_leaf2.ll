@@ -7,7 +7,7 @@ target triple = "x86_64-pc-windows-msvc"
 
 declare i32 @__CxxFrameHandler3(...)
 
-define void @f1() uwtable nounwind personality i32 (...)* @__CxxFrameHandler3 {
+define void @f1() uwtable nounwind personality ptr @__CxxFrameHandler3 {
   ret void
 }
 

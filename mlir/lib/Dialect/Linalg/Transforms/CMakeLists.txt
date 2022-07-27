@@ -4,10 +4,12 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Bufferize.cpp
   CodegenStrategy.cpp
   ConstantFold.cpp
+  DecomposeLinalgOps.cpp
   Detensorize.cpp
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
+  FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
   FusionOnTensors.cpp
   Generalization.cpp
@@ -19,9 +21,8 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Loops.cpp
   LinalgStrategyPasses.cpp
   NamedOpConversions.cpp
-  PadOpInterchange.cpp
   Promotion.cpp
-  SparseTensorRewriting.cpp
+  Split.cpp
   SplitReduction.cpp
   Tiling.cpp
   TilingInterfaceImpl.cpp
@@ -40,9 +41,11 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRAnalysis
   MLIRArithmeticDialect
   MLIRArithmeticTransforms
+  MLIRArithmeticUtils
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRComplexDialect
+  MLIRDialectUtils
   MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRFuncTransforms

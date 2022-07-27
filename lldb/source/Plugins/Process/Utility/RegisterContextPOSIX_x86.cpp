@@ -444,6 +444,7 @@ RegisterContextPOSIX_x86::RegisterContextPOSIX_x86(
   }
 
   ::memset(&m_fpr, 0, sizeof(FPR));
+  ::memset(&m_ymm_set, 0, sizeof(YMM));
 
   m_fpr_type = eNotValid;
 }

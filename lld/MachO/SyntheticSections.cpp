@@ -22,11 +22,16 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/SHA256.h"
 
 #if defined(__APPLE__)
 #include <sys/mman.h>
+
+#define COMMON_DIGEST_FOR_OPENSSL
+#include <CommonCrypto/CommonDigest.h>
+#else
+#include "llvm/Support/SHA256.h"
 #endif
 
 #ifdef LLVM_HAVE_LIBXAR
@@ -42,6 +47,20 @@ using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::macho;
+
+// Reads `len` bytes at data and writes the 32-byte SHA256 checksum to `output`.
+static void sha256(const uint8_t *data, size_t len, uint8_t *output) {
+#if defined(__APPLE__)
+  // FIXME: Make LLVM's SHA256 faster and use it unconditionally. See PR56121
+  // for some notes on this.
+  CC_SHA256(data, len, output);
+#else
+  ArrayRef<uint8_t> block(data, len);
+  std::array<uint8_t, 32> hash = SHA256::hash(block);
+  static_assert(hash.size() == CodeSignatureSection::hashSize, "");
+  memcpy(output, hash.data(), hash.size());
+#endif
+}
 
 InStruct macho::in;
 std::vector<SyntheticSection *> macho::syntheticSections;
@@ -145,52 +164,108 @@ RebaseSection::RebaseSection()
     : LinkEditSection(segment_names::linkEdit, section_names::rebase) {}
 
 namespace {
-struct Rebase {
-  OutputSegment *segment = nullptr;
-  uint64_t offset = 0;
-  uint64_t consecutiveCount = 0;
+struct RebaseState {
+  uint64_t sequenceLength;
+  uint64_t skipLength;
 };
 } // namespace
 
-// Rebase opcodes allow us to describe a contiguous sequence of rebase location
-// using a single DO_REBASE opcode. To take advantage of it, we delay emitting
-// `DO_REBASE` until we have reached the end of a contiguous sequence.
-static void encodeDoRebase(Rebase &rebase, raw_svector_ostream &os) {
-  assert(rebase.consecutiveCount != 0);
-  if (rebase.consecutiveCount <= REBASE_IMMEDIATE_MASK) {
-    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_IMM_TIMES |
-                               rebase.consecutiveCount);
+static void emitIncrement(uint64_t incr, raw_svector_ostream &os) {
+  assert(incr != 0);
+
+  if ((incr >> target->p2WordSize) <= REBASE_IMMEDIATE_MASK &&
+      (incr % target->wordSize) == 0) {
+    os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_IMM_SCALED |
+                               (incr >> target->p2WordSize));
   } else {
-    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_ULEB_TIMES);
-    encodeULEB128(rebase.consecutiveCount, os);
+    os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_ULEB);
+    encodeULEB128(incr, os);
   }
-  rebase.consecutiveCount = 0;
 }
 
-static void encodeRebase(const OutputSection *osec, uint64_t outSecOff,
-                         Rebase &lastRebase, raw_svector_ostream &os) {
-  OutputSegment *seg = osec->parent;
-  uint64_t offset = osec->getSegmentOffset() + outSecOff;
-  if (lastRebase.segment != seg || lastRebase.offset != offset) {
-    if (lastRebase.consecutiveCount != 0)
-      encodeDoRebase(lastRebase, os);
+static void flushRebase(const RebaseState &state, raw_svector_ostream &os) {
+  assert(state.sequenceLength > 0);
 
-    if (lastRebase.segment != seg) {
-      os << static_cast<uint8_t>(REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
-                                 seg->index);
-      encodeULEB128(offset, os);
-      lastRebase.segment = seg;
-      lastRebase.offset = offset;
+  if (state.skipLength == target->wordSize) {
+    if (state.sequenceLength <= REBASE_IMMEDIATE_MASK) {
+      os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_IMM_TIMES |
+                                 state.sequenceLength);
     } else {
-      assert(lastRebase.offset != offset);
-      os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_ULEB);
-      encodeULEB128(offset - lastRebase.offset, os);
-      lastRebase.offset = offset;
+      os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_ULEB_TIMES);
+      encodeULEB128(state.sequenceLength, os);
+    }
+  } else if (state.sequenceLength == 1) {
+    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB);
+    encodeULEB128(state.skipLength - target->wordSize, os);
+  } else {
+    os << static_cast<uint8_t>(
+        REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB);
+    encodeULEB128(state.sequenceLength, os);
+    encodeULEB128(state.skipLength - target->wordSize, os);
+  }
+}
+
+// Rebases are communicated to dyld using a bytecode, whose opcodes cause the
+// memory location at a specific address to be rebased and/or the address to be
+// incremented.
+//
+// Opcode REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB is the most generic
+// one, encoding a series of evenly spaced addresses. This algorithm works by
+// splitting up the sorted list of addresses into such chunks. If the locations
+// are consecutive or the sequence consists of a single location, flushRebase
+// will use a smaller, more specialized encoding.
+static void encodeRebases(const OutputSegment *seg,
+                          MutableArrayRef<Location> locations,
+                          raw_svector_ostream &os) {
+  // dyld operates on segments. Translate section offsets into segment offsets.
+  for (Location &loc : locations)
+    loc.offset =
+        loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
+  // The algorithm assumes that locations are unique.
+  Location *end =
+      llvm::unique(locations, [](const Location &a, const Location &b) {
+        return a.offset == b.offset;
+      });
+  size_t count = end - locations.begin();
+
+  os << static_cast<uint8_t>(REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
+                             seg->index);
+  assert(!locations.empty());
+  uint64_t offset = locations[0].offset;
+  encodeULEB128(offset, os);
+
+  RebaseState state{1, target->wordSize};
+
+  for (size_t i = 1; i < count; ++i) {
+    offset = locations[i].offset;
+
+    uint64_t skip = offset - locations[i - 1].offset;
+    assert(skip != 0 && "duplicate locations should have been weeded out");
+
+    if (skip == state.skipLength) {
+      ++state.sequenceLength;
+    } else if (state.sequenceLength == 1) {
+      ++state.sequenceLength;
+      state.skipLength = skip;
+    } else if (skip < state.skipLength) {
+      // The address is lower than what the rebase pointer would be if the last
+      // location would be part of a sequence. We start a new sequence from the
+      // previous location.
+      --state.sequenceLength;
+      flushRebase(state, os);
+
+      state.sequenceLength = 2;
+      state.skipLength = skip;
+    } else {
+      // The address is at some positive offset from the rebase pointer. We
+      // start a new sequence which begins with the current location.
+      flushRebase(state, os);
+      emitIncrement(skip - state.skipLength, os);
+      state.sequenceLength = 1;
+      state.skipLength = target->wordSize;
     }
   }
-  ++lastRebase.consecutiveCount;
-  // DO_REBASE causes dyld to both perform the binding and increment the offset
-  lastRebase.offset += target->wordSize;
+  flushRebase(state, os);
 }
 
 void RebaseSection::finalizeContents() {
@@ -198,19 +273,20 @@ void RebaseSection::finalizeContents() {
     return;
 
   raw_svector_ostream os{contents};
-  Rebase lastRebase;
-
   os << static_cast<uint8_t>(REBASE_OPCODE_SET_TYPE_IMM | REBASE_TYPE_POINTER);
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
     return a.isec->getVA(a.offset) < b.isec->getVA(b.offset);
   });
-  for (const Location &loc : locations)
-    encodeRebase(loc.isec->parent, loc.isec->getOffset(loc.offset), lastRebase,
-                 os);
-  if (lastRebase.consecutiveCount != 0)
-    encodeDoRebase(lastRebase, os);
 
+  for (size_t i = 0, count = locations.size(); i < count;) {
+    const OutputSegment *seg = locations[i].isec->parent->parent;
+    size_t j = i + 1;
+    while (j < count && locations[j].isec->parent->parent == seg)
+      ++j;
+    encodeRebases(seg, {locations.data() + i, locations.data() + j}, os);
+    i = j;
+  }
   os << static_cast<uint8_t>(REBASE_OPCODE_DONE);
 }
 
@@ -834,16 +910,9 @@ SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : LinkEditSection(segment_names::linkEdit, section_names::symbolTable),
       stringTableSection(stringTableSection) {}
 
-void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
+void SymtabSection::emitBeginSourceStab(StringRef sourceFile) {
   StabsEntry stab(N_SO);
-  SmallString<261> dir(compileUnit->getCompilationDir());
-  StringRef sep = sys::path::get_separator();
-  // We don't use `path::append` here because we want an empty `dir` to result
-  // in an absolute path. `append` would give us a relative path for that case.
-  if (!dir.endswith(sep))
-    dir += sep;
-  stab.strx = stringTableSection.addString(
-      saver().save(dir + compileUnit->getUnitDIE().getShortName()));
+  stab.strx = stringTableSection.addString(saver().save(sourceFile));
   stabs.emplace_back(std::move(stab));
 }
 
@@ -938,7 +1007,7 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(file->compileUnit);
+      emitBeginSourceStab(file->sourceFile());
       emitObjectFileStab(file);
     }
 
@@ -1235,20 +1304,13 @@ uint64_t CodeSignatureSection::getRawSize() const {
 void CodeSignatureSection::writeHashes(uint8_t *buf) const {
   // NOTE: Changes to this functionality should be repeated in llvm-objcopy's
   // MachOWriter::writeSignatureData.
-  uint8_t *code = buf;
-  uint8_t *codeEnd = buf + fileOff;
-  uint8_t *hashes = codeEnd + allHeadersSize;
-  while (code < codeEnd) {
-    StringRef block(reinterpret_cast<char *>(code),
-                    std::min(codeEnd - code, static_cast<ssize_t>(blockSize)));
-    SHA256 hasher;
-    hasher.update(block);
-    std::array<uint8_t, 32> hash = hasher.final();
-    assert(hash.size() == hashSize);
-    memcpy(hashes, hash.data(), hashSize);
-    code += blockSize;
-    hashes += hashSize;
-  }
+  uint8_t *hashes = buf + fileOff + allHeadersSize;
+  parallelFor(0, getBlockCount(), [&](size_t i) {
+    sha256(buf + i * blockSize,
+           std::min(static_cast<size_t>(fileOff - i * blockSize),
+                    static_cast<size_t>(blockSize)),
+           hashes + i * hashSize);
+  });
 #if defined(__APPLE__)
   // This is macOS-specific work-around and makes no sense for any
   // other host OS. See https://openradar.appspot.com/FB8914231
@@ -1557,6 +1619,86 @@ void WordLiteralSection::writeTo(uint8_t *buf) const {
 
   for (const auto &p : literal4Map)
     memcpy(buf + p.second * 4, &p.first, 4);
+}
+
+ObjCImageInfoSection::ObjCImageInfoSection()
+    : SyntheticSection(segment_names::data, section_names::objCImageInfo) {}
+
+ObjCImageInfoSection::ImageInfo
+ObjCImageInfoSection::parseImageInfo(const InputFile *file) {
+  ImageInfo info;
+  ArrayRef<uint8_t> data = file->objCImageInfo;
+  // The image info struct has the following layout:
+  // struct {
+  //   uint32_t version;
+  //   uint32_t flags;
+  // };
+  if (data.size() < 8) {
+    warn(toString(file) + ": invalid __objc_imageinfo size");
+    return info;
+  }
+
+  auto *buf = reinterpret_cast<const uint32_t *>(data.data());
+  if (read32le(buf) != 0) {
+    warn(toString(file) + ": invalid __objc_imageinfo version");
+    return info;
+  }
+
+  uint32_t flags = read32le(buf + 1);
+  info.swiftVersion = (flags >> 8) & 0xff;
+  info.hasCategoryClassProperties = flags & 0x40;
+  return info;
+}
+
+static std::string swiftVersionString(uint8_t version) {
+  switch (version) {
+    case 1:
+      return "1.0";
+    case 2:
+      return "1.1";
+    case 3:
+      return "2.0";
+    case 4:
+      return "3.0";
+    case 5:
+      return "4.0";
+    default:
+      return ("0x" + Twine::utohexstr(version)).str();
+  }
+}
+
+// Validate each object file's __objc_imageinfo and use them to generate the
+// image info for the output binary. Only two pieces of info are relevant:
+// 1. The Swift version (should be identical across inputs)
+// 2. `bool hasCategoryClassProperties` (true only if true for all inputs)
+void ObjCImageInfoSection::finalizeContents() {
+  assert(files.size() != 0); // should have already been checked via isNeeded()
+
+  info.hasCategoryClassProperties = true;
+  const InputFile *firstFile;
+  for (auto file : files) {
+    ImageInfo inputInfo = parseImageInfo(file);
+    info.hasCategoryClassProperties &= inputInfo.hasCategoryClassProperties;
+
+    // swiftVersion 0 means no Swift is present, so no version checking required
+    if (inputInfo.swiftVersion == 0)
+      continue;
+
+    if (info.swiftVersion != 0 && info.swiftVersion != inputInfo.swiftVersion) {
+      error("Swift version mismatch: " + toString(firstFile) + " has version " +
+            swiftVersionString(info.swiftVersion) + " but " + toString(file) +
+            " has version " + swiftVersionString(inputInfo.swiftVersion));
+    } else {
+      info.swiftVersion = inputInfo.swiftVersion;
+      firstFile = file;
+    }
+  }
+}
+
+void ObjCImageInfoSection::writeTo(uint8_t *buf) const {
+  uint32_t flags = info.hasCategoryClassProperties ? 0x40 : 0x0;
+  flags |= info.swiftVersion << 8;
+  write32le(buf + 4, flags);
 }
 
 void macho::createSyntheticSymbols() {

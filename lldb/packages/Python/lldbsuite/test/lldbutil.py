@@ -235,7 +235,7 @@ def state_type_to_str(enum):
     elif enum == lldb.eStateSuspended:
         return "suspended"
     else:
-        raise Exception("Unknown StateType enum")
+        raise Exception("Unknown StateType enum: " + str(enum))
 
 
 def stop_reason_to_str(enum):
@@ -945,7 +945,22 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
     test.assertFalse(error.Fail(),
                      "Process launch failed: %s" % (error.GetCString()))
 
-    test.assertEqual(process.GetState(), lldb.eStateStopped)
+    def processStateInfo(process):
+        info = "state: {}".format(state_type_to_str(process.state))
+        if process.state == lldb.eStateExited:
+            info += ", exit code: {}".format(process.GetExitStatus())
+            if process.exit_description:
+                info += ", exit description: '{}'".format(process.exit_description)
+        stdout = process.GetSTDOUT(999)
+        if stdout:
+            info += ", stdout: '{}'".format(stdout)
+        stderr = process.GetSTDERR(999)
+        if stderr:
+            info += ", stderr: '{}'".format(stderr)
+        return info
+
+    if process.state != lldb.eStateStopped:
+        test.fail("Test process is not stopped at breakpoint: {}".format(processStateInfo(process)))
 
     # Frame #0 should be at our breakpoint.
     threads = get_threads_stopped_at_breakpoint(

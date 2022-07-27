@@ -147,35 +147,6 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
-class InstrProfilingLegacyPass : public ModulePass {
-  InstrProfiling InstrProf;
-
-public:
-  static char ID;
-
-  InstrProfilingLegacyPass() : ModulePass(ID) {}
-  InstrProfilingLegacyPass(const InstrProfOptions &Options, bool IsCS = false)
-      : ModulePass(ID), InstrProf(Options, IsCS) {
-    initializeInstrProfilingLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override {
-    return "Frontend instrumentation-based coverage lowering";
-  }
-
-  bool runOnModule(Module &M) override {
-    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    };
-    return InstrProf.run(M, GetTLI);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-
 ///
 /// A helper class to promote one counter RMW operation in the loop
 /// into register update.
@@ -313,8 +284,7 @@ public:
         auto PreheaderCount = BFI->getBlockProfileCount(L.getLoopPreheader());
         // If the average loop trip count is not greater than 1.5, we skip
         // promotion.
-        if (PreheaderCount &&
-            (PreheaderCount.getValue() * 3) >= (InstrCount.getValue() * 2))
+        if (PreheaderCount && (*PreheaderCount * 3) >= (*InstrCount * 2))
           continue;
       }
 
@@ -438,21 +408,6 @@ PreservedAnalyses InstrProfiling::run(Module &M, ModuleAnalysisManager &AM) {
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
-}
-
-char InstrProfilingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(InstrProfilingLegacyPass, "instrprof",
-                      "Frontend instrumentation-based coverage lowering.",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(InstrProfilingLegacyPass, "instrprof",
-                    "Frontend instrumentation-based coverage lowering.", false,
-                    false)
-
-ModulePass *
-llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options,
-                                     bool IsCS) {
-  return new InstrProfilingLegacyPass(Options, IsCS);
 }
 
 bool InstrProfiling::lowerIntrinsics(Function *F) {
@@ -1245,6 +1200,7 @@ bool InstrProfiling::emitRuntimeHook() {
   auto *Var =
       new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
+  Var->setVisibility(GlobalValue::HiddenVisibility);
 
   if (TT.isOSBinFormatELF() && !TT.isPS()) {
     // Mark the user variable as used so that it isn't stripped out.

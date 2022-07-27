@@ -622,7 +622,7 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
     OS << '-';
 
   OS << '(' << Mul1Name << " * " << Mul2Name << ") " << AccStr << ' '
-     << AccName;
+     << AccName << '\n';
 
   return true;
 }

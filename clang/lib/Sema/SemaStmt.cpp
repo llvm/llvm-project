@@ -442,7 +442,16 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
 
-  return CompoundStmt::Create(Context, Elts, L, R);
+  // Calculate difference between FP options in this compound statement and in
+  // the enclosing one. If this is a function body, take the difference against
+  // default options. In this case the difference will indicate options that are
+  // changed upon entry to the statement.
+  FPOptions FPO = (getCurFunction()->CompoundScopes.size() == 1)
+                      ? FPOptions(getLangOpts())
+                      : getCurCompoundScope().InitialFPFeatures;
+  FPOptionsOverride FPDiff = getCurFPFeatures().getChangesFrom(FPO);
+
+  return CompoundStmt::Create(Context, Elts, FPDiff, L, R);
 }
 
 ExprResult
@@ -888,8 +897,7 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
     CommaVisitor(*this).Visit(CondExpr);
 
   if (!ConstevalOrNegatedConsteval && !elseStmt)
-    DiagnoseEmptyStmtBody(CondExpr->getEndLoc(), thenStmt,
-                          diag::warn_empty_if_body);
+    DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
 
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
@@ -3890,12 +3898,10 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
     return R;
 
-  if (VarDecl *VD =
-      const_cast<VarDecl*>(cast<ReturnStmt>(R.get())->getNRVOCandidate())) {
-    CurScope->addNRVOCandidate(VD);
-  } else {
-    CurScope->setNoNRVO();
-  }
+  VarDecl *VD =
+      const_cast<VarDecl *>(cast<ReturnStmt>(R.get())->getNRVOCandidate());
+
+  CurScope->updateNRVOCandidate(VD);
 
   CheckJumpOutOfSEHFinally(*this, ReturnLoc, *CurScope->getFnParent());
 

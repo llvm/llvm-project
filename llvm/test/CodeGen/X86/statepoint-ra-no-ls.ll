@@ -7,7 +7,7 @@ target triple = "x86_64-pc-win64"
 declare void @foo()
 declare void @bar(i64)
 
-define void @test(i8 addrspace(1)* %b) gc "statepoint-example" {
+define void @test(ptr addrspace(1) %b) gc "statepoint-example" {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -70,22 +70,20 @@ define void @test(i8 addrspace(1)* %b) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %p.64.p = bitcast i8 addrspace(1)* %b to i8 addrspace(1)* addrspace(1)*
-  %p = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %p.64.p
-  %p.64 = bitcast i8 addrspace(1)* %b to i64 addrspace(1)*
-  %a6.ptr = getelementptr i64, i64 addrspace(1)* %p.64, i64 1
-  %a6 = load i64, i64 addrspace(1)* %a6.ptr
-  %a5.ptr = getelementptr i64, i64 addrspace(1)* %p.64, i64 2
-  %a5 = load i64, i64 addrspace(1)* %a5.ptr
-  %a4.ptr = getelementptr i64, i64 addrspace(1)* %p.64, i64 3
-  %a4 = load i64, i64 addrspace(1)* %a4.ptr
-  %a3.ptr = getelementptr i64, i64 addrspace(1)* %p.64, i64 4
-  %a3 = load i64, i64 addrspace(1)* %a3.ptr
-  %a2.ptr = getelementptr i64, i64 addrspace(1)* %p.64, i64 5
-  %a2 = load i64, i64 addrspace(1)* %a2.ptr
-  %a1.ptr = getelementptr i64, i64 addrspace(1)* %p.64, i64 6
-  %a1 = load i64, i64 addrspace(1)* %a1.ptr
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["deopt" (i8 addrspace(1)* %p)]
+  %p = load ptr addrspace(1), ptr addrspace(1) %b
+  %a6.ptr = getelementptr i64, ptr addrspace(1) %b, i64 1
+  %a6 = load i64, ptr addrspace(1) %a6.ptr
+  %a5.ptr = getelementptr i64, ptr addrspace(1) %b, i64 2
+  %a5 = load i64, ptr addrspace(1) %a5.ptr
+  %a4.ptr = getelementptr i64, ptr addrspace(1) %b, i64 3
+  %a4 = load i64, ptr addrspace(1) %a4.ptr
+  %a3.ptr = getelementptr i64, ptr addrspace(1) %b, i64 4
+  %a3 = load i64, ptr addrspace(1) %a3.ptr
+  %a2.ptr = getelementptr i64, ptr addrspace(1) %b, i64 5
+  %a2 = load i64, ptr addrspace(1) %a2.ptr
+  %a1.ptr = getelementptr i64, ptr addrspace(1) %b, i64 6
+  %a1 = load i64, ptr addrspace(1) %a1.ptr
+  %token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr addrspace(1) %p)]
   call void @bar(i64 %a1)
   call void @bar(i64 %a2)
   call void @bar(i64 %a3)
@@ -95,6 +93,6 @@ entry:
   ret void
 }
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
 

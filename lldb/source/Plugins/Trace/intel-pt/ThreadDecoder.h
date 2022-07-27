@@ -34,13 +34,19 @@ public:
   ///
   /// \return
   ///     A \a DecodedThread instance.
-  DecodedThreadSP Decode();
+  llvm::Expected<DecodedThreadSP> Decode();
+
+  /// \return
+  ///     The lowest TSC value in this trace if available, \a llvm::None if the
+  ///     trace is empty or the trace contains no timing information, or an \a
+  ///     llvm::Error if it was not possible to set up the decoder.
+  llvm::Expected<llvm::Optional<uint64_t>> FindLowestTSC();
 
   ThreadDecoder(const ThreadDecoder &other) = delete;
   ThreadDecoder &operator=(const ThreadDecoder &other) = delete;
 
 private:
-  DecodedThreadSP DoDecode();
+  llvm::Expected<DecodedThreadSP> DoDecode();
 
   lldb::ThreadSP m_thread_sp;
   TraceIntelPT &m_trace;

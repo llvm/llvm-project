@@ -27,8 +27,8 @@ protected:
 
 public:
   StringRef getName() const { return name; }
-  uint32_t getAssignedIndex() const { return assignedIndex.getValue(); }
-  bool hasAssignedIndex() const { return assignedIndex.hasValue(); }
+  uint32_t getAssignedIndex() const { return assignedIndex.value(); }
+  bool hasAssignedIndex() const { return assignedIndex.has_value(); }
   void assignIndex(uint32_t index) {
     assert(!hasAssignedIndex());
     assignedIndex = index;
@@ -64,7 +64,7 @@ public:
   const WasmInitExpr &getInitExpr() const { return initExpr; }
 
   void setPointerValue(uint64_t value) {
-    initExpr = intConst(value, config->is64.getValueOr(false));
+    initExpr = intConst(value, config->is64.value_or(false));
   }
 
 private:

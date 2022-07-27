@@ -38,7 +38,7 @@ define %0 @test2() {
 }
 
 ; Uses both values.
-define void @call1(x86_fp80 *%P1, x86_fp80 *%P2) {
+define void @call1(ptr%P1, ptr%P2) {
 ; i686-LABEL: call1:
 ; i686:       # %bb.0:
 ; i686-NEXT:    pushl %edi
@@ -82,15 +82,15 @@ define void @call1(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; x86_64-NEXT:    retq
   %a = call %0 @test()
   %b = extractvalue %0 %a, 0
-  store x86_fp80 %b, x86_fp80* %P1
+  store x86_fp80 %b, ptr %P1
 
   %c = extractvalue %0 %a, 1
-  store x86_fp80 %c, x86_fp80* %P2
+  store x86_fp80 %c, ptr %P2
   ret void
 }
 
 ; Uses both values, requires fxch
-define void @call2(x86_fp80 *%P1, x86_fp80 *%P2) {
+define void @call2(ptr%P1, ptr%P2) {
 ; i686-LABEL: call2:
 ; i686:       # %bb.0:
 ; i686-NEXT:    pushl %edi
@@ -136,15 +136,15 @@ define void @call2(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; x86_64-NEXT:    retq
   %a = call %0 @test()
   %b = extractvalue %0 %a, 1
-  store x86_fp80 %b, x86_fp80* %P1
+  store x86_fp80 %b, ptr %P1
 
   %c = extractvalue %0 %a, 0
-  store x86_fp80 %c, x86_fp80* %P2
+  store x86_fp80 %c, ptr %P2
   ret void
 }
 
 ; Uses ST(0), ST(1) is dead but must be popped.
-define void @call3(x86_fp80 *%P1, x86_fp80 *%P2) {
+define void @call3(ptr%P1, ptr%P2) {
 ; i686-LABEL: call3:
 ; i686:       # %bb.0:
 ; i686-NEXT:    pushl %esi
@@ -172,12 +172,12 @@ define void @call3(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; x86_64-NEXT:    retq
   %a = call %0 @test()
   %b = extractvalue %0 %a, 0
-  store x86_fp80 %b, x86_fp80* %P1
+  store x86_fp80 %b, ptr %P1
   ret void
 }
 
 ; Uses ST(1), ST(0) is dead and must be popped.
-define void @call4(x86_fp80 *%P1, x86_fp80 *%P2) {
+define void @call4(ptr%P1, ptr%P2) {
 ; i686-LABEL: call4:
 ; i686:       # %bb.0:
 ; i686-NEXT:    pushl %esi
@@ -206,7 +206,7 @@ define void @call4(x86_fp80 *%P1, x86_fp80 *%P2) {
   %a = call %0 @test()
 
   %c = extractvalue %0 %a, 1
-  store x86_fp80 %c, x86_fp80* %P2
+  store x86_fp80 %c, ptr %P2
   ret void
 }
 

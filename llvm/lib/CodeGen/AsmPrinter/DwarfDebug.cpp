@@ -819,7 +819,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   }
 
   // Do not emit CSInfo for undef forwarding registers.
-  for (auto &MO : CallMI->uses())
+  for (const auto &MO : CallMI->uses())
     if (MO.isReg() && MO.isUndef())
       ForwardedRegWorklist.erase(MO.getReg());
 
@@ -2235,7 +2235,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 #endif
   // Construct abstract scopes.
   for (LexicalScope *AScope : LScopes.getAbstractScopesList()) {
-    auto *SP = cast<DISubprogram>(AScope->getScopeNode());
+    const auto *SP = cast<DISubprogram>(AScope->getScopeNode());
     for (const DINode *DN : SP->getRetainedNodes()) {
       if (!Processed.insert(InlinedEntity(DN, nullptr)).second)
         continue;
@@ -2527,7 +2527,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
 
   using Encoding = DWARFExpression::Operation::Encoding;
   uint64_t Offset = 0;
-  for (auto &Op : Expr) {
+  for (const auto &Op : Expr) {
     assert(Op.getCode() != dwarf::DW_OP_const_type &&
            "3 operand ops not yet supported");
     Streamer.emitInt8(Op.getCode(), Comment != End ? *(Comment++) : "");
@@ -3042,15 +3042,22 @@ void DwarfDebug::emitDebugARanges() {
     for (const ArangeSpan &Span : List) {
       Asm->emitLabelReference(Span.Start, PtrSize);
 
-      // Calculate the size as being from the span start to it's end.
-      if (Span.End) {
+      // Calculate the size as being from the span start to its end.
+      //
+      // If the size is zero, then round it up to one byte. The DWARF
+      // specification requires that entries in this table have nonzero
+      // lengths.
+      auto SizeRef = SymSize.find(Span.Start);
+      if ((SizeRef == SymSize.end() || SizeRef->second != 0) && Span.End) {
         Asm->emitLabelDifference(Span.End, Span.Start, PtrSize);
       } else {
         // For symbols without an end marker (e.g. common), we
         // write a single arange entry containing just that one symbol.
-        uint64_t Size = SymSize[Span.Start];
-        if (Size == 0)
+        uint64_t Size;
+        if (SizeRef == SymSize.end() || SizeRef->second == 0)
           Size = 1;
+        else
+          Size = SizeRef->second;
 
         Asm->OutStreamer->emitIntValue(Size, PtrSize);
       }

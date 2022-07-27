@@ -26,38 +26,37 @@ entry:
   %k = alloca i32, align 4
   %m = alloca i32, align 4
   %a = alloca [100 x i32], align 16
-  %0 = bitcast [100 x i32]* %a to i8*
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 16 %0, i8 0, i64 400, i1 false)
-  %arrayidx = getelementptr inbounds [100 x i32], [100 x i32]* %a, i64 0, i64 34
-  %add = load i32, i32* %k
-  %1 = load i32, i32* null
-  %2 = load i32, i32* undef
-  %3 = load i32, i32* undef
-  %4 = load i32, i32* %arrayidx
-  %5 = load i32, i32* undef
-  %6 = load i32, i32* undef
-  %7 = load i32, i32* undef
-  %8 = load i32, i32* undef
-  %9 = load i32, i32* undef
-  %10 = load i32, i32* undef
-  %11 = load i32, i32* undef
-  %12 = load i32, i32* undef
-  %13 = load i32, i32* undef
-  %14 = load i32, i32* undef
-  %15 = load i32, i32* undef
-  %16 = load i32, i32* undef
-  %add.1 = add i32 %add, %1
-  %add.2 = add i32 %add.1, %2
-  %add.3 = add i32 %add.2, %3
-  %add.4 = add i32 %add.3, %4
-  store i32 %add.4, i32* %k
-  %17 = load i32, i32* %m
-  %mul = mul i32 %17, %17
-  %sub = sub i32 %17, %mul
-  store i32 %sub, i32* undef
+  call void @llvm.memset.p0.i64(ptr nonnull align 16 %a, i8 0, i64 400, i1 false)
+  %arrayidx = getelementptr inbounds [100 x i32], ptr %a, i64 0, i64 34
+  %add = load i32, ptr %k
+  %0 = load i32, ptr null
+  %1 = load i32, ptr undef
+  %2 = load i32, ptr undef
+  %3 = load i32, ptr %arrayidx
+  %4 = load i32, ptr undef
+  %5 = load i32, ptr undef
+  %6 = load i32, ptr undef
+  %7 = load i32, ptr undef
+  %8 = load i32, ptr undef
+  %9 = load i32, ptr undef
+  %10 = load i32, ptr undef
+  %11 = load i32, ptr undef
+  %12 = load i32, ptr undef
+  %13 = load i32, ptr undef
+  %14 = load i32, ptr undef
+  %15 = load i32, ptr undef
+  %add.1 = add i32 %add, %0
+  %add.2 = add i32 %add.1, %1
+  %add.3 = add i32 %add.2, %2
+  %add.4 = add i32 %add.3, %3
+  store i32 %add.4, ptr %k
+  %16 = load i32, ptr %m
+  %mul = mul i32 %16, %16
+  %sub = sub i32 %16, %mul
+  store i32 %sub, ptr undef
   unreachable
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #0
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) #0
 
 attributes #0 = { argmemonly nounwind }

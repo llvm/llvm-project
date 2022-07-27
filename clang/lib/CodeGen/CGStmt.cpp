@@ -314,17 +314,30 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPMasterTaskLoopDirectiveClass:
     EmitOMPMasterTaskLoopDirective(cast<OMPMasterTaskLoopDirective>(*S));
     break;
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+    llvm_unreachable("masked taskloop directive not supported yet.");
+    break;
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
     EmitOMPMasterTaskLoopSimdDirective(
         cast<OMPMasterTaskLoopSimdDirective>(*S));
+    break;
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+    llvm_unreachable("masked taskloop simd directive not supported yet.");
     break;
   case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
     EmitOMPParallelMasterTaskLoopDirective(
         cast<OMPParallelMasterTaskLoopDirective>(*S));
     break;
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+    llvm_unreachable("parallel masked taskloop directive not supported yet.");
+    break;
   case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
     EmitOMPParallelMasterTaskLoopSimdDirective(
         cast<OMPParallelMasterTaskLoopSimdDirective>(*S));
+    break;
+  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
+    llvm_unreachable(
+        "parallel masked taskloop simd directive not supported yet.");
     break;
   case Stmt::OMPDistributeDirectiveClass:
     EmitOMPDistributeDirective(cast<OMPDistributeDirective>(*S));
@@ -2590,14 +2603,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       for (const auto *E : GS->labels()) {
         JumpDest Dest = getJumpDestForLabel(E->getLabel());
         Transfer.push_back(Dest.getBlock());
-        llvm::BlockAddress *BA =
-            llvm::BlockAddress::get(CurFn, Dest.getBlock());
-        Args.push_back(BA);
-        ArgTypes.push_back(BA->getType());
-        ArgElemTypes.push_back(nullptr);
         if (!Constraints.empty())
           Constraints += ',';
-        Constraints += 'i';
+        Constraints += "!i";
       }
       Fallthrough = createBasicBlock("asm.fallthrough");
     }

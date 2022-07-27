@@ -368,7 +368,7 @@ define i4 @ptr_N_and_step_signed_positive_explicit_check_constant_step(i8* %src,
 ; CHECK:       step.check:
 ; CHECK-NEXT:    [[STEP_UGE_0:%.*]] = icmp uge i16 [[STEP]], 0
 ; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[STEP_UGE_0]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i16 1

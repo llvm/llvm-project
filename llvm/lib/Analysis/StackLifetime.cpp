@@ -70,7 +70,7 @@ static const AllocaInst *findMatchingAlloca(const IntrinsicInst &II,
   auto AllocaSizeInBits = AI->getAllocationSizeInBits(DL);
   if (!AllocaSizeInBits)
     return nullptr;
-  int64_t AllocaSize = AllocaSizeInBits.getValue() / 8;
+  int64_t AllocaSize = *AllocaSizeInBits / 8;
 
   auto *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));
   if (!Size)
@@ -182,7 +182,7 @@ void StackLifetime::calculateLocalLiveness() {
 
       // Compute LiveIn by unioning together the LiveOut sets of all preds.
       BitVector LocalLiveIn;
-      for (auto *PredBB : predecessors(BB)) {
+      for (const auto *PredBB : predecessors(BB)) {
         LivenessMap::const_iterator I = BlockLiveness.find(PredBB);
         // If a predecessor is unreachable, ignore it.
         if (I == BlockLiveness.end())

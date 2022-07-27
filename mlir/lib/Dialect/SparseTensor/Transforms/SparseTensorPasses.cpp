@@ -49,13 +49,17 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
 
   void runOnOperation() override {
     auto *ctx = &getContext();
-    RewritePatternSet patterns(ctx);
+    // Apply pre-rewriting.
+    RewritePatternSet prePatterns(ctx);
+    populateSparseTensorRewriting(prePatterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(prePatterns));
     // Translate strategy flags to strategy options.
     SparsificationOptions options(
         sparseParallelizationStrategy(parallelization),
         sparseVectorizationStrategy(vectorization), vectorLength,
         enableSIMDIndex32, enableVLAVectorization);
-    // Apply rewriting.
+    // Apply sparsification and vector cleanup rewriting.
+    RewritePatternSet patterns(ctx);
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
@@ -92,9 +96,9 @@ struct SparseTensorConversionPass
     ConversionTarget target(*ctx);
     // Everything in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
-    // All dynamic rules below accept new function, call, return, and tensor
-    // dim and cast operations as legal output of the rewriting provided that
-    // all sparse tensor types have been fully rewritten.
+    // All dynamic rules below accept new function, call, return, and various
+    // tensor and bufferization operations as legal output of the rewriting
+    // provided that all sparse tensor types have been fully rewritten.
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return converter.isSignatureLegal(op.getFunctionType());
     });
@@ -108,18 +112,35 @@ struct SparseTensorConversionPass
       return converter.isLegal(op.getOperandTypes());
     });
     target.addDynamicallyLegalOp<tensor::CastOp>([&](tensor::CastOp op) {
-      return converter.isLegal(op.getOperand().getType());
+      return converter.isLegal(op.getSource().getType()) &&
+             converter.isLegal(op.getDest().getType());
     });
+    target.addDynamicallyLegalOp<tensor::ExpandShapeOp>(
+        [&](tensor::ExpandShapeOp op) {
+          return converter.isLegal(op.getSrc().getType()) &&
+                 converter.isLegal(op.getResult().getType());
+        });
+    target.addDynamicallyLegalOp<tensor::CollapseShapeOp>(
+        [&](tensor::CollapseShapeOp op) {
+          return converter.isLegal(op.getSrc().getType()) &&
+                 converter.isLegal(op.getResult().getType());
+        });
+    target.addDynamicallyLegalOp<bufferization::AllocTensorOp>(
+        [&](bufferization::AllocTensorOp op) {
+          return converter.isLegal(op.getType());
+        });
+    target.addDynamicallyLegalOp<bufferization::DeallocTensorOp>(
+        [&](bufferization::DeallocTensorOp op) {
+          return converter.isLegal(op.getTensor().getType());
+        });
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
-    target.addLegalOp<arith::CmpFOp, arith::CmpIOp, arith::ConstantOp,
-                      arith::IndexCastOp, complex::ConstantOp,
-                      complex::NotEqualOp, linalg::FillOp, linalg::YieldOp,
-                      tensor::ExtractOp>();
-    target
-        .addLegalDialect<bufferization::BufferizationDialect, LLVM::LLVMDialect,
-                         memref::MemRefDialect, scf::SCFDialect>();
-    target.addIllegalOp<bufferization::AllocTensorOp>();
+    target.addLegalOp<bufferization::ToMemrefOp, bufferization::ToTensorOp,
+                      complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
+                      linalg::YieldOp, tensor::ExtractOp>();
+    target.addLegalDialect<
+        arith::ArithmeticDialect, bufferization::BufferizationDialect,
+        LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
     // Translate strategy flags to strategy options.
     SparseTensorConversionOptions options(
         sparseToSparseConversionStrategy(sparseToSparse));

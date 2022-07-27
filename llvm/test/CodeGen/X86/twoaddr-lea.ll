@@ -21,7 +21,7 @@ define i32 @test1(i32 %X) nounwind {
 ; CHECK-NEXT:    ## kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
         %Z = add i32 %X, 1
-        store volatile i32 %Z, i32* @G
+        store volatile i32 %Z, ptr @G
         ret i32 %X
 }
 
@@ -124,7 +124,7 @@ bb1:
   br i1 %tmp3, label %bb2, label %bb3
 
 bb2:
-  %tmp6 = load i32, i32* @global, align 4
+  %tmp6 = load i32, ptr @global, align 4
   %tmp8 = add nsw i32 %tmp6, %tmp2
   %tmp9 = sext i32 %tmp8 to i64
   br label %bb6
@@ -147,9 +147,9 @@ bb5:
   br i1 %tmp35, label %bb4, label %bb3
 
 bb6:
-  store volatile i64 %tmp, i64* @global2, align 8
-  store volatile i64 %tmp9, i64* @global2, align 8
-  store volatile i32 %tmp6, i32* @global, align 4
+  store volatile i64 %tmp, ptr @global2, align 8
+  store volatile i64 %tmp9, ptr @global2, align 8
+  store volatile i32 %tmp6, ptr @global, align 4
   %tmp45 = icmp slt i32 undef, undef
   br i1 %tmp45, label %bb6, label %bb9
 

@@ -310,3 +310,75 @@ define amdgpu_kernel void @bitcast_f32_to_v1i32(i32 addrspace(1)* %out) {
   store i32 %v1, i32 addrspace(1)* %out
   ret void
 }
+
+; FUNC-LABEL: {{^}}bitcast_v4i64_to_v16i16:
+define amdgpu_kernel void @bitcast_v4i64_to_v16i16(i32 %cond, <16 x i16> addrspace(1)* %out, <4 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <4 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <4 x i64> %phi_value to <16 x i16>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <16 x i16> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x i16> %phi_cast, <16 x i16> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v4f64_to_v16f16:
+define amdgpu_kernel void @bitcast_v4f64_to_v16f16(i32 %cond, <16 x half> addrspace(1)* %out, <4 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <4 x double> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <4 x double> %phi_value to <16 x half>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <16 x half> [zeroinitializer, %entry], [%cast, %if]
+  store <16 x half> %phi_cast, <16 x half> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v16i16_to_v4i64:
+define amdgpu_kernel void @bitcast_v16i16_to_v4i64(i32 %cond, <4 x i64> addrspace(1)* %out, <16 x i16> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <16 x i16> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <16 x i16> %phi_value to <4 x i64>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <4 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x i64> %phi_cast, <4 x i64> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v16f16_to_v4f64:
+define amdgpu_kernel void @bitcast_v16f16_to_v4f64(i32 %cond, <4 x double> addrspace(1)* %out, <16 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <16 x half> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <16 x half> %phi_value to <4 x double>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <4 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <4 x double> %phi_cast, <4 x double> addrspace(1)* %out
+  ret void
+}

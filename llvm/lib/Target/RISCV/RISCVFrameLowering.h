@@ -67,6 +67,8 @@ public:
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
 
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
@@ -82,7 +84,7 @@ private:
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          int64_t Amount, MachineInstr::MIFlag Flag) const;
   std::pair<int64_t, Align>
-  assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const;
+  assignRVVStackObjectOffsets(MachineFunction &MF) const;
 };
-}
+} // namespace llvm
 #endif

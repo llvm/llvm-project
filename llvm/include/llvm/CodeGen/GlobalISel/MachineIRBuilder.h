@@ -683,6 +683,13 @@ public:
   MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op,
                                    bool IsFP);
 
+  // Build and insert \p Res = G_SEXT_INREG \p Op, 1 or \p Res = G_AND \p Op, 1,
+  // or COPY depending on how the target wants to extend boolean values, using
+  // the original register size.
+  MachineInstrBuilder buildBoolExtInReg(const DstOp &Res, const SrcOp &Op,
+                                        bool IsVector,
+                                        bool IsFP);
+
   /// Build and insert \p Res = G_ZEXT \p Op
   ///
   /// G_ZEXT produces a register of the specified width, with bits 0 to
@@ -1398,6 +1405,40 @@ public:
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_FSUB Addr, Val, MMO`.
   MachineInstrBuilder buildAtomicRMWFSub(
+        const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+        MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FMAX Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the floating point maximum of
+  /// \p Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWFMax(
+        const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+        MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FMIN Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the floating point minimum of
+  /// \p Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWFMin(
         const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
         MachineMemOperand &MMO);
 

@@ -171,7 +171,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<AffineMap, 4> indexingMaps = genericOp.getIndexingMaps();
+    SmallVector<AffineMap, 4> indexingMaps = genericOp.getIndexingMapsArray();
     if (indexingMaps.empty())
       return failure();
 
@@ -455,37 +455,9 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
 };
 } // namespace
 
-/// Get the reassociation maps to fold the result of a extract_slice (or source
-/// of a insert_slice) operation with given offsets, and sizes to its
-/// rank-reduced version. This is only done for the cases where the size is 1
-/// and offset is 0. Strictly speaking the offset 0 is not required in general,
-/// but non-zero offsets are not handled by SPIR-V backend at this point (and
-/// potentially cannot be handled).
-static Optional<SmallVector<ReassociationIndices>>
-getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
-  SmallVector<ReassociationIndices> reassociation;
-  ReassociationIndices curr;
-  for (const auto &it : llvm::enumerate(mixedSizes)) {
-    auto dim = it.index();
-    auto size = it.value();
-    curr.push_back(dim);
-    auto attr = size.dyn_cast<Attribute>();
-    if (attr && attr.cast<IntegerAttr>().getInt() == 1)
-      continue;
-    reassociation.emplace_back(ReassociationIndices{});
-    std::swap(reassociation.back(), curr);
-  }
-  // When the reassociations are not empty, then fold the remaining
-  // unit-dimensions into the last dimension.  If the reassociations so far is
-  // empty, then leave it emtpy. This will fold everything to a rank-0 tensor.
-  if (!curr.empty() && !reassociation.empty())
-    reassociation.back().append(curr.begin(), curr.end());
-  return reassociation;
-}
-
 namespace {
 /// Convert `extract_slice` operations to rank-reduced versions.
-struct UseRankReducedExtractSliceOp
+struct RankReducedExtractSliceOp
     : public OpRewritePattern<tensor::ExtractSliceOp> {
   using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
 
@@ -499,14 +471,15 @@ struct UseRankReducedExtractSliceOp
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(resultType.getRank()))
       return failure();
-    auto rankReducedType = tensor::ExtractSliceOp::inferRankReducedResultType(
-                               reassociation->size(), sliceOp.getSourceType(),
-                               offsets, sizes, strides)
-                               .cast<RankedTensorType>();
+    auto rankReducedType =
+        tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
+            reassociation->size(), sliceOp.getSourceType(), offsets, sizes,
+            strides)
+            .cast<RankedTensorType>();
 
     Location loc = sliceOp.getLoc();
     Value newSlice = rewriter.create<tensor::ExtractSliceOp>(
-        loc, rankReducedType, sliceOp.source(), offsets, sizes, strides);
+        loc, rankReducedType, sliceOp.getSource(), offsets, sizes, strides);
     rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         sliceOp, resultType, newSlice, *reassociation);
     return success();
@@ -514,26 +487,37 @@ struct UseRankReducedExtractSliceOp
 };
 
 /// Convert `insert_slice` operations to rank-reduced versions.
-struct UseRankReducedInsertSliceOp
-    : public OpRewritePattern<tensor::InsertSliceOp> {
-  using OpRewritePattern<tensor::InsertSliceOp>::OpRewritePattern;
+/// This patterns works with both InsertSliceOp and ParallelInsertSliceOp.
+template <typename InsertOpTy>
+struct RankReducedInsertSliceOp : public OpRewritePattern<InsertOpTy> {
+  using OpRewritePattern<InsertOpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
+  LogicalResult matchAndRewrite(InsertOpTy insertSliceOp,
                                 PatternRewriter &rewriter) const override {
-    RankedTensorType sourceType = insertOp.getSourceType();
-    SmallVector<OpFoldResult> offsets = insertOp.getMixedOffsets();
-    SmallVector<OpFoldResult> sizes = insertOp.getMixedSizes();
-    SmallVector<OpFoldResult> strides = insertOp.getMixedStrides();
+    RankedTensorType sourceType = insertSliceOp.getSourceType();
+    SmallVector<OpFoldResult> offsets = insertSliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> sizes = insertSliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> strides = insertSliceOp.getMixedStrides();
     auto reassociation = getReassociationMapForFoldingUnitDims(sizes);
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(sourceType.getRank()))
       return failure();
-    Location loc = insertOp.getLoc();
-    auto reshapedSource = rewriter.create<tensor::CollapseShapeOp>(
-        loc, insertOp.source(), *reassociation);
-    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        insertOp, reshapedSource, insertOp.dest(), insertOp.getMixedOffsets(),
-        insertOp.getMixedSizes(), insertOp.getMixedStrides());
+    Location loc = insertSliceOp.getLoc();
+    tensor::CollapseShapeOp reshapedSource;
+    {
+      OpBuilder::InsertionGuard g(rewriter);
+      // The only difference between InsertSliceOp and ParallelInsertSliceOp is
+      // the the insertion point is just before the ParallelCombiningOp in the
+      // parallel case.
+      if (std::is_same<InsertOpTy, tensor::ParallelInsertSliceOp>::value)
+        rewriter.setInsertionPoint(insertSliceOp->getParentOp());
+      reshapedSource = rewriter.create<tensor::CollapseShapeOp>(
+          loc, insertSliceOp.getSource(), *reassociation);
+    }
+    rewriter.replaceOpWithNewOp<InsertOpTy>(
+        insertSliceOp, reshapedSource, insertSliceOp.getDest(),
+        insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
+        insertSliceOp.getMixedStrides());
     return success();
   }
 };
@@ -544,8 +528,9 @@ struct UseRankReducedInsertSliceOp
 void mlir::linalg::populateFoldUnitExtentDimsPatterns(
     RewritePatternSet &patterns) {
   auto *context = patterns.getContext();
-  patterns.add<FoldUnitDimLoops, ReplaceUnitExtents,
-               UseRankReducedExtractSliceOp, UseRankReducedInsertSliceOp>(
+  patterns.add<FoldUnitDimLoops, ReplaceUnitExtents, RankReducedExtractSliceOp,
+               RankReducedInsertSliceOp<tensor::InsertSliceOp>,
+               RankReducedInsertSliceOp<tensor::ParallelInsertSliceOp>>(
       context);
   linalg::FillOp::getCanonicalizationPatterns(patterns, context);
   linalg::InitTensorOp::getCanonicalizationPatterns(patterns, context);

@@ -33,14 +33,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           ArrayRef<NamedAttribute> attributes,
-                           BlockRange successors, unsigned numRegions);
-
-  /// Overload of create that takes an existing DictionaryAttr to avoid
-  /// unnecessarily uniquing a list of attributes.
-  static Operation *create(Location location, OperationName name,
-                           TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes, BlockRange successors,
+                           NamedAttrList &&attributes, BlockRange successors,
                            unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
@@ -49,7 +42,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes,
+                           NamedAttrList &&attributes,
                            BlockRange successors = {},
                            RegionRange regions = {});
 
@@ -465,6 +458,15 @@ public:
       if (!attr.getName().strref().contains('.'))
         attrs.push_back(attr);
     setAttrs(attrs.getDictionary(getContext()));
+  }
+
+  /// Sets default attributes on unset attributes.
+  void populateDefaultAttrs() {
+    if (auto registered = getRegisteredInfo()) {
+      NamedAttrList attrs(getAttrDictionary());
+      registered->populateDefaultAttrs(attrs);
+      setAttrs(attrs.getDictionary(getContext()));
+    }
   }
 
   //===--------------------------------------------------------------------===//

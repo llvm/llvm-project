@@ -3,7 +3,7 @@
 
 %struct.obj = type { i64 }
 
-define dso_local void @_Z7releaseP3obj(%struct.obj* nocapture %o) nounwind uwtable ssp {
+define dso_local void @_Z7releaseP3obj(ptr nocapture %o) nounwind uwtable ssp {
 ; CHECK-LABEL: _Z7releaseP3obj:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    decq (%rdi)
@@ -13,16 +13,14 @@ define dso_local void @_Z7releaseP3obj(%struct.obj* nocapture %o) nounwind uwtab
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    jmp free # TAILCALL
 entry:
-  %refcnt = getelementptr inbounds %struct.obj, %struct.obj* %o, i64 0, i32 0
-  %0 = load i64, i64* %refcnt, align 8
+  %0 = load i64, ptr %o, align 8
   %dec = add i64 %0, -1
-  store i64 %dec, i64* %refcnt, align 8
+  store i64 %dec, ptr %o, align 8
   %tobool = icmp eq i64 %dec, 0
   br i1 %tobool, label %if.end, label %return
 
 if.end:                                           ; preds = %entry
-  %1 = bitcast %struct.obj* %o to i8*
-  tail call void @free(i8* %1)
+  tail call void @free(ptr %o)
   br label %return
 
 return:                                           ; preds = %entry, %if.end
@@ -53,13 +51,13 @@ define dso_local i32 @test() nounwind uwtable ssp {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-%0 = load i64, i64* @c, align 8
+%0 = load i64, ptr @c, align 8
 %dec.i = add nsw i64 %0, -1
-store i64 %dec.i, i64* @c, align 8
+store i64 %dec.i, ptr @c, align 8
 %tobool.i = icmp ne i64 %dec.i, 0
 %lor.ext.i = zext i1 %tobool.i to i32
-store i32 %lor.ext.i, i32* @a, align 4
-%call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i64 %dec.i) nounwind
+store i32 %lor.ext.i, ptr @a, align 4
+%call = tail call i32 (ptr, ...) @printf(ptr @.str, i64 %dec.i) nounwind
 ret i32 0
 }
 
@@ -82,25 +80,25 @@ define dso_local i32 @test2() nounwind uwtable ssp {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-%0 = load i64, i64* @c, align 8
+%0 = load i64, ptr @c, align 8
 %dec.i = add nsw i64 %0, -1
-store i64 %dec.i, i64* @c, align 8
+store i64 %dec.i, ptr @c, align 8
 %tobool.i = icmp ne i64 %0, 0
 %lor.ext.i = zext i1 %tobool.i to i32
-store i32 %lor.ext.i, i32* @a, align 4
-%call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i64 %dec.i) nounwind
+store i32 %lor.ext.i, ptr @a, align 4
+%call = tail call i32 (ptr, ...) @printf(ptr @.str, i64 %dec.i) nounwind
 ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
-declare dso_local void @free(i8* nocapture) nounwind
+declare dso_local void @free(ptr nocapture) nounwind
 
 %struct.obj2 = type { i64, i32, i16, i8 }
 
-declare dso_local void @other(%struct.obj2* ) nounwind;
+declare dso_local void @other(ptr ) nounwind;
 
-define dso_local void @example_dec(%struct.obj2* %o) nounwind uwtable ssp {
+define dso_local void @example_dec(ptr %o) nounwind uwtable ssp {
 ; 64 bit dec
 ; CHECK-LABEL: example_dec:
 ; CHECK:       # %bb.0: # %entry
@@ -120,49 +118,48 @@ define dso_local void @example_dec(%struct.obj2* %o) nounwind uwtable ssp {
 ; CHECK-NEXT:  .LBB3_5: # %if.end4
 ; CHECK-NEXT:    jmp other # TAILCALL
 entry:
-  %s64 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 0
-  %0 = load i64, i64* %s64, align 8
+  %0 = load i64, ptr %o, align 8
   %dec = add i64 %0, -1
-  store i64 %dec, i64* %s64, align 8
+  store i64 %dec, ptr %o, align 8
   %tobool = icmp eq i64 %dec, 0
   br i1 %tobool, label %if.end, label %return
 
 ; 32 bit dec
 if.end:
-  %s32 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 1
-  %1 = load i32, i32* %s32, align 4
+  %s32 = getelementptr inbounds %struct.obj2, ptr %o, i64 0, i32 1
+  %1 = load i32, ptr %s32, align 4
   %dec1 = add i32 %1, -1
-  store i32 %dec1, i32* %s32, align 4
+  store i32 %dec1, ptr %s32, align 4
   %tobool2 = icmp eq i32 %dec1, 0
   br i1 %tobool2, label %if.end1, label %return
 
 ; 16 bit dec
 if.end1:
-  %s16 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 2
-  %2 = load i16, i16* %s16, align 2
+  %s16 = getelementptr inbounds %struct.obj2, ptr %o, i64 0, i32 2
+  %2 = load i16, ptr %s16, align 2
   %dec2 = add i16 %2, -1
-  store i16 %dec2, i16* %s16, align 2
+  store i16 %dec2, ptr %s16, align 2
   %tobool3 = icmp eq i16 %dec2, 0
   br i1 %tobool3, label %if.end2, label %return
 
 ; 8 bit dec
 if.end2:
-  %s8 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 3
-  %3 = load i8, i8* %s8
+  %s8 = getelementptr inbounds %struct.obj2, ptr %o, i64 0, i32 3
+  %3 = load i8, ptr %s8
   %dec3 = add i8 %3, -1
-  store i8 %dec3, i8* %s8
+  store i8 %dec3, ptr %s8
   %tobool4 = icmp eq i8 %dec3, 0
   br i1 %tobool4, label %if.end4, label %return
 
 if.end4:
-  tail call void @other(%struct.obj2* %o) nounwind
+  tail call void @other(ptr %o) nounwind
   br label %return
 
 return:                                           ; preds = %if.end4, %if.end, %entry
   ret void
 }
 
-define dso_local void @example_inc(%struct.obj2* %o) nounwind uwtable ssp {
+define dso_local void @example_inc(ptr %o) nounwind uwtable ssp {
 ; 64 bit inc
 ; CHECK-LABEL: example_inc:
 ; CHECK:       # %bb.0: # %entry
@@ -182,42 +179,41 @@ define dso_local void @example_inc(%struct.obj2* %o) nounwind uwtable ssp {
 ; CHECK-NEXT:  .LBB4_4: # %return
 ; CHECK-NEXT:    retq
 entry:
-  %s64 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 0
-  %0 = load i64, i64* %s64, align 8
+  %0 = load i64, ptr %o, align 8
   %inc = add i64 %0, 1
-  store i64 %inc, i64* %s64, align 8
+  store i64 %inc, ptr %o, align 8
   %tobool = icmp eq i64 %inc, 0
   br i1 %tobool, label %if.end, label %return
 
 ; 32 bit inc
 if.end:
-  %s32 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 1
-  %1 = load i32, i32* %s32, align 4
+  %s32 = getelementptr inbounds %struct.obj2, ptr %o, i64 0, i32 1
+  %1 = load i32, ptr %s32, align 4
   %inc1 = add i32 %1, 1
-  store i32 %inc1, i32* %s32, align 4
+  store i32 %inc1, ptr %s32, align 4
   %tobool2 = icmp eq i32 %inc1, 0
   br i1 %tobool2, label %if.end1, label %return
 
 ; 16 bit inc
 if.end1:
-  %s16 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 2
-  %2 = load i16, i16* %s16, align 2
+  %s16 = getelementptr inbounds %struct.obj2, ptr %o, i64 0, i32 2
+  %2 = load i16, ptr %s16, align 2
   %inc2 = add i16 %2, 1
-  store i16 %inc2, i16* %s16, align 2
+  store i16 %inc2, ptr %s16, align 2
   %tobool3 = icmp eq i16 %inc2, 0
   br i1 %tobool3, label %if.end2, label %return
 
 ; 8 bit inc
 if.end2:
-  %s8 = getelementptr inbounds %struct.obj2, %struct.obj2* %o, i64 0, i32 3
-  %3 = load i8, i8* %s8
+  %s8 = getelementptr inbounds %struct.obj2, ptr %o, i64 0, i32 3
+  %3 = load i8, ptr %s8
   %inc3 = add i8 %3, 1
-  store i8 %inc3, i8* %s8
+  store i8 %inc3, ptr %s8
   %tobool4 = icmp eq i8 %inc3, 0
   br i1 %tobool4, label %if.end4, label %return
 
 if.end4:
-  tail call void @other(%struct.obj2* %o) nounwind
+  tail call void @other(ptr %o) nounwind
   br label %return
 
 return:
@@ -226,7 +222,7 @@ return:
 
 ; Deal with TokenFactor chain
 ; rdar://11236106
-@foo = external dso_local global i64*, align 8
+@foo = external dso_local global ptr, align 8
 
 define dso_local void @test3() nounwind ssp {
 ; CHECK-LABEL: test3:
@@ -239,11 +235,11 @@ define dso_local void @test3() nounwind ssp {
 ; CHECK-NEXT:  .LBB5_2: # %if.then
 ; CHECK-NEXT:    jmp baz # TAILCALL
 entry:
-  %0 = load i64*, i64** @foo, align 8
-  %arrayidx = getelementptr inbounds i64, i64* %0, i64 2
-  %1 = load i64, i64* %arrayidx, align 8
+  %0 = load ptr, ptr @foo, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %0, i64 2
+  %1 = load i64, ptr %arrayidx, align 8
   %dec = add i64 %1, -1
-  store i64 %dec, i64* %arrayidx, align 8
+  store i64 %dec, ptr %arrayidx, align 8
   %cmp = icmp eq i64 %dec, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -277,12 +273,12 @@ define dso_local void @test4() nounwind uwtable ssp {
 ; CHECK-NEXT:    movl %eax, z(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i32, i32* @x, align 4
-  %1 = load i32, i32* @y, align 4
+  %0 = load i32, ptr @x, align 4
+  %1 = load i32, ptr @y, align 4
   %dec = add nsw i32 %1, -1
-  store i32 %dec, i32* @y, align 4
+  store i32 %dec, ptr @y, align 4
   %tobool.i = icmp ne i32 %dec, 0
   %cond.i = select i1 %tobool.i, i32 %0, i32 0
-  store i32 %cond.i, i32* @z, align 4
+  store i32 %cond.i, ptr @z, align 4
   ret void
 }

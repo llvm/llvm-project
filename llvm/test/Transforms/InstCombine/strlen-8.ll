@@ -2,6 +2,9 @@
 ; Verify that strlen calls with variable offsets into elements of constant
 ; arrays are folded.
 ;
+; TODO: None of these cases is folded at the moment due to a limitation
+; in LibCallSimplifier::optimizeStringLength.
+;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare i64 @strlen(i8*)
@@ -41,10 +44,11 @@ define i64 @fold_a5_4_i1_pI(i64 %I) {
 
 define i64 @fold_a5_4_i2_pI(i64 %I) {
 ; CHECK-LABEL: @fold_a5_4_i2_pI(
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x [4 x i8]], [5 x [4 x i8]]* @a5_4, i64 0, i64 2, i64 1))
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [5 x [4 x i8]], [5 x [4 x i8]]* @a5_4, i64 0, i64 2, i64 [[I:%.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[PTR]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = getelementptr [5 x [4 x i8]], [5 x [4 x i8]]* @a5_4, i64 0, i64 2, i64 1
+  %ptr = getelementptr [5 x [4 x i8]], [5 x [4 x i8]]* @a5_4, i64 0, i64 2, i64 %I
   %len = call i64 @strlen(i8* %ptr)
   ret i64 %len
 }

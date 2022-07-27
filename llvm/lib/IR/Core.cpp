@@ -74,13 +74,16 @@ void LLVMDisposeMessage(char *Message) {
 
 /*===-- Operations on contexts --------------------------------------------===*/
 
-static ManagedStatic<LLVMContext> GlobalContext;
+static LLVMContext &getGlobalContext() {
+  static LLVMContext GlobalContext;
+  return GlobalContext;
+}
 
 LLVMContextRef LLVMContextCreate() {
   return wrap(new LLVMContext());
 }
 
-LLVMContextRef LLVMGetGlobalContext() { return wrap(&*GlobalContext); }
+LLVMContextRef LLVMGetGlobalContext() { return wrap(&getGlobalContext()); }
 
 void LLVMContextSetDiagnosticHandler(LLVMContextRef C,
                                      LLVMDiagnosticHandler Handler,
@@ -251,7 +254,7 @@ LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI) {
 /*===-- Operations on modules ---------------------------------------------===*/
 
 LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID) {
-  return wrap(new Module(ModuleID, *GlobalContext));
+  return wrap(new Module(ModuleID, getGlobalContext()));
 }
 
 LLVMModuleRef LLVMModuleCreateWithNameInContext(const char *ModuleID,
@@ -1445,6 +1448,10 @@ LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
                                   DontNullTerminate);
 }
 
+LLVMValueRef LLVMGetAggregateElement(LLVMValueRef C, unsigned Idx) {
+  return wrap(unwrap<Constant>(C)->getAggregateElement(Idx));
+}
+
 LLVMValueRef LLVMGetElementAsConstant(LLVMValueRef C, unsigned idx) {
   return wrap(unwrap<ConstantDataSequential>(C)->getElementAsConstant(idx));
 }
@@ -1567,11 +1574,6 @@ LLVMValueRef LLVMConstNUWAdd(LLVMValueRef LHSConstant,
                                       unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstFAdd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFAdd(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getSub(unwrap<Constant>(LHSConstant),
                                    unwrap<Constant>(RHSConstant)));
@@ -1589,11 +1591,6 @@ LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant,
                                       unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstFSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFSub(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getMul(unwrap<Constant>(LHSConstant),
                                    unwrap<Constant>(RHSConstant)));
@@ -1609,53 +1606,6 @@ LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant,
                              LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getNUWMul(unwrap<Constant>(LHSConstant),
                                       unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFMul(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstUDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getUDiv(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstExactUDiv(LLVMValueRef LHSConstant,
-                                LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getExactUDiv(unwrap<Constant>(LHSConstant),
-                                         unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstSDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getSDiv(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstExactSDiv(LLVMValueRef LHSConstant,
-                                LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getExactSDiv(unwrap<Constant>(LHSConstant),
-                                         unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFDiv(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstURem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getURem(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstSRem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getSRem(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFRem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFRem(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
 }
 
 LLVMValueRef LLVMConstAnd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
@@ -1869,20 +1819,6 @@ LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
   return wrap(ConstantExpr::getShuffleVector(unwrap<Constant>(VectorAConstant),
                                              unwrap<Constant>(VectorBConstant),
                                              IntMask));
-}
-
-LLVMValueRef LLVMConstExtractValue(LLVMValueRef AggConstant, unsigned *IdxList,
-                                   unsigned NumIdx) {
-  return wrap(ConstantExpr::getExtractValue(unwrap<Constant>(AggConstant),
-                                            makeArrayRef(IdxList, NumIdx)));
-}
-
-LLVMValueRef LLVMConstInsertValue(LLVMValueRef AggConstant,
-                                  LLVMValueRef ElementValueConstant,
-                                  unsigned *IdxList, unsigned NumIdx) {
-  return wrap(ConstantExpr::getInsertValue(unwrap<Constant>(AggConstant),
-                                         unwrap<Constant>(ElementValueConstant),
-                                           makeArrayRef(IdxList, NumIdx)));
 }
 
 LLVMValueRef LLVMConstInlineAsm(LLVMTypeRef Ty, const char *AsmString,
@@ -2845,6 +2781,10 @@ void LLVMInstructionEraseFromParent(LLVMValueRef Inst) {
   unwrap<Instruction>(Inst)->eraseFromParent();
 }
 
+void LLVMDeleteInstruction(LLVMValueRef Inst) {
+  unwrap<Instruction>(Inst)->deleteValue();
+}
+
 LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst) {
   if (ICmpInst *I = dyn_cast<ICmpInst>(unwrap(Inst)))
     return (LLVMIntPredicate)I->getPredicate();
@@ -3081,8 +3021,6 @@ unsigned LLVMGetNumIndices(LLVMValueRef Inst) {
     return EV->getNumIndices();
   if (auto *IV = dyn_cast<InsertValueInst>(I))
     return IV->getNumIndices();
-  if (auto *CE = dyn_cast<ConstantExpr>(I))
-    return CE->getIndices().size();
   llvm_unreachable(
     "LLVMGetNumIndices applies only to extractvalue and insertvalue!");
 }
@@ -3093,8 +3031,6 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst) {
     return EV->getIndices().data();
   if (auto *IV = dyn_cast<InsertValueInst>(I))
     return IV->getIndices().data();
-  if (auto *CE = dyn_cast<ConstantExpr>(I))
-    return CE->getIndices().data();
   llvm_unreachable(
     "LLVMGetIndices applies only to extractvalue and insertvalue!");
 }
@@ -3666,6 +3602,8 @@ static AtomicRMWInst::BinOp mapFromLLVMRMWBinOp(LLVMAtomicRMWBinOp BinOp) {
     case LLVMAtomicRMWBinOpUMin: return AtomicRMWInst::UMin;
     case LLVMAtomicRMWBinOpFAdd: return AtomicRMWInst::FAdd;
     case LLVMAtomicRMWBinOpFSub: return AtomicRMWInst::FSub;
+    case LLVMAtomicRMWBinOpFMax: return AtomicRMWInst::FMax;
+    case LLVMAtomicRMWBinOpFMin: return AtomicRMWInst::FMin;
   }
 
   llvm_unreachable("Invalid LLVMAtomicRMWBinOp value!");
@@ -3686,6 +3624,8 @@ static LLVMAtomicRMWBinOp mapToLLVMRMWBinOp(AtomicRMWInst::BinOp BinOp) {
     case AtomicRMWInst::UMin: return LLVMAtomicRMWBinOpUMin;
     case AtomicRMWInst::FAdd: return LLVMAtomicRMWBinOpFAdd;
     case AtomicRMWInst::FSub: return LLVMAtomicRMWBinOpFSub;
+    case AtomicRMWInst::FMax: return LLVMAtomicRMWBinOpFMax;
+    case AtomicRMWInst::FMin: return LLVMAtomicRMWBinOpFMin;
     default: break;
   }
 

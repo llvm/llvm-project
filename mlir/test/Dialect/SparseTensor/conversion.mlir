@@ -136,7 +136,8 @@ func.func @sparse_new3d(%arg0: !llvm.ptr<i8>) -> tensor<?x?x?xf32, #SparseTensor
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func.func @sparse_init(%arg0: index, %arg1: index) -> tensor<?x?xf64, #SparseMatrix> {
   %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #SparseMatrix>
-  return %0 : tensor<?x?xf64, #SparseMatrix>
+  %1 = sparse_tensor.load %0 : tensor<?x?xf64, #SparseMatrix>
+  return %1 : tensor<?x?xf64, #SparseMatrix>
 }
 
 // CHECK-LABEL: func @sparse_release(
@@ -144,7 +145,7 @@ func.func @sparse_init(%arg0: index, %arg1: index) -> tensor<?x?xf64, #SparseMat
 //       CHECK: call @delSparseTensor(%[[A]]) : (!llvm.ptr<i8>) -> ()
 //       CHECK: return
 func.func @sparse_release(%arg0: tensor<128xf64, #SparseVector>) {
-  sparse_tensor.release %arg0 : tensor<128xf64, #SparseVector>
+  bufferization.dealloc_tensor %arg0 : tensor<128xf64, #SparseVector>
   return
 }
 
@@ -571,4 +572,16 @@ func.func @sparse_out1(%arg0: tensor<?x?xf64, #SparseMatrix>, %arg1: !llvm.ptr<i
 func.func @sparse_out2(%arg0: tensor<?x?x?xf32, #SparseTensor>, %arg1: !llvm.ptr<i8>) {
   sparse_tensor.out %arg0, %arg1 : tensor<?x?x?xf32, #SparseTensor>, !llvm.ptr<i8>
   return
+}
+
+// CHECK-LABEL: func @sparse_and_dense_init(
+//       CHECK: %[[S:.*]] = call @newSparseTensor
+//       CHECK: %[[D:.*]] = bufferization.alloc_tensor
+//       CHECK: return %[[S]], %[[D]] : !llvm.ptr<i8>, tensor<?x?xf64>
+func.func @sparse_and_dense_init(%arg0: index, %arg1: index)
+           -> (tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>) {
+  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #SparseMatrix>
+  %1 = sparse_tensor.load %0 : tensor<?x?xf64, #SparseMatrix>
+  %2 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64>
+  return %1, %2 : tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>
 }

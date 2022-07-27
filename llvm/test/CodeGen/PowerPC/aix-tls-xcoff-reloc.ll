@@ -171,7 +171,7 @@ entry:
 ; SYM-NEXT: Symbols [
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 0
-; SYM-NEXT:     Name: .file
+; SYM-NEXT:     Name: <stdin>
 ; SYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYM-NEXT:     Section: N_DEBUG
 ; SYM-NEXT:     Source Language ID: TB_C (0x0)
@@ -212,7 +212,7 @@ entry:
 ; SYM-NEXT:       SectionLen: 104
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
-; SYM-NEXT:       SymbolAlignmentLog2: 4
+; SYM-NEXT:       SymbolAlignmentLog2: 5
 ; SYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYM-NEXT:       StabInfoIndex: 0x0

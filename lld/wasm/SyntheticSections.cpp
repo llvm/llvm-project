@@ -124,8 +124,8 @@ void DylinkSection::writeBody() {
 
     for (const Symbol *sym : importInfo) {
       LLVM_DEBUG(llvm::dbgs() << "imports info: " << toString(*sym) << "\n");
-      StringRef module = sym->importModule.getValueOr(defaultModule);
-      StringRef name = sym->importName.getValueOr(sym->getName());
+      StringRef module = sym->importModule.value_or(defaultModule);
+      StringRef name = sym->importName.value_or(sym->getName());
       writeStr(sub.os, module, "import module");
       writeStr(sub.os, name, "import name");
       writeUleb128(sub.os, sym->flags, "sym flags");
@@ -184,8 +184,8 @@ void ImportSection::addGOTEntry(Symbol *sym) {
 
 void ImportSection::addImport(Symbol *sym) {
   assert(!isSealed);
-  StringRef module = sym->importModule.getValueOr(defaultModule);
-  StringRef name = sym->importName.getValueOr(sym->getName());
+  StringRef module = sym->importModule.value_or(defaultModule);
+  StringRef name = sym->importName.value_or(sym->getName());
   if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
     ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
     auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
@@ -232,7 +232,7 @@ void ImportSection::writeBody() {
 
   writeUleb128(os, getNumImports(), "import count");
 
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
 
   if (config->importMemory) {
     WasmImport import;
@@ -254,8 +254,8 @@ void ImportSection::writeBody() {
 
   for (const Symbol *sym : importedSymbols) {
     WasmImport import;
-    import.Field = sym->importName.getValueOr(sym->getName());
-    import.Module = sym->importModule.getValueOr(defaultModule);
+    import.Field = sym->importName.value_or(sym->getName());
+    import.Module = sym->importModule.value_or(defaultModule);
 
     if (auto *functionSym = dyn_cast<FunctionSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_FUNCTION;
@@ -357,7 +357,7 @@ void MemorySection::writeBody() {
     flags |= WASM_LIMITS_FLAG_HAS_MAX;
   if (config->sharedMemory)
     flags |= WASM_LIMITS_FLAG_IS_SHARED;
-  if (config->is64.getValueOr(false))
+  if (config->is64.value_or(false))
     flags |= WASM_LIMITS_FLAG_IS_64;
   writeUleb128(os, flags, "memory limits flags");
   writeUleb128(os, numMemoryPages, "initial pages");
@@ -415,7 +415,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
   assert(!config->extendedConst);
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
@@ -465,7 +465,7 @@ void GlobalSection::writeBody() {
     writeGlobalType(os, g->getType());
     writeInitExpr(os, g->getInitExpr());
   }
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   uint8_t itype = is64 ? WASM_TYPE_I64 : WASM_TYPE_I32;
   for (const Symbol *sym : internalGotSymbols) {
     bool mutable_ = false;
@@ -569,8 +569,8 @@ void ElemSection::writeBody() {
   if (config->isPic) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
     initExpr.Inst.Value.Global =
-        (config->is64.getValueOr(false) ? WasmSym::tableBase32
-                                        : WasmSym::tableBase)
+        (config->is64.value_or(false) ? WasmSym::tableBase32
+                                      : WasmSym::tableBase)
             ->getGlobalIndex();
   } else {
     initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;

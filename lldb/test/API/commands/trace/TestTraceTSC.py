@@ -16,8 +16,8 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.traceStartThread(enableTsc=True)
 
         self.expect("n")
-        self.expect("thread trace dump instructions --tsc -c 1",
-            patterns=["0: \[tsc=0x[0-9a-fA-F]+\] 0x0000000000400511    movl"])
+        self.expect("thread trace dump instructions -t -c 1",
+            patterns=[": \[\d+.\d+ ns\] 0x0000000000400511    movl"])
 
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -29,23 +29,23 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.traceStartThread(enableTsc=True)
 
         # After each stop there'll be a new TSC
-        self.expect("n")
-        self.expect("n")
-        self.expect("n")
+        self.expect("si")
+        self.expect("si")
+        self.expect("si")
 
         # We'll get the most recent instructions, with at least 3 different TSCs
-        self.runCmd("thread trace dump instructions --tsc --raw")
-        id_to_tsc = {}
+        self.runCmd("thread trace dump instructions -t --raw --forward")
+        id_to_timestamp = {}
         for line in self.res.GetOutput().splitlines():
-            m = re.search("    (.+): \[tsc=(.+)\].*", line)
+            m = re.search("    (.+): \[(.+)\ ns].*", line)
             if m:
-                id_to_tsc[int(m.group(1))] = m.group(2)
-        self.assertEqual(len(id_to_tsc), 6)
+                id_to_timestamp[int(m.group(1))] = m.group(2)
+        self.assertEqual(len(id_to_timestamp), 3)
 
         # We check that the values are right when dumping a specific id
-        for id in range(0, 6):
-            self.expect(f"thread trace dump instructions --tsc --id {id} -c 1",
-                substrs=[f"{id}: [tsc={id_to_tsc[id]}]"])
+        for id, timestamp in id_to_timestamp.items():
+            self.expect(f"thread trace dump instructions -t --id {id} -c 1",
+                substrs=[f"{id}: [{timestamp} ns]"])
 
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -57,8 +57,11 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.traceStartProcess(enableTsc=True)
 
         self.expect("n")
-        self.expect("thread trace dump instructions --tsc -c 1",
-            patterns=["0: \[tsc=0x[0-9a-fA-F]+\] 0x0000000000400511    movl"])
+        self.expect("thread trace dump instructions -t -c 1",
+            patterns=[": \[\d+.\d+ ns\] 0x0000000000400511    movl"])
+
+        self.expect("thread trace dump instructions -t -c 1 --pretty-json",
+            patterns=['''"timestamp_ns": "\d+.\d+"'''])
 
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -70,8 +73,11 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.traceStartThread(enableTsc=False)
 
         self.expect("n")
-        self.expect("thread trace dump instructions --tsc -c 1",
-            patterns=["0: \[tsc=unavailable\] 0x0000000000400511    movl"])
+        self.expect("thread trace dump instructions -t -c 1",
+            patterns=[": \[unavailable\] 0x0000000000400511    movl"])
+
+        self.expect("thread trace dump instructions -t -c 1 --json",
+            substrs=['''"timestamp_ns":null'''])
 
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))

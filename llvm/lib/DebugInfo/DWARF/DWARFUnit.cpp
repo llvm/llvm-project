@@ -624,7 +624,7 @@ bool DWARFUnit::parseDWO() {
     DWO->setAddrOffsetSection(AddrOffsetSection, *AddrOffsetSectionBase);
   if (getVersion() == 4) {
     auto DWORangesBase = UnitDie.getRangesBaseAttribute();
-    DWO->setRangesSection(RangeSection, DWORangesBase.getValueOr(0));
+    DWO->setRangesSection(RangeSection, DWORangesBase.value_or(0));
   }
 
   return true;

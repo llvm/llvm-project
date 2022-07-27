@@ -11,6 +11,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
@@ -117,17 +118,16 @@ void RecoveryReproducerContext::generate(std::string &description) {
   }
   descOS << "reproducer generated at `" << stream->description() << "`";
 
-  // Output the current pass manager configuration to the crash stream.
-  auto &os = stream->os();
-  os << "// configuration: -pass-pipeline='" << pipeline << "'";
-  if (disableThreads)
-    os << " -mlir-disable-threading";
-  if (verifyPasses)
-    os << " -verify-each";
-  os << '\n';
+  AsmState state(preCrashOperation);
+  state.attachResourcePrinter(
+      "mlir_reproducer", [&](Operation *op, AsmResourceBuilder &builder) {
+        builder.buildString("pipeline", pipeline);
+        builder.buildBool("disable_threading", disableThreads);
+        builder.buildBool("verify_each", verifyPasses);
+      });
 
   // Output the .mlir module.
-  preCrashOperation->print(os);
+  preCrashOperation->print(stream->os(), state);
 }
 
 void RecoveryReproducerContext::disable() {
@@ -437,4 +437,39 @@ void PassManager::enableCrashReproducerGeneration(
       factory, genLocalReproducer);
   addInstrumentation(
       std::make_unique<CrashReproducerInstrumentation>(*crashReproGenerator));
+}
+
+//===----------------------------------------------------------------------===//
+// Asm Resource
+//===----------------------------------------------------------------------===//
+
+void mlir::attachPassReproducerAsmResource(ParserConfig &config,
+                                           PassManager &pm,
+                                           bool &enableThreading) {
+  auto parseFn = [&](AsmParsedResourceEntry &entry) -> LogicalResult {
+    if (entry.getKey() == "pipeline") {
+      FailureOr<std::string> pipeline = entry.parseAsString();
+      if (failed(pipeline))
+        return failure();
+      return parsePassPipeline(*pipeline, pm);
+    }
+    if (entry.getKey() == "disable_threading") {
+      FailureOr<bool> value = entry.parseAsBool();
+
+      // FIXME: We should just update the context directly, but some places
+      // force disable threading during parsing.
+      if (succeeded(value))
+        enableThreading = !(*value);
+      return value;
+    }
+    if (entry.getKey() == "verify_each") {
+      FailureOr<bool> value = entry.parseAsBool();
+      if (succeeded(value))
+        pm.enableVerifier(*value);
+      return value;
+    }
+    return entry.emitError() << "unknown 'mlir_reproducer' resource key '"
+                             << entry.getKey() << "'";
+  };
+  config.attachResourceParser("mlir_reproducer", parseFn);
 }

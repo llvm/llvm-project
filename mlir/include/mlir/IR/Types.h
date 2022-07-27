@@ -68,7 +68,7 @@ namespace mlir {
 ///      context and the key type for this storage.
 ///
 ///    - If they have a mutable component, this component must not be a part of
-//       the key.
+///      the key.
 class Type {
 public:
   /// Utility class for implementing types.
@@ -94,11 +94,16 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  template <typename U> bool isa() const;
-  template <typename First, typename Second, typename... Rest> bool isa() const;
-  template <typename U> U dyn_cast() const;
-  template <typename U> U dyn_cast_or_null() const;
-  template <typename U> U cast() const;
+  template <typename U>
+  bool isa() const;
+  template <typename First, typename Second, typename... Rest>
+  bool isa() const;
+  template <typename U>
+  U dyn_cast() const;
+  template <typename U>
+  U dyn_cast_or_null() const;
+  template <typename U>
+  U cast() const;
 
   // Support type casting Type to itself.
   static bool classof(Type) { return true; }
@@ -223,6 +228,18 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// Core TypeTrait
+//===----------------------------------------------------------------------===//
+
+/// This trait is used to determine if a type is mutable or not. It is attached
+/// on a type if the corresponding ImplType defines a `mutate` function with
+/// a proper signature.
+namespace TypeTrait {
+template <typename ConcreteType>
+using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
+} // namespace TypeTrait
+
+//===----------------------------------------------------------------------===//
 // Type Utils
 //===----------------------------------------------------------------------===//
 
@@ -231,7 +248,8 @@ inline ::llvm::hash_code hash_value(Type arg) {
   return DenseMapInfo<const Type::ImplType *>::getHashValue(arg.impl);
 }
 
-template <typename U> bool Type::isa() const {
+template <typename U>
+bool Type::isa() const {
   assert(impl && "isa<> used on a null type.");
   return U::classof(*this);
 }
@@ -241,13 +259,16 @@ bool Type::isa() const {
   return isa<First>() || isa<Second, Rest...>();
 }
 
-template <typename U> U Type::dyn_cast() const {
+template <typename U>
+U Type::dyn_cast() const {
   return isa<U>() ? U(impl) : U(nullptr);
 }
-template <typename U> U Type::dyn_cast_or_null() const {
+template <typename U>
+U Type::dyn_cast_or_null() const {
   return (impl && isa<U>()) ? U(impl) : U(nullptr);
 }
-template <typename U> U Type::cast() const {
+template <typename U>
+U Type::cast() const {
   assert(isa<U>());
   return U(impl);
 }
@@ -257,7 +278,8 @@ template <typename U> U Type::cast() const {
 namespace llvm {
 
 // Type hash just like pointers.
-template <> struct DenseMapInfo<mlir::Type> {
+template <>
+struct DenseMapInfo<mlir::Type> {
   static mlir::Type getEmptyKey() {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
@@ -270,7 +292,8 @@ template <> struct DenseMapInfo<mlir::Type> {
   static bool isEqual(mlir::Type LHS, mlir::Type RHS) { return LHS == RHS; }
 };
 template <typename T>
-struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value>>
+struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value &&
+                                        !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Type> {
   static T getEmptyKey() {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
@@ -283,7 +306,8 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value>>
 };
 
 /// We align TypeStorage by 8, so allow LLVM to steal the low bits.
-template <> struct PointerLikeTypeTraits<mlir::Type> {
+template <>
+struct PointerLikeTypeTraits<mlir::Type> {
 public:
   static inline void *getAsVoidPointer(mlir::Type I) {
     return const_cast<void *>(I.getAsOpaquePointer());

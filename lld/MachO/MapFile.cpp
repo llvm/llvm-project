@@ -75,7 +75,7 @@ static std::pair<Symbols, Symbols> getSymbols() {
 static DenseMap<Symbol *, std::string>
 getSymbolStrings(ArrayRef<Defined *> syms) {
   std::vector<std::string> str(syms.size());
-  parallelForEachN(0, syms.size(), [&](size_t i) {
+  parallelFor(0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
     Defined *sym = syms[i];
 

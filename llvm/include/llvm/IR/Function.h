@@ -288,7 +288,7 @@ public:
   /// profile annotations. If IncludeSynthetic is false, only return true
   /// when the profile data is real.
   bool hasProfileData(bool IncludeSynthetic = false) const {
-    return getEntryCount(IncludeSynthetic).hasValue();
+    return getEntryCount(IncludeSynthetic).has_value();
   }
 
   /// Returns the set of GUIDs that needs to be imported to the function for

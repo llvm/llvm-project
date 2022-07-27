@@ -87,6 +87,6 @@ head:
   br i1 undef, label %exit, label %head
 
 exit:
-  store <8 x i32> %or1, <8 x i32> addrspace(1)* undef, align 32
+  store <8 x i32> %or1, ptr addrspace(1) undef, align 32
   ret void
 }

@@ -429,7 +429,7 @@ public:
   }
 
   void onStartOfTranslationUnit() {
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     for (MatchCallback *MC : Matchers->AllCallbacks) {
       if (EnableCheckProfiling)
@@ -439,7 +439,7 @@ public:
   }
 
   void onEndOfTranslationUnit() {
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     for (MatchCallback *MC : Matchers->AllCallbacks) {
       if (EnableCheckProfiling)
@@ -1010,7 +1010,7 @@ private:
   /// Used by \c matchDispatch() below.
   template <typename T, typename MC>
   void matchWithoutFilter(const T &Node, const MC &Matchers) {
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     for (const auto &MP : Matchers) {
       if (EnableCheckProfiling)
@@ -1033,7 +1033,7 @@ private:
     if (Filter.empty())
       return;
 
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     auto &Matchers = this->Matchers->DeclOrStmt;
     for (unsigned short I : Filter) {

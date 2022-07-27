@@ -182,8 +182,8 @@ FOREVERY_O(DECL_SPARSEINDICES)
 /// Coordinate-scheme method for adding a new element.
 #define DECL_ADDELT(VNAME, V)                                                  \
   MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_addElt##VNAME(                   \
-      void *coo,                                                               \
-      StridedMemRefType<V, 0> *vref, StridedMemRefType<index_type, 1> *iref,   \
+      void *coo, StridedMemRefType<V, 0> *vref,                                \
+      StridedMemRefType<index_type, 1> *iref,                                  \
       StridedMemRefType<index_type, 1> *pref);
 FOREVERY_V(DECL_ADDELT)
 #undef DECL_ADDELT

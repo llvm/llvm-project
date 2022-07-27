@@ -105,29 +105,29 @@ define void @zext() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v4 = zext i16 undef to i64
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v5 = zext i32 undef to i64
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v6 = zext <2 x i8> undef to <2 x i16>
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v7 = zext <2 x i8> undef to <2 x i32>
-; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v8 = zext <2 x i8> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v7 = zext <2 x i8> undef to <2 x i32>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v8 = zext <2 x i8> undef to <2 x i64>
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v9 = zext <2 x i16> undef to <2 x i32>
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v10 = zext <2 x i16> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v10 = zext <2 x i16> undef to <2 x i64>
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v11 = zext <2 x i32> undef to <2 x i64>
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v12 = zext <4 x i8> undef to <4 x i16>
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v13 = zext <4 x i8> undef to <4 x i32>
-; CHECK: Cost Model: Found an estimated cost of 7 for instruction:   %v14 = zext <4 x i8> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v13 = zext <4 x i8> undef to <4 x i32>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v14 = zext <4 x i8> undef to <4 x i64>
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v15 = zext <4 x i16> undef to <4 x i32>
-; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v16 = zext <4 x i16> undef to <4 x i64>
-; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v17 = zext <4 x i32> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v16 = zext <4 x i16> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v17 = zext <4 x i32> undef to <4 x i64>
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v18 = zext <8 x i8> undef to <8 x i16>
-; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v19 = zext <8 x i8> undef to <8 x i32>
-; CHECK: Cost Model: Found an estimated cost of 15 for instruction:   %v20 = zext <8 x i8> undef to <8 x i64>
-; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v21 = zext <8 x i16> undef to <8 x i32>
-; CHECK: Cost Model: Found an estimated cost of 11 for instruction:   %v22 = zext <8 x i16> undef to <8 x i64>
-; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v23 = zext <8 x i32> undef to <8 x i64>
-; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v24 = zext <16 x i8> undef to <16 x i16>
-; CHECK: Cost Model: Found an estimated cost of 11 for instruction:   %v25 = zext <16 x i8> undef to <16 x i32>
-; CHECK: Cost Model: Found an estimated cost of 31 for instruction:   %v26 = zext <16 x i8> undef to <16 x i64>
-; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v27 = zext <16 x i16> undef to <16 x i32>
-; CHECK: Cost Model: Found an estimated cost of 22 for instruction:   %v28 = zext <16 x i16> undef to <16 x i64>
-; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v29 = zext <16 x i32> undef to <16 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v19 = zext <8 x i8> undef to <8 x i32>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v20 = zext <8 x i8> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v21 = zext <8 x i16> undef to <8 x i32>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v22 = zext <8 x i16> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v23 = zext <8 x i32> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v24 = zext <16 x i8> undef to <16 x i16>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v25 = zext <16 x i8> undef to <16 x i32>
+; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v26 = zext <16 x i8> undef to <16 x i64>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v27 = zext <16 x i16> undef to <16 x i32>
+; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v28 = zext <16 x i16> undef to <16 x i64>
+; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v29 = zext <16 x i32> undef to <16 x i64>
 
  ret void
 }

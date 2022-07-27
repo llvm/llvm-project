@@ -21,9 +21,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -33,7 +31,7 @@ using namespace mlir::tosa;
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Tosa dialect structs and interface includes.
+// Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
@@ -69,7 +67,7 @@ struct TosaInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 /// Returns the while loop body.
-Region &tosa::WhileOp::getLoopBody() { return body(); }
+Region &tosa::WhileOp::getLoopBody() { return getBody(); }
 
 //===----------------------------------------------------------------------===//
 // Tosa dialect initialization.
@@ -97,549 +95,24 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Canonicalizers.
-//===----------------------------------------------------------------------===//
-
-template <typename... Args>
-void addOpsCanonicalizations(MLIRContext *ctx, RewritePatternSet &patterns) {
-  (void)std::initializer_list<int>{
-      0, (Args::getCanonicalizationPatterns(patterns, ctx), 0)...};
-}
-
-void mlir::tosa::populateTosaOpsCanonicalizationPatterns(
-    MLIRContext *ctx, RewritePatternSet &patterns) {
-  addOpsCanonicalizations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
-      >(ctx, patterns);
-}
-
-struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
-  using OpRewritePattern<tosa::ConcatOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ConcatOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.input1().size() != 1)
-      return failure();
-    if (op.input1().front().getType() != op.getType()) {
-      rewriter
-          .replaceOpWithNewOp<tensor::CastOp>(op, op.getType(),
-                                              op.input1().front())
-          .getResult();
-      return success();
-    }
-
-    rewriter.replaceOp(op, op.input1().front());
-    return success();
-  }
-};
-
-void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                           MLIRContext *context) {
-  results.add<ConcatOptimization>(context);
-}
-
-struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
-  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.input1();
-    Operation *definingOp = input.getDefiningOp();
-    if (!definingOp)
-      return failure();
-
-    if (tosa::ReshapeOp reshapeOp = dyn_cast<tosa::ReshapeOp>(definingOp)) {
-      rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-          op, op.getType(), reshapeOp.input1(), op.new_shape());
-      return success();
-    }
-
-    return failure();
-  }
-};
-
-struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
-  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.input1();
-    ArrayAttr newShape = op.new_shape();
-
-    // Check if input is constant
-    DenseElementsAttr inputAttr;
-    if (!matchPattern(input, m_Constant(&inputAttr)))
-      return failure();
-
-    // Check if has >1 consumer and is not splat
-    if (!input.hasOneUse() && !inputAttr.isSplat())
-      return failure();
-
-    // Grab the new shape
-    SmallVector<int64_t> newShapeValues = llvm::to_vector<6>(
-        llvm::map_range(newShape.getValue(), [](const Attribute &val) {
-          return val.cast<IntegerAttr>().getValue().getSExtValue();
-        }));
-
-    // Build new const op with correct output shape
-    ShapedType inputShape = input.getType().cast<ShapedType>();
-    DenseElementsAttr outputAttr =
-        inputAttr.reshape(inputShape.clone(newShapeValues));
-    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, outputAttr.getType(),
-                                               outputAttr);
-    return success();
-  }
-};
-
-void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                            MLIRContext *context) {
-  results.add<ReshapeReshapeOptimization>(context);
-  results.add<ReshapeConstOptimization>(context);
-}
-
-LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
-  auto notOp = op.pred().getDefiningOp<tosa::LogicalNotOp>();
-  if (!notOp)
-    return failure();
-  rewriter.updateRootInPlace(op, [&]() {
-    op.getOperation()->setOperands(
-        {notOp.input1(), op.on_false(), op.on_true()});
-  });
-  return success();
-}
-
-struct NoOpOptimization : public OpRewritePattern<tosa::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::TransposeOp op,
-                                PatternRewriter &rewriter) const override {
-    auto perm = op.perms();
-
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(perm, m_Constant(&permAttr))) {
-      return failure();
-    }
-
-    SmallVector<int64_t> permValues = llvm::to_vector<6>(
-        llvm::map_range(permAttr.getValues<APInt>(),
-                        [](const APInt &val) { return val.getSExtValue(); }));
-
-    for (int i = 0, s = permValues.size(); i < s; i++) {
-      if (i != permValues[i]) {
-        return failure();
-      }
-    }
-
-    rewriter.replaceOp(op, op.input1());
-    return success();
-  }
-};
-
-void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                              MLIRContext *context) {
-  results.add<NoOpOptimization>(context);
-}
-
-struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::AddOp op,
-                                PatternRewriter &rewriter) const override {
-    auto input1 = op.input1();
-    auto input2 = op.input2();
-
-    DenseElementsAttr input1Attr;
-    if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
-        input2.getType() == op.getType()) {
-      if (input1Attr.getType().getElementType().isa<IntegerType>() &&
-          input1Attr.getSplatValue<APInt>().isZero()) {
-        rewriter.replaceOp(op, op.input2());
-        return success();
-      }
-    }
-
-    DenseElementsAttr input2Attr;
-    if (matchPattern(input2, m_Constant(&input2Attr)) && input2Attr.isSplat() &&
-        input1.getType() == op.getType()) {
-      if (input2Attr.getType().getElementType().isa<IntegerType>() &&
-          input2Attr.getSplatValue<APInt>().isZero()) {
-        rewriter.replaceOp(op, op.input1());
-        return success();
-      }
-    }
-
-    return failure();
-  }
-};
-
-void AddOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<AddZeroOptimization>(context);
-}
-
-struct MulOneOptimization : public OpRewritePattern<tosa::MulOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::MulOp op,
-                                PatternRewriter &rewriter) const override {
-    auto input1 = op.input1();
-    auto input2 = op.input2();
-
-    DenseElementsAttr input1Attr;
-    if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
-        input2.getType() == op.getType()) {
-      if (input1Attr.getType().getElementType().isa<FloatType>() &&
-          input1Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
-        rewriter.replaceOp(op, op.input2());
-        return success();
-      }
-
-      if (input1Attr.getType().getElementType().isa<IntegerType>() &&
-          matchPattern(input1, m_One())) {
-        rewriter.replaceOp(op, op.input2());
-        return success();
-      }
-    }
-
-    DenseElementsAttr input2Attr;
-    if (matchPattern(input2, m_Constant(&input2Attr)) && input2Attr.isSplat() &&
-        input1.getType() == op.getType()) {
-      if (input2Attr.getType().getElementType().isa<FloatType>() &&
-          input2Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
-        rewriter.replaceOp(op, op.input1());
-        return success();
-      }
-
-      if (input2Attr.getType().getElementType().isa<IntegerType>() &&
-          matchPattern(input2, m_One())) {
-        rewriter.replaceOp(op, op.input1());
-        return success();
-      }
-    }
-
-    return failure();
-  }
-};
-
-void MulOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<MulOneOptimization>(context);
-}
-
-struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::PadOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.pad_const())
-      return failure();
-
-    auto input = op.input1();
-    auto padding = op.padding();
-
-    ShapedType inputTy = input.getType().cast<ShapedType>();
-    Type elementTy = inputTy.getElementType();
-
-    Attribute constantAttr;
-    if (elementTy.isa<FloatType>()) {
-      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (elementTy.isa<IntegerType>() && !op.quantization_info()) {
-      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (elementTy.isa<IntegerType>() && op.quantization_info()) {
-      auto value = op.quantization_info().getValue().getInputZp();
-      constantAttr = rewriter.getIntegerAttr(elementTy, value);
-    }
-
-    if (!constantAttr) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "tosa.pad to linalg lowering encountered an unknown element type");
-    }
-
-    auto denseAttr = DenseElementsAttr::get(
-        RankedTensorType::get({}, elementTy), constantAttr);
-    auto constantVal = rewriter.create<tosa::ConstOp>(
-        op.getLoc(), denseAttr.getType(), denseAttr);
-
-    rewriter.replaceOpWithNewOp<tosa::PadOp>(
-        op, op.getType(), ValueRange{input, padding, constantVal},
-        op->getAttrs());
-    return success();
-  }
-};
-
-void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<MaterializePadValue>(context);
-}
-
-struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    Value output = op.output();
-    ShapedType inputType = input.getType().cast<ShapedType>();
-    ShapedType outputType = output.getType().cast<ShapedType>();
-
-    if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
-      return failure();
-    }
-
-    // If the output and input shapes are 1x1, then this is a no op.
-    ArrayRef<int64_t> outputShape = outputType.getShape();
-    if (outputShape[1] != 1 || outputShape[2] != 1) {
-      return failure();
-    }
-
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-    if (inputShape[1] != 1 || inputShape[2] != 1) {
-      return failure();
-    }
-
-    rewriter.replaceOp(op, input);
-    return success();
-  }
-};
-
-void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                              MLIRContext *context) {
-  results.add<MaxPool2dIsNoOp>(context);
-}
-
-struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ClampOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    auto inputType = op.input().getType().template dyn_cast<RankedTensorType>();
-    auto inputElementType = inputType.getElementType();
-
-    if (!inputType.hasStaticShape()) {
-      return failure();
-    }
-
-    if (inputElementType.isF32()) {
-      auto minClamp = op.min_fp();
-      auto maxClamp = op.max_fp();
-      bool isMin = (minClamp.isLargest() || minClamp.isInfinity()) &&
-                   minClamp.isNegative();
-      bool isMax = (maxClamp.isLargest() || maxClamp.isInfinity()) &&
-                   !maxClamp.isNegative();
-
-      if (isMin && isMax) {
-        rewriter.replaceOp(op, input);
-        return success();
-      }
-      return failure();
-    }
-
-    if (inputElementType.isUnsignedInteger()) {
-      int64_t minClamp = op.min_int();
-      int64_t maxClamp = op.max_int();
-
-      int64_t intMin =
-          APInt::getMinValue(inputElementType.getIntOrFloatBitWidth())
-              .getZExtValue();
-      int64_t intMax =
-          APInt::getMaxValue(inputElementType.getIntOrFloatBitWidth())
-              .getZExtValue();
-
-      if (minClamp <= intMin && maxClamp >= intMax) {
-        rewriter.replaceOp(op, input);
-        return success();
-      }
-      return failure();
-    }
-
-    if (inputElementType.isa<IntegerType>()) {
-      int64_t minClamp = op.min_int();
-      int64_t maxClamp = op.max_int();
-
-      int64_t intMin =
-          APInt::getSignedMinValue(inputElementType.getIntOrFloatBitWidth())
-              .getSExtValue();
-      int64_t intMax =
-          APInt::getSignedMaxValue(inputElementType.getIntOrFloatBitWidth())
-              .getSExtValue();
-
-      if (minClamp <= intMin && maxClamp >= intMax) {
-        rewriter.replaceOp(op, input);
-        return success();
-      }
-      return failure();
-    }
-
-    return failure();
-  }
-};
-
-struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
-  using OpRewritePattern<tosa::ClampOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ClampOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.input();
-
-    Operation *definingOp = input.getDefiningOp();
-    if (!definingOp)
-      return failure();
-
-    if (tosa::ClampOp clampOp = dyn_cast<tosa::ClampOp>(definingOp)) {
-      auto minFp = std::max(op.min_fp(), clampOp.min_fp()).convertToFloat();
-      auto maxFp = std::min(op.max_fp(), clampOp.max_fp()).convertToFloat();
-
-      auto minInt = std::max(op.min_int(), clampOp.min_int());
-      auto maxInt = std::min(op.max_int(), clampOp.max_int());
-
-      rewriter.replaceOpWithNewOp<tosa::ClampOp>(
-          op, op.getType(), clampOp.input(), rewriter.getI64IntegerAttr(minInt),
-          rewriter.getI64IntegerAttr(maxInt), rewriter.getF32FloatAttr(minFp),
-          rewriter.getF32FloatAttr(maxFp));
-      return success();
-    }
-
-    return failure();
-  }
-};
-
-void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                          MLIRContext *context) {
-  results.add<ClampIsNoOp>(context);
-  results.add<ClampClampOptimization>(context);
-}
-
-//===----------------------------------------------------------------------===//
-// Operator Folders.
-//===----------------------------------------------------------------------===//
-
-OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
-  if (input().getType() == getType())
-    return input();
-  return {};
-}
-
-OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "constant has no operands");
-  return valueAttr();
-}
-
-#define REDUCE_FOLDER(OP)                                                      \
-  OpFoldResult OP::fold(ArrayRef<Attribute> operands) {                        \
-    ShapedType inputTy = input().getType().cast<ShapedType>();                 \
-    if (!inputTy.hasRank())                                                    \
-      return {};                                                               \
-    if (inputTy.getDimSize(axis()) == 1)                                       \
-      return input();                                                          \
-    return {};                                                                 \
-  }
-
-REDUCE_FOLDER(ReduceAllOp)
-REDUCE_FOLDER(ReduceAnyOp)
-REDUCE_FOLDER(ReduceMaxOp)
-REDUCE_FOLDER(ReduceMinOp)
-REDUCE_FOLDER(ReduceProdOp)
-REDUCE_FOLDER(ReduceSumOp)
-#undef REDUCE_FOLDER
-
-OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
-  auto inputTy = input1().getType().dyn_cast<RankedTensorType>();
-  auto outputTy = getType().dyn_cast<RankedTensorType>();
-
-  if (!inputTy || !outputTy || inputTy != outputTy)
-    return {};
-  return input1();
-}
-
-OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
-  // If the pad is all zeros we can fold this operation away.
-  if (operands[1]) {
-    auto densePad = operands[1].cast<DenseElementsAttr>();
-    if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
-      return input1();
-    }
-  }
-
-  return {};
-}
-
-OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
-  auto inputTy = input().getType().dyn_cast<RankedTensorType>();
-  auto outputTy = getType().dyn_cast<RankedTensorType>();
-
-  if (!inputTy || !outputTy || inputTy != outputTy)
-    return {};
-  if (inputTy.hasStaticShape())
-    return input();
-
-  return {};
-}
-
-OpFoldResult tosa::SelectOp::fold(ArrayRef<Attribute> operands) {
-  if (on_true() == on_false())
-    return on_true();
-
-  auto predicate = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
-  if (!predicate)
-    return {};
-
-  if (!predicate.isSplat())
-    return {};
-  return predicate.getSplatValue<APInt>().getBoolValue() ? on_true()
-                                                         : on_false();
-}
-
-OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
-  bool allOnes = true;
-  for (Attribute val : multiples().getValue()) {
-    allOnes = allOnes && val.cast<IntegerAttr>().getValue().getSExtValue() == 1;
-  }
-
-  if (allOnes && input1().getType() == getType())
-    return input1();
-  return {};
-}
-
-OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[1])
-    return {};
-
-  // Transposing splat values just means reshaping.
-  if (auto input = operands[0].dyn_cast_or_null<DenseElementsAttr>()) {
-    if (input.isSplat())
-      return input.reshape(getType().cast<ShapedType>());
-  }
-
-  auto perms = llvm::to_vector<6>(llvm::map_range(
-      operands[1].cast<DenseIntElementsAttr>().getValues<APInt>(),
-      [](const APInt &val) { return val.getSExtValue(); }));
-
-  if (llvm::equal(llvm::seq<int64_t>(0, perms.size()), perms) &&
-      input1().getType() == getType())
-    return input1();
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
 template <typename T>
 static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
-  auto inputType = op.input().getType().template dyn_cast<RankedTensorType>();
-  auto weightType = op.weight().getType().template dyn_cast<RankedTensorType>();
+  auto inputType =
+      op.getInput().getType().template dyn_cast<RankedTensorType>();
+  auto weightType =
+      op.getWeight().getType().template dyn_cast<RankedTensorType>();
 
   // Must be ranked tensor types
   if (!inputType) {
-    op.emitOpError("expect a ranked tensor for input, got ") << op.input();
+    op.emitOpError("expect a ranked tensor for input, got ") << op.getInput();
     return failure();
   }
   if (!weightType) {
-    op.emitOpError("expect a ranked tensor for weight, got ") << op.weight();
+    op.emitOpError("expect a ranked tensor for weight, got ") << op.getWeight();
     return failure();
   }
 
@@ -659,8 +132,8 @@ static LogicalResult verifyConvOp(T op) {
 
   // Quantized type must have constructed the quantizationattr, and unquantized
   // types should not have a quantizationattr.
-  if ((inputIsQuant && !op.quantization_info()) ||
-      (!inputIsQuant && op.quantization_info())) {
+  if ((inputIsQuant && !op.getQuantizationInfo()) ||
+      (!inputIsQuant && op.getQuantizationInfo())) {
     op.emitOpError("quantizationattr is required for quantized type, and not "
                    "allowed for float type");
     return failure();
@@ -670,7 +143,7 @@ static LogicalResult verifyConvOp(T op) {
 }
 
 LogicalResult tosa::AvgPool2dOp::verify() {
-  auto inputETy = input().getType().cast<ShapedType>().getElementType();
+  auto inputETy = getInput().getType().cast<ShapedType>().getElementType();
   auto resultETy = getType().cast<ShapedType>().getElementType();
 
   if (auto quantType = inputETy.dyn_cast<mlir::quant::UniformQuantizedType>())
@@ -717,15 +190,15 @@ static void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 }
 
 /// Handles tosa.transpose_conv2d which has outpad and output shape attributes.
-static void
-buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                              Type outputType, Value input, Value weight,
-                              Value bias, ArrayAttr outpad, ArrayAttr stride,
-                              ArrayAttr dilation, ArrayAttr outputShape) {
+static void buildTransConvOpWithQuantInfo(OpBuilder &builder,
+                                          OperationState &result,
+                                          Type outputType, Value input,
+                                          Value weight, Value bias,
+                                          ArrayAttr outpad, ArrayAttr stride,
+                                          ArrayAttr outputShape) {
   result.addOperands({input, weight, bias});
   result.addAttribute("out_pad", outpad);
   result.addAttribute("stride", stride);
-  result.addAttribute("dilation", dilation);
   result.addAttribute("out_shape", outputShape);
   auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
 
@@ -1067,7 +540,7 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::llvm::Optional<Location> location,
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ArrayAttr sizes = SliceOpAdaptor(operands, attributes).size();
+  ArrayAttr sizes = SliceOpAdaptor(operands, attributes).getSize();
   SmallVector<int64_t> outputShape;
   outputShape.reserve(sizes.size());
   for (auto val : sizes) {
@@ -1099,7 +572,7 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   TileOpAdaptor adaptor(operands, attributes);
-  ArrayAttr multiples = adaptor.multiples();
+  ArrayAttr multiples = adaptor.getMultiples();
   ShapeAdaptor inputShape = operands.getShape(0);
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
@@ -1135,7 +608,7 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   ReshapeOpAdaptor adaptor(operands, attributes);
   ShapeAdaptor inputShape = operands.getShape(0);
 
-  ArrayAttr newShape = adaptor.new_shape();
+  ArrayAttr newShape = adaptor.getNewShape();
   llvm::SmallVector<int64_t> newShapeValue;
   getI64Values(newShape, newShapeValue);
 
@@ -1270,7 +743,7 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   int32_t inHeight = ShapedType::kDynamicSize;
   int32_t inWidth = ShapedType::kDynamicSize;
 
-  ShapeAdaptor inputShape = operands.getShape(adaptor.input());
+  ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
   if (inputShape.hasRank()) {
     outputShape[0] = inputShape.getDimSize(0);
     outputShape[3] = inputShape.getDimSize(3);
@@ -1279,9 +752,9 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     inWidth = inputShape.getDimSize(2);
   }
 
-  int32_t shift = adaptor.shift();
+  int32_t shift = adaptor.getShift();
   llvm::SmallVector<int64_t> newShape;
-  getI64Values(adaptor.output_size(), newShape);
+  getI64Values(adaptor.getOutputSize(), newShape);
   outputShape[1] = newShape[0];
   outputShape[2] = newShape[1];
 
@@ -1289,10 +762,10 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> offsetInt;
   llvm::SmallVector<double> strideFp;
   llvm::SmallVector<double> offsetFp;
-  getI64Values(adaptor.offset(), offsetInt);
-  getF64Values(adaptor.offset_fp(), offsetFp);
-  getI64Values(adaptor.stride(), strideInt);
-  getF64Values(adaptor.stride_fp(), strideFp);
+  getI64Values(adaptor.getOffset(), offsetInt);
+  getF64Values(adaptor.getOffsetFp(), offsetFp);
+  getI64Values(adaptor.getStride(), strideInt);
+  getF64Values(adaptor.getStrideFp(), strideFp);
 
   // If we have a 0 zero in integers we know that the resize indexing needs to
   // be performed in floating point. Use the floating point varient to compute
@@ -1551,7 +1024,7 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
 
   // Input shape describes input width/height and batch.
 
-  ShapeAdaptor inputShape = operands.getShape(adaptor.input());
+  ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
   if (inputShape.hasRank()) {
     outputShape[0] = inputShape.getDimSize(0);
     inputHeight = inputShape.getDimSize(1);
@@ -1559,7 +1032,7 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
   }
 
   // Weight shapes describes the filter width/height and the output channels.
-  ShapeAdaptor weightShape = operands.getShape(adaptor.weight());
+  ShapeAdaptor weightShape = operands.getShape(adaptor.getWeight());
   if (weightShape.hasRank()) {
     outputShape[3] = weightShape.getDimSize(0);
     weightHeight = weightShape.getDimSize(1);
@@ -1567,7 +1040,7 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
   }
 
   // Bias shape can describe the output channels.
-  ShapeAdaptor biasShape = operands.getShape(adaptor.bias());
+  ShapeAdaptor biasShape = operands.getShape(adaptor.getBias());
   if (biasShape.hasRank()) {
     outputShape[3] = ShapedType::isDynamic(outputShape[3])
                          ? biasShape.getDimSize(0)
@@ -1578,9 +1051,9 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> padding;
   llvm::SmallVector<int64_t> stride;
 
-  getI64Values(adaptor.dilation(), dilation);
-  getI64Values(adaptor.pad(), padding);
-  getI64Values(adaptor.stride(), stride);
+  getI64Values(adaptor.getDilation(), dilation);
+  getI64Values(adaptor.getPad(), padding);
+  getI64Values(adaptor.getStride(), stride);
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
@@ -1620,7 +1093,7 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
   int32_t weightDepth = ShapedType::kDynamicSize;
 
   // Input shape describes input width/height and batch.
-  ShapeAdaptor inputShape = operands.getShape(adaptor.input());
+  ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
   if (inputShape.hasRank()) {
     outputShape[0] = inputShape.getDimSize(0);
     inputHeight = inputShape.getDimSize(1);
@@ -1629,7 +1102,7 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
   }
 
   // Weight shapes describes the filter width/height and the output channels.
-  ShapeAdaptor weightShape = operands.getShape(adaptor.weight());
+  ShapeAdaptor weightShape = operands.getShape(adaptor.getWeight());
   if (weightShape.hasRank()) {
     outputShape[4] = weightShape.getDimSize(0);
     weightHeight = weightShape.getDimSize(1);
@@ -1638,7 +1111,7 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
   }
 
   // Bias shape can describe the output channels.
-  ShapeAdaptor biasShape = operands.getShape(adaptor.bias());
+  ShapeAdaptor biasShape = operands.getShape(adaptor.getBias());
   if (biasShape.hasRank()) {
     outputShape[4] =
         (outputShape[4] == -1) ? biasShape.getDimSize(0) : outputShape[4];
@@ -1648,9 +1121,9 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> padding;
   llvm::SmallVector<int64_t> stride;
 
-  getI64Values(adaptor.dilation(), dilation);
-  getI64Values(adaptor.pad(), padding);
-  getI64Values(adaptor.stride(), stride);
+  getI64Values(adaptor.getDilation(), dilation);
+  getI64Values(adaptor.getPad(), padding);
+  getI64Values(adaptor.getStride(), stride);
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
@@ -1712,7 +1185,7 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
   int32_t depthChannels = ShapedType::kDynamicSize;
 
   // Input shape describes input width/height and batch.
-  ShapeAdaptor inputShape = operands.getShape(adaptor.input());
+  ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
   if (inputShape.hasRank()) {
     outputShape[0] = inputShape.getDimSize(0);
     inputHeight = inputShape.getDimSize(1);
@@ -1721,7 +1194,7 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
   }
 
   // Weight shapes describes the filter width/height and the output channels.
-  ShapeAdaptor weightShape = operands.getShape(adaptor.weight());
+  ShapeAdaptor weightShape = operands.getShape(adaptor.getWeight());
   if (weightShape.hasRank()) {
     weightHeight = weightShape.getDimSize(0);
     weightWidth = weightShape.getDimSize(1);
@@ -1739,7 +1212,7 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
   }
 
   // Bias shape can describe the output channels.
-  ShapeAdaptor biasShape = operands.getShape(adaptor.bias());
+  ShapeAdaptor biasShape = operands.getShape(adaptor.getBias());
   if (biasShape.hasRank()) {
     outputShape[3] = ShapedType::isDynamic(outputShape[3])
                          ? biasShape.getDimSize(0)
@@ -1750,9 +1223,9 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> padding;
   llvm::SmallVector<int64_t> stride;
 
-  getI64Values(adaptor.dilation(), dilation);
-  getI64Values(adaptor.pad(), padding);
-  getI64Values(adaptor.stride(), stride);
+  getI64Values(adaptor.getDilation(), dilation);
+  getI64Values(adaptor.getPad(), padding);
+  getI64Values(adaptor.getStride(), stride);
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
@@ -1782,7 +1255,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   TransposeConv2DOp::Adaptor adaptor(operands.getValues(), attributes);
   llvm::SmallVector<int64_t> outputShape;
-  getI64Values(adaptor.out_shape(), outputShape);
+  getI64Values(adaptor.getOutShape(), outputShape);
 
   int32_t inputWidth = ShapedType::kDynamicSize;
   int32_t inputHeight = ShapedType::kDynamicSize;
@@ -1790,7 +1263,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   int32_t weightHeight = ShapedType::kDynamicSize;
 
   // Input shape describes input width/height and batch.
-  ShapeAdaptor inputShape = operands.getShape(adaptor.input());
+  ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
   if (inputShape.hasRank()) {
     outputShape[0] = ShapedType::isDynamic(outputShape[0])
                          ? inputShape.getDimSize(0)
@@ -1800,7 +1273,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   }
 
   // Weight shapes describes the filter width/height and the output channels.
-  ShapeAdaptor weightShape = operands.getShape(adaptor.filter());
+  ShapeAdaptor weightShape = operands.getShape(adaptor.getFilter());
   if (weightShape.hasRank()) {
     outputShape[3] = ShapedType::isDynamic(outputShape[3])
                          ? weightShape.getDimSize(0)
@@ -1810,33 +1283,30 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   }
 
   // Bias shape can describe the output channels.
-  ShapeAdaptor biasShape = operands.getShape(adaptor.input());
+  ShapeAdaptor biasShape = operands.getShape(adaptor.getInput());
   if (biasShape.hasRank()) {
     outputShape[3] = ShapedType::isDynamic(outputShape[3])
                          ? biasShape.getDimSize(0)
                          : outputShape[3];
   }
 
-  llvm::SmallVector<int64_t> dilation;
   llvm::SmallVector<int64_t> padding;
   llvm::SmallVector<int64_t> stride;
 
-  getI64Values(adaptor.dilation(), dilation);
-  getI64Values(adaptor.out_pad(), padding);
-  getI64Values(adaptor.stride(), stride);
+  getI64Values(adaptor.getOutPad(), padding);
+  getI64Values(adaptor.getStride(), stride);
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
-    int32_t dilated = (weightHeight - 1) * dilation[0] + 1;
     int32_t calculateSize =
-        (inputHeight - 1) * stride[0] - padding[0] + dilated;
+        (inputHeight - 1) * stride[0] - padding[0] - padding[1] + weightHeight;
     outputShape[1] = outputShape[1] == -1 ? calculateSize : outputShape[1];
   }
 
   if (!ShapedType::isDynamic(inputWidth) &&
       !ShapedType::isDynamic(weightWidth)) {
-    int32_t dilated = (weightWidth - 1) * dilation[1] + 1;
-    int32_t calculateSize = (inputWidth - 1) * stride[1] - padding[1] + dilated;
+    int32_t calculateSize =
+        (inputWidth - 1) * stride[1] - padding[2] - padding[3] + weightWidth;
     outputShape[2] = outputShape[2] == -1 ? calculateSize : outputShape[2];
   }
 

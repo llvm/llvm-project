@@ -42,9 +42,9 @@ module {
   // http://tensor-compiler.org/docs/data_analytics/index.html.
   //
   func.func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseTensor>,
-                      %argc: tensor<?x?xf64>,
-                      %argd: tensor<?x?xf64>,
-                      %arga: tensor<?x?xf64> {linalg.inplaceable = true})
+                           %argc: tensor<?x?xf64>,
+                           %argd: tensor<?x?xf64>,
+                           %arga: tensor<?x?xf64>)
 		      -> tensor<?x?xf64> {
     %0 = linalg.generic #mttkrp
       ins(%argb, %argc, %argd:
@@ -66,55 +66,58 @@ module {
   //
   func.func @entry() {
     %f0 = arith.constant 0.0 : f64
-    %c0 = arith.constant 0 : index
-    %c1 = arith.constant 1 : index
-    %c2 = arith.constant 2 : index
+    %cst0 = arith.constant 0 : index
+    %cst1 = arith.constant 1 : index
+    %cst2 = arith.constant 2 : index
 
     // Read the sparse input tensor B from a file.
-    %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
+    %fileName = call @getTensorFilename(%cst0) : (index) -> (!Filename)
     %b = sparse_tensor.new %fileName
           : !Filename to tensor<?x?x?xf64, #SparseTensor>
 
     // Get sizes from B, pick a fixed size for dim-2 of A.
-    %isz = tensor.dim %b, %c0 : tensor<?x?x?xf64, #SparseTensor>
+    %isz = tensor.dim %b, %cst0 : tensor<?x?x?xf64, #SparseTensor>
     %jsz = arith.constant 5 : index
-    %ksz = tensor.dim %b, %c1 : tensor<?x?x?xf64, #SparseTensor>
-    %lsz = tensor.dim %b, %c2 : tensor<?x?x?xf64, #SparseTensor>
+    %ksz = tensor.dim %b, %cst1 : tensor<?x?x?xf64, #SparseTensor>
+    %lsz = tensor.dim %b, %cst2 : tensor<?x?x?xf64, #SparseTensor>
 
     // Initialize dense input matrix C.
-    %cdata = memref.alloc(%ksz, %jsz) : memref<?x?xf64>
-    scf.for %k = %c0 to %ksz step %c1 {
-      scf.for %j = %c0 to %jsz step %c1 {
+    %c0 = bufferization.alloc_tensor(%ksz, %jsz) : tensor<?x?xf64>
+    %c = scf.for %k = %cst0 to %ksz step %cst1 iter_args(%c1 = %c0) -> tensor<?x?xf64> {
+      %c2 = scf.for %j = %cst0 to %jsz step %cst1 iter_args(%c3 = %c1) -> tensor<?x?xf64> {
         %k0 = arith.muli %k, %jsz : index
         %k1 = arith.addi %k0, %j : index
         %k2 = arith.index_cast %k1 : index to i32
         %kf = arith.sitofp %k2 : i32 to f64
-        memref.store %kf, %cdata[%k, %j] : memref<?x?xf64>
+        %c4 = tensor.insert %kf into %c3[%k, %j] : tensor<?x?xf64>
+        scf.yield %c4 : tensor<?x?xf64>
       }
+      scf.yield %c2 : tensor<?x?xf64>
     }
-    %c = bufferization.to_tensor %cdata : memref<?x?xf64>
 
     // Initialize dense input matrix D.
-    %ddata = memref.alloc(%lsz, %jsz) : memref<?x?xf64>
-    scf.for %l = %c0 to %lsz step %c1 {
-      scf.for %j = %c0 to %jsz step %c1 {
+    %d0 = bufferization.alloc_tensor(%lsz, %jsz) : tensor<?x?xf64>
+    %d = scf.for %l = %cst0 to %lsz step %cst1 iter_args(%d1 = %d0) -> tensor<?x?xf64> {
+      %d2 = scf.for %j = %cst0 to %jsz step %cst1 iter_args(%d3 = %d1) -> tensor<?x?xf64> {
         %k0 = arith.muli %l, %jsz : index
         %k1 = arith.addi %k0, %j : index
         %k2 = arith.index_cast %k1 : index to i32
         %kf = arith.sitofp %k2 : i32 to f64
-        memref.store %kf, %ddata[%l, %j] : memref<?x?xf64>
+        %d4 = tensor.insert %kf into %d3[%l, %j] : tensor<?x?xf64>
+        scf.yield %d4 : tensor<?x?xf64>
       }
+      scf.yield %d2 : tensor<?x?xf64>
     }
-    %d = bufferization.to_tensor %ddata : memref<?x?xf64>
 
     // Initialize dense output matrix A.
-    %adata = memref.alloc(%isz, %jsz) : memref<?x?xf64>
-    scf.for %i = %c0 to %isz step %c1 {
-      scf.for %j = %c0 to %jsz step %c1 {
-        memref.store %f0, %adata[%i, %j] : memref<?x?xf64>
+    %a0 = bufferization.alloc_tensor(%isz, %jsz) : tensor<?x?xf64>
+    %a = scf.for %i = %cst0 to %isz step %cst1 iter_args(%a1 = %a0) -> tensor<?x?xf64> {
+      %a2 = scf.for %j = %cst0 to %jsz step %cst1 iter_args(%a3 = %a1) -> tensor<?x?xf64> {
+        %a4 = tensor.insert %f0 into %a3[%i, %j] : tensor<?x?xf64>
+        scf.yield %a4 : tensor<?x?xf64>
       }
+      scf.yield %a2 : tensor<?x?xf64>
     }
-    %a = bufferization.to_tensor %adata : memref<?x?xf64>
 
     // Call kernel.
     %0 = call @kernel_mttkrp(%b, %c, %d, %a)
@@ -126,16 +129,12 @@ module {
     // CHECK: ( ( 16075, 21930, 28505, 35800, 43815 ),
     // CHECK:   ( 10000, 14225, 19180, 24865, 31280 ) )
     //
-    %m = bufferization.to_memref %0 : memref<?x?xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %f0
-          : memref<?x?xf64>, vector<2x5xf64>
+    %v = vector.transfer_read %0[%cst0, %cst0], %f0
+          : tensor<?x?xf64>, vector<2x5xf64>
     vector.print %v : vector<2x5xf64>
 
     // Release the resources.
-    memref.dealloc %adata : memref<?x?xf64>
-    memref.dealloc %cdata : memref<?x?xf64>
-    memref.dealloc %ddata : memref<?x?xf64>
-    sparse_tensor.release %b : tensor<?x?x?xf64, #SparseTensor>
+    bufferization.dealloc_tensor %b : tensor<?x?x?xf64, #SparseTensor>
 
     return
   }

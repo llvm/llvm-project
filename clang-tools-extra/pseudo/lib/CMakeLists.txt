@@ -1,3 +1,4 @@
+add_subdirectory(cli)
 add_subdirectory(cxx)
 add_subdirectory(grammar)
 
@@ -15,4 +16,8 @@ add_clang_library(clangPseudo
   clangBasic
   clangLex
   clangPseudoGrammar
+  )
+
+  target_include_directories(clangPseudo INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
   )

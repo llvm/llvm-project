@@ -1155,7 +1155,7 @@ int clang_Type_getNumTemplateArguments(CXType CT) {
   if (!TA)
     return -1;
 
-  return GetTemplateArgumentArraySize(TA.getValue());
+  return GetTemplateArgumentArraySize(*TA);
 }
 
 CXType clang_Type_getTemplateArgumentAsType(CXType CT, unsigned index) {
@@ -1167,8 +1167,8 @@ CXType clang_Type_getTemplateArgumentAsType(CXType CT, unsigned index) {
   if (!TA)
     return MakeCXType(QualType(), GetTU(CT));
 
-  Optional<QualType> QT = FindTemplateArgumentTypeAt(TA.getValue(), index);
-  return MakeCXType(QT.getValueOr(QualType()), GetTU(CT));
+  Optional<QualType> QT = FindTemplateArgumentTypeAt(*TA, index);
+  return MakeCXType(QT.value_or(QualType()), GetTU(CT));
 }
 
 CXType clang_Type_getObjCObjectBaseType(CXType CT) {

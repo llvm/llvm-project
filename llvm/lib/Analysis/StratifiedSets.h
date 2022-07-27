@@ -340,10 +340,10 @@ public:
     return StratifiedSets<T>(std::move(Values), std::move(StratLinks));
   }
 
-  bool has(const T &Elem) const { return get(Elem).hasValue(); }
+  bool has(const T &Elem) const { return get(Elem).has_value(); }
 
   bool add(const T &Main) {
-    if (get(Main).hasValue())
+    if (get(Main))
       return false;
 
     auto NewIndex = getNewUnlinkedIndex();
@@ -560,7 +560,7 @@ private:
 
   Optional<StratifiedIndex> indexOf(const T &Val) {
     auto MaybeVal = get(Val);
-    if (!MaybeVal.hasValue())
+    if (!MaybeVal)
       return None;
     auto *Info = *MaybeVal;
     auto &Link = linksAt(Info->Index);

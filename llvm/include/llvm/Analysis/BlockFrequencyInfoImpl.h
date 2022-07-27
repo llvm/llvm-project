@@ -1278,9 +1278,9 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
       }
       LLVM_DEBUG(dbgs() << getBlockName(HeaderNode)
                         << " has irr loop header weight "
-                        << HeaderWeight.getValue() << "\n");
+                        << HeaderWeight.value() << "\n");
       NumHeadersWithWeight++;
-      uint64_t HeaderWeightValue = HeaderWeight.getValue();
+      uint64_t HeaderWeightValue = HeaderWeight.value();
       if (!MinHeaderWeight || HeaderWeightValue < MinHeaderWeight)
         MinHeaderWeight = HeaderWeightValue;
       if (HeaderWeightValue) {
@@ -1299,7 +1299,7 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
       auto &HeaderNode = Loop.Nodes[H];
       assert(!getBlock(HeaderNode)->getIrrLoopHeaderWeight() &&
              "Shouldn't have a weight metadata");
-      uint64_t MinWeight = MinHeaderWeight.getValue();
+      uint64_t MinWeight = *MinHeaderWeight;
       LLVM_DEBUG(dbgs() << "Giving weight " << MinWeight << " to "
                         << getBlockName(HeaderNode) << "\n");
       if (MinWeight)
@@ -1732,10 +1732,10 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
     if (Optional<uint64_t> ProfileCount =
         BlockFrequencyInfoImplBase::getBlockProfileCount(
             F->getFunction(), getNode(&BB)))
-      OS << ", count = " << ProfileCount.getValue();
+      OS << ", count = " << ProfileCount.value();
     if (Optional<uint64_t> IrrLoopHeaderWeight =
         BB.getIrrLoopHeaderWeight())
-      OS << ", irr_loop_header_weight = " << IrrLoopHeaderWeight.getValue();
+      OS << ", irr_loop_header_weight = " << IrrLoopHeaderWeight.value();
     OS << "\n";
   }
 
@@ -1869,7 +1869,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     case GVDT_Count: {
       auto Count = Graph->getBlockProfileCount(Node);
       if (Count)
-        OS << Count.getValue();
+        OS << *Count;
       else
         OS << "Unknown";
       break;

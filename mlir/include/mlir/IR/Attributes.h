@@ -46,14 +46,18 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  template <typename U> bool isa() const;
+  template <typename U>
+  bool isa() const;
   template <typename First, typename Second, typename... Rest>
   bool isa() const;
   template <typename First, typename... Rest>
   bool isa_and_nonnull() const;
-  template <typename U> U dyn_cast() const;
-  template <typename U> U dyn_cast_or_null() const;
-  template <typename U> U cast() const;
+  template <typename U>
+  U dyn_cast() const;
+  template <typename U>
+  U dyn_cast_or_null() const;
+  template <typename U>
+  U cast() const;
 
   // Support dyn_cast'ing Attribute to itself.
   static bool classof(Attribute) { return true; }
@@ -106,7 +110,8 @@ inline raw_ostream &operator<<(raw_ostream &os, Attribute attr) {
   return os;
 }
 
-template <typename U> bool Attribute::isa() const {
+template <typename U>
+bool Attribute::isa() const {
   assert(impl && "isa<> used on a null attribute.");
   return U::classof(*this);
 }
@@ -121,13 +126,16 @@ bool Attribute::isa_and_nonnull() const {
   return impl && isa<First, Rest...>();
 }
 
-template <typename U> U Attribute::dyn_cast() const {
+template <typename U>
+U Attribute::dyn_cast() const {
   return isa<U>() ? U(impl) : U(nullptr);
 }
-template <typename U> U Attribute::dyn_cast_or_null() const {
+template <typename U>
+U Attribute::dyn_cast_or_null() const {
   return (impl && isa<U>()) ? U(impl) : U(nullptr);
 }
-template <typename U> U Attribute::cast() const {
+template <typename U>
+U Attribute::cast() const {
   assert(isa<U>());
   return U(impl);
 }
@@ -231,12 +239,25 @@ private:
   friend InterfaceBase;
 };
 
+//===----------------------------------------------------------------------===//
+// Core AttributeTrait
+//===----------------------------------------------------------------------===//
+
+/// This trait is used to determine if an attribute is mutable or not. It is
+/// attached on an attribute if the corresponding ImplType defines a `mutate`
+/// function with proper signature.
+namespace AttributeTrait {
+template <typename ConcreteType>
+using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
+} // namespace AttributeTrait
+
 } // namespace mlir.
 
 namespace llvm {
 
 // Attribute hash just like pointers.
-template <> struct DenseMapInfo<mlir::Attribute> {
+template <>
+struct DenseMapInfo<mlir::Attribute> {
   static mlir::Attribute getEmptyKey() {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
@@ -254,7 +275,8 @@ template <> struct DenseMapInfo<mlir::Attribute> {
 };
 template <typename T>
 struct DenseMapInfo<
-    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value>>
+    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value &&
+                        !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Attribute> {
   static T getEmptyKey() {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
@@ -267,7 +289,8 @@ struct DenseMapInfo<
 };
 
 /// Allow LLVM to steal the low bits of Attributes.
-template <> struct PointerLikeTypeTraits<mlir::Attribute> {
+template <>
+struct PointerLikeTypeTraits<mlir::Attribute> {
   static inline void *getAsVoidPointer(mlir::Attribute attr) {
     return const_cast<void *>(attr.getAsOpaquePointer());
   }
@@ -278,7 +301,8 @@ template <> struct PointerLikeTypeTraits<mlir::Attribute> {
       mlir::AttributeStorage *>::NumLowBitsAvailable;
 };
 
-template <> struct DenseMapInfo<mlir::NamedAttribute> {
+template <>
+struct DenseMapInfo<mlir::NamedAttribute> {
   static mlir::NamedAttribute getEmptyKey() {
     auto emptyAttr = llvm::DenseMapInfo<mlir::Attribute>::getEmptyKey();
     return mlir::NamedAttribute(emptyAttr, emptyAttr);

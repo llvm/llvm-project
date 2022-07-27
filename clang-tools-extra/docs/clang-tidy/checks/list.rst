@@ -78,6 +78,7 @@ Clang-Tidy Checks
    `boost-use-to-string <boost/use-to-string.html>`_, "Yes"
    `bugprone-argument-comment <bugprone/argument-comment.html>`_, "Yes"
    `bugprone-assert-side-effect <bugprone/assert-side-effect.html>`_,
+   `bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition.html>`_,
    `bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread.html>`_,
    `bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion.html>`_, "Yes"
    `bugprone-branch-clone <bugprone/branch-clone.html>`_,
@@ -237,6 +238,8 @@ Clang-Tidy Checks
    `llvmlibc-callee-namespace <llvmlibc/callee-namespace.html>`_,
    `llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace.html>`_,
    `llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers.html>`_, "Yes"
+   `misc-confusable-identifiers <misc/confusable-identifiers.html>`_,
+   `misc-const-correctness <misc/const-correctness.html>`_, "Yes"
    `misc-definitions-in-headers <misc/definitions-in-headers.html>`_, "Yes"
    `misc-misleading-bidirectional <misc/misleading-bidirectional.html>`_,
    `misc-misleading-identifier <misc/misleading-identifier.html>`_,

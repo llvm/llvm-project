@@ -818,7 +818,11 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt) {
       if (SrcScalarBits >= 8) {
-        // ZExt/SExt will be handled with one unpack per doubling of width.
+        // ZExt will use either a single unpack or a vector permute.
+        if (Opcode == Instruction::ZExt)
+          return NumDstVectors;
+
+        // SExt will be handled with one unpack per doubling of width.
         unsigned NumUnpacks = getElSizeLog2Diff(Src, Dst);
 
         // For types that spans multiple vector registers, some additional

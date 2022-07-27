@@ -11,15 +11,14 @@ define void @volatile_load_2_elts() {
 ; AVX-LABEL: volatile_load_2_elts:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps g0(%rip), %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX-NEXT:    vpermilpd {{.*#+}} ymm1 = ymm1[0,0,3,2]
-; AVX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendpd {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2],ymm0[3]
-; AVX-NEXT:    vmovapd %ymm0, (%rax)
-; AVX-NEXT:    vmovapd %ymm1, (%rax)
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3,4,5],ymm2[6,7]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5],ymm2[6,7]
+; AVX-NEXT:    vmovaps %ymm0, (%rax)
+; AVX-NEXT:    vmovaps %ymm1, (%rax)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -34,10 +33,10 @@ define void @volatile_load_2_elts() {
 ; AVX2-NEXT:    vmovaps %ymm2, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %i = load volatile <2 x double>, <2 x double>* @g0, align 16
+  %i = load volatile <2 x double>, ptr @g0, align 16
   %i1 = shufflevector <2 x double> %i, <2 x double> poison, <4 x i32> <i32 undef, i32 0, i32 undef, i32 0>
   %shuffle1 = shufflevector <4 x double> %i1, <4 x double> zeroinitializer, <8 x i32> <i32 6, i32 7, i32 3, i32 6, i32 7, i32 1, i32 7, i32 1>
-  store volatile <8 x double> %shuffle1, <8 x double>* undef, align 64
+  store volatile <8 x double> %shuffle1, ptr undef, align 64
   ret void
 }
 
@@ -53,10 +52,10 @@ define void @volatile_load_1_elt() {
 ; ALL-NEXT:    vmovaps %ymm2, (%rax)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
-  %i = load volatile <1 x double>, <1 x double>* @g1, align 16
+  %i = load volatile <1 x double>, ptr @g1, align 16
   %i1 = shufflevector <1 x double> %i, <1 x double> poison, <4 x i32> <i32 undef, i32 0, i32 undef, i32 0>
   %shuffle1 = shufflevector <4 x double> %i1, <4 x double> zeroinitializer, <8 x i32> <i32 6, i32 7, i32 3, i32 6, i32 7, i32 1, i32 7, i32 1>
-  store volatile <8 x double> %shuffle1, <8 x double>* undef, align 64
+  store volatile <8 x double> %shuffle1, ptr undef, align 64
   ret void
 }
 
@@ -72,15 +71,15 @@ define void @volatile_load_2_elts_bitcast() {
 ; ALL-NEXT:    vmovaps %ymm2, (%rax)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
-  %i0 = load volatile <2 x float>, <2 x float>* @g2, align 16
+  %i0 = load volatile <2 x float>, ptr @g2, align 16
   %i = bitcast <2 x float> %i0 to <1 x double>
   %i1 = shufflevector <1 x double> %i, <1 x double> poison, <4 x i32> <i32 undef, i32 0, i32 undef, i32 0>
   %shuffle1 = shufflevector <4 x double> %i1, <4 x double> zeroinitializer, <8 x i32> <i32 6, i32 7, i32 3, i32 6, i32 7, i32 1, i32 7, i32 1>
-  store volatile <8 x double> %shuffle1, <8 x double>* undef, align 64
+  store volatile <8 x double> %shuffle1, ptr undef, align 64
   ret void
 }
 
-define void @elts_from_consecutive_loads(<2 x i64>* %arg, i32* %arg12, <8 x i32>* %arg13, float %arg14, i1 %arg15) {
+define void @elts_from_consecutive_loads(ptr %arg, ptr %arg12, ptr %arg13, float %arg14, i1 %arg15) {
 ; ALL-LABEL: elts_from_consecutive_loads:
 ; ALL:       # %bb.0: # %bb
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -109,13 +108,13 @@ bb16:                                             ; preds = %bb17, %bb16, %bb
   br i1 %arg15, label %bb17, label %bb16
 
 bb17:                                             ; preds = %bb17, %bb16
-  %tmp = load <2 x i64>, <2 x i64>* %arg, align 16
+  %tmp = load <2 x i64>, ptr %arg, align 16
   %tmp18 = extractelement <2 x i64> %tmp, i32 0
   %tmp19 = trunc i64 %tmp18 to i32
-  store i32 %tmp19, i32* %arg12, align 4
+  store i32 %tmp19, ptr %arg12, align 4
   %tmp20 = insertelement <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, i32 %tmp19, i32 0
   %tmp21 = shufflevector <8 x i32> %tmp20, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef>
-  store <8 x i32> %tmp21, <8 x i32>* %arg13, align 32
+  store <8 x i32> %tmp21, ptr %arg13, align 32
   %tmp22 = fcmp une float %arg14, 0.000000e+00
   br i1 %tmp22, label %bb17, label %bb16
 }

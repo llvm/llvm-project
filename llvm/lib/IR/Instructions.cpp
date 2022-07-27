@@ -128,7 +128,7 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   // If the PHI node is dead, because it has zero entries, nuke it now.
   if (getNumOperands() == 0 && DeletePHIIfEmpty) {
     // If anyone is using this PHI, make them use a dummy value instead...
-    replaceAllUsesWith(UndefValue::get(getType()));
+    replaceAllUsesWith(PoisonValue::get(getType()));
     eraseFromParent();
   }
   return Removed;
@@ -960,15 +960,10 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
   setName(NameStr);
 }
 
-void CallBrInst::updateArgBlockAddresses(unsigned i, BasicBlock *B) {
-  assert(getNumIndirectDests() > i && "IndirectDest # out of range for callbr");
-  if (BasicBlock *OldBB = getIndirectDest(i)) {
-    BlockAddress *Old = BlockAddress::get(OldBB);
-    BlockAddress *New = BlockAddress::get(B);
-    for (unsigned ArgNo = 0, e = arg_size(); ArgNo != e; ++ArgNo)
-      if (dyn_cast<BlockAddress>(getArgOperand(ArgNo)) == Old)
-        setArgOperand(ArgNo, New);
-  }
+BlockAddress *
+CallBrInst::getBlockAddressForIndirectDest(unsigned DestNo) const {
+  return BlockAddress::get(const_cast<Function *>(getFunction()),
+                           getIndirectDest(DestNo));
 }
 
 CallBrInst::CallBrInst(const CallBrInst &CBI)
@@ -1632,6 +1627,10 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
 void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
                          SyncScope::ID SSID) {
+  assert(Ordering != AtomicOrdering::NotAtomic &&
+         "atomicrmw instructions can only be atomic.");
+  assert(Ordering != AtomicOrdering::Unordered &&
+         "atomicrmw instructions cannot be unordered.");
   Op<0>() = Ptr;
   Op<1>() = Val;
   setOperation(Operation);
@@ -1696,6 +1695,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fadd";
   case AtomicRMWInst::FSub:
     return "fsub";
+  case AtomicRMWInst::FMax:
+    return "fmax";
+  case AtomicRMWInst::FMin:
+    return "fmin";
   case AtomicRMWInst::BAD_BINOP:
     return "<invalid operation>";
   }
@@ -4423,10 +4426,9 @@ MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
   assert(SI.getNumSuccessors() == Weights->size() &&
          "num of prof branch_weights must accord with num of successors");
 
-  bool AllZeroes =
-      all_of(Weights.getValue(), [](uint32_t W) { return W == 0; });
+  bool AllZeroes = all_of(Weights.value(), [](uint32_t W) { return W == 0; });
 
-  if (AllZeroes || Weights.getValue().size() < 2)
+  if (AllZeroes || Weights.value().size() < 2)
     return nullptr;
 
   return MDBuilder(SI.getParent()->getContext()).createBranchWeights(*Weights);
@@ -4460,8 +4462,8 @@ SwitchInstProfUpdateWrapper::removeCase(SwitchInst::CaseIt I) {
     // Copy the last case to the place of the removed one and shrink.
     // This is tightly coupled with the way SwitchInst::removeCase() removes
     // the cases in SwitchInst::removeCase(CaseIt).
-    Weights.getValue()[I->getCaseIndex() + 1] = Weights.getValue().back();
-    Weights.getValue().pop_back();
+    Weights.value()[I->getCaseIndex() + 1] = Weights.value().back();
+    Weights.value().pop_back();
   }
   return SI.removeCase(I);
 }
@@ -4474,10 +4476,10 @@ void SwitchInstProfUpdateWrapper::addCase(
   if (!Weights && W && *W) {
     Changed = true;
     Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
-    Weights.getValue()[SI.getNumSuccessors() - 1] = *W;
+    Weights.value()[SI.getNumSuccessors() - 1] = *W;
   } else if (Weights) {
     Changed = true;
-    Weights.getValue().push_back(W.getValueOr(0));
+    Weights.value().push_back(W.value_or(0));
   }
   if (Weights)
     assert(SI.getNumSuccessors() == Weights->size() &&
@@ -4497,7 +4499,7 @@ SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(unsigned idx) {
   if (!Weights)
     return None;
-  return Weights.getValue()[idx];
+  return (*Weights)[idx];
 }
 
 void SwitchInstProfUpdateWrapper::setSuccessorWeight(
@@ -4509,7 +4511,7 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
     Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
 
   if (Weights) {
-    auto &OldW = Weights.getValue()[idx];
+    auto &OldW = (*Weights)[idx];
     if (*W != OldW) {
       Changed = true;
       OldW = *W;

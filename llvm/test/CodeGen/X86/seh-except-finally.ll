@@ -33,16 +33,16 @@ declare void @crash()
 declare i32 @filt()
 
 ; Function Attrs: nounwind uwtable
-define void @use_both() #1 personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define void @use_both() #1 personality ptr @__C_specific_handler {
 entry:
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   invoke void @crash() #5
           to label %invoke.cont unwind label %__finally
 
 invoke.cont:                                      ; preds = %entry
-  %0 = call i8* @llvm.localaddress()
-  invoke void @"\01?fin$0@0@use_both@@"(i1 zeroext false, i8* %0) #5
+  %0 = call ptr @llvm.localaddress()
+  invoke void @"\01?fin$0@0@use_both@@"(i1 zeroext false, ptr %0) #5
           to label %invoke.cont2 unwind label %catch.dispatch
 
 invoke.cont2:                                     ; preds = %invoke.cont
@@ -50,8 +50,8 @@ invoke.cont2:                                     ; preds = %invoke.cont
 
 __finally:                                             ; preds = %entry
   %cleanuppad = cleanuppad within none []
-  %locals = call i8* @llvm.localaddress()
-  invoke void @"\01?fin$0@0@use_both@@"(i1 zeroext true, i8* %locals) #5 [ "funclet"(token %cleanuppad) ]
+  %locals = call ptr @llvm.localaddress()
+  invoke void @"\01?fin$0@0@use_both@@"(i1 zeroext true, ptr %locals) #5 [ "funclet"(token %cleanuppad) ]
           to label %invoke.cont3 unwind label %catch.dispatch
 
 invoke.cont3:                                     ; preds = %__finally
@@ -61,8 +61,8 @@ catch.dispatch:                                   ; preds = %invoke.cont3, %lpad
   %cs1 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %catch.dispatch
-  %catchpad = catchpad within %cs1 [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@use_both@@" to i8*)]
-  %call = call i32 @puts(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @"\01??_C@_08MLCMLGHM@__except?$AA@", i32 0, i32 0)) [ "funclet"(token %catchpad) ]
+  %catchpad = catchpad within %cs1 [ptr @"\01?filt$0@0@use_both@@"]
+  %call = call i32 @puts(ptr @"\01??_C@_08MLCMLGHM@__except?$AA@") [ "funclet"(token %catchpad) ]
   catchret from %catchpad to label %__try.cont
 
 __try.cont:                                       ; preds = %__except, %invoke.cont2
@@ -97,45 +97,44 @@ __try.cont:                                       ; preds = %__except, %invoke.c
 ; CHECK-NEXT: .Llsda_end0:
 
 ; Function Attrs: noinline nounwind
-define internal i32 @"\01?filt$0@0@use_both@@"(i8* %exception_pointers, i8* %frame_pointer) #2 {
+define internal i32 @"\01?filt$0@0@use_both@@"(ptr %exception_pointers, ptr %frame_pointer) #2 {
 entry:
-  %frame_pointer.addr = alloca i8*, align 8
-  %exception_pointers.addr = alloca i8*, align 8
-  %exn.slot = alloca i8*
-  store i8* %frame_pointer, i8** %frame_pointer.addr, align 8
-  store i8* %exception_pointers, i8** %exception_pointers.addr, align 8
-  %0 = load i8*, i8** %exception_pointers.addr
-  %1 = bitcast i8* %0 to { i32*, i8* }*
-  %2 = getelementptr inbounds { i32*, i8* }, { i32*, i8* }* %1, i32 0, i32 0
-  %3 = load i32*, i32** %2
-  %4 = load i32, i32* %3
-  %5 = zext i32 %4 to i64
-  %6 = inttoptr i64 %5 to i8*
-  store i8* %6, i8** %exn.slot
+  %frame_pointer.addr = alloca ptr, align 8
+  %exception_pointers.addr = alloca ptr, align 8
+  %exn.slot = alloca ptr
+  store ptr %frame_pointer, ptr %frame_pointer.addr, align 8
+  store ptr %exception_pointers, ptr %exception_pointers.addr, align 8
+  %0 = load ptr, ptr %exception_pointers.addr
+  %1 = getelementptr inbounds { ptr, ptr }, ptr %0, i32 0, i32 0
+  %2 = load ptr, ptr %1
+  %3 = load i32, ptr %2
+  %4 = zext i32 %3 to i64
+  %5 = inttoptr i64 %4 to ptr
+  store ptr %5, ptr %exn.slot
   %call = call i32 @filt()
   ret i32 %call
 }
 
-define internal void @"\01?fin$0@0@use_both@@"(i1 zeroext %abnormal_termination, i8* %frame_pointer) #3 {
+define internal void @"\01?fin$0@0@use_both@@"(i1 zeroext %abnormal_termination, ptr %frame_pointer) #3 {
 entry:
-  %frame_pointer.addr = alloca i8*, align 8
+  %frame_pointer.addr = alloca ptr, align 8
   %abnormal_termination.addr = alloca i8, align 1
-  store i8* %frame_pointer, i8** %frame_pointer.addr, align 8
+  store ptr %frame_pointer, ptr %frame_pointer.addr, align 8
   %frombool = zext i1 %abnormal_termination to i8
-  store i8 %frombool, i8* %abnormal_termination.addr, align 1
-  %call = call i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"\01??_C@_09KJEHOMHG@__finally?$AA@", i32 0, i32 0))
+  store i8 %frombool, ptr %abnormal_termination.addr, align 1
+  %call = call i32 @puts(ptr @"\01??_C@_09KJEHOMHG@__finally?$AA@")
   ret void
 }
 
-declare i32 @puts(i8*) #3
+declare i32 @puts(ptr) #3
 
 declare i32 @__C_specific_handler(...)
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.localaddress() #4
+declare ptr @llvm.localaddress() #4
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.eh.typeid.for(i8*) #4
+declare i32 @llvm.eh.typeid.for(ptr) #4
 
 attributes #0 = { noinline nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "unsafe-fp-math"="false" "use-soft-float"="false" }

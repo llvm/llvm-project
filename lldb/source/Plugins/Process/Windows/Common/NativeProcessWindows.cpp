@@ -117,7 +117,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
       }
       case eStateSuspended:
       case eStateStopped:
-        llvm_unreachable("Unexpected state");
+        break;
 
       default:
         return Status(
@@ -253,13 +253,12 @@ void NativeProcessWindows::SetStopReasonForThread(NativeThreadWindows &thread,
 
   ThreadStopInfo stop_info;
   stop_info.reason = reason;
-
   // No signal support on Windows but required to provide a 'valid' signum.
+  stop_info.signo = SIGTRAP;
+
   if (reason == StopReason::eStopReasonException) {
     stop_info.details.exception.type = 0;
     stop_info.details.exception.data_count = 0;
-  } else {
-    stop_info.details.signal.signo = SIGTRAP;
   }
 
   thread.SetStopReason(stop_info, description);

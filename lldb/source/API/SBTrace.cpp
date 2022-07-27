@@ -9,6 +9,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Instrumentation.h"
 
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBTrace.h"
@@ -19,11 +20,45 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace llvm;
 
 SBTrace::SBTrace() { LLDB_INSTRUMENT_VA(this); }
 
 SBTrace::SBTrace(const lldb::TraceSP &trace_sp) : m_opaque_sp(trace_sp) {
   LLDB_INSTRUMENT_VA(this, trace_sp);
+}
+
+SBTrace SBTrace::LoadTraceFromFile(SBError &error, SBDebugger &debugger,
+                                   const SBFileSpec &trace_description_file) {
+  LLDB_INSTRUMENT_VA(error, debugger, trace_description_file);
+
+  Expected<lldb::TraceSP> trace_or_err = Trace::LoadPostMortemTraceFromFile(
+      debugger.ref(), trace_description_file.ref());
+
+  if (!trace_or_err) {
+    error.SetErrorString(toString(trace_or_err.takeError()).c_str());
+    return SBTrace();
+  }
+
+  return SBTrace(trace_or_err.get());
+}
+
+SBFileSpec SBTrace::SaveToDisk(SBError &error, const SBFileSpec &bundle_dir,
+                               bool compact) {
+  LLDB_INSTRUMENT_VA(this, error, bundle_dir, compact);
+
+  error.Clear();
+  SBFileSpec file_spec;
+
+  if (!m_opaque_sp)
+    error.SetErrorString("error: invalid trace");
+  else if (Expected<FileSpec> desc_file =
+               m_opaque_sp->SaveToDisk(bundle_dir.ref(), compact))
+    file_spec.SetFileSpec(*desc_file);
+  else
+    error.SetErrorString(llvm::toString(desc_file.takeError()).c_str());
+
+  return file_spec;
 }
 
 const char *SBTrace::GetStartConfigurationHelp() {

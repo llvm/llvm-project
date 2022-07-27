@@ -219,7 +219,7 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   // If DataEnd is not set, we assume everything we generated is a part of the
   // stream.
   Result.Location.DataSize =
-      DataEnd.getValueOr(File.tell()) - Result.Location.RVA;
+      DataEnd.value_or(File.tell()) - Result.Location.RVA;
   return Result;
 }
 

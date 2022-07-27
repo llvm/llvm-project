@@ -1,11 +1,8 @@
 """Common utilities that are useful for all the benchmarks."""
 import numpy as np
 
-import mlir.all_passes_registration
-
 from mlir import ir
 from mlir.dialects import arith
-from mlir.dialects import builtin
 from mlir.dialects import func
 from mlir.dialects import memref
 from mlir.dialects import scf
@@ -66,25 +63,26 @@ def emit_timer_func() -> func.FuncOp:
     return nanoTime
 
 
-def emit_benchmark_wrapped_main_func(func, timer_func):
+def emit_benchmark_wrapped_main_func(kernel_func, timer_func):
     """Takes a function and a timer function, both represented as FuncOp
     objects, and returns a new function. This new function wraps the call to
     the original function between calls to the timer_func and this wrapping
     in turn is executed inside a loop. The loop is executed
-    len(func.type.results) times. This function can be used to create a
-    "time measuring" variant of a function.
+    len(kernel_func.type.results) times. This function can be used to
+    create a "time measuring" variant of a function.
     """
     i64_type = ir.IntegerType.get_signless(64)
     memref_of_i64_type = ir.MemRefType.get([-1], i64_type)
     wrapped_func = func.FuncOp(
         # Same signature and an extra buffer of indices to save timings.
         "main",
-        (func.arguments.types + [memref_of_i64_type], func.type.results),
+        (kernel_func.arguments.types + [memref_of_i64_type],
+         kernel_func.type.results),
         visibility="public"
     )
     wrapped_func.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
 
-    num_results = len(func.type.results)
+    num_results = len(kernel_func.type.results)
     with ir.InsertionPoint(wrapped_func.add_entry_block()):
         timer_buffer = wrapped_func.arguments[-1]
         zero = arith.ConstantOp.create_index(0)
@@ -95,7 +93,7 @@ def emit_benchmark_wrapped_main_func(func, timer_func):
         with ir.InsertionPoint(loop.body):
             start = func.CallOp(timer_func, [])
             call = func.CallOp(
-                func,
+                kernel_func,
                 wrapped_func.arguments[:-num_results - 1] + loop.inner_iter_args
             )
             end = func.CallOp(timer_func, [])

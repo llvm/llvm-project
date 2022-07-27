@@ -54,5 +54,4 @@ class TestLinux64LaunchingViaDynamicLoader(TestBase):
 
         # Stopped because of generated signal.
         self.assertState(process.GetState(), lldb.eStateStopped)
-        self.assertIn("raise", thread.GetFrameAtIndex(0).GetDisplayFunctionName())
-        self.assertIn("get_signal_crash", thread.GetFrameAtIndex(1).GetDisplayFunctionName())
+        self.assertIn("raise", lldbutil.get_function_names(thread))

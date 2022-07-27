@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512vp2intersect --show-mc-encoding | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vp2intersect --show-mc-encoding | FileCheck %s --check-prefix=X64
 
-define void @test_mm512_2intersect_epi32(<8 x i64> %a, <8 x i64> %b, i16* nocapture %m0, i16* nocapture %m1) {
+define void @test_mm512_2intersect_epi32(<8 x i64> %a, <8 x i64> %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
@@ -25,15 +25,13 @@ entry:
   %1 = bitcast <8 x i64> %b to <16 x i32>
   %2 = tail call { <16 x i1>, <16 x i1> } @llvm.x86.avx512.vp2intersect.d.512(<16 x i32> %0, <16 x i32> %1)
   %3 = extractvalue { <16 x i1>, <16 x i1> } %2, 0
-  %4 = bitcast i16* %m0 to <16 x i1>*
-  store <16 x i1> %3, <16 x i1>* %4, align 16
-  %5 = extractvalue { <16 x i1>, <16 x i1> } %2, 1
-  %6 = bitcast i16* %m1 to <16 x i1>*
-  store <16 x i1> %5, <16 x i1>* %6, align 16
+  store <16 x i1> %3, ptr %m0, align 16
+  %4 = extractvalue { <16 x i1>, <16 x i1> } %2, 1
+  store <16 x i1> %4, ptr %m1, align 16
   ret void
 }
 
-define void @test_mm512_2intersect_epi64(<8 x i64> %a, <8 x i64> %b, i8* nocapture %m0, i8* nocapture %m1) {
+define void @test_mm512_2intersect_epi64(<8 x i64> %a, <8 x i64> %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi64:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -58,15 +56,13 @@ define void @test_mm512_2intersect_epi64(<8 x i64> %a, <8 x i64> %b, i8* nocaptu
 entry:
   %0 = tail call { <8 x i1>, <8 x i1> } @llvm.x86.avx512.vp2intersect.q.512(<8 x i64> %a, <8 x i64> %b)
   %1 = extractvalue { <8 x i1>, <8 x i1> } %0, 0
-  %2 = bitcast i8* %m0 to <8 x i1>*
-  store <8 x i1> %1, <8 x i1>* %2, align 8
-  %3 = extractvalue { <8 x i1>, <8 x i1> } %0, 1
-  %4 = bitcast i8* %m1 to <8 x i1>*
-  store <8 x i1> %3, <8 x i1>* %4, align 8
+  store <8 x i1> %1, ptr %m0, align 8
+  %2 = extractvalue { <8 x i1>, <8 x i1> } %0, 1
+  store <8 x i1> %2, ptr %m1, align 8
   ret void
 }
 
-define void @test_mm512_2intersect_epi32_p(<8 x i64>* nocapture readonly %a, <8 x i64>* nocapture readonly %b, i16* nocapture %m0, i16* nocapture %m1) {
+define void @test_mm512_2intersect_epi32_p(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi32_p:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -94,21 +90,17 @@ define void @test_mm512_2intersect_epi32_p(<8 x i64>* nocapture readonly %a, <8 
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = bitcast <8 x i64>* %a to <16 x i32>*
-  %1 = load <16 x i32>, <16 x i32>* %0, align 64
-  %2 = bitcast <8 x i64>* %b to <16 x i32>*
-  %3 = load <16 x i32>, <16 x i32>* %2, align 64
-  %4 = tail call { <16 x i1>, <16 x i1> } @llvm.x86.avx512.vp2intersect.d.512(<16 x i32> %1, <16 x i32> %3)
-  %5 = extractvalue { <16 x i1>, <16 x i1> } %4, 0
-  %6 = bitcast i16* %m0 to <16 x i1>*
-  store <16 x i1> %5, <16 x i1>* %6, align 16
-  %7 = extractvalue { <16 x i1>, <16 x i1> } %4, 1
-  %8 = bitcast i16* %m1 to <16 x i1>*
-  store <16 x i1> %7, <16 x i1>* %8, align 16
+  %0 = load <16 x i32>, ptr %a, align 64
+  %1 = load <16 x i32>, ptr %b, align 64
+  %2 = tail call { <16 x i1>, <16 x i1> } @llvm.x86.avx512.vp2intersect.d.512(<16 x i32> %0, <16 x i32> %1)
+  %3 = extractvalue { <16 x i1>, <16 x i1> } %2, 0
+  store <16 x i1> %3, ptr %m0, align 16
+  %4 = extractvalue { <16 x i1>, <16 x i1> } %2, 1
+  store <16 x i1> %4, ptr %m1, align 16
   ret void
 }
 
-define void @test_mm512_2intersect_epi64_p(<8 x i64>* nocapture readonly %a, <8 x i64>* nocapture readonly %b, i8* nocapture %m0, i8* nocapture %m1) {
+define void @test_mm512_2intersect_epi64_p(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi64_p:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
@@ -136,19 +128,17 @@ define void @test_mm512_2intersect_epi64_p(<8 x i64>* nocapture readonly %a, <8 
 ; X64-NEXT:    retq # encoding: [0xc3]
 
 entry:
-  %0 = load <8 x i64>, <8 x i64>* %a, align 64
-  %1 = load <8 x i64>, <8 x i64>* %b, align 64
+  %0 = load <8 x i64>, ptr %a, align 64
+  %1 = load <8 x i64>, ptr %b, align 64
   %2 = tail call { <8 x i1>, <8 x i1> } @llvm.x86.avx512.vp2intersect.q.512(<8 x i64> %0, <8 x i64> %1)
   %3 = extractvalue { <8 x i1>, <8 x i1> } %2, 0
-  %4 = bitcast i8* %m0 to <8 x i1>*
-  store <8 x i1> %3, <8 x i1>* %4, align 8
-  %5 = extractvalue { <8 x i1>, <8 x i1> } %2, 1
-  %6 = bitcast i8* %m1 to <8 x i1>*
-  store <8 x i1> %5, <8 x i1>* %6, align 8
+  store <8 x i1> %3, ptr %m0, align 8
+  %4 = extractvalue { <8 x i1>, <8 x i1> } %2, 1
+  store <8 x i1> %4, ptr %m1, align 8
   ret void
 }
 
-define void @test_mm512_2intersect_epi32_b(i32* nocapture readonly %a, i32* nocapture readonly %b, i16* nocapture %m0, i16* nocapture %m1) {
+define void @test_mm512_2intersect_epi32_b(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi32_b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -176,23 +166,21 @@ define void @test_mm512_2intersect_epi32_b(i32* nocapture readonly %a, i32* noca
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %vecinit.i = insertelement <16 x i32> undef, i32 %0, i32 0
   %vecinit15.i = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %1 = load i32, i32* %b, align 4
+  %1 = load i32, ptr %b, align 4
   %vecinit.i2 = insertelement <16 x i32> undef, i32 %1, i32 0
   %vecinit15.i3 = shufflevector <16 x i32> %vecinit.i2, <16 x i32> undef, <16 x i32> zeroinitializer
   %2 = tail call { <16 x i1>, <16 x i1> } @llvm.x86.avx512.vp2intersect.d.512(<16 x i32> %vecinit15.i, <16 x i32> %vecinit15.i3)
   %3 = extractvalue { <16 x i1>, <16 x i1> } %2, 0
-  %4 = bitcast i16* %m0 to <16 x i1>*
-  store <16 x i1> %3, <16 x i1>* %4, align 16
-  %5 = extractvalue { <16 x i1>, <16 x i1> } %2, 1
-  %6 = bitcast i16* %m1 to <16 x i1>*
-  store <16 x i1> %5, <16 x i1>* %6, align 16
+  store <16 x i1> %3, ptr %m0, align 16
+  %4 = extractvalue { <16 x i1>, <16 x i1> } %2, 1
+  store <16 x i1> %4, ptr %m1, align 16
   ret void
 }
 
-define void @test_mm512_2intersect_epi64_b(i64* nocapture readonly %a, i64* nocapture readonly %b, i8* nocapture %m0, i8* nocapture %m1) {
+define void @test_mm512_2intersect_epi64_b(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi64_b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
@@ -219,19 +207,17 @@ define void @test_mm512_2intersect_epi64_b(i64* nocapture readonly %a, i64* noca
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %a, align 8
   %vecinit.i = insertelement <8 x i64> undef, i64 %0, i32 0
   %vecinit7.i = shufflevector <8 x i64> %vecinit.i, <8 x i64> undef, <8 x i32> zeroinitializer
-  %1 = load i64, i64* %b, align 8
+  %1 = load i64, ptr %b, align 8
   %vecinit.i2 = insertelement <8 x i64> undef, i64 %1, i32 0
   %vecinit7.i3 = shufflevector <8 x i64> %vecinit.i2, <8 x i64> undef, <8 x i32> zeroinitializer
   %2 = tail call { <8 x i1>, <8 x i1> } @llvm.x86.avx512.vp2intersect.q.512(<8 x i64> %vecinit7.i, <8 x i64> %vecinit7.i3)
   %3 = extractvalue { <8 x i1>, <8 x i1> } %2, 0
-  %4 = bitcast i8* %m0 to <8 x i1>*
-  store <8 x i1> %3, <8 x i1>* %4, align 8
-  %5 = extractvalue { <8 x i1>, <8 x i1> } %2, 1
-  %6 = bitcast i8* %m1 to <8 x i1>*
-  store <8 x i1> %5, <8 x i1>* %6, align 8
+  store <8 x i1> %3, ptr %m0, align 8
+  %4 = extractvalue { <8 x i1>, <8 x i1> } %2, 1
+  store <8 x i1> %4, ptr %m1, align 8
   ret void
 }
 

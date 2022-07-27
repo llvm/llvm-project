@@ -521,13 +521,13 @@ StringRef MDString::getString() const {
       "Alignment is insufficient after objects prepended to " #CLASS);
 #include "llvm/IR/Metadata.def"
 
-void *MDNode::operator new(size_t Size, unsigned NumOps,
-                           StorageType /* Storage */) {
+void *MDNode::operator new(size_t Size, size_t NumOps, StorageType Storage) {
   // uint64_t is the most aligned type we need support (ensured by static_assert
   // above)
-  size_t AllocSize = alignTo(Header::getAllocSize(NumOps), alignof(uint64_t));
+  size_t AllocSize =
+      alignTo(Header::getAllocSize(Storage, NumOps), alignof(uint64_t));
   char *Mem = reinterpret_cast<char *>(::operator new(AllocSize + Size));
-  Header *H = new (Mem + AllocSize - sizeof(Header)) Header(NumOps);
+  Header *H = new (Mem + AllocSize - sizeof(Header)) Header(NumOps, Storage);
   return reinterpret_cast<void *>(H + 1);
 }
 
@@ -566,17 +566,78 @@ TempMDNode MDNode::clone() const {
   }
 }
 
-MDNode::Header::Header(unsigned NumOps) {
-  NumOperands = NumOps;
-  MDOperand *O = reinterpret_cast<MDOperand *>(this);
-  for (MDOperand *E = O - NumOps; O != E; --O)
-    (void)new (O - 1) MDOperand();
+MDNode::Header::Header(size_t NumOps, StorageType Storage) {
+  IsLarge = isLarge(NumOps);
+  IsResizable = isResizable(Storage);
+  SmallSize = getSmallSize(NumOps, IsResizable, IsLarge);
+  if (IsLarge) {
+    SmallNumOps = 0;
+    new (getLargePtr()) LargeStorageVector();
+    getLarge().resize(NumOps);
+    return;
+  }
+  SmallNumOps = NumOps;
+  MDOperand *O = reinterpret_cast<MDOperand *>(this) - SmallSize;
+  for (MDOperand *E = O + SmallSize; O != E;)
+    (void)new (O++) MDOperand();
 }
 
 MDNode::Header::~Header() {
-  MDOperand *O = reinterpret_cast<MDOperand *>(this) - NumOperands;
-  for (MDOperand *E = O + NumOperands; O != E; ++O)
-    (void)O->~MDOperand();
+  if (IsLarge) {
+    getLarge().~LargeStorageVector();
+    return;
+  }
+  MDOperand *O = reinterpret_cast<MDOperand *>(this);
+  for (MDOperand *E = O - SmallSize; O != E; --O)
+    (void)(O - 1)->~MDOperand();
+}
+
+void *MDNode::Header::getSmallPtr() {
+  static_assert(alignof(MDOperand) <= alignof(Header),
+                "MDOperand too strongly aligned");
+  return reinterpret_cast<char *>(const_cast<Header *>(this)) -
+         sizeof(MDOperand) * SmallSize;
+}
+
+void MDNode::Header::resize(size_t NumOps) {
+  assert(IsResizable && "Node is not resizable");
+  if (operands().size() == NumOps)
+    return;
+
+  if (IsLarge)
+    getLarge().resize(NumOps);
+  else if (NumOps <= SmallSize)
+    resizeSmall(NumOps);
+  else
+    resizeSmallToLarge(NumOps);
+}
+
+void MDNode::Header::resizeSmall(size_t NumOps) {
+  assert(!IsLarge && "Expected a small MDNode");
+  assert(NumOps <= SmallSize && "NumOps too large for small resize");
+
+  MutableArrayRef<MDOperand> ExistingOps = operands();
+  assert(NumOps != ExistingOps.size() && "Expected a different size");
+
+  int NumNew = (int)NumOps - (int)ExistingOps.size();
+  MDOperand *O = ExistingOps.end();
+  for (int I = 0, E = NumNew; I < E; ++I)
+    (O++)->reset();
+  for (int I = 0, E = NumNew; I > E; --I)
+    (--O)->reset();
+  SmallNumOps = NumOps;
+  assert(O == operands().end() && "Operands not (un)initialized until the end");
+}
+
+void MDNode::Header::resizeSmallToLarge(size_t NumOps) {
+  assert(!IsLarge && "Expected a small MDNode");
+  assert(NumOps > SmallSize && "Expected NumOps to be larger than allocation");
+  LargeStorageVector NewOps;
+  NewOps.resize(NumOps);
+  llvm::move(operands(), NewOps.begin());
+  resizeSmall(0);
+  new (getLargePtr()) LargeStorageVector(std::move(NewOps));
+  IsLarge = true;
 }
 
 static bool isOperandUnresolved(Metadata *Op) {

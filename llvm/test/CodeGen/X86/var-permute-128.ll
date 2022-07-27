@@ -1214,7 +1214,7 @@ define void @indices_convert() {
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 bb:
-  %0 = load <4 x i64>, <4 x i64>* undef, align 32
+  %0 = load <4 x i64>, ptr undef, align 32
   %1 = bitcast <4 x i64> %0 to <8 x i32>
   %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <2 x i32> <i32 2, i32 12>
   %3 = and <2 x i32> %2, <i32 7, i32 7>
@@ -1225,6 +1225,6 @@ bb:
   %6 = insertelement <2 x i64> poison, i64 %vecext.i8.1, i32 0
   %7 = insertelement <2 x i64> %6, i64 %vecext.i8.2, i32 1
   %8 = select <2 x i1> undef, <2 x i64> undef, <2 x i64> %7
-  store <2 x i64> %8, <2 x i64>* undef, align 8
+  store <2 x i64> %8, ptr undef, align 8
   ret void
 }

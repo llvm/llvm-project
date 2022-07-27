@@ -1065,7 +1065,7 @@ private:
     // 'swift_async' goes first and overrides anything else.
     if (auto ConventionalAsync =
             isConventionalSwiftAsync(Function, ParamIndex)) {
-      return ConventionalAsync.getValue();
+      return *ConventionalAsync;
     }
 
     return shouldBeCalledOnce(Function->getParamDecl(ParamIndex)) ||
@@ -1082,7 +1082,7 @@ private:
 
     // 'swift_async' goes first and overrides anything else.
     if (auto ConventionalAsync = isConventionalSwiftAsync(Method, ParamIndex)) {
-      return ConventionalAsync.getValue();
+      return *ConventionalAsync;
     }
 
     const ParmVarDecl *Parameter = Method->getParamDecl(ParamIndex);

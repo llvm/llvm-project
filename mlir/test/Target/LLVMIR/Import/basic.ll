@@ -629,3 +629,34 @@ define void @unreachable_inst() {
   ; CHECK: llvm.unreachable
   unreachable
 }
+
+; Varadic function definition
+%struct.va_list = type { i8* }
+
+declare void @llvm.va_start(i8*)
+declare void @llvm.va_copy(i8*, i8*)
+declare void @llvm.va_end(i8*)
+
+; CHECK-LABEL: llvm.func @variadic_function
+define void @variadic_function(i32 %X, ...) {
+  ; CHECK: %[[ALLOCA0:.+]] = llvm.alloca %{{.*}} x !llvm.struct<"struct.va_list", (ptr<i8>)> {{.*}} : (i32) -> !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>>
+  %ap = alloca %struct.va_list
+  ; CHECK: %[[CAST0:.+]] = llvm.bitcast %[[ALLOCA0]] : !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>> to !llvm.ptr<i8>
+  %ap2 = bitcast %struct.va_list* %ap to i8*
+  ; CHECK: llvm.intr.vastart %[[CAST0]]
+  call void @llvm.va_start(i8* %ap2)
+
+  ; CHECK: %[[ALLOCA1:.+]] = llvm.alloca %{{.*}} x !llvm.ptr<i8> {{.*}} : (i32) -> !llvm.ptr<ptr<i8>>
+  %aq = alloca i8*
+  ; CHECK: %[[CAST1:.+]] = llvm.bitcast %[[ALLOCA1]] : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
+  %aq2 = bitcast i8** %aq to i8*
+  ; CHECK: llvm.intr.vacopy %[[CAST0]] to %[[CAST1]]
+  call void @llvm.va_copy(i8* %aq2, i8* %ap2)
+  ; CHECK: llvm.intr.vaend %[[CAST1]]
+  call void @llvm.va_end(i8* %aq2)
+
+  ; CHECK: llvm.intr.vaend %[[CAST0]]
+  call void @llvm.va_end(i8* %ap2)
+  ; CHECK: llvm.return
+  ret void
+}

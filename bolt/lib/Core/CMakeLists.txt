@@ -18,6 +18,7 @@ add_llvm_library(LLVMBOLTCore
   DebugData.cpp
   DynoStats.cpp
   Exceptions.cpp
+  FunctionLayout.cpp
   JumpTable.cpp
   MCPlusBuilder.cpp
   ParallelUtilities.cpp

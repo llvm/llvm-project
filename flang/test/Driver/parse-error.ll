@@ -2,9 +2,6 @@
 ; Fortran (with the `-x` flag). This way we verify that the driver
 ; correctly rejects invalid Fortran input.
 
-;----------
-; RUN LINES
-;----------
 ; Input type is implicit (correctly assumed to be LLVM IR)
 ; RUN: %flang_fc1 -S %s -o -
 

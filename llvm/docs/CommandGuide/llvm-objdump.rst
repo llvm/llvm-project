@@ -27,7 +27,11 @@ combined with other commands:
 
 .. option:: -d, --disassemble
 
-  Disassemble all executable sections found in the input files.
+  Disassemble all executable sections found in the input files. On some
+  architectures (AArch64, PPC64, x86), all known instructions are disassembled by
+  default. On the others, :option:`--mcpu` or :option:`--mattr` is needed to
+  enable some instruction sets. Disabled instructions are displayed as
+  ``<unknown>``.
 
 .. option:: -D, --disassemble-all
 
@@ -178,6 +182,10 @@ OPTIONS
 .. option:: --no-show-raw-insn
 
   When disassembling, do not print the raw bytes of each instruction.
+
+.. option:: --offloading
+
+  Display the content of the LLVM offloading section.
 
 .. option:: --prefix=<prefix>
 

@@ -14,7 +14,7 @@ using namespace llvm;
 static bool shouldReduceSection(GlobalObject &GO) { return GO.hasSection(); }
 
 static bool shouldReduceAlign(GlobalObject &GO) {
-  return GO.getAlign().hasValue();
+  return GO.getAlign().has_value();
 }
 
 static void reduceGOs(Oracle &O, Module &Program) {

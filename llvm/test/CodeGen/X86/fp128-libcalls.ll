@@ -49,7 +49,7 @@ define dso_local void @Test128Add(fp128 %d1, fp128 %d2) nounwind {
 ; X86-NEXT:    retl
 entry:
   %add = fadd fp128 %d1, %d2
-  store fp128 %add, fp128* @vf128, align 16
+  store fp128 %add, ptr @vf128, align 16
   ret void
 }
 
@@ -92,9 +92,9 @@ define dso_local void @Test128_1Add(fp128 %d1) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %add = fadd fp128 %0, %d1
-  store fp128 %add, fp128* @vf128, align 16
+  store fp128 %add, ptr @vf128, align 16
   ret void
 }
 
@@ -136,7 +136,7 @@ define dso_local void @Test128Sub(fp128 %d1, fp128 %d2) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sub = fsub fp128 %d1, %d2
-  store fp128 %sub, fp128* @vf128, align 16
+  store fp128 %sub, ptr @vf128, align 16
   ret void
 }
 
@@ -179,9 +179,9 @@ define dso_local void @Test128_1Sub(fp128 %d1) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %sub = fsub fp128 %0, %d1
-  store fp128 %sub, fp128* @vf128, align 16
+  store fp128 %sub, ptr @vf128, align 16
   ret void
 }
 
@@ -223,7 +223,7 @@ define dso_local void @Test128Mul(fp128 %d1, fp128 %d2) nounwind {
 ; X86-NEXT:    retl
 entry:
   %mul = fmul fp128 %d1, %d2
-  store fp128 %mul, fp128* @vf128, align 16
+  store fp128 %mul, ptr @vf128, align 16
   ret void
 }
 
@@ -266,9 +266,9 @@ define dso_local void @Test128_1Mul(fp128 %d1) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %mul = fmul fp128 %0, %d1
-  store fp128 %mul, fp128* @vf128, align 16
+  store fp128 %mul, ptr @vf128, align 16
   ret void
 }
 
@@ -310,7 +310,7 @@ define dso_local void @Test128Div(fp128 %d1, fp128 %d2) nounwind {
 ; X86-NEXT:    retl
 entry:
   %div = fdiv fp128 %d1, %d2
-  store fp128 %div, fp128* @vf128, align 16
+  store fp128 %div, ptr @vf128, align 16
   ret void
 }
 
@@ -353,9 +353,9 @@ define dso_local void @Test128_1Div(fp128 %d1) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %div = fdiv fp128 %0, %d1
-  store fp128 %div, fp128* @vf128, align 16
+  store fp128 %div, ptr @vf128, align 16
   ret void
 }
 
@@ -397,7 +397,7 @@ define dso_local void @Test128Rem(fp128 %d1, fp128 %d2) nounwind {
 ; X86-NEXT:    retl
 entry:
   %div = frem fp128 %d1, %d2
-  store fp128 %div, fp128* @vf128, align 16
+  store fp128 %div, ptr @vf128, align 16
   ret void
 }
 
@@ -440,9 +440,9 @@ define dso_local void @Test128_1Rem(fp128 %d1) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %div = frem fp128 %0, %d1
-  store fp128 %div, fp128* @vf128, align 16
+  store fp128 %div, ptr @vf128, align 16
   ret void
 }
 
@@ -480,7 +480,7 @@ define dso_local void @Test128Sqrt(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.sqrt.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.sqrt.f128(fp128)
@@ -519,7 +519,7 @@ define dso_local void @Test128Sin(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.sin.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.sin.f128(fp128)
@@ -558,7 +558,7 @@ define dso_local void @Test128Cos(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.cos.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.cos.f128(fp128)
@@ -597,7 +597,7 @@ define dso_local void @Test128Ceil(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.ceil.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.ceil.f128(fp128)
@@ -636,7 +636,7 @@ define dso_local void @Test128Floor(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.floor.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.floor.f128(fp128)
@@ -675,7 +675,7 @@ define dso_local void @Test128Trunc(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.trunc.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.trunc.f128(fp128)
@@ -714,7 +714,7 @@ define dso_local void @Test128Nearbyint(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.nearbyint.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.nearbyint.f128(fp128)
@@ -753,7 +753,7 @@ define dso_local void @Test128Rint(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.rint.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.rint.f128(fp128)
@@ -792,7 +792,7 @@ define dso_local void @Test128Round(fp128 %d1) nounwind {
 ; X86-NEXT:    retl
 entry:
   %sqrt = call fp128 @llvm.round.f128(fp128 %d1)
-  store fp128 %sqrt, fp128* @vf128, align 16
+  store fp128 %sqrt, ptr @vf128, align 16
   ret void
 }
 declare fp128 @llvm.round.f128(fp128)

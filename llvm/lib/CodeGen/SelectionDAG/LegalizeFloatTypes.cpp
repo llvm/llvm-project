@@ -2915,6 +2915,12 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::SELECT_CC:  Res = SoftPromoteHalfOp_SELECT_CC(N, OpNo); break;
   case ISD::SETCC:      Res = SoftPromoteHalfOp_SETCC(N); break;
   case ISD::STORE:      Res = SoftPromoteHalfOp_STORE(N, OpNo); break;
+  case ISD::STACKMAP:
+    Res = SoftPromoteHalfOp_STACKMAP(N, OpNo);
+    break;
+  case ISD::PATCHPOINT:
+    Res = SoftPromoteHalfOp_PATCHPOINT(N, OpNo);
+    break;
   }
 
   if (!Res.getNode())
@@ -3041,4 +3047,33 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo) {
   SDValue Promoted = GetSoftPromotedHalf(Val);
   return DAG.getStore(ST->getChain(), dl, Promoted, ST->getBasePtr(),
                       ST->getMemOperand());
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
+  assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
+  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SDValue Op = N->getOperand(OpNo);
+  NewOps[OpNo] = GetSoftPromotedHalf(Op);
+  SDValue NewNode =
+      DAG.getNode(N->getOpcode(), SDLoc(N), N->getVTList(), NewOps);
+
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+    ReplaceValueWith(SDValue(N, ResNum), NewNode.getValue(ResNum));
+
+  return SDValue(); // Signal that we replaced the node ourselves.
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_PATCHPOINT(SDNode *N,
+                                                       unsigned OpNo) {
+  assert(OpNo >= 7);
+  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SDValue Op = N->getOperand(OpNo);
+  NewOps[OpNo] = GetSoftPromotedHalf(Op);
+  SDValue NewNode =
+      DAG.getNode(N->getOpcode(), SDLoc(N), N->getVTList(), NewOps);
+
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+    ReplaceValueWith(SDValue(N, ResNum), NewNode.getValue(ResNum));
+
+  return SDValue(); // Signal that we replaced the node ourselves.
 }

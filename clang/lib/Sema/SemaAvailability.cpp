@@ -501,7 +501,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         SmallVector<StringRef, 12> SelectorSlotNames;
         Optional<unsigned> NumParams = tryParseObjCMethodName(
             Replacement, SelectorSlotNames, S.getLangOpts());
-        if (NumParams && NumParams.getValue() == Sel.getNumArgs()) {
+        if (NumParams && *NumParams == Sel.getNumArgs()) {
           assert(SelectorSlotNames.size() == Locs.size());
           for (unsigned I = 0; I < Locs.size(); ++I) {
             if (!Sel.getNameForSlot(I).empty()) {

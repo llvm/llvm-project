@@ -72,7 +72,7 @@ if(LLD_BUILT_STANDALONE)
     # path is removed.
     set(MAIN_INCLUDE_DIR "${LLVM_INCLUDE_DIR}")
     set(LLVM_OBJ_DIR "${LLVM_BINARY_DIR}")
-    # N.B. this is just a default value, the CACHE PATHs below can be overriden.
+    # N.B. this is just a default value, the CACHE PATHs below can be overridden.
     set(MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
   endif()
 
@@ -155,6 +155,10 @@ if(LLD_BUILT_STANDALONE)
     set(XAR_LIB xar)
   endif()
 endif() # standalone
+
+set(LLD_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+    "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
+mark_as_advanced(LLD_TOOLS_INSTALL_DIR)
 
 set(LLD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLD_INCLUDE_DIR ${LLD_SOURCE_DIR}/include )

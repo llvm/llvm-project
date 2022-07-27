@@ -112,90 +112,86 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    movw %cx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    movw %di, %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movl $buf, %r8d
-; O0-NEXT:    movl $32, %r9d
-; O0-NEXT:    movw $8, %si
+; O0-NEXT:    movl $buf, %esi
+; O0-NEXT:    movl $32, %edi
+; O0-NEXT:    movw $8, %dx
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %si, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%r8,%r9), %tmm0
-; O0-NEXT:    movl $64, %r8d
-; O0-NEXT:    movw $8, %si
-; O0-NEXT:    tilestored %tmm0, (%rdi,%r8)
-; O0-NEXT:    movl $32, %edi
-; O0-NEXT:    movl $buf+1024, %esi
+; O0-NEXT:    tileloadd (%rsi,%rdi), %tmm0
+; O0-NEXT:    movl $64, %edi
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; O0-NEXT:    movw $8, %dx
+; O0-NEXT:    tilestored %tmm0, (%rsi,%rdi)
+; O0-NEXT:    movl $32, %esi
+; O0-NEXT:    movl $buf+1024, %edx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%rsi,%rdi), %tmm0
+; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; O0-NEXT:    movl $64, %esi
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; O0-NEXT:    vzeroupper
 ; O0-NEXT:    callq foo
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    movl $32, %r10d
-; O0-NEXT:    movl $buf+2048, %edi
-; O0-NEXT:    tileloadd (%rdi,%r10), %tmm0
+; O0-NEXT:    movl $32, %esi
+; O0-NEXT:    movl $buf+2048, %edx
+; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
+; O0-NEXT:    movl $64, %esi
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; O0-NEXT:    movl $64, %edi
-; O0-NEXT:    tilestored %tmm0, (%rsi,%rdi)
-; O0-NEXT:    movl $64, %r10d
-; O0-NEXT:    movw $8, %di
-; O0-NEXT:    # implicit-def: $al
-; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%r8,%r10), %tmm0
-; O0-NEXT:    movabsq $64, %r8
-; O0-NEXT:    tilestored %tmm0, 1024(%rsp,%r8) # 1024-byte Folded Spill
-; O0-NEXT:    movl $64, %r10d
-; O0-NEXT:    movw $8, %r8w
-; O0-NEXT:    # implicit-def: $al
-; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; O0-NEXT:    # implicit-def: $al
-; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; O0-NEXT:    # implicit-def: $al
-; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; O0-NEXT:    # implicit-def: $al
-; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; O0-NEXT:    # implicit-def: $r8b
-; O0-NEXT:    movb %r8b, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%r9,%r10), %tmm2
-; O0-NEXT:    movl $64, %r8d
-; O0-NEXT:    tileloadd (%rsi,%r8), %tmm0
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; O0-NEXT:    movw $8, %si
-; O0-NEXT:    movabsq $64, %r8
-; O0-NEXT:    tileloadd 1024(%rsp,%r8), %tmm1 # 1024-byte Folded Reload
+; O0-NEXT:    # implicit-def: $al
+; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %si, {{[0-9]+}}(%rsp)
+; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; O0-NEXT:    tileloadd (%rdx,%rdi), %tmm0
+; O0-NEXT:    movabsq $64, %rdx
+; O0-NEXT:    tilestored %tmm0, 1024(%rsp,%rdx) # 1024-byte Folded Spill
+; O0-NEXT:    movl $64, %r8d
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; O0-NEXT:    movw $8, %dx
+; O0-NEXT:    # implicit-def: $al
+; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; O0-NEXT:    # implicit-def: $al
+; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; O0-NEXT:    # implicit-def: $al
+; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %si, {{[0-9]+}}(%rsp)
+; O0-NEXT:    # implicit-def: $al
+; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; O0-NEXT:    # implicit-def: $dl
+; O0-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; O0-NEXT:    tileloadd (%rdi,%r8), %tmm2
+; O0-NEXT:    movl $64, %edi
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; O0-NEXT:    tileloadd (%rdx,%rdi), %tmm0
+; O0-NEXT:    movw $8, %dx
+; O0-NEXT:    movabsq $64, %rdi
+; O0-NEXT:    tileloadd 1024(%rsp,%rdi), %tmm1 # 1024-byte Folded Reload
 ; O0-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
 ; O0-NEXT:    movl $64, %esi
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; O0-NEXT:    movl $64, %esi
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; O0-NEXT:    movl $32, %esi
 ; O0-NEXT:    movl $buf+2048, %edx
@@ -204,12 +200,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    popq %rbp
 ; O0-NEXT:    tilerelease
 ; O0-NEXT:    retq
-  %3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32)
-  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 1024), i64 32)
+  %3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 8, ptr @buf, i64 32)
+  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 1024), i64 32)
   call void @foo()
-  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32)
+  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32)
   %6 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %0, i16 %1, i16 8, x86_amx %5, x86_amx %3, x86_amx %4)
-  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32, x86_amx %6)
+  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32, x86_amx %6)
   ret void
 }
 
@@ -348,10 +344,6 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    vzeroupper
 ; O0-NEXT:    callq foo
 ; O0-NEXT:  # %bb.1:
@@ -368,22 +360,22 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; O0-NEXT:    jmp .LBB2_4
 ; O0-NEXT:  .LBB2_3: # =>This Inner Loop Header: Depth=1
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:    movl $buf, %edx
-; O0-NEXT:    movl $32, %esi
+; O0-NEXT:    movl $buf, %ecx
+; O0-NEXT:    movl $32, %edx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
+; O0-NEXT:    tileloadd (%rcx,%rdx), %tmm0
 ; O0-NEXT:    movl $64, %edx
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    tilestored %tmm0, (%rcx,%rdx)
 ; O0-NEXT:    callq foo
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl $64, %edx
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
@@ -404,19 +396,20 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; O0-NEXT:    jmp .LBB2_3
 ; O0-NEXT:  .LBB2_4:
 ; O0-NEXT:    callq foo
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; O0-NEXT:    movl $32, %esi
-; O0-NEXT:    movl $buf+1024, %edx
+; O0-NEXT:    movl $32, %edx
+; O0-NEXT:    movl $buf+1024, %ecx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
+; O0-NEXT:    tileloadd (%rcx,%rdx), %tmm0
 ; O0-NEXT:    movl $64, %edx
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    tilestored %tmm0, (%rcx,%rdx)
 ; O0-NEXT:    movl $64, %edx
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
@@ -457,17 +450,17 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
   br i1 %5, label %13, label %11
 6:
   %7 = phi i32 [ %9, %6 ], [ 0, %2 ]
-  %8 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32)
+  %8 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, ptr @buf, i64 32)
   call void @foo()
-  tail call void @llvm.x86.tilestored64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32, x86_amx %8)
+  tail call void @llvm.x86.tilestored64.internal(i16 8, i16 8, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32, x86_amx %8)
   call void @foo()
   %9 = add i32 %7, 1
   %10 = icmp eq i32 %9, 0
   br i1 %10, label %4, label %6
 11:
   call void @foo()
-  %12 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 1024), i64 32)
-  tail call void @llvm.x86.tilestored64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 1024), i64 32, x86_amx %12)
+  %12 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 1024), i64 32)
+  tail call void @llvm.x86.tilestored64.internal(i16 8, i16 8, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 1024), i64 32, x86_amx %12)
   br label %17
 13:
   %14 = icmp eq i32 %9, 7
@@ -492,14 +485,14 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $1088, %rsp # imm = 0x440
-; CHECK-NEXT:    movl %edi, %ebx
+; CHECK-NEXT:    movl %edi, %r15d
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rsp)
 ; CHECK-NEXT:    movb $1, (%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %r14d
-; CHECK-NEXT:    movl $32, %r15d
+; CHECK-NEXT:    movl $32, %ebx
 ; CHECK-NEXT:    movw $8, %bp
 ; CHECK-NEXT:    movl $buf+2048, %r12d
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -507,17 +500,17 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg (%rsp)
-; CHECK-NEXT:    testl %ebx, %ebx
+; CHECK-NEXT:    testl %r15d, %r15d
 ; CHECK-NEXT:    jle .LBB3_3
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
+; CHECK-NEXT:    tileloadd (%r14,%rbx), %tmm0
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm0, 64(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg (%rsp)
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tileloadd 64(%rsp,%rax), %tmm0 # 1024-byte Folded Reload
-; CHECK-NEXT:    tilestored %tmm0, (%r12,%r15)
+; CHECK-NEXT:    tilestored %tmm0, (%r12,%rbx)
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    jmp .LBB3_1
 ; CHECK-NEXT:  .LBB3_3:
@@ -570,8 +563,6 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    xorl %eax, %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
@@ -583,21 +574,21 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; O0-NEXT:    cmpl $0, %eax
 ; O0-NEXT:    jle .LBB3_3
 ; O0-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; O0-NEXT:    movl $buf, %edx
-; O0-NEXT:    movl $32, %esi
+; O0-NEXT:    movl $buf, %ecx
+; O0-NEXT:    movl $32, %edx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
+; O0-NEXT:    tileloadd (%rcx,%rdx), %tmm0
 ; O0-NEXT:    movl $64, %edx
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    tilestored %tmm0, (%rcx,%rdx)
 ; O0-NEXT:    callq foo
-; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl $64, %edx
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; O0-NEXT:    movw $8, %ax
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
@@ -625,9 +616,9 @@ define dso_local void @test_loop2(i32 %0) nounwind {
   %4 = icmp sgt i32 %0, 0
   br i1 %4, label %5, label %8
 5:
-  %6 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32)
+  %6 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, ptr @buf, i64 32)
   call void @foo()
-  tail call void @llvm.x86.tilestored64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32, x86_amx %6)
+  tail call void @llvm.x86.tilestored64.internal(i16 8, i16 8, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32, x86_amx %6)
   call void @foo()
   %7 = add i32 %3, 1
   br label %2
@@ -635,6 +626,6 @@ define dso_local void @test_loop2(i32 %0) nounwind {
   ret void
 }
 
-declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)

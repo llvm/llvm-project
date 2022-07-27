@@ -52,10 +52,10 @@ entry:
 
 for.body:
   %i.06 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr [0 x double], [0 x double]* @A, i64 0, i64 %i.06
-  %tmp3 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr [0 x double], ptr @A, i64 0, i64 %i.06
+  %tmp3 = load double, ptr %arrayidx, align 8
   %mul = fmul double %tmp3, 2.300000e+00
-  store double %mul, double* %arrayidx, align 8
+  store double %mul, ptr %arrayidx, align 8
   %inc = add nsw i64 %i.06, 1
   %exitcond = icmp eq i64 %inc, %n
   br i1 %exitcond, label %for.end, label %for.body

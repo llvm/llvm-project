@@ -66,12 +66,12 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
   std::unique_ptr<clang::CXXBaseSpecifier> base_spec =
       m_ast_builder.clang().CreateBaseClassSpecifier(
           qt.getAsOpaquePtr(), TranslateMemberAccess(access),
-          vtable_idx.hasValue(), udt_cvt.kind() == LF_CLASS);
+          vtable_idx.has_value(), udt_cvt.kind() == LF_CLASS);
   if (!base_spec)
     return {};
 
   m_bases.push_back(
-      std::make_pair(vtable_idx.getValueOr(0), std::move(base_spec)));
+      std::make_pair(vtable_idx.value_or(0), std::move(base_spec)));
 
   return qt;
 }

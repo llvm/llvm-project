@@ -172,6 +172,9 @@ private:
   /// for the LocalLabelVal and adds it to the map if needed.
   unsigned GetInstance(unsigned LocalLabelVal);
 
+  /// LLVM_BB_ADDR_MAP version to emit.
+  uint8_t BBAddrMapVersion = 1;
+
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
   /// directive is used or it is an error.
@@ -600,8 +603,6 @@ public:
                                     const MCSymbolELF *Group,
                                     const MCSectionELF *RelInfoSection);
 
-  void renameELFSection(MCSectionELF *Section, StringRef Name);
-
   MCSectionELF *createELFGroupSection(const MCSymbolELF *Group, bool IsComdat);
 
   void recordELFMergeableSectionInfo(StringRef SectionName, unsigned Flags,
@@ -678,6 +679,8 @@ public:
 
   // Create and save a copy of STI and return a reference to the copy.
   MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
+
+  uint8_t getBBAddrMapVersion() const { return BBAddrMapVersion; }
 
   /// @}
 

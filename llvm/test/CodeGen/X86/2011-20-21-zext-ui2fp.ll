@@ -4,7 +4,7 @@
 ; Check that the booleans are converted using zext and not via sext.
 ; 0x1 means that we only look at the first bit.
 
-define void @ui_to_fp_conv(<8 x float> * nocapture %aFOO, <8 x float>* nocapture %RET) nounwind {
+define void @ui_to_fp_conv(ptr nocapture %aFOO, ptr nocapture %RET) nounwind {
 ; CHECK-LABEL: ui_to_fp_conv:
 ; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,1.0E+0,0.0E+0,0.0E+0]
@@ -15,7 +15,7 @@ define void @ui_to_fp_conv(<8 x float> * nocapture %aFOO, <8 x float>* nocapture
 allocas:
   %bincmp = fcmp olt <8 x float> <float 1.000000e+00, float 1.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00> , <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   %bool2float = uitofp <8 x i1> %bincmp to <8 x float>
-  store <8 x float> %bool2float, <8 x float>* %RET, align 4
+  store <8 x float> %bool2float, ptr %RET, align 4
   ret void
 }
 

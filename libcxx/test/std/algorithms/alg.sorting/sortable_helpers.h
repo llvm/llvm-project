@@ -13,6 +13,12 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER > 17
+#include <compare>
+#include <iterator>
+#include "test_iterators.h"
+#endif 
+
 struct TrivialSortable {
     int value;
     TEST_CONSTEXPR TrivialSortable() : value(0) {}
@@ -74,5 +80,47 @@ static_assert(std::is_trivially_copyable<TrivialSortable>::value, "");
 static_assert(std::is_trivially_copyable<TrivialSortableWithComp>::value, "");
 static_assert(!std::is_trivially_copyable<NonTrivialSortable>::value, "");
 static_assert(!std::is_trivially_copyable<NonTrivialSortableWithComp>::value, "");
+
+#if TEST_STD_VER > 17
+struct TracedCopy {
+  int copied = 0;
+  int data   = 0;
+
+  constexpr TracedCopy() = default;
+  constexpr TracedCopy(int i) : data(i) {}
+  constexpr TracedCopy(const TracedCopy& other) : copied(other.copied + 1), data(other.data) {}
+
+  constexpr TracedCopy(TracedCopy&& other)            = delete;
+  constexpr TracedCopy& operator=(TracedCopy&& other) = delete;
+
+  constexpr TracedCopy& operator=(const TracedCopy& other) {
+    copied = other.copied + 1;
+    data   = other.data;
+    return *this;
+  }
+
+  constexpr bool copiedOnce() const { return copied == 1; }
+
+  constexpr bool operator==(const TracedCopy& o) const { return data == o.data; }
+  constexpr auto operator<=>(const TracedCopy& o) const { return data <=> o.data; }
+};
+
+template <class Iter>
+struct NonBorrowedRange {
+  int* data_;
+  size_t size_;
+
+  // TODO: some algorithms calls std::__copy
+  // std::__copy(contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>, contiguous_iterator<int*>) doesn't seem to work.
+  // It seems that it unwraps contiguous_iterator<int*> into int*, and then it failed because there is no == between int* and 
+  // sentinel_wrapper<contiguous_iterator<int*>>
+  using Sent = std::conditional_t<std::contiguous_iterator<Iter>, Iter, sentinel_wrapper<Iter>>;
+
+  constexpr NonBorrowedRange(int* d, size_t s) : data_{d}, size_{s} {}
+
+  constexpr Iter begin() const { return Iter{data_}; };
+  constexpr Sent end() const { return Sent{Iter{data_ + size_}}; };
+};
+#endif // TEST_STD_VER > 17
 
 #endif // SORTABLE_HELPERS_H

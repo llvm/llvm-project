@@ -58,6 +58,24 @@ any generated diagnostics in-place.
 
 ![IMG](/mlir-lsp-server/diagnostics.png)
 
+##### Automatically insert `expected-` diagnostic checks
+
+MLIR provides
+[infrastructure](https://mlir.llvm.org/docs/Diagnostics/#sourcemgr-diagnostic-verifier-handler)
+for checking expected diagnostics, which is heavily utilized when defining IR
+parsing and verification. The language server provides code actions for
+automatically inserting the checks for diagnostics it knows about.
+
+![IMG](/mlir-lsp-server/diagnostics_action.gif)
+
+#### Code completion
+
+The language server provides suggestions as you type, offering completions for
+dialect constructs (such as attributes, operations, and types), block names, SSA
+value names, keywords, and more.
+
+![IMG](/mlir-lsp-server/code_complete.gif)
+
 #### Cross-references
 
 Cross references allow for navigating the use/def chains of SSA values (i.e.
@@ -368,6 +386,7 @@ The MLIR extension adds language support for the
 - go-to-definition and cross references
 - Detailed information when hovering over IR entities
 - Outline and navigation of symbols and symbol tables
+- Code completion
 - Live parser and verifier diagnostics
 
 [mlir-vscode features]: #

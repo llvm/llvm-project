@@ -17,15 +17,15 @@
 // CHECK-LABEL:   func @sparse_static_dims(
 // CHECK-SAME:                          %[[VAL_0:.*]]: tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<20x30x10xf32>) -> tensor<20x30x10xf32> {
+// CHECK-DAG:       %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 20 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 30 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 10 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_1]] : memref<20x30x10xf32>
-// CHECK-DAG:       %[[VAL_9:.*]] = memref.alloc() : memref<20x30x10xf32>
-// CHECK:           memref.copy %[[VAL_8]], %[[VAL_9]] : memref<20x30x10xf32> to memref<20x30x10xf32>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<20x30x10xf32>
+// CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_9]] : memref<20x30x10xf32>)
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
 // CHECK:               %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_4]] : index
@@ -42,7 +42,7 @@
 // CHECK:           return %[[VAL_18]] : tensor<20x30x10xf32>
 // CHECK:         }
 func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
-                         %argx: tensor<20x30x10xf32>) -> tensor<20x30x10xf32> {
+                              %argx: tensor<20x30x10xf32>) -> tensor<20x30x10xf32> {
   %0 = linalg.generic #trait
     ins(%arga: tensor<10x20x30xf32, #X>)
     outs(%argx: tensor<20x30x10xf32>) {
@@ -55,6 +55,7 @@ func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK-LABEL:   func @sparse_dynamic_dims(
 // CHECK-SAME:                          %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+// CHECK-DAG:       %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
@@ -62,9 +63,8 @@ func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK-DAG:       %[[VAL_6:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xf32>
 // CHECK-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xf32>
 // CHECK-DAG:       %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_2]] : tensor<?x?x?xf32>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?x?xf32>
-// CHECK-DAG:       %[[VAL_10:.*]] = memref.alloc(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]]) : memref<?x?x?xf32>
-// CHECK:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<?x?x?xf32> to memref<?x?x?xf32>
+// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?x?xf32>
+// CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_10]] : memref<?x?x?xf32>)
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
 // CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_4]] {
 // CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_8]], %[[VAL_11]] : index
@@ -81,7 +81,7 @@ func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK:           return %[[VAL_19]] : tensor<?x?x?xf32>
 // CHECK:         }
 func.func @sparse_dynamic_dims(%arga: tensor<?x?x?xf32, #X>,
-                          %argx: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+                               %argx: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
   %0 = linalg.generic #trait
     ins(%arga: tensor<?x?x?xf32, #X>)
     outs(%argx: tensor<?x?x?xf32>) {

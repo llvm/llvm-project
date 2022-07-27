@@ -1,4 +1,4 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest -print-statistics | FileCheck %s
 
 void foo() {
   T* a; // a multiply expression or a pointer declaration?
@@ -7,7 +7,8 @@ void foo() {
 // CHECK-NEXT: │ ├─expression~multiplicative-expression := multiplicative-expression * pm-expression
 // CHECK-NEXT: │ │ ├─multiplicative-expression~IDENTIFIER := tok[5]
 // CHECK-NEXT: │ │ ├─* := tok[6]
-// CHECK-NEXT: │ │ └─pm-expression~IDENTIFIER := tok[7]
+// CHECK-NEXT: │ │ └─pm-expression~id-expression := unqualified-id #1
+// CHECK-NEXT: │ │   └─unqualified-id~IDENTIFIER := tok[7]
 // CHECK-NEXT: │ └─; := tok[8]
 // CHECK-NEXT: └─statement~simple-declaration := decl-specifier-seq init-declarator-list ;
 // CHECK-NEXT:   ├─decl-specifier-seq~simple-type-specifier := <ambiguous>
@@ -18,6 +19,16 @@ void foo() {
 // CHECK-NEXT:   │ └─simple-type-specifier~IDENTIFIER := tok[5]
 // CHECK-NEXT:   ├─init-declarator-list~ptr-declarator := ptr-operator ptr-declarator
 // CHECK-NEXT:   │ ├─ptr-operator~* := tok[6]
-// CHECK-NEXT:   │ └─ptr-declarator~IDENTIFIER := tok[7]
+// CHECK-NEXT:   │ └─ptr-declarator~id-expression =#1
 // CHECK-NEXT:   └─; := tok[8]
 }
+
+// CHECK:      3 Ambiguous nodes:
+// CHECK-NEXT: 1 simple-type-specifier
+// CHECK-NEXT: 1 statement
+// CHECK-NEXT: 1 type-name
+// CHECK-EMPTY:
+// CHECK-NEXT: 0 Opaque nodes:
+// CHECK-EMPTY:
+// CHECK-NEXT: Ambiguity: 0.40 misparses/token
+// CHECK-NEXT: Unparsed: 0.00%

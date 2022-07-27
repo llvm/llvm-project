@@ -211,7 +211,7 @@ void UnwindInfoSection::addSymbol(const Defined *d) {
   // we use that as the key here.
   auto p = symbols.insert({{d->isec, d->value}, d});
   // If we have multiple symbols at the same address, only one of them can have
-  // an associated CUE.
+  // an associated unwind entry.
   if (!p.second && d->unwindEntry) {
     assert(!p.first->second->unwindEntry);
     p.first->second = d;
@@ -326,7 +326,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
 // is no source address to make a relative location meaningful.
 void UnwindInfoSectionImpl::relocateCompactUnwind(
     std::vector<CompactUnwindEntry> &cuEntries) {
-  parallelForEachN(0, symbolsVec.size(), [&](size_t i) {
+  parallelFor(0, symbolsVec.size(), [&](size_t i) {
     CompactUnwindEntry &cu = cuEntries[i];
     const Defined *d = symbolsVec[i].second;
     cu.functionAddress = d->getVA();
@@ -506,7 +506,7 @@ void UnwindInfoSectionImpl::finalize() {
     secondLevelPages.emplace_back();
     SecondLevelPage &page = secondLevelPages.back();
     page.entryIndex = i;
-    uintptr_t functionAddressMax =
+    uint64_t functionAddressMax =
         cuEntries[idx].functionAddress + COMPRESSED_ENTRY_FUNC_OFFSET_MASK;
     size_t n = commonEncodings.size();
     size_t wordsRemaining =

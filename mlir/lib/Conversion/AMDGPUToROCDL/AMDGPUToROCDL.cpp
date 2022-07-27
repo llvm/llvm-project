@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 
 using namespace mlir;
+using namespace mlir::amdgpu;
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
@@ -26,8 +27,10 @@ namespace {
 /// Define lowering patterns for raw buffer ops
 template <typename GpuOp, typename Intrinsic>
 struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
-  using ConvertOpToLLVMPattern<GpuOp>::ConvertOpToLLVMPattern;
+  RawBufferOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<GpuOp>(converter), chipset(chipset) {}
 
+  Chipset chipset;
   static constexpr uint32_t maxVectorOpWidth = 128;
 
   LogicalResult
@@ -37,6 +40,9 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value memref = adaptor.getMemref();
     Value unconvertedMemref = gpuOp.getMemref();
     MemRefType memrefType = unconvertedMemref.getType().cast<MemRefType>();
+
+    if (chipset.majorVersion < 9)
+      return gpuOp.emitOpError("Raw buffer ops require GCN or higher");
 
     Value storeData = adaptor.getODSOperands(0)[0];
     if (storeData == memref) // no write component to this op
@@ -57,7 +63,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     // If we want to load a vector<NxT> with total size <= 32
     // bits, use a scalar load and bitcast it. Similarly, if bitsize(T) < 32
-    // and the
+    // and the total load size is >= 32, use a vector load of N / (bitsize(T) /
+    // 32) x i32 and bitcast.
     Type llvmBufferValType = llvmWantedDataType;
     if (auto dataVector = wantedDataType.dyn_cast<VectorType>()) {
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
@@ -159,13 +166,13 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bit 24: Reserved to 1 (RDNA) or 0 (CDNA)
     // bits 25-26: Reserved (0)
     // bit 27: Buffer is non-volatile (CDNA only)
-    // bits 28-29: Out of bounds select (0 = structured, 1 = raw, 2 = none, 3 =
-    // swizzles) RDNA only
+    // bits 28-29: Out of bounds select (0 = structured, 1 = check index, 2 =
+    //  none, 3 = either swizzles or testing against offset field) RDNA only
     // bits 30-31: Type (must be 0)
     uint32_t word3 = (7 << 12) | (4 << 15);
-    if (adaptor.getTargetIsRDNA()) {
+    if (chipset.majorVersion == 10) {
       word3 |= (1 << 24);
-      uint32_t oob = adaptor.getBoundsCheck() ? 1 : 2;
+      uint32_t oob = adaptor.getBoundsCheck() ? 3 : 2;
       word3 |= (oob << 28);
     }
     Value word3Const = createI32Constant(rewriter, loc, word3);
@@ -191,7 +198,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       voffset =
           voffset ? rewriter.create<LLVM::AddOp>(loc, voffset, index) : index;
     }
-    if (adaptor.getIndexOffset().hasValue()) {
+    if (adaptor.getIndexOffset()) {
       int32_t indexOffset = *gpuOp.getIndexOffset() * elementByteWidth;
       Value extraOffsetConst = createI32Constant(rewriter, loc, indexOffset);
       voffset =
@@ -234,14 +241,41 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
   }
 };
 
+struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
+  using ConvertOpToLLVMPattern<LDSBarrierOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(LDSBarrierOp op, LDSBarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
+                                                    LLVM::AsmDialect::AD_ATT);
+    const char *asmStr = "s_waitcnt lgkmcnt(0)\ns_barrier";
+    const char *constraints = "";
+    rewriter.replaceOpWithNewOp<LLVM::InlineAsmOp>(
+        op,
+        /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
+        /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
+        /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
+        /*operand_attrs=*/ArrayAttr());
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public ConvertAMDGPUToROCDLBase<ConvertAMDGPUToROCDLPass> {
   ConvertAMDGPUToROCDLPass() = default;
 
   void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    LLVMTypeConverter converter(&getContext());
-    populateAMDGPUToROCDLConversionPatterns(converter, patterns);
+    MLIRContext *ctx = &getContext();
+    FailureOr<Chipset> maybeChipset = Chipset::parse(chipset);
+    if (failed(maybeChipset)) {
+      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+      return signalPassFailure();
+    }
+
+    RewritePatternSet patterns(ctx);
+    LLVMTypeConverter converter(ctx);
+    populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
     LLVMConversionTarget target(getContext());
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
     target.addLegalDialect<::mlir::ROCDL::ROCDLDialect>();
@@ -252,13 +286,15 @@ struct ConvertAMDGPUToROCDLPass
 };
 } // namespace
 
-void mlir::populateAMDGPUToROCDLConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
+                                                   RewritePatternSet &patterns,
+                                                   Chipset chipset) {
+  patterns.add<LDSBarrierOpLowering>(converter);
   patterns.add<
-      RawBufferOpLowering<amdgpu::RawBufferLoadOp, ROCDL::RawBufferLoadOp>,
-      RawBufferOpLowering<amdgpu::RawBufferStoreOp, ROCDL::RawBufferStoreOp>,
-      RawBufferOpLowering<amdgpu::RawBufferAtomicFaddOp,
-                          ROCDL::RawBufferAtomicFAddOp>>(converter);
+      RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawBufferLoadOp>,
+      RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawBufferStoreOp>,
+      RawBufferOpLowering<RawBufferAtomicFaddOp, ROCDL::RawBufferAtomicFAddOp>>(
+      converter, chipset);
 }
 
 std::unique_ptr<Pass> mlir::createConvertAMDGPUToROCDLPass() {

@@ -579,6 +579,17 @@ void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
   m_str_offsets_base = str_offsets_base;
 }
 
+dw_addr_t DWARFUnit::ReadAddressFromDebugAddrSection(uint32_t index) const {
+  uint32_t index_size = GetAddressByteSize();
+  dw_offset_t addr_base = GetAddrBase();
+  dw_addr_t offset = addr_base + index * index_size;
+  const DWARFDataExtractor &data =
+      m_dwarf.GetDWARFContext().getOrLoadAddrData();
+  if (data.ValidOffsetForDataOfSize(offset, index_size))
+    return data.GetMaxU64_unchecked(&offset, index_size);
+  return LLDB_INVALID_ADDRESS;
+}
+
 // It may be called only with m_die_array_mutex held R/W.
 void DWARFUnit::ClearDIEsRWLocked() {
   m_die_array.clear();
@@ -789,7 +800,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
       die->GetAttributeValueAsString(this, DW_AT_comp_dir, nullptr));
   if (!comp_dir.empty()) {
     FileSpec::Style comp_dir_style =
-        FileSpec::GuessPathStyle(comp_dir).getValueOr(FileSpec::Style::native);
+        FileSpec::GuessPathStyle(comp_dir).value_or(FileSpec::Style::native);
     m_comp_dir = FileSpec(comp_dir, comp_dir_style);
   } else {
     // Try to detect the style based on the DW_AT_name attribute, but just store
@@ -797,7 +808,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
     const char *name =
         die->GetAttributeValueAsString(this, DW_AT_name, nullptr);
     m_comp_dir = FileSpec(
-        "", FileSpec::GuessPathStyle(name).getValueOr(FileSpec::Style::native));
+        "", FileSpec::GuessPathStyle(name).value_or(FileSpec::Style::native));
   }
 }
 

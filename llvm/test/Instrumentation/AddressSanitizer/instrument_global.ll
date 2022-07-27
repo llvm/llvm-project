@@ -16,7 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; indexed with constants in-bounds. But instrument all other cases.
 
 @GlobSt = global [10 x i32] zeroinitializer, align 16  ; static initializer
-@GlobDy = global [10 x i32] zeroinitializer, align 16  ; dynamic initializer
+@GlobDy = global [10 x i32] zeroinitializer, align 16, sanitize_address_dyninit  ; dynamic initializer
 @GlobEx = external global [10 x i32] , align 16        ; extern initializer
 
 ; GlobSt is declared here, and has static initializer -- ok to optimize.
@@ -68,10 +68,6 @@ entry:
 ; CHECK: __asan_report
 ; CHECK: ret i32
 }
-
-
-!llvm.asan.globals = !{!0}
-!0 = !{[10 x i32]* @GlobDy, null, null, i1 true, i1 false}
 
 ; CHECK-LABEL: define internal void @asan.module_ctor
 ; CHECK-NOT: ret

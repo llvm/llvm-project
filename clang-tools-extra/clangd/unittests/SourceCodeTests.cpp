@@ -376,7 +376,7 @@ protected:
   SpelledWord word(const char *Text) {
     auto Result = tryWord(Text);
     EXPECT_TRUE(Result) << Text;
-    return Result.getValueOr(SpelledWord());
+    return Result.value_or(SpelledWord());
   }
 
   void noWord(const char *Text) { EXPECT_FALSE(tryWord(Text)) << Text; }

@@ -24,7 +24,7 @@ module {
   // A kernel that sum-reduces a matrix to a single scalar.
   //
   func.func @kernel_sum_reduce(%arga: tensor<?x?xbf16, #SparseMatrix>,
-                          %argx: tensor<bf16> {linalg.inplaceable = true}) -> tensor<bf16> {
+                               %argx: tensor<bf16>) -> tensor<bf16> {
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xbf16, #SparseMatrix>)
       outs(%argx: tensor<bf16>) {
@@ -52,9 +52,7 @@ module {
     %d0 = arith.constant 0.0 : bf16
     // Setup memory for a single reduction scalar,
     // initialized to zero.
-    %xdata = memref.alloc() : memref<bf16>
-    memref.store %d0, %xdata[] : memref<bf16>
-    %x = bufferization.to_tensor %xdata : memref<bf16>
+    %x = tensor.from_elements %d0 : tensor<bf16>
 
     // Call the kernel.
     %0 = call @kernel_sum_reduce(%a, %x)
@@ -64,14 +62,12 @@ module {
     //
     // CHECK: 13.5
     //
-    %m = bufferization.to_memref %0 : memref<bf16>
-    %v = memref.load %m[] : memref<bf16>
+    %v = tensor.extract %0[] : tensor<bf16>
     %vf = arith.extf %v: bf16 to f32
     vector.print %vf : f32
 
     // Release the resources.
-    memref.dealloc %xdata : memref<bf16>
-    sparse_tensor.release %a : tensor<?x?xbf16, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xbf16, #SparseMatrix>
 
     return
   }

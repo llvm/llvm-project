@@ -236,23 +236,21 @@ static Expected<SectionRename> parseRenameSectionValue(StringRef FlagValue) {
 }
 
 static Expected<std::pair<StringRef, uint64_t>>
-parseSetSectionAlignment(StringRef FlagValue) {
+parseSetSectionAttribute(StringRef Option, StringRef FlagValue) {
   if (!FlagValue.contains('='))
-    return createStringError(
-        errc::invalid_argument,
-        "bad format for --set-section-alignment: missing '='");
+    return make_error<StringError>("bad format for " + Option + ": missing '='",
+                                   errc::invalid_argument);
   auto Split = StringRef(FlagValue).split('=');
   if (Split.first.empty())
-    return createStringError(
-        errc::invalid_argument,
-        "bad format for --set-section-alignment: missing section name");
-  uint64_t NewAlign;
-  if (Split.second.getAsInteger(0, NewAlign))
-    return createStringError(
-        errc::invalid_argument,
-        "invalid alignment for --set-section-alignment: '%s'",
-        Split.second.str().c_str());
-  return std::make_pair(Split.first, NewAlign);
+    return make_error<StringError>("bad format for " + Option +
+                                       ": missing section name",
+                                   errc::invalid_argument);
+  uint64_t Value;
+  if (Split.second.getAsInteger(0, Value))
+    return make_error<StringError>("invalid value for " + Option + ": '" +
+                                       Split.second + "'",
+                                   errc::invalid_argument);
+  return std::make_pair(Split.first, Value);
 }
 
 static Expected<SectionFlagsUpdate>
@@ -721,26 +719,16 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     }
   }
 
-  if (auto Arg = InputArgs.getLastArg(OBJCOPY_compress_debug_sections,
-                                      OBJCOPY_compress_debug_sections_eq)) {
-    Config.CompressionType = DebugCompressionType::Z;
-
-    if (Arg->getOption().getID() == OBJCOPY_compress_debug_sections_eq) {
-      Config.CompressionType =
-          StringSwitch<DebugCompressionType>(
-              InputArgs.getLastArgValue(OBJCOPY_compress_debug_sections_eq))
-              .Case("zlib-gnu", DebugCompressionType::GNU)
-              .Case("zlib", DebugCompressionType::Z)
-              .Default(DebugCompressionType::None);
-      if (Config.CompressionType == DebugCompressionType::None)
-        return createStringError(
-            errc::invalid_argument,
-            "invalid or unsupported --compress-debug-sections format: %s",
-            InputArgs.getLastArgValue(OBJCOPY_compress_debug_sections_eq)
-                .str()
-                .c_str());
-    }
-    if (!zlib::isAvailable())
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_compress_debug_sections)) {
+    Config.CompressionType = StringSwitch<DebugCompressionType>(A->getValue())
+                                 .Case("zlib", DebugCompressionType::Z)
+                                 .Default(DebugCompressionType::None);
+    if (Config.CompressionType == DebugCompressionType::None)
+      return createStringError(
+          errc::invalid_argument,
+          "invalid or unsupported --compress-debug-sections format: %s",
+          A->getValue());
+    if (!compression::zlib::isAvailable())
       return createStringError(
           errc::invalid_argument,
           "LLVM was not compiled with LLVM_ENABLE_ZLIB: can not compress");
@@ -794,7 +782,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   }
   for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_alignment)) {
     Expected<std::pair<StringRef, uint64_t>> NameAndAlign =
-        parseSetSectionAlignment(Arg->getValue());
+        parseSetSectionAttribute("--set-section-alignment", Arg->getValue());
     if (!NameAndAlign)
       return NameAndAlign.takeError();
     Config.SetSectionAlignment[NameAndAlign->first] = NameAndAlign->second;
@@ -810,22 +798,28 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
           "--set-section-flags set multiple times for section '%s'",
           SFU->Name.str().c_str());
   }
-  // Prohibit combinations of --set-section-flags when the section name is used
-  // by --rename-section, either as a source or a destination.
+  for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_type)) {
+    Expected<std::pair<StringRef, uint64_t>> NameAndType =
+        parseSetSectionAttribute("--set-section-type", Arg->getValue());
+    if (!NameAndType)
+      return NameAndType.takeError();
+    Config.SetSectionType[NameAndType->first] = NameAndType->second;
+  }
+  // Prohibit combinations of --set-section-{flags,type} when the section name
+  // is used as the destination of a --rename-section.
   for (const auto &E : Config.SectionsToRename) {
     const SectionRename &SR = E.second;
-    if (Config.SetSectionFlags.count(SR.OriginalName))
+    auto Err = [&](const char *Option) {
       return createStringError(
           errc::invalid_argument,
-          "--set-section-flags=%s conflicts with --rename-section=%s=%s",
-          SR.OriginalName.str().c_str(), SR.OriginalName.str().c_str(),
-          SR.NewName.str().c_str());
-    if (Config.SetSectionFlags.count(SR.NewName))
-      return createStringError(
-          errc::invalid_argument,
-          "--set-section-flags=%s conflicts with --rename-section=%s=%s",
+          "--set-section-%s=%s conflicts with --rename-section=%s=%s", Option,
           SR.NewName.str().c_str(), SR.OriginalName.str().c_str(),
           SR.NewName.str().c_str());
+    };
+    if (Config.SetSectionFlags.count(SR.NewName))
+      return Err("flags");
+    if (Config.SetSectionType.count(SR.NewName))
+      return Err("type");
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
@@ -999,7 +993,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         "--decompress-debug-sections");
   }
 
-  if (Config.DecompressDebugSections && !zlib::isAvailable())
+  if (Config.DecompressDebugSections && !compression::zlib::isAvailable())
     return createStringError(
         errc::invalid_argument,
         "LLVM was not compiled with LLVM_ENABLE_ZLIB: cannot decompress");

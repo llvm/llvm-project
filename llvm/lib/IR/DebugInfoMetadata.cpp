@@ -807,7 +807,7 @@ DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
   assert((!Source || isCanonical(*Source)) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIFile, (Filename, Directory, CS, Source));
   Metadata *Ops[] = {Filename, Directory, CS ? CS->Value : nullptr,
-                     Source.getValueOr(nullptr)};
+                     Source.value_or(nullptr)};
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
 }
 DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
@@ -1582,7 +1582,7 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   //
   // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
   Optional<FragmentInfo> FI = Expr->getFragmentInfo();
-  unsigned DropUntilStackValue = FI.hasValue() ? 3 : 0;
+  unsigned DropUntilStackValue = FI ? 3 : 0;
   ArrayRef<uint64_t> ExprOpsBeforeFragment =
       Expr->getElements().drop_back(DropUntilStackValue);
   bool NeedsDeref = (Expr->getNumElements() > DropUntilStackValue) &&

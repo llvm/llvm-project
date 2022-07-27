@@ -1302,7 +1302,7 @@ bool ObjectFileMachO::IsStripped() {
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const lldb::offset_t load_cmd_offset = offset;
 
-        llvm::MachO::load_command lc;
+        llvm::MachO::load_command lc = {};
         if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
           break;
         if (lc.cmd == LC_DYSYMTAB) {
@@ -1932,10 +1932,10 @@ public:
           if (first_section_sp)
             filename = first_section_sp->GetObjectFile()->GetFileSpec().GetPath();
 
-          Host::SystemLog(Host::eSystemLogError,
-                          "error: unable to find section %d for a symbol in "
-                          "%s, corrupt file?\n",
-                          n_sect, filename.c_str());
+          Debugger::ReportError(
+              llvm::formatv("unable to find section {0} for a symbol in "
+                            "{1}, corrupt file?",
+                            n_sect, filename));
         }
       }
       if (m_section_infos[n_sect].vm_range.Contains(file_addr)) {
@@ -2804,12 +2804,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                       // No symbol should be NULL, even the symbols with no
                       // string values should have an offset zero which
                       // points to an empty C-string
-                      Host::SystemLog(
-                          Host::eSystemLogError,
-                          "error: DSC unmapped local symbol[%u] has invalid "
-                          "string table offset 0x%x in %s, ignoring symbol\n",
+                      Debugger::ReportError(llvm::formatv(
+                          "DSC unmapped local symbol[{0}] has invalid "
+                          "string table offset {1:x} in {2}, ignoring symbol",
                           nlist_index, nlist.n_strx,
-                          module_sp->GetFileSpec().GetPath().c_str());
+                          module_sp->GetFileSpec().GetPath());
                       continue;
                     }
                     if (symbol_name[0] == '\0')
@@ -3730,11 +3729,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
         if (symbol_name == nullptr) {
           // No symbol should be NULL, even the symbols with no string values
           // should have an offset zero which points to an empty C-string
-          Host::SystemLog(Host::eSystemLogError,
-                          "error: symbol[%u] has invalid string table offset "
-                          "0x%x in %s, ignoring symbol\n",
-                          nlist_idx, nlist.n_strx,
-                          module_sp->GetFileSpec().GetPath().c_str());
+          Debugger::ReportError(llvm::formatv(
+              "symbol[{0}] has invalid string table offset {1:x} in {2}, "
+              "ignoring symbol",
+              nlist_idx, nlist.n_strx, module_sp->GetFileSpec().GetPath()));
           return true;
         }
         if (symbol_name[0] == '\0')
@@ -5423,7 +5421,7 @@ std::string ObjectFileMachO::GetIdentifierString() {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
-      llvm::MachO::load_command lc;
+      llvm::MachO::load_command lc = {};
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == LC_NOTE) {
@@ -5490,7 +5488,7 @@ addr_t ObjectFileMachO::GetAddressMask() {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
-      llvm::MachO::load_command lc;
+      llvm::MachO::load_command lc = {};
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == LC_NOTE) {
@@ -5537,7 +5535,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
-      llvm::MachO::load_command lc;
+      llvm::MachO::load_command lc = {};
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == LC_NOTE) {
@@ -5947,7 +5945,7 @@ llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t load_cmd_offset = offset;
 
-      llvm::MachO::version_min_command lc;
+      llvm::MachO::version_min_command lc = {};
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
@@ -6003,12 +6001,12 @@ llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
 }
 
 llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
-  if (!m_sdk_versions.hasValue()) {
+  if (!m_sdk_versions) {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t load_cmd_offset = offset;
 
-      llvm::MachO::version_min_command lc;
+      llvm::MachO::version_min_command lc = {};
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
@@ -6032,12 +6030,12 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
       offset = load_cmd_offset + lc.cmdsize;
     }
 
-    if (!m_sdk_versions.hasValue()) {
+    if (!m_sdk_versions) {
       offset = MachHeaderSizeFromMagic(m_header.magic);
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const lldb::offset_t load_cmd_offset = offset;
 
-        llvm::MachO::version_min_command lc;
+        llvm::MachO::version_min_command lc = {};
         if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
           break;
         if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
@@ -6069,11 +6067,11 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
       }
     }
 
-    if (!m_sdk_versions.hasValue())
+    if (!m_sdk_versions)
       m_sdk_versions = llvm::VersionTuple();
   }
 
-  return m_sdk_versions.getValue();
+  return *m_sdk_versions;
 }
 
 bool ObjectFileMachO::GetIsDynamicLinkEditor() {
@@ -6518,8 +6516,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             addr_t pagesize = range_info.GetPageSize();
             const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
                 range_info.GetDirtyPageList();
-            if (dirty_pages_only && dirty_page_list.hasValue()) {
-              for (addr_t dirtypage : dirty_page_list.getValue()) {
+            if (dirty_pages_only && dirty_page_list) {
+              for (addr_t dirtypage : dirty_page_list.value()) {
                 page_object obj;
                 obj.addr = dirtypage;
                 obj.size = pagesize;
@@ -6866,7 +6864,7 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const uint32_t cmd_offset = offset;
-    llvm::MachO::load_command lc;
+    llvm::MachO::load_command lc = {};
     if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
       break;
     if (lc.cmd == LC_NOTE) {

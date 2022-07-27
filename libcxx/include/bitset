@@ -1090,7 +1090,7 @@ operator^(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT
 
 template <size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS hash<bitset<_Size> >
-    : public unary_function<bitset<_Size>, size_t>
+    : public __unary_function<bitset<_Size>, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const bitset<_Size>& __bs) const _NOEXCEPT

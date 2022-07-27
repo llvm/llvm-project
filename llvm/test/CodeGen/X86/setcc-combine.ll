@@ -240,10 +240,10 @@ define i32 @test_gt_2(<4 x i32> %A, <4 x i32> %B) {
 
 ; (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
 ; Don't combine with i1 - out of range constant
-define void @test_i1_uge(i1 *%A2) {
+define void @test_i1_uge(ptr%A2) {
 ; CHECK-LABEL: test_i1_uge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    xorb $1, %cl
 ; CHECK-NEXT:    andb %cl, %al
@@ -253,12 +253,12 @@ define void @test_i1_uge(i1 *%A2) {
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    movb %cl, (%rdi,%rax)
 ; CHECK-NEXT:    retq
-  %L5 = load i1, i1* %A2
+  %L5 = load i1, ptr %A2
   %C3 = icmp ne i1 %L5, true
   %C8 = icmp eq i1 %L5, false
   %C9 = icmp ugt i1 %C3, %C8
-  %G3 = getelementptr i1, i1* %A2, i1 %C9
-  store i1 %C3, i1* %G3
+  %G3 = getelementptr i1, ptr %A2, i1 %C9
+  store i1 %C3, ptr %G3
   ret void
 }
 

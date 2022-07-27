@@ -31,7 +31,7 @@ static ConstantIntRanges computeBoundsBy(ConstArithFn op, const APInt &minLeft,
                                          const APInt &maxRight, bool isSigned) {
   Optional<APInt> maybeMin = op(minLeft, minRight);
   Optional<APInt> maybeMax = op(maxLeft, maxRight);
-  if (maybeMin.hasValue() && maybeMax.hasValue())
+  if (maybeMin && maybeMax)
     return ConstantIntRanges::range(*maybeMin, *maybeMax, isSigned);
   return ConstantIntRanges::maxRange(minLeft.getBitWidth());
 }

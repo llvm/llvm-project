@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -49,7 +50,7 @@ struct BubbleUpExtractSliceOpPattern
 
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const final {
-    Value source = sliceOp.source();
+    Value source = sliceOp.getSource();
     auto linalgOp = source.getDefiningOp<LinalgOp>();
     if (!linalgOp) {
       return rewriter.notifyMatchFailure(sliceOp,
@@ -88,40 +89,35 @@ struct BubbleUpExtractSliceOpPattern
     }
 
     auto linalgLoc = linalgOp.getLoc();
-    auto allShapeSizes =
+    SmallVector<OpFoldResult> allShapeSizes =
         linalgOp.createFlatListOfOperandDims(rewriter, linalgLoc);
     AffineMap shapeSizesToLoopsMap = linalgOp.getShapesToLoopsMap();
     if (!shapeSizesToLoopsMap) {
       return rewriter.notifyMatchFailure(
           linalgOp, "failed to get loops map from shape sizes");
     }
-    auto sizeBounds = applyMapToValues(rewriter, linalgLoc,
-                                       shapeSizesToLoopsMap, allShapeSizes);
-
-    auto sliceLoc = sliceOp.getLoc();
-    auto offsetVals = getValueOrCreateConstantIndexOp(
-        rewriter, sliceLoc, sliceOp.getMixedOffsets());
-    auto sizeVals = getValueOrCreateConstantIndexOp(rewriter, sliceLoc,
-                                                    sliceOp.getMixedSizes());
+    SmallVector<OpFoldResult> sizeBounds =
+        makeComposedFoldedMultiResultAffineApply(
+            rewriter, linalgLoc, shapeSizesToLoopsMap, allShapeSizes);
 
     // The offsets and sizes from the slice operation only give you the tile
     // size of the output. Use that compute the tile sizes and offsets of the
     // loops. For loops not used to access the output, set the tile sizes to
     // loop bounds and set the offset to 0.
-    Value zero = rewriter.create<arith::ConstantIndexOp>(linalgLoc, 0);
-    SmallVector<Value, 4> tileOffsets(sizeBounds.size(), zero);
-    SmallVector<Value, 4> tileSizes = sizeBounds;
+    SmallVector<OpFoldResult> tileOffsets(sizeBounds.size(),
+                                          rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> tileSizes = sizeBounds;
     for (auto const &result : enumerate(indexingMap.getResults())) {
       unsigned position = result.value().cast<AffineDimExpr>().getPosition();
-      tileOffsets[position] = offsetVals[result.index()];
-      tileSizes[position] = sizeVals[result.index()];
+      tileOffsets[position] = sliceOp.getMixedOffsets()[result.index()];
+      tileSizes[position] = sliceOp.getMixedSizes()[result.index()];
     }
 
     SmallVector<Value> valuesToTile = linalgOp.getInputAndOutputOperands();
-
-    SmallVector<Value, 4> tiledOperands = makeTiledShapes(
-        rewriter, linalgLoc, linalgOp, valuesToTile, tileOffsets, tileSizes,
-        sizeBounds, /*omitPartialTileCheck=*/true);
+    SmallVector<Value> tiledOperands =
+        makeTiledShapes(rewriter, linalgLoc, linalgOp, valuesToTile,
+                        tileOffsets, tileSizes, sizeBounds,
+                        /*omitPartialTileCheck=*/true);
 
     SmallVector<Type, 4> resultTensorTypes;
     for (OpOperand *opOperand : linalgOp.getOutputTensorOperands())

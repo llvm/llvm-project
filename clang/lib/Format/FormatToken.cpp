@@ -264,7 +264,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // We can never place more than ColumnLimit / 3 items in a row (because of the
   // spaces and the comma).
   unsigned MaxItems = Style.ColumnLimit / 3;
-  std::vector<unsigned> MinSizeInColumn;
+  SmallVector<unsigned> MinSizeInColumn;
   MinSizeInColumn.reserve(MaxItems);
   for (unsigned Columns = 1; Columns <= MaxItems; ++Columns) {
     ColumnFormat Format;

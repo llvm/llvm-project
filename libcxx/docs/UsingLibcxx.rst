@@ -34,27 +34,29 @@ matches that Standard in the library.
   library until the standard has been ratified.
 
 
-Using libc++experimental and ``<experimental/...>``
-===================================================
+Enabling experimental C++ Library features
+==========================================
 
-Libc++ provides implementations of experimental technical specifications
-in a separate library, ``libc++experimental.a``. Users of ``<experimental/...>``
-headers may be required to link ``-lc++experimental``. Note that not all
-vendors ship ``libc++experimental.a``, and as a result, you may not be
-able to use those experimental features.
-
-.. code-block:: bash
-
-  $ clang++ test.cpp -lc++experimental
+Libc++ provides implementations of some experimental features. Experimental features
+are either Technical Specifications (TSes) or official features that were voted to
+the Standard but whose implementation is not complete or stable yet in libc++. Those
+are disabled by default because they are neither API nor ABI stable. However, the
+``-fexperimental-library`` compiler flag can be defined to turn those features on.
 
 .. warning::
-  Experimental libraries are Experimental.
-    * The contents of the ``<experimental/...>`` headers and ``libc++experimental.a``
+  Experimental libraries are experimental.
+    * The contents of the ``<experimental/...>`` headers and the associated static
       library will not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
     * When the standardized version of an experimental feature is implemented,
       the experimental feature is removed two releases after the non-experimental
       version has shipped. The full policy is explained :ref:`here <experimental features>`.
+
+.. note::
+  On compilers that do not support the ``-fexperimental-library`` flag, users can
+  define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against the
+  appropriate static library (usually shipped as ``libc++experimental.a``) to get
+  access to experimental library features.
 
 
 Using libc++ when it is not the system default
@@ -161,7 +163,7 @@ Replacing the default assertion handler is done by defining the following functi
 
 .. code-block:: cpp
 
-  void __libcpp_assertion_handler(char const* file, int line, char const* expression, char const* message)
+  void __libcpp_assertion_handler(char const* format, ...)
 
 This mechanism is similar to how one can replace the default definition of ``operator new``
 and ``operator delete``. For example:
@@ -171,8 +173,12 @@ and ``operator delete``. For example:
   // In HelloWorldHandler.cpp
   #include <version> // must include any libc++ header before defining the handler (C compatibility headers excluded)
 
-  void std::__libcpp_assertion_handler(char const* file, int line, char const* expression, char const* message) {
-    std::printf("Assertion %s failed at %s:%d, more info: %s", expression, file, line, message);
+  void std::__libcpp_assertion_handler(char const* format, ...) {
+    va_list list;
+    va_start(list, format);
+    std::vfprintf(stderr, format, list);
+    va_end(list);
+
     std::abort();
   }
 
@@ -298,8 +304,8 @@ C++17 Specific Configuration Macros
   This macro is used to re-enable `set_unexpected`, `get_unexpected`, and
   `unexpected`.
 
-C++20 Specific Configuration Macros:
-------------------------------------
+C++20 Specific Configuration Macros
+-----------------------------------
 **_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17**:
   This macro can be used to disable diagnostics emitted from functions marked
   ``[[nodiscard]]`` in dialects after C++17.  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
@@ -429,3 +435,12 @@ which no dialect declares as such (See the second form described above).
 * ``identity::operator()``
 * ``to_integer``
 * ``to_underlying``
+
+Additional types supported in random distributions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The `C++ Standard <http://eel.is/c++draft/rand#req.genl-1.5>`_ mentions that instantiating several random number
+distributions with types other than ``short``, ``int``, ``long``, ``long long``, and their unsigned versions is
+undefined. As an extension, libc++ supports instantiating ``binomial_distribution``, ``discrete_distribution``,
+``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``, and ``uniform_int_distribution``
+with ``int8_t``, ``__int128_t`` and their unsigned versions.

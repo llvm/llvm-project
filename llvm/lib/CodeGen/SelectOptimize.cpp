@@ -433,7 +433,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
         DebugPseudoINS.push_back(&*DIt);
       DIt++;
     }
-    for (auto DI : DebugPseudoINS) {
+    for (auto *DI : DebugPseudoINS) {
       DI->moveBefore(&*EndBlock->getFirstInsertionPt());
     }
 
@@ -862,7 +862,7 @@ bool SelectOptimize::computeLoopCosts(
           }
         }
         auto ILatency = computeInstCost(&I);
-        if (!ILatency.hasValue()) {
+        if (!ILatency) {
           OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti", &I);
           ORmissL << "Invalid instruction cost preventing analysis and "
                      "optimization of the inner-most loop containing this "
@@ -870,8 +870,8 @@ bool SelectOptimize::computeLoopCosts(
           ORE->emit(ORmissL);
           return false;
         }
-        IPredCost += Scaled64::get(ILatency.getValue());
-        INonPredCost += Scaled64::get(ILatency.getValue());
+        IPredCost += Scaled64::get(ILatency.value());
+        INonPredCost += Scaled64::get(ILatency.value());
 
         // For a select that can be converted to branch,
         // compute its cost as a branch (non-predicated cost).
@@ -924,7 +924,7 @@ Optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
   InstructionCost ICost =
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
   if (auto OC = ICost.getValue())
-    return Optional<uint64_t>(OC.getValue());
+    return Optional<uint64_t>(*OC);
   return Optional<uint64_t>(None);
 }
 

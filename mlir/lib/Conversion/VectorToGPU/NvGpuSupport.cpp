@@ -124,6 +124,14 @@ getMmaSyncRegisterType(const WarpMatrixInfo &type) {
         LLVM::getFixedVectorType(IntegerType::get(ctx, 8), 4), 4, 32,
         inferNumRegistersPerMatrixFragment(type)};
   }
+
+  // int4 operand
+  if (elType.isInteger(4)) {
+    return FragmentElementInfo{
+        LLVM::getFixedVectorType(IntegerType::get(ctx, 4), 8), 8, 32,
+        inferNumRegistersPerMatrixFragment(type)};
+  }
+
   // Integer 32bit acc operands
   if (elType.isInteger(32)) {
     return FragmentElementInfo{
@@ -212,7 +220,7 @@ FailureOr<nvgpu::LdMatrixParams> getLdMatrixParams(const WarpMatrixInfo &type,
   params.contiguousDimType =
       transpose ? IteratorType::Parallel : IteratorType::Reduction;
 
-  if (params.targetLayout == NVVM::MMALayout::row) {
+  if (params.contiguousDimType == IteratorType::Reduction) {
     params.numTiles = (shape[0] / kNumRowsPerTile) *
                       ((shape[1] * elType.getIntOrFloatBitWidth()) / 128);
   } else {
@@ -282,7 +290,7 @@ PrepareContractToGPUMMASync::matchAndRewrite(vector::ContractionOp op,
   bindDims(rewriter.getContext(), m, n, k);
   static constexpr std::array<int64_t, 2> perm = {1, 0};
   auto iteratorTypes = op.getIteratorTypes().getValue();
-  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
+  SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
   if (iteratorTypes.size() != 3)
     return failure();
   if (!(isParallelIterator(iteratorTypes[0]) &&

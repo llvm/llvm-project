@@ -22,7 +22,7 @@ recog_memoized.exit52:                            ; preds = %cond_true818.i
   ]
 
 bb857.i:                                          ; preds = %bb886.i, %bb866.i
-  %tmp862.i494.24 = phi i8* [ null, %bb866.i ], [ %tmp862.i494.26, %bb886.i ] ; <i8*> [#uses=1]
+  %tmp862.i494.24 = phi ptr [ null, %bb866.i ], [ %tmp862.i494.26, %bb886.i ] ; <ptr> [#uses=1]
   switch i32 0, label %bb886.i.preheader [
     i32 0, label %bb907.i
     i32 44, label %bb866.i
@@ -57,7 +57,7 @@ bb886.i.preheader.loopexit:                       ; preds = %bb874.i
   ret void
 
 bb886.i.preheader:                                ; preds = %bb857.i, %recog_memoized.exit52
-  %tmp862.i494.26 = phi i8* [ undef, %recog_memoized.exit52 ], [ %tmp862.i494.24, %bb857.i ] ; <i8*> [#uses=1]
+  %tmp862.i494.26 = phi ptr [ undef, %recog_memoized.exit52 ], [ %tmp862.i494.24, %bb857.i ] ; <ptr> [#uses=1]
   br label %bb886.i
 
 bb886.i:                                          ; preds = %cond_true903.i, %bb886.i.preheader

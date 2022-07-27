@@ -311,7 +311,7 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   Record.push_back(D->isReferenced());
   Record.push_back(D->isTopLevelDeclInObjCContainer());
   Record.push_back(D->getAccess());
-  Record.push_back(D->isModulePrivate());
+  Record.push_back((uint64_t)D->getModuleOwnershipKind());
   Record.push_back(Writer.getSubmoduleID(D->getOwningModule()));
 
   // If this declaration injected a name into a context different from its
@@ -584,6 +584,9 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->getTemplatedKind());
   switch (D->getTemplatedKind()) {
   case FunctionDecl::TK_NonTemplate:
+    break;
+  case FunctionDecl::TK_DependentNonTemplate:
+    Record.AddDeclRef(D->getInstantiatedFromDecl());
     break;
   case FunctionDecl::TK_FunctionTemplate:
     Record.AddDeclRef(D->getDescribedFunctionTemplate());
@@ -1928,7 +1931,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
   Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));  // AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));  // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -1961,7 +1964,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
   Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));  // AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));  // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -1999,7 +2002,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
   Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
   Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2049,7 +2052,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
   Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
   Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2111,7 +2114,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
   Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
   Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2159,7 +2162,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isReferenced
   Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2188,7 +2191,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
   Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
   Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2240,7 +2243,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Referenced
   Abv->Add(BitCodeAbbrevOp(0));                         // InObjCContainer
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // Access
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ModulePrivate
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(DeclarationName::Identifier)); // NameKind

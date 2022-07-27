@@ -262,6 +262,55 @@ Backport Requests
 
 Instructions for requesting a backport to a stable branch can be found :doc:`here <GitHub>`.
 
+Triaging Bug Reports for Releases
+---------------------------------
+
+This section describes how to triage bug reports:
+
+#. Search for bugs with a Release Milestone that have not been added to the
+   "Release Status" github project:
+
+   https://github.com/llvm/llvm-project/issues?q=is%3Aissue+milestone%3A%22LLVM+14.0.5+Release%22+no%3Aproject+
+
+   Replace 14.0.5 in this query with the version from the Release Milestone being
+   targeted.
+
+   Add these bugs to the "Release Status" project.
+
+#. Navigate to the `Release Status project <https://github.com/orgs/llvm/projects/3>`_
+   to see the list of bugs that are being considered for the release.
+
+#. Review each bug and first check if it has been fixed in main.  If it has, update
+   its status to "Needs Pull Request", and create a pull request for the fix
+   using the /cherry-pick or /branch comments if this has not been done already.
+
+#. If a bug has been fixed and has a pull request created for backporting it,
+   then update its status to "Needs Review" and notify a knowledgeable reviewer.
+   Usually you will want to notify the person who approved the patch in Phabricator,
+   but you may use your best judgement on who a good reviewer would be.  Once
+   you have identified the reviewer(s), assign the issue to them and mention
+   them (i.e @username) in a comment and ask them if the patch is safe to backport.
+   You should also review the bug yourself to ensure that it meets the requirements
+   for committing to the release branch.
+
+#. Once a bug has been reviewed, add the release:reviewed label and update the
+   issue's status to "Needs Merge".  Check the pull request associated with the
+   issue.  If all the tests pass, then the pull request can be merged.  If not,
+   then add a comment on the issue asking someone to take a look at the failures.
+
+#. Once the pull request has been merged push it to the official release branch:
+
+   ::
+
+      git checkout release/XX.x
+      git pull --ff-only https://github.com/llvm/llvm-project-release-prs release/XX.x
+      git push https://github.com/llvm/llvm-project release/XX.x:release/XX.x
+
+   Then add a comment to the issue stating that the fix has been merged along with
+   the git hashes from the release branch.  Add the release:merged label to the issue
+   and close it.
+
+
 Release Patch Rules
 -------------------
 

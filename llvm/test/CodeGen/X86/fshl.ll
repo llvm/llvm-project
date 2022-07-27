@@ -17,7 +17,7 @@ declare i128 @llvm.fshl.i128(i128, i128, i128) nounwind readnone
 define i8 @var_shift_i8(i8 %x, i8 %y, i8 %z) nounwind {
 ; X86-LABEL: var_shift_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
@@ -48,14 +48,14 @@ define i16 @var_shift_i16(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-FAST:       # %bb.0:
 ; X86-FAST-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-FAST-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-FAST-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-FAST-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-FAST-NEXT:    andb $15, %cl
 ; X86-FAST-NEXT:    shldw %cl, %dx, %ax
 ; X86-FAST-NEXT:    retl
 ;
 ; X86-SLOW-LABEL: var_shift_i16:
 ; X86-SLOW:       # %bb.0:
-; X86-SLOW-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-SLOW-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SLOW-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    shll $16, %eax
@@ -95,7 +95,7 @@ define i16 @var_shift_i16(i16 %x, i16 %y, i16 %z) nounwind {
 define i32 @var_shift_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-FAST-LABEL: var_shift_i32:
 ; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-FAST-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-FAST-NEXT:    shldl %cl, %edx, %eax
@@ -104,7 +104,7 @@ define i32 @var_shift_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-SLOW-LABEL: var_shift_i32:
 ; X86-SLOW:       # %bb.0:
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLOW-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-SLOW-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    shll %cl, %edx
 ; X86-SLOW-NEXT:    notb %cl
@@ -446,8 +446,8 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 define i8 @const_shift_i8(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: const_shift_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shrb %cl
 ; X86-NEXT:    shlb $7, %al
 ; X86-NEXT:    orb %cl, %al
@@ -584,25 +584,25 @@ define i64 @const_shift_i64(i64 %x, i64 %y) nounwind {
 ; Combine Consecutive Loads
 ;
 
-define i8 @combine_fshl_load_i8(i8* %p) nounwind {
+define i8 @combine_fshl_load_i8(ptr %p) nounwind {
 ; X86-LABEL: combine_fshl_load_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb 1(%eax), %al
+; X86-NEXT:    movzbl 1(%eax), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_fshl_load_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movb 1(%rdi), %al
+; X64-NEXT:    movzbl 1(%rdi), %eax
 ; X64-NEXT:    retq
-  %p1 = getelementptr i8, i8* %p, i32 1
-  %ld0 = load i8, i8 *%p
-  %ld1 = load i8, i8 *%p1
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %ld0 = load i8, ptr%p
+  %ld1 = load i8, ptr%p1
   %res = call i8 @llvm.fshl.i8(i8 %ld1, i8 %ld0, i8 8)
   ret i8 %res
 }
 
-define i16 @combine_fshl_load_i16(i16* %p) nounwind {
+define i16 @combine_fshl_load_i16(ptr %p) nounwind {
 ; X86-LABEL: combine_fshl_load_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -613,15 +613,14 @@ define i16 @combine_fshl_load_i16(i16* %p) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl 1(%rdi), %eax
 ; X64-NEXT:    retq
-  %p0 = getelementptr i16, i16* %p, i32 0
-  %p1 = getelementptr i16, i16* %p, i32 1
-  %ld0 = load i16, i16 *%p0
-  %ld1 = load i16, i16 *%p1
+  %p1 = getelementptr i16, ptr %p, i32 1
+  %ld0 = load i16, ptr%p
+  %ld1 = load i16, ptr%p1
   %res = call i16 @llvm.fshl.i16(i16 %ld1, i16 %ld0, i16 8)
   ret i16 %res
 }
 
-define i32 @combine_fshl_load_i32(i32* %p) nounwind {
+define i32 @combine_fshl_load_i32(ptr %p) nounwind {
 ; X86-LABEL: combine_fshl_load_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -632,15 +631,15 @@ define i32 @combine_fshl_load_i32(i32* %p) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl 11(%rdi), %eax
 ; X64-NEXT:    retq
-  %p0 = getelementptr i32, i32* %p, i32 2
-  %p1 = getelementptr i32, i32* %p, i32 3
-  %ld0 = load i32, i32 *%p0
-  %ld1 = load i32, i32 *%p1
+  %p0 = getelementptr i32, ptr %p, i32 2
+  %p1 = getelementptr i32, ptr %p, i32 3
+  %ld0 = load i32, ptr%p0
+  %ld1 = load i32, ptr%p1
   %res = call i32 @llvm.fshl.i32(i32 %ld1, i32 %ld0, i32 8)
   ret i32 %res
 }
 
-define i64 @combine_fshl_load_i64(i64* %p) nounwind {
+define i64 @combine_fshl_load_i64(ptr %p) nounwind {
 ; X86-LABEL: combine_fshl_load_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -652,10 +651,10 @@ define i64 @combine_fshl_load_i64(i64* %p) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq 13(%rdi), %rax
 ; X64-NEXT:    retq
-  %p0 = getelementptr i64, i64* %p, i64 1
-  %p1 = getelementptr i64, i64* %p, i64 2
-  %ld0 = load i64, i64 *%p0
-  %ld1 = load i64, i64 *%p1
+  %p0 = getelementptr i64, ptr %p, i64 1
+  %p1 = getelementptr i64, ptr %p, i64 2
+  %ld0 = load i64, ptr%p0
+  %ld1 = load i64, ptr%p1
   %res = call i64 @llvm.fshl.i64(i64 %ld1, i64 %ld0, i64 24)
   ret i64 %res
 }

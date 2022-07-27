@@ -53,25 +53,17 @@ public:
   }
 
   /// Return true if the constraint is perfectly constrained to 'true'.
-  bool isConstrainedTrue() const {
-    return Val.hasValue() && Val.getValue();
-  }
+  bool isConstrainedTrue() const { return Val && Val.value(); }
 
   /// Return true if the constraint is perfectly constrained to 'false'.
-  bool isConstrainedFalse() const {
-    return Val.hasValue() && !Val.getValue();
-  }
+  bool isConstrainedFalse() const { return Val && !Val.value(); }
 
   /// Return true if the constrained is perfectly constrained.
-  bool isConstrained() const {
-    return Val.hasValue();
-  }
+  bool isConstrained() const { return Val.has_value(); }
 
   /// Return true if the constrained is underconstrained and we do not know
   /// if the constraint is true of value.
-  bool isUnderconstrained() const {
-    return !Val.hasValue();
-  }
+  bool isUnderconstrained() const { return !Val.has_value(); }
 };
 
 class ConstraintManager {
@@ -126,6 +118,9 @@ public:
   virtual void printJson(raw_ostream &Out, ProgramStateRef State,
                          const char *NL, unsigned int Space,
                          bool IsDot) const = 0;
+
+  virtual void printValue(raw_ostream &Out, ProgramStateRef State,
+                          SymbolRef Sym) {}
 
   /// Convenience method to query the state to see if a symbol is null or
   /// not null, or if neither assumption can be made.

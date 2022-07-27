@@ -105,7 +105,6 @@ function generate-cmake-libcxx-win() {
     # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
     # when building tests) to allow enabling filesystem for running tests,
     # even if it uses a non-permanent ABI.
-
     generate-cmake-base \
           -DLLVM_ENABLE_RUNTIMES="libcxx" \
           -DCMAKE_C_COMPILER=clang-cl \
@@ -237,7 +236,7 @@ generic-debug-mode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
     check-runtimes
-    check-abi-list
+    # We don't check the ABI lists because the debug mode ABI is not stable
 ;;
 generic-noexceptions)
     clean
@@ -281,8 +280,8 @@ generic-clang-14)
     check-abi-list
 ;;
 generic-gcc)
-    export CC=gcc-11
-    export CXX=g++-11
+    export CC=gcc-12
+    export CXX=g++-12
     clean
     generate-cmake -DLIBCXX_ENABLE_WERROR=NO \
                    -DLIBCXXABI_ENABLE_WERROR=NO \
@@ -290,8 +289,8 @@ generic-gcc)
     check-runtimes
 ;;
 generic-gcc-cxx11)
-    export CC=gcc-11
-    export CXX=g++-11
+    export CC=gcc-12
+    export CXX=g++-12
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
                    -DLIBCXX_ENABLE_WERROR=NO \
@@ -322,6 +321,11 @@ generic-ubsan)
 generic-with_llvm_unwinder)
     clean
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
+    check-runtimes
+;;
+generic-no-transitive-includes)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-transitive-includes.cmake"
     check-runtimes
 ;;
 generic-no-threads)
@@ -408,6 +412,9 @@ apple-system-backdeployment-*)
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
     PARAMS+=";use_system_cxx_lib=True"
+    # TODO: Enable experimental features during back-deployment -- right now some of the availability
+    #       annotations are incorrect, leading to test failures that could be avoided.
+    PARAMS+=";enable_experimental=False"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
@@ -518,7 +525,7 @@ clang-cl-dll)
     # correctly when libc++ visibility attributes indicate dllimport linkage
     # anyway), thus just disable the experimental library. Remove this
     # setting when cmake and the test driver does the right thing automatically.
-    generate-cmake-libcxx-win -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False"
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;

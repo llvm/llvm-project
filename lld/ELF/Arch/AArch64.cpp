@@ -693,6 +693,11 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
     return false;
 
   Symbol &sym = *adrpRel.sym;
+  // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
+  // position-independent code because these instructions produce a relative
+  // address.
+  if (config->isPic && !cast<Defined>(sym).section)
+    return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
       getAArch64Page(sym.getVA()) - getAArch64Page(secAddr + adrpRel.offset);

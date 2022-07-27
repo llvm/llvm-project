@@ -258,7 +258,7 @@ static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
 static bool isInterestingExpr(const Expr *E, const ExplodedNode *N,
                               const PathSensitiveBugReport *B) {
   if (Optional<SVal> V = getSValForVar(E, N))
-    return B->getInterestingnessKind(*V).hasValue();
+    return B->getInterestingnessKind(*V).has_value();
   return false;
 }
 
@@ -530,9 +530,8 @@ public:
 private:
   /// \return Whether \c RegionOfInterest was modified at \p CurrN compared to
   /// the value it holds in \p CallExitBeginN.
-  virtual bool
-  wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
-                            const ExplodedNode *CallExitBeginN) override;
+  bool wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
+                                 const ExplodedNode *CallExitBeginN) override;
 
   /// Attempts to find the region of interest in a given record decl,
   /// by either following the base classes or fields.
@@ -547,19 +546,17 @@ private:
 
   // Region of interest corresponds to an IVar, exiting a method
   // which could have written into that IVar, but did not.
-  virtual PathDiagnosticPieceRef
-  maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
-                           const ObjCMethodCall &Call,
-                           const ExplodedNode *N) override final;
+  PathDiagnosticPieceRef maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
+                                                  const ObjCMethodCall &Call,
+                                                  const ExplodedNode *N) final;
 
-  virtual PathDiagnosticPieceRef
-  maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
-                          const CXXConstructorCall &Call,
-                          const ExplodedNode *N) override final;
+  PathDiagnosticPieceRef maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
+                                                 const CXXConstructorCall &Call,
+                                                 const ExplodedNode *N) final;
 
-  virtual PathDiagnosticPieceRef
+  PathDiagnosticPieceRef
   maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
-                             const ExplodedNode *N) override final;
+                             const ExplodedNode *N) final;
 
   /// Consume the information on the no-store stack frame in order to
   /// either emit a note or suppress the report enirely.
@@ -2355,7 +2352,7 @@ public:
       // well. Try to use the correct type when looking up the value.
       SVal RVal;
       if (ExplodedGraph::isInterestingLValueExpr(Inner))
-        RVal = LVState->getRawSVal(L.getValue(), Inner->getType());
+        RVal = LVState->getRawSVal(*L, Inner->getType());
       else if (CanDereference)
         RVal = LVState->getSVal(L->getRegion());
 
@@ -2949,8 +2946,8 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
 
   PathDiagnosticLocation Loc(Cond, SM, LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Message);
-  if (shouldPrune.hasValue())
-    event->setPrunable(shouldPrune.getValue());
+  if (shouldPrune)
+    event->setPrunable(shouldPrune.value());
   return event;
 }
 
@@ -3077,16 +3074,16 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
   if (!IsAssuming)
     IntValue = getConcreteIntegerValue(CondVarExpr, N);
 
-  if (IsAssuming || !IntValue.hasValue()) {
+  if (IsAssuming || !IntValue) {
     if (Ty->isBooleanType())
       Out << (TookTrue ? "true" : "false");
     else
       Out << (TookTrue ? "not equal to 0" : "0");
   } else {
     if (Ty->isBooleanType())
-      Out << (IntValue.getValue()->getBoolValue() ? "true" : "false");
+      Out << (IntValue.value()->getBoolValue() ? "true" : "false");
     else
-      Out << *IntValue.getValue();
+      Out << *IntValue.value();
   }
 
   return true;
@@ -3279,10 +3276,10 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
 
   // And check for satisfiability
   Optional<bool> IsSAT = RefutationSolver->check();
-  if (!IsSAT.hasValue())
+  if (!IsSAT)
     return;
 
-  if (!IsSAT.getValue())
+  if (!IsSAT.value())
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
 }
 

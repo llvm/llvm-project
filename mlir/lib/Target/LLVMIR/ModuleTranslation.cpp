@@ -485,17 +485,15 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
                                          const ModuleTranslation &state) {
   // Skip the first block, it cannot be branched to and its arguments correspond
   // to the arguments of the LLVM function.
-  for (auto it = std::next(region.begin()), eit = region.end(); it != eit;
-       ++it) {
-    Block *bb = &*it;
-    llvm::BasicBlock *llvmBB = state.lookupBlock(bb);
+  for (Block &bb : llvm::drop_begin(region)) {
+    llvm::BasicBlock *llvmBB = state.lookupBlock(&bb);
     auto phis = llvmBB->phis();
-    auto numArguments = bb->getNumArguments();
+    auto numArguments = bb.getNumArguments();
     assert(numArguments == std::distance(phis.begin(), phis.end()));
     for (auto &numberedPhiNode : llvm::enumerate(phis)) {
       auto &phiNode = numberedPhiNode.value();
       unsigned index = numberedPhiNode.index();
-      for (auto *pred : bb->getPredecessors()) {
+      for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
         // instruction and use it in the PHI node. Note that this block is not
         // necessarily the same as state.lookupBlock(pred), some operations
@@ -504,9 +502,9 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
         llvm::Instruction *terminator =
             state.lookupBranch(pred->getTerminator());
         assert(terminator && "missing the mapping for a terminator");
-        phiNode.addIncoming(
-            state.lookupValue(getPHISourceValue(bb, pred, numArguments, index)),
-            terminator->getParent());
+        phiNode.addIncoming(state.lookupValue(getPHISourceValue(
+                                &bb, pred, numArguments, index)),
+                            terminator->getParent());
       }
     }
   }
@@ -666,17 +664,17 @@ LogicalResult ModuleTranslation::convertGlobals() {
                              : llvm::GlobalValue::NotThreadLocal,
         addrSpace);
 
-    if (op.getUnnamedAddr().hasValue())
+    if (op.getUnnamedAddr().has_value())
       var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));
 
-    if (op.getSection().hasValue())
+    if (op.getSection().has_value())
       var->setSection(*op.getSection());
 
     addRuntimePreemptionSpecifier(op.getDsoLocal(), var);
 
     Optional<uint64_t> alignment = op.getAlignment();
-    if (alignment.hasValue())
-      var->setAlignment(llvm::MaybeAlign(alignment.getValue()));
+    if (alignment.has_value())
+      var->setAlignment(llvm::MaybeAlign(alignment.value()));
 
     globalsMapping.try_emplace(op, var);
   }
@@ -875,7 +873,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   }
 
   // Check the personality and set it.
-  if (func.getPersonality().hasValue()) {
+  if (func.getPersonality()) {
     llvm::Type *ty = llvm::Type::getInt8PtrTy(llvmFunc->getContext());
     if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
                                                 func.getLoc(), *this))
@@ -1005,7 +1003,7 @@ LogicalResult ModuleTranslation::createAliasScopeMetadata() {
       llvm::SmallVector<llvm::Metadata *, 2> operands;
       operands.push_back({}); // Placeholder for self-reference
       if (Optional<StringRef> description = op.getDescription())
-        operands.push_back(llvm::MDString::get(ctx, description.getValue()));
+        operands.push_back(llvm::MDString::get(ctx, *description));
       llvm::MDNode *domain = llvm::MDNode::get(ctx, operands);
       domain->replaceOperandWith(0, domain); // Self-reference for uniqueness
       aliasScopeDomainMetadataMapping.insert({op, domain});
@@ -1024,7 +1022,7 @@ LogicalResult ModuleTranslation::createAliasScopeMetadata() {
       operands.push_back({}); // Placeholder for self-reference
       operands.push_back(domain);
       if (Optional<StringRef> description = op.getDescription())
-        operands.push_back(llvm::MDString::get(ctx, description.getValue()));
+        operands.push_back(llvm::MDString::get(ctx, *description));
       llvm::MDNode *scope = llvm::MDNode::get(ctx, operands);
       scope->replaceOperandWith(0, scope); // Self-reference for uniqueness
       aliasScopeMetadataMapping.insert({op, scope});

@@ -1863,7 +1863,8 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
     def "_" # lmul.MX # "_" # emul.MX # "_TU": VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
                                                                      Constraint>;
     def "_" # lmul.MX # "_" # emul.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
-                                                                          Constraint>;
+                                                                          Constraint>,
+                                                  RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 

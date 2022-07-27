@@ -1203,7 +1203,7 @@ bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
   // destination. The check for isInvariantLoad gives the target the chance to
   // classify the load as always returning a constant, e.g. a constant pool
   // load.
-  if (mayLoad() && !isDereferenceableInvariantLoad(AA))
+  if (mayLoad() && !isDereferenceableInvariantLoad())
     // Otherwise, this is a real load.  If there is a store between the load and
     // end of block, we can't move it.
     return !SawStore;
@@ -1348,7 +1348,7 @@ bool MachineInstr::hasOrderedMemoryRef() const {
 /// isDereferenceableInvariantLoad - Return true if this instruction will never
 /// trap and is loading from a location whose value is invariant across a run of
 /// this function.
-bool MachineInstr::isDereferenceableInvariantLoad(AAResults *AA) const {
+bool MachineInstr::isDereferenceableInvariantLoad() const {
   // If the instruction doesn't load at all, it isn't an invariant load.
   if (!mayLoad())
     return false;
@@ -1371,15 +1371,8 @@ bool MachineInstr::isDereferenceableInvariantLoad(AAResults *AA) const {
       continue;
 
     // A load from a constant PseudoSourceValue is invariant.
-    if (const PseudoSourceValue *PSV = MMO->getPseudoValue())
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
       if (PSV->isConstant(&MFI))
-        continue;
-
-    if (const Value *V = MMO->getValue()) {
-      // If we have an AliasAnalysis, ask it whether the memory is constant.
-      if (AA &&
-          AA->pointsToConstantMemory(
-              MemoryLocation(V, MMO->getSize(), MMO->getAAInfo())))
         continue;
     }
 
@@ -2274,7 +2267,7 @@ using MMOList = SmallVector<const MachineMemOperand *, 2>;
 static unsigned getSpillSlotSize(const MMOList &Accesses,
                                  const MachineFrameInfo &MFI) {
   unsigned Size = 0;
-  for (auto A : Accesses)
+  for (const auto *A : Accesses)
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
                 ->getFrameIndex()))

@@ -8,7 +8,7 @@ declare void @leak(i32 %v1, i32 %v2)
 
 declare void @sink(i32)
 
-define i32 @test_trivial_entry_load(i32* %ptr) speculative_load_hardening {
+define i32 @test_trivial_entry_load(ptr %ptr) speculative_load_hardening {
 ; X64-LABEL: test_trivial_entry_load:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %rcx
@@ -25,11 +25,11 @@ define i32 @test_trivial_entry_load(i32* %ptr) speculative_load_hardening {
 ; X64-LFENCE-NEXT:    movl (%rdi), %eax
 ; X64-LFENCE-NEXT:    retq
 entry:
-  %v = load i32, i32* %ptr
+  %v = load i32, ptr %ptr
   ret i32 %v
 }
 
-define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr2, i32** %ptr3) speculative_load_hardening {
+define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2, ptr %ptr3) speculative_load_hardening {
 ; X64-LABEL: test_basic_conditions:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %r15
@@ -164,36 +164,36 @@ then2:
   br i1 %c.cmp, label %then3, label %else3
 
 then3:
-  %secret1 = load i32, i32* %ptr1
-  %secret2 = load i32, i32* %ptr2
+  %secret1 = load i32, ptr %ptr1
+  %secret2 = load i32, ptr %ptr2
   %secret.sum1 = add i32 %secret1, %secret2
-  %ptr2.idx = getelementptr i32, i32* %ptr2, i32 %secret.sum1
-  %secret3 = load i32, i32* %ptr2.idx
-  %secret4 = load i32*, i32** %ptr3
-  %secret5 = load i32, i32* %secret4
+  %ptr2.idx = getelementptr i32, ptr %ptr2, i32 %secret.sum1
+  %secret3 = load i32, ptr %ptr2.idx
+  %secret4 = load ptr, ptr %ptr3
+  %secret5 = load i32, ptr %secret4
   %secret.sum2 = add i32 %secret3, %secret5
   call void @leak(i32 %secret.sum1, i32 %secret.sum2)
   br label %merge
 
 else3:
-  %secret6 = load i32*, i32** %ptr3
-  %cast = ptrtoint i32* %secret6 to i32
-  %ptr2.idx2 = getelementptr i32, i32* %ptr2, i32 %cast
-  store i32 %cast, i32* %ptr2.idx2
+  %secret6 = load ptr, ptr %ptr3
+  %cast = ptrtoint ptr %secret6 to i32
+  %ptr2.idx2 = getelementptr i32, ptr %ptr2, i32 %cast
+  store i32 %cast, ptr %ptr2.idx2
   br label %merge
 
 merge:
-  %phi = phi i32* [ %secret4, %then3 ], [ %ptr2.idx2, %else3 ]
-  %secret7 = load i32, i32* %phi
-  %ptr2.idx3 = getelementptr i32, i32* %ptr2, i32 %secret7
-  store i32 0, i32* %ptr2.idx3
+  %phi = phi ptr [ %secret4, %then3 ], [ %ptr2.idx2, %else3 ]
+  %secret7 = load i32, ptr %phi
+  %ptr2.idx3 = getelementptr i32, ptr %ptr2, i32 %secret7
+  store i32 0, ptr %ptr2.idx3
   br label %exit
 
 exit:
   ret void
 }
 
-define void @test_basic_loop(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2) nounwind speculative_load_hardening {
+define void @test_basic_loop(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) nounwind speculative_load_hardening {
 ; X64-LABEL: test_basic_loop:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbp
@@ -289,9 +289,9 @@ entry:
 
 l.header:
   %i = phi i32 [ 0, %entry ], [ %i.next, %l.header ]
-  %secret = load i32, i32* %ptr1
-  %ptr2.idx = getelementptr i32, i32* %ptr2, i32 %secret
-  %leak = load i32, i32* %ptr2.idx
+  %secret = load i32, ptr %ptr1
+  %ptr2.idx = getelementptr i32, ptr %ptr2, i32 %secret
+  %leak = load i32, ptr %ptr2.idx
   call void @sink(i32 %leak)
   %i.next = add i32 %i, 1
   %i.cmp = icmp slt i32 %i.next, %b
@@ -301,7 +301,7 @@ exit:
   ret void
 }
 
-define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr2) nounwind speculative_load_hardening {
+define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2) nounwind speculative_load_hardening {
 ; X64-LABEL: test_basic_nested_loop:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbp
@@ -473,18 +473,18 @@ l1.header:
 
 l2.header:
   %j = phi i32 [ 0, %l1.header ], [ %j.next, %l2.header ]
-  %secret = load i32, i32* %ptr1
-  %ptr2.idx = getelementptr i32, i32* %ptr2, i32 %secret
-  %leak = load i32, i32* %ptr2.idx
+  %secret = load i32, ptr %ptr1
+  %ptr2.idx = getelementptr i32, ptr %ptr2, i32 %secret
+  %leak = load i32, ptr %ptr2.idx
   call void @sink(i32 %leak)
   %j.next = add i32 %j, 1
   %j.cmp = icmp slt i32 %j.next, %c
   br i1 %j.cmp, label %l2.header, label %l1.latch
 
 l1.latch:
-  %secret2 = load i32, i32* %ptr1
-  %ptr2.idx2 = getelementptr i32, i32* %ptr2, i32 %secret2
-  %leak2 = load i32, i32* %ptr2.idx2
+  %secret2 = load i32, ptr %ptr1
+  %ptr2.idx2 = getelementptr i32, ptr %ptr2, i32 %secret2
+  %leak2 = load i32, ptr %ptr2.idx2
   call void @sink(i32 %leak2)
   %i.next = add i32 %i, 1
   %i.cmp = icmp slt i32 %i.next, %b
@@ -496,37 +496,35 @@ exit:
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+declare ptr @__cxa_allocate_exception(i64) local_unnamed_addr
 
-declare void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
+declare void @__cxa_throw(ptr, ptr, ptr) local_unnamed_addr
 
-define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) speculative_load_hardening personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test_basic_eh(i32 %a, ptr %ptr1, ptr %ptr2) speculative_load_hardening personality ptr @__gxx_personality_v0 {
 entry:
   %a.cmp = icmp slt i32 %a, 42
   br i1 %a.cmp, label %thrower, label %exit
 
 thrower:
-  %badidx = getelementptr i32, i32* %ptr1, i32 %a
-  %secret1 = load i32, i32* %badidx
-  %e.ptr = call i8* @__cxa_allocate_exception(i64 4)
-  %e.ptr.cast = bitcast i8* %e.ptr to i32*
-  store i32 %secret1, i32* %e.ptr.cast
-  invoke void @__cxa_throw(i8* %e.ptr, i8* null, i8* null)
+  %badidx = getelementptr i32, ptr %ptr1, i32 %a
+  %secret1 = load i32, ptr %badidx
+  %e.ptr = call ptr @__cxa_allocate_exception(i64 4)
+  store i32 %secret1, ptr %e.ptr
+  invoke void @__cxa_throw(ptr %e.ptr, ptr null, ptr null)
           to label %exit unwind label %lpad
 
 exit:
   ret void
 
 lpad:
-  %e = landingpad { i8*, i32 }
-          catch i8* null
-  %e.catch.ptr = extractvalue { i8*, i32 } %e, 0
-  %e.catch.ptr.cast = bitcast i8* %e.catch.ptr to i32*
-  %secret1.catch = load i32, i32* %e.catch.ptr.cast
-  %secret2 = load i32, i32* %ptr1
+  %e = landingpad { ptr, i32 }
+          catch ptr null
+  %e.catch.ptr = extractvalue { ptr, i32 } %e, 0
+  %secret1.catch = load i32, ptr %e.catch.ptr
+  %secret2 = load i32, ptr %ptr1
   %secret.sum = add i32 %secret1.catch, %secret2
-  %ptr2.idx = getelementptr i32, i32* %ptr2, i32 %secret.sum
-  %leak = load i32, i32* %ptr2.idx
+  %ptr2.idx = getelementptr i32, ptr %ptr2, i32 %secret.sum
+  %leak = load i32, ptr %ptr2.idx
   call void @sink(i32 %leak)
   unreachable
 }
@@ -535,7 +533,7 @@ declare void @sink_float(float)
 declare void @sink_double(double)
 
 ; Test direct and converting loads of floating point values.
-define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64ptr) nounwind speculative_load_hardening {
+define void @test_fp_loads(ptr %fptr, ptr %dptr, ptr %i32ptr, ptr %i64ptr) nounwind speculative_load_hardening {
 ; X64-LABEL: test_fp_loads:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %r15
@@ -689,26 +687,26 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-LFENCE-NEXT:    popq %r15
 ; X64-LFENCE-NEXT:    retq
 entry:
-  %f1 = load float, float* %fptr
+  %f1 = load float, ptr %fptr
   call void @sink_float(float %f1)
-  %d1 = load double, double* %dptr
+  %d1 = load double, ptr %dptr
   call void @sink_double(double %d1)
-  %f2.d = load double, double* %dptr
+  %f2.d = load double, ptr %dptr
   %f2 = fptrunc double %f2.d to float
   call void @sink_float(float %f2)
-  %d2.f = load float, float* %fptr
+  %d2.f = load float, ptr %fptr
   %d2 = fpext float %d2.f to double
   call void @sink_double(double %d2)
-  %f3.i = load i32, i32* %i32ptr
+  %f3.i = load i32, ptr %i32ptr
   %f3 = sitofp i32 %f3.i to float
   call void @sink_float(float %f3)
-  %d3.i = load i64, i64* %i64ptr
+  %d3.i = load i64, ptr %i64ptr
   %d3 = sitofp i64 %d3.i to double
   call void @sink_double(double %d3)
-  %f4.i = load i64, i64* %i64ptr
+  %f4.i = load i64, ptr %i64ptr
   %f4 = sitofp i64 %f4.i to float
   call void @sink_float(float %f4)
-  %d4.i = load i32, i32* %i32ptr
+  %d4.i = load i32, ptr %i32ptr
   %d4 = sitofp i32 %d4.i to double
   call void @sink_double(double %d4)
   ret void
@@ -722,7 +720,7 @@ declare void @sink_v4i32(<4 x i32>)
 declare void @sink_v2i64(<2 x i64>)
 
 ; Test loads of vectors.
-define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16 x i8>* %v16i8ptr, <8 x i16>* %v8i16ptr, <4 x i32>* %v4i32ptr, <2 x i64>* %v2i64ptr) nounwind speculative_load_hardening {
+define void @test_vec_loads(ptr %v4f32ptr, ptr %v2f64ptr, ptr %v16i8ptr, ptr %v8i16ptr, ptr %v4i32ptr, ptr %v2i64ptr) nounwind speculative_load_hardening {
 ; X64-LABEL: test_vec_loads:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbp
@@ -848,22 +846,22 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-LFENCE-NEXT:    popq %r15
 ; X64-LFENCE-NEXT:    retq
 entry:
-  %x1 = load <4 x float>, <4 x float>* %v4f32ptr
+  %x1 = load <4 x float>, ptr %v4f32ptr
   call void @sink_v4f32(<4 x float> %x1)
-  %x2 = load <2 x double>, <2 x double>* %v2f64ptr
+  %x2 = load <2 x double>, ptr %v2f64ptr
   call void @sink_v2f64(<2 x double> %x2)
-  %x3 = load <16 x i8>, <16 x i8>* %v16i8ptr
+  %x3 = load <16 x i8>, ptr %v16i8ptr
   call void @sink_v16i8(<16 x i8> %x3)
-  %x4 = load <8 x i16>, <8 x i16>* %v8i16ptr
+  %x4 = load <8 x i16>, ptr %v8i16ptr
   call void @sink_v8i16(<8 x i16> %x4)
-  %x5 = load <4 x i32>, <4 x i32>* %v4i32ptr
+  %x5 = load <4 x i32>, ptr %v4i32ptr
   call void @sink_v4i32(<4 x i32> %x5)
-  %x6 = load <2 x i64>, <2 x i64>* %v2i64ptr
+  %x6 = load <2 x i64>, ptr %v2i64ptr
   call void @sink_v2i64(<2 x i64> %x6)
   ret void
 }
 
-define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind speculative_load_hardening {
+define void @test_deferred_hardening(ptr %ptr1, ptr %ptr2, i32 %x) nounwind speculative_load_hardening {
 ; X64-LABEL: test_deferred_hardening:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %r15
@@ -913,8 +911,8 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-NEXT:    cmpq $.Lslh_ret_addr23, %rcx
 ; X64-NEXT:    cmovneq %r15, %rax
 ; X64-NEXT:    movswl (%rbx), %edi
-; X64-NEXT:    shrl $7, %edi
 ; X64-NEXT:    notl %edi
+; X64-NEXT:    shrl $7, %edi
 ; X64-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
@@ -966,8 +964,8 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-LFENCE-NEXT:    shll $7, %edi
 ; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movswl (%rbx), %edi
-; X64-LFENCE-NEXT:    shrl $7, %edi
 ; X64-LFENCE-NEXT:    notl %edi
+; X64-LFENCE-NEXT:    shrl $7, %edi
 ; X64-LFENCE-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
 ; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movzwl (%rbx), %eax
@@ -980,26 +978,26 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-LFENCE-NEXT:    popq %r14
 ; X64-LFENCE-NEXT:    retq
 entry:
-  %a1 = load i32, i32* %ptr1
+  %a1 = load i32, ptr %ptr1
   %a2 = add i32 %a1, 1
   %a3 = mul i32 %a2, %x
   call void @sink(i32 %a3)
-  %b1 = load i32, i32* %ptr1
+  %b1 = load i32, ptr %ptr1
   %b2 = add i32 %b1, 1
-  %b3 = load i32, i32* %ptr2
+  %b3 = load i32, ptr %ptr2
   %b4 = add i32 %b2, %b3
   call void @sink(i32 %b4)
-  %c1 = load i32, i32* %ptr1
+  %c1 = load i32, ptr %ptr1
   %c2 = shl i32 %c1, 7
   call void @sink(i32 %c2)
-  %d1 = load i32, i32* %ptr1
+  %d1 = load i32, ptr %ptr1
   ; Check trunc and integer ops narrower than i32.
   %d2 = trunc i32 %d1 to i16
   %d3 = ashr i16 %d2, 7
   %d4 = zext i16 %d3 to i32
   %d5 = xor i32 %d4, -1
   call void @sink(i32 %d5)
-  %e1 = load i32, i32* %ptr1
+  %e1 = load i32, ptr %ptr1
   %e2 = trunc i32 %e1 to i16
   %e3 = lshr i16 %e2, 7
   %e4 = shl i16 %e2, 9
@@ -1012,7 +1010,7 @@ entry:
 
 ; Make sure we don't crash on idempotent atomic operations which have a
 ; hardcoded reference to RSP+offset.
-define void @idempotent_atomic(i32* %x) speculative_load_hardening {
+define void @idempotent_atomic(ptr %x) speculative_load_hardening {
 ; X64-LABEL: idempotent_atomic:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -1022,6 +1020,6 @@ define void @idempotent_atomic(i32* %x) speculative_load_hardening {
 ; X64-LFENCE:       # %bb.0:
 ; X64-LFENCE-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-LFENCE-NEXT:    retq
-  %tmp = atomicrmw or i32* %x, i32 0 seq_cst
+  %tmp = atomicrmw or ptr %x, i32 0 seq_cst
   ret void
 }

@@ -76,6 +76,26 @@ const Scope &GetProgramUnitContaining(const Symbol &symbol) {
   return GetProgramUnitContaining(symbol.owner());
 }
 
+const Scope &GetProgramUnitOrBlockConstructContaining(const Scope &start) {
+  CHECK(!start.IsTopLevel());
+  return DEREF(FindScopeContaining(start, [](const Scope &scope) {
+    switch (scope.kind()) {
+    case Scope::Kind::Module:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Subprogram:
+    case Scope::Kind::BlockData:
+    case Scope::Kind::BlockConstruct:
+      return true;
+    default:
+      return false;
+    }
+  }));
+}
+
+const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &symbol) {
+  return GetProgramUnitOrBlockConstructContaining(symbol.owner());
+}
+
 const Scope *FindPureProcedureContaining(const Scope &start) {
   // N.B. We only need to examine the innermost containing program unit
   // because an internal subprogram of a pure subprogram must also
@@ -202,9 +222,10 @@ bool IsCommonBlockContaining(const Symbol &block, const Symbol &object) {
 }
 
 bool IsUseAssociated(const Symbol &symbol, const Scope &scope) {
-  const Scope &owner{GetProgramUnitContaining(symbol.GetUltimate().owner())};
+  const Scope &owner{
+      GetProgramUnitOrBlockConstructContaining(symbol.GetUltimate().owner())};
   return owner.kind() == Scope::Kind::Module &&
-      owner != GetProgramUnitContaining(scope);
+      owner != GetProgramUnitOrBlockConstructContaining(scope);
 }
 
 bool DoesScopeContain(
@@ -229,9 +250,9 @@ static const Symbol &FollowHostAssoc(const Symbol &symbol) {
 }
 
 bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
-  const Scope &subprogram{GetProgramUnitContaining(scope)};
   return DoesScopeContain(
-      &GetProgramUnitContaining(FollowHostAssoc(symbol)), subprogram);
+      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
+      GetProgramUnitOrBlockConstructContaining(scope));
 }
 
 bool IsInStmtFunction(const Symbol &symbol) {
@@ -1091,7 +1112,9 @@ const Symbol *FindSeparateModuleSubprogramInterface(const Symbol *proc) {
 
 ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
   const Symbol &ultimate{symbol.GetUltimate()};
-  if (ultimate.attrs().test(Attr::INTRINSIC)) {
+  if (!IsProcedure(ultimate)) {
+    return ProcedureDefinitionClass::None;
+  } else if (ultimate.attrs().test(Attr::INTRINSIC)) {
     return ProcedureDefinitionClass::Intrinsic;
   } else if (ultimate.attrs().test(Attr::EXTERNAL)) {
     return ProcedureDefinitionClass::External;

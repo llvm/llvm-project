@@ -114,6 +114,7 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
     // Otherwise, OPEN on open unit with new FILE= implies CLOSE
     DoImpliedEndfile(handler);
     FlushOutput(handler);
+    TruncateFrame(0, handler);
     Close(CloseStatus::Keep, handler);
   }
   if (newPath.get() && newPathLength > 0) {
@@ -655,6 +656,45 @@ void ExternalFileUnit::SetPosition(std::int64_t pos, IoErrorHandler &handler) {
   BeginRecord();
 }
 
+bool ExternalFileUnit::SetStreamPos(
+    std::int64_t oneBasedPos, IoErrorHandler &handler) {
+  if (access != Access::Stream) {
+    handler.SignalError("POS= may not appear unless ACCESS='STREAM'");
+    return false;
+  }
+  if (oneBasedPos < 1) { // POS=1 is beginning of file (12.6.2.11)
+    handler.SignalError(
+        "POS=%zd is invalid", static_cast<std::intmax_t>(oneBasedPos));
+    return false;
+  }
+  SetPosition(oneBasedPos - 1, handler);
+  // We no longer know which record we're in.  Set currentRecordNumber to
+  // a large value from whence we can both advance and backspace.
+  currentRecordNumber = std::numeric_limits<std::int64_t>::max() / 2;
+  endfileRecordNumber.reset();
+  return true;
+}
+
+bool ExternalFileUnit::SetDirectRec(
+    std::int64_t oneBasedRec, IoErrorHandler &handler) {
+  if (access != Access::Direct) {
+    handler.SignalError("REC= may not appear unless ACCESS='DIRECT'");
+    return false;
+  }
+  if (!openRecl) {
+    handler.SignalError("RECL= was not specified");
+    return false;
+  }
+  if (oneBasedRec < 1) {
+    handler.SignalError(
+        "REC=%zd is invalid", static_cast<std::intmax_t>(oneBasedRec));
+    return false;
+  }
+  currentRecordNumber = oneBasedRec;
+  SetPosition((oneBasedRec - 1) * *openRecl, handler);
+  return true;
+}
+
 void ExternalFileUnit::EndIoStatement() {
   io_.reset();
   u_.emplace<std::monostate>();
@@ -848,16 +888,20 @@ void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
 
 void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   if (IsRecordFile() && access != Access::Direct) {
+    furthestPositionInRecord =
+        std::max(positionInRecord, furthestPositionInRecord);
     if (furthestPositionInRecord > 0) {
-      // Last write was non-advancing, so AdvanceRecord() was not called.
+      // Last read/write was non-advancing, so AdvanceRecord() was not called.
       leftTabLimit.reset();
       ++currentRecordNumber;
     }
     endfileRecordNumber = currentRecordNumber;
   }
+  frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
+  recordOffsetInFrame_ = 0;
   FlushOutput(handler);
-  Truncate(frameOffsetInFile_ + recordOffsetInFrame_ + furthestPositionInRecord,
-      handler);
+  Truncate(frameOffsetInFile_, handler);
+  TruncateFrame(frameOffsetInFile_, handler);
   BeginRecord();
   impliedEndfile_ = false;
 }

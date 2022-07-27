@@ -13,10 +13,10 @@ punpkhi p0.h, p0.b
 // CHECK-INST: punpkhi	p0.h, p0.b
 // CHECK-ENCODING: [0x00,0x40,0x31,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 40 31 05 <unknown>
+// CHECK-UNKNOWN: 05314000 <unknown>
 
 punpkhi p15.h, p15.b
 // CHECK-INST: punpkhi	p15.h, p15.b
 // CHECK-ENCODING: [0xef,0x41,0x31,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ef 41 31 05 <unknown>
+// CHECK-UNKNOWN: 053141ef <unknown>

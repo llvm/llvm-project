@@ -858,7 +858,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   // The line and column of the user expression inside the transformed source
   // code.
   unsigned user_expr_line, user_expr_column;
-  if (m_user_expression_start_pos.hasValue())
+  if (m_user_expression_start_pos)
     AbsPosToLineColumnPos(*m_user_expression_start_pos, m_transformed_text,
                           user_expr_line, user_expr_column);
   else
@@ -870,6 +870,34 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   parser.Complete(request, user_expr_line, completion_column, complete_pos);
 
   return true;
+}
+
+lldb::addr_t ClangUserExpression::GetCppObjectPointer(
+    lldb::StackFrameSP frame_sp, ConstString &object_name, Status &err) {
+  auto valobj_sp =
+      GetObjectPointerValueObject(std::move(frame_sp), object_name, err);
+
+  // We're inside a C++ class method. This could potentially be an unnamed
+  // lambda structure. If the lambda captured a "this", that should be
+  // the object pointer.
+  if (auto thisChildSP =
+          valobj_sp->GetChildMemberWithName(ConstString("this"), true)) {
+    valobj_sp = thisChildSP;
+  }
+
+  if (!err.Success() || !valobj_sp.get())
+    return LLDB_INVALID_ADDRESS;
+
+  lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+
+  if (ret == LLDB_INVALID_ADDRESS) {
+    err.SetErrorStringWithFormat(
+        "Couldn't load '%s' because its value couldn't be evaluated",
+        object_name.AsCString());
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  return ret;
 }
 
 bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
@@ -906,8 +934,14 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
           address_type != eAddressTypeLoad)
         object_ptr_error.SetErrorString("Can't get context object's "
                                         "debuggee address");
-    } else
-      object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
+    } else {
+      if (m_in_cplusplus_method) {
+        object_ptr =
+            GetCppObjectPointer(frame_sp, object_name, object_ptr_error);
+      } else {
+        object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
+      }
+    }
 
     if (!object_ptr_error.Success()) {
       exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(

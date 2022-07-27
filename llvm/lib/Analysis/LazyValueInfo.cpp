@@ -918,10 +918,10 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueCast(
   // transfer rule on the full set since we may be able to locally infer
   // interesting facts.
   Optional<ConstantRange> LHSRes = getRangeFor(CI->getOperand(0), CI, BB);
-  if (!LHSRes.hasValue())
+  if (!LHSRes)
     // More work to do before applying this transfer rule.
     return None;
-  const ConstantRange &LHSRange = LHSRes.getValue();
+  const ConstantRange &LHSRange = LHSRes.value();
 
   const unsigned ResultBitWidth = CI->getType()->getIntegerBitWidth();
 
@@ -942,12 +942,12 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
   // @foo()), 32"
   Optional<ConstantRange> LHSRes = getRangeFor(I->getOperand(0), I, BB);
   Optional<ConstantRange> RHSRes = getRangeFor(I->getOperand(1), I, BB);
-  if (!LHSRes.hasValue() || !RHSRes.hasValue())
+  if (!LHSRes || !RHSRes)
     // More work to do before applying this transfer rule.
     return None;
 
-  const ConstantRange &LHSRange = LHSRes.getValue();
-  const ConstantRange &RHSRange = RHSRes.getValue();
+  const ConstantRange &LHSRange = LHSRes.value();
+  const ConstantRange &RHSRange = RHSRes.value();
   return ValueLatticeElement::getRange(OpFn(LHSRange, RHSRange));
 }
 
@@ -1353,7 +1353,7 @@ static Optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
               ValueLatticeElement OpLatticeVal =
                   getValueFromCondition(Op, Condition, isTrueDest);
               if (Optional<APInt> OpConst = OpLatticeVal.asConstantInteger()) {
-                Result = constantFoldUser(Usr, Op, OpConst.getValue(), DL);
+                Result = constantFoldUser(Usr, Op, *OpConst, DL);
                 break;
               }
             }
@@ -1424,8 +1424,9 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::getEdgeValue(
   if (Constant *VC = dyn_cast<Constant>(Val))
     return ValueLatticeElement::get(VC);
 
-  ValueLatticeElement LocalResult = getEdgeValueLocal(Val, BBFrom, BBTo)
-      .getValueOr(ValueLatticeElement::getOverdefined());
+  ValueLatticeElement LocalResult =
+      getEdgeValueLocal(Val, BBFrom, BBTo)
+          .value_or(ValueLatticeElement::getOverdefined());
   if (hasSingleValue(LocalResult))
     // Can't get any more precise here
     return LocalResult;
@@ -1895,7 +1896,7 @@ void LazyValueInfoAnnotatedWriter::emitBasicBlockStartAnnot(
     const BasicBlock *BB, formatted_raw_ostream &OS) {
   // Find if there are latticevalues defined for arguments of the function.
   auto *F = BB->getParent();
-  for (auto &Arg : F->args()) {
+  for (const auto &Arg : F->args()) {
     ValueLatticeElement Result = LVIImpl->getValueInBlock(
         const_cast<Argument *>(&Arg), const_cast<BasicBlock *>(BB));
     if (Result.isUnknown())
@@ -1931,12 +1932,12 @@ void LazyValueInfoAnnotatedWriter::emitInstructionAnnot(
   printResult(ParentBB);
   // Print the LVI analysis results for the immediate successor blocks, that
   // are dominated by `ParentBB`.
-  for (auto *BBSucc : successors(ParentBB))
+  for (const auto *BBSucc : successors(ParentBB))
     if (DT.dominates(ParentBB, BBSucc))
       printResult(BBSucc);
 
   // Print LVI in blocks where `I` is used.
-  for (auto *U : I->users())
+  for (const auto *U : I->users())
     if (auto *UseI = dyn_cast<Instruction>(U))
       if (!isa<PHINode>(UseI) || DT.dominates(ParentBB, UseI->getParent()))
         printResult(UseI->getParent());

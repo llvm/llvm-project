@@ -108,8 +108,8 @@ static bool nodesHaveSameOperandValue(SDNode *N0, SDNode* N1, unsigned OpName) {
   return N0->getOperand(Op0Idx) == N1->getOperand(Op1Idx);
 }
 
-bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                    AAResults *AA) const {
+bool SIInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
   if (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isSDWA(MI) || isSALU(MI)) {
     // Normally VALU use of exec would block the rematerialization, but that
     // is OK in this case to have an implicit exec read as all VALU do.
@@ -220,16 +220,23 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
         AMDGPU::getNamedOperandIdx(Opc1, AMDGPU::OpName::sbase) == -1)
       return false;
 
-    assert(getNumOperandsNoGlue(Load0) == getNumOperandsNoGlue(Load1));
+    unsigned NumOps = getNumOperandsNoGlue(Load0);
+    if (NumOps != getNumOperandsNoGlue(Load1))
+      return false;
 
     // Check base reg.
     if (Load0->getOperand(0) != Load1->getOperand(0))
       return false;
 
+    // Match register offsets, if both register and immediate offsets present.
+    assert(NumOps == 4 || NumOps == 5);
+    if (NumOps == 5 && Load0->getOperand(1) != Load1->getOperand(1))
+      return false;
+
     const ConstantSDNode *Load0Offset =
-        dyn_cast<ConstantSDNode>(Load0->getOperand(1));
+        dyn_cast<ConstantSDNode>(Load0->getOperand(NumOps - 3));
     const ConstantSDNode *Load1Offset =
-        dyn_cast<ConstantSDNode>(Load1->getOperand(1));
+        dyn_cast<ConstantSDNode>(Load1->getOperand(NumOps - 3));
 
     if (!Load0Offset || !Load1Offset)
       return false;
@@ -1770,14 +1777,8 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
 
   case AMDGPU::S_NOP:
     return MI.getOperand(0).getImm() + 1;
-
-  // FIXME: Any other pseudo instruction?
   // SI_RETURN_TO_EPILOG is a fallthrough to code outside of the function. The
   // hazard, even if one exist, won't really be visible. Should we handle it?
-  case AMDGPU::SI_MASKED_UNREACHABLE:
-  case AMDGPU::WAVE_BARRIER:
-  case AMDGPU::SCHED_BARRIER:
-    return 0;
   }
 }
 
@@ -3261,6 +3262,20 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     return MIB;
   }
 
+  if (SIInstrInfo::isWMMA(MI)) {
+    unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
+    MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
+                                  .setMIFlags(MI.getFlags());
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+      MIB->addOperand(MI.getOperand(I));
+
+    updateLiveVariables(LV, MI, *MIB);
+    if (LIS)
+      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+
+    return MIB;
+  }
+
   // Handle MAC/FMAC.
   bool IsF16 = Opc == AMDGPU::V_MAC_F16_e32 || Opc == AMDGPU::V_MAC_F16_e64 ||
                Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64;
@@ -3327,15 +3342,18 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI;
-    const auto killDef = [&DefMI, &MBB, this]() -> void {
+    const auto killDef = [&]() -> void {
       const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
       // The only user is the instruction which will be killed.
-      if (!MRI.hasOneNonDBGUse(DefMI->getOperand(0).getReg()))
+      Register DefReg = DefMI->getOperand(0).getReg();
+      if (!MRI.hasOneNonDBGUse(DefReg))
         return;
       // We cannot just remove the DefMI here, calling pass will crash.
       DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
       for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
         DefMI->removeOperand(I);
+      if (LV)
+        LV->getVarInfo(DefReg).AliveBlocks.clear();
     };
 
     int64_t Imm;
@@ -3974,6 +3992,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+  int Src3Idx = -1;
+  if (Src0Idx == -1) {
+    // VOPD V_DUAL_* instructions use different operand names.
+    Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0X);
+    Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vsrc1X);
+    Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0Y);
+    Src3Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vsrc1Y);
+  }
 
   // Make sure the number of operands is correct.
   const MCInstrDesc &Desc = get(Opcode);
@@ -4247,9 +4273,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // Only look at the true operands. Only a real operand can use the constant
     // bus, and we don't want to check pseudo-operands like the source modifier
     // flags.
-    for (int OpIdx : {Src0Idx, Src1Idx, Src2Idx}) {
+    for (int OpIdx : {Src0Idx, Src1Idx, Src2Idx, Src3Idx}) {
       if (OpIdx == -1)
-        break;
+        continue;
       const MachineOperand &MO = MI.getOperand(OpIdx);
       if (usesConstantBus(MRI, MO, MI.getDesc().OpInfo[OpIdx])) {
         if (MO.isReg()) {
@@ -4439,7 +4465,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSMRD(MI)) {
-    if (MI.mayStore()) {
+    if (MI.mayStore() &&
+        ST.getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS) {
       // The register offset form of scalar stores may only use m0 as the
       // soffset register.
       const MachineOperand *Soff = getNamedOperand(MI, AMDGPU::OpName::soffset);
@@ -4991,10 +5018,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   }
 
   if (MO->isReg()) {
-    if (!DefinedRC) {
-      // This operand allows any register.
-      return true;
-    }
+    if (!DefinedRC)
+      return OpInfo.OperandType == MCOI::OPERAND_UNKNOWN;
     if (!isLegalRegOperand(MRI, OpInfo, *MO))
       return false;
     bool IsAGPR = RI.isAGPR(MRI, MO->getReg());
@@ -6173,6 +6198,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
 
     case AMDGPU::S_PACK_LL_B32_B16:
     case AMDGPU::S_PACK_LH_B32_B16:
+    case AMDGPU::S_PACK_HL_B32_B16:
     case AMDGPU::S_PACK_HH_B32_B16:
       movePackToVALU(Worklist, MRI, Inst);
       Inst.eraseFromParent();
@@ -7084,6 +7110,17 @@ void SIInstrInfo::movePackToVALU(SetVectorType &Worklist,
       .addReg(ImmReg, RegState::Kill)
       .add(Src0)
       .add(Src1);
+    break;
+  }
+  case AMDGPU::S_PACK_HL_B32_B16: {
+    Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
+        .addImm(16)
+        .add(Src0);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32_e64), ResultReg)
+        .add(Src1)
+        .addImm(16)
+        .addReg(TmpReg, RegState::Kill);
     break;
   }
   case AMDGPU::S_PACK_HH_B32_B16: {

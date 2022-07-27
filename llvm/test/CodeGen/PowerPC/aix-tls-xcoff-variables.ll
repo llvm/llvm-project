@@ -66,7 +66,7 @@
 ; SYMS-NEXT: Symbols [
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: 0
-; SYMS-NEXT:     Name: .file
+; SYMS-NEXT:     Name: <stdin>
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_C (0x0)
@@ -128,7 +128,7 @@
 ; SYMS-NEXT:       SectionLen: 0
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
-; SYMS-NEXT:       SymbolAlignmentLog2: 2
+; SYMS-NEXT:       SymbolAlignmentLog2: 5
 ; SYMS-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYMS-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYMS-NEXT:       StabInfoIndex: 0x0

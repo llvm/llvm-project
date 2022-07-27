@@ -979,7 +979,16 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
 
   const llvm::Triple::VendorType lhs_triple_vendor = lhs_triple.getVendor();
   const llvm::Triple::VendorType rhs_triple_vendor = rhs_triple.getVendor();
-  if (lhs_triple_vendor != rhs_triple_vendor) {
+
+  const llvm::Triple::OSType lhs_triple_os = lhs_triple.getOS();
+  const llvm::Triple::OSType rhs_triple_os = rhs_triple.getOS();
+
+  bool both_windows = lhs_triple.isOSWindows() && rhs_triple.isOSWindows();
+
+  // On Windows, the vendor field doesn't have any practical effect, but
+  // it is often set to either "pc" or "w64".
+  if ((lhs_triple_vendor != rhs_triple_vendor) &&
+      (exact_match || !both_windows)) {
     const bool rhs_vendor_specified = rhs.TripleVendorWasSpecified();
     const bool lhs_vendor_specified = TripleVendorWasSpecified();
     // Both architectures had the vendor specified, so if they aren't equal
@@ -993,8 +1002,6 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
       return false;
   }
 
-  const llvm::Triple::OSType lhs_triple_os = lhs_triple.getOS();
-  const llvm::Triple::OSType rhs_triple_os = rhs_triple.getOS();
   const llvm::Triple::EnvironmentType lhs_triple_env =
       lhs_triple.getEnvironment();
   const llvm::Triple::EnvironmentType rhs_triple_env =
@@ -1031,6 +1038,9 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
                          (!rhs_os_specified && !rhs_triple.hasEnvironment())))
       return true;
   }
+
+  if (!exact_match && both_windows)
+    return true; // The Windows environments (MSVC vs GNU) are compatible
 
   return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
 }

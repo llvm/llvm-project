@@ -236,7 +236,7 @@ function(expand_flags_for_libc_unittest target_name flags)
 
   # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
   # `flag__ONLY` do not.
-  if(NOT "${modifier}")
+  if("${modifier}" STREQUAL "")
     set(TARGET_NAME "${target_name}.__NO_${flag}")
   else()
     set(TARGET_NAME "${target_name}")
@@ -421,13 +421,9 @@ function(add_integration_test test_name)
   get_fq_target_name(${test_name}.libc fq_libc_target_name)
 
   get_fq_deps_list(fq_deps_list ${INTEGRATION_TEST_DEPENDS})
-  # Add memory functions to which compilers can emit calls.
-  list(APPEND fq_deps_list
-          libc.src.string.bcmp
-          libc.src.string.bzero
-          libc.src.string.memcmp
-          libc.src.string.memcpy
-          libc.src.string.memset)
+  # All integration tests setup TLS area and the main thread's self object.
+  # So, we need to link in the threads implementation.
+  list(APPEND fq_deps_list libc.src.__support.threads.thread)
   list(REMOVE_DUPLICATES fq_deps_list)
   # TODO: Instead of gathering internal object files from entrypoints,
   # collect the object files with public names of entrypoints.

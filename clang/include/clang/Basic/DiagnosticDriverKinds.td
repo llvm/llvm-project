@@ -60,8 +60,6 @@ def err_drv_no_cuda_libdevice : Error<
   "cannot find libdevice for %0; provide path to different CUDA installation "
   "via '--cuda-path', or pass '-nocudalib' to build without linking with "
   "libdevice">;
-def err_drv_no_rdc_new_driver : Error<
-  "Using '--offload-new-driver' requires '-fgpu-rdc'">;
 
 def err_drv_no_rocm_device_lib : Error<
   "cannot find ROCm device library%select{| for %1|for ABI version %1}0; provide its path via "
@@ -680,4 +678,11 @@ def err_drv_invalid_format_dxil_validator_version : Error<
 def err_drv_invalid_empty_dxil_validator_version : Error<
   "invalid validator version : %0\n"
   "If validator major version is 0, minor version must also be 0.">;
+
+def warn_drv_sarif_format_unstable : Warning<
+  "diagnostic formatting in SARIF mode is currently unstable">,
+  InGroup<DiagGroup<"sarif-format-unstable">>;
+
+def err_drv_riscv_unsupported_with_linker_relaxation : Error<
+  "%0 is unsupported with RISC-V linker relaxation (-mrelax)">;
 }

@@ -30,6 +30,7 @@
 #define CLANG_PSEUDO_GLR_H
 
 #include "clang-pseudo/Forest.h"
+#include "clang-pseudo/Language.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRTable.h"
 #include "llvm/Support/Allocator.h"
@@ -113,53 +114,53 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GSS::Node &);
 
 // Parameters for the GLR parsing.
 struct ParseParams {
-  // The grammar of the language we're going to parse.
-  const Grammar &G;
-  // The LR table which GLR uses to parse the input, should correspond to the
-  // Grammar G.
-  const LRTable &Table;
+  // The token stream to parse.
+  const TokenStream &Code;
 
   // Arena for data structure used by the GLR algorithm.
   ForestArena &Forest;  // Storage for the output forest.
   GSS &GSStack;         // Storage for parsing stacks.
 };
+
 // Parses the given token stream as the start symbol with the GLR algorithm,
 // and returns a forest node of the start symbol.
 //
 // A rule `_ := StartSymbol` must exit for the chosen start symbol.
 //
 // If the parsing fails, we model it as an opaque node in the forest.
-const ForestNode &glrParse(const TokenStream &Code, const ParseParams &Params,
-                           SymbolID StartSymbol);
+const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
+                           const Language &Lang);
 
-// An active stack head can have multiple available actions (reduce/reduce
-// actions, reduce/shift actions).
-// A step is any one action applied to any one stack head.
-struct ParseStep {
-  // A specific stack head.
-  const GSS::Node *Head = nullptr;
-  // An action associated with the head.
-  LRTable::Action Action = LRTable::Action::sentinel();
-};
-// A callback is invoked whenever a new GSS head is created during the GLR
-// parsing process (glrShift, or glrReduce).
-using NewHeadCallback = std::function<void(const GSS::Node *)>;
-// Apply all PendingShift actions on a given GSS state, newly-created heads are
-// passed to the callback.
-//
-// When this function returns, PendingShift is empty.
+// Shift a token onto all OldHeads, placing the results into NewHeads.
 //
 // Exposed for testing only.
-void glrShift(std::vector<ParseStep> &PendingShift, const ForestNode &NextTok,
-              const ParseParams &Params, NewHeadCallback NewHeadCB);
-// Applies PendingReduce actions, until no more reduce actions are available.
-//
-// When this function returns, PendingReduce is empty. Calls to NewHeadCB may
-// add elements to PendingReduce
+void glrShift(llvm::ArrayRef<const GSS::Node *> OldHeads,
+              const ForestNode &NextTok, const ParseParams &Params,
+              const Language &Lang, std::vector<const GSS::Node *> &NewHeads);
+// Applies available reductions on Heads, appending resulting heads to the list.
 //
 // Exposed for testing only.
-void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
-               NewHeadCallback NewHeadCB);
+void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
+               const ParseParams &Params, const Language &Lang);
+
+// Heuristically recover from a state where no further parsing is possible.
+//
+// OldHeads is the parse state at TokenIndex.
+// This function consumes zero or more tokens by advancing TokenIndex,
+// and places any recovery states created in NewHeads.
+//
+// On failure, NewHeads is empty and TokenIndex is unchanged.
+//
+// WARNING: glrRecover acts as a "fallback shift". If it consumes no tokens,
+// there is a risk of the parser falling into an infinite loop, creating an
+// endless sequence of recovery nodes.
+// Generally it is safe for recovery to match 0 tokens against sequence symbols
+// like `statement-seq`, as the grammar won't permit another statement-seq
+// immediately afterwards. However recovery strategies for `statement` should
+// consume at least one token, as statements may be adjacent in the input.
+void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
+                unsigned &TokenIndex, const ParseParams &Params,
+                const Language &Lang, std::vector<const GSS::Node *> &NewHeads);
 
 } // namespace pseudo
 } // namespace clang

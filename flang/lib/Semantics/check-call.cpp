@@ -192,20 +192,21 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (isElemental) {
     } else if (dummy.type.attrs().test(
                    characteristics::TypeAndShape::Attr::AssumedRank)) {
-    } else if (!dummy.type.attrs().test(
-                   characteristics::TypeAndShape::Attr::AssumedShape) &&
+    } else if (dummy.type.Rank() > 0 &&
+        !dummy.type.attrs().test(
+            characteristics::TypeAndShape::Attr::AssumedShape) &&
         !dummy.type.attrs().test(
             characteristics::TypeAndShape::Attr::DeferredShape) &&
         (actualType.Rank() > 0 || IsArrayElement(actual))) {
       // Sequence association (15.5.2.11) applies -- rank need not match
       // if the actual argument is an array or array element designator,
-      // and the dummy is not assumed-shape or an INTENT(IN) pointer
-      // that's standing in for an assumed-shape dummy.
+      // and the dummy is an array, but not assumed-shape or an INTENT(IN)
+      // pointer that's standing in for an assumed-shape dummy.
     } else {
-      // Let CheckConformance accept scalars; storage association
+      // Let CheckConformance accept actual scalars; storage association
       // cases are checked here below.
       CheckConformance(messages, dummy.type.shape(), actualType.shape(),
-          evaluate::CheckConformanceFlags::EitherScalarExpandable,
+          evaluate::CheckConformanceFlags::RightScalarExpandable,
           "dummy argument", "actual argument");
     }
   } else {
@@ -602,12 +603,13 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
             }
           }
           if (interface.HasExplicitInterface()) {
-            if (!interface.IsCompatibleWith(argInterface)) {
+            std::string whyNot;
+            if (!interface.IsCompatibleWith(argInterface, &whyNot)) {
               // 15.5.2.9(1): Explicit interfaces must match
               if (argInterface.HasExplicitInterface()) {
                 messages.Say(
-                    "Actual procedure argument has interface incompatible with %s"_err_en_US,
-                    dummyName);
+                    "Actual procedure argument has interface incompatible with %s: %s"_err_en_US,
+                    dummyName, whyNot);
                 return;
               } else if (proc.IsPure()) {
                 messages.Say(
@@ -739,6 +741,15 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                                        DummyDataObject::Attr::Optional)) &&
                     evaluate::IsNullPointer(*expr)) {
                   // ok, FOO(NULL())
+                } else if (object.attrs.test(characteristics::DummyDataObject::
+                                   Attr::Allocatable) &&
+                    evaluate::IsNullPointer(*expr)) {
+                  // Unsupported extension that more or less naturally falls
+                  // out of other Fortran implementations that pass separate
+                  // base address and descriptor address physical arguments
+                  messages.Say(
+                      "Null actual argument '%s' may not be associated with allocatable %s"_err_en_US,
+                      expr->AsFortran(), dummyName);
                 } else {
                   messages.Say(
                       "Actual argument '%s' associated with %s is not a variable or typed expression"_err_en_US,

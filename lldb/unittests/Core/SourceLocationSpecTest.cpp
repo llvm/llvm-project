@@ -50,7 +50,7 @@ TEST(SourceLocationSpecTest, FileLineColumnComponents) {
                                     true);
   EXPECT_TRUE(without_column);
   EXPECT_EQ(fs, without_column.GetFileSpec());
-  EXPECT_EQ(line, without_column.GetLine().getValueOr(0));
+  EXPECT_EQ(line, without_column.GetLine().value_or(0));
   EXPECT_EQ(llvm::None, without_column.GetColumn());
   EXPECT_FALSE(without_column.GetCheckInlines());
   EXPECT_TRUE(without_column.GetExactMatch());

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-tiling-interface -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-tiling-interface=tile-using-scf-for -split-input-file %s | FileCheck %s
 
 func.func @simple_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
     %arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> {
@@ -192,3 +192,86 @@ func.func @conv2D(%arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>,
 // CHECK-SAME:             outs(%[[INIT_TILE]] :
 //      CHECK:         tensor.insert_slice %[[CONV_TILE]] into %[[INIT2]]
 // CHECK-SAME:             [0, 0, 0, 0] [%[[N]], %[[R]], %[[S]], %[[F]]]
+
+// -----
+
+// CHECK: #[[$MAP_ADD:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
+
+// CHECK-LABEL: @indexed_semantics
+func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // Check that we correctly amend "linalg.index" results.
+
+  // CHECK: scf.for %[[I0:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+  // CHECK: scf.for %[[I1:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+  %0 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+    {__internal_linalg_transform__ = "indexed_semantics"}
+    ins(%arg0: tensor<?x?xf32>)
+    outs(%arg1: tensor<?x?xf32>) {
+  ^bb0(%arg2: f32, %arg3: f32):
+    // CHECK: %[[INDEX0:.+]] = linalg.index 0
+    // CHECK: %[[INDEX0_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX0]], %[[I0]])
+    %1 = linalg.index 0 : index
+    // CHECK: %[[INDEX1:.+]] = linalg.index 1
+    // CHECK: %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX1]], %[[I1]])
+    %2 = linalg.index 1 : index
+    // CHECK: arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
+    %3 = arith.addi %1, %2 : index
+    %4 = arith.index_cast %3 : index to i64
+    %5 = arith.uitofp %4 : i64 to f32
+    %6 = arith.addf %5, %arg2 : f32
+    linalg.yield %6 : f32
+  } -> (tensor<?x?xf32>)
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+func.func @interchange_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
+    %arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.matmul {__internal_linalg_transform__ = "gemm_interchange"}
+      ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0, s1] -> (20, -d0 + s1)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0)[s0, s1] -> (30, -d0 + s1)>
+//  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0)[s0, s1] -> (10, -d0 + s1)>
+//      CHECK: func.func @interchange_matmul(
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C10:.+]] = arith.constant 10 : index
+//  CHECK-DAG:   %[[C20:.+]] = arith.constant 20 : index
+//  CHECK-DAG:   %[[C30:.+]] = arith.constant 30 : index
+//  CHECK-DAG:   %[[M:.+]] = tensor.dim %[[ARG0]], %[[C0]]
+//  CHECK-DAG:   %[[K:.+]] = tensor.dim %[[ARG0]], %[[C1]]
+//  CHECK-DAG:   %[[N:.+]] = tensor.dim %[[ARG1]], %[[C1]]
+//      CHECK:   %[[OUTER:[a-zA-Z0-9]+]] = scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[N]] step %[[C20]]
+// CHECK-SAME:       iter_args(%[[INIT0:.+]] = %[[ARG2]])
+//      CHECK:     %[[TS_N:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[C20]], %[[N]]]
+//      CHECK:     %[[INNER1:[a-zA-Z0-9]+]] = scf.for %[[IV1:[a-zA-Z0-9]+]] = %[[C0]] to %[[K]] step %[[C30]]
+// CHECK-SAME:         iter_args(%[[INIT1:.+]] = %[[INIT0]])
+//      CHECK:       %[[TS_K:.+]] = affine.min #[[MAP1]](%[[IV1]])[%[[C30]], %[[K]]]
+//      CHECK:       %[[INNER2:[a-zA-Z0-9]+]] = scf.for %[[IV2:[a-zA-Z0-9]+]] = %[[C0]] to %[[M]] step %[[C10]]
+// CHECK-SAME:           iter_args(%[[INIT2:.+]] = %[[INIT1]])
+//  CHECK-DAG:         %[[TS_M:.+]] = affine.min #[[MAP2]](%[[IV2]])[%[[C10]], %[[M]]]
+//  CHECK-DAG:         %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]]
+// CHECK-SAME:             [%[[IV2]], %[[IV1]]] [%[[TS_M]], %[[TS_K]]] [1, 1]
+//  CHECK-DAG:         %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]]
+// CHECK-SAME:             [%[[IV1]], %[[IV0]]] [%[[TS_K]], %[[TS_N]]] [1, 1]
+//  CHECK-DAG:         %[[INIT_TILE:.+]] = tensor.extract_slice %[[INIT2]]
+// CHECK-SAME:             [%[[IV2]], %[[IV0]]] [%[[TS_M]], %[[TS_N]]] [1, 1]
+//      CHECK:         %[[GEMM_TILE:.+]] = linalg.matmul
+// CHECK-SAME:             ins(%[[LHS_TILE]], %[[RHS_TILE]] :
+// CHECK-SAME:             outs(%[[INIT_TILE]] :
+//      CHECK:         %[[UPDATE:.+]] = tensor.insert_slice %[[GEMM_TILE]] into %[[INIT2]]
+// CHECK-SAME:             [%[[IV2]], %[[IV0]]] [%[[TS_M]], %[[TS_N]]] [1, 1]
+//      CHECK:         scf.yield %[[UPDATE]]
+//      CHECK:       scf.yield %[[INNER2]]
+//      CHECK:     scf.yield %[[INNER1]]
+//      CHECK:   return %[[OUTER]]

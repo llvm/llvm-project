@@ -34,7 +34,6 @@ using namespace NVVM;
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
-#include "mlir/Dialect/LLVMIR/NVVMOpsStructs.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Printing/parsing for NVVM ops
@@ -118,15 +117,15 @@ static bool isIntegerPtxType(MMATypes type) {
 MMATypes MmaOp::accumPtxType() {
   Optional<mlir::NVVM::MMATypes> val = inferOperandMMAType(
       getODSOperands(2).getTypes().front(), /*isAccum=*/true);
-  assert(val.hasValue() && "accumulator PTX type should always be inferrable");
-  return val.getValue();
+  assert(val.has_value() && "accumulator PTX type should always be inferrable");
+  return val.value();
 }
 
 MMATypes MmaOp::resultPtxType() {
   Optional<mlir::NVVM::MMATypes> val =
       inferOperandMMAType(getResult().getType(), /*isAccum=*/true);
-  assert(val.hasValue() && "result PTX type should always be inferrable");
-  return val.getValue();
+  assert(val.has_value() && "result PTX type should always be inferrable");
+  return val.value();
 }
 
 void MmaOp::print(OpAsmPrinter &p) {
@@ -203,7 +202,7 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.addOperands(operandB);
   result.addOperands(operandC);
 
-  if (multiplicandPtxTypes.hasValue()) {
+  if (multiplicandPtxTypes) {
     result.addAttribute("multiplicandAPtxType",
                         MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[0]));
     result.addAttribute("multiplicandBPtxType",
@@ -215,7 +214,7 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
       result.addAttribute("multiplicandBPtxType", MMATypesAttr::get(ctx, *res));
   }
 
-  if (multiplicandLayouts.hasValue()) {
+  if (multiplicandLayouts) {
     result.addAttribute("layoutA",
                         MMALayoutAttr::get(ctx, (*multiplicandLayouts)[0]));
     result.addAttribute("layoutB",
@@ -225,10 +224,10 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
     result.addAttribute("layoutB", MMALayoutAttr::get(ctx, MMALayout::col));
   }
 
-  if (intOverflow.hasValue())
+  if (intOverflow.has_value())
     result.addAttribute("intOverflowBehavior",
                         MMAIntOverflowAttr::get(ctx, *intOverflow));
-  if (b1Op.hasValue())
+  if (b1Op.has_value())
     result.addAttribute("b1Op", MMAB1OpAttr::get(ctx, *b1Op));
 
   result.addTypes(resultType);
@@ -312,13 +311,13 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   for (unsigned idx = 0; idx < names.size(); idx++) {
     const auto &frag = frags[idx];
     Optional<NamedAttribute> attr = namedAttributes.getNamed(names[idx]);
-    if (!frag.elemtype.hasValue() && !attr.hasValue()) {
+    if (!frag.elemtype.has_value() && !attr.has_value()) {
       return parser.emitError(
           parser.getNameLoc(),
           "attribute " + names[idx] +
               " is not provided explicitly and cannot be inferred");
     }
-    if (!attr.hasValue())
+    if (!attr.has_value())
       result.addAttribute(
           names[idx], MMATypesAttr::get(parser.getContext(), *frag.elemtype));
   }
@@ -373,7 +372,7 @@ LogicalResult MmaOp::verify() {
   if (mmaShape[0] == 16) {
     int64_t kFactor;
     Type multiplicandFragType;
-    switch (getMultiplicandAPtxType().getValue()) {
+    switch (*getMultiplicandAPtxType()) {
     case MMATypes::tf32:
       kFactor = 4;
       multiplicandFragType = i32Ty;
@@ -400,10 +399,10 @@ LogicalResult MmaOp::verify() {
       break;
     default:
       return emitError("invalid shape or multiplicand type: " +
-                       stringifyEnum(getMultiplicandAPtxType().getValue()));
+                       stringifyEnum(getMultiplicandAPtxType().value()));
     }
 
-    if (isIntegerPtxType(getMultiplicandAPtxType().getValue())) {
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
       expectedResult.push_back(s32x4StructTy);
       expectedC.emplace_back(4, i32Ty);
       multiplicandFragType = i32Ty;
@@ -422,7 +421,7 @@ LogicalResult MmaOp::verify() {
 
   // In the M=8 case, there is only 1 possible case per data type.
   if (mmaShape[0] == 8) {
-    if (getMultiplicandAPtxType().getValue() == MMATypes::f16) {
+    if (*getMultiplicandAPtxType() == MMATypes::f16) {
       expectedA.emplace_back(2, f16x2Ty);
       expectedB.emplace_back(2, f16x2Ty);
       expectedResult.push_back(f16x2x4StructTy);
@@ -431,7 +430,7 @@ LogicalResult MmaOp::verify() {
       expectedC.emplace_back(8, f32Ty);
       allowedShapes.push_back({8, 8, 4});
     }
-    if (getMultiplicandAPtxType().getValue() == MMATypes::f64) {
+    if (*getMultiplicandAPtxType() == MMATypes::f64) {
       Type f64Ty = Float64Type::get(context);
       expectedA.emplace_back(1, f64Ty);
       expectedB.emplace_back(1, f64Ty);
@@ -441,16 +440,16 @@ LogicalResult MmaOp::verify() {
           context, SmallVector<Type>(2, f64Ty)));
       allowedShapes.push_back({8, 8, 4});
     }
-    if (isIntegerPtxType(getMultiplicandAPtxType().getValue())) {
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
       expectedA.push_back({i32Ty});
       expectedB.push_back({i32Ty});
       expectedC.push_back({i32Ty, i32Ty});
       expectedResult.push_back(s32x2StructTy);
-      if (isInt4PtxType(getMultiplicandAPtxType().getValue()))
+      if (isInt4PtxType(getMultiplicandAPtxType().value()))
         allowedShapes.push_back({8, 8, 32});
-      if (isInt8PtxType(getMultiplicandAPtxType().getValue()))
+      if (isInt8PtxType(getMultiplicandAPtxType().value()))
         allowedShapes.push_back({8, 8, 16});
-      if (getMultiplicandAPtxType().getValue() == MMATypes::b1)
+      if (getMultiplicandAPtxType().value() == MMATypes::b1)
         allowedShapes.push_back({8, 8, 128});
     }
   }
@@ -506,7 +505,7 @@ LogicalResult MmaOp::verify() {
   }
 
   // Ensure that binary MMA variants have a b1 MMA operation defined.
-  if (getMultiplicandAPtxType() == MMATypes::b1 && !getB1Op().hasValue()) {
+  if (getMultiplicandAPtxType() == MMATypes::b1 && !getB1Op()) {
     return emitOpError("op requires " + getB1OpAttrName().strref() +
                        " attribute");
   }
@@ -515,7 +514,7 @@ LogicalResult MmaOp::verify() {
   // attribute.
   if (isInt4PtxType(*getMultiplicandAPtxType()) ||
       isInt8PtxType(*getMultiplicandAPtxType())) {
-    if (!getIntOverflowBehavior().hasValue())
+    if (!getIntOverflowBehavior())
       return emitOpError("op requires " +
                          getIntOverflowBehaviorAttrName().strref() +
                          " attribute");

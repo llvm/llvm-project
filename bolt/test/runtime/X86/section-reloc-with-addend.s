@@ -13,9 +13,10 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe --relocs=1 --print-finalized --print-only=main -o %t.out
+# RUN: llvm-bolt %t.exe --print-finalized --print-only=main -o %t.out \
+# RUN:   2>&1 | FileCheck %s
 
-# RUN: %t.out 1 2
+# RUN: %t.out 1 2 | FileCheck --check-prefix=CHECK-RT %s
 
   .text
   .globl  main
@@ -24,11 +25,14 @@
 main:
   pushq %rbp
   movq  %rsp, %rbp
-  subq  $0x18, %rsp
+  subq  $0x10, %rsp
   cmpl  $0x2, %edi
   jb    .BBend
 .BB2:
-  leaq .data-0x1000000, %rsi     # Use a large negative addend to cause a
+
+# CHECK: leaq
+# CHECK-SAME: {{.*}}-{{.*}}
+  leaq mystring-0x1000000, %rsi  # Use a large negative addend to cause a
                                  # negative result to be encoded in LEA
   addq $0x1000000, %rsi          # Eventually program logic compensates to get
                                  # a real address
@@ -47,4 +51,6 @@ main:
   .size main, .-main
 
   .data
+
+# CHECK-RT: {{.*}} is rbx mod 10 contents in decimal
 mystring: .asciz "0 is rbx mod 10 contents in decimal\n"

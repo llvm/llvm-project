@@ -240,7 +240,7 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (ModuleName.hasValue())
+    if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
@@ -264,7 +264,8 @@ private:
 } // end anonymous namespace
 
 DependencyScanningWorker::DependencyScanningWorker(
-    DependencyScanningService &Service)
+    DependencyScanningService &Service,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   PCHContainerOps->registerReader(
@@ -274,8 +275,8 @@ DependencyScanningWorker::DependencyScanningWorker(
   PCHContainerOps->registerWriter(
       std::make_unique<ObjectFilePCHContainerWriter>());
 
-  auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
-      llvm::vfs::createPhysicalFileSystem());
+  auto OverlayFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(std::move(FS));
   InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFS->pushOverlay(InMemoryFS);
   RealFS = OverlayFS;
@@ -317,7 +318,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
       Files ? Files : new FileManager(FileSystemOptions(), RealFS);
 
   Optional<std::vector<std::string>> ModifiedCommandLine;
-  if (ModuleName.hasValue()) {
+  if (ModuleName) {
     ModifiedCommandLine = CommandLine;
     InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
     ModifiedCommandLine->emplace_back(*ModuleName);

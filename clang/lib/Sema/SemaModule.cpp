@@ -90,7 +90,14 @@ Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
 
   // All declarations created from now on are owned by the global module.
   auto *TU = Context.getTranslationUnitDecl();
-  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::Visible);
+  // [module.global.frag]p2
+  // A global-module-fragment specifies the contents of the global module
+  // fragment for a module unit. The global module fragment can be used to
+  // provide declarations that are attached to the global module and usable
+  // within the module unit.
+  //
+  // So the declations in the global module shouldn't be visible by default.
+  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
   TU->setLocalOwningModule(GlobalModule);
 
   // FIXME: Consider creating an explicit representation of this declaration.
@@ -200,8 +207,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // here, in order to support macro import.
 
   // Only one module-declaration is permitted per source file.
-  if (!ModuleScopes.empty() &&
-      ModuleScopes.back().Module->isModulePurview()) {
+  if (isCurrentModulePurview()) {
     Diag(ModuleLoc, diag::err_module_redeclaration);
     Diag(VisibleModules.getImportLoc(ModuleScopes.back().Module),
          diag::note_prev_module_declaration);
@@ -325,15 +331,27 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   VisibleModules.setVisible(Mod, ModuleLoc);
 
   // From now on, we have an owning module for all declarations we see.
-  // However, those declarations are module-private unless explicitly
+  // In C++20 modules, those declaration would be reachable when imported
+  // unless explicitily exported.
+  // Otherwise, those declarations are module-private unless explicitly
   // exported.
   auto *TU = Context.getTranslationUnitDecl();
-  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
+  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
   TU->setLocalOwningModule(Mod);
 
   // We are in the module purview, but before any other (non import)
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
+
+  // For an implementation, We already made an implicit import (its interface).
+  // Make and return the import decl to be added to the current TU.
+  if (MDK == ModuleDeclKind::Implementation) {
+    // Make the import decl for the interface.
+    ImportDecl *Import =
+        ImportDecl::Create(Context, CurContext, ModuleLoc, Mod, Path[0].second);
+    // and return it to be added.
+    return ConvertDeclToDeclGroup(Import);
+  }
 
   // FIXME: Create a ModuleDecl.
   return nullptr;
@@ -698,7 +716,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
   //   indirectly within [...] a private-module-fragment.
-  if (ModuleScopes.empty() || !ModuleScopes.back().Module->isModulePurview()) {
+  if (!isCurrentModulePurview()) {
     Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
     D->setInvalidDecl();
     return D;
@@ -925,4 +943,17 @@ void Sema::PopGlobalModuleFragment() {
   assert(!ModuleScopes.empty() && getCurrentModule()->isGlobalModule() &&
          "left the wrong module scope, which is not global module fragment");
   ModuleScopes.pop_back();
+}
+
+bool Sema::isModuleUnitOfCurrentTU(const Module *M) const {
+  assert(M);
+
+  Module *CurrentModuleUnit = getCurrentModule();
+
+  // If we are not in a module currently, M must not be the module unit of
+  // current TU.
+  if (!CurrentModuleUnit)
+    return false;
+
+  return M->isSubModuleOf(CurrentModuleUnit->getTopLevelModule());
 }

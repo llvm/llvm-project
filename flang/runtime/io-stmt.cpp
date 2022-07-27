@@ -630,7 +630,6 @@ std::optional<char32_t> IoStatementState::NextInField(
         switch (*next) {
         case ' ':
         case '\t':
-        case ';':
         case '/':
         case '(':
         case ')':
@@ -640,11 +639,15 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '\n': // for stream access
           return std::nullopt;
         case ',':
-          if (edit.modes.editingFlags & decimalComma) {
-            break;
-          } else {
+          if (!(edit.modes.editingFlags & decimalComma)) {
             return std::nullopt;
           }
+          break;
+        case ';':
+          if (edit.modes.editingFlags & decimalComma) {
+            return std::nullopt;
+          }
+          break;
         default:
           break;
         }
@@ -677,7 +680,8 @@ bool IoStatementState::CheckForEndOfRecord() {
     if (auto length{connection.EffectiveRecordLength()}) {
       if (connection.positionInRecord >= *length) {
         IoErrorHandler &handler{GetIoErrorHandler()};
-        if (mutableModes().nonAdvancing) {
+        const auto &modes{mutableModes()};
+        if (modes.nonAdvancing) {
           if (connection.access == Access::Stream &&
               connection.unterminatedRecord) {
             // Reading final unterminated record left by a
@@ -687,10 +691,10 @@ bool IoStatementState::CheckForEndOfRecord() {
           } else {
             handler.SignalEor();
           }
-        } else if (!connection.modes.pad) {
+        } else if (!modes.pad) {
           handler.SignalError(IostatRecordReadOverrun);
         }
-        return connection.modes.pad; // PAD='YES'
+        return modes.pad; // PAD='YES'
       }
     }
   }
@@ -1339,7 +1343,7 @@ bool InquireNoUnitState::Inquire(
   case HashInquiryKeyword("STREAM"):
   case HashInquiryKeyword("WRITE"):
   case HashInquiryKeyword("UNFORMATTED"):
-    ToFortranDefaultCharacter(result, length, "UNKNONN");
+    ToFortranDefaultCharacter(result, length, "UNKNOWN");
     return true;
   default:
     BadInquiryKeywordHashCrash(inquiry);

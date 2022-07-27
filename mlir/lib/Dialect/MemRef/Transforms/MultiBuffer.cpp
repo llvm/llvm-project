@@ -23,7 +23,7 @@ static bool overrideBuffer(Operation *op, Value buffer) {
   auto copyOp = dyn_cast<memref::CopyOp>(op);
   if (!copyOp)
     return false;
-  return copyOp.target() == buffer;
+  return copyOp.getTarget() == buffer;
 }
 
 /// Replace the uses of `oldOp` with the given `val` and for subview uses
@@ -44,10 +44,10 @@ static void replaceUsesAndPropagateType(Operation *oldOp, Value val,
     }
     builder.setInsertionPoint(subviewUse);
     Type newType = memref::SubViewOp::inferRankReducedResultType(
-        subviewUse.getType().getRank(), val.getType().cast<MemRefType>(),
-        extractFromI64ArrayAttr(subviewUse.static_offsets()),
-        extractFromI64ArrayAttr(subviewUse.static_sizes()),
-        extractFromI64ArrayAttr(subviewUse.static_strides()));
+        subviewUse.getType().getShape(), val.getType().cast<MemRefType>(),
+        extractFromI64ArrayAttr(subviewUse.getStaticOffsets()),
+        extractFromI64ArrayAttr(subviewUse.getStaticSizes()),
+        extractFromI64ArrayAttr(subviewUse.getStaticStrides()));
     Value newSubview = builder.create<memref::SubViewOp>(
         subviewUse->getLoc(), newType.cast<MemRefType>(), val,
         subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
@@ -136,7 +136,7 @@ LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
     sizes.push_back(builder.getIndexAttr(size));
   auto dstMemref =
       memref::SubViewOp::inferRankReducedResultType(
-          allocOp.getType().getRank(), newMemref, offsets, sizes, strides)
+          allocOp.getType().getShape(), newMemref, offsets, sizes, strides)
           .cast<MemRefType>();
   Value subview = builder.create<memref::SubViewOp>(loc, dstMemref, newAlloc,
                                                     offsets, sizes, strides);

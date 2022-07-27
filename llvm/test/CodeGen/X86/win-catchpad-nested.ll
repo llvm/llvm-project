@@ -4,7 +4,7 @@ declare void @ProcessCLRException()
 
 declare void @f()
 
-define void @test1() personality void ()* @ProcessCLRException {
+define void @test1() personality ptr @ProcessCLRException {
 entry:
   invoke void @f()
           to label %exit unwind label %catch.dispatch.1

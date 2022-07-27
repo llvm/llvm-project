@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PrintfMatcher.h"
+
+#include "src/__support/CPP/UInt128.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include "utils/UnitTest/StringUtils.h"
@@ -70,8 +72,7 @@ void display(testutils::StreamWrapper &stream, FormatSection form) {
                     reinterpret_cast<uintptr_t>(form.conv_val_ptr))
              << "\n";
     else if (form.conv_name != '%')
-      stream << "\tvalue: " << int_to_hex<__uint128_t>(form.conv_val_raw)
-             << "\n";
+      stream << "\tvalue: " << int_to_hex<UInt128>(form.conv_val_raw) << "\n";
   }
 }
 } // anonymous namespace

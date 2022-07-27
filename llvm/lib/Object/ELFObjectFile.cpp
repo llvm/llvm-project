@@ -167,12 +167,12 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   bool isV7 = false;
   Optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
-  if (Attr.hasValue())
-    isV7 = Attr.getValue() == ARMBuildAttrs::v7;
+  if (Attr)
+    isV7 = Attr.value() == ARMBuildAttrs::v7;
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (Attr.value()) {
     case ARMBuildAttrs::ApplicationProfile:
       Features.AddFeature("aclass");
       break;
@@ -190,8 +190,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (Attr.value()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -205,8 +205,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::FP_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (Attr.value()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -229,8 +229,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::Advanced_SIMD_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (Attr.value()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -248,8 +248,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::MVE_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (Attr.value()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -267,8 +267,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   }
 
   Attr = Attributes.getAttributeValue(ARMBuildAttrs::DIV_use);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (Attr.value()) {
     default:
       break;
     case ARMBuildAttrs::DisallowDIV:
@@ -303,11 +303,11 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
   }
 
   Optional<StringRef> Attr = Attributes.getAttributeString(RISCVAttrs::ARCH);
-  if (Attr.hasValue()) {
+  if (Attr) {
     // The Arch pattern is [rv32|rv64][i|e]version(_[m|a|f|d|c]version)*
     // Version string pattern is (major)p(minor). Major and minor are optional.
     // For example, a version number could be 2p0, 2, or p92.
-    StringRef Arch = Attr.getValue();
+    StringRef Arch = *Attr;
     if (Arch.consume_front("rv32"))
       Features.AddFeature("64bit", false);
     else if (Arch.consume_front("rv64"))
@@ -358,6 +358,8 @@ Optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   switch (getEMachine()) {
   case ELF::EM_AMDGPU:
     return getAMDGPUCPUName();
+  case ELF::EM_PPC64:
+    return StringRef("future");
   default:
     return None;
   }
@@ -521,8 +523,8 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
 
   Optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
-  if (Attr.hasValue()) {
-    switch (Attr.getValue()) {
+  if (Attr) {
+    switch (Attr.value()) {
     case ARMBuildAttrs::v4:
       Triple += "v4";
       break;
@@ -553,8 +555,8 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v7: {
       Optional<unsigned> ArchProfileAttr =
           Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
-      if (ArchProfileAttr.hasValue() &&
-          ArchProfileAttr.getValue() == ARMBuildAttrs::MicroControllerProfile)
+      if (ArchProfileAttr &&
+          ArchProfileAttr.value() == ARMBuildAttrs::MicroControllerProfile)
         Triple += "v7m";
       else
         Triple += "v7";
@@ -678,7 +680,8 @@ readBBAddrMapImpl(const ELFFile<ELFT> &EF,
   std::vector<BBAddrMap> BBAddrMaps;
   const auto &Sections = cantFail(EF.sections());
   for (const Elf_Shdr &Sec : Sections) {
-    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP)
+    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP &&
+        Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP_V0)
       continue;
     if (TextSectionIndex) {
       Expected<const Elf_Shdr *> TextSecOrErr = EF.getSection(Sec.sh_link);

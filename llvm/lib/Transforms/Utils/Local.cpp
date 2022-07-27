@@ -439,6 +439,10 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     return true;
   }
 
+  if (auto *CB = dyn_cast<CallBase>(I))
+    if (isRemovableAlloc(CB, TLI))
+      return true;
+
   if (!I->willReturn())
     return false;
 
@@ -485,20 +489,17 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
 
     if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
       Optional<fp::ExceptionBehavior> ExBehavior = FPI->getExceptionBehavior();
-      return ExBehavior.getValue() != fp::ebStrict;
+      return *ExBehavior != fp::ebStrict;
     }
   }
 
-  if (isAllocationFn(I, TLI) && isAllocRemovable(cast<CallBase>(I), TLI))
-    return true;
-
-  if (CallInst *CI = isFreeCall(I, TLI))
-    if (Constant *C = dyn_cast<Constant>(CI->getArgOperand(0)))
-      return C->isNullValue() || isa<UndefValue>(C);
-
-  if (auto *Call = dyn_cast<CallBase>(I))
+  if (auto *Call = dyn_cast<CallBase>(I)) {
+    if (Value *FreedOp = getFreedOperand(Call, TLI))
+      if (Constant *C = dyn_cast<Constant>(FreedOp))
+        return C->isNullValue() || isa<UndefValue>(C);
     if (isMathLibCallNoop(Call, TLI))
       return true;
+  }
 
   // Non-volatile atomic loads from constants can be removed.
   if (auto *LI = dyn_cast<LoadInst>(I))
@@ -637,7 +638,7 @@ bool llvm::RecursivelyDeleteDeadPHINode(PHINode *PN,
     // won't prove fruitful.
     if (!Visited.insert(I).second) {
       // Break the cycle and delete the instruction and its operands.
-      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      I->replaceAllUsesWith(PoisonValue::get(I->getType()));
       (void)RecursivelyDeleteTriviallyDeadInstructions(I, TLI, MSSAU);
       return true;
     }
@@ -750,8 +751,8 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   // If BB has single-entry PHI nodes, fold them.
   while (PHINode *PN = dyn_cast<PHINode>(DestBB->begin())) {
     Value *NewVal = PN->getIncomingValue(0);
-    // Replace self referencing PHI with undef, it must be dead.
-    if (NewVal == PN) NewVal = UndefValue::get(PN->getType());
+    // Replace self referencing PHI with poison, it must be dead.
+    if (NewVal == PN) NewVal = PoisonValue::get(PN->getType());
     PN->replaceAllUsesWith(NewVal);
     PN->eraseFromParent();
   }
@@ -2105,7 +2106,7 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
     // Delete the next to last instruction.
     Instruction *Inst = &*--EndInst->getIterator();
     if (!Inst->use_empty() && !Inst->getType()->isTokenTy())
-      Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
+      Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
     if (Inst->isEHPad() || Inst->getType()->isTokenTy()) {
       EndInst = Inst;
       continue;
@@ -2144,7 +2145,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
   BasicBlock::iterator BBI = I->getIterator(), BBE = BB->end();
   while (BBI != BBE) {
     if (!BBI->use_empty())
-      BBI->replaceAllUsesWith(UndefValue::get(BBI->getType()));
+      BBI->replaceAllUsesWith(PoisonValue::get(BBI->getType()));
     BB->getInstList().erase(BBI++);
     ++NumInstrsRemoved;
   }

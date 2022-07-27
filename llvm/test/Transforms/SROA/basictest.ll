@@ -3,8 +3,8 @@
 
 target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 define i32 @test0() {
 ; CHECK-LABEL: @test0(
@@ -18,23 +18,21 @@ entry:
   %a1 = alloca i32
   %a2 = alloca float
 
-  %a1.i8 = bitcast i32* %a1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %a1.i8)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %a1)
 
-  store i32 0, i32* %a1
-  %v1 = load i32, i32* %a1
+  store i32 0, ptr %a1
+  %v1 = load i32, ptr %a1
 
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %a1.i8)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %a1)
 
-  %a2.i8 = bitcast float* %a2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %a2.i8)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %a2)
 
-  store float 0.0, float* %a2
-  %v2 = load float , float * %a2
+  store float 0.0, ptr %a2
+  %v2 = load float , ptr %a2
   %v2.int = bitcast float %v2 to i32
   %sum1 = add i32 %v1, %v2.int
 
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %a2.i8)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %a2)
 
   ret i32 %sum1
 }
@@ -47,9 +45,9 @@ define i32 @test1() {
 
 entry:
   %X = alloca { i32, float }
-  %Y = getelementptr { i32, float }, { i32, float }* %X, i64 0, i32 0
-  store i32 0, i32* %Y
-  %Z = load i32, i32* %Y
+  %Y = getelementptr { i32, float }, ptr %X, i64 0, i32 0
+  store i32 0, ptr %Y
+  %Z = load i32, ptr %Y
   ret i32 %Z
 }
 
@@ -63,12 +61,11 @@ define i64 @test2(i64 %X) {
 
 entry:
   %A = alloca [8 x i8]
-  %B = bitcast [8 x i8]* %A to i64*
-  store i64 %X, i64* %B
+  store i64 %X, ptr %A
   br label %L2
 
 L2:
-  %Z = load i64, i64* %B
+  %Z = load i64, ptr %A
   ret i64 %Z
 }
 
@@ -82,12 +79,12 @@ define i64 @test2_addrspacecast(i64 %X) {
 
 entry:
   %A = alloca [8 x i8]
-  %B = addrspacecast [8 x i8]* %A to i64 addrspace(1)*
-  store i64 %X, i64 addrspace(1)* %B
+  %B = addrspacecast ptr %A to ptr addrspace(1)
+  store i64 %X, ptr addrspace(1) %B
   br label %L2
 
 L2:
-  %Z = load i64, i64 addrspace(1)* %B
+  %Z = load i64, ptr addrspace(1) %B
   ret i64 %Z
 }
 
@@ -101,15 +98,14 @@ define i64 @test2_addrspacecast_gep(i64 %X, i16 %idx) {
 
 entry:
   %A = alloca [256 x i8]
-  %B = addrspacecast [256 x i8]* %A to i64 addrspace(1)*
-  %gepA = getelementptr [256 x i8], [256 x i8]* %A, i16 0, i16 32
-  %gepB = getelementptr i64, i64 addrspace(1)* %B, i16 4
-  store i64 %X, i64 addrspace(1)* %gepB, align 1
+  %B = addrspacecast ptr %A to ptr addrspace(1)
+  %gepA = getelementptr [256 x i8], ptr %A, i16 0, i16 32
+  %gepB = getelementptr i64, ptr addrspace(1) %B, i16 4
+  store i64 %X, ptr addrspace(1) %gepB, align 1
   br label %L2
 
 L2:
-  %gepA.bc = bitcast i8* %gepA to i64*
-  %Z = load i64, i64* %gepA.bc, align 1
+  %Z = load i64, ptr %gepA, align 1
   ret i64 %Z
 }
 
@@ -118,376 +114,289 @@ define i64 @test2_addrspacecast_gep_offset(i64 %X) {
 ; CHECK-LABEL: @test2_addrspacecast_gep_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [10 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_IDX:%.*]] = getelementptr inbounds [10 x i8], [10 x i8]* [[A_SROA_0]], i16 0, i16 2
-; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_CAST:%.*]] = addrspacecast i8* [[A_SROA_0_2_GEPB_SROA_IDX]] to i64 addrspace(1)*
-; CHECK-NEXT:    store i64 [[X:%.*]], i64 addrspace(1)* [[A_SROA_0_2_GEPB_SROA_CAST]], align 1
+; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i16 2
+; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_CAST:%.*]] = addrspacecast ptr [[A_SROA_0_2_GEPB_SROA_IDX]] to ptr addrspace(1)
+; CHECK-NEXT:    store i64 [[X:%.*]], ptr addrspace(1) [[A_SROA_0_2_GEPB_SROA_CAST]], align 1
 ; CHECK-NEXT:    br label [[L2:%.*]]
 ; CHECK:       L2:
-; CHECK-NEXT:    [[A_SROA_0_0_GEPA_BC_SROA_CAST:%.*]] = bitcast [10 x i8]* [[A_SROA_0]] to i64*
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_30_Z:%.*]] = load i64, i64* [[A_SROA_0_0_GEPA_BC_SROA_CAST]], align 1
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_30_Z:%.*]] = load i64, ptr [[A_SROA_0]], align 1
 ; CHECK-NEXT:    ret i64 [[A_SROA_0_0_A_SROA_0_30_Z]]
 ;
 
 entry:
   %A = alloca [256 x i8]
-  %B = addrspacecast [256 x i8]* %A to i64 addrspace(1)*
-  %gepA = getelementptr [256 x i8], [256 x i8]* %A, i16 0, i16 30
-  %gepB = getelementptr i64, i64 addrspace(1)* %B, i16 4
-  store i64 %X, i64 addrspace(1)* %gepB, align 1
+  %B = addrspacecast ptr %A to ptr addrspace(1)
+  %gepA = getelementptr [256 x i8], ptr %A, i16 0, i16 30
+  %gepB = getelementptr i64, ptr addrspace(1) %B, i16 4
+  store i64 %X, ptr addrspace(1) %gepB, align 1
   br label %L2
 
 L2:
-  %gepA.bc = bitcast i8* %gepA to i64*
-  %Z = load i64, i64* %gepA.bc, align 1
+  %Z = load i64, ptr %gepA, align 1
   ret i64 %Z
 }
 
-define void @test3(i8* %dst, i8* align 8 %src) {
+define void @test3(ptr %dst, ptr align 8 %src) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [42 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca [99 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_34:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[A_SROA_32:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_15:%.*]] = alloca [42 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_16:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_239:%.*]] = alloca [7 x i8], align 1
+; CHECK-NEXT:    [[A_SROA_235:%.*]] = alloca [7 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_31:%.*]] = alloca [85 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_0_0_B_SROA_IDX:%.*]] = getelementptr inbounds [42 x i8], [42 x i8]* [[A_SROA_0]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_0_0_B_SROA_IDX]], i8* align 8 [[SRC:%.*]], i32 42, i1 false), !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 42
-; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load i8, i8* [[A_SROA_2_0_SRC_SROA_RAW_IDX]], align 2, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 43
-; CHECK-NEXT:    [[A_SROA_3_0_B_SROA_IDX:%.*]] = getelementptr inbounds [99 x i8], [99 x i8]* [[A_SROA_3]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_3_0_B_SROA_IDX]], i8* align 1 [[A_SROA_3_0_SRC_SROA_RAW_IDX]], i32 99, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_34_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 142
-; CHECK-NEXT:    [[A_SROA_34_0_B_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_34_0_B_SROA_IDX]], i8* align 2 [[A_SROA_34_0_SRC_SROA_RAW_IDX]], i32 16, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_15_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 158
-; CHECK-NEXT:    [[A_SROA_15_0_B_SROA_IDX:%.*]] = getelementptr inbounds [42 x i8], [42 x i8]* [[A_SROA_15]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_15_0_B_SROA_IDX]], i8* align 2 [[A_SROA_15_0_SRC_SROA_RAW_IDX]], i32 42, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_16_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 200
-; CHECK-NEXT:    [[A_SROA_16_0_B_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_16_0_B_SROA_IDX]], i8* align 8 [[A_SROA_16_0_SRC_SROA_RAW_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_23_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 207
-; CHECK-NEXT:    [[A_SROA_23_0_COPYLOAD:%.*]] = load i8, i8* [[A_SROA_23_0_SRC_SROA_RAW_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_239_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 208
-; CHECK-NEXT:    [[A_SROA_239_0_B_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_239_0_B_SROA_IDX]], i8* align 8 [[A_SROA_239_0_SRC_SROA_RAW_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_31_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 215
-; CHECK-NEXT:    [[A_SROA_31_0_B_SROA_IDX:%.*]] = getelementptr inbounds [85 x i8], [85 x i8]* [[A_SROA_31]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_31_0_B_SROA_IDX]], i8* align 1 [[A_SROA_31_0_SRC_SROA_RAW_IDX]], i32 85, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_34_0_OVERLAP_1_I8_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 0
-; CHECK-NEXT:    store i8 1, i8* [[A_SROA_34_0_OVERLAP_1_I8_SROA_IDX]], align 1, !tbaa [[TBAA3:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_0_OVERLAP_1_I16_SROA_CAST:%.*]] = bitcast [16 x i8]* [[A_SROA_34]] to i16*
-; CHECK-NEXT:    store i16 1, i16* [[A_SROA_34_0_OVERLAP_1_I16_SROA_CAST]], align 1, !tbaa [[TBAA5:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_0_OVERLAP_1_I32_SROA_CAST:%.*]] = bitcast [16 x i8]* [[A_SROA_34]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[A_SROA_34_0_OVERLAP_1_I32_SROA_CAST]], align 1, !tbaa [[TBAA7:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_0_OVERLAP_1_I64_SROA_CAST:%.*]] = bitcast [16 x i8]* [[A_SROA_34]] to i64*
-; CHECK-NEXT:    store i64 1, i64* [[A_SROA_34_0_OVERLAP_1_I64_SROA_CAST]], align 1, !tbaa [[TBAA9:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_1_OVERLAP_2_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 1
-; CHECK-NEXT:    [[A_SROA_34_1_OVERLAP_2_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_1_OVERLAP_2_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 2, i64* [[A_SROA_34_1_OVERLAP_2_I64_SROA_CAST]], align 1, !tbaa [[TBAA11:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_2_OVERLAP_3_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 2
-; CHECK-NEXT:    [[A_SROA_34_2_OVERLAP_3_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_2_OVERLAP_3_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 3, i64* [[A_SROA_34_2_OVERLAP_3_I64_SROA_CAST]], align 1, !tbaa [[TBAA13:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_3_OVERLAP_4_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 3
-; CHECK-NEXT:    [[A_SROA_34_3_OVERLAP_4_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_3_OVERLAP_4_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 4, i64* [[A_SROA_34_3_OVERLAP_4_I64_SROA_CAST]], align 1, !tbaa [[TBAA15:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_4_OVERLAP_5_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 4
-; CHECK-NEXT:    [[A_SROA_34_4_OVERLAP_5_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_4_OVERLAP_5_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 5, i64* [[A_SROA_34_4_OVERLAP_5_I64_SROA_CAST]], align 1, !tbaa [[TBAA17:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_5_OVERLAP_6_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 5
-; CHECK-NEXT:    [[A_SROA_34_5_OVERLAP_6_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_5_OVERLAP_6_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 6, i64* [[A_SROA_34_5_OVERLAP_6_I64_SROA_CAST]], align 1, !tbaa [[TBAA19:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_6_OVERLAP_7_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 6
-; CHECK-NEXT:    [[A_SROA_34_6_OVERLAP_7_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_6_OVERLAP_7_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 7, i64* [[A_SROA_34_6_OVERLAP_7_I64_SROA_CAST]], align 1, !tbaa [[TBAA21:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_7_OVERLAP_8_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 7
-; CHECK-NEXT:    [[A_SROA_34_7_OVERLAP_8_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_7_OVERLAP_8_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 8, i64* [[A_SROA_34_7_OVERLAP_8_I64_SROA_CAST]], align 1, !tbaa [[TBAA23:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_34_8_OVERLAP_9_I64_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 8
-; CHECK-NEXT:    [[A_SROA_34_8_OVERLAP_9_I64_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_8_OVERLAP_9_I64_SROA_IDX]] to i64*
-; CHECK-NEXT:    store i64 9, i64* [[A_SROA_34_8_OVERLAP_9_I64_SROA_CAST]], align 1, !tbaa [[TBAA25:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_0_OVERLAP2_1_0_I8_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 0
-; CHECK-NEXT:    store i8 1, i8* [[A_SROA_16_0_OVERLAP2_1_0_I8_SROA_IDX]], align 1, !tbaa [[TBAA27:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_0_OVERLAP2_1_0_I16_SROA_CAST:%.*]] = bitcast [7 x i8]* [[A_SROA_16]] to i16*
-; CHECK-NEXT:    store i16 1, i16* [[A_SROA_16_0_OVERLAP2_1_0_I16_SROA_CAST]], align 1, !tbaa [[TBAA29:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_0_OVERLAP2_1_0_I32_SROA_CAST:%.*]] = bitcast [7 x i8]* [[A_SROA_16]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[A_SROA_16_0_OVERLAP2_1_0_I32_SROA_CAST]], align 1, !tbaa [[TBAA31:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_1_OVERLAP2_1_1_I32_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 1
-; CHECK-NEXT:    [[A_SROA_16_1_OVERLAP2_1_1_I32_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_16_1_OVERLAP2_1_1_I32_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 2, i32* [[A_SROA_16_1_OVERLAP2_1_1_I32_SROA_CAST]], align 1, !tbaa [[TBAA33:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_2_OVERLAP2_1_2_I32_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 2
-; CHECK-NEXT:    [[A_SROA_16_2_OVERLAP2_1_2_I32_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_16_2_OVERLAP2_1_2_I32_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 3, i32* [[A_SROA_16_2_OVERLAP2_1_2_I32_SROA_CAST]], align 1, !tbaa [[TBAA35:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_3_OVERLAP2_1_3_I32_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 3
-; CHECK-NEXT:    [[A_SROA_16_3_OVERLAP2_1_3_I32_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_16_3_OVERLAP2_1_3_I32_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 4, i32* [[A_SROA_16_3_OVERLAP2_1_3_I32_SROA_CAST]], align 1, !tbaa [[TBAA37:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_0_OVERLAP2_2_0_I32_SROA_CAST:%.*]] = bitcast [7 x i8]* [[A_SROA_239]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[A_SROA_239_0_OVERLAP2_2_0_I32_SROA_CAST]], align 1, !tbaa [[TBAA39:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_1_OVERLAP2_2_1_I8_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 1
-; CHECK-NEXT:    store i8 1, i8* [[A_SROA_239_1_OVERLAP2_2_1_I8_SROA_IDX]], align 1, !tbaa [[TBAA41:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_1_OVERLAP2_2_1_I16_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 1
-; CHECK-NEXT:    [[A_SROA_239_1_OVERLAP2_2_1_I16_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_239_1_OVERLAP2_2_1_I16_SROA_IDX]] to i16*
-; CHECK-NEXT:    store i16 1, i16* [[A_SROA_239_1_OVERLAP2_2_1_I16_SROA_CAST]], align 1, !tbaa [[TBAA43:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_1_OVERLAP2_2_1_I32_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 1
-; CHECK-NEXT:    [[A_SROA_239_1_OVERLAP2_2_1_I32_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_239_1_OVERLAP2_2_1_I32_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[A_SROA_239_1_OVERLAP2_2_1_I32_SROA_CAST]], align 1, !tbaa [[TBAA45:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_2_OVERLAP2_2_2_I32_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 2
-; CHECK-NEXT:    [[A_SROA_239_2_OVERLAP2_2_2_I32_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_239_2_OVERLAP2_2_2_I32_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 3, i32* [[A_SROA_239_2_OVERLAP2_2_2_I32_SROA_CAST]], align 1, !tbaa [[TBAA47:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_3_OVERLAP2_2_3_I32_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 3
-; CHECK-NEXT:    [[A_SROA_239_3_OVERLAP2_2_3_I32_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_239_3_OVERLAP2_2_3_I32_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 4, i32* [[A_SROA_239_3_OVERLAP2_2_3_I32_SROA_CAST]], align 1, !tbaa [[TBAA49:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_15_197_OVERLAP2_PREFIX_SROA_IDX:%.*]] = getelementptr inbounds [42 x i8], [42 x i8]* [[A_SROA_15]], i64 0, i64 39
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_15_197_OVERLAP2_PREFIX_SROA_IDX]], i8* align 1 [[SRC]], i32 3, i1 false), !tbaa [[TBAA51:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_197_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 3
-; CHECK-NEXT:    [[A_SROA_16_197_OVERLAP2_PREFIX_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_16_197_OVERLAP2_PREFIX_SROA_IDX]], i8* align 1 [[A_SROA_16_197_SRC_SROA_RAW_IDX]], i32 5, i1 false), !tbaa [[TBAA51]]
-; CHECK-NEXT:    [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 2
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX]], i8 42, i32 5, i1 false), !tbaa [[TBAA53:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_0_OVERLAP2_1_2_I8_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[A_SROA_239_0_OVERLAP2_1_2_I8_SROA_IDX]], i8 42, i32 2, i1 false), !tbaa [[TBAA53]]
-; CHECK-NEXT:    [[A_SROA_239_209_OVERLAP2_2_1_I8_SROA_IDX11:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_239_209_OVERLAP2_2_1_I8_SROA_IDX11]], i8* align 1 [[SRC]], i32 5, i1 false), !tbaa [[TBAA55:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_239_210_OVERLAP2_2_2_I8_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 2
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_239_210_OVERLAP2_2_2_I8_SROA_IDX]], i8* align 1 [[SRC]], i32 5, i1 false), !tbaa [[TBAA57:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_31_210_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 5
-; CHECK-NEXT:    [[A_SROA_31_210_OVERLAP2_2_2_I8_SROA_IDX:%.*]] = getelementptr inbounds [85 x i8], [85 x i8]* [[A_SROA_31]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_31_210_OVERLAP2_2_2_I8_SROA_IDX]], i8* align 1 [[A_SROA_31_210_SRC_SROA_RAW_IDX]], i32 3, i1 false), !tbaa [[TBAA57]]
-; CHECK-NEXT:    [[A_SROA_0_0_B_SROA_IDX1:%.*]] = getelementptr inbounds [42 x i8], [42 x i8]* [[A_SROA_0]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[A_SROA_0_0_B_SROA_IDX1]], i32 42, i1 false), !tbaa [[TBAA59:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_2_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 42
-; CHECK-NEXT:    store i8 0, i8* [[A_SROA_2_0_DST_SROA_RAW_IDX]], align 1, !tbaa [[TBAA59]]
-; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 43
-; CHECK-NEXT:    [[A_SROA_3_0_B_SROA_IDX3:%.*]] = getelementptr inbounds [99 x i8], [99 x i8]* [[A_SROA_3]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_3_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_3_0_B_SROA_IDX3]], i32 99, i1 false), !tbaa [[TBAA59]]
-; CHECK-NEXT:    [[A_SROA_34_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 142
-; CHECK-NEXT:    [[A_SROA_34_0_B_SROA_IDX5:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_34]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_34_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_34_0_B_SROA_IDX5]], i32 16, i1 false), !tbaa [[TBAA59]]
-; CHECK-NEXT:    [[A_SROA_15_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 158
-; CHECK-NEXT:    [[A_SROA_15_0_B_SROA_IDX6:%.*]] = getelementptr inbounds [42 x i8], [42 x i8]* [[A_SROA_15]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_15_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_15_0_B_SROA_IDX6]], i32 42, i1 false), !tbaa [[TBAA59]]
-; CHECK-NEXT:    [[A_SROA_16_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 200
-; CHECK-NEXT:    [[A_SROA_16_0_B_SROA_IDX7:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_16]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_16_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_16_0_B_SROA_IDX7]], i32 7, i1 false), !tbaa [[TBAA59]]
-; CHECK-NEXT:    [[A_SROA_23_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 207
-; CHECK-NEXT:    store i8 42, i8* [[A_SROA_23_0_DST_SROA_RAW_IDX]], align 1, !tbaa [[TBAA59]]
-; CHECK-NEXT:    [[A_SROA_239_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 208
-; CHECK-NEXT:    [[A_SROA_239_0_B_SROA_IDX10:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_239]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_239_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_239_0_B_SROA_IDX10]], i32 7, i1 false), !tbaa [[TBAA59]]
-; CHECK-NEXT:    [[A_SROA_31_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 215
-; CHECK-NEXT:    [[A_SROA_31_0_B_SROA_IDX12:%.*]] = getelementptr inbounds [85 x i8], [85 x i8]* [[A_SROA_31]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_31_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_31_0_B_SROA_IDX12]], i32 85, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_0]], ptr align 8 [[SRC:%.*]], i32 42, i1 false), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 42
+; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 2, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 43
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3]], ptr align 1 [[A_SROA_3_0_SRC_SROA_IDX]], i32 99, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_32_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 142
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_32]], ptr align 2 [[A_SROA_32_0_SRC_SROA_IDX]], i32 16, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_15_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 158
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_15]], ptr align 2 [[A_SROA_15_0_SRC_SROA_IDX]], i32 42, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_16_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 200
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_16]], ptr align 8 [[A_SROA_16_0_SRC_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_23_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 207
+; CHECK-NEXT:    [[A_SROA_23_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_23_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_235_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 208
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235]], ptr align 8 [[A_SROA_235_0_SRC_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_31_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 215
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31]], ptr align 1 [[A_SROA_31_0_SRC_SROA_IDX]], i32 85, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    store i8 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    store i16 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    store i32 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA7:![0-9]+]]
+; CHECK-NEXT:    store i64 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA9:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_1_OVERLAP_2_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 1
+; CHECK-NEXT:    store i64 2, ptr [[A_SROA_32_1_OVERLAP_2_I8_SROA_IDX]], align 1, !tbaa [[TBAA11:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_2_OVERLAP_3_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 2
+; CHECK-NEXT:    store i64 3, ptr [[A_SROA_32_2_OVERLAP_3_I8_SROA_IDX]], align 1, !tbaa [[TBAA13:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_3_OVERLAP_4_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 3
+; CHECK-NEXT:    store i64 4, ptr [[A_SROA_32_3_OVERLAP_4_I8_SROA_IDX]], align 1, !tbaa [[TBAA15:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_4_OVERLAP_5_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 4
+; CHECK-NEXT:    store i64 5, ptr [[A_SROA_32_4_OVERLAP_5_I8_SROA_IDX]], align 1, !tbaa [[TBAA17:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_5_OVERLAP_6_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 5
+; CHECK-NEXT:    store i64 6, ptr [[A_SROA_32_5_OVERLAP_6_I8_SROA_IDX]], align 1, !tbaa [[TBAA19:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_6_OVERLAP_7_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 6
+; CHECK-NEXT:    store i64 7, ptr [[A_SROA_32_6_OVERLAP_7_I8_SROA_IDX]], align 1, !tbaa [[TBAA21:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_7_OVERLAP_8_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 7
+; CHECK-NEXT:    store i64 8, ptr [[A_SROA_32_7_OVERLAP_8_I8_SROA_IDX]], align 1, !tbaa [[TBAA23:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_32_8_OVERLAP_9_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 8
+; CHECK-NEXT:    store i64 9, ptr [[A_SROA_32_8_OVERLAP_9_I8_SROA_IDX]], align 1, !tbaa [[TBAA25:![0-9]+]]
+; CHECK-NEXT:    store i8 1, ptr [[A_SROA_16]], align 1, !tbaa [[TBAA27:![0-9]+]]
+; CHECK-NEXT:    store i16 1, ptr [[A_SROA_16]], align 1, !tbaa [[TBAA29:![0-9]+]]
+; CHECK-NEXT:    store i32 1, ptr [[A_SROA_16]], align 1, !tbaa [[TBAA31:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_16_1_OVERLAP2_1_1_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 1
+; CHECK-NEXT:    store i32 2, ptr [[A_SROA_16_1_OVERLAP2_1_1_I8_SROA_IDX]], align 1, !tbaa [[TBAA33:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 2
+; CHECK-NEXT:    store i32 3, ptr [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX]], align 1, !tbaa [[TBAA35:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_16_3_OVERLAP2_1_3_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 3
+; CHECK-NEXT:    store i32 4, ptr [[A_SROA_16_3_OVERLAP2_1_3_I8_SROA_IDX]], align 1, !tbaa [[TBAA37:![0-9]+]]
+; CHECK-NEXT:    store i32 1, ptr [[A_SROA_235]], align 1, !tbaa [[TBAA39:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX11:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
+; CHECK-NEXT:    store i8 1, ptr [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX11]], align 1, !tbaa [[TBAA41:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX10:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
+; CHECK-NEXT:    store i16 1, ptr [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX10]], align 1, !tbaa [[TBAA43:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
+; CHECK-NEXT:    store i32 1, ptr [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX]], align 1, !tbaa [[TBAA45:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_2_OVERLAP2_2_2_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 2
+; CHECK-NEXT:    store i32 3, ptr [[A_SROA_235_2_OVERLAP2_2_2_I8_SROA_IDX]], align 1, !tbaa [[TBAA47:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_3_OVERLAP2_2_3_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 3
+; CHECK-NEXT:    store i32 4, ptr [[A_SROA_235_3_OVERLAP2_2_3_I8_SROA_IDX]], align 1, !tbaa [[TBAA49:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_15_197_OVERLAP2_PREFIX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_15]], i64 39
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_15_197_OVERLAP2_PREFIX_SROA_IDX]], ptr align 1 [[SRC]], i32 3, i1 false), !tbaa [[TBAA51:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_16_197_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_16]], ptr align 1 [[A_SROA_16_197_SRC_SROA_IDX]], i32 5, i1 false), !tbaa [[TBAA51]]
+; CHECK-NEXT:    [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX12:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX12]], i8 42, i32 5, i1 false), !tbaa [[TBAA53:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_235]], i8 42, i32 2, i1 false), !tbaa [[TBAA53]]
+; CHECK-NEXT:    [[A_SROA_235_209_OVERLAP2_2_1_I8_SROA_IDX8:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235_209_OVERLAP2_2_1_I8_SROA_IDX8]], ptr align 1 [[SRC]], i32 5, i1 false), !tbaa [[TBAA55:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_210_OVERLAP2_2_2_I8_SROA_IDX9:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 2
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235_210_OVERLAP2_2_2_I8_SROA_IDX9]], ptr align 1 [[SRC]], i32 5, i1 false), !tbaa [[TBAA57:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_31_210_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 5
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31]], ptr align 1 [[A_SROA_31_210_SRC_SROA_IDX]], i32 3, i1 false), !tbaa [[TBAA57]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[A_SROA_0]], i32 42, i1 false), !tbaa [[TBAA59:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_2_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 42
+; CHECK-NEXT:    store i8 0, ptr [[A_SROA_2_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA59]]
+; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 43
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_3]], i32 99, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    [[A_SROA_32_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 142
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_32_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_32]], i32 16, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    [[A_SROA_15_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 158
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_15_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_15]], i32 42, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    [[A_SROA_16_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 200
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_16_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_16]], i32 7, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    [[A_SROA_23_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 207
+; CHECK-NEXT:    store i8 42, ptr [[A_SROA_23_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA59]]
+; CHECK-NEXT:    [[A_SROA_235_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 208
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_235]], i32 7, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    [[A_SROA_31_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 215
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_31]], i32 85, i1 false), !tbaa [[TBAA59]]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca [300 x i8]
 
-  %b = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %b, i8* align 8 %src, i32 300, i1 false), !tbaa !0
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr align 8 %src, i32 300, i1 false), !tbaa !0
 
   ; Clobber a single element of the array, this should be promotable, and be deleted.
-  %c = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 42
-  store i8 0, i8* %c
+  %c = getelementptr [300 x i8], ptr %a, i64 0, i64 42
+  store i8 0, ptr %c
 
   ; Make a sequence of overlapping stores to the array. These overlap both in
   ; forward strides and in shrinking accesses.
-  %overlap.1.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 142
-  %overlap.2.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 143
-  %overlap.3.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 144
-  %overlap.4.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 145
-  %overlap.5.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 146
-  %overlap.6.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 147
-  %overlap.7.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 148
-  %overlap.8.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 149
-  %overlap.9.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 150
-  %overlap.1.i16 = bitcast i8* %overlap.1.i8 to i16*
-  %overlap.1.i32 = bitcast i8* %overlap.1.i8 to i32*
-  %overlap.1.i64 = bitcast i8* %overlap.1.i8 to i64*
-  %overlap.2.i64 = bitcast i8* %overlap.2.i8 to i64*
-  %overlap.3.i64 = bitcast i8* %overlap.3.i8 to i64*
-  %overlap.4.i64 = bitcast i8* %overlap.4.i8 to i64*
-  %overlap.5.i64 = bitcast i8* %overlap.5.i8 to i64*
-  %overlap.6.i64 = bitcast i8* %overlap.6.i8 to i64*
-  %overlap.7.i64 = bitcast i8* %overlap.7.i8 to i64*
-  %overlap.8.i64 = bitcast i8* %overlap.8.i8 to i64*
-  %overlap.9.i64 = bitcast i8* %overlap.9.i8 to i64*
-  store i8 1, i8* %overlap.1.i8, !tbaa !3
-  store i16 1, i16* %overlap.1.i16, !tbaa !5
-  store i32 1, i32* %overlap.1.i32, !tbaa !7
-  store i64 1, i64* %overlap.1.i64, !tbaa !9
-  store i64 2, i64* %overlap.2.i64, !tbaa !11
-  store i64 3, i64* %overlap.3.i64, !tbaa !13
-  store i64 4, i64* %overlap.4.i64, !tbaa !15
-  store i64 5, i64* %overlap.5.i64, !tbaa !17
-  store i64 6, i64* %overlap.6.i64, !tbaa !19
-  store i64 7, i64* %overlap.7.i64, !tbaa !21
-  store i64 8, i64* %overlap.8.i64, !tbaa !23
-  store i64 9, i64* %overlap.9.i64, !tbaa !25
+  %overlap.1.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 142
+  %overlap.2.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 143
+  %overlap.3.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 144
+  %overlap.4.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 145
+  %overlap.5.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 146
+  %overlap.6.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 147
+  %overlap.7.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 148
+  %overlap.8.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 149
+  %overlap.9.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 150
+  store i8 1, ptr %overlap.1.i8, !tbaa !3
+  store i16 1, ptr %overlap.1.i8, !tbaa !5
+  store i32 1, ptr %overlap.1.i8, !tbaa !7
+  store i64 1, ptr %overlap.1.i8, !tbaa !9
+  store i64 2, ptr %overlap.2.i8, !tbaa !11
+  store i64 3, ptr %overlap.3.i8, !tbaa !13
+  store i64 4, ptr %overlap.4.i8, !tbaa !15
+  store i64 5, ptr %overlap.5.i8, !tbaa !17
+  store i64 6, ptr %overlap.6.i8, !tbaa !19
+  store i64 7, ptr %overlap.7.i8, !tbaa !21
+  store i64 8, ptr %overlap.8.i8, !tbaa !23
+  store i64 9, ptr %overlap.9.i8, !tbaa !25
 
   ; Make two sequences of overlapping stores with more gaps and irregularities.
-  %overlap2.1.0.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 200
-  %overlap2.1.1.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 201
-  %overlap2.1.2.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 202
-  %overlap2.1.3.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 203
+  %overlap2.1.0.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 200
+  %overlap2.1.1.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 201
+  %overlap2.1.2.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 202
+  %overlap2.1.3.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 203
 
-  %overlap2.2.0.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 208
-  %overlap2.2.1.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 209
-  %overlap2.2.2.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 210
-  %overlap2.2.3.i8 = getelementptr [300 x i8], [300 x i8]* %a, i64 0, i64 211
+  %overlap2.2.0.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 208
+  %overlap2.2.1.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 209
+  %overlap2.2.2.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 210
+  %overlap2.2.3.i8 = getelementptr [300 x i8], ptr %a, i64 0, i64 211
 
-  %overlap2.1.0.i16 = bitcast i8* %overlap2.1.0.i8 to i16*
-  %overlap2.1.0.i32 = bitcast i8* %overlap2.1.0.i8 to i32*
-  %overlap2.1.1.i32 = bitcast i8* %overlap2.1.1.i8 to i32*
-  %overlap2.1.2.i32 = bitcast i8* %overlap2.1.2.i8 to i32*
-  %overlap2.1.3.i32 = bitcast i8* %overlap2.1.3.i8 to i32*
-  store i8 1,  i8*  %overlap2.1.0.i8, !tbaa !27
-  store i16 1, i16* %overlap2.1.0.i16, !tbaa !29
-  store i32 1, i32* %overlap2.1.0.i32, !tbaa !31
-  store i32 2, i32* %overlap2.1.1.i32, !tbaa !33
-  store i32 3, i32* %overlap2.1.2.i32, !tbaa !35
-  store i32 4, i32* %overlap2.1.3.i32, !tbaa !37
+  store i8 1,  ptr  %overlap2.1.0.i8, !tbaa !27
+  store i16 1, ptr %overlap2.1.0.i8, !tbaa !29
+  store i32 1, ptr %overlap2.1.0.i8, !tbaa !31
+  store i32 2, ptr %overlap2.1.1.i8, !tbaa !33
+  store i32 3, ptr %overlap2.1.2.i8, !tbaa !35
+  store i32 4, ptr %overlap2.1.3.i8, !tbaa !37
 
-  %overlap2.2.0.i32 = bitcast i8* %overlap2.2.0.i8 to i32*
-  %overlap2.2.1.i16 = bitcast i8* %overlap2.2.1.i8 to i16*
-  %overlap2.2.1.i32 = bitcast i8* %overlap2.2.1.i8 to i32*
-  %overlap2.2.2.i32 = bitcast i8* %overlap2.2.2.i8 to i32*
-  %overlap2.2.3.i32 = bitcast i8* %overlap2.2.3.i8 to i32*
-  store i32 1, i32* %overlap2.2.0.i32, !tbaa !39
-  store i8 1,  i8*  %overlap2.2.1.i8, !tbaa !41
-  store i16 1, i16* %overlap2.2.1.i16, !tbaa !43
-  store i32 1, i32* %overlap2.2.1.i32, !tbaa !45
-  store i32 3, i32* %overlap2.2.2.i32, !tbaa !47
-  store i32 4, i32* %overlap2.2.3.i32, !tbaa !49
+  store i32 1, ptr %overlap2.2.0.i8, !tbaa !39
+  store i8 1,  ptr  %overlap2.2.1.i8, !tbaa !41
+  store i16 1, ptr %overlap2.2.1.i8, !tbaa !43
+  store i32 1, ptr %overlap2.2.1.i8, !tbaa !45
+  store i32 3, ptr %overlap2.2.2.i8, !tbaa !47
+  store i32 4, ptr %overlap2.2.3.i8, !tbaa !49
 
-  %overlap2.prefix = getelementptr i8, i8* %overlap2.1.1.i8, i64 -4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %overlap2.prefix, i8* %src, i32 8, i1 false), !tbaa !51
+  %overlap2.prefix = getelementptr i8, ptr %overlap2.1.1.i8, i64 -4
+  call void @llvm.memcpy.p0.p0.i32(ptr %overlap2.prefix, ptr %src, i32 8, i1 false), !tbaa !51
 
   ; Bridge between the overlapping areas
-  call void @llvm.memset.p0i8.i32(i8* %overlap2.1.2.i8, i8 42, i32 8, i1 false), !tbaa !53
+  call void @llvm.memset.p0.i32(ptr %overlap2.1.2.i8, i8 42, i32 8, i1 false), !tbaa !53
 ; ...promoted i8 store...
 
   ; Entirely within the second overlap.
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %overlap2.2.1.i8, i8* %src, i32 5, i1 false), !tbaa !55
+  call void @llvm.memcpy.p0.p0.i32(ptr %overlap2.2.1.i8, ptr %src, i32 5, i1 false), !tbaa !55
 
   ; Trailing past the second overlap.
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %overlap2.2.2.i8, i8* %src, i32 8, i1 false), !tbaa !57
+  call void @llvm.memcpy.p0.p0.i32(ptr %overlap2.2.2.i8, ptr %src, i32 8, i1 false), !tbaa !57
 
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %b, i32 300, i1 false), !tbaa !59
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %a, i32 300, i1 false), !tbaa !59
 
   ret void
 }
 
-define void @test4(i8* %dst, i8* %src) {
+define void @test4(ptr %dst, ptr %src) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [20 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_2_SROA_4:%.*]] = alloca [7 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca [10 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_34_SROA_5:%.*]] = alloca [7 x i8], align 1
+; CHECK-NEXT:    [[A_SROA_31_SROA_5:%.*]] = alloca [7 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_6_SROA_4:%.*]] = alloca [7 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_7:%.*]] = alloca [40 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_0_0_B_SROA_IDX:%.*]] = getelementptr inbounds [20 x i8], [20 x i8]* [[A_SROA_0]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_0_0_B_SROA_IDX]], i8* align 1 [[SRC:%.*]], i32 20, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 20
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_2_SROA_0_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_IDX]] to i16*
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load i16, i16* [[A_SROA_2_SROA_0_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 22
-; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_COPYLOAD:%.*]] = load i8, i8* [[A_SROA_2_SROA_3_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 23
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_B_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_2_SROA_4]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_2_SROA_4_0_B_SROA_IDX]], i8* align 1 [[A_SROA_2_SROA_4_0_A_SROA_2_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 30
-; CHECK-NEXT:    [[A_SROA_3_0_B_SROA_IDX:%.*]] = getelementptr inbounds [10 x i8], [10 x i8]* [[A_SROA_3]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_3_0_B_SROA_IDX]], i8* align 1 [[A_SROA_3_0_SRC_SROA_RAW_IDX]], i32 10, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_34_SROA_0_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 40
-; CHECK-NEXT:    [[A_SROA_34_SROA_0_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_SROA_0_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_IDX]] to i16*
-; CHECK-NEXT:    [[A_SROA_34_SROA_0_0_COPYLOAD:%.*]] = load i16, i16* [[A_SROA_34_SROA_0_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_34_SROA_4_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 42
-; CHECK-NEXT:    [[A_SROA_34_SROA_4_0_COPYLOAD:%.*]] = load i8, i8* [[A_SROA_34_SROA_4_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_34_SROA_5_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 43
-; CHECK-NEXT:    [[A_SROA_34_SROA_5_0_B_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_34_SROA_5]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_34_SROA_5_0_B_SROA_IDX]], i8* align 1 [[A_SROA_34_SROA_5_0_A_SROA_34_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 50
-; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_6_SROA_0_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_IDX]] to i16*
-; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_COPYLOAD:%.*]] = load i16, i16* [[A_SROA_6_SROA_0_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 52
-; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_COPYLOAD:%.*]] = load i8, i8* [[A_SROA_6_SROA_3_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 53
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_B_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_6_SROA_4]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_6_SROA_4_0_B_SROA_IDX]], i8* align 1 [[A_SROA_6_SROA_4_0_A_SROA_6_0_SRC_SROA_RAW_IDX_SROA_RAW_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_7_0_SRC_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 60
-; CHECK-NEXT:    [[A_SROA_7_0_B_SROA_IDX:%.*]] = getelementptr inbounds [40 x i8], [40 x i8]* [[A_SROA_7]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_7_0_B_SROA_IDX]], i8* align 1 [[A_SROA_7_0_SRC_SROA_RAW_IDX]], i32 40, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_3_A_SROA_34_SROA_5_0_A_DST_1_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_34_SROA_5]], i64 0, i64 0
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_3_A_SRC_1_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_2_SROA_4]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_2_SROA_4_3_A_SROA_34_SROA_5_0_A_DST_1_SROA_IDX_SROA_IDX]], i8* align 1 [[A_SROA_2_SROA_4_3_A_SRC_1_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_3_A_SROA_34_SROA_5_0_A_DST_1_SROA_IDX16_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_34_SROA_5]], i64 0, i64 0
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_3_A_SRC_2_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_6_SROA_4]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_6_SROA_4_3_A_SROA_34_SROA_5_0_A_DST_1_SROA_IDX16_SROA_IDX]], i8* align 1 [[A_SROA_6_SROA_4_3_A_SRC_2_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[A_SROA_0_0_B_SROA_IDX1:%.*]] = getelementptr inbounds [20 x i8], [20 x i8]* [[A_SROA_0]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[A_SROA_0_0_B_SROA_IDX1]], i32 20, i1 false), !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 20
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_2_SROA_0_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_IDX]] to i16*
-; CHECK-NEXT:    store i16 [[A_SROA_2_SROA_0_0_COPYLOAD]], i16* [[A_SROA_2_SROA_0_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_CAST]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 22
-; CHECK-NEXT:    store i8 [[A_SROA_2_SROA_3_0_COPYLOAD]], i8* [[A_SROA_2_SROA_3_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_RAW_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 23
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_B_SROA_IDX22:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_2_SROA_4]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_2_SROA_4_0_A_SROA_2_0_DST_SROA_RAW_IDX_SROA_RAW_IDX]], i8* align 1 [[A_SROA_2_SROA_4_0_B_SROA_IDX22]], i32 7, i1 false), !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 30
-; CHECK-NEXT:    [[A_SROA_3_0_B_SROA_IDX3:%.*]] = getelementptr inbounds [10 x i8], [10 x i8]* [[A_SROA_3]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_3_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_3_0_B_SROA_IDX3]], i32 10, i1 false), !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_34_SROA_0_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 40
-; CHECK-NEXT:    [[A_SROA_34_SROA_0_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_34_SROA_0_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_IDX]] to i16*
-; CHECK-NEXT:    store i16 [[A_SROA_6_SROA_0_0_COPYLOAD]], i16* [[A_SROA_34_SROA_0_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_CAST]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_34_SROA_4_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 42
-; CHECK-NEXT:    store i8 [[A_SROA_6_SROA_3_0_COPYLOAD]], i8* [[A_SROA_34_SROA_4_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_RAW_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_34_SROA_5_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 43
-; CHECK-NEXT:    [[A_SROA_34_SROA_5_0_B_SROA_IDX15:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_34_SROA_5]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_34_SROA_5_0_A_SROA_34_0_DST_SROA_RAW_IDX_SROA_RAW_IDX]], i8* align 1 [[A_SROA_34_SROA_5_0_B_SROA_IDX15]], i32 7, i1 false), !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 50
-; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_6_SROA_0_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_IDX]] to i16*
-; CHECK-NEXT:    store i16 [[A_SROA_6_SROA_0_0_COPYLOAD]], i16* [[A_SROA_6_SROA_0_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_CAST]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 52
-; CHECK-NEXT:    store i8 [[A_SROA_6_SROA_3_0_COPYLOAD]], i8* [[A_SROA_6_SROA_3_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_RAW_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 53
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_B_SROA_IDX19:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_6_SROA_4]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_6_SROA_4_0_A_SROA_6_0_DST_SROA_RAW_IDX_SROA_RAW_IDX]], i8* align 1 [[A_SROA_6_SROA_4_0_B_SROA_IDX19]], i32 7, i1 false), !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_7_0_DST_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 60
-; CHECK-NEXT:    [[A_SROA_7_0_B_SROA_IDX8:%.*]] = getelementptr inbounds [40 x i8], [40 x i8]* [[A_SROA_7]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_7_0_DST_SROA_RAW_IDX]], i8* align 1 [[A_SROA_7_0_B_SROA_IDX8]], i32 40, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_0]], ptr align 1 [[SRC:%.*]], i32 20, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 20
+; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_SRC_SROA_IDX]], i64 2
+; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_2_SROA_3_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_SRC_SROA_IDX]], i64 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_2_SROA_4]], ptr align 1 [[A_SROA_2_SROA_4_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 30
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3]], ptr align 1 [[A_SROA_3_0_SRC_SROA_IDX]], i32 10, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_31_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 40
+; CHECK-NEXT:    [[A_SROA_31_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[A_SROA_31_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_4_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_SRC_SROA_IDX]], i64 2
+; CHECK-NEXT:    [[A_SROA_31_SROA_4_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_31_SROA_4_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_5_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_SRC_SROA_IDX]], i64 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5]], ptr align 1 [[A_SROA_31_SROA_5_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_6_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 50
+; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[A_SROA_6_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_SRC_SROA_IDX]], i64 2
+; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_6_SROA_3_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_SRC_SROA_IDX]], i64 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_6_SROA_4]], ptr align 1 [[A_SROA_6_SROA_4_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_7_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 60
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_7]], ptr align 1 [[A_SROA_7_0_SRC_SROA_IDX]], i32 40, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5]], ptr align 1 [[A_SROA_2_SROA_4]], i32 7, i1 false), !tbaa [[TBAA3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5]], ptr align 1 [[A_SROA_6_SROA_4]], i32 7, i1 false), !tbaa [[TBAA5]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[A_SROA_0]], i32 20, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_2_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 20
+; CHECK-NEXT:    store i16 [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_DST_SROA_IDX]], i64 2
+; CHECK-NEXT:    store i8 [[A_SROA_2_SROA_3_0_COPYLOAD]], ptr [[A_SROA_2_SROA_3_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_DST_SROA_IDX]], i64 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_2_SROA_4_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX]], ptr align 1 [[A_SROA_2_SROA_4]], i32 7, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 30
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_3]], i32 10, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_31_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 40
+; CHECK-NEXT:    store i16 [[A_SROA_6_SROA_0_0_COPYLOAD]], ptr [[A_SROA_31_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_4_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_DST_SROA_IDX]], i64 2
+; CHECK-NEXT:    store i8 [[A_SROA_6_SROA_3_0_COPYLOAD]], ptr [[A_SROA_31_SROA_4_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_5_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_DST_SROA_IDX]], i64 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX]], ptr align 1 [[A_SROA_31_SROA_5]], i32 7, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_6_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 50
+; CHECK-NEXT:    store i16 [[A_SROA_6_SROA_0_0_COPYLOAD]], ptr [[A_SROA_6_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_DST_SROA_IDX]], i64 2
+; CHECK-NEXT:    store i8 [[A_SROA_6_SROA_3_0_COPYLOAD]], ptr [[A_SROA_6_SROA_3_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_DST_SROA_IDX]], i64 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_6_SROA_4_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX]], ptr align 1 [[A_SROA_6_SROA_4]], i32 7, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_7_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 60
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_7_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_7]], i32 40, i1 false), !tbaa [[TBAA7]]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca [100 x i8]
 
-  %b = getelementptr [100 x i8], [100 x i8]* %a, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %b, i8* %src, i32 100, i1 false), !tbaa !0
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 100, i1 false), !tbaa !0
 
-  %a.src.1 = getelementptr [100 x i8], [100 x i8]* %a, i64 0, i64 20
-  %a.dst.1 = getelementptr [100 x i8], [100 x i8]* %a, i64 0, i64 40
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.dst.1, i8* %a.src.1, i32 10, i1 false), !tbaa !3
+  %a.src.1 = getelementptr [100 x i8], ptr %a, i64 0, i64 20
+  %a.dst.1 = getelementptr [100 x i8], ptr %a, i64 0, i64 40
+  call void @llvm.memcpy.p0.p0.i32(ptr %a.dst.1, ptr %a.src.1, i32 10, i1 false), !tbaa !3
 
   ; Clobber a single element of the array, this should be promotable, and be deleted.
-  %c = getelementptr [100 x i8], [100 x i8]* %a, i64 0, i64 42
-  store i8 0, i8* %c
+  %c = getelementptr [100 x i8], ptr %a, i64 0, i64 42
+  store i8 0, ptr %c
 
-  %a.src.2 = getelementptr [100 x i8], [100 x i8]* %a, i64 0, i64 50
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %a.dst.1, i8* %a.src.2, i32 10, i1 false), !tbaa !5
+  %a.src.2 = getelementptr [100 x i8], ptr %a, i64 0, i64 50
+  call void @llvm.memmove.p0.p0.i32(ptr %a.dst.1, ptr %a.src.2, i32 10, i1 false), !tbaa !5
 
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %b, i32 100, i1 false), !tbaa !7
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %a, i32 100, i1 false), !tbaa !7
 
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 
 define i16 @test5() {
 ; CHECK-LABEL: @test5(
@@ -500,11 +409,9 @@ define i16 @test5() {
 
 entry:
   %a = alloca [4 x i8]
-  %fptr = bitcast [4 x i8]* %a to float*
-  store float 0.0, float* %fptr
-  %ptr = getelementptr [4 x i8], [4 x i8]* %a, i32 0, i32 2
-  %iptr = bitcast i8* %ptr to i16*
-  %val = load i16, i16* %iptr
+  store float 0.0, ptr %a
+  %ptr = getelementptr [4 x i8], ptr %a, i32 0, i32 2
+  %val = load i16, ptr %ptr
   ret i16 %val
 }
 
@@ -519,12 +426,10 @@ define i16 @test5_multi_addrspace_access() {
 
 entry:
   %a = alloca [4 x i8]
-  %fptr = bitcast [4 x i8]* %a to float*
-  %fptr.as1 = addrspacecast float* %fptr to float addrspace(1)*
-  store float 0.0, float addrspace(1)* %fptr.as1
-  %ptr = getelementptr [4 x i8], [4 x i8]* %a, i32 0, i32 2
-  %iptr = bitcast i8* %ptr to i16*
-  %val = load i16, i16* %iptr
+  %fptr.as1 = addrspacecast ptr %a to ptr addrspace(1)
+  store float 0.0, ptr addrspace(1) %fptr.as1
+  %ptr = getelementptr [4 x i8], ptr %a, i32 0, i32 2
+  %val = load i16, ptr %ptr
   ret i16 %val
 }
 
@@ -532,77 +437,69 @@ define i32 @test6() {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store volatile i32 707406378, i32* [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load i32, i32* [[A_SROA_0]], align 4
+; CHECK-NEXT:    store volatile i32 707406378, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load i32, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_A_SROA_0_0_VAL]]
 ;
 
 entry:
   %a = alloca [4 x i8]
-  %ptr = getelementptr [4 x i8], [4 x i8]* %a, i32 0, i32 0
-  call void @llvm.memset.p0i8.i32(i8* %ptr, i8 42, i32 4, i1 true)
-  %iptr = bitcast i8* %ptr to i32*
-  %val = load i32, i32* %iptr
+  call void @llvm.memset.p0.i32(ptr %a, i8 42, i32 4, i1 true)
+  %val = load i32, ptr %a
   ret i32 %val
 }
 
-define void @test7(i8* %src, i8* %dst) {
+define void @test7(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_SROA_0_0_SRC_SROA_CAST:%.*]] = bitcast i8* [[SRC:%.*]] to i32*
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, i32* [[A_SROA_0_0_SRC_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_COPYLOAD]], i32* [[A_SROA_0]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_0_0_DST_SROA_CAST:%.*]] = bitcast i8* [[DST:%.*]] to i32*
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile i32, i32* [[A_SROA_0]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], i32* [[A_SROA_0_0_DST_SROA_CAST]], align 1, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_0]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca [4 x i8]
-  %ptr = getelementptr [4 x i8], [4 x i8]* %a, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %src, i32 4, i1 true), !tbaa !0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %ptr, i32 4, i1 true), !tbaa !3
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 4, i1 true), !tbaa !0
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %a, i32 4, i1 true), !tbaa !3
   ret void
 }
 
 
 %S1 = type { i32, i32, [16 x i8] }
-%S2 = type { %S1*, %S2* }
+%S2 = type { ptr, ptr }
 
-define %S2 @test8(%S2* %arg) {
+define %S2 @test8(ptr %arg) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S2_NEXT_PTR:%.*]] = getelementptr [[S2:%.*]], %S2* [[ARG:%.*]], i64 0, i32 1
-; CHECK-NEXT:    [[S2_NEXT:%.*]] = load %S2*, %S2** [[S2_NEXT_PTR]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[S2_NEXT_S1_PTR:%.*]] = getelementptr [[S2]], %S2* [[S2_NEXT]], i64 0, i32 0
-; CHECK-NEXT:    [[S2_NEXT_S1:%.*]] = load %S1*, %S1** [[S2_NEXT_S1_PTR]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[S2_NEXT_NEXT_PTR:%.*]] = getelementptr [[S2]], %S2* [[S2_NEXT]], i64 0, i32 1
-; CHECK-NEXT:    [[S2_NEXT_NEXT:%.*]] = load %S2*, %S2** [[S2_NEXT_NEXT_PTR]], align 8, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[RESULT1:%.*]] = insertvalue [[S2]] poison, %S1* [[S2_NEXT_S1]], 0
-; CHECK-NEXT:    [[RESULT2:%.*]] = insertvalue [[S2]] [[RESULT1]], %S2* [[S2_NEXT_NEXT]], 1
+; CHECK-NEXT:    [[S2_NEXT_PTR:%.*]] = getelementptr [[S2:%.*]], ptr [[ARG:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[S2_NEXT:%.*]] = load ptr, ptr [[S2_NEXT_PTR]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[S2_NEXT_S1:%.*]] = load ptr, ptr [[S2_NEXT]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[S2_NEXT_NEXT_PTR:%.*]] = getelementptr [[S2]], ptr [[S2_NEXT]], i64 0, i32 1
+; CHECK-NEXT:    [[S2_NEXT_NEXT:%.*]] = load ptr, ptr [[S2_NEXT_NEXT_PTR]], align 8, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = insertvalue [[S2]] poison, ptr [[S2_NEXT_S1]], 0
+; CHECK-NEXT:    [[RESULT2:%.*]] = insertvalue [[S2]] [[RESULT1]], ptr [[S2_NEXT_NEXT]], 1
 ; CHECK-NEXT:    ret [[S2]] [[RESULT2]]
 ;
 entry:
   %new = alloca %S2
 
-  %s2.next.ptr = getelementptr %S2, %S2* %arg, i64 0, i32 1
-  %s2.next = load %S2*, %S2** %s2.next.ptr, !tbaa !0
+  %s2.next.ptr = getelementptr %S2, ptr %arg, i64 0, i32 1
+  %s2.next = load ptr, ptr %s2.next.ptr, !tbaa !0
 
-  %s2.next.s1.ptr = getelementptr %S2, %S2* %s2.next, i64 0, i32 0
-  %s2.next.s1 = load %S1*, %S1** %s2.next.s1.ptr, !tbaa !3
-  %new.s1.ptr = getelementptr %S2, %S2* %new, i64 0, i32 0
-  store %S1* %s2.next.s1, %S1** %new.s1.ptr, !tbaa !5
-  %s2.next.next.ptr = getelementptr %S2, %S2* %s2.next, i64 0, i32 1
-  %s2.next.next = load %S2*, %S2** %s2.next.next.ptr, !tbaa !7
-  %new.next.ptr = getelementptr %S2, %S2* %new, i64 0, i32 1
-  store %S2* %s2.next.next, %S2** %new.next.ptr, !tbaa !9
+  %s2.next.s1 = load ptr, ptr %s2.next, !tbaa !3
+  store ptr %s2.next.s1, ptr %new, !tbaa !5
+  %s2.next.next.ptr = getelementptr %S2, ptr %s2.next, i64 0, i32 1
+  %s2.next.next = load ptr, ptr %s2.next.next.ptr, !tbaa !7
+  %new.next.ptr = getelementptr %S2, ptr %new, i64 0, i32 1
+  store ptr %s2.next.next, ptr %new.next.ptr, !tbaa !9
 
-  %new.s1 = load %S1*, %S1** %new.s1.ptr
-  %result1 = insertvalue %S2 poison, %S1* %new.s1, 0
-  %new.next = load %S2*, %S2** %new.next.ptr
-  %result2 = insertvalue %S2 %result1, %S2* %new.next, 1
+  %new.s1 = load ptr, ptr %new
+  %result1 = insertvalue %S2 poison, ptr %new.s1, 0
+  %new.next = load ptr, ptr %new.next.ptr
+  %result2 = insertvalue %S2 %result1, ptr %new.next, 1
   ret %S2 %result2
 }
 
@@ -630,33 +527,28 @@ define i64 @test9() {
 
 entry:
   %a = alloca { [3 x i8] }, align 8
-  %gep1 = getelementptr inbounds { [3 x i8] }, { [3 x i8] }* %a, i32 0, i32 0, i32 0
-  store i8 0, i8* %gep1, align 1
-  %gep2 = getelementptr inbounds { [3 x i8] }, { [3 x i8] }* %a, i32 0, i32 0, i32 1
-  store i8 0, i8* %gep2, align 1
-  %gep3 = getelementptr inbounds { [3 x i8] }, { [3 x i8] }* %a, i32 0, i32 0, i32 2
-  store i8 26, i8* %gep3, align 1
-  %cast = bitcast { [3 x i8] }* %a to { i64 }*
-  %elt = getelementptr inbounds { i64 }, { i64 }* %cast, i32 0, i32 0
-  %load = load i64, i64* %elt
+  store i8 0, ptr %a, align 1
+  %gep2 = getelementptr inbounds { [3 x i8] }, ptr %a, i32 0, i32 0, i32 1
+  store i8 0, ptr %gep2, align 1
+  %gep3 = getelementptr inbounds { [3 x i8] }, ptr %a, i32 0, i32 0, i32 2
+  store i8 26, ptr %gep3, align 1
+  %load = load i64, ptr %a
   %result = and i64 %load, 16777215
   ret i64 %result
 }
 
-define %S2* @test10() {
+define ptr @test10() {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint %S2* null to i64
-; CHECK-NEXT:    ret %S2* null
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr null to i64
+; CHECK-NEXT:    ret ptr null
 ;
 
 entry:
   %a = alloca [8 x i8]
-  %ptr = getelementptr [8 x i8], [8 x i8]* %a, i32 0, i32 0
-  call void @llvm.memset.p0i8.i32(i8* %ptr, i8 0, i32 8, i1 false)
-  %s2ptrptr = bitcast i8* %ptr to %S2**
-  %s2ptr = load %S2*, %S2** %s2ptrptr
-  ret %S2* %s2ptr
+  call void @llvm.memset.p0.i32(ptr %a, i8 0, i32 8, i1 false)
+  %s2ptr = load ptr, ptr %a
+  ret ptr %s2ptr
 }
 
 define i32 @test11(i1 %c1) {
@@ -674,15 +566,14 @@ entry:
   br i1 %c1, label %good, label %bad
 
 good:
-  %Y = getelementptr i32, i32* %X, i64 0
-  store i32 0, i32* %Y
-  %Z = load i32, i32* %Y
+  store i32 0, ptr %X
+  %Z = load i32, ptr %X
   ret i32 %Z
 
 bad:
-  %Y2 = getelementptr i32, i32* %X, i64 1
-  store i32 0, i32* %Y2
-  %Z2 = load i32, i32* %Y2
+  %Y2 = getelementptr i32, ptr %X, i64 1
+  store i32 0, ptr %Y2
+  %Z2 = load i32, ptr %Y2
   ret i32 %Z2
 }
 
@@ -717,23 +608,19 @@ entry:
   %a = alloca [3 x i8]
   %b = alloca [3 x i8]
 
-  %a0ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 0
-  store i8 0, i8* %a0ptr
-  %a1ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 1
-  store i8 0, i8* %a1ptr
-  %a2ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 2
-  store i8 0, i8* %a2ptr
-  %aiptr = bitcast [3 x i8]* %a to i24*
-  %ai = load i24, i24* %aiptr
+  store i8 0, ptr %a
+  %a1ptr = getelementptr [3 x i8], ptr %a, i64 0, i32 1
+  store i8 0, ptr %a1ptr
+  %a2ptr = getelementptr [3 x i8], ptr %a, i64 0, i32 2
+  store i8 0, ptr %a2ptr
+  %ai = load i24, ptr %a
 
-  %biptr = bitcast [3 x i8]* %b to i24*
-  store i24 %ai, i24* %biptr
-  %b0ptr = getelementptr [3 x i8], [3 x i8]* %b, i64 0, i32 0
-  %b0 = load i8, i8* %b0ptr
-  %b1ptr = getelementptr [3 x i8], [3 x i8]* %b, i64 0, i32 1
-  %b1 = load i8, i8* %b1ptr
-  %b2ptr = getelementptr [3 x i8], [3 x i8]* %b, i64 0, i32 2
-  %b2 = load i8, i8* %b2ptr
+  store i24 %ai, ptr %b
+  %b0 = load i8, ptr %b
+  %b1ptr = getelementptr [3 x i8], ptr %b, i64 0, i32 1
+  %b1 = load i8, ptr %b1ptr
+  %b2ptr = getelementptr [3 x i8], ptr %b, i64 0, i32 2
+  %b2 = load i8, ptr %b2ptr
 
   %bsum0 = add i8 %b0, %b1
   %bsum1 = add i8 %bsum0, %b2
@@ -752,15 +639,13 @@ define i32 @test13() {
 
 entry:
   %a = alloca [3 x i8], align 2
-  %b0ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 0
-  store i8 0, i8* %b0ptr
-  %b1ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 1
-  store i8 0, i8* %b1ptr
-  %b2ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 2
-  store i8 0, i8* %b2ptr
-  %iptrcast = bitcast [3 x i8]* %a to i16*
-  %iptrgep = getelementptr i16, i16* %iptrcast, i64 1
-  %i = load i16, i16* %iptrgep
+  store i8 0, ptr %a
+  %b1ptr = getelementptr [3 x i8], ptr %a, i64 0, i32 1
+  store i8 0, ptr %b1ptr
+  %b2ptr = getelementptr [3 x i8], ptr %a, i64 0, i32 2
+  store i8 0, ptr %b2ptr
+  %iptrgep = getelementptr i16, ptr %a, i64 1
+  %i = load i16, ptr %iptrgep
   %ret = zext i16 %i to i32
   ret i32 %ret
 }
@@ -779,24 +664,18 @@ define void @test14(...) nounwind uwtable {
 
 entry:
   %a = alloca %test14.struct
-  %p = alloca %test14.struct*
-  %0 = bitcast %test14.struct* %a to i8*
-  %1 = getelementptr i8, i8* %0, i64 12
-  %2 = bitcast i8* %1 to %test14.struct*
-  %3 = getelementptr inbounds %test14.struct, %test14.struct* %2, i32 0, i32 0
-  %4 = getelementptr inbounds %test14.struct, %test14.struct* %a, i32 0, i32 0
-  %5 = bitcast [3 x i32]* %3 to i32*
-  %6 = bitcast [3 x i32]* %4 to i32*
-  %7 = load i32, i32* %6, align 4
-  store i32 %7, i32* %5, align 4
-  %8 = getelementptr inbounds i32, i32* %5, i32 1
-  %9 = getelementptr inbounds i32, i32* %6, i32 1
-  %10 = load i32, i32* %9, align 4
-  store i32 %10, i32* %8, align 4
-  %11 = getelementptr inbounds i32, i32* %5, i32 2
-  %12 = getelementptr inbounds i32, i32* %6, i32 2
-  %13 = load i32, i32* %12, align 4
-  store i32 %13, i32* %11, align 4
+  %p = alloca ptr
+  %0 = getelementptr i8, ptr %a, i64 12
+  %1 = load i32, ptr %a, align 4
+  store i32 %1, ptr %0, align 4
+  %2 = getelementptr inbounds i32, ptr %0, i32 1
+  %3 = getelementptr inbounds i32, ptr %a, i32 1
+  %4 = load i32, ptr %3, align 4
+  store i32 %4, ptr %2, align 4
+  %5 = getelementptr inbounds i32, ptr %0, i32 2
+  %6 = getelementptr inbounds i32, ptr %a, i32 2
+  %7 = load i32, ptr %6, align 4
+  store i32 %7, ptr %5, align 4
   ret void
 }
 
@@ -819,167 +698,139 @@ entry:
   br label %loop
 
 loop:
-  %dead3 = phi i8* [ %gep3, %loop ], [ null, %entry ]
+  %dead3 = phi ptr [ %gep3, %loop ], [ null, %entry ]
 
-  store i64 1879048192, i64* %l0, align 8
-  %bc0 = bitcast i64* %l0 to i8*
-  %gep0 = getelementptr i8, i8* %bc0, i64 3
-  %dead0 = bitcast i8* %gep0 to i64*
+  store i64 1879048192, ptr %l0, align 8
+  %gep0 = getelementptr i8, ptr %l0, i64 3
 
-  store i64 1879048192, i64* %l1, align 8
-  %bc1 = bitcast i64* %l1 to i8*
-  %gep1 = getelementptr i8, i8* %bc1, i64 3
-  %dead1 = getelementptr i8, i8* %gep1, i64 1
+  store i64 1879048192, ptr %l1, align 8
+  %gep1 = getelementptr i8, ptr %l1, i64 3
+  %dead1 = getelementptr i8, ptr %gep1, i64 1
 
-  store i64 1879048192, i64* %l2, align 8
-  %bc2 = bitcast i64* %l2 to i8*
-  %gep2.1 = getelementptr i8, i8* %bc2, i64 1
-  %gep2.2 = getelementptr i8, i8* %bc2, i64 3
+  store i64 1879048192, ptr %l2, align 8
+  %gep2.1 = getelementptr i8, ptr %l2, i64 1
+  %gep2.2 = getelementptr i8, ptr %l2, i64 3
   ; Note that this select should get visited multiple times due to using two
   ; different GEPs off the same alloca. We should only delete it once.
-  %dead2 = select i1 %flag, i8* %gep2.1, i8* %gep2.2
+  %dead2 = select i1 %flag, ptr %gep2.1, ptr %gep2.2
 
-  store i64 1879048192, i64* %l3, align 8
-  %bc3 = bitcast i64* %l3 to i8*
-  %gep3 = getelementptr i8, i8* %bc3, i64 3
+  store i64 1879048192, ptr %l3, align 8
+  %gep3 = getelementptr i8, ptr %l3, i64 3
 
   br label %loop
 }
 
-define void @test16(i8* %src, i8* %dst) {
+define void @test16(ptr %src, ptr %dst) {
 ; Ensure that we can promote an alloca of [3 x i8] to an i24 SSA value.
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0_0_SRC_SROA_CAST:%.*]] = bitcast i8* [[SRC:%.*]] to i24*
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i24, i24* [[A_SROA_0_0_SRC_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_0_0_DST_SROA_CAST:%.*]] = bitcast i8* [[DST:%.*]] to i24*
-; CHECK-NEXT:    store i24 0, i24* [[A_SROA_0_0_DST_SROA_CAST]], align 1, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i24, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    store i24 0, ptr [[DST:%.*]], align 1, !tbaa [[TBAA5]]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca [3 x i8]
-  %ptr = getelementptr [3 x i8], [3 x i8]* %a, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %src, i32 4, i1 false), !tbaa !0
-  %cast = bitcast i8* %ptr to i24*
-  store i24 0, i24* %cast, !tbaa !3
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %ptr, i32 4, i1 false), !tbaa !5
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 4, i1 false), !tbaa !0
+  store i24 0, ptr %a, !tbaa !3
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %a, i32 4, i1 false), !tbaa !5
   ret void
 }
 
-define void @test17(i8* %src, i8* %dst) {
+define void @test17(ptr %src, ptr %dst) {
 ; Ensure that we can rewrite unpromotable memcpys which extend past the end of
 ; the alloca.
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [3 x i8], align 1
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [3 x i8], [3 x i8]* [[A]], i32 0, i32 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR]], i8* [[SRC:%.*]], i32 4, i1 true), !tbaa [[TBAA0]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[DST:%.*]], i8* [[PTR]], i32 4, i1 true), !tbaa [[TBAA3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[A]], ptr [[SRC:%.*]], i32 4, i1 true), !tbaa [[TBAA0]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST:%.*]], ptr [[A]], i32 4, i1 true), !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca [3 x i8]
-  %ptr = getelementptr [3 x i8], [3 x i8]* %a, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %src, i32 4, i1 true), !tbaa !0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %ptr, i32 4, i1 true), !tbaa !3
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 4, i1 true), !tbaa !0
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %a, i32 4, i1 true), !tbaa !3
   ret void
 }
 
-define void @test18(i8* %src, i8* %dst, i32 %size) {
+define void @test18(ptr %src, ptr %dst, i32 %size) {
 ; Preserve transfer intrinsics with a variable size, even if they overlap with
 ; fixed size operations. Further, continue to split and promote allocas preceding
 ; the variable sized intrinsic.
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_33:%.*]] = alloca [34 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_0_0_SRC_SROA_CAST:%.*]] = bitcast i8* [[SRC:%.*]] to i32*
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i32, i32* [[A_SROA_0_0_SRC_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 4
-; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_3_0_SRC_SROA_IDX]] to i32*
-; CHECK-NEXT:    [[A_SROA_3_0_COPYLOAD:%.*]] = load i32, i32* [[A_SROA_3_0_SRC_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_33_0_PTR2_SROA_IDX:%.*]] = getelementptr inbounds [34 x i8], [34 x i8]* [[A_SROA_33]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_33_0_PTR2_SROA_IDX]], i8* [[SRC]], i32 [[SIZE:%.*]], i1 false), !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[A_SROA_33_0_PTR2_SROA_IDX6:%.*]] = getelementptr inbounds [34 x i8], [34 x i8]* [[A_SROA_33]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[A_SROA_33_0_PTR2_SROA_IDX6]], i8 42, i32 [[SIZE]], i1 false), !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[A_SROA_0_0_DST_SROA_CAST:%.*]] = bitcast i8* [[DST:%.*]] to i32*
-; CHECK-NEXT:    store i32 42, i32* [[A_SROA_0_0_DST_SROA_CAST]], align 1, !tbaa [[TBAA9]]
-; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 4
-; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_3_0_DST_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 [[A_SROA_3_0_COPYLOAD]], i32* [[A_SROA_3_0_DST_SROA_CAST]], align 1, !tbaa [[TBAA9]]
-; CHECK-NEXT:    [[A_SROA_33_0_PTR2_SROA_IDX7:%.*]] = getelementptr inbounds [34 x i8], [34 x i8]* [[A_SROA_33]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[DST]], i8* align 1 [[A_SROA_33_0_PTR2_SROA_IDX7]], i32 [[SIZE]], i1 false), !tbaa [[TBAA11]]
+; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
+; CHECK-NEXT:    [[A_SROA_3_0_COPYLOAD:%.*]] = load i32, ptr [[A_SROA_3_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_33]], ptr [[SRC]], i32 [[SIZE:%.*]], i1 false), !tbaa [[TBAA3]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_33]], i8 42, i32 [[SIZE]], i1 false), !tbaa [[TBAA5]]
+; CHECK-NEXT:    store i32 42, ptr [[DST:%.*]], align 1, !tbaa [[TBAA9]]
+; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
+; CHECK-NEXT:    store i32 [[A_SROA_3_0_COPYLOAD]], ptr [[A_SROA_3_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST]], ptr align 1 [[A_SROA_33]], i32 [[SIZE]], i1 false), !tbaa [[TBAA11]]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca [42 x i8]
-  %ptr = getelementptr [42 x i8], [42 x i8]* %a, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %src, i32 8, i1 false), !tbaa !0
-  %ptr2 = getelementptr [42 x i8], [42 x i8]* %a, i32 0, i32 8
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr2, i8* %src, i32 %size, i1 false), !tbaa !3
-  call void @llvm.memset.p0i8.i32(i8* %ptr2, i8 42, i32 %size, i1 false), !tbaa !5
-  %cast = bitcast i8* %ptr to i32*
-  store i32 42, i32* %cast, !tbaa !7
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %ptr, i32 8, i1 false), !tbaa !9
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %ptr2, i32 %size, i1 false), !tbaa !11
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 8, i1 false), !tbaa !0
+  %ptr2 = getelementptr [42 x i8], ptr %a, i32 0, i32 8
+  call void @llvm.memcpy.p0.p0.i32(ptr %ptr2, ptr %src, i32 %size, i1 false), !tbaa !3
+  call void @llvm.memset.p0.i32(ptr %ptr2, i8 42, i32 %size, i1 false), !tbaa !5
+  store i32 42, ptr %a, !tbaa !7
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %a, i32 8, i1 false), !tbaa !9
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %ptr2, i32 %size, i1 false), !tbaa !11
   ret void
 }
 
 %opaque = type opaque
 
-define i64 @test19(%opaque* %x) {
+define i64 @test19(ptr %x) {
 ; This input will cause us to try to compute a natural GEP when rewriting
 ; pointers in such a way that we try to GEP through the opaque type. Previously,
 ; a check for an unsized type was missing and this crashed. Ensure it behaves
 ; reasonably now.
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CAST1:%.*]] = bitcast %opaque* [[X:%.*]] to i8*
-; CHECK-NEXT:    [[A_SROA_0_0_CAST1_SROA_CAST:%.*]] = bitcast i8* [[CAST1]] to i64*
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, i64* [[A_SROA_0_0_CAST1_SROA_CAST]], align 1
-; CHECK-NEXT:    [[A_SROA_2_0_CAST1_SROA_IDX:%.*]] = getelementptr inbounds i8, i8* [[CAST1]], i64 8
-; CHECK-NEXT:    [[A_SROA_2_0_CAST1_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_2_0_CAST1_SROA_IDX]] to i8**
-; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load i8*, i8** [[A_SROA_2_0_CAST1_SROA_CAST]], align 1
+; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[A_SROA_2_0_X_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[A_SROA_2_0_X_SROA_IDX]], align 1
 ; CHECK-NEXT:    ret i64 [[A_SROA_0_0_COPYLOAD]]
 ;
 
 entry:
-  %a = alloca { i64, i8* }
-  %cast1 = bitcast %opaque* %x to i8*
-  %cast2 = bitcast { i64, i8* }* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %cast2, i8* %cast1, i32 16, i1 false)
-  %gep = getelementptr inbounds { i64, i8* }, { i64, i8* }* %a, i32 0, i32 0
-  %val = load i64, i64* %gep
+  %a = alloca { i64, ptr }
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %x, i32 16, i1 false)
+  %gep = getelementptr inbounds { i64, ptr }, ptr %a, i32 0, i32 0
+  %val = load i64, ptr %gep
   ret i64 %val
 }
 
-declare void @llvm.memcpy.p0i8.p1i8.i32(i8* nocapture, i8 addrspace(1)* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p1.i32(ptr nocapture, ptr addrspace(1) nocapture, i32, i32, i1) nounwind
 
-define i64 @test19_addrspacecast(%opaque* %x) {
+define i64 @test19_addrspacecast(ptr %x) {
 ; This input will cause us to try to compute a natural GEP when rewriting
 ; pointers in such a way that we try to GEP through the opaque type. Previously,
 ; a check for an unsized type was missing and this crashed. Ensure it behaves
 ; reasonably now.
 ; CHECK-LABEL: @test19_addrspacecast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast %opaque* [[X:%.*]] to i8 addrspace(1)*
-; CHECK-NEXT:    [[A_SROA_0_0_CAST1_SROA_CAST:%.*]] = bitcast i8 addrspace(1)* [[CAST1]] to i64 addrspace(1)*
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, i64 addrspace(1)* [[A_SROA_0_0_CAST1_SROA_CAST]], align 1
-; CHECK-NEXT:    [[A_SROA_2_0_CAST1_SROA_IDX:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[CAST1]], i16 8
-; CHECK-NEXT:    [[A_SROA_2_0_CAST1_SROA_CAST:%.*]] = bitcast i8 addrspace(1)* [[A_SROA_2_0_CAST1_SROA_IDX]] to i8* addrspace(1)*
-; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load i8*, i8* addrspace(1)* [[A_SROA_2_0_CAST1_SROA_CAST]], align 1
+; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr addrspace(1) [[CAST1]], align 1
+; CHECK-NEXT:    [[A_SROA_2_0_CAST1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[CAST1]], i16 8
+; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(1) [[A_SROA_2_0_CAST1_SROA_IDX]], align 1
 ; CHECK-NEXT:    ret i64 [[A_SROA_0_0_COPYLOAD]]
 ;
 
 entry:
-  %a = alloca { i64, i8* }
-  %cast1 = addrspacecast %opaque* %x to i8 addrspace(1)*
-  %cast2 = bitcast { i64, i8* }* %a to i8*
-  call void @llvm.memcpy.p0i8.p1i8.i32(i8* %cast2, i8 addrspace(1)* %cast1, i32 16, i32 1, i1 false)
-  %gep = getelementptr inbounds { i64, i8* }, { i64, i8* }* %a, i32 0, i32 0
-  %val = load i64, i64* %gep
+  %a = alloca { i64, ptr }
+  %cast1 = addrspacecast ptr %x to ptr addrspace(1)
+  call void @llvm.memcpy.p0.p1.i32(ptr %a, ptr addrspace(1) %cast1, i32 16, i32 1, i1 false)
+  %gep = getelementptr inbounds { i64, ptr }, ptr %a, i32 0, i32 0
+  %val = load i64, ptr %gep
   ret i64 %val
 }
 
@@ -995,24 +846,23 @@ define i32 @test20() {
 
 entry:
   %a = alloca [3 x i32]
-  %gep1 = getelementptr [3 x i32], [3 x i32]* %a, i32 0, i32 0
-  store i32 1, i32* %gep1
-  %gep2.1 = getelementptr [3 x i32], [3 x i32]* %a, i32 0, i32 -2
-  %gep2.2 = getelementptr i32, i32* %gep2.1, i32 3
-  store i32 2, i32* %gep2.2
-  %gep3.1 = getelementptr [3 x i32], [3 x i32]* %a, i32 0, i32 14
-  %gep3.2 = getelementptr i32, i32* %gep3.1, i32 -12
-  store i32 3, i32* %gep3.2
+  store i32 1, ptr %a
+  %gep2.1 = getelementptr [3 x i32], ptr %a, i32 0, i32 -2
+  %gep2.2 = getelementptr i32, ptr %gep2.1, i32 3
+  store i32 2, ptr %gep2.2
+  %gep3.1 = getelementptr [3 x i32], ptr %a, i32 0, i32 14
+  %gep3.2 = getelementptr i32, ptr %gep3.1, i32 -12
+  store i32 3, ptr %gep3.2
 
-  %load1 = load i32, i32* %gep1
-  %load2 = load i32, i32* %gep2.2
-  %load3 = load i32, i32* %gep3.2
+  %load1 = load i32, ptr %a
+  %load2 = load i32, ptr %gep2.2
+  %load3 = load i32, ptr %gep3.2
   %sum1 = add i32 %load1, %load2
   %sum2 = add i32 %sum1, %load3
   ret i32 %sum2
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 define i8 @test21() {
 ; Test allocations and offsets which border on overflow of the int64_t used
@@ -1026,20 +876,19 @@ define i8 @test21() {
 
 entry:
   %a = alloca [2305843009213693951 x i8]
-  %gep0 = getelementptr [2305843009213693951 x i8], [2305843009213693951 x i8]* %a, i64 0, i64 2305843009213693949
-  store i8 255, i8* %gep0
-  %gep1 = getelementptr [2305843009213693951 x i8], [2305843009213693951 x i8]* %a, i64 0, i64 -9223372036854775807
-  %gep2 = getelementptr i8, i8* %gep1, i64 -1
-  call void @llvm.memset.p0i8.i64(i8* %gep2, i8 0, i64 18446744073709551615, i1 false)
-  %gep3 = getelementptr i8, i8* %gep1, i64 9223372036854775807
-  %gep4 = getelementptr i8, i8* %gep3, i64 9223372036854775807
-  %gep5 = getelementptr i8, i8* %gep4, i64 -6917529027641081857
-  store i8 255, i8* %gep5
-  %cast1 = bitcast i8* %gep4 to i32*
-  store i32 0, i32* %cast1
-  %load = load i8, i8* %gep0
-  %gep6 = getelementptr i8, i8* %gep0, i32 1
-  %load2 = load i8, i8* %gep6
+  %gep0 = getelementptr [2305843009213693951 x i8], ptr %a, i64 0, i64 2305843009213693949
+  store i8 255, ptr %gep0
+  %gep1 = getelementptr [2305843009213693951 x i8], ptr %a, i64 0, i64 -9223372036854775807
+  %gep2 = getelementptr i8, ptr %gep1, i64 -1
+  call void @llvm.memset.p0.i64(ptr %gep2, i8 0, i64 18446744073709551615, i1 false)
+  %gep3 = getelementptr i8, ptr %gep1, i64 9223372036854775807
+  %gep4 = getelementptr i8, ptr %gep3, i64 9223372036854775807
+  %gep5 = getelementptr i8, ptr %gep4, i64 -6917529027641081857
+  store i8 255, ptr %gep5
+  store i32 0, ptr %gep4
+  %load = load i8, ptr %gep0
+  %gep6 = getelementptr i8, ptr %gep0, i32 1
+  %load2 = load i8, ptr %gep6
   %result = or i8 %load, %load2
   ret i8 %result
 }
@@ -1056,8 +905,8 @@ define void @PR13916.1() {
 
 entry:
   %a = alloca i8
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %a, i32 1, i1 false)
-  %tmp2 = load i8, i8* %a
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %a, i32 1, i1 false)
+  %tmp2 = load i8, ptr %a
   ret void
 }
 
@@ -1079,18 +928,15 @@ entry:
   br i1 %c1, label %if.then, label %if.end
 
 if.then:
-  %tmp0 = bitcast %PR13916.struct* %a to i8*
-  %tmp1 = bitcast %PR13916.struct* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp0, i8* %tmp1, i32 1, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %a, i32 1, i1 false)
   br label %if.end
 
 if.end:
-  %gep = getelementptr %PR13916.struct, %PR13916.struct* %a, i32 0, i32 0
-  %tmp2 = load i8, i8* %gep
+  %tmp2 = load i8, ptr %a
   ret void
 }
 
-define void @PR13990(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i8* %ptr) {
+define void @PR13990(i1 %c1, i1 %c2, i1 %c3, i1 %c4, ptr %ptr) {
 ; Ensure we can handle cases where processing one alloca causes the other
 ; alloca to become dead and get deleted. This might crash or fail under
 ; Valgrind if we regress.
@@ -1108,16 +954,16 @@ define void @PR13990(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i8* %ptr) {
 ;
 
 entry:
-  %tmp1 = alloca i8*
-  %tmp2 = alloca i8*
+  %tmp1 = alloca ptr
+  %tmp2 = alloca ptr
   br i1 %c1, label %bb1, label %bb2
 
 bb1:
-  store i8* %ptr, i8** %tmp2
+  store ptr %ptr, ptr %tmp2
   br i1 %c2, label %bb2, label %bb3
 
 bb2:
-  %tmp50 = select i1 %c3, i8** %tmp2, i8** %tmp1
+  %tmp50 = select i1 %c3, ptr %tmp2, ptr %tmp1
   br i1 %c4, label %bb3, label %bb4
 
 bb3:
@@ -1138,42 +984,38 @@ define double @PR13969(double %x) {
 
 entry:
   %a = alloca double
-  %b = alloca double*
+  %b = alloca ptr
   %c = alloca double
 
-  store double %x, double* %a
-  store double* %c, double** %b
-  store double* %a, double** %b
-  store double %x, double* %c
-  %ret = load double, double* %a
+  store double %x, ptr %a
+  store ptr %c, ptr %b
+  store ptr %a, ptr %b
+  store double %x, ptr %c
+  %ret = load double, ptr %a
 
   ret double %ret
 }
 
 %PR14034.struct = type { { {} }, i32, %PR14034.list }
-%PR14034.list = type { %PR14034.list*, %PR14034.list* }
+%PR14034.list = type { ptr, ptr }
 
-define void @PR14034(%PR14034.list* %ptr, %PR14034.struct* %ptr2) {
+define void @PR14034(ptr %ptr, ptr %ptr2) {
 ; This test case tries to form GEPs into the empty leading struct members, and
 ; subsequently crashed (under valgrind) before we fixed the PR. The important
 ; thing is to handle empty structs gracefully.
 ; CHECK-LABEL: @PR14034(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [12 x i8], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_CAST0_SROA_CAST:%.*]] = bitcast %PR14034.struct* [[PTR2:%.*]] to i8*
-; CHECK-NEXT:    [[A_SROA_0_0_CAST1_SROA_IDX:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[A_SROA_0]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[A_SROA_0_0_CAST0_SROA_CAST]], i8* align 8 [[A_SROA_0_0_CAST1_SROA_IDX]], i32 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[PTR2:%.*]], ptr align 8 [[A_SROA_0]], i32 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca %PR14034.struct
-  %list = getelementptr %PR14034.struct, %PR14034.struct* %a, i32 0, i32 2
-  %prev = getelementptr %PR14034.list, %PR14034.list* %list, i32 0, i32 1
-  store %PR14034.list* %ptr, %PR14034.list** %prev
-  %cast0 = bitcast %PR14034.struct* %ptr2 to i8*
-  %cast1 = bitcast %PR14034.struct* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %cast0, i8* %cast1, i32 12, i1 false)
+  %list = getelementptr %PR14034.struct, ptr %a, i32 0, i32 2
+  %prev = getelementptr %PR14034.list, ptr %list, i32 0, i32 1
+  store ptr %ptr, ptr %prev
+  call void @llvm.memcpy.p0.p0.i32(ptr %ptr2, ptr %a, i32 12, i1 false)
   ret void
 }
 
@@ -1208,38 +1050,32 @@ entry:
   %a3 = alloca { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }
 
   %wrap1 = insertvalue [1 x { i32 }] poison, i32 %x, 0, 0
-  %gep1 = getelementptr { { [1 x { i32 }] } }, { { [1 x { i32 }] } }* %a1, i32 0, i32 0, i32 0
-  store [1 x { i32 }] %wrap1, [1 x { i32 }]* %gep1
+  store [1 x { i32 }] %wrap1, ptr %a1
 
-  %gep2 = getelementptr { { [1 x { i32 }] } }, { { [1 x { i32 }] } }* %a1, i32 0, i32 0
-  %ptrcast1 = bitcast { [1 x { i32 }] }* %gep2 to { [1 x { float }] }*
-  %load1 = load { [1 x { float }] }, { [1 x { float }] }* %ptrcast1
+  %load1 = load { [1 x { float }] }, ptr %a1
   %unwrap1 = extractvalue { [1 x { float }] } %load1, 0, 0
 
   %wrap2 = insertvalue { {}, { float }, [0 x i8] } poison, { float } %unwrap1, 1
-  store { {}, { float }, [0 x i8] } %wrap2, { {}, { float }, [0 x i8] }* %a2
+  store { {}, { float }, [0 x i8] } %wrap2, ptr %a2
 
-  %gep3 = getelementptr { {}, { float }, [0 x i8] }, { {}, { float }, [0 x i8] }* %a2, i32 0, i32 1, i32 0
-  %ptrcast2 = bitcast float* %gep3 to <4 x i8>*
-  %load3 = load <4 x i8>, <4 x i8>* %ptrcast2
+  %gep3 = getelementptr { {}, { float }, [0 x i8] }, ptr %a2, i32 0, i32 1, i32 0
+  %load3 = load <4 x i8>, ptr %gep3
   %valcast1 = bitcast <4 x i8> %load3 to i32
 
   %wrap3 = insertvalue [1 x [1 x i32]] poison, i32 %valcast1, 0, 0
   %wrap4 = insertvalue { [1 x [1 x i32]], {} } poison, [1 x [1 x i32]] %wrap3, 0
-  %gep4 = getelementptr { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }, { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }* %a3, i32 0, i32 1
-  %ptrcast3 = bitcast { [0 x double], [1 x [1 x <4 x i8>]], {} }* %gep4 to { [1 x [1 x i32]], {} }*
-  store { [1 x [1 x i32]], {} } %wrap4, { [1 x [1 x i32]], {} }* %ptrcast3
+  %gep4 = getelementptr { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }, ptr %a3, i32 0, i32 1
+  store { [1 x [1 x i32]], {} } %wrap4, ptr %gep4
 
-  %gep5 = getelementptr { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }, { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }* %a3, i32 0, i32 1, i32 1, i32 0
-  %ptrcast4 = bitcast [1 x <4 x i8>]* %gep5 to { {}, float, {} }*
-  %load4 = load { {}, float, {} }, { {}, float, {} }* %ptrcast4
+  %gep5 = getelementptr { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }, ptr %a3, i32 0, i32 1, i32 1, i32 0
+  %load4 = load { {}, float, {} }, ptr %gep5
   %unwrap2 = extractvalue { {}, float, {} } %load4, 1
   %valcast2 = bitcast float %unwrap2 to i32
 
   ret i32 %valcast2
 }
 
-define void @PR14059.1(double* %d) {
+define void @PR14059.1(ptr %d) {
 ; In PR14059 a peculiar construct was identified as something that is used
 ; pervasively in ARM's ABI-calling-convention lowering: the passing of a struct
 ; of doubles via an array of i32 in order to place the data into integer
@@ -1260,69 +1096,64 @@ define void @PR14059.1(double* %d) {
 ; CHECK-NEXT:    [[X_SROA_0_I_2_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_2_INSERT_MASK]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[X_SROA_0_I_2_INSERT_INSERT]] to double
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
-; CHECK-NEXT:    [[X_SROA_0_I_4_D_RAW_SROA_CAST:%.*]] = bitcast double* [[D:%.*]] to i32*
-; CHECK-NEXT:    [[X_SROA_0_I_4_COPYLOAD:%.*]] = load i32, i32* [[X_SROA_0_I_4_D_RAW_SROA_CAST]], align 1
+; CHECK-NEXT:    [[X_SROA_0_I_4_COPYLOAD:%.*]] = load i32, ptr [[D:%.*]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double 0.000000e+00 to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_EXT:%.*]] = zext i32 [[X_SROA_0_I_4_COPYLOAD]] to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_SHIFT:%.*]] = shl i64 [[X_SROA_0_I_4_INSERT_EXT]], 32
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK4:%.*]] = and i64 [[TMP5]], 4294967295
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT5:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK4]], [[X_SROA_0_I_4_INSERT_SHIFT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT5]] to double
+; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK3:%.*]] = and i64 [[TMP5]], 4294967295
+; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT4:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK3]], [[X_SROA_0_I_4_INSERT_SHIFT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT4]] to double
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double [[TMP6]] to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK:%.*]] = and i64 [[TMP7]], 4294967295
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK]], 4607182418800017408
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT]] to double
-; CHECK-NEXT:    [[ACCUM_REAL_I:%.*]] = load double, double* [[D]], align 8
+; CHECK-NEXT:    [[ACCUM_REAL_I:%.*]] = load double, ptr [[D]], align 8
 ; CHECK-NEXT:    [[ADD_R_I:%.*]] = fadd double [[ACCUM_REAL_I]], [[TMP8]]
-; CHECK-NEXT:    store double [[ADD_R_I]], double* [[D]], align 8
+; CHECK-NEXT:    store double [[ADD_R_I]], ptr [[D]], align 8
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %X.sroa.0.i = alloca double, align 8
-  %0 = bitcast double* %X.sroa.0.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %0)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %X.sroa.0.i)
 
   ; Store to the low 32-bits...
-  %X.sroa.0.0.cast2.i = bitcast double* %X.sroa.0.i to i32*
-  store i32 0, i32* %X.sroa.0.0.cast2.i, align 8
+  store i32 0, ptr %X.sroa.0.i, align 8
 
   ; Also use a memset to the middle 32-bits for fun.
-  %X.sroa.0.2.raw_idx2.i = getelementptr inbounds i8, i8* %0, i32 2
-  call void @llvm.memset.p0i8.i64(i8* %X.sroa.0.2.raw_idx2.i, i8 0, i64 4, i1 false)
+  %X.sroa.0.2.raw_idx2.i = getelementptr inbounds i8, ptr %X.sroa.0.i, i32 2
+  call void @llvm.memset.p0.i64(ptr %X.sroa.0.2.raw_idx2.i, i8 0, i64 4, i1 false)
 
   ; Or a memset of the whole thing.
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 8, i1 false)
+  call void @llvm.memset.p0.i64(ptr %X.sroa.0.i, i8 0, i64 8, i1 false)
 
   ; Write to the high 32-bits with a memcpy.
-  %X.sroa.0.4.raw_idx4.i = getelementptr inbounds i8, i8* %0, i32 4
-  %d.raw = bitcast double* %d to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %X.sroa.0.4.raw_idx4.i, i8* %d.raw, i32 4, i1 false)
+  %X.sroa.0.4.raw_idx4.i = getelementptr inbounds i8, ptr %X.sroa.0.i, i32 4
+  call void @llvm.memcpy.p0.p0.i32(ptr %X.sroa.0.4.raw_idx4.i, ptr %d, i32 4, i1 false)
 
   ; Store to the high 32-bits...
-  %X.sroa.0.4.cast5.i = bitcast i8* %X.sroa.0.4.raw_idx4.i to i32*
-  store i32 1072693248, i32* %X.sroa.0.4.cast5.i, align 4
+  store i32 1072693248, ptr %X.sroa.0.4.raw_idx4.i, align 4
 
   ; Do the actual math...
-  %X.sroa.0.0.load1.i = load double, double* %X.sroa.0.i, align 8
-  %accum.real.i = load double, double* %d, align 8
+  %X.sroa.0.0.load1.i = load double, ptr %X.sroa.0.i, align 8
+  %accum.real.i = load double, ptr %d, align 8
   %add.r.i = fadd double %accum.real.i, %X.sroa.0.0.load1.i
-  store double %add.r.i, double* %d, align 8
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
+  store double %add.r.i, ptr %d, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %X.sroa.0.i)
   ret void
 }
 
-define i64 @PR14059.2({ float, float }* %phi) {
+define i64 @PR14059.2(ptr %phi) {
 ; Check that SROA can split up alloca-wide integer loads and stores where the
 ; underlying alloca has smaller components that are accessed independently. This
 ; shows up particularly with ABI lowering patterns coming out of Clang that rely
 ; on the particular register placement of a single large integer return value.
 ; CHECK-LABEL: @PR14059.2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PHI_REALP:%.*]] = getelementptr inbounds { float, float }, { float, float }* [[PHI:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[PHI_REAL:%.*]] = load float, float* [[PHI_REALP]], align 4
-; CHECK-NEXT:    [[PHI_IMAGP:%.*]] = getelementptr inbounds { float, float }, { float, float }* [[PHI]], i32 0, i32 1
-; CHECK-NEXT:    [[PHI_IMAG:%.*]] = load float, float* [[PHI_IMAGP]], align 4
+; CHECK-NEXT:    [[PHI_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[PHI:%.*]], i32 0, i32 0
+; CHECK-NEXT:    [[PHI_REAL:%.*]] = load float, ptr [[PHI_REALP]], align 4
+; CHECK-NEXT:    [[PHI_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[PHI]], i32 0, i32 1
+; CHECK-NEXT:    [[PHI_IMAG:%.*]] = load float, ptr [[PHI_IMAGP]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[PHI_REAL]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[PHI_IMAG]] to i32
 ; CHECK-NEXT:    [[RETVAL_SROA_3_0_INSERT_EXT:%.*]] = zext i32 [[TMP1]] to i64
@@ -1338,65 +1169,57 @@ define i64 @PR14059.2({ float, float }* %phi) {
 entry:
   %retval = alloca { float, float }, align 4
 
-  %0 = bitcast { float, float }* %retval to i64*
-  store i64 0, i64* %0
+  store i64 0, ptr %retval
 
-  %phi.realp = getelementptr inbounds { float, float }, { float, float }* %phi, i32 0, i32 0
-  %phi.real = load float, float* %phi.realp
-  %phi.imagp = getelementptr inbounds { float, float }, { float, float }* %phi, i32 0, i32 1
-  %phi.imag = load float, float* %phi.imagp
+  %phi.realp = getelementptr inbounds { float, float }, ptr %phi, i32 0, i32 0
+  %phi.real = load float, ptr %phi.realp
+  %phi.imagp = getelementptr inbounds { float, float }, ptr %phi, i32 0, i32 1
+  %phi.imag = load float, ptr %phi.imagp
 
-  %real = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 0
-  %imag = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 1
-  store float %phi.real, float* %real
-  store float %phi.imag, float* %imag
+  %real = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 0
+  %imag = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 1
+  store float %phi.real, ptr %real
+  store float %phi.imag, ptr %imag
 
-  %1 = load i64, i64* %0, align 1
-  ret i64 %1
+  %0 = load i64, ptr %retval, align 1
+  ret i64 %0
 }
 
-define void @PR14105({ [16 x i8] }* %ptr) {
+define void @PR14105(ptr %ptr) {
 ; Ensure that when rewriting the GEP index '-1' for this alloca we preserve is
 ; sign as negative. We use a volatile memcpy to ensure promotion never actually
 ; occurs.
 ; CHECK-LABEL: @PR14105(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [16 x i8], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_CAST1_SROA_IDX:%.*]] = getelementptr inbounds { [16 x i8] }, { [16 x i8] }* [[PTR:%.*]], i64 -1, i32 0, i64 0
-; CHECK-NEXT:    [[A_SROA_0_0_CAST2_SROA_IDX:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[A_SROA_0]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 [[A_SROA_0_0_CAST1_SROA_IDX]], i8* align 8 [[A_SROA_0_0_CAST2_SROA_IDX]], i32 16, i1 true)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { [16 x i8] }, ptr [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[GEP]], ptr align 8 [[A_SROA_0]], i32 16, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca { [16 x i8] }, align 8
 
-  %gep = getelementptr inbounds { [16 x i8] }, { [16 x i8] }* %ptr, i64 -1
+  %gep = getelementptr inbounds { [16 x i8] }, ptr %ptr, i64 -1
 
-  %cast1 = bitcast { [16 x i8 ] }* %gep to i8*
-  %cast2 = bitcast { [16 x i8 ] }* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %cast1, i8* align 8 %cast2, i32 16, i1 true)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %gep, ptr align 8 %a, i32 16, i1 true)
   ret void
 }
 
-define void @PR14105_as1({ [16 x i8] } addrspace(1)* %ptr) {
+define void @PR14105_as1(ptr addrspace(1) %ptr) {
 ; Make sure this the right address space pointer is used for type check.
 ; CHECK-LABEL: @PR14105_as1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca { [16 x i8] }, align 8
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { [16 x i8] }, { [16 x i8] } addrspace(1)* [[PTR:%.*]], i64 -1
-; CHECK-NEXT:    [[CAST1:%.*]] = bitcast { [16 x i8] } addrspace(1)* [[GEP]] to i8 addrspace(1)*
-; CHECK-NEXT:    [[CAST2:%.*]] = bitcast { [16 x i8] }* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* align 8 [[CAST1]], i8* align 8 [[CAST2]], i32 16, i1 true)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { [16 x i8] }, ptr addrspace(1) [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 8 [[GEP]], ptr align 8 [[A]], i32 16, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca { [16 x i8] }, align 8
-  %gep = getelementptr inbounds { [16 x i8] }, { [16 x i8] } addrspace(1)* %ptr, i64 -1
-  %cast1 = bitcast { [16 x i8 ] } addrspace(1)* %gep to i8 addrspace(1)*
-  %cast2 = bitcast { [16 x i8 ] }* %a to i8*
-  call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* align 8 %cast1, i8* align 8 %cast2, i32 16, i1 true)
+  %gep = getelementptr inbounds { [16 x i8] }, ptr addrspace(1) %ptr, i64 -1
+  call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 8 %gep, ptr align 8 %a, i32 16, i1 true)
   ret void
 }
 
@@ -1405,14 +1228,12 @@ define void @PR14465() {
 ; integer type width (MAX_INT_BITS) supported by llvm (1048576*32 > (1<<23)-1).
 ; CHECK-LABEL: @PR14465(
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [1048576 x i32], align 16
-; CHECK-NEXT:    [[STACK_0_CAST_SROA_CAST:%.*]] = bitcast [1048576 x i32]* [[STACK]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 16 [[STACK_0_CAST_SROA_CAST]], i8 -2, i64 4194304, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[STACK]], i8 -2, i64 4194304, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
   %stack = alloca [1048576 x i32], align 16
-  %cast = bitcast [1048576 x i32]* %stack to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 16 %cast, i8 -2, i64 4194304, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 16 %stack, i8 -2, i64 4194304, i1 false)
   ret void
 }
 
@@ -1427,14 +1248,12 @@ define void @PR14548(i1 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i8, align 8
 ; CHECK-NEXT:    [[B_SROA_0:%.*]] = alloca i8, align 8
-; CHECK-NEXT:    [[B_SROA_0_0_B_I1_SROA_CAST1:%.*]] = bitcast i8* [[B_SROA_0]] to i1*
-; CHECK-NEXT:    store i1 [[X:%.*]], i1* [[B_SROA_0_0_B_I1_SROA_CAST1]], align 8
-; CHECK-NEXT:    [[B_SROA_0_0_B_SROA_0_0_FOO:%.*]] = load i8, i8* [[B_SROA_0]], align 8
-; CHECK-NEXT:    [[B_SROA_0_0_B_SROA_0_0_COPYLOAD:%.*]] = load i8, i8* [[B_SROA_0]], align 8
-; CHECK-NEXT:    store i8 [[B_SROA_0_0_B_SROA_0_0_COPYLOAD]], i8* [[A_SROA_0]], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_BAR:%.*]] = load i8, i8* [[A_SROA_0]], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_A_I1_SROA_CAST2:%.*]] = bitcast i8* [[A_SROA_0]] to i1*
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_BAZ:%.*]] = load i1, i1* [[A_SROA_0_0_A_I1_SROA_CAST2]], align 8
+; CHECK-NEXT:    store i1 [[X:%.*]], ptr [[B_SROA_0]], align 8
+; CHECK-NEXT:    [[B_SROA_0_0_B_SROA_0_0_FOO:%.*]] = load i8, ptr [[B_SROA_0]], align 8
+; CHECK-NEXT:    [[B_SROA_0_0_B_SROA_0_0_COPYLOAD:%.*]] = load i8, ptr [[B_SROA_0]], align 8
+; CHECK-NEXT:    store i8 [[B_SROA_0_0_B_SROA_0_0_COPYLOAD]], ptr [[A_SROA_0]], align 8
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_BAR:%.*]] = load i8, ptr [[A_SROA_0]], align 8
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_BAZ:%.*]] = load i1, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    ret void
 ;
 
@@ -1442,16 +1261,12 @@ entry:
   %a = alloca <{ i1 }>, align 8
   %b = alloca <{ i1 }>, align 8
 
-  %b.i1 = bitcast <{ i1 }>* %b to i1*
-  store i1 %x, i1* %b.i1, align 8
-  %b.i8 = bitcast <{ i1 }>* %b to i8*
-  %foo = load i8, i8* %b.i8, align 1
+  store i1 %x, ptr %b, align 8
+  %foo = load i8, ptr %b, align 1
 
-  %a.i8 = bitcast <{ i1 }>* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.i8, i8* %b.i8, i32 1, i1 false) nounwind
-  %bar = load i8, i8* %a.i8, align 1
-  %a.i1 = getelementptr inbounds <{ i1 }>, <{ i1 }>* %a, i32 0, i32 0
-  %baz = load i1, i1* %a.i1, align 1
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %b, i32 1, i1 false) nounwind
+  %bar = load i8, ptr %a, align 1
+  %baz = load i1, ptr %a, align 1
 
   ret void
 }
@@ -1471,9 +1286,8 @@ define <3 x i8> @PR14572.1(i32 %x) {
 entry:
   %a = alloca <3 x i8>, align 4
 
-  %cast = bitcast <3 x i8>* %a to i32*
-  store i32 %x, i32* %cast, align 1
-  %y = load <3 x i8>, <3 x i8>* %a, align 4
+  store i32 %x, ptr %a, align 1
+  %y = load <3 x i8>, ptr %a, align 4
   ret <3 x i8> %y
 }
 
@@ -1496,9 +1310,8 @@ define i32 @PR14572.2(<3 x i8> %x) {
 entry:
   %a = alloca <3 x i8>, align 4
 
-  store <3 x i8> %x, <3 x i8>* %a, align 1
-  %cast = bitcast <3 x i8>* %a to i32*
-  %y = load i32, i32* %cast, align 4
+  store <3 x i8> %x, ptr %a, align 1
+  %y = load i32, ptr %a, align 4
   ret i32 %y
 }
 
@@ -1508,22 +1321,20 @@ define i32 @PR14601(i32 %x) {
 ; CHECK-LABEL: @PR14601(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_0_A_I8_SROA_CAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 4 [[A_0_A_I8_SROA_CAST]], i8 0, i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[A_0_V:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[A]], i8 0, i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[A_0_V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[A_0_V]]
 ;
 
 entry:
   %a = alloca i32
 
-  %a.i8 = bitcast i32* %a to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.i8, i8 0, i32 %x, i1 false)
-  %v = load i32, i32* %a
+  call void @llvm.memset.p0.i32(ptr %a, i8 0, i32 %x, i1 false)
+  %v = load i32, ptr %a
   ret i32 %v
 }
 
-define void @PR15674(i8* %data, i8* %src, i32 %size) {
+define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; Arrange (via control flow) to have unmerged stores of a particular width to
 ; an alloca where we incrementally store from the end of the array toward the
 ; beginning of the array. Ensure that the final integer store, despite being
@@ -1539,35 +1350,29 @@ define void @PR15674(i8* %data, i8* %src, i32 %size) {
 ; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[SRC_GEP3:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i32 3
-; CHECK-NEXT:    [[SRC_3:%.*]] = load i8, i8* [[SRC_GEP3]], align 1
-; CHECK-NEXT:    [[TMP_SROA_0_3_TMP_GEP3_SROA_RAW_CAST7:%.*]] = bitcast i32* [[TMP_SROA_0]] to i8*
-; CHECK-NEXT:    [[TMP_SROA_0_3_TMP_GEP3_SROA_RAW_IDX8:%.*]] = getelementptr inbounds i8, i8* [[TMP_SROA_0_3_TMP_GEP3_SROA_RAW_CAST7]], i64 3
-; CHECK-NEXT:    store i8 [[SRC_3]], i8* [[TMP_SROA_0_3_TMP_GEP3_SROA_RAW_IDX8]], align 1
+; CHECK-NEXT:    [[SRC_GEP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i32 3
+; CHECK-NEXT:    [[SRC_3:%.*]] = load i8, ptr [[SRC_GEP3]], align 1
+; CHECK-NEXT:    [[TMP_SROA_0_3_TMP_GEP3_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[TMP_SROA_0]], i64 3
+; CHECK-NEXT:    store i8 [[SRC_3]], ptr [[TMP_SROA_0_3_TMP_GEP3_SROA_IDX3]], align 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[SRC_GEP2:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i32 2
-; CHECK-NEXT:    [[SRC_2:%.*]] = load i8, i8* [[SRC_GEP2]], align 1
-; CHECK-NEXT:    [[TMP_SROA_0_2_TMP_GEP2_SROA_RAW_CAST5:%.*]] = bitcast i32* [[TMP_SROA_0]] to i8*
-; CHECK-NEXT:    [[TMP_SROA_0_2_TMP_GEP2_SROA_RAW_IDX6:%.*]] = getelementptr inbounds i8, i8* [[TMP_SROA_0_2_TMP_GEP2_SROA_RAW_CAST5]], i64 2
-; CHECK-NEXT:    store i8 [[SRC_2]], i8* [[TMP_SROA_0_2_TMP_GEP2_SROA_RAW_IDX6]], align 2
+; CHECK-NEXT:    [[SRC_GEP2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 2
+; CHECK-NEXT:    [[SRC_2:%.*]] = load i8, ptr [[SRC_GEP2]], align 1
+; CHECK-NEXT:    [[TMP_SROA_0_2_TMP_GEP2_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[TMP_SROA_0]], i64 2
+; CHECK-NEXT:    store i8 [[SRC_2]], ptr [[TMP_SROA_0_2_TMP_GEP2_SROA_IDX2]], align 2
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[SRC_GEP1:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i32 1
-; CHECK-NEXT:    [[SRC_1:%.*]] = load i8, i8* [[SRC_GEP1]], align 1
-; CHECK-NEXT:    [[TMP_SROA_0_1_TMP_GEP1_SROA_RAW_CAST3:%.*]] = bitcast i32* [[TMP_SROA_0]] to i8*
-; CHECK-NEXT:    [[TMP_SROA_0_1_TMP_GEP1_SROA_RAW_IDX4:%.*]] = getelementptr inbounds i8, i8* [[TMP_SROA_0_1_TMP_GEP1_SROA_RAW_CAST3]], i64 1
-; CHECK-NEXT:    store i8 [[SRC_1]], i8* [[TMP_SROA_0_1_TMP_GEP1_SROA_RAW_IDX4]], align 1
+; CHECK-NEXT:    [[SRC_GEP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 1
+; CHECK-NEXT:    [[SRC_1:%.*]] = load i8, ptr [[SRC_GEP1]], align 1
+; CHECK-NEXT:    [[TMP_SROA_0_1_TMP_GEP1_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[TMP_SROA_0]], i64 1
+; CHECK-NEXT:    store i8 [[SRC_1]], ptr [[TMP_SROA_0_1_TMP_GEP1_SROA_IDX1]], align 1
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SRC_GEP0:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i32 0
-; CHECK-NEXT:    [[SRC_0:%.*]] = load i8, i8* [[SRC_GEP0]], align 1
-; CHECK-NEXT:    [[TMP_SROA_0_0_TMP_GEP0_SROA_CAST2:%.*]] = bitcast i32* [[TMP_SROA_0]] to i8*
-; CHECK-NEXT:    store i8 [[SRC_0]], i8* [[TMP_SROA_0_0_TMP_GEP0_SROA_CAST2]], align 4
+; CHECK-NEXT:    [[SRC_0:%.*]] = load i8, ptr [[SRC]], align 1
+; CHECK-NEXT:    store i8 [[SRC_0]], ptr [[TMP_SROA_0]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP_SROA_0_0_TMP_RAW_SROA_CAST1:%.*]] = bitcast i32* [[TMP_SROA_0]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[DATA:%.*]], i8* align 4 [[TMP_SROA_0_0_TMP_RAW_SROA_CAST1]], i32 [[SIZE]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DATA:%.*]], ptr align 4 [[TMP_SROA_0]], i32 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -1582,40 +1387,37 @@ entry:
   ]
 
 bb4:
-  %src.gep3 = getelementptr inbounds i8, i8* %src, i32 3
-  %src.3 = load i8, i8* %src.gep3
-  %tmp.gep3 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i32 3
-  store i8 %src.3, i8* %tmp.gep3
+  %src.gep3 = getelementptr inbounds i8, ptr %src, i32 3
+  %src.3 = load i8, ptr %src.gep3
+  %tmp.gep3 = getelementptr inbounds [4 x i8], ptr %tmp, i32 0, i32 3
+  store i8 %src.3, ptr %tmp.gep3
 
   br label %bb3
 
 bb3:
-  %src.gep2 = getelementptr inbounds i8, i8* %src, i32 2
-  %src.2 = load i8, i8* %src.gep2
-  %tmp.gep2 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i32 2
-  store i8 %src.2, i8* %tmp.gep2
+  %src.gep2 = getelementptr inbounds i8, ptr %src, i32 2
+  %src.2 = load i8, ptr %src.gep2
+  %tmp.gep2 = getelementptr inbounds [4 x i8], ptr %tmp, i32 0, i32 2
+  store i8 %src.2, ptr %tmp.gep2
 
   br label %bb2
 
 bb2:
-  %src.gep1 = getelementptr inbounds i8, i8* %src, i32 1
-  %src.1 = load i8, i8* %src.gep1
-  %tmp.gep1 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i32 1
-  store i8 %src.1, i8* %tmp.gep1
+  %src.gep1 = getelementptr inbounds i8, ptr %src, i32 1
+  %src.1 = load i8, ptr %src.gep1
+  %tmp.gep1 = getelementptr inbounds [4 x i8], ptr %tmp, i32 0, i32 1
+  store i8 %src.1, ptr %tmp.gep1
 
   br label %bb1
 
 bb1:
-  %src.gep0 = getelementptr inbounds i8, i8* %src, i32 0
-  %src.0 = load i8, i8* %src.gep0
-  %tmp.gep0 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i32 0
-  store i8 %src.0, i8* %tmp.gep0
+  %src.0 = load i8, ptr %src
+  store i8 %src.0, ptr %tmp
 
   br label %end
 
 end:
-  %tmp.raw = bitcast [4 x i8]* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %data, i8* %tmp.raw, i32 %size, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %data, ptr %tmp, i32 %size, i1 false)
   ret void
 }
 
@@ -1626,9 +1428,9 @@ define void @PR15805(i1 %a, i1 %b) {
 ;
 
   %c = alloca i64, align 8
-  %p.0.c = select i1 %a, i64* %c, i64* %c
-  %cond.in = select i1 %b, i64* %p.0.c, i64* %c
-  %cond = load i64, i64* %cond.in, align 8
+  %p.0.c = select i1 %a, ptr %c, ptr %c
+  %cond.in = select i1 %b, ptr %p.0.c, ptr %c
+  %cond = load i64, ptr %cond.in, align 8
   ret void
 }
 
@@ -1650,16 +1452,16 @@ define void @PR15805.1(i1 %a, i1 %b, i1 %c2) {
   br label %exit
 
 loop:
-  %cond.in = select i1 %a, i64* %c, i64* %p.0.c
-  %p.0.c = select i1 %b, i64* %c, i64* %c
-  %cond = load i64, i64* %cond.in, align 8
+  %cond.in = select i1 %a, ptr %c, ptr %p.0.c
+  %p.0.c = select i1 %b, ptr %c, ptr %c
+  %cond = load i64, ptr %cond.in, align 8
   br i1 %c2, label %loop, label %exit
 
 exit:
   ret void
 }
 
-define void @PR16651.1(i8* %a) {
+define void @PR16651.1(ptr %a) {
 ; This test case caused a crash due to the volatile memcpy in combination with
 ; lowering to integer loads and stores of a width other than that of the original
 ; memcpy.
@@ -1669,25 +1471,23 @@ define void @PR16651.1(i8* %a) {
 ; CHECK-NEXT:    [[B_SROA_0:%.*]] = alloca i16, align 4
 ; CHECK-NEXT:    [[B_SROA_1:%.*]] = alloca i8, align 2
 ; CHECK-NEXT:    [[B_SROA_2:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[B_SROA_0_0_A_SROA_CAST:%.*]] = bitcast i8* [[A:%.*]] to i16*
-; CHECK-NEXT:    [[B_SROA_0_0_COPYLOAD:%.*]] = load volatile i16, i16* [[B_SROA_0_0_A_SROA_CAST]], align 4
-; CHECK-NEXT:    store volatile i16 [[B_SROA_0_0_COPYLOAD]], i16* [[B_SROA_0]], align 4
-; CHECK-NEXT:    [[B_SROA_1_0_A_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 2
-; CHECK-NEXT:    [[B_SROA_1_0_COPYLOAD:%.*]] = load volatile i8, i8* [[B_SROA_1_0_A_SROA_RAW_IDX]], align 2
-; CHECK-NEXT:    store volatile i8 [[B_SROA_1_0_COPYLOAD]], i8* [[B_SROA_1]], align 2
-; CHECK-NEXT:    [[B_SROA_2_0_A_SROA_RAW_IDX:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 3
-; CHECK-NEXT:    [[B_SROA_2_0_COPYLOAD:%.*]] = load volatile i8, i8* [[B_SROA_2_0_A_SROA_RAW_IDX]], align 1
-; CHECK-NEXT:    store volatile i8 [[B_SROA_2_0_COPYLOAD]], i8* [[B_SROA_2]], align 1
-; CHECK-NEXT:    [[B_SROA_1_0_B_SROA_1_2_:%.*]] = load i8, i8* [[B_SROA_1]], align 2
+; CHECK-NEXT:    [[B_SROA_0_0_COPYLOAD:%.*]] = load volatile i16, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    store volatile i16 [[B_SROA_0_0_COPYLOAD]], ptr [[B_SROA_0]], align 4
+; CHECK-NEXT:    [[B_SROA_1_0_A_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; CHECK-NEXT:    [[B_SROA_1_0_COPYLOAD:%.*]] = load volatile i8, ptr [[B_SROA_1_0_A_SROA_IDX]], align 2
+; CHECK-NEXT:    store volatile i8 [[B_SROA_1_0_COPYLOAD]], ptr [[B_SROA_1]], align 2
+; CHECK-NEXT:    [[B_SROA_2_0_A_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 3
+; CHECK-NEXT:    [[B_SROA_2_0_COPYLOAD:%.*]] = load volatile i8, ptr [[B_SROA_2_0_A_SROA_IDX]], align 1
+; CHECK-NEXT:    store volatile i8 [[B_SROA_2_0_COPYLOAD]], ptr [[B_SROA_2]], align 1
+; CHECK-NEXT:    [[B_SROA_1_0_B_SROA_1_2_:%.*]] = load i8, ptr [[B_SROA_1]], align 2
 ; CHECK-NEXT:    unreachable
 ;
 
 entry:
   %b = alloca i32, align 4
-  %b.cast = bitcast i32* %b to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %b.cast, i8* align 4 %a, i32 4, i1 true)
-  %b.gep = getelementptr inbounds i8, i8* %b.cast, i32 2
-  load i8, i8* %b.gep, align 2
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %b, ptr align 4 %a, i32 4, i1 true)
+  %b.gep = getelementptr inbounds i8, ptr %b, i32 2
+  load i8, ptr %b.gep, align 2
   unreachable
 }
 
@@ -1700,20 +1500,19 @@ define void @PR16651.2(<2 x float> %val, i1 %c1) {
 ; CHECK-LABEL: @PR16651.2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TV1_SROA_0:%.*]] = alloca <2 x float>, align 8
-; CHECK-NEXT:    store <2 x float> [[VAL:%.*]], <2 x float>* [[TV1_SROA_0]], align 8
-; CHECK-NEXT:    [[TV1_SROA_0_0__SROA_IDX:%.*]] = getelementptr inbounds <2 x float>, <2 x float>* [[TV1_SROA_0]], i64 0, i32 0
-; CHECK-NEXT:    [[COND105_IN_I_I:%.*]] = select i1 [[C1:%.*]], float* null, float* [[TV1_SROA_0_0__SROA_IDX]]
-; CHECK-NEXT:    [[COND105_I_I:%.*]] = load float, float* [[COND105_IN_I_I]], align 8
+; CHECK-NEXT:    store <2 x float> [[VAL:%.*]], ptr [[TV1_SROA_0]], align 8
+; CHECK-NEXT:    [[COND105_IN_I_I:%.*]] = select i1 [[C1:%.*]], ptr null, ptr [[TV1_SROA_0]]
+; CHECK-NEXT:    [[COND105_I_I:%.*]] = load float, ptr [[COND105_IN_I_I]], align 8
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %tv1 = alloca { <2 x float>, <2 x float> }, align 8
-  %0 = getelementptr { <2 x float>, <2 x float> }, { <2 x float>, <2 x float> }* %tv1, i64 0, i32 1
-  store <2 x float> %val, <2 x float>* %0, align 8
-  %1 = getelementptr inbounds { <2 x float>, <2 x float> }, { <2 x float>, <2 x float> }* %tv1, i64 0, i32 1, i64 0
-  %cond105.in.i.i = select i1 %c1, float* null, float* %1
-  %cond105.i.i = load float, float* %cond105.in.i.i, align 8
+  %0 = getelementptr { <2 x float>, <2 x float> }, ptr %tv1, i64 0, i32 1
+  store <2 x float> %val, ptr %0, align 8
+  %1 = getelementptr inbounds { <2 x float>, <2 x float> }, ptr %tv1, i64 0, i32 1, i64 0
+  %cond105.in.i.i = select i1 %c1, ptr null, ptr %1
+  %cond105.i.i = load float, ptr %cond105.in.i.i, align 8
   ret void
 }
 
@@ -1724,45 +1523,39 @@ define void @test23(i32 %x) {
 ;
 entry:
   %a = alloca i32, align 4
-  store i32 %x, i32* %a, align 4
-  %gep1 = getelementptr inbounds i32, i32* %a, i32 1
-  %gep0 = getelementptr inbounds i32, i32* %a, i32 0
-  %cast1 = bitcast i32* %gep1 to i8*
-  %cast0 = bitcast i32* %gep0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %cast1, i8* %cast0, i32 4, i1 false)
+  store i32 %x, ptr %a, align 4
+  %gep1 = getelementptr inbounds i32, ptr %a, i32 1
+  call void @llvm.memcpy.p0.p0.i32(ptr %gep1, ptr %a, i32 4, i1 false)
   ret void
 }
 
-define void @PR18615(i8* %ptr) {
+define void @PR18615(ptr %ptr) {
 ; CHECK-LABEL: @PR18615(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %f = alloca i8
-  %gep = getelementptr i8, i8* %f, i64 -1
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %gep, i32 1, i1 false)
+  %gep = getelementptr i8, ptr %f, i64 -1
+  call void @llvm.memcpy.p0.p0.i32(ptr %ptr, ptr %gep, i32 1, i1 false)
   ret void
 }
 
-define void @test24(i8* %src, i8* %dst) {
+define void @test24(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test24(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 16
-; CHECK-NEXT:    [[A_0_SRC_SROA_CAST:%.*]] = bitcast i8* [[SRC:%.*]] to i64*
-; CHECK-NEXT:    [[A_0_COPYLOAD:%.*]] = load volatile i64, i64* [[A_0_SRC_SROA_CAST]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD]], i64* [[A]], align 16, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_0_DST_SROA_CAST:%.*]] = bitcast i8* [[DST:%.*]] to i64*
-; CHECK-NEXT:    [[A_0_COPYLOAD1:%.*]] = load volatile i64, i64* [[A]], align 16, !tbaa [[TBAA3]]
-; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD1]], i64* [[A_0_DST_SROA_CAST]], align 1, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[A_0_COPYLOAD:%.*]] = load volatile i64, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD]], ptr [[A]], align 16, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_0_COPYLOAD1:%.*]] = load volatile i64, ptr [[A]], align 16, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca i64, align 16
-  %ptr = bitcast i64* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %src, i32 8, i1 true), !tbaa !0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %ptr, i32 8, i1 true), !tbaa !3
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 8, i1 true), !tbaa !0
+  call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %a, i32 8, i1 true), !tbaa !3
   ret void
 }
 
@@ -1785,18 +1578,14 @@ define float @test25() {
 entry:
   %a = alloca i64
   %b = alloca i64
-  %a.cast = bitcast i64* %a to [2 x float]*
-  %a.gep1 = getelementptr [2 x float], [2 x float]* %a.cast, i32 0, i32 0
-  %a.gep2 = getelementptr [2 x float], [2 x float]* %a.cast, i32 0, i32 1
-  %b.cast = bitcast i64* %b to [2 x float]*
-  %b.gep1 = getelementptr [2 x float], [2 x float]* %b.cast, i32 0, i32 0
-  %b.gep2 = getelementptr [2 x float], [2 x float]* %b.cast, i32 0, i32 1
-  store float 0.0, float* %a.gep1
-  store float 1.0, float* %a.gep2
-  %v = load i64, i64* %a
-  store i64 %v, i64* %b
-  %f1 = load float, float* %b.gep1
-  %f2 = load float, float* %b.gep2
+  %a.gep2 = getelementptr [2 x float], ptr %a, i32 0, i32 1
+  %b.gep2 = getelementptr [2 x float], ptr %b, i32 0, i32 1
+  store float 0.0, ptr %a
+  store float 1.0, ptr %a.gep2
+  %v = load i64, ptr %a
+  store i64 %v, ptr %b
+  %f1 = load float, ptr %b
+  %f2 = load float, ptr %b.gep2
   %ret = fadd float %f1, %f2
   ret float %ret
 }
@@ -1809,32 +1598,30 @@ define void @test26() {
 ;
 ; CHECK-LABEL: @test26(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V14:%.*]] = load i32, i32* bitcast ([2 x float]* @complex1 to i32*), align 4
-; CHECK-NEXT:    [[V16:%.*]] = load i32, i32* bitcast (float* getelementptr inbounds ([2 x float], [2 x float]* @complex1, i64 0, i64 1) to i32*), align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[V14]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[V16]] to float
+; CHECK-NEXT:    [[V13:%.*]] = load i32, ptr @complex1, align 4
+; CHECK-NEXT:    [[V14:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @complex1, i64 4), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[V13]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[V14]] to float
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[SUM]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[SUM]] to i32
-; CHECK-NEXT:    store i32 [[TMP2]], i32* bitcast ([2 x float]* @complex2 to i32*), align 4
-; CHECK-NEXT:    store i32 [[TMP3]], i32* bitcast (float* getelementptr inbounds ([2 x float], [2 x float]* @complex2, i64 0, i64 1) to i32*), align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @complex2, align 4
+; CHECK-NEXT:    store i32 [[TMP3]], ptr getelementptr inbounds (i8, ptr @complex2, i64 4), align 4
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %a = alloca i64
-  %a.cast = bitcast i64* %a to [2 x float]*
-  %a.gep1 = getelementptr [2 x float], [2 x float]* %a.cast, i32 0, i32 0
-  %a.gep2 = getelementptr [2 x float], [2 x float]* %a.cast, i32 0, i32 1
-  %v1 = load i64, i64* bitcast ([2 x float]* @complex1 to i64*)
-  store i64 %v1, i64* %a
-  %f1 = load float, float* %a.gep1
-  %f2 = load float, float* %a.gep2
+  %a.gep2 = getelementptr [2 x float], ptr %a, i32 0, i32 1
+  %v1 = load i64, ptr @complex1
+  store i64 %v1, ptr %a
+  %f1 = load float, ptr %a
+  %f2 = load float, ptr %a.gep2
   %sum = fadd float %f1, %f2
-  store float %sum, float* %a.gep1
-  store float %sum, float* %a.gep2
-  %v2 = load i64, i64* %a
-  store i64 %v2, i64* bitcast ([2 x float]* @complex2 to i64*)
+  store float %sum, ptr %a
+  store float %sum, ptr %a.gep2
+  %v2 = load i64, ptr %a
+  store i64 %v2, ptr @complex2
   ret void
 }
 
@@ -1853,20 +1640,14 @@ define float @test27() {
 
 entry:
   %a = alloca [12 x i8]
-  %gep1 = getelementptr [12 x i8], [12 x i8]* %a, i32 0, i32 0
-  %gep2 = getelementptr [12 x i8], [12 x i8]* %a, i32 0, i32 4
-  %gep3 = getelementptr [12 x i8], [12 x i8]* %a, i32 0, i32 8
-  %iptr1 = bitcast i8* %gep1 to i64*
-  %iptr2 = bitcast i8* %gep2 to i64*
-  %fptr1 = bitcast i8* %gep1 to float*
-  %fptr2 = bitcast i8* %gep2 to float*
-  %fptr3 = bitcast i8* %gep3 to float*
-  store float 0.0, float* %fptr1
-  store float 1.0, float* %fptr2
-  %v = load i64, i64* %iptr1
-  store i64 %v, i64* %iptr2
-  %f1 = load float, float* %fptr2
-  %f2 = load float, float* %fptr3
+  %gep2 = getelementptr [12 x i8], ptr %a, i32 0, i32 4
+  %gep3 = getelementptr [12 x i8], ptr %a, i32 0, i32 8
+  store float 0.0, ptr %a
+  store float 1.0, ptr %gep2
+  %v = load i64, ptr %a
+  store i64 %v, ptr %gep2
+  %f1 = load float, ptr %gep2
+  %f2 = load float, ptr %gep3
   %ret = fadd float %f1, %f2
   ret float %ret
 }
@@ -1882,8 +1663,8 @@ define i32 @PR22093() {
 ; CHECK-LABEL: @PR22093(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    store volatile i16 42, i16* [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_LOAD:%.*]] = load i16, i16* [[A_SROA_0]], align 4
+; CHECK-NEXT:    store volatile i16 42, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_LOAD:%.*]] = load i16, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    [[A_SROA_3_0_INSERT_EXT:%.*]] = zext i16 undef to i32
 ; CHECK-NEXT:    [[A_SROA_3_0_INSERT_SHIFT:%.*]] = shl i32 [[A_SROA_3_0_INSERT_EXT]], 16
 ; CHECK-NEXT:    [[A_SROA_3_0_INSERT_MASK:%.*]] = and i32 undef, 65535
@@ -1892,7 +1673,7 @@ define i32 @PR22093() {
 ; CHECK-NEXT:    [[A_SROA_0_0_INSERT_MASK:%.*]] = and i32 [[A_SROA_3_0_INSERT_INSERT]], -65536
 ; CHECK-NEXT:    [[A_SROA_0_0_INSERT_INSERT:%.*]] = or i32 [[A_SROA_0_0_INSERT_MASK]], [[A_SROA_0_0_INSERT_EXT]]
 ; CHECK-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_0_0_INSERT_INSERT]] to i16
-; CHECK-NEXT:    store i16 [[A_SROA_0_0_EXTRACT_TRUNC]], i16* [[A_SROA_0]], align 4
+; CHECK-NEXT:    store i16 [[A_SROA_0_0_EXTRACT_TRUNC]], ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    [[A_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[A_SROA_0_0_INSERT_INSERT]], 16
 ; CHECK-NEXT:    [[A_SROA_3_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_3_0_EXTRACT_SHIFT]] to i16
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_INSERT_INSERT]]
@@ -1900,10 +1681,9 @@ define i32 @PR22093() {
 
 entry:
   %a = alloca i32
-  %a.cast = bitcast i32* %a to i16*
-  store volatile i16 42, i16* %a.cast
-  %load = load i32, i32* %a
-  store i32 %load, i32* %a
+  store volatile i16 42, ptr %a
+  %load = load i32, ptr %a
+  store i32 %load, ptr %a
   ret i32 %load
 }
 
@@ -1920,8 +1700,8 @@ define void @PR22093.2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i16, align 8
 ; CHECK-NEXT:    [[A_SROA_31:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    store volatile i16 42, i16* [[A_SROA_0]], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_LOAD:%.*]] = load i16, i16* [[A_SROA_0]], align 8
+; CHECK-NEXT:    store volatile i16 42, ptr [[A_SROA_0]], align 8
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_LOAD:%.*]] = load i16, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    [[A_SROA_3_0_INSERT_EXT:%.*]] = zext i16 undef to i32
 ; CHECK-NEXT:    [[A_SROA_3_0_INSERT_SHIFT:%.*]] = shl i32 [[A_SROA_3_0_INSERT_EXT]], 16
 ; CHECK-NEXT:    [[A_SROA_3_0_INSERT_MASK:%.*]] = and i32 undef, 65535
@@ -1930,12 +1710,12 @@ define void @PR22093.2() {
 ; CHECK-NEXT:    [[A_SROA_0_0_INSERT_MASK:%.*]] = and i32 [[A_SROA_3_0_INSERT_INSERT]], -65536
 ; CHECK-NEXT:    [[A_SROA_0_0_INSERT_INSERT:%.*]] = or i32 [[A_SROA_0_0_INSERT_MASK]], [[A_SROA_0_0_INSERT_EXT]]
 ; CHECK-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_0_0_INSERT_INSERT]] to i16
-; CHECK-NEXT:    store i16 [[A_SROA_0_0_EXTRACT_TRUNC]], i16* [[A_SROA_0]], align 8
+; CHECK-NEXT:    store i16 [[A_SROA_0_0_EXTRACT_TRUNC]], ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    [[A_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[A_SROA_0_0_INSERT_INSERT]], 16
 ; CHECK-NEXT:    [[A_SROA_3_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_3_0_EXTRACT_SHIFT]] to i16
-; CHECK-NEXT:    store volatile i8 13, i8* [[A_SROA_31]], align 4
+; CHECK-NEXT:    store volatile i8 13, ptr [[A_SROA_31]], align 4
 ; CHECK-NEXT:    [[A_SROA_31_4_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_0_0_INSERT_INSERT]] to i8
-; CHECK-NEXT:    store i8 [[A_SROA_31_4_EXTRACT_TRUNC]], i8* [[A_SROA_31]], align 4
+; CHECK-NEXT:    store i8 [[A_SROA_31_4_EXTRACT_TRUNC]], ptr [[A_SROA_31]], align 4
 ; CHECK-NEXT:    [[A_SROA_5_4_EXTRACT_SHIFT:%.*]] = lshr i32 [[A_SROA_0_0_INSERT_INSERT]], 8
 ; CHECK-NEXT:    [[A_SROA_5_4_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_5_4_EXTRACT_SHIFT]] to i24
 ; CHECK-NEXT:    ret void
@@ -1943,15 +1723,12 @@ define void @PR22093.2() {
 
 entry:
   %a = alloca i64
-  %a.cast1 = bitcast i64* %a to i32*
-  %a.cast2 = bitcast i64* %a to i16*
-  store volatile i16 42, i16* %a.cast2
-  %load = load i32, i32* %a.cast1
-  store i32 %load, i32* %a.cast1
-  %a.gep1 = getelementptr i32, i32* %a.cast1, i32 1
-  %a.cast3 = bitcast i32* %a.gep1 to i8*
-  store volatile i8 13, i8* %a.cast3
-  store i32 %load, i32* %a.gep1
+  store volatile i16 42, ptr %a
+  %load = load i32, ptr %a
+  store i32 %load, ptr %a
+  %a.gep1 = getelementptr i32, ptr %a, i32 1
+  store volatile i8 13, ptr %a.gep1
+  store i32 %load, ptr %a.gep1
   ret void
 }
 
@@ -1959,14 +1736,14 @@ define void @PR23737() {
 ; CHECK-LABEL: @PR23737(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    store atomic volatile i64 0, i64* [[PTR]] seq_cst, align 8
-; CHECK-NEXT:    [[PTR_0_LOAD:%.*]] = load atomic volatile i64, i64* [[PTR]] seq_cst, align 8
+; CHECK-NEXT:    store atomic volatile i64 0, ptr [[PTR]] seq_cst, align 8
+; CHECK-NEXT:    [[PTR_0_LOAD:%.*]] = load atomic volatile i64, ptr [[PTR]] seq_cst, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %ptr = alloca i64, align 8
-  store atomic volatile i64 0, i64* %ptr seq_cst, align 8
-  %load = load atomic volatile i64, i64* %ptr seq_cst, align 8
+  store atomic volatile i64 0, ptr %ptr seq_cst, align 8
+  %load = load atomic volatile i64, ptr %ptr seq_cst, align 8
   ret void
 }
 
@@ -1983,28 +1760,23 @@ define i16 @PR24463() {
 ;
 entry:
   %alloca = alloca [3 x i8]
-  %gep1 = getelementptr inbounds [3 x i8], [3 x i8]* %alloca, i64 0, i64 1
-  %bc1 = bitcast i8* %gep1 to i16*
-  store i16 0, i16* %bc1
-  %gep2 = getelementptr inbounds [3 x i8], [3 x i8]* %alloca, i64 0, i64 2
-  %bc2 = bitcast i8* %gep2 to i16*
-  %load = load i16, i16* %bc2
+  %gep1 = getelementptr inbounds [3 x i8], ptr %alloca, i64 0, i64 1
+  store i16 0, ptr %gep1
+  %gep2 = getelementptr inbounds [3 x i8], ptr %alloca, i64 0, i64 2
+  %load = load i16, ptr %gep2
   ret i16 %load
 }
 
 %struct.STest = type { %struct.SPos, %struct.SPos }
 %struct.SPos = type { float, float }
 
-define void @PR25873(%struct.STest* %outData) {
+define void @PR25873(ptr %outData) {
 ; CHECK-LABEL: @PR25873(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMPDATA_SROA_0_0__SROA_CAST1_SROA_CAST:%.*]] = bitcast %struct.STest* [[OUTDATA:%.*]] to i32*
-; CHECK-NEXT:    store i32 1123418112, i32* [[TMPDATA_SROA_0_0__SROA_CAST1_SROA_CAST]], align 4
-; CHECK-NEXT:    [[TMPDATA_SROA_0_0__SROA_CAST1_SROA_IDX:%.*]] = getelementptr inbounds [[STRUCT_STEST:%.*]], %struct.STest* [[OUTDATA]], i64 0, i32 0, i32 1
-; CHECK-NEXT:    [[TMPDATA_SROA_0_0__SROA_CAST1_SROA_CAST16:%.*]] = bitcast float* [[TMPDATA_SROA_0_0__SROA_CAST1_SROA_IDX]] to i32*
-; CHECK-NEXT:    store i32 1139015680, i32* [[TMPDATA_SROA_0_0__SROA_CAST1_SROA_CAST16]], align 4
-; CHECK-NEXT:    [[TMPDATA_SROA_6_0__SROA_IDX3:%.*]] = getelementptr inbounds [[STRUCT_STEST]], %struct.STest* [[OUTDATA]], i64 0, i32 1
-; CHECK-NEXT:    [[TMPDATA_SROA_6_0__SROA_CAST4:%.*]] = bitcast %struct.SPos* [[TMPDATA_SROA_6_0__SROA_IDX3]] to i64*
+; CHECK-NEXT:    store i32 1123418112, ptr [[OUTDATA:%.*]], align 4
+; CHECK-NEXT:    [[DOTSROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA:%.*]], i64 4
+; CHECK-NEXT:    store i32 1139015680, ptr [[DOTSROA_IDX]], align 4
+; CHECK-NEXT:    [[TMPDATA_SROA_6_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA:%.*]], i64 8
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT:%.*]] = zext i32 1139015680 to i64
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_SHIFT:%.*]] = shl i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT]], 32
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_MASK:%.*]] = and i64 undef, 4294967295
@@ -2012,29 +1784,24 @@ define void @PR25873(%struct.STest* %outData) {
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_EXT:%.*]] = zext i32 1123418112 to i64
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_MASK:%.*]] = and i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_INSERT]], -4294967296
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT:%.*]] = or i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_MASK]], [[TMPDATA_SROA_6_SROA_0_0_INSERT_EXT]]
-; CHECK-NEXT:    store i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT]], i64* [[TMPDATA_SROA_6_0__SROA_CAST4]], align 4
+; CHECK-NEXT:    store i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT]], ptr [[TMPDATA_SROA_6_0__SROA_IDX]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %tmpData = alloca %struct.STest, align 8
-  %0 = bitcast %struct.STest* %tmpData to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0)
-  %x = getelementptr inbounds %struct.STest, %struct.STest* %tmpData, i64 0, i32 0, i32 0
-  store float 1.230000e+02, float* %x, align 8
-  %y = getelementptr inbounds %struct.STest, %struct.STest* %tmpData, i64 0, i32 0, i32 1
-  store float 4.560000e+02, float* %y, align 4
-  %m_posB = getelementptr inbounds %struct.STest, %struct.STest* %tmpData, i64 0, i32 1
-  %1 = bitcast %struct.STest* %tmpData to i64*
-  %2 = bitcast %struct.SPos* %m_posB to i64*
-  %3 = load i64, i64* %1, align 8
-  store i64 %3, i64* %2, align 8
-  %4 = bitcast %struct.STest* %outData to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %4, i8* align 4 %0, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %0)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %tmpData)
+  store float 1.230000e+02, ptr %tmpData, align 8
+  %y = getelementptr inbounds %struct.STest, ptr %tmpData, i64 0, i32 0, i32 1
+  store float 4.560000e+02, ptr %y, align 4
+  %m_posB = getelementptr inbounds %struct.STest, ptr %tmpData, i64 0, i32 1
+  %0 = load i64, ptr %tmpData, align 8
+  store i64 %0, ptr %m_posB, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %outData, ptr align 4 %tmpData, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr %tmpData)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 define void @PR27999() unnamed_addr {
 ; CHECK-LABEL: @PR27999(
@@ -2043,11 +1810,9 @@ define void @PR27999() unnamed_addr {
 ;
 entry-block:
   %0 = alloca [2 x i64], align 8
-  %1 = bitcast [2 x i64]* %0 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %1)
-  %2 = getelementptr inbounds [2 x i64], [2 x i64]* %0, i32 0, i32 1
-  %3 = bitcast i64* %2 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %0)
+  %1 = getelementptr inbounds [2 x i64], ptr %0, i32 0, i32 1
+  call void @llvm.lifetime.end.p0(i64 8, ptr %1)
   ret void
 }
 
@@ -2058,9 +1823,8 @@ define void @PR29139() {
 ;
 bb1:
   %e.7.sroa.6.i = alloca i32, align 1
-  %e.7.sroa.6.0.load81.i = load i32, i32* %e.7.sroa.6.i, align 1
-  %0 = bitcast i32* %e.7.sroa.6.i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* %0)
+  %e.7.sroa.6.0.load81.i = load i32, ptr %e.7.sroa.6.i, align 1
+  call void @llvm.lifetime.end.p0(i64 2, ptr %e.7.sroa.6.i)
   ret void
 }
 
@@ -2077,14 +1841,10 @@ define void @PR35657(i64 %v) {
 ;
 entry:
   %a48 = alloca i48
-  %a48.cast64 = bitcast i48* %a48 to i64*
-  store i64 %v, i64* %a48.cast64
-  %a48.cast16 = bitcast i48* %a48 to i16*
-  %b0_15 = load i16, i16* %a48.cast16
-  %a48.cast8 = bitcast i48* %a48 to i8*
-  %a48_offset2 = getelementptr inbounds i8, i8* %a48.cast8, i64 2
-  %a48_offset2.cast48 = bitcast i8* %a48_offset2 to i48*
-  %b16_63 = load i48, i48* %a48_offset2.cast48, align 2
+  store i64 %v, ptr %a48
+  %b0_15 = load i16, ptr %a48
+  %a48_offset2 = getelementptr inbounds i8, ptr %a48, i64 2
+  %b16_63 = load i48, ptr %a48_offset2, align 2
   call void @callee16(i16 %b0_15)
   call void @callee48(i48 %b16_63)
   ret void
@@ -2107,18 +1867,17 @@ define void @test28(i64 %v) #0 {
 entry:
   %t = alloca { i64, i32, i32 }
 
-  %b = getelementptr { i64, i32, i32 }, { i64, i32, i32 }* %t, i32 0, i32 1
-  %0 = bitcast i32* %b to i64*
-  store i64 %v, i64* %0
+  %b = getelementptr { i64, i32, i32 }, ptr %t, i32 0, i32 1
+  store i64 %v, ptr %b
 
-  %1 = load i32, i32* %b
-  %c = getelementptr { i64, i32, i32 }, { i64, i32, i32 }* %t, i32 0, i32 2
-  store i32 %1, i32* %c
+  %0 = load i32, ptr %b
+  %c = getelementptr { i64, i32, i32 }, ptr %t, i32 0, i32 2
+  store i32 %0, ptr %c
   ret void
 }
 
-declare void @llvm.lifetime.start.isVoid.i64.p0i8(i64, [10 x float]* nocapture)
-declare void @llvm.lifetime.end.isVoid.i64.p0i8(i64, [10 x float]* nocapture)
+declare void @llvm.lifetime.start.isVoid.i64.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.isVoid.i64.p0(i64, ptr nocapture)
 @array = dso_local global [10 x float] zeroinitializer, align 4
 
 define void @test29(i32 %num, i32 %tid) {
@@ -2129,8 +1888,7 @@ define void @test29(i32 %num, i32 %tid) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TID:%.*]], 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = zext i32 [[TID]] to i64
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [10 x float], [10 x float]* @array, i64 0, i64 [[CONV_I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[ARRAYIDX5]] to i32*
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [10 x float], ptr @array, i64 0, i64 [[CONV_I]]
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ [[NUM]], [[BB1]] ], [ [[SUB:%.*]], [[BB5:%.*]] ]
@@ -2138,7 +1896,7 @@ define void @test29(i32 %num, i32 %tid) {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    store i32 undef, i32* [[TMP0]], align 4
+; CHECK-NEXT:    store i32 undef, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[SUB]] = add i32 [[I_02]], -1
@@ -2152,7 +1910,7 @@ define void @test29(i32 %num, i32 %tid) {
 
 entry:
   %ra = alloca [10 x float], align 4
-  call void @llvm.lifetime.start.isVoid.i64.p0i8(i64 40, [10 x float]* nonnull %ra)
+  call void @llvm.lifetime.start.isVoid.i64.p0(i64 40, ptr nonnull %ra)
 
   %cmp1 = icmp sgt i32 %num, 0
   br i1 %cmp1, label %bb1, label %bb7
@@ -2160,10 +1918,8 @@ entry:
 bb1:
   %tobool = icmp eq i32 %tid, 0
   %conv.i = zext i32 %tid to i64
-  %0 = bitcast [10 x float]* %ra to i32*
-  %1 = load i32, i32* %0, align 4
-  %arrayidx5 = getelementptr inbounds [10 x float], [10 x float]* @array, i64 0, i64 %conv.i
-  %2 = bitcast float* %arrayidx5 to i32*
+  %0 = load i32, ptr %ra, align 4
+  %arrayidx5 = getelementptr inbounds [10 x float], ptr @array, i64 0, i64 %conv.i
   br label %bb2
 
 bb2:
@@ -2174,7 +1930,7 @@ bb3:
   br label %bb5
 
 bb4:
-  store i32 %1, i32* %2, align 4
+  store i32 %0, ptr %arrayidx5, align 4
   br label %bb5
 
 bb5:
@@ -2186,7 +1942,7 @@ bb6:
   br label %bb7
 
 bb7:
-  call void @llvm.lifetime.end.isVoid.i64.p0i8(i64 40, [10 x float]* nonnull %ra)
+  call void @llvm.lifetime.end.isVoid.i64.p0(i64 40, ptr nonnull %ra)
   ret void
 }
 

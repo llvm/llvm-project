@@ -246,6 +246,7 @@ public:
       MachineInstrBundleIterator<const MachineInstr, true>;
 
   unsigned size() const { return (unsigned)Insts.size(); }
+  bool sizeWithoutDebugLargerThan(unsigned Limit) const;
   bool empty() const { return Insts.empty(); }
 
   MachineInstr       &instr_front()       { return Insts.front(); }
@@ -735,6 +736,15 @@ public:
   /// all, for example if this block ends with an unconditional branch to some
   /// other block.
   bool isLayoutSuccessor(const MachineBasicBlock *MBB) const;
+
+  /// Return the successor of this block if it has a single successor.
+  /// Otherwise return a null pointer.
+  ///
+  const MachineBasicBlock *getSingleSuccessor() const;
+  MachineBasicBlock *getSingleSuccessor() {
+    return const_cast<MachineBasicBlock *>(
+        static_cast<const MachineBasicBlock *>(this)->getSingleSuccessor());
+  }
 
   /// Return the fallthrough block if the block can implicitly
   /// transfer control to the block after it by falling off the end of

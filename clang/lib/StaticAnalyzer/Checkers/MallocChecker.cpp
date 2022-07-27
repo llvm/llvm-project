@@ -852,9 +852,8 @@ protected:
     return false;
   }
 
-  virtual bool
-  wasModifiedInFunction(const ExplodedNode *CallEnterN,
-                        const ExplodedNode *CallExitEndN) override {
+  bool wasModifiedInFunction(const ExplodedNode *CallEnterN,
+                             const ExplodedNode *CallExitEndN) override {
     if (!doesFnIntendToHandleOwnership(
             CallExitEndN->getFirstPred()->getLocationContext()->getDecl(),
             CallExitEndN->getState()->getAnalysisManager().getASTContext()))
@@ -885,7 +884,7 @@ protected:
            "later deallocation");
   }
 
-  virtual PathDiagnosticPieceRef
+  PathDiagnosticPieceRef
   maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
                            const ObjCMethodCall &Call,
                            const ExplodedNode *N) override {
@@ -893,7 +892,7 @@ protected:
     return nullptr;
   }
 
-  virtual PathDiagnosticPieceRef
+  PathDiagnosticPieceRef
   maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
                           const CXXConstructorCall &Call,
                           const ExplodedNode *N) override {
@@ -901,7 +900,7 @@ protected:
     return nullptr;
   }
 
-  virtual PathDiagnosticPieceRef
+  PathDiagnosticPieceRef
   maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
                              const ExplodedNode *N) override {
     // TODO: Factor the logic of "what constitutes as an entity being passed
@@ -1155,7 +1154,7 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
   ASTContext &Ctx = C.getASTContext();
   llvm::Triple::OSType OS = Ctx.getTargetInfo().getTriple().getOS();
 
-  if (!KernelZeroFlagVal.hasValue()) {
+  if (!KernelZeroFlagVal) {
     if (OS == llvm::Triple::FreeBSD)
       KernelZeroFlagVal = 0x0100;
     else if (OS == llvm::Triple::NetBSD)
@@ -1189,9 +1188,10 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
   }
 
   NonLoc Flags = V.castAs<NonLoc>();
-  NonLoc ZeroFlag = C.getSValBuilder()
-      .makeIntVal(KernelZeroFlagVal.getValue(), FlagsEx->getType())
-      .castAs<NonLoc>();
+  NonLoc ZeroFlag =
+      C.getSValBuilder()
+          .makeIntVal(KernelZeroFlagVal.value(), FlagsEx->getType())
+          .castAs<NonLoc>();
   SVal MaskedFlagsUC = C.getSValBuilder().evalBinOpNN(State, BO_And,
                                                       Flags, ZeroFlag,
                                                       FlagsEx->getType());
@@ -1238,8 +1238,8 @@ void MallocChecker::checkKernelMalloc(const CallEvent &Call,
   ProgramStateRef State = C.getState();
   llvm::Optional<ProgramStateRef> MaybeState =
       performKernelMalloc(Call, C, State);
-  if (MaybeState.hasValue())
-    State = MaybeState.getValue();
+  if (MaybeState)
+    State = MaybeState.value();
   else
     State = MallocMemAux(C, Call, Call.getArgExpr(0), UndefinedVal(), State,
                          AF_Malloc);
@@ -2218,7 +2218,7 @@ void MallocChecker::HandleNonHeapDealloc(CheckerContext &C, SVal ArgVal,
   }
 
   Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(Family);
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   if (ExplodedNode *N = C.generateErrorNode()) {
@@ -2351,7 +2351,7 @@ void MallocChecker::HandleOffsetFree(CheckerContext &C, SVal ArgVal,
   }
 
   Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(Family);
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   ExplodedNode *N = C.generateErrorNode();
@@ -2408,7 +2408,7 @@ void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
   }
 
   Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(C, Sym);
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   if (ExplodedNode *N = C.generateErrorNode()) {
@@ -2447,7 +2447,7 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
   }
 
   Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(C, Sym);
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   if (ExplodedNode *N = C.generateErrorNode()) {
@@ -2477,7 +2477,7 @@ void MallocChecker::HandleDoubleDelete(CheckerContext &C, SymbolRef Sym) const {
   }
 
   Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(C, Sym);
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   if (ExplodedNode *N = C.generateErrorNode()) {
@@ -2505,7 +2505,7 @@ void MallocChecker::HandleUseZeroAlloc(CheckerContext &C, SourceRange Range,
 
   Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(C, Sym);
 
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   if (ExplodedNode *N = C.generateErrorNode()) {
@@ -2537,7 +2537,7 @@ void MallocChecker::HandleFunctionPtrFree(CheckerContext &C, SVal ArgVal,
   }
 
   Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(Family);
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   if (ExplodedNode *N = C.generateErrorNode()) {
@@ -2750,7 +2750,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   Optional<MallocChecker::CheckKind>
       CheckKind = getCheckIfTracked(Family, true);
 
-  if (!CheckKind.hasValue())
+  if (!CheckKind)
     return;
 
   assert(N);
@@ -3571,13 +3571,13 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
       const RefState *RefS = State->get<RegionState>(I.getKey());
       AllocationFamily Family = RefS->getAllocationFamily();
       Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(Family);
-      if (!CheckKind.hasValue())
-         CheckKind = getCheckIfTracked(Family, true);
+      if (!CheckKind)
+        CheckKind = getCheckIfTracked(Family, true);
 
       I.getKey()->dumpToStream(Out);
       Out << " : ";
       I.getData().dump(Out);
-      if (CheckKind.hasValue())
+      if (CheckKind)
         Out << " (" << CheckNames[*CheckKind].getName() << ")";
       Out << NL;
     }

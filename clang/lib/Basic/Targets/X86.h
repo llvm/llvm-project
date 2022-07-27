@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_BASIC_TARGETS_X86_H
 
 #include "OSTargets.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
@@ -124,6 +125,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasMOVBE = false;
   bool HasPREFETCHWT1 = false;
   bool HasRDPID = false;
+  bool HasRDPRU = false;
   bool HasRetpolineExternalThunk = false;
   bool HasLAHFSAHF = false;
   bool HasWBNOINVD = false;
@@ -227,12 +229,12 @@ public:
   bool validateInputSize(const llvm::StringMap<bool> &FeatureMap,
                          StringRef Constraint, unsigned Size) const override;
 
-  virtual bool
+  bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
     return true;
   };
 
-  virtual bool
+  bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override {
     return true;
   };
@@ -419,8 +421,8 @@ public:
 
     // Use fpret for all types.
     RealTypeUsesObjCFPRetMask =
-        ((1 << (int)FloatModeKind::Float) | (1 << (int)FloatModeKind::Double) |
-         (1 << (int)FloatModeKind::LongDouble));
+        (unsigned)(FloatModeKind::Float | FloatModeKind::Double |
+                   FloatModeKind::LongDouble);
 
     // x86-32 has atomics up to 8 bytes
     MaxAtomicPromoteWidth = 64;
@@ -699,7 +701,7 @@ public:
                                         "64-i64:64-f80:128-n8:16:32:64-S128");
 
     // Use fpret only for long double.
-    RealTypeUsesObjCFPRetMask = (1 << (int)FloatModeKind::LongDouble);
+    RealTypeUsesObjCFPRetMask = (unsigned)FloatModeKind::LongDouble;
 
     // Use fp2ret for _Complex long double.
     ComplexLongDoubleUsesFP2Ret = true;

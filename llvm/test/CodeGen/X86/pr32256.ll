@@ -31,7 +31,7 @@ define void @_Z1av() {
 ; CHECK-NEXT:    retl
 entry:
   %b = alloca i8, align 1
-  %0 = load i8, i8* @c, align 1
+  %0 = load i8, ptr @c, align 1
   %tobool = trunc i8 %0 to i1
   %lnot = xor i1 %tobool, true
   br i1 %lnot, label %land.rhs, label %land.end
@@ -42,6 +42,6 @@ land.rhs:                                         ; preds = %entry
 land.end:                                         ; preds = %land.rhs, %entry
   %1 = phi i1 [ false, %entry ], [ false, %land.rhs ]
   %conv = zext i1 %1 to i8
-  store i8 %conv, i8* %b, align 1
+  store i8 %conv, ptr %b, align 1
   ret void
 }

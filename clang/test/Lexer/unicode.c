@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x c -std=c11 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -x c++ -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,c2x -x c -std=c2x %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx -x c++ -std=c++11 %s
 // RUN: %clang_cc1 -std=c99 -E -DPP_ONLY=1 %s | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -E -DPP_ONLY=1 %s | FileCheck %s --strict-whitespace
 
@@ -31,7 +32,7 @@ CHECK : The preprocessor should not complain about Unicode characters like ©.
 extern int X\UAAAAAAAA; // expected-error {{not allowed in an identifier}}
 int Y = '\UAAAAAAAA'; // expected-error {{invalid universal character}}
 
-#ifdef __cplusplus
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L)
 
 extern int ༀ;
 extern int 𑩐;
@@ -39,9 +40,15 @@ extern int 𐠈;
 extern int ꙮ;
 extern int  \u1B4C;     // BALINESE LETTER ARCHAIC JNYA - Added in Unicode 14
 extern int  \U00016AA2; // TANGSA LETTER GA - Added in Unicode 14
+extern int _\N{TANGSA LETTER GA};
+extern int _\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a valid Unicode character name}} \
+                                // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespace}}
+
+
+
 // This character doesn't have the XID_Start property
-extern int  \U00016AC0; // TANGSA DIGIT ZERO  // expected-error {{expected unqualified-id}}
-extern int _\U00016AC0; // TANGSA DIGIT ZERO
+extern int  \U00016AC0; // TANGSA DIGIT ZERO  // cxx-error {{expected unqualified-id}} \
+                                              // c2x-error {{expected identifier or '('}}
 
 extern int 🌹; // expected-error {{unexpected character <U+1F339>}} \
                   expected-warning {{declaration does not declare anything}}

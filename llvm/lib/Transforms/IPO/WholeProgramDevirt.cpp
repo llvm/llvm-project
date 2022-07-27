@@ -747,77 +747,7 @@ struct DevirtIndex {
 
   void run();
 };
-
-struct WholeProgramDevirt : public ModulePass {
-  static char ID;
-
-  bool UseCommandLine = false;
-
-  ModuleSummaryIndex *ExportSummary = nullptr;
-  const ModuleSummaryIndex *ImportSummary = nullptr;
-
-  WholeProgramDevirt() : ModulePass(ID), UseCommandLine(true) {
-    initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
-  }
-
-  WholeProgramDevirt(ModuleSummaryIndex *ExportSummary,
-                     const ModuleSummaryIndex *ImportSummary)
-      : ModulePass(ID), ExportSummary(ExportSummary),
-        ImportSummary(ImportSummary) {
-    initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    // In the new pass manager, we can request the optimization
-    // remark emitter pass on a per-function-basis, which the
-    // OREGetter will do for us.
-    // In the old pass manager, this is harder, so we just build
-    // an optimization remark emitter on the fly, when we need it.
-    std::unique_ptr<OptimizationRemarkEmitter> ORE;
-    auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
-      ORE = std::make_unique<OptimizationRemarkEmitter>(F);
-      return *ORE;
-    };
-
-    auto LookupDomTree = [this](Function &F) -> DominatorTree & {
-      return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-    };
-
-    if (UseCommandLine)
-      return DevirtModule::runForTesting(M, LegacyAARGetter(*this), OREGetter,
-                                         LookupDomTree);
-
-    return DevirtModule(M, LegacyAARGetter(*this), OREGetter, LookupDomTree,
-                        ExportSummary, ImportSummary)
-        .run();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-};
-
 } // end anonymous namespace
-
-INITIALIZE_PASS_BEGIN(WholeProgramDevirt, "wholeprogramdevirt",
-                      "Whole program devirtualization", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(WholeProgramDevirt, "wholeprogramdevirt",
-                    "Whole program devirtualization", false, false)
-char WholeProgramDevirt::ID = 0;
-
-ModulePass *
-llvm::createWholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
-                                   const ModuleSummaryIndex *ImportSummary) {
-  return new WholeProgramDevirt(ExportSummary, ImportSummary);
-}
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
@@ -843,14 +773,13 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
+namespace llvm {
 // Enable whole program visibility if enabled by client (e.g. linker) or
 // internal option, and not force disabled.
-static bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
+bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
   return (WholeProgramVisibilityEnabledInLTO || WholeProgramVisibility) &&
          !DisableWholeProgramVisibility;
 }
-
-namespace llvm {
 
 /// If whole program visibility asserted, then upgrade all public vcall
 /// visibility metadata on vtable definitions to linkage unit visibility in
@@ -860,7 +789,7 @@ void updateVCallVisibilityInModule(
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
-  for (GlobalVariable &GV : M.globals())
+  for (GlobalVariable &GV : M.globals()) {
     // Add linkage unit visibility to any variable with type metadata, which are
     // the vtable definitions. We won't have an existing vcall_visibility
     // metadata on vtable definitions with public visibility.
@@ -870,6 +799,34 @@ void updateVCallVisibilityInModule(
         // linker, as we have no information on their eventual use.
         !DynamicExportSymbols.count(GV.getGUID()))
       GV.setVCallVisibilityMetadata(GlobalObject::VCallVisibilityLinkageUnit);
+  }
+}
+
+void updatePublicTypeTestCalls(Module &M,
+                               bool WholeProgramVisibilityEnabledInLTO) {
+  Function *PublicTypeTestFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+  if (!PublicTypeTestFunc)
+    return;
+  if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO)) {
+    Function *TypeTestFunc =
+        Intrinsic::getDeclaration(&M, Intrinsic::type_test);
+    for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
+      auto *CI = cast<CallInst>(U.getUser());
+      auto *NewCI = CallInst::Create(
+          TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)}, None, "",
+          CI);
+      CI->replaceAllUsesWith(NewCI);
+      CI->eraseFromParent();
+    }
+  } else {
+    auto *True = ConstantInt::getTrue(M.getContext());
+    for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
+      auto *CI = cast<CallInst>(U.getUser());
+      CI->replaceAllUsesWith(True);
+      CI->eraseFromParent();
+    }
+  }
 }
 
 /// If whole program visibility asserted, then upgrade all public vcall
@@ -2015,7 +1972,7 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
     // (although this is unlikely). In that case, explicitly build a pair and
     // RAUW it.
     if (!CI->use_empty()) {
-      Value *Pair = UndefValue::get(CI->getType());
+      Value *Pair = PoisonValue::get(CI->getType());
       IRBuilder<> B(CI);
       Pair = B.CreateInsertValue(Pair, LoadedValue, {0});
       Pair = B.CreateInsertValue(Pair, TypeTestCall, {1});

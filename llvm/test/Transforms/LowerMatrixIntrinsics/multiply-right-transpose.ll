@@ -77,13 +77,13 @@ define <4 x double> @multiply_right_transpose_2x3x2(<6 x double> %a, <6 x double
 ; CHECK-NEXT:    [[SPLIT40:%.*]] = shufflevector <6 x double> [[B]], <6 x double> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[SPLIT41:%.*]] = shufflevector <6 x double> [[B]], <6 x double> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[SPLIT39]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> undef, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SPLIT40]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x double> [[TMP1]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[SPLIT41]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x double> [[TMP3]], double [[TMP4]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[SPLIT39]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x double> undef, double [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x double> poison, double [[TMP6]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[SPLIT40]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x double> [[TMP7]], double [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[SPLIT41]], i64 1

@@ -1013,39 +1013,6 @@ LLVMValueRef llvm_const_intcast(LLVMValueRef CV, LLVMTypeRef T,
   return LLVMConstIntCast(CV, T, Bool_val(IsSigned));
 }
 
-/* llvalue -> int array -> llvalue */
-LLVMValueRef llvm_const_extractvalue(LLVMValueRef Aggregate, value Indices) {
-  int size = Wosize_val(Indices);
-  int i;
-  LLVMValueRef result;
-
-  unsigned *idxs = (unsigned *)malloc(size * sizeof(unsigned));
-  for (i = 0; i < size; i++) {
-    idxs[i] = Int_val(Field(Indices, i));
-  }
-
-  result = LLVMConstExtractValue(Aggregate, idxs, size);
-  free(idxs);
-  return result;
-}
-
-/* llvalue -> llvalue -> int array -> llvalue */
-LLVMValueRef llvm_const_insertvalue(LLVMValueRef Aggregate, LLVMValueRef Val,
-                                    value Indices) {
-  int size = Wosize_val(Indices);
-  int i;
-  LLVMValueRef result;
-
-  unsigned *idxs = (unsigned *)malloc(size * sizeof(unsigned));
-  for (i = 0; i < size; i++) {
-    idxs[i] = Int_val(Field(Indices, i));
-  }
-
-  result = LLVMConstInsertValue(Aggregate, Val, idxs, size);
-  free(idxs);
-  return result;
-}
-
 /* lltype -> string -> string -> bool -> bool -> llvalue */
 LLVMValueRef llvm_const_inline_asm(LLVMTypeRef Ty, value Asm, value Constraints,
                                    value HasSideEffects, value IsAlignStack) {

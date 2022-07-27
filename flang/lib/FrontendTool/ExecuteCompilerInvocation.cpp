@@ -158,6 +158,9 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
     return false;
   }
 
+  // Honor color diagnostics.
+  flang->getDiagnosticOpts().ShowColors = flang->getFrontendOpts().showColors;
+
   // Create and execute the frontend action.
   std::unique_ptr<FrontendAction> act(createFrontendAction(*flang));
   if (!act)

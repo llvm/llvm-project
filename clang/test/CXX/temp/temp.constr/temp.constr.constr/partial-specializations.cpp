@@ -79,6 +79,6 @@ namespace variable_templates
   // expected-note@-1{{while checking constraint satisfaction for variable template partial specialization 'v1<int>' required here}}
   // expected-note@-2{{during template argument deduction for variable template partial specialization 'v1<T *>' [with T = int *]}}
   // expected-note@-3{{during template argument deduction for variable template partial specialization 'v1<T **>' [with T = int]}}
-  // expected-error@-4{{static_assert failed due to requirement 'v1<int **>'}}
+  // expected-error@-4{{static assertion failed due to requirement 'v1<int **>'}}
 
 }

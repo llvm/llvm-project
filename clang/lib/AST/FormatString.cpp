@@ -321,6 +321,12 @@ bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
 
 clang::analyze_format_string::ArgType::MatchKind
 ArgType::matchesType(ASTContext &C, QualType argTy) const {
+  // When using the format attribute in C++, you can receive a function or an
+  // array that will necessarily decay to a pointer when passed to the final
+  // format consumer. Apply decay before type comparison.
+  if (argTy->canDecayToPointerType())
+    argTy = C.getDecayedType(argTy);
+
   if (Ptr) {
     // It has to be a pointer.
     const PointerType *PT = argTy->getAs<PointerType>();
@@ -975,10 +981,9 @@ Optional<LengthModifier> FormatSpecifier::getCorrectedLengthModifier() const {
 
 bool FormatSpecifier::namedTypeToLengthModifier(QualType QT,
                                                 LengthModifier &LM) {
-  assert(isa<TypedefType>(QT) && "Expected a TypedefType");
-  const TypedefNameDecl *Typedef = cast<TypedefType>(QT)->getDecl();
-
-  for (;;) {
+  for (/**/; const auto *TT = QT->getAs<TypedefType>();
+       QT = TT->getDecl()->getUnderlyingType()) {
+    const TypedefNameDecl *Typedef = TT->getDecl();
     const IdentifierInfo *Identifier = Typedef->getIdentifier();
     if (Identifier->getName() == "size_t") {
       LM.setKind(LengthModifier::AsSizeT);
@@ -997,12 +1002,6 @@ bool FormatSpecifier::namedTypeToLengthModifier(QualType QT,
       LM.setKind(LengthModifier::AsPtrDiff);
       return true;
     }
-
-    QualType T = Typedef->getUnderlyingType();
-    if (!isa<TypedefType>(T))
-      break;
-
-    Typedef = cast<TypedefType>(T)->getDecl();
   }
   return false;
 }

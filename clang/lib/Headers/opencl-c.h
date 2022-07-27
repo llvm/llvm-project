@@ -10467,12 +10467,6 @@ float __ovld __cnfn fast_distance(float, float);
 float __ovld __cnfn fast_distance(float2, float2);
 float __ovld __cnfn fast_distance(float3, float3);
 float __ovld __cnfn fast_distance(float4, float4);
-#ifdef cl_khr_fp16
-half __ovld __cnfn fast_distance(half, half);
-half __ovld __cnfn fast_distance(half2, half2);
-half __ovld __cnfn fast_distance(half3, half3);
-half __ovld __cnfn fast_distance(half4, half4);
-#endif //cl_khr_fp16
 
 /**
  * Returns the length of vector p computed as:
@@ -10482,12 +10476,6 @@ float __ovld __cnfn fast_length(float);
 float __ovld __cnfn fast_length(float2);
 float __ovld __cnfn fast_length(float3);
 float __ovld __cnfn fast_length(float4);
-#ifdef cl_khr_fp16
-half __ovld __cnfn fast_length(half);
-half __ovld __cnfn fast_length(half2);
-half __ovld __cnfn fast_length(half3);
-half __ovld __cnfn fast_length(half4);
-#endif //cl_khr_fp16
 
 /**
  * Returns a vector in the same direction as p but with a
@@ -10514,12 +10502,6 @@ float __ovld __cnfn fast_normalize(float);
 float2 __ovld __cnfn fast_normalize(float2);
 float3 __ovld __cnfn fast_normalize(float3);
 float4 __ovld __cnfn fast_normalize(float4);
-#ifdef cl_khr_fp16
-half __ovld __cnfn fast_normalize(half);
-half2 __ovld __cnfn fast_normalize(half2);
-half3 __ovld __cnfn fast_normalize(half3);
-half4 __ovld __cnfn fast_normalize(half4);
-#endif //cl_khr_fp16
 
 // OpenCL v1.1 s6.11.6, v1.2 s6.12.6, v2.0 s6.13.6 - Relational Functions
 
@@ -11255,7 +11237,6 @@ double16 __ovld __purefn vload16(size_t, const __constant double *);
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
-half __ovld __purefn vload(size_t, const __constant half *);
 half2 __ovld __purefn vload2(size_t, const __constant half *);
 half3 __ovld __purefn vload3(size_t, const __constant half *);
 half4 __ovld __purefn vload4(size_t, const __constant half *);
@@ -11319,7 +11300,6 @@ double16 __ovld __purefn vload16(size_t, const double *);
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
-half __ovld __purefn vload(size_t, const half *);
 half2 __ovld __purefn vload2(size_t, const half *);
 half3 __ovld __purefn vload3(size_t, const half *);
 half4 __ovld __purefn vload4(size_t, const half *);
@@ -11484,19 +11464,16 @@ double16 __ovld __purefn vload16(size_t, const __private double *);
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
-half __ovld __purefn vload(size_t, const __global half *);
 half2 __ovld __purefn vload2(size_t, const __global half *);
 half3 __ovld __purefn vload3(size_t, const __global half *);
 half4 __ovld __purefn vload4(size_t, const __global half *);
 half8 __ovld __purefn vload8(size_t, const __global half *);
 half16 __ovld __purefn vload16(size_t, const __global half *);
-half __ovld __purefn vload(size_t, const __local half *);
 half2 __ovld __purefn vload2(size_t, const __local half *);
 half3 __ovld __purefn vload3(size_t, const __local half *);
 half4 __ovld __purefn vload4(size_t, const __local half *);
 half8 __ovld __purefn vload8(size_t, const __local half *);
 half16 __ovld __purefn vload16(size_t, const __local half *);
-half __ovld __purefn vload(size_t, const __private half *);
 half2 __ovld __purefn vload2(size_t, const __private half *);
 half3 __ovld __purefn vload3(size_t, const __private half *);
 half4 __ovld __purefn vload4(size_t, const __private half *);
@@ -11559,7 +11536,6 @@ void __ovld vstore8(double8, size_t, double *);
 void __ovld vstore16(double16, size_t, double *);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-void __ovld vstore(half, size_t, half *);
 void __ovld vstore2(half2, size_t, half *);
 void __ovld vstore3(half3, size_t, half *);
 void __ovld vstore4(half4, size_t, half *);
@@ -11722,19 +11698,16 @@ void __ovld vstore8(double8, size_t, __private double *);
 void __ovld vstore16(double16, size_t, __private double *);
 #endif //cl_khr_fp64
 #ifdef cl_khr_fp16
-void __ovld vstore(half, size_t, __global half *);
 void __ovld vstore2(half2, size_t, __global half *);
 void __ovld vstore3(half3, size_t, __global half *);
 void __ovld vstore4(half4, size_t, __global half *);
 void __ovld vstore8(half8, size_t, __global half *);
 void __ovld vstore16(half16, size_t, __global half *);
-void __ovld vstore(half, size_t, __local half *);
 void __ovld vstore2(half2, size_t, __local half *);
 void __ovld vstore3(half3, size_t, __local half *);
 void __ovld vstore4(half4, size_t, __local half *);
 void __ovld vstore8(half8, size_t, __local half *);
 void __ovld vstore16(half16, size_t, __local half *);
-void __ovld vstore(half, size_t, __private half *);
 void __ovld vstore2(half2, size_t, __private half *);
 void __ovld vstore3(half3, size_t, __private half *);
 void __ovld vstore4(half4, size_t, __private half *);

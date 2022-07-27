@@ -19,34 +19,17 @@ using namespace object;
 
 Expected<Decompressor> Decompressor::create(StringRef Name, StringRef Data,
                                             bool IsLE, bool Is64Bit) {
-  if (!zlib::isAvailable())
+  if (!compression::zlib::isAvailable())
     return createError("zlib is not available");
 
   Decompressor D(Data);
-  Error Err = isGnuStyle(Name) ? D.consumeCompressedGnuHeader()
-                               : D.consumeCompressedZLibHeader(Is64Bit, IsLE);
-  if (Err)
+  if (Error Err = D.consumeCompressedZLibHeader(Is64Bit, IsLE))
     return std::move(Err);
   return D;
 }
 
 Decompressor::Decompressor(StringRef Data)
     : SectionData(Data), DecompressedSize(0) {}
-
-Error Decompressor::consumeCompressedGnuHeader() {
-  if (!SectionData.startswith("ZLIB"))
-    return createError("corrupted compressed section header");
-
-  SectionData = SectionData.substr(4);
-
-  // Consume uncompressed section size (big-endian 8 bytes).
-  if (SectionData.size() < 8)
-    return createError("corrupted uncompressed section size");
-  DecompressedSize = read64be(SectionData.data());
-  SectionData = SectionData.substr(8);
-
-  return Error::success();
-}
 
 Error Decompressor::consumeCompressedZLibHeader(bool Is64Bit,
                                                 bool IsLittleEndian) {
@@ -72,27 +55,8 @@ Error Decompressor::consumeCompressedZLibHeader(bool Is64Bit,
   return Error::success();
 }
 
-bool Decompressor::isGnuStyle(StringRef Name) {
-  return Name.startswith(".zdebug");
-}
-
-bool Decompressor::isCompressed(const object::SectionRef &Section) {
-  if (Section.isCompressed())
-    return true;
-
-  Expected<StringRef> SecNameOrErr = Section.getName();
-  if (SecNameOrErr)
-    return isGnuStyle(*SecNameOrErr);
-
-  consumeError(SecNameOrErr.takeError());
-  return false;
-}
-
-bool Decompressor::isCompressedELFSection(uint64_t Flags, StringRef Name) {
-  return (Flags & ELF::SHF_COMPRESSED) || isGnuStyle(Name);
-}
-
-Error Decompressor::decompress(MutableArrayRef<char> Buffer) {
+Error Decompressor::decompress(MutableArrayRef<uint8_t> Buffer) {
   size_t Size = Buffer.size();
-  return zlib::uncompress(SectionData, Buffer.data(), Size);
+  return compression::zlib::uncompress(arrayRefFromStringRef(SectionData),
+                                       Buffer.data(), Size);
 }

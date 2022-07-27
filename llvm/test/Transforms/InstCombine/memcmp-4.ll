@@ -17,21 +17,17 @@ declare i32 @memcmp(i8*, i8*, i64)
 ; value (analogous to strncmp) is safer than letting a SIMD library
 ; implementation return a bogus value.
 
-define void @fold_memcmp_too_big(i32* %pcmp) {
-; BE-LABEL: @fold_memcmp_too_big(
-; BE-NEXT:    [[CMP_BC:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(12) bitcast ([5 x i16]* @ia16b to i8*), i8* noundef nonnull dereferenceable(12) bitcast ([6 x i16]* @ia16c to i8*), i64 12)
-; BE-NEXT:    store i32 [[CMP_BC]], i32* [[PCMP:%.*]], align 4
-; BE-NEXT:    [[CMP_CB:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(12) bitcast ([6 x i16]* @ia16c to i8*), i8* noundef nonnull dereferenceable(12) bitcast ([5 x i16]* @ia16b to i8*), i64 12)
+define void @fold_memcmp_mismatch_too_big(i32* %pcmp) {
+; BE-LABEL: @fold_memcmp_mismatch_too_big(
+; BE-NEXT:    store i32 -1, i32* [[PCMP:%.*]], align 4
 ; BE-NEXT:    [[PSTOR_CB:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; BE-NEXT:    store i32 [[CMP_CB]], i32* [[PSTOR_CB]], align 4
+; BE-NEXT:    store i32 1, i32* [[PSTOR_CB]], align 4
 ; BE-NEXT:    ret void
 ;
-; LE-LABEL: @fold_memcmp_too_big(
-; LE-NEXT:    [[CMP_BC:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(12) bitcast ([5 x i16]* @ia16b to i8*), i8* noundef nonnull dereferenceable(12) bitcast ([6 x i16]* @ia16c to i8*), i64 12)
-; LE-NEXT:    store i32 [[CMP_BC]], i32* [[PCMP:%.*]], align 4
-; LE-NEXT:    [[CMP_CB:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(12) bitcast ([6 x i16]* @ia16c to i8*), i8* noundef nonnull dereferenceable(12) bitcast ([5 x i16]* @ia16b to i8*), i64 12)
+; LE-LABEL: @fold_memcmp_mismatch_too_big(
+; LE-NEXT:    store i32 -1, i32* [[PCMP:%.*]], align 4
 ; LE-NEXT:    [[PSTOR_CB:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; LE-NEXT:    store i32 [[CMP_CB]], i32* [[PSTOR_CB]], align 4
+; LE-NEXT:    store i32 1, i32* [[PSTOR_CB]], align 4
 ; LE-NEXT:    ret void
 ;
   %p0 = getelementptr [5 x i16], [5 x i16]* @ia16b, i64 0, i64 0
@@ -51,23 +47,21 @@ define void @fold_memcmp_too_big(i32* %pcmp) {
 }
 
 
-; Don't fold calls with excessive byte counts of arrays with the same bytes.
+; Fold even calls with excessive byte counts of arrays with matching bytes.
+; Like in the instances above, this is preferable to letting the undefined
+; calls take place, although it does prevent sanitizers from detecting them.
 
-define void @call_memcmp_too_big(i32* %pcmp) {
-; BE-LABEL: @call_memcmp_too_big(
-; BE-NEXT:    [[CMP_AB_9:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(9) bitcast ([4 x i16]* @ia16a to i8*), i8* noundef nonnull dereferenceable(9) bitcast ([5 x i16]* @ia16b to i8*), i64 9)
-; BE-NEXT:    store i32 [[CMP_AB_9]], i32* [[PCMP:%.*]], align 4
-; BE-NEXT:    [[CMP_AB_M1:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(18446744073709551615) bitcast ([4 x i16]* @ia16a to i8*), i8* noundef nonnull dereferenceable(18446744073709551615) bitcast ([5 x i16]* @ia16b to i8*), i64 -1)
+define void @fold_memcmp_match_too_big(i32* %pcmp) {
+; BE-LABEL: @fold_memcmp_match_too_big(
+; BE-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; BE-NEXT:    [[PSTOR_AB_M1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; BE-NEXT:    store i32 [[CMP_AB_M1]], i32* [[PSTOR_AB_M1]], align 4
+; BE-NEXT:    store i32 0, i32* [[PSTOR_AB_M1]], align 4
 ; BE-NEXT:    ret void
 ;
-; LE-LABEL: @call_memcmp_too_big(
-; LE-NEXT:    [[CMP_AB_9:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(9) bitcast ([4 x i16]* @ia16a to i8*), i8* noundef nonnull dereferenceable(9) bitcast ([5 x i16]* @ia16b to i8*), i64 9)
-; LE-NEXT:    store i32 [[CMP_AB_9]], i32* [[PCMP:%.*]], align 4
-; LE-NEXT:    [[CMP_AB_M1:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(18446744073709551615) bitcast ([4 x i16]* @ia16a to i8*), i8* noundef nonnull dereferenceable(18446744073709551615) bitcast ([5 x i16]* @ia16b to i8*), i64 -1)
+; LE-LABEL: @fold_memcmp_match_too_big(
+; LE-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; LE-NEXT:    [[PSTOR_AB_M1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; LE-NEXT:    store i32 [[CMP_AB_M1]], i32* [[PSTOR_AB_M1]], align 4
+; LE-NEXT:    store i32 0, i32* [[PSTOR_AB_M1]], align 4
 ; LE-NEXT:    ret void
 ;
   %p0 = getelementptr [4 x i16], [4 x i16]* @ia16a, i64 0, i64 0

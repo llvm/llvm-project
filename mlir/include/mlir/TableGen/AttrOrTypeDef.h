@@ -37,6 +37,9 @@ class AttrOrTypeBuilder : public Builder {
 public:
   using Builder::Builder;
 
+  /// Returns an optional builder return type.
+  Optional<StringRef> getReturnType() const;
+
   /// Returns true if this builder is able to infer the MLIRContext parameter.
   bool hasInferredContextParameter() const;
 };
@@ -75,6 +78,9 @@ public:
 
   /// Get the C++ storage type of this parameter.
   StringRef getCppStorageType() const;
+
+  /// Get the C++ code to convert from the storage type to the parameter type.
+  StringRef getConvertFromStorage() const;
 
   /// Get an optional C++ parameter parser.
   Optional<StringRef> getParser() const;
@@ -194,6 +200,9 @@ public:
 
   /// Returns the def's extra class declaration code.
   Optional<StringRef> getExtraDecls() const;
+
+  /// Returns the def's extra class definition code.
+  Optional<StringRef> getExtraDefs() const;
 
   /// Get the code location (for error printing).
   ArrayRef<SMLoc> getLoc() const;

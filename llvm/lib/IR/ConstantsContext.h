@@ -209,67 +209,6 @@ public:
   }
 };
 
-/// ExtractValueConstantExpr - This class is private to
-/// Constants.cpp, and is used behind the scenes to implement
-/// extractvalue constant exprs.
-class ExtractValueConstantExpr final : public ConstantExpr {
-public:
-  ExtractValueConstantExpr(Constant *Agg, ArrayRef<unsigned> IdxList,
-                           Type *DestTy)
-      : ConstantExpr(DestTy, Instruction::ExtractValue, &Op<0>(), 1),
-        Indices(IdxList.begin(), IdxList.end()) {
-    Op<0>() = Agg;
-  }
-
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, 1); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
-
-  /// Indices - These identify which value to extract.
-  const SmallVector<unsigned, 4> Indices;
-
-  /// Transparently provide more efficient getOperand methods.
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::ExtractValue;
-  }
-  static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
-  }
-};
-
-/// InsertValueConstantExpr - This class is private to
-/// Constants.cpp, and is used behind the scenes to implement
-/// insertvalue constant exprs.
-class InsertValueConstantExpr final : public ConstantExpr {
-public:
-  InsertValueConstantExpr(Constant *Agg, Constant *Val,
-                          ArrayRef<unsigned> IdxList, Type *DestTy)
-      : ConstantExpr(DestTy, Instruction::InsertValue, &Op<0>(), 2),
-        Indices(IdxList.begin(), IdxList.end()) {
-    Op<0>() = Agg;
-    Op<1>() = Val;
-  }
-
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, 2); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
-
-  /// Indices - These identify the position for the insertion.
-  const SmallVector<unsigned, 4> Indices;
-
-  /// Transparently provide more efficient getOperand methods.
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::InsertValue;
-  }
-  static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
-  }
-};
-
 /// GetElementPtrConstantExpr - This class is private to Constants.cpp, and is
 /// used behind the scenes to implement getelementpr constant exprs.
 class GetElementPtrConstantExpr final : public ConstantExpr {
@@ -361,16 +300,6 @@ template <>
 struct OperandTraits<ShuffleVectorConstantExpr>
     : public FixedNumOperandTraits<ShuffleVectorConstantExpr, 2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorConstantExpr, Value)
-
-template <>
-struct OperandTraits<ExtractValueConstantExpr>
-    : public FixedNumOperandTraits<ExtractValueConstantExpr, 1> {};
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ExtractValueConstantExpr, Value)
-
-template <>
-struct OperandTraits<InsertValueConstantExpr>
-    : public FixedNumOperandTraits<InsertValueConstantExpr, 2> {};
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertValueConstantExpr, Value)
 
 template <>
 struct OperandTraits<GetElementPtrConstantExpr>
@@ -507,19 +436,12 @@ private:
   uint8_t SubclassOptionalData;
   uint16_t SubclassData;
   ArrayRef<Constant *> Ops;
-  ArrayRef<unsigned> Indexes;
   ArrayRef<int> ShuffleMask;
   Type *ExplicitTy;
 
   static ArrayRef<int> getShuffleMaskIfValid(const ConstantExpr *CE) {
     if (CE->getOpcode() == Instruction::ShuffleVector)
       return CE->getShuffleMask();
-    return None;
-  }
-
-  static ArrayRef<unsigned> getIndicesIfValid(const ConstantExpr *CE) {
-    if (CE->hasIndices())
-      return CE->getIndices();
     return None;
   }
 
@@ -533,18 +455,17 @@ public:
   ConstantExprKeyType(unsigned Opcode, ArrayRef<Constant *> Ops,
                       unsigned short SubclassData = 0,
                       unsigned short SubclassOptionalData = 0,
-                      ArrayRef<unsigned> Indexes = None,
                       ArrayRef<int> ShuffleMask = None,
                       Type *ExplicitTy = nullptr)
       : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData),
-        SubclassData(SubclassData), Ops(Ops), Indexes(Indexes),
-        ShuffleMask(ShuffleMask), ExplicitTy(ExplicitTy) {}
+        SubclassData(SubclassData), Ops(Ops), ShuffleMask(ShuffleMask),
+        ExplicitTy(ExplicitTy) {}
 
   ConstantExprKeyType(ArrayRef<Constant *> Operands, const ConstantExpr *CE)
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0), Ops(Operands),
-        Indexes(getIndicesIfValid(CE)), ShuffleMask(getShuffleMaskIfValid(CE)),
+        ShuffleMask(getShuffleMaskIfValid(CE)),
         ExplicitTy(getSourceElementTypeIfValid(CE)) {}
 
   ConstantExprKeyType(const ConstantExpr *CE,
@@ -552,7 +473,7 @@ public:
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0),
-        Indexes(getIndicesIfValid(CE)), ShuffleMask(getShuffleMaskIfValid(CE)),
+        ShuffleMask(getShuffleMaskIfValid(CE)),
         ExplicitTy(getSourceElementTypeIfValid(CE)) {
     assert(Storage.empty() && "Expected empty storage");
     for (unsigned I = 0, E = CE->getNumOperands(); I != E; ++I)
@@ -563,8 +484,7 @@ public:
   bool operator==(const ConstantExprKeyType &X) const {
     return Opcode == X.Opcode && SubclassData == X.SubclassData &&
            SubclassOptionalData == X.SubclassOptionalData && Ops == X.Ops &&
-           Indexes == X.Indexes && ShuffleMask == X.ShuffleMask &&
-           ExplicitTy == X.ExplicitTy;
+           ShuffleMask == X.ShuffleMask && ExplicitTy == X.ExplicitTy;
   }
 
   bool operator==(const ConstantExpr *CE) const {
@@ -579,8 +499,6 @@ public:
     for (unsigned I = 0, E = Ops.size(); I != E; ++I)
       if (Ops[I] != CE->getOperand(I))
         return false;
-    if (Indexes != getIndicesIfValid(CE))
-      return false;
     if (ShuffleMask != getShuffleMaskIfValid(CE))
       return false;
     if (ExplicitTy != getSourceElementTypeIfValid(CE))
@@ -592,7 +510,6 @@ public:
     return hash_combine(
         Opcode, SubclassOptionalData, SubclassData,
         hash_combine_range(Ops.begin(), Ops.end()),
-        hash_combine_range(Indexes.begin(), Indexes.end()),
         hash_combine_range(ShuffleMask.begin(), ShuffleMask.end()), ExplicitTy);
   }
 
@@ -618,10 +535,6 @@ public:
       return new InsertElementConstantExpr(Ops[0], Ops[1], Ops[2]);
     case Instruction::ShuffleVector:
       return new ShuffleVectorConstantExpr(Ops[0], Ops[1], ShuffleMask);
-    case Instruction::InsertValue:
-      return new InsertValueConstantExpr(Ops[0], Ops[1], Indexes, Ty);
-    case Instruction::ExtractValue:
-      return new ExtractValueConstantExpr(Ops[0], Indexes, Ty);
     case Instruction::GetElementPtr:
       return GetElementPtrConstantExpr::Create(ExplicitTy, Ops[0], Ops.slice(1),
                                                Ty, SubclassOptionalData);

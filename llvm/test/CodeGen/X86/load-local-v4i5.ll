@@ -8,7 +8,7 @@ define void @_start() {
 ; CHECK:       # %bb.0: # %Entry
 ; CHECK-NEXT:    movl __unnamed_1(%rip), %eax
 ; CHECK-NEXT:    movl %eax, -12(%rsp)
-; CHECK-NEXT:    movb -9(%rsp), %cl
+; CHECK-NEXT:    movzbl -9(%rsp), %ecx
 ; CHECK-NEXT:    movzbl -10(%rsp), %edx
 ; CHECK-NEXT:    movzbl -11(%rsp), %esi
 ; CHECK-NEXT:    andl $31, %eax
@@ -37,27 +37,25 @@ Entry:
   %x = alloca [4 x i5], align 1
   %y = alloca <4 x i5>, align 4
   %z = alloca i5, align 1
-  %0 = bitcast [4 x i5]* %x to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 bitcast ([4 x i5]* @0 to i8*), i64 4, i1 false)
-  %1 = getelementptr inbounds [4 x i5], [4 x i5]* %x, i64 0, i64 0
-  %2 = load i5, i5* %1
-  %3 = insertelement <4 x i5> undef, i5 %2, i32 0
-  %4 = getelementptr inbounds [4 x i5], [4 x i5]* %x, i64 0, i64 1
-  %5 = load i5, i5* %4
-  %6 = insertelement <4 x i5> %3, i5 %5, i32 1
-  %7 = getelementptr inbounds [4 x i5], [4 x i5]* %x, i64 0, i64 2
-  %8 = load i5, i5* %7
-  %9 = insertelement <4 x i5> %6, i5 %8, i32 2
-  %10 = getelementptr inbounds [4 x i5], [4 x i5]* %x, i64 0, i64 3
-  %11 = load i5, i5* %10
-  %12 = insertelement <4 x i5> %9, i5 %11, i32 3
-  store <4 x i5> %12, <4 x i5>* %y, align 4
-  %13 = load <4 x i5>, <4 x i5>* %y
-  %14 = extractelement <4 x i5> %13, i32 3
-  store i5 %14, i5* %z, align 1
-  %15 = load i5, i5* %z, align 1
-  %16 = icmp ne i5 %15, -1
-  br i1 %16, label %Then, label %Else
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %x, ptr align 1 @0, i64 4, i1 false)
+  %0 = load i5, ptr %x
+  %1 = insertelement <4 x i5> undef, i5 %0, i32 0
+  %2 = getelementptr inbounds [4 x i5], ptr %x, i64 0, i64 1
+  %3 = load i5, ptr %2
+  %4 = insertelement <4 x i5> %1, i5 %3, i32 1
+  %5 = getelementptr inbounds [4 x i5], ptr %x, i64 0, i64 2
+  %6 = load i5, ptr %5
+  %7 = insertelement <4 x i5> %4, i5 %6, i32 2
+  %8 = getelementptr inbounds [4 x i5], ptr %x, i64 0, i64 3
+  %9 = load i5, ptr %8
+  %10 = insertelement <4 x i5> %7, i5 %9, i32 3
+  store <4 x i5> %10, ptr %y, align 4
+  %11 = load <4 x i5>, ptr %y
+  %12 = extractelement <4 x i5> %11, i32 3
+  store i5 %12, ptr %z, align 1
+  %13 = load i5, ptr %z, align 1
+  %14 = icmp ne i5 %13, -1
+  br i1 %14, label %Then, label %Else
 
 Then:                                             ; preds = %Entry
   call void @llvm.debugtrap()
@@ -71,7 +69,7 @@ EndIf:                                            ; preds = %Else, %Then
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 ; Function Attrs: nounwind
 declare void @llvm.debugtrap()

@@ -42,7 +42,7 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
   auto tosaNegateOp = cast<tosa::NegateOp>(op);
 
   auto inputType =
-      tosaNegateOp.input1().getType().dyn_cast<mlir::RankedTensorType>();
+      tosaNegateOp.getInput1().getType().dyn_cast<mlir::RankedTensorType>();
   // skip if input is not ranked tensor type
   if (!inputType)
     return failure();
@@ -83,7 +83,7 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
                            rewriter.getBoolAttr(narrowRange)));
 
   ElementsAttr inputElems;
-  if (!matchPattern(tosaNegateOp.input1(), m_Constant(&inputElems)))
+  if (!matchPattern(tosaNegateOp.getInput1(), m_Constant(&inputElems)))
     return failure();
 
   auto newConstOp =
@@ -112,14 +112,14 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   auto tosaConv2DOp = cast<tosa::Conv2DOp>(op);
 
   auto inputType =
-      tosaConv2DOp.input().getType().dyn_cast<mlir::RankedTensorType>();
+      tosaConv2DOp.getInput().getType().dyn_cast<mlir::RankedTensorType>();
 
   // skip if input is not ranked tensor type
   if (!inputType)
     return failure();
 
   auto weightType =
-      tosaConv2DOp.weight().getType().dyn_cast<mlir::RankedTensorType>();
+      tosaConv2DOp.getWeight().getType().dyn_cast<mlir::RankedTensorType>();
 
   // skip if wt is not ranked tensor type
   if (!weightType)
@@ -146,9 +146,9 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       RankedTensorType::get(outputType.getShape(), rewriter.getIntegerType(32));
 
   auto newTosaConv2DOp = rewriter.create<tosa::Conv2DOp>(
-      op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.input(),
-      tosaConv2DOp.weight(), tosaConv2DOp.bias(), tosaConv2DOp.pad(),
-      tosaConv2DOp.stride(), tosaConv2DOp.dilation());
+      op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.getInput(),
+      tosaConv2DOp.getWeight(), tosaConv2DOp.getBias(), tosaConv2DOp.getPad(),
+      tosaConv2DOp.getStride(), tosaConv2DOp.getDilation());
 
   // Create rescale to quantized type
   double inputScale = inputQType.getScale();

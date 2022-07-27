@@ -325,7 +325,7 @@ bool InferPedantic::isOffByDefault(const Record *Diag) {
 bool InferPedantic::groupInPedantic(const Record *Group, bool increment) {
   GMap::mapped_type &V = GroupCount[Group];
   // Lazily compute the threshold value for the group count.
-  if (!V.second.hasValue()) {
+  if (!V.second) {
     const GroupInfo &GI =
         DiagsInGroup[std::string(Group->getValueAsString("GroupName"))];
     V.second = GI.SubGroups.size() + GI.DiagsInGroup.size();
@@ -337,7 +337,7 @@ bool InferPedantic::groupInPedantic(const Record *Group, bool increment) {
   // Consider a group in -Wpendatic IFF if has at least one diagnostic
   // or subgroup AND all of those diagnostics and subgroups are covered
   // by -Wpedantic via our computation.
-  return V.first != 0 && V.first == V.second.getValue();
+  return V.first != 0 && V.first == *V.second;
 }
 
 void InferPedantic::markGroup(const Record *Group) {

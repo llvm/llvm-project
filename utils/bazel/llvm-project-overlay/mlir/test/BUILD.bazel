@@ -18,7 +18,12 @@ cc_library(
 
 cc_library(
     name = "TestAnalysis",
-    srcs = glob(["lib/Analysis/*.cpp"]),
+    srcs = glob(
+        [
+            "lib/Analysis/*.cpp",
+            "lib/Analysis/DataFlow/*.cpp",
+        ],
+    ),
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -85,14 +90,6 @@ gentbl_cc_library(
         (
             ["-gen-enum-defs"],
             "lib/Dialect/Test/TestOpEnums.cpp.inc",
-        ),
-        (
-            ["-gen-struct-attr-decls"],
-            "lib/Dialect/Test/TestOpStructs.h.inc",
-        ),
-        (
-            ["-gen-struct-attr-defs"],
-            "lib/Dialect/Test/TestOpStructs.cpp.inc",
         ),
         (
             ["-gen-rewriters"],

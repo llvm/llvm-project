@@ -847,6 +847,7 @@ template<size_t N, class T>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/assume_aligned.h>
+#include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/concepts.h>
 #include <__memory/construct_at.h>
@@ -870,105 +871,19 @@ template<size_t N, class T>
 #include <typeinfo>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iterator>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 #include <compare>
-
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-#   include <__memory/auto_ptr.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Alloc, class _Ptr>
-_LIBCPP_INLINE_VISIBILITY
-void __construct_forward_with_exception_guarantees(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2) {
-    static_assert(__is_cpp17_move_insertable<_Alloc>::value,
-        "The specified type does not meet the requirements of Cpp17MoveInsertable");
-    typedef allocator_traits<_Alloc> _Traits;
-    for (; __begin1 != __end1; ++__begin1, (void)++__begin2) {
-        _Traits::construct(__a, _VSTD::__to_address(__begin2),
-#ifdef _LIBCPP_NO_EXCEPTIONS
-            _VSTD::move(*__begin1)
-#else
-            _VSTD::move_if_noexcept(*__begin1)
-#endif
-        );
-    }
-}
-
-template <class _Alloc, class _Tp, typename enable_if<
-    (__is_default_allocator<_Alloc>::value || !__has_construct<_Alloc, _Tp*, _Tp>::value) &&
-    is_trivially_move_constructible<_Tp>::value
->::type>
-_LIBCPP_INLINE_VISIBILITY
-void __construct_forward_with_exception_guarantees(_Alloc&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2) {
-    ptrdiff_t _Np = __end1 - __begin1;
-    if (_Np > 0) {
-        _VSTD::memcpy(__begin2, __begin1, _Np * sizeof(_Tp));
-        __begin2 += _Np;
-    }
-}
-
-template <class _Alloc, class _Iter, class _Ptr>
-_LIBCPP_INLINE_VISIBILITY
-void __construct_range_forward(_Alloc& __a, _Iter __begin1, _Iter __end1, _Ptr& __begin2) {
-    typedef allocator_traits<_Alloc> _Traits;
-    for (; __begin1 != __end1; ++__begin1, (void) ++__begin2) {
-        _Traits::construct(__a, _VSTD::__to_address(__begin2), *__begin1);
-    }
-}
-
-template <class _Alloc, class _Source, class _Dest,
-          class _RawSource = typename remove_const<_Source>::type,
-          class _RawDest = typename remove_const<_Dest>::type,
-          class =
-    typename enable_if<
-        is_trivially_copy_constructible<_Dest>::value &&
-        is_same<_RawSource, _RawDest>::value &&
-        (__is_default_allocator<_Alloc>::value || !__has_construct<_Alloc, _Dest*, _Source&>::value)
-    >::type>
-_LIBCPP_INLINE_VISIBILITY
-void __construct_range_forward(_Alloc&, _Source* __begin1, _Source* __end1, _Dest*& __begin2) {
-    ptrdiff_t _Np = __end1 - __begin1;
-    if (_Np > 0) {
-        _VSTD::memcpy(const_cast<_RawDest*>(__begin2), __begin1, _Np * sizeof(_Dest));
-        __begin2 += _Np;
-    }
-}
-
-template <class _Alloc, class _Ptr>
-_LIBCPP_INLINE_VISIBILITY
-void __construct_backward_with_exception_guarantees(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2) {
-    static_assert(__is_cpp17_move_insertable<_Alloc>::value,
-        "The specified type does not meet the requirements of Cpp17MoveInsertable");
-    typedef allocator_traits<_Alloc> _Traits;
-    while (__end1 != __begin1) {
-        _Traits::construct(__a, _VSTD::__to_address(__end2 - 1),
-#ifdef _LIBCPP_NO_EXCEPTIONS
-            _VSTD::move(*--__end1)
-#else
-            _VSTD::move_if_noexcept(*--__end1)
-#endif
-        );
-        --__end2;
-    }
-}
-
-template <class _Alloc, class _Tp, class = typename enable_if<
-    (__is_default_allocator<_Alloc>::value || !__has_construct<_Alloc, _Tp*, _Tp>::value) &&
-    is_trivially_move_constructible<_Tp>::value
->::type>
-_LIBCPP_INLINE_VISIBILITY
-void __construct_backward_with_exception_guarantees(_Alloc&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2) {
-    ptrdiff_t _Np = __end1 - __begin1;
-    __end2 -= _Np;
-    if (_Np > 0)
-        _VSTD::memcpy(static_cast<void*>(__end2), static_cast<void const*>(__begin1), _Np * sizeof(_Tp));
-}
 
 struct __destruct_n
 {
@@ -1010,37 +925,6 @@ public:
 };
 
 _LIBCPP_FUNC_VIS void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
-
-// --- Helper for container swap --
-template <typename _Alloc>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-void __swap_allocator(_Alloc & __a1, _Alloc & __a2, true_type)
-#if _LIBCPP_STD_VER > 11
-    _NOEXCEPT
-#else
-    _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
-#endif
-{
-    using _VSTD::swap;
-    swap(__a1, __a2);
-}
-
-template <typename _Alloc>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-void __swap_allocator(_Alloc &, _Alloc &, false_type) _NOEXCEPT {}
-
-template <typename _Alloc>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
-#if _LIBCPP_STD_VER > 11
-    _NOEXCEPT
-#else
-    _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
-#endif
-{
-    _VSTD::__swap_allocator(__a1, __a2,
-      integral_constant<bool, allocator_traits<_Alloc>::propagate_on_container_swap::value>());
-}
 
 template <typename _Alloc, typename _Traits=allocator_traits<_Alloc> >
 struct __noexcept_move_assign_container : public integral_constant<bool,
@@ -1094,8 +978,8 @@ struct __builtin_new_allocator {
     _LIBCPP_CONSTEXPR explicit __builtin_new_deleter(size_t __size, size_t __align)
         : __size_(__size), __align_(__align) {}
 
-    void operator()(void* p) const _NOEXCEPT {
-        _VSTD::__libcpp_deallocate(p, __size_, __align_);
+    void operator()(void* __p) const _NOEXCEPT {
+        _VSTD::__libcpp_deallocate(__p, __size_, __align_);
     }
 
    private:

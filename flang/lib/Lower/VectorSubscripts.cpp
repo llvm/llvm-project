@@ -111,7 +111,7 @@ private:
     // Parent components will not be found here, they are not part
     // of the FIR type and cannot be used in the path yet.
     if (componentSymbol.test(Fortran::semantics::Symbol::Flag::ParentComp))
-      TODO(loc, "Reference to parent component");
+      TODO(loc, "reference to parent component");
     mlir::Type fldTy = fir::FieldType::get(&converter.getMLIRContext());
     llvm::StringRef componentName = toStringRef(componentSymbol.name());
     // Parameters threading in field_index is not yet very clear. We only
@@ -212,7 +212,7 @@ private:
 
   mlir::Type gen(const Fortran::evaluate::CoarrayRef &) {
     // Is this possible/legal ?
-    TODO(loc, "Coarray ref with vector subscript in IO input");
+    TODO(loc, "coarray ref with vector subscript in IO input");
   }
 
   template <typename A>

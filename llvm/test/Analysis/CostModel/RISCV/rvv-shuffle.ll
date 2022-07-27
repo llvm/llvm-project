@@ -36,22 +36,22 @@ define void  @vector_broadcast() {
 
 define void @vector_insert_extract(<vscale x 4 x i32> %v0, <vscale x 16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: 'vector_insert_extract'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %extract_fixed_from_scalable = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.experimental.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %extract_fixed_from_scalable = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %extract_fixed_from_scalable = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
-  %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
-  %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
-  %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.experimental.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
+  %extract_fixed_from_scalable = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
+  %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
+  %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
+  %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
   ret void
 }
-declare <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32>, i64)
-declare <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32>, <16 x i32>, i64)
-declare <vscale x 4 x i32> @llvm.experimental.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32>, i64)
-declare <vscale x 16 x i32> @llvm.experimental.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32>, <vscale x 4 x i32>, i64)
+declare <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32>, i64)
+declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32>, <16 x i32>, i64)
+declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32>, i64)
+declare <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32>, <vscale x 4 x i32>, i64)
 
 define void @vector_reverse() {
 ; CHECK-LABEL: 'vector_reverse'
@@ -65,10 +65,10 @@ define void @vector_reverse() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %reverse_nxv8i32 = call <vscale x 8 x i32> @llvm.experimental.vector.reverse.nxv8i32(<vscale x 8 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %reverse_nxv2i64 = call <vscale x 2 x i64> @llvm.experimental.vector.reverse.nxv2i64(<vscale x 2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %reverse_nxv4i64 = call <vscale x 4 x i64> @llvm.experimental.vector.reverse.nxv4i64(<vscale x 4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %reverse_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)

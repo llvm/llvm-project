@@ -34,24 +34,58 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
         substrs=["intel-pt"])
 
         self.expect("thread trace dump info",
-            substrs=['''Trace technology: intel-pt
+            substrs=['''thread #1: tid = 3842849
 
-thread #1: tid = 3842849
-  Total number of instructions: 21
+  Trace technology: intel-pt
+
+  Total number of trace items: 23
 
   Memory usage:
     Raw trace size: 4 KiB
-    Total approximate memory usage (excluding raw trace): 1.27 KiB
-    Average memory usage per instruction (excluding raw trace): 61.76 bytes
+    Total approximate memory usage (excluding raw trace): 0.20 KiB
+    Average memory usage per item (excluding raw trace): 9.00 bytes
 
   Timing for this thread:
     Decoding instructions: ''', '''
 
   Events:
-    Number of instructions with events: 1
-    Number of individual events: 1
-      paused: 1
+    Number of individual events: 2
+      software disabled tracing: 2
 
   Errors:
     Number of TSC decoding errors: 0'''],
             patterns=["Decoding instructions: \d.\d\ds"])
+
+    def testDumpRawTraceSizeJSON(self):
+        self.expect("trace load -v " +
+        os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+        substrs=["intel-pt"])
+
+        self.expect("thread trace dump info --json ",
+            substrs=['''{
+  "traceTechnology": "intel-pt",
+  "threadStats": {
+    "tid": 3842849,
+    "traceItemsCount": 23,
+    "memoryUsage": {
+      "totalInBytes": "207",
+      "avgPerItemInBytes": 9
+    },
+    "timingInSeconds": {
+      "Decoding instructions": 0''', '''
+    },
+    "events": {
+      "totalCount": 2,
+      "individualCounts": {
+        "software disabled tracing": 2
+      }
+    },
+    "errorItems": {
+      "total": 0,
+      "individualErrors": {}
+    }
+  },
+  "globalStats": {
+    "timingInSeconds": {}
+  }
+}'''])

@@ -1085,7 +1085,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       Err = P.takeError();
       return;
     }
-  } else if (!TT.isOSWindows() && !TT.isOSBinFormatMachO()) {
+  } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
       ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
           ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
@@ -1143,6 +1143,9 @@ void Session::modifyPassConfig(const Triple &TT,
 
       if (EPC.getTargetTriple().getObjectFormat() == Triple::MachO)
         return registerMachOGraphInfo(*this, G);
+
+      if (EPC.getTargetTriple().isOSWindows())
+        return registerCOFFGraphInfo(*this, G);
 
       return make_error<StringError>("Unsupported object format for GOT/stub "
                                      "registration",
@@ -1252,13 +1255,17 @@ static Triple getFirstFileTriple() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
     for (auto InputFile : InputFiles) {
       auto ObjBuffer = ExitOnErr(getFile(InputFile));
-      switch (identify_magic(ObjBuffer->getBuffer())) {
+      file_magic Magic = identify_magic(ObjBuffer->getBuffer());
+      switch (Magic) {
+      case file_magic::coff_object:
       case file_magic::elf_relocatable:
-      case file_magic::macho_object:
-      case file_magic::coff_object: {
+      case file_magic::macho_object: {
         auto Obj = ExitOnErr(
             object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-        return Obj->makeTriple();
+        Triple TT = Obj->makeTriple();
+        if (Magic == file_magic::coff_object)
+          TT.setOS(Triple::OSType::Win32);
+        return TT;
       }
       default:
         break;
@@ -1479,7 +1486,8 @@ static Error addObjects(Session &S,
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
     const std::string &InputFile = *InputFileItr;
-    if (StringRef(InputFile).endswith(".a"))
+    if (StringRef(InputFile).endswith(".a") ||
+        StringRef(InputFile).endswith(".lib"))
       continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
@@ -1565,7 +1573,7 @@ static Error addLibraries(Session &S,
   for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
        InputFileItr != InputFileEnd; ++InputFileItr) {
     StringRef InputFile = *InputFileItr;
-    if (!InputFile.endswith(".a"))
+    if (!InputFile.endswith(".a") && !InputFile.endswith(".lib"))
       continue;
     LibraryLoad LL;
     LL.LibName = InputFile;
@@ -1587,8 +1595,8 @@ static Error addLibraries(Session &S,
     LL.Modifier = LibraryLoad::Hidden;
     LibraryLoads.push_back(std::move(LL));
   }
-  StringRef StandardExtensions[] = {".so", ".dylib", ".a"};
-  StringRef ArchiveExtensionsOnly[] = {".a"};
+  StringRef StandardExtensions[] = {".so", ".dylib", ".dll", ".a", ".lib"};
+  StringRef ArchiveExtensionsOnly[] = {".a", ".lib"};
 
   // Add -lx arguments to LibraryLoads.
   for (auto LibItr = Libraries.begin(), LibEnd = Libraries.end();
@@ -1669,13 +1677,16 @@ static Error addLibraries(Session &S,
     auto JDSearchPathsItr = JDSearchPaths.find(&JD);
     if (JDSearchPathsItr != JDSearchPaths.end()) {
       for (StringRef SearchPath : JDSearchPathsItr->second) {
-        for (const char *LibExt : {".dylib", ".so", ".a"}) {
+        for (const char *LibExt : {".dylib", ".so", ".dll", ".a", ".lib"}) {
           SmallVector<char, 256> LibPath;
           LibPath.reserve(SearchPath.size() + strlen("lib") +
                           LL.LibName.size() + strlen(LibExt) +
                           2); // +2 for pathsep, null term.
           llvm::copy(SearchPath, std::back_inserter(LibPath));
-          sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
+          if (StringRef(LibExt) != ".lib" && StringRef(LibExt) != ".dll")
+            sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
+          else
+            sys::path::append(LibPath, LL.LibName + LibExt);
           LibPath.push_back('\0');
 
           // Skip missing or non-regular paths.

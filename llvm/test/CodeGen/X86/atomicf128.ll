@@ -41,6 +41,6 @@ define void @atomic_fetch_swapf128(fp128 %x) nounwind {
 ; NOSSE-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; NOSSE-NEXT:    popq %rbx
 ; NOSSE-NEXT:    retq
-  %t1 = atomicrmw xchg fp128* @fsc128, fp128 %x acquire
+  %t1 = atomicrmw xchg ptr @fsc128, fp128 %x acquire
   ret void
 }

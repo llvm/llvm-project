@@ -115,20 +115,20 @@ bool CompilerInstance::createTarget() {
     auto TO = std::make_shared<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
     if (getFrontendOpts().AuxTargetCPU)
-      TO->CPU = getFrontendOpts().AuxTargetCPU.getValue();
+      TO->CPU = getFrontendOpts().AuxTargetCPU.value();
     if (getFrontendOpts().AuxTargetFeatures)
-      TO->FeaturesAsWritten = getFrontendOpts().AuxTargetFeatures.getValue();
+      TO->FeaturesAsWritten = getFrontendOpts().AuxTargetFeatures.value();
     TO->HostTriple = getTarget().getTriple().str();
     setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
   }
 
   if (!getTarget().hasStrictFP() && !getLangOpts().ExpStrictFP) {
-    if (getLangOpts().getFPRoundingMode() !=
-        llvm::RoundingMode::NearestTiesToEven) {
+    if (getLangOpts().RoundingMath) {
       getDiagnostics().Report(diag::warn_fe_backend_unsupported_fp_rounding);
-      getLangOpts().setFPRoundingMode(llvm::RoundingMode::NearestTiesToEven);
+      getLangOpts().RoundingMath = false;
     }
-    if (getLangOpts().getFPExceptionMode() != LangOptions::FPE_Ignore) {
+    auto FPExc = getLangOpts().getFPExceptionMode();
+    if (FPExc != LangOptions::FPE_Default && FPExc != LangOptions::FPE_Ignore) {
       getDiagnostics().Report(diag::warn_fe_backend_unsupported_fp_exceptions);
       getLangOpts().setFPExceptionMode(LangOptions::FPE_Ignore);
     }
@@ -757,6 +757,8 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 // Output Files
 
 void CompilerInstance::clearOutputFiles(bool EraseFiles) {
+  // The ASTConsumer can own streams that write to the output files.
+  assert(!hasASTConsumer() && "ASTConsumer should be reset");
   // Ignore errors that occur when trying to discard the temp file.
   for (OutputFile &OF : OutputFiles) {
     if (EraseFiles) {
@@ -1235,8 +1237,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
-  llvm::CrashRecoveryContext CRC;
-  CRC.RunSafelyOnThread(
+  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
       [&]() {
         GenerateModuleFromModuleMapAction Action;
         Instance.ExecuteAction(Action);
@@ -1249,9 +1250,15 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                                             diag::remark_module_build_done)
     << ModuleName;
 
-  // Delete any remaining temporary files related to Instance, in case the
-  // module generation thread crashed.
-  Instance.clearOutputFiles(/*EraseFiles=*/true);
+  if (Crashed) {
+    // Clear the ASTConsumer if it hasn't been already, in case it owns streams
+    // that must be closed before clearing output files.
+    Instance.setSema(nullptr);
+    Instance.setASTConsumer(nullptr);
+
+    // Delete any remaining temporary files related to Instance.
+    Instance.clearOutputFiles(/*EraseFiles=*/true);
+  }
 
   // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
   // occurred.

@@ -6,13 +6,13 @@
 ; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE
 ; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,NOUNIQUE
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
 ;; If the function is in a comdat group, the generated .gcc_except_table should
 ;; be placed in the same group, so that .gcc_except_table can be discarded if
 ;; the comdat is not prevailing. If -funique-section-names, append the function name.
 $group = comdat any
-define i32 @group() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @group() uwtable comdat personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL:       group:
 ; CHECK:             .cfi_endproc
 ; NORMAL-NEXT:       .section .gcc_except_table.group,"aG",@progbits,group,comdat{{$}}
@@ -23,18 +23,18 @@ define i32 @group() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_pe
 entry:
   invoke void @ext() to label %try.cont unwind label %lpad
 lpad:
-  %0 = landingpad { i8*, i32 } catch i8* bitcast (i8** @_ZTIi to i8*)
+  %0 = landingpad { ptr, i32 } catch ptr @_ZTIi
   br label %eh.resume
 try.cont:
   ret i32 0
 eh.resume:
-  resume { i8*, i32 } %0
+  resume { ptr, i32 } %0
 }
 
 ;; If the function is not in a comdat group, but function sections is enabled,
 ;; use a separate section by either using a unique ID (integrated assembler) or
 ;; a suffix (GNU as<2.35).
-define i32 @foo() uwtable personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @foo() uwtable personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL:       foo:
 ; CHECK:             .cfi_endproc
 ; NORMAL-NEXT:       .section .gcc_except_table,"a",@progbits{{$}}
@@ -45,18 +45,18 @@ define i32 @foo() uwtable personality i8* bitcast (i32 (...)* @__gxx_personality
 entry:
   invoke void @ext() to label %try.cont unwind label %lpad
 lpad:
-  %0 = landingpad { i8*, i32 } catch i8* bitcast (i8** @_ZTIi to i8*)
+  %0 = landingpad { ptr, i32 } catch ptr @_ZTIi
   br label %eh.resume
 try.cont:
   ret i32 0
 eh.resume:
-  resume { i8*, i32 } %0
+  resume { ptr, i32 } %0
 }
 
 ;; If the function is in a comdat group with nodeduplicate kind, the generated
 ;; .gcc_except_table should is lowered to a zero-flag ELF section group.
 $zero = comdat nodeduplicate
-define i32 @zero() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @zero() uwtable comdat personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL:       zero:
 ; CHECK:             .cfi_endproc
 ; NORMAL-NEXT:       .section .gcc_except_table.zero,"aG",@progbits,zero{{$}}
@@ -67,12 +67,12 @@ define i32 @zero() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_per
 entry:
   invoke void @ext() to label %try.cont unwind label %lpad
 lpad:
-  %0 = landingpad { i8*, i32 } catch i8* bitcast (i8** @_ZTIi to i8*)
+  %0 = landingpad { ptr, i32 } catch ptr @_ZTIi
   br label %eh.resume
 try.cont:
   ret i32 0
 eh.resume:
-  resume { i8*, i32 } %0
+  resume { ptr, i32 } %0
 }
 
 declare void @ext()

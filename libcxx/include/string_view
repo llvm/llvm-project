@@ -218,6 +218,12 @@ namespace std {
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <functional>
+#  include <iterator>
+#endif
+
 // standard-mandated includes
 
 // [iterator.range]
@@ -318,8 +324,8 @@ public:
         ranges::sized_range<_Range> &&
         is_same_v<ranges::range_value_t<_Range>, _CharT> &&
         !is_convertible_v<_Range, const _CharT*> &&
-        (!requires(remove_cvref_t<_Range>& d) {
-          d.operator _VSTD::basic_string_view<_CharT, _Traits>();
+        (!requires(remove_cvref_t<_Range>& __d) {
+          __d.operator _VSTD::basic_string_view<_CharT, _Traits>();
         }) &&
         (!requires {
          typename remove_reference_t<_Range>::traits_type;
@@ -914,14 +920,13 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 // [string.view.hash]
 template<class _CharT>
 struct _LIBCPP_TEMPLATE_VIS hash<basic_string_view<_CharT, char_traits<_CharT> > >
-    : public unary_function<basic_string_view<_CharT, char_traits<_CharT> >, size_t>
+    : public __unary_function<basic_string_view<_CharT, char_traits<_CharT> >, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const basic_string_view<_CharT, char_traits<_CharT> > __val) const _NOEXCEPT {
         return __do_string_hash(__val.data(), __val.data() + __val.size());
     }
 };
-
 
 #if _LIBCPP_STD_VER > 11
 inline namespace literals

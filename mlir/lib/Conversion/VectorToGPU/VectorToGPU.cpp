@@ -21,7 +21,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
@@ -78,9 +78,10 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
   // The contract needs to represent a matmul to be able to convert to
   // MMAMatrix matmul.
   if (!useNvGpu &&
-      contract.getIndexingMaps() != infer({{m, k}, {k, n}, {m, n}}))
+      contract.getIndexingMapsArray() != infer({{m, k}, {k, n}, {m, n}}))
     return false;
-  if (useNvGpu && contract.getIndexingMaps() != infer({{m, k}, {n, k}, {m, n}}))
+  if (useNvGpu &&
+      contract.getIndexingMapsArray() != infer({{m, k}, {n, k}, {m, n}}))
     return false;
 
   return true;
@@ -183,7 +184,7 @@ convertElementwiseOpToMMA(Operation *op) {
 
 /// Return true if the op is supported as elementwise op on MMAMatrix type.
 static bool elementwiseSupportsMMAMatrixType(Operation *op) {
-  return convertElementwiseOpToMMA(op).hasValue();
+  return convertElementwiseOpToMMA(op).has_value();
 }
 
 static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
@@ -290,7 +291,7 @@ struct PrepareContractToGPUMMA
     bindDims(rewriter.getContext(), m, n, k);
     static constexpr std::array<int64_t, 2> perm = {1, 0};
     auto iteratorTypes = op.getIteratorTypes().getValue();
-    SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
+    SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
     if (!(isParallelIterator(iteratorTypes[0]) &&
           isParallelIterator(iteratorTypes[1]) &&
           isReductionIterator(iteratorTypes[2])))
@@ -524,11 +525,6 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
     return failure();
   }
 
-  NVVM::MMALayout targetLayout =
-      warpMatrixInfo->operandRole == nvgpu::MatMulOperandRole::B
-          ? NVVM::MMALayout::col
-          : NVVM::MMALayout::row;
-
   Value laneId = builder.create<gpu::LaneIdOp>(loc);
   SmallVector<Value, 4> elements;
 
@@ -543,8 +539,9 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
 
   bool isTransposeLoad = !op.getPermutationMap().isMinorIdentity();
 
-  // Vectorized loads.
-  if (!isTransposeLoad && targetLayout == NVVM::MMALayout::row) {
+  // If we are not transposing, then we can use vectorized loads. Otherwise, we
+  // must load each element individually.
+  if (!isTransposeLoad) {
     if (!loadedElType.isa<VectorType>()) {
       loadedElType = VectorType::get({1}, loadedElType);
     }
@@ -566,11 +563,10 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
       result = builder.create<vector::InsertOp>(loc, el, result,
                                                 builder.getI64ArrayAttr(i));
     }
-  } else if (isTransposeLoad && targetLayout == NVVM::MMALayout::col) {
+  } else {
     if (auto vecType = loadedElType.dyn_cast<VectorType>()) {
       loadedElType = vecType.getElementType();
     }
-    // Load each element individually.
     for (int i = 0; i < vectorType.getShape()[0]; i++) {
       for (unsigned innerIdx = 0; innerIdx < vectorType.getShape()[1];
            innerIdx++) {
@@ -592,8 +588,6 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
             op.getLoc(), el, result, builder.getI64ArrayAttr({i, innerIdx}));
       }
     }
-  } else {
-    return failure();
   }
 
   valueMapping[op.getResult()] = result;

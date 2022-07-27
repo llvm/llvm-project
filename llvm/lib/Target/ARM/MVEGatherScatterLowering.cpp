@@ -145,7 +145,8 @@ private:
   // Optimise the base and offsets of the given address
   bool optimiseAddress(Value *Address, BasicBlock *BB, LoopInfo *LI);
   // Try to fold consecutive geps together into one
-  Value *foldGEP(GetElementPtrInst *GEP, Value *&Offsets, IRBuilder<> &Builder);
+  Value *foldGEP(GetElementPtrInst *GEP, Value *&Offsets, unsigned &Scale,
+                 IRBuilder<> &Builder);
   // Check whether these offsets could be moved out of the loop they're in
   bool optimiseOffsets(Value *Offsets, BasicBlock *BB, LoopInfo *LI);
   // Pushes the given add out of the loop
@@ -350,13 +351,13 @@ Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
     if (!Op0 || !Op1)
       return Optional<int64_t>{};
     if (I->getOpcode() == Instruction::Add)
-      return Optional<int64_t>{Op0.getValue() + Op1.getValue()};
+      return Optional<int64_t>{Op0.value() + Op1.value()};
     if (I->getOpcode() == Instruction::Mul)
-      return Optional<int64_t>{Op0.getValue() * Op1.getValue()};
+      return Optional<int64_t>{Op0.value() * Op1.value()};
     if (I->getOpcode() == Instruction::Shl)
-      return Optional<int64_t>{Op0.getValue() << Op1.getValue()};
+      return Optional<int64_t>{Op0.value() << Op1.value()};
     if (I->getOpcode() == Instruction::Or)
-      return Optional<int64_t>{Op0.getValue() | Op1.getValue()};
+      return Optional<int64_t>{Op0.value() | Op1.value()};
   }
   return Optional<int64_t>{};
 }
@@ -390,7 +391,7 @@ MVEGatherScatterLowering::getVarAndConst(Value *Inst, int TypeScale) {
     return ReturnFalse;
 
   // Check that the constant is small enough for an incrementing gather
-  int64_t Immediate = Const.getValue() << TypeScale;
+  int64_t Immediate = *Const << TypeScale;
   if (Immediate > 512 || Immediate < -512 || Immediate % 4 != 0)
     return ReturnFalse;
 
@@ -1103,8 +1104,8 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   return true;
 }
 
-static Value *CheckAndCreateOffsetAdd(Value *X, Value *Y, Value *GEP,
-                                      IRBuilder<> &Builder) {
+static Value *CheckAndCreateOffsetAdd(Value *X, unsigned ScaleX, Value *Y,
+                                      unsigned ScaleY, IRBuilder<> &Builder) {
   // Splat the non-vector value to a vector of the given type - if the value is
   // a constant (and its value isn't too big), we can even use this opportunity
   // to scale it to the size of the vector elements
@@ -1156,40 +1157,49 @@ static Value *CheckAndCreateOffsetAdd(Value *X, Value *Y, Value *GEP,
       ConstantInt *ConstYEl =
           dyn_cast<ConstantInt>(ConstY->getAggregateElement(i));
       if (!ConstXEl || !ConstYEl ||
-          ConstXEl->getZExtValue() + ConstYEl->getZExtValue() >=
+          ConstXEl->getZExtValue() * ScaleX +
+                  ConstYEl->getZExtValue() * ScaleY >=
               (unsigned)(1 << (TargetElemSize - 1)))
         return nullptr;
     }
   }
 
-  Value *Add = Builder.CreateAdd(X, Y);
+  Value *XScale = Builder.CreateVectorSplat(
+      XElType->getNumElements(),
+      Builder.getIntN(XElType->getScalarSizeInBits(), ScaleX));
+  Value *YScale = Builder.CreateVectorSplat(
+      YElType->getNumElements(),
+      Builder.getIntN(YElType->getScalarSizeInBits(), ScaleY));
+  Value *Add = Builder.CreateAdd(Builder.CreateMul(X, XScale),
+                                 Builder.CreateMul(Y, YScale));
 
-  FixedVectorType *GEPType = cast<FixedVectorType>(GEP->getType());
-  if (checkOffsetSize(Add, GEPType->getNumElements()))
+  if (checkOffsetSize(Add, XElType->getNumElements()))
     return Add;
   else
     return nullptr;
 }
 
 Value *MVEGatherScatterLowering::foldGEP(GetElementPtrInst *GEP,
-                                         Value *&Offsets,
+                                         Value *&Offsets, unsigned &Scale,
                                          IRBuilder<> &Builder) {
   Value *GEPPtr = GEP->getPointerOperand();
   Offsets = GEP->getOperand(1);
+  Scale = DL->getTypeAllocSize(GEP->getSourceElementType());
   // We only merge geps with constant offsets, because only for those
   // we can make sure that we do not cause an overflow
-  if (!isa<Constant>(Offsets))
+  if (GEP->getNumIndices() != 1 || !isa<Constant>(Offsets))
     return nullptr;
-  GetElementPtrInst *BaseGEP;
-  if ((BaseGEP = dyn_cast<GetElementPtrInst>(GEPPtr))) {
+  if (GetElementPtrInst *BaseGEP = dyn_cast<GetElementPtrInst>(GEPPtr)) {
     // Merge the two geps into one
-    Value *BaseBasePtr = foldGEP(BaseGEP, Offsets, Builder);
+    Value *BaseBasePtr = foldGEP(BaseGEP, Offsets, Scale, Builder);
     if (!BaseBasePtr)
       return nullptr;
-    Offsets =
-        CheckAndCreateOffsetAdd(Offsets, GEP->getOperand(1), GEP, Builder);
+    Offsets = CheckAndCreateOffsetAdd(
+        Offsets, Scale, GEP->getOperand(1),
+        DL->getTypeAllocSize(GEP->getSourceElementType()), Builder);
     if (Offsets == nullptr)
       return nullptr;
+    Scale = 1; // Scale is always an i8 at this point.
     return BaseBasePtr;
   }
   return GEPPtr;
@@ -1206,15 +1216,24 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
     Builder.SetInsertPoint(GEP);
     Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
     Value *Offsets;
-    Value *Base = foldGEP(GEP, Offsets, Builder);
+    unsigned Scale;
+    Value *Base = foldGEP(GEP, Offsets, Scale, Builder);
     // We only want to merge the geps if there is a real chance that they can be
     // used by an MVE gather; thus the offset has to have the correct size
     // (always i32 if it is not of vector type) and the base has to be a
     // pointer.
     if (Offsets && Base && Base != GEP) {
+      assert(Scale == 1 && "Expected to fold GEP to a scale of 1");
+      Type *BaseTy = Builder.getInt8PtrTy();
+      if (auto *VecTy = dyn_cast<FixedVectorType>(Base->getType()))
+        BaseTy = FixedVectorType::get(BaseTy, VecTy);
       GetElementPtrInst *NewAddress = GetElementPtrInst::Create(
-          GEP->getSourceElementType(), Base, Offsets, "gep.merged", GEP);
-      GEP->replaceAllUsesWith(NewAddress);
+          Builder.getInt8Ty(), Builder.CreateBitCast(Base, BaseTy), Offsets,
+          "gep.merged", GEP);
+      LLVM_DEBUG(dbgs() << "Folded GEP: " << *GEP
+                        << "\n      new :  " << *NewAddress << "\n");
+      GEP->replaceAllUsesWith(
+          Builder.CreateBitCast(NewAddress, GEP->getType()));
       GEP = NewAddress;
       Changed = true;
     }

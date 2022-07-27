@@ -229,7 +229,7 @@ void Lint::visitCallBase(CallBase &I) {
         if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
           AttributeList PAL = I.getAttributes();
           unsigned ArgNo = 0;
-          for (auto BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
+          for (auto *BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
             if (PAL.hasParamAttr(ArgNo, Attribute::ByVal))
@@ -686,11 +686,6 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
                                CE->getOperand(0)->getType(), CE->getType(),
                                *DL))
         return findValueImpl(CE->getOperand(0), OffsetOk, Visited);
-    } else if (CE->getOpcode() == Instruction::ExtractValue) {
-      ArrayRef<unsigned> Indices = CE->getIndices();
-      if (Value *W = FindInsertedValue(CE->getOperand(0), Indices))
-        if (W != V)
-          return findValueImpl(W, OffsetOk, Visited);
     }
   }
 

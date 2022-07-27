@@ -39,114 +39,166 @@ IntelPTError::IntelPTError(int libipt_error_code, lldb::addr_t address)
 }
 
 void IntelPTError::log(llvm::raw_ostream &OS) const {
-  const char *libipt_error_message = pt_errstr(pt_errcode(m_libipt_error_code));
-  if (m_address != LLDB_INVALID_ADDRESS && m_address > 0) {
-    write_hex(OS, m_address, HexPrintStyle::PrefixLower, 18);
-    OS << "    ";
+  OS << pt_errstr(pt_errcode(m_libipt_error_code));
+  if (m_address != LLDB_INVALID_ADDRESS && m_address > 0)
+    OS << formatv(": {0:x+16}", m_address);
+}
+
+bool DecodedThread::TSCRange::InRange(uint64_t item_index) const {
+  return item_index >= first_item_index &&
+         item_index < first_item_index + items_count;
+}
+
+bool DecodedThread::NanosecondsRange::InRange(uint64_t item_index) const {
+  return item_index >= first_item_index &&
+         item_index < first_item_index + items_count;
+}
+
+double DecodedThread::NanosecondsRange::GetInterpolatedTime(
+    uint64_t item_index, uint64_t begin_of_time_nanos,
+    const LinuxPerfZeroTscConversion &tsc_conversion) const {
+  uint64_t items_since_last_tsc = item_index - first_item_index;
+
+  auto interpolate = [&](uint64_t next_range_start_ns) {
+    if (next_range_start_ns == nanos) {
+      // If the resolution of the conversion formula is bad enough to consider
+      // these two timestamps as equal, then we just increase the next one by 1
+      // for correction
+      next_range_start_ns++;
+    }
+    long double item_duration =
+        static_cast<long double>(items_count) / (next_range_start_ns - nanos);
+    return (nanos - begin_of_time_nanos) + items_since_last_tsc * item_duration;
+  };
+
+  if (!next_range) {
+    // If this is the last TSC range, so we have to extrapolate. In this case,
+    // we assume that each instruction took one TSC, which is what an
+    // instruction would take if no parallelism is achieved and the frequency
+    // multiplier is 1.
+    return interpolate(tsc_conversion.ToNanos(tsc + items_count));
   }
-  OS << "error: " << libipt_error_message;
-}
-
-DecodedInstruction::operator bool() const {
-  return !IsLibiptError(libipt_error);
-}
-
-size_t DecodedThread::GetInstructionsCount() const {
-  return m_instruction_ips.size();
-}
-
-lldb::addr_t DecodedThread::GetInstructionLoadAddress(size_t insn_index) const {
-  return m_instruction_ips[insn_index];
-}
-
-TraceInstructionControlFlowType
-DecodedThread::GetInstructionControlFlowType(size_t insn_index) const {
-  if (IsInstructionAnError(insn_index))
-    return (TraceInstructionControlFlowType)0;
-
-  TraceInstructionControlFlowType mask =
-      eTraceInstructionControlFlowTypeInstruction;
-
-  lldb::addr_t load_address = m_instruction_ips[insn_index];
-  uint8_t insn_byte_size = m_instruction_sizes[insn_index];
-  pt_insn_class iclass = m_instruction_classes[insn_index];
-
-  switch (iclass) {
-  case ptic_cond_jump:
-  case ptic_jump:
-  case ptic_far_jump:
-    mask |= eTraceInstructionControlFlowTypeBranch;
-    if (insn_index + 1 < m_instruction_ips.size() &&
-        load_address + insn_byte_size != m_instruction_ips[insn_index + 1])
-      mask |= eTraceInstructionControlFlowTypeTakenBranch;
-    break;
-  case ptic_return:
-  case ptic_far_return:
-    mask |= eTraceInstructionControlFlowTypeReturn;
-    break;
-  case ptic_call:
-  case ptic_far_call:
-    mask |= eTraceInstructionControlFlowTypeCall;
-    break;
-  default:
-    break;
+  if (items_count < (next_range->tsc - tsc)) {
+    // If the numbers of items in this range is less than the total TSC duration
+    // of this range, i.e. each instruction taking longer than 1 TSC, then we
+    // can assume that something else happened between these TSCs (e.g. a
+    // context switch, change to kernel, decoding errors, etc). In this case, we
+    // also assume that each instruction took 1 TSC. A proper way to improve
+    // this would be to analize the next events in the trace looking for context
+    // switches or trace disablement events, but for now, as we only want an
+    // approximation, we keep it simple. We are also guaranteed that the time in
+    // nanos of the next range is different to the current one, just because of
+    // the definition of a NanosecondsRange.
+    return interpolate(
+        std::min(tsc_conversion.ToNanos(tsc + items_count), next_range->nanos));
   }
 
-  return mask;
+  // In this case, each item took less than 1 TSC, so some parallelism was
+  // achieved, which is an indication that we didn't suffered of any kind of
+  // interruption.
+  return interpolate(next_range->nanos);
+}
+
+uint64_t DecodedThread::GetItemsCount() const { return m_item_kinds.size(); }
+
+lldb::addr_t
+DecodedThread::GetInstructionLoadAddress(uint64_t item_index) const {
+  return m_item_data[item_index].load_address;
 }
 
 ThreadSP DecodedThread::GetThread() { return m_thread_sp; }
 
-void DecodedThread::RecordTscForLastInstruction(uint64_t tsc) {
-  if (!m_last_tsc || *m_last_tsc != tsc) {
-    // In case the first instructions are errors or did not have a TSC, we'll
-    // get a first valid TSC not in position 0. We can safely force these error
-    // instructions to use the first valid TSC, so that all the trace has TSCs.
-    size_t start_index =
-        m_instruction_timestamps.empty() ? 0 : m_instruction_ips.size() - 1;
-    m_instruction_timestamps.emplace(start_index, tsc);
-    m_last_tsc = tsc;
+DecodedThread::TraceItemStorage &
+DecodedThread::CreateNewTraceItem(lldb::TraceItemKind kind) {
+  m_item_kinds.push_back(kind);
+  m_item_data.emplace_back();
+  if (m_last_tsc)
+    (*m_last_tsc)->second.items_count++;
+  if (m_last_nanoseconds)
+    (*m_last_nanoseconds)->second.items_count++;
+  return m_item_data.back();
+}
+
+void DecodedThread::NotifyTsc(TSC tsc) {
+  if (m_last_tsc && (*m_last_tsc)->second.tsc == tsc)
+    return;
+
+  m_last_tsc =
+      m_tscs.emplace(GetItemsCount(), TSCRange{tsc, 0, GetItemsCount()}).first;
+
+  if (m_tsc_conversion) {
+    uint64_t nanos = m_tsc_conversion->ToNanos(tsc);
+    if (!m_last_nanoseconds || (*m_last_nanoseconds)->second.nanos != nanos) {
+      m_last_nanoseconds =
+          m_nanoseconds
+              .emplace(GetItemsCount(), NanosecondsRange{nanos, tsc, nullptr, 0,
+                                                         GetItemsCount()})
+              .first;
+      if (*m_last_nanoseconds != m_nanoseconds.begin()) {
+        auto prev_range = prev(*m_last_nanoseconds);
+        prev_range->second.next_range = &(*m_last_nanoseconds)->second;
+      }
+    }
+  }
+  AppendEvent(lldb::eTraceEventHWClockTick);
+}
+
+void DecodedThread::NotifyCPU(lldb::cpu_id_t cpu_id) {
+  if (!m_last_cpu || *m_last_cpu != cpu_id) {
+    m_cpus.emplace(GetItemsCount(), cpu_id);
+    m_last_cpu = cpu_id;
+    AppendEvent(lldb::eTraceEventCPUChanged);
   }
 }
 
-void DecodedThread::Append(const DecodedInstruction &insn) {
-  if (!insn) {
-    // End of stream shouldn't be a public error
-    if (IsEndOfStream(insn.libipt_error))
-      return;
-
-    AppendError(make_error<IntelPTError>(insn.libipt_error, insn.pt_insn.ip));
-  } else {
-    m_instruction_ips.emplace_back(insn.pt_insn.ip);
-    m_instruction_sizes.emplace_back(insn.pt_insn.size);
-    m_instruction_classes.emplace_back(insn.pt_insn.iclass);
-  }
-
-  if (insn.tsc)
-    RecordTscForLastInstruction(*insn.tsc);
-
-  if (insn.events) {
-    m_events.try_emplace(m_instruction_ips.size() - 1, insn.events);
-    m_events_stats.RecordEventsForInstruction(insn.events);
-  }
+Optional<lldb::cpu_id_t>
+DecodedThread::GetCPUByIndex(uint64_t item_index) const {
+  auto it = m_cpus.upper_bound(item_index);
+  if (it == m_cpus.begin())
+    return None;
+  return prev(it)->second;
 }
 
-void DecodedThread::AppendError(llvm::Error &&error) {
-  m_errors.try_emplace(m_instruction_ips.size(), toString(std::move(error)));
-  m_instruction_ips.emplace_back(LLDB_INVALID_ADDRESS);
-  m_instruction_sizes.emplace_back(0);
-  m_instruction_classes.emplace_back(pt_insn_class::ptic_error);
+Optional<DecodedThread::TSCRange>
+DecodedThread::GetTSCRangeByIndex(uint64_t item_index) const {
+  auto next_it = m_tscs.upper_bound(item_index);
+  if (next_it == m_tscs.begin())
+    return None;
+  return prev(next_it)->second;
 }
 
-void DecodedThread::SetAsFailed(llvm::Error &&error) {
-  AppendError(std::move(error));
+Optional<DecodedThread::NanosecondsRange>
+DecodedThread::GetNanosecondsRangeByIndex(uint64_t item_index) {
+  auto next_it = m_nanoseconds.upper_bound(item_index);
+  if (next_it == m_nanoseconds.begin())
+    return None;
+  return prev(next_it)->second;
 }
 
-lldb::TraceEvents DecodedThread::GetEvents(int insn_index) {
-  auto it = m_events.find(insn_index);
-  if (it != m_events.end())
-    return it->second;
-  return (TraceEvents)0;
+void DecodedThread::AppendEvent(lldb::TraceEvent event) {
+  CreateNewTraceItem(lldb::eTraceItemKindEvent).event = event;
+  m_events_stats.RecordEvent(event);
+}
+
+void DecodedThread::AppendInstruction(const pt_insn &insn) {
+  CreateNewTraceItem(lldb::eTraceItemKindInstruction).load_address = insn.ip;
+}
+
+void DecodedThread::AppendError(const IntelPTError &error) {
+  // End of stream shouldn't be a public error
+  if (IsEndOfStream(error.GetLibiptErrorCode()))
+    return;
+  CreateNewTraceItem(lldb::eTraceItemKindError).error =
+      ConstString(error.message()).AsCString();
+}
+
+void DecodedThread::AppendCustomError(StringRef err) {
+  CreateNewTraceItem(lldb::eTraceItemKindError).error =
+      ConstString(err).AsCString();
+}
+
+lldb::TraceEvent DecodedThread::GetEventByIndex(int item_index) const {
+  return m_item_data[item_index].event;
 }
 
 void DecodedThread::LibiptErrorsStats::RecordError(int libipt_error_code) {
@@ -167,116 +219,29 @@ const DecodedThread::EventsStats &DecodedThread::GetEventsStats() const {
   return m_events_stats;
 }
 
-void DecodedThread::EventsStats::RecordEventsForInstruction(
-    lldb::TraceEvents events) {
-  if (!events)
-    return;
-
-  total_instructions_with_events++;
-  trace_event_utils::ForEachEvent(events, [&](TraceEvents event) {
-    events_counts[event]++;
-    total_count++;
-  });
+void DecodedThread::EventsStats::RecordEvent(lldb::TraceEvent event) {
+  events_counts[event]++;
+  total_count++;
 }
 
-Optional<DecodedThread::TscRange> DecodedThread::CalculateTscRange(
-    size_t insn_index,
-    const Optional<DecodedThread::TscRange> &hint_range) const {
-  // We first try to check the given hint range in case we are traversing the
-  // trace in short jumps. If that fails, then we do the more expensive
-  // arbitrary lookup.
-  if (hint_range) {
-    Optional<TscRange> candidate_range;
-    if (insn_index < hint_range->GetStartInstructionIndex())
-      candidate_range = hint_range->Prev();
-    else if (insn_index > hint_range->GetEndInstructionIndex())
-      candidate_range = hint_range->Next();
-    else
-      candidate_range = hint_range;
-
-    if (candidate_range && candidate_range->InRange(insn_index))
-      return candidate_range;
-  }
-  // Now we do a more expensive lookup
-  auto it = m_instruction_timestamps.upper_bound(insn_index);
-  if (it == m_instruction_timestamps.begin())
-    return None;
-
-  return TscRange(--it, *this);
+lldb::TraceItemKind
+DecodedThread::GetItemKindByIndex(uint64_t item_index) const {
+  return static_cast<lldb::TraceItemKind>(m_item_kinds[item_index]);
 }
 
-bool DecodedThread::IsInstructionAnError(size_t insn_idx) const {
-  return m_instruction_ips[insn_idx] == LLDB_INVALID_ADDRESS;
+const char *DecodedThread::GetErrorByIndex(uint64_t item_index) const {
+  return m_item_data[item_index].error;
 }
 
-const char *DecodedThread::GetErrorByInstructionIndex(size_t insn_idx) {
-  auto it = m_errors.find(insn_idx);
-  if (it == m_errors.end())
-    return nullptr;
-
-  return it->second.c_str();
-}
-
-DecodedThread::DecodedThread(ThreadSP thread_sp) : m_thread_sp(thread_sp) {}
-
-DecodedThread::DecodedThread(ThreadSP thread_sp, Error &&error)
-    : m_thread_sp(thread_sp) {
-  AppendError(std::move(error));
-}
-
-lldb::TraceCursorUP DecodedThread::GetCursor() {
-  // We insert a fake error signaling an empty trace if needed becasue the
-  // TraceCursor requires non-empty traces.
-  if (m_instruction_ips.empty())
-    AppendError(createStringError(inconvertibleErrorCode(), "empty trace"));
-  return std::make_unique<TraceCursorIntelPT>(m_thread_sp, shared_from_this());
-}
+DecodedThread::DecodedThread(
+    ThreadSP thread_sp,
+    const llvm::Optional<LinuxPerfZeroTscConversion> &tsc_conversion)
+    : m_thread_sp(thread_sp), m_tsc_conversion(tsc_conversion) {}
 
 size_t DecodedThread::CalculateApproximateMemoryUsage() const {
-  return sizeof(pt_insn::ip) * m_instruction_ips.size() +
-         sizeof(pt_insn::size) * m_instruction_sizes.size() +
-         sizeof(pt_insn::iclass) * m_instruction_classes.size() +
-         (sizeof(size_t) + sizeof(uint64_t)) * m_instruction_timestamps.size() +
-         m_errors.getMemorySize() + m_events.getMemorySize();
-}
-
-DecodedThread::TscRange::TscRange(std::map<size_t, uint64_t>::const_iterator it,
-                                  const DecodedThread &decoded_thread)
-    : m_it(it), m_decoded_thread(&decoded_thread) {
-  auto next_it = m_it;
-  ++next_it;
-  m_end_index = (next_it == m_decoded_thread->m_instruction_timestamps.end())
-                    ? m_decoded_thread->GetInstructionsCount() - 1
-                    : next_it->first - 1;
-}
-
-size_t DecodedThread::TscRange::GetTsc() const { return m_it->second; }
-
-size_t DecodedThread::TscRange::GetStartInstructionIndex() const {
-  return m_it->first;
-}
-
-size_t DecodedThread::TscRange::GetEndInstructionIndex() const {
-  return m_end_index;
-}
-
-bool DecodedThread::TscRange::InRange(size_t insn_index) const {
-  return GetStartInstructionIndex() <= insn_index &&
-         insn_index <= GetEndInstructionIndex();
-}
-
-Optional<DecodedThread::TscRange> DecodedThread::TscRange::Next() const {
-  auto next_it = m_it;
-  ++next_it;
-  if (next_it == m_decoded_thread->m_instruction_timestamps.end())
-    return None;
-  return TscRange(next_it, *m_decoded_thread);
-}
-
-Optional<DecodedThread::TscRange> DecodedThread::TscRange::Prev() const {
-  if (m_it == m_decoded_thread->m_instruction_timestamps.begin())
-    return None;
-  auto prev_it = m_it;
-  --prev_it;
-  return TscRange(prev_it, *m_decoded_thread);
+  return sizeof(TraceItemStorage) * m_item_data.size() +
+         sizeof(uint8_t) * m_item_kinds.size() +
+         (sizeof(uint64_t) + sizeof(TSC)) * m_tscs.size() +
+         (sizeof(uint64_t) + sizeof(uint64_t)) * m_nanoseconds.size() +
+         (sizeof(uint64_t) + sizeof(lldb::cpu_id_t)) * m_cpus.size();
 }

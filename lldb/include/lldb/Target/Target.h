@@ -59,16 +59,17 @@ enum LoadCWDlldbinitFile {
   eLoadCWDlldbinitWarn
 };
 
-enum LoadDependentFiles {
-  eLoadDependentsDefault,
-  eLoadDependentsYes,
-  eLoadDependentsNo,
-};
-
 enum ImportStdModule {
   eImportStdModuleFalse,
   eImportStdModuleFallback,
   eImportStdModuleTrue,
+};
+
+enum DynamicClassInfoHelper {
+  eDynamicClassInfoHelperAuto,
+  eDynamicClassInfoHelperRealizedClassesStruct,
+  eDynamicClassInfoHelperCopyRealizedClassList,
+  eDynamicClassInfoHelperGetRealizedClassList,
 };
 
 class TargetExperimentalProperties : public Properties {
@@ -151,6 +152,8 @@ public:
   bool GetEnableAutoImportClangModules() const;
 
   ImportStdModule GetImportStdModule() const;
+
+  DynamicClassInfoHelper GetDynamicClassInfoHelper() const;
 
   bool GetEnableAutoApplyFixIts() const;
 

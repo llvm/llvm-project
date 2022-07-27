@@ -364,7 +364,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << name
                     << " count=" << relocations.size() << "\n");
 
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD

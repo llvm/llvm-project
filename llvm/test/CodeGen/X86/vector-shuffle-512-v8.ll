@@ -977,7 +977,7 @@ define <8 x i64> @shuffle_v8i64_01014545(<8 x i64> %a, <8 x i64> %b) {
   ret <8 x i64> %shuffle
 }
 
-define <8 x i64> @shuffle_v8i64_01014545_mem(<8 x i64>* %ptr, <8 x i64> %b) {
+define <8 x i64> @shuffle_v8i64_01014545_mem(ptr %ptr, <8 x i64> %b) {
 ; AVX512F-LABEL: shuffle_v8i64_01014545_mem:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpermpd {{.*#+}} zmm0 = mem[0,1,0,1,4,5,4,5]
@@ -989,7 +989,7 @@ define <8 x i64> @shuffle_v8i64_01014545_mem(<8 x i64>* %ptr, <8 x i64> %b) {
 ; AVX512F-32-NEXT:    vpermpd {{.*#+}} zmm0 = mem[0,1,0,1,4,5,4,5]
 ; AVX512F-32-NEXT:    retl
 
-  %a = load <8 x i64>, <8 x i64>* %ptr
+  %a = load <8 x i64>, ptr %ptr
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>
   ret <8 x i64> %shuffle
 }
@@ -1775,7 +1775,7 @@ define <8 x i64> @test_vshufi64x2_512_mask(<8 x i64> %x, <8 x i64> %x1, <8 x i1>
   ret <8 x i64> %res
 }
 
-define <8 x double> @test_vshuff64x2_512_mem(<8 x double> %x, <8 x double> *%ptr) nounwind {
+define <8 x double> @test_vshuff64x2_512_mem(<8 x double> %x, ptr%ptr) nounwind {
 ; AVX512F-LABEL: test_vshuff64x2_512_mem:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]
@@ -1786,12 +1786,12 @@ define <8 x double> @test_vshuff64x2_512_mem(<8 x double> %x, <8 x double> *%ptr
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]
 ; AVX512F-32-NEXT:    retl
-  %x1   = load <8 x double>,<8 x double> *%ptr,align 1
+  %x1   = load <8 x double>,ptr%ptr,align 1
   %res = shufflevector <8 x double> %x, <8 x double> %x1, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 10, i32 11, i32 8, i32 9>
   ret <8 x double> %res
 }
 
-define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, <8 x double> *%ptr, <8 x i1> %mask) nounwind {
+define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, ptr%ptr, <8 x i1> %mask) nounwind {
 ; AVX512F-LABEL: test_vshuff64x2_512_mem_mask:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
@@ -1808,13 +1808,13 @@ define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, <8 x double> 
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} = zmm0[0,1,4,5],mem[2,3,0,1]
 ; AVX512F-32-NEXT:    retl
-  %x1 = load <8 x double>,<8 x double> *%ptr,align 1
+  %x1 = load <8 x double>,ptr%ptr,align 1
   %y = shufflevector <8 x double> %x, <8 x double> %x1, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 10, i32 11, i32 8, i32 9>
   %res = select <8 x i1> %mask, <8 x double> %y, <8 x double> %x
   ret <8 x double> %res
 }
 
-define <8 x double> @test_vshuff64x2_512_mem_maskz(<8 x double> %x, <8 x double> *%ptr, <8 x i1> %mask) nounwind {
+define <8 x double> @test_vshuff64x2_512_mem_maskz(<8 x double> %x, ptr%ptr, <8 x i1> %mask) nounwind {
 ; AVX512F-LABEL: test_vshuff64x2_512_mem_maskz:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
@@ -1831,7 +1831,7 @@ define <8 x double> @test_vshuff64x2_512_mem_maskz(<8 x double> %x, <8 x double>
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,4,5],mem[2,3,0,1]
 ; AVX512F-32-NEXT:    retl
-  %x1 = load <8 x double>,<8 x double> *%ptr,align 1
+  %x1 = load <8 x double>,ptr%ptr,align 1
   %y = shufflevector <8 x double> %x, <8 x double> %x1, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 10, i32 11, i32 8, i32 9>
   %res = select <8 x i1> %mask, <8 x double> %y, <8 x double> zeroinitializer
   ret <8 x double> %res
@@ -2249,9 +2249,7 @@ define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
 define <8 x i64> @test_v8i64_insert_zero_128(<8 x i64> %a) {
 ; ALL-LABEL: test_v8i64_insert_zero_128:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movb $3, %al
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ALL-NEXT:    vmovaps %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %res = shufflevector <8 x i64> %a, <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9>
   ret <8 x i64> %res

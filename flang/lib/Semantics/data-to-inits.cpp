@@ -541,8 +541,8 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
             if (auto dyType{evaluate::DynamicType::From(component)}) {
               if (auto extents{evaluate::GetConstantExtents(
                       foldingContext, component)}) {
-                if (auto extant{init.image.AsConstant(
-                        foldingContext, *dyType, *extents, componentOffset)}) {
+                if (auto extant{init.image.AsConstant(foldingContext, *dyType,
+                        *extents, false /*don't pad*/, componentOffset)}) {
                   initialized = !(*extant == *object->init());
                 }
               }
@@ -673,7 +673,8 @@ static std::size_t ComputeMinElementBytes(
       auto size{static_cast<std::size_t>(
           evaluate::ToInt64(dyType->MeasureSizeInBytes(foldingContext, true))
               .value_or(1))};
-      if (std::size_t alignment{dyType->GetAlignment(foldingContext)}) {
+      if (std::size_t alignment{
+              dyType->GetAlignment(foldingContext.targetCharacteristics())}) {
         size = ((size + alignment - 1) / alignment) * alignment;
       }
       if (&s == &first) {
@@ -753,7 +754,7 @@ static bool CombineEquivalencedInitialization(
     combinedSymbol.set_size(bytes);
     std::size_t minElementBytes{
         ComputeMinElementBytes(associated, foldingContext)};
-    if (!evaluate::IsValidKindOfIntrinsicType(
+    if (!exprAnalyzer.GetFoldingContext().targetCharacteristics().IsTypeEnabled(
             TypeCategory::Integer, minElementBytes) ||
         (bytes % minElementBytes) != 0) {
       minElementBytes = 1;
@@ -820,7 +821,7 @@ static bool ProcessScopes(const Scope &scope,
   case Scope::Kind::MainProgram:
   case Scope::Kind::Subprogram:
   case Scope::Kind::BlockData:
-  case Scope::Kind::Block: {
+  case Scope::Kind::BlockConstruct: {
     std::list<std::list<SymbolRef>> associations{GetStorageAssociations(scope)};
     for (const std::list<SymbolRef> &associated : associations) {
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {

@@ -11,47 +11,43 @@ entry:
 ; CHECK-DAG: movq   %rdx, 24(%rsp)
 ; CHECK: leaq   24(%rsp), %rax
 
-  %ap = alloca i8*, align 8                       ; <i8**> [#uses=1]
-  %ap.0 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap.0)
+  %ap = alloca ptr, align 8                       ; <ptr> [#uses=1]
+  call void @llvm.va_start(ptr %ap)
   ret void
 }
 
-declare void @llvm.va_start(i8*) nounwind
-declare void @llvm.va_copy(i8*, i8*) nounwind
-declare void @llvm.va_end(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind
+declare void @llvm.va_copy(ptr, ptr) nounwind
+declare void @llvm.va_end(ptr) nounwind
 
 ; CHECK-LABEL: f5:
 ; CHECK: pushq
 ; CHECK: leaq 56(%rsp),
-define win64cc i8** @f5(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, ...) nounwind {
+define win64cc ptr @f5(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, ...) nounwind {
 entry:
-  %ap = alloca i8*, align 8
-  %ap.0 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap.0)
-  ret i8** %ap
+  %ap = alloca ptr, align 8
+  call void @llvm.va_start(ptr %ap)
+  ret ptr %ap
 }
 
 ; CHECK-LABEL: f4:
 ; CHECK: pushq
 ; CHECK: leaq 48(%rsp),
-define win64cc i8** @f4(i64 %a0, i64 %a1, i64 %a2, i64 %a3, ...) nounwind {
+define win64cc ptr @f4(i64 %a0, i64 %a1, i64 %a2, i64 %a3, ...) nounwind {
 entry:
-  %ap = alloca i8*, align 8
-  %ap.0 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap.0)
-  ret i8** %ap
+  %ap = alloca ptr, align 8
+  call void @llvm.va_start(ptr %ap)
+  ret ptr %ap
 }
 
 ; CHECK-LABEL: f3:
 ; CHECK: pushq
 ; CHECK: leaq 40(%rsp),
-define win64cc i8** @f3(i64 %a0, i64 %a1, i64 %a2, ...) nounwind {
+define win64cc ptr @f3(i64 %a0, i64 %a1, i64 %a2, ...) nounwind {
 entry:
-  %ap = alloca i8*, align 8
-  %ap.0 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap.0)
-  ret i8** %ap
+  %ap = alloca ptr, align 8
+  call void @llvm.va_start(ptr %ap)
+  ret ptr %ap
 }
 
 ; WinX86_64 uses char* for va_list. Verify that the correct amount of bytes
@@ -64,12 +60,10 @@ entry:
 ; CHECK: ret
 define win64cc void @copy1(i64 %a0, ...) nounwind {
 entry:
-  %ap = alloca i8*, align 8
-  %cp = alloca i8*, align 8
-  %ap.0 = bitcast i8** %ap to i8*
-  %cp.0 = bitcast i8** %cp to i8*
-  call void @llvm.va_start(i8* %ap.0)
-  call void @llvm.va_copy(i8* %cp.0, i8* %ap.0)
+  %ap = alloca ptr, align 8
+  %cp = alloca ptr, align 8
+  call void @llvm.va_start(ptr %ap)
+  call void @llvm.va_copy(ptr %cp, ptr %ap)
   ret void
 }
 
@@ -80,12 +74,10 @@ entry:
 ; CHECK: ret
 define win64cc void @copy4(i64 %a0, i64 %a1, i64 %a2, i64 %a3, ...) nounwind {
 entry:
-  %ap = alloca i8*, align 8
-  %cp = alloca i8*, align 8
-  %ap.0 = bitcast i8** %ap to i8*
-  %cp.0 = bitcast i8** %cp to i8*
-  call void @llvm.va_start(i8* %ap.0)
-  call void @llvm.va_copy(i8* %cp.0, i8* %ap.0)
+  %ap = alloca ptr, align 8
+  %cp = alloca ptr, align 8
+  call void @llvm.va_start(ptr %ap)
+  call void @llvm.va_copy(ptr %cp, ptr %ap)
   ret void
 }
 
@@ -98,9 +90,8 @@ entry:
 ; CHECK: ret
 define win64cc i32 @arg4(i64 %a0, i64 %a1, i64 %a2, i64 %a3, ...) nounwind {
 entry:
-  %ap = alloca i8*, align 8
-  %ap.0 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap.0)
-  %tmp = va_arg i8** %ap, i32
+  %ap = alloca ptr, align 8
+  call void @llvm.va_start(ptr %ap)
+  %tmp = va_arg ptr %ap, i32
   ret i32 %tmp
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -fcxx-exceptions -Wno-deprecated-builtins %s
 
 void fn() = default; // expected-error {{only special member}}
 struct foo {
@@ -258,4 +258,29 @@ namespace P1286R2 {
   A::B b;
 
   static_assert(noexcept(A::B()), "");
+}
+
+namespace GH56456 {
+template <typename T>
+using RC=T const&;
+template <typename T>
+using RV=T&;
+template <typename T>
+using RM=T&&;
+
+struct A {
+  A(RC<A>) = default;
+  A(RM<A>) = default;
+
+  auto operator=(RC<A>) -> RV<A> = default;
+  auto operator=(RM<A>) -> RV<A> = default;
+};
+
+struct B {
+  B (RC<B>) = delete;
+  B (RM<B>) = delete;
+
+  auto operator = (RC<B>) -> RV<B> = delete;
+  auto operator = (RM<B>) -> RV<B> = delete;
+};
 }

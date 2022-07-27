@@ -15,11 +15,8 @@ file(WRITE
           "${CMAKE_CURRENT_BINARY_DIR}/LLVMDriverTools.def"
           "${def_decl}${LLVM_EXTRA_DRIVER_ENTRIES}#undef LLVM_DRIVER_TOOL\n")
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-add_llvm_tool(llvm-driver
-  llvm-driver.cpp
-  )
+target_include_directories(llvm-driver PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_sources(llvm-driver PRIVATE llvm-driver.cpp)
 
 set_target_properties(llvm-driver PROPERTIES OUTPUT_NAME llvm)
 
@@ -29,3 +26,13 @@ if(APPLE)
   # dsymutil uses some CoreFoundation stuff on Darwin...
   target_link_libraries(llvm-driver PRIVATE "-framework CoreFoundation")
 endif(APPLE)
+
+macro(generate_driver_tool_targets)
+  get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
+  get_property(LLVM_DRIVER_TOOL_SYMLINKS GLOBAL PROPERTY LLVM_DRIVER_TOOL_SYMLINKS)
+  foreach(name IN LISTS LLVM_DRIVER_TOOLS LLVM_DRIVER_TOOL_SYMLINKS)
+    add_llvm_tool_symlink(${name} llvm-driver ALWAYS_GENERATE)
+    # Always generate install targets
+    llvm_install_symlink(LLVM ${name} llvm-driver ALWAYS_GENERATE)
+  endforeach()
+endmacro()

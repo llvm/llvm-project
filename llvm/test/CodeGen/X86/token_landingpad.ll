@@ -3,7 +3,7 @@
 
 ; This test verifies that SelectionDAG can handle landingPad of token type and not crash LLVM.
 
-define void @test() personality i32 (...)* @dummy_personality {
+define void @test() personality ptr @dummy_personality {
 entry:
   invoke void @dummy()
           to label %return unwind label %unwind

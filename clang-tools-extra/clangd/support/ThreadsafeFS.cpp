@@ -53,7 +53,7 @@ private:
       assert(this->Wrapped);
     }
 
-    virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
     getBuffer(const llvm::Twine &Name, int64_t FileSize,
               bool RequiresNullTerminator, bool /*IsVolatile*/) override {
       return Wrapped->getBuffer(Name, FileSize, RequiresNullTerminator,

@@ -212,8 +212,7 @@ static std::unique_ptr<MangleContext> InitDeviceMC(CodeGenModule &CGM) {
 CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
     : CGCUDARuntime(CGM), Context(CGM.getLLVMContext()),
       TheModule(CGM.getModule()),
-      RelocatableDeviceCode(CGM.getLangOpts().GPURelocatableDeviceCode ||
-                            CGM.getLangOpts().OffloadingNewDriver),
+      RelocatableDeviceCode(CGM.getLangOpts().GPURelocatableDeviceCode),
       DeviceMC(InitDeviceMC(CGM)) {
   CodeGen::CodeGenTypes &Types = CGM.getTypes();
   ASTContext &Ctx = CGM.getContext();
@@ -1116,7 +1115,8 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   llvm::OpenMPIRBuilder OMPBuilder(CGM.getModule());
   OMPBuilder.initialize();
 
-  StringRef Section = "cuda_offloading_entries";
+  StringRef Section = CGM.getLangOpts().HIP ? "hip_offloading_entries"
+                                            : "cuda_offloading_entries";
   for (KernelInfo &I : EmittedKernels)
     OMPBuilder.emitOffloadingEntry(KernelHandles[I.Kernel],
                                    getDeviceSideName(cast<NamedDecl>(I.D)), 0,
@@ -1171,10 +1171,11 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     }
     return nullptr;
   }
-  if (!(CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode))
+  if (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode)
+    createOffloadingEntries();
+  else
     return makeModuleCtorFunction();
 
-  createOffloadingEntries();
   return nullptr;
 }
 

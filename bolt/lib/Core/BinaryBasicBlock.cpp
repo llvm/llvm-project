@@ -544,7 +544,7 @@ BinaryBasicBlock::getBranchStats(const BinaryBasicBlock *Succ) const {
     }
 
     if (TotalCount > 0) {
-      auto Itr = std::find(Successors.begin(), Successors.end(), Succ);
+      auto Itr = llvm::find(Successors, Succ);
       assert(Itr != Successors.end());
       const BinaryBranchInfo &BI = BranchInfo[Itr - Successors.begin()];
       if (BI.Count && BI.Count != COUNT_NO_PROFILE) {

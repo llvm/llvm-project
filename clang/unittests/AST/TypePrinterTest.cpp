@@ -60,7 +60,7 @@ TEST(TypePrinter, TemplateId) {
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = false; }));
 
   ASSERT_TRUE(PrintedTypeMatches(
-      Code, {}, Matcher, "const N::Type<T> &",
+      Code, {}, Matcher, "const Type<T> &",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
 

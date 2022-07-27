@@ -590,10 +590,15 @@ namespace vfs {
 
 namespace detail {
 
-enum InMemoryNodeKind { IME_File, IME_Directory, IME_HardLink };
+enum InMemoryNodeKind {
+  IME_File,
+  IME_Directory,
+  IME_HardLink,
+  IME_SymbolicLink,
+};
 
 /// The in memory file system is a tree of Nodes. Every node can either be a
-/// file , hardlink or a directory.
+/// file, symlink, hardlink or a directory.
 class InMemoryNode {
   InMemoryNodeKind Kind;
   std::string FileName;
@@ -662,6 +667,30 @@ public:
   }
 };
 
+class InMemorySymbolicLink : public InMemoryNode {
+  std::string TargetPath;
+  Status Stat;
+
+public:
+  InMemorySymbolicLink(StringRef Path, StringRef TargetPath, Status Stat)
+      : InMemoryNode(Path, IME_SymbolicLink), TargetPath(std::move(TargetPath)),
+        Stat(Stat) {}
+
+  std::string toString(unsigned Indent) const override {
+    return std::string(Indent, ' ') + "SymbolicLink to -> " + TargetPath;
+  }
+
+  Status getStatus(const Twine &RequestedName) const override {
+    return Status::copyWithNewName(Stat, RequestedName);
+  }
+
+  StringRef getTargetPath() const { return TargetPath; }
+
+  static bool classof(const InMemoryNode *N) {
+    return N->getKind() == IME_SymbolicLink;
+  }
+};
+
 /// Adapt a InMemoryFile for VFS' File interface.  The goal is to make
 /// \p InMemoryFileAdaptor mimic as much as possible the behavior of
 /// \p RealFile.
@@ -710,7 +739,7 @@ public:
 
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
-  InMemoryNode *getChild(StringRef Name) {
+  InMemoryNode *getChild(StringRef Name) const {
     auto I = Entries.find(Name);
     if (I != Entries.end())
       return I->second.get();
@@ -806,10 +835,10 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
 
   detail::InMemoryDirectory *Dir = Root.get();
   auto I = llvm::sys::path::begin(Path), E = sys::path::end(Path);
-  const auto ResolvedUser = User.getValueOr(0);
-  const auto ResolvedGroup = Group.getValueOr(0);
-  const auto ResolvedType = Type.getValueOr(sys::fs::file_type::regular_file);
-  const auto ResolvedPerms = Perms.getValueOr(sys::fs::all_all);
+  const auto ResolvedUser = User.value_or(0);
+  const auto ResolvedGroup = Group.value_or(0);
+  const auto ResolvedType = Type.value_or(sys::fs::file_type::regular_file);
+  const auto ResolvedPerms = Perms.value_or(sys::fs::all_all);
   // Any intermediate directories we create should be accessible by
   // the owner, even if Perms says otherwise for the final path.
   const auto NewDirectoryPerms = ResolvedPerms | sys::fs::owner_all;
@@ -897,22 +926,23 @@ bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
                  });
 }
 
-static ErrorOr<const detail::InMemoryNode *>
-lookupInMemoryNode(const InMemoryFileSystem &FS, detail::InMemoryDirectory *Dir,
-                   const Twine &P) {
+detail::NamedNodeOrError
+InMemoryFileSystem::lookupNode(const Twine &P, bool FollowFinalSymlink,
+                               size_t SymlinkDepth) const {
   SmallString<128> Path;
   P.toVector(Path);
 
   // Fix up relative paths. This just prepends the current working directory.
-  std::error_code EC = FS.makeAbsolute(Path);
+  std::error_code EC = makeAbsolute(Path);
   assert(!EC);
   (void)EC;
 
-  if (FS.useNormalizedPaths())
+  if (useNormalizedPaths())
     llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
 
+  const detail::InMemoryDirectory *Dir = Root.get();
   if (Path.empty())
-    return Dir;
+    return detail::NamedNodeOrError(Path, Dir);
 
   auto I = llvm::sys::path::begin(Path), E = llvm::sys::path::end(Path);
   while (true) {
@@ -921,43 +951,99 @@ lookupInMemoryNode(const InMemoryFileSystem &FS, detail::InMemoryDirectory *Dir,
     if (!Node)
       return errc::no_such_file_or_directory;
 
+    if (auto Symlink = dyn_cast<detail::InMemorySymbolicLink>(Node)) {
+      // If we're at the end of the path, and we're not following through
+      // terminal symlinks, then we're done.
+      if (I == E && !FollowFinalSymlink)
+        return detail::NamedNodeOrError(Path, Symlink);
+
+      if (SymlinkDepth > InMemoryFileSystem::MaxSymlinkDepth)
+        return errc::no_such_file_or_directory;
+
+      SmallString<128> TargetPath = Symlink->getTargetPath();
+      if (std::error_code EC = makeAbsolute(TargetPath))
+        return EC;
+
+      // Keep going with the target. We always want to follow symlinks here
+      // because we're either at the end of a path that we want to follow, or
+      // not at the end of a path, in which case we need to follow the symlink
+      // regardless.
+      auto Target =
+          lookupNode(TargetPath, /*FollowFinalSymlink=*/true, SymlinkDepth + 1);
+      if (!Target || I == E)
+        return Target;
+
+      if (!isa<detail::InMemoryDirectory>(*Target))
+        return errc::no_such_file_or_directory;
+
+      // Otherwise, continue on the search in the symlinked directory.
+      Dir = cast<detail::InMemoryDirectory>(*Target);
+      continue;
+    }
+
     // Return the file if it's at the end of the path.
     if (auto File = dyn_cast<detail::InMemoryFile>(Node)) {
       if (I == E)
-        return File;
+        return detail::NamedNodeOrError(Path, File);
       return errc::no_such_file_or_directory;
     }
 
     // If Node is HardLink then return the resolved file.
     if (auto File = dyn_cast<detail::InMemoryHardLink>(Node)) {
       if (I == E)
-        return &File->getResolvedFile();
+        return detail::NamedNodeOrError(Path, &File->getResolvedFile());
       return errc::no_such_file_or_directory;
     }
     // Traverse directories.
     Dir = cast<detail::InMemoryDirectory>(Node);
     if (I == E)
-      return Dir;
+      return detail::NamedNodeOrError(Path, Dir);
   }
 }
 
-bool InMemoryFileSystem::addHardLink(const Twine &FromPath,
-                                     const Twine &ToPath) {
-  auto FromNode = lookupInMemoryNode(*this, Root.get(), FromPath);
-  auto ToNode = lookupInMemoryNode(*this, Root.get(), ToPath);
+bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
+                                     const Twine &Target) {
+  auto NewLinkNode = lookupNode(NewLink, /*FollowFinalSymlink=*/false);
+  // Whether symlinks in the hardlink target are followed is
+  // implementation-defined in POSIX.
+  // We're following symlinks here to be consistent with macOS.
+  auto TargetNode = lookupNode(Target, /*FollowFinalSymlink=*/true);
   // FromPath must not have been added before. ToPath must have been added
   // before. Resolved ToPath must be a File.
-  if (!ToNode || FromNode || !isa<detail::InMemoryFile>(*ToNode))
+  if (!TargetNode || NewLinkNode || !isa<detail::InMemoryFile>(*TargetNode))
     return false;
-  return addFile(FromPath, 0, nullptr, None, None, None, None,
+  return addFile(NewLink, 0, nullptr, None, None, None, None,
                  [&](detail::NewInMemoryNodeInfo NNI) {
                    return std::make_unique<detail::InMemoryHardLink>(
-                       NNI.Path.str(), *cast<detail::InMemoryFile>(*ToNode));
+                       NNI.Path.str(),
+                       *cast<detail::InMemoryFile>(*TargetNode));
+                 });
+}
+
+bool InMemoryFileSystem::addSymbolicLink(const Twine &NewLink,
+                                         const Twine &Target,
+                                         time_t ModificationTime,
+                                         Optional<uint32_t> User,
+                                         Optional<uint32_t> Group,
+                                         Optional<llvm::sys::fs::perms> Perms) {
+  auto NewLinkNode = lookupNode(NewLink, /*FollowFinalSymlink=*/false);
+  if (NewLinkNode)
+    return false;
+
+  SmallString<128> NewLinkStr, TargetStr;
+  NewLink.toVector(NewLinkStr);
+  Target.toVector(TargetStr);
+
+  return addFile(NewLinkStr, ModificationTime, nullptr, User, Group,
+                 sys::fs::file_type::symlink_file, Perms,
+                 [&](detail::NewInMemoryNodeInfo NNI) {
+                   return std::make_unique<detail::InMemorySymbolicLink>(
+                       NewLinkStr, TargetStr, NNI.makeStatus());
                  });
 }
 
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
-  auto Node = lookupInMemoryNode(*this, Root.get(), Path);
+  auto Node = lookupNode(Path, /*FollowFinalSymlink=*/true);
   if (Node)
     return (*Node)->getStatus(Path);
   return Node.getError();
@@ -965,7 +1051,7 @@ llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
 
 llvm::ErrorOr<std::unique_ptr<File>>
 InMemoryFileSystem::openFileForRead(const Twine &Path) {
-  auto Node = lookupInMemoryNode(*this, Root.get(), Path);
+  auto Node = lookupNode(Path,/*FollowFinalSymlink=*/true);
   if (!Node)
     return Node.getError();
 
@@ -979,10 +1065,9 @@ InMemoryFileSystem::openFileForRead(const Twine &Path) {
   return make_error_code(llvm::errc::invalid_argument);
 }
 
-namespace {
-
 /// Adaptor from InMemoryDir::iterator to directory_iterator.
-class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
+class InMemoryFileSystem::DirIterator : public llvm::vfs::detail::DirIterImpl {
+  const InMemoryFileSystem *FS;
   detail::InMemoryDirectory::const_iterator I;
   detail::InMemoryDirectory::const_iterator E;
   std::string RequestedDirName;
@@ -1000,6 +1085,13 @@ class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
       case detail::IME_Directory:
         Type = sys::fs::file_type::directory_file;
         break;
+      case detail::IME_SymbolicLink:
+        if (auto SymlinkTarget =
+                FS->lookupNode(Path, /*FollowFinalSymlink=*/true)) {
+          Path = SymlinkTarget.getName();
+          Type = (*SymlinkTarget)->getStatus(Path).getType();
+        }
+        break;
       }
       CurrentEntry = directory_entry(std::string(Path.str()), Type);
     } else {
@@ -1010,11 +1102,12 @@ class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
   }
 
 public:
-  InMemoryDirIterator() = default;
+  DirIterator() = default;
 
-  explicit InMemoryDirIterator(const detail::InMemoryDirectory &Dir,
-                               std::string RequestedDirName)
-      : I(Dir.begin()), E(Dir.end()),
+  DirIterator(const InMemoryFileSystem *FS,
+              const detail::InMemoryDirectory &Dir,
+              std::string RequestedDirName)
+      : FS(FS), I(Dir.begin()), E(Dir.end()),
         RequestedDirName(std::move(RequestedDirName)) {
     setCurrentEntry();
   }
@@ -1026,22 +1119,20 @@ public:
   }
 };
 
-} // namespace
-
 directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
                                                  std::error_code &EC) {
-  auto Node = lookupInMemoryNode(*this, Root.get(), Dir);
+  auto Node = lookupNode(Dir, /*FollowFinalSymlink=*/true);
   if (!Node) {
     EC = Node.getError();
-    return directory_iterator(std::make_shared<InMemoryDirIterator>());
+    return directory_iterator(std::make_shared<DirIterator>());
   }
 
   if (auto *DirNode = dyn_cast<detail::InMemoryDirectory>(*Node))
     return directory_iterator(
-        std::make_shared<InMemoryDirIterator>(*DirNode, Dir.str()));
+        std::make_shared<DirIterator>(this, *DirNode, Dir.str()));
 
   EC = make_error_code(llvm::errc::not_a_directory);
-  return directory_iterator(std::make_shared<InMemoryDirIterator>());
+  return directory_iterator(std::make_shared<DirIterator>());
 }
 
 std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
@@ -2576,15 +2667,15 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
 
   OS << "{\n"
         "  'version': 0,\n";
-  if (IsCaseSensitive.hasValue())
+  if (IsCaseSensitive)
     OS << "  'case-sensitive': '"
-       << (IsCaseSensitive.getValue() ? "true" : "false") << "',\n";
-  if (UseExternalNames.hasValue())
+       << (IsCaseSensitive.value() ? "true" : "false") << "',\n";
+  if (UseExternalNames)
     OS << "  'use-external-names': '"
-       << (UseExternalNames.getValue() ? "true" : "false") << "',\n";
+       << (UseExternalNames.value() ? "true" : "false") << "',\n";
   bool UseOverlayRelative = false;
-  if (IsOverlayRelative.hasValue()) {
-    UseOverlayRelative = IsOverlayRelative.getValue();
+  if (IsOverlayRelative) {
+    UseOverlayRelative = IsOverlayRelative.value();
     OS << "  'overlay-relative': '" << (UseOverlayRelative ? "true" : "false")
        << "',\n";
   }

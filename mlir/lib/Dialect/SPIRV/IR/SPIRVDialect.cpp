@@ -268,7 +268,7 @@ static LogicalResult parseOptionalArrayStride(const SPIRVDialect &dialect,
   if (!optStride)
     return failure();
 
-  if (!(stride = optStride.getValue())) {
+  if (!(stride = *optStride)) {
     parser.emitError(strideLoc, "ArrayStride must be greater than zero");
     return failure();
   }
@@ -483,7 +483,8 @@ namespace {
 // parseAndVerify does the actual parsing and verification of individual
 // elements. This is a functor since parsing the last element of the list
 // (termination condition) needs partial specialization.
-template <typename ParseType, typename... Args> struct ParseCommaSeparatedList {
+template <typename ParseType, typename... Args>
+struct ParseCommaSeparatedList {
   Optional<std::tuple<ParseType, Args...>>
   operator()(SPIRVDialect const &dialect, DialectAsmParser &parser) const {
     auto parseVal = parseAndVerify<ParseType>(dialect, parser);
@@ -496,18 +497,19 @@ template <typename ParseType, typename... Args> struct ParseCommaSeparatedList {
     auto remainingValues = ParseCommaSeparatedList<Args...>{}(dialect, parser);
     if (!remainingValues)
       return llvm::None;
-    return std::tuple_cat(std::tuple<ParseType>(parseVal.getValue()),
-                          remainingValues.getValue());
+    return std::tuple_cat(std::tuple<ParseType>(parseVal.value()),
+                          remainingValues.value());
   }
 };
 
 // Partial specialization of the function to parse a comma separated list of
 // specs to parse the last element of the list.
-template <typename ParseType> struct ParseCommaSeparatedList<ParseType> {
+template <typename ParseType>
+struct ParseCommaSeparatedList<ParseType> {
   Optional<std::tuple<ParseType>> operator()(SPIRVDialect const &dialect,
                                              DialectAsmParser &parser) const {
     if (auto value = parseAndVerify<ParseType>(dialect, parser))
-      return std::tuple<ParseType>(value.getValue());
+      return std::tuple<ParseType>(*value);
     return llvm::None;
   }
 };
@@ -542,7 +544,7 @@ static Type parseImageType(SPIRVDialect const &dialect,
 
   if (parser.parseGreater())
     return Type();
-  return ImageType::get(value.getValue());
+  return ImageType::get(*value);
 }
 
 // sampledImage-type :: = `!spv.sampledImage<` image-type `>`
@@ -607,11 +609,11 @@ static ParseResult parseStructMemberDecorations(
 
       memberDecorationInfo.emplace_back(
           static_cast<uint32_t>(memberTypes.size() - 1), 1,
-          memberDecoration.getValue(), memberDecorationValue.getValue());
+          memberDecoration.value(), memberDecorationValue.value());
     } else {
       memberDecorationInfo.emplace_back(
           static_cast<uint32_t>(memberTypes.size() - 1), 0,
-          memberDecoration.getValue(), 0);
+          memberDecoration.value(), 0);
     }
     return success();
   };

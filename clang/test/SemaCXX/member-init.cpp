@@ -87,7 +87,7 @@ namespace PR14838 {
   struct thing {};
   struct another {
     another() : r(thing()) {} // expected-error {{binds to a temporary object}}
-    // expected-error@-1 {{temporary of type 'PR14838::function' has private destructor}}
+    // expected-error@-1 {{temporary of type 'function' has private destructor}}
     const function &r; // expected-note {{reference member declared here}}
   } af;
 }
@@ -98,7 +98,7 @@ namespace rdar14084171 {
     double y;
   };
   struct Sprite {
-    Point location = Point(0,0); // expected-error {{no matching constructor for initialization of 'rdar14084171::Point'}}
+    Point location = Point(0,0); // expected-error {{no matching constructor for initialization of 'Point'}}
   };
   void f(Sprite& x) { x = x; } // expected-warning {{explicitly assigning value of variable}}
 }

@@ -413,7 +413,7 @@ subroutine test12(a,b,c,d,n,m)
     ! CHECK: fir.array_fetch %[[B]]
   ! CHECK: fir.array_merge_store %[[A]], %[[LOOP2]] to %arg0
   a = b + bar(c + d)
-  ! CHECK: fir.freemem %[[tmp]]
+  ! CHECK: fir.freemem %[[tmp]] : !fir.heap<!fir.array<?xf32>>
 end subroutine test12
 
 ! CHECK-LABEL: func @_QPtest13
@@ -471,7 +471,7 @@ subroutine test15(a,b)
   real :: a(100), b(100)
   ! CHECK: %[[loop:.*]] = fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[bth:.*]] = %[[barr]]) -> (!fir.array<100xf32>) {
   ! CHECK: %[[val:.*]] = fir.array_fetch %[[aarr]], %[[i]] : (!fir.array<100xf32>, index) -> f32
-  ! CHECK: %[[fres:.*]] = fir.call @llvm.fabs.f32(%[[val]]) : (f32) -> f32
+  ! CHECK: %[[fres:.*]] = math.abs %[[val]] : f32
   ! CHECK: %[[res:.*]] = fir.array_update %[[bth]], %[[fres]], %[[i]] : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
   ! CHECK: fir.result %[[res]] : !fir.array<100xf32>
   ! CHECK: fir.array_merge_store %[[barr]], %[[loop]] to %[[b]]
@@ -1164,7 +1164,7 @@ end subroutine test19h
 ! CHECK:         %[[VAL_42:.*]] = fir.embox %[[VAL_18]](%[[VAL_41]]) : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
 ! CHECK:         %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_44:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_13]], %[[VAL_43]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
-! CHECK:         fir.freemem %[[VAL_18]]
+! CHECK:         fir.freemem %[[VAL_18]] : !fir.heap<!fir.array<10xi32>>
 ! CHECK:         %[[VAL_45:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_13]]) : (!fir.ref<i8>) -> i32
 ! CHECK:         return
 ! CHECK:       }

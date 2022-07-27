@@ -39,7 +39,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -177,10 +176,9 @@ class InstrProfErrorCategoryType : public std::error_category {
 
 } // end anonymous namespace
 
-static ManagedStatic<InstrProfErrorCategoryType> ErrorCategory;
-
 const std::error_category &llvm::instrprof_category() {
-  return *ErrorCategory;
+  static InstrProfErrorCategoryType ErrorCategory;
+  return ErrorCategory;
 }
 
 namespace {
@@ -466,12 +464,13 @@ Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
     return WriteStringToResult(0, UncompressedNameStrings);
   }
 
-  SmallString<128> CompressedNameStrings;
-  zlib::compress(StringRef(UncompressedNameStrings), CompressedNameStrings,
-                 zlib::BestSizeCompression);
+  SmallVector<uint8_t, 128> CompressedNameStrings;
+  compression::zlib::compress(arrayRefFromStringRef(UncompressedNameStrings),
+                              CompressedNameStrings,
+                              compression::zlib::BestSizeCompression);
 
   return WriteStringToResult(CompressedNameStrings.size(),
-                             CompressedNameStrings);
+                             toStringRef(CompressedNameStrings));
 }
 
 StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar) {
@@ -488,7 +487,7 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
     NameStrs.push_back(std::string(getPGOFuncNameVarInitializer(NameVar)));
   }
   return collectPGOFuncNameStrings(
-      NameStrs, zlib::isAvailable() && doCompression, Result);
+      NameStrs, compression::zlib::isAvailable() && doCompression, Result);
 }
 
 Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
@@ -501,23 +500,20 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
     uint64_t CompressedSize = decodeULEB128(P, &N);
     P += N;
     bool isCompressed = (CompressedSize != 0);
-    SmallString<128> UncompressedNameStrings;
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
     StringRef NameStrings;
     if (isCompressed) {
-      if (!llvm::zlib::isAvailable())
+      if (!llvm::compression::zlib::isAvailable())
         return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
 
-      StringRef CompressedNameStrings(reinterpret_cast<const char *>(P),
-                                      CompressedSize);
-      if (Error E =
-              zlib::uncompress(CompressedNameStrings, UncompressedNameStrings,
-                               UncompressedSize)) {
+      if (Error E = compression::zlib::uncompress(
+              makeArrayRef(P, CompressedSize), UncompressedNameStrings,
+              UncompressedSize)) {
         consumeError(std::move(E));
         return make_error<InstrProfError>(instrprof_error::uncompress_failed);
       }
       P += CompressedSize;
-      NameStrings = StringRef(UncompressedNameStrings.data(),
-                              UncompressedNameStrings.size());
+      NameStrings = toStringRef(UncompressedNameStrings);
     } else {
       NameStrings =
           StringRef(reinterpret_cast<const char *>(P), UncompressedSize);

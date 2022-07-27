@@ -106,35 +106,6 @@ static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
   }
 }
 
-int get_fe_rounding(RoundingMode mode) {
-  switch (mode) {
-  case RoundingMode::Upward:
-    return FE_UPWARD;
-    break;
-  case RoundingMode::Downward:
-    return FE_DOWNWARD;
-    break;
-  case RoundingMode::TowardZero:
-    return FE_TOWARDZERO;
-    break;
-  case RoundingMode::Nearest:
-    return FE_TONEAREST;
-    break;
-  }
-}
-
-ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
-  old_rounding_mode = fegetround();
-  rounding_mode = get_fe_rounding(mode);
-  if (old_rounding_mode != rounding_mode)
-    fesetround(rounding_mode);
-}
-
-ForceRoundingMode::~ForceRoundingMode() {
-  if (old_rounding_mode != rounding_mode)
-    fesetround(old_rounding_mode);
-}
-
 class MPFRNumber {
   unsigned int mpfr_precision;
   mpfr_rnd_t mpfr_rounding;
@@ -244,6 +215,12 @@ public:
   MPFRNumber floor() const {
     MPFRNumber result(*this);
     mpfr_floor(result.value, value);
+    return result;
+  }
+
+  MPFRNumber fmod(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_fmod(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
@@ -561,6 +538,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
   MPFRNumber inputX(x, precision, rounding);
   MPFRNumber inputY(y, precision, rounding);
   switch (op) {
+  case Operation::Fmod:
+    return inputX.fmod(inputY);
   case Operation::Hypot:
     return inputX.hypot(inputY);
   default:

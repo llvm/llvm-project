@@ -850,7 +850,7 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
     Optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(j + 1, *Prolog, Cond);
     unsigned numAdded = 0;
-    if (!StaticallyGreater.hasValue()) {
+    if (!StaticallyGreater) {
       Prolog->addSuccessor(Epilog);
       numAdded = TII->insertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
     } else if (*StaticallyGreater == false) {
@@ -1163,8 +1163,17 @@ void ModuloScheduleExpander::rewriteScheduledInstr(
     if (!InProlog && !Phi->isPHI() && StagePhi < StageSched)
       ReplaceReg = NewReg;
     if (ReplaceReg) {
-      MRI.constrainRegClass(ReplaceReg, MRI.getRegClass(OldReg));
-      UseOp.setReg(ReplaceReg);
+      const TargetRegisterClass *NRC =
+          MRI.constrainRegClass(ReplaceReg, MRI.getRegClass(OldReg));
+      if (NRC)
+        UseOp.setReg(ReplaceReg);
+      else {
+        Register SplitReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
+        BuildMI(*BB, UseMI, UseMI->getDebugLoc(), TII->get(TargetOpcode::COPY),
+                SplitReg)
+            .addReg(ReplaceReg);
+        UseOp.setReg(SplitReg);
+      }
     }
   }
 }
@@ -1209,8 +1218,12 @@ void EliminateDeadPhis(MachineBasicBlock *MBB, MachineRegisterInfo &MRI,
         MI.eraseFromParent();
         Changed = true;
       } else if (!KeepSingleSrcPhi && MI.getNumExplicitOperands() == 3) {
-        MRI.constrainRegClass(MI.getOperand(1).getReg(),
-                              MRI.getRegClass(MI.getOperand(0).getReg()));
+        const TargetRegisterClass *ConstrainRegClass =
+            MRI.constrainRegClass(MI.getOperand(1).getReg(),
+                                  MRI.getRegClass(MI.getOperand(0).getReg()));
+        assert(ConstrainRegClass &&
+               "Expected a valid constrained register class!");
+        (void)ConstrainRegClass;
         MRI.replaceRegWith(MI.getOperand(0).getReg(),
                            MI.getOperand(1).getReg());
         if (LIS)
@@ -1408,7 +1421,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   while (DefaultI != Defaults.rend())
     LoopReg = phi(LoopReg, *DefaultI++, MRI.getRegClass(Reg));
 
-  if (IllegalPhiDefault.hasValue()) {
+  if (IllegalPhiDefault) {
     // The consumer optionally consumes LoopProducer in the same iteration
     // (because the producer is scheduled at an earlier cycle than the consumer)
     // or the initial value. To facilitate this we create an illegal block here
@@ -1418,7 +1431,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
     Register R = MRI.createVirtualRegister(RC);
     MachineInstr *IllegalPhi =
         BuildMI(*BB, MI, DebugLoc(), TII->get(TargetOpcode::PHI), R)
-            .addReg(IllegalPhiDefault.getValue())
+            .addReg(*IllegalPhiDefault)
             .addMBB(PreheaderBB) // Block choice is arbitrary and has no effect.
             .addReg(LoopReg)
             .addMBB(BB); // Block choice is arbitrary and has no effect.
@@ -1434,8 +1447,8 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
 Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
                              const TargetRegisterClass *RC) {
   // If the init register is not undef, try and find an existing phi.
-  if (InitReg.hasValue()) {
-    auto I = Phis.find({LoopReg, InitReg.getValue()});
+  if (InitReg) {
+    auto I = Phis.find({LoopReg, InitReg.value()});
     if (I != Phis.end())
       return I->second;
   } else {
@@ -1450,15 +1463,18 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
   auto I = UndefPhis.find(LoopReg);
   if (I != UndefPhis.end()) {
     Register R = I->second;
-    if (!InitReg.hasValue())
+    if (!InitReg)
       // Found a phi taking undef as input, and this input is undef so return
       // without any more changes.
       return R;
     // Found a phi taking undef as input, so rewrite it to take InitReg.
     MachineInstr *MI = MRI.getVRegDef(R);
-    MI->getOperand(1).setReg(InitReg.getValue());
-    Phis.insert({{LoopReg, InitReg.getValue()}, R});
-    MRI.constrainRegClass(R, MRI.getRegClass(InitReg.getValue()));
+    MI->getOperand(1).setReg(InitReg.value());
+    Phis.insert({{LoopReg, InitReg.value()}, R});
+    const TargetRegisterClass *ConstrainRegClass =
+        MRI.constrainRegClass(R, MRI.getRegClass(InitReg.value()));
+    assert(ConstrainRegClass && "Expected a valid constrained register class!");
+    (void)ConstrainRegClass;
     UndefPhis.erase(I);
     return R;
   }
@@ -1467,14 +1483,18 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
   if (!RC)
     RC = MRI.getRegClass(LoopReg);
   Register R = MRI.createVirtualRegister(RC);
-  if (InitReg.hasValue())
-    MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
+  if (InitReg) {
+    const TargetRegisterClass *ConstrainRegClass =
+        MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
+    assert(ConstrainRegClass && "Expected a valid constrained register class!");
+    (void)ConstrainRegClass;
+  }
   BuildMI(*BB, BB->getFirstNonPHI(), DebugLoc(), TII->get(TargetOpcode::PHI), R)
-      .addReg(InitReg.hasValue() ? *InitReg : undef(RC))
+      .addReg(InitReg ? *InitReg : undef(RC))
       .addMBB(PreheaderBB)
       .addReg(LoopReg)
       .addMBB(BB);
-  if (!InitReg.hasValue())
+  if (!InitReg)
     UndefPhis[LoopReg] = R;
   else
     Phis[{LoopReg, *InitReg}] = R;
@@ -1923,7 +1943,7 @@ void PeelingModuloScheduleExpander::fixupBranches() {
     TII->removeBranch(*Prolog);
     Optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(TC, *Prolog, Cond);
-    if (!StaticallyGreater.hasValue()) {
+    if (!StaticallyGreater) {
       LLVM_DEBUG(dbgs() << "Dynamic: TC > " << TC << "\n");
       // Dynamically branch based on Cond.
       TII->insertBranch(*Prolog, Epilog, Fallthrough, Cond, DebugLoc());

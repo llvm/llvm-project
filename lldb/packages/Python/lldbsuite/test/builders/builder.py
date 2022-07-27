@@ -120,6 +120,11 @@ class Builder:
                 configuration.clang_module_cache_dir)]
         return []
 
+    def getLibCxxArgs(self):
+        if configuration.hermetic_libcxx:
+            return ["USE_HERMETIC_LIBCPP=1"]
+        return []
+
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
@@ -142,7 +147,7 @@ class Builder:
             self.getArchCFlags(architecture), self.getArchSpec(architecture),
             self.getCCSpec(compiler), self.getExtraMakeArgs(),
             self.getSDKRootSpec(), self.getModuleCacheSpec(),
-            self.getCmdLine(dictionary)]
+            self.getLibCxxArgs(), self.getCmdLine(dictionary)]
         command = list(itertools.chain(*command_parts))
 
         return command

@@ -278,6 +278,8 @@ def print_symbol_order: P<
     "/call-graph-profile-sort into the specified file">;
 def wrap : P_priv<"wrap">;
 
+def vfsoverlay : P<"vfsoverlay", "Path to a vfsoverlay yaml file to optionally look for /defaultlib's in">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;
@@ -296,6 +298,8 @@ def nologo : F<"nologo">;
 def throwingnew : F<"throwingnew">;
 def editandcontinue : F<"editandcontinue">;
 def fastfail : F<"fastfail">;
+def kernel : F<"kernel">;
+def pdbcompress : F<"pdbcompress">;
 
 def delay : P_priv<"delay">;
 def errorreport : P_priv<"errorreport">;

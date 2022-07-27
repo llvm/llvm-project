@@ -66,7 +66,7 @@ void RemarkLinker::setExternalFilePrependPath(StringRef PrependPathIn) {
 }
 
 // Discard remarks with no source location.
-static bool shouldKeepRemark(const Remark &R) { return R.Loc.hasValue(); }
+static bool shouldKeepRemark(const Remark &R) { return R.Loc.has_value(); }
 
 Error RemarkLinker::link(StringRef Buffer, Optional<Format> RemarkFormat) {
   if (!RemarkFormat) {

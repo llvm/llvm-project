@@ -9,15 +9,15 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@a = external global i32*, align 8
+@a = external global ptr, align 8
 @b = external global i32, align 4
-@d = external global i32*, align 8
+@d = external global ptr, align 8
 
 ; Function Attrs: norecurse noreturn nounwind uwtable
 define void @fn1(i32 %p1, i32 %p2, i64 %p3) {
 entry:
-  %tmp = load i32*, i32** @d, align 8
-  %tmp1 = load i32*, i32** @a, align 8
+  %tmp = load ptr, ptr @d, align 8
+  %tmp1 = load ptr, ptr @a, align 8
   %tmp2 = sext i32 %p1 to i64
   br label %for.cond
 
@@ -37,7 +37,7 @@ for.cond:                                         ; preds = %for.inc14, %entry
   %tmp9 = sub i32 undef, %indvar
   %tmp10 = icmp sgt i64 %tmp2, 0
   %smax40 = select i1 %tmp10, i64 %tmp2, i64 0
-  %scevgep41 = getelementptr i32, i32* %tmp1, i64 %smax40
+  %scevgep41 = getelementptr i32, ptr %tmp1, i64 %smax40
   %indvars.iv30 = add i32 %indvars.iv30.in, -1
   %tmp11 = icmp sgt i32 %indvars.iv30, 0
   %smax = select i1 %tmp11, i32 %indvars.iv30, i32 0
@@ -60,7 +60,7 @@ min.iters.checked:                                ; preds = %for.body6.preheader
   br i1 undef, label %for.body6, label %vector.memcheck
 
 vector.memcheck:                                  ; preds = %min.iters.checked
-  %bound1 = icmp ule i32* undef, %scevgep41
+  %bound1 = icmp ule ptr undef, %scevgep41
   %memcheck.conflict = and i1 undef, %bound1
   br i1 %memcheck.conflict, label %for.body6, label %vector.body.preheader
 
@@ -80,12 +80,10 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i64 [ %index.next.3, %vector.body ], [ 0, %vector.body.preheader.split ]
   %index.next = add i64 %index, 8
   %offset.idx.1 = add i64 %tmp12, %index.next
-  %tmp14 = getelementptr inbounds i32, i32* %tmp, i64 %offset.idx.1
-  %tmp15 = bitcast i32* %tmp14 to <4 x i32>*
-  %wide.load.1 = load <4 x i32>, <4 x i32>* %tmp15, align 4
-  %tmp16 = getelementptr inbounds i32, i32* %tmp1, i64 %offset.idx.1
-  %tmp17 = bitcast i32* %tmp16 to <4 x i32>*
-  store <4 x i32> %wide.load.1, <4 x i32>* %tmp17, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %tmp, i64 %offset.idx.1
+  %wide.load.1 = load <4 x i32>, ptr %tmp14, align 4
+  %tmp16 = getelementptr inbounds i32, ptr %tmp1, i64 %offset.idx.1
+  store <4 x i32> %wide.load.1, ptr %tmp16, align 4
   %index.next.3 = add i64 %index, 32
   br i1 undef, label %middle.block, label %vector.body
 
@@ -98,16 +96,16 @@ for.body.preheader:                               ; preds = %for.cond
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %k.127 = phi i32 [ %k.0, %for.body.preheader ], [ %add, %for.body ]
   %add = add nsw i32 %k.127, 1
-  %tmp18 = load i32, i32* undef, align 4
-  store i32 %tmp18, i32* @b, align 4
+  %tmp18 = load i32, ptr undef, align 4
+  store i32 %tmp18, ptr @b, align 4
   br i1 undef, label %for.body, label %for.cond4.preheader
 
 for.body6:                                        ; preds = %for.body6, %middle.block, %vector.memcheck, %min.iters.checked, %for.body6.preheader
   %indvars.iv32 = phi i64 [ undef, %for.body6 ], [ %tmp12, %vector.memcheck ], [ %tmp12, %min.iters.checked ], [ %tmp12, %for.body6.preheader ], [ undef, %middle.block ]
-  %arrayidx8 = getelementptr inbounds i32, i32* %tmp, i64 %indvars.iv32
-  %tmp19 = load i32, i32* %arrayidx8, align 4
-  %arrayidx10 = getelementptr inbounds i32, i32* %tmp1, i64 %indvars.iv32
-  store i32 %tmp19, i32* %arrayidx10, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %tmp, i64 %indvars.iv32
+  %tmp19 = load i32, ptr %arrayidx8, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %tmp1, i64 %indvars.iv32
+  store i32 %tmp19, ptr %arrayidx10, align 4
   %cmp5 = icmp slt i64 %indvars.iv32, undef
   br i1 %cmp5, label %for.body6, label %for.inc14
 

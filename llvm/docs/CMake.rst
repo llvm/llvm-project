@@ -941,9 +941,11 @@ the ``cmake`` command or by setting it directly in ``ccmake`` or ``cmake-gui``).
 
 This file is available in two different locations.
 
-* ``<INSTALL_PREFIX>/lib/cmake/llvm/LLVMConfig.cmake`` where
-  ``<INSTALL_PREFIX>`` is the install prefix of an installed version of LLVM.
-  On Linux typically this is ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
+* ``<LLVM_INSTALL_PACKAGE_DIR>/LLVMConfig.cmake`` where
+  ``<LLVM_INSTALL_PACKAGE_DIR>`` is the location where LLVM CMake modules are
+  installed as part of an installed version of LLVM. This is typically
+  ``cmake/llvm/`` within the lib directory. On Linux, this is typically
+  ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
 
 * ``<LLVM_BUILD_ROOT>/lib/cmake/llvm/LLVMConfig.cmake`` where
   ``<LLVM_BUILD_ROOT>`` is the root of the LLVM build tree. **Note: this is only
@@ -1066,10 +1068,25 @@ Compiler/Platform-specific topics
 
 Notes for specific compilers and/or platforms.
 
-Microsoft Visual C++
---------------------
+Windows
+-------
 
 **LLVM_COMPILER_JOBS**:STRING
   Specifies the maximum number of parallel compiler jobs to use per project
   when building with msbuild or Visual Studio. Only supported for the Visual
   Studio 2010 CMake generator. 0 means use all processors. Default is 0.
+
+**CMAKE_MT**:STRING
+  When compiling with clang-cl, recent CMake versions will default to selecting
+  `llvm-mt` as the Manifest Tool instead of Microsoft's `mt.exe`. This will
+  often cause errors like:
+
+  .. code-block:: console
+
+    -- Check for working C compiler: [...]clang-cl.exe - broken
+    [...]
+        MT: command [...] failed (exit code 0x1) with the following output:
+        llvm-mt: error: no libxml2
+        ninja: build stopped: subcommand failed.
+
+  To work around this error, set `CMAKE_MT=mt`.

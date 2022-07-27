@@ -1684,7 +1684,7 @@ deleteDeadBlocksFromLoop(Loop &L,
     // uses in other blocks.
     for (auto &I : *BB)
       if (!I.use_empty())
-        I.replaceAllUsesWith(UndefValue::get(I.getType()));
+        I.replaceAllUsesWith(PoisonValue::get(I.getType()));
     BB->dropAllReferences();
   }
 
@@ -3151,8 +3151,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
       AR.MSSA->verifyMemorySSA();
   }
   if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.AA, AR.TTI, Trivial, NonTrivial,
-                    UnswitchCB, &AR.SE,
-                    MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
+                    UnswitchCB, &AR.SE, MSSAU ? MSSAU.getPointer() : nullptr,
                     DestroyLoopCB))
     return PreservedAnalyses::all();
 

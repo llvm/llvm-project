@@ -532,6 +532,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
+#include <__memory/swap_allocator.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__utility/auto_cast.h>
@@ -553,6 +554,16 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
+#endif
+
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <functional>
+#  include <iterator>
+#  include <new>
+#  include <typeinfo>
+#  include <utility>
+#  include <vector>
 #endif
 
 // standard-mandated includes
@@ -721,10 +732,16 @@ private:
     static const size_type __endian_factor = 2;
 #endif
 
+    // Attribute 'packed' is used to keep the layout compatible with the
+    // previous definition that did not use bit fields. This is because on
+    // some platforms bit fields have a default size rather than the actual
+    // size used, e.g., it is 4 bytes on AIX. See D128285 for details.
     struct __long
     {
-        size_type __is_long_ : 1;
-        size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
+        struct _LIBCPP_PACKED {
+            size_type __is_long_ : 1;
+            size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
+        };
         size_type __size_;
         pointer   __data_;
     };
@@ -734,8 +751,10 @@ private:
 
     struct __short
     {
-        unsigned char __is_long_ : 1;
-        unsigned char __size_ : 7;
+        struct _LIBCPP_PACKED {
+            unsigned char __is_long_ : 1;
+            unsigned char __size_ : 7;
+        };
         char __padding_[sizeof(value_type) - 1];
         value_type __data_[__min_cap];
     };
@@ -4539,14 +4558,12 @@ const typename basic_string<_CharT, _Traits, _Allocator>::size_type
 template <class _CharT, class _Allocator>
 struct _LIBCPP_TEMPLATE_VIS
     hash<basic_string<_CharT, char_traits<_CharT>, _Allocator> >
-    : public unary_function<
-          basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
+    : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
 {
     size_t
     operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT
     { return __do_string_hash(__val.data(), __val.data() + __val.size()); }
 };
-
 
 template<class _CharT, class _Traits, class _Allocator>
 basic_ostream<_CharT, _Traits>&

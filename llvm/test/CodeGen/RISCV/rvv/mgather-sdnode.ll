@@ -1266,8 +1266,8 @@ define <vscale x 8 x i64> @mgather_baseidx_nxv8i64(i64* %base, <vscale x 8 x i64
 
 declare <vscale x 16 x i64> @llvm.masked.gather.nxv16i64.nxv16p0f64(<vscale x 16 x i64*>, i32, <vscale x 16 x i1>, <vscale x 16 x i64>)
 
-declare <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64>, <vscale x 8 x i64>, i64 %idx)
-declare <vscale x 16 x i64*> @llvm.experimental.vector.insert.nxv8p0i64.nxv16p0i64(<vscale x 16 x i64*>, <vscale x 8 x i64*>, i64 %idx)
+declare <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64>, <vscale x 8 x i64>, i64 %idx)
+declare <vscale x 16 x i64*> @llvm.vector.insert.nxv8p0i64.nxv16p0i64(<vscale x 16 x i64*>, <vscale x 8 x i64*>, i64 %idx)
 
 define void @mgather_nxv16i64(<vscale x 8 x i64*> %ptrs0, <vscale x 8 x i64*> %ptrs1, <vscale x 16 x i1> %m, <vscale x 8 x i64> %passthru0, <vscale x 8 x i64> %passthru1, <vscale x 16 x i64>* %out) {
 ; RV32-LABEL: mgather_nxv16i64:
@@ -1318,11 +1318,11 @@ define void @mgather_nxv16i64(<vscale x 8 x i64*> %ptrs0, <vscale x 8 x i64*> %p
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
-  %p0 = call <vscale x 16 x i64*> @llvm.experimental.vector.insert.nxv8p0i64.nxv16p0i64(<vscale x 16 x i64*> undef, <vscale x 8 x i64*> %ptrs0, i64 0)
-  %p1 = call <vscale x 16 x i64*> @llvm.experimental.vector.insert.nxv8p0i64.nxv16p0i64(<vscale x 16 x i64*> %p0, <vscale x 8 x i64*> %ptrs1, i64 8)
+  %p0 = call <vscale x 16 x i64*> @llvm.vector.insert.nxv8p0i64.nxv16p0i64(<vscale x 16 x i64*> undef, <vscale x 8 x i64*> %ptrs0, i64 0)
+  %p1 = call <vscale x 16 x i64*> @llvm.vector.insert.nxv8p0i64.nxv16p0i64(<vscale x 16 x i64*> %p0, <vscale x 8 x i64*> %ptrs1, i64 8)
 
-  %pt0 = call <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %passthru0, i64 0)
-  %pt1 = call <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %pt0, <vscale x 8 x i64> %passthru1, i64 8)
+  %pt0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %passthru0, i64 0)
+  %pt1 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %pt0, <vscale x 8 x i64> %passthru1, i64 8)
 
   %v = call <vscale x 16 x i64> @llvm.masked.gather.nxv16i64.nxv16p0f64(<vscale x 16 x i64*> %p1, i32 8, <vscale x 16 x i1> %m, <vscale x 16 x i64> %pt1)
   store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out

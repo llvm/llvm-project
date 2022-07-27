@@ -22,199 +22,199 @@ let TargetPrefix = "arm" in {  // All intrinsics start with "llvm.arm.".
 def int_arm_space : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // 16-bit multiplications
-def int_arm_smulbb : GCCBuiltin<"__builtin_arm_smulbb">,
+def int_arm_smulbb : ClangBuiltin<"__builtin_arm_smulbb">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smulbt : GCCBuiltin<"__builtin_arm_smulbt">,
+def int_arm_smulbt : ClangBuiltin<"__builtin_arm_smulbt">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smultb : GCCBuiltin<"__builtin_arm_smultb">,
+def int_arm_smultb : ClangBuiltin<"__builtin_arm_smultb">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smultt : GCCBuiltin<"__builtin_arm_smultt">,
+def int_arm_smultt : ClangBuiltin<"__builtin_arm_smultt">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smulwb : GCCBuiltin<"__builtin_arm_smulwb">,
+def int_arm_smulwb : ClangBuiltin<"__builtin_arm_smulwb">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smulwt : GCCBuiltin<"__builtin_arm_smulwt">,
+def int_arm_smulwt : ClangBuiltin<"__builtin_arm_smulwt">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
 // Saturating Arithmetic
 
-def int_arm_qadd : GCCBuiltin<"__builtin_arm_qadd">,
+def int_arm_qadd : ClangBuiltin<"__builtin_arm_qadd">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
     [Commutative, IntrNoMem]>;
-def int_arm_qsub : GCCBuiltin<"__builtin_arm_qsub">,
+def int_arm_qsub : ClangBuiltin<"__builtin_arm_qsub">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_ssat : GCCBuiltin<"__builtin_arm_ssat">,
+def int_arm_ssat : ClangBuiltin<"__builtin_arm_ssat">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_usat : GCCBuiltin<"__builtin_arm_usat">,
+def int_arm_usat : ClangBuiltin<"__builtin_arm_usat">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
 // Accumulating multiplications
-def int_arm_smlabb : GCCBuiltin<"__builtin_arm_smlabb">,
+def int_arm_smlabb : ClangBuiltin<"__builtin_arm_smlabb">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem]>;
-def int_arm_smlabt : GCCBuiltin<"__builtin_arm_smlabt">,
+def int_arm_smlabt : ClangBuiltin<"__builtin_arm_smlabt">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem]>;
-def int_arm_smlatb : GCCBuiltin<"__builtin_arm_smlatb">,
+def int_arm_smlatb : ClangBuiltin<"__builtin_arm_smlatb">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem]>;
-def int_arm_smlatt : GCCBuiltin<"__builtin_arm_smlatt">,
+def int_arm_smlatt : ClangBuiltin<"__builtin_arm_smlatt">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem]>;
-def int_arm_smlawb : GCCBuiltin<"__builtin_arm_smlawb">,
+def int_arm_smlawb : ClangBuiltin<"__builtin_arm_smlawb">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem]>;
-def int_arm_smlawt : GCCBuiltin<"__builtin_arm_smlawt">,
+def int_arm_smlawt : ClangBuiltin<"__builtin_arm_smlawt">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem]>;
 
 // Parallel 16-bit saturation
-def int_arm_ssat16 : GCCBuiltin<"__builtin_arm_ssat16">,
+def int_arm_ssat16 : ClangBuiltin<"__builtin_arm_ssat16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_usat16 : GCCBuiltin<"__builtin_arm_usat16">,
+def int_arm_usat16 : ClangBuiltin<"__builtin_arm_usat16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
 // Packing and unpacking
-def int_arm_sxtab16 : GCCBuiltin<"__builtin_arm_sxtab16">,
+def int_arm_sxtab16 : ClangBuiltin<"__builtin_arm_sxtab16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_sxtb16 : GCCBuiltin<"__builtin_arm_sxtb16">,
+def int_arm_sxtb16 : ClangBuiltin<"__builtin_arm_sxtb16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uxtab16 : GCCBuiltin<"__builtin_arm_uxtab16">,
+def int_arm_uxtab16 : ClangBuiltin<"__builtin_arm_uxtab16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uxtb16 : GCCBuiltin<"__builtin_arm_uxtb16">,
+def int_arm_uxtb16 : ClangBuiltin<"__builtin_arm_uxtb16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 
 // Parallel selection, reads the GE flags.
-def int_arm_sel : GCCBuiltin<"__builtin_arm_sel">,
+def int_arm_sel : ClangBuiltin<"__builtin_arm_sel">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrReadMem]>;
 
 // Parallel 8-bit addition and subtraction
-def int_arm_qadd8  : GCCBuiltin<"__builtin_arm_qadd8">,
+def int_arm_qadd8  : ClangBuiltin<"__builtin_arm_qadd8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_qsub8  : GCCBuiltin<"__builtin_arm_qsub8">,
+def int_arm_qsub8  : ClangBuiltin<"__builtin_arm_qsub8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 // Writes to the GE bits.
-def int_arm_sadd8  : GCCBuiltin<"__builtin_arm_sadd8">,
+def int_arm_sadd8  : ClangBuiltin<"__builtin_arm_sadd8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
-def int_arm_shadd8  : GCCBuiltin<"__builtin_arm_shadd8">,
+def int_arm_shadd8  : ClangBuiltin<"__builtin_arm_shadd8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_shsub8  : GCCBuiltin<"__builtin_arm_shsub8">,
+def int_arm_shsub8  : ClangBuiltin<"__builtin_arm_shsub8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 // Writes to the GE bits.
-def int_arm_ssub8  : GCCBuiltin<"__builtin_arm_ssub8">,
+def int_arm_ssub8  : ClangBuiltin<"__builtin_arm_ssub8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 // Writes to the GE bits.
-def int_arm_uadd8  : GCCBuiltin<"__builtin_arm_uadd8">,
+def int_arm_uadd8  : ClangBuiltin<"__builtin_arm_uadd8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
-def int_arm_uhadd8  : GCCBuiltin<"__builtin_arm_uhadd8">,
+def int_arm_uhadd8  : ClangBuiltin<"__builtin_arm_uhadd8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uhsub8  : GCCBuiltin<"__builtin_arm_uhsub8">,
+def int_arm_uhsub8  : ClangBuiltin<"__builtin_arm_uhsub8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uqadd8  : GCCBuiltin<"__builtin_arm_uqadd8">,
+def int_arm_uqadd8  : ClangBuiltin<"__builtin_arm_uqadd8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uqsub8  : GCCBuiltin<"__builtin_arm_uqsub8">,
+def int_arm_uqsub8  : ClangBuiltin<"__builtin_arm_uqsub8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 // Writes to the GE bits.
-def int_arm_usub8  : GCCBuiltin<"__builtin_arm_usub8">,
+def int_arm_usub8  : ClangBuiltin<"__builtin_arm_usub8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 
 // Sum of 8-bit absolute differences
-def int_arm_usad8  : GCCBuiltin<"__builtin_arm_usad8">,
+def int_arm_usad8  : ClangBuiltin<"__builtin_arm_usad8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_usada8  : GCCBuiltin<"__builtin_arm_usada8">,
+def int_arm_usada8  : ClangBuiltin<"__builtin_arm_usada8">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrNoMem]>;
 
 // Parallel 16-bit addition and subtraction
-def int_arm_qadd16  : GCCBuiltin<"__builtin_arm_qadd16">,
+def int_arm_qadd16  : ClangBuiltin<"__builtin_arm_qadd16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_qasx  : GCCBuiltin<"__builtin_arm_qasx">,
+def int_arm_qasx  : ClangBuiltin<"__builtin_arm_qasx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_qsax  : GCCBuiltin<"__builtin_arm_qsax">,
+def int_arm_qsax  : ClangBuiltin<"__builtin_arm_qsax">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_qsub16  : GCCBuiltin<"__builtin_arm_qsub16">,
+def int_arm_qsub16  : ClangBuiltin<"__builtin_arm_qsub16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 // Writes to the GE bits.
-def int_arm_sadd16  : GCCBuiltin<"__builtin_arm_sadd16">,
+def int_arm_sadd16  : ClangBuiltin<"__builtin_arm_sadd16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 // Writes to the GE bits.
-def int_arm_sasx  : GCCBuiltin<"__builtin_arm_sasx">,
+def int_arm_sasx  : ClangBuiltin<"__builtin_arm_sasx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
-def int_arm_shadd16  : GCCBuiltin<"__builtin_arm_shadd16">,
+def int_arm_shadd16  : ClangBuiltin<"__builtin_arm_shadd16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_shasx  : GCCBuiltin<"__builtin_arm_shasx">,
+def int_arm_shasx  : ClangBuiltin<"__builtin_arm_shasx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_shsax  : GCCBuiltin<"__builtin_arm_shsax">,
+def int_arm_shsax  : ClangBuiltin<"__builtin_arm_shsax">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_shsub16  : GCCBuiltin<"__builtin_arm_shsub16">,
+def int_arm_shsub16  : ClangBuiltin<"__builtin_arm_shsub16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 // Writes to the GE bits.
-def int_arm_ssax  : GCCBuiltin<"__builtin_arm_ssax">,
+def int_arm_ssax  : ClangBuiltin<"__builtin_arm_ssax">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 // Writes to the GE bits.
-def int_arm_ssub16  : GCCBuiltin<"__builtin_arm_ssub16">,
+def int_arm_ssub16  : ClangBuiltin<"__builtin_arm_ssub16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 // Writes to the GE bits.
-def int_arm_uadd16  : GCCBuiltin<"__builtin_arm_uadd16">,
+def int_arm_uadd16  : ClangBuiltin<"__builtin_arm_uadd16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 // Writes to the GE bits.
-def int_arm_uasx  : GCCBuiltin<"__builtin_arm_uasx">,
+def int_arm_uasx  : ClangBuiltin<"__builtin_arm_uasx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
-def int_arm_uhadd16  : GCCBuiltin<"__builtin_arm_uhadd16">,
+def int_arm_uhadd16  : ClangBuiltin<"__builtin_arm_uhadd16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uhasx  : GCCBuiltin<"__builtin_arm_uhasx">,
+def int_arm_uhasx  : ClangBuiltin<"__builtin_arm_uhasx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uhsax  : GCCBuiltin<"__builtin_arm_uhsax">,
+def int_arm_uhsax  : ClangBuiltin<"__builtin_arm_uhsax">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uhsub16  : GCCBuiltin<"__builtin_arm_uhsub16">,
+def int_arm_uhsub16  : ClangBuiltin<"__builtin_arm_uhsub16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uqadd16  : GCCBuiltin<"__builtin_arm_uqadd16">,
+def int_arm_uqadd16  : ClangBuiltin<"__builtin_arm_uqadd16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uqasx  : GCCBuiltin<"__builtin_arm_uqasx">,
+def int_arm_uqasx  : ClangBuiltin<"__builtin_arm_uqasx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uqsax  : GCCBuiltin<"__builtin_arm_uqsax">,
+def int_arm_uqsax  : ClangBuiltin<"__builtin_arm_uqsax">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_uqsub16  : GCCBuiltin<"__builtin_arm_uqsub16">,
+def int_arm_uqsub16  : ClangBuiltin<"__builtin_arm_uqsub16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 // Writes to the GE bits.
-def int_arm_usax  : GCCBuiltin<"__builtin_arm_usax">,
+def int_arm_usax  : ClangBuiltin<"__builtin_arm_usax">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 // Writes to the GE bits.
-def int_arm_usub16  : GCCBuiltin<"__builtin_arm_usub16">,
+def int_arm_usub16  : ClangBuiltin<"__builtin_arm_usub16">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], []>;
 
 // Parallel 16-bit multiplication
-def int_arm_smlad : GCCBuiltin<"__builtin_arm_smlad">,
+def int_arm_smlad : ClangBuiltin<"__builtin_arm_smlad">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrNoMem]>;
-def int_arm_smladx : GCCBuiltin<"__builtin_arm_smladx">,
+def int_arm_smladx : ClangBuiltin<"__builtin_arm_smladx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrNoMem]>;
-def int_arm_smlald : GCCBuiltin<"__builtin_arm_smlald">,
+def int_arm_smlald : ClangBuiltin<"__builtin_arm_smlald">,
     Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
               [IntrNoMem]>;
-def int_arm_smlaldx : GCCBuiltin<"__builtin_arm_smlaldx">,
+def int_arm_smlaldx : ClangBuiltin<"__builtin_arm_smlaldx">,
     Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
               [IntrNoMem]>;
-def int_arm_smlsd : GCCBuiltin<"__builtin_arm_smlsd">,
+def int_arm_smlsd : ClangBuiltin<"__builtin_arm_smlsd">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrNoMem]>;
-def int_arm_smlsdx : GCCBuiltin<"__builtin_arm_smlsdx">,
+def int_arm_smlsdx : ClangBuiltin<"__builtin_arm_smlsdx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrNoMem]>;
-def int_arm_smlsld : GCCBuiltin<"__builtin_arm_smlsld">,
+def int_arm_smlsld : ClangBuiltin<"__builtin_arm_smlsld">,
     Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
               [IntrNoMem]>;
-def int_arm_smlsldx : GCCBuiltin<"__builtin_arm_smlsldx">,
+def int_arm_smlsldx : ClangBuiltin<"__builtin_arm_smlsldx">,
     Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
               [IntrNoMem]>;
-def int_arm_smuad : GCCBuiltin<"__builtin_arm_smuad">,
+def int_arm_smuad : ClangBuiltin<"__builtin_arm_smuad">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smuadx : GCCBuiltin<"__builtin_arm_smuadx">,
+def int_arm_smuadx : ClangBuiltin<"__builtin_arm_smuadx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smusd : GCCBuiltin<"__builtin_arm_smusd">,
+def int_arm_smusd : ClangBuiltin<"__builtin_arm_smusd">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_smusdx : GCCBuiltin<"__builtin_arm_smusdx">,
+def int_arm_smusdx : ClangBuiltin<"__builtin_arm_smusdx">,
     Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
 
@@ -239,19 +239,19 @@ def int_arm_ldaexd : Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_ptr_ty]>;
 
 //===----------------------------------------------------------------------===//
 // Data barrier instructions
-def int_arm_dmb : GCCBuiltin<"__builtin_arm_dmb">, MSBuiltin<"__dmb">,
+def int_arm_dmb : ClangBuiltin<"__builtin_arm_dmb">, MSBuiltin<"__dmb">,
                   Intrinsic<[], [llvm_i32_ty]>;
-def int_arm_dsb : GCCBuiltin<"__builtin_arm_dsb">, MSBuiltin<"__dsb">,
+def int_arm_dsb : ClangBuiltin<"__builtin_arm_dsb">, MSBuiltin<"__dsb">,
                   Intrinsic<[], [llvm_i32_ty]>;
-def int_arm_isb : GCCBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
+def int_arm_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
                   Intrinsic<[], [llvm_i32_ty]>;
 
 //===----------------------------------------------------------------------===//
 // VFP
 
-def int_arm_get_fpscr : GCCBuiltin<"__builtin_arm_get_fpscr">,
+def int_arm_get_fpscr : ClangBuiltin<"__builtin_arm_get_fpscr">,
                        Intrinsic<[llvm_i32_ty], [], []>;
-def int_arm_set_fpscr : GCCBuiltin<"__builtin_arm_set_fpscr">,
+def int_arm_set_fpscr : ClangBuiltin<"__builtin_arm_set_fpscr">,
                        Intrinsic<[], [llvm_i32_ty], []>;
 def int_arm_vcvtr     : Intrinsic<[llvm_float_ty], [llvm_anyfloat_ty],
                                   [IntrNoMem]>;
@@ -261,47 +261,47 @@ def int_arm_vcvtru    : Intrinsic<[llvm_float_ty], [llvm_anyfloat_ty],
 //===----------------------------------------------------------------------===//
 // Coprocessor
 
-def int_arm_ldc : GCCBuiltin<"__builtin_arm_ldc">,
+def int_arm_ldc : ClangBuiltin<"__builtin_arm_ldc">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-def int_arm_ldcl : GCCBuiltin<"__builtin_arm_ldcl">,
+def int_arm_ldcl : ClangBuiltin<"__builtin_arm_ldcl">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-def int_arm_ldc2 : GCCBuiltin<"__builtin_arm_ldc2">,
+def int_arm_ldc2 : ClangBuiltin<"__builtin_arm_ldc2">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-def int_arm_ldc2l : GCCBuiltin<"__builtin_arm_ldc2l">,
+def int_arm_ldc2l : ClangBuiltin<"__builtin_arm_ldc2l">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
-def int_arm_stc : GCCBuiltin<"__builtin_arm_stc">,
+def int_arm_stc : ClangBuiltin<"__builtin_arm_stc">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-def int_arm_stcl : GCCBuiltin<"__builtin_arm_stcl">,
+def int_arm_stcl : ClangBuiltin<"__builtin_arm_stcl">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-def int_arm_stc2 : GCCBuiltin<"__builtin_arm_stc2">,
+def int_arm_stc2 : ClangBuiltin<"__builtin_arm_stc2">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-def int_arm_stc2l : GCCBuiltin<"__builtin_arm_stc2l">,
+def int_arm_stc2l : ClangBuiltin<"__builtin_arm_stc2l">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
 // Move to coprocessor
-def int_arm_mcr : GCCBuiltin<"__builtin_arm_mcr">,
+def int_arm_mcr : ClangBuiltin<"__builtin_arm_mcr">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
-def int_arm_mcr2 : GCCBuiltin<"__builtin_arm_mcr2">,
+def int_arm_mcr2 : ClangBuiltin<"__builtin_arm_mcr2">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 // Move from coprocessor
-def int_arm_mrc : GCCBuiltin<"__builtin_arm_mrc">,
+def int_arm_mrc : ClangBuiltin<"__builtin_arm_mrc">,
                   MSBuiltin<"_MoveFromCoprocessor">,
    Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                              llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
-def int_arm_mrc2 : GCCBuiltin<"__builtin_arm_mrc2">,
+def int_arm_mrc2 : ClangBuiltin<"__builtin_arm_mrc2">,
                    MSBuiltin<"_MoveFromCoprocessor2">,
    Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                              llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
 // Coprocessor data processing
-def int_arm_cdp : GCCBuiltin<"__builtin_arm_cdp">,
+def int_arm_cdp : ClangBuiltin<"__builtin_arm_cdp">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
-def int_arm_cdp2 : GCCBuiltin<"__builtin_arm_cdp2">,
+def int_arm_cdp2 : ClangBuiltin<"__builtin_arm_cdp2">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
@@ -335,13 +335,13 @@ def int_arm_crc32cw : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
 //===----------------------------------------------------------------------===//
 // CMSE
 
-def int_arm_cmse_tt : GCCBuiltin<"__builtin_arm_cmse_TT">,
+def int_arm_cmse_tt : ClangBuiltin<"__builtin_arm_cmse_TT">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
-def int_arm_cmse_ttt : GCCBuiltin<"__builtin_arm_cmse_TTT">,
+def int_arm_cmse_ttt : ClangBuiltin<"__builtin_arm_cmse_TTT">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
-def int_arm_cmse_tta : GCCBuiltin<"__builtin_arm_cmse_TTA">,
+def int_arm_cmse_tta : ClangBuiltin<"__builtin_arm_cmse_TTA">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
-def int_arm_cmse_ttat : GCCBuiltin<"__builtin_arm_cmse_TTAT">,
+def int_arm_cmse_ttat : ClangBuiltin<"__builtin_arm_cmse_TTAT">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//

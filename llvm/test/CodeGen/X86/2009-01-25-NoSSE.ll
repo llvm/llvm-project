@@ -11,12 +11,11 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo() nounwind {
 entry:
   %termios = alloca %struct.ktermios, align 8
-  %termios1 = bitcast %struct.ktermios* %termios to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 8 %termios1, i8 0, i64 44, i1 false)
-  call void @bar(%struct.ktermios* %termios) nounwind
+  call void @llvm.memset.p0.i64(ptr align 8 %termios, i8 0, i64 44, i1 false)
+  call void @bar(ptr %termios) nounwind
   ret void
 }
 
-declare void @bar(%struct.ktermios*)
+declare void @bar(ptr)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind

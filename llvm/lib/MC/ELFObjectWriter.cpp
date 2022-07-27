@@ -144,9 +144,9 @@ struct ELFWriter {
 
   uint64_t align(unsigned Alignment);
 
-  bool maybeWriteCompression(uint64_t Size,
-                             SmallVectorImpl<char> &CompressedContents,
-                             bool ZLibStyle, unsigned Alignment);
+  bool maybeWriteCompression(uint32_t ChType, uint64_t Size,
+                             SmallVectorImpl<uint8_t> &CompressedContents,
+                             unsigned Alignment);
 
 public:
   ELFWriter(ELFObjectWriter &OWriter, raw_pwrite_stream &OS,
@@ -293,9 +293,8 @@ public:
       : ELFObjectWriter(std::move(MOTW)), OS(OS), DwoOS(DwoOS),
         IsLittleEndian(IsLittleEndian) {}
 
-  virtual bool checkRelocation(MCContext &Ctx, SMLoc Loc,
-                               const MCSectionELF *From,
-                               const MCSectionELF *To) override {
+  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
+                       const MCSectionELF *To) override {
     if (isDwoSection(*From)) {
       Ctx.reportError(Loc, "A dwo section may not contain relocations");
       return false;
@@ -819,36 +818,25 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
 
 // Include the debug info compression header.
 bool ELFWriter::maybeWriteCompression(
-    uint64_t Size, SmallVectorImpl<char> &CompressedContents, bool ZLibStyle,
-    unsigned Alignment) {
-  if (ZLibStyle) {
-    uint64_t HdrSize =
-        is64Bit() ? sizeof(ELF::Elf32_Chdr) : sizeof(ELF::Elf64_Chdr);
-    if (Size <= HdrSize + CompressedContents.size())
-      return false;
-    // Platform specific header is followed by compressed data.
-    if (is64Bit()) {
-      // Write Elf64_Chdr header.
-      write(static_cast<ELF::Elf64_Word>(ELF::ELFCOMPRESS_ZLIB));
-      write(static_cast<ELF::Elf64_Word>(0)); // ch_reserved field.
-      write(static_cast<ELF::Elf64_Xword>(Size));
-      write(static_cast<ELF::Elf64_Xword>(Alignment));
-    } else {
-      // Write Elf32_Chdr header otherwise.
-      write(static_cast<ELF::Elf32_Word>(ELF::ELFCOMPRESS_ZLIB));
-      write(static_cast<ELF::Elf32_Word>(Size));
-      write(static_cast<ELF::Elf32_Word>(Alignment));
-    }
-    return true;
-  }
-
-  // "ZLIB" followed by 8 bytes representing the uncompressed size of the section,
-  // useful for consumers to preallocate a buffer to decompress into.
-  const StringRef Magic = "ZLIB";
-  if (Size <= Magic.size() + sizeof(Size) + CompressedContents.size())
+    uint32_t ChType, uint64_t Size,
+    SmallVectorImpl<uint8_t> &CompressedContents, unsigned Alignment) {
+  uint64_t HdrSize =
+      is64Bit() ? sizeof(ELF::Elf32_Chdr) : sizeof(ELF::Elf64_Chdr);
+  if (Size <= HdrSize + CompressedContents.size())
     return false;
-  W.OS << Magic;
-  support::endian::write(W.OS, Size, support::big);
+  // Platform specific header is followed by compressed data.
+  if (is64Bit()) {
+    // Write Elf64_Chdr header.
+    write(static_cast<ELF::Elf64_Word>(ChType));
+    write(static_cast<ELF::Elf64_Word>(0)); // ch_reserved field.
+    write(static_cast<ELF::Elf64_Xword>(Size));
+    write(static_cast<ELF::Elf64_Xword>(Alignment));
+  } else {
+    // Write Elf32_Chdr header otherwise.
+    write(static_cast<ELF::Elf32_Word>(ChType));
+    write(static_cast<ELF::Elf32_Word>(Size));
+    write(static_cast<ELF::Elf32_Word>(Alignment));
+  }
   return true;
 }
 
@@ -867,36 +855,31 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     return;
   }
 
-  assert((MAI->compressDebugSections() == DebugCompressionType::Z ||
-          MAI->compressDebugSections() == DebugCompressionType::GNU) &&
-         "expected zlib or zlib-gnu style compression");
+  assert(MAI->compressDebugSections() == DebugCompressionType::Z &&
+         "expected zlib style compression");
 
   SmallVector<char, 128> UncompressedData;
   raw_svector_ostream VecOS(UncompressedData);
   Asm.writeSectionData(VecOS, &Section, Layout);
 
-  SmallVector<char, 128> CompressedContents;
-  zlib::compress(StringRef(UncompressedData.data(), UncompressedData.size()),
-                 CompressedContents);
+  SmallVector<uint8_t, 128> Compressed;
+  const uint32_t ChType = ELF::ELFCOMPRESS_ZLIB;
+  compression::zlib::compress(
+      makeArrayRef(reinterpret_cast<uint8_t *>(UncompressedData.data()),
+                   UncompressedData.size()),
+      Compressed);
 
-  bool ZlibStyle = MAI->compressDebugSections() == DebugCompressionType::Z;
-  if (!maybeWriteCompression(UncompressedData.size(), CompressedContents,
-                             ZlibStyle, Sec.getAlignment())) {
+  if (!maybeWriteCompression(ChType, UncompressedData.size(), Compressed,
+                             Sec.getAlignment())) {
     W.OS << UncompressedData;
     return;
   }
 
-  if (ZlibStyle) {
-    // Set the compressed flag. That is zlib style.
-    Section.setFlags(Section.getFlags() | ELF::SHF_COMPRESSED);
-    // Alignment field should reflect the requirements of
-    // the compressed section header.
-    Section.setAlignment(is64Bit() ? Align(8) : Align(4));
-  } else {
-    // Add "z" prefix to section name. This is zlib-gnu style.
-    MC.renameELFSection(&Section, (".z" + SectionName.drop_front(1)).str());
-  }
-  W.OS << CompressedContents;
+  Section.setFlags(Section.getFlags() | ELF::SHF_COMPRESSED);
+  // Alignment field should reflect the requirements of
+  // the compressed section header.
+  Section.setAlignment(is64Bit() ? Align(8) : Align(4));
+  W.OS << toStringRef(Compressed);
 }
 
 void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,

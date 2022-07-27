@@ -778,7 +778,7 @@ define <32 x i8> @constant_fold_pshufb_256() {
   ret <32 x i8> %1
 }
 
-define i32 @broadcast_v2i64_multiuse(i64* %p0) {
+define i32 @broadcast_v2i64_multiuse(ptr %p0) {
 ; X86-LABEL: broadcast_v2i64_multiuse:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -792,7 +792,7 @@ define i32 @broadcast_v2i64_multiuse(i64* %p0) {
 ; X64-NEXT:    addl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  %tmp = load i64, i64* %p0, align 8
+  %tmp = load i64, ptr %p0, align 8
   %tmp1 = trunc i64 %tmp to i32
   %tmp2 = insertelement <2 x i64> undef, i64 %tmp, i32 0
   %tmp3 = shufflevector <2 x i64> %tmp2, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -878,6 +878,6 @@ define void @packss_zext_v8i1() {
   %tmp6 = sext <16 x i16> %tmp4 to <16 x i32>
   %tmp10 = shufflevector <16 x i32> %tmp6, <16 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   %tmp11 = tail call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> undef, <8 x i32> %tmp10)
-  store <16 x i16> %tmp11, <16 x i16>* undef, align 2
+  store <16 x i16> %tmp11, ptr undef, align 2
   ret void
 }

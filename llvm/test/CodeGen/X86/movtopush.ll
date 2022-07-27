@@ -8,16 +8,16 @@
 
 declare void @good(i32 %a, i32 %b, i32 %c, i32 %d)
 declare void @inreg(i32 %a, i32 inreg %b, i32 %c, i32 %d)
-declare x86_thiscallcc void @thiscall(%class.Class* %class, i32 %a, i32 %b, i32 %c, i32 %d)
+declare x86_thiscallcc void @thiscall(ptr %class, i32 %a, i32 %b, i32 %c, i32 %d)
 declare void @oneparam(i32 %a)
 declare void @eightparams(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
 declare void @eightparams16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h)
 declare void @eightparams64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h)
-declare void @struct(%struct.s* byval(%struct.s) %a, i32 %b, i32 %c, i32 %d)
-declare void @inalloca(<{ %struct.s }>* inalloca(<{ %struct.s }>))
+declare void @struct(ptr byval(%struct.s) %a, i32 %b, i32 %c, i32 %d)
+declare void @inalloca(ptr inalloca(<{ %struct.s }>))
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 
 ; We should get pushes for x86, even though there is a reserved call frame.
 ; Make sure we don't touch x86-64, and that turning it off works.
@@ -118,9 +118,9 @@ entry:
 ; NORMAL-NEXT: pushl   $1
 ; NORMAL-NEXT: call
 ; NORMAL-NEXT: ret
-define void @test4b(%class.Class* %f) optsize {
+define void @test4b(ptr %f) optsize {
 entry:
-  call x86_thiscallcc void @thiscall(%class.Class* %f, i32 1, i32 2, i32 3, i32 4)
+  call x86_thiscallcc void @thiscall(ptr %f, i32 1, i32 2, i32 3, i32 4)
   ret void
 }
 
@@ -130,11 +130,11 @@ entry:
 ; NORMAL-LABEL: test6:
 ; NORMAL: pushl    $_ext
 ; NORMAL-NEXT: call
-declare void @f(i8*)
+declare void @f(ptr)
 @ext = external dso_local constant i8
 
 define void @test6() {
-  call void @f(i8* @ext)
+  call void @f(ptr @ext)
   br label %bb
 bb:
   alloca i32
@@ -151,9 +151,9 @@ bb:
 ; NORMAL-NEXT: pushl   $1
 ; NORMAL-NEXT: call
 ; NORMAL-NEXT: addl $16, %esp
-define void @test7(i32* %ptr) optsize {
+define void @test7(ptr %ptr) optsize {
 entry:
-  %val = load i32, i32* %ptr
+  %val = load i32, ptr %ptr
   call void @good(i32 1, i32 2, i32 %val, i32 4)
   ret void
 }
@@ -203,9 +203,9 @@ entry:
   %q = alloca i32, align 4
   %s = alloca %struct.s, align 8
   call void @good(i32 1, i32 2, i32 3, i32 4)
-  %pv = ptrtoint i32* %p to i32
-  %qv = ptrtoint i32* %q to i32
-  call void @struct(%struct.s* byval(%struct.s) %s, i32 6, i32 %qv, i32 %pv)
+  %pv = ptrtoint ptr %p to i32
+  %qv = ptrtoint ptr %q to i32
+  call void @struct(ptr byval(%struct.s) %s, i32 6, i32 %qv, i32 %pv)
   ret void
 }
 
@@ -224,9 +224,9 @@ entry:
 ; NORMAL-NEXT: calll *16(%esp)
 ; NORMAL-NEXT: addl $24, %esp
 define void @test10() optsize {
-  %stack_fptr = alloca void (i32, i32, i32, i32)*
-  store void (i32, i32, i32, i32)* @good, void (i32, i32, i32, i32)** %stack_fptr
-  %good_ptr = load volatile void (i32, i32, i32, i32)*, void (i32, i32, i32, i32)** %stack_fptr
+  %stack_fptr = alloca ptr
+  store ptr @good, ptr %stack_fptr
+  %good_ptr = load volatile ptr, ptr %stack_fptr
   call void asm sideeffect "nop", "~{ax},~{bx},~{cx},~{dx},~{bp},~{si},~{di}"()
   call void (i32, i32, i32, i32) %good_ptr(i32 1, i32 2, i32 3, i32 4)
   ret void
@@ -245,8 +245,8 @@ define void @test10() optsize {
 ; NORMAL-NEXT: addl $16, %esp
 @the_global = external dso_local global i32
 define void @test11() optsize {
-  %myload = load i32, i32* @the_global
-  store i32 42, i32* @the_global
+  %myload = load i32, ptr @the_global
+  store i32 42, ptr @the_global
   call void @good(i32 %myload, i32 2, i32 3, i32 4)
   ret void
 }
@@ -262,9 +262,9 @@ define void @test11() optsize {
 define void @test12() optsize {
 entry:
   %s = alloca %struct.s, align 4
-  call void @struct(%struct.s* byval(%struct.s) %s, i32 2, i32 3, i32 4)
+  call void @struct(ptr byval(%struct.s) %s, i32 2, i32 3, i32 4)
   call void @good(i32 5, i32 6, i32 7, i32 8)
-  call void @struct(%struct.s* byval(%struct.s) %s, i32 10, i32 11, i32 12)
+  call void @struct(ptr byval(%struct.s) %s, i32 10, i32 11, i32 12)
   ret void
 }
 
@@ -295,7 +295,7 @@ define void @test12b() optsize {
 entry:
   %s = alloca %struct.s, align 4
   call void @good(i32 1, i32 2, i32 3, i32 4)
-  call void @struct(%struct.s* byval(%struct.s) %s, i32 6, i32 7, i32 8)
+  call void @struct(ptr byval(%struct.s) %s, i32 6, i32 7, i32 8)
   call void @good(i32 9, i32 10, i32 11, i32 12)
   ret void
 }
@@ -313,14 +313,14 @@ entry:
 ; NORMAL-NEXT: pushl [[V1]]
 ; NORMAL-NEXT: calll _good
 ; NORMAL: movl [[P3]], %eax
-define i32* @test13(i32* inreg %ptr1, i32* inreg %ptr2, i32* inreg %ptr3) optsize {
+define ptr @test13(ptr inreg %ptr1, ptr inreg %ptr2, ptr inreg %ptr3) optsize {
 entry:
-  %val1 = load i32, i32* %ptr1
-  %val2 = load i32, i32* %ptr2
-  %val3 = load i32, i32* %ptr3
+  %val1 = load i32, ptr %ptr1
+  %val2 = load i32, ptr %ptr2
+  %val3 = load i32, ptr %ptr3
   %add = add i32 %val1, %val2
   call void @good(i32 %val1, i32 %val2, i32 %val3, i32 %add)
-  ret i32* %ptr3
+  ret ptr %ptr3
 }
 
 ; Make sure to fold adjacent stack adjustments.
@@ -357,20 +357,17 @@ entry:
 ; NORMAL: retl
 %struct.A = type { i32, i32 }
 %struct.B = type { i8 }
-declare x86_thiscallcc %struct.B* @B_ctor(%struct.B* returned, %struct.A* byval(%struct.A))
-declare void @B_func(%struct.B* sret(%struct.B), %struct.B*, i32)
-define void @test14(%struct.A* %a) {
+declare x86_thiscallcc ptr @B_ctor(ptr returned, ptr byval(%struct.A))
+declare void @B_func(ptr sret(%struct.B), ptr, i32)
+define void @test14(ptr %a) {
 entry:
   %ref.tmp = alloca %struct.B, align 1
   %agg.tmp = alloca i64, align 8
-  %tmpcast = bitcast i64* %agg.tmp to %struct.A*
   %tmp = alloca %struct.B, align 1
-  %0 = bitcast %struct.A* %a to i64*
-  %1 = load i64, i64* %0, align 4
-  store i64 %1, i64* %agg.tmp, align 4
-  %call = call x86_thiscallcc %struct.B* @B_ctor(%struct.B* returned %ref.tmp, %struct.A* byval(%struct.A) %tmpcast)
-  %2 = getelementptr inbounds %struct.B, %struct.B* %tmp, i32 0, i32 0
-  call void @B_func(%struct.B* sret(%struct.B) %tmp, %struct.B* %ref.tmp, i32 1)
+  %0 = load i64, ptr %a, align 4
+  store i64 %0, ptr %agg.tmp, align 4
+  %call = call x86_thiscallcc ptr @B_ctor(ptr returned %ref.tmp, ptr byval(%struct.A) %agg.tmp)
+  call void @B_func(ptr sret(%struct.B) %tmp, ptr %ref.tmp, i32 1)
   ret void
 }
 

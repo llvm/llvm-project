@@ -8,9 +8,9 @@
 ; RUN: not --crash llc < %s -o /dev/null -mtriple=i686-apple-darwin 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; RUN: not --crash llc < %s -o /dev/null -mtriple=x86_64-pc-apple-darwin 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
-declare i8* @llvm.thread.pointer()
+declare ptr @llvm.thread.pointer()
 
-define i8* @thread_pointer() nounwind {
-  %1 = tail call i8* @llvm.thread.pointer()
-  ret i8* %1
+define ptr @thread_pointer() nounwind {
+  %1 = tail call ptr @llvm.thread.pointer()
+  ret ptr %1
 }

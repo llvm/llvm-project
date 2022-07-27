@@ -80,7 +80,7 @@ void BufferPlacementAllocs::build(Operation *op) {
     // Find the associated dealloc value and register the allocation entry.
     llvm::Optional<Operation *> dealloc = memref::findDealloc(allocValue);
     // If the allocation has > 1 dealloc associated with it, skip handling it.
-    if (!dealloc.hasValue())
+    if (!dealloc)
       return;
     allocs.push_back(std::make_tuple(allocValue, *dealloc));
   });
@@ -158,11 +158,10 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
     auto globalOp = dyn_cast<memref::GlobalOp>(&op);
     if (!globalOp)
       continue;
-    if (!globalOp.initial_value().hasValue())
+    if (!globalOp.getInitialValue().has_value())
       continue;
-    uint64_t opAlignment =
-        globalOp.alignment().hasValue() ? globalOp.alignment().getValue() : 0;
-    Attribute initialValue = globalOp.initial_value().getValue();
+    uint64_t opAlignment = globalOp.getAlignment().value_or(0);
+    Attribute initialValue = globalOp.getInitialValue().value();
     if (opAlignment == alignment && initialValue == constantOp.getValue())
       return globalOp;
   }

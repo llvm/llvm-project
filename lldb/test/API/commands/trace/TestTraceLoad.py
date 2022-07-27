@@ -7,46 +7,154 @@ from lldbsuite.test.decorators import *
 class TestTraceLoad(TraceIntelPTTestCaseBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @testSBAPIAndCommands
     def testLoadMultiCoreTrace(self):
         src_dir = self.getSourceDir()
-        trace_definition_file = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
-        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
+        self.expect("thread trace dump info --json",
+          substrs=['''{
+  "traceTechnology": "intel-pt",
+  "threadStats": {
+    "tid": 3497234,
+    "traceItemsCount": 0,
+    "memoryUsage": {
+      "totalInBytes": "0",
+      "avgPerItemInBytes": null
+    },
+    "timingInSeconds": {
+      "Decoding instructions": ''', '''
+    },
+    "events": {
+      "totalCount": 0,
+      "individualCounts": {}
+    },
+    "continuousExecutions": 0,
+    "PSBBlocks": 0,
+    "errorItems": {
+      "total": 0,
+      "individualErrors": {}
+    }
+  },
+  "globalStats": {
+    "timingInSeconds": {
+      "Context switch and Intel PT traces correlation": 0
+    },
+    "totalUnattributedPSBBlocks": 0,
+    "totalCountinuosExecutions": 153,
+    "totalPSBBlocks": 5,
+    "totalContinuousExecutions": 153
+  }
+}'''])
+
+        self.expect("thread trace dump info 2 --json",
+          substrs=['''{
+  "traceTechnology": "intel-pt",
+  "threadStats": {
+    "tid": 3497496,
+    "traceItemsCount": 19533,
+    "memoryUsage": {
+      "totalInBytes": "176097",
+      "avgPerItemInBytes": 9.''', '''},
+    "timingInSeconds": {
+      "Decoding instructions": ''', '''
+    },
+    "events": {
+      "totalCount": 11,
+      "individualCounts": {
+        "software disabled tracing": 1,
+        "HW clock tick": 9,
+        "CPU core changed": 1
+      }
+    },
+    "continuousExecutions": 1,
+    "PSBBlocks": 1,
+    "errorItems": {
+      "total": 0,
+      "individualErrors": {}
+    }
+  },
+  "globalStats": {
+    "timingInSeconds": {
+      "Context switch and Intel PT traces correlation": 0''', '''},
+    "totalUnattributedPSBBlocks": 0,
+    "totalCountinuosExecutions": 153,
+    "totalPSBBlocks": 5,
+    "totalContinuousExecutions": 153
+  }
+}'''])
+
+    @testSBAPIAndCommands
+    def testLoadCompactMultiCoreTrace(self):
+        src_dir = self.getSourceDir()
+        trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
+
+        self.expect("thread trace dump info 2", substrs=["Total number of continuous executions found: 153"])
+
+        # we'll save the trace in compact format
+        compact_trace_bundle_dir = os.path.join(self.getBuildDir(), "intelpt-multi-core-trace-compact")
+        self.traceSave(compact_trace_bundle_dir, compact=True)
+
+        # we'll delete the previous target and make sure it's trace object is deleted
+        self.dbg.DeleteTarget(self.dbg.GetTargetAtIndex(0))
+        self.expect("thread trace dump instructions 2 -t", substrs=["error: invalid target"], error=True)
+
+        # we'll load the compact trace and make sure it works
+        self.traceLoad(os.path.join(compact_trace_bundle_dir, "trace.json"), substrs=["intel-pt"])
+        self.expect("thread trace dump instructions 2 -t",
+          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
+                   "m.out`foo() + 65 at multi_thread.cpp:12:21",
+                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
+        self.expect("thread trace dump instructions 3 -t",
+          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+                   "m.out`bar() + 26 at multi_thread.cpp:20:6"])
+
+        # This reduced the number of continuous executions to look at
+        self.expect("thread trace dump info 2", substrs=["Total number of continuous executions found: 3"])
+
+        # We clean up for the next run of this test
+        self.dbg.DeleteTarget(self.dbg.GetTargetAtIndex(0))
+
+    @testSBAPIAndCommands
     def testLoadMultiCoreTraceWithStringNumbers(self):
         src_dir = self.getSourceDir()
-        trace_definition_file = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_with_string_numbers.json")
-        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_with_string_numbers.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
+    @testSBAPIAndCommands
     def testLoadMultiCoreTraceWithMissingThreads(self):
         src_dir = self.getSourceDir()
-        trace_definition_file = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_missing_threads.json")
-        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_missing_threads.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
+    @testSBAPIAndCommands
     def testLoadTrace(self):
         src_dir = self.getSourceDir()
-        trace_definition_file = os.path.join(src_dir, "intelpt-trace", "trace.json")
-        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
 
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
@@ -67,32 +175,34 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         # check that the Process and Thread objects were created correctly
         self.expect("thread info", substrs=["tid = 3842849"])
         self.expect("thread list", substrs=["Process 1234 stopped", "tid = 3842849"])
-        self.expect("thread trace dump info", substrs=['''Trace technology: intel-pt
+        self.expect("thread trace dump info", substrs=['''thread #1: tid = 3842849
 
-thread #1: tid = 3842849
-  Total number of instructions: 21
+  Trace technology: intel-pt
+
+  Total number of trace items: 23
 
   Memory usage:
     Raw trace size: 4 KiB
-    Total approximate memory usage (excluding raw trace): 1.27 KiB
-    Average memory usage per instruction (excluding raw trace): 61.76 bytes
+    Total approximate memory usage (excluding raw trace): 0.20 KiB
+    Average memory usage per item (excluding raw trace): 9.00 bytes
 
   Timing for this thread:
     Decoding instructions: ''', '''
 
   Events:
-    Number of instructions with events: 1
-    Number of individual events: 1
-      paused: 1
+    Number of individual events: 2
+      software disabled tracing: 2
 
   Errors:
     Number of TSC decoding errors: 0'''])
 
+    @testSBAPIAndCommands
     def testLoadInvalidTraces(self):
         src_dir = self.getSourceDir()
+
         # We test first an invalid type
-        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad.json"), error=True,
-          substrs=['''error: expected object at traceSession.processes[0]
+        trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad.json")
+        expected_substrs = ['''error: expected object at traceBundle.processes[0]
 
 Context:
 {
@@ -114,15 +224,19 @@ Schema:
     "family": integer,
     "model": integer,
     "stepping": integer
-  },'''])
+  },''']
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
 
-        # Now we test a wrong cpu family field in the global session file
-        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad2.json"), error=True,
-            substrs=['error: expected uint64_t at traceSession.cpuInfo.family', "Context", "Schema"])
+
+        # Now we test a wrong cpu family field in the global bundle description file
+        trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad2.json")
+        expected_substrs = ['error: expected uint64_t at traceBundle.cpuInfo.family', "Context", "Schema"]
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
+
 
         # Now we test a missing field in the intel-pt settings
-        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,
-            substrs=['''error: missing value at traceSession.cpuInfo.family
+        trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad4.json")
+        expected_substrs = ['''error: missing value at traceBundle.cpuInfo.family
 
 Context:
 {
@@ -133,15 +247,20 @@ Context:
   },
   "processes": [],
   "type": "intel-pt"
-}''', "Schema"])
+}''', "Schema"]
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
+
 
         # Now we test an incorrect load address in the intel-pt settings
-        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad5.json"), error=True,
-            substrs=['error: missing value at traceSession.processes[1].pid', "Schema"])
+        trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad5.json")
+        expected_substrs = ['error: missing value at traceBundle.processes[1].pid', "Schema"]
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
+
 
         # The following wrong schema will have a valid target and an invalid one. In the case of failure,
         # no targets should be created.
         self.assertEqual(self.dbg.GetNumTargets(), 0)
-        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad3.json"), error=True,
-            substrs=['error: missing value at traceSession.processes[1].pid'])
+        trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad3.json")
+        expected_substrs = ['error: missing value at traceBundle.processes[1].pid']
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
         self.assertEqual(self.dbg.GetNumTargets(), 0)

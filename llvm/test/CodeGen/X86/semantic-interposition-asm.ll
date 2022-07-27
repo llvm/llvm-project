@@ -28,7 +28,7 @@ define i64 @test_var() nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    retq
 entry:
-  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(i32* elementtype(i32) @gv0, i32* elementtype(i32) @gv1)
+  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(ptr elementtype(i32) @gv0, ptr elementtype(i32) @gv1)
   ret i64 %0
 }
 
@@ -67,6 +67,6 @@ define i64 @test_fun() nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    retq
 entry:
-  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(void ()* elementtype(void ()) nonnull @fun0, void ()* elementtype(void ()) nonnull @fun1)
+  %0 = tail call i64 asm "movq $1, $0\0Amovq $2, $0", "=r,*m,*m"(ptr elementtype(void ()) nonnull @fun0, ptr elementtype(void ()) nonnull @fun1)
   ret i64 %0
 }

@@ -20,6 +20,8 @@
 // trigger -Wunused-value warnings.
 // ADDITIONAL_COMPILE_FLAGS: -fno-builtin
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <algorithm>
 #include <bit> // bit_cast
 #include <cstddef> // to_integer

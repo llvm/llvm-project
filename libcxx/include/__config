@@ -24,7 +24,14 @@
 
 #ifdef __cplusplus
 
-#  define _LIBCPP_VERSION 15000
+#  define _LIBCPP_VERSION 16000
+
+#  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
+#  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
+
+// Valid C++ identifier that revs with every libc++ version. This can be used to
+// generate identifiers that must be unique for every released libc++ version.
+#  define _LIBCPP_VERSIONED_IDENTIFIER _LIBCPP_CONCAT(v, _LIBCPP_VERSION)
 
 #  if __STDC_HOSTED__ == 0
 #    define _LIBCPP_FREESTANDING
@@ -83,9 +90,6 @@
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #    define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
-// In C++20 and later, don't derive std::plus from std::binary_function,
-// nor std::negate from std::unary_function.
-#    define _LIBCPP_ABI_NO_BINDER_BASES
 // Give reverse_iterator<T> one data member of type T, not two.
 // Also, in C++17 and later, don't derive iterator types from std::iterator.
 #    define _LIBCPP_ABI_NO_ITERATOR_BASES
@@ -96,8 +100,6 @@
 #    define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 // All the regex constants must be distinct and nonzero.
 #    define _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
-// Use raw pointers, not wrapped ones, for std::span's iterator type.
-#    define _LIBCPP_ABI_SPAN_POINTER_ITERATORS
 // Re-worked external template instantiations for std::string with a focus on
 // performance and fast-path inlining.
 #    define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
@@ -212,6 +214,12 @@
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
 #  endif
 
+#  ifdef _LIBCPP_COMPILER_MSVC
+#    error If you successfully use libc++ with MSVC please tell the libc++ developers and consider upstreaming your \
+changes. We are not aware of anybody using this configuration and know that at least some code is currently broken. \
+If there are users of this configuration we are happy to provide support.
+#  endif
+
 // FIXME: ABI detection should be done via compiler builtin macros. This
 // is just a placeholder until Clang implements such macros. For now assume
 // that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
@@ -233,6 +241,19 @@
 
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
 #    define _LIBCPP_ABI_VCRUNTIME
+#  endif
+
+#  if __has_feature(experimental_library)
+#    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
+#      define _LIBCPP_ENABLE_EXPERIMENTAL
+#    endif
+#  endif
+
+// Incomplete features get their own specific disabling flags. This makes it
+// easier to grep for target specific flags once the feature is complete.
+#  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
+#    define _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
+#    define _LIBCPP_HAS_NO_INCOMPLETE_RANGES
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.
@@ -530,42 +551,35 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_TEMPLATE_DATA_VIS
 #    define _LIBCPP_ENUM_VIS
 
-#  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
+#  else
 
-#  ifndef _LIBCPP_HIDDEN
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      define _LIBCPP_HIDDEN __attribute__((__visibility__("hidden")))
+#      define _LIBCPP_VISIBILITY(vis) __attribute__((__visibility__(vis)))
 #    else
-#      define _LIBCPP_HIDDEN
+#      define _LIBCPP_VISIBILITY(vis)
 #    endif
-#  endif
 
-#  ifndef _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
+#    define _LIBCPP_HIDDEN _LIBCPP_VISIBILITY("hidden")
+#    define _LIBCPP_FUNC_VIS _LIBCPP_VISIBILITY("default")
+#    define _LIBCPP_TYPE_VIS _LIBCPP_VISIBILITY("default")
+#    define _LIBCPP_TEMPLATE_DATA_VIS _LIBCPP_VISIBILITY("default")
+#    define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
+#    define _LIBCPP_EXCEPTION_ABI _LIBCPP_VISIBILITY("default")
+#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
+#    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+
+// TODO: Make this a proper customization point or remove the option to override it.
+#    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
+#      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
+#    endif
+
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 // The inline should be removed once PR32114 is resolved
 #      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS inline _LIBCPP_HIDDEN
 #    else
 #      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    endif
-#  endif
 
-#  ifndef _LIBCPP_FUNC_VIS
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      define _LIBCPP_FUNC_VIS __attribute__((__visibility__("default")))
-#    else
-#      define _LIBCPP_FUNC_VIS
-#    endif
-#  endif
-
-#  ifndef _LIBCPP_TYPE_VIS
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      define _LIBCPP_TYPE_VIS __attribute__((__visibility__("default")))
-#    else
-#      define _LIBCPP_TYPE_VIS
-#    endif
-#  endif
-
-#  ifndef _LIBCPP_TEMPLATE_VIS
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 #      if __has_attribute(__type_visibility__)
 #        define _LIBCPP_TEMPLATE_VIS __attribute__((__type_visibility__("default")))
@@ -575,61 +589,14 @@ typedef __char32_t char32_t;
 #    else
 #      define _LIBCPP_TEMPLATE_VIS
 #    endif
-#  endif
 
-#  ifndef _LIBCPP_TEMPLATE_DATA_VIS
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      define _LIBCPP_TEMPLATE_DATA_VIS __attribute__((__visibility__("default")))
-#    else
-#      define _LIBCPP_TEMPLATE_DATA_VIS
-#    endif
-#  endif
-
-#  ifndef _LIBCPP_EXPORTED_FROM_ABI
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      define _LIBCPP_EXPORTED_FROM_ABI __attribute__((__visibility__("default")))
-#    else
-#      define _LIBCPP_EXPORTED_FROM_ABI
-#    endif
-#  endif
-
-#  ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
-#    define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_FUNC_VIS
-#  endif
-
-#  ifndef _LIBCPP_EXCEPTION_ABI
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      define _LIBCPP_EXCEPTION_ABI __attribute__((__visibility__("default")))
-#    else
-#      define _LIBCPP_EXCEPTION_ABI
-#    endif
-#  endif
-
-#  ifndef _LIBCPP_ENUM_VIS
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && __has_attribute(__type_visibility__)
 #      define _LIBCPP_ENUM_VIS __attribute__((__type_visibility__("default")))
 #    else
 #      define _LIBCPP_ENUM_VIS
 #    endif
-#  endif
 
-#  ifndef _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __attribute__((__visibility__("default")))
-#    else
-#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-#    endif
-#  endif
-
-#  ifndef _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
-#    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
-#  endif
-
-#  if __has_attribute(internal_linkage)
-#    define _LIBCPP_INTERNAL_LINKAGE __attribute__((internal_linkage))
-#  else
-#    define _LIBCPP_INTERNAL_LINKAGE _LIBCPP_ALWAYS_INLINE
-#  endif
+#  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
 #  if __has_attribute(exclude_from_explicit_instantiation)
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((__exclude_from_explicit_instantiation__))
@@ -640,20 +607,35 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION _LIBCPP_ALWAYS_INLINE
 #  endif
 
-#  ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU
-#    ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT
-#      define _LIBCPP_HIDE_FROM_ABI_PER_TU 0
-#    else
-#      define _LIBCPP_HIDE_FROM_ABI_PER_TU 1
-#    endif
-#  endif
-
-#  ifndef _LIBCPP_HIDE_FROM_ABI
-#    if _LIBCPP_HIDE_FROM_ABI_PER_TU
-#      define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
-#    else
-#      define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
-#    endif
+// This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
+// on two levels:
+// 1. The symbol is given hidden visibility, which ensures that users won't start exporting
+//    symbols from their dynamic library by means of using the libc++ headers. This ensures
+//    that those symbols stay private to the dynamic library in which it is defined.
+//
+// 2. The symbol is given an ABI tag that changes with each version of libc++. This ensures
+//    that no ODR violation can arise from mixing two TUs compiled with different versions
+//    of libc++ where we would have changed the definition of a symbol. If the symbols shared
+//    the same name, the ODR would require that their definitions be token-by-token equivalent,
+//    which basically prevents us from being able to make any change to any function in our
+//    headers. Using this ABI tag ensures that the symbol name is "bumped" artificially at
+//    each release, which lets us change the definition of these symbols at our leisure.
+//    Note that historically, this has been achieved in various ways, including force-inlining
+//    all functions or giving internal linkage to all functions. Both these (previous) solutions
+//    suffer from drawbacks that lead notably to code bloat.
+//
+// Note that we use _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION to ensure that we don't depend
+// on _LIBCPP_HIDE_FROM_ABI methods of classes explicitly instantiated in the dynamic library.
+//
+// TODO: We provide a escape hatch with _LIBCPP_NO_ABI_TAG for folks who want to avoid increasing
+//       the length of symbols with an ABI tag. In practice, we should remove the escape hatch and
+//       use compression mangling instead, see https://github.com/itanium-cxx-abi/cxx-abi/issues/70.
+#  ifndef _LIBCPP_NO_ABI_TAG
+#    define _LIBCPP_HIDE_FROM_ABI                                                                                      \
+      _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION                                                       \
+          __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_VERSIONED_IDENTIFIER))))
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #  endif
 
 #  ifdef _LIBCPP_BUILDING_LIBRARY
@@ -1116,6 +1098,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+#    define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
 #  endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
 
 #  if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES)
@@ -1228,6 +1211,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  else
 #    define _LIBCPP_PACKED_BYTE_FOR_AIX     /* empty */
 #    define _LIBCPP_PACKED_BYTE_FOR_AIX_END /* empty */
+#  endif
+
+#  if __has_attribute(__packed__)
+#    define _LIBCPP_PACKED __attribute__((__packed__))
+#  else
+#    define _LIBCPP_PACKED
 #  endif
 
 #endif // __cplusplus

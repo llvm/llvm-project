@@ -367,7 +367,7 @@ void Operator::populateTypeInferenceInfo(
     for (auto me = ecs.member_end(); mi != me; ++mi) {
       if (*mi < 0) {
         auto tc = getResultTypeConstraint(i);
-        if (tc.getBuilderCall().hasValue()) {
+        if (tc.getBuilderCall()) {
           resultTypeMapping[i].emplace_back(tc);
           found = true;
         }

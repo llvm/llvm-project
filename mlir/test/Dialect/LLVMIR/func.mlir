@@ -159,6 +159,11 @@ module {
   llvm.func weak fastcc @cconv3() {
     llvm.return
   }
+
+  // CHECK-LABEL: llvm.func @variadic_def
+  llvm.func @variadic_def(...) {
+    llvm.return
+  }
 }
 
 // -----
@@ -228,15 +233,6 @@ module {
 module {
   // expected-error@+1 {{failed to construct function type: expected zero or one function result}}
   llvm.func @foo() -> (i64, i64)
-}
-
-// -----
-
-module {
-  // expected-error@+1 {{only external functions can be variadic}}
-  llvm.func @variadic_def(...) {
-    llvm.return
-  }
 }
 
 // -----

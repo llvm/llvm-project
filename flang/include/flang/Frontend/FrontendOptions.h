@@ -219,7 +219,7 @@ public:
 struct FrontendOptions {
   FrontendOptions()
       : showHelp(false), showVersion(false), instrumentedParse(false),
-        needProvenanceRangeToCharBlockMappings(false) {}
+        showColors(false), needProvenanceRangeToCharBlockMappings(false) {}
 
   /// Show the -help text.
   unsigned showHelp : 1;
@@ -229,6 +229,9 @@ struct FrontendOptions {
 
   /// Instrument the parse to get a more verbose log
   unsigned instrumentedParse : 1;
+
+  /// Enable color diagnostics.
+  unsigned showColors : 1;
 
   /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
   /// symbols based on source-code location. This is not needed in regular

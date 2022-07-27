@@ -211,7 +211,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
 
   // The definition of O_CREAT is platform specific.  We need a better way
   // of querying this information from the checking environment.
-  if (!Val_O_CREAT.hasValue()) {
+  if (!Val_O_CREAT) {
     if (C.getASTContext().getTargetInfo().getTriple().getVendor()
                                                       == llvm::Triple::Apple)
       Val_O_CREAT = 0x0200;
@@ -234,7 +234,8 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   }
   NonLoc oflags = V.castAs<NonLoc>();
   NonLoc ocreateFlag = C.getSValBuilder()
-      .makeIntVal(Val_O_CREAT.getValue(), oflagsEx->getType()).castAs<NonLoc>();
+                           .makeIntVal(Val_O_CREAT.value(), oflagsEx->getType())
+                           .castAs<NonLoc>();
   SVal maskedFlagsUC = C.getSValBuilder().evalBinOpNN(state, BO_And,
                                                       oflags, ocreateFlag,
                                                       oflagsEx->getType());

@@ -62,9 +62,9 @@ define void @ptr_iv_v4i32_mult(i32* noalias nocapture readonly %A, i32* noalias 
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0, q0, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, q0]
 ; CHECK-NEXT:    vadd.i32 q2, q2, r2
-; CHECK-NEXT:    vstrw.32 q2, [r0, q1, uxtw #2]
+; CHECK-NEXT:    vstrw.32 q2, [r0, q1]
 ; CHECK-NEXT:    adds r0, #64
 ; CHECK-NEXT:    le lr, .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
@@ -72,15 +72,15 @@ define void @ptr_iv_v4i32_mult(i32* noalias nocapture readonly %A, i32* noalias 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 5 @ 0x5
-; CHECK-NEXT:    .long 9 @ 0x9
-; CHECK-NEXT:    .long 13 @ 0xd
-; CHECK-NEXT:    .long 17 @ 0x11
+; CHECK-NEXT:    .long 20 @ 0x14
+; CHECK-NEXT:    .long 36 @ 0x24
+; CHECK-NEXT:    .long 52 @ 0x34
+; CHECK-NEXT:    .long 68 @ 0x44
 ; CHECK-NEXT:  .LCPI1_1:
-; CHECK-NEXT:    .long 3 @ 0x3
-; CHECK-NEXT:    .long 7 @ 0x7
-; CHECK-NEXT:    .long 11 @ 0xb
-; CHECK-NEXT:    .long 15 @ 0xf
+; CHECK-NEXT:    .long 12 @ 0xc
+; CHECK-NEXT:    .long 28 @ 0x1c
+; CHECK-NEXT:    .long 44 @ 0x2c
+; CHECK-NEXT:    .long 60 @ 0x3c
 vector.ph:
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %y, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -173,10 +173,10 @@ define void @ptr_iv_v8i16_mult(i16* noalias nocapture readonly %A, i16* noalias 
 ; CHECK-NEXT:    vldrw.u32 q1, [r12]
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q2, [r0, q0, uxtw #1]
+; CHECK-NEXT:    vldrh.u16 q2, [r0, q0]
 ; CHECK-NEXT:    adds r0, #64
 ; CHECK-NEXT:    vadd.i16 q2, q2, r2
-; CHECK-NEXT:    vstrh.16 q2, [r1, q1, uxtw #1]
+; CHECK-NEXT:    vstrh.16 q2, [r1, q1]
 ; CHECK-NEXT:    adds r1, #64
 ; CHECK-NEXT:    le lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
@@ -184,23 +184,23 @@ define void @ptr_iv_v8i16_mult(i16* noalias nocapture readonly %A, i16* noalias 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .short 5 @ 0x5
-; CHECK-NEXT:    .short 9 @ 0x9
-; CHECK-NEXT:    .short 13 @ 0xd
-; CHECK-NEXT:    .short 17 @ 0x11
-; CHECK-NEXT:    .short 21 @ 0x15
-; CHECK-NEXT:    .short 25 @ 0x19
-; CHECK-NEXT:    .short 29 @ 0x1d
-; CHECK-NEXT:    .short 33 @ 0x21
+; CHECK-NEXT:    .short 10 @ 0xa
+; CHECK-NEXT:    .short 18 @ 0x12
+; CHECK-NEXT:    .short 26 @ 0x1a
+; CHECK-NEXT:    .short 34 @ 0x22
+; CHECK-NEXT:    .short 42 @ 0x2a
+; CHECK-NEXT:    .short 50 @ 0x32
+; CHECK-NEXT:    .short 58 @ 0x3a
+; CHECK-NEXT:    .short 66 @ 0x42
 ; CHECK-NEXT:  .LCPI3_1:
-; CHECK-NEXT:    .short 3 @ 0x3
-; CHECK-NEXT:    .short 7 @ 0x7
-; CHECK-NEXT:    .short 11 @ 0xb
-; CHECK-NEXT:    .short 15 @ 0xf
-; CHECK-NEXT:    .short 19 @ 0x13
-; CHECK-NEXT:    .short 23 @ 0x17
-; CHECK-NEXT:    .short 27 @ 0x1b
-; CHECK-NEXT:    .short 31 @ 0x1f
+; CHECK-NEXT:    .short 6 @ 0x6
+; CHECK-NEXT:    .short 14 @ 0xe
+; CHECK-NEXT:    .short 22 @ 0x16
+; CHECK-NEXT:    .short 30 @ 0x1e
+; CHECK-NEXT:    .short 38 @ 0x26
+; CHECK-NEXT:    .short 46 @ 0x2e
+; CHECK-NEXT:    .short 54 @ 0x36
+; CHECK-NEXT:    .short 62 @ 0x3e
 vector.ph:
   %broadcast.splatinsert = insertelement <8 x i16> undef, i16 %y, i32 0
   %broadcast.splat = shufflevector <8 x i16> %broadcast.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -432,9 +432,9 @@ define void @ptr_iv_v4f32_mult(float* noalias nocapture readonly %A, float* noal
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0, q0, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, q0]
 ; CHECK-NEXT:    vadd.f32 q2, q2, r2
-; CHECK-NEXT:    vstrw.32 q2, [r0, q1, uxtw #2]
+; CHECK-NEXT:    vstrw.32 q2, [r0, q1]
 ; CHECK-NEXT:    adds r0, #64
 ; CHECK-NEXT:    le lr, .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
@@ -442,15 +442,15 @@ define void @ptr_iv_v4f32_mult(float* noalias nocapture readonly %A, float* noal
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI7_0:
-; CHECK-NEXT:    .long 5 @ 0x5
-; CHECK-NEXT:    .long 9 @ 0x9
-; CHECK-NEXT:    .long 13 @ 0xd
-; CHECK-NEXT:    .long 17 @ 0x11
+; CHECK-NEXT:    .long 20 @ 0x14
+; CHECK-NEXT:    .long 36 @ 0x24
+; CHECK-NEXT:    .long 52 @ 0x34
+; CHECK-NEXT:    .long 68 @ 0x44
 ; CHECK-NEXT:  .LCPI7_1:
-; CHECK-NEXT:    .long 3 @ 0x3
-; CHECK-NEXT:    .long 7 @ 0x7
-; CHECK-NEXT:    .long 11 @ 0xb
-; CHECK-NEXT:    .long 15 @ 0xf
+; CHECK-NEXT:    .long 12 @ 0xc
+; CHECK-NEXT:    .long 28 @ 0x1c
+; CHECK-NEXT:    .long 44 @ 0x2c
+; CHECK-NEXT:    .long 60 @ 0x3c
 vector.ph:                                        ; preds = %entry
   %broadcast.splatinsert = insertelement <4 x float> undef, float %y, i32 0
   %broadcast.splat = shufflevector <4 x float> %broadcast.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
@@ -549,9 +549,9 @@ define void @ptr_iv_v8f16_mult(half* noalias nocapture readonly %A, half* noalia
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q2, [r0, q0, uxtw #1]
+; CHECK-NEXT:    vldrh.u16 q2, [r0, q0]
 ; CHECK-NEXT:    vadd.f16 q2, q2, r1
-; CHECK-NEXT:    vstrh.16 q2, [r0, q1, uxtw #1]
+; CHECK-NEXT:    vstrh.16 q2, [r0, q1]
 ; CHECK-NEXT:    adds r0, #64
 ; CHECK-NEXT:    le lr, .LBB9_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
@@ -559,23 +559,23 @@ define void @ptr_iv_v8f16_mult(half* noalias nocapture readonly %A, half* noalia
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI9_0:
-; CHECK-NEXT:    .short 3 @ 0x3
-; CHECK-NEXT:    .short 7 @ 0x7
-; CHECK-NEXT:    .short 11 @ 0xb
-; CHECK-NEXT:    .short 15 @ 0xf
-; CHECK-NEXT:    .short 19 @ 0x13
-; CHECK-NEXT:    .short 23 @ 0x17
-; CHECK-NEXT:    .short 27 @ 0x1b
-; CHECK-NEXT:    .short 31 @ 0x1f
+; CHECK-NEXT:    .short 6 @ 0x6
+; CHECK-NEXT:    .short 14 @ 0xe
+; CHECK-NEXT:    .short 22 @ 0x16
+; CHECK-NEXT:    .short 30 @ 0x1e
+; CHECK-NEXT:    .short 38 @ 0x26
+; CHECK-NEXT:    .short 46 @ 0x2e
+; CHECK-NEXT:    .short 54 @ 0x36
+; CHECK-NEXT:    .short 62 @ 0x3e
 ; CHECK-NEXT:  .LCPI9_1:
-; CHECK-NEXT:    .short 5 @ 0x5
-; CHECK-NEXT:    .short 9 @ 0x9
-; CHECK-NEXT:    .short 13 @ 0xd
-; CHECK-NEXT:    .short 17 @ 0x11
-; CHECK-NEXT:    .short 21 @ 0x15
-; CHECK-NEXT:    .short 25 @ 0x19
-; CHECK-NEXT:    .short 29 @ 0x1d
-; CHECK-NEXT:    .short 33 @ 0x21
+; CHECK-NEXT:    .short 10 @ 0xa
+; CHECK-NEXT:    .short 18 @ 0x12
+; CHECK-NEXT:    .short 26 @ 0x1a
+; CHECK-NEXT:    .short 34 @ 0x22
+; CHECK-NEXT:    .short 42 @ 0x2a
+; CHECK-NEXT:    .short 50 @ 0x32
+; CHECK-NEXT:    .short 58 @ 0x3a
+; CHECK-NEXT:    .short 66 @ 0x42
 vector.ph:
   %y.trunc = fptrunc float %y to half
   %broadcast.splatinsert = insertelement <8 x half> undef, half %y.trunc, i32 0
@@ -620,17 +620,17 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v4i32(i32* nocapture readonly %x, 
 ; CHECK-NEXT:    movs r3, #10
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q3, [r0, q0, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q3, [r0, q0]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0, q1, uxtw #2]
-; CHECK-NEXT:    vldrw.u32 q5, [r0, q2, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q5, [r0, q2]
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmul.i32 q3, q4, q3
 ; CHECK-NEXT:    add.w r0, r0, #48
 ; CHECK-NEXT:    vmul.i32 q5, q4, q5
 ; CHECK-NEXT:    vmul.i32 q4, q4, r3
 ; CHECK-NEXT:    vstrw.32 q4, [r1, q1, uxtw #2]
-; CHECK-NEXT:    vstrw.32 q5, [r1, q2, uxtw #2]
-; CHECK-NEXT:    vstrw.32 q3, [r1, q0, uxtw #2]
+; CHECK-NEXT:    vstrw.32 q5, [r1, q2]
+; CHECK-NEXT:    vstrw.32 q3, [r1, q0]
 ; CHECK-NEXT:    add.w r1, r1, #48
 ; CHECK-NEXT:    bne .LBB10_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
@@ -639,20 +639,20 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v4i32(i32* nocapture readonly %x, 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI10_0:
-; CHECK-NEXT:    .long 1 @ 0x1
 ; CHECK-NEXT:    .long 4 @ 0x4
-; CHECK-NEXT:    .long 7 @ 0x7
-; CHECK-NEXT:    .long 10 @ 0xa
+; CHECK-NEXT:    .long 16 @ 0x10
+; CHECK-NEXT:    .long 28 @ 0x1c
+; CHECK-NEXT:    .long 40 @ 0x28
 ; CHECK-NEXT:  .LCPI10_1:
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 3 @ 0x3
 ; CHECK-NEXT:    .long 6 @ 0x6
 ; CHECK-NEXT:    .long 9 @ 0x9
 ; CHECK-NEXT:  .LCPI10_2:
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 5 @ 0x5
 ; CHECK-NEXT:    .long 8 @ 0x8
-; CHECK-NEXT:    .long 11 @ 0xb
+; CHECK-NEXT:    .long 20 @ 0x14
+; CHECK-NEXT:    .long 32 @ 0x20
+; CHECK-NEXT:    .long 44 @ 0x2c
 vector.ph:
   br label %vector.body
 
@@ -790,17 +790,17 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v8i16(i16* nocapture readonly %x, 
 ; CHECK-NEXT:    movs r3, #10
 ; CHECK-NEXT:  .LBB12_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q3, [r0, q0, uxtw #1]
+; CHECK-NEXT:    vldrh.u16 q3, [r0, q0]
 ; CHECK-NEXT:    vldrh.u16 q4, [r0, q1, uxtw #1]
-; CHECK-NEXT:    vldrh.u16 q5, [r0, q2, uxtw #1]
+; CHECK-NEXT:    vldrh.u16 q5, [r0, q2]
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmul.i16 q3, q4, q3
 ; CHECK-NEXT:    add.w r0, r0, #48
 ; CHECK-NEXT:    vmul.i16 q5, q4, q5
 ; CHECK-NEXT:    vmul.i16 q4, q4, r3
 ; CHECK-NEXT:    vstrh.16 q4, [r1, q1, uxtw #1]
-; CHECK-NEXT:    vstrh.16 q5, [r1, q2, uxtw #1]
-; CHECK-NEXT:    vstrh.16 q3, [r1, q0, uxtw #1]
+; CHECK-NEXT:    vstrh.16 q5, [r1, q2]
+; CHECK-NEXT:    vstrh.16 q3, [r1, q0]
 ; CHECK-NEXT:    add.w r1, r1, #48
 ; CHECK-NEXT:    bne .LBB12_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
@@ -809,14 +809,14 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v8i16(i16* nocapture readonly %x, 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI12_0:
-; CHECK-NEXT:    .short 1 @ 0x1
-; CHECK-NEXT:    .short 4 @ 0x4
-; CHECK-NEXT:    .short 7 @ 0x7
-; CHECK-NEXT:    .short 10 @ 0xa
-; CHECK-NEXT:    .short 13 @ 0xd
-; CHECK-NEXT:    .short 16 @ 0x10
-; CHECK-NEXT:    .short 19 @ 0x13
-; CHECK-NEXT:    .short 22 @ 0x16
+; CHECK-NEXT:    .short 2 @ 0x2
+; CHECK-NEXT:    .short 8 @ 0x8
+; CHECK-NEXT:    .short 14 @ 0xe
+; CHECK-NEXT:    .short 20 @ 0x14
+; CHECK-NEXT:    .short 26 @ 0x1a
+; CHECK-NEXT:    .short 32 @ 0x20
+; CHECK-NEXT:    .short 38 @ 0x26
+; CHECK-NEXT:    .short 44 @ 0x2c
 ; CHECK-NEXT:  .LCPI12_1:
 ; CHECK-NEXT:    .short 0 @ 0x0
 ; CHECK-NEXT:    .short 3 @ 0x3
@@ -827,14 +827,14 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v8i16(i16* nocapture readonly %x, 
 ; CHECK-NEXT:    .short 18 @ 0x12
 ; CHECK-NEXT:    .short 21 @ 0x15
 ; CHECK-NEXT:  .LCPI12_2:
-; CHECK-NEXT:    .short 2 @ 0x2
-; CHECK-NEXT:    .short 5 @ 0x5
-; CHECK-NEXT:    .short 8 @ 0x8
-; CHECK-NEXT:    .short 11 @ 0xb
-; CHECK-NEXT:    .short 14 @ 0xe
-; CHECK-NEXT:    .short 17 @ 0x11
-; CHECK-NEXT:    .short 20 @ 0x14
-; CHECK-NEXT:    .short 23 @ 0x17
+; CHECK-NEXT:    .short 4 @ 0x4
+; CHECK-NEXT:    .short 10 @ 0xa
+; CHECK-NEXT:    .short 16 @ 0x10
+; CHECK-NEXT:    .short 22 @ 0x16
+; CHECK-NEXT:    .short 28 @ 0x1c
+; CHECK-NEXT:    .short 34 @ 0x22
+; CHECK-NEXT:    .short 40 @ 0x28
+; CHECK-NEXT:    .short 46 @ 0x2e
 vector.ph:
   br label %vector.body
 

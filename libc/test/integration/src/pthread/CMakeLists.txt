@@ -1,0 +1,55 @@
+add_libc_integration_test_suite(libc-pthread-integration-tests)
+
+add_integration_test(
+  pthread_mutex_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_mutex_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.pthread
+    libc.src.errno.errno
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)
+
+add_integration_test(
+  pthread_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)
+
+add_integration_test(
+  pthread_equal_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_equal_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.pthread
+    libc.src.errno.errno
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_equal
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+)

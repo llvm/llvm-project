@@ -212,7 +212,7 @@ bool CommandInterpreter::SetQuitExitCode(int exit_code) {
 }
 
 int CommandInterpreter::GetQuitExitCode(bool &exited) const {
-  exited = m_quit_exit_code.hasValue();
+  exited = m_quit_exit_code.has_value();
   if (exited)
     return *m_quit_exit_code;
   return 0;

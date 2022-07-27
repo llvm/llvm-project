@@ -7,7 +7,10 @@ lldb_tablegen("CommandOptions") {
 
 static_library("Commands") {
   output_name = "lldbCommands"
-  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:lldb_code",
+  ]
   deps = [
     ":CommandOptions",
     "//llvm/lib/Support",
@@ -61,6 +64,7 @@ static_library("Commands") {
     "CommandObjectVersion.cpp",
     "CommandObjectWatchpoint.cpp",
     "CommandObjectWatchpointCommand.cpp",
+    "CommandOptionArgumentTable.cpp",
     "CommandOptionsProcessLaunch.cpp",
   ]
 }

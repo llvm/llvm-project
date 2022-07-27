@@ -265,7 +265,7 @@ struct CastIsPossible {
 template <typename To, typename From>
 struct CastIsPossible<To, Optional<From>> {
   static inline bool isPossible(const Optional<From> &f) {
-    assert(f.hasValue() && "CastIsPossible::isPossible called on a nullopt!");
+    assert(f && "CastIsPossible::isPossible called on a nullopt!");
     return isa_impl_wrap<
         To, const From,
         typename simplify_type<const From>::SimpleType>::doit(*f);
@@ -637,10 +637,8 @@ template <typename T, typename Enable = void> struct ValueIsPresent {
 // Optional provides its own way to check if something is present.
 template <typename T> struct ValueIsPresent<Optional<T>> {
   using UnwrappedType = T;
-  static inline bool isPresent(const Optional<T> &t) { return t.hasValue(); }
-  static inline decltype(auto) unwrapValue(Optional<T> &t) {
-    return t.getValue();
-  }
+  static inline bool isPresent(const Optional<T> &t) { return t.has_value(); }
+  static inline decltype(auto) unwrapValue(Optional<T> &t) { return t.value(); }
 };
 
 // If something is "nullable" then we just compare it to nullptr to see if it

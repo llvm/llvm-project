@@ -1,6 +1,6 @@
 ; RUN: llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types < %s | FileCheck %s
 
-%funcref = type i8 addrspace(20)* ;; addrspace 20 is nonintegral
+%funcref = type ptr addrspace(20) ;; addrspace 20 is nonintegral
 
 @funcref_table = local_unnamed_addr addrspace(1) global [0 x %funcref] undef
 
@@ -13,8 +13,8 @@ define void @set_funcref_table(%funcref %g, i32 %i) {
 ; CHECK-NEXT: end_function
 
 ;; this generates a table.set of @funcref_table
-  %p = getelementptr [0 x %funcref], [0 x %funcref] addrspace (1)* @funcref_table, i32 0, i32 %i
-  store %funcref %g, %funcref addrspace(1)* %p
+  %p = getelementptr [0 x %funcref], ptr addrspace (1) @funcref_table, i32 0, i32 %i
+  store %funcref %g, ptr addrspace(1) %p
   ret void
 }
 
@@ -25,8 +25,8 @@ define void @set_funcref_table_const(%funcref %g) {
 ; CHECK-NEXT:  local.get      0
 ; CHECK-NEXT:  table.set      funcref_table
 ; CHECK-NEXT:  end_function
-  %p = getelementptr [0 x %funcref], [0 x %funcref] addrspace (1)* @funcref_table, i32 0, i32 0
-  store %funcref %g, %funcref addrspace(1)* %p
+  %p = getelementptr [0 x %funcref], ptr addrspace (1) @funcref_table, i32 0, i32 0
+  store %funcref %g, ptr addrspace(1) %p
   ret void
 }
 
@@ -40,8 +40,8 @@ define void @set_funcref_table_with_offset(%funcref %g, i32 %i) {
 ; CHECK-NEXT:  table.set       funcref_table
 ; CHECK-NEXT:  end_function
   %off = add nsw i32 %i, 2
-  %p = getelementptr [0 x %funcref], [0 x %funcref] addrspace (1)* @funcref_table, i32 0, i32 %off
-  store %funcref %g, %funcref addrspace(1)* %p
+  %p = getelementptr [0 x %funcref], ptr addrspace (1) @funcref_table, i32 0, i32 %off
+  store %funcref %g, ptr addrspace(1) %p
   ret void
 }
 
@@ -55,8 +55,8 @@ define void @set_funcref_table_with_var_offset(%funcref %g, i32 %i, i32 %j) {
 ; CHECK-NEXT:  table.set       funcref_table
 ; CHECK-NEXT:  end_function
   %off = add nsw i32 %i, %j
-  %p = getelementptr [0 x %funcref], [0 x %funcref] addrspace (1)* @funcref_table, i32 0, i32 %off
-  store %funcref %g, %funcref addrspace(1)* %p
+  %p = getelementptr [0 x %funcref], ptr addrspace (1) @funcref_table, i32 0, i32 %off
+  store %funcref %g, ptr addrspace(1) %p
   ret void
 }
 
@@ -73,8 +73,8 @@ define void @set_funcref_table_with_var_offset2(%funcref %g, i32 %i) {
 ; CHECK-NEXT:  end_function
   %j = call i32 @set_offset()
   %off = add nsw i32 %i, %j
-  %p = getelementptr [0 x %funcref], [0 x %funcref] addrspace (1)* @funcref_table, i32 0, i32 %off
-  store %funcref %g, %funcref addrspace(1)* %p
+  %p = getelementptr [0 x %funcref], ptr addrspace (1) @funcref_table, i32 0, i32 %off
+  store %funcref %g, ptr addrspace(1) %p
   ret void
 }
 

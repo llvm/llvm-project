@@ -172,28 +172,28 @@ define i64 @add_and_xor_const_explicit_trunc_wrong_mask(i64 %x) {
   ret i64 %add
 }
 
-define i8* @gep_and_xor(i8* %a, i64 %m) {
+define ptr @gep_and_xor(ptr %a, i64 %m) {
 ; CHECK-LABEL: gep_and_xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
-  %old = ptrtoint i8* %a to i64
+  %old = ptrtoint ptr %a to i64
   %old.not = and i64 %old, %m
   %offset = xor i64 %old.not, %m
-  %p = getelementptr i8, i8* %a, i64 %offset
-  ret i8* %p
+  %p = getelementptr i8, ptr %a, i64 %offset
+  ret ptr %p
 }
 
-define i8* @gep_and_xor_const(i8* %a) {
+define ptr @gep_and_xor_const(ptr %a) {
 ; CHECK-LABEL: gep_and_xor_const:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq $1, %rax
 ; CHECK-NEXT:    retq
-  %old = ptrtoint i8* %a to i64
+  %old = ptrtoint ptr %a to i64
   %old.not = and i64 %old, 1
   %offset = xor i64 %old.not, 1
-  %p = getelementptr i8, i8* %a, i64 %offset
-  ret i8* %p
+  %p = getelementptr i8, ptr %a, i64 %offset
+  ret ptr %p
 }

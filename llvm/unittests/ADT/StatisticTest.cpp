@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 using namespace llvm;
 
-using OptionalStatistic = Optional<std::pair<StringRef, unsigned>>;
+using OptionalStatistic = Optional<std::pair<StringRef, uint64_t>>;
 
 namespace {
 #define DEBUG_TYPE "unittest"
@@ -21,7 +21,7 @@ ALWAYS_ENABLED_STATISTIC(AlwaysCounter, "Counts things always");
 
 #if LLVM_ENABLE_STATS
 static void
-extractCounters(const std::vector<std::pair<StringRef, unsigned>> &Range,
+extractCounters(const std::vector<std::pair<StringRef, uint64_t>> &Range,
                 OptionalStatistic &S1, OptionalStatistic &S2) {
   for (const auto &S : Range) {
     if (S.first == "Counter")
@@ -36,20 +36,21 @@ TEST(StatisticTest, Count) {
   EnableStatistics();
 
   Counter = 0;
-  EXPECT_EQ(Counter, 0u);
+  EXPECT_EQ(Counter, 0ull);
   Counter++;
   Counter++;
+  Counter += (std::numeric_limits<uint64_t>::max() - 3);
 #if LLVM_ENABLE_STATS
-  EXPECT_EQ(Counter, 2u);
+  EXPECT_EQ(Counter, std::numeric_limits<uint64_t>::max() - 1);
 #else
-  EXPECT_EQ(Counter, 0u);
+  EXPECT_EQ(Counter, UINT64_C(0));
 #endif
 
   AlwaysCounter = 0;
-  EXPECT_EQ(AlwaysCounter, 0u);
+  EXPECT_EQ(AlwaysCounter, 0ull);
   AlwaysCounter++;
   ++AlwaysCounter;
-  EXPECT_EQ(AlwaysCounter, 2u);
+  EXPECT_EQ(AlwaysCounter, 2ull);
 }
 
 TEST(StatisticTest, Assign) {
@@ -91,8 +92,8 @@ TEST(StatisticTest, API) {
     OptionalStatistic S2;
     extractCounters(Range1, S1, S2);
 
-    EXPECT_EQ(S1.hasValue(), true);
-    EXPECT_EQ(S2.hasValue(), false);
+    EXPECT_EQ(S1.has_value(), true);
+    EXPECT_EQ(S2.has_value(), false);
   }
 
   // Counter2 will be registered when it's first touched.
@@ -107,8 +108,8 @@ TEST(StatisticTest, API) {
     OptionalStatistic S2;
     extractCounters(Range, S1, S2);
 
-    EXPECT_EQ(S1.hasValue(), true);
-    EXPECT_EQ(S2.hasValue(), true);
+    EXPECT_EQ(S1.has_value(), true);
+    EXPECT_EQ(S2.has_value(), true);
 
     EXPECT_EQ(S1->first, "Counter");
     EXPECT_EQ(S1->second, 2u);
@@ -134,8 +135,8 @@ TEST(StatisticTest, API) {
     OptionalStatistic S1;
     OptionalStatistic S2;
     extractCounters(Range, S1, S2);
-    EXPECT_EQ(S1.hasValue(), false);
-    EXPECT_EQ(S2.hasValue(), false);
+    EXPECT_EQ(S1.has_value(), false);
+    EXPECT_EQ(S2.has_value(), false);
   }
 
   // Now check that they successfully re-register and count.
@@ -152,8 +153,8 @@ TEST(StatisticTest, API) {
     OptionalStatistic S2;
     extractCounters(Range, S1, S2);
 
-    EXPECT_EQ(S1.hasValue(), true);
-    EXPECT_EQ(S2.hasValue(), true);
+    EXPECT_EQ(S1.has_value(), true);
+    EXPECT_EQ(S2.has_value(), true);
 
     EXPECT_EQ(S1->first, "Counter");
     EXPECT_EQ(S1->second, 1u);

@@ -10,46 +10,78 @@
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACECURSORINTELPT_H
 
 #include "ThreadDecoder.h"
-#include "TraceIntelPTSessionFileParser.h"
 
 namespace lldb_private {
 namespace trace_intel_pt {
 
 class TraceCursorIntelPT : public TraceCursor {
 public:
-  TraceCursorIntelPT(lldb::ThreadSP thread_sp,
-                     DecodedThreadSP decoded_thread_sp);
+  TraceCursorIntelPT(
+      lldb::ThreadSP thread_sp, DecodedThreadSP decoded_thread_sp,
+      const llvm::Optional<LinuxPerfZeroTscConversion> &tsc_conversion,
+      llvm::Optional<uint64_t> beginning_of_time_nanos);
 
-  uint64_t Seek(int64_t offset, SeekType origin) override;
+  bool Seek(int64_t offset, SeekType origin) override;
 
-  virtual bool Next() override;
+  void Next() override;
 
-  const char *GetError() override;
+  bool HasValue() const override;
 
-  lldb::addr_t GetLoadAddress() override;
+  const char *GetError() const override;
 
-  llvm::Optional<uint64_t> GetCounter(lldb::TraceCounter counter_type) override;
+  lldb::addr_t GetLoadAddress() const override;
 
-  lldb::TraceEvents GetEvents() override;
+  lldb::TraceEvent GetEventType() const override;
 
-  lldb::TraceInstructionControlFlowType
-  GetInstructionControlFlowType() override;
+  llvm::Optional<lldb::cpu_id_t> GetCPU() const override;
 
-  bool IsError() override;
+  llvm::Optional<uint64_t> GetHWClock() const override;
+
+  lldb::TraceItemKind GetItemKind() const override;
 
   bool GoToId(lldb::user_id_t id) override;
 
   lldb::user_id_t GetId() const override;
 
+  bool HasId(lldb::user_id_t id) const override;
+
+  llvm::Optional<double> GetWallClockTime() const override;
+
 private:
-  size_t GetInternalInstructionSize();
+  /// Clear the current TSC and nanoseconds ranges if after moving they are not
+  /// valid anymore.
+  void ClearTimingRangesIfInvalid();
+
+  /// Get or calculate the TSC range that includes the current trace item.
+  const llvm::Optional<DecodedThread::TSCRange> &GetTSCRange() const;
+
+  /// Get or calculate the TSC range that includes the current trace item.
+  const llvm::Optional<DecodedThread::NanosecondsRange> &
+  GetNanosecondsRange() const;
 
   /// Storage of the actual instructions
   DecodedThreadSP m_decoded_thread_sp;
   /// Internal instruction index currently pointing at.
-  size_t m_pos;
-  /// Tsc range covering the current instruction.
-  llvm::Optional<DecodedThread::TscRange> m_tsc_range;
+  int64_t m_pos;
+
+  /// Timing information and cached values.
+  /// \{
+
+  /// TSC -> nanos conversion utility. \a None if not available at all.
+  llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
+  /// Lowest nanoseconds timestamp seen in any thread trace, \a None if not
+  /// available at all.
+  llvm::Optional<uint64_t> m_beginning_of_time_nanos;
+  /// Range of trace items with the same TSC that includes the current trace
+  /// item, \a None if not calculated or not available.
+  llvm::Optional<DecodedThread::TSCRange> mutable m_tsc_range;
+  bool mutable m_tsc_range_calculated = false;
+  /// Range of trace items with the same non-interpolated timestamps in
+  /// nanoseconds that includes the current trace item, \a None if not
+  /// calculated or not available.
+  llvm::Optional<DecodedThread::NanosecondsRange> mutable m_nanoseconds_range;
+  bool mutable m_nanoseconds_range_calculated = false;
+  /// \}
 };
 
 } // namespace trace_intel_pt

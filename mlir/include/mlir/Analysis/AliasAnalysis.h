@@ -55,7 +55,7 @@ public:
   /// returned.
   AliasResult merge(AliasResult other) const;
 
-  /// Returns if this result is a partial alias.
+  /// Returns if this result indicates no possibility of aliasing.
   bool isNo() const { return kind == NoAlias; }
 
   /// Returns if this result is a may alias.
@@ -193,7 +193,8 @@ struct AliasAnalysisTraits {
   /// `ImplT`. A model is instantiated for each alias analysis implementation
   /// to implement the `Concept` without the need for the derived
   /// implementation to inherit from the `Concept` class.
-  template <typename ImplT> class Model final : public Concept {
+  template <typename ImplT>
+  class Model final : public Concept {
   public:
     explicit Model(ImplT &&impl) : impl(std::forward<ImplT>(impl)) {}
     ~Model() override = default;

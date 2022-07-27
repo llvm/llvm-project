@@ -714,7 +714,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
         return None;
       }
 
-      SSID = IsSyncScopeInclusion.getValue() ? SSID : MMO->getSyncScopeID();
+      SSID = *IsSyncScopeInclusion ? SSID : MMO->getSyncScopeID();
       Ordering = getMergedAtomicOrdering(Ordering, OpOrdering);
       assert(MMO->getFailureOrdering() != AtomicOrdering::Release &&
              MMO->getFailureOrdering() != AtomicOrdering::AcquireRelease);
@@ -733,7 +733,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       return None;
     }
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
-      ScopeOrNone.getValue();
+        *ScopeOrNone;
     if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
         ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace) ||
         ((InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) == SIAtomicAddrSpace::NONE)) {
@@ -795,7 +795,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::getAtomicFenceInfo(
   SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::NONE;
   bool IsCrossAddressSpaceOrdering = false;
   std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
-    ScopeOrNone.getValue();
+      *ScopeOrNone;
 
   if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
       ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace)) {
@@ -2329,13 +2329,13 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       if (const auto &MOI = MOA.getLoadInfo(MI))
-        Changed |= expandLoad(MOI.getValue(), MI);
+        Changed |= expandLoad(MOI.value(), MI);
       else if (const auto &MOI = MOA.getStoreInfo(MI))
-        Changed |= expandStore(MOI.getValue(), MI);
+        Changed |= expandStore(MOI.value(), MI);
       else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
-        Changed |= expandAtomicFence(MOI.getValue(), MI);
+        Changed |= expandAtomicFence(MOI.value(), MI);
       else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
-        Changed |= expandAtomicCmpxchgOrRmw(MOI.getValue(), MI);
+        Changed |= expandAtomicCmpxchgOrRmw(MOI.value(), MI);
     }
   }
 

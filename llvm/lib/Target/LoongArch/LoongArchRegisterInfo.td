@@ -148,7 +148,9 @@ def FPR64 : RegisterClass<"LoongArch", [f64], 64, (sequence "F%u_64", 0, 31)>;
 foreach I = 0-7 in
 def FCC#I : LoongArchReg<I, "fcc"#I>;
 
-def CFR : RegisterClass<"LoongArch", [i32], 32, (sequence "FCC%u", 0, 7)>;
+def CFR : RegisterClass<"LoongArch", [GRLenVT], 32, (sequence "FCC%u", 0, 7)> {
+  let RegInfos = GRLenRI;
+}
 
 // Control and status registers
 

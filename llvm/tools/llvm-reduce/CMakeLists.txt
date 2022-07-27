@@ -14,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   Target
   TransformUtils
+  IPO
   )
 
 add_llvm_tool(llvm-reduce
@@ -21,6 +22,7 @@ add_llvm_tool(llvm-reduce
   ReducerWorkItem.cpp
   TestRunner.cpp
   deltas/Delta.cpp
+  deltas/Utils.cpp
   deltas/ReduceAliases.cpp
   deltas/ReduceArguments.cpp
   deltas/ReduceAttributes.cpp
@@ -43,6 +45,8 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceInstructionFlagsMIR.cpp
   deltas/ReduceIRReferences.cpp
   deltas/ReduceVirtualRegisters.cpp
+  deltas/ReduceRegisterMasks.cpp
+  deltas/ReduceRegisterDefs.cpp
   deltas/ReduceRegisterUses.cpp
   deltas/SimplifyInstructions.cpp
   llvm-reduce.cpp

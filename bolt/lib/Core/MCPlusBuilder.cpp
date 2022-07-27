@@ -159,6 +159,17 @@ void MCPlusBuilder::addEHInfo(MCInst &Inst, const MCLandingPad &LP) {
   }
 }
 
+bool MCPlusBuilder::updateEHInfo(MCInst &Inst, const MCLandingPad &LP) {
+  if (!isInvoke(Inst))
+    return false;
+
+  setAnnotationOpValue(Inst, MCAnnotation::kEHLandingPad,
+                       reinterpret_cast<int64_t>(LP.first));
+  setAnnotationOpValue(Inst, MCAnnotation::kEHAction,
+                       static_cast<int64_t>(LP.second));
+  return true;
+}
+
 int64_t MCPlusBuilder::getGnuArgsSize(const MCInst &Inst) const {
   Optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kGnuArgsSize);

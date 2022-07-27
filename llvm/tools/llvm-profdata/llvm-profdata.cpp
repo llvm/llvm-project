@@ -777,12 +777,12 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
     }
 
     SampleProfileMap &Profiles = Reader->getProfiles();
-    if (ProfileIsProbeBased.hasValue() &&
+    if (ProfileIsProbeBased &&
         ProfileIsProbeBased != FunctionSamples::ProfileIsProbeBased)
       exitWithError(
           "cannot merge probe-based profile with non-probe-based profile");
     ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
-    if (ProfileIsCS.hasValue() && ProfileIsCS != FunctionSamples::ProfileIsCS)
+    if (ProfileIsCS && ProfileIsCS != FunctionSamples::ProfileIsCS)
       exitWithError("cannot merge CS profile with non-CS profile");
     ProfileIsCS = FunctionSamples::ProfileIsCS;
     for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
@@ -2200,8 +2200,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     Builder.addRecord(Func);
 
     if (ShowCovered) {
-      if (std::any_of(Func.Counts.begin(), Func.Counts.end(),
-                      [](uint64_t C) { return C; }))
+      if (llvm::any_of(Func.Counts, [](uint64_t C) { return C; }))
         OS << Func.Name << "\n";
       continue;
     }
@@ -2471,9 +2470,10 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
         (ProfileTotalSample > 0)
             ? (Func.getTotalSamples() * 100.0) / ProfileTotalSample
             : 0;
-    PrintValues.emplace_back(HotFuncInfo(
-        Func.getContext().toString(), Func.getTotalSamples(),
-        TotalSamplePercent, FuncPair.second.second, Func.getEntrySamples()));
+    PrintValues.emplace_back(
+        HotFuncInfo(Func.getContext().toString(), Func.getTotalSamples(),
+                    TotalSamplePercent, FuncPair.second.second,
+                    Func.getHeadSamplesEstimate()));
   }
   dumpHotFunctionList(ColumnTitle, ColumnOffset, PrintValues, HotFuncCount,
                       Profiles.size(), HotFuncSample, ProfileTotalSample,

@@ -37,7 +37,7 @@ static bool mapOptOrNull(const llvm::json::Value &params,
 
   // Field is missing or null.
   auto *v = o->get(prop);
-  if (!v || v->getAsNull().hasValue())
+  if (!v || v->getAsNull())
     return true;
   return fromJSON(*v, out, path.field(prop));
 }
@@ -267,6 +267,10 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
               documentSymbol->getBoolean("hierarchicalDocumentSymbolSupport"))
         result.hierarchicalDocumentSymbol = *hierarchicalSupport;
     }
+    if (auto *codeAction = textDocument->getObject("codeAction")) {
+      if (codeAction->getObject("codeActionLiteralSupport"))
+        result.codeActionStructure = true;
+    }
   }
   return true;
 }
@@ -397,6 +401,12 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const Range &value) {
 //===----------------------------------------------------------------------===//
 // Location
 //===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, Location &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("uri", result.uri) && o.map("range", result.range);
+}
 
 llvm::json::Value mlir::lsp::toJSON(const Location &value) {
   return llvm::json::Object{
@@ -545,7 +555,7 @@ llvm::json::Value mlir::lsp::toJSON(const MarkupContent &mc) {
 
 llvm::json::Value mlir::lsp::toJSON(const Hover &hover) {
   llvm::json::Object result{{"contents", toJSON(hover.contents)}};
-  if (hover.range.hasValue())
+  if (hover.range)
     result["range"] = toJSON(*hover.range);
   return std::move(result);
 }
@@ -581,6 +591,14 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // DiagnosticRelatedInformation
 //===----------------------------------------------------------------------===//
 
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         DiagnosticRelatedInformation &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("location", result.location) &&
+         o.map("message", result.message);
+}
+
 llvm::json::Value mlir::lsp::toJSON(const DiagnosticRelatedInformation &info) {
   return llvm::json::Object{
       {"location", info.location},
@@ -605,6 +623,23 @@ llvm::json::Value mlir::lsp::toJSON(const Diagnostic &diag) {
   if (diag.relatedInformation)
     result["relatedInformation"] = *diag.relatedInformation;
   return std::move(result);
+}
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, Diagnostic &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  if (!o)
+    return false;
+  int severity = 0;
+  if (!mapOptOrNull(value, "severity", severity, path))
+    return false;
+  result.severity = (DiagnosticSeverity)severity;
+
+  return o.map("range", result.range) && o.map("message", result.message) &&
+         mapOptOrNull(value, "category", result.category, path) &&
+         mapOptOrNull(value, "source", result.source, path) &&
+         mapOptOrNull(value, "relatedInformation", result.relatedInformation,
+                      path);
 }
 
 //===----------------------------------------------------------------------===//
@@ -781,7 +816,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 
 llvm::json::Value mlir::lsp::toJSON(const ParameterInformation &value) {
-  assert((value.labelOffsets.hasValue() || !value.labelString.empty()) &&
+  assert((value.labelOffsets || !value.labelString.empty()) &&
          "parameter information label is required");
   llvm::json::Object result;
   if (value.labelOffsets)
@@ -891,4 +926,66 @@ llvm::raw_ostream &mlir::lsp::operator<<(llvm::raw_ostream &os,
     return os << "type";
   }
   llvm_unreachable("Unknown InlayHintKind");
+}
+
+//===----------------------------------------------------------------------===//
+// CodeActionContext
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         CodeActionContext &result, llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  if (!o || !o.map("diagnostics", result.diagnostics))
+    return false;
+  o.map("only", result.only);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// CodeActionParams
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         CodeActionParams &result, llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("textDocument", result.textDocument) &&
+         o.map("range", result.range) && o.map("context", result.context);
+}
+
+//===----------------------------------------------------------------------===//
+// WorkspaceEdit
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, WorkspaceEdit &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("changes", result.changes);
+}
+
+llvm::json::Value mlir::lsp::toJSON(const WorkspaceEdit &value) {
+  llvm::json::Object fileChanges;
+  for (auto &change : value.changes)
+    fileChanges[change.first] = llvm::json::Array(change.second);
+  return llvm::json::Object{{"changes", std::move(fileChanges)}};
+}
+
+//===----------------------------------------------------------------------===//
+// CodeAction
+//===----------------------------------------------------------------------===//
+
+const llvm::StringLiteral CodeAction::kQuickFix = "quickfix";
+const llvm::StringLiteral CodeAction::kRefactor = "refactor";
+const llvm::StringLiteral CodeAction::kInfo = "info";
+
+llvm::json::Value mlir::lsp::toJSON(const CodeAction &value) {
+  llvm::json::Object codeAction{{"title", value.title}};
+  if (value.kind)
+    codeAction["kind"] = *value.kind;
+  if (value.diagnostics)
+    codeAction["diagnostics"] = llvm::json::Array(*value.diagnostics);
+  if (value.isPreferred)
+    codeAction["isPreferred"] = true;
+  if (value.edit)
+    codeAction["edit"] = *value.edit;
+  return std::move(codeAction);
 }

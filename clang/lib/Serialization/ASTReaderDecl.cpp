@@ -605,15 +605,27 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   D->setTopLevelDeclInObjCContainer(Record.readInt());
   D->setAccess((AccessSpecifier)Record.readInt());
   D->FromASTFile = true;
-  bool ModulePrivate = Record.readInt();
+  auto ModuleOwnership = (Decl::ModuleOwnershipKind)Record.readInt();
+  bool ModulePrivate =
+      (ModuleOwnership == Decl::ModuleOwnershipKind::ModulePrivate);
 
   // Determine whether this declaration is part of a (sub)module. If so, it
   // may not yet be visible.
   if (unsigned SubmoduleID = readSubmoduleID()) {
+
+    switch (ModuleOwnership) {
+    case Decl::ModuleOwnershipKind::Visible:
+      ModuleOwnership = Decl::ModuleOwnershipKind::VisibleWhenImported;
+      break;
+    case Decl::ModuleOwnershipKind::Unowned:
+    case Decl::ModuleOwnershipKind::VisibleWhenImported:
+    case Decl::ModuleOwnershipKind::ReachableWhenImported:
+    case Decl::ModuleOwnershipKind::ModulePrivate:
+      break;
+    }
+
+    D->setModuleOwnershipKind(ModuleOwnership);
     // Store the owning submodule ID in the declaration.
-    D->setModuleOwnershipKind(
-        ModulePrivate ? Decl::ModuleOwnershipKind::ModulePrivate
-                      : Decl::ModuleOwnershipKind::VisibleWhenImported);
     D->setOwningModuleID(SubmoduleID);
 
     if (ModulePrivate) {
@@ -940,6 +952,10 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   switch ((FunctionDecl::TemplatedKind)Record.readInt()) {
   case FunctionDecl::TK_NonTemplate:
     mergeRedeclarable(FD, Redecl);
+    break;
+  case FunctionDecl::TK_DependentNonTemplate:
+    mergeRedeclarable(FD, Redecl);
+    FD->setInstantiatedFromDecl(readDeclAs<FunctionDecl>());
     break;
   case FunctionDecl::TK_FunctionTemplate:
     // Merged when we merge the template.
@@ -2910,7 +2926,8 @@ Attr *ASTRecordReader::readAttr() {
 /// Reads attributes from the current stream position.
 void ASTRecordReader::readAttributes(AttrVec &Attrs) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
-    Attrs.push_back(readAttr());
+    if (auto *A = readAttr())
+      Attrs.push_back(A);
 }
 
 //===----------------------------------------------------------------------===//

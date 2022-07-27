@@ -458,7 +458,9 @@ enum RMWOperations {
   RMW_UMAX = 9,
   RMW_UMIN = 10,
   RMW_FADD = 11,
-  RMW_FSUB = 12
+  RMW_FSUB = 12,
+  RMW_FMAX = 13,
+  RMW_FMIN = 14
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -686,6 +688,7 @@ enum AttributeKindCodes {
   ATTR_KIND_ALLOCATED_POINTER = 81,
   ATTR_KIND_ALLOC_KIND = 82,
   ATTR_KIND_PRESPLIT_COROUTINE = 83,
+  ATTR_KIND_FNRETTHUNK_EXTERN = 84,
 };
 
 enum ComdatSelectionKindCodes {

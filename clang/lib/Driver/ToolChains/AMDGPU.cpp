@@ -552,7 +552,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
     if (OptionalGpuArch) {
-      StringRef GpuArch = OptionalGpuArch.getValue();
+      StringRef GpuArch = *OptionalGpuArch;
       // Iterate through all possible target ID features for the given GPU.
       // If it is mapped to true, add +feature.
       // If it is mapped to false, add -feature.
@@ -730,7 +730,7 @@ AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
   if (!OptionalGpuArch)
     return {TargetID.str(), None, None};
 
-  return {TargetID.str(), OptionalGpuArch.getValue().str(), FeatureMap};
+  return {TargetID.str(), OptionalGpuArch->str(), FeatureMap};
 }
 
 void AMDGPUToolChain::checkTargetID(
@@ -738,7 +738,7 @@ void AMDGPUToolChain::checkTargetID(
   auto PTID = getParsedTargetID(DriverArgs);
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
-        << PTID.OptionalTargetID.getValue();
+        << *PTID.OptionalTargetID;
   }
 }
 

@@ -65,6 +65,11 @@ static cl::opt<unsigned> ICPMispredictThreshold(
              "indirect call"),
     cl::init(0), cl::cat(BoltOptCategory));
 
+static cl::alias ICPMispredictThresholdAlias(
+    "icp-mp-threshold",
+    cl::desc("alias for --indirect-call-promotion-mispredict-threshold"),
+    cl::aliasopt(ICPMispredictThreshold));
+
 static cl::opt<bool> ICPUseMispredicts(
     "indirect-call-promotion-use-mispredicts",
     cl::desc("use misprediction frequency for determining whether or not ICP "
@@ -73,11 +78,21 @@ static cl::opt<bool> ICPUseMispredicts(
              "by this heuristic"),
     cl::cat(BoltOptCategory));
 
+static cl::alias ICPUseMispredictsAlias(
+    "icp-use-mp",
+    cl::desc("alias for --indirect-call-promotion-use-mispredicts"),
+    cl::aliasopt(ICPUseMispredicts));
+
 static cl::opt<unsigned>
     ICPTopN("indirect-call-promotion-topn",
             cl::desc("limit number of targets to consider when doing indirect "
                      "call promotion. 0 = no limit"),
             cl::init(3), cl::cat(BoltOptCategory));
+
+static cl::alias
+    ICPTopNAlias("icp-topn",
+                 cl::desc("alias for --indirect-call-promotion-topn"),
+                 cl::aliasopt(ICPTopN));
 
 static cl::opt<unsigned> ICPCallsTopN(
     "indirect-call-promotion-calls-topn",
@@ -85,11 +100,21 @@ static cl::opt<unsigned> ICPCallsTopN(
              "call promotion on calls. 0 = no limit"),
     cl::init(0), cl::cat(BoltOptCategory));
 
+static cl::alias ICPCallsTopNAlias(
+    "icp-calls-topn",
+    cl::desc("alias for --indirect-call-promotion-calls-topn"),
+    cl::aliasopt(ICPCallsTopN));
+
 static cl::opt<unsigned> ICPJumpTablesTopN(
     "indirect-call-promotion-jump-tables-topn",
     cl::desc("limit number of targets to consider when doing indirect "
              "call promotion on jump tables. 0 = no limit"),
     cl::init(0), cl::cat(BoltOptCategory));
+
+static cl::alias ICPJumpTablesTopNAlias(
+    "icp-jt-topn",
+    cl::desc("alias for --indirect-call-promotion-jump-tables-topn"),
+    cl::aliasopt(ICPJumpTablesTopN));
 
 static cl::opt<bool> EliminateLoads(
     "icp-eliminate-loads",
@@ -120,6 +145,11 @@ static cl::opt<bool> ICPJumpTablesByTarget(
         "for jump tables, optimize indirect jmp targets instead of indices"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
+static cl::alias
+    ICPJumpTablesByTargetAlias("icp-jt-targets",
+                               cl::desc("alias for --icp-jump-tables-targets"),
+                               cl::aliasopt(ICPJumpTablesByTarget));
+
 static cl::opt<bool> ICPPeelForInline(
     "icp-inline", cl::desc("only promote call targets eligible for inlining"),
     cl::Hidden, cl::cat(BoltOptCategory));
@@ -132,11 +162,11 @@ static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
     BinaryFunction &BF = BFI.second;
     if (!BF.isSimple())
       continue;
-    for (BinaryBasicBlock *BB : BF.layout()) {
-      auto BI = BB->branch_info_begin();
-      for (BinaryBasicBlock *SuccBB : BB->successors()) {
+    for (const BinaryBasicBlock &BB : BF) {
+      auto BI = BB.branch_info_begin();
+      for (BinaryBasicBlock *SuccBB : BB.successors()) {
         if (BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE && BI->Count > 0) {
-          if (BB->getKnownExecutionCount() == 0 ||
+          if (BB.getKnownExecutionCount() == 0 ||
               SuccBB->getKnownExecutionCount() == 0) {
             errs() << "BOLT-WARNING: profile verification failed after ICP for "
                       "function "
@@ -238,17 +268,16 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     }
 
     // Sort by symbol then addr.
-    std::sort(Targets.begin(), Targets.end(),
-              [](const Callsite &A, const Callsite &B) {
-                if (A.To.Sym && B.To.Sym)
-                  return A.To.Sym < B.To.Sym;
-                else if (A.To.Sym && !B.To.Sym)
-                  return true;
-                else if (!A.To.Sym && B.To.Sym)
-                  return false;
-                else
-                  return A.To.Addr < B.To.Addr;
-              });
+    llvm::sort(Targets, [](const Callsite &A, const Callsite &B) {
+      if (A.To.Sym && B.To.Sym)
+        return A.To.Sym < B.To.Sym;
+      else if (A.To.Sym && !B.To.Sym)
+        return true;
+      else if (!A.To.Sym && B.To.Sym)
+        return false;
+      else
+        return A.To.Addr < B.To.Addr;
+    });
 
     // Targets may contain multiple entries to the same target, but using
     // different indices. Their profile will report the same number of branches
@@ -294,21 +323,18 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
   // Sort by target count, number of indices in case of jump table, and
   // mispredicts. We prioritize targets with high count, small number of indices
   // and high mispredicts. Break ties by selecting targets with lower addresses.
-  std::stable_sort(Targets.begin(), Targets.end(),
-                   [](const Callsite &A, const Callsite &B) {
-                     if (A.Branches != B.Branches)
-                       return A.Branches > B.Branches;
-                     if (A.JTIndices.size() != B.JTIndices.size())
-                       return A.JTIndices.size() < B.JTIndices.size();
-                     if (A.Mispreds != B.Mispreds)
-                       return A.Mispreds > B.Mispreds;
-                     return A.To.Addr < B.To.Addr;
-                   });
+  llvm::stable_sort(Targets, [](const Callsite &A, const Callsite &B) {
+    if (A.Branches != B.Branches)
+      return A.Branches > B.Branches;
+    if (A.JTIndices.size() != B.JTIndices.size())
+      return A.JTIndices.size() < B.JTIndices.size();
+    if (A.Mispreds != B.Mispreds)
+      return A.Mispreds > B.Mispreds;
+    return A.To.Addr < B.To.Addr;
+  });
 
   // Remove non-symbol targets
-  auto Last = std::remove_if(Targets.begin(), Targets.end(),
-                             [](const Callsite &CS) { return !CS.To.Sym; });
-  Targets.erase(Last, Targets.end());
+  llvm::erase_if(Targets, [](const Callsite &CS) { return !CS.To.Sym; });
 
   LLVM_DEBUG(if (BF.getJumpTable(Inst)) {
     uint64_t TotalCount = 0;
@@ -471,14 +497,14 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
     HotTarget.second = Index;
   }
 
-  std::transform(
-      HotTargetMap.begin(), HotTargetMap.end(), std::back_inserter(HotTargets),
+  llvm::transform(
+      HotTargetMap, std::back_inserter(HotTargets),
       [](const std::pair<MCSymbol *, std::pair<uint64_t, uint64_t>> &A) {
         return A.second;
       });
 
   // Sort with highest counts first.
-  std::sort(HotTargets.rbegin(), HotTargets.rend());
+  llvm::sort(reverse(HotTargets));
 
   LLVM_DEBUG({
     dbgs() << "BOLT-INFO: ICP jump table hot targets:\n";
@@ -566,9 +592,7 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
 
       NewTargets.push_back(Target);
       std::vector<uint64_t>({JTIndex}).swap(NewTargets.back().JTIndices);
-      Target.JTIndices.erase(std::remove(Target.JTIndices.begin(),
-                                         Target.JTIndices.end(), JTIndex),
-                             Target.JTIndices.end());
+      llvm::erase_value(Target.JTIndices, JTIndex);
 
       // Keep fixCFG counts sane if more indices use this same target later
       assert(IndicesPerTarget[Target.To.Sym] > 0 && "wrong map");
@@ -581,7 +605,7 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
       Target.Branches -= NewTargets.back().Branches;
       Target.Mispreds -= NewTargets.back().Mispreds;
     }
-    std::copy(Targets.begin(), Targets.end(), std::back_inserter(NewTargets));
+    llvm::copy(Targets, std::back_inserter(NewTargets));
     std::swap(NewTargets, Targets);
     N = I;
 
@@ -953,10 +977,8 @@ size_t IndirectCallPromotion::canPromoteCallsite(
 
   const size_t TrialN = TopN ? std::min(TopN, Targets.size()) : Targets.size();
 
-  if (opts::ICPTopCallsites > 0) {
-    if (!BC.MIB->hasAnnotation(Inst, "DoICP"))
-      return 0;
-  }
+  if (opts::ICPTopCallsites && !BC.MIB->hasAnnotation(Inst, "DoICP"))
+    return 0;
 
   // Pick the top N targets.
   uint64_t TotalMispredictsTopN = 0;
@@ -1040,11 +1062,11 @@ size_t IndirectCallPromotion::canPromoteCallsite(
 
   // Filter by inline-ability of target functions, stop at first target that
   // can't be inlined.
-  if (opts::ICPPeelForInline) {
+  if (!IsJumpTable && opts::ICPPeelForInline) {
     for (size_t I = 0; I < N; ++I) {
       const MCSymbol *TargetSym = Targets[I].To.Sym;
       const BinaryFunction *TargetBF = BC.getFunctionForSymbol(TargetSym);
-      if (!BinaryFunctionPass::shouldOptimize(*TargetBF) ||
+      if (!TargetBF || !BinaryFunctionPass::shouldOptimize(*TargetBF) ||
           getInliningInfo(*TargetBF).Type == InliningType::INL_NONE) {
         N = I;
         break;
@@ -1140,7 +1162,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
           !Function.hasProfile())
         continue;
 
-      const bool HasLayout = !Function.layout_empty();
+      const bool HasLayout = !Function.getLayout().block_empty();
 
       for (BinaryBasicBlock &BB : Function) {
         if (HasLayout && Function.isSplit() && BB.isCold())
@@ -1168,7 +1190,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
     }
 
     // Sort callsites by execution count.
-    std::sort(IndirectCalls.rbegin(), IndirectCalls.rend());
+    llvm::sort(reverse(IndirectCalls));
 
     // Find callsites that contribute to the top "opts::ICPTopCallsites"%
     // number of calls.
@@ -1200,7 +1222,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
     if (!Function.isSimple() || Function.isIgnored() || !Function.hasProfile())
       continue;
 
-    const bool HasLayout = !Function.layout_empty();
+    const bool HasLayout = !Function.getLayout().block_empty();
 
     // Total number of indirect calls issued from the current Function.
     // (a fraction of TotalIndirectCalls)

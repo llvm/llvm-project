@@ -50,7 +50,7 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
      outlined into a separate function. The provided name is used as a _base_
      for forming actual function names following SymbolTable auto-renaming
      scheme to avoid duplicate symbols. Expects that all ops in the Payload IR
-     have a SymbolTable ancestor (typically true because of the top-level 
+     have a SymbolTable ancestor (typically true because of the top-level
      module). Returns the handle to the list of outlined functions in the same
      order as the operand handle.
   }];
@@ -68,27 +68,40 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let summary = "Peels the last iteration of the loop";
   let description = [{
      Updates the given loop so that its step evenly divides its range and puts
-     the remaining iteration into a separate loop or a conditional. Note that
-     even though the Payload IR modification may be performed in-place, this
-     operation consumes the operand handle and produces a new one. Applies to
-     each loop associated with the operand handle individually. The results
-     follow the same order as the operand.
+     the remaining iteration into a separate loop or a conditional.
 
-     Note: If it can be proven statically that the step already evenly divides
-     the range, this op is a no-op. In the absence of sufficient static
-     information, this op may peel a loop, even if the step always divides the
-     range evenly at runtime.
+     In the absence of sufficient static information, this op may peel a loop,
+     even if the step always divides the range evenly at runtime.
+
+     #### Return modes
+     
+     This operation ignores non-scf::ForOp ops and drops them in the return.
+
+     This operation always succeeds and returns the scf::ForOp with the
+     postcondition: "the loop trip count is divisible by the step".
+     This operation may return the same unmodified loop handle when peeling did
+     not modify the IR (i.e. the loop trip count was already divisible).
+
+     Note that even though the Payload IR modification may be performed
+     in-place, this operation consumes the operand handle and produces a new
+     one.
+
+     TODO: Return both the peeled loop and the remainder loop.
   }];
 
   let arguments =
       (ins PDL_Operation:$target,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
+  // TODO: Return both the peeled loop and the remainder loop. 
   let results = (outs PDL_Operation:$transformed);
 
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::scf::ForOp> applyToOne(::mlir::scf::ForOp loop);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::scf::ForOp target, 
+        ::llvm::SmallVector<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
  
@@ -101,10 +114,21 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
     each of them. That is, performs some amount of reads from memory before the
     loop rather than inside the loop, the same amount of writes into memory
     after the loop, and updates each iteration to read the data for a following
-    iteration rather than the current one. The amount is specified by the
-    attributes. The values read and about to be stored are transferred as loop
-    iteration arguments. Currently supports memref and vector transfer
-    operations as memory reads/writes.
+    iteration rather than the current one. 
+    
+    The amount is specified by the attributes. 
+    
+    The values read and about to be stored are transferred as loop iteration
+    arguments. Currently supports memref and vector transfer operations as 
+    memory reads/writes.
+
+    #### Return modes
+    
+    This operation ignores non-scf::For ops and drops them in the return.
+    If all the operations referred to by the `target` PDLOperation pipeline
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    The return handle points to only the subset of successfully produced 
+    pipelined loops, which can be empty.
   }];
 
   let arguments = (ins PDL_Operation:$target,
@@ -115,7 +139,10 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::scf::ForOp> applyToOne(::mlir::scf::ForOp loop);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::scf::ForOp target, 
+        ::llvm::SmallVector<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -124,11 +151,18 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
      TransformOpInterface, TransformEachOpTrait]> {
   let summary = "Unrolls the given loop with the given unroll factor";
   let description = [{
-     Unrolls each loop associated with the given handle to have up to the given
-     number of loop body copies per iteration. If the unroll factor is larger
-     than the loop trip count, the latter is used as the unroll factor instead.
-     Does not produce a new handle as the operation may result in the loop being
-     removed after a full unrolling.
+    Unrolls each loop associated with the given handle to have up to the given
+    number of loop body copies per iteration. If the unroll factor is larger
+    than the loop trip count, the latter is used as the unroll factor instead.
+
+    #### Return modes
+    
+    This operation ignores non-scf::For ops and drops them in the return.
+    If all the operations referred to by the `target` PDLOperation unroll
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    
+    Does not return handles as the operation may result in the loop being
+    removed after a full unrolling.
   }];
 
   let arguments = (ins PDL_Operation:$target,
@@ -137,7 +171,10 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::LogicalResult applyToOne(::mlir::scf::ForOp loop);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::scf::ForOp target, 
+        ::llvm::SmallVector<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 

@@ -301,6 +301,15 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 }
 
 Optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
+  unsigned Type = llvm::StringSwitch<unsigned>(Name)
+                      .Case("BFD_RELOC_NONE", ELF::R_MIPS_NONE)
+                      .Case("BFD_RELOC_16", ELF::R_MIPS_16)
+                      .Case("BFD_RELOC_32", ELF::R_MIPS_32)
+                      .Case("BFD_RELOC_64", ELF::R_MIPS_64)
+                      .Default(-1u);
+  if (Type != -1u)
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+
   return StringSwitch<Optional<MCFixupKind>>(Name)
       .Case("R_MIPS_NONE", FK_NONE)
       .Case("R_MIPS_32", FK_Data_4)
@@ -502,6 +511,8 @@ getFixupKindInfo(MCFixupKind Kind) const {
   static_assert(array_lengthof(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
 
+  if (Kind >= FirstLiteralRelocationKind)
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
@@ -534,6 +545,8 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
                                            const MCValue &Target) {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return true;
   const unsigned FixupKind = Fixup.getKind();
   switch (FixupKind) {
   default:

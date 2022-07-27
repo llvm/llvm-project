@@ -16,14 +16,43 @@
 using namespace mlir;
 
 namespace {
+// Functor to resolve the function name corresponding to the given complex
+// result type.
+struct ComplexTypeResolver {
+  llvm::Optional<bool> operator()(Type type) const {
+    auto complexType = type.cast<ComplexType>();
+    auto elementType = complexType.getElementType();
+    if (!elementType.isa<Float32Type, Float64Type>())
+      return {};
+
+    return elementType.getIntOrFloatBitWidth() == 64;
+  }
+};
+
+// Functor to resolve the function name corresponding to the given float result
+// type.
+struct FloatTypeResolver {
+  llvm::Optional<bool> operator()(Type type) const {
+    auto elementType = type.cast<FloatType>();
+    if (!elementType.isa<Float32Type, Float64Type>())
+      return {};
+
+    return elementType.getIntOrFloatBitWidth() == 64;
+  }
+};
+
 // Pattern to convert scalar complex operations to calls to libm functions.
 // Additionally the libm function signatures are declared.
-template <typename Op>
+// TypeResolver is a functor returning the libm function name according to the
+// expected type double or float.
+template <typename Op, typename TypeResolver = ComplexTypeResolver>
 struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
-  ScalarOpToLibmCall<Op>(MLIRContext *context, StringRef floatFunc,
-                         StringRef doubleFunc, PatternBenefit benefit)
+  ScalarOpToLibmCall<Op, TypeResolver>(MLIRContext *context,
+                                       StringRef floatFunc,
+                                       StringRef doubleFunc,
+                                       PatternBenefit benefit)
       : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 
@@ -34,18 +63,16 @@ private:
 };
 } // namespace
 
-template <typename Op>
-LogicalResult
-ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
-                                        PatternRewriter &rewriter) const {
+template <typename Op, typename TypeResolver>
+LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
+    Op op, PatternRewriter &rewriter) const {
   auto module = SymbolTable::getNearestSymbolTable(op);
-  auto type = op.getType().template cast<ComplexType>();
-  Type elementType = type.getElementType();
-  if (!elementType.isa<Float32Type, Float64Type>())
+  auto isDouble = TypeResolver()(op.getType());
+  if (!isDouble.has_value())
     return failure();
 
-  auto name =
-      elementType.getIntOrFloatBitWidth() == 64 ? doubleFunc : floatFunc;
+  auto name = isDouble.value() ? doubleFunc : floatFunc;
+
   auto opFunc = dyn_cast_or_null<SymbolOpInterface>(
       SymbolTable::lookupSymbolIn(module, name));
   // Forward declare function if it hasn't already been
@@ -60,7 +87,8 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 
-  rewriter.replaceOpWithNewOp<func::CallOp>(op, name, type, op->getOperands());
+  rewriter.replaceOpWithNewOp<func::CallOp>(op, name, op.getType(),
+                                            op->getOperands());
 
   return success();
 }
@@ -77,6 +105,14 @@ void mlir::populateComplexToLibmConversionPatterns(RewritePatternSet &patterns,
                                                    "ccosf", "ccos", benefit);
   patterns.add<ScalarOpToLibmCall<complex::SinOp>>(patterns.getContext(),
                                                    "csinf", "csin", benefit);
+  patterns.add<ScalarOpToLibmCall<complex::ConjOp>>(patterns.getContext(),
+                                                    "conjf", "conj", benefit);
+  patterns.add<ScalarOpToLibmCall<complex::LogOp>>(patterns.getContext(),
+                                                   "clogf", "clog", benefit);
+  patterns.add<ScalarOpToLibmCall<complex::AbsOp, FloatTypeResolver>>(
+      patterns.getContext(), "cabsf", "cabs", benefit);
+  patterns.add<ScalarOpToLibmCall<complex::AngleOp, FloatTypeResolver>>(
+      patterns.getContext(), "cargf", "carg", benefit);
 }
 
 namespace {
@@ -94,7 +130,8 @@ void ConvertComplexToLibmPass::runOnOperation() {
 
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
-  target.addIllegalOp<complex::PowOp, complex::SqrtOp, complex::TanhOp>();
+  target.addIllegalOp<complex::PowOp, complex::SqrtOp, complex::TanhOp,
+                      complex::AbsOp, complex::AngleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

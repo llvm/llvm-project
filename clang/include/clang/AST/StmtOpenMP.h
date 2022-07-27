@@ -1523,6 +1523,8 @@ public:
            T->getStmtClass() == OMPParallelForSimdDirectiveClass ||
            T->getStmtClass() == OMPTaskLoopDirectiveClass ||
            T->getStmtClass() == OMPTaskLoopSimdDirectiveClass ||
+           T->getStmtClass() == OMPMaskedTaskLoopDirectiveClass ||
+           T->getStmtClass() == OMPMaskedTaskLoopSimdDirectiveClass ||
            T->getStmtClass() == OMPMasterTaskLoopDirectiveClass ||
            T->getStmtClass() == OMPMasterTaskLoopSimdDirectiveClass ||
            T->getStmtClass() == OMPGenericLoopDirectiveClass ||
@@ -1530,6 +1532,8 @@ public:
            T->getStmtClass() == OMPTargetTeamsGenericLoopDirectiveClass ||
            T->getStmtClass() == OMPParallelGenericLoopDirectiveClass ||
            T->getStmtClass() == OMPTargetParallelGenericLoopDirectiveClass ||
+           T->getStmtClass() == OMPParallelMaskedTaskLoopDirectiveClass ||
+           T->getStmtClass() == OMPParallelMaskedTaskLoopSimdDirectiveClass ||
            T->getStmtClass() == OMPParallelMasterTaskLoopDirectiveClass ||
            T->getStmtClass() == OMPParallelMasterTaskLoopSimdDirectiveClass ||
            T->getStmtClass() == OMPDistributeDirectiveClass ||
@@ -3858,6 +3862,82 @@ public:
   }
 };
 
+/// This represents '#pragma omp masked taskloop' directive.
+///
+/// \code
+/// #pragma omp masked taskloop private(a,b) grainsize(val) num_tasks(num)
+/// \endcode
+/// In this example directive '#pragma omp masked taskloop' has clauses
+/// 'private' with the variables 'a' and 'b', 'grainsize' with expression 'val'
+/// and 'num_tasks' with expression 'num'.
+///
+class OMPMaskedTaskLoopDirective final : public OMPLoopDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// true if the construct has inner cancel directive.
+  bool HasCancel = false;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  OMPMaskedTaskLoopDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                             unsigned CollapsedNum)
+      : OMPLoopDirective(OMPMaskedTaskLoopDirectiveClass,
+                         llvm::omp::OMPD_masked_taskloop, StartLoc, EndLoc,
+                         CollapsedNum) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  explicit OMPMaskedTaskLoopDirective(unsigned CollapsedNum)
+      : OMPLoopDirective(OMPMaskedTaskLoopDirectiveClass,
+                         llvm::omp::OMPD_masked_taskloop, SourceLocation(),
+                         SourceLocation(), CollapsedNum) {}
+
+  /// Set cancel state.
+  void setHasCancel(bool Has) { HasCancel = Has; }
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param CollapsedNum Number of collapsed loops.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param Exprs Helper expressions for CodeGen.
+  /// \param HasCancel true if this directive has inner cancel directive.
+  ///
+  static OMPMaskedTaskLoopDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt, const HelperExprs &Exprs, bool HasCancel);
+
+  /// Creates an empty directive with the place
+  /// for \a NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPMaskedTaskLoopDirective *CreateEmpty(const ASTContext &C,
+                                                 unsigned NumClauses,
+                                                 unsigned CollapsedNum,
+                                                 EmptyShell);
+
+  /// Return true if current directive has inner cancel directive.
+  bool hasCancel() const { return HasCancel; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPMaskedTaskLoopDirectiveClass;
+  }
+};
+
 /// This represents '#pragma omp master taskloop simd' directive.
 ///
 /// \code
@@ -3920,6 +4000,71 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPMasterTaskLoopSimdDirectiveClass;
+  }
+};
+
+/// This represents '#pragma omp masked taskloop simd' directive.
+///
+/// \code
+/// #pragma omp masked taskloop simd private(a,b) grainsize(val) num_tasks(num)
+/// \endcode
+/// In this example directive '#pragma omp masked taskloop simd' has clauses
+/// 'private' with the variables 'a' and 'b', 'grainsize' with expression 'val'
+/// and 'num_tasks' with expression 'num'.
+///
+class OMPMaskedTaskLoopSimdDirective final : public OMPLoopDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  OMPMaskedTaskLoopSimdDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                                 unsigned CollapsedNum)
+      : OMPLoopDirective(OMPMaskedTaskLoopSimdDirectiveClass,
+                         llvm::omp::OMPD_masked_taskloop_simd, StartLoc, EndLoc,
+                         CollapsedNum) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  explicit OMPMaskedTaskLoopSimdDirective(unsigned CollapsedNum)
+      : OMPLoopDirective(OMPMaskedTaskLoopSimdDirectiveClass,
+                         llvm::omp::OMPD_masked_taskloop_simd, SourceLocation(),
+                         SourceLocation(), CollapsedNum) {}
+
+public:
+  /// Creates directive with a list of \p Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param CollapsedNum Number of collapsed loops.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param Exprs Helper expressions for CodeGen.
+  ///
+  static OMPMaskedTaskLoopSimdDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt, const HelperExprs &Exprs);
+
+  /// Creates an empty directive with the place for \p NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPMaskedTaskLoopSimdDirective *CreateEmpty(const ASTContext &C,
+                                                     unsigned NumClauses,
+                                                     unsigned CollapsedNum,
+                                                     EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPMaskedTaskLoopSimdDirectiveClass;
   }
 };
 
@@ -4001,6 +4146,84 @@ public:
   }
 };
 
+/// This represents '#pragma omp parallel masked taskloop' directive.
+///
+/// \code
+/// #pragma omp parallel masked taskloop private(a,b) grainsize(val)
+/// num_tasks(num)
+/// \endcode
+/// In this example directive '#pragma omp parallel masked taskloop' has clauses
+/// 'private' with the variables 'a' and 'b', 'grainsize' with expression 'val'
+/// and 'num_tasks' with expression 'num'.
+///
+class OMPParallelMaskedTaskLoopDirective final : public OMPLoopDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// true if the construct has inner cancel directive.
+  bool HasCancel = false;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  OMPParallelMaskedTaskLoopDirective(SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     unsigned CollapsedNum)
+      : OMPLoopDirective(OMPParallelMaskedTaskLoopDirectiveClass,
+                         llvm::omp::OMPD_parallel_masked_taskloop, StartLoc,
+                         EndLoc, CollapsedNum) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  explicit OMPParallelMaskedTaskLoopDirective(unsigned CollapsedNum)
+      : OMPLoopDirective(OMPParallelMaskedTaskLoopDirectiveClass,
+                         llvm::omp::OMPD_parallel_masked_taskloop,
+                         SourceLocation(), SourceLocation(), CollapsedNum) {}
+
+  /// Set cancel state.
+  void setHasCancel(bool Has) { HasCancel = Has; }
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param CollapsedNum Number of collapsed loops.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param Exprs Helper expressions for CodeGen.
+  /// \param HasCancel true if this directive has inner cancel directive.
+  ///
+  static OMPParallelMaskedTaskLoopDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt, const HelperExprs &Exprs, bool HasCancel);
+
+  /// Creates an empty directive with the place
+  /// for \a NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPParallelMaskedTaskLoopDirective *CreateEmpty(const ASTContext &C,
+                                                         unsigned NumClauses,
+                                                         unsigned CollapsedNum,
+                                                         EmptyShell);
+
+  /// Return true if current directive has inner cancel directive.
+  bool hasCancel() const { return HasCancel; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPParallelMaskedTaskLoopDirectiveClass;
+  }
+};
+
 /// This represents '#pragma omp parallel master taskloop simd' directive.
 ///
 /// \code
@@ -4065,6 +4288,73 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPParallelMasterTaskLoopSimdDirectiveClass;
+  }
+};
+
+/// This represents '#pragma omp parallel masked taskloop simd' directive.
+///
+/// \code
+/// #pragma omp parallel masked taskloop simd private(a,b) grainsize(val)
+/// num_tasks(num)
+/// \endcode
+/// In this example directive '#pragma omp parallel masked taskloop simd' has
+/// clauses 'private' with the variables 'a' and 'b', 'grainsize' with
+/// expression 'val' and 'num_tasks' with expression 'num'.
+///
+class OMPParallelMaskedTaskLoopSimdDirective final : public OMPLoopDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  OMPParallelMaskedTaskLoopSimdDirective(SourceLocation StartLoc,
+                                         SourceLocation EndLoc,
+                                         unsigned CollapsedNum)
+      : OMPLoopDirective(OMPParallelMaskedTaskLoopSimdDirectiveClass,
+                         llvm::omp::OMPD_parallel_masked_taskloop_simd,
+                         StartLoc, EndLoc, CollapsedNum) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  explicit OMPParallelMaskedTaskLoopSimdDirective(unsigned CollapsedNum)
+      : OMPLoopDirective(OMPParallelMaskedTaskLoopSimdDirectiveClass,
+                         llvm::omp::OMPD_parallel_masked_taskloop_simd,
+                         SourceLocation(), SourceLocation(), CollapsedNum) {}
+
+public:
+  /// Creates directive with a list of \p Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param CollapsedNum Number of collapsed loops.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param Exprs Helper expressions for CodeGen.
+  ///
+  static OMPParallelMaskedTaskLoopSimdDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt, const HelperExprs &Exprs);
+
+  /// Creates an empty directive with the place
+  /// for \a NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPParallelMaskedTaskLoopSimdDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, unsigned CollapsedNum,
+              EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPParallelMaskedTaskLoopSimdDirectiveClass;
   }
 };
 

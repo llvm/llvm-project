@@ -121,7 +121,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
       assert(MI && "Dead valno in interval");
     }
 
-    if (!TII.isTriviallyReMaterializable(*MI, LIS.getAliasAnalysis()))
+    if (!TII.isTriviallyReMaterializable(*MI))
       return false;
   }
   return true;
@@ -279,7 +279,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       MRI.clearSimpleHint(LI.reg());
 
     std::set<Register> HintedRegs;
-    for (auto &Hint : CopyHints) {
+    for (const auto &Hint : CopyHints) {
       if (!HintedRegs.insert(Hint.Reg).second ||
           (TargetHint.first != 0 && Hint.Reg == TargetHint.second))
         // Don't add the same reg twice or the target-type hint again.

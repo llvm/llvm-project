@@ -221,6 +221,8 @@ enum Kind {
   kw_min,
   kw_umax,
   kw_umin,
+  kw_fmax,
+  kw_fmin,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -397,9 +399,6 @@ enum Kind {
   // GV's with __attribute__((no_sanitize("hwaddress"))), or things in
   // -fsanitize-ignorelist when built with HWASan.
   kw_no_sanitize_hwaddress,
-  // GV's with __attribute__((no_sanitize("memtag"))), or things in
-  // -fsanitize-ignorelist when built with memory tagging.
-  kw_no_sanitize_memtag,
   // GV's where the clang++ frontend (when ASan is used) notes that this is
   // dynamically initialized, and thus needs ODR detection.
   kw_sanitize_address_dyninit,

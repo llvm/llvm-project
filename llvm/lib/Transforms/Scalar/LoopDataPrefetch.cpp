@@ -213,10 +213,12 @@ bool LoopDataPrefetchLegacyPass::runOnFunction(Function &F) {
 bool LoopDataPrefetch::run() {
   // If PrefetchDistance is not set, don't run the pass.  This gives an
   // opportunity for targets to run this pass for selected subtargets only
-  // (whose TTI sets PrefetchDistance).
-  if (getPrefetchDistance() == 0)
+  // (whose TTI sets PrefetchDistance and CacheLineSize).
+  if (getPrefetchDistance() == 0 || TTI->getCacheLineSize() == 0) {
+    LLVM_DEBUG(dbgs() << "Please set both PrefetchDistance and CacheLineSize "
+                         "for loop data prefetch.\n");
     return false;
-  assert(TTI->getCacheLineSize() && "Cache line size is not set for target");
+  }
 
   bool MadeChange = false;
 
@@ -388,15 +390,15 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     if (!isStrideLargeEnough(P.LSCEVAddRec, TargetMinStride))
       continue;
 
+    BasicBlock *BB = P.InsertPt->getParent();
+    SCEVExpander SCEVE(*SE, BB->getModule()->getDataLayout(), "prefaddr");
     const SCEV *NextLSCEV = SE->getAddExpr(P.LSCEVAddRec, SE->getMulExpr(
       SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
       P.LSCEVAddRec->getStepRecurrence(*SE)));
-    if (!isSafeToExpand(NextLSCEV, *SE))
+    if (!SCEVE.isSafeToExpand(NextLSCEV))
       continue;
 
-    BasicBlock *BB = P.InsertPt->getParent();
     Type *I8Ptr = Type::getInt8PtrTy(BB->getContext(), 0/*PtrAddrSpace*/);
-    SCEVExpander SCEVE(*SE, BB->getModule()->getDataLayout(), "prefaddr");
     Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, P.InsertPt);
 
     IRBuilder<> Builder(P.InsertPt);

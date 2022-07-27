@@ -144,9 +144,7 @@ Module::Module(const ModuleSpec &module_spec)
               module_spec.GetArchitecture().GetArchitectureName(),
               module_spec.GetFileSpec().GetPath().c_str(),
               module_spec.GetObjectName().IsEmpty() ? "" : "(",
-              module_spec.GetObjectName().IsEmpty()
-                  ? ""
-                  : module_spec.GetObjectName().AsCString(""),
+              module_spec.GetObjectName().AsCString(""),
               module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
   auto data_sp = module_spec.GetData();
@@ -254,8 +252,7 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
     LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
               static_cast<void *>(this), m_arch.GetArchitectureName(),
               m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""),
-              m_object_name.IsEmpty() ? "" : ")");
+              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
 }
 
 Module::Module() : m_file_has_changed(false), m_first_file_changed_log(false) {
@@ -283,8 +280,7 @@ Module::~Module() {
     LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
               static_cast<void *>(this), m_arch.GetArchitectureName(),
               m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""),
-              m_object_name.IsEmpty() ? "" : ")");
+              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
   // Release any auto pointers before we start tearing down our member
   // variables since the object file and symbol files might need to make
   // function calls back into this module object. The ordering is important
@@ -1000,8 +996,7 @@ void Module::FindTypes(
     FindTypes_Impl(type_basename_const_str, CompilerDeclContext(), max_matches,
                    searched_symbol_files, typesmap);
     if (typesmap.GetSize())
-      typesmap.RemoveMismatchedTypes(std::string(type_scope),
-                                     std::string(type_basename), type_class,
+      typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                      exact_match);
   } else {
     // The type is not in a namespace/class scope, just search for it by
@@ -1011,15 +1006,13 @@ void Module::FindTypes(
       // class prefix (like "struct", "class", "union", "typedef" etc).
       FindTypes_Impl(ConstString(type_basename), CompilerDeclContext(),
                      UINT_MAX, searched_symbol_files, typesmap);
-      typesmap.RemoveMismatchedTypes(std::string(type_scope),
-                                     std::string(type_basename), type_class,
+      typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                      exact_match);
     } else {
       FindTypes_Impl(name, CompilerDeclContext(), UINT_MAX,
                      searched_symbol_files, typesmap);
       if (exact_match) {
-        std::string name_str(name.AsCString(""));
-        typesmap.RemoveMismatchedTypes(std::string(type_scope), name_str,
+        typesmap.RemoveMismatchedTypes(type_scope, name.GetStringRef(),
                                        type_class, exact_match);
       }
     }
@@ -1107,27 +1100,6 @@ void Module::GetDescription(llvm::raw_ostream &s,
     s << llvm::formatv("({0})", object_name);
 }
 
-void Module::ReportError(const char *format, ...) {
-  if (format && format[0]) {
-    StreamString strm;
-    strm.PutCString("error: ");
-    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
-    strm.PutChar(' ');
-    va_list args;
-    va_start(args, format);
-    strm.PrintfVarArg(format, args);
-    va_end(args);
-
-    const int format_len = strlen(format);
-    if (format_len > 0) {
-      const char last_char = format[format_len - 1];
-      if (last_char != '\n' && last_char != '\r')
-        strm.EOL();
-    }
-    Host::SystemLog(Host::eSystemLogError, "%s", strm.GetData());
-  }
-}
-
 bool Module::FileHasChanged() const {
   // We have provided the DataBuffer for this module to avoid accessing the
   // filesystem. We never want to reload those files.
@@ -1170,7 +1142,7 @@ void Module::ReportErrorIfModifyDetected(const char *format, ...) {
       m_first_file_changed_log = true;
       if (format) {
         StreamString strm;
-        strm.PutCString("error: the object file ");
+        strm.PutCString("the object file ");
         GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
         strm.PutCString(" has been modified\n");
 
@@ -1186,17 +1158,31 @@ void Module::ReportErrorIfModifyDetected(const char *format, ...) {
             strm.EOL();
         }
         strm.PutCString("The debug session should be aborted as the original "
-                        "debug information has been overwritten.\n");
-        Host::SystemLog(Host::eSystemLogError, "%s", strm.GetData());
+                        "debug information has been overwritten.");
+        Debugger::ReportError(std::string(strm.GetString()));
       }
     }
+  }
+}
+
+void Module::ReportError(const char *format, ...) {
+  if (format && format[0]) {
+    StreamString strm;
+    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
+    strm.PutChar(' ');
+
+    va_list args;
+    va_start(args, format);
+    strm.PrintfVarArg(format, args);
+    va_end(args);
+
+    Debugger::ReportError(std::string(strm.GetString()));
   }
 }
 
 void Module::ReportWarning(const char *format, ...) {
   if (format && format[0]) {
     StreamString strm;
-    strm.PutCString("warning: ");
     GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
     strm.PutChar(' ');
 
@@ -1205,13 +1191,7 @@ void Module::ReportWarning(const char *format, ...) {
     strm.PrintfVarArg(format, args);
     va_end(args);
 
-    const int format_len = strlen(format);
-    if (format_len > 0) {
-      const char last_char = format[format_len - 1];
-      if (last_char != '\n' && last_char != '\r')
-        strm.EOL();
-    }
-    Host::SystemLog(Host::eSystemLogWarning, "%s", strm.GetData());
+    Debugger::ReportWarning(std::string(strm.GetString()));
   }
 }
 

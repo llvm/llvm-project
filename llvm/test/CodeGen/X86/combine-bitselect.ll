@@ -50,7 +50,7 @@ define <2 x i64> @bitselect_v2i64_rr(<2 x i64>, <2 x i64>) {
   ret <2 x i64> %5
 }
 
-define <2 x i64> @bitselect_v2i64_rm(<2 x i64>, <2 x i64>* nocapture readonly) {
+define <2 x i64> @bitselect_v2i64_rm(<2 x i64>, ptr nocapture readonly) {
 ; SSE-LABEL: bitselect_v2i64_rm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm1
@@ -88,14 +88,14 @@ define <2 x i64> @bitselect_v2i64_rm(<2 x i64>, <2 x i64>* nocapture readonly) {
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
-  %3 = load <2 x i64>, <2 x i64>* %1
+  %3 = load <2 x i64>, ptr %1
   %4 = and <2 x i64> %0, <i64 8589934593, i64 3>
   %5 = and <2 x i64> %3, <i64 -8589934594, i64 -4>
   %6 = or <2 x i64> %5, %4
   ret <2 x i64> %6
 }
 
-define <2 x i64> @bitselect_v2i64_mr(<2 x i64>* nocapture readonly, <2 x i64>) {
+define <2 x i64> @bitselect_v2i64_mr(ptr nocapture readonly, <2 x i64>) {
 ; SSE-LABEL: bitselect_v2i64_mr:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm1
@@ -133,14 +133,14 @@ define <2 x i64> @bitselect_v2i64_mr(<2 x i64>* nocapture readonly, <2 x i64>) {
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
-  %3 = load <2 x i64>, <2 x i64>* %0
+  %3 = load <2 x i64>, ptr %0
   %4 = and <2 x i64> %3, <i64 12884901890, i64 4294967296>
   %5 = and <2 x i64> %1, <i64 -12884901891, i64 -4294967297>
   %6 = or <2 x i64> %4, %5
   ret <2 x i64> %6
 }
 
-define <2 x i64> @bitselect_v2i64_mm(<2 x i64>* nocapture readonly, <2 x i64>* nocapture readonly) {
+define <2 x i64> @bitselect_v2i64_mm(ptr nocapture readonly, ptr nocapture readonly) {
 ; SSE-LABEL: bitselect_v2i64_mm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm1
@@ -182,8 +182,8 @@ define <2 x i64> @bitselect_v2i64_mm(<2 x i64>* nocapture readonly, <2 x i64>* n
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm0 = [18446744073709551612,18446744065119617022]
 ; AVX512VL-NEXT:    vpternlogq $202, (%rdi), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
-  %3 = load <2 x i64>, <2 x i64>* %0
-  %4 = load <2 x i64>, <2 x i64>* %1
+  %3 = load <2 x i64>, ptr %0
+  %4 = load <2 x i64>, ptr %1
   %5 = and <2 x i64> %3, <i64 3, i64 8589934593>
   %6 = and <2 x i64> %4, <i64 -4, i64 -8589934594>
   %7 = or <2 x i64> %6, %5
@@ -249,7 +249,7 @@ define <2 x i64> @bitselect_v2i64_broadcast_rrr(<2 x i64> %a0, <2 x i64> %a1, i6
   ret <2 x i64> %7
 }
 
-define <2 x i64> @bitselect_v2i64_broadcast_rrm(<2 x i64> %a0, <2 x i64> %a1, i64* %p2) {
+define <2 x i64> @bitselect_v2i64_broadcast_rrm(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) {
 ; SSE-LABEL: bitselect_v2i64_broadcast_rrm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
@@ -285,7 +285,7 @@ define <2 x i64> @bitselect_v2i64_broadcast_rrm(<2 x i64> %a0, <2 x i64> %a1, i6
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpternlogq $228, (%rdi){1to2}, %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
-  %a2 = load i64, i64* %p2
+  %a2 = load i64, ptr %p2
   %1 = insertelement <2 x i64> undef, i64 %a2, i32 0
   %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <2 x i32> zeroinitializer
   %3 = xor <2 x i64> %1, <i64 -1, i64 undef>
@@ -342,7 +342,7 @@ define <4 x i64> @bitselect_v4i64_rr(<4 x i64>, <4 x i64>) {
   ret <4 x i64> %5
 }
 
-define <4 x i64> @bitselect_v4i64_rm(<4 x i64>, <4 x i64>* nocapture readonly) {
+define <4 x i64> @bitselect_v4i64_rm(<4 x i64>, ptr nocapture readonly) {
 ; SSE-LABEL: bitselect_v4i64_rm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm2 = [18446744065119617022,18446744073709551612]
@@ -387,14 +387,14 @@ define <4 x i64> @bitselect_v4i64_rm(<4 x i64>, <4 x i64>* nocapture readonly) {
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
-  %3 = load <4 x i64>, <4 x i64>* %1
+  %3 = load <4 x i64>, ptr %1
   %4 = and <4 x i64> %0, <i64 8589934593, i64 3, i64 8589934593, i64 3>
   %5 = and <4 x i64> %3, <i64 -8589934594, i64 -4, i64 -8589934594, i64 -4>
   %6 = or <4 x i64> %5, %4
   ret <4 x i64> %6
 }
 
-define <4 x i64> @bitselect_v4i64_mr(<4 x i64>* nocapture readonly, <4 x i64>) {
+define <4 x i64> @bitselect_v4i64_mr(ptr nocapture readonly, <4 x i64>) {
 ; SSE-LABEL: bitselect_v4i64_mr:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm2 = [12884901890,4294967296]
@@ -439,14 +439,14 @@ define <4 x i64> @bitselect_v4i64_mr(<4 x i64>* nocapture readonly, <4 x i64>) {
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
-  %3 = load <4 x i64>, <4 x i64>* %0
+  %3 = load <4 x i64>, ptr %0
   %4 = and <4 x i64> %3, <i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296>
   %5 = and <4 x i64> %1, <i64 -12884901891, i64 -4294967297, i64 -12884901891, i64 -4294967297>
   %6 = or <4 x i64> %4, %5
   ret <4 x i64> %6
 }
 
-define <4 x i64> @bitselect_v4i64_mm(<4 x i64>* nocapture readonly, <4 x i64>* nocapture readonly) {
+define <4 x i64> @bitselect_v4i64_mm(ptr nocapture readonly, ptr nocapture readonly) {
 ; SSE-LABEL: bitselect_v4i64_mm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [18446744073709551612,18446744065119617022]
@@ -492,8 +492,8 @@ define <4 x i64> @bitselect_v4i64_mm(<4 x i64>* nocapture readonly, <4 x i64>* n
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
 ; AVX512VL-NEXT:    vpternlogq $202, (%rdi), %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
-  %3 = load <4 x i64>, <4 x i64>* %0
-  %4 = load <4 x i64>, <4 x i64>* %1
+  %3 = load <4 x i64>, ptr %0
+  %4 = load <4 x i64>, ptr %1
   %5 = and <4 x i64> %3, <i64 3, i64 8589934593, i64 3, i64 8589934593>
   %6 = and <4 x i64> %4, <i64 -4, i64 -8589934594, i64 -4, i64 -8589934594>
   %7 = or <4 x i64> %6, %5
@@ -565,7 +565,7 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrr(<4 x i64> %a0, <4 x i64> %a1, i6
   ret <4 x i64> %7
 }
 
-define <4 x i64> @bitselect_v4i64_broadcast_rrm(<4 x i64> %a0, <4 x i64> %a1, i64* %p2) {
+define <4 x i64> @bitselect_v4i64_broadcast_rrm(<4 x i64> %a0, <4 x i64> %a1, ptr %p2) {
 ; SSE-LABEL: bitselect_v4i64_broadcast_rrm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
@@ -605,7 +605,7 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrm(<4 x i64> %a0, <4 x i64> %a1, i6
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpternlogq $228, (%rdi){1to4}, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
-  %a2 = load i64, i64* %p2
+  %a2 = load i64, ptr %p2
   %1 = insertelement <4 x i64> undef, i64 %a2, i32 0
   %2 = shufflevector <4 x i64> %1, <4 x i64> undef, <4 x i32> zeroinitializer
   %3 = xor <4 x i64> %1, <i64 -1, i64 undef, i64 undef, i64 undef>
@@ -673,7 +673,7 @@ define <8 x i64> @bitselect_v8i64_rr(<8 x i64>, <8 x i64>) {
   ret <8 x i64> %5
 }
 
-define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, <8 x i64>* nocapture readonly) {
+define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, ptr nocapture readonly) {
 ; SSE-LABEL: bitselect_v8i64_rm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm4 = [18446744065119617022,18446744073709551612]
@@ -729,14 +729,14 @@ define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, <8 x i64>* nocapture readonly) {
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm1
 ; AVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
-  %3 = load <8 x i64>, <8 x i64>* %1
+  %3 = load <8 x i64>, ptr %1
   %4 = and <8 x i64> %0, <i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3>
   %5 = and <8 x i64> %3, <i64 -8589934594, i64 -4, i64 -8589934594, i64 -4, i64 -8589934594, i64 -4, i64 -8589934594, i64 -4>
   %6 = or <8 x i64> %5, %4
   ret <8 x i64> %6
 }
 
-define <8 x i64> @bitselect_v8i64_mr(<8 x i64>* nocapture readonly, <8 x i64>) {
+define <8 x i64> @bitselect_v8i64_mr(ptr nocapture readonly, <8 x i64>) {
 ; SSE-LABEL: bitselect_v8i64_mr:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm4 = [12884901890,4294967296]
@@ -792,14 +792,14 @@ define <8 x i64> @bitselect_v8i64_mr(<8 x i64>* nocapture readonly, <8 x i64>) {
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm1
 ; AVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
-  %3 = load <8 x i64>, <8 x i64>* %0
+  %3 = load <8 x i64>, ptr %0
   %4 = and <8 x i64> %3, <i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296>
   %5 = and <8 x i64> %1, <i64 -12884901891, i64 -4294967297, i64 -12884901891, i64 -4294967297, i64 -12884901891, i64 -4294967297, i64 -12884901891, i64 -4294967297>
   %6 = or <8 x i64> %4, %5
   ret <8 x i64> %6
 }
 
-define <8 x i64> @bitselect_v8i64_mm(<8 x i64>* nocapture readonly, <8 x i64>* nocapture readonly) {
+define <8 x i64> @bitselect_v8i64_mm(ptr nocapture readonly, ptr nocapture readonly) {
 ; SSE-LABEL: bitselect_v8i64_mm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm3 = [18446744073709551612,18446744065119617022]
@@ -852,8 +852,8 @@ define <8 x i64> @bitselect_v8i64_mm(<8 x i64>* nocapture readonly, <8 x i64>* n
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
 ; AVX512-NEXT:    vpternlogq $202, (%rdi), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
-  %3 = load <8 x i64>, <8 x i64>* %0
-  %4 = load <8 x i64>, <8 x i64>* %1
+  %3 = load <8 x i64>, ptr %0
+  %4 = load <8 x i64>, ptr %1
   %5 = and <8 x i64> %3, <i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593>
   %6 = and <8 x i64> %4, <i64 -4, i64 -8589934594, i64 -4, i64 -8589934594, i64 -4, i64 -8589934594, i64 -4, i64 -8589934594>
   %7 = or <8 x i64> %6, %5
@@ -931,7 +931,7 @@ define <8 x i64> @bitselect_v8i64_broadcast_rrr(<8 x i64> %a0, <8 x i64> %a1, i6
   ret <8 x i64> %7
 }
 
-define <8 x i64> @bitselect_v8i64_broadcast_rrm(<8 x i64> %a0, <8 x i64> %a1, i64* %p2) {
+define <8 x i64> @bitselect_v8i64_broadcast_rrm(<8 x i64> %a0, <8 x i64> %a1, ptr %p2) {
 ; SSE-LABEL: bitselect_v8i64_broadcast_rrm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm8 = mem[0],zero
@@ -975,7 +975,7 @@ define <8 x i64> @bitselect_v8i64_broadcast_rrm(<8 x i64> %a0, <8 x i64> %a1, i6
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpternlogq $228, (%rdi){1to8}, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
-  %a2 = load i64, i64* %p2
+  %a2 = load i64, ptr %p2
   %1 = insertelement <8 x i64> undef, i64 %a2, i32 0
   %2 = shufflevector <8 x i64> %1, <8 x i64> undef, <8 x i32> zeroinitializer
   %3 = xor <8 x i64> %1, <i64 -1, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>

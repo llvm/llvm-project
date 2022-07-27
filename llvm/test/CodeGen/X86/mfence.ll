@@ -18,7 +18,7 @@ define void @test() {
   ret void
 }
 
-define i32 @fence(i32* %ptr) {
+define i32 @fence(ptr %ptr) {
 ; X32-LABEL: fence:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -31,7 +31,7 @@ define i32 @fence(i32* %ptr) {
 ; X64-NEXT:    mfence
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    retq
-  %atomic = atomicrmw add i32* %ptr, i32 0 seq_cst
+  %atomic = atomicrmw add ptr %ptr, i32 0 seq_cst
   ret i32 %atomic
 }
 

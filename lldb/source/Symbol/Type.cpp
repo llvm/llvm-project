@@ -162,8 +162,8 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
 }
 
 Type::Type()
-    : std::enable_shared_from_this<Type>(), UserID(0),
-      m_name("<INVALID TYPE>") {
+    : std::enable_shared_from_this<Type>(), UserID(0), m_name("<INVALID TYPE>"),
+      m_payload(0) {
   m_byte_size = 0;
   m_byte_size_has_value = false;
 }
@@ -324,7 +324,7 @@ void Type::DumpValue(ExecutionContext *exe_ctx, Stream *s,
         exe_ctx, s, format == lldb::eFormatDefault ? GetFormat() : format, data,
         data_byte_offset,
         GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
-            .getValueOr(0),
+            .value_or(0),
         0, // Bitfield bit size
         0, // Bitfield bit offset
         show_types, show_summary, verbose, 0);
@@ -434,7 +434,7 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
 
   const uint64_t byte_size =
       GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
-          .getValueOr(0);
+          .value_or(0);
   if (data.GetByteSize() < byte_size) {
     lldb::DataBufferSP data_sp(new DataBufferHeap(byte_size, '\0'));
     data.SetData(data_sp);

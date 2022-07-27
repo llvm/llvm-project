@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NoopAnalysis.h"
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
@@ -18,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Tooling/Tooling.h"
@@ -82,8 +82,8 @@ TEST(DataflowAnalysisTest, NoopAnalysis) {
         return NoopAnalysis(C, false);
       }));
   EXPECT_EQ(BlockStates.size(), 2u);
-  EXPECT_TRUE(BlockStates[0].hasValue());
-  EXPECT_TRUE(BlockStates[1].hasValue());
+  EXPECT_TRUE(BlockStates[0].has_value());
+  EXPECT_TRUE(BlockStates[1].has_value());
 }
 
 struct NonConvergingLattice {

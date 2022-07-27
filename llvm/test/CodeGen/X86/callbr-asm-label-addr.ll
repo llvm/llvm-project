@@ -10,7 +10,7 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT: .Ltmp0:
 ; CHECK-NEXT:  # %bb.2: # %baz
 entry:
-  callbr void asm sideeffect ".quad ${0:l}\0A\09.quad ${1:l}", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %baz), i8* blockaddress(@test1, %bar))
+  callbr void asm sideeffect ".quad ${0:l}\0A\09.quad ${1:l}", "i,!i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@test1, %baz))
           to label %asm.fallthrough [label %bar]
 
 asm.fallthrough:

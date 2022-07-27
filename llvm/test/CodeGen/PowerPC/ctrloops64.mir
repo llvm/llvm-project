@@ -1,0 +1,347 @@
+# RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -run-pass=ppc-ctrloops %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64-ibm-aix-xcoff \
+# RUN:   -run-pass=ppc-ctrloops %s -o - -verify-machineinstrs | FileCheck %s
+
+---
+name:            test_success1
+# CHECK: test_success1
+
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK: MTCTR8
+    ; CHECK: BDNZ8
+    ; CHECK-NOT: ADDI8
+    ; CHECK-NOT: CMPLDI
+    ; CHECK-NOT: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %1:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_clobber
+# CHECK: test_fail_clobber
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %1:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_use_in_loop
+# CHECK: test_fail_use_in_loop
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    %1:g8rc = MFCTR8 implicit $ctr8
+    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %2:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_call_in_preheader_after_mtctr
+# CHECK: test_fail_call_in_preheader_after_mtctr
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    BL8 @test_fail_use_in_loop, csr_ppc64, implicit-def dead $lr8, implicit $rm
+
+  bb.1:
+
+    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %1:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_succ_call_in_preheader_before_mtctr
+# CHECK: test_succ_call_in_preheader_before_mtctr
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    BL8 @test_fail_use_in_loop, csr_ppc64, implicit-def dead $lr8, implicit $rm
+    ; CHECK: MTCTR8
+    ; CHECK: BDNZ8
+    ; CHECK-NOT: ADDI8
+    ; CHECK-NOT: CMPLDI
+    ; CHECK-NOT: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %1:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_call_in_loop
+# CHECK: test_fail_call_in_loop
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    BL8 @test_fail_use_in_loop, csr_ppc64, implicit-def dead $lr8, implicit $rm
+    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %1:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_indirect_call_in_loop
+# CHECK: test_fail_indirect_call_in_loop
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    renamable %1:crrc = CMPLD killed renamable $x3, killed renamable $x4
+    renamable %2:crbitrc = COPY %1.sub_gt
+    MTLR8 %0:g8rc, implicit-def $lr8
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    BCLRL renamable %2, implicit $lr, implicit $rm
+    %3:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %3:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_livein_preheader
+# CHECK: test_fail_livein_preheader
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $ctr8
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %1:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_def_preheader
+# CHECK: test_fail_def_preheader
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    %1:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %1:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_success_only_use_preheader
+# CHECK: test_success_only_use_preheader
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = MFCTR8 implicit $ctr8
+    %1:g8rc = LI8 2048
+    ; CHECK: MTCTR8
+    ; CHECK: BDNZ8
+    ; CHECK-NOT: ADDI8
+    ; CHECK-NOT: CMPLDI
+    ; CHECK-NOT: BC
+    MTCTR8Pseudo killed %1:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %2:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_use_after_mtctr
+# CHECK: test_fail_use_after_mtctr
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    %1:g8rc = MFCTR8 implicit $ctr8
+
+  bb.1:
+
+    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %2:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_fail_def_after_mtctr
+# CHECK: test_fail_def_after_mtctr
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK-NOT: MTCTR8
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+
+  bb.1:
+
+    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %2:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name:            test_success_def_after_loop
+# CHECK: test_success_def_after_loop
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    ; CHECK: MTCTR8
+    ; CHECK: BDNZ8
+    ; CHECK-NOT: ADDI8
+    ; CHECK-NOT: CMPLDI
+    ; CHECK-NOT: BC
+    MTCTR8Pseudo killed %0:g8rc, implicit-def dead $ctr8
+
+  bb.1:
+
+    %2:crbitrc = DecreaseCTR8Pseudo 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %2:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+
+    BLR8 implicit $lr8, implicit $rm
+...

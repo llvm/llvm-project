@@ -26,7 +26,7 @@ define void @constant_fold_vector_to_half() {
 ; AVX512FP16-NEXT:    vmovsh -{{[0-9]+}}(%rsp), %xmm0
 ; AVX512FP16-NEXT:    vmovsh %xmm0, (%rax)
 ; AVX512FP16-NEXT:    retq
-  store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), half* undef
+  store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), ptr undef
   ret void
 }
 
@@ -48,7 +48,7 @@ define void @pr38533_2(half %x) {
 ; AVX512FP16-NEXT:    vmovsh %xmm0, (%rax)
 ; AVX512FP16-NEXT:    retq
   %a = bitcast half %x to <4 x i4>
-  store volatile <4 x i4> %a, <4 x i4>* undef
+  store volatile <4 x i4> %a, ptr undef
   ret void
 }
 
@@ -70,6 +70,6 @@ define void @pr38533_3(half %x) {
 ; AVX512FP16-NEXT:    vmovsh %xmm0, (%rax)
 ; AVX512FP16-NEXT:    retq
   %a = bitcast half %x to <16 x i1>
-  store volatile <16 x i1> %a, <16 x i1>* undef
+  store volatile <16 x i1> %a, ptr undef
   ret void
 }

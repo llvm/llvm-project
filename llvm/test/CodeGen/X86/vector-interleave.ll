@@ -138,7 +138,7 @@ define <64 x i16> @interleave8x8(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x 
   ret <64 x i16> %result
 }
 
-define void @splat2_i8(<32 x i8>* %s, <64 x i8>* %d) {
+define void @splat2_i8(ptr %s, ptr %d) {
 ; SSE-LABEL: splat2_i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -178,14 +178,14 @@ define void @splat2_i8(<32 x i8>* %s, <64 x i8>* %d) {
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %ld32 = load <32 x i8>, <32 x i8>* %s, align 1
+  %ld32 = load <32 x i8>, ptr %s, align 1
   %cat = shufflevector <32 x i8> %ld32, <32 x i8> undef, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %cat2 = shufflevector <64 x i8> %cat, <64 x i8> undef, <64 x i32> <i32 0, i32 32, i32 1, i32 33, i32 2, i32 34, i32 3, i32 35, i32 4, i32 36, i32 5, i32 37, i32 6, i32 38, i32 7, i32 39, i32 8, i32 40, i32 9, i32 41, i32 10, i32 42, i32 11, i32 43, i32 12, i32 44, i32 13, i32 45, i32 14, i32 46, i32 15, i32 47, i32 16, i32 48, i32 17, i32 49, i32 18, i32 50, i32 19, i32 51, i32 20, i32 52, i32 21, i32 53, i32 22, i32 54, i32 23, i32 55, i32 24, i32 56, i32 25, i32 57, i32 26, i32 58, i32 27, i32 59, i32 28, i32 60, i32 29, i32 61, i32 30, i32 62, i32 31, i32 63>
-  store <64 x i8> %cat2, <64 x i8>* %d, align 1
+  store <64 x i8> %cat2, ptr %d, align 1
   ret void
 }
 
-define void @splat2_i16(<16 x i16>* %s, <32 x i16>* %d) {
+define void @splat2_i16(ptr %s, ptr %d) {
 ; SSE-LABEL: splat2_i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -225,14 +225,14 @@ define void @splat2_i16(<16 x i16>* %s, <32 x i16>* %d) {
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %ld32 = load <16 x i16>, <16 x i16>* %s, align 1
+  %ld32 = load <16 x i16>, ptr %s, align 1
   %cat = shufflevector <16 x i16> %ld32, <16 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %cat2 = shufflevector <32 x i16> %cat, <32 x i16> undef, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-  store <32 x i16> %cat2, <32 x i16>* %d, align 1
+  store <32 x i16> %cat2, ptr %d, align 1
   ret void
 }
 
-define void @splat2_i32(<8 x i32>* %s, <16 x i32>* %d) {
+define void @splat2_i32(ptr %s, ptr %d) {
 ; SSE-LABEL: splat2_i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -270,14 +270,14 @@ define void @splat2_i32(<8 x i32>* %s, <16 x i32>* %d) {
 ; AVX2-NEXT:    vmovups %ymm1, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %ld32 = load <8 x i32>, <8 x i32>* %s, align 1
+  %ld32 = load <8 x i32>, ptr %s, align 1
   %cat = shufflevector <8 x i32> %ld32, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %cat2 = shufflevector <16 x i32> %cat, <16 x i32> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-  store <16 x i32> %cat2, <16 x i32>* %d, align 1
+  store <16 x i32> %cat2, ptr %d, align 1
   ret void
 }
 
-define void @splat2_i64(<4 x i64>* %s, <8 x i64>* %d) {
+define void @splat2_i64(ptr %s, ptr %d) {
 ; SSE-LABEL: splat2_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -312,9 +312,9 @@ define void @splat2_i64(<4 x i64>* %s, <8 x i64>* %d) {
 ; AVX2-NEXT:    vmovups %ymm1, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %ld32 = load <4 x i64>, <4 x i64>* %s, align 1
+  %ld32 = load <4 x i64>, ptr %s, align 1
   %cat = shufflevector <4 x i64> %ld32, <4 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   %cat2 = shufflevector <8 x i64> %cat, <8 x i64> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-  store <8 x i64> %cat2, <8 x i64>* %d, align 1
+  store <8 x i64> %cat2, ptr %d, align 1
   ret void
 }

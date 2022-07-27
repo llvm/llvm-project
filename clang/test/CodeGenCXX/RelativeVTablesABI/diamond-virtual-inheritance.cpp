@@ -60,7 +60,7 @@
 // CHECK-NEXT:   [[a:%[0-9]+]] = bitcast i8* [[add_ptr]] to %class.A*
 // CHECK-NEXT:   [[a_i8_ptr:%[0-9]+]] = bitcast i8* [[add_ptr]] to i8**
 // CHECK-NEXT:   [[vtable:%[a-z0-9]+]] = load i8*, i8** [[a_i8_ptr]], align 8
-// CHECK-NEXT:   [[ptr:%[0-9]+]] = call i8* @llvm.load.relative.i32(i8* [[vtable]], i32 0)
+// CHECK-NEXT:   [[ptr:%[0-9]+]] = tail call i8* @llvm.load.relative.i32(i8* [[vtable]], i32 0)
 // CHECK-NEXT:   [[method:%[0-9]+]] = bitcast i8* [[ptr]] to void (%class.A*)*
 // CHECK-NEXT:   call void [[method]](%class.A* {{[^,]*}} [[a]])
 // CHECK-NEXT:   ret void

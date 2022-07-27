@@ -33,6 +33,14 @@ _warningFlags = [
   '-Wno-literal-suffix', # GCC
   '-Wno-user-defined-literals', # Clang
 
+  # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
+  # function. (This mostely happens in C++11 mode.)
+  # TODO(mordante) investigate a solution for this issue.
+  '-Wno-tautological-compare',
+
+  # -Wstringop-overread seems to be a bit buggy currently
+  '-Wno-stringop-overread',
+
   # These warnings should be enabled in order to support the MSVC
   # team using the test suite; They enable the warnings below and
   # expect the test suite to be clean.
@@ -151,15 +159,19 @@ DEFAULT_PARAMETERS = [
             ])),
 
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=True,
-            help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
-            actions=lambda experimental: [] if not experimental else [
-              AddFeature('c++experimental'),
+            help="Whether to enable tests for experimental C++ Library features.",
+            actions=lambda experimental: [
               # When linking in MSVC mode via the Clang driver, a -l<foo>
               # maps to <foo>.lib, so we need to use -llibc++experimental here
               # to make it link against the static libc++experimental.lib.
               # We can't check for the feature 'msvc' in available_features
               # as those features are added after processing parameters.
-              PrependLinkFlag(lambda config: '-llibc++experimental' if _isMSVC(config) else '-lc++experimental')
+              AddFeature('c++experimental'),
+              PrependLinkFlag(lambda cfg: '-llibc++experimental' if _isMSVC(cfg) else '-lc++experimental'),
+              AddCompileFlag('-D_LIBCPP_ENABLE_EXPERIMENTAL'),
+            ] if experimental else [
+              AddFeature('libcpp-has-no-incomplete-format'),
+              AddFeature('libcpp-has-no-incomplete-ranges')
             ]),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,
@@ -181,6 +193,15 @@ DEFAULT_PARAMETERS = [
                  "This should be used sparingly since specifying ad-hoc features manually is error-prone and "
                  "brittle in the long run as changes are made to the test suite.",
             actions=lambda features: [AddFeature(f) for f in features]),
+
+  Parameter(name='enable_transitive_includes', choices=[True, False], type=bool, default=True,
+            help="Whether to enable backwards-compatibility transitive includes when running the tests. This "
+                 "is provided to ensure that the trimmed-down version of libc++ does not bit-rot in between "
+                 "points at which we bulk-remove transitive includes.",
+            actions=lambda enabled: [] if enabled else [
+              AddFeature('transitive-includes-disabled'),
+              AddCompileFlag('-D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES')
+            ]),
 ]
 
 DEFAULT_PARAMETERS += [

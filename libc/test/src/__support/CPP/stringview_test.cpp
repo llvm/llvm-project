@@ -9,132 +9,243 @@
 #include "src/__support/CPP/StringView.h"
 #include "utils/UnitTest/Test.h"
 
+using __llvm_libc::cpp::StringView;
+
 TEST(LlvmLibcStringViewTest, InitializeCheck) {
-  __llvm_libc::cpp::StringView v;
+  StringView v;
   ASSERT_EQ(v.size(), size_t(0));
   ASSERT_TRUE(v.data() == nullptr);
 
-  v = __llvm_libc::cpp::StringView("");
+  v = StringView("");
   ASSERT_EQ(v.size(), size_t(0));
   ASSERT_TRUE(v.data() == nullptr);
 
-  v = __llvm_libc::cpp::StringView(nullptr);
+  v = StringView(nullptr);
   ASSERT_EQ(v.size(), size_t(0));
   ASSERT_TRUE(v.data() == nullptr);
 
-  v = __llvm_libc::cpp::StringView(nullptr, 10);
+  v = StringView(nullptr, 10);
   ASSERT_EQ(v.size(), size_t(0));
   ASSERT_TRUE(v.data() == nullptr);
 
-  v = __llvm_libc::cpp::StringView("abc", 0);
+  v = StringView("abc", 0);
   ASSERT_EQ(v.size(), size_t(0));
   ASSERT_TRUE(v.data() == nullptr);
 
-  v = __llvm_libc::cpp::StringView("123456789");
+  v = StringView("123456789");
   ASSERT_EQ(v.size(), size_t(9));
 }
 
 TEST(LlvmLibcStringViewTest, Equals) {
-  __llvm_libc::cpp::StringView v("abc");
-  ASSERT_TRUE(v.equals(__llvm_libc::cpp::StringView("abc")));
-  ASSERT_FALSE(v.equals(__llvm_libc::cpp::StringView()));
-  ASSERT_FALSE(v.equals(__llvm_libc::cpp::StringView("")));
-  ASSERT_FALSE(v.equals(__llvm_libc::cpp::StringView("123")));
-  ASSERT_FALSE(v.equals(__llvm_libc::cpp::StringView("abd")));
-  ASSERT_FALSE(v.equals(__llvm_libc::cpp::StringView("aaa")));
-  ASSERT_FALSE(v.equals(__llvm_libc::cpp::StringView("abcde")));
+  StringView v("abc");
+  ASSERT_TRUE(v.equals(StringView("abc")));
+  ASSERT_FALSE(v.equals(StringView()));
+  ASSERT_FALSE(v.equals(StringView("")));
+  ASSERT_FALSE(v.equals(StringView("123")));
+  ASSERT_FALSE(v.equals(StringView("abd")));
+  ASSERT_FALSE(v.equals(StringView("aaa")));
+  ASSERT_FALSE(v.equals(StringView("abcde")));
 }
 
 TEST(LlvmLibcStringViewTest, startsWith) {
-  __llvm_libc::cpp::StringView v("abc");
-  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("a")));
-  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("ab")));
-  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("abc")));
-  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView()));
-  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("")));
-  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("123")));
-  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("abd")));
-  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("aaa")));
-  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("abcde")));
+  StringView v("abc");
+  ASSERT_TRUE(v.starts_with('a'));
+  ASSERT_TRUE(v.starts_with(StringView("a")));
+  ASSERT_TRUE(v.starts_with(StringView("ab")));
+  ASSERT_TRUE(v.starts_with(StringView("abc")));
+  ASSERT_TRUE(v.starts_with(StringView()));
+  ASSERT_TRUE(v.starts_with(StringView("")));
+  ASSERT_FALSE(v.starts_with('1'));
+  ASSERT_FALSE(v.starts_with(StringView("123")));
+  ASSERT_FALSE(v.starts_with(StringView("abd")));
+  ASSERT_FALSE(v.starts_with(StringView("aaa")));
+  ASSERT_FALSE(v.starts_with(StringView("abcde")));
+}
+
+TEST(LlvmLibcStringViewTest, endsWith) {
+  StringView v("abc");
+  ASSERT_TRUE(v.ends_with('c'));
+  ASSERT_TRUE(v.ends_with(StringView("c")));
+  ASSERT_TRUE(v.ends_with(StringView("bc")));
+  ASSERT_TRUE(v.ends_with(StringView("abc")));
+  ASSERT_TRUE(v.ends_with(StringView()));
+  ASSERT_TRUE(v.ends_with(StringView("")));
+  ASSERT_FALSE(v.ends_with('1'));
+  ASSERT_FALSE(v.ends_with(StringView("123")));
+  ASSERT_FALSE(v.ends_with(StringView("abd")));
+  ASSERT_FALSE(v.ends_with(StringView("aaa")));
+  ASSERT_FALSE(v.ends_with(StringView("abcde")));
 }
 
 TEST(LlvmLibcStringViewTest, RemovePrefix) {
-  __llvm_libc::cpp::StringView v("123456789");
+  StringView a("123456789");
+  a.remove_prefix(0);
+  ASSERT_EQ(a.size(), size_t(9));
+  ASSERT_TRUE(a.equals(StringView("123456789")));
 
-  auto p = v.remove_prefix(0);
-  ASSERT_EQ(p.size(), size_t(9));
-  ASSERT_TRUE(p.equals(__llvm_libc::cpp::StringView("123456789")));
+  StringView b("123456789");
+  b.remove_prefix(4);
+  ASSERT_EQ(b.size(), size_t(5));
+  ASSERT_TRUE(b.equals(StringView("56789")));
 
-  p = v.remove_prefix(4);
-  ASSERT_EQ(p.size(), size_t(5));
-  ASSERT_TRUE(p.equals(__llvm_libc::cpp::StringView("56789")));
-
-  p = v.remove_prefix(9);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
-
-  p = v.remove_prefix(10);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
+  StringView c("123456789");
+  c.remove_prefix(9);
+  ASSERT_EQ(c.size(), size_t(0));
 }
 
 TEST(LlvmLibcStringViewTest, RemoveSuffix) {
-  __llvm_libc::cpp::StringView v("123456789");
+  StringView a("123456789");
+  a.remove_suffix(0);
+  ASSERT_EQ(a.size(), size_t(9));
+  ASSERT_TRUE(a.equals(StringView("123456789")));
 
-  auto p = v.remove_suffix(0);
-  ASSERT_EQ(p.size(), size_t(9));
-  ASSERT_TRUE(p.equals(__llvm_libc::cpp::StringView("123456789")));
+  StringView b("123456789");
+  b.remove_suffix(4);
+  ASSERT_EQ(b.size(), size_t(5));
+  ASSERT_TRUE(b.equals(StringView("12345")));
 
-  p = v.remove_suffix(4);
-  ASSERT_EQ(p.size(), size_t(5));
-  ASSERT_TRUE(p.equals(__llvm_libc::cpp::StringView("12345")));
-
-  p = v.remove_suffix(9);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
-
-  p = v.remove_suffix(10);
-  ASSERT_EQ(p.size(), size_t(0));
-  ASSERT_TRUE(p.data() == nullptr);
+  StringView c("123456789");
+  c.remove_suffix(9);
+  ASSERT_EQ(c.size(), size_t(0));
 }
 
 TEST(LlvmLibcStringViewTest, TrimSingleChar) {
-  __llvm_libc::cpp::StringView v("     123456789   ");
+  StringView v("     123456789   ");
   auto t = v.trim(' ');
   ASSERT_EQ(t.size(), size_t(9));
-  ASSERT_TRUE(t.equals(__llvm_libc::cpp::StringView("123456789")));
+  ASSERT_TRUE(t.equals(StringView("123456789")));
 
-  v = __llvm_libc::cpp::StringView("====12345==");
+  v = StringView("====12345==");
   t = v.trim(' ');
   ASSERT_EQ(v.size(), size_t(11));
-  ASSERT_TRUE(t.equals(__llvm_libc::cpp::StringView("====12345==")));
+  ASSERT_TRUE(t.equals(StringView("====12345==")));
 
   t = v.trim('=');
   ASSERT_EQ(t.size(), size_t(5));
-  ASSERT_TRUE(t.equals(__llvm_libc::cpp::StringView("12345")));
+  ASSERT_TRUE(t.equals(StringView("12345")));
 
-  v = __llvm_libc::cpp::StringView("12345===");
+  v = StringView("12345===");
   t = v.trim('=');
   ASSERT_EQ(t.size(), size_t(5));
-  ASSERT_TRUE(t.equals(__llvm_libc::cpp::StringView("12345")));
+  ASSERT_TRUE(t.equals(StringView("12345")));
 
-  v = __llvm_libc::cpp::StringView("===========12345");
+  v = StringView("===========12345");
   t = v.trim('=');
   ASSERT_EQ(t.size(), size_t(5));
-  ASSERT_TRUE(t.equals(__llvm_libc::cpp::StringView("12345")));
+  ASSERT_TRUE(t.equals(StringView("12345")));
 
-  v = __llvm_libc::cpp::StringView("============");
+  v = StringView("============");
   t = v.trim('=');
   ASSERT_EQ(t.size(), size_t(0));
   ASSERT_TRUE(t.data() == nullptr);
 
-  v = __llvm_libc::cpp::StringView();
+  v = StringView();
   t = v.trim(' ');
   ASSERT_EQ(t.size(), size_t(0));
   ASSERT_TRUE(t.data() == nullptr);
 
-  v = __llvm_libc::cpp::StringView("");
+  v = StringView("");
   t = v.trim(' ');
   ASSERT_EQ(t.size(), size_t(0));
   ASSERT_TRUE(t.data() == nullptr);
+}
+
+TEST(LlvmLibcStringViewTest, Observer) {
+  StringView ABC("abc");
+  ASSERT_EQ(ABC.size(), size_t(3));
+  ASSERT_FALSE(ABC.empty());
+  ASSERT_EQ(ABC.front(), 'a');
+  ASSERT_EQ(ABC.back(), 'c');
+}
+
+bool isDigit(char c) { return c >= '0' && c <= '9'; }
+
+TEST(LlvmLibcStringViewTest, Transform) {
+  ASSERT_TRUE(StringView("123abc").drop_back(3).equals("123"));
+  ASSERT_TRUE(StringView("123abc").drop_front(3).equals("abc"));
+  ASSERT_TRUE(StringView("123abc").take_back(3).equals("abc"));
+  ASSERT_TRUE(StringView("123abc").take_front(3).equals("123"));
+
+  ASSERT_TRUE(StringView("123abc").take_while(&isDigit).equals("123"));
+  ASSERT_TRUE(StringView("abc123").take_until(&isDigit).equals("abc"));
+  ASSERT_TRUE(StringView("123abc").drop_while(&isDigit).equals("abc"));
+  ASSERT_TRUE(StringView("abc123").drop_until(&isDigit).equals("123"));
+}
+
+TEST(LlvmLibcStringViewTest, ConsumeFront) {
+  StringView Tmp("abc");
+  ASSERT_FALSE(Tmp.consume_front("###"));
+  ASSERT_TRUE(Tmp.consume_front("ab"));
+  ASSERT_TRUE(Tmp.equals("c"));
+}
+
+TEST(LlvmLibcStringViewTest, ConsumeBack) {
+  StringView Tmp("abc");
+  ASSERT_FALSE(Tmp.consume_back("###"));
+  ASSERT_TRUE(Tmp.consume_back("bc"));
+  ASSERT_TRUE(Tmp.equals("a"));
+}
+
+TEST(LlvmLibcStringViewTest, FindFirstOf) {
+  StringView Tmp("abca");
+  ASSERT_TRUE(Tmp.find_first_of('a') == 0);
+  ASSERT_TRUE(Tmp.find_first_of('d') == StringView::npos);
+  ASSERT_TRUE(Tmp.find_first_of('b') == 1);
+  ASSERT_TRUE(Tmp.find_first_of('a', 0) == 0);
+  ASSERT_TRUE(Tmp.find_first_of('b', 1) == 1);
+  ASSERT_TRUE(Tmp.find_first_of('a', 1) == 3);
+  ASSERT_TRUE(Tmp.find_first_of('a', 42) == StringView::npos);
+  ASSERT_FALSE(Tmp.find_first_of('c') == 1);
+  ASSERT_FALSE(Tmp.find_first_of('c', 0) == 1);
+  ASSERT_FALSE(Tmp.find_first_of('c', 1) == 1);
+}
+
+TEST(LlvmLibcStringViewTest, FindLastOf) {
+  StringView Tmp("abada");
+
+  ASSERT_EQ(Tmp.find_last_of('a'), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 123), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 5), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 4), size_t(4));
+  ASSERT_EQ(Tmp.find_last_of('a', 3), size_t(2));
+  ASSERT_EQ(Tmp.find_last_of('a', 2), size_t(2));
+  ASSERT_EQ(Tmp.find_last_of('a', 1), size_t(0));
+  ASSERT_EQ(Tmp.find_last_of('a', 0), size_t(0));
+
+  ASSERT_EQ(Tmp.find_last_of('b'), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 123), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 5), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 4), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 3), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 2), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 1), size_t(1));
+  ASSERT_EQ(Tmp.find_last_of('b', 0), StringView::npos);
+
+  ASSERT_EQ(Tmp.find_last_of('d'), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 123), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 5), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 4), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 3), size_t(3));
+  ASSERT_EQ(Tmp.find_last_of('d', 2), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('d', 1), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('d', 0), StringView::npos);
+
+  ASSERT_EQ(Tmp.find_last_of('e'), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 123), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 5), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 4), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 3), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 2), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 1), StringView::npos);
+  ASSERT_EQ(Tmp.find_last_of('e', 0), StringView::npos);
+
+  StringView Empty;
+  ASSERT_EQ(Empty.find_last_of('a'), StringView::npos);
+  ASSERT_EQ(Empty.find_last_of('a', 0), StringView::npos);
+  ASSERT_EQ(Empty.find_last_of('a', 123), StringView::npos);
+
+  StringView Empty1("");
+  ASSERT_EQ(Empty1.find_last_of('a'), StringView::npos);
+  ASSERT_EQ(Empty1.find_last_of('a', 0), StringView::npos);
+  ASSERT_EQ(Empty1.find_last_of('a', 123), StringView::npos);
 }

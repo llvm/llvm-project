@@ -153,7 +153,7 @@ bool Parser::ExpectAndConsume(tok::TokenKind ExpectedTok, unsigned DiagID,
   return true;
 }
 
-bool Parser::ExpectAndConsumeSemi(unsigned DiagID) {
+bool Parser::ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed) {
   if (TryConsumeToken(tok::semi))
     return false;
 
@@ -172,7 +172,7 @@ bool Parser::ExpectAndConsumeSemi(unsigned DiagID) {
     return false;
   }
 
-  return ExpectAndConsume(tok::semi, DiagID);
+  return ExpectAndConsume(tok::semi, DiagID , TokenUsed);
 }
 
 void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
@@ -663,12 +663,22 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     return false;
   }
 
-  case tok::annot_module_include:
-    Actions.ActOnModuleInclude(Tok.getLocation(),
-                               reinterpret_cast<Module *>(
-                                   Tok.getAnnotationValue()));
+  case tok::annot_module_include: {
+    auto Loc = Tok.getLocation();
+    Module *Mod = reinterpret_cast<Module *>(Tok.getAnnotationValue());
+    // FIXME: We need a better way to disambiguate C++ clang modules and
+    // standard C++ modules.
+    if (!getLangOpts().CPlusPlusModules || !Mod->isHeaderUnit())
+      Actions.ActOnModuleInclude(Loc, Mod);
+    else {
+      DeclResult Import =
+          Actions.ActOnModuleImport(Loc, SourceLocation(), Loc, Mod);
+      Decl *ImportDecl = Import.isInvalid() ? nullptr : Import.get();
+      Result = Actions.ConvertDeclToDeclGroup(ImportDecl);
+    }
     ConsumeAnnotationToken();
     return false;
+  }
 
   case tok::annot_module_begin:
     Actions.ActOnModuleBegin(Tok.getLocation(), reinterpret_cast<Module *>(
@@ -1113,8 +1123,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
-                                                       DS, AnonRecord);
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
+        getCurScope(), AS_none, DS, ParsedAttributesView::none(), AnonRecord);
     DS.complete(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
@@ -1574,7 +1584,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
   ExprResult AsmString(ParseStringLiteralExpression());
   if (!AsmString.isInvalid()) {
     const auto *SL = cast<StringLiteral>(AsmString.get());
-    if (!SL->isAscii()) {
+    if (!SL->isOrdinary()) {
       Diag(Tok, diag::err_asm_operand_wide_string_literal)
         << SL->isWide()
         << SL->getSourceRange();

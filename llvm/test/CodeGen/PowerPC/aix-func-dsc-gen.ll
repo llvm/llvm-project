@@ -13,7 +13,7 @@ entry:
 ; CHECK-NEXT: AddressSize: 32bit
 ; CHECK:        Symbol {
 ; CHECK-NEXT:     Index: 0
-; CHECK-NEXT:     Name: .file
+; CHECK-NEXT:     Name: <stdin>
 ; CHECK-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECK-NEXT:     Section: N_DEBUG
 ; CHECK-NEXT:     Source Language ID: TB_C (0x0)
@@ -34,7 +34,7 @@ entry:
 ; CHECK-NEXT:       SectionLen: 4
 ; CHECK-NEXT:       ParameterHashIndex: 0x0
 ; CHECK-NEXT:       TypeChkSectNum: 0x0
-; CHECK-NEXT:       SymbolAlignmentLog2: 4
+; CHECK-NEXT:       SymbolAlignmentLog2: 5
 ; CHECK-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECK-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; CHECK-NEXT:       StabInfoIndex: 0x0

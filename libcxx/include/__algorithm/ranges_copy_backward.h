@@ -11,6 +11,7 @@
 
 #include <__algorithm/copy_backward.h>
 #include <__algorithm/in_out_result.h>
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/reverse_iterator.h>
@@ -39,7 +40,7 @@ struct __fn {
     requires indirectly_copyable<_InIter1, _InIter2>
   _LIBCPP_HIDE_FROM_ABI constexpr
   copy_backward_result<_InIter1, _InIter2> operator()(_InIter1 __first, _Sent1 __last, _InIter2 __result) const {
-    auto __ret = std::__copy_backward(std::move(__first), std::move(__last), std::move(__result));
+    auto __ret = std::__copy_backward<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 
@@ -47,9 +48,7 @@ struct __fn {
     requires indirectly_copyable<iterator_t<_Range>, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr
   copy_backward_result<borrowed_iterator_t<_Range>, _Iter> operator()(_Range&& __r, _Iter __result) const {
-    auto __ret = std::__copy_backward(ranges::begin(__r),
-                                      ranges::end(__r),
-                                      std::move(__result));
+    auto __ret = std::__copy_backward<_RangeAlgPolicy>(ranges::begin(__r), ranges::end(__r), std::move(__result));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 };

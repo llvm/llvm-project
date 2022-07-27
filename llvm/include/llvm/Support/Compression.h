@@ -13,35 +13,59 @@
 #ifndef LLVM_SUPPORT_COMPRESSION_H
 #define LLVM_SUPPORT_COMPRESSION_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;
 class Error;
-class StringRef;
 
+namespace compression {
 namespace zlib {
 
-static constexpr int NoCompression = 0;
-static constexpr int BestSpeedCompression = 1;
-static constexpr int DefaultCompression = 6;
-static constexpr int BestSizeCompression = 9;
+constexpr int NoCompression = 0;
+constexpr int BestSpeedCompression = 1;
+constexpr int DefaultCompression = 6;
+constexpr int BestSizeCompression = 9;
 
 bool isAvailable();
 
-void compress(StringRef InputBuffer, SmallVectorImpl<char> &CompressedBuffer,
+void compress(ArrayRef<uint8_t> Input,
+              SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error uncompress(StringRef InputBuffer, char *UncompressedBuffer,
+Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
                  size_t &UncompressedSize);
 
-Error uncompress(StringRef InputBuffer,
-                 SmallVectorImpl<char> &UncompressedBuffer,
+Error uncompress(ArrayRef<uint8_t> Input,
+                 SmallVectorImpl<uint8_t> &UncompressedBuffer,
                  size_t UncompressedSize);
 
-uint32_t crc32(StringRef Buffer);
+} // End of namespace zlib
 
-}  // End of namespace zlib
+namespace zstd {
+
+constexpr int NoCompression = -5;
+constexpr int BestSpeedCompression = 1;
+constexpr int DefaultCompression = 5;
+constexpr int BestSizeCompression = 12;
+
+bool isAvailable();
+
+void compress(ArrayRef<uint8_t> Input,
+              SmallVectorImpl<uint8_t> &CompressedBuffer,
+              int Level = DefaultCompression);
+
+Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+                 size_t &UncompressedSize);
+
+Error uncompress(ArrayRef<uint8_t> Input,
+                 SmallVectorImpl<uint8_t> &UncompressedBuffer,
+                 size_t UncompressedSize);
+
+} // End of namespace zstd
+
+} // End of namespace compression
 
 } // End of namespace llvm
 

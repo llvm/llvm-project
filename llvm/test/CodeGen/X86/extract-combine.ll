@@ -14,6 +14,6 @@ entry:
 	%sub.i25620 = fsub <4 x float> %conv3.i25615, zeroinitializer		; <<4 x float>> [#uses=1]
 	%mul.i25621 = fmul <4 x float> zeroinitializer, %sub.i25620		; <<4 x float>> [#uses=1]
 	%add.i25622 = fadd <4 x float> zeroinitializer, %mul.i25621		; <<4 x float>> [#uses=1]
-	store <4 x float> %add.i25622, <4 x float>* null
+	store <4 x float> %add.i25622, ptr null
 	unreachable
 }

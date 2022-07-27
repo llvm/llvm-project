@@ -56,7 +56,7 @@ entry:
 ; ASM-NEXT:    .csect fun[DS]
 ; ASM-NEXT:  fun_weak:                               # @fun
 ; ASM-NEXT:  fun_hidden:
-; ASM:         .csect .text[PR],2
+; ASM:         .csect .text[PR],5
 ; ASM-NEXT:  .fun:
 ; ASM-NEXT:  .fun_weak:
 ; ASM-NEXT:  .fun_hidden:
@@ -64,7 +64,7 @@ entry:
 ; ASM-NEXT:    li 3, 0
 ; ASM-NEXT:    blr
 ; ASM-NEXT:                                          # -- End function
-; ASM:       .csect .text[PR],2
+; ASM:       .csect .text[PR],5
 ; ASM-NEXT:  .test:
 ; ASM-NEXT:  # %bb.0:                                # %entry
 ; ASM:         bl .fun
@@ -75,6 +75,12 @@ entry:
 ; ASM:                                               # -- End function
 ; ASM-NEXT:    .csect .data[RW]
 ; ASM-NEXT:    .globl  var
+; ASM-NEXT:    .globl  var1
+; ASM-NEXT:    .globl  var2
+; ASM-NEXT:    .weak   var_l
+; ASM-NEXT:    .lglobl var_i
+; ASM-NEXT:    .globl  var_h,hidden
+; ASM-NEXT:    .globl  var_p,protected
 ; ASM:       var:
 ; ASM-NEXT:  var1:
 ; ASM-NEXT:  var2:
@@ -83,24 +89,18 @@ entry:
 ; ASM-NEXT:  var_h:
 ; ASM-NEXT:  var_p:
 ; ASM-NEXT:    .vbyte  4, 42
-; ASM-NEXT:   .globl array
+; ASM-NEXT:    .globl array
 ; ASM:       array:
 ; ASM-NEXT:    .vbyte 4, 1 # 0x1
 ; ASM-NEXT:    .vbyte 4, 2 # 0x2
 ; ASM-NEXT:    .globl x
+; ASM-NEXT:    .globl  bitcast_alias
 ; ASM:       x:
 ; ASM-NEXT:  bitcast_alias:
 ; ASM-NEXT:    .vbyte  {{[0-9]+}}, array+4
 ; ASM-NEXT:    .globl  fun_ptr
 ; ASM:       fun_ptr:
 ; ASM-NEXT:    .vbyte  {{[0-9]+}}, fun_weak
-; ASM-NEXT:    .globl  var1
-; ASM-NEXT:    .globl  var2
-; ASM-NEXT:    .weak var_l
-; ASM-NEXT:    .lglobl var_i
-; ASM-NEXT:    .globl  var_h,hidden
-; ASM-NEXT:    .globl  var_p,protected
-; ASM-NEXT:    .globl bitcast_alias
 ; ASM-NEXT:    .weak fun_weak
 ; ASM-NEXT:    .weak .fun_weak
 ; ASM-NEXT:    .globl  fun_hidden,hidden

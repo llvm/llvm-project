@@ -27,6 +27,7 @@
 #include "sanitizer_linux.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
+#include "sanitizer_solaris.h"
 
 #if SANITIZER_NETBSD
 #define _RTLD_SOURCE  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
@@ -62,6 +63,7 @@
 #endif
 
 #if SANITIZER_SOLARIS
+#include <stddef.h>
 #include <stdlib.h>
 #include <thread.h>
 #endif
@@ -350,19 +352,43 @@ static uptr TlsGetOffset(uptr ti_module, uptr ti_offset) {
 extern "C" void *__tls_get_addr(size_t *);
 #endif
 
+static size_t main_tls_modid;
+
 static int CollectStaticTlsBlocks(struct dl_phdr_info *info, size_t size,
                                   void *data) {
-  if (!info->dlpi_tls_modid)
+  size_t tls_modid;
+#if SANITIZER_SOLARIS
+  // dlpi_tls_modid is only available since Solaris 11.4 SRU 10.  Use
+  // dlinfo(RTLD_DI_LINKMAP) instead which works on all of Solaris 11.3,
+  // 11.4, and Illumos.  The tlsmodid of the executable was changed to 1 in
+  // 11.4 to match other implementations.
+  if (size >= offsetof(dl_phdr_info_test, dlpi_tls_modid))
+    main_tls_modid = 1;
+  else
+    main_tls_modid = 0;
+  g_use_dlpi_tls_data = 0;
+  Rt_map *map;
+  dlinfo(RTLD_SELF, RTLD_DI_LINKMAP, &map);
+  tls_modid = map->rt_tlsmodid;
+#else
+  main_tls_modid = 1;
+  tls_modid = info->dlpi_tls_modid;
+#endif
+
+  if (tls_modid < main_tls_modid)
     return 0;
-  uptr begin = (uptr)info->dlpi_tls_data;
+  uptr begin;
+#if !SANITIZER_SOLARIS
+  begin = (uptr)info->dlpi_tls_data;
+#endif
   if (!g_use_dlpi_tls_data) {
     // Call __tls_get_addr as a fallback. This forces TLS allocation on glibc
     // and FreeBSD.
 #ifdef __s390__
     begin = (uptr)__builtin_thread_pointer() +
-            TlsGetOffset(info->dlpi_tls_modid, 0);
+            TlsGetOffset(tls_modid, 0);
 #else
-    size_t mod_and_off[2] = {info->dlpi_tls_modid, 0};
+    size_t mod_and_off[2] = {tls_modid, 0};
     begin = (uptr)__tls_get_addr(mod_and_off);
 #endif
   }
@@ -370,7 +396,7 @@ static int CollectStaticTlsBlocks(struct dl_phdr_info *info, size_t size,
     if (info->dlpi_phdr[i].p_type == PT_TLS) {
       static_cast<InternalMmapVector<TlsBlock> *>(data)->push_back(
           TlsBlock{begin, begin + info->dlpi_phdr[i].p_memsz,
-                   info->dlpi_phdr[i].p_align, info->dlpi_tls_modid});
+                   info->dlpi_phdr[i].p_align, tls_modid});
       break;
     }
   return 0;
@@ -382,11 +408,11 @@ __attribute__((unused)) static void GetStaticTlsBoundary(uptr *addr, uptr *size,
   dl_iterate_phdr(CollectStaticTlsBlocks, &ranges);
   uptr len = ranges.size();
   Sort(ranges.begin(), len);
-  // Find the range with tls_modid=1. For glibc, because libc.so uses PT_TLS,
-  // this module is guaranteed to exist and is one of the initially loaded
-  // modules.
+  // Find the range with tls_modid == main_tls_modid. For glibc, because
+  // libc.so uses PT_TLS, this module is guaranteed to exist and is one of
+  // the initially loaded modules.
   uptr one = 0;
-  while (one != len && ranges[one].tls_modid != 1) ++one;
+  while (one != len && ranges[one].tls_modid != main_tls_modid) ++one;
   if (one == len) {
     // This may happen with musl if no module uses PT_TLS.
     *addr = 0;
@@ -395,14 +421,14 @@ __attribute__((unused)) static void GetStaticTlsBoundary(uptr *addr, uptr *size,
     return;
   }
   // Find the maximum consecutive ranges. We consider two modules consecutive if
-  // the gap is smaller than the alignment. The dynamic loader places static TLS
-  // blocks this way not to waste space.
+  // the gap is smaller than the alignment of the latter range. The dynamic
+  // loader places static TLS blocks this way not to waste space.
   uptr l = one;
   *align = ranges[l].align;
-  while (l != 0 && ranges[l].begin < ranges[l - 1].end + ranges[l - 1].align)
+  while (l != 0 && ranges[l].begin < ranges[l - 1].end + ranges[l].align)
     *align = Max(*align, ranges[--l].align);
   uptr r = one + 1;
-  while (r != len && ranges[r].begin < ranges[r - 1].end + ranges[r - 1].align)
+  while (r != len && ranges[r].begin < ranges[r - 1].end + ranges[r].align)
     *align = Max(*align, ranges[r++].align);
   *addr = ranges[l].begin;
   *size = ranges[r - 1].end - ranges[l].begin;

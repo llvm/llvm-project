@@ -2,15 +2,15 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -code-model=large -relocation-model=static | FileCheck --check-prefix=CHECK-X64 %s
 ; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck --check-prefix=CHECK-X32 %s
 
-@.str = internal constant [38 x i8] c"%d, %f, %d, %lld, %d, %f, %d, %d, %d\0A\00"		; <[38 x i8]*> [#uses=1]
+@.str = internal constant [38 x i8] c"%d, %f, %d, %lld, %d, %f, %d, %d, %d\0A\00"		; <ptr> [#uses=1]
 
-declare i32 @printf(i8*, ...) nounwind
+declare i32 @printf(ptr, ...) nounwind
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_copy(i8*, i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_copy(ptr, ptr)
+declare void @llvm.va_end(ptr)
 
-%struct.va_list = type { i32, i32, i8*, i8* }
+%struct.va_list = type { i32, i32, ptr, ptr }
 
 define void @func(...) nounwind {
 ; CHECK-X64-LABEL: func:
@@ -530,28 +530,26 @@ define void @func(...) nounwind {
 entry:
   %ap1 = alloca %struct.va_list
   %ap2 = alloca %struct.va_list
-  %ap1p = bitcast %struct.va_list* %ap1 to i8*
-  %ap2p = bitcast %struct.va_list* %ap2 to i8*
-  tail call void @llvm.va_start(i8* %ap1p)
-  %arg1 = va_arg i8* %ap1p, i32
-  %arg2 = va_arg i8* %ap1p, i32
-  %arg3 = va_arg i8* %ap1p, i32
-  tail call void @llvm.va_copy(i8* %ap2p, i8* %ap1p)
-  %arg4.1 = va_arg i8* %ap1p, double
-  %arg4.2 = va_arg i8* %ap2p, double
-  %arg5.1 = va_arg i8* %ap1p, i32
-  %arg5.2 = va_arg i8* %ap2p, i32
-  %arg6.1 = va_arg i8* %ap1p, i64
-  %arg6.2 = va_arg i8* %ap2p, i64
-  %arg7.1 = va_arg i8* %ap1p, i32
-  %arg7.2 = va_arg i8* %ap2p, i32
-  %arg8.1 = va_arg i8* %ap1p, double
-  %arg8.2 = va_arg i8* %ap2p, double
-  %arg9.1 = va_arg i8* %ap1p, i32
-  %arg9.2 = va_arg i8* %ap2p, i32
-  %result = tail call i32 (i8*, ...) @printf (i8* getelementptr ([38 x i8], [38 x i8]* @.str, i32 0, i64 0), i32 %arg9.1, double %arg8.2, i32 %arg7.1, i64 %arg6.2, i32 %arg5.1, double %arg4.2, i32 %arg3, i32 %arg2, i32 %arg1) nounwind
-  tail call void @llvm.va_end(i8* %ap2p)
-  tail call void @llvm.va_end(i8* %ap1p)
+  tail call void @llvm.va_start(ptr %ap1)
+  %arg1 = va_arg ptr %ap1, i32
+  %arg2 = va_arg ptr %ap1, i32
+  %arg3 = va_arg ptr %ap1, i32
+  tail call void @llvm.va_copy(ptr %ap2, ptr %ap1)
+  %arg4.1 = va_arg ptr %ap1, double
+  %arg4.2 = va_arg ptr %ap2, double
+  %arg5.1 = va_arg ptr %ap1, i32
+  %arg5.2 = va_arg ptr %ap2, i32
+  %arg6.1 = va_arg ptr %ap1, i64
+  %arg6.2 = va_arg ptr %ap2, i64
+  %arg7.1 = va_arg ptr %ap1, i32
+  %arg7.2 = va_arg ptr %ap2, i32
+  %arg8.1 = va_arg ptr %ap1, double
+  %arg8.2 = va_arg ptr %ap2, double
+  %arg9.1 = va_arg ptr %ap1, i32
+  %arg9.2 = va_arg ptr %ap2, i32
+  %result = tail call i32 (ptr, ...) @printf (ptr @.str, i32 %arg9.1, double %arg8.2, i32 %arg7.1, i64 %arg6.2, i32 %arg5.1, double %arg4.2, i32 %arg3, i32 %arg2, i32 %arg1) nounwind
+  tail call void @llvm.va_end(ptr %ap2)
+  tail call void @llvm.va_end(ptr %ap1)
   ret void
 }
 

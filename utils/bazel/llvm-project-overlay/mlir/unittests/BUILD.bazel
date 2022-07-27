@@ -106,6 +106,20 @@ cc_test(
 )
 
 cc_test(
+    name = "memref_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/MemRef/*.cpp",
+        "Dialect/MemRef/*.h",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//llvm:gtest_main",
+        "//mlir:MemRefDialect",
+    ],
+)
+
+cc_test(
     name = "quantops_tests",
     size = "small",
     srcs = glob([
@@ -166,6 +180,21 @@ cc_test(
 )
 
 cc_test(
+    name = "transform_dialect_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/Transform/*.cpp",
+        "Dialect/Transform/*.h",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//llvm:gtest_main",
+        "//mlir:FuncDialect",
+        "//mlir:TransformDialect",
+    ],
+)
+
+cc_test(
     name = "dialect_utils_tests",
     size = "small",
     srcs = glob([
@@ -214,25 +243,6 @@ gentbl_cc_library(
     ],
 )
 
-gentbl_cc_library(
-    name = "StructsIncGen",
-    tbl_outs = [
-        (
-            ["-gen-struct-attr-decls"],
-            "TableGen/StructAttrGenTest.h.inc",
-        ),
-        (
-            ["-gen-struct-attr-defs"],
-            "TableGen/StructAttrGenTest.cpp.inc",
-        ),
-    ],
-    tblgen = "//mlir:mlir-tblgen",
-    td_file = "TableGen/structs.td",
-    deps = [
-        "//mlir:OpBaseTdFiles",
-    ],
-)
-
 cc_test(
     name = "tablegen_tests",
     size = "small",
@@ -242,14 +252,11 @@ cc_test(
     ]) + [
         "TableGen/EnumsGenTest.cpp.inc",
         "TableGen/EnumsGenTest.h.inc",
-        "TableGen/StructAttrGenTest.cpp.inc",
-        "TableGen/StructAttrGenTest.h.inc",
     ],
     includes = ["TableGen/"],
     deps = [
         ":EnumsIncGen",
         ":PassIncGen",
-        ":StructsIncGen",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:gtest_main",
@@ -292,8 +299,8 @@ cc_test(
         "//llvm:gtest_main",
         "//mlir:AffineAnalysis",
         "//mlir:Analysis",
-        "//mlir:IR",
         "//mlir:Parser",
+        "//mlir:IR",
     ],
 )
 

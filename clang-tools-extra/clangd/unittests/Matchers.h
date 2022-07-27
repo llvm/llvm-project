@@ -173,7 +173,7 @@ private:
     virtual bool
     MatchAndExplain(Optional optional,
                     ::testing::MatchResultListener *listener) const {
-      if (!optional.hasValue())
+      if (!optional)
         return false;
 
       *listener << "which has a value ";

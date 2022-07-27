@@ -42,8 +42,8 @@ static TransformationMode hasUnrollTransformation(MDNode *LoopID) {
 
   Optional<int> Count =
       getOptionalIntLoopAttribute(LoopID, "llvm.loop.unroll.count");
-  if (Count.hasValue())
-    return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+  if (Count)
+    return Count.value() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.enable"))
     return TM_ForcedByUser;
@@ -96,8 +96,8 @@ static isl::schedule applyLoopUnroll(MDNode *LoopMD,
   // unrolled loop could be input of another loop transformation which expects
   // the explicit schedule nodes. That is, we would need this explicit expansion
   // anyway and using the ISL codegen option is a compile-time optimization.
-  int64_t Factor = getOptionalIntLoopAttribute(LoopMD, "llvm.loop.unroll.count")
-                       .getValueOr(0);
+  int64_t Factor =
+      getOptionalIntLoopAttribute(LoopMD, "llvm.loop.unroll.count").value_or(0);
   bool Full = getBooleanLoopAttribute(LoopMD, "llvm.loop.unroll.full");
   assert((!Full || !(Factor > 0)) &&
          "Cannot unroll fully and partially at the same time");

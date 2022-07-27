@@ -952,7 +952,7 @@ Check the size argument passed into C string functions for common erroneous patt
 unix.cstring.NullArg (C)
 """""""""""""""""""""""""
 Check for null pointers being passed as arguments to C string functions:
-``strlen, strnlen, strcpy, strncpy, strcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp``.
+``strlen, strnlen, strcpy, strncpy, strcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp, wcslen, wcsnlen``.
 
 .. code-block:: c
 
@@ -2520,6 +2520,75 @@ Check improper use of chroot.
    f(); // warn: no call of chdir("/") immediately after chroot
  }
 
+.. _alpha-unix-Errno:
+
+alpha.unix.Errno (C)
+""""""""""""""""""""
+
+Check for improper use of ``errno``.
+This checker implements partially CERT rule
+`ERR30-C. Set errno to zero before calling a library function known to set errno,
+and check errno only after the function returns a value indicating failure
+<https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152351>`_.
+The checker can find the first read of ``errno`` after successful standard
+function calls.
+
+The C and POSIX standards often do not define if a standard library function
+may change value of ``errno`` if the call does not fail.
+Therefore, ``errno`` should only be used if it is known from the return value
+of a function that the call has failed.
+There are exceptions to this rule (for example ``strtol``) but the affected
+functions are not yet supported by the checker.
+The return values for the failure cases are documented in the standard Linux man
+pages of the functions and in the `POSIX standard <https://pubs.opengroup.org/onlinepubs/9699919799/>`_.
+
+.. code-block:: c
+
+ int unsafe_errno_read(int sock, void *data, int data_size) {
+   if (send(sock, data, data_size, 0) != data_size) {
+     // 'send' can be successful even if not all data was sent
+     if (errno == 1) { // An undefined value may be read from 'errno'
+       return 0;
+     }
+   }
+   return 1;
+ }
+
+The supported functions are the same that are modeled by checker
+:ref:`alpha-unix-StdCLibraryFunctionArgs`.
+The ``ModelPOSIX`` option of that checker affects the set of checked functions.
+
+**Parameters**
+
+The ``AllowErrnoReadOutsideConditionExpressions`` option allows read of the
+errno value if the value is not used in a condition (in ``if`` statements,
+loops, conditional expressions, ``switch`` statements). For example ``errno``
+can be stored into a variable without getting a warning by the checker.
+
+.. code-block:: c
+
+ int unsafe_errno_read(int sock, void *data, int data_size) {
+   if (send(sock, data, data_size, 0) != data_size) {
+     int err = errno;
+     // warning if 'AllowErrnoReadOutsideConditionExpressions' is false
+     // no warning if 'AllowErrnoReadOutsideConditionExpressions' is true
+   }
+   return 1;
+ }
+
+Default value of this option is ``true``. This allows save of the errno value
+for possible later error handling.
+
+**Limitations**
+
+ - Only the very first usage of ``errno`` is checked after an affected function
+   call. Value of ``errno`` is not followed when it is stored into a variable
+   or returned from a function.
+ - Documentation of function ``lseek`` is not clear about what happens if the
+   function returns different value than the expected file position but not -1.
+   To avoid possible false-positives ``errno`` is allowed to be used in this
+   case.
+
 .. _alpha-unix-PthreadLock:
 
 alpha.unix.PthreadLock (C)
@@ -2630,7 +2699,7 @@ Check stream handling functions: ``fopen, tmpfile, fclose, fread, fwrite, fseek,
 
 alpha.unix.cstring.BufferOverlap (C)
 """"""""""""""""""""""""""""""""""""
-Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy``.
+Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmemcpy``.
 
 .. code-block:: c
 
@@ -2643,7 +2712,7 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy``.
 
 alpha.unix.cstring.NotNullTerminated (C)
 """"""""""""""""""""""""""""""""""""""""
-Check for arguments which are not null-terminated strings; applies to: ``strlen, strnlen, strcpy, strncpy, strcat, strncat``.
+Check for arguments which are not null-terminated strings; applies to: ``strlen, strnlen, strcpy, strncpy, strcat, strncat, wcslen, wcsnlen``.
 
 .. code-block:: c
 
@@ -2655,12 +2724,24 @@ Check for arguments which are not null-terminated strings; applies to: ``strlen,
 
 alpha.unix.cstring.OutOfBounds (C)
 """"""""""""""""""""""""""""""""""
-Check for out-of-bounds access in string functions; applies to:`` strncopy, strncat``.
+Check for out-of-bounds access in string functions, such as:
+``memcpy, bcopy, strcpy, strncpy, strcat, strncat, memmove, memcmp, memset`` and more.
+
+This check also works with string literals, except there is a known bug in that
+the analyzer cannot detect embedded NULL characters when determining the string length.
 
 .. code-block:: c
 
- void test() {
-   int y = strlen((char *)&test); // warn
+ void test1() {
+   const char str[] = "Hello world";
+   char buffer[] = "Hello world";
+   memcpy(buffer, str, sizeof(str) + 1); // warn
+ }
+
+ void test2() {
+   const char str[] = "Hello world";
+   char buffer[] = "Helloworld";
+   memcpy(buffer, str, sizeof(str)); // warn
  }
 
 .. _alpha-unix-cstring-UninitializedRead:

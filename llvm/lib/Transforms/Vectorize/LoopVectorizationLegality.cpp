@@ -386,20 +386,6 @@ static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
   return true;
 }
 
-/// Check whether it is safe to if-convert this phi node.
-///
-/// Phi nodes with constant expressions that can trap are not safe to if
-/// convert.
-static bool canIfConvertPHINodes(BasicBlock *BB) {
-  for (PHINode &Phi : BB->phis()) {
-    for (Value *V : Phi.incoming_values())
-      if (auto *C = dyn_cast<Constant>(V))
-        if (C->canTrap())
-          return false;
-  }
-  return true;
-}
-
 static Type *convertPointerToIntegerType(const DataLayout &DL, Type *Ty) {
   if (Ty->isPointerTy())
     return DL.getIntPtrType(Ty);
@@ -993,7 +979,6 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
     }
   }
 
-  Requirements->addRuntimePointerChecks(LAI->getNumRuntimePointerChecks());
   PSE.addPredicate(LAI->getPSE().getPredicate());
   return true;
 }
@@ -1098,13 +1083,6 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     SmallPtrSetImpl<const Instruction *> &MaskedOp,
     SmallPtrSetImpl<Instruction *> &ConditionalAssumes) const {
   for (Instruction &I : *BB) {
-    // Check that we don't have a constant expression that can trap as operand.
-    for (Value *Operand : I.operands()) {
-      if (auto *C = dyn_cast<Constant>(Operand))
-        if (C->canTrap())
-          return false;
-    }
-
     // We can predicate blocks with calls to assume, as long as we drop them in
     // case we flatten the CFG via predication.
     if (match(&I, m_Intrinsic<Intrinsic::assume>())) {
@@ -1190,7 +1168,6 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   }
 
   // Collect the blocks that need predication.
-  BasicBlock *Header = TheLoop->getHeader();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // We don't support switch statements inside loops.
     if (!isa<BranchInst>(BB->getTerminator())) {
@@ -1212,13 +1189,6 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
             BB->getTerminator());
         return false;
       }
-    } else if (BB != Header && !canIfConvertPHINodes(BB)) {
-      reportVectorizationFailure(
-          "Control flow cannot be substituted for a select",
-          "control flow cannot be substituted for a select",
-          "NoCFGForSelect", ORE, TheLoop,
-          BB->getTerminator());
-      return false;
     }
   }
 

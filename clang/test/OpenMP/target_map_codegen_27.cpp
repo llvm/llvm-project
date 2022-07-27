@@ -45,45 +45,53 @@
 void explicit_maps_pointer_references (int *p){
   int *&a = p;
 
-  // Region 00
-  // CK28-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
-  // CK28-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK28-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 00
+// CK28-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK28-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK28-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK28-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK28-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK28-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK28-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-  // CK28-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK28-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK28-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32***
-  // CK28-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32***
-  // CK28-DAG: store i32** [[VAR0:%.+]], i32*** [[CBP0]]
-  // CK28-DAG: store i32** [[VAR1:%.+]], i32*** [[CP0]]
-  // CK28-DAG: [[VAR0]] = load i32**, i32*** [[VAR00:%.+]],
-  // CK28-DAG: [[VAR1]] = load i32**, i32*** [[VAR11:%.+]],
+// CK28-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK28-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK28-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32***
+// CK28-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32***
+// CK28-DAG: store i32** [[VAR0:%.+]], i32*** [[CBP0]]
+// CK28-DAG: store i32** [[VAR1:%.+]], i32*** [[CP0]]
+// CK28-DAG: [[VAR0]] = load i32**, i32*** [[VAR00:%.+]],
+// CK28-DAG: [[VAR1]] = load i32**, i32*** [[VAR11:%.+]],
 
-  // CK28: call void [[CALL00:@.+]](i32** {{[^,]+}})
-  #pragma omp target map(a)
+// CK28: call void [[CALL00:@.+]](i32** {{[^,]+}})
+#pragma omp target map(a)
   {
     ++a;
   }
 
-  // Region 01
-  // CK28-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
-  // CK28-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK28-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 01
+// CK28-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK28-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK28-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK28-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK28-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK28-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK28-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-  // CK28-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK28-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK28-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
-  // CK28-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-  // CK28-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
-  // CK28-DAG: store i32* [[VAR1:%.+]], i32** [[CP0]]
-  // CK28-DAG: [[VAR0]] = load i32*, i32** [[VAR00:%.+]],
-  // CK28-DAG: [[VAR00]] = load i32**, i32*** [[VAR000:%.+]],
-  // CK28-DAG: [[VAR1]] = getelementptr inbounds i32, i32* [[VAR11:%.+]], i{{64|32}} 2
-  // CK28-DAG: [[VAR11]] = load i32*, i32** [[VAR111:%.+]],
-  // CK28-DAG: [[VAR111]] = load i32**, i32*** [[VAR1111:%.+]],
+// CK28-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK28-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK28-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+// CK28-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK28-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
+// CK28-DAG: store i32* [[VAR1:%.+]], i32** [[CP0]]
+// CK28-DAG: [[VAR0]] = load i32*, i32** [[VAR00:%.+]],
+// CK28-DAG: [[VAR00]] = load i32**, i32*** [[VAR000:%.+]],
+// CK28-DAG: [[VAR1]] = getelementptr inbounds i32, i32* [[VAR11:%.+]], i{{64|32}} 2
+// CK28-DAG: [[VAR11]] = load i32*, i32** [[VAR111:%.+]],
+// CK28-DAG: [[VAR111]] = load i32**, i32*** [[VAR1111:%.+]],
 
-  // CK28: call void [[CALL01:@.+]](i32* {{[^,]+}})
-  #pragma omp target map(a[2:100])
+// CK28: call void [[CALL01:@.+]](i32* {{[^,]+}})
+#pragma omp target map(a [2:100])
   {
     ++a;
   }

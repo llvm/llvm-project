@@ -40,9 +40,9 @@ using namespace llvm;
 #include "AMDGPUGenSubtargetInfo.inc"
 #undef AMDGPUSubtarget
 
-static cl::opt<bool> DisablePowerSched(
-  "amdgpu-disable-power-sched",
-  cl::desc("Disable scheduling to minimize mAI power bursts"),
+static cl::opt<bool> EnablePowerSched(
+  "amdgpu-enable-power-sched",
+  cl::desc("Enable scheduling to minimize mAI power bursts"),
   cl::init(false));
 
 static cl::opt<bool> EnableVGPRIndexMode(
@@ -535,13 +535,11 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
   for (const Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    MaybeAlign Alignment = IsByRef ? Arg.getParamAlign() : None;
-    if (!Alignment)
-      Alignment = DL.getABITypeAlign(ArgTy);
-
+    Align Alignment = DL.getValueOrABITypeAlignment(
+        IsByRef ? Arg.getParamAlign() : None, ArgTy);
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
     ExplicitArgBytes = alignTo(ExplicitArgBytes, Alignment) + AllocSize;
-    MaxAlign = max(MaxAlign, Alignment);
+    MaxAlign = std::max(MaxAlign, Alignment);
   }
 
   return ExplicitArgBytes;
@@ -738,13 +736,18 @@ static unsigned getMaxNumPreloadedSGPRs() {
                           2 + // dispatch ID
                           2 + // flat scratch init
                           2;  // Implicit buffer ptr
+
   // Max number of system SGPRs
   unsigned MaxSystemSGPRs = 1 + // WorkGroupIDX
                             1 + // WorkGroupIDY
                             1 + // WorkGroupIDZ
                             1 + // WorkGroupInfo
                             1;  // private segment wave byte offset
-  return MaxUserSGPRs + MaxSystemSGPRs;
+
+  // Max number of synthetic SGPRs
+  unsigned SyntheticSGPRs = 1; // LDSKernelId
+
+  return MaxUserSGPRs + MaxSystemSGPRs + SyntheticSGPRs;
 }
 
 unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
@@ -854,34 +857,6 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
     return MI && TII->isVALU(*MI);
   }
 
-  bool canAddEdge(const SUnit *Succ, const SUnit *Pred) const {
-    if (Pred->NodeNum < Succ->NodeNum)
-      return true;
-
-    SmallVector<const SUnit*, 64> Succs({Succ}), Preds({Pred});
-
-    for (unsigned I = 0; I < Succs.size(); ++I) {
-      for (const SDep &SI : Succs[I]->Succs) {
-        const SUnit *SU = SI.getSUnit();
-        if (SU != Succs[I] && !llvm::is_contained(Succs, SU))
-          Succs.push_back(SU);
-      }
-    }
-
-    SmallPtrSet<const SUnit*, 32> Visited;
-    while (!Preds.empty()) {
-      const SUnit *SU = Preds.pop_back_val();
-      if (llvm::is_contained(Succs, SU))
-        return false;
-      Visited.insert(SU);
-      for (const SDep &SI : SU->Preds)
-        if (SI.getSUnit() != SU && !Visited.count(SI.getSUnit()))
-          Preds.push_back(SI.getSUnit());
-    }
-
-    return true;
-  }
-
   // Link as many SALU instructions in chain as possible. Return the size
   // of the chain. Links up to MaxChain instructions.
   unsigned linkSALUChain(SUnit *From, SUnit *To, unsigned MaxChain,
@@ -897,18 +872,20 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
       LLVM_DEBUG(dbgs() << "Inserting edge from\n" ; DAG->dumpNode(*From);
                  dbgs() << "to\n"; DAG->dumpNode(*SU); dbgs() << '\n');
 
-      if (SU->addPred(SDep(From, SDep::Artificial), false))
-        ++Linked;
+      if (SU != From && From != &DAG->ExitSU && DAG->canAddEdge(SU, From))
+        if (DAG->addEdge(SU, SDep(From, SDep::Artificial)))
+          ++Linked;
 
       for (SDep &SI : From->Succs) {
         SUnit *SUv = SI.getSUnit();
-        if (SUv != From && isVALU(SUv) && canAddEdge(SUv, SU))
-          SUv->addPred(SDep(SU, SDep::Artificial), false);
+        if (SUv != From && SU != &DAG->ExitSU && isVALU(SUv) &&
+            DAG->canAddEdge(SUv, SU))
+          DAG->addEdge(SUv, SDep(SU, SDep::Artificial));
       }
 
       for (SDep &SI : SU->Succs) {
         SUnit *Succ = SI.getSUnit();
-        if (Succ != SU && isSALU(Succ) && canAddEdge(From, Succ))
+        if (Succ != SU && isSALU(Succ))
           Worklist.push_back(Succ);
       }
     }
@@ -918,7 +895,7 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override {
     const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasMAIInsts() || DisablePowerSched)
+    if (!ST.hasMAIInsts())
       return;
     DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
     const TargetSchedModel *TSchedModel = DAGInstrs->getSchedModel();
@@ -951,7 +928,8 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
         if (Visited.count(&*LastSALU))
           continue;
 
-        if (!isSALU(&*LastSALU) || !canAddEdge(&*LastSALU, &SU))
+        if (&SU == &DAG->ExitSU || &SU == &*LastSALU || !isSALU(&*LastSALU) ||
+            !DAG->canAddEdge(&*LastSALU, &SU))
           continue;
 
         Lat -= linkSALUChain(&SU, &*LastSALU, Lat, Visited);
@@ -968,7 +946,8 @@ void GCNSubtarget::getPostRAMutations(
 
 std::unique_ptr<ScheduleDAGMutation>
 GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
-  return std::make_unique<FillMFMAShadowMutation>(&InstrInfo);
+  return EnablePowerSched ? std::make_unique<FillMFMAShadowMutation>(&InstrInfo)
+                          : nullptr;
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {

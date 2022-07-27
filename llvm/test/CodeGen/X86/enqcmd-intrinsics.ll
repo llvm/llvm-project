@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+enqcmd | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnux32 -mattr=+enqcmd | FileCheck %s --check-prefix=X32
 
-define i8 @test_enqcmd(i8* %dst, i8* %src) {
+define i8 @test_enqcmd(ptr %dst, ptr %src) {
 ; X64-LABEL: test_enqcmd:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    enqcmd (%rsi), %rdi
@@ -26,11 +26,11 @@ define i8 @test_enqcmd(i8* %dst, i8* %src) {
 entry:
 
 
-  %0 = call i8 @llvm.x86.enqcmd(i8* %dst, i8* %src)
+  %0 = call i8 @llvm.x86.enqcmd(ptr %dst, ptr %src)
   ret i8 %0
 }
 
-define i8 @test_enqcmds(i8* %dst, i8* %src) {
+define i8 @test_enqcmds(ptr %dst, ptr %src) {
 ; X64-LABEL: test_enqcmds:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    enqcmds (%rsi), %rdi
@@ -53,9 +53,9 @@ define i8 @test_enqcmds(i8* %dst, i8* %src) {
 entry:
 
 
-  %0 = call i8 @llvm.x86.enqcmds(i8* %dst, i8* %src)
+  %0 = call i8 @llvm.x86.enqcmds(ptr %dst, ptr %src)
   ret i8 %0
 }
 
-declare i8 @llvm.x86.enqcmd(i8*, i8*)
-declare i8 @llvm.x86.enqcmds(i8*, i8*)
+declare i8 @llvm.x86.enqcmd(ptr, ptr)
+declare i8 @llvm.x86.enqcmds(ptr, ptr)

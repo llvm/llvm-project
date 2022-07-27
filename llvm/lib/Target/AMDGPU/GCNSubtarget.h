@@ -107,6 +107,7 @@ protected:
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
   bool SGPRInitBug = false;
+  bool UserSGPRInit16Bug = false;
   bool NegativeScratchOffsetBug = false;
   bool NegativeUnalignedScratchOffsetBug = false;
   bool HasSMemRealTime = false;
@@ -144,6 +145,7 @@ protected:
   bool HasDot7Insts = false;
   bool HasDot8Insts = false;
   bool HasMAIInsts = false;
+  bool HasFP8Insts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFaddRtnInsts = false;
   bool HasAtomicFaddNoRtnInsts = false;
@@ -720,6 +722,10 @@ public:
     return HasMAIInsts;
   }
 
+  bool hasFP8Insts() const {
+    return HasFP8Insts;
+  }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -926,6 +932,10 @@ public:
 
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
+  }
+
+  bool hasUserSGPRInit16Bug() const {
+    return UserSGPRInit16Bug && isWave32();
   }
 
   bool hasNegativeScratchOffsetBug() const { return NegativeScratchOffsetBug; }

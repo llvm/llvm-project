@@ -59,11 +59,10 @@ void dumpJumpTableFdata(raw_ostream &OS, const BinaryFunction &BF,
                         const MCInst &Instr, const std::string &BranchLabel) {
   StringRef FunctionName = BF.getOneName();
   const JumpTable *JT = BF.getJumpTable(Instr);
-  for (const uint64_t EntryOffset : JT->OffsetEntries) {
-    auto LI = JT->Labels.find(EntryOffset);
-    StringRef TargetName = LI->second->getName();
-    const uint64_t Mispreds = JT->Counts[EntryOffset].Mispreds;
-    const uint64_t Count = JT->Counts[EntryOffset].Count;
+  for (uint32_t i = 0; i < JT->Entries.size(); ++i) {
+    StringRef TargetName = JT->Entries[i]->getName();
+    const uint64_t Mispreds = JT->Counts[i].Mispreds;
+    const uint64_t Count = JT->Counts[i].Count;
     OS << "# FDATA: 1 " << FunctionName << " #" << BranchLabel << "# "
        << "1 " << FunctionName << " #" << TargetName << "# " << Mispreds << " "
        << Count << '\n';
@@ -196,7 +195,7 @@ void dumpFunction(const BinaryFunction &BF) {
   std::unordered_set<const MCSymbol *> CallReferences;
 
   MAP->OutStreamer->emitCFIStartProc(/*IsSimple=*/false);
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     OS << BB->getName() << ": \n";
 
     const std::string BranchLabel = Twine(BB->getName(), "_br").str();

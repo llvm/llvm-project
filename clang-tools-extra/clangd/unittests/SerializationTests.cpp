@@ -297,7 +297,7 @@ TEST(SerializationTest, CmdlTest) {
     ASSERT_TRUE(bool(In)) << In.takeError();
     ASSERT_TRUE(In->Cmd);
 
-    const tooling::CompileCommand &SerializedCmd = In->Cmd.getValue();
+    const tooling::CompileCommand &SerializedCmd = *In->Cmd;
     EXPECT_EQ(SerializedCmd.CommandLine, Cmd.CommandLine);
     EXPECT_EQ(SerializedCmd.Directory, Cmd.Directory);
     EXPECT_NE(SerializedCmd.Filename, Cmd.Filename);
@@ -391,7 +391,7 @@ TEST(SerializationTest, NoCrashOnBadArraySize) {
 // Check we detect invalid string table size size without allocating it first.
 // If this detection fails, the test should allocate a huge array and crash.
 TEST(SerializationTest, NoCrashOnBadStringTableSize) {
-  if (!llvm::zlib::isAvailable()) {
+  if (!llvm::compression::zlib::isAvailable()) {
     log("skipping test, no zlib");
     return;
   }

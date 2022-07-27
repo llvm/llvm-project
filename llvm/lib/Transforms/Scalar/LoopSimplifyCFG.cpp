@@ -371,7 +371,7 @@ private:
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {
-        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
         I->eraseFromParent();
       }
 
@@ -576,6 +576,18 @@ public:
       return false;
     }
 
+    // TODO: Tokens may breach LCSSA form by default. However, the transform for
+    // dead exit blocks requires LCSSA form to be maintained for all values,
+    // tokens included, otherwise it may break use-def dominance (see PR56243).
+    if (!DeadExitBlocks.empty() && !L.isLCSSAForm(DT, /*IgnoreTokens*/ false)) {
+      assert(L.isLCSSAForm(DT, /*IgnoreTokens*/ true) &&
+             "LCSSA broken not by tokens?");
+      LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
+                        << Header->getName()
+                        << ": tokens uses potentially break LCSSA form.\n");
+      return false;
+    }
+
     SE.forgetTopmostLoop(&L);
     // Dump analysis results.
     LLVM_DEBUG(dump());
@@ -701,8 +713,7 @@ PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
     MSSAU = MemorySSAUpdater(AR.MSSA);
   bool DeleteCurrentLoop = false;
   if (!simplifyLoopCFG(L, AR.DT, AR.LI, AR.SE,
-                       MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-                       DeleteCurrentLoop))
+                       MSSAU ? MSSAU.getPointer() : nullptr, DeleteCurrentLoop))
     return PreservedAnalyses::all();
 
   if (DeleteCurrentLoop)
@@ -736,9 +747,9 @@ public:
     if (MSSAA && VerifyMemorySSA)
       MSSAU->getMemorySSA()->verifyMemorySSA();
     bool DeleteCurrentLoop = false;
-    bool Changed = simplifyLoopCFG(
-        *L, DT, LI, SE, MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-        DeleteCurrentLoop);
+    bool Changed =
+        simplifyLoopCFG(*L, DT, LI, SE, MSSAU ? MSSAU.getPointer() : nullptr,
+                        DeleteCurrentLoop);
     if (DeleteCurrentLoop)
       LPM.markLoopAsDeleted(*L);
     return Changed;

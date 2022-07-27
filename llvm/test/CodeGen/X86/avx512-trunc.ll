@@ -44,14 +44,14 @@ define <8 x i8> @trunc_qb_512(<8 x i64> %i) #0 {
   ret <8 x i8> %x
 }
 
-define void @trunc_qb_512_mem(<8 x i64> %i, <8 x i8>* %res) #0 {
+define void @trunc_qb_512_mem(<8 x i64> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_qb_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovqb %zmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
     %x = trunc <8 x i64> %i to <8 x i8>
-    store <8 x i8> %x, <8 x i8>* %res
+    store <8 x i8> %x, ptr %res
     ret void
 }
 
@@ -72,7 +72,7 @@ define <4 x i8> @trunc_qb_256(<4 x i64> %i) #0 {
   ret <4 x i8> %x
 }
 
-define void @trunc_qb_256_mem(<4 x i64> %i, <4 x i8>* %res) #0 {
+define void @trunc_qb_256_mem(<4 x i64> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_qb_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
@@ -87,7 +87,7 @@ define void @trunc_qb_256_mem(<4 x i64> %i, <4 x i8>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <4 x i64> %i to <4 x i8>
-    store <4 x i8> %x, <4 x i8>* %res
+    store <4 x i8> %x, ptr %res
     ret void
 }
 
@@ -105,7 +105,7 @@ define <2 x i8> @trunc_qb_128(<2 x i64> %i) #0 {
   ret <2 x i8> %x
 }
 
-define void @trunc_qb_128_mem(<2 x i64> %i, <2 x i8>* %res) #0 {
+define void @trunc_qb_128_mem(<2 x i64> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_qb_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
@@ -117,7 +117,7 @@ define void @trunc_qb_128_mem(<2 x i64> %i, <2 x i8>* %res) #0 {
 ; SKX-NEXT:    vpmovqb %xmm0, (%rdi)
 ; SKX-NEXT:    retq
     %x = trunc <2 x i64> %i to <2 x i8>
-    store <2 x i8> %x, <2 x i8>* %res
+    store <2 x i8> %x, ptr %res
     ret void
 }
 
@@ -131,14 +131,14 @@ define <8 x i16> @trunc_qw_512(<8 x i64> %i) #0 {
   ret <8 x i16> %x
 }
 
-define void @trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) #0 {
+define void @trunc_qw_512_mem(<8 x i64> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_qw_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovqw %zmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
     %x = trunc <8 x i64> %i to <8 x i16>
-    store <8 x i16> %x, <8 x i16>* %res
+    store <8 x i16> %x, ptr %res
     ret void
 }
 
@@ -159,7 +159,7 @@ define <4 x i16> @trunc_qw_256(<4 x i64> %i) #0 {
   ret <4 x i16> %x
 }
 
-define void @trunc_qw_256_mem(<4 x i64> %i, <4 x i16>* %res) #0 {
+define void @trunc_qw_256_mem(<4 x i64> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_qw_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
@@ -174,7 +174,7 @@ define void @trunc_qw_256_mem(<4 x i64> %i, <4 x i16>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <4 x i64> %i to <4 x i16>
-    store <4 x i16> %x, <4 x i16>* %res
+    store <4 x i16> %x, ptr %res
     ret void
 }
 
@@ -193,7 +193,7 @@ define <2 x i16> @trunc_qw_128(<2 x i64> %i) #0 {
   ret <2 x i16> %x
 }
 
-define void @trunc_qw_128_mem(<2 x i64> %i, <2 x i16>* %res) #0 {
+define void @trunc_qw_128_mem(<2 x i64> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_qw_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -206,7 +206,7 @@ define void @trunc_qw_128_mem(<2 x i64> %i, <2 x i16>* %res) #0 {
 ; SKX-NEXT:    vpmovqw %xmm0, (%rdi)
 ; SKX-NEXT:    retq
     %x = trunc <2 x i64> %i to <2 x i16>
-    store <2 x i16> %x, <2 x i16>* %res
+    store <2 x i16> %x, ptr %res
     ret void
 }
 
@@ -219,14 +219,14 @@ define <8 x i32> @trunc_qd_512(<8 x i64> %i) #0 {
   ret <8 x i32> %x
 }
 
-define void @trunc_qd_512_mem(<8 x i64> %i, <8 x i32>* %res) #0 {
+define void @trunc_qd_512_mem(<8 x i64> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_qd_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovqd %zmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
     %x = trunc <8 x i64> %i to <8 x i32>
-    store <8 x i32> %x, <8 x i32>* %res
+    store <8 x i32> %x, ptr %res
     ret void
 }
 
@@ -248,7 +248,7 @@ define <4 x i32> @trunc_qd_256(<4 x i64> %i) #0 {
   ret <4 x i32> %x
 }
 
-define void @trunc_qd_256_mem(<4 x i64> %i, <4 x i32>* %res) #0 {
+define void @trunc_qd_256_mem(<4 x i64> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_qd_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
@@ -263,7 +263,7 @@ define void @trunc_qd_256_mem(<4 x i64> %i, <4 x i32>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <4 x i64> %i to <4 x i32>
-    store <4 x i32> %x, <4 x i32>* %res
+    store <4 x i32> %x, ptr %res
     ret void
 }
 
@@ -276,7 +276,7 @@ define <2 x i32> @trunc_qd_128(<2 x i64> %i) #0 {
   ret <2 x i32> %x
 }
 
-define void @trunc_qd_128_mem(<2 x i64> %i, <2 x i32>* %res) #0 {
+define void @trunc_qd_128_mem(<2 x i64> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_qd_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -288,7 +288,7 @@ define void @trunc_qd_128_mem(<2 x i64> %i, <2 x i32>* %res) #0 {
 ; SKX-NEXT:    vpmovqd %xmm0, (%rdi)
 ; SKX-NEXT:    retq
     %x = trunc <2 x i64> %i to <2 x i32>
-    store <2 x i32> %x, <2 x i32>* %res
+    store <2 x i32> %x, ptr %res
     ret void
 }
 
@@ -302,14 +302,14 @@ define <16 x i8> @trunc_db_512(<16 x i32> %i) #0 {
   ret <16 x i8> %x
 }
 
-define void @trunc_db_512_mem(<16 x i32> %i, <16 x i8>* %res) #0 {
+define void @trunc_db_512_mem(<16 x i32> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_db_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
     %x = trunc <16 x i32> %i to <16 x i8>
-    store <16 x i8> %x, <16 x i8>* %res
+    store <16 x i8> %x, ptr %res
     ret void
 }
 
@@ -330,7 +330,7 @@ define <8 x i8> @trunc_db_256(<8 x i32> %i) #0 {
   ret <8 x i8> %x
 }
 
-define void @trunc_db_256_mem(<8 x i32> %i, <8 x i8>* %res) #0 {
+define void @trunc_db_256_mem(<8 x i32> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_db_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
@@ -345,7 +345,7 @@ define void @trunc_db_256_mem(<8 x i32> %i, <8 x i8>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <8 x i32> %i to <8 x i8>
-    store <8 x i8> %x, <8 x i8>* %res
+    store <8 x i8> %x, ptr %res
     ret void
 }
 
@@ -363,7 +363,7 @@ define <4 x i8> @trunc_db_128(<4 x i32> %i) #0 {
   ret <4 x i8> %x
 }
 
-define void @trunc_db_128_mem(<4 x i32> %i, <4 x i8>* %res) #0 {
+define void @trunc_db_128_mem(<4 x i32> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_db_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
@@ -375,7 +375,7 @@ define void @trunc_db_128_mem(<4 x i32> %i, <4 x i8>* %res) #0 {
 ; SKX-NEXT:    vpmovdb %xmm0, (%rdi)
 ; SKX-NEXT:    retq
     %x = trunc <4 x i32> %i to <4 x i8>
-    store <4 x i8> %x, <4 x i8>* %res
+    store <4 x i8> %x, ptr %res
     ret void
 }
 
@@ -388,14 +388,14 @@ define <16 x i16> @trunc_dw_512(<16 x i32> %i) #0 {
   ret <16 x i16> %x
 }
 
-define void @trunc_dw_512_mem(<16 x i32> %i, <16 x i16>* %res) #0 {
+define void @trunc_dw_512_mem(<16 x i32> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_dw_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovdw %zmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
     %x = trunc <16 x i32> %i to <16 x i16>
-    store <16 x i16> %x, <16 x i16>* %res
+    store <16 x i16> %x, ptr %res
     ret void
 }
 
@@ -417,7 +417,7 @@ define <8 x i16> @trunc_dw_256(<8 x i32> %i) #0 {
   ret <8 x i16> %x
 }
 
-define void @trunc_dw_256_mem(<8 x i32> %i, <8 x i16>* %res) #0 {
+define void @trunc_dw_256_mem(<8 x i32> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_dw_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
@@ -432,11 +432,11 @@ define void @trunc_dw_256_mem(<8 x i32> %i, <8 x i16>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <8 x i32> %i to <8 x i16>
-    store <8 x i16> %x, <8 x i16>* %res
+    store <8 x i16> %x, ptr %res
     ret void
 }
 
-define void @trunc_dw_128_mem(<4 x i32> %i, <4 x i16>* %res) #0 {
+define void @trunc_dw_128_mem(<4 x i32> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_dw_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u]
@@ -448,7 +448,7 @@ define void @trunc_dw_128_mem(<4 x i32> %i, <4 x i16>* %res) #0 {
 ; SKX-NEXT:    vpmovdw %xmm0, (%rdi)
 ; SKX-NEXT:    retq
     %x = trunc <4 x i32> %i to <4 x i16>
-    store <4 x i16> %x, <4 x i16>* %res
+    store <4 x i16> %x, ptr %res
     ret void
 }
 
@@ -471,7 +471,7 @@ define <32 x i8> @trunc_wb_512(<32 x i16> %i) #0 {
   ret <32 x i8> %x
 }
 
-define void @trunc_wb_512_mem(<32 x i16> %i, <32 x i8>* %res) #0 {
+define void @trunc_wb_512_mem(<32 x i16> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_wb_512_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
@@ -488,7 +488,7 @@ define void @trunc_wb_512_mem(<32 x i16> %i, <32 x i8>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <32 x i16> %i to <32 x i8>
-    store <32 x i8> %x, <32 x i8>* %res
+    store <32 x i8> %x, ptr %res
     ret void
 }
 
@@ -509,7 +509,7 @@ define <16 x i8> @trunc_wb_256(<16 x i16> %i) #0 {
   ret <16 x i8> %x
 }
 
-define void @trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) #0 {
+define void @trunc_wb_256_mem(<16 x i16> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
@@ -523,11 +523,11 @@ define void @trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <16 x i16> %i to <16 x i8>
-    store <16 x i8> %x, <16 x i8>* %res
+    store <16 x i8> %x, ptr %res
     ret void
 }
 
-define <16 x i8> @trunc_wb_256_mem_and_ret(<16 x i16> %i, <16 x i8>* %res) #0 {
+define <16 x i8> @trunc_wb_256_mem_and_ret(<16 x i16> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_wb_256_mem_and_ret:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
@@ -543,7 +543,7 @@ define <16 x i8> @trunc_wb_256_mem_and_ret(<16 x i16> %i, <16 x i8>* %res) #0 {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
     %x = trunc <16 x i16> %i to <16 x i8>
-    store <16 x i8> %x, <16 x i8>* %res
+    store <16 x i8> %x, ptr %res
     ret <16 x i8> %x
 }
 
@@ -561,7 +561,7 @@ define <8 x i8> @trunc_wb_128(<8 x i16> %i) #0 {
   ret <8 x i8> %x
 }
 
-define void @trunc_wb_128_mem(<8 x i16> %i, <8 x i8>* %res) #0 {
+define void @trunc_wb_128_mem(<8 x i16> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_wb_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
@@ -573,12 +573,12 @@ define void @trunc_wb_128_mem(<8 x i16> %i, <8 x i8>* %res) #0 {
 ; SKX-NEXT:    vpmovwb %xmm0, (%rdi)
 ; SKX-NEXT:    retq
     %x = trunc <8 x i16> %i to <8 x i8>
-    store <8 x i8> %x, <8 x i8>* %res
+    store <8 x i8> %x, ptr %res
     ret void
 }
 
 
-define void @usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) {
+define void @usat_trunc_wb_256_mem(<16 x i16> %i, ptr %res) {
 ; KNL-LABEL: usat_trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
@@ -595,7 +595,7 @@ define void @usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) {
   %x3 = icmp ult <16 x i16> %i, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x5 = select <16 x i1> %x3, <16 x i16> %i, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x6 = trunc <16 x i16> %x5 to <16 x i8>
-  store <16 x i8> %x6, <16 x i8>* %res, align 1
+  store <16 x i8> %x6, ptr %res, align 1
   ret void
 }
 
@@ -619,7 +619,7 @@ define <16 x i8> @usat_trunc_wb_256(<16 x i16> %i) {
   ret <16 x i8> %x6
 }
 
-define void @usat_trunc_wb_128_mem(<8 x i16> %i, <8 x i8>* %res) {
+define void @usat_trunc_wb_128_mem(<8 x i16> %i, ptr %res) {
 ; KNL-LABEL: usat_trunc_wb_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -634,11 +634,11 @@ define void @usat_trunc_wb_128_mem(<8 x i16> %i, <8 x i8>* %res) {
   %x3 = icmp ult <8 x i16> %i, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x5 = select <8 x i1> %x3, <8 x i16> %i, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x6 = trunc <8 x i16> %x5 to <8 x i8>
-  store <8 x i8> %x6, <8 x i8>* %res, align 1
+  store <8 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @usat_trunc_db_512_mem(<16 x i32> %i, <16 x i8>* %res) {
+define void @usat_trunc_db_512_mem(<16 x i32> %i, ptr %res) {
 ; ALL-LABEL: usat_trunc_db_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovusdb %zmm0, (%rdi)
@@ -647,11 +647,11 @@ define void @usat_trunc_db_512_mem(<16 x i32> %i, <16 x i8>* %res) {
   %x3 = icmp ult <16 x i32> %i, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x5 = select <16 x i1> %x3, <16 x i32> %i, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x6 = trunc <16 x i32> %x5 to <16 x i8>
-  store <16 x i8> %x6, <16 x i8>* %res, align 1
+  store <16 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @usat_trunc_qb_512_mem(<8 x i64> %i, <8 x i8>* %res) {
+define void @usat_trunc_qb_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL-LABEL: usat_trunc_qb_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovusqb %zmm0, (%rdi)
@@ -660,11 +660,11 @@ define void @usat_trunc_qb_512_mem(<8 x i64> %i, <8 x i8>* %res) {
   %x3 = icmp ult <8 x i64> %i, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %x5 = select <8 x i1> %x3, <8 x i64> %i, <8 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %x6 = trunc <8 x i64> %x5 to <8 x i8>
-  store <8 x i8> %x6, <8 x i8>* %res, align 1
+  store <8 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @usat_trunc_qd_512_mem(<8 x i64> %i, <8 x i32>* %res) {
+define void @usat_trunc_qd_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL-LABEL: usat_trunc_qd_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovusqd %zmm0, (%rdi)
@@ -673,11 +673,11 @@ define void @usat_trunc_qd_512_mem(<8 x i64> %i, <8 x i32>* %res) {
   %x3 = icmp ult <8 x i64> %i, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %x5 = select <8 x i1> %x3, <8 x i64> %i, <8 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %x6 = trunc <8 x i64> %x5 to <8 x i32>
-  store <8 x i32> %x6, <8 x i32>* %res, align 1
+  store <8 x i32> %x6, ptr %res, align 1
   ret void
 }
 
-define void @usat_trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) {
+define void @usat_trunc_qw_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL-LABEL: usat_trunc_qw_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovusqw %zmm0, (%rdi)
@@ -686,7 +686,7 @@ define void @usat_trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) {
   %x3 = icmp ult <8 x i64> %i, <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %x5 = select <8 x i1> %x3, <8 x i64> %i, <8 x i64> <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %x6 = trunc <8 x i64> %x5 to <8 x i16>
-  store <8 x i16> %x6, <8 x i16>* %res, align 1
+  store <8 x i16> %x6, ptr %res, align 1
   ret void
 }
 
@@ -703,7 +703,7 @@ define <32 x i8> @usat_trunc_db_1024(<32 x i32> %i) {
   ret <32 x i8> %x6
 }
 
-define void @usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
+define void @usat_trunc_db_1024_mem(<32 x i32> %i, ptr %p) {
 ; ALL-LABEL: usat_trunc_db_1024_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovusdb %zmm1, 16(%rdi)
@@ -713,7 +713,7 @@ define void @usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
   %x3 = icmp ult <32 x i32> %i, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x5 = select <32 x i1> %x3, <32 x i32> %i, <32 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x6 = trunc <32 x i32> %x5 to <32 x i8>
-  store <32 x i8>%x6, <32 x i8>* %p, align 1
+  store <32 x i8>%x6, ptr %p, align 1
   ret void
 }
 
@@ -789,7 +789,7 @@ define <16 x i8> @usat_trunc_db_256(<8 x i32> %x) {
 ; %res = trunc %d
 
 
-define void @smax_usat_trunc_wb_256_mem1(<16 x i16> %i, <16 x i8>* %res) {
+define void @smax_usat_trunc_wb_256_mem1(<16 x i16> %i, ptr %res) {
 ; KNL-LABEL: smax_usat_trunc_wb_256_mem1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -810,12 +810,12 @@ define void @smax_usat_trunc_wb_256_mem1(<16 x i16> %i, <16 x i8>* %res) {
   %x3 = icmp slt <16 x i16> %x2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x5 = select <16 x i1> %x3, <16 x i16> %x2, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x6 = trunc <16 x i16> %x5 to <16 x i8>
-  store <16 x i8> %x6, <16 x i8>* %res, align 1
+  store <16 x i8> %x6, ptr %res, align 1
   ret void
 }
 
 ; Test for smax(smin(x, C2), C1).
-define void @smax_usat_trunc_wb_256_mem2(<16 x i16> %i, <16 x i8>* %res) {
+define void @smax_usat_trunc_wb_256_mem2(<16 x i16> %i, ptr %res) {
 ; KNL-LABEL: smax_usat_trunc_wb_256_mem2:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -836,7 +836,7 @@ define void @smax_usat_trunc_wb_256_mem2(<16 x i16> %i, <16 x i8>* %res) {
   %x3 = icmp sgt <16 x i16> %x2, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
   %x5 = select <16 x i1> %x3, <16 x i16> %x2, <16 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
   %x6 = trunc <16 x i16> %x5 to <16 x i8>
-  store <16 x i8> %x6, <16 x i8>* %res, align 1
+  store <16 x i8> %x6, ptr %res, align 1
   ret void
 }
 
@@ -863,7 +863,7 @@ define <16 x i8> @smax_usat_trunc_wb_256(<16 x i16> %i) {
   ret <16 x i8> %x6
   }
 
-define void @smax_usat_trunc_wb_128_mem(<8 x i16> %i, <8 x i8>* %res) {
+define void @smax_usat_trunc_wb_128_mem(<8 x i16> %i, ptr %res) {
 ; KNL-LABEL: smax_usat_trunc_wb_128_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
@@ -881,11 +881,11 @@ define void @smax_usat_trunc_wb_128_mem(<8 x i16> %i, <8 x i8>* %res) {
   %x3 = icmp slt <8 x i16> %x2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x5 = select <8 x i1> %x3, <8 x i16> %x2, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x6 = trunc <8 x i16> %x5 to <8 x i8>
-  store <8 x i8> %x6, <8 x i8>* %res, align 1
+  store <8 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @smax_usat_trunc_db_512_mem(<16 x i32> %i, <16 x i8>* %res) {
+define void @smax_usat_trunc_db_512_mem(<16 x i32> %i, ptr %res) {
 ; ALL-LABEL: smax_usat_trunc_db_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -898,11 +898,11 @@ define void @smax_usat_trunc_db_512_mem(<16 x i32> %i, <16 x i8>* %res) {
   %x3 = icmp slt <16 x i32> %x2, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x5 = select <16 x i1> %x3, <16 x i32> %x2, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x6 = trunc <16 x i32> %x5 to <16 x i8>
-  store <16 x i8> %x6, <16 x i8>* %res, align 1
+  store <16 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @smax_usat_trunc_qb_512_mem(<8 x i64> %i, <8 x i8>* %res) {
+define void @smax_usat_trunc_qb_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL-LABEL: smax_usat_trunc_qb_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -915,11 +915,11 @@ define void @smax_usat_trunc_qb_512_mem(<8 x i64> %i, <8 x i8>* %res) {
   %x3 = icmp slt <8 x i64> %x2, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %x5 = select <8 x i1> %x3, <8 x i64> %x2, <8 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %x6 = trunc <8 x i64> %x5 to <8 x i8>
-  store <8 x i8> %x6, <8 x i8>* %res, align 1
+  store <8 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @smax_usat_trunc_qd_512_mem(<8 x i64> %i, <8 x i32>* %res) {
+define void @smax_usat_trunc_qd_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL-LABEL: smax_usat_trunc_qd_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -932,11 +932,11 @@ define void @smax_usat_trunc_qd_512_mem(<8 x i64> %i, <8 x i32>* %res) {
   %x3 = icmp slt <8 x i64> %x2, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %x5 = select <8 x i1> %x3, <8 x i64> %x2, <8 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %x6 = trunc <8 x i64> %x5 to <8 x i32>
-  store <8 x i32> %x6, <8 x i32>* %res, align 1
+  store <8 x i32> %x6, ptr %res, align 1
   ret void
 }
 
-define void @smax_usat_trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) {
+define void @smax_usat_trunc_qw_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL-LABEL: smax_usat_trunc_qw_512_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -949,7 +949,7 @@ define void @smax_usat_trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) {
   %x3 = icmp slt <8 x i64> %x2, <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %x5 = select <8 x i1> %x3, <8 x i64> %x2, <8 x i64> <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %x6 = trunc <8 x i64> %x5 to <8 x i16>
-  store <8 x i16> %x6, <8 x i16>* %res, align 1
+  store <8 x i16> %x6, ptr %res, align 1
   ret void
 }
 
@@ -971,7 +971,7 @@ define <32 x i8> @smax_usat_trunc_db_1024(<32 x i32> %i) {
   ret <32 x i8> %x6
 }
 
-define void @smax_usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
+define void @smax_usat_trunc_db_1024_mem(<32 x i32> %i, ptr %p) {
 ; ALL-LABEL: smax_usat_trunc_db_1024_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -986,7 +986,7 @@ define void @smax_usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
   %x3 = icmp slt <32 x i32> %x2, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x5 = select <32 x i1> %x3, <32 x i32> %x2, <32 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x6 = trunc <32 x i32> %x5 to <32 x i8>
-  store <32 x i8>%x6, <32 x i8>* %p, align 1
+  store <32 x i8>%x6, ptr %p, align 1
   ret void
 }
 
@@ -1005,7 +1005,7 @@ define <16 x i16> @smax_usat_trunc_dw_512(<16 x i32> %i) {
   ret <16 x i16> %x6
 }
 
-define void @negative_test1_smax_usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) {
+define void @negative_test1_smax_usat_trunc_wb_256_mem(<16 x i16> %i, ptr %res) {
 ; KNL-LABEL: negative_test1_smax_usat_trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpminsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
@@ -1027,11 +1027,11 @@ define void @negative_test1_smax_usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>*
   %x3 = icmp sgt <16 x i16> %x2, <i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10>
   %x5 = select <16 x i1> %x3, <16 x i16> %x2, <16 x i16> <i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10, i16 -10>
   %x6 = trunc <16 x i16> %x5 to <16 x i8>
-  store <16 x i8> %x6, <16 x i8>* %res, align 1
+  store <16 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @negative_test2_smax_usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) {
+define void @negative_test2_smax_usat_trunc_wb_256_mem(<16 x i16> %i, ptr %res) {
 ; KNL-LABEL: negative_test2_smax_usat_trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmaxsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
@@ -1053,11 +1053,11 @@ define void @negative_test2_smax_usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>*
   %x3 = icmp slt <16 x i16> %x2, <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>
   %x5 = select <16 x i1> %x3, <16 x i16> %x2, <16 x i16> <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>
   %x6 = trunc <16 x i16> %x5 to <16 x i8>
-  store <16 x i8> %x6, <16 x i8>* %res, align 1
+  store <16 x i8> %x6, ptr %res, align 1
   ret void
 }
 
-define void @ssat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
+define void @ssat_trunc_db_1024_mem(<32 x i32> %i, ptr %p) {
 ; ALL-LABEL: ssat_trunc_db_1024_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpmovsdb %zmm1, 16(%rdi)
@@ -1070,7 +1070,7 @@ define void @ssat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
   %x3 = icmp slt <32 x i32> %x2, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %x5 = select <32 x i1> %x3, <32 x i32> %x2, <32 x i32> <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %x6 = trunc <32 x i32> %x5 to <32 x i8>
-  store <32 x i8>%x6, <32 x i8>* %p, align 1
+  store <32 x i8>%x6, ptr %p, align 1
   ret void
 }
 

@@ -103,47 +103,6 @@ static void parseCHRFilterFiles() {
 }
 
 namespace {
-class ControlHeightReductionLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  ControlHeightReductionLegacyPass() : FunctionPass(ID) {
-    initializeControlHeightReductionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-    parseCHRFilterFiles();
-  }
-
-  bool runOnFunction(Function &F) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<RegionInfoPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-} // end anonymous namespace
-
-char ControlHeightReductionLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(ControlHeightReductionLegacyPass,
-                      "chr",
-                      "Reduce control height in the hot paths",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
-INITIALIZE_PASS_END(ControlHeightReductionLegacyPass,
-                    "chr",
-                    "Reduce control height in the hot paths",
-                    false, false)
-
-FunctionPass *llvm::createControlHeightReductionLegacyPass() {
-  return new ControlHeightReductionLegacyPass();
-}
-
-namespace {
 
 struct CHRStats {
   CHRStats() = default;
@@ -1765,7 +1724,7 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   // Create the combined branch condition and constant-fold the branches/selects
   // in the hot path.
   fixupBranchesAndSelects(Scope, PreEntryBlock, MergedBr,
-                          ProfileCount.getValueOr(0));
+                          ProfileCount.value_or(0));
 }
 
 // A helper for transformScopes. Clone the blocks in the scope (excluding the
@@ -2081,18 +2040,6 @@ bool CHR::run() {
   }
 
   return Changed;
-}
-
-bool ControlHeightReductionLegacyPass::runOnFunction(Function &F) {
-  BlockFrequencyInfo &BFI =
-      getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  ProfileSummaryInfo &PSI =
-      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
-  std::unique_ptr<OptimizationRemarkEmitter> OwnedORE =
-      std::make_unique<OptimizationRemarkEmitter>(&F);
-  return CHR(F, BFI, DT, PSI, RI, *OwnedORE).run();
 }
 
 namespace llvm {

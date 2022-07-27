@@ -41,10 +41,16 @@ void ref_map() {
   double b;
   S s(b);
 
-  // CK35-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 4, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[4 x i{{.+}}]* [[MTYPE_TO]]{{.+}}, i8** null, i8** null)
-  // CK35-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK35-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-  // CK35-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+  // CK35-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+  // CK35-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+  // CK35-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+  // CK35-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+  // CK35-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+  // CK35-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+  // CK35-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+  // CK35-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK35-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK35-DAG: [[SIZES]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
 
   // pass TARGET_PARAM {&s, &s, ((void*)(&s+1)-(void*)&s)}
 
@@ -132,10 +138,16 @@ void ref_map() {
 
   // CK35 : call void
 
-  // CK35-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE_FROM]]{{.+}}, i8** null, i8** null)
-  // CK35-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK35-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-  // CK35-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+  // CK35-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+  // CK35-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+  // CK35-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+  // CK35-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+  // CK35-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+  // CK35-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+  // CK35-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+  // CK35-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK35-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK35-DAG: [[SIZES]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
 
   // pass TARGET_PARAM {&s, &s.b, ((void*)(&s.b+1)-(void*)&s.b)}
 

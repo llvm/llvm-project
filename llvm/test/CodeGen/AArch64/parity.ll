@@ -77,28 +77,40 @@ define i32 @parity_32(i32 %x) {
 define i64 @parity_64(i64 %x) {
 ; CHECK-LABEL: parity_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor x8, x0, x0, lsr #32
-; CHECK-NEXT:    eor x8, x8, x8, lsr #16
-; CHECK-NEXT:    eor x8, x8, x8, lsr #8
-; CHECK-NEXT:    eor x8, x8, x8, lsr #4
-; CHECK-NEXT:    eor x8, x8, x8, lsr #2
-; CHECK-NEXT:    eor w8, w8, w8, lsr #1
-; CHECK-NEXT:    and x0, x8, #0x1
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.ctpop.i64(i64 %x)
   %2 = and i64 %1, 1
   ret i64 %2
 }
 
+define i128 @parity_128(i128 %x) {
+; CHECK-LABEL: parity_128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    mov v0.d[1], x1
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %1 = tail call i128 @llvm.ctpop.i128(i128 %x)
+  %2 = and i128 %1, 1
+  ret i128 %2
+}
+
 define i32 @parity_64_trunc(i64 %x) {
 ; CHECK-LABEL: parity_64_trunc:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor x8, x0, x0, lsr #32
-; CHECK-NEXT:    eor x8, x8, x8, lsr #16
-; CHECK-NEXT:    eor x8, x8, x8, lsr #8
-; CHECK-NEXT:    eor x8, x8, x8, lsr #4
-; CHECK-NEXT:    eor x8, x8, x8, lsr #2
-; CHECK-NEXT:    eor w8, w8, w8, lsr #1
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.ctpop.i64(i64 %x)
@@ -159,3 +171,4 @@ declare i16 @llvm.ctpop.i16(i16 %x)
 declare i17 @llvm.ctpop.i17(i17 %x)
 declare i32 @llvm.ctpop.i32(i32 %x)
 declare i64 @llvm.ctpop.i64(i64 %x)
+declare i128 @llvm.ctpop.i128(i128 %x)

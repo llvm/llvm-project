@@ -27,6 +27,15 @@ add_header_library(
 )
 
 add_header_library(
+  integer_to_string
+  HDRS
+    integer_to_string.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+)
+
+add_header_library(
   high_precision_decimal
   HDRS
     high_precision_decimal.h
@@ -45,6 +54,7 @@ add_header_library(
     libc.include.errno
     libc.src.errno.errno
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.uint128
     libc.src.__support.FPUtil.fputil
 )
 

@@ -451,7 +451,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (IrrLoopHeaderWeight && IsStandalone) {
     if (Indexes) OS << '\t';
     OS.indent(2) << "; Irreducible loop header weight: "
-                 << IrrLoopHeaderWeight.getValue() << '\n';
+                 << IrrLoopHeaderWeight.value() << '\n';
   }
 }
 
@@ -913,6 +913,10 @@ bool MachineBasicBlock::isSuccessor(const MachineBasicBlock *MBB) const {
 bool MachineBasicBlock::isLayoutSuccessor(const MachineBasicBlock *MBB) const {
   MachineFunction::const_iterator I(this);
   return std::next(I) == MachineFunction::const_iterator(MBB);
+}
+
+const MachineBasicBlock *MachineBasicBlock::getSingleSuccessor() const {
+  return Successors.size() == 1 ? Successors[0] : nullptr;
 }
 
 MachineBasicBlock *MachineBasicBlock::getFallThrough() {
@@ -1432,7 +1436,7 @@ MachineBasicBlock::getSuccProbability(const_succ_iterator Succ) const {
     // ditribute the complemental of the sum to each unknown probability.
     unsigned KnownProbNum = 0;
     auto Sum = BranchProbability::getZero();
-    for (auto &P : Probs) {
+    for (const auto &P : Probs) {
       if (!P.isUnknown()) {
         Sum += P;
         KnownProbNum++;
@@ -1615,6 +1619,16 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   }
 
   return liveout_iterator(*this, ExceptionPointer, ExceptionSelector, false);
+}
+
+bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
+  unsigned Cntr = 0;
+  auto R = instructionsWithoutDebug(begin(), end());
+  for (auto I = R.begin(), E = R.end(); I != E; ++I) {
+    if (++Cntr > Limit)
+      return true;
+  }
+  return false;
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);

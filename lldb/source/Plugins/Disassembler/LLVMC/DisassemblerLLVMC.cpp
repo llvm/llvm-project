@@ -85,6 +85,324 @@ private:
   std::unique_ptr<llvm::MCInstPrinter> m_instr_printer_up;
 };
 
+namespace x86 {
+
+/// These are the three values deciding instruction control flow kind.
+/// InstructionLengthDecode function decodes an instruction and get this struct.
+///
+/// primary_opcode
+///    Primary opcode of the instruction.
+///    For one-byte opcode instruction, it's the first byte after prefix.
+///    For two- and three-byte opcodes, it's the second byte.
+///
+/// opcode_len
+///    The length of opcode in bytes. Valid opcode lengths are 1, 2, or 3.
+///
+/// modrm
+///    ModR/M byte of the instruction.
+///    Bits[7:6] indicate MOD. Bits[5:3] specify a register and R/M bits[2:0]
+///    may contain a register or specify an addressing mode, depending on MOD.
+struct InstructionOpcodeAndModrm {
+  uint8_t primary_opcode;
+  uint8_t opcode_len;
+  uint8_t modrm;
+};
+
+/// Determine the InstructionControlFlowKind based on opcode and modrm bytes.
+/// Refer to http://ref.x86asm.net/coder.html for the full list of opcode and
+/// instruction set.
+///
+/// \param[in] opcode_and_modrm
+///    Contains primary_opcode byte, its length, and ModR/M byte.
+///    Refer to the struct InstructionOpcodeAndModrm for details.
+///
+/// \return
+///   The control flow kind of the instruction or
+///   eInstructionControlFlowKindOther if the instruction doesn't affect
+///   the control flow of the program.
+lldb::InstructionControlFlowKind
+MapOpcodeIntoControlFlowKind(InstructionOpcodeAndModrm opcode_and_modrm) {
+  uint8_t opcode = opcode_and_modrm.primary_opcode;
+  uint8_t opcode_len = opcode_and_modrm.opcode_len;
+  uint8_t modrm = opcode_and_modrm.modrm;
+
+  if (opcode_len > 2)
+    return lldb::eInstructionControlFlowKindOther;
+
+  if (opcode >= 0x70 && opcode <= 0x7F) {
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindCondJump;
+    else
+      return lldb::eInstructionControlFlowKindOther;
+  }
+
+  if (opcode >= 0x80 && opcode <= 0x8F) {
+    if (opcode_len == 2)
+      return lldb::eInstructionControlFlowKindCondJump;
+    else
+      return lldb::eInstructionControlFlowKindOther;
+  }
+
+  switch (opcode) {
+  case 0x9A:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarCall;
+    break;
+  case 0xFF:
+    if (opcode_len == 1) {
+      uint8_t modrm_reg = (modrm >> 3) & 7;
+      if (modrm_reg == 2)
+        return lldb::eInstructionControlFlowKindCall;
+      else if (modrm_reg == 3)
+        return lldb::eInstructionControlFlowKindFarCall;
+      else if (modrm_reg == 4)
+        return lldb::eInstructionControlFlowKindJump;
+      else if (modrm_reg == 5)
+        return lldb::eInstructionControlFlowKindFarJump;
+    }
+    break;
+  case 0xE8:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindCall;
+    break;
+  case 0xCD:
+  case 0xCC:
+  case 0xCE:
+  case 0xF1:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarCall;
+    break;
+  case 0xCF:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarReturn;
+    break;
+  case 0xE9:
+  case 0xEB:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindJump;
+    break;
+  case 0xEA:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarJump;
+    break;
+  case 0xE3:
+  case 0xE0:
+  case 0xE1:
+  case 0xE2:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindCondJump;
+    break;
+  case 0xC3:
+  case 0xC2:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindReturn;
+    break;
+  case 0xCB:
+  case 0xCA:
+    if (opcode_len == 1)
+      return lldb::eInstructionControlFlowKindFarReturn;
+    break;
+  case 0x05:
+  case 0x34:
+    if (opcode_len == 2)
+      return lldb::eInstructionControlFlowKindFarCall;
+    break;
+  case 0x35:
+  case 0x07:
+    if (opcode_len == 2)
+      return lldb::eInstructionControlFlowKindFarReturn;
+    break;
+  case 0x01:
+    if (opcode_len == 2) {
+      switch (modrm) {
+      case 0xc1:
+        return lldb::eInstructionControlFlowKindFarCall;
+      case 0xc2:
+      case 0xc3:
+        return lldb::eInstructionControlFlowKindFarReturn;
+      default:
+        break;
+      }
+    }
+    break;
+  default:
+    break;
+  }
+
+  return lldb::eInstructionControlFlowKindOther;
+}
+
+/// Decode an instruction into opcode, modrm and opcode_len.
+/// Refer to http://ref.x86asm.net/coder.html for the instruction bytes layout.
+/// Opcodes in x86 are generally the first byte of instruction, though two-byte
+/// instructions and prefixes exist. ModR/M is the byte following the opcode
+/// and adds additional information for how the instruction is executed.
+///
+/// \param[in] inst_bytes
+///    Raw bytes of the instruction
+///
+///
+/// \param[in] bytes_len
+///    The length of the inst_bytes array.
+///
+/// \param[in] is_exec_mode_64b
+///    If true, the execution mode is 64 bit.
+///
+/// \return
+///    Returns decoded instruction as struct InstructionOpcodeAndModrm, holding
+///    primary_opcode, opcode_len and modrm byte. Refer to the struct definition
+///    for more details.
+///    Otherwise if the given instruction is invalid, returns None.
+llvm::Optional<InstructionOpcodeAndModrm>
+InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
+                        bool is_exec_mode_64b) {
+  int op_idx = 0;
+  bool prefix_done = false;
+  InstructionOpcodeAndModrm ret = {0, 0, 0};
+
+  // In most cases, the primary_opcode is the first byte of the instruction
+  // but some instructions have a prefix to be skipped for these calculations.
+  // The following mapping is inspired from libipt's instruction decoding logic
+  // in `src/pt_ild.c`
+  while (!prefix_done) {
+    if (op_idx >= bytes_len)
+      return llvm::None;
+
+    ret.primary_opcode = inst_bytes[op_idx];
+    switch (ret.primary_opcode) {
+    // prefix_ignore
+    case 0x26:
+    case 0x2e:
+    case 0x36:
+    case 0x3e:
+    case 0x64:
+    case 0x65:
+    // prefix_osz, prefix_asz
+    case 0x66:
+    case 0x67:
+    // prefix_lock, prefix_f2, prefix_f3
+    case 0xf0:
+    case 0xf2:
+    case 0xf3:
+      op_idx++;
+      break;
+
+    // prefix_rex
+    case 0x40:
+    case 0x41:
+    case 0x42:
+    case 0x43:
+    case 0x44:
+    case 0x45:
+    case 0x46:
+    case 0x47:
+    case 0x48:
+    case 0x49:
+    case 0x4a:
+    case 0x4b:
+    case 0x4c:
+    case 0x4d:
+    case 0x4e:
+    case 0x4f:
+      if (is_exec_mode_64b)
+        op_idx++;
+      else
+        prefix_done = true;
+      break;
+
+    // prefix_vex_c4, c5
+    case 0xc5:
+      if (!is_exec_mode_64b && (inst_bytes[op_idx + 1] & 0xc0) != 0xc0) {
+        prefix_done = true;
+        break;
+      }
+
+      ret.opcode_len = 2;
+      ret.primary_opcode = inst_bytes[op_idx + 2];
+      ret.modrm = inst_bytes[op_idx + 3];
+      return ret;
+
+    case 0xc4:
+      if (!is_exec_mode_64b && (inst_bytes[op_idx + 1] & 0xc0) != 0xc0) {
+        prefix_done = true;
+        break;
+      }
+      ret.opcode_len = inst_bytes[op_idx + 1] & 0x1f;
+      ret.primary_opcode = inst_bytes[op_idx + 3];
+      ret.modrm = inst_bytes[op_idx + 4];
+      return ret;
+
+    // prefix_evex
+    case 0x62:
+      if (!is_exec_mode_64b && (inst_bytes[op_idx + 1] & 0xc0) != 0xc0) {
+        prefix_done = true;
+        break;
+      }
+      ret.opcode_len = inst_bytes[op_idx + 1] & 0x03;
+      ret.primary_opcode = inst_bytes[op_idx + 4];
+      ret.modrm = inst_bytes[op_idx + 5];
+      return ret;
+
+    default:
+      prefix_done = true;
+      break;
+    }
+  } // prefix done
+
+  ret.primary_opcode = inst_bytes[op_idx];
+  ret.modrm = inst_bytes[op_idx + 1];
+  ret.opcode_len = 1;
+
+  // If the first opcode is 0F, it's two- or three- byte opcodes.
+  if (ret.primary_opcode == 0x0F) {
+    ret.primary_opcode = inst_bytes[++op_idx]; // get the next byte
+
+    if (ret.primary_opcode == 0x38) {
+      ret.opcode_len = 3;
+      ret.primary_opcode = inst_bytes[++op_idx]; // get the next byte
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else if (ret.primary_opcode == 0x3A) {
+      ret.opcode_len = 3;
+      ret.primary_opcode = inst_bytes[++op_idx];
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else if ((ret.primary_opcode & 0xf8) == 0x38) {
+      ret.opcode_len = 0;
+      ret.primary_opcode = inst_bytes[++op_idx];
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else if (ret.primary_opcode == 0x0F) {
+      ret.opcode_len = 3;
+      // opcode is 0x0F, no needs to update
+      ret.modrm = inst_bytes[op_idx + 1];
+    } else {
+      ret.opcode_len = 2;
+      ret.modrm = inst_bytes[op_idx + 1];
+    }
+  }
+
+  return ret;
+}
+
+lldb::InstructionControlFlowKind GetControlFlowKind(bool is_exec_mode_64b,
+                                                    Opcode m_opcode) {
+  llvm::Optional<InstructionOpcodeAndModrm> ret = llvm::None;
+
+  if (m_opcode.GetOpcodeBytes() == nullptr || m_opcode.GetByteSize() <= 0) {
+    // x86_64 and i386 instructions are categorized as Opcode::Type::eTypeBytes
+    return lldb::eInstructionControlFlowKindUnknown;
+  }
+
+  // Opcode bytes will be decoded into primary_opcode, modrm and opcode length.
+  // These are the three values deciding instruction control flow kind.
+  ret = InstructionLengthDecode((const uint8_t *)m_opcode.GetOpcodeBytes(),
+                                m_opcode.GetByteSize(), is_exec_mode_64b);
+  if (!ret)
+    return lldb::eInstructionControlFlowKindUnknown;
+  else
+    return MapOpcodeIntoControlFlowKind(ret.value());
+}
+
+} // namespace x86
+
 class InstructionLLVMC : public lldb_private::Instruction {
 public:
   InstructionLLVMC(DisassemblerLLVMC &disasm,
@@ -221,6 +539,19 @@ public:
       m_comment.append(", ");
       m_comment.append(description);
     }
+  }
+
+  lldb::InstructionControlFlowKind
+  GetControlFlowKind(const lldb_private::ExecutionContext *exe_ctx) override {
+    DisassemblerScope disasm(*this, exe_ctx);
+    if (disasm){
+      if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86)
+        return x86::GetControlFlowKind(/*is_64b=*/false, m_opcode);
+      else if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
+        return x86::GetControlFlowKind(/*is_64b=*/true, m_opcode);
+    }
+
+    return eInstructionControlFlowKindUnknown;
   }
 
   void CalculateMnemonicOperandsAndComment(
@@ -1181,11 +1512,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
 
   // If any AArch64 variant, enable latest ISA with all extensions.
   if (triple.isAArch64()) {
-    features_str += "+v9.3a,";
-    std::vector<llvm::StringRef> features;
-    // Get all possible features
-    llvm::AArch64::getExtensionFeatures(-1, features);
-    features_str += llvm::join(features, ",");
+    features_str += "+all,";
 
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";
@@ -1382,14 +1709,14 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         // the ADRP's register and this ADD's register are the same,
         // then this is a pc-relative address calculation.
         if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
-            m_adrp_insn.hasValue() && m_adrp_address == pc - 4 &&
-            (m_adrp_insn.getValue() & 0x1f) == ((value >> 5) & 0x1f)) {
+            m_adrp_insn && m_adrp_address == pc - 4 &&
+            (m_adrp_insn.value() & 0x1f) == ((value >> 5) & 0x1f)) {
           uint32_t addxri_inst;
           uint64_t adrp_imm, addxri_imm;
           // Get immlo and immhi bits, OR them together to get the ADRP imm
           // value.
-          adrp_imm = ((m_adrp_insn.getValue() & 0x00ffffe0) >> 3) |
-                     ((m_adrp_insn.getValue() >> 29) & 0x3);
+          adrp_imm = ((m_adrp_insn.value() & 0x00ffffe0) >> 3) |
+                     ((m_adrp_insn.value() >> 29) & 0x3);
           // if high bit of immhi after right-shifting set, sign extend
           if (adrp_imm & (1ULL << 20))
             adrp_imm |= ~((1ULL << 21) - 1);

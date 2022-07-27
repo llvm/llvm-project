@@ -116,10 +116,8 @@ RecordType verifyDerived(mlir::AsmParser &parser, RecordType derivedTy,
 mlir::Type fir::parseFirType(FIROpsDialect *dialect,
                              mlir::DialectAsmParser &parser) {
   mlir::StringRef typeTag;
-  if (parser.parseKeyword(&typeTag))
-    return {};
   mlir::Type genType;
-  auto parseResult = generatedTypeParser(parser, typeTag, genType);
+  auto parseResult = generatedTypeParser(parser, &typeTag, genType);
   if (parseResult.hasValue())
     return genType;
   parser.emitError(parser.getNameLoc(), "unknown fir type: ") << typeTag;
@@ -749,14 +747,17 @@ mlir::Type fir::SequenceType::parse(mlir::AsmParser &parser) {
     return {};
   }
   mlir::Type eleTy;
-  if (parser.parseType(eleTy) || parser.parseGreater())
+  if (parser.parseType(eleTy))
     return {};
   mlir::AffineMapAttr map;
-  if (!parser.parseOptionalComma())
+  if (!parser.parseOptionalComma()) {
     if (parser.parseAttribute(map)) {
       parser.emitError(parser.getNameLoc(), "expecting affine map");
       return {};
     }
+  }
+  if (parser.parseGreater())
+    return {};
   return SequenceType::get(parser.getContext(), shape, eleTy, map);
 }
 

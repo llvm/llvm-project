@@ -1,110 +1,146 @@
 ## Test that in the presence of SHT_LLVM_BB_ADDR_MAP sections,
 ## --symbolize-operands can display <BB*> labels.
 
-# RUN: yaml2obj --docnum=1 %s -o %t1
+## Executable object file.
+# RUN: yaml2obj --docnum=1 -DTYPE=ET_EXEC -DFOO_ADDR=0x4000 -DBAR_ADDR=0x5000 %s -o %t1
 # RUN: llvm-objdump %t1 -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --match-full-lines --check-prefix=INTEL
+# RUN:   FileCheck %s -DSYM=symbol --match-full-lines --check-prefixes=INTEL
 # RUN: llvm-objdump %t1 -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --match-full-lines --check-prefix=ATT
+# RUN:   FileCheck %s -DSYM=symbol --match-full-lines --check-prefixes=ATT
 
-# RUN: yaml2obj --docnum=2 %s -o %t2
+## Relocatable object file.
+# RUN: yaml2obj --docnum=1 -DTYPE=ET_REL -DFOO_ADDR=0x0 -DBAR_ADDR=0x0 %s -o %t2
 # RUN: llvm-objdump %t2 -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --match-full-lines --check-prefixes=INTEL,INTEL-MULTISECTION
+# RUN:   FileCheck %s -DSYM=foo+0x200c --match-full-lines --check-prefix=INTEL
 # RUN: llvm-objdump %t2 -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
-# RUN:   FileCheck %s --match-full-lines --check-prefixes=ATT,ATT-MULTISECTION
+# RUN:   FileCheck %s -DSYM=foo+0x200c --match-full-lines --check-prefix=ATT
+
+## Executable object file with a single SHT_LLVM_BB_ADDR_MAP for multiple text sections.
+# RUN: yaml2obj --docnum=2 %s -o %t3
+# RUN: llvm-objdump %t3 -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s -DSYM=symbol --match-full-lines --check-prefixes=INTEL
+# RUN: llvm-objdump %t3 -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s -DSYM=symbol --match-full-lines --check-prefixes=ATT
 
 ## Expect to find the branch and basic block labels and global variable name.
 # ATT:      <foo>:
 # ATT-NEXT: <BB0>:
 # ATT-NEXT:   pushq %rax
 # ATT-NEXT: <BB1>:
-# ATT-NEXT:   cmpl  , %eax <symbol>
+# ATT-NEXT:   cmpl  , %eax <[[SYM]]>
 # ATT-NEXT:   nop
 # ATT-NEXT: <BB2>:
 # ATT-NEXT:   jge    <BB3>
 # ATT-NEXT:   jmp    <BB1>
 # ATT-NEXT: <BB3>:
 # ATT-NEXT:   retq
-# ATT-MULTISECTION:      <bar>:
-# ATT-MULTISECTION-NEXT: <BB0>:
-# ATT-MULTISECTION-NEXT:   pushq  %rax
-# ATT-MULTISECTION-NEXT:   movl   %edx, %eax
-# ATT-MULTISECTION-NEXT:   je     <BB2>
-# ATT-MULTISECTION-NEXT: <BB1>:
-# ATT-MULTISECTION-NEXT:   xorl   %esi, %esi
-# ATT-MULTISECTION-NEXT: <BB2>:
-# ATT-MULTISECTION-NEXT:   callq  <bar>
-# ATT-MULTISECTION-NEXT:   retq
+# ATT:      <bar>:
+# ATT-NEXT: <BB0>:
+# ATT-NEXT:   pushq  %rax
+# ATT-NEXT:   movl   %edx, %eax
+# ATT-NEXT:   je     <BB2>
+# ATT-NEXT: <BB1>:
+# ATT-NEXT:   xorl   %esi, %esi
+# ATT-NEXT: <BB2>:
+# ATT-NEXT:   callq  <bar>
+# ATT-NEXT:   retq
 
 # INTEL:      <foo>:
 # INTEL-NEXT: <BB0>:
 # INTEL-NEXT:   push rax
 # INTEL-NEXT: <BB1>:
-# INTEL-NEXT:   cmp  eax, dword ptr <symbol>
+# INTEL-NEXT:   cmp  eax, dword ptr <[[SYM]]>
 # INTEL-NEXT:   nop
 # INTEL-NEXT: <BB2>:
 # INTEL-NEXT:   jge   <BB3>
 # INTEL-NEXT:   jmp   <BB1>
 # INTEL-NEXT: <BB3>:
 # INTEL-NEXT:   ret
-# INTEL-MULTISECTION:      <bar>:
-# INTEL-MULTISECTION-NEXT: <BB0>:
-# INTEL-MULTISECTION-NEXT:   push  rax
-# INTEL-MULTISECTION-NEXT:   mov   eax, edx
-# INTEL-MULTISECTION-NEXT:   je    <BB2>
-# INTEL-MULTISECTION-NEXT: <BB1>:
-# INTEL-MULTISECTION-NEXT:   xor   esi, esi
-# INTEL-MULTISECTION-NEXT: <BB2>:
-# INTEL-MULTISECTION-NEXT:   call  <bar>
-# INTEL-MULTISECTION-NEXT:   ret
+# INTEL:      <bar>:
+# INTEL-NEXT: <BB0>:
+# INTEL-NEXT:   push  rax
+# INTEL-NEXT:   mov   eax, edx
+# INTEL-NEXT:   je    <BB2>
+# INTEL-NEXT: <BB1>:
+# INTEL-NEXT:   xor   esi, esi
+# INTEL-NEXT: <BB2>:
+# INTEL-NEXT:   call  <bar>
+# INTEL-NEXT:   ret
 
-## This object file contains a text section, a SHT_LLVM_BB_ADDR_MAP section
-## linked to it, and a data section.
+## This object file contains a separate text section and SHT_LLVM_BB_ADDR_MAP
+## section for each of the two functions foo and bar.
+## This is used to test --symbolize-operands on reloctable and non-relocotable
+## object files.
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
-  Type:    ET_EXEC
+  Type:    [[TYPE]]
   Machine: EM_X86_64
 Sections:
-  - Name:    .text
+  - Name:    .text.foo
     Type:    SHT_PROGBITS
-    Address: 0x4000
+    Address: [[FOO_ADDR]]
     Flags:   [SHF_ALLOC, SHF_EXECINSTR]
-    Content: '503b0505100000907d02ebf5c3'
+    Content: '503b0505200000907d02ebf5c3'
+  - Name:    .text.bar
+    Type:    SHT_PROGBITS
+    Address: [[BAR_ADDR]]
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '5089d0740231f6e8f4ffffffc3'
   - Name:    .data
     Type:    SHT_PROGBITS
     Flags:   [SHF_ALLOC, SHF_WRITE]
-    Address: 0x5000
-  - Name:   bb_addr_map_1
+    Address: 0x6000
+  - Name:   .llvm_bb_addr_map.foo
     Type:   SHT_LLVM_BB_ADDR_MAP
-    Link:   .text
+    Link:   .text.foo
     Entries:
-      - Address: 0x4000
+      - Version: 1
+        Address: [[FOO_ADDR]]
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x1
+          - AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
-          - AddressOffset: 0x8
-            Size:          0x3
+          - AddressOffset: 0x1
+            Size:          0x4
             Metadata:      0x0
-          - AddressOffset: 0xc
+          - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
+  - Name:   .llvm_bb_addr_map.bar
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.bar
+    Entries:
+      - Version: 1
+        Address: [[BAR_ADDR]]
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x1
+          - AddressOffset: 0x4
+            Size:          0x2
+            Metadata:      0x0
+          - AddressOffset: 0x0
+            Size:          0x6
+            Metadata:      0x0
+
 Symbols:
   - Name:    foo
-    Section: .text
-    Value:   0x4000
+    Section: .text.foo
+    Value:   [[FOO_ADDR]]
+  - Name:    bar
+    Section: .text.bar
+    Value:   [[BAR_ADDR]]
   - Name:    symbol
     Section: .data
-    Value:   0x500c
+    Value:   0x600c
 
-## This object file contains a separate text section and SHT_LLVM_BB_ADDR_MAP
-## section for each of the two functions foo and bar. foo's section contents
-## are identical to the ones above.
+## This object file contains a single SHT_LLVM_BB_ADDR_MAP for two text
+## sections .text.foo and .text.bar.
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -126,37 +162,35 @@ Sections:
     Type:    SHT_PROGBITS
     Flags:   [SHF_ALLOC, SHF_WRITE]
     Address: 0x6000
-  - Name:   bb_addr_map.foo
+  - Name:   .llvm_bb_addr_map.foo
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text.foo
     Entries:
-      - Address: 0x4000
+      - Version: 1
+        Address: 0x4000
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x1
+          - AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
-          - AddressOffset: 0x8
-            Size:          0x3
+          - AddressOffset: 0x1
+            Size:          0x4
             Metadata:      0x0
-          - AddressOffset: 0xc
+          - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
-  - Name:   bb_addr_map.bar
-    Type:   SHT_LLVM_BB_ADDR_MAP
-    Link:   .text.bar
-    Entries:
-      - Address: 0x5000
+      - Version: 1
+        Address: 0x5000
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x5
+          - AddressOffset: 0x4
             Size:          0x2
             Metadata:      0x0
-          - AddressOffset: 0x7
+          - AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
 

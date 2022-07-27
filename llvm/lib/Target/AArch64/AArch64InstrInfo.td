@@ -14,196 +14,196 @@
 // ARM Instruction Predicate Definitions.
 //
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
-                                 AssemblerPredicate<(all_of HasV8_1aOps), "armv8.1a">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_1aOps), "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
-                                 AssemblerPredicate<(all_of HasV8_2aOps), "armv8.2a">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_2aOps), "armv8.2a">;
 def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
-                                 AssemblerPredicate<(all_of HasV8_3aOps), "armv8.3a">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_3aOps), "armv8.3a">;
 def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
-                                 AssemblerPredicate<(all_of HasV8_4aOps), "armv8.4a">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_4aOps), "armv8.4a">;
 def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
-                                 AssemblerPredicate<(all_of HasV8_5aOps), "armv8.5a">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_5aOps), "armv8.5a">;
 def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
-                                 AssemblerPredicate<(all_of HasV8_6aOps), "armv8.6a">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_6aOps), "armv8.6a">;
 def HasV8_7a         : Predicate<"Subtarget->hasV8_7aOps()">,
-                                 AssemblerPredicate<(all_of HasV8_7aOps), "armv8.7a">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_7aOps), "armv8.7a">;
 def HasV9_0a         : Predicate<"Subtarget->hasV9_0aOps()">,
-                                 AssemblerPredicate<(all_of HasV9_0aOps), "armv9-a">;
+                                 AssemblerPredicateWithAll<(all_of HasV9_0aOps), "armv9-a">;
 def HasV9_1a         : Predicate<"Subtarget->hasV9_1aOps()">,
-                                 AssemblerPredicate<(all_of HasV9_1aOps), "armv9.1a">;
+                                 AssemblerPredicateWithAll<(all_of HasV9_1aOps), "armv9.1a">;
 def HasV9_2a         : Predicate<"Subtarget->hasV9_2aOps()">,
-                                 AssemblerPredicate<(all_of HasV9_2aOps), "armv9.2a">;
+                                 AssemblerPredicateWithAll<(all_of HasV9_2aOps), "armv9.2a">;
 def HasV9_3a         : Predicate<"Subtarget->hasV9_3aOps()">,
-                                 AssemblerPredicate<(all_of HasV9_3aOps), "armv9.3a">;
+                                 AssemblerPredicateWithAll<(all_of HasV9_3aOps), "armv9.3a">;
 def HasV8_0r         : Predicate<"Subtarget->hasV8_0rOps()">,
-                                 AssemblerPredicate<(all_of HasV8_0rOps), "armv8-r">;
+                                 AssemblerPredicateWithAll<(all_of HasV8_0rOps), "armv8-r">;
 
 def HasEL2VMSA       : Predicate<"Subtarget->hasEL2VMSA()">,
-                       AssemblerPredicate<(all_of FeatureEL2VMSA), "el2vmsa">;
+                       AssemblerPredicateWithAll<(all_of FeatureEL2VMSA), "el2vmsa">;
 
 def HasEL3           : Predicate<"Subtarget->hasEL3()">,
-                       AssemblerPredicate<(all_of FeatureEL3), "el3">;
+                       AssemblerPredicateWithAll<(all_of FeatureEL3), "el3">;
 
 def HasVH            : Predicate<"Subtarget->hasVH()">,
-                       AssemblerPredicate<(all_of FeatureVH), "vh">;
+                       AssemblerPredicateWithAll<(all_of FeatureVH), "vh">;
 
 def HasLOR           : Predicate<"Subtarget->hasLOR()">,
-                       AssemblerPredicate<(all_of FeatureLOR), "lor">;
+                       AssemblerPredicateWithAll<(all_of FeatureLOR), "lor">;
 
 def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
-                       AssemblerPredicate<(all_of FeaturePAuth), "pauth">;
+                       AssemblerPredicateWithAll<(all_of FeaturePAuth), "pauth">;
 
 def HasJS            : Predicate<"Subtarget->hasJS()">,
-                       AssemblerPredicate<(all_of FeatureJS), "jsconv">;
+                       AssemblerPredicateWithAll<(all_of FeatureJS), "jsconv">;
 
 def HasCCIDX         : Predicate<"Subtarget->hasCCIDX()">,
-                       AssemblerPredicate<(all_of FeatureCCIDX), "ccidx">;
+                       AssemblerPredicateWithAll<(all_of FeatureCCIDX), "ccidx">;
 
 def HasComplxNum      : Predicate<"Subtarget->hasComplxNum()">,
-                       AssemblerPredicate<(all_of FeatureComplxNum), "complxnum">;
+                       AssemblerPredicateWithAll<(all_of FeatureComplxNum), "complxnum">;
 
 def HasNV            : Predicate<"Subtarget->hasNV()">,
-                       AssemblerPredicate<(all_of FeatureNV), "nv">;
+                       AssemblerPredicateWithAll<(all_of FeatureNV), "nv">;
 
 def HasMPAM          : Predicate<"Subtarget->hasMPAM()">,
-                       AssemblerPredicate<(all_of FeatureMPAM), "mpam">;
+                       AssemblerPredicateWithAll<(all_of FeatureMPAM), "mpam">;
 
 def HasDIT           : Predicate<"Subtarget->hasDIT()">,
-                       AssemblerPredicate<(all_of FeatureDIT), "dit">;
+                       AssemblerPredicateWithAll<(all_of FeatureDIT), "dit">;
 
 def HasTRACEV8_4         : Predicate<"Subtarget->hasTRACEV8_4()">,
-                       AssemblerPredicate<(all_of FeatureTRACEV8_4), "tracev8.4">;
+                       AssemblerPredicateWithAll<(all_of FeatureTRACEV8_4), "tracev8.4">;
 
 def HasAM            : Predicate<"Subtarget->hasAM()">,
-                       AssemblerPredicate<(all_of FeatureAM), "am">;
+                       AssemblerPredicateWithAll<(all_of FeatureAM), "am">;
 
 def HasSEL2          : Predicate<"Subtarget->hasSEL2()">,
-                       AssemblerPredicate<(all_of FeatureSEL2), "sel2">;
+                       AssemblerPredicateWithAll<(all_of FeatureSEL2), "sel2">;
 
 def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
-                       AssemblerPredicate<(all_of FeatureTLB_RMI), "tlb-rmi">;
+                       AssemblerPredicateWithAll<(all_of FeatureTLB_RMI), "tlb-rmi">;
 
 def HasFlagM         : Predicate<"Subtarget->hasFlagM()">,
-                       AssemblerPredicate<(all_of FeatureFlagM), "flagm">;
+                       AssemblerPredicateWithAll<(all_of FeatureFlagM), "flagm">;
 
 def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPCImm()">,
-                       AssemblerPredicate<(all_of FeatureRCPC_IMMO), "rcpc-immo">;
+                       AssemblerPredicateWithAll<(all_of FeatureRCPC_IMMO), "rcpc-immo">;
 
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
-                               AssemblerPredicate<(all_of FeatureFPARMv8), "fp-armv8">;
+                               AssemblerPredicateWithAll<(all_of FeatureFPARMv8), "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
-                                 AssemblerPredicate<(all_of FeatureNEON), "neon">;
+                                 AssemblerPredicateWithAll<(all_of FeatureNEON), "neon">;
 def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
-                                 AssemblerPredicate<(all_of FeatureCrypto), "crypto">;
+                                 AssemblerPredicateWithAll<(all_of FeatureCrypto), "crypto">;
 def HasSM4           : Predicate<"Subtarget->hasSM4()">,
-                                 AssemblerPredicate<(all_of FeatureSM4), "sm4">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSM4), "sm4">;
 def HasSHA3          : Predicate<"Subtarget->hasSHA3()">,
-                                 AssemblerPredicate<(all_of FeatureSHA3), "sha3">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSHA3), "sha3">;
 def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
-                                 AssemblerPredicate<(all_of FeatureSHA2), "sha2">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSHA2), "sha2">;
 def HasAES           : Predicate<"Subtarget->hasAES()">,
-                                 AssemblerPredicate<(all_of FeatureAES), "aes">;
+                                 AssemblerPredicateWithAll<(all_of FeatureAES), "aes">;
 def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
-                                 AssemblerPredicate<(all_of FeatureDotProd), "dotprod">;
+                                 AssemblerPredicateWithAll<(all_of FeatureDotProd), "dotprod">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
-                                 AssemblerPredicate<(all_of FeatureCRC), "crc">;
+                                 AssemblerPredicateWithAll<(all_of FeatureCRC), "crc">;
 def HasLSE           : Predicate<"Subtarget->hasLSE()">,
-                                 AssemblerPredicate<(all_of FeatureLSE), "lse">;
+                                 AssemblerPredicateWithAll<(all_of FeatureLSE), "lse">;
 def HasNoLSE         : Predicate<"!Subtarget->hasLSE()">;
 def HasRAS           : Predicate<"Subtarget->hasRAS()">,
-                                 AssemblerPredicate<(all_of FeatureRAS), "ras">;
+                                 AssemblerPredicateWithAll<(all_of FeatureRAS), "ras">;
 def HasRDM           : Predicate<"Subtarget->hasRDM()">,
-                                 AssemblerPredicate<(all_of FeatureRDM), "rdm">;
+                                 AssemblerPredicateWithAll<(all_of FeatureRDM), "rdm">;
 def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
-                                 AssemblerPredicate<(all_of FeatureFullFP16), "fullfp16">;
+                                 AssemblerPredicateWithAll<(all_of FeatureFullFP16), "fullfp16">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
-                                 AssemblerPredicate<(all_of FeatureFP16FML), "fp16fml">;
+                                 AssemblerPredicateWithAll<(all_of FeatureFP16FML), "fp16fml">;
 def HasSPE           : Predicate<"Subtarget->hasSPE()">,
-                                 AssemblerPredicate<(all_of FeatureSPE), "spe">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSPE), "spe">;
 def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
-                                 AssemblerPredicate<(all_of FeatureFuseAES),
+                                 AssemblerPredicateWithAll<(all_of FeatureFuseAES),
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->hasSVE()">,
-                                 AssemblerPredicate<(all_of FeatureSVE), "sve">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE), "sve">;
 def HasSVE2          : Predicate<"Subtarget->hasSVE2()">,
-                                 AssemblerPredicate<(all_of FeatureSVE2), "sve2">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2AES       : Predicate<"Subtarget->hasSVE2AES()">,
-                                 AssemblerPredicate<(all_of FeatureSVE2AES), "sve2-aes">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2AES), "sve2-aes">;
 def HasSVE2SM4       : Predicate<"Subtarget->hasSVE2SM4()">,
-                                 AssemblerPredicate<(all_of FeatureSVE2SM4), "sve2-sm4">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->hasSVE2SHA3()">,
-                                 AssemblerPredicate<(all_of FeatureSVE2SHA3), "sve2-sha3">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2SHA3), "sve2-sha3">;
 def HasSVE2BitPerm   : Predicate<"Subtarget->hasSVE2BitPerm()">,
-                                 AssemblerPredicate<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
 def HasSME           : Predicate<"Subtarget->hasSME()">,
-                                 AssemblerPredicate<(all_of FeatureSME), "sme">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSME), "sme">;
 def HasSMEF64        : Predicate<"Subtarget->hasSMEF64()">,
-                                 AssemblerPredicate<(all_of FeatureSMEF64), "sme-f64">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF64), "sme-f64">;
 def HasSMEI64        : Predicate<"Subtarget->hasSMEI64()">,
-                                 AssemblerPredicate<(all_of FeatureSMEI64), "sme-i64">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEI64), "sme-i64">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
     : Predicate<"Subtarget->hasSVE() || Subtarget->hasSME()">,
-                AssemblerPredicate<(any_of FeatureSVE, FeatureSME),
+                AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
 def HasSVE2orSME
     : Predicate<"Subtarget->hasSVE2() || Subtarget->hasSME()">,
-                AssemblerPredicate<(any_of FeatureSVE2, FeatureSME),
+                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME),
                 "sve2 or sme">;
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorSME
     : Predicate<"Subtarget->hasNEON() || Subtarget->hasSME()">,
-                AssemblerPredicate<(any_of FeatureNEON, FeatureSME),
+                AssemblerPredicateWithAll<(any_of FeatureNEON, FeatureSME),
                 "neon or sme">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
-                                 AssemblerPredicate<(all_of FeatureRCPC), "rcpc">;
+                                 AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
 def HasLDAPR         : Predicate<"Subtarget->hasLDAPR()">,
-                                 AssemblerPredicate<(all_of FeatureLDAPR), "ldapr">;
+                                 AssemblerPredicateWithAll<(all_of FeatureLDAPR), "ldapr">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
-                       AssemblerPredicate<(all_of FeatureAltFPCmp), "altnzcv">;
+                       AssemblerPredicateWithAll<(all_of FeatureAltFPCmp), "altnzcv">;
 def HasFRInt3264     : Predicate<"Subtarget->hasFRInt3264()">,
-                       AssemblerPredicate<(all_of FeatureFRInt3264), "frint3264">;
+                       AssemblerPredicateWithAll<(all_of FeatureFRInt3264), "frint3264">;
 def HasSB            : Predicate<"Subtarget->hasSB()">,
-                       AssemblerPredicate<(all_of FeatureSB), "sb">;
+                       AssemblerPredicateWithAll<(all_of FeatureSB), "sb">;
 def HasPredRes      : Predicate<"Subtarget->hasPredRes()">,
-                       AssemblerPredicate<(all_of FeaturePredRes), "predres">;
+                       AssemblerPredicateWithAll<(all_of FeaturePredRes), "predres">;
 def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
-                       AssemblerPredicate<(all_of FeatureCacheDeepPersist), "ccdp">;
+                       AssemblerPredicateWithAll<(all_of FeatureCacheDeepPersist), "ccdp">;
 def HasBTI           : Predicate<"Subtarget->hasBTI()">,
-                       AssemblerPredicate<(all_of FeatureBranchTargetId), "bti">;
+                       AssemblerPredicateWithAll<(all_of FeatureBranchTargetId), "bti">;
 def HasMTE           : Predicate<"Subtarget->hasMTE()">,
-                       AssemblerPredicate<(all_of FeatureMTE), "mte">;
+                       AssemblerPredicateWithAll<(all_of FeatureMTE), "mte">;
 def HasTME           : Predicate<"Subtarget->hasTME()">,
-                       AssemblerPredicate<(all_of FeatureTME), "tme">;
+                       AssemblerPredicateWithAll<(all_of FeatureTME), "tme">;
 def HasETE           : Predicate<"Subtarget->hasETE()">,
-                       AssemblerPredicate<(all_of FeatureETE), "ete">;
+                       AssemblerPredicateWithAll<(all_of FeatureETE), "ete">;
 def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
-                       AssemblerPredicate<(all_of FeatureTRBE), "trbe">;
+                       AssemblerPredicateWithAll<(all_of FeatureTRBE), "trbe">;
 def HasBF16          : Predicate<"Subtarget->hasBF16()">,
-                       AssemblerPredicate<(all_of FeatureBF16), "bf16">;
+                       AssemblerPredicateWithAll<(all_of FeatureBF16), "bf16">;
 def HasMatMulInt8    : Predicate<"Subtarget->hasMatMulInt8()">,
-                       AssemblerPredicate<(all_of FeatureMatMulInt8), "i8mm">;
+                       AssemblerPredicateWithAll<(all_of FeatureMatMulInt8), "i8mm">;
 def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
-                       AssemblerPredicate<(all_of FeatureMatMulFP32), "f32mm">;
+                       AssemblerPredicateWithAll<(all_of FeatureMatMulFP32), "f32mm">;
 def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
-                       AssemblerPredicate<(all_of FeatureMatMulFP64), "f64mm">;
+                       AssemblerPredicateWithAll<(all_of FeatureMatMulFP64), "f64mm">;
 def HasXS            : Predicate<"Subtarget->hasXS()">,
-                       AssemblerPredicate<(all_of FeatureXS), "xs">;
+                       AssemblerPredicateWithAll<(all_of FeatureXS), "xs">;
 def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
-                       AssemblerPredicate<(all_of FeatureWFxT), "wfxt">;
+                       AssemblerPredicateWithAll<(all_of FeatureWFxT), "wfxt">;
 def HasLS64          : Predicate<"Subtarget->hasLS64()">,
-                       AssemblerPredicate<(all_of FeatureLS64), "ls64">;
+                       AssemblerPredicateWithAll<(all_of FeatureLS64), "ls64">;
 def HasBRBE          : Predicate<"Subtarget->hasBRBE()">,
-                       AssemblerPredicate<(all_of FeatureBRBE), "brbe">;
+                       AssemblerPredicateWithAll<(all_of FeatureBRBE), "brbe">;
 def HasSPE_EEF       : Predicate<"Subtarget->hasSPE_EEF()">,
-                       AssemblerPredicate<(all_of FeatureSPE_EEF), "spe-eef">;
+                       AssemblerPredicateWithAll<(all_of FeatureSPE_EEF), "spe-eef">;
 def HasHBC           : Predicate<"Subtarget->hasHBC()">,
-                       AssemblerPredicate<(all_of FeatureHBC), "hbc">;
+                       AssemblerPredicateWithAll<(all_of FeatureHBC), "hbc">;
 def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
-                       AssemblerPredicate<(all_of FeatureMOPS), "mops">;
+                       AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -583,6 +583,7 @@ def AArch64duplane8  : SDNode<"AArch64ISD::DUPLANE8", SDT_AArch64DupLane>;
 def AArch64duplane16 : SDNode<"AArch64ISD::DUPLANE16", SDT_AArch64DupLane>;
 def AArch64duplane32 : SDNode<"AArch64ISD::DUPLANE32", SDT_AArch64DupLane>;
 def AArch64duplane64 : SDNode<"AArch64ISD::DUPLANE64", SDT_AArch64DupLane>;
+def AArch64duplane128 : SDNode<"AArch64ISD::DUPLANE128", SDT_AArch64DupLane>;
 
 def AArch64insr      : SDNode<"AArch64ISD::INSR", SDT_AArch64Insr>;
 
@@ -734,6 +735,22 @@ def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
                         [SDNPHasChain, SDNPOutGlue]>;
+
+// Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
+// have no common bits.
+def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
+                         [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
+   if (N->getOpcode() == ISD::ADD)
+     return true;
+   return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
+}]> {
+  let GISelPredicateCode = [{
+     // Only handle G_ADD for now. FIXME. build capability to compute whether
+     // operands of G_OR have common bits set or not.
+     return MI.getOpcode() == TargetOpcode::G_ADD;
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -1674,6 +1691,11 @@ def : InstAlias<"mov $dst, $src",
 defm ADDS : AddSubS<0, "adds", AArch64add_flag, "cmn", "subs", "cmp">;
 defm SUBS : AddSubS<1, "subs", AArch64sub_flag, "cmp", "adds", "cmn">;
 
+def copyFromSP: PatLeaf<(i64 GPR64:$src), [{
+  return N->getOpcode() == ISD::CopyFromReg &&
+         cast<RegisterSDNode>(N->getOperand(1))->getReg() == AArch64::SP;
+}]>;
+
 // Use SUBS instead of SUB to enable CSE between SUBS and SUB.
 def : Pat<(sub GPR32sp:$Rn, addsub_shifted_imm32:$imm),
           (SUBSWri GPR32sp:$Rn, addsub_shifted_imm32:$imm)>;
@@ -1692,6 +1714,8 @@ def : Pat<(sub GPR32sp:$R2, arith_extended_reg32_i32:$R3),
           (SUBSWrx GPR32sp:$R2, arith_extended_reg32_i32:$R3)>;
 def : Pat<(sub GPR64sp:$R2, arith_extended_reg32to64_i64:$R3),
           (SUBSXrx GPR64sp:$R2, arith_extended_reg32to64_i64:$R3)>;
+def : Pat<(sub copyFromSP:$R2, (arith_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
+          (SUBXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
 }
 
 // Because of the immediate format for add/sub-imm instructions, the
@@ -4028,6 +4052,12 @@ def : InstAlias<"fmov $Rd, #0.0", (FMOVWHr FPR16:$Rd, WZR), 0>,
 def : InstAlias<"fmov $Rd, #0.0", (FMOVWSr FPR32:$Rd, WZR), 0>;
 def : InstAlias<"fmov $Rd, #0.0", (FMOVXDr FPR64:$Rd, XZR), 0>;
 
+// Pattern for FP16 immediates
+let Predicates = [HasFullFP16] in {
+  def : Pat<(f16 fpimm:$in),
+    (FMOVWHr (MOVi32imm (bitcast_fpimm_to_i32 f16:$in)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point conversion instruction.
 //===----------------------------------------------------------------------===//
@@ -4339,10 +4369,12 @@ defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
 
 // AArch64's FCVT instructions saturate when out of range.
 multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, string INST> {
+  let Predicates = [HasFullFP16] in {
   def : Pat<(v4i16 (to_int_sat v4f16:$Rn, i16)),
             (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
   def : Pat<(v8i16 (to_int_sat v8f16:$Rn, i16)),
             (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
+  }
   def : Pat<(v2i32 (to_int_sat v2f32:$Rn, i32)),
             (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
   def : Pat<(v4i32 (to_int_sat v4f32:$Rn, i32)),
@@ -5274,6 +5306,9 @@ def : Pat<(int_aarch64_neon_pmull64 (extractelt (v2i64 V128:$Rn), (i64 1)),
 // CodeGen patterns for addhn and subhn instructions, which can actually be
 // written in LLVM IR without too much difficulty.
 
+// Prioritize ADDHN and SUBHN over UZP2.
+let AddedComplexity = 10 in {
+
 // ADDHN
 def : Pat<(v8i8 (trunc (v8i16 (AArch64vlshr (add V128:$Rn, V128:$Rm), (i32 8))))),
           (ADDHNv8i16_v8i8 V128:$Rn, V128:$Rm)>;
@@ -5323,6 +5358,8 @@ def : Pat<(concat_vectors (v2i32 V64:$Rd),
                                                     (i32 32))))),
           (SUBHNv2i64_v4i32 (SUBREG_TO_REG (i32 0), V64:$Rd, dsub),
                             V128:$Rn, V128:$Rm)>;
+
+} // AddedComplexity = 10
 
 //----------------------------------------------------------------------------
 // AdvSIMD bitwise extract from vector instruction.
@@ -5389,6 +5426,19 @@ def : Pat<(v8i16 (concat_vectors (v4i16 (trunc (v4i32 V128:$Vn))),
 def : Pat<(v4i32 (concat_vectors (v2i32 (trunc (v2i64 V128:$Vn))),
                                  (v2i32 (trunc (v2i64 V128:$Vm))))),
           (UZP1v4i32 V128:$Vn, V128:$Vm)>;
+
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vn), (i32 8)))),
+                 (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vm), (i32 8)))))),
+          (UZP2v16i8 V128:$Vn, V128:$Vm)>;
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 (trunc (AArch64vlshr (v4i32 V128:$Vn), (i32 16)))),
+                 (v4i16 (trunc (AArch64vlshr (v4i32 V128:$Vm), (i32 16)))))),
+          (UZP2v8i16 V128:$Vn, V128:$Vm)>;
+def : Pat<(v4i32 (concat_vectors
+                 (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vn), (i32 32)))),
+                 (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vm), (i32 32)))))),
+          (UZP2v4i32 V128:$Vn, V128:$Vm)>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD TBL/TBX instructions
@@ -6472,22 +6522,6 @@ def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
                                           (vector_extract (v4i32 V128:$Vm),
                                                            VectorIndexS:$idx)),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
-
-// Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
-// have no common bits.
-def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
-                         [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
-   if (N->getOpcode() == ISD::ADD)
-     return true;
-   return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
-}]> {
-  let GISelPredicateCode = [{
-     // Only handle G_ADD for now. FIXME. build capability to compute whether
-     // operands of G_OR have common bits set or not.
-     return MI.getOpcode() == TargetOpcode::G_ADD;
-  }];
-}
-
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions

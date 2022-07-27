@@ -6,17 +6,17 @@ target triple = "x86_64-pc-linux-gnu"
 
 declare i1 @return_i1()
 declare void @func()
-declare void @consume(i32 addrspace(1)*)
+declare void @consume(ptr addrspace(1))
 declare i32 @consume1(i32) gc "statepoint-example"
-declare void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
+declare void @consume2(ptr addrspace(1), ptr addrspace(1))
 declare void @consume3(float) gc "statepoint-example"
 declare float @consume4(i64) gc "statepoint-example"
-declare void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
+declare void @consume5(ptr addrspace(1), ptr addrspace(1), ptr addrspace(1), ptr addrspace(1), ptr addrspace(1))
 
-declare void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
+declare void @use1(ptr addrspace(1), ptr addrspace(1))
 
 ; test most simple relocate
-define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
+define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
 ; CHECK-LABEL: test_relocate:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -42,15 +42,15 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
-  %rel1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
+  %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %res1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  call void @consume(i32 addrspace(1)* %rel1)
+  call void @consume(ptr addrspace(1) %rel1)
   ret i1 %res1
 }
 
 ; test pointer variables intermixed with pointer constants
-define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c) gc "statepoint-example" {
+define void @test_mixed(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c) gc "statepoint-example" {
 ; CHECK-LABEL: test_mixed:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %r15
@@ -81,18 +81,18 @@ define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a, i32 addrspace(1)* null, i32 addrspace(1)* %b, i32 addrspace(1)* null, i32 addrspace(1)* %c)]
-  %rel1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  %rel2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 1, i32 1)
-  %rel3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 2, i32 2)
-  %rel4 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 3, i32 3)
-  %rel5 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 4, i32 4)
-  call void @consume5(i32 addrspace(1)* %rel1, i32 addrspace(1)* %rel2, i32 addrspace(1)* %rel3, i32 addrspace(1)* %rel4, i32 addrspace(1)* %rel5)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a, ptr addrspace(1) null, ptr addrspace(1) %b, ptr addrspace(1) null, ptr addrspace(1) %c)]
+  %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %rel2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 1, i32 1)
+  %rel3 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 2, i32 2)
+  %rel4 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 3, i32 3)
+  %rel5 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 4, i32 4)
+  call void @consume5(ptr addrspace(1) %rel1, ptr addrspace(1) %rel2, ptr addrspace(1) %rel3, ptr addrspace(1) %rel4, ptr addrspace(1) %rel5)
   ret void
 }
 
 ; same as above, but for alloca
-define i32 addrspace(1)* @test_alloca(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define ptr addrspace(1) @test_alloca(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_alloca:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %r14
@@ -119,17 +119,17 @@ define i32 addrspace(1)* @test_alloca(i32 addrspace(1)* %ptr) gc "statepoint-exa
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %alloca = alloca i32 addrspace(1)*, align 8
-  store i32 addrspace(1)* %ptr, i32 addrspace(1)** %alloca
-  %safepoint_token = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)** %alloca, i32 addrspace(1)* %ptr)]
-  %rel1 = load i32 addrspace(1)*, i32 addrspace(1)** %alloca
-  %rel2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 1, i32 1)
-  call void @consume(i32 addrspace(1)* %rel2)
-  ret i32 addrspace(1)* %rel1
+  %alloca = alloca ptr addrspace(1), align 8
+  store ptr addrspace(1) %ptr, ptr %alloca
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr %alloca, ptr addrspace(1) %ptr)]
+  %rel1 = load ptr addrspace(1), ptr %alloca
+  %rel2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 1, i32 1)
+  call void @consume(ptr addrspace(1) %rel2)
+  ret ptr addrspace(1) %rel1
 }
 
 ; test base != derived
-define void @test_base_derived(i32 addrspace(1)* %base, i32 addrspace(1)* %derived) gc "statepoint-example" {
+define void @test_base_derived(ptr addrspace(1) %base, ptr addrspace(1) %derived) gc "statepoint-example" {
 ; CHECK-LABEL: test_base_derived:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %r14
@@ -153,14 +153,14 @@ define void @test_base_derived(i32 addrspace(1)* %base, i32 addrspace(1)* %deriv
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %base, i32 addrspace(1)* %derived)]
-  %reloc = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 1)
-  call void @consume(i32 addrspace(1)* %reloc)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %base, ptr addrspace(1) %derived)]
+  %reloc = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 1)
+  call void @consume(ptr addrspace(1) %reloc)
   ret void
 }
 
 ; deopt GC pointer not present in GC args goes on reg.
-define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc "statepoint-example" {
+define void @test_deopt_gcpointer(ptr addrspace(1) %a, ptr addrspace(1) %b) gc "statepoint-example" {
 ; CHECK-LABEL: test_deopt_gcpointer:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %r14
@@ -184,14 +184,14 @@ define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)* %a), "gc-live" (i32 addrspace(1)* %b)]
-  %rel = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  call void @consume(i32 addrspace(1)* %rel)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr addrspace(1) %a), "gc-live" (ptr addrspace(1) %b)]
+  %rel = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  call void @consume(ptr addrspace(1) %rel)
   ret void
 }
 
 ;; Two gc.relocates of the same input, should require only a single spill/fill
-define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define void @test_gcrelocate_uniqueing(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_gcrelocate_uniqueing:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -206,15 +206,15 @@ define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-ex
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %tok = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)* %ptr, i32 undef), "gc-live" (i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr)]
-  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
-  %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 1, i32 1)
-  call void @consume2(i32 addrspace(1)* %a, i32 addrspace(1)* %b)
+  %tok = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr addrspace(1) %ptr, i32 undef), "gc-live" (ptr addrspace(1) %ptr, ptr addrspace(1) %ptr)]
+  %a = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 0, i32 0)
+  %b = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 1, i32 1)
+  call void @consume2(ptr addrspace(1) %a, ptr addrspace(1) %b)
   ret void
 }
 
 ; Two gc.relocates of a bitcasted pointer should only require a single spill/fill
-define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define void @test_gcptr_uniqueing(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_gcptr_uniqueing:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -229,18 +229,17 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %ptr2 = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
-  %tok = tail call token (i64, i32, void ()*, i32, i32, ...)
-      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)* %ptr, i32 undef), "gc-live" (i32 addrspace(1)* %ptr, i8 addrspace(1)* %ptr2)]
-  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
-  %b = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok, i32 1, i32 1)
-  call void @use1(i32 addrspace(1)* %a, i8 addrspace(1)* %b)
+  %tok = tail call token (i64, i32, ptr, i32, i32, ...)
+      @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr addrspace(1) %ptr, i32 undef), "gc-live" (ptr addrspace(1) %ptr, ptr addrspace(1) %ptr)]
+  %a = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 0, i32 0)
+  %b = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 1, i32 1)
+  call void @use1(ptr addrspace(1) %a, ptr addrspace(1) %b)
   ret void
 }
 
 ;
 ; Cross-basicblock relocates are handled with spilling for now.
-define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
+define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-LABEL: test_cross_bb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -275,13 +274,13 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
   br i1 %external_cond, label %left, label %right
 
 left:
-  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %call1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  call void @consume(i32 addrspace(1)* %call1)
+  call void @consume(ptr addrspace(1) %call1)
   ret i1 %call2
 
 right:
@@ -303,21 +302,21 @@ define i1 @duplicate_reloc() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* null, i32 addrspace(1)* null)]
-  %base = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  %derived = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 1)
-  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %base, i32 addrspace(1)* %derived)]
-  %base_reloc = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2,  i32 0, i32 0)
-  %derived_reloc = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2,  i32 0, i32 1)
-  %cmp1 = icmp eq i32 addrspace(1)* %base_reloc, null
-  %cmp2 = icmp eq i32 addrspace(1)* %derived_reloc, null
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) null, ptr addrspace(1) null)]
+  %base = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %derived = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 1)
+  %safepoint_token2 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %base, ptr addrspace(1) %derived)]
+  %base_reloc = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 0)
+  %derived_reloc = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 1)
+  %cmp1 = icmp eq ptr addrspace(1) %base_reloc, null
+  %cmp2 = icmp eq ptr addrspace(1) %derived_reloc, null
   %cmp = and i1 %cmp1, %cmp2
   ret i1 %cmp
 }
 
 ; Vectors cannot go in VRegs
 ; No need to check post-regalloc output as it is lowered using old scheme
-define <2 x i8 addrspace(1)*> @test_vector(<2 x i8 addrspace(1)*> %obj) gc "statepoint-example" {
+define <2 x ptr addrspace(1)> @test_vector(<2 x ptr addrspace(1)> %obj) gc "statepoint-example" {
 ; CHECK-LABEL: test_vector:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -330,14 +329,14 @@ define <2 x i8 addrspace(1)*> @test_vector(<2 x i8 addrspace(1)*> %obj) gc "stat
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<2 x i8 addrspace(1)*> %obj)]
-  %obj.relocated = call coldcc <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
-  ret <2 x i8 addrspace(1)*> %obj.relocated
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<2 x ptr addrspace(1)> %obj)]
+  %obj.relocated = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
+  ret <2 x ptr addrspace(1)> %obj.relocated
 }
 
 
 ; test limit on amount of vregs
-define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %d, i32 addrspace(1)*  %e) gc "statepoint-example" {
+define void @test_limit(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1)  %e) gc "statepoint-example" {
 ; CHECK-LABEL: test_limit:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %r15
@@ -379,18 +378,18 @@ define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %d, i32 addrspace(1)* %e)]
-  %rel1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  %rel2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 1, i32 1)
-  %rel3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 2, i32 2)
-  %rel4 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 3, i32 3)
-  %rel5 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 4, i32 4)
-  call void @consume5(i32 addrspace(1)* %rel1, i32 addrspace(1)* %rel2, i32 addrspace(1)* %rel3, i32 addrspace(1)* %rel4, i32 addrspace(1)* %rel5)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e)]
+  %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %rel2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 1, i32 1)
+  %rel3 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 2, i32 2)
+  %rel4 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 3, i32 3)
+  %rel5 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 4, i32 4)
+  call void @consume5(ptr addrspace(1) %rel1, ptr addrspace(1) %rel2, ptr addrspace(1) %rel3, ptr addrspace(1) %rel4, ptr addrspace(1) %rel5)
   ret void
 }
 
 ; test ISEL for constant base pointer - must properly tie operands
-define void @test_const_base(i32 addrspace(1)* %a) gc "statepoint-example" {
+define void @test_const_base(ptr addrspace(1) %a) gc "statepoint-example" {
 ; CHECK-LABEL: test_const_base:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
@@ -405,15 +404,15 @@ define void @test_const_base(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %token1 = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 0, i32 1, i32 7, i32 addrspace(1)* null, i32 9), "gc-live" (i32 addrspace(1)* null, i32 addrspace(1)* %a)]
-  %rel = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token1,  i32 0, i32 1)
-  call void @consume(i32 addrspace(1)* %rel)
+  %token1 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 0, i32 1, i32 7, ptr addrspace(1) null, i32 9), "gc-live" (ptr addrspace(1) null, ptr addrspace(1) %a)]
+  %rel = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token1,  i32 0, i32 1)
+  call void @consume(ptr addrspace(1) %rel)
   ret void
 }
 
 ; test multiple statepoints/relocates within single block.
 ; relocates must be properly scheduled w.r.t. statepoints
-define void @test_sched(float %0, i32 %1, i8 addrspace(1)* %2) gc "statepoint-example" {
+define void @test_sched(float %0, i32 %1, ptr addrspace(1) %2) gc "statepoint-example" {
 ; CHECK-LABEL: test_sched:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -471,30 +470,24 @@ define void @test_sched(float %0, i32 %1, i8 addrspace(1)* %2) gc "statepoint-ex
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %token0 = call token (i64, i32, void (float)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf32f(i64 2, i32 0, void (float)* nonnull elementtype(void (float)) @consume3, i32 1, i32 0, float %0, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* %2) ]
-  %reloc1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token0, i32 0, i32 0) ; (%2, %2)
+  %token0 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 0, ptr nonnull elementtype(void (float)) @consume3, i32 1, i32 0, float %0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %2) ]
+  %reloc1 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token0, i32 0, i32 0) ; (%2, %2)
   %tmp1 = sitofp i32 %1 to double
   %to_max.i29 = fcmp ogt double %tmp1, 0.000000e+00
-  %token1 = call token (i64, i32, i32 (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32f(i64 2, i32 5, i32 (i32)* nonnull elementtype(i32 (i32)) @consume1, i32 1, i32 0, i32 undef, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* %reloc1) ]
-  %reloc2 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token1, i32 0, i32 0) ; (%reloc1, %reloc1)
-  %reloc3 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token1, i32 0, i32 0) ; (%reloc1, %reloc1)
-  %token2 = call token (i64, i32, i32 (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32f(i64 2, i32 5, i32 (i32)* nonnull elementtype(i32 (i32)) @consume1, i32 1, i32 0, i32 undef, i32 0, i32 0) [ "deopt"(float %0, double %tmp1), "gc-live"(i8 addrspace(1)* %reloc2, i8 addrspace(1)* %reloc3) ]
-  %reloc4 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token2, i32 0, i32 0) ; (%reloc3, %reloc2)
-  %reloc5 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token2, i32 1, i32 1) ; (%reloc3, %reloc3)
-  %token3 = call token (i64, i32, void (float)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf32f(i64 2, i32 5, void (float)* nonnull elementtype(void (float)) @consume3, i32 1, i32 0, float %0, i32 0, i32 0) [ "deopt"(float %0, double %tmp1), "gc-live"(i8 addrspace(1)* %reloc4, i8 addrspace(1)* %reloc5) ]
-  %reloc6 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token3, i32 1, i32 0) ; (%reloc5, %reloc4)
+  %token1 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr nonnull elementtype(i32 (i32)) @consume1, i32 1, i32 0, i32 undef, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %reloc1) ]
+  %reloc2 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token1, i32 0, i32 0) ; (%reloc1, %reloc1)
+  %reloc3 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token1, i32 0, i32 0) ; (%reloc1, %reloc1)
+  %token2 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr nonnull elementtype(i32 (i32)) @consume1, i32 1, i32 0, i32 undef, i32 0, i32 0) [ "deopt"(float %0, double %tmp1), "gc-live"(ptr addrspace(1) %reloc2, ptr addrspace(1) %reloc3) ]
+  %reloc4 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token2, i32 0, i32 0) ; (%reloc3, %reloc2)
+  %reloc5 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token2, i32 1, i32 1) ; (%reloc3, %reloc3)
+  %token3 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr nonnull elementtype(void (float)) @consume3, i32 1, i32 0, float %0, i32 0, i32 0) [ "deopt"(float %0, double %tmp1), "gc-live"(ptr addrspace(1) %reloc4, ptr addrspace(1) %reloc5) ]
+  %reloc6 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token3, i32 1, i32 0) ; (%reloc5, %reloc4)
   %tmp5 = select i1 %to_max.i29, i64 9223372036854775807, i64 0
-  %token4 = call token (i64, i32, float (i64)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_f32i64f(i64 2, i32 5, float (i64)* nonnull elementtype(float (i64)) @consume4, i32 1, i32 0, i64 %tmp5, i32 0, i32 0) [ "deopt"(float %0, double %tmp1), "gc-live"() ]
+  %token4 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr nonnull elementtype(float (i64)) @consume4, i32 1, i32 0, i64 %tmp5, i32 0, i32 0) [ "deopt"(float %0, double %tmp1), "gc-live"() ]
 ret void
 }
 
-declare token @llvm.experimental.gc.statepoint.p0f_f32i64f(i64 immarg, i32 immarg, float (i64)*, i32 immarg, i32 immarg, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_i32i32f(i64 immarg, i32 immarg, i32 (i32)*, i32 immarg, i32 immarg, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf32f(i64 immarg, i32 immarg, void (float)*, i32 immarg, i32 immarg, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
-declare i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token, i32, i32)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
-declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
+declare <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token, i32, i32)
 declare i1 @llvm.experimental.gc.result.i1(token)

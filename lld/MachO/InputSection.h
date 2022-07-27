@@ -50,7 +50,11 @@ public:
   // The offset from the beginning of the file.
   uint64_t getVA(uint64_t off) const;
   // Return a user-friendly string for use in diagnostics.
+  // Format: /path/to/object.o:(symbol _func+0x123)
   std::string getLocation(uint64_t off) const;
+  // Return the source line corresponding to an address, or the empty string.
+  // Format: Source.cpp:123 (/path/to/Source.cpp:123)
+  std::string getSourceLocation(uint64_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
@@ -79,12 +83,15 @@ public:
   OutputSection *parent = nullptr;
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
+  ArrayRef<OptimizationHint> optimizationHints;
   // The symbols that belong to this InputSection, sorted by value. With
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;
 
 protected:
   const Section &section;
+
+  const Defined *getContainingSymbol(uint64_t off) const;
 };
 
 // ConcatInputSections are combined into (Concat)OutputSections through simple
@@ -274,6 +281,7 @@ bool isCodeSection(const InputSection *);
 bool isCfStringSection(const InputSection *);
 bool isClassRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
+bool isGccExceptTabSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
 
@@ -292,6 +300,7 @@ constexpr const char compactUnwind[] = "__compact_unwind";
 constexpr const char data[] = "__data";
 constexpr const char debugAbbrev[] = "__debug_abbrev";
 constexpr const char debugInfo[] = "__debug_info";
+constexpr const char debugLine[] = "__debug_line";
 constexpr const char debugStr[] = "__debug_str";
 constexpr const char ehFrame[] = "__eh_frame";
 constexpr const char gccExceptTab[] = "__gcc_except_tab";
@@ -312,7 +321,7 @@ constexpr const char objcCatList[] = "__objc_catlist";
 constexpr const char objcClassList[] = "__objc_classlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
-constexpr const char objcImageInfo[] = "__objc_imageinfo";
+constexpr const char objCImageInfo[] = "__objc_imageinfo";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";
 constexpr const char objcNonLazyClassList[] = "__objc_nlclslist";
 constexpr const char objcProtoList[] = "__objc_protolist";

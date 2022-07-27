@@ -23,14 +23,12 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %1 = load ptr, ptr %s, align 4
-  %2 = bitcast ptr %1 to ptr
-  %add.ptr = getelementptr inbounds i8, ptr %2, i32 4
-  %3 = ptrtoint ptr %add.ptr to i32
-  %4 = load ptr, ptr %s, align 4
-  %5 = bitcast ptr %4 to ptr
-  %add.ptr1 = getelementptr inbounds i8, ptr %5, i32 4
-  %6 = ptrtoint ptr %add.ptr1 to i32
-  %rem = urem i32 %6, 2
+  %add.ptr = getelementptr inbounds i8, ptr %1, i32 4
+  %2 = ptrtoint ptr %add.ptr to i32
+  %3 = load ptr, ptr %s, align 4
+  %add.ptr1 = getelementptr inbounds i8, ptr %3, i32 4
+  %4 = ptrtoint ptr %add.ptr1 to i32
+  %rem = urem i32 %4, 2
   %cmp2 = icmp eq i32 %rem, 0
   br i1 %cmp2, label %cond.true, label %cond.false
 
@@ -38,35 +36,34 @@ cond.true:                                        ; preds = %for.body
   br label %cond.end
 
 cond.false:                                       ; preds = %for.body
-  %7 = load ptr, ptr %s, align 4
-  %8 = bitcast ptr %7 to ptr
-  %add.ptr3 = getelementptr inbounds i8, ptr %8, i32 4
-  %9 = ptrtoint ptr %add.ptr3 to i32
-  %rem4 = urem i32 %9, 2
+  %5 = load ptr, ptr %s, align 4
+  %add.ptr3 = getelementptr inbounds i8, ptr %5, i32 4
+  %6 = ptrtoint ptr %add.ptr3 to i32
+  %rem4 = urem i32 %6, 2
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %cond.true
   %cond = phi i32 [ 0, %cond.true ], [ %rem4, %cond.false ]
-  %add = add i32 %3, %cond
-  %10 = inttoptr i32 %add to ptr
-  %11 = load ptr, ptr %s, align 4
-  %next = getelementptr inbounds %struct.ST, ptr %11, i32 0, i32 0
-  store ptr %10, ptr %next, align 4
-  %12 = load ptr, ptr %s, align 4
-  %next5 = getelementptr inbounds %struct.ST, ptr %12, i32 0, i32 0
-  %13 = load ptr, ptr %next5, align 4
-  store ptr %13, ptr %s, align 4
+  %add = add i32 %2, %cond
+  %7 = inttoptr i32 %add to ptr
+  %8 = load ptr, ptr %s, align 4
+  %next = getelementptr inbounds %struct.ST, ptr %8, i32 0, i32 0
+  store ptr %7, ptr %next, align 4
+  %9 = load ptr, ptr %s, align 4
+  %next5 = getelementptr inbounds %struct.ST, ptr %9, i32 0, i32 0
+  %10 = load ptr, ptr %next5, align 4
+  store ptr %10, ptr %s, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %cond.end
-  %14 = load i32, ptr %j, align 4
-  %inc = add nsw i32 %14, 1
+  %11 = load i32, ptr %j, align 4
+  %inc = add nsw i32 %11, 1
   store i32 %inc, ptr %j, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %15 = load ptr, ptr %s, align 4
-  %next6 = getelementptr inbounds %struct.ST, ptr %15, i32 0, i32 0
+  %12 = load ptr, ptr %s, align 4
+  %next6 = getelementptr inbounds %struct.ST, ptr %12, i32 0, i32 0
   store ptr null, ptr %next6, align 4
   ret void
 }

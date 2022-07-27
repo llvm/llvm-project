@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILValueEnumerator.h"
+#include "DXILPointerType.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"
@@ -259,9 +260,7 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
     return LU->getOperandNo() > RU->getOperandNo();
   });
 
-  if (llvm::is_sorted(List, [](const Entry &L, const Entry &R) {
-        return L.second < R.second;
-      }))
+  if (llvm::is_sorted(List, llvm::less_second()))
     // Order is already correct.
     return;
 
@@ -373,6 +372,8 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
   for (const Function &F : M) {
     EnumerateValue(&F);
     EnumerateType(F.getValueType());
+    EnumerateType(
+        dxil::TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
     EnumerateAttributes(F.getAttributes());
   }
 
@@ -392,6 +393,8 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
   for (const GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer())
       EnumerateValue(GV.getInitializer());
+    EnumerateType(
+        dxil::TypedPointerType::get(GV.getValueType(), GV.getAddressSpace()));
     if (GV.hasAttributes())
       EnumerateAttributes(GV.getAttributesAsList(AttributeList::FunctionIndex));
   }
@@ -804,7 +807,7 @@ void ValueEnumerator::organizeMetadata() {
   //   - by function, then
   //   - by isa<MDString>
   // and then sort by the original/current ID.  Since the IDs are guaranteed to
-  // be unique, the result of std::sort will be deterministic.  There's no need
+  // be unique, the result of llvm::sort will be deterministic.  There's no need
   // for std::stable_sort.
   llvm::sort(Order, [this](MDIndex LHS, MDIndex RHS) {
     return std::make_tuple(LHS.F, getMetadataTypeOrder(LHS.get(MDs)), LHS.ID) <

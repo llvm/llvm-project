@@ -12,7 +12,8 @@ tablegen(LLVM X86GenEVEX2VEXTables.inc -gen-x86-EVEX2VEX-tables)
 tablegen(LLVM X86GenExegesis.inc -gen-exegesis)
 tablegen(LLVM X86GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
-tablegen(LLVM X86GenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM X86GenInstrInfo.inc -gen-instr-info
+                                  -instr-info-expand-mi-operand-info=0)
 tablegen(LLVM X86GenMnemonicTables.inc -gen-x86-mnemonic-tables -asmwriternum=1)
 tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM X86GenRegisterInfo.inc -gen-register-info)
@@ -74,6 +75,7 @@ set(sources
   X86PartialReduction.cpp
   X86RegisterBankInfo.cpp
   X86RegisterInfo.cpp
+  X86ReturnThunks.cpp
   X86SelectionDAGInfo.cpp
   X86ShuffleDecodeConstantPool.cpp
   X86SpeculativeLoadHardening.cpp

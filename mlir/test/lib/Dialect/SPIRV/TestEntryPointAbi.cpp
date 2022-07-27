@@ -44,8 +44,7 @@ private:
       llvm::cl::desc(
           "Workgroup size to use for all gpu.func kernels in the module, "
           "specified with x-dimension first, y-dimension next and z-dimension "
-          "last. Unspecified dimensions will be set to 1"),
-      llvm::cl::ZeroOrMore};
+          "last. Unspecified dimensions will be set to 1")};
 };
 } // namespace
 

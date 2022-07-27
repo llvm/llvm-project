@@ -39,7 +39,7 @@ program wsloop_collapse
   do i = 1, a
      do j= 1, b
         do k = 1, c
-! CHECK:           omp.wsloop collapse(3) for (%[[ARG0:.*]], %[[ARG1:.*]], %[[ARG2:.*]]) : i32 = (%[[VAL_20]], %[[VAL_23]], %[[VAL_26]]) to (%[[VAL_21]], %[[VAL_24]], %[[VAL_27]]) inclusive step (%[[VAL_22]], %[[VAL_25]], %[[VAL_28]]) {
+! CHECK:           omp.wsloop for (%[[ARG0:.*]], %[[ARG1:.*]], %[[ARG2:.*]]) : i32 = (%[[VAL_20]], %[[VAL_23]], %[[VAL_26]]) to (%[[VAL_21]], %[[VAL_24]], %[[VAL_27]]) inclusive step (%[[VAL_22]], %[[VAL_25]], %[[VAL_28]]) {
 ! CHECK:             fir.store %[[ARG0]] to %[[STORE_IV0:.*]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[ARG1]] to %[[STORE_IV1:.*]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[ARG2]] to %[[STORE_IV2:.*]] : !fir.ref<i32>

@@ -378,13 +378,13 @@ def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true
 def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopLogAlignment","2",
                                               "Prefer 32-bit alignment for loops">;
 
-def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "1",
+def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "4",
                         "Model MVE instructions as a 1 beat per tick architecture">;
 
 def FeatureMVEVectorCostFactor2 : SubtargetFeature<"mve2beat", "MVEVectorCostFactor", "2",
                         "Model MVE instructions as a 2 beats per tick architecture">;
 
-def FeatureMVEVectorCostFactor4 : SubtargetFeature<"mve4beat", "MVEVectorCostFactor", "4",
+def FeatureMVEVectorCostFactor4 : SubtargetFeature<"mve4beat", "MVEVectorCostFactor", "1",
                         "Model MVE instructions as a 4 beats per tick architecture">;
 
 /// Some instructions update CPSR partially, which can add false dependency for
@@ -545,6 +545,25 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
 def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098",
   "FixCortexA57AES1742098", "true",
   "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
+
+def FeatureAAPCSFrameChain : SubtargetFeature<"aapcs-frame-chain",
+                                              "CreateAAPCSFrameChain", "true",
+                                              "Create an AAPCS compliant frame chain">;
+
+def FeatureAAPCSFrameChainLeaf : SubtargetFeature<"aapcs-frame-chain-leaf",
+                                                  "CreateAAPCSFrameChainLeaf", "true",
+                                                  "Create an AAPCS compliant frame chain "
+                                                  "for leaf functions",
+                                                  [FeatureAAPCSFrameChain]>;
+
+// Assume that lock-free 32-bit atomics are available, even if the target
+// and operating system combination would not usually provide them. The user
+// is responsible for providing any necessary __sync implementations. Code
+// built with this feature is not ABI-compatible with code built without this
+// feature, if atomic variables are exposed across the ABI boundary.
+def FeatureAtomics32 : SubtargetFeature<
+    "atomics-32", "HasForced32BitAtomics", "true",
+    "Assume that lock-free 32-bit atomics are available">;
 
 //===----------------------------------------------------------------------===//
 // ARM architecture class
@@ -1439,6 +1458,13 @@ def : ProcessorModel<"cortex-m55", CortexM4Model,      [ARMv81mMainline,
                                                          FeatureHasSlowFPVMLx,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
+
+def : ProcessorModel<"cortex-m85", CortexM7Model,       [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeaturePACBTI,
+                                                         FeatureUseMISched,
+                                                         HasMVEFloatOps]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,

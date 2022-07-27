@@ -30,6 +30,7 @@
 #include "bolt/Core/BinaryLoop.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
@@ -253,10 +254,6 @@ private:
 
   std::unique_ptr<BinaryLoopInfo> BLI;
 
-  /// Set of external addresses in the code that are not a function start
-  /// and are referenced from this function.
-  std::set<uint64_t> InterproceduralReferences;
-
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
   /// goto labels.
@@ -337,9 +334,9 @@ private:
   /// True if the original entry point was patched.
   bool IsPatched{false};
 
-  /// True if the function contains jump table with entries pointing to
-  /// locations in fragments.
-  bool HasSplitJumpTable{false};
+  /// True if the function contains explicit or implicit indirect branch to its
+  /// split fragments, e.g., split jump table, landing pad in split fragment
+  bool HasIndirectTargetToSplitFragment{false};
 
   /// True if there are no control-flow edges with successors in other functions
   /// (i.e. if tail calls have edges to function-local basic blocks).
@@ -556,10 +553,8 @@ private:
   using BasicBlockListType = SmallVector<BinaryBasicBlock *, 0>;
   BasicBlockListType BasicBlocks;
   BasicBlockListType DeletedBasicBlocks;
-  BasicBlockOrderType BasicBlocksLayout;
-  /// Previous layout replaced by modifyLayout
-  BasicBlockOrderType BasicBlocksPreviousLayout;
-  bool ModifiedLayout{false};
+
+  FunctionLayout Layout;
 
   /// BasicBlockOffsets are used during CFG construction to map from code
   /// offsets to BinaryBasicBlocks.  Any modifications made to the CFG
@@ -716,9 +711,8 @@ private:
     BB->setOffset(Offset);
 
     BasicBlockOffsets.emplace_back(Offset, BB);
-    assert(std::is_sorted(BasicBlockOffsets.begin(), BasicBlockOffsets.end(),
-                          CompareBasicBlockOffsets()) &&
-           std::is_sorted(begin(), end()));
+    assert(llvm::is_sorted(BasicBlockOffsets, CompareBasicBlockOffsets()) &&
+           llvm::is_sorted(blocks()));
 
     return BB;
   }
@@ -759,12 +753,6 @@ public:
   using const_reverse_iterator =
       pointee_iterator<BasicBlockListType::const_reverse_iterator>;
 
-  typedef BasicBlockOrderType::iterator order_iterator;
-  typedef BasicBlockOrderType::const_iterator const_order_iterator;
-  typedef BasicBlockOrderType::reverse_iterator reverse_order_iterator;
-  typedef BasicBlockOrderType::const_reverse_iterator
-      const_reverse_order_iterator;
-
   // CFG iterators.
   iterator                 begin()       { return BasicBlocks.begin(); }
   const_iterator           begin() const { return BasicBlocks.begin(); }
@@ -792,49 +780,6 @@ public:
   // Iterators by pointer.
   BasicBlockListType::iterator pbegin()  { return BasicBlocks.begin(); }
   BasicBlockListType::iterator pend()    { return BasicBlocks.end(); }
-
-  order_iterator       layout_begin()    { return BasicBlocksLayout.begin(); }
-  const_order_iterator layout_begin()    const
-                                         { return BasicBlocksLayout.begin(); }
-  order_iterator       layout_end()      { return BasicBlocksLayout.end(); }
-  const_order_iterator layout_end()      const
-                                         { return BasicBlocksLayout.end(); }
-  reverse_order_iterator       layout_rbegin()
-                                         { return BasicBlocksLayout.rbegin(); }
-  const_reverse_order_iterator layout_rbegin() const
-                                         { return BasicBlocksLayout.rbegin(); }
-  reverse_order_iterator       layout_rend()
-                                         { return BasicBlocksLayout.rend(); }
-  const_reverse_order_iterator layout_rend()   const
-                                         { return BasicBlocksLayout.rend(); }
-  size_t   layout_size()  const { return BasicBlocksLayout.size(); }
-  bool     layout_empty() const { return BasicBlocksLayout.empty(); }
-  const BinaryBasicBlock *layout_front() const
-                                         { return BasicBlocksLayout.front(); }
-        BinaryBasicBlock *layout_front() { return BasicBlocksLayout.front(); }
-  const BinaryBasicBlock *layout_back()  const
-                                         { return BasicBlocksLayout.back(); }
-        BinaryBasicBlock *layout_back()  { return BasicBlocksLayout.back(); }
-
-  inline iterator_range<order_iterator> layout() {
-    return iterator_range<order_iterator>(BasicBlocksLayout.begin(),
-                                          BasicBlocksLayout.end());
-  }
-
-  inline iterator_range<const_order_iterator> layout() const {
-    return iterator_range<const_order_iterator>(BasicBlocksLayout.begin(),
-                                                BasicBlocksLayout.end());
-  }
-
-  inline iterator_range<reverse_order_iterator> rlayout() {
-    return iterator_range<reverse_order_iterator>(BasicBlocksLayout.rbegin(),
-                                                  BasicBlocksLayout.rend());
-  }
-
-  inline iterator_range<const_reverse_order_iterator> rlayout() const {
-    return iterator_range<const_reverse_order_iterator>(
-        BasicBlocksLayout.rbegin(), BasicBlocksLayout.rend());
-  }
 
   cfi_iterator        cie_begin()       { return CIEFrameInstructions.begin(); }
   const_cfi_iterator  cie_begin() const { return CIEFrameInstructions.begin(); }
@@ -886,26 +831,16 @@ public:
     return *this;
   }
 
-  /// Update layout of basic blocks used for output.
-  void updateBasicBlockLayout(BasicBlockOrderType &NewLayout) {
-    BasicBlocksPreviousLayout = BasicBlocksLayout;
+  FunctionLayout &getLayout() { return Layout; }
 
-    if (NewLayout != BasicBlocksLayout) {
-      ModifiedLayout = true;
-      BasicBlocksLayout.clear();
-      BasicBlocksLayout.swap(NewLayout);
-    }
-  }
+  const FunctionLayout &getLayout() const { return Layout; }
 
   /// Recompute landing pad information for the function and all its blocks.
   void recomputeLandingPads();
 
-  /// Return current basic block layout.
-  const BasicBlockOrderType &getLayout() const { return BasicBlocksLayout; }
-
   /// Return a list of basic blocks sorted using DFS and update layout indices
   /// using the same order. Does not modify the current layout.
-  BasicBlockOrderType dfs() const;
+  BasicBlockListType dfs() const;
 
   /// Find the loops in the CFG of the function and store information about
   /// them.
@@ -953,33 +888,11 @@ public:
   bool validateCFG() const;
 
   BinaryBasicBlock *getBasicBlockForLabel(const MCSymbol *Label) {
-    auto I = LabelToBB.find(Label);
-    return I == LabelToBB.end() ? nullptr : I->second;
+    return LabelToBB.lookup(Label);
   }
 
   const BinaryBasicBlock *getBasicBlockForLabel(const MCSymbol *Label) const {
-    auto I = LabelToBB.find(Label);
-    return I == LabelToBB.end() ? nullptr : I->second;
-  }
-
-  /// Returns the basic block after the given basic block in the layout or
-  /// nullptr the last basic block is given.
-  const BinaryBasicBlock *getBasicBlockAfter(const BinaryBasicBlock *BB,
-                                             bool IgnoreSplits = true) const {
-    return const_cast<BinaryFunction *>(this)->getBasicBlockAfter(BB,
-                                                                  IgnoreSplits);
-  }
-
-  BinaryBasicBlock *getBasicBlockAfter(const BinaryBasicBlock *BB,
-                                       bool IgnoreSplits = true) {
-    for (auto I = layout_begin(), E = layout_end(); I != E; ++I) {
-      auto Next = std::next(I);
-      if (*I == BB && Next != E) {
-        return (IgnoreSplits || (*I)->isCold() == (*Next)->isCold()) ? *Next
-                                                                     : nullptr;
-      }
-    }
-    return nullptr;
+    return LabelToBB.lookup(Label);
   }
 
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
@@ -1161,8 +1074,8 @@ public:
   /// Return the number of emitted instructions for this function.
   uint32_t getNumNonPseudos() const {
     uint32_t N = 0;
-    for (BinaryBasicBlock *const &BB : layout())
-      N += BB->getNumNonPseudos();
+    for (const BinaryBasicBlock &BB : blocks())
+      N += BB.getNumNonPseudos();
     return N;
   }
 
@@ -1441,9 +1354,12 @@ public:
   /// otherwise processed.
   bool isPseudo() const { return IsPseudo; }
 
-  /// Return true if the function contains a jump table with entries pointing
-  /// to split fragments.
-  bool hasSplitJumpTable() const { return HasSplitJumpTable; }
+  /// Return true if the function contains explicit or implicit indirect branch
+  /// to its split fragments, e.g., split jump table, landing pad in split
+  /// fragment.
+  bool hasIndirectTargetToSplitFragment() const {
+    return HasIndirectTargetToSplitFragment;
+  }
 
   /// Return true if all CFG edges have local successors.
   bool hasCanonicalCFG() const { return HasCanonicalCFG; }
@@ -1456,10 +1372,7 @@ public:
   bool hasUnknownControlFlow() const { return HasUnknownControlFlow; }
 
   /// Return true if the function body is non-contiguous.
-  bool isSplit() const {
-    return isSimple() && layout_size() &&
-           layout_front()->isCold() != layout_back()->isCold();
-  }
+  bool isSplit() const { return isSimple() && getLayout().isSplit(); }
 
   bool shouldPreserveNops() const { return PreserveNops; }
 
@@ -1579,8 +1492,7 @@ public:
     BinaryBasicBlock *BB = BasicBlocks.back();
 
     BB->setIndex(BasicBlocks.size() - 1);
-    BB->setLayoutIndex(layout_size());
-    BasicBlocksLayout.emplace_back(BB);
+    Layout.addBasicBlock(BB);
 
     return BB;
   }
@@ -1626,13 +1538,6 @@ public:
   /// [Start->Index, Start->Index + NumNewBlocks) are inserted into the
   /// layout after the BB indicated by Start.
   void updateLayout(BinaryBasicBlock *Start, const unsigned NumNewBlocks);
-
-  /// Make sure basic blocks' indices match the current layout.
-  void updateLayoutIndices() const {
-    unsigned Index = 0;
-    for (BinaryBasicBlock *BB : layout())
-      BB->setLayoutIndex(Index++);
-  }
 
   /// Recompute the CFI state for NumNewBlocks following Start after inserting
   /// new blocks into the CFG.  This must be called after updateLayout.
@@ -1838,7 +1743,9 @@ public:
 
   void setIsPatched(bool V) { IsPatched = V; }
 
-  void setHasSplitJumpTable(bool V) { HasSplitJumpTable = V; }
+  void setHasIndirectTargetToSplitFragment(bool V) {
+    HasIndirectTargetToSplitFragment = V;
+  }
 
   void setHasCanonicalCFG(bool V) { HasCanonicalCFG = V; }
 
@@ -2212,14 +2119,6 @@ public:
   /// and size.
   uint64_t getFunctionScore() const;
 
-  /// Return true if the layout has been changed by basic block reordering,
-  /// false otherwise.
-  bool hasLayoutChanged() const;
-
-  /// Get the edit distance of the new layout with respect to the previous
-  /// layout after basic block reordering.
-  uint64_t getEditDistance() const;
-
   /// Get the number of instructions within this function.
   uint64_t getInstructionCount() const;
 
@@ -2334,13 +2233,13 @@ public:
   size_t estimateHotSize(const bool UseSplitSize = true) const {
     size_t Estimate = 0;
     if (UseSplitSize && isSplit()) {
-      for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-        if (!BB->isCold())
-          Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+      for (const BinaryBasicBlock &BB : blocks())
+        if (!BB.isCold())
+          Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     } else {
-      for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-        if (BB->getKnownExecutionCount() != 0)
-          Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+      for (const BinaryBasicBlock &BB : blocks())
+        if (BB.getKnownExecutionCount() != 0)
+          Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     }
     return Estimate;
   }
@@ -2349,16 +2248,16 @@ public:
     if (!isSplit())
       return estimateSize();
     size_t Estimate = 0;
-    for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-      if (BB->isCold())
-        Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+    for (const BinaryBasicBlock &BB : blocks())
+      if (BB.isCold())
+        Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     return Estimate;
   }
 
   size_t estimateSize() const {
     size_t Estimate = 0;
-    for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-      Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+    for (const BinaryBasicBlock &BB : blocks())
+      Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     return Estimate;
   }
 
@@ -2428,7 +2327,7 @@ template <>
 struct GraphTraits<bolt::BinaryFunction *>
     : public GraphTraits<bolt::BinaryBasicBlock *> {
   static NodeRef getEntryNode(bolt::BinaryFunction *F) {
-    return *F->layout_begin();
+    return F->getLayout().block_front();
   }
 
   using nodes_iterator = pointer_iterator<bolt::BinaryFunction::iterator>;
@@ -2448,7 +2347,7 @@ template <>
 struct GraphTraits<const bolt::BinaryFunction *>
     : public GraphTraits<const bolt::BinaryBasicBlock *> {
   static NodeRef getEntryNode(const bolt::BinaryFunction *F) {
-    return *F->layout_begin();
+    return F->getLayout().block_front();
   }
 
   using nodes_iterator = pointer_iterator<bolt::BinaryFunction::const_iterator>;
@@ -2468,7 +2367,7 @@ template <>
 struct GraphTraits<Inverse<bolt::BinaryFunction *>>
     : public GraphTraits<Inverse<bolt::BinaryBasicBlock *>> {
   static NodeRef getEntryNode(Inverse<bolt::BinaryFunction *> G) {
-    return *G.Graph->layout_begin();
+    return G.Graph->getLayout().block_front();
   }
 };
 
@@ -2476,7 +2375,7 @@ template <>
 struct GraphTraits<Inverse<const bolt::BinaryFunction *>>
     : public GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
   static NodeRef getEntryNode(Inverse<const bolt::BinaryFunction *> G) {
-    return *G.Graph->layout_begin();
+    return G.Graph->getLayout().block_front();
   }
 };
 

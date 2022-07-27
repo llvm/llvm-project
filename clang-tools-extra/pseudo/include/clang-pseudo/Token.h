@@ -67,6 +67,8 @@ struct Token {
   uint8_t Indent = 0;
   /// Flags have some meaning defined by the function that produced this stream.
   uint8_t Flags = 0;
+  /// Index into the original token stream (as raw-lexed from the source code).
+  Index OriginalIndex = Invalid;
   // Helpers to get/set Flags based on `enum class`.
   template <class T> bool flag(T Mask) const {
     return Flags & uint8_t{static_cast<std::underlying_type_t<T>>(Mask)};
@@ -96,7 +98,7 @@ struct Token {
   /// If this token is a paired bracket, the offset of the pair in the stream.
   int32_t Pair = 0;
 };
-static_assert(sizeof(Token) <= sizeof(char *) + 20, "Careful with layout!");
+static_assert(sizeof(Token) <= sizeof(char *) + 24, "Careful with layout!");
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Token &);
 
 /// A half-open range of tokens within a stream.
@@ -168,6 +170,18 @@ public:
   const Token &front() const {
     assert(isFinalized());
     return Storage[1];
+  }
+
+  /// Returns the shared payload.
+  std::shared_ptr<void> getPayload() const { return Payload; }
+  /// Adds the given payload to the stream.
+  void addPayload(std::shared_ptr<void> P) {
+    if (!Payload)
+      Payload = std::move(P);
+    else
+      Payload = std::make_shared<
+          std::pair<std::shared_ptr<void>, std::shared_ptr<void>>>(
+          std::move(P), std::move(Payload));
   }
 
   /// Print the tokens in this stream to the output stream.

@@ -231,6 +231,10 @@ template <class T, class Container, class Compare>
 #include <vector>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <functional>
+#endif
+
 // standard-mandated includes
 #include <compare>
 #include <initializer_list>

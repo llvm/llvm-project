@@ -190,7 +190,7 @@ define <8 x i32> @vec256_i32_unsigned_reg_reg(<8 x i32> %a1, <8 x i32> %a2) noun
 
 ; Values are loaded. Only check signed case.
 
-define <8 x i32> @vec256_i32_signed_mem_reg(<8 x i32>* %a1_addr, <8 x i32> %a2) nounwind {
+define <8 x i32> @vec256_i32_signed_mem_reg(ptr %a1_addr, <8 x i32> %a2) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i32_signed_mem_reg:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vextractf128 $1, %ymm0, %xmm1
@@ -268,7 +268,7 @@ define <8 x i32> @vec256_i32_signed_mem_reg(<8 x i32>* %a1_addr, <8 x i32> %a2) 
 ; AVX512-NEXT:    vpmulld %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %a1 = load <8 x i32>, <8 x i32>* %a1_addr
+  %a1 = load <8 x i32>, ptr %a1_addr
   %t3 = icmp sgt <8 x i32> %a1, %a2 ; signed
   %t4 = select <8 x i1> %t3, <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %t5 = select <8 x i1> %t3, <8 x i32> %a2, <8 x i32> %a1
@@ -280,7 +280,7 @@ define <8 x i32> @vec256_i32_signed_mem_reg(<8 x i32>* %a1_addr, <8 x i32> %a2) 
   ret <8 x i32> %a10
 }
 
-define <8 x i32> @vec256_i32_signed_reg_mem(<8 x i32> %a1, <8 x i32>* %a2_addr) nounwind {
+define <8 x i32> @vec256_i32_signed_reg_mem(<8 x i32> %a1, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i32_signed_reg_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
@@ -358,7 +358,7 @@ define <8 x i32> @vec256_i32_signed_reg_mem(<8 x i32> %a1, <8 x i32>* %a2_addr) 
 ; AVX512-NEXT:    vpmulld %ymm1, %ymm1, %ymm1
 ; AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
-  %a2 = load <8 x i32>, <8 x i32>* %a2_addr
+  %a2 = load <8 x i32>, ptr %a2_addr
   %t3 = icmp sgt <8 x i32> %a1, %a2 ; signed
   %t4 = select <8 x i1> %t3, <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %t5 = select <8 x i1> %t3, <8 x i32> %a2, <8 x i32> %a1
@@ -370,7 +370,7 @@ define <8 x i32> @vec256_i32_signed_reg_mem(<8 x i32> %a1, <8 x i32>* %a2_addr) 
   ret <8 x i32> %a10
 }
 
-define <8 x i32> @vec256_i32_signed_mem_mem(<8 x i32>* %a1_addr, <8 x i32>* %a2_addr) nounwind {
+define <8 x i32> @vec256_i32_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i32_signed_mem_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm0
@@ -453,8 +453,8 @@ define <8 x i32> @vec256_i32_signed_mem_mem(<8 x i32>* %a1_addr, <8 x i32>* %a2_
 ; AVX512-NEXT:    vpmulld %ymm1, %ymm1, %ymm1
 ; AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
-  %a1 = load <8 x i32>, <8 x i32>* %a1_addr
-  %a2 = load <8 x i32>, <8 x i32>* %a2_addr
+  %a1 = load <8 x i32>, ptr %a1_addr
+  %a2 = load <8 x i32>, ptr %a2_addr
   %t3 = icmp sgt <8 x i32> %a1, %a2 ; signed
   %t4 = select <8 x i1> %t3, <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %t5 = select <8 x i1> %t3, <8 x i32> %a2, <8 x i32> %a1
@@ -902,7 +902,7 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 
 ; Values are loaded. Only check signed case.
 
-define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) nounwind {
+define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i64_signed_mem_reg:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
@@ -1106,7 +1106,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a1 = load <4 x i64>, <4 x i64>* %a1_addr
+  %a1 = load <4 x i64>, ptr %a1_addr
   %t3 = icmp sgt <4 x i64> %a1, %a2 ; signed
   %t4 = select <4 x i1> %t3, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i64> <i64 1, i64 1, i64 1, i64 1>
   %t5 = select <4 x i1> %t3, <4 x i64> %a2, <4 x i64> %a1
@@ -1118,7 +1118,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
   ret <4 x i64> %a10
 }
 
-define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) nounwind {
+define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i64_signed_reg_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
@@ -1322,7 +1322,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a2 = load <4 x i64>, <4 x i64>* %a2_addr
+  %a2 = load <4 x i64>, ptr %a2_addr
   %t3 = icmp sgt <4 x i64> %a1, %a2 ; signed
   %t4 = select <4 x i1> %t3, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i64> <i64 1, i64 1, i64 1, i64 1>
   %t5 = select <4 x i1> %t3, <4 x i64> %a2, <4 x i64> %a1
@@ -1334,7 +1334,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
   ret <4 x i64> %a10
 }
 
-define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_addr) nounwind {
+define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i64_signed_mem_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm1
@@ -1543,8 +1543,8 @@ define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a1 = load <4 x i64>, <4 x i64>* %a1_addr
-  %a2 = load <4 x i64>, <4 x i64>* %a2_addr
+  %a1 = load <4 x i64>, ptr %a1_addr
+  %a2 = load <4 x i64>, ptr %a2_addr
   %t3 = icmp sgt <4 x i64> %a1, %a2 ; signed
   %t4 = select <4 x i1> %t3, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i64> <i64 1, i64 1, i64 1, i64 1>
   %t5 = select <4 x i1> %t3, <4 x i64> %a2, <4 x i64> %a1
@@ -1857,7 +1857,7 @@ define <16 x i16> @vec256_i16_unsigned_reg_reg(<16 x i16> %a1, <16 x i16> %a2) n
 
 ; Values are loaded. Only check signed case.
 
-define <16 x i16> @vec256_i16_signed_mem_reg(<16 x i16>* %a1_addr, <16 x i16> %a2) nounwind {
+define <16 x i16> @vec256_i16_signed_mem_reg(ptr %a1_addr, <16 x i16> %a2) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i16_signed_mem_reg:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vextractf128 $1, %ymm0, %xmm1
@@ -1996,7 +1996,7 @@ define <16 x i16> @vec256_i16_signed_mem_reg(<16 x i16>* %a1_addr, <16 x i16> %a
 ; AVX512VLBW-NEXT:    vpsubw %ymm0, %ymm2, %ymm0 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <16 x i16>, <16 x i16>* %a1_addr
+  %a1 = load <16 x i16>, ptr %a1_addr
   %t3 = icmp sgt <16 x i16> %a1, %a2 ; signed
   %t4 = select <16 x i1> %t3, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t5 = select <16 x i1> %t3, <16 x i16> %a2, <16 x i16> %a1
@@ -2008,7 +2008,7 @@ define <16 x i16> @vec256_i16_signed_mem_reg(<16 x i16>* %a1_addr, <16 x i16> %a
   ret <16 x i16> %a10
 }
 
-define <16 x i16> @vec256_i16_signed_reg_mem(<16 x i16> %a1, <16 x i16>* %a2_addr) nounwind {
+define <16 x i16> @vec256_i16_signed_reg_mem(<16 x i16> %a1, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i16_signed_reg_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
@@ -2147,7 +2147,7 @@ define <16 x i16> @vec256_i16_signed_reg_mem(<16 x i16> %a1, <16 x i16>* %a2_add
 ; AVX512VLBW-NEXT:    vpsubw %ymm1, %ymm2, %ymm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %ymm0, %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
-  %a2 = load <16 x i16>, <16 x i16>* %a2_addr
+  %a2 = load <16 x i16>, ptr %a2_addr
   %t3 = icmp sgt <16 x i16> %a1, %a2 ; signed
   %t4 = select <16 x i1> %t3, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t5 = select <16 x i1> %t3, <16 x i16> %a2, <16 x i16> %a1
@@ -2159,7 +2159,7 @@ define <16 x i16> @vec256_i16_signed_reg_mem(<16 x i16> %a1, <16 x i16>* %a2_add
   ret <16 x i16> %a10
 }
 
-define <16 x i16> @vec256_i16_signed_mem_mem(<16 x i16>* %a1_addr, <16 x i16>* %a2_addr) nounwind {
+define <16 x i16> @vec256_i16_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i16_signed_mem_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm0
@@ -2305,8 +2305,8 @@ define <16 x i16> @vec256_i16_signed_mem_mem(<16 x i16>* %a1_addr, <16 x i16>* %
 ; AVX512VLBW-NEXT:    vpsubw %ymm1, %ymm2, %ymm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %ymm0, %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <16 x i16>, <16 x i16>* %a1_addr
-  %a2 = load <16 x i16>, <16 x i16>* %a2_addr
+  %a1 = load <16 x i16>, ptr %a1_addr
+  %a2 = load <16 x i16>, ptr %a2_addr
   %t3 = icmp sgt <16 x i16> %a1, %a2 ; signed
   %t4 = select <16 x i1> %t3, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t5 = select <16 x i1> %t3, <16 x i16> %a2, <16 x i16> %a1
@@ -2775,7 +2775,7 @@ define <32 x i8> @vec256_i8_unsigned_reg_reg(<32 x i8> %a1, <32 x i8> %a2) nounw
 
 ; Values are loaded. Only check signed case.
 
-define <32 x i8> @vec256_i8_signed_mem_reg(<32 x i8>* %a1_addr, <32 x i8> %a2) nounwind {
+define <32 x i8> @vec256_i8_signed_mem_reg(ptr %a1_addr, <32 x i8> %a2) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i8_signed_mem_reg:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vextractf128 $1, %ymm0, %xmm3
@@ -2992,7 +2992,7 @@ define <32 x i8> @vec256_i8_signed_mem_reg(<32 x i8>* %a1_addr, <32 x i8> %a2) n
 ; AVX512VLBW-NEXT:    vpsubb %ymm0, %ymm2, %ymm0 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <32 x i8>, <32 x i8>* %a1_addr
+  %a1 = load <32 x i8>, ptr %a1_addr
   %t3 = icmp sgt <32 x i8> %a1, %a2 ; signed
   %t4 = select <32 x i1> %t3, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t5 = select <32 x i1> %t3, <32 x i8> %a2, <32 x i8> %a1
@@ -3004,7 +3004,7 @@ define <32 x i8> @vec256_i8_signed_mem_reg(<32 x i8>* %a1_addr, <32 x i8> %a2) n
   ret <32 x i8> %a10
 }
 
-define <32 x i8> @vec256_i8_signed_reg_mem(<32 x i8> %a1, <32 x i8>* %a2_addr) nounwind {
+define <32 x i8> @vec256_i8_signed_reg_mem(<32 x i8> %a1, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i8_signed_reg_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm2
@@ -3221,7 +3221,7 @@ define <32 x i8> @vec256_i8_signed_reg_mem(<32 x i8> %a1, <32 x i8>* %a2_addr) n
 ; AVX512VLBW-NEXT:    vpsubb %ymm1, %ymm2, %ymm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
-  %a2 = load <32 x i8>, <32 x i8>* %a2_addr
+  %a2 = load <32 x i8>, ptr %a2_addr
   %t3 = icmp sgt <32 x i8> %a1, %a2 ; signed
   %t4 = select <32 x i1> %t3, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t5 = select <32 x i1> %t3, <32 x i8> %a2, <32 x i8> %a1
@@ -3233,7 +3233,7 @@ define <32 x i8> @vec256_i8_signed_reg_mem(<32 x i8> %a1, <32 x i8>* %a2_addr) n
   ret <32 x i8> %a10
 }
 
-define <32 x i8> @vec256_i8_signed_mem_mem(<32 x i8>* %a1_addr, <32 x i8>* %a2_addr) nounwind {
+define <32 x i8> @vec256_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; AVX1-FALLBACK-LABEL: vec256_i8_signed_mem_mem:
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm2
@@ -3457,8 +3457,8 @@ define <32 x i8> @vec256_i8_signed_mem_mem(<32 x i8>* %a1_addr, <32 x i8>* %a2_a
 ; AVX512VLBW-NEXT:    vpsubb %ymm1, %ymm2, %ymm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <32 x i8>, <32 x i8>* %a1_addr
-  %a2 = load <32 x i8>, <32 x i8>* %a2_addr
+  %a1 = load <32 x i8>, ptr %a1_addr
+  %a2 = load <32 x i8>, ptr %a2_addr
   %t3 = icmp sgt <32 x i8> %a1, %a2 ; signed
   %t4 = select <32 x i1> %t3, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t5 = select <32 x i1> %t3, <32 x i8> %a2, <32 x i8> %a1

@@ -5,10 +5,10 @@
 # CHECK-INTERESTINGNESS: %{{[0-9]+}}.sub0:vreg_64 = V_ADD_U32_e32 %{{[0-9]+}}.sub1, %{{[0-9]+}}.sub0, implicit $exec
 # CHECK-INTERESTINGNESS: %{{[0-9]+}}.sub0:vreg_64 = V_ADD_U32_e32 4, %{{[0-9]+}}.sub0, implicit $exec
 
-# RESULT: undef %2.sub1:vreg_64 = IMPLICIT_DEF
-# RESULT-NEXT: %0.sub0:vreg_64 = V_ADD_U32_e32 %2.sub1, %2.sub0, implicit $exec
-# RESULT-NEXT: %1.sub0:vreg_64 = V_ADD_U32_e32 4, %2.sub0, implicit $exec
-# RESULT-NEXT: S_ENDPGM 0, implicit %2, implicit %2.sub0
+# RESULT: undef %{{[0-9]+}}.sub1:vreg_64 = IMPLICIT_DEF
+# RESULT-NEXT: %0.sub0:vreg_64 = V_ADD_U32_e32 %{{[0-9]+}}.sub1, %{{[0-9]+}}.sub0, implicit $exec
+# RESULT-NEXT: %1.sub0:vreg_64 = V_ADD_U32_e32 4, %{{[0-9]+}}.sub0, implicit $exec
+# RESULT-NEXT: S_ENDPGM 0, implicit %{{[0-9]+}}, implicit %{{[0-9]+}}.sub0
 ---
 name:            f
 tracksRegLiveness: true

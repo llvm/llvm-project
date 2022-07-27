@@ -201,9 +201,7 @@ template <class charT> class messages_byname;
 #include <__iterator/istreambuf_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale>
-#ifndef __APPLE__
-# include <cstdarg>
-#endif
+#include <cstdarg> // TODO: Remove this include
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -212,6 +210,10 @@ template <class charT> class messages_byname;
 #include <memory>
 #include <streambuf>
 #include <version>
+
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iterator>
+#endif
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
@@ -3616,7 +3618,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 template<class _Codecvt, class _Elem = wchar_t,
          class _Wide_alloc = allocator<_Elem>,
          class _Byte_alloc = allocator<char> >
-class _LIBCPP_TEMPLATE_VIS wstring_convert
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert
 {
 public:
     typedef basic_string<char, char_traits<char>, _Byte_alloc>   byte_string;
@@ -3683,6 +3685,7 @@ public:
     state_type state() const {return __cvtstate_;}
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
 inline
 wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
@@ -3690,6 +3693,7 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
         : __cvtptr_(__pcvt), __cvtstate_(), __cvtcount_(0)
 {
 }
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
 inline
@@ -3724,6 +3728,7 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
 
 #endif // _LIBCPP_CXX03_LANG
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
 wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::~wstring_convert()
 {
@@ -3735,6 +3740,7 @@ typename wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::wide_string
 wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
     from_bytes(const char* __frm, const char* __frm_end)
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     __cvtcount_ = 0;
     if (__cvtptr_ != nullptr)
     {
@@ -3881,7 +3887,7 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
 }
 
 template <class _Codecvt, class _Elem = wchar_t, class _Tr = char_traits<_Elem> >
-class _LIBCPP_TEMPLATE_VIS wbuffer_convert
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wbuffer_convert
     : public basic_streambuf<_Elem, _Tr>
 {
 public:
@@ -3958,6 +3964,7 @@ private:
     wbuffer_convert* __close();
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _Tr>
 wbuffer_convert<_Codecvt, _Elem, _Tr>::
     wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt, state_type __state)
@@ -3993,6 +4000,7 @@ template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type
 wbuffer_convert<_Codecvt, _Elem, _Tr>::underflow()
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     if (__cv_ == 0 || __bufptr_ == 0)
         return traits_type::eof();
     bool __initial = __read_mode();
@@ -4057,10 +4065,12 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::underflow()
     return __c;
 }
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type
 wbuffer_convert<_Codecvt, _Elem, _Tr>::pbackfail(int_type __c)
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     if (__cv_ != 0 && __bufptr_ != 0 && this->eback() < this->gptr())
     {
         if (traits_type::eq_int_type(__c, traits_type::eof()))
@@ -4078,10 +4088,12 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::pbackfail(int_type __c)
     return traits_type::eof();
 }
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type
 wbuffer_convert<_Codecvt, _Elem, _Tr>::overflow(int_type __c)
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     if (__cv_ == 0 || __bufptr_ == 0)
         return traits_type::eof();
     __write_mode();
@@ -4140,10 +4152,12 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::overflow(int_type __c)
     return traits_type::not_eof(__c);
 }
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _Tr>
 basic_streambuf<_Elem, _Tr>*
 wbuffer_convert<_Codecvt, _Elem, _Tr>::setbuf(char_type* __s, streamsize __n)
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     this->setg(0, 0, 0);
     this->setp(0, 0);
     if (__owns_eb_)
@@ -4193,6 +4207,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::setbuf(char_type* __s, streamsize __n)
     return this;
 }
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _Tr>
 typename wbuffer_convert<_Codecvt, _Elem, _Tr>::pos_type
 wbuffer_convert<_Codecvt, _Elem, _Tr>::seekoff(off_type __off, ios_base::seekdir __way,
@@ -4224,6 +4239,7 @@ template <class _Codecvt, class _Elem, class _Tr>
 int
 wbuffer_convert<_Codecvt, _Elem, _Tr>::sync()
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     if (__cv_ == 0 || __bufptr_ == 0)
         return 0;
     if (__cm_ & ios_base::out)
@@ -4292,6 +4308,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::sync()
     return 0;
 }
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _Tr>
 bool
 wbuffer_convert<_Codecvt, _Elem, _Tr>::__read_mode()
@@ -4345,6 +4362,8 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::__close()
     }
     return __rt;
 }
+
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -19,6 +19,7 @@
 #include <__iterator/move_iterator.h>
 #include <__memory/allocator.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/swap_allocator.h>
 #include <__utility/forward.h>
 #include <memory>
 #include <type_traits>
@@ -118,19 +119,10 @@ public:
     void __construct_at_end(size_type __n);
     void __construct_at_end(size_type __n, const_reference __x);
     template <class _InputIter>
-        typename enable_if
-        <
-            __is_cpp17_input_iterator<_InputIter>::value &&
-           !__is_cpp17_forward_iterator<_InputIter>::value,
-            void
-        >::type
+    __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIter>::value>
         __construct_at_end(_InputIter __first, _InputIter __last);
     template <class _ForwardIterator>
-        typename enable_if
-        <
-            __is_cpp17_forward_iterator<_ForwardIterator>::value,
-            void
-        >::type
+    __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value>
         __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
 
     _LIBCPP_INLINE_VISIBILITY void __destruct_at_begin(pointer __new_begin)
@@ -239,12 +231,7 @@ __split_buffer<_Tp, _Allocator>::__construct_at_end(size_type __n, const_referen
 
 template <class _Tp, class _Allocator>
 template <class _InputIter>
-typename enable_if
-<
-     __is_cpp17_input_iterator<_InputIter>::value &&
-    !__is_cpp17_forward_iterator<_InputIter>::value,
-    void
->::type
+__enable_if_t<__is_exactly_cpp17_input_iterator<_InputIter>::value>
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIter __last)
 {
     __alloc_rr& __a = this->__alloc();
@@ -267,11 +254,7 @@ __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIt
 
 template <class _Tp, class _Allocator>
 template <class _ForwardIterator>
-typename enable_if
-<
-    __is_cpp17_forward_iterator<_ForwardIterator>::value,
-    void
->::type
+__enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value>
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
 {
     _ConstructTransaction __tx(&this->__end_, _VSTD::distance(__first, __last));

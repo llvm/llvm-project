@@ -2393,30 +2393,14 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_FCONSTANT: {
+    // To avoid changing the bits of the constant due to extension to a larger
+    // type and then using G_FPTRUNC, we simply convert to a G_CONSTANT.
     MachineOperand &SrcMO = MI.getOperand(1);
-    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
-    APFloat Val = SrcMO.getFPImm()->getValueAPF();
-    bool LosesInfo;
-    switch (WideTy.getSizeInBits()) {
-    case 32:
-      Val.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
-                  &LosesInfo);
-      break;
-    case 64:
-      Val.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                  &LosesInfo);
-      break;
-    default:
-      return UnableToLegalize;
-    }
-
-    assert(!LosesInfo && "extend should always be lossless");
-
-    Observer.changingInstr(MI);
-    SrcMO.setFPImm(ConstantFP::get(Ctx, Val));
-
-    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
-    Observer.changedInstr(MI);
+    APInt Val = SrcMO.getFPImm()->getValueAPF().bitcastToAPInt();
+    MIRBuilder.setInstrAndDebugLoc(MI);
+    auto IntCst = MIRBuilder.buildConstant(MI.getOperand(0).getReg(), Val);
+    widenScalarDst(*IntCst, WideTy, 0, TargetOpcode::G_TRUNC);
+    MI.eraseFromParent();
     return Legalized;
   }
   case TargetOpcode::G_IMPLICIT_DEF: {
@@ -7587,7 +7571,7 @@ LegalizerHelper::lowerMemcpyInline(MachineInstr &MI) {
   // See if this is a constant length copy
   auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
   // FIXME: support dynamically sized G_MEMCPY_INLINE
-  assert(LenVRegAndVal.hasValue() &&
+  assert(LenVRegAndVal &&
          "inline memcpy with dynamic size is not yet supported");
   uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
   if (KnownLen == 0) {
@@ -7627,7 +7611,7 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
 
   bool DstAlignCanChange = false;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  Align Alignment = commonAlignment(DstAlign, SrcAlign);
+  Align Alignment = std::min(DstAlign, SrcAlign);
 
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
   if (FIDef && !MFI.isFixedObjectIndex(FIDef->getOperand(1).getIndex()))
@@ -7662,7 +7646,7 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign / 2;
+        NewAlign = NewAlign.previous();
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;
@@ -7735,7 +7719,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   bool DstAlignCanChange = false;
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF);
-  Align Alignment = commonAlignment(DstAlign, SrcAlign);
+  Align Alignment = std::min(DstAlign, SrcAlign);
 
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
   if (FIDef && !MFI.isFixedObjectIndex(FIDef->getOperand(1).getIndex()))
@@ -7770,7 +7754,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign / 2;
+        NewAlign = NewAlign.previous();
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;

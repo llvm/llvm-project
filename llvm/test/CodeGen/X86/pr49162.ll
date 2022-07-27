@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-define i32* @PR49162(i32* %base, i160* %ptr160) {
+define ptr @PR49162(ptr %base, ptr %ptr160) {
 ; X86-LABEL: PR49162:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -23,11 +23,11 @@ define i32* @PR49162(i32* %base, i160* %ptr160) {
 ; X64-NEXT:    sarq $16, %rax
 ; X64-NEXT:    leaq (%rdi,%rax,4), %rax
 ; X64-NEXT:    retq
-  %load160 = load i160, i160* %ptr160, align 4
+  %load160 = load i160, ptr %ptr160, align 4
   %shl = shl i160 %load160, 80
   %ashr160 = ashr i160 %shl, 112
   %trunc = trunc i160 %ashr160 to i64
   %ashr64 = ashr i64 %trunc, 32
-  %gep = getelementptr inbounds i32, i32* %base, i64 %ashr64
-  ret i32* %gep
+  %gep = getelementptr inbounds i32, ptr %base, i64 %ashr64
+  ret ptr %gep
 }

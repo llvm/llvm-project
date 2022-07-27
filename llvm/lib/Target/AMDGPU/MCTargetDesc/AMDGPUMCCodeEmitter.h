@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include <cstdint>
 
 namespace llvm {
 
@@ -63,12 +62,6 @@ public:
   virtual void getAVOperandEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                                     SmallVectorImpl<MCFixup> &Fixups,
                                     const MCSubtargetInfo &STI) const = 0;
-
-protected:
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // End namespace llvm

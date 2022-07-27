@@ -2394,7 +2394,6 @@ Status ProcessGDBRemote::DoDetach(bool keep_stopped) {
 }
 
 Status ProcessGDBRemote::DoDestroy() {
-  Status error;
   Log *log = GetLog(GDBRLog::Process);
   LLDB_LOGF(log, "ProcessGDBRemote::DoDestroy()");
 
@@ -2404,54 +2403,35 @@ Status ProcessGDBRemote::DoDestroy() {
 
   if (m_gdb_comm.IsConnected()) {
     if (m_public_state.GetValue() != eStateAttaching) {
-      StringExtractorGDBRemote response;
-      GDBRemoteCommunication::ScopedTimeout(m_gdb_comm,
-                                            std::chrono::seconds(3));
+      llvm::Expected<int> kill_res = m_gdb_comm.KillProcess(GetID());
 
-      if (m_gdb_comm.SendPacketAndWaitForResponse("k", response,
-                                                  GetInterruptTimeout()) ==
-          GDBRemoteCommunication::PacketResult::Success) {
-        char packet_cmd = response.GetChar(0);
-
-        if (packet_cmd == 'W' || packet_cmd == 'X') {
+      if (kill_res) {
+        exit_status = kill_res.get();
 #if defined(__APPLE__)
-          // For Native processes on Mac OS X, we launch through the Host
-          // Platform, then hand the process off to debugserver, which becomes
-          // the parent process through "PT_ATTACH".  Then when we go to kill
-          // the process on Mac OS X we call ptrace(PT_KILL) to kill it, then
-          // we call waitpid which returns with no error and the correct
-          // status.  But amusingly enough that doesn't seem to actually reap
-          // the process, but instead it is left around as a Zombie.  Probably
-          // the kernel is in the process of switching ownership back to lldb
-          // which was the original parent, and gets confused in the handoff.
-          // Anyway, so call waitpid here to finally reap it.
-          PlatformSP platform_sp(GetTarget().GetPlatform());
-          if (platform_sp && platform_sp->IsHost()) {
-            int status;
-            ::pid_t reap_pid;
-            reap_pid = waitpid(GetID(), &status, WNOHANG);
-            LLDB_LOGF(log, "Reaped pid: %d, status: %d.\n", reap_pid, status);
-          }
-#endif
-          SetLastStopPacket(response);
-          ClearThreadIDList();
-          exit_status = response.GetHexU8();
-        } else {
-          LLDB_LOGF(log,
-                    "ProcessGDBRemote::DoDestroy - got unexpected response "
-                    "to k packet: %s",
-                    response.GetStringRef().data());
-          exit_string.assign("got unexpected response to k packet: ");
-          exit_string.append(std::string(response.GetStringRef()));
+        // For Native processes on Mac OS X, we launch through the Host
+        // Platform, then hand the process off to debugserver, which becomes
+        // the parent process through "PT_ATTACH".  Then when we go to kill
+        // the process on Mac OS X we call ptrace(PT_KILL) to kill it, then
+        // we call waitpid which returns with no error and the correct
+        // status.  But amusingly enough that doesn't seem to actually reap
+        // the process, but instead it is left around as a Zombie.  Probably
+        // the kernel is in the process of switching ownership back to lldb
+        // which was the original parent, and gets confused in the handoff.
+        // Anyway, so call waitpid here to finally reap it.
+        PlatformSP platform_sp(GetTarget().GetPlatform());
+        if (platform_sp && platform_sp->IsHost()) {
+          int status;
+          ::pid_t reap_pid;
+          reap_pid = waitpid(GetID(), &status, WNOHANG);
+          LLDB_LOGF(log, "Reaped pid: %d, status: %d.\n", reap_pid, status);
         }
+#endif
+        ClearThreadIDList();
+        exit_string.assign("killed");
       } else {
-        LLDB_LOGF(log, "ProcessGDBRemote::DoDestroy - failed to send k packet");
-        exit_string.assign("failed to send the k packet");
+        exit_string.assign(llvm::toString(kill_res.takeError()));
       }
     } else {
-      LLDB_LOGF(log,
-                "ProcessGDBRemote::DoDestroy - killed or interrupted while "
-                "attaching");
       exit_string.assign("killed or interrupted while attaching.");
     }
   } else {
@@ -2465,7 +2445,7 @@ Status ProcessGDBRemote::DoDestroy() {
 
   StopAsyncThread();
   KillDebugserverProcess();
-  return error;
+  return Status();
 }
 
 void ProcessGDBRemote::SetLastStopPacket(
@@ -5008,19 +4988,12 @@ public:
   ~CommandObjectProcessGDBRemotePacketHistory() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    const size_t argc = command.GetArgumentCount();
-    if (argc == 0) {
-      ProcessGDBRemote *process =
-          (ProcessGDBRemote *)m_interpreter.GetExecutionContext()
-              .GetProcessPtr();
-      if (process) {
-        process->GetGDBRemote().DumpHistory(result.GetOutputStream());
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-        return true;
-      }
-    } else {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
+    ProcessGDBRemote *process =
+        (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
+    if (process) {
+      process->GetGDBRemote().DumpHistory(result.GetOutputStream());
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
     }
     result.SetStatus(eReturnStatusFailed);
     return false;
@@ -5034,7 +5007,10 @@ public:
       : CommandObjectParsed(
             interpreter, "process plugin packet xfer-size",
             "Maximum size that lldb will try to read/write one one chunk.",
-            nullptr) {}
+            nullptr) {
+    CommandArgumentData max_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
+    m_arguments.push_back({max_arg});
+  }
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
 
@@ -5075,7 +5051,10 @@ public:
                             "The packet header and footer will automatically "
                             "be added to the packet prior to sending and "
                             "stripped from the result.",
-                            nullptr) {}
+                            nullptr) {
+    CommandArgumentData packet_arg{eArgTypeNone, eArgRepeatStar};
+    m_arguments.push_back({packet_arg});
+  }
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
 
@@ -5308,8 +5287,11 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
   // Hardware breakpoints/watchpoints are not inherited implicitly,
   // so we need to readd them if we're following child.
-  if (GetFollowForkMode() == eFollowChild)
+  if (GetFollowForkMode() == eFollowChild) {
     DidForkSwitchHardwareTraps(true);
+    // Update our PID
+    SetID(child_pid);
+  }
 }
 
 void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
@@ -5361,6 +5343,11 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
                "ProcessGDBRemote::DidFork() detach packet send failed: {0}",
                 error.AsCString() ? error.AsCString() : "<unknown error>");
       return;
+  }
+
+  if (GetFollowForkMode() == eFollowChild) {
+    // Update our PID
+    SetID(child_pid);
   }
 }
 

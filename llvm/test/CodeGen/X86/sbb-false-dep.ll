@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64--                          | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+sbb-dep-breaking | FileCheck %s --check-prefixes=IDIOM
 
-%struct.y_s = type { i64*, i64* }
+%struct.y_s = type { ptr, ptr }
 
-define i32 @mallocbench_gs(i32* noundef %0, %struct.y_s* noundef %1, i32 noundef %2, i32 noundef %3, i32 noundef %4) nounwind {
+define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3, i32 noundef %4) nounwind {
 ; CHECK-LABEL: mallocbench_gs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -100,19 +100,18 @@ define i32 @mallocbench_gs(i32* noundef %0, %struct.y_s* noundef %1, i32 noundef
 ; IDIOM-NEXT:    popq %r15
 ; IDIOM-NEXT:    popq %rbp
 ; IDIOM-NEXT:    retq
-  %6 = getelementptr inbounds %struct.y_s, %struct.y_s* %1, i64 0, i32 0
-  %7 = load i64*, i64** %6, align 8
-  %8 = getelementptr inbounds %struct.y_s, %struct.y_s* %1, i64 0, i32 1
-  %9 = load i64*, i64** %8, align 8
-  tail call void @foo1(i64* noundef %7, i64* noundef %9, %struct.y_s* noundef %1)
-  %10 = icmp eq i32 %4, 0
-  %11 = load i64*, i64** %8, align 8
-  %12 = load i64, i64* %11, align 8
-  %13 = select i1 %10, i64 %12, i64 -1
-  %14 = select i1 %10, i64 -1, i64 %12
-  %15 = tail call noundef i32 @foo2(i32* noundef %0, i32 noundef %2, i32 noundef %3, i32 noundef 0, i32 noundef 0, i32 noundef 0, %struct.y_s* noundef nonnull %1, i64 noundef %13, i64 noundef %14)
-  ret i32 %15
+  %6 = load ptr, ptr %1, align 8
+  %7 = getelementptr inbounds %struct.y_s, ptr %1, i64 0, i32 1
+  %8 = load ptr, ptr %7, align 8
+  tail call void @foo1(ptr noundef %6, ptr noundef %8, ptr noundef %1)
+  %9 = icmp eq i32 %4, 0
+  %10 = load ptr, ptr %7, align 8
+  %11 = load i64, ptr %10, align 8
+  %12 = select i1 %9, i64 %11, i64 -1
+  %13 = select i1 %9, i64 -1, i64 %11
+  %14 = tail call noundef i32 @foo2(ptr noundef %0, i32 noundef %2, i32 noundef %3, i32 noundef 0, i32 noundef 0, i32 noundef 0, ptr noundef nonnull %1, i64 noundef %12, i64 noundef %13)
+  ret i32 %14
 }
 
-declare void @foo1(i64* noundef, i64* noundef, %struct.y_s* noundef) local_unnamed_addr #1
-declare noundef i32 @foo2(i32* noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, %struct.y_s* noundef, i64 noundef, i64 noundef) local_unnamed_addr #1
+declare void @foo1(ptr noundef, ptr noundef, ptr noundef) local_unnamed_addr #1
+declare noundef i32 @foo2(ptr noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, ptr noundef, i64 noundef, i64 noundef) local_unnamed_addr #1

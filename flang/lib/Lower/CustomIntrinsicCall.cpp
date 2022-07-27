@@ -89,11 +89,10 @@ static void prepareMinOrMaxArguments(
     const Fortran::lower::OperandPrepare &prepareOtherArgument,
     Fortran::lower::AbstractConverter &converter) {
   assert(retTy && "MIN and MAX must have a return type");
-  mlir::Type resultType = retTy.getValue();
+  mlir::Type resultType = *retTy;
   mlir::Location loc = converter.getCurrentLocation();
   if (fir::isa_char(resultType))
-    TODO(loc,
-         "CHARACTER MIN and MAX lowering with dynamically optional arguments");
+    TODO(loc, "CHARACTER MIN and MAX with dynamically optional arguments");
   for (auto arg : llvm::enumerate(procRef.arguments())) {
     const auto *expr =
         Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
@@ -123,7 +122,7 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
   assert(numOperands >= 2 && !isPresentCheck(0) && !isPresentCheck(1) &&
          "min/max must have at least two non-optional args");
   assert(retTy && "MIN and MAX must have a return type");
-  mlir::Type resultType = retTy.getValue();
+  mlir::Type resultType = *retTy;
   llvm::SmallVector<fir::ExtendedValue> args;
   args.push_back(getOperand(0));
   args.push_back(getOperand(1));
@@ -136,7 +135,7 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
       // Argument is dynamically optional.
       extremum =
           builder
-              .genIfOp(loc, {resultType}, isPresentRuntimeCheck.getValue(),
+              .genIfOp(loc, {resultType}, *isPresentRuntimeCheck,
                        /*withElseRegion=*/true)
               .genThen([&]() {
                 llvm::SmallVector<fir::ExtendedValue> args;
@@ -195,12 +194,12 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
          isPresentCheck(2) &&
          "only ISHFTC SIZE arg is expected to be dynamically optional here");
   assert(retTy && "ISFHTC must have a return type");
-  mlir::Type resultType = retTy.getValue();
+  mlir::Type resultType = retTy.value();
   llvm::SmallVector<fir::ExtendedValue> args;
   args.push_back(getOperand(0));
   args.push_back(getOperand(1));
   args.push_back(builder
-                     .genIfOp(loc, {resultType}, isPresentCheck(2).getValue(),
+                     .genIfOp(loc, {resultType}, isPresentCheck(2).value(),
                               /*withElseRegion=*/true)
                      .genThen([&]() {
                        fir::ExtendedValue sizeExv = getOperand(2);

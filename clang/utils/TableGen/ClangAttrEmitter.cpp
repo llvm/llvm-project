@@ -4492,7 +4492,7 @@ void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
     // Only look at the first documentation if there are several.
     // (Currently there's only one such attr, revisit if this becomes common).
     StringRef Text =
-        Docs.front()->getValueAsOptionalString("Content").getValueOr("");
+        Docs.front()->getValueAsOptionalString("Content").value_or("");
     OS << "\nstatic const char AttrDoc_" << A->getName() << "[] = "
        << "R\"reST(" << Text.trim() << ")reST\";\n";
   }
@@ -4578,7 +4578,8 @@ static void WriteCategoryHeader(const Record *DocCategory,
 
 static std::pair<std::string, SpellingList>
 GetAttributeHeadingAndSpellings(const Record &Documentation,
-                                const Record &Attribute) {
+                                const Record &Attribute,
+                                StringRef Cat) {
   // FIXME: there is no way to have a per-spelling category for the attribute
   // documentation. This may not be a limiting factor since the spellings
   // should generally be consistently applied across the category.
@@ -4598,7 +4599,7 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
     else {
       std::set<std::string> Uniques;
       for (auto I = Spellings.begin(), E = Spellings.end();
-           I != E && Uniques.size() <= 1; ++I) {
+           I != E; ++I) {
         std::string Spelling =
             std::string(NormalizeNameForSpellingComparison(I->name()));
         Uniques.insert(Spelling);
@@ -4607,6 +4608,11 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
       // needs.
       if (Uniques.size() == 1)
         Heading = *Uniques.begin();
+      // If it's in the undocumented category, just construct a header by
+      // concatenating all the spellings. Might not be great, but better than
+      // nothing.
+      else if (Cat == "Undocumented")
+        Heading = llvm::join(Uniques.begin(), Uniques.end(), ", ");
     }
   }
 
@@ -4701,19 +4707,19 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto *D : Docs) {
       const Record &Doc = *D;
       const Record *Category = Doc.getValueAsDef("Category");
-      // If the category is "undocumented", then there cannot be any other
-      // documentation categories (otherwise, the attribute would become
-      // documented).
+      // If the category is "InternalOnly", then there cannot be any other
+      // documentation categories (otherwise, the attribute would be
+      // emitted into the docs).
       const StringRef Cat = Category->getValueAsString("Name");
-      bool Undocumented = Cat == "Undocumented";
-      if (Undocumented && Docs.size() > 1)
+      bool InternalOnly = Cat == "InternalOnly";
+      if (InternalOnly && Docs.size() > 1)
         PrintFatalError(Doc.getLoc(),
-                        "Attribute is \"Undocumented\", but has multiple "
+                        "Attribute is \"InternalOnly\", but has multiple "
                         "documentation categories");
 
-      if (!Undocumented)
+      if (!InternalOnly)
         SplitDocs[Category].push_back(DocumentationData(
-            Doc, Attr, GetAttributeHeadingAndSpellings(Doc, Attr)));
+            Doc, Attr, GetAttributeHeadingAndSpellings(Doc, Attr, Cat)));
     }
   }
 

@@ -23,6 +23,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
@@ -210,14 +211,18 @@ public:
 
 protected:
   /// Construct a SimplexBase with the specified number of variables and fixed
-  /// columns.
+  /// columns. The first overload should be used when there are nosymbols.
+  /// With the second overload, the specified range of vars will be marked
+  /// as symbols. With the third overload, `isSymbol` is a bitmask denoting
+  /// which vars are symbols. The size of `isSymbol` must be `nVar`.
   ///
   /// For example, Simplex uses two fixed columns: the denominator and the
   /// constant term, whereas LexSimplex has an extra fixed column for the
   /// so-called big M parameter. For more information see the documentation for
   /// LexSimplex.
-  SimplexBase(unsigned nVar, bool mustUseBigM, unsigned symbolOffset,
-              unsigned nSymbol);
+  SimplexBase(unsigned nVar, bool mustUseBigM);
+  SimplexBase(unsigned nVar, bool mustUseBigM,
+              const llvm::SmallBitVector &isSymbol);
 
   enum class Orientation { Row, Column };
 
@@ -422,12 +427,16 @@ public:
   unsigned getSnapshot() { return SimplexBase::getSnapshotBasis(); }
 
 protected:
-  LexSimplexBase(unsigned nVar, unsigned symbolOffset, unsigned nSymbol)
-      : SimplexBase(nVar, /*mustUseBigM=*/true, symbolOffset, nSymbol) {}
+  LexSimplexBase(unsigned nVar) : SimplexBase(nVar, /*mustUseBigM=*/true) {}
+  LexSimplexBase(unsigned nVar, const llvm::SmallBitVector &isSymbol)
+      : SimplexBase(nVar, /*mustUseBigM=*/true, isSymbol) {}
   explicit LexSimplexBase(const IntegerRelation &constraints)
-      : LexSimplexBase(constraints.getNumIds(),
-                       constraints.getIdKindOffset(IdKind::Symbol),
-                       constraints.getNumSymbolIds()) {
+      : LexSimplexBase(constraints.getNumVars()) {
+    intersectIntegerRelation(constraints);
+  }
+  explicit LexSimplexBase(const IntegerRelation &constraints,
+                          const llvm::SmallBitVector &isSymbol)
+      : LexSimplexBase(constraints.getNumVars(), isSymbol) {
     intersectIntegerRelation(constraints);
   }
 
@@ -470,13 +479,12 @@ protected:
 /// provides support for integer-exact redundancy and separateness checks.
 class LexSimplex : public LexSimplexBase {
 public:
-  explicit LexSimplex(unsigned nVar)
-      : LexSimplexBase(nVar, /*symbolOffset=*/0, /*nSymbol=*/0) {}
+  explicit LexSimplex(unsigned nVar) : LexSimplexBase(nVar) {}
+  // Note that LexSimplex does NOT support symbolic lexmin;
+  // use SymbolicLexSimplex if that is required. LexSimplex ignores the VarKinds
+  // of the passed IntegerRelation. Symbols will be treated as ordinary vars.
   explicit LexSimplex(const IntegerRelation &constraints)
-      : LexSimplexBase(constraints) {
-    assert(constraints.getNumSymbolIds() == 0 &&
-           "LexSimplex does not support symbols!");
-  }
+      : LexSimplexBase(constraints) {}
 
   /// Return the lexicographically minimum rational solution to the constraints.
   MaybeOptimum<SmallVector<Fraction, 8>> findRationalLexMin();
@@ -521,10 +529,9 @@ private:
 
 /// Represents the result of a symbolic lexicographic minimization computation.
 struct SymbolicLexMin {
-  SymbolicLexMin(unsigned nSymbols, unsigned nNonSymbols)
-      : lexmin(PresburgerSpace::getSetSpace(nSymbols), nNonSymbols),
-        unboundedDomain(
-            PresburgerSet::getEmpty(PresburgerSpace::getSetSpace(nSymbols))) {}
+  SymbolicLexMin(const PresburgerSpace &domainSpace, unsigned numOutputs)
+      : lexmin(domainSpace, numOutputs),
+        unboundedDomain(PresburgerSet::getEmpty(domainSpace)) {}
 
   /// This maps assignments of symbols to the corresponding lexmin.
   /// Takes no value when no integer sample exists for the assignment or if the
@@ -568,14 +575,41 @@ class SymbolicLexSimplex : public LexSimplexBase {
 public:
   /// `constraints` is the set for which the symbolic lexmin will be computed.
   /// `symbolDomain` is the set of values of the symbols for which the lexmin
-  /// will be computed. `symbolDomain` should have a dim id for every symbol in
-  /// `constraints`, and no other ids.
-  SymbolicLexSimplex(const IntegerPolyhedron &constraints,
-                     const IntegerPolyhedron &symbolDomain)
-      : LexSimplexBase(constraints), domainPoly(symbolDomain),
+  /// will be computed. `symbolDomain` should have a dim var for every symbol in
+  /// `constraints`, and no other vars. `isSymbol` specifies which vars of
+  /// `constraints` should be considered as symbols.
+  ///
+  /// The resulting SymbolicLexMin's space will be compatible with that of
+  /// symbolDomain.
+  SymbolicLexSimplex(const IntegerRelation &constraints,
+                     const IntegerPolyhedron &symbolDomain,
+                     const llvm::SmallBitVector &isSymbol)
+      : LexSimplexBase(constraints, isSymbol), domainPoly(symbolDomain),
         domainSimplex(symbolDomain) {
-    assert(domainPoly.getNumIds() == constraints.getNumSymbolIds());
-    assert(domainPoly.getNumDimIds() == constraints.getNumSymbolIds());
+    // TODO consider supporting this case. It amounts
+    // to just returning the input constraints.
+    assert(domainPoly.getNumVars() > 0 &&
+           "there must be some non-symbols to optimize!");
+  }
+
+  /// An overload to select some subrange of ids as symbols for lexmin.
+  /// The symbol ids are the range of ids with absolute index
+  /// [symbolOffset, symbolOffset + symbolDomain.getNumVars())
+  SymbolicLexSimplex(const IntegerRelation &constraints, unsigned symbolOffset,
+                     const IntegerPolyhedron &symbolDomain)
+      : SymbolicLexSimplex(constraints, symbolDomain,
+                           getSubrangeBitVector(constraints.getNumVars(),
+                                                symbolOffset,
+                                                symbolDomain.getNumVars())) {}
+
+  /// An overload to select the symbols of `constraints` as symbols for lexmin.
+  SymbolicLexSimplex(const IntegerRelation &constraints,
+                     const IntegerPolyhedron &symbolDomain)
+      : SymbolicLexSimplex(constraints,
+                           constraints.getVarKindOffset(VarKind::Symbol),
+                           symbolDomain) {
+    assert(constraints.getNumSymbolVars() == symbolDomain.getNumVars() &&
+           "symbolDomain must have as many vars as constraints has symbols!");
   }
 
   /// The lexmin will be stored as a function `lexmin` from symbols to
@@ -583,6 +617,9 @@ public:
   ///
   /// For some values of the symbols, the lexmin may be unbounded.
   /// These parts of the symbol domain will be stored in `unboundedDomain`.
+  ///
+  /// The spaces of the sets in the result are compatible with the symbolDomain
+  /// passed in the SymbolicLexSimplex constructor.
   SymbolicLexMin computeSymbolicIntegerLexMin();
 
 private:
@@ -658,11 +695,9 @@ public:
   enum class Direction { Up, Down };
 
   Simplex() = delete;
-  explicit Simplex(unsigned nVar)
-      : SimplexBase(nVar, /*mustUseBigM=*/false, /*symbolOffset=*/0,
-                    /*nSymbol=*/0) {}
+  explicit Simplex(unsigned nVar) : SimplexBase(nVar, /*mustUseBigM=*/false) {}
   explicit Simplex(const IntegerRelation &constraints)
-      : Simplex(constraints.getNumIds()) {
+      : Simplex(constraints.getNumVars()) {
     intersectIntegerRelation(constraints);
   }
   ~Simplex() override = default;

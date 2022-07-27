@@ -253,19 +253,19 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
 
   // Apply user values provided by argument
-  if (UserThreshold.hasValue()) {
+  if (UserThreshold) {
     UP.Threshold = *UserThreshold;
     UP.PartialThreshold = *UserThreshold;
   }
-  if (UserCount.hasValue())
+  if (UserCount)
     UP.Count = *UserCount;
-  if (UserAllowPartial.hasValue())
+  if (UserAllowPartial)
     UP.Partial = *UserAllowPartial;
-  if (UserRuntime.hasValue())
+  if (UserRuntime)
     UP.Runtime = *UserRuntime;
-  if (UserUpperBound.hasValue())
+  if (UserUpperBound)
     UP.UpperBound = *UserUpperBound;
-  if (UserFullUnrollMaxCount.hasValue())
+  if (UserFullUnrollMaxCount)
     UP.FullUnrollMaxCount = *UserFullUnrollMaxCount;
 
   return UP;
@@ -1323,16 +1323,16 @@ static LoopUnrollResult tryToUnrollLoop(
     Optional<MDNode *> RemainderLoopID =
         makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
                                         LLVMLoopUnrollFollowupRemainder});
-    if (RemainderLoopID.hasValue())
-      RemainderLoop->setLoopID(RemainderLoopID.getValue());
+    if (RemainderLoopID)
+      RemainderLoop->setLoopID(RemainderLoopID.value());
   }
 
   if (UnrollResult != LoopUnrollResult::FullyUnrolled) {
     Optional<MDNode *> NewLoopID =
         makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
                                         LLVMLoopUnrollFollowupUnrolled});
-    if (NewLoopID.hasValue()) {
-      L->setLoopID(NewLoopID.getValue());
+    if (NewLoopID) {
+      L->setLoopID(NewLoopID.value());
 
       // Do not setLoopAlreadyUnrolled if loop attributes have been specified
       // explicitly.
@@ -1645,15 +1645,15 @@ void LoopUnrollPass::printPipeline(
       OS, MapClassName2PassName);
   OS << "<";
   if (UnrollOpts.AllowPartial != None)
-    OS << (UnrollOpts.AllowPartial.getValue() ? "" : "no-") << "partial;";
+    OS << (UnrollOpts.AllowPartial.value() ? "" : "no-") << "partial;";
   if (UnrollOpts.AllowPeeling != None)
-    OS << (UnrollOpts.AllowPeeling.getValue() ? "" : "no-") << "peeling;";
+    OS << (UnrollOpts.AllowPeeling.value() ? "" : "no-") << "peeling;";
   if (UnrollOpts.AllowRuntime != None)
-    OS << (UnrollOpts.AllowRuntime.getValue() ? "" : "no-") << "runtime;";
+    OS << (UnrollOpts.AllowRuntime.value() ? "" : "no-") << "runtime;";
   if (UnrollOpts.AllowUpperBound != None)
-    OS << (UnrollOpts.AllowUpperBound.getValue() ? "" : "no-") << "upperbound;";
+    OS << (UnrollOpts.AllowUpperBound.value() ? "" : "no-") << "upperbound;";
   if (UnrollOpts.AllowProfileBasedPeeling != None)
-    OS << (UnrollOpts.AllowProfileBasedPeeling.getValue() ? "" : "no-")
+    OS << (UnrollOpts.AllowProfileBasedPeeling.value() ? "" : "no-")
        << "profile-peeling;";
   if (UnrollOpts.FullUnrollMaxCount != None)
     OS << "full-unroll-max=" << UnrollOpts.FullUnrollMaxCount << ";";

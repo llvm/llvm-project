@@ -572,12 +572,9 @@ public:
 
   /// Returns true if the instruction has implicit definition.
   bool hasImplicitDef() const {
-    for (unsigned I = getNumExplicitOperands(), E = getNumOperands();
-      I != E; ++I) {
-      const MachineOperand &MO = getOperand(I);
+    for (const MachineOperand &MO : implicit_operands())
       if (MO.isDef() && MO.isImplicit())
         return true;
-    }
     return false;
   }
 
@@ -1620,7 +1617,7 @@ public:
   /// argument area of a function (if it does not change).  If the instruction
   /// does multiple loads, this returns true only if all of the loads are
   /// dereferenceable and invariant.
-  bool isDereferenceableInvariantLoad(AAResults *AA) const;
+  bool isDereferenceableInvariantLoad() const;
 
   /// If the specified instruction is a PHI that always merges together the
   /// same virtual register, return the register, otherwise return 0.

@@ -14,11 +14,10 @@ stack:
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
-    ; CHECK: renamable $xmm1 = V_SET0
+    ; CHECK:      renamable $xmm1 = V_SET0
     ; CHECK-NEXT: renamable $xmm0 = V_SET0
     ; CHECK-NEXT: renamable $xmm1 = PXORrr renamable $xmm1, renamable $xmm0
-    ; CHECK-NEXT: MOVAPSmr %stack.1, 1, $noreg, 0, $noreg, $xmm1 :: (store (s128) into %stack.1)
-    ; CHECK-NEXT: MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, renamable $xmm1
+    ; CHECK-NEXT: MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, killed renamable $xmm1
     ; CHECK-NEXT: MOVAPSmr %stack.0, 1, $noreg, 16, $noreg, killed renamable $xmm0
 
     %0:vr128 = V_SET0

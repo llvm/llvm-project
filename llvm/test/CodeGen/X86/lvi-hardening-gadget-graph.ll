@@ -1,65 +1,65 @@
 ; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -x86-lvi-load-dot-verify -o %t < %s | FileCheck %s
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @test(i32* %untrusted_user_ptr, i32* %secret, i32 %secret_size) #0 {
+define dso_local i32 @test(ptr %untrusted_user_ptr, ptr %secret, i32 %secret_size) #0 {
 entry:
-  %untrusted_user_ptr.addr = alloca i32*, align 8
-  %secret.addr = alloca i32*, align 8
+  %untrusted_user_ptr.addr = alloca ptr, align 8
+  %secret.addr = alloca ptr, align 8
   %secret_size.addr = alloca i32, align 4
   %ret_val = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32* %untrusted_user_ptr, i32** %untrusted_user_ptr.addr, align 8
-  store i32* %secret, i32** %secret.addr, align 8
-  store i32 %secret_size, i32* %secret_size.addr, align 4
-  store i32 0, i32* %ret_val, align 4
+  store ptr %untrusted_user_ptr, ptr %untrusted_user_ptr.addr, align 8
+  store ptr %secret, ptr %secret.addr, align 8
+  store i32 %secret_size, ptr %secret_size.addr, align 4
+  store i32 0, ptr %ret_val, align 4
   call void @llvm.x86.sse2.lfence()
-  store i32 0, i32* %i, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, i32* %i, align 4
-  %1 = load i32, i32* %secret_size.addr, align 4
+  %0 = load i32, ptr %i, align 4
+  %1 = load i32, ptr %secret_size.addr, align 4
   %cmp = icmp slt i32 %0, %1
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %2 = load i32, i32* %i, align 4
+  %2 = load i32, ptr %i, align 4
   %rem = srem i32 %2, 2
   %cmp1 = icmp eq i32 %rem, 0
   br i1 %cmp1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %for.body
-  %3 = load i32*, i32** %secret.addr, align 8
-  %4 = load i32, i32* %ret_val, align 4
+  %3 = load ptr, ptr %secret.addr, align 8
+  %4 = load i32, ptr %ret_val, align 4
   %idxprom = sext i32 %4 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %3, i64 %idxprom
-  %5 = load i32, i32* %arrayidx, align 4
-  %6 = load i32*, i32** %untrusted_user_ptr.addr, align 8
-  store i32 %5, i32* %6, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %3, i64 %idxprom
+  %5 = load i32, ptr %arrayidx, align 4
+  %6 = load ptr, ptr %untrusted_user_ptr.addr, align 8
+  store i32 %5, ptr %6, align 4
   br label %if.end
 
 if.else:                                          ; preds = %for.body
-  %7 = load i32*, i32** %secret.addr, align 8
-  %8 = load i32, i32* %ret_val, align 4
+  %7 = load ptr, ptr %secret.addr, align 8
+  %8 = load i32, ptr %ret_val, align 4
   %idxprom2 = sext i32 %8 to i64
-  %arrayidx3 = getelementptr inbounds i32, i32* %7, i64 %idxprom2
-  store i32 42, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %7, i64 %idxprom2
+  store i32 42, ptr %arrayidx3, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %9 = load i32*, i32** %untrusted_user_ptr.addr, align 8
-  %10 = load i32, i32* %9, align 4
-  store i32 %10, i32* %ret_val, align 4
+  %9 = load ptr, ptr %untrusted_user_ptr.addr, align 8
+  %10 = load i32, ptr %9, align 4
+  store i32 %10, ptr %ret_val, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end
-  %11 = load i32, i32* %i, align 4
+  %11 = load i32, ptr %i, align 4
   %inc = add nsw i32 %11, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %12 = load i32, i32* %ret_val, align 4
+  %12 = load i32, ptr %ret_val, align 4
   ret i32 %12
 }
 

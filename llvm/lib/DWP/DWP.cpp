@@ -16,7 +16,9 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/Decompressor.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <limits>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -273,12 +275,16 @@ static Error createError(StringRef Name, Error E) {
 
 static Error
 handleCompressedSection(std::deque<SmallString<32>> &UncompressedSections,
-                        StringRef &Name, StringRef &Contents) {
-  if (!Decompressor::isGnuStyle(Name))
+                        SectionRef Sec, StringRef Name, StringRef &Contents) {
+  auto *Obj = dyn_cast<ELFObjectFileBase>(Sec.getObject());
+  if (!Obj ||
+      !(static_cast<ELFSectionRef>(Sec).getFlags() & ELF::SHF_COMPRESSED))
     return Error::success();
-
-  Expected<Decompressor> Dec =
-      Decompressor::create(Name, Contents, false /*IsLE*/, false /*Is64Bit*/);
+  bool IsLE = isa<object::ELF32LEObjectFile>(Obj) ||
+              isa<object::ELF64LEObjectFile>(Obj);
+  bool Is64 = isa<object::ELF64LEObjectFile>(Obj) ||
+              isa<object::ELF64BEObjectFile>(Obj);
+  Expected<Decompressor> Dec = Decompressor::create(Name, Contents, IsLE, Is64);
   if (!Dec)
     return createError(Name, Dec.takeError());
 
@@ -286,7 +292,6 @@ handleCompressedSection(std::deque<SmallString<32>> &UncompressedSections,
   if (Error E = Dec->resizeAndDecompress(UncompressedSections.back()))
     return createError(Name, std::move(E));
 
-  Name = Name.substr(2); // Drop ".z"
   Contents = UncompressedSections.back();
   return Error::success();
 }
@@ -494,7 +499,8 @@ Error handleSection(
     return ContentsOrErr.takeError();
   StringRef Contents = *ContentsOrErr;
 
-  if (auto Err = handleCompressedSection(UncompressedSections, Name, Contents))
+  if (auto Err = handleCompressedSection(UncompressedSections, Section, Name,
+                                         Contents))
     return Err;
 
   Name = Name.substr(Name.find_first_not_of("._"));
@@ -649,6 +655,12 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
                                                              IndexVersion)];
           C.Offset = InfoSectionOffset;
           C.Length = Header.Length + 4;
+
+          if (std::numeric_limits<uint32_t>::max() - InfoSectionOffset <
+              C.Length)
+            return make_error<DWPError>(
+                "debug information section offset is greater than 4GB");
+
           UnitOffset += C.Length;
           if (Header.Version < 5 ||
               Header.UnitType == dwarf::DW_UT_split_compile) {
@@ -669,7 +681,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
             FoundCUUnit = true;
           } else if (Header.UnitType == dwarf::DW_UT_split_type) {
             auto P = TypeIndexEntries.insert(
-                std::make_pair(Header.Signature.getValue(), Entry));
+                std::make_pair(*Header.Signature, Entry));
             if (!P.second)
               continue;
           }

@@ -171,9 +171,7 @@ public:
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-MATCHER_P(HasConstantVal, v, "") {
-  return arg.Data.hasValue() && arg.Data->Value == v;
-}
+MATCHER_P(HasConstantVal, v, "") { return arg.Data && arg.Data->Value == v; }
 
 MATCHER(IsUnknown, "") { return arg == arg.bottom(); }
 MATCHER(Varies, "") { return arg == arg.top(); }
@@ -186,28 +184,25 @@ MATCHER_P(HoldsCPLattice, m,
   return ExplainMatchResult(m, arg.Lattice, result_listener);
 }
 
-class ConstantPropagationTest : public ::testing::Test {
-protected:
-  template <typename Matcher>
-  void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
-    ASSERT_THAT_ERROR(
-        test::checkDataflow<ConstantPropagationAnalysis>(
-            Code, "fun",
-            [](ASTContext &C, Environment &) {
-              return ConstantPropagationAnalysis(C);
-            },
-            [&Expectations](
-                llvm::ArrayRef<std::pair<
-                    std::string, DataflowAnalysisState<
-                                     ConstantPropagationAnalysis::Lattice>>>
-                    Results,
-                ASTContext &) { EXPECT_THAT(Results, Expectations); },
-            {"-fsyntax-only", "-std=c++17"}),
-        llvm::Succeeded());
-  }
-};
+template <typename Matcher>
+void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
+  ASSERT_THAT_ERROR(
+      test::checkDataflow<ConstantPropagationAnalysis>(
+          Code, "fun",
+          [](ASTContext &C, Environment &) {
+            return ConstantPropagationAnalysis(C);
+          },
+          [&Expectations](
+              llvm::ArrayRef<std::pair<
+                  std::string, DataflowAnalysisState<
+                                    ConstantPropagationAnalysis::Lattice>>>
+                  Results,
+              ASTContext &) { EXPECT_THAT(Results, Expectations); },
+          {"-fsyntax-only", "-std=c++17"}),
+      llvm::Succeeded());
+}
 
-TEST_F(ConstantPropagationTest, JustInit) {
+TEST(ConstantPropagationTest, JustInit) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -219,7 +214,7 @@ TEST_F(ConstantPropagationTest, JustInit) {
 }
 
 // Verifies that the analysis tracks the last variable seen.
-TEST_F(ConstantPropagationTest, TwoVariables) {
+TEST(ConstantPropagationTest, TwoVariables) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -236,7 +231,7 @@ TEST_F(ConstantPropagationTest, TwoVariables) {
                         Pair("p3", HoldsCPLattice(HasConstantVal(3)))));
 }
 
-TEST_F(ConstantPropagationTest, Assignment) {
+TEST(ConstantPropagationTest, Assignment) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -250,7 +245,7 @@ TEST_F(ConstantPropagationTest, Assignment) {
                         Pair("p2", HoldsCPLattice(HasConstantVal(2)))));
 }
 
-TEST_F(ConstantPropagationTest, AssignmentCall) {
+TEST(ConstantPropagationTest, AssignmentCall) {
   std::string Code = R"(
     int g();
     void fun() {
@@ -262,7 +257,7 @@ TEST_F(ConstantPropagationTest, AssignmentCall) {
   RunDataflow(Code, UnorderedElementsAre(Pair("p", HoldsCPLattice(Varies()))));
 }
 
-TEST_F(ConstantPropagationTest, AssignmentBinOp) {
+TEST(ConstantPropagationTest, AssignmentBinOp) {
   std::string Code = R"(
     void fun() {
       int target;
@@ -274,7 +269,7 @@ TEST_F(ConstantPropagationTest, AssignmentBinOp) {
       Code, UnorderedElementsAre(Pair("p", HoldsCPLattice(HasConstantVal(5)))));
 }
 
-TEST_F(ConstantPropagationTest, PlusAssignment) {
+TEST(ConstantPropagationTest, PlusAssignment) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -288,7 +283,7 @@ TEST_F(ConstantPropagationTest, PlusAssignment) {
                                  Pair("p2", HoldsCPLattice(Varies()))));
 }
 
-TEST_F(ConstantPropagationTest, SameAssignmentInBranches) {
+TEST(ConstantPropagationTest, SameAssignmentInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -311,7 +306,7 @@ TEST_F(ConstantPropagationTest, SameAssignmentInBranches) {
                         Pair("p2", HoldsCPLattice(HasConstantVal(2)))));
 }
 
-TEST_F(ConstantPropagationTest, SameAssignmentInBranch) {
+TEST(ConstantPropagationTest, SameAssignmentInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target = 1;
@@ -328,7 +323,7 @@ TEST_F(ConstantPropagationTest, SameAssignmentInBranch) {
                         Pair("p2", HoldsCPLattice(HasConstantVal(1)))));
 }
 
-TEST_F(ConstantPropagationTest, NewVarInBranch) {
+TEST(ConstantPropagationTest, NewVarInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       if (b) {
@@ -351,7 +346,7 @@ TEST_F(ConstantPropagationTest, NewVarInBranch) {
                         Pair("p4", HoldsCPLattice(HasConstantVal(1)))));
 }
 
-TEST_F(ConstantPropagationTest, DifferentAssignmentInBranches) {
+TEST(ConstantPropagationTest, DifferentAssignmentInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -374,7 +369,7 @@ TEST_F(ConstantPropagationTest, DifferentAssignmentInBranches) {
                                  Pair("p2", HoldsCPLattice(Varies()))));
 }
 
-TEST_F(ConstantPropagationTest, DifferentAssignmentInBranch) {
+TEST(ConstantPropagationTest, DifferentAssignmentInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target = 1;

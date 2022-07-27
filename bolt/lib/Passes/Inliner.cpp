@@ -165,8 +165,8 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
       return INL_NONE;
 
     const MCPhysReg SPReg = BC.MIB->getStackPointer();
-    for (const BinaryBasicBlock *BB : BF.layout()) {
-      for (const MCInst &Inst : *BB) {
+    for (const BinaryBasicBlock &BB : BF) {
+      for (const MCInst &Inst : BB) {
         // Tail calls are marked as implicitly using the stack pointer and they
         // could be inlined.
         if (BC.MIB->isTailCall(Inst))
@@ -353,10 +353,10 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
 
     // Add CFG edges to the basic blocks of the inlined instance.
     std::vector<BinaryBasicBlock *> Successors(BB.succ_size());
-    std::transform(BB.succ_begin(), BB.succ_end(), Successors.begin(),
-                   [&InlinedBBMap](const BinaryBasicBlock *BB) {
-                     return InlinedBBMap.at(BB);
-                   });
+    llvm::transform(BB.successors(), Successors.begin(),
+                    [&InlinedBBMap](const BinaryBasicBlock *BB) {
+                      return InlinedBBMap.at(BB);
+                    });
 
     if (CallerFunction.hasValidProfile() && Callee.hasValidProfile())
       InlinedBB->addSuccessors(Successors.begin(), Successors.end(),
@@ -395,13 +395,12 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
 
 bool Inliner::inlineCallsInFunction(BinaryFunction &Function) {
   BinaryContext &BC = Function.getBinaryContext();
-  std::vector<BinaryBasicBlock *> Blocks(Function.layout().begin(),
-                                         Function.layout().end());
-  std::sort(Blocks.begin(), Blocks.end(),
-            [](const BinaryBasicBlock *BB1, const BinaryBasicBlock *BB2) {
-              return BB1->getKnownExecutionCount() >
-                     BB2->getKnownExecutionCount();
-            });
+  std::vector<BinaryBasicBlock *> Blocks(Function.getLayout().block_begin(),
+                                         Function.getLayout().block_end());
+  llvm::sort(
+      Blocks, [](const BinaryBasicBlock *BB1, const BinaryBasicBlock *BB2) {
+        return BB1->getKnownExecutionCount() > BB2->getKnownExecutionCount();
+      });
 
   bool DidInlining = false;
   for (BinaryBasicBlock *BB : Blocks) {
@@ -520,11 +519,10 @@ void Inliner::runOnFunctions(BinaryContext &BC) {
         continue;
       ConsideredFunctions.push_back(&Function);
     }
-    std::sort(ConsideredFunctions.begin(), ConsideredFunctions.end(),
-              [](const BinaryFunction *A, const BinaryFunction *B) {
-                return B->getKnownExecutionCount() <
-                       A->getKnownExecutionCount();
-              });
+    llvm::sort(ConsideredFunctions, [](const BinaryFunction *A,
+                                       const BinaryFunction *B) {
+      return B->getKnownExecutionCount() < A->getKnownExecutionCount();
+    });
     for (BinaryFunction *Function : ConsideredFunctions) {
       if (opts::InlineLimit && NumInlinedCallSites >= opts::InlineLimit)
         break;

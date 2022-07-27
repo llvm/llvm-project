@@ -20,17 +20,13 @@ declare i64 @strtoll(i8*, i8**, i32)
 
 define void @fold_atoi_member(i32* %pi) {
 ; CHECK-LABEL: @fold_atoi_member(
-; CHECK-NEXT:    [[IA0A:%.*]] = call i32 @atoi(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0))
-; CHECK-NEXT:    store i32 [[IA0A]], i32* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA0B:%.*]] = call i32 @atoi(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0))
+; CHECK-NEXT:    store i32 1, i32* [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i32, i32* [[PI]], i64 1
-; CHECK-NEXT:    store i32 [[IA0B]], i32* [[PIA0B]], align 4
-; CHECK-NEXT:    [[IA1A:%.*]] = call i32 @atoi(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 0))
+; CHECK-NEXT:    store i32 12, i32* [[PIA0B]], align 4
 ; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i32, i32* [[PI]], i64 2
-; CHECK-NEXT:    store i32 [[IA1A]], i32* [[PIA1A]], align 4
-; CHECK-NEXT:    [[IA1B:%.*]] = call i32 @atoi(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 0))
+; CHECK-NEXT:    store i32 123, i32* [[PIA1A]], align 4
 ; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i32, i32* [[PI]], i64 3
-; CHECK-NEXT:    store i32 [[IA1B]], i32* [[PIA1B]], align 4
+; CHECK-NEXT:    store i32 1234, i32* [[PIA1B]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Fold atoi(a[0].a) to 1.
@@ -61,25 +57,25 @@ define void @fold_atoi_member(i32* %pi) {
 }
 
 
-; Do not fold atoi with an excessive offset.  It's undefined so folding
-; it (e.g., to zero) would be valid and might prevent crashes or returning
-; a bogus value but could also prevent detecting the bug by sanitizers.
+; TODO: Fold atoi with an excessive offset.  It's undefined so folding it
+; to zero is valid and might prevent crashes or returning a bogus value,
+; even though it prevents detecting the bug by sanitizers.
+; This is not fully implemented because the out-of-bounds offset results
+; in the empty string which atoi (via strtol) is required to interpret as
+; a zero but for which it may set errno to EINVAL.  To fold only
+; the undefined calls the folder would have to differentiate between
+; the empty string an out-of-bounds pointer.
 
-define void @call_atoi_offset_out_of_bounds(i32* %pi) {
-; CHECK-LABEL: @call_atoi_offset_out_of_bounds(
-; CHECK-NEXT:    [[IA_0_0_32:%.*]] = call i32 @atoi(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 1, i64 0, i32 0, i64 0))
-; CHECK-NEXT:    store i32 [[IA_0_0_32]], i32* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA_0_0_33:%.*]] = call i32 @atoi(i8* getelementptr ([2 x %struct.A], [2 x %struct.A]* @a, i64 1, i64 0, i32 0, i64 1))
-; CHECK-NEXT:    store i32 [[IA_0_0_33]], i32* [[PI]], align 4
-; CHECK-NEXT:    ret void
+define void @fold_atoi_offset_out_of_bounds(i32* %pi) {
+; CHECK-LABEL: @fold_atoi_offset_out_of_bounds(
+; TODO: Check folding.
 ;
-; Do not fold atoi((const char*)a + sizeof a).
-  %pa_0_0_32 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 32
-  %ia_0_0_32 = call i32 @atoi(i8* %pa_0_0_32)
+; Fold atoi((const char*)a + sizeof a) to zero.
+  %ia_0_0_32 = call i32 @atoi(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 1, i64 0, i32 0, i64 0))
   %pia_0_0_32 = getelementptr i32, i32* %pi, i32 0
   store i32 %ia_0_0_32, i32* %pia_0_0_32
 
-; Likewise, do not fold atoi((const char*)a + sizeof a + 1).
+; Likewise, fold atoi((const char*)a + sizeof a + 1) to zero.
   %pa_0_0_33 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 33
   %ia_0_0_33 = call i32 @atoi(i8* %pa_0_0_33)
   %pia_0_0_33 = getelementptr i32, i32* %pi, i32 0
@@ -94,23 +90,17 @@ define void @call_atoi_offset_out_of_bounds(i32* %pi) {
 
 define void @fold_atol_member(i64* %pi) {
 ; CHECK-LABEL: @fold_atol_member(
-; CHECK-NEXT:    [[IA0A:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0))
-; CHECK-NEXT:    store i64 [[IA0A]], i64* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA0B:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0))
+; CHECK-NEXT:    store i64 1, i64* [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i64, i64* [[PI]], i64 1
-; CHECK-NEXT:    store i64 [[IA0B]], i64* [[PIA0B]], align 4
-; CHECK-NEXT:    [[IA0C:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 2, i64 0))
+; CHECK-NEXT:    store i64 12, i64* [[PIA0B]], align 4
 ; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i64, i64* [[PI]], i64 2
-; CHECK-NEXT:    store i64 [[IA0C]], i64* [[PIA0C]], align 4
-; CHECK-NEXT:    [[IA1A:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 0))
+; CHECK-NEXT:    store i64 56789, i64* [[PIA0C]], align 4
 ; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i64, i64* [[PI]], i64 3
-; CHECK-NEXT:    store i64 [[IA1A]], i64* [[PIA1A]], align 4
-; CHECK-NEXT:    [[IA1B:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 0))
+; CHECK-NEXT:    store i64 123, i64* [[PIA1A]], align 4
 ; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i64, i64* [[PI]], i64 4
-; CHECK-NEXT:    store i64 [[IA1B]], i64* [[PIA1B]], align 4
-; CHECK-NEXT:    [[IA1C:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 2, i64 0))
+; CHECK-NEXT:    store i64 1234, i64* [[PIA1B]], align 4
 ; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i64, i64* [[PI]], i64 5
-; CHECK-NEXT:    store i64 [[IA1C]], i64* [[PIA1C]], align 4
+; CHECK-NEXT:    store i64 67890, i64* [[PIA1C]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Fold atol(a[0].a) to 1.
@@ -158,23 +148,17 @@ define void @fold_atol_member(i64* %pi) {
 
 define void @fold_atoll_member_pC(i64* %pi) {
 ; CHECK-LABEL: @fold_atoll_member_pC(
-; CHECK-NEXT:    [[IA0A:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0))
-; CHECK-NEXT:    store i64 [[IA0A]], i64* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA0BP1:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1))
+; CHECK-NEXT:    store i64 1, i64* [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i64, i64* [[PI]], i64 1
-; CHECK-NEXT:    store i64 [[IA0BP1]], i64* [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[IA0CP3:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 2, i64 3))
+; CHECK-NEXT:    store i64 2, i64* [[PIA0BP1]], align 4
 ; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i64, i64* [[PI]], i64 2
-; CHECK-NEXT:    store i64 [[IA0CP3]], i64* [[PIA0CP3]], align 4
-; CHECK-NEXT:    [[IA1AP2:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 2))
+; CHECK-NEXT:    store i64 89, i64* [[PIA0CP3]], align 4
 ; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i64, i64* [[PI]], i64 3
-; CHECK-NEXT:    store i64 [[IA1AP2]], i64* [[PIA1AP2]], align 4
-; CHECK-NEXT:    [[IA1BP3:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 3))
+; CHECK-NEXT:    store i64 3, i64* [[PIA1AP2]], align 4
 ; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i64, i64* [[PI]], i64 4
-; CHECK-NEXT:    store i64 [[IA1BP3]], i64* [[PIA1BP3]], align 4
-; CHECK-NEXT:    [[IA1CP4:%.*]] = call i64 @atol(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 2, i64 4))
+; CHECK-NEXT:    store i64 4, i64* [[PIA1BP3]], align 4
 ; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i64, i64* [[PI]], i64 5
-; CHECK-NEXT:    store i64 [[IA1CP4]], i64* [[PIA1CP4]], align 4
+; CHECK-NEXT:    store i64 0, i64* [[PIA1CP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Fold atoll(a[0].a) to 1.
@@ -222,23 +206,17 @@ define void @fold_atoll_member_pC(i64* %pi) {
 
 define void @fold_strtol_member_pC(i64* %pi) {
 ; CHECK-LABEL: @fold_strtol_member_pC(
-; CHECK-NEXT:    [[IA0A:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0), i8** null, i32 0)
-; CHECK-NEXT:    store i64 [[IA0A]], i64* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA0BP1:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1), i8** null, i32 0)
+; CHECK-NEXT:    store i64 1, i64* [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i64, i64* [[PI]], i64 1
-; CHECK-NEXT:    store i64 [[IA0BP1]], i64* [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[IA0CP3:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 2, i64 3), i8** null, i32 0)
+; CHECK-NEXT:    store i64 2, i64* [[PIA0BP1]], align 4
 ; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i64, i64* [[PI]], i64 2
-; CHECK-NEXT:    store i64 [[IA0CP3]], i64* [[PIA0CP3]], align 4
-; CHECK-NEXT:    [[IA1AP2:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 2), i8** null, i32 0)
+; CHECK-NEXT:    store i64 89, i64* [[PIA0CP3]], align 4
 ; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i64, i64* [[PI]], i64 3
-; CHECK-NEXT:    store i64 [[IA1AP2]], i64* [[PIA1AP2]], align 4
-; CHECK-NEXT:    [[IA1BP3:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 3), i8** null, i32 0)
+; CHECK-NEXT:    store i64 3, i64* [[PIA1AP2]], align 4
 ; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i64, i64* [[PI]], i64 4
-; CHECK-NEXT:    store i64 [[IA1BP3]], i64* [[PIA1BP3]], align 4
-; CHECK-NEXT:    [[IA1CP4:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 2, i64 4), i8** null, i32 0)
+; CHECK-NEXT:    store i64 4, i64* [[PIA1BP3]], align 4
 ; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i64, i64* [[PI]], i64 5
-; CHECK-NEXT:    store i64 [[IA1CP4]], i64* [[PIA1CP4]], align 4
+; CHECK-NEXT:    store i64 0, i64* [[PIA1CP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Fold strtol(a[0].a, 0, 0) to 1.
@@ -286,23 +264,17 @@ define void @fold_strtol_member_pC(i64* %pi) {
 
 define void @fold_strtoll_member_pC(i64* %pi) {
 ; CHECK-LABEL: @fold_strtoll_member_pC(
-; CHECK-NEXT:    [[IA0A:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0), i8** null, i32 0)
-; CHECK-NEXT:    store i64 [[IA0A]], i64* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA0BP1:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1), i8** null, i32 0)
+; CHECK-NEXT:    store i64 1, i64* [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i64, i64* [[PI]], i64 1
-; CHECK-NEXT:    store i64 [[IA0BP1]], i64* [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[IA0CP3:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 2, i64 3), i8** null, i32 0)
+; CHECK-NEXT:    store i64 2, i64* [[PIA0BP1]], align 4
 ; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i64, i64* [[PI]], i64 2
-; CHECK-NEXT:    store i64 [[IA0CP3]], i64* [[PIA0CP3]], align 4
-; CHECK-NEXT:    [[IA1AP2:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 2), i8** null, i32 0)
+; CHECK-NEXT:    store i64 89, i64* [[PIA0CP3]], align 4
 ; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i64, i64* [[PI]], i64 3
-; CHECK-NEXT:    store i64 [[IA1AP2]], i64* [[PIA1AP2]], align 4
-; CHECK-NEXT:    [[IA1BP3:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 3), i8** null, i32 0)
+; CHECK-NEXT:    store i64 3, i64* [[PIA1AP2]], align 4
 ; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i64, i64* [[PI]], i64 4
-; CHECK-NEXT:    store i64 [[IA1BP3]], i64* [[PIA1BP3]], align 4
-; CHECK-NEXT:    [[IA1CP4:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 2, i64 4), i8** null, i32 0)
+; CHECK-NEXT:    store i64 4, i64* [[PIA1BP3]], align 4
 ; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i64, i64* [[PI]], i64 5
-; CHECK-NEXT:    store i64 [[IA1CP4]], i64* [[PIA1CP4]], align 4
+; CHECK-NEXT:    store i64 0, i64* [[PIA1CP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Fold strtoll(a[0].a, 0, 0) to 1.

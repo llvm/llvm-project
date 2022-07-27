@@ -59,14 +59,12 @@ public:
     Offset = getIndentOffset(*Line.First);
     // Update the indent level cache size so that we can rely on it
     // having the right size in adjustToUnmodifiedline.
-    while (IndentForLevel.size() <= Line.Level)
-      IndentForLevel.push_back(-1);
+    skipLine(Line, /*UnknownIndent=*/true);
     if (Line.InPPDirective) {
       unsigned IndentWidth =
           (Style.PPIndentWidth >= 0) ? Style.PPIndentWidth : Style.IndentWidth;
       Indent = Line.Level * IndentWidth + AdditionalIndent;
     } else {
-      IndentForLevel.resize(Line.Level + 1);
       Indent = getIndent(Line.Level);
     }
     if (static_cast<int>(Indent) + Offset >= 0)
@@ -77,9 +75,9 @@ public:
 
   /// Update the indent state given that \p Line indent should be
   /// skipped.
-  void skipLine(const AnnotatedLine &Line) {
-    while (IndentForLevel.size() <= Line.Level)
-      IndentForLevel.push_back(Indent);
+  void skipLine(const AnnotatedLine &Line, bool UnknownIndent = false) {
+    if (Line.Level >= IndentForLevel.size())
+      IndentForLevel.resize(Line.Level + 1, UnknownIndent ? -1 : Indent);
   }
 
   /// Update the level indent to adapt to the given \p Line.
@@ -91,6 +89,7 @@ public:
     unsigned LevelIndent = Line.First->OriginalColumn;
     if (static_cast<int>(LevelIndent) - Offset >= 0)
       LevelIndent -= Offset;
+    assert(Line.Level < IndentForLevel.size());
     if ((!Line.First->is(tok::comment) || IndentForLevel[Line.Level] == -1) &&
         !Line.InPPDirective) {
       IndentForLevel[Line.Level] = LevelIndent;
@@ -159,7 +158,7 @@ private:
   const unsigned AdditionalIndent;
 
   /// The indent in characters for each level.
-  std::vector<int> IndentForLevel;
+  SmallVector<int> IndentForLevel;
 
   /// Offset of the current line relative to the indent level.
   ///
@@ -1133,7 +1132,7 @@ private:
   typedef std::pair<OrderedPenalty, StateNode *> QueueItem;
 
   /// The BFS queue type.
-  typedef std::priority_queue<QueueItem, std::vector<QueueItem>,
+  typedef std::priority_queue<QueueItem, SmallVector<QueueItem>,
                               std::greater<QueueItem>>
       QueueType;
 
@@ -1163,6 +1162,10 @@ private:
 
     // While not empty, take first element and follow edges.
     while (!Queue.empty()) {
+      // Quit if we still haven't found a solution by now.
+      if (Count > 25000000)
+        return 0;
+
       Penalty = Queue.top().first.first;
       StateNode *Node = Queue.top().second;
       if (!Node->State.NextToken) {

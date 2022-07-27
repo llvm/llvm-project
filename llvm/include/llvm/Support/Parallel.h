@@ -193,11 +193,11 @@ void parallelSort(RandomAccessIterator Start, RandomAccessIterator End,
   llvm::sort(Start, End, Comp);
 }
 
-void parallelForEachN(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
+void parallelFor(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
 
 template <class IterTy, class FuncTy>
 void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
-  parallelForEachN(0, End - Begin, [&](size_t I) { Fn(Begin[I]); });
+  parallelFor(0, End - Begin, [&](size_t I) { Fn(Begin[I]); });
 }
 
 template <class IterTy, class ResultTy, class ReduceFuncTy,

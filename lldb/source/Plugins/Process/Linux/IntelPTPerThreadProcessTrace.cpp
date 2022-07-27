@@ -62,5 +62,5 @@ IntelPTPerThreadProcessTrace::Start(const TraceIntelPTStartRequest &request,
     error = joinErrors(std::move(error), trace->TraceStart(tid));
   if (error)
     return std::move(error);
-  return trace;
+  return std::move(trace);
 }

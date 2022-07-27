@@ -301,7 +301,7 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   uint32_t Encoded_pad = Encoded_s_code_end;
 
   // Instruction cache line size in bytes.
-  const unsigned Log2CacheLineSize = 6;
+  const unsigned Log2CacheLineSize = AMDGPU::isGFX11Plus(STI) ? 7 : 6;
   const unsigned CacheLineSize = 1u << Log2CacheLineSize;
 
   // Extra padding amount in bytes to support prefetch mode 3.
@@ -367,6 +367,8 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_wavefront_size32", KD,
                 kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
+  PRINT_FIELD(OS, ".amdhsa_uses_dynamic_stack", KD, kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
   PRINT_FIELD(OS,
               (hasArchitectedFlatScratch(STI)
                    ? ".amdhsa_enable_private_segment"
@@ -824,7 +826,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   uint32_t Encoded_pad = Encoded_s_code_end;
 
   // Instruction cache line size in bytes.
-  const unsigned Log2CacheLineSize = 6;
+  const unsigned Log2CacheLineSize = AMDGPU::isGFX11Plus(STI) ? 7 : 6;
   const unsigned CacheLineSize = 1u << Log2CacheLineSize;
 
   // Extra padding amount in bytes to support prefetch mode 3.

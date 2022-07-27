@@ -311,7 +311,7 @@ define void @extsetcc(<4 x float> %x) {
   %cmp = fcmp ult <4 x float> %x, zeroinitializer
   %sext = sext <4 x i1> %cmp to <4 x i32>
   %e = extractelement <4 x i1> %cmp, i1 0
-  store i1 %e, i1* undef
+  store i1 %e, ptr undef
   ret void
 }
 

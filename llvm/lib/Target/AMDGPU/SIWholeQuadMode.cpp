@@ -534,13 +534,36 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         GlobalFlags |= StateStrictWWM;
         LowerToMovInstrs.push_back(&MI);
         continue;
-      } else if (Opcode == AMDGPU::STRICT_WQM) {
+      } else if (Opcode == AMDGPU::STRICT_WQM ||
+                 TII->isDualSourceBlendEXP(MI)) {
         // STRICT_WQM is similar to STRICTWWM, but instead of enabling all
         // threads of the wave like STRICTWWM, STRICT_WQM enables all threads in
         // quads that have at least one active thread.
         markInstructionUses(MI, StateStrictWQM, Worklist);
         GlobalFlags |= StateStrictWQM;
-        LowerToMovInstrs.push_back(&MI);
+
+        if (Opcode == AMDGPU::STRICT_WQM) {
+          LowerToMovInstrs.push_back(&MI);
+        } else {
+          // Dual source blend export acts as implicit strict-wqm, its sources
+          // need to be shuffled in strict wqm, but the export itself needs to
+          // run in exact mode.
+          BBI.Needs |= StateExact;
+          if (!(BBI.InNeeds & StateExact)) {
+            BBI.InNeeds |= StateExact;
+            Worklist.push_back(MBB);
+          }
+          GlobalFlags |= StateExact;
+          III.Disabled = StateWQM | StateStrict;
+        }
+        continue;
+      } else if (Opcode == AMDGPU::LDS_PARAM_LOAD ||
+                 Opcode == AMDGPU::LDS_DIRECT_LOAD) {
+        // Mark these STRICTWQM, but only for the instruction, not its operands.
+        // This avoid unnecessarily marking M0 as requiring WQM.
+        InstrInfo &II = Instructions[&MI];
+        II.Needs |= StateStrictWQM;
+        GlobalFlags |= StateStrictWQM;
         continue;
       } else if (Opcode == AMDGPU::V_SET_INACTIVE_B32 ||
                  Opcode == AMDGPU::V_SET_INACTIVE_B64) {

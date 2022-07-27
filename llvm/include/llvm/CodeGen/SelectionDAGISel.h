@@ -322,6 +322,11 @@ private:
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
 
+  void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
+                                SDLoc DL);
+  void Select_STACKMAP(SDNode *N);
+  void Select_PATCHPOINT(SDNode *N);
+
 private:
   void DoInstructionSelection();
   SDNode *MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,

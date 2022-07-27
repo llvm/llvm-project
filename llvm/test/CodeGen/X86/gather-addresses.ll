@@ -9,7 +9,7 @@
 ; When doing vector gather-scatter index calculation with 32-bit indices,
 ; minimize shuffling of each individual element out of the index vector.
 
-define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
+define <4 x double> @foo(ptr %p, ptr %i, ptr %h) nounwind {
 ; LIN-SSE2-LABEL: foo:
 ; LIN-SSE2:       # %bb.0:
 ; LIN-SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -108,21 +108,21 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; LIN32-NEXT:    popl %esi
 ; LIN32-NEXT:    popl %edi
 ; LIN32-NEXT:    retl
-  %a = load <4 x i32>, <4 x i32>* %i
-  %b = load <4 x i32>, <4 x i32>* %h
+  %a = load <4 x i32>, ptr %i
+  %b = load <4 x i32>, ptr %h
   %j = and <4 x i32> %a, %b
   %d0 = extractelement <4 x i32> %j, i32 0
   %d1 = extractelement <4 x i32> %j, i32 1
   %d2 = extractelement <4 x i32> %j, i32 2
   %d3 = extractelement <4 x i32> %j, i32 3
-  %q0 = getelementptr double, double* %p, i32 %d0
-  %q1 = getelementptr double, double* %p, i32 %d1
-  %q2 = getelementptr double, double* %p, i32 %d2
-  %q3 = getelementptr double, double* %p, i32 %d3
-  %r0 = load double, double* %q0
-  %r1 = load double, double* %q1
-  %r2 = load double, double* %q2
-  %r3 = load double, double* %q3
+  %q0 = getelementptr double, ptr %p, i32 %d0
+  %q1 = getelementptr double, ptr %p, i32 %d1
+  %q2 = getelementptr double, ptr %p, i32 %d2
+  %q3 = getelementptr double, ptr %p, i32 %d3
+  %r0 = load double, ptr %q0
+  %r1 = load double, ptr %q1
+  %r2 = load double, ptr %q2
+  %r3 = load double, ptr %q3
   %v0 = insertelement <4 x double> undef, double %r0, i32 0
   %v1 = insertelement <4 x double> %v0, double %r1, i32 1
   %v2 = insertelement <4 x double> %v1, double %r2, i32 2
@@ -133,7 +133,7 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; Check that the sequence previously used above, which bounces the vector off the
 ; cache works for x86-32. Note that in this case it will not be used for index
 ; calculation, since indexes are 32-bit, not 64.
-define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind {
+define <4 x i64> @old(ptr %p, ptr %i, ptr %h, i64 %f) nounwind {
 ; LIN-SSE2-LABEL: old:
 ; LIN-SSE2:       # %bb.0:
 ; LIN-SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -246,8 +246,8 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; LIN32-NEXT:    popl %esi
 ; LIN32-NEXT:    popl %edi
 ; LIN32-NEXT:    retl
-  %a = load <4 x i32>, <4 x i32>* %i
-  %b = load <4 x i32>, <4 x i32>* %h
+  %a = load <4 x i32>, ptr %i
+  %b = load <4 x i32>, ptr %h
   %j = and <4 x i32> %a, %b
   %d0 = extractelement <4 x i32> %j, i32 0
   %d1 = extractelement <4 x i32> %j, i32 1

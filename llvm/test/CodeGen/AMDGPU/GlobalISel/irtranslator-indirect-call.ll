@@ -28,6 +28,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -46,8 +47,9 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK-NEXT:   $sgpr12 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
+  ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[LOAD]](p0), 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[LOAD]](p0), 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   call void %fptr()

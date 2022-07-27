@@ -4,7 +4,7 @@
 
 ; Test with more than four live mask pairs
 
-define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1, <16 x i32> %a2, <16 x i32> %b2, <16 x i32> %a3, <16 x i32> %b3, <16 x i32> %a4, <16 x i32> %b4, i16* nocapture %m0, i16* nocapture %m1) nounwind {
+define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1, <16 x i32> %a2, <16 x i32> %b2, <16 x i32> %a3, <16 x i32> %b3, <16 x i32> %a4, <16 x i32> %b4, ptr nocapture %m0, ptr nocapture %m1) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -147,7 +147,7 @@ entry:
   %22 = add i16 %19, %21
   %23 = add i16 %22, %20
 
-  store i16 %23, i16* %m0, align 16
+  store i16 %23, ptr %m0, align 16
   ret void
 }
 

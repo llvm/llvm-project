@@ -53,6 +53,20 @@ def WriteVLDFF8       : SchedWrite;
 def WriteVLDFF16      : SchedWrite;
 def WriteVLDFF32      : SchedWrite;
 def WriteVLDFF64      : SchedWrite;
+// 7.8. Vector Segment Instructions
+foreach nf=2-8 in {
+  foreach eew = [8, 16, 32, 64] in {
+    def WriteVLSEG # nf # e # eew : SchedWrite;
+    def WriteVSSEG # nf # e # eew : SchedWrite;
+    def WriteVLSEGFF # nf # e # eew : SchedWrite;
+    def WriteVLSSEG # nf # e # eew : SchedWrite;
+    def WriteVSSSEG # nf # e # eew : SchedWrite;
+    def WriteVLUXSEG # nf # e # eew : SchedWrite;
+    def WriteVLOXSEG # nf # e # eew : SchedWrite;
+    def WriteVSUXSEG # nf # e # eew : SchedWrite;
+    def WriteVSOXSEG # nf # e # eew : SchedWrite;
+  }
+}
 // 7.9. Vector Whole Register Instructions
 def WriteVLD1R8       : SchedWrite;
 def WriteVLD1R16      : SchedWrite;
@@ -538,6 +552,20 @@ def : WriteRes<WriteVST1R, []>;
 def : WriteRes<WriteVST2R, []>;
 def : WriteRes<WriteVST4R, []>;
 def : WriteRes<WriteVST8R, []>;
+// Vector Segment Loads and Stores
+foreach nf=2-8 in {
+  foreach eew = [8, 16, 32, 64] in {
+    def : WriteRes <!cast<SchedWrite>("WriteVLSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLSEGFF" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLSSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSSSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLUXSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLOXSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSUXSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSOXSEG" # nf # "e" # eew), []>;
+  }
+}
 
 // 12. Vector Integer Arithmetic Instructions
 def : WriteRes<WriteVIALUV, []>;

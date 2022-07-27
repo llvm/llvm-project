@@ -14,7 +14,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -673,7 +673,7 @@ void mlir::collapseParallelLoops(
   // Presort combined dimensions.
   auto sortedDimensions = llvm::to_vector<3>(combinedDimensions);
   for (auto &dims : sortedDimensions)
-    std::sort(dims.begin(), dims.end());
+    llvm::sort(dims);
 
   // Normalize ParallelOp's iteration pattern.
   SmallVector<Value, 3> normalizedLowerBounds, normalizedSteps,

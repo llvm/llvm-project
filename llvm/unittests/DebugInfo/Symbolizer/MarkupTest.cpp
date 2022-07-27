@@ -44,6 +44,14 @@ TEST(SymbolizerMarkup, LinesWithoutMarkup) {
   EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("kept")));
   EXPECT_THAT(Parser.nextNode(), None);
 
+  Parser.parseLine("text\n");
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("text\n")));
+  EXPECT_THAT(Parser.nextNode(), None);
+
+  Parser.parseLine("text\r\n");
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("text\r\n")));
+  EXPECT_THAT(Parser.nextNode(), None);
+
   Parser.parseLine("{{{");
   EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("{{{")));
   EXPECT_THAT(Parser.nextNode(), None);
@@ -142,6 +150,71 @@ TEST(SymbolizerMarkup, LinesWithMarkup) {
   EXPECT_THAT(Parser.nextNode(),
               testing::Optional(
                   isNode("{{{tag:\033[0m}}}", "tag", ElementsAre("\033[0m"))));
+  EXPECT_THAT(Parser.nextNode(), None);
+}
+
+TEST(SymbolizerMarkup, MultilineElements) {
+  MarkupParser Parser(/*MultilineTags=*/{"first", "second"});
+
+  Parser.parseLine("{{{tag:");
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("{{{tag:")));
+  EXPECT_THAT(Parser.nextNode(), None);
+
+  Parser.parseLine("{{{first:");
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.parseLine("}}}{{{second:");
+  EXPECT_THAT(
+      Parser.nextNode(),
+      testing::Optional(isNode("{{{first:}}}", "first", ElementsAre(""))));
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.parseLine("}}}");
+  EXPECT_THAT(
+      Parser.nextNode(),
+      testing::Optional(isNode("{{{second:}}}", "second", ElementsAre(""))));
+  EXPECT_THAT(Parser.nextNode(), None);
+
+  Parser.parseLine("{{{before{{{first:");
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("{{{before")));
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.parseLine("line");
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.parseLine("}}}after");
+  EXPECT_THAT(Parser.nextNode(),
+              testing::Optional(
+                  isNode("{{{first:line}}}", "first", ElementsAre("line"))));
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("after")));
+  EXPECT_THAT(Parser.nextNode(), None);
+
+  Parser.parseLine("{{{first:");
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.flush();
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("{{{first:")));
+  EXPECT_THAT(Parser.nextNode(), None);
+
+  Parser.parseLine("{{{first:\n");
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.parseLine("}}}\n");
+  EXPECT_THAT(
+      Parser.nextNode(),
+      testing::Optional(isNode("{{{first:\n}}}", "first", ElementsAre("\n"))));
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("\n")));
+  EXPECT_THAT(Parser.nextNode(), None);
+
+  Parser.parseLine("{{{first:\r\n");
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.parseLine("}}}\r\n");
+  EXPECT_THAT(Parser.nextNode(),
+              testing::Optional(
+                  isNode("{{{first:\r\n}}}", "first", ElementsAre("\r\n"))));
+  EXPECT_THAT(Parser.nextNode(), testing::Optional(isNode("\r\n")));
+  EXPECT_THAT(Parser.nextNode(), None);
+
+  Parser.parseLine("{{{first:");
+  EXPECT_THAT(Parser.nextNode(), None);
+  Parser.parseLine("\033[0m}}}");
+  EXPECT_THAT(Parser.nextNode(),
+              testing::Optional(isNode("{{{first:\033[0m}}}", "first",
+                                       ElementsAre("\033[0m"))));
   EXPECT_THAT(Parser.nextNode(), None);
 }
 

@@ -3,16 +3,18 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu < %s -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,GNU
 
 
-declare noalias i8* @malloc(i64)
-declare noalias i8* @calloc(i64, i64)
-declare noalias i8* @realloc(i8* nocapture, i64)
+declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias i8* @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+declare noalias i8* @realloc(i8* nocapture, i64) allockind("realloc") allocsize(1) "alloc-family"="malloc"
 declare noalias nonnull i8* @_Znam(i64) ; throwing version of 'new'
 declare noalias nonnull i8* @_Znwm(i64) ; throwing version of 'new'
 declare noalias i8* @strdup(i8*)
-declare noalias i8* @aligned_alloc(i64, i64)
+declare noalias i8* @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
 declare noalias align 16 i8* @memalign(i64, i64)
 ; new[](unsigned int, align_val_t)
 declare noalias i8* @_ZnajSt11align_val_t(i64 %size, i64 %align)
+declare i8* @my_malloc(i64) allocsize(0)
+declare i8* @my_calloc(i64, i64) allocsize(0, 1)
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
@@ -354,3 +356,20 @@ define noalias i8* @op_new_align() {
   ret i8* %call
 }
 
+define i8* @my_malloc_constant_size() {
+; CHECK-LABEL: @my_malloc_constant_size(
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(32) i8* @my_malloc(i64 32)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = call i8* @my_malloc(i64 32)
+  ret i8* %call
+}
+
+define i8* @my_calloc_constant_size() {
+; CHECK-LABEL: @my_calloc_constant_size(
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(128) i8* @my_calloc(i64 32, i64 4)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = call i8* @my_calloc(i64 32, i64 4)
+  ret i8* %call
+}

@@ -102,7 +102,7 @@ entry:
 
 ; These 2 divs only differ in their exception behavior and will be CSEd. Make
 ; sure the nofpexcept flag is not set on the combined node.
-define void @binop_cse(double %a, double %b, double* %x, double* %y) #0 {
+define void @binop_cse(double %a, double %b, ptr %x, ptr %y) #0 {
 entry:
 ; CHECK-LABEL: name: binop_cse
 ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
@@ -114,14 +114,14 @@ entry:
 ; CHECK: RET 0
   %div = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   %div2 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  store double %div, double* %x
-  store double %div2, double* %y
+  store double %div, ptr %x
+  store double %div2, ptr %y
   ret void
 }
 
 ; These 2 sitofps only differ in their exception behavior and will be CSEd. Make
 ; sure the nofpexcept flag is not set on the combined node.
-define void @sitofp_cse(i32 %a, double* %x, double* %y) #0 {
+define void @sitofp_cse(i32 %a, ptr %x, ptr %y) #0 {
 entry:
 ; CHECK-LABEL: name: sitofp_cse
 ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 8)
@@ -132,8 +132,8 @@ entry:
 ; CHECK: RET 0
   %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   %result2 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  store double %result, double* %x
-  store double %result2, double* %y
+  store double %result, ptr %x
+  store double %result2, ptr %y
   ret void
 }
 

@@ -336,37 +336,28 @@ bool ExpressionAnalyzer::CheckRanks(const DataRef &dataRef) {
 }
 
 // Parse tree correction after a substring S(j:k) was misparsed as an
-// array section.  N.B. Fortran substrings have to have a range, not a
+// array section.  Fortran substrings must have a range, not a
 // single index.
-static void FixMisparsedSubstring(const parser::Designator &d) {
-  auto &mutate{const_cast<parser::Designator &>(d)};
-  if (auto *dataRef{std::get_if<parser::DataRef>(&mutate.u)}) {
-    if (auto *ae{std::get_if<common::Indirection<parser::ArrayElement>>(
-            &dataRef->u)}) {
-      parser::ArrayElement &arrElement{ae->value()};
-      if (!arrElement.subscripts.empty()) {
-        auto iter{arrElement.subscripts.begin()};
-        if (auto *triplet{std::get_if<parser::SubscriptTriplet>(&iter->u)}) {
-          if (!std::get<2>(triplet->t) /* no stride */ &&
-              ++iter == arrElement.subscripts.end() /* one subscript */) {
-            if (Symbol *
-                symbol{common::visit(
-                    common::visitors{
-                        [](parser::Name &n) { return n.symbol; },
-                        [](common::Indirection<parser::StructureComponent>
-                                &sc) { return sc.value().component.symbol; },
-                        [](auto &) -> Symbol * { return nullptr; },
-                    },
-                    arrElement.base.u)}) {
-              const Symbol &ultimate{symbol->GetUltimate()};
-              if (const semantics::DeclTypeSpec * type{ultimate.GetType()}) {
-                if (!ultimate.IsObjectArray() &&
-                    type->category() == semantics::DeclTypeSpec::Character) {
-                  // The ambiguous S(j:k) was parsed as an array section
-                  // reference, but it's now clear that it's a substring.
-                  // Fix the parse tree in situ.
-                  mutate.u = arrElement.ConvertToSubstring();
-                }
+static std::optional<parser::Substring> FixMisparsedSubstringDataRef(
+    parser::DataRef &dataRef) {
+  if (auto *ae{
+          std::get_if<common::Indirection<parser::ArrayElement>>(&dataRef.u)}) {
+    // ...%a(j:k) and "a" is a character scalar
+    parser::ArrayElement &arrElement{ae->value()};
+    if (arrElement.subscripts.size() == 1) {
+      if (auto *triplet{std::get_if<parser::SubscriptTriplet>(
+              &arrElement.subscripts.front().u)}) {
+        if (!std::get<2 /*stride*/>(triplet->t).has_value()) {
+          if (const Symbol *
+              symbol{parser::GetLastName(arrElement.base).symbol}) {
+            const Symbol &ultimate{symbol->GetUltimate()};
+            if (const semantics::DeclTypeSpec * type{ultimate.GetType()}) {
+              if (!ultimate.IsObjectArray() &&
+                  type->category() == semantics::DeclTypeSpec::Character) {
+                // The ambiguous S(j:k) was parsed as an array section
+                // reference, but it's now clear that it's a substring.
+                // Fix the parse tree in situ.
+                return arrElement.ConvertToSubstring();
               }
             }
           }
@@ -374,11 +365,45 @@ static void FixMisparsedSubstring(const parser::Designator &d) {
       }
     }
   }
+  return std::nullopt;
+}
+
+// When a designator is a misparsed type-param-inquiry of a misparsed
+// substring -- it looks like a structure component reference of an array
+// slice -- fix the substring and then convert to an intrinsic function
+// call to KIND() or LEN().  And when the designator is a misparsed
+// substring, convert it into a substring reference in place.
+MaybeExpr ExpressionAnalyzer::FixMisparsedSubstring(
+    const parser::Designator &d) {
+  auto &mutate{const_cast<parser::Designator &>(d)};
+  if (auto *dataRef{std::get_if<parser::DataRef>(&mutate.u)}) {
+    if (auto *sc{std::get_if<common::Indirection<parser::StructureComponent>>(
+            &dataRef->u)}) {
+      parser::StructureComponent &structComponent{sc->value()};
+      parser::CharBlock which{structComponent.component.source};
+      if (which == "kind" || which == "len") {
+        if (auto substring{
+                FixMisparsedSubstringDataRef(structComponent.base)}) {
+          // ...%a(j:k)%kind or %len and "a" is a character scalar
+          mutate.u = std::move(*substring);
+          if (MaybeExpr substringExpr{Analyze(d)}) {
+            return MakeFunctionRef(which,
+                ActualArguments{ActualArgument{std::move(*substringExpr)}});
+          }
+        }
+      }
+    } else if (auto substring{FixMisparsedSubstringDataRef(*dataRef)}) {
+      mutate.u = std::move(*substring);
+    }
+  }
+  return std::nullopt;
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
   auto restorer{GetContextualMessages().SetLocation(d.source)};
-  FixMisparsedSubstring(d);
+  if (auto substringInquiry{FixMisparsedSubstring(d)}) {
+    return substringInquiry;
+  }
   // These checks have to be deferred to these "top level" data-refs where
   // we can be sure that there are no following subscripts (yet).
   if (MaybeExpr result{Analyze(d.u)}) {
@@ -527,11 +552,12 @@ template <typename TYPE>
 Constant<TYPE> ReadRealLiteral(
     parser::CharBlock source, FoldingContext &context) {
   const char *p{source.begin()};
-  auto valWithFlags{Scalar<TYPE>::Read(p, context.rounding())};
+  auto valWithFlags{
+      Scalar<TYPE>::Read(p, context.targetCharacteristics().roundingMode())};
   CHECK(p == source.end());
   RealFlagWarnings(context, valWithFlags.flags, "conversion of REAL literal");
   auto value{valWithFlags.value};
-  if (context.flushSubnormalsToZero()) {
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     value = value.FlushSubnormalToZero();
   }
   return {value};
@@ -904,7 +930,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
             StaticDataObject::Pointer staticData{StaticDataObject::Create()};
             staticData->set_alignment(Result::kind)
                 .set_itemBytes(Result::kind)
-                .Push(cp->GetScalarValue().value());
+                .Push(cp->GetScalarValue().value(),
+                    foldingContext_.targetCharacteristics().isBigEndian());
             Substring substring{std::move(staticData), std::move(lower.value()),
                 std::move(upper.value())};
             return AsGenericExpr(
@@ -914,6 +941,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     }
   }
   return std::nullopt;
+}
+
+// substring%KIND/LEN
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::SubstringInquiry &x) {
+  if (MaybeExpr substring{Analyze(x.v)}) {
+    CHECK(x.source.size() >= 8);
+    int nameLen{x.source.end()[-1] == 'n' ? 3 /*LEN*/ : 4 /*KIND*/};
+    parser::CharBlock name{
+        x.source.end() - nameLen, static_cast<std::size_t>(nameLen)};
+    CHECK(name == "len" || name == "kind");
+    return MakeFunctionRef(
+        name, ActualArguments{ActualArgument{std::move(*substring)}});
+  } else {
+    return std::nullopt;
+  }
 }
 
 // Subscripted array references
@@ -3158,7 +3200,13 @@ DynamicType ExpressionAnalyzer::GetDefaultKindOfType(
 
 bool ExpressionAnalyzer::CheckIntrinsicKind(
     TypeCategory category, std::int64_t kind) {
-  if (IsValidKindOfIntrinsicType(category, kind)) { // C712, C714, C715, C727
+  if (foldingContext_.targetCharacteristics().IsTypeEnabled(
+          category, kind)) { // C712, C714, C715, C727
+    return true;
+  } else if (foldingContext_.targetCharacteristics().CanSupportType(
+                 category, kind)) {
+    Say("%s(KIND=%jd) is not an enabled type for this targe"_warn_en_US,
+        ToUpperCase(EnumToString(category)), kind);
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -3169,17 +3217,29 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
 
 bool ExpressionAnalyzer::CheckIntrinsicSize(
     TypeCategory category, std::int64_t size) {
+  std::int64_t kind{size};
   if (category == TypeCategory::Complex) {
     // COMPLEX*16 == COMPLEX(KIND=8)
-    if (size % 2 == 0 && IsValidKindOfIntrinsicType(category, size / 2)) {
-      return true;
+    if (size % 2 == 0) {
+      kind = size / 2;
+    } else {
+      Say("COMPLEX*%jd is not a supported type"_err_en_US, size);
+      return false;
     }
-  } else if (IsValidKindOfIntrinsicType(category, size)) {
-    return true;
   }
-  Say("%s*%jd is not a supported type"_err_en_US,
-      ToUpperCase(EnumToString(category)), size);
-  return false;
+  if (foldingContext_.targetCharacteristics().IsTypeEnabled(
+          category, kind)) { // C712, C714, C715, C727
+    return true;
+  } else if (foldingContext_.targetCharacteristics().CanSupportType(
+                 category, kind)) {
+    Say("%s*%jd is not an enabled type for this target"_warn_en_US,
+        ToUpperCase(EnumToString(category)), size);
+    return true;
+  } else {
+    Say("%s*%jd is not a supported type"_err_en_US,
+        ToUpperCase(EnumToString(category)), size);
+    return false;
+  }
 }
 
 bool ExpressionAnalyzer::AddImpliedDo(parser::CharBlock name, int kind) {

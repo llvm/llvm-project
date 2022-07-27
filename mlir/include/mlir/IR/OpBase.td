@@ -274,7 +274,7 @@ class Type<Pred condition, string descr = "",
 
 // Allows providing an alternative name and summary to an existing type def.
 class TypeAlias<Type t, string summary = t.summary> :
-    Type<t.predicate, summary> {
+    Type<t.predicate, summary, t.cppClassName> {
   let description = t.description;
   let builderCall = t.builderCall;
 }
@@ -1258,6 +1258,19 @@ class IntElementsAttrBase<Pred condition, string summary> :
   let convertFromStorage = "$_self";
 }
 
+class DenseArrayAttrBase<string denseAttrName, string cppType, string summaryName> :
+    ElementsAttrBase<CPred<"$_self.isa<::mlir::" # denseAttrName # ">()">,
+                     summaryName # " dense array attribute"> {
+  let storageType = "::mlir::" # denseAttrName;
+  let returnType = "::llvm::ArrayRef<" # cppType # ">";
+}
+def DenseI8ArrayAttr : DenseArrayAttrBase<"DenseI8ArrayAttr", "int8_t", "i8">;
+def DenseI16ArrayAttr : DenseArrayAttrBase<"DenseI16ArrayAttr", "int16_t", "i16">;
+def DenseI32ArrayAttr : DenseArrayAttrBase<"DenseI32ArrayAttr", "int32_t", "i32">;
+def DenseI64ArrayAttr : DenseArrayAttrBase<"DenseI64ArrayAttr", "int64_t", "i64">;
+def DenseF32ArrayAttr : DenseArrayAttrBase<"DenseF32ArrayAttr", "float", "f32">;
+def DenseF64ArrayAttr : DenseArrayAttrBase<"DenseF64ArrayAttr", "double", "f64">;
+
 def IndexElementsAttr
     : IntElementsAttrBase<CPred<[{$_self.cast<::mlir::DenseIntElementsAttr>()
                                       .getType()
@@ -1447,45 +1460,6 @@ def TypeArrayAttr : TypedArrayAttrBase<TypeAttr, "type array attribute"> {
 def IndexListArrayAttr :
   TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
 
-// Attribute information for an Attribute field within a StructAttr.
-class StructFieldAttr<string thisName, Attr thisType>
-    : Deprecated<"StructAttr is being removed on June 20"> {
-  // Name of this field in the StructAttr.
-  string name = thisName;
-
-  // Attribute type wrapped by the struct attr.
-  Attr type = thisType;
-}
-
-// Structured attribute that wraps a DictionaryAttr and provides both a
-// validation method and set of accessors for a fixed set of fields. This is
-// useful when representing data that would normally be in a structure.
-class StructAttr<string name, Dialect d,
-                 list<StructFieldAttr> attributes> :
-    Deprecated<"StructAttr is being removed on June 20">,
-    DictionaryAttrBase<CPred<"$_self.isa<" # d.cppNamespace
-                                           # "::" # name # ">()">,
-        "DictionaryAttr with field(s): " #
-        !interleave(!foreach(a, attributes, "'" # a.name # "'"), ", ") #
-        " (each field having its own constraints)"> {
-  // Name for this StructAttr.
-  string className = name;
-
-  // Return type should match the name of the structure.
-  let returnType = d.cppNamespace # "::" # name;
-
-  // Storage type should match the name of the structure.
-  let storageType = d.cppNamespace # "::" # name;
-
-  // The dialect this StructAttr belongs to.
-  Dialect dialect = d;
-
-  let cppNamespace = d.cppNamespace;
-
-  // List of fields that the StructAttr contains.
-  list<StructFieldAttr> fields = attributes;
-}
-
 // Attributes containing symbol references.
 def SymbolRefAttr : Attr<CPred<"$_self.isa<::mlir::SymbolRefAttr>()">,
                         "symbol reference attribute"> {
@@ -1539,7 +1513,7 @@ class DerivedAttr<code ret, code b, code convert = ""> :
   // Special placeholders can be used to refer to entities during conversion:
   //
   // * `$_builder` will be replaced by a mlir::Builder instance.
-  // * `$_ctx` will be replaced by the MLIRContext* instance.
+  // * `$_ctxt` will be replaced by the MLIRContext* instance.
   // * `$_self` will be replaced with the derived attribute (value produces
   //    `returnType`).
   let convertFromStorage = convert;
@@ -1975,7 +1949,7 @@ class Interface<string name> {
   string description = "";
 
   // The name given to the c++ interface class.
-  string cppClassName = name;
+  string cppInterfaceName = name;
 
   // The C++ namespace that this interface should be placed into.
   //
@@ -1996,13 +1970,25 @@ class Interface<string name> {
 }
 
 // AttrInterface represents an interface registered to an attribute.
-class AttrInterface<string name> : Interface<name>, InterfaceTrait<name>;
+class AttrInterface<string name> : Interface<name>, InterfaceTrait<name>,
+	Attr<CPred<"$_self.isa<"
+		# !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
+			name # " instance">
+{
+	let storageType = !if(!empty(cppNamespace), "", cppNamespace # "::") # name;
+	let returnType = storageType;
+	let convertFromStorage = "$_self";
+}
 
 // OpInterface represents an interface registered to an operation.
 class OpInterface<string name> : Interface<name>, OpInterfaceTrait<name>;
 
 // TypeInterface represents an interface registered to a type.
-class TypeInterface<string name> : Interface<name>, InterfaceTrait<name>;
+class TypeInterface<string name> : Interface<name>, InterfaceTrait<name>,
+	Type<CPred<"$_self.isa<"
+		# !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
+			name # " instance",
+				!if(!empty(cppNamespace),"", cppNamespace # "::") # name>;
 
 // Whether to declare the interface methods in the user entity's header. This
 // class simply wraps an Interface but is used to indicate that the method
@@ -2018,27 +2004,27 @@ class DeclareInterfaceMethods<list<string> overridenMethods = []> {
 class DeclareAttrInterfaceMethods<AttrInterface interface,
                                   list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        AttrInterface<interface.cppClassName> {
+        AttrInterface<interface.cppInterfaceName> {
     let description = interface.description;
-    let cppClassName = interface.cppClassName;
+    let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
 }
 class DeclareOpInterfaceMethods<OpInterface interface,
                                 list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        OpInterface<interface.cppClassName> {
+        OpInterface<interface.cppInterfaceName> {
     let description = interface.description;
-    let cppClassName = interface.cppClassName;
+    let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
 }
 class DeclareTypeInterfaceMethods<TypeInterface interface,
                                   list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        TypeInterface<interface.cppClassName> {
+        TypeInterface<interface.cppInterfaceName> {
     let description = interface.description;
-    let cppClassName = interface.cppClassName;
+    let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
 }

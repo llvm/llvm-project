@@ -298,13 +298,13 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   Optional<OperandBundleUse> DeoptBundle =
       Call->getOperandBundle(LLVMContext::OB_deopt);
 
-  if (!DeoptBundle.hasValue()) {
+  if (!DeoptBundle) {
     assert(AllowStatepointWithNoDeoptInfo &&
            "Found non-leaf call without deopt info!");
     return None;
   }
 
-  return DeoptBundle.getValue().Inputs;
+  return DeoptBundle->Inputs;
 }
 
 /// Compute the live-in set for every basic block in the function
@@ -473,6 +473,14 @@ static Value *findBaseDefiningValueOfVector(Value *I, DefiningValueMapTy &Cache,
     auto *BDV =
         findBaseDefiningValue(GEP->getPointerOperand(), Cache, KnownBases);
     Cache[GEP] = BDV;
+    return BDV;
+  }
+
+  // The behavior of freeze instructions is the same for vector and
+  // non-vector data types.
+  if (auto *Freeze = dyn_cast<FreezeInst>(I)) {
+    auto *BDV = findBaseDefiningValue(Freeze->getOperand(0), Cache, KnownBases);
+    Cache[Freeze] = BDV;
     return BDV;
   }
 
@@ -1694,10 +1702,20 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       auto &Context = Call->getContext();
       auto &DL = Call->getModule()->getDataLayout();
       auto GetBaseAndOffset = [&](Value *Derived) {
-        assert(PointerToBase.count(Derived));
+        Value *Base = nullptr;
+        // Optimizations in unreachable code might substitute the real pointer
+        // with undef, poison or null-derived constant. Return null base for
+        // them to be consistent with the handling in the main algorithm in
+        // findBaseDefiningValue.
+        if (isa<Constant>(Derived))
+          Base =
+              ConstantPointerNull::get(cast<PointerType>(Derived->getType()));
+        else {
+          assert(PointerToBase.count(Derived));
+          Base = PointerToBase.find(Derived)->second;
+        }
         unsigned AddressSpace = Derived->getType()->getPointerAddressSpace();
         unsigned IntPtrSize = DL.getPointerSizeInBits(AddressSpace);
-        Value *Base = PointerToBase.find(Derived)->second;
         Value *Base_int = Builder.CreatePtrToInt(
             Base, Type::getIntNTy(Context, IntPtrSize));
         Value *Derived_int = Builder.CreatePtrToInt(

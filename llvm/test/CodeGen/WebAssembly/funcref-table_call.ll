@@ -1,7 +1,6 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
 
-%funcptr = type void () addrspace(20)*
-%funcref = type i8 addrspace(20)* ;; addrspace 20 is nonintegral
+%funcref = type ptr addrspace(20) ;; addrspace 20 is nonintegral
 
 @funcref_table = local_unnamed_addr addrspace(1) global [0 x %funcref] undef
 
@@ -20,10 +19,9 @@ define void @call_funcref_from_table(i32 %i) {
 ; CHECK-NEXT: ref.null_func
 ; CHECK-NEXT: table.set       __funcref_call_table
 ; CHECK-NEXT: end_function
-  %p = getelementptr [0 x %funcref], [0 x %funcref] addrspace (1)* @funcref_table, i32 0, i32 %i
-  %ref = load %funcref, %funcref addrspace(1)* %p
-  %fn = bitcast %funcref %ref to %funcptr
-  call addrspace(20) void %fn()
+  %p = getelementptr [0 x %funcref], ptr addrspace (1) @funcref_table, i32 0, i32 %i
+  %ref = load %funcref, ptr addrspace(1) %p
+  call addrspace(20) void %ref()
   ret void
 }
 

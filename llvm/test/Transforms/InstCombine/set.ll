@@ -4,6 +4,8 @@
 
 @X = external global i32
 
+declare void @use(i1)
+
 define i1 @test1(i32 %A) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret i1 false
@@ -220,17 +222,101 @@ define i1 @xor_of_icmps_commute(i64 %a) {
   ret i1 %xor
 }
 
-; FIXME: This is (a != 5).
+define i1 @xor_of_icmps_to_ne(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A:%.*]], 5
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %b = icmp sgt i64 %a, 4
+  %c = icmp slt i64 %a, 6
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
 
-define i1 @xor_of_icmps_folds_more(i64 %a) {
-; CHECK-LABEL: @xor_of_icmps_folds_more(
+define i1 @xor_of_icmps_to_ne_commute(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_ne_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A:%.*]], 5
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %c = icmp sgt i64 %a, 4
+  %b = icmp slt i64 %a, 6
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define i1 @xor_of_icmps_neg_to_ne(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_neg_to_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A:%.*]], -5
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %b = icmp sgt i64 %a, -6
+  %c = icmp slt i64 %a, -4
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define <2 x i1> @xor_of_icmps_to_ne_vector(<2 x i64> %a) {
+; CHECK-LABEL: @xor_of_icmps_to_ne_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[A:%.*]], <i64 5, i64 5>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+  %b = icmp sgt <2 x i64> %a, <i64 4, i64 4>
+  %c = icmp slt <2 x i64> %a, <i64 6, i64 6>
+  %xor = xor <2 x i1> %b, %c
+  ret <2 x i1> %xor
+}
+
+define i1 @xor_of_icmps_to_ne_no_common_operand(i64 %a, i64 %z) {
+; CHECK-LABEL: @xor_of_icmps_to_ne_no_common_operand(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[Z:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A:%.*]], 6
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[B]], [[C]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %b = icmp sgt i64 %z, 4
+  %c = icmp slt i64 %a, 6
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define i1 @xor_of_icmps_to_ne_extra_use_one(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_ne_extra_use_one(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[A:%.*]], 4
+; CHECK-NEXT:    call void @use(i1 [[B]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 5
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %b = icmp sgt i64 %a, 4
+  %c = icmp slt i64 %a, 6
+  call void @use(i1 %b)
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define i1 @xor_of_icmps_to_ne_extra_use_two(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_ne_extra_use_two(
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[A:%.*]], 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A]], 6
+; CHECK-NEXT:    call void @use(i1 [[B]])
+; CHECK-NEXT:    call void @use(i1 [[C]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[B]], [[C]]
 ; CHECK-NEXT:    ret i1 [[XOR]]
 ;
   %b = icmp sgt i64 %a, 4
   %c = icmp slt i64 %a, 6
+  call void @use(i1 %b)
+  call void @use(i1 %c)
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define i1 @xor_of_icmps_to_eq(i8 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_eq(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], 127
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp sgt i8 %a, 126
+  %b = icmp slt i8 %a, 128
   %xor = xor i1 %b, %c
   ret i1 %xor
 }
@@ -450,4 +536,3 @@ define i1 @test25(i32 %A) {
   %C = icmp ugt i32 %B, 2
   ret i1 %C
 }
-

@@ -219,6 +219,11 @@ namespace std {
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <typeinfo>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 #include <compare>
 
@@ -772,8 +777,8 @@ public:
   using __index_t = __variant_index_t<sizeof...(_Types)>;
 
   inline _LIBCPP_INLINE_VISIBILITY
-  explicit constexpr __base(__valueless_t tag) noexcept
-      : __data(tag), __index(__variant_npos<__index_t>) {}
+  explicit constexpr __base(__valueless_t __tag) noexcept
+      : __data(__tag), __index(__variant_npos<__index_t>) {}
 
   template <size_t _Ip, class... _Args>
   inline _LIBCPP_INLINE_VISIBILITY

@@ -1660,8 +1660,9 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
     Constant *MulC;
     if (match(&I, m_c_FAdd(m_FMul(m_Value(X), m_ImmConstant(MulC)),
                            m_Deferred(X)))) {
-      MulC = ConstantExpr::getFAdd(MulC, ConstantFP::get(I.getType(), 1.0));
-      return BinaryOperator::CreateFMulFMF(X, MulC, &I);
+      if (Constant *NewMulC = ConstantFoldBinaryOpOperands(
+              Instruction::FAdd, MulC, ConstantFP::get(I.getType(), 1.0), DL))
+        return BinaryOperator::CreateFMulFMF(X, NewMulC, &I);
     }
 
     if (Value *V = FAddCombine(Builder).simplify(&I))
@@ -1748,6 +1749,52 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
     Result = Builder.CreateNeg(Result, "diff.neg");
 
   return Builder.CreateIntCast(Result, Ty, true);
+}
+
+static Instruction *foldSubOfMinMax(BinaryOperator &I,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Type *Ty = I.getType();
+  auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op1);
+  if (!MinMax)
+    return nullptr;
+
+  // sub(add(X,Y), s/umin(X,Y)) --> s/umax(X,Y)
+  // sub(add(X,Y), s/umax(X,Y)) --> s/umin(X,Y)
+  Value *X = MinMax->getLHS();
+  Value *Y = MinMax->getRHS();
+  if (match(Op0, m_c_Add(m_Specific(X), m_Specific(Y))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Intrinsic::ID InvID = getInverseMinMaxIntrinsic(MinMax->getIntrinsicID());
+    Function *F = Intrinsic::getDeclaration(I.getModule(), InvID, Ty);
+    return CallInst::Create(F, {X, Y});
+  }
+
+  // sub(add(X,Y),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
+  // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Z,Y))
+  Value *Z;
+  if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z))))) {
+    if (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X))))) {
+      Value *USub = Builder.CreateIntrinsic(Intrinsic::usub_sat, Ty, {Y, Z});
+      return BinaryOperator::CreateAdd(X, USub);
+    }
+    if (match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X))))) {
+      Value *USub = Builder.CreateIntrinsic(Intrinsic::usub_sat, Ty, {Z, Y});
+      return BinaryOperator::CreateAdd(X, USub);
+    }
+  }
+
+  // sub Op0, smin((sub nsw Op0, Z), 0) --> smax Op0, Z
+  // sub Op0, smax((sub nsw Op0, Z), 0) --> smin Op0, Z
+  if (MinMax->isSigned() && match(Y, m_ZeroInt()) &&
+      match(X, m_NSWSub(m_Specific(Op0), m_Value(Z)))) {
+    Intrinsic::ID InvID = getInverseMinMaxIntrinsic(MinMax->getIntrinsicID());
+    Function *F = Intrinsic::getDeclaration(I.getModule(), InvID, Ty);
+    return CallInst::Create(F, {Op0, Z});
+  }
+
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
@@ -2016,36 +2063,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
-  if (auto *II = dyn_cast<MinMaxIntrinsic>(Op1)) {
-    {
-      // sub(add(X,Y), s/umin(X,Y)) --> s/umax(X,Y)
-      // sub(add(X,Y), s/umax(X,Y)) --> s/umin(X,Y)
-      Value *X = II->getLHS();
-      Value *Y = II->getRHS();
-      if (match(Op0, m_c_Add(m_Specific(X), m_Specific(Y))) &&
-          (Op0->hasOneUse() || Op1->hasOneUse())) {
-        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
-        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
-        return replaceInstUsesWith(I, InvMaxMin);
-      }
-    }
-
-    {
-      // sub(add(X,Y),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
-      // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Z,Y))
-      Value *X, *Y, *Z;
-      if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z))))) {
-        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X)))))
-          return BinaryOperator::CreateAdd(
-              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
-                                         {Y, Z}));
-        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X)))))
-          return BinaryOperator::CreateAdd(
-              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
-                                         {Z, Y}));
-      }
-    }
-  }
+  if (Instruction *R = foldSubOfMinMax(I, Builder))
+    return R;
 
   {
     // If we have a subtraction between some value and a select between
@@ -2437,13 +2456,15 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
 
     // (X * C) - X --> X * (C - 1.0)
     if (match(Op0, m_FMul(m_Specific(Op1), m_Constant(C)))) {
-      Constant *CSubOne = ConstantExpr::getFSub(C, ConstantFP::get(Ty, 1.0));
-      return BinaryOperator::CreateFMulFMF(Op1, CSubOne, &I);
+      if (Constant *CSubOne = ConstantFoldBinaryOpOperands(
+              Instruction::FSub, C, ConstantFP::get(Ty, 1.0), DL))
+        return BinaryOperator::CreateFMulFMF(Op1, CSubOne, &I);
     }
     // X - (X * C) --> X * (1.0 - C)
     if (match(Op1, m_FMul(m_Specific(Op0), m_Constant(C)))) {
-      Constant *OneSubC = ConstantExpr::getFSub(ConstantFP::get(Ty, 1.0), C);
-      return BinaryOperator::CreateFMulFMF(Op0, OneSubC, &I);
+      if (Constant *OneSubC = ConstantFoldBinaryOpOperands(
+              Instruction::FSub, ConstantFP::get(Ty, 1.0), C, DL))
+        return BinaryOperator::CreateFMulFMF(Op0, OneSubC, &I);
     }
 
     // Reassociate fsub/fadd sequences to create more fadd instructions and

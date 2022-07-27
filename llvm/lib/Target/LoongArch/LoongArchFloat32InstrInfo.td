@@ -11,6 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// LoongArch specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_LoongArchMOVGR2FR_W_LA64
+    : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i64>]>;
+def SDT_LoongArchMOVFR2GR_S_LA64
+    : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, f32>]>;
+def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+
+def loongarch_movgr2fr_w_la64
+    : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
+def loongarch_movfr2gr_s_la64
+    : SDNode<"LoongArchISD::MOVFR2GR_S_LA64", SDT_LoongArchMOVFR2GR_S_LA64>;
+def loongarch_ftint : SDNode<"LoongArchISD::FTINT", SDT_LoongArchFTINT>;
+
+//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
@@ -106,3 +122,108 @@ def FSTGT_S : FP_STORE_3R<0b00111000011101100, "fstgt.s", FPR32>;
 def FSTLE_S : FP_STORE_3R<0b00111000011101110, "fstle.s", FPR32>;
 
 } // Predicates = [HasBasicF]
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+/// Generic pattern classes
+
+class PatFpr<SDPatternOperator OpNode, LAInst Inst, RegisterClass RegTy>
+    : Pat<(OpNode RegTy:$fj), (Inst $fj)>;
+class PatFprFpr<SDPatternOperator OpNode, LAInst Inst, RegisterClass RegTy>
+    : Pat<(OpNode RegTy:$fj, RegTy:$fk), (Inst $fj, $fk)>;
+
+let Predicates = [HasBasicF] in {
+
+/// Float arithmetic operations
+
+def : PatFprFpr<fadd, FADD_S, FPR32>;
+def : PatFprFpr<fsub, FSUB_S, FPR32>;
+def : PatFprFpr<fmul, FMUL_S, FPR32>;
+def : PatFprFpr<fdiv, FDIV_S, FPR32>;
+def : PatFpr<fneg, FNEG_S, FPR32>;
+
+/// Setcc
+
+// Match non-signaling comparison
+
+// TODO: change setcc to any_fsetcc after call is supported because
+// we need to call llvm.experimental.constrained.fcmp.f32 in testcase.
+// See RISCV float-fcmp-strict.ll for reference.
+class PatFPSetcc<CondCode cc, LAInst CmpInst, RegisterClass RegTy>
+    : Pat<(setcc RegTy:$fj, RegTy:$fk, cc),
+          (MOVCF2GR (CmpInst RegTy:$fj, RegTy:$fk))>;
+// SETOGT/SETOGE/SETUGT/SETUGE will expand into SETOLT/SETOLE/SETULT/SETULE.
+def : PatFPSetcc<SETOEQ, FCMP_CEQ_S,  FPR32>;
+def : PatFPSetcc<SETOLT, FCMP_CLT_S,  FPR32>;
+def : PatFPSetcc<SETOLE, FCMP_CLE_S,  FPR32>;
+def : PatFPSetcc<SETONE, FCMP_CNE_S,  FPR32>;
+def : PatFPSetcc<SETO,   FCMP_COR_S,  FPR32>;
+def : PatFPSetcc<SETUEQ, FCMP_CUEQ_S, FPR32>;
+def : PatFPSetcc<SETULT, FCMP_CULT_S, FPR32>;
+def : PatFPSetcc<SETULE, FCMP_CULE_S, FPR32>;
+def : PatFPSetcc<SETUNE, FCMP_CUNE_S, FPR32>;
+def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
+def : PatFPSetcc<SETLT,  FCMP_CLT_S,  FPR32>;
+
+// TODO: Match signaling comparison strict_fsetccs with FCMP_S*_S instructions.
+
+/// Select
+
+def : Pat<(select GPR:$cc, FPR32:$fk, FPR32:$fj),
+          (FSEL_S FPR32:$fj, FPR32:$fk, (MOVGR2CF GPR:$cc))>;
+
+/// Selectcc
+
+class PatFPSelectcc<CondCode cc, LAInst CmpInst, LAInst SelInst,
+                    RegisterClass RegTy>
+    : Pat<(select (GRLenVT (setcc RegTy:$a, RegTy:$b, cc)), RegTy:$t, RegTy:$f),
+          (SelInst RegTy:$f, RegTy:$t, (CmpInst RegTy:$a, RegTy:$b))>;
+def : PatFPSelectcc<SETOEQ, FCMP_CEQ_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETOLT, FCMP_CLT_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETOLE, FCMP_CLE_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETONE, FCMP_CNE_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETO,   FCMP_COR_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETUEQ, FCMP_CUEQ_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETULT, FCMP_CULT_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETULE, FCMP_CULE_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETUNE, FCMP_CUNE_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETUO,  FCMP_CUN_S,  FSEL_S, FPR32>;
+
+/// Loads
+
+defm : LdPat<load, FLD_S, f32>;
+
+/// Stores
+
+defm : StPat<store, FST_S, FPR32, f32>;
+
+/// Floating point constants
+
+def : Pat<(f32 fpimm0), (MOVGR2FR_W R0)>;
+def : Pat<(f32 fpimm0neg), (FNEG_S (MOVGR2FR_W R0))>;
+def : Pat<(f32 fpimm1), (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1)))>;
+
+// FP Conversion
+def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
+} // Predicates = [HasBasicF]
+
+let Predicates = [HasBasicF, IsLA64] in {
+// GPR -> FPR
+def : Pat<(loongarch_movgr2fr_w_la64 GPR:$src), (MOVGR2FR_W GPR:$src)>;
+// FPR -> GPR
+def : Pat<(loongarch_movfr2gr_s_la64 FPR32:$src),
+          (MOVFR2GR_S FPR32:$src)>;
+// int -> f32
+def : Pat<(f32 (sint_to_fp GPR:$src)), (FFINT_S_W (MOVGR2FR_W GPR:$src))>;
+} // Predicates = [HasBasicF, IsLA64]
+
+let Predicates = [HasBasicF, IsLA32] in {
+// GPR -> FPR
+def : Pat<(bitconvert (i32 GPR:$src)), (MOVGR2FR_W GPR:$src)>;
+// FPR -> GPR
+def : Pat<(i32 (bitconvert FPR32:$src)), (MOVFR2GR_S FPR32:$src)>;
+// int -> f32
+def : Pat<(f32 (sint_to_fp (i32 GPR:$src))), (FFINT_S_W (MOVGR2FR_W GPR:$src))>;
+} // Predicates = [HasBasicF, IsLA64]

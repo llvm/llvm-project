@@ -65,7 +65,7 @@ TimingManager::~TimingManager() = default;
 /// Get the root timer of this timing manager.
 Timer TimingManager::getRootTimer() {
   auto rt = rootTimer();
-  return rt.hasValue() ? Timer(*this, rt.getValue()) : Timer();
+  return rt ? Timer(*this, *rt) : Timer();
 }
 
 /// Get the root timer of this timing manager wrapped in a `TimingScope`.

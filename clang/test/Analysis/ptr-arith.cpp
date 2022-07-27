@@ -1,4 +1,7 @@
 // RUN: %clang_analyze_cc1 -Wno-unused-value -std=c++14 -analyzer-checker=core,debug.ExprInspection,alpha.core.PointerArithm -verify %s
+
+template <typename T> void clang_analyzer_dump(T);
+
 struct X {
   int *p;
   int zero;
@@ -117,3 +120,24 @@ bool integerAsPtrSubtractionNoCrash(char *p, __UINTPTR_TYPE__ m) {
   auto n = p - reinterpret_cast<char*>((__UINTPTR_TYPE__)1);
   return n == m;
 }
+
+namespace Bug_55934 {
+struct header {
+  unsigned a : 1;
+  unsigned b : 1;
+};
+struct parse_t {
+  unsigned bits0 : 1;
+  unsigned bits2 : 2; // <-- header
+  unsigned bits4 : 4;
+};
+int parse(parse_t *p) {
+  unsigned copy = p->bits2;
+  clang_analyzer_dump(copy);
+  // expected-warning@-1 {{reg_$1<unsigned int SymRegion{reg_$0<parse_t * p>}.bits2>}}
+  header *bits = (header *)&copy;
+  clang_analyzer_dump(bits->b);
+  // expected-warning@-1 {{derived_$2{reg_$1<unsigned int SymRegion{reg_$0<parse_t * p>}.bits2>,Element{copy,0 S64b,struct Bug_55934::header}.b}}}
+  return bits->b; // no-warning
+}
+} // namespace Bug_55934

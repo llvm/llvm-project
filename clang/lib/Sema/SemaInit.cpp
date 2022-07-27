@@ -87,7 +87,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (ElemTy->isChar8Type())
       return SIF_None;
     LLVM_FALLTHROUGH;
-  case StringLiteral::Ascii:
+  case StringLiteral::Ordinary:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
@@ -1696,7 +1696,7 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
     return;
   }
 
-  if (!SemaRef.getLangOpts().OpenCL) {
+  if (!SemaRef.getLangOpts().OpenCL && !SemaRef.getLangOpts().HLSL ) {
     // If the initializing element is a vector, try to copy-initialize
     // instead of breaking it apart (which is doomed to failure anyway).
     Expr *Init = IList->getInit(Index);
@@ -1790,7 +1790,7 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   InitializedEntity ElementEntity =
     InitializedEntity::InitializeElement(SemaRef.Context, 0, Entity);
 
-  // OpenCL initializers allows vectors to be constructed from vectors.
+  // OpenCL and HLSL initializers allow vectors to be constructed from vectors.
   for (unsigned i = 0; i < maxElements; ++i) {
     // Don't attempt to go past the end of the init list
     if (Index >= IList->getNumInits())
@@ -1819,7 +1819,7 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
     }
   }
 
-  // OpenCL requires all elements to be initialized.
+  // OpenCL and HLSL require all elements to be initialized.
   if (numEltsInit != maxElements) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
@@ -5969,6 +5969,37 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
   assert(Args.size() >= 1 && "Zero-argument case handled above");
 
+  // For HLSL ext vector types we allow list initialization behavior for C++
+  // constructor syntax. This is accomplished by converting initialization
+  // arguments an InitListExpr late.
+  if (S.getLangOpts().HLSL && DestType->isExtVectorType() &&
+      (SourceType.isNull() ||
+       !Context.hasSameUnqualifiedType(SourceType, DestType))) {
+
+    llvm::SmallVector<Expr *> InitArgs;
+    for (auto Arg : Args) {
+      if (Arg->getType()->isExtVectorType()) {
+        const auto *VTy = Arg->getType()->castAs<ExtVectorType>();
+        unsigned Elm = VTy->getNumElements();
+        for (unsigned Idx = 0; Idx < Elm; ++Idx) {
+          InitArgs.emplace_back(new (Context) ArraySubscriptExpr(
+              Arg,
+              IntegerLiteral::Create(
+                  Context, llvm::APInt(Context.getIntWidth(Context.IntTy), Idx),
+                  Context.IntTy, SourceLocation()),
+              VTy->getElementType(), Arg->getValueKind(), Arg->getObjectKind(),
+              SourceLocation()));
+        }
+      } else
+        InitArgs.emplace_back(Arg);
+    }
+    InitListExpr *ILE = new (Context) InitListExpr(
+        S.getASTContext(), SourceLocation(), InitArgs, SourceLocation());
+    Args[0] = ILE;
+    AddListInitializationStep(DestType);
+    return;
+  }
+
   // The remaining cases all need a source type.
   if (Args.size() > 1) {
     SetFailed(FK_TooManyInitsForScalar);
@@ -8129,6 +8160,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
   ExprResult CurInit((Expr *)nullptr);
   SmallVector<Expr*, 4> ArrayLoopCommonExprs;
 
+  // HLSL allows vector initialization to function like list initialization, but
+  // use the syntax of a C++-like constructor.
+  bool IsHLSLVectorInit = S.getLangOpts().HLSL && DestType->isExtVectorType() &&
+                          isa<InitListExpr>(Args[0]);
+  (void)IsHLSLVectorInit;
+
   // For initialization steps that start with a single initializer,
   // grab the only argument out the Args and place it into the "current"
   // initializer.
@@ -8166,7 +8203,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
   case SK_StdInitializerList:
   case SK_OCLSamplerInit:
   case SK_OCLZeroOpaqueType: {
-    assert(Args.size() == 1);
+    assert(Args.size() == 1 || IsHLSLVectorInit);
     CurInit = Args[0];
     if (!CurInit.get()) return ExprError();
     break;

@@ -919,7 +919,7 @@ void Generator::generate(pdl_interp::GetOperandsOp op, ByteCodeWriter &writer) {
   Value result = op.getValue();
   Optional<uint32_t> index = op.getIndex();
   writer.append(OpCode::GetOperands,
-                index.getValueOr(std::numeric_limits<uint32_t>::max()),
+                index.value_or(std::numeric_limits<uint32_t>::max()),
                 op.getInputOp());
   if (result.getType().isa<pdl::RangeType>())
     writer.append(getRangeStorageIndex(result));
@@ -939,7 +939,7 @@ void Generator::generate(pdl_interp::GetResultsOp op, ByteCodeWriter &writer) {
   Value result = op.getValue();
   Optional<uint32_t> index = op.getIndex();
   writer.append(OpCode::GetResults,
-                index.getValueOr(std::numeric_limits<uint32_t>::max()),
+                index.value_or(std::numeric_limits<uint32_t>::max()),
                 op.getInputOp());
   if (result.getType().isa<pdl::RangeType>())
     writer.append(getRangeStorageIndex(result));

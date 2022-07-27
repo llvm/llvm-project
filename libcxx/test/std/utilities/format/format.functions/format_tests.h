@@ -55,7 +55,7 @@ template <class CharT>
 struct std::formatter<status, CharT> {
   int type = 0;
 
-  constexpr auto parse(auto& parse_ctx) -> decltype(parse_ctx.begin()) {
+  constexpr auto parse(basic_format_parse_context<CharT>& parse_ctx) -> decltype(parse_ctx.begin()) {
     auto begin = parse_ctx.begin();
     auto end = parse_ctx.end();
     if (begin == end)
@@ -83,7 +83,8 @@ struct std::formatter<status, CharT> {
     return begin;
   }
 
-  auto format(status s, auto& ctx) -> decltype(ctx.out()) {
+  template <class Out>
+  auto format(status s, basic_format_context<Out, CharT>& ctx) -> decltype(ctx.out()) {
     const char* names[] = {"foo", "bar", "foobar"};
     char buffer[6];
     const char* begin;
@@ -292,8 +293,8 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
 }
 
 template <class CharT, class TestFunction>
-void format_test_string_unicode(TestFunction check) {
-  (void)check;
+void format_test_string_unicode([[maybe_unused]] TestFunction check) {
+  // unicode.pass.cpp and ascii.pass.cpp have additional tests.
 #ifndef TEST_HAS_NO_UNICODE
   // Make sure all possible types are tested. For clarity don't use macros.
   if constexpr (std::same_as<CharT, char>) {
@@ -331,7 +332,7 @@ void format_test_string_unicode(TestFunction check) {
     check.template operator()<"{:*^5}">(SV("*aßc*"), std::wstring_view(L"aßc"));
     check.template operator()<"{:*^4.2}">(SV("*aß*"), std::wstring_view(L"aßc"));
   }
-#  endif
+#  endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   // ß requires one column
   check.template operator()<"{}">(SV("aßc"), STR("aßc"));
@@ -364,6 +365,25 @@ void format_test_string_unicode(TestFunction check) {
   check.template operator()<"{:-<7}">(SV("a\u1110c---"), STR("a\u1110c"));
   check.template operator()<"{:-^7}">(SV("-a\u1110c--"), STR("a\u1110c"));
   check.template operator()<"{:->7}">(SV("---a\u1110c"), STR("a\u1110c"));
+
+  // Examples used in P1868R2
+  check.template operator()<"{:*^3}">(SV("*\u0041*"), STR("\u0041")); // { LATIN CAPITAL LETTER A }
+  check.template operator()<"{:*^3}">(SV("*\u00c1*"), STR("\u00c1")); // { LATIN CAPITAL LETTER A WITH ACUTE }
+  check.template operator()<"{:*^3}">(
+      SV("*\u0041\u0301*"),
+      STR("\u0041\u0301")); // { LATIN CAPITAL LETTER A } { COMBINING ACUTE ACCENT }
+  check.template operator()<"{:*^3}">(SV("*\u0132*"), STR("\u0132")); // { LATIN CAPITAL LIGATURE IJ }
+  check.template operator()<"{:*^3}">(SV("*\u0394*"), STR("\u0394")); // { GREEK CAPITAL LETTER DELTA }
+
+  check.template operator()<"{:*^3}">(SV("*\u0429*"), STR("\u0429"));         // { CYRILLIC CAPITAL LETTER SHCHA }
+  check.template operator()<"{:*^3}">(SV("*\u05d0*"), STR("\u05d0"));         // { HEBREW LETTER ALEF }
+  check.template operator()<"{:*^3}">(SV("*\u0634*"), STR("\u0634"));         // { ARABIC LETTER SHEEN }
+  check.template operator()<"{:*^4}">(SV("*\u3009*"), STR("\u3009"));         // { RIGHT-POINTING ANGLE BRACKET }
+  check.template operator()<"{:*^4}">(SV("*\u754c*"), STR("\u754c"));         // { CJK Unified Ideograph-754C }
+  check.template operator()<"{:*^4}">(SV("*\U0001f921*"), STR("\U0001f921")); // { UNICORN FACE }
+  check.template operator()<"{:*^4}">(
+      SV("*\U0001f468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466*"),
+      STR("\U0001f468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466")); // { Family: Man, Woman, Girl, Boy }
 #endif // TEST_HAS_NO_UNICODE
 }
 
@@ -701,19 +721,16 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
     check_exception("The format-spec type has a type not supported for an integer argument", fmt, I(42));
 
   // *** Validate range ***
-  // TODO FMT Update test after adding 128-bit support.
-  if constexpr (sizeof(I) <= sizeof(long long)) {
-    // The code has some duplications to keep the if statement readable.
-    if constexpr (std::signed_integral<CharT>) {
-      if constexpr (std::signed_integral<I> && sizeof(I) > sizeof(CharT)) {
-        check_exception("Integral value outside the range of the char type", SV("{:c}"), std::numeric_limits<I>::min());
-        check_exception("Integral value outside the range of the char type", SV("{:c}"), std::numeric_limits<I>::max());
-      } else if constexpr (std::unsigned_integral<I> && sizeof(I) >= sizeof(CharT)) {
-        check_exception("Integral value outside the range of the char type", SV("{:c}"), std::numeric_limits<I>::max());
-      }
-    } else if constexpr (sizeof(I) > sizeof(CharT)) {
+  // The code has some duplications to keep the if statement readable.
+  if constexpr (std::signed_integral<CharT>) {
+    if constexpr (std::signed_integral<I> && sizeof(I) > sizeof(CharT)) {
+      check_exception("Integral value outside the range of the char type", SV("{:c}"), std::numeric_limits<I>::min());
+      check_exception("Integral value outside the range of the char type", SV("{:c}"), std::numeric_limits<I>::max());
+    } else if constexpr (std::unsigned_integral<I> && sizeof(I) >= sizeof(CharT)) {
       check_exception("Integral value outside the range of the char type", SV("{:c}"), std::numeric_limits<I>::max());
     }
+  } else if constexpr (sizeof(I) > sizeof(CharT)) {
+    check_exception("Integral value outside the range of the char type", SV("{:c}"), std::numeric_limits<I>::max());
   }
 }
 
@@ -755,6 +772,18 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
   check.template operator()<"{:#}">(SV("-9223372036854775808"), std::numeric_limits<int64_t>::min());
   check.template operator()<"{:#x}">(SV("-0x8000000000000000"), std::numeric_limits<int64_t>::min());
 
+#ifndef TEST_HAS_NO_INT128
+  check.template operator()<"{:#b}">(
+      SV("-0b1000000000000000000000000000000000000000000000000000000000000000"
+         "0000000000000000000000000000000000000000000000000000000000000000"),
+      std::numeric_limits<__int128_t>::min());
+  check.template
+  operator()<"{:#o}">(SV("-02000000000000000000000000000000000000000000"), std::numeric_limits<__int128_t>::min());
+  check.template
+  operator()<"{:#}">(SV("-170141183460469231731687303715884105728"), std::numeric_limits<__int128_t>::min());
+  check.template operator()<"{:#x}">(SV("-0x80000000000000000000000000000000"), std::numeric_limits<__int128_t>::min());
+#endif
+
   check.template operator()<"{:#b}">(SV("0b1111111"), std::numeric_limits<int8_t>::max());
   check.template operator()<"{:#o}">(SV("0177"), std::numeric_limits<int8_t>::max());
   check.template operator()<"{:#}">(SV("127"), std::numeric_limits<int8_t>::max());
@@ -776,7 +805,17 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
   check.template operator()<"{:#}">(SV("9223372036854775807"), std::numeric_limits<int64_t>::max());
   check.template operator()<"{:#x}">(SV("0x7fffffffffffffff"), std::numeric_limits<int64_t>::max());
 
-  // TODO FMT Add __int128_t test after implementing full range.
+#ifndef TEST_HAS_NO_INT128
+  check.template operator()<"{:#b}">(
+      SV("0b111111111111111111111111111111111111111111111111111111111111111"
+         "1111111111111111111111111111111111111111111111111111111111111111"),
+      std::numeric_limits<__int128_t>::max());
+  check.template
+  operator()<"{:#o}">(SV("01777777777777777777777777777777777777777777"), std::numeric_limits<__int128_t>::max());
+  check.template
+  operator()<"{:#}">(SV("170141183460469231731687303715884105727"), std::numeric_limits<__int128_t>::max());
+  check.template operator()<"{:#x}">(SV("0x7fffffffffffffffffffffffffffffff"), std::numeric_limits<__int128_t>::max());
+#endif
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -811,7 +850,17 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
   check.template operator()<"{:#}">(SV("18446744073709551615"), std::numeric_limits<uint64_t>::max());
   check.template operator()<"{:#x}">(SV("0xffffffffffffffff"), std::numeric_limits<uint64_t>::max());
 
-  // TODO FMT Add __uint128_t test after implementing full range.
+#ifndef TEST_HAS_NO_INT128
+  check.template operator()<"{:#b}">(
+      SV("0b1111111111111111111111111111111111111111111111111111111111111111"
+         "1111111111111111111111111111111111111111111111111111111111111111"),
+      std::numeric_limits<__uint128_t>::max());
+  check.template
+  operator()<"{:#o}">(SV("03777777777777777777777777777777777777777777"), std::numeric_limits<__uint128_t>::max());
+  check.template
+  operator()<"{:#}">(SV("340282366920938463463374607431768211455"), std::numeric_limits<__uint128_t>::max());
+  check.template operator()<"{:#x}">(SV("0xffffffffffffffffffffffffffffffff"), std::numeric_limits<__uint128_t>::max());
+#endif
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -2488,6 +2537,11 @@ void format_test_handle(TestFunction check, ExceptionTest check_exception) {
   check.template operator()<"answer is '{:X}'">(SV("answer is '0XAA55'"), status::foobar);
   check.template operator()<"answer is '{:s}'">(SV("answer is 'foobar'"), status::foobar);
 
+  // P2418 Changed the argument from a const reference to a forwarding reference.
+  // This mainly affects handle classes, however since we use an abstraction
+  // layer here it's "tricky" to verify whether this test would do the "right"
+  // thing. So these tests are done separately.
+
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("xXs"))
     check_exception("The format-spec type has a type not supported for a status argument", fmt, status::foo);
@@ -2545,9 +2599,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   // *** Test char format argument ***
   // The `char` to `wchar_t` formatting is tested separately.
-  check.template operator()<"hello {}{}{}{}{}{}{}">(SV("hello 09azAZ!"), CharT('0'), CharT('9'), CharT('a'), CharT('z'),
-                                                    CharT('A'), CharT('Z'), CharT('!'));
-
+  check.template operator()<"hello {}{}{}{}{}{}{}">(
+      SV("hello 09azAZ!"), CharT('0'), CharT('9'), CharT('a'), CharT('z'), CharT('A'), CharT('Z'), CharT('!'));
   format_test_char<CharT>(check, check_exception);
   format_test_char_as_integer<CharT>(check, check_exception);
 
@@ -2587,21 +2640,6 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check.template operator()<"hello {}">(SV("hello 42"), static_cast<long long>(42));
 #ifndef TEST_HAS_NO_INT128
   check.template operator()<"hello {}">(SV("hello 42"), static_cast<__int128_t>(42));
-  {
-    // Note 128-bit support is only partly implemented test the range
-    // conditions here.
-    static constexpr auto fmt = string_literal("{}");
-    std::basic_string<CharT> min = std::format(fmt.template sv<CharT>(), std::numeric_limits<long long>::min());
-    check.template operator()<"{}">(std::basic_string_view<CharT>(min),
-                                    static_cast<__int128_t>(std::numeric_limits<long long>::min()));
-    std::basic_string<CharT> max = std::format(fmt.template sv<CharT>(), std::numeric_limits<long long>::max());
-    check.template operator()<"{}">(std::basic_string_view<CharT>(max),
-                                    static_cast<__int128_t>(std::numeric_limits<long long>::max()));
-    check_exception("128-bit value is outside of implemented range", SV("{}"),
-                    static_cast<__int128_t>(std::numeric_limits<long long>::min()) - 1);
-    check_exception("128-bit value is outside of implemented range", SV("{}"),
-                    static_cast<__int128_t>(std::numeric_limits<long long>::max()) + 1);
-  }
 #endif
   format_test_signed_integer<CharT>(check, check_exception);
 
@@ -2613,16 +2651,6 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check.template operator()<"hello {}">(SV("hello 42"), static_cast<unsigned long long>(42));
 #ifndef TEST_HAS_NO_INT128
   check.template operator()<"hello {}">(SV("hello 42"), static_cast<__uint128_t>(42));
-  {
-    // Note 128-bit support is only partly implemented test the range
-    // conditions here.
-    static constexpr auto fmt = string_literal("{}");
-    std::basic_string<CharT> max = std::format(fmt.template sv<CharT>(), std::numeric_limits<unsigned long long>::max());
-    check.template operator()<"{}">(std::basic_string_view<CharT>(max),
-                                    static_cast<__uint128_t>(std::numeric_limits<unsigned long long>::max()));
-    check_exception("128-bit value is outside of implemented range", SV("{}"),
-                    static_cast<__uint128_t>(std::numeric_limits<unsigned long long>::max()) + 1);
-  }
 #endif
   format_test_unsigned_integer<CharT>(check, check_exception);
 

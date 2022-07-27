@@ -88,6 +88,7 @@ void test() {
   (void) std::any_of(it, it, pred);
   (void) std::binary_search(it, it, 0);
   (void) std::binary_search(it, it, 0, pred);
+  (void) std::copy_backward(it, it, it);
   (void) std::copy_if(it, it, it, pred);
   (void) std::copy_n(it, 0, it);
   (void) std::copy(it, it, it);
@@ -118,8 +119,8 @@ void test() {
   (void) std::generate(it, it, pred);
   (void) std::includes(it, it, it, it);
   (void) std::includes(it, it, it, it, pred);
-  // (void) std::inplace_merge(it, it, it);
-  // (void) std::inplace_merge(it, it, it, pred);
+  (void) std::inplace_merge(it, it, it);
+  (void) std::inplace_merge(it, it, it, pred);
   (void) std::is_heap_until(it, it);
   (void) std::is_heap_until(it, it, pred);
   (void) std::is_heap(it, it);
@@ -209,7 +210,7 @@ void test() {
   (void) std::sort(it, it);
   (void) std::sort(it, it, pred);
   (void) std::stable_partition(it, it, pred);
-  // (void) std::stable_sort(it, it);
+  (void) std::stable_sort(it, it);
   (void) std::swap_ranges(it, it, it);
   (void) std::transform(it, it, it, pred);
   (void) std::transform(it, it, it, it, pred);

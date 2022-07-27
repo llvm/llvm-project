@@ -64,11 +64,11 @@ void check_string_literal( FILE* fp, const char* s, char *buf, ... ) {
   printf("abc\
 def"
          "%*d", 1, 1); // no-warning
-         
+
   // <rdar://problem/6079850>, allow 'unsigned' (instead of 'int') to be used for both
   // the field width and precision.  This deviates from C99, but is reasonably safe
   // and is also accepted by GCC.
-  printf("%*d", (unsigned) 1, 1); // no-warning  
+  printf("%*d", (unsigned) 1, 1); // no-warning
 }
 
 // When calling a non-variadic format function (vprintf, vscanf, NSLogv, ...),
@@ -218,7 +218,7 @@ void check_empty_format_string(char* buf, ...)
   va_start(ap,buf);
   vprintf("",ap); // expected-warning {{format string is empty}}
   sprintf(buf, "", 1); // expected-warning {{format string is empty}}
-  
+
   // Don't warn about empty format strings when there are no data arguments.
   // This can arise from macro expansions and non-standard format string
   // functions.
@@ -254,7 +254,7 @@ void test_constant_bindings(void) {
   const char *s3 = "hello";
   char * const s4 = "hello";
   extern const char s5[];
-  
+
   printf(s1); // no-warning
   printf(s2); // no-warning
   printf(s3); // expected-warning{{not a string literal}}
@@ -279,7 +279,7 @@ void test9(char *P) {
 
 void torture(va_list v8) {
   vprintf ("%*.*d", v8);  // no-warning
-  
+
 }
 
 void test10(int x, float f, int i, long long lli) {
@@ -344,7 +344,7 @@ void test12(char *b) {
   unsigned char buf[4];
   printf ("%.4s\n", buf); // no-warning
   printf ("%.4s\n", &buf); // expected-warning{{format specifies type 'char *' but the argument has type 'unsigned char (*)[4]'}}
-  
+
   // Verify that we are checking asprintf
   asprintf(&b, "%d", "asprintf"); // expected-warning{{format specifies type 'int' but the argument has type 'char *'}}
 }
@@ -490,7 +490,7 @@ void rdar8269537(void) {
 extern void rdar8332221_vprintf_scanf(const char *, va_list, const char *, ...)
      __attribute__((__format__(__printf__, 1, 0)))
      __attribute__((__format__(__scanf__, 3, 4)));
-     
+
 void rdar8332221(va_list ap, int *x, long *y) {
   rdar8332221_vprintf_scanf("%", ap, "%d", x); // expected-warning{{incomplete format specifier}}
 }
@@ -790,7 +790,7 @@ void test_char_pointer_arithmetic(int b) {
 
 void PR30481(void) {
   // This caused crashes due to invalid casts.
-  printf(1 > 0); // expected-warning{{format string is not a string literal}} expected-warning{{incompatible integer to pointer conversion}} expected-note@format-strings.c:*{{passing argument to parameter here}} expected-note{{to avoid this}}
+  printf(1 > 0); // expected-warning{{format string is not a string literal}} expected-error{{incompatible integer to pointer conversion}} expected-note@format-strings.c:*{{passing argument to parameter here}} expected-note{{to avoid this}}
 }
 
 void test_printf_opaque_ptr(void *op) {
@@ -816,6 +816,7 @@ void test_block(void) {
           __attribute__((__format__(__printf__, 2, 3))) {
     va_list ap;
     va_start(ap, fmt);
+    vprintf(fmt, ap);
     vprintf(not_fmt, ap); // expected-warning{{format string is not a string literal}}
     va_end(ap);
   };

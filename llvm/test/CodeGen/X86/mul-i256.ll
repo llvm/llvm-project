@@ -4,7 +4,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @test(i256* %a, i256* %b, i256* %out) #0 {
+define void @test(ptr %a, ptr %b, ptr %out) #0 {
 ; X32-LABEL: test:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
@@ -384,10 +384,10 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 entry:
-  %av = load i256, i256* %a
-  %bv = load i256, i256* %b
+  %av = load i256, ptr %a
+  %bv = load i256, ptr %b
   %r = mul i256 %av, %bv
-  store i256 %r, i256* %out
+  store i256 %r, ptr %out
   ret void
 }
 

@@ -138,6 +138,8 @@ private:
                        SmallVectorImpl<Constant *> &Formals);
 
   Constant *ComputeLoadResult(Constant *P, Type *Ty);
+  Constant *ComputeLoadResult(GlobalVariable *GV, Type *Ty,
+                              const APInt &Offset);
 
   /// As we compute SSA register values, we store their contents here. The back
   /// of the deque contains the current function and the stack contains the

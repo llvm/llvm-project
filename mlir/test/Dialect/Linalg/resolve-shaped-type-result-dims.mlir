@@ -65,7 +65,7 @@ func.func @remove_dim_result_uses
   return %3, %4 : index, index
 }
 //       CHECK: #[[MAP0:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-//       CHECK: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s1 - s0)>
+//       CHECK: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (-s0 + s1)>
 //       CHECK: func @remove_dim_result_uses
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>

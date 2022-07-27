@@ -12,10 +12,13 @@
 #include <cassert>
 #include <concepts>
 #include <iterator>
+#include <ranges>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"
+
 
 // This iterator meets C++20's Cpp17OutputIterator requirements, as described
 // in Table 90 ([output.iterators]).
@@ -33,8 +36,12 @@ public:
     typedef typename std::iterator_traits<It>::reference       reference;
 
     TEST_CONSTEXPR explicit cpp17_output_iterator(It it) : it_(std::move(it)) {}
+
     template <class U>
-        TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) :it_(u.it_) {}
+    TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 cpp17_output_iterator(cpp17_output_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -67,8 +74,12 @@ public:
     typedef typename Traits::reference                         reference;
 
     TEST_CONSTEXPR explicit cpp17_input_iterator(It it) : it_(it) {}
+
     template <class U, class T>
-        TEST_CONSTEXPR cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) : it_(u.it_) {}
+
+    template <class U, class T, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 cpp17_input_iterator(cpp17_input_iterator<U, T>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -102,8 +113,12 @@ public:
 
     TEST_CONSTEXPR forward_iterator() : it_() {}
     TEST_CONSTEXPR explicit forward_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR forward_iterator(const forward_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR forward_iterator(const forward_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 forward_iterator(forward_iterator<U>&& other) : it_(other.it_) { other.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -134,8 +149,12 @@ public:
 
     TEST_CONSTEXPR bidirectional_iterator() : it_() {}
     TEST_CONSTEXPR explicit bidirectional_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR bidirectional_iterator(const bidirectional_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR bidirectional_iterator(const bidirectional_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 bidirectional_iterator(bidirectional_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -168,8 +187,12 @@ public:
 
     TEST_CONSTEXPR random_access_iterator() : it_() {}
     TEST_CONSTEXPR explicit random_access_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR random_access_iterator(const random_access_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR random_access_iterator(const random_access_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 random_access_iterator(random_access_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
     TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
@@ -220,8 +243,12 @@ public:
 
     TEST_CONSTEXPR_CXX14 contiguous_iterator() : it_() {}
     TEST_CONSTEXPR_CXX14 explicit contiguous_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
     TEST_CONSTEXPR pointer operator->() const {return it_;}
@@ -272,8 +299,12 @@ public:
 
     constexpr three_way_contiguous_iterator() : it_() {}
     constexpr explicit three_way_contiguous_iterator(It it) : it_(it) {}
+
     template <class U>
     constexpr three_way_contiguous_iterator(const three_way_contiguous_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    constexpr three_way_contiguous_iterator(three_way_contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     constexpr reference operator*() const {return *it_;}
     constexpr pointer operator->() const {return it_;}
@@ -727,6 +758,7 @@ namespace adl {
 class Iterator {
  public:
   using value_type = int;
+  using reference = int&;
   using difference_type = ptrdiff_t;
 
  private:
@@ -755,9 +787,27 @@ class Iterator {
   constexpr int iter_swaps() const { assert(iter_swaps_); return *iter_swaps_; }
 
   constexpr value_type& operator*() const { return *ptr_; }
+  constexpr reference operator[](difference_type n) const { return ptr_[n]; }
 
-  constexpr Iterator operator+(difference_type n) const {
-    return Iterator(ptr_ + n, iter_moves_, iter_swaps_);
+  friend constexpr Iterator operator+(Iterator i, difference_type n) {
+    return Iterator(i.ptr_ + n, i.iter_moves_, i.iter_swaps_);
+  }
+  friend constexpr Iterator operator+(difference_type n, Iterator i) {
+    return i + n;
+  }
+  constexpr Iterator operator-(difference_type n) const {
+    return Iterator(ptr_ - n, iter_moves_, iter_swaps_);
+  }
+  constexpr difference_type operator-(Iterator rhs) const {
+    return ptr_ - rhs.ptr_;
+  }
+  constexpr Iterator& operator+=(difference_type n) {
+    ptr_ += n;
+    return *this;
+  }
+  constexpr Iterator& operator-=(difference_type n) {
+    ptr_ -= n;
+    return *this;
   }
 
   constexpr Iterator& operator++() { ++ptr_; return *this; }
@@ -774,7 +824,8 @@ class Iterator {
     return prev;
   }
 
-  constexpr friend void iter_swap(Iterator a, Iterator) {
+  constexpr friend void iter_swap(Iterator a, Iterator b) {
+    std::swap(a.ptr_, b.ptr_);
     if (a.iter_swaps_) {
       ++(*a.iter_swaps_);
     }
@@ -787,10 +838,333 @@ class Iterator {
     return std::move(*iter);
   }
 
-  constexpr friend bool operator==(const Iterator& lhs, const Iterator& rhs) { return lhs.ptr_ == rhs.ptr_; }
+  constexpr friend bool operator==(const Iterator& lhs, const Iterator& rhs) {
+    return lhs.ptr_ == rhs.ptr_;
+  }
+  constexpr friend auto operator<=>(const Iterator& lhs, const Iterator& rhs) {
+    return lhs.ptr_ <=> rhs.ptr_;
+  }
 };
 
 } // namespace adl
+
+// Proxy
+// ======================================================================
+// Proxy that can wrap a value or a reference. It simulates C++23's tuple
+// but simplified to just hold one argument.
+// Note that unlike tuple, this class deliberately doesn't have special handling
+// of swap to cause a compilation error if it's used in an algorithm that relies
+// on plain swap instead of ranges::iter_swap.
+// This class is useful for testing that if algorithms support proxy iterator
+// properly, i.e. calling ranges::iter_swap and ranges::iter_move instead of
+// plain swap and std::move
+template <class T>
+struct Proxy;
+
+template <class T>
+inline constexpr bool IsProxy = false;
+
+template <class T>
+inline constexpr bool IsProxy<Proxy<T>> = true;
+
+template <class T>
+struct Proxy {
+  T data;
+
+  constexpr T& getData() & { return data; }
+
+  constexpr const T& getData() const& { return data; }
+
+  constexpr T&& getData() && { return static_cast<T&&>(data); }
+
+  constexpr const T&& getData() const&& { return static_cast<const T&&>(data); }
+
+  template <class U>
+    requires std::constructible_from<T, U&&>
+  constexpr Proxy(U&& u) : data{std::forward<U>(u)} {}
+
+  // This constructor covers conversion from cvref of Proxy<U>, including non-const/const versions of copy/move constructor
+  template <class Other>
+    requires(IsProxy<std::decay_t<Other>> && std::constructible_from<T, decltype(std::declval<Other>().getData())>)
+  constexpr Proxy(Other&& other) : data{std::forward<Other>(other).getData()} {}
+
+  template <class Other>
+    requires(IsProxy<std::decay_t<Other>> && std::assignable_from<T&, decltype(std::declval<Other>().getData())>)
+  constexpr Proxy& operator=(Other&& other) {
+    data = std::forward<Other>(other).getData();
+    return *this;
+  }
+
+  // const assignment required to make ProxyIterator model std::indirectly_writable
+  template <class Other>
+    requires(IsProxy<std::decay_t<Other>> && std::assignable_from<const T&, decltype(std::declval<Other>().getData())>)
+  constexpr const Proxy& operator=(Other&& other) const {
+    data = std::forward<Other>(other).getData();
+    return *this;
+  }
+
+  // If `T` is a reference type, the implicitly-generated assignment operator will be deleted (and would take precedence
+  // over the templated `operator=` above because it's a better match).
+  constexpr Proxy& operator=(const Proxy& rhs) {
+    data = rhs.data;
+    return *this;
+  }
+
+  // no specialised swap function that takes const Proxy& and no specialised const member swap
+  // Calling swap(Proxy<T>{}, Proxy<T>{}) would fail (pass prvalues)
+
+  // Compare operators are defined for the convenience of the tests
+  friend constexpr bool operator==(const Proxy&, const Proxy&)
+    requires (std::equality_comparable<T> && !std::is_reference_v<T>)
+  = default;
+
+  // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default equality comparison operator is deleted
+  // when `T` is a reference type.
+  template <class U>
+  friend constexpr bool operator==(const Proxy& lhs, const Proxy<U>& rhs)
+    requires std::equality_comparable_with<std::decay_t<T>, std::decay_t<U>> {
+    return lhs.data == rhs.data;
+  }
+
+  friend constexpr auto operator<=>(const Proxy&, const Proxy&)
+    requires (std::three_way_comparable<T> && !std::is_reference_v<T>)
+  = default;
+
+  // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default 3-way comparison operator is deleted when
+  // `T` is a reference type.
+  template <class U>
+  friend constexpr auto operator<=>(const Proxy& lhs, const Proxy<U>& rhs)
+    requires std::three_way_comparable_with<std::decay_t<T>, std::decay_t<U>> {
+    return lhs.data <=> rhs.data;
+  }
+};
+
+// This is to make ProxyIterator model `std::indirectly_readable`
+template <class T, class U, template <class> class TQual, template <class> class UQual>
+  requires requires { typename std::common_reference_t<TQual<T>, UQual<U>>; }
+struct std::basic_common_reference<Proxy<T>, Proxy<U>, TQual, UQual> {
+  using type = Proxy<std::common_reference_t<TQual<T>, UQual<U>>>;
+};
+
+template <class T, class U>
+  requires requires { typename std::common_type_t<T, U>; }
+struct std::common_type<Proxy<T>, Proxy<U>> {
+  using type = Proxy<std::common_type_t<T, U>>;
+};
+
+// ProxyIterator
+// ======================================================================
+// It wraps `Base` iterator and when dereferenced it returns a Proxy<ref>
+// It simulates C++23's zip_view::iterator but simplified to just wrap
+// one base iterator.
+// Note it forwards value_type, iter_move, iter_swap. e.g if the base
+// iterator is int*,
+// operator*    -> Proxy<int&>
+// iter_value_t -> Proxy<int>
+// iter_move    -> Proxy<int&&>
+template <class Base>
+struct ProxyIteratorBase {};
+
+template <class Base>
+  requires std::derived_from<
+      typename std::iterator_traits<Base>::iterator_category,
+      std::input_iterator_tag>
+struct ProxyIteratorBase<Base> {
+  using iterator_category = std::input_iterator_tag;
+};
+
+template <std::input_iterator Base>
+consteval auto get_iterator_concept() {
+  if constexpr (std::random_access_iterator<Base>) {
+    return std::random_access_iterator_tag{};
+  } else if constexpr (std::bidirectional_iterator<Base>) {
+    return std::bidirectional_iterator_tag{};
+  } else if constexpr (std::forward_iterator<Base>) {
+    return std::forward_iterator_tag{};
+  } else {
+    return std::input_iterator_tag{};
+  }
+}
+
+template <std::input_iterator Base>
+struct ProxyIterator : ProxyIteratorBase<Base> {
+  Base base_;
+
+  using iterator_concept = decltype(get_iterator_concept<Base>());
+  using value_type       = Proxy<std::iter_value_t<Base>>;
+  using difference_type  = std::iter_difference_t<Base>;
+
+  ProxyIterator()
+    requires std::default_initializable<Base>
+  = default;
+
+  constexpr ProxyIterator(Base base) : base_{std::move(base)} {}
+
+  template <class T>
+    requires std::constructible_from<Base, T&&>
+  constexpr ProxyIterator(T&& t) : base_{std::forward<T>(t)} {}
+
+  friend constexpr decltype(auto) base(const ProxyIterator& p) { return base(p.base_); }
+
+  // Specialization of iter_move
+  // If operator* returns Proxy<Foo&>, iter_move will return Proxy<Foo&&>
+  // Note std::move(*it) returns Proxy<Foo&>&&, which is not what we want as
+  // it will likely result in a copy rather than a move
+  friend constexpr Proxy<std::iter_rvalue_reference_t<Base>> iter_move(const ProxyIterator& p) noexcept {
+    return {std::ranges::iter_move(p.base_)};
+  }
+
+  // Specialization of iter_swap
+  // Note std::swap(*x, *y) would fail to compile as operator* returns prvalues
+  // and std::swap takes non-const lvalue references
+  friend constexpr void iter_swap(const ProxyIterator& x, const ProxyIterator& y) noexcept {
+    std::ranges::iter_swap(x.base_, y.base_);
+  }
+
+  // to satisfy input_iterator
+  constexpr Proxy<std::iter_reference_t<Base>> operator*() const { return {*base_}; }
+
+  constexpr ProxyIterator& operator++() {
+    ++base_;
+    return *this;
+  }
+
+  constexpr void operator++(int) { ++*this; }
+
+  friend constexpr bool operator==(const ProxyIterator& x, const ProxyIterator& y)
+    requires std::equality_comparable<Base> {
+    return x.base_ == y.base_;
+  }
+
+  // to satisfy forward_iterator
+  constexpr ProxyIterator operator++(int)
+    requires std::forward_iterator<Base> {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+  // to satisfy bidirectional_iterator
+  constexpr ProxyIterator& operator--()
+    requires std::bidirectional_iterator<Base> {
+    --base_;
+    return *this;
+  }
+
+  constexpr ProxyIterator operator--(int)
+    requires std::bidirectional_iterator<Base> {
+    auto tmp = *this;
+    --*this;
+    return tmp;
+  }
+
+  // to satisfy random_access_iterator
+  constexpr ProxyIterator& operator+=(difference_type n)
+    requires std::random_access_iterator<Base> {
+    base_ += n;
+    return *this;
+  }
+
+  constexpr ProxyIterator& operator-=(difference_type n)
+    requires std::random_access_iterator<Base> {
+    base_ -= n;
+    return *this;
+  }
+
+  constexpr Proxy<std::iter_reference_t<Base>> operator[](difference_type n) const
+    requires std::random_access_iterator<Base> {
+    return {base_[n]};
+  }
+
+  friend constexpr bool operator<(const ProxyIterator& x, const ProxyIterator& y)
+    requires std::random_access_iterator<Base> {
+    return x.base_ < y.base_;
+  }
+
+  friend constexpr bool operator>(const ProxyIterator& x, const ProxyIterator& y)
+    requires std::random_access_iterator<Base> {
+    return x.base_ > y.base_;
+  }
+
+  friend constexpr bool operator<=(const ProxyIterator& x, const ProxyIterator& y)
+    requires std::random_access_iterator<Base> {
+    return x.base_ <= y.base_;
+  }
+
+  friend constexpr bool operator>=(const ProxyIterator& x, const ProxyIterator& y)
+    requires std::random_access_iterator<Base> {
+    return x.base_ >= y.base_;
+  }
+
+  friend constexpr auto operator<=>(const ProxyIterator& x, const ProxyIterator& y)
+    requires(std::random_access_iterator<Base> && std::three_way_comparable<Base>) {
+    return x.base_ <=> y.base_;
+  }
+
+  friend constexpr ProxyIterator operator+(const ProxyIterator& x, difference_type n)
+    requires std::random_access_iterator<Base> {
+    return ProxyIterator{x.base_ + n};
+  }
+
+  friend constexpr ProxyIterator operator+(difference_type n, const ProxyIterator& x)
+    requires std::random_access_iterator<Base> {
+    return ProxyIterator{n + x.base_};
+  }
+
+  friend constexpr ProxyIterator operator-(const ProxyIterator& x, difference_type n)
+    requires std::random_access_iterator<Base> {
+    return ProxyIterator{x.base_ - n};
+  }
+
+  friend constexpr difference_type operator-(const ProxyIterator& x, const ProxyIterator& y)
+    requires std::random_access_iterator<Base> {
+    return x.base_ - y.base_;
+  }
+};
+
+static_assert(std::indirectly_readable<ProxyIterator<int*>>);
+static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int>>);
+static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int&>>);
+
+template <class BaseSent>
+struct ProxySentinel {
+  BaseSent base_;
+
+  ProxySentinel() = default;
+  constexpr ProxySentinel(BaseSent base) : base_{std::move(base)} {}
+
+  template <class Base>
+    requires std::equality_comparable_with<Base, BaseSent>
+  friend constexpr bool operator==(const ProxyIterator<Base>& p, const ProxySentinel& sent) {
+    return p.base_ == sent.base_;
+  }
+};
+
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+template <std::ranges::input_range Base>
+  requires std::ranges::view<Base>
+struct ProxyRange {
+  Base base_;
+
+  constexpr auto begin() { return ProxyIterator{std::ranges::begin(base_)}; }
+
+  constexpr auto end() { return ProxySentinel{std::ranges::end(base_)}; }
+
+  constexpr auto begin() const
+    requires std::ranges::input_range<const Base> {
+    return ProxyIterator{std::ranges::begin(base_)};
+  }
+
+  constexpr auto end() const
+    requires std::ranges::input_range<const Base> {
+    return ProxySentinel{std::ranges::end(base_)};
+  }
+};
+
+template <std::ranges::input_range R>
+  requires std::ranges::viewable_range<R&&>
+ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 #endif // TEST_STD_VER > 17
 

@@ -29,14 +29,14 @@ public:
   LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const final {
     Location loc = sliceOp.getLoc();
-    Value input = sliceOp.input();
+    Value input = sliceOp.getInput();
     SmallVector<int64_t> strides;
-    auto starts = sliceOp.start();
-    auto sizes = sliceOp.size();
+    auto starts = sliceOp.getStart();
+    auto sizes = sliceOp.getSize();
     strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
 
     SmallVector<Value> dynSizes;
-    for (auto i : llvm::enumerate(sizes)) {
+    for (const auto &i : llvm::enumerate(sizes)) {
       int64_t size = i.value().cast<IntegerAttr>().getInt();
       size_t index = i.index();
       if (size != ShapedType::kDynamicSize)

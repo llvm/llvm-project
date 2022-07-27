@@ -251,8 +251,7 @@ static Optional<Type> convertArrayType(spirv::ArrayType type,
   unsigned stride = type.getArrayStride();
   Type elementType = type.getElementType();
   auto sizeInBytes = elementType.cast<spirv::SPIRVType>().getSizeInBytes();
-  if (stride != 0 &&
-      !(sizeInBytes.hasValue() && sizeInBytes.getValue() == stride))
+  if (stride != 0 && !(sizeInBytes && *sizeInBytes == stride))
     return llvm::None;
 
   auto llvmElementType = converter.convertType(elementType);
@@ -540,8 +539,7 @@ public:
     ElementsAttr branchWeights = nullptr;
     if (auto weights = op.branch_weights()) {
       VectorType weightType = VectorType::get(2, rewriter.getI32Type());
-      branchWeights =
-          DenseElementsAttr::get(weightType, weights.getValue().getValue());
+      branchWeights = DenseElementsAttr::get(weightType, weights->getValue());
     }
 
     rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
@@ -647,8 +645,8 @@ public:
     ModuleOp module = op->getParentOfType<ModuleOp>();
     IntegerAttr executionModeAttr = op.execution_modeAttr();
     std::string moduleName;
-    if (module.getName().hasValue())
-      moduleName = "_" + module.getName().getValue().str();
+    if (module.getName().has_value())
+      moduleName = "_" + module.getName().value().str();
     else
       moduleName = "";
     std::string executionModeInfoName =
@@ -868,12 +866,12 @@ public:
 };
 
 class InverseSqrtPattern
-    : public SPIRVToLLVMConversion<spirv::GLSLInverseSqrtOp> {
+    : public SPIRVToLLVMConversion<spirv::GLInverseSqrtOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSLInverseSqrtOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::GLInverseSqrtOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSLInverseSqrtOp op, OpAdaptor adaptor,
+  matchAndRewrite(spirv::GLInverseSqrtOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = op.getType();
     auto dstType = typeConverter.convertType(srcType);
@@ -897,13 +895,13 @@ public:
   LogicalResult
   matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op.memory_access().hasValue()) {
+    if (!op.memory_access()) {
       return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
                                     this->typeConverter, /*alignment=*/0,
                                     /*isVolatile=*/false,
                                     /*isNonTemporal=*/false);
     }
-    auto memoryAccess = op.memory_access().getValue();
+    auto memoryAccess = *op.memory_access();
     switch (memoryAccess) {
     case spirv::MemoryAccess::Aligned:
     case spirv::MemoryAccess::None:
@@ -1193,12 +1191,12 @@ public:
   }
 };
 
-class TanPattern : public SPIRVToLLVMConversion<spirv::GLSLTanOp> {
+class TanPattern : public SPIRVToLLVMConversion<spirv::GLTanOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSLTanOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::GLTanOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSLTanOp tanOp, OpAdaptor adaptor,
+  matchAndRewrite(spirv::GLTanOp tanOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType = typeConverter.convertType(tanOp.getType());
     if (!dstType)
@@ -1218,12 +1216,12 @@ public:
 ///   -----------
 ///   exp(2x) + 1
 ///
-class TanhPattern : public SPIRVToLLVMConversion<spirv::GLSLTanhOp> {
+class TanhPattern : public SPIRVToLLVMConversion<spirv::GLTanhOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSLTanhOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::GLTanhOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSLTanhOp tanhOp, OpAdaptor adaptor,
+  matchAndRewrite(spirv::GLTanhOp tanhOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = tanhOp.getType();
     auto dstType = typeConverter.convertType(srcType);
@@ -1517,18 +1515,18 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
 
       // GLSL extended instruction set ops
-      DirectConversionPattern<spirv::GLSLCeilOp, LLVM::FCeilOp>,
-      DirectConversionPattern<spirv::GLSLCosOp, LLVM::CosOp>,
-      DirectConversionPattern<spirv::GLSLExpOp, LLVM::ExpOp>,
-      DirectConversionPattern<spirv::GLSLFAbsOp, LLVM::FAbsOp>,
-      DirectConversionPattern<spirv::GLSLFloorOp, LLVM::FFloorOp>,
-      DirectConversionPattern<spirv::GLSLFMaxOp, LLVM::MaxNumOp>,
-      DirectConversionPattern<spirv::GLSLFMinOp, LLVM::MinNumOp>,
-      DirectConversionPattern<spirv::GLSLLogOp, LLVM::LogOp>,
-      DirectConversionPattern<spirv::GLSLSinOp, LLVM::SinOp>,
-      DirectConversionPattern<spirv::GLSLSMaxOp, LLVM::SMaxOp>,
-      DirectConversionPattern<spirv::GLSLSMinOp, LLVM::SMinOp>,
-      DirectConversionPattern<spirv::GLSLSqrtOp, LLVM::SqrtOp>,
+      DirectConversionPattern<spirv::GLCeilOp, LLVM::FCeilOp>,
+      DirectConversionPattern<spirv::GLCosOp, LLVM::CosOp>,
+      DirectConversionPattern<spirv::GLExpOp, LLVM::ExpOp>,
+      DirectConversionPattern<spirv::GLFAbsOp, LLVM::FAbsOp>,
+      DirectConversionPattern<spirv::GLFloorOp, LLVM::FFloorOp>,
+      DirectConversionPattern<spirv::GLFMaxOp, LLVM::MaxNumOp>,
+      DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
+      DirectConversionPattern<spirv::GLSinOp, LLVM::SinOp>,
+      DirectConversionPattern<spirv::GLSMaxOp, LLVM::SMaxOp>,
+      DirectConversionPattern<spirv::GLSMinOp, LLVM::SMinOp>,
+      DirectConversionPattern<spirv::GLSqrtOp, LLVM::SqrtOp>,
       InverseSqrtPattern, TanPattern, TanhPattern,
 
       // Logical ops
@@ -1587,10 +1585,10 @@ void mlir::encodeBindAttribute(ModuleOp module) {
       if (descriptorSet && binding) {
         // Encode these numbers into the variable's symbolic name. If the
         // SPIR-V module has a name, add it at the beginning.
-        auto moduleAndName = spvModule.getName().hasValue()
-                                 ? spvModule.getName().getValue().str() + "_" +
-                                       op.sym_name().str()
-                                 : op.sym_name().str();
+        auto moduleAndName =
+            spvModule.getName().has_value()
+                ? spvModule.getName().value().str() + "_" + op.sym_name().str()
+                : op.sym_name().str();
         std::string name =
             llvm::formatv("{0}_descriptor_set{1}_binding{2}", moduleAndName,
                           std::to_string(descriptorSet.getInt()),

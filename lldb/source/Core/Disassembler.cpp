@@ -527,8 +527,11 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       }
 
       const bool show_bytes = (options & eOptionShowBytes) != 0;
-      inst->Dump(&strm, max_opcode_byte_size, true, show_bytes, &exe_ctx, &sc,
-                 &prev_sc, nullptr, address_text_size);
+      const bool show_control_flow_kind =
+          (options & eOptionShowControlFlowKind) != 0;
+      inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
+                 show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
+                 address_text_size);
       strm.EOL();
     } else {
       break;
@@ -574,8 +577,33 @@ AddressClass Instruction::GetAddressClass() {
   return m_address_class;
 }
 
+const char *Instruction::GetNameForInstructionControlFlowKind(
+    lldb::InstructionControlFlowKind instruction_control_flow_kind) {
+  switch (instruction_control_flow_kind) {
+  case eInstructionControlFlowKindUnknown:
+    return "unknown";
+  case eInstructionControlFlowKindOther:
+    return "other";
+  case eInstructionControlFlowKindCall:
+    return "call";
+  case eInstructionControlFlowKindReturn:
+    return "return";
+  case eInstructionControlFlowKindJump:
+    return "jump";
+  case eInstructionControlFlowKindCondJump:
+    return "cond jump";
+  case eInstructionControlFlowKindFarCall:
+    return "far call";
+  case eInstructionControlFlowKindFarReturn:
+    return "far return";
+  case eInstructionControlFlowKindFarJump:
+    return "far jump";
+  }
+}
+
 void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                        bool show_address, bool show_bytes,
+                       bool show_control_flow_kind,
                        const ExecutionContext *exe_ctx,
                        const SymbolContext *sym_ctx,
                        const SymbolContext *prev_sym_ctx,
@@ -611,6 +639,13 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
       else
         m_opcode.Dump(&ss, 12);
     }
+  }
+
+  if (show_control_flow_kind) {
+    lldb::InstructionControlFlowKind instruction_control_flow_kind =
+        GetControlFlowKind(exe_ctx);
+    ss.Printf("%-12s", GetNameForInstructionControlFlowKind(
+                           instruction_control_flow_kind));
   }
 
   const size_t opcode_pos = ss.GetSizeOfLastLine();
@@ -957,6 +992,7 @@ InstructionSP InstructionList::GetInstructionAtAddress(const Address &address) {
 }
 
 void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
+                           bool show_control_flow_kind,
                            const ExecutionContext *exe_ctx) {
   const uint32_t max_opcode_byte_size = GetMaxOpcocdeByteSize();
   collection::const_iterator pos, begin, end;
@@ -975,8 +1011,9 @@ void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
        pos != end; ++pos) {
     if (pos != begin)
       s->EOL();
-    (*pos)->Dump(s, max_opcode_byte_size, show_address, show_bytes, exe_ctx,
-                 nullptr, nullptr, disassembly_format, 0);
+    (*pos)->Dump(s, max_opcode_byte_size, show_address, show_bytes,
+                 show_control_flow_kind, exe_ctx, nullptr, nullptr,
+                 disassembly_format, 0);
   }
 }
 
@@ -994,7 +1031,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;
-  
+
   if (found_calls)
     *found_calls = false;
   for (size_t i = start; i < num_instructions; i++) {

@@ -6,7 +6,7 @@
 ;
 
 %i32vec3 = type <3 x i32>
-define void @add3i32(%i32vec3* sret(%i32vec3) %ret, %i32vec3* %ap, %i32vec3* %bp)  {
+define void @add3i32(ptr sret(%i32vec3) %ret, ptr %ap, ptr %bp)  {
 ; X86-LABEL: add3i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -27,14 +27,14 @@ define void @add3i32(%i32vec3* sret(%i32vec3) %ret, %i32vec3* %ap, %i32vec3* %bp
 ; X64-NEXT:    pextrd $2, %xmm0, 8(%rdi)
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i32vec3, %i32vec3* %ap, align 16
-	%b = load %i32vec3, %i32vec3* %bp, align 16
+	%a = load %i32vec3, ptr %ap, align 16
+	%b = load %i32vec3, ptr %bp, align 16
 	%x = add %i32vec3 %a, %b
-	store %i32vec3 %x, %i32vec3* %ret, align 16
+	store %i32vec3 %x, ptr %ret, align 16
 	ret void
 }
 
-define void @add3i32_2(%i32vec3* sret(%i32vec3) %ret, %i32vec3* %ap, %i32vec3* %bp)  {
+define void @add3i32_2(ptr sret(%i32vec3) %ret, ptr %ap, ptr %bp)  {
 ; X86-LABEL: add3i32_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -63,15 +63,15 @@ define void @add3i32_2(%i32vec3* sret(%i32vec3) %ret, %i32vec3* %ap, %i32vec3* %
 ; X64-NEXT:    pextrd $2, %xmm1, 8(%rdi)
 ; X64-NEXT:    movq %xmm1, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i32vec3, %i32vec3* %ap, align 8
-	%b = load %i32vec3, %i32vec3* %bp, align 8
+	%a = load %i32vec3, ptr %ap, align 8
+	%b = load %i32vec3, ptr %bp, align 8
 	%x = add %i32vec3 %a, %b
-	store %i32vec3 %x, %i32vec3* %ret, align 8
+	store %i32vec3 %x, ptr %ret, align 8
 	ret void
 }
 
 %i32vec7 = type <7 x i32>
-define void @add7i32(%i32vec7* sret(%i32vec7) %ret, %i32vec7* %ap, %i32vec7* %bp)  {
+define void @add7i32(ptr sret(%i32vec7) %ret, ptr %ap, ptr %bp)  {
 ; X86-LABEL: add7i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -98,15 +98,15 @@ define void @add7i32(%i32vec7* sret(%i32vec7) %ret, %i32vec7* %ap, %i32vec7* %bp
 ; X64-NEXT:    pextrd $2, %xmm1, 24(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i32vec7, %i32vec7* %ap, align 16
-	%b = load %i32vec7, %i32vec7* %bp, align 16
+	%a = load %i32vec7, ptr %ap, align 16
+	%b = load %i32vec7, ptr %bp, align 16
 	%x = add %i32vec7 %a, %b
-	store %i32vec7 %x, %i32vec7* %ret, align 16
+	store %i32vec7 %x, ptr %ret, align 16
 	ret void
 }
 
 %i32vec12 = type <12 x i32>
-define void @add12i32(%i32vec12* sret(%i32vec12) %ret, %i32vec12* %ap, %i32vec12* %bp)  {
+define void @add12i32(ptr sret(%i32vec12) %ret, ptr %ap, ptr %bp)  {
 ; X86-LABEL: add12i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -136,16 +136,16 @@ define void @add12i32(%i32vec12* sret(%i32vec12) %ret, %i32vec12* %ap, %i32vec12
 ; X64-NEXT:    movdqa %xmm2, 32(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i32vec12, %i32vec12* %ap, align 16
-	%b = load %i32vec12, %i32vec12* %bp, align 16
+	%a = load %i32vec12, ptr %ap, align 16
+	%b = load %i32vec12, ptr %bp, align 16
 	%x = add %i32vec12 %a, %b
-	store %i32vec12 %x, %i32vec12* %ret, align 16
+	store %i32vec12 %x, ptr %ret, align 16
 	ret void
 }
 
 
 %i16vec3 = type <3 x i16>
-define void @add3i16(%i16vec3* nocapture sret(%i16vec3) %ret, %i16vec3* %ap, %i16vec3* %bp) nounwind {
+define void @add3i16(ptr nocapture sret(%i16vec3) %ret, ptr %ap, ptr %bp) nounwind {
 ; X86-LABEL: add3i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -169,15 +169,15 @@ define void @add3i16(%i16vec3* nocapture sret(%i16vec3) %ret, %i16vec3* %ap, %i1
 ; X64-NEXT:    pextrw $2, %xmm1, 4(%rdi)
 ; X64-NEXT:    movd %xmm1, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i16vec3, %i16vec3* %ap, align 16
-	%b = load %i16vec3, %i16vec3* %bp, align 16
+	%a = load %i16vec3, ptr %ap, align 16
+	%b = load %i16vec3, ptr %bp, align 16
 	%x = add %i16vec3 %a, %b
-	store %i16vec3 %x, %i16vec3* %ret, align 16
+	store %i16vec3 %x, ptr %ret, align 16
 	ret void
 }
 
 %i16vec4 = type <4 x i16>
-define void @add4i16(%i16vec4* nocapture sret(%i16vec4) %ret, %i16vec4* %ap, %i16vec4* %bp) nounwind {
+define void @add4i16(ptr nocapture sret(%i16vec4) %ret, ptr %ap, ptr %bp) nounwind {
 ; X86-LABEL: add4i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -197,15 +197,15 @@ define void @add4i16(%i16vec4* nocapture sret(%i16vec4) %ret, %i16vec4* %ap, %i1
 ; X64-NEXT:    paddw %xmm0, %xmm1
 ; X64-NEXT:    movq %xmm1, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i16vec4, %i16vec4* %ap, align 16
-	%b = load %i16vec4, %i16vec4* %bp, align 16
+	%a = load %i16vec4, ptr %ap, align 16
+	%b = load %i16vec4, ptr %bp, align 16
 	%x = add %i16vec4 %a, %b
-	store %i16vec4 %x, %i16vec4* %ret, align 16
+	store %i16vec4 %x, ptr %ret, align 16
 	ret void
 }
 
 %i16vec12 = type <12 x i16>
-define void @add12i16(%i16vec12* nocapture sret(%i16vec12) %ret, %i16vec12* %ap, %i16vec12* %bp) nounwind {
+define void @add12i16(ptr nocapture sret(%i16vec12) %ret, ptr %ap, ptr %bp) nounwind {
 ; X86-LABEL: add12i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -230,15 +230,15 @@ define void @add12i16(%i16vec12* nocapture sret(%i16vec12) %ret, %i16vec12* %ap,
 ; X64-NEXT:    movq %xmm1, 16(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i16vec12, %i16vec12* %ap, align 16
-	%b = load %i16vec12, %i16vec12* %bp, align 16
+	%a = load %i16vec12, ptr %ap, align 16
+	%b = load %i16vec12, ptr %bp, align 16
 	%x = add %i16vec12 %a, %b
-	store %i16vec12 %x, %i16vec12* %ret, align 16
+	store %i16vec12 %x, ptr %ret, align 16
 	ret void
 }
 
 %i16vec18 = type <18 x i16>
-define void @add18i16(%i16vec18* nocapture sret(%i16vec18) %ret, %i16vec18* %ap, %i16vec18* %bp) nounwind {
+define void @add18i16(ptr nocapture sret(%i16vec18) %ret, ptr %ap, ptr %bp) nounwind {
 ; X86-LABEL: add18i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -268,16 +268,16 @@ define void @add18i16(%i16vec18* nocapture sret(%i16vec18) %ret, %i16vec18* %ap,
 ; X64-NEXT:    movd %xmm2, 32(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i16vec18, %i16vec18* %ap, align 16
-	%b = load %i16vec18, %i16vec18* %bp, align 16
+	%a = load %i16vec18, ptr %ap, align 16
+	%b = load %i16vec18, ptr %bp, align 16
 	%x = add %i16vec18 %a, %b
-	store %i16vec18 %x, %i16vec18* %ret, align 16
+	store %i16vec18 %x, ptr %ret, align 16
 	ret void
 }
 
 
 %i8vec3 = type <3 x i8>
-define void @add3i8(%i8vec3* nocapture sret(%i8vec3) %ret, %i8vec3* %ap, %i8vec3* %bp) nounwind {
+define void @add3i8(ptr nocapture sret(%i8vec3) %ret, ptr %ap, ptr %bp) nounwind {
 ; X86-LABEL: add3i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -299,15 +299,15 @@ define void @add3i8(%i8vec3* nocapture sret(%i8vec3) %ret, %i8vec3* %ap, %i8vec3
 ; X64-NEXT:    pextrb $2, %xmm1, 2(%rdi)
 ; X64-NEXT:    pextrw $0, %xmm1, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i8vec3, %i8vec3* %ap, align 16
-	%b = load %i8vec3, %i8vec3* %bp, align 16
+	%a = load %i8vec3, ptr %ap, align 16
+	%b = load %i8vec3, ptr %bp, align 16
 	%x = add %i8vec3 %a, %b
-	store %i8vec3 %x, %i8vec3* %ret, align 16
+	store %i8vec3 %x, ptr %ret, align 16
 	ret void
 }
 
 %i8vec31 = type <31 x i8>
-define void @add31i8(%i8vec31* nocapture sret(%i8vec31) %ret, %i8vec31* %ap, %i8vec31* %bp) nounwind {
+define void @add31i8(ptr nocapture sret(%i8vec31) %ret, ptr %ap, ptr %bp) nounwind {
 ; X86-LABEL: add31i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -338,16 +338,16 @@ define void @add31i8(%i8vec31* nocapture sret(%i8vec31) %ret, %i8vec31* %ap, %i8
 ; X64-NEXT:    pextrb $14, %xmm1, 30(%rdi)
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq
-	%a = load %i8vec31, %i8vec31* %ap, align 16
-	%b = load %i8vec31, %i8vec31* %bp, align 16
+	%a = load %i8vec31, ptr %ap, align 16
+	%b = load %i8vec31, ptr %bp, align 16
 	%x = add %i8vec31 %a, %b
-	store %i8vec31 %x, %i8vec31* %ret, align 16
+	store %i8vec31 %x, ptr %ret, align 16
 	ret void
 }
 
 
 %i8vec3pack = type { <3 x i8>, i8 }
-define void @rot(%i8vec3pack* nocapture sret(%i8vec3pack) %result, %i8vec3pack* %X, %i8vec3pack* %rot) nounwind {
+define void @rot(ptr nocapture sret(%i8vec3pack) %result, ptr %X, ptr %rot) nounwind {
 ; X86-LABEL: rot:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -378,17 +378,14 @@ define void @rot(%i8vec3pack* nocapture sret(%i8vec3pack) %result, %i8vec3pack* 
 ; X64-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
-  %storetmp = bitcast %i8vec3pack* %X to <3 x i8>*
-  store <3 x i8> <i8 -98, i8 -98, i8 -98>, <3 x i8>* %storetmp
-  %storetmp1 = bitcast %i8vec3pack* %rot to <3 x i8>*
-  store <3 x i8> <i8 1, i8 1, i8 1>, <3 x i8>* %storetmp1
-  %tmp = load %i8vec3pack, %i8vec3pack* %X
+  store <3 x i8> <i8 -98, i8 -98, i8 -98>, ptr %X
+  store <3 x i8> <i8 1, i8 1, i8 1>, ptr %rot
+  %tmp = load %i8vec3pack, ptr %X
   %extractVec = extractvalue %i8vec3pack %tmp, 0
-  %tmp2 = load %i8vec3pack, %i8vec3pack* %rot
+  %tmp2 = load %i8vec3pack, ptr %rot
   %extractVec3 = extractvalue %i8vec3pack %tmp2, 0
   %shr = lshr <3 x i8> %extractVec, %extractVec3
-  %storetmp4 = bitcast %i8vec3pack* %result to <3 x i8>*
-  store <3 x i8> %shr, <3 x i8>* %storetmp4
+  store <3 x i8> %shr, ptr %result
   ret void
 }
 

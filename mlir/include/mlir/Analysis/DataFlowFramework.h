@@ -16,7 +16,6 @@
 #ifndef MLIR_ANALYSIS_DATAFLOWFRAMEWORK_H
 #define MLIR_ANALYSIS_DATAFLOWFRAMEWORK_H
 
-#include "mlir/Analysis/DataFlowAnalysis.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/StorageUniquer.h"
 #include "llvm/ADT/SetVector.h"
@@ -24,6 +23,27 @@
 #include <queue>
 
 namespace mlir {
+
+//===----------------------------------------------------------------------===//
+// ChangeResult
+//===----------------------------------------------------------------------===//
+
+/// A result type used to indicate if a change happened. Boolean operations on
+/// ChangeResult behave as though `Change` is truthy.
+enum class ChangeResult {
+  NoChange,
+  Change,
+};
+inline ChangeResult operator|(ChangeResult lhs, ChangeResult rhs) {
+  return lhs == ChangeResult::Change ? lhs : rhs;
+}
+inline ChangeResult &operator|=(ChangeResult &lhs, ChangeResult rhs) {
+  lhs = lhs | rhs;
+  return lhs;
+}
+inline ChangeResult operator&(ChangeResult lhs, ChangeResult rhs) {
+  return lhs == ChangeResult::NoChange ? lhs : rhs;
+}
 
 /// Forward declare the analysis state class.
 class AnalysisState;
@@ -137,6 +157,12 @@ struct ProgramPoint
   using ParentTy::PointerUnion;
   /// Allow implicit conversion from the parent type.
   ProgramPoint(ParentTy point = nullptr) : ParentTy(point) {}
+  /// Allow implicit conversions from operation wrappers.
+  /// TODO: For Windows only. Find a better solution.
+  template <typename OpT, typename = typename std::enable_if_t<
+                              std::is_convertible<OpT, Operation *>::value &&
+                              !std::is_same<OpT, Operation *>::value>>
+  ProgramPoint(OpT op) : ParentTy(op) {}
 
   /// Print the program point.
   void print(raw_ostream &os) const;
@@ -180,7 +206,7 @@ public:
   /// does not exist.
   template <typename StateT, typename PointT>
   const StateT *lookupState(PointT point) const {
-    auto it = analysisStates.find({point, TypeID::get<StateT>()});
+    auto it = analysisStates.find({ProgramPoint(point), TypeID::get<StateT>()});
     if (it == analysisStates.end())
       return nullptr;
     return static_cast<const StateT *>(it->second.get());
@@ -200,7 +226,6 @@ public:
   /// Push a work item onto the worklist.
   void enqueue(WorkItem item) { worklist.push(std::move(item)); }
 
-protected:
   /// Get the state associated with the given program point. If it does not
   /// exist, create an uninitialized state.
   template <typename StateT, typename PointT>

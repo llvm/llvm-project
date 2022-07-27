@@ -10,13 +10,13 @@ declare void @use(i8, i8, i8, i8)
 define void @cmyk(i8 %r, i8 %g, i8 %b) {
 ; CHECK-LABEL: @cmyk(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.smax.i8(i8 [[R:%.*]], i8 [[G:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B:%.*]], i8 [[TMP0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.smax.i8(i8 [[R:%.*]], i8 [[G:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8 @llvm.smax.i8(i8 [[B:%.*]], i8 [[TMP0]])
 ; CHECK-NEXT:    [[K_0:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    [[SUB31:%.*]] = sub i8 [[TMP1]], [[R]]
 ; CHECK-NEXT:    [[SUB35:%.*]] = sub i8 [[TMP1]], [[G]]
 ; CHECK-NEXT:    [[SUB39:%.*]] = sub i8 [[TMP1]], [[B]]
-; CHECK-NEXT:    call void @use(i8 [[SUB31]], i8 [[SUB35]], i8 [[SUB39]], i8 [[K_0]])
+; CHECK-NEXT:    tail call void @use(i8 [[SUB31]], i8 [[SUB35]], i8 [[SUB39]], i8 [[K_0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

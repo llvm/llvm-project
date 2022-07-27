@@ -206,18 +206,6 @@ static cl::opt<bool> VerifyDebugInfoPreserve(
     cl::desc("Start the pipeline with collecting and end it with checking of "
              "debug info preservation."));
 
-static cl::opt<bool> VerifyEachDebugInfoPreserve(
-    "verify-each-debuginfo-preserve",
-    cl::desc("Start each pass with collecting and end it with checking of "
-             "debug info preservation."));
-
-static cl::opt<std::string>
-    VerifyDIPreserveExport("verify-di-preserve-export",
-                   cl::desc("Export debug info preservation failures into "
-                            "specified (JSON) file (should be abs path as we use"
-                            " append mode to insert new JSON objects)"),
-                   cl::value_desc("filename"), cl::init(""));
-
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
                  cl::desc("Print select breakpoints location for testing"));
@@ -363,32 +351,6 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
 
   if (TM)
     TM->adjustPassManager(Builder);
-
-  switch (PGOKindFlag) {
-  case InstrGen:
-    Builder.EnablePGOInstrGen = true;
-    Builder.PGOInstrGen = ProfileFile;
-    break;
-  case InstrUse:
-    Builder.PGOInstrUse = ProfileFile;
-    break;
-  case SampleUse:
-    Builder.PGOSampleUse = ProfileFile;
-    break;
-  default:
-    break;
-  }
-
-  switch (CSPGOKindFlag) {
-  case CSInstrGen:
-    Builder.EnablePGOCSInstrGen = true;
-    break;
-  case CSInstrUse:
-    Builder.EnablePGOCSInstrUse = true;
-    break;
-  default:
-    break;
-  }
 
   Builder.populateFunctionPassManager(FPM);
   Builder.populateModulePassManager(MPM);
@@ -557,8 +519,6 @@ int main(int argc, char **argv) {
   initializeIndirectBrExpandPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
-  initializeEntryExitInstrumenterPass(Registry);
-  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeExpandVectorPredicationPass(Registry);
@@ -823,7 +783,8 @@ int main(int argc, char **argv) {
                            ThinLinkOut.get(), RemarksFile.get(), Pipeline,
                            Passes, PluginList, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
-                           EmitModuleHash, EnableDebugify)
+                           EmitModuleHash, EnableDebugify,
+                           VerifyDebugInfoPreserve)
                ? 0
                : 1;
   }

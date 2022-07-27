@@ -316,8 +316,7 @@ protected:
           llvmType.cast<LLVM::LLVMFunctionType>().getNumParams());
       for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
         auto mapping = result.getInputMapping(i);
-        assert(mapping.hasValue() &&
-               "unexpected deletion of function argument");
+        assert(mapping && "unexpected deletion of function argument");
         for (size_t j = 0; j < mapping->size; ++j)
           newArgAttrs[mapping->inputNo + j] = argAttrDicts[i];
       }
@@ -374,6 +373,10 @@ struct FuncOpConversion : public FuncOpConversionBase {
 
     if (funcOp->getAttrOfType<UnitAttr>(
             LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
+      if (newFuncOp.isVarArg())
+        return funcOp->emitError("C interface for variadic functions is not "
+                                 "supported yet.");
+
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, funcOp.getLoc(), *getTypeConverter(),
                              funcOp, newFuncOp);

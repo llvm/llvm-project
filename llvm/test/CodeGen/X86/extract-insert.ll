@@ -15,7 +15,7 @@ define i32 @extractelt_undef_insertelt(i32 %x, i32 %y) {
 define i8 @extractelt_bitcast(i32 %x) nounwind {
 ; X86-LABEL: extractelt_bitcast:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractelt_bitcast:
@@ -28,7 +28,7 @@ define i8 @extractelt_bitcast(i32 %x) nounwind {
   ret i8 %ext
 }
 
-define i8 @extractelt_bitcast_extra_use(i32 %x, <4 x i8>* %p) nounwind {
+define i8 @extractelt_bitcast_extra_use(i32 %x, ptr %p) nounwind {
 ; X86-LABEL: extractelt_bitcast_extra_use:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -44,7 +44,7 @@ define i8 @extractelt_bitcast_extra_use(i32 %x, <4 x i8>* %p) nounwind {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %bc = bitcast i32 %x to <4 x i8>
-  store <4 x i8> %bc, <4 x i8>* %p
+  store <4 x i8> %bc, ptr %p
   %ext = extractelement <4 x i8> %bc, i32 0
   ret i8 %ext
 }
@@ -87,7 +87,7 @@ define i16 @trunc_i64_to_i16_le(i64 %x) {
 define i8 @trunc_i32_to_i8_le(i32 %x) {
 ; X86-LABEL: trunc_i32_to_i8_le:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: trunc_i32_to_i8_le:

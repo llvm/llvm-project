@@ -49,10 +49,10 @@ void test02() {
 // CHECK-SAME:    [[#VBITS]]
 // CHECK-SAME:    EES_(<vscale x 4 x i32> noundef %x.coerce, <vscale x 4 x i32> noundef %y.coerce)
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   [[X:%.*]] = call <[[#div(VBITS, 32)]] x i32> @llvm.experimental.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
-// CHECK-NEXT:   [[Y:%.*]] = call <[[#div(VBITS, 32)]] x i32> @llvm.experimental.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE1:%.*]], i64 0)
+// CHECK-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS, 32)]] x i32> @llvm.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:   [[Y:%.*]] = tail call <[[#div(VBITS, 32)]] x i32> @llvm.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE1:%.*]], i64 0)
 // CHECK-NEXT:   [[ADD:%.*]] = add <[[#div(VBITS, 32)]] x i32> [[Y]], [[X]]
-// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v[[#div(VBITS, 32)]]i32(<vscale x 4 x i32> undef, <[[#div(VBITS, 32)]] x i32> [[ADD]], i64 0)
+// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v[[#div(VBITS, 32)]]i32(<vscale x 4 x i32> undef, <[[#div(VBITS, 32)]] x i32> [[ADD]], i64 0)
 // CHECK-NEXT:   ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 typedef svint32_t vec __attribute__((arm_sve_vector_bits(N)));
 auto f(vec x, vec y) { return x + y; } // Returns a vec.
@@ -68,11 +68,11 @@ typedef svint16_t vec2 __attribute__((arm_sve_vector_bits(N)));
 // CHECK-SAME:    [[#VBITS]]
 // CHECK-SAME:    EE(<vscale x 8 x i16> noundef %x.coerce)
 // CHECK-NEXT: entry:
-// CHECK128-NEXT:   [[X:%.*]] = call <8 x i16> @llvm.experimental.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
+// CHECK128-NEXT:   [[X:%.*]] = tail call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
 // CHECK128-NEXT:   call void @_Z1fDv8_s(<8 x i16> noundef [[X]]) [[ATTR5:#.*]]
 // CHECK128-NEXT:   ret void
 // CHECKWIDE-NEXT:   [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS, 16)]] x i16>, align 16
-// CHECKWIDE-NEXT:   [[X:%.*]] = call <[[#div(VBITS, 16)]] x i16> @llvm.experimental.vector.extract.v[[#div(VBITS, 16)]]i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
+// CHECKWIDE-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS, 16)]] x i16> @llvm.vector.extract.v[[#div(VBITS, 16)]]i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
 // CHECKWIDE-NEXT:   store <[[#div(VBITS, 16)]] x i16> [[X]], <[[#div(VBITS, 16)]] x i16>* [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(<[[#div(VBITS, 16)]] x i16>* noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
 // CHECKWIDE-NEXT:   ret void

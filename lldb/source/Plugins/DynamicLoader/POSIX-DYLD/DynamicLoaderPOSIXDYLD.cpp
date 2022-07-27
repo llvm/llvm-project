@@ -433,27 +433,31 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
     for (; I != E; ++I) {
       ModuleSP module_sp =
           LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
-      if (module_sp.get()) {
-        if (module_sp->GetObjectFile()->GetBaseAddress().GetLoadAddress(
-                &m_process->GetTarget()) == m_interpreter_base &&
-            module_sp != m_interpreter_module.lock()) {
-          if (m_interpreter_module.lock() == nullptr) {
-            m_interpreter_module = module_sp;
-          } else {
-            // If this is a duplicate instance of ld.so, unload it.  We may end
-            // up with it if we load it via a different path than before
-            // (symlink vs real path).
-            // TODO: remove this once we either fix library matching or avoid
-            // loading the interpreter when setting the rendezvous breakpoint.
-            UnloadSections(module_sp);
-            loaded_modules.Remove(module_sp);
-            continue;
-          }
-        }
+      if (!module_sp.get())
+        continue;
 
-        loaded_modules.AppendIfNeeded(module_sp);
-        new_modules.Append(module_sp);
+      if (module_sp->GetObjectFile()->GetBaseAddress().GetLoadAddress(
+              &m_process->GetTarget()) == m_interpreter_base) {
+        ModuleSP interpreter_sp = m_interpreter_module.lock();
+        if (m_interpreter_module.lock() == nullptr) {
+          m_interpreter_module = module_sp;
+        } else if (module_sp == interpreter_sp) {
+          // Module already loaded.
+          continue;
+        } else {
+          // If this is a duplicate instance of ld.so, unload it.  We may end
+          // up with it if we load it via a different path than before
+          // (symlink vs real path).
+          // TODO: remove this once we either fix library matching or avoid
+          // loading the interpreter when setting the rendezvous breakpoint.
+          UnloadSections(module_sp);
+          loaded_modules.Remove(module_sp);
+          continue;
+        }
       }
+
+      loaded_modules.AppendIfNeeded(module_sp);
+      new_modules.Append(module_sp);
     }
     m_process->GetTarget().ModulesDidLoad(new_modules);
   }
@@ -488,7 +492,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   if (sym == nullptr || !sym->IsTrampoline())
     return thread_plan_sp;
 
-  ConstString sym_name = sym->GetName();
+  ConstString sym_name = sym->GetMangled().GetName(Mangled::ePreferMangled);
   if (!sym_name)
     return thread_plan_sp;
 

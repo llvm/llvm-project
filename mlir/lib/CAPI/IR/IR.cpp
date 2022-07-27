@@ -9,6 +9,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
@@ -75,6 +76,10 @@ bool mlirContextIsRegisteredOperation(MlirContext context, MlirStringRef name) {
 
 void mlirContextEnableMultithreading(MlirContext context, bool enable) {
   return unwrap(context)->enableMultithreading(enable);
+}
+
+void mlirContextLoadAllAvailableDialects(MlirContext context) {
+  unwrap(context)->loadAllAvailableDialects();
 }
 
 //===----------------------------------------------------------------------===//

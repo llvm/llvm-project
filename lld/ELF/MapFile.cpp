@@ -55,7 +55,7 @@ static void writeHeader(raw_ostream &os, uint64_t vma, uint64_t lma,
 // Returns a list of all symbols that we want to print out.
 static std::vector<Defined *> getSymbols() {
   std::vector<Defined *> v;
-  for (ELFFileBase *file : objectFiles)
+  for (ELFFileBase *file : ctx->objectFiles)
     for (Symbol *b : file->getSymbols())
       if (auto *dr = dyn_cast<Defined>(b))
         if (!dr->isSection() && dr->section && dr->section->isLive() &&
@@ -92,7 +92,7 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
 static DenseMap<Symbol *, std::string>
 getSymbolStrings(ArrayRef<Defined *> syms) {
   auto strs = std::make_unique<std::string[]>(syms.size());
-  parallelForEachN(0, syms.size(), [&](size_t i) {
+  parallelFor(0, syms.size(), [&](size_t i) {
     raw_string_ostream os(strs[i]);
     OutputSection *osec = syms[i]->getOutputSection();
     uint64_t vma = syms[i]->getVA();
@@ -224,7 +224,7 @@ static void writeMapFile(raw_fd_ostream &os) {
 static void writeCref(raw_fd_ostream &os) {
   // Collect symbols and files.
   MapVector<Symbol *, SetVector<InputFile *>> map;
-  for (ELFFileBase *file : objectFiles) {
+  for (ELFFileBase *file : ctx->objectFiles) {
     for (Symbol *sym : file->getSymbols()) {
       if (isa<SharedSymbol>(sym))
         map[sym].insert(file);

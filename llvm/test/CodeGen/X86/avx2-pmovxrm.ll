@@ -4,7 +4,7 @@
 ; RUN: llc < %s -disable-peephole -mtriple=i686-apple-darwin -mattr=+avx512vl,avx512bw | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=+avx512vl,avx512bw | FileCheck %s --check-prefix=X64
 
-define <16 x i16> @test_llvm_x86_avx2_pmovsxbw(<16 x i8>* %a) {
+define <16 x i16> @test_llvm_x86_avx2_pmovsxbw(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxbw:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -15,12 +15,12 @@ define <16 x i16> @test_llvm_x86_avx2_pmovsxbw(<16 x i8>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxbw (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a, align 1
+  %1 = load <16 x i8>, ptr %a, align 1
   %2 = sext <16 x i8> %1 to <16 x i16>
   ret <16 x i16> %2
 }
 
-define <8 x i32> @test_llvm_x86_avx2_pmovsxbd(<16 x i8>* %a) {
+define <8 x i32> @test_llvm_x86_avx2_pmovsxbd(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxbd:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -31,13 +31,13 @@ define <8 x i32> @test_llvm_x86_avx2_pmovsxbd(<16 x i8>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxbd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a, align 1
+  %1 = load <16 x i8>, ptr %a, align 1
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %3 = sext <8 x i8> %2 to <8 x i32>
   ret <8 x i32> %3
 }
 
-define <4 x i64> @test_llvm_x86_avx2_pmovsxbq(<16 x i8>* %a) {
+define <4 x i64> @test_llvm_x86_avx2_pmovsxbq(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxbq:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -48,13 +48,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovsxbq(<16 x i8>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxbq (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a, align 1
+  %1 = load <16 x i8>, ptr %a, align 1
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = sext <4 x i8> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-define <8 x i32> @test_llvm_x86_avx2_pmovsxwd(<8 x i16>* %a) {
+define <8 x i32> @test_llvm_x86_avx2_pmovsxwd(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxwd:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -65,12 +65,12 @@ define <8 x i32> @test_llvm_x86_avx2_pmovsxwd(<8 x i16>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxwd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a, align 1
+  %1 = load <8 x i16>, ptr %a, align 1
   %2 = sext <8 x i16> %1 to <8 x i32>
   ret <8 x i32> %2
 }
 
-define <4 x i64> @test_llvm_x86_avx2_pmovsxwq(<8 x i16>* %a) {
+define <4 x i64> @test_llvm_x86_avx2_pmovsxwq(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxwq:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -81,13 +81,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovsxwq(<8 x i16>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxwq (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a, align 1
+  %1 = load <8 x i16>, ptr %a, align 1
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = sext <4 x i16> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-define <4 x i64> @test_llvm_x86_avx2_pmovsxdq(<4 x i32>* %a) {
+define <4 x i64> @test_llvm_x86_avx2_pmovsxdq(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovsxdq:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -98,12 +98,12 @@ define <4 x i64> @test_llvm_x86_avx2_pmovsxdq(<4 x i32>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovsxdq (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load <4 x i32>, <4 x i32>* %a, align 1
+  %1 = load <4 x i32>, ptr %a, align 1
   %2 = sext <4 x i32> %1 to <4 x i64>
   ret <4 x i64> %2
 }
 
-define <16 x i16> @test_llvm_x86_avx2_pmovzxbw(<16 x i8>* %a) {
+define <16 x i16> @test_llvm_x86_avx2_pmovzxbw(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxbw:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -114,12 +114,12 @@ define <16 x i16> @test_llvm_x86_avx2_pmovzxbw(<16 x i8>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; X64-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a, align 1
+  %1 = load <16 x i8>, ptr %a, align 1
   %2 = zext <16 x i8> %1 to <16 x i16>
   ret <16 x i16> %2
 }
 
-define <8 x i32> @test_llvm_x86_avx2_pmovzxbd(<16 x i8>* %a) {
+define <8 x i32> @test_llvm_x86_avx2_pmovzxbd(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxbd:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -130,13 +130,13 @@ define <8 x i32> @test_llvm_x86_avx2_pmovzxbd(<16 x i8>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; X64-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a, align 1
+  %1 = load <16 x i8>, ptr %a, align 1
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %3 = zext <8 x i8> %2 to <8 x i32>
   ret <8 x i32> %3
 }
 
-define <4 x i64> @test_llvm_x86_avx2_pmovzxbq(<16 x i8>* %a) {
+define <4 x i64> @test_llvm_x86_avx2_pmovzxbq(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxbq:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -147,13 +147,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxbq(<16 x i8>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxbq {{.*#+}} ymm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a, align 1
+  %1 = load <16 x i8>, ptr %a, align 1
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = zext <4 x i8> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-define <8 x i32> @test_llvm_x86_avx2_pmovzxwd(<8 x i16>* %a) {
+define <8 x i32> @test_llvm_x86_avx2_pmovzxwd(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxwd:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -164,12 +164,12 @@ define <8 x i32> @test_llvm_x86_avx2_pmovzxwd(<8 x i16>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; X64-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a, align 1
+  %1 = load <8 x i16>, ptr %a, align 1
   %2 = zext <8 x i16> %1 to <8 x i32>
   ret <8 x i32> %2
 }
 
-define <4 x i64> @test_llvm_x86_avx2_pmovzxwq(<8 x i16>* %a) {
+define <4 x i64> @test_llvm_x86_avx2_pmovzxwq(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxwq:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -180,13 +180,13 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxwq(<8 x i16>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxwq {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X64-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a, align 1
+  %1 = load <8 x i16>, ptr %a, align 1
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = zext <4 x i16> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-define <4 x i64> @test_llvm_x86_avx2_pmovzxdq(<4 x i32>* %a) {
+define <4 x i64> @test_llvm_x86_avx2_pmovzxdq(ptr %a) {
 ; X32-LABEL: test_llvm_x86_avx2_pmovzxdq:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -197,7 +197,7 @@ define <4 x i64> @test_llvm_x86_avx2_pmovzxdq(<4 x i32>* %a) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vpmovzxdq {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X64-NEXT:    retq
-  %1 = load <4 x i32>, <4 x i32>* %a, align 1
+  %1 = load <4 x i32>, ptr %a, align 1
   %2 = zext <4 x i32> %1 to <4 x i64>
   ret <4 x i64> %2
 }

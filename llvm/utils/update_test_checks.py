@@ -22,11 +22,6 @@ Workflow:
 7. Re-run this script on affected regression tests.
 8. Check the diffs to ensure the script has done something reasonable.
 9. Submit a patch including the regression test diffs for review.
-
-A common pattern is to have the script insert complete checking of every
-instruction. Then, edit it down to only check the relevant instructions.
-The script is designed to make adding checks to a test case fast, it is *not*
-designed to be authoratitive about what constitutes a good test!
 """
 
 from __future__ import print_function
@@ -125,6 +120,7 @@ def main():
                                            verbose=ti.args.verbose)
       builder.process_run_line(common.OPT_FUNCTION_RE, common.scrub_body,
               raw_tool_output, prefixes, False)
+      builder.processed_prefixes(prefixes)
 
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False

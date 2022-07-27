@@ -53,7 +53,7 @@ void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS) {
 }
 
 void ClangTidyProfiling::storeProfileData() {
-  assert(Storage.hasValue() && "We should have a filename.");
+  assert(Storage && "We should have a filename.");
 
   llvm::SmallString<256> OutputDirectory(Storage->StoreFilename);
   llvm::sys::path::remove_filename(OutputDirectory);
@@ -80,7 +80,7 @@ ClangTidyProfiling::ClangTidyProfiling(llvm::Optional<StorageParams> Storage)
 ClangTidyProfiling::~ClangTidyProfiling() {
   TG.emplace("clang-tidy", "clang-tidy checks profiling", Records);
 
-  if (!Storage.hasValue())
+  if (!Storage)
     printUserFriendlyTable(llvm::errs());
   else
     storeProfileData();

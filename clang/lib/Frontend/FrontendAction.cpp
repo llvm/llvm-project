@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/ParseAST.h"
+#include "clang/Sema/HLSLExternalSemaSource.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -413,7 +414,7 @@ static std::error_code collectModuleHeaderIncludes(
 
     // Sort header paths and make the header inclusion order deterministic
     // across different OSs and filesystems.
-    llvm::sort(Headers.begin(), Headers.end(), llvm::less_first());
+    llvm::sort(Headers, llvm::less_first());
     for (auto &H : Headers) {
       // Include this header as part of the umbrella directory.
       Module->addTopHeader(H.second);
@@ -580,6 +581,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   auto FailureCleanup = llvm::make_scope_exit([&]() {
     if (HasBegunSourceFile)
       CI.getDiagnosticClient().EndSourceFile();
+    CI.setASTConsumer(nullptr);
     CI.clearOutputFiles(/*EraseFiles=*/true);
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_None);
     setCurrentInput(FrontendInputFile());
@@ -1014,6 +1016,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.getASTContext().setExternalSource(Override);
   }
 
+  // Setup HLSL External Sema Source
+  if (CI.getLangOpts().HLSL && CI.hasASTContext()) {
+    IntrusiveRefCntPtr<ExternalASTSource> HLSLSema(
+        new HLSLExternalSemaSource());
+    CI.getASTContext().setExternalSource(HLSLSema);
+  }
+
   FailureCleanup.release();
   return true;
 }
@@ -1196,4 +1205,3 @@ bool WrapperFrontendAction::hasCodeCompletionSupport() const {
 WrapperFrontendAction::WrapperFrontendAction(
     std::unique_ptr<FrontendAction> WrappedAction)
   : WrappedAction(std::move(WrappedAction)) {}
-

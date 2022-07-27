@@ -235,6 +235,19 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_riscv_vector_builtin_sema_gen",
+    tbl_outs = [(
+        "-gen-riscv-vector-builtin-sema",
+        "include/clang/Basic/riscv_vector_builtin_sema.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/riscv_vector.td",
+    td_srcs = [
+        "include/clang/Basic/riscv_vector.td",
+    ],
+)
+
+gentbl(
     name = "basic_arm_cde_gen",
     tbl_outs = [(
         "-gen-arm-cde-builtin-def",
@@ -866,10 +879,12 @@ cc_library(
         ":basic_arm_cde_sema_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
+        ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
         ":lex",
         ":libsema_openclbuiltins_inc_gen",
         ":sema_attr_gen",
+        ":support",
         ":type_nodes_gen",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
@@ -1455,7 +1470,14 @@ gentbl(
 # We generate the set of builtin headers under a special subdirectory in the
 # 'bin' section of the bazel output so that they can be used as data
 # dependencies. It requires listing explicitly all the generated inputs here.
-builtin_headers = glob(["lib/Headers/**/*.h"]) + [
+builtin_headers = glob(
+    ["lib/Headers/**/*.h"],
+    exclude = [
+        # FIXME: They are not handled in CMake side.
+        "lib/Headers/openmp_wrappers/time.h",
+        "lib/Headers/ppc_wrappers/nmmintrin.h",
+    ],
+) + [
     "lib/Headers/arm_cde.h",
     "lib/Headers/arm_fp16.h",
     "lib/Headers/arm_mve.h",
@@ -1931,7 +1953,7 @@ template_rule(
     src = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     out = "clang-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "clang"
+        "@TOOL_NAME@": "clang",
     },
 )
 

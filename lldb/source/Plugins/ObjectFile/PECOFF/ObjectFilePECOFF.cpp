@@ -16,6 +16,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
@@ -90,6 +91,11 @@ public:
     return (llvm::Triple::EnvironmentType)
         m_collection_sp->GetPropertyAtIndexAsEnumeration(
             nullptr, ePropertyABI, llvm::Triple::UnknownEnvironment);
+  }
+
+  OptionValueDictionary *ModuleABIMap() const {
+    return m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
+        nullptr, ePropertyModuleABIMap);
   }
 };
 
@@ -283,7 +289,41 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     return llvm::Triple::MSVC;
   }();
 
-  llvm::Triple::EnvironmentType env = GetGlobalPluginProperties().ABI();
+  // Check for a module-specific override.
+  OptionValueSP module_env_option;
+  const auto *map = GetGlobalPluginProperties().ModuleABIMap();
+  if (map->GetNumValues() > 0) {
+    // Step 1: Try with the exact file name.
+    auto name = file.GetLastPathComponent();
+    module_env_option = map->GetValueForKey(name);
+    if (!module_env_option) {
+      // Step 2: Try with the file name in lowercase.
+      auto name_lower = name.GetStringRef().lower();
+      module_env_option =
+          map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+    }
+    if (!module_env_option) {
+      // Step 3: Try with the file name with ".debug" suffix stripped.
+      auto name_stripped = name.GetStringRef();
+      if (name_stripped.consume_back_insensitive(".debug")) {
+        module_env_option = map->GetValueForKey(ConstString(name_stripped));
+        if (!module_env_option) {
+          // Step 4: Try with the file name in lowercase with ".debug" suffix
+          // stripped.
+          auto name_lower = name_stripped.lower();
+          module_env_option =
+              map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+        }
+      }
+    }
+  }
+  llvm::Triple::EnvironmentType env;
+  if (module_env_option)
+    env =
+        (llvm::Triple::EnvironmentType)module_env_option->GetEnumerationValue();
+  else
+    env = GetGlobalPluginProperties().ABI();
+
   if (env == llvm::Triple::UnknownEnvironment)
     env = default_env;
 
@@ -295,9 +335,6 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     break;
   case MachineX86:
     spec.SetTriple("i386-pc-windows");
-    spec.GetTriple().setEnvironment(env);
-    specs.Append(module_spec);
-    spec.SetTriple("i686-pc-windows");
     spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
     break;
@@ -377,22 +414,18 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    lldb::offset_t file_offset,
                                    lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_dos_header(), m_coff_header(), m_sect_headers(),
-      m_entry_point_address(), m_deps_filespec() {
-  ::memset(&m_dos_header, 0, sizeof(m_dos_header));
-  ::memset(&m_coff_header, 0, sizeof(m_coff_header));
-}
+      m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
+      m_image_base(LLDB_INVALID_ADDRESS), m_entry_point_address(),
+      m_deps_filespec() {}
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    WritableDataBufferSP header_data_sp,
                                    const lldb::ProcessSP &process_sp,
                                    addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_dos_header(), m_coff_header(), m_sect_headers(),
-      m_entry_point_address(), m_deps_filespec() {
-  ::memset(&m_dos_header, 0, sizeof(m_dos_header));
-  ::memset(&m_coff_header, 0, sizeof(m_coff_header));
-}
+      m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
+      m_image_base(LLDB_INVALID_ADDRESS), m_entry_point_address(),
+      m_deps_filespec() {}
 
 ObjectFilePECOFF::~ObjectFilePECOFF() = default;
 

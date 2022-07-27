@@ -124,6 +124,25 @@ struct type_caster<MlirContext> {
   }
 };
 
+/// Casts object <-> MlirDialectRegistry.
+template <>
+struct type_caster<MlirDialectRegistry> {
+  PYBIND11_TYPE_CASTER(MlirDialectRegistry, _("MlirDialectRegistry"));
+  bool load(handle src, bool) {
+    py::object capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToDialectRegistry(capsule.ptr());
+    return !mlirDialectRegistryIsNull(value);
+  }
+  static handle cast(MlirDialectRegistry v, return_value_policy, handle) {
+    py::object capsule = py::reinterpret_steal<py::object>(
+        mlirPythonDialectRegistryToCapsule(v));
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+        .attr("DialectRegistry")
+        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+        .release();
+  }
+};
+
 /// Casts object <-> MlirLocation.
 template <>
 struct type_caster<MlirLocation> {
@@ -252,7 +271,7 @@ public:
   }
 
   template <typename Func, typename... Extra>
-  pure_subclass &def(const char *name, Func &&f, const Extra &... extra) {
+  pure_subclass &def(const char *name, Func &&f, const Extra &...extra) {
     py::cpp_function cf(
         std::forward<Func>(f), py::name(name), py::is_method(thisClass),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
@@ -262,7 +281,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_property_readonly(const char *name, Func &&f,
-                                       const Extra &... extra) {
+                                       const Extra &...extra) {
     py::cpp_function cf(
         std::forward<Func>(f), py::name(name), py::is_method(thisClass),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
@@ -274,7 +293,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_staticmethod(const char *name, Func &&f,
-                                  const Extra &... extra) {
+                                  const Extra &...extra) {
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_staticmethod(...) called with a non-static member "
                   "function pointer");
@@ -287,7 +306,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_classmethod(const char *name, Func &&f,
-                                 const Extra &... extra) {
+                                 const Extra &...extra) {
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_classmethod(...) called with a non-static member "
                   "function pointer");

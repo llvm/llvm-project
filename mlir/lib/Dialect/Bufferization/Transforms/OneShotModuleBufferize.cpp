@@ -82,7 +82,7 @@ getFuncAnalysisState(const AnalysisState &state) {
   Optional<const FuncAnalysisState *> maybeState =
       state.getDialectState<FuncAnalysisState>(
           func::FuncDialect::getDialectNamespace());
-  assert(maybeState.hasValue() && "FuncAnalysisState does not exist");
+  assert(maybeState && "FuncAnalysisState does not exist");
   return **maybeState;
 }
 
@@ -325,24 +325,6 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   return success();
 }
 
-/// Set the attribute that triggers inplace bufferization on a FuncOp argument
-/// `bbArg`.
-static void setInPlaceFuncArgument(BlockArgument bbArg, bool inPlace) {
-  auto funcOp = cast<func::FuncOp>(bbArg.getOwner()->getParentOp());
-  funcOp.setArgAttr(bbArg.getArgNumber(),
-                    BufferizableOpInterface::kInplaceableAttrName,
-                    BoolAttr::get(bbArg.getContext(), inPlace));
-}
-
-/// Annotate the IR with the result of the analysis. For testing/debugging only.
-static void annotateOpsWithBufferizationMarkers(func::FuncOp funcOp,
-                                                const AnalysisState &state) {
-  auto bufferizableOp = cast<BufferizableOpInterface>(funcOp.getOperation());
-  for (BlockArgument bbArg : funcOp.getArguments())
-    if (bbArg.getType().isa<TensorType>())
-      setInPlaceFuncArgument(bbArg, bufferizableOp.isWritable(bbArg, state));
-}
-
 /// Fold return values that are memref casts and update function return types.
 ///
 /// During FuncOp bufferization, the exact type of the returned memrefs (if any)
@@ -359,8 +341,8 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 
   for (OpOperand &operand : returnOp->getOpOperands()) {
     if (auto castOp = operand.get().getDefiningOp<memref::CastOp>()) {
-      operand.set(castOp.source());
-      resultTypes.push_back(castOp.source().getType());
+      operand.set(castOp.getSource());
+      resultTypes.push_back(castOp.getSource().getType());
     } else {
       resultTypes.push_back(operand.get().getType());
     }
@@ -413,10 +395,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
     // Mark op as fully analyzed.
     funcState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
-
-    // Add annotations to function arguments.
-    if (options.testAnalysisOnly)
-      annotateOpsWithBufferizationMarkers(funcOp, state);
   }
 
   return success();

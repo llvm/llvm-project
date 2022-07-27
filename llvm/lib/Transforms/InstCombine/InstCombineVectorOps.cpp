@@ -228,8 +228,9 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
   // truncate a subset of scalar bits of an insert op.
   if (NumSrcElts.getKnownMinValue() < NumElts.getKnownMinValue()) {
     Value *Scalar;
+    Value *Vec;
     uint64_t InsIndexC;
-    if (!match(X, m_InsertElt(m_Value(), m_Value(Scalar),
+    if (!match(X, m_InsertElt(m_Value(Vec), m_Value(Scalar),
                               m_ConstantInt(InsIndexC))))
       return nullptr;
 
@@ -239,8 +240,19 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     // of elements 4-7 of the bitcasted vector.
     unsigned NarrowingRatio =
         NumElts.getKnownMinValue() / NumSrcElts.getKnownMinValue();
-    if (ExtIndexC / NarrowingRatio != InsIndexC)
+
+    if (ExtIndexC / NarrowingRatio != InsIndexC) {
+      // Remove insertelement, if we don't use the inserted element.
+      // extractelement (bitcast (insertelement (Vec, b)), a) ->
+      // extractelement (bitcast (Vec), a)
+      // FIXME: this should be removed to SimplifyDemandedVectorElts,
+      // once scale vectors are supported.
+      if (X->hasOneUse() && Ext.getVectorOperand()->hasOneUse()) {
+        Value *NewBC = Builder.CreateBitCast(Vec, Ext.getVectorOperandType());
+        return ExtractElementInst::Create(NewBC, Ext.getIndexOperand());
+      }
       return nullptr;
+    }
 
     // We are extracting part of the original scalar. How that scalar is
     // inserted into the vector depends on the endian-ness. Example:
@@ -878,7 +890,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // of an aggregate. If we did, that means the CurrIVI will later be
     // overwritten with the already-recorded value. But if not, let's record it!
     Optional<Instruction *> &Elt = AggElts[Indices.front()];
-    Elt = Elt.getValueOr(InsertedValue);
+    Elt = Elt.value_or(InsertedValue);
 
     // FIXME: should we handle chain-terminating undef base operand?
   }

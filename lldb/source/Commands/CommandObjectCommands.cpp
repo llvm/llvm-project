@@ -13,6 +13,7 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
@@ -824,6 +825,8 @@ a number follows 'f':"
         R"(
 
     (lldb) command regex f s/^$/finish/ 's/([0-9]+)/frame select %1/')");
+    CommandArgumentData thread_arg{eArgTypeSEDStylePair, eArgRepeatOptional};
+    m_arguments.push_back({thread_arg});
   }
 
   ~CommandObjectCommandsAddRegex() override = default;
@@ -1352,29 +1355,6 @@ protected:
   CommandOptions m_options;
 };
 
-// CommandObjectCommandsScriptAdd
-static constexpr OptionEnumValueElement g_script_synchro_type[] = {
-    {
-        eScriptedCommandSynchronicitySynchronous,
-        "synchronous",
-        "Run synchronous",
-    },
-    {
-        eScriptedCommandSynchronicityAsynchronous,
-        "asynchronous",
-        "Run asynchronous",
-    },
-    {
-        eScriptedCommandSynchronicityCurrentValue,
-        "current",
-        "Do not alter current setting",
-    },
-};
-
-static constexpr OptionEnumValues ScriptSynchroType() {
-  return OptionEnumValues(g_script_synchro_type);
-}
-
 #define LLDB_OPTIONS_script_add
 #include "CommandOptions.inc"
 
@@ -1664,11 +1644,6 @@ public:
   ~CommandObjectCommandsScriptList() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 0) {
-      result.AppendError("'command script list' doesn't take any arguments");
-      return false;
-    }
-
     m_interpreter.GetHelp(result, CommandInterpreter::eCommandTypesUserDef);
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1689,11 +1664,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 0) {
-      result.AppendError("'command script clear' doesn't take any arguments");
-      return false;
-    }
-
     m_interpreter.RemoveAllUser();
 
     result.SetStatus(eReturnStatusSuccessFinishResult);

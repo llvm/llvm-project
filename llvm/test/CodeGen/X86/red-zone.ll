@@ -41,7 +41,7 @@ declare void @llvm.x86.flags.write.u64(i64)
 define x86_fp80 @norz_flags_read(float %f) nounwind {
 entry:
   %flags = call i64 @llvm.x86.flags.read.u64()
-  store i64 %flags, i64* @flags_gv
+  store i64 %flags, ptr @flags_gv
   %0 = fpext float %f to x86_fp80
   ret x86_fp80 %0
 }

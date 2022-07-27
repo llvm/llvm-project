@@ -62,7 +62,6 @@ run(testInvalidModule)
 
 
 def lowerToLLVM(module):
-  import mlir.conversions
   pm = PassManager.parse(
       "convert-complex-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts")
   pm.run(module)
@@ -489,6 +488,11 @@ def testSharedLibLoad():
       shared_libs = [
           "../../../../bin/mlir_runner_utils.dll",
           "../../../../bin/mlir_c_runner_utils.dll"
+      ]
+    elif sys.platform == 'darwin':
+      shared_libs = [
+          "../../../../lib/libmlir_runner_utils.dylib",
+          "../../../../lib/libmlir_c_runner_utils.dylib"
       ]
     else:
       shared_libs = [

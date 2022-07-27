@@ -401,10 +401,13 @@ void PdbAstBuilder::BuildParentMap() {
       }
     };
 
-    CVType field_list = m_index.tpi().getType(tag.asTag().FieldList);
+    CVType field_list_cvt = m_index.tpi().getType(tag.asTag().FieldList);
     ProcessTpiStream process(m_index, *ti, tag, m_parent_types);
-    llvm::Error error = visitMemberRecordStream(field_list.data(), process);
-    if (error)
+    FieldListRecord field_list;
+    if (llvm::Error error = TypeDeserializer::deserializeAs<FieldListRecord>(
+            field_list_cvt, field_list))
+      llvm::consumeError(std::move(error));
+    if (llvm::Error error = visitMemberRecordStream(field_list.Data, process))
       llvm::consumeError(std::move(error));
   }
 
@@ -560,7 +563,7 @@ clang::DeclContext *PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
   auto option = GetOrCreateDeclForUid(uid);
   if (!option)
     return nullptr;
-  clang::Decl *decl = FromCompilerDecl(option.getValue());
+  clang::Decl *decl = FromCompilerDecl(*option);
   if (!decl)
     return nullptr;
 
@@ -757,22 +760,26 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
   CVType field_list_cvt = m_index.tpi().getType(field_list_ti);
   if (field_list_cvt.kind() != LF_FIELDLIST)
     return false;
+  FieldListRecord field_list;
+  if (llvm::Error error = TypeDeserializer::deserializeAs<FieldListRecord>(
+          field_list_cvt, field_list))
+    llvm::consumeError(std::move(error));
 
   // Visit all members of this class, then perform any finalization necessary
   // to complete the class.
   CompilerType ct = ToCompilerType(tag_qt);
   UdtRecordCompleter completer(best_ti, ct, tag, *this, m_index,
                                m_cxx_record_map);
-  auto error =
-      llvm::codeview::visitMemberRecordStream(field_list_cvt.data(), completer);
+  llvm::Error error =
+      llvm::codeview::visitMemberRecordStream(field_list.Data, completer);
   completer.complete();
 
   status.resolved = true;
-  if (!error)
-    return true;
-
-  llvm::consumeError(std::move(error));
-  return false;
+  if (error) {
+    llvm::consumeError(std::move(error));
+    return false;
+  }
+  return true;
 }
 
 clang::QualType PdbAstBuilder::CreateSimpleType(TypeIndex ti) {
@@ -809,6 +816,40 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
     clang::QualType class_type = GetOrCreateType(mpi.ContainingType);
     if (class_type.isNull())
       return {};
+    if (clang::TagDecl *tag = class_type->getAsTagDecl()) {
+      clang::MSInheritanceAttr::Spelling spelling;
+      switch (mpi.Representation) {
+      case llvm::codeview::PointerToMemberRepresentation::SingleInheritanceData:
+      case llvm::codeview::PointerToMemberRepresentation::
+          SingleInheritanceFunction:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_single_inheritance;
+        break;
+      case llvm::codeview::PointerToMemberRepresentation::
+          MultipleInheritanceData:
+      case llvm::codeview::PointerToMemberRepresentation::
+          MultipleInheritanceFunction:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_multiple_inheritance;
+        break;
+      case llvm::codeview::PointerToMemberRepresentation::
+          VirtualInheritanceData:
+      case llvm::codeview::PointerToMemberRepresentation::
+          VirtualInheritanceFunction:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_virtual_inheritance;
+        break;
+      case llvm::codeview::PointerToMemberRepresentation::Unknown:
+        spelling =
+            clang::MSInheritanceAttr::Spelling::Keyword_unspecified_inheritance;
+        break;
+      default:
+        spelling = clang::MSInheritanceAttr::Spelling::SpellingNotCalculated;
+        break;
+      }
+      tag->addAttr(clang::MSInheritanceAttr::CreateImplicit(
+          m_clang.getASTContext(), spelling));
+    }
     return m_clang.getASTContext().getMemberPointerType(
         pointee_type, class_type.getTypePtr());
   }
@@ -1118,10 +1159,14 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
       }
     }
     if (!tag_record.FieldList.isSimple()) {
-      CVType field_list = m_index.tpi().getType(tag_record.FieldList);
+      CVType field_list_cvt = m_index.tpi().getType(tag_record.FieldList);
+      FieldListRecord field_list;
+      if (llvm::Error error = TypeDeserializer::deserializeAs<FieldListRecord>(
+              field_list_cvt, field_list))
+        llvm::consumeError(std::move(error));
       CreateMethodDecl process(m_index, m_clang, func_ti, function_decl,
                                parent_opaque_ty, func_name, func_ct);
-      if (llvm::Error err = visitMemberRecordStream(field_list.data(), process))
+      if (llvm::Error err = visitMemberRecordStream(field_list.Data, process))
         llvm::consumeError(std::move(err));
     }
 
@@ -1453,7 +1498,7 @@ void PdbAstBuilder::ParseAllNamespacesPlusChildrenOf(
 
     CVTagRecord tag = CVTagRecord::create(cvt);
 
-    if (!parent.hasValue()) {
+    if (!parent) {
       clang::QualType qt = GetOrCreateType(tid);
       CompleteType(qt);
       continue;

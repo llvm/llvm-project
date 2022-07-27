@@ -89,7 +89,7 @@ public:
   /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
 
-  /// Get character length type
+  /// Get character length type.
   mlir::Type getCharacterLengthType() { return getIndexType(); }
 
   /// Get the integer type whose bit width corresponds to the width of pointer
@@ -306,7 +306,8 @@ public:
   /// \p exv is an extended value holding a memory reference to the object that
   /// must be boxed. This function will crash if provided something that is not
   /// a memory reference type.
-  /// Array entities are boxed with a shape and character with their length.
+  /// Array entities are boxed with a shape and possibly a shift. Character
+  /// entities are boxed with a LEN parameter.
   mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv);
 
   /// Create constant i1 with value 1. if \p b is true or 0. otherwise
@@ -440,18 +441,18 @@ llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &exv);
 
-/// Return length parameters associated to \p exv that are not deferred (that
-/// are available without having to read any fir.box values).
-/// Empty if \p exv has no length parameters or if they are all deferred.
+/// Return LEN parameters associated to \p exv that are not deferred (that are
+/// available without having to read any fir.box values). Empty if \p exv has no
+/// LEN parameters or if they are all deferred.
 llvm::SmallVector<mlir::Value>
-getNonDeferredLengthParams(const fir::ExtendedValue &exv);
+getNonDeferredLenParams(const fir::ExtendedValue &exv);
 
 //===----------------------------------------------------------------------===//
 // String literal helper helpers
 //===----------------------------------------------------------------------===//
 
-/// Create a !fir.char<1> string literal global and returns a
-/// fir::CharBoxValue with its address and length.
+/// Create a !fir.char<1> string literal global and returns a fir::CharBoxValue
+/// with its address and length.
 fir::ExtendedValue createStringLiteral(fir::FirOpBuilder &, mlir::Location,
                                        llvm::StringRef string);
 
@@ -486,9 +487,9 @@ fir::ExtendedValue componentToExtendedValue(fir::FirOpBuilder &builder,
 
 /// Given the address of an array element and the ExtendedValue describing the
 /// array, returns the ExtendedValue describing the array element. The purpose
-/// is to propagate the length parameters of the array to the element.
-/// This can be used for elements of `array` or `array(i:j:k)`. If \p element
-/// belongs to an array section `array%x` whose base is \p array,
+/// is to propagate the LEN parameters of the array to the element. This can be
+/// used for elements of `array` or `array(i:j:k)`. If \p element belongs to an
+/// array section `array%x` whose base is \p array,
 /// arraySectionElementToExtendedValue must be used instead.
 fir::ExtendedValue arrayElementToExtendedValue(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
@@ -541,6 +542,10 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Unwrap integer constant from an mlir::Value.
 llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value);
+
+/// Get the integer constants of triplet and compute the extent.
+llvm::Optional<std::int64_t>
+getExtentFromTriplet(mlir::Value lb, mlir::Value ub, mlir::Value stride);
 
 /// Generate max(\p value, 0) where \p value is a scalar integer.
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,

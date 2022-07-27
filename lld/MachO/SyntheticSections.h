@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/MathExtras.h"
@@ -69,7 +70,7 @@ public:
   // Sections in __LINKEDIT are special: their offsets are recorded in the
   // load commands like LC_DYLD_INFO_ONLY and LC_SYMTAB, instead of in section
   // headers.
-  bool isHidden() const override final { return true; }
+  bool isHidden() const final { return true; }
 
   virtual uint64_t getRawSize() const = 0;
 
@@ -79,9 +80,7 @@ public:
   //
   // NOTE: This assumes that the extra bytes required for alignment can be
   // zero-valued bytes.
-  uint64_t getSize() const override final {
-    return llvm::alignTo(getRawSize(), align);
-  }
+  uint64_t getSize() const final { return llvm::alignTo(getRawSize(), align); }
 };
 
 // The header of the Mach-O file, which must have a file offset of zero.
@@ -435,7 +434,7 @@ public:
   uint32_t getNumUndefinedSymbols() const { return undefinedSymbols.size(); }
 
 private:
-  void emitBeginSourceStab(llvm::DWARFUnit *compileUnit);
+  void emitBeginSourceStab(StringRef);
   void emitEndSourceStab();
   void emitObjectFileStab(ObjFile *);
   void emitEndFunStab(Defined *);
@@ -600,6 +599,27 @@ private:
   std::unordered_map<uint32_t, uint64_t> literal4Map;
 };
 
+class ObjCImageInfoSection final : public SyntheticSection {
+public:
+  ObjCImageInfoSection();
+  bool isNeeded() const override { return !files.empty(); }
+  uint64_t getSize() const override { return 8; }
+  void addFile(const InputFile *file) {
+    assert(!file->objCImageInfo.empty());
+    files.push_back(file);
+  }
+  void finalizeContents();
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  struct ImageInfo {
+    uint8_t swiftVersion = 0;
+    bool hasCategoryClassProperties = false;
+  } info;
+  static ImageInfo parseImageInfo(const InputFile *);
+  std::vector<const InputFile *> files; // files with image info
+};
+
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
@@ -616,6 +636,7 @@ struct InStruct {
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
+  ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;
 };
 

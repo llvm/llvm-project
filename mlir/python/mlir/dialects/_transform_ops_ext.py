@@ -28,6 +28,21 @@ class GetClosestIsolatedParentOp:
         ip=ip)
 
 
+class MergeHandlesOp:
+
+  def __init__(self,
+               handles: Sequence[Union[Operation, Value]],
+               *,
+               deduplicate: bool = False,
+               loc=None,
+               ip=None):
+    super().__init__(
+        pdl.OperationType.get(), [_get_op_result_or_value(h) for h in handles],
+        deduplicate=deduplicate,
+        loc=loc,
+        ip=ip)
+
+
 class PDLMatchOp:
 
   def __init__(self,
@@ -40,6 +55,22 @@ class PDLMatchOp:
         pdl.OperationType.get(),
         _get_op_result_or_value(target),
         _get_symbol_ref_attr(pattern_name),
+        loc=loc,
+        ip=ip)
+
+
+class ReplicateOp:
+
+  def __init__(self,
+               pattern: Union[Operation, Value],
+               handles: Sequence[Union[Operation, Value]],
+               *,
+               loc=None,
+               ip=None):
+    super().__init__(
+        [pdl.OperationType.get()] * len(handles),
+        _get_op_result_or_value(pattern),
+        [_get_op_result_or_value(h) for h in handles],
         loc=loc,
         ip=ip)
 

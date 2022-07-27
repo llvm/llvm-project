@@ -693,24 +693,24 @@ void GVNPass::ValueTable::verifyRemoved(const Value *V) const {
 //===----------------------------------------------------------------------===//
 
 bool GVNPass::isPREEnabled() const {
-  return Options.AllowPRE.getValueOr(GVNEnablePRE);
+  return Options.AllowPRE.value_or(GVNEnablePRE);
 }
 
 bool GVNPass::isLoadPREEnabled() const {
-  return Options.AllowLoadPRE.getValueOr(GVNEnableLoadPRE);
+  return Options.AllowLoadPRE.value_or(GVNEnableLoadPRE);
 }
 
 bool GVNPass::isLoadInLoopPREEnabled() const {
-  return Options.AllowLoadInLoopPRE.getValueOr(GVNEnableLoadInLoopPRE);
+  return Options.AllowLoadInLoopPRE.value_or(GVNEnableLoadInLoopPRE);
 }
 
 bool GVNPass::isLoadPRESplitBackedgeEnabled() const {
-  return Options.AllowLoadPRESplitBackedge.getValueOr(
+  return Options.AllowLoadPRESplitBackedge.value_or(
       GVNEnableSplitBackedgeInLoadPRE);
 }
 
 bool GVNPass::isMemDepEnabled() const {
-  return Options.AllowMemDep.getValueOr(GVNEnableMemDep);
+  return Options.AllowMemDep.value_or(GVNEnableMemDep);
 }
 
 PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -748,14 +748,14 @@ void GVNPass::printPipeline(
 
   OS << "<";
   if (Options.AllowPRE != None)
-    OS << (Options.AllowPRE.getValue() ? "" : "no-") << "pre;";
+    OS << (Options.AllowPRE.value() ? "" : "no-") << "pre;";
   if (Options.AllowLoadPRE != None)
-    OS << (Options.AllowLoadPRE.getValue() ? "" : "no-") << "load-pre;";
+    OS << (Options.AllowLoadPRE.value() ? "" : "no-") << "load-pre;";
   if (Options.AllowLoadPRESplitBackedge != None)
-    OS << (Options.AllowLoadPRESplitBackedge.getValue() ? "" : "no-")
+    OS << (Options.AllowLoadPRESplitBackedge.value() ? "" : "no-")
        << "split-backedge-load-pre;";
   if (Options.AllowMemDep != None)
-    OS << (Options.AllowMemDep.getValue() ? "" : "no-") << "memdep";
+    OS << (Options.AllowMemDep.value() ? "" : "no-") << "memdep";
   OS << ">";
 }
 
@@ -1059,8 +1059,8 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
         if (DT->dominates(cast<Instruction>(OtherAccess), cast<Instruction>(U)))
           OtherAccess = U;
         else
-          assert(DT->dominates(cast<Instruction>(U),
-                               cast<Instruction>(OtherAccess)));
+          assert(U == OtherAccess || DT->dominates(cast<Instruction>(U),
+                                                   cast<Instruction>(OtherAccess)));
       } else
         OtherAccess = U;
     }
@@ -1188,9 +1188,7 @@ bool GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
             canCoerceMustAliasedValueToLoad(DepLoad, LoadType, DL)) {
           const auto ClobberOff = MD->getClobberOffset(DepLoad);
           // GVN has no deal with a negative offset.
-          Offset = (ClobberOff == None || ClobberOff.getValue() < 0)
-                       ? -1
-                       : ClobberOff.getValue();
+          Offset = (ClobberOff == None || *ClobberOff < 0) ? -1 : *ClobberOff;
         }
         if (Offset == -1)
           Offset =
@@ -1234,12 +1232,11 @@ bool GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     return true;
   }
 
-  if (isAllocationFn(DepInst, TLI))
-    if (auto *InitVal = getInitialValueOfAllocation(cast<CallBase>(DepInst),
-                                                    TLI, Load->getType())) {
-      Res = AvailableValue::get(InitVal);
-      return true;
-    }
+  if (Constant *InitVal =
+          getInitialValueOfAllocation(DepInst, TLI, Load->getType())) {
+    Res = AvailableValue::get(InitVal);
+    return true;
+  }
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {
     // Reject loads and stores that are to the same address but are of
@@ -1493,14 +1490,6 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
       if (isa<IndirectBrInst>(Pred->getTerminator())) {
         LLVM_DEBUG(
             dbgs() << "COULD NOT PRE LOAD BECAUSE OF INDBR CRITICAL EDGE '"
-                   << Pred->getName() << "': " << *Load << '\n');
-        return false;
-      }
-
-      // FIXME: Can we support the fallthrough edge?
-      if (isa<CallBrInst>(Pred->getTerminator())) {
-        LLVM_DEBUG(
-            dbgs() << "COULD NOT PRE LOAD BECAUSE OF CALLBR CRITICAL EDGE '"
                    << Pred->getName() << "': " << *Load << '\n');
         return false;
       }
@@ -2876,11 +2865,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
 
     // Don't do PRE across indirect branch.
     if (isa<IndirectBrInst>(PREPred->getTerminator()))
-      return false;
-
-    // Don't do PRE across callbr.
-    // FIXME: Can we do this across the fallthrough edge?
-    if (isa<CallBrInst>(PREPred->getTerminator()))
       return false;
 
     // We can't do PRE safely on a critical edge, so instead we schedule

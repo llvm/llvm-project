@@ -37,8 +37,8 @@ define i16 @test(i32 %key) {
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca i32, align 4
-  store i32 %key, i32* %key.addr, align 4
-  %0 = load i32, i32* %key.addr, align 4
+  store i32 %key, ptr %key.addr, align 4
+  %0 = load i32, ptr %key.addr, align 4
   %call = call swiftcc { i16, i8 } @gen(i32 %0)
   %v3 = extractvalue { i16, i8 } %call, 0
   %v1 = sext i16 %v3 to i32
@@ -93,8 +93,8 @@ define dso_local i32 @test2(i32 %key) #0 {
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca i32, align 4
-  store i32 %key, i32* %key.addr, align 4
-  %0 = load i32, i32* %key.addr, align 4
+  store i32 %key, ptr %key.addr, align 4
+  %0 = load i32, ptr %key.addr, align 4
   %call = call swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %0)
 
   %v3 = extractvalue { i32, i32, i32, i32, i32 } %call, 0
@@ -169,8 +169,8 @@ define dso_local i32 @test3(i32 %key) #0 {
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca i32, align 4
-  store i32 %key, i32* %key.addr, align 4
-  %0 = load i32, i32* %key.addr, align 4
+  store i32 %key, ptr %key.addr, align 4
+  %0 = load i32, ptr %key.addr, align 4
   %call = call swiftcc { i32, i32, i32, i32 } @gen3(i32 %0)
 
   %v3 = extractvalue { i32, i32, i32, i32 } %call, 0
@@ -217,8 +217,8 @@ define dso_local float @test4(float %key) #0 {
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca float, align 4
-  store float %key, float* %key.addr, align 4
-  %0 = load float, float* %key.addr, align 4
+  store float %key, ptr %key.addr, align 4
+  %0 = load float, ptr %key.addr, align 4
   %call = call swiftcc { float, float, float, float } @gen4(float %0)
 
   %v3 = extractvalue { float, float, float, float } %call, 0
@@ -282,19 +282,19 @@ define dso_local void @consume_i1_ret() {
   %v6 = extractvalue { i1, i1, i1, i1 } %call, 2
   %v7 = extractvalue { i1, i1, i1, i1 } %call, 3
   %val = zext i1 %v3 to i32
-  store volatile i32 %val, i32* @var
+  store volatile i32 %val, ptr @var
   %val2 = zext i1 %v5 to i32
-  store volatile i32 %val2, i32* @var
+  store volatile i32 %val2, ptr @var
   %val3 = zext i1 %v6 to i32
-  store volatile i32 %val3, i32* @var
+  store volatile i32 %val3, ptr @var
   %val4 = zext i1 %v7 to i32
-  store i32 %val4, i32* @var
+  store i32 %val4, ptr @var
   ret void
 }
 
 declare swiftcc { i1, i1, i1, i1 } @produce_i1_ret()
 
-define swiftcc void @foo(i64* sret(i64) %agg.result, i64 %val) {
+define swiftcc void @foo(ptr sret(i64) %agg.result, i64 %val) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, (%rax)
@@ -304,7 +304,7 @@ define swiftcc void @foo(i64* sret(i64) %agg.result, i64 %val) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq %rdi, (%rax)
 ; CHECK-O0-NEXT:    retq
-  store i64 %val, i64* %agg.result
+  store i64 %val, ptr %agg.result
   ret void
 }
 

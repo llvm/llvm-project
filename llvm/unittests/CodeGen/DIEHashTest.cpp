@@ -73,7 +73,7 @@ TEST_F(DIEHashTest, TrivialType) {
   uint64_t MD5Res = DIEHash().computeTypeSignature(Unnamed);
 
   // The exact same hash GCC produces for this DIE.
-  ASSERT_EQ(0x715305ce6cfd9ad1ULL, MD5Res);
+  ASSERT_EQ(0x715305CE6CFD9AD1ULL, MD5Res);
 }
 
 // struct foo { };
@@ -87,7 +87,7 @@ TEST_F(DIEHashTest, NamedType) {
   uint64_t MD5Res = DIEHash().computeTypeSignature(Foo);
 
   // The exact same hash GCC produces for this DIE.
-  ASSERT_EQ(0xd566dbd2ca5265ffULL, MD5Res);
+  ASSERT_EQ(0xD566DBD2CA5265FFULL, MD5Res);
 }
 
 // namespace space { struct foo { }; }
@@ -606,7 +606,7 @@ TEST_F(DIEHashTest, MemberFuncFlag) {
   uint64_t MD5Res = DIEHash().computeTypeSignature(A);
 
   // The exact same hash GCC produces for this DIE.
-  ASSERT_EQ(0x8f78211ddce3df10ULL, MD5Res);
+  ASSERT_EQ(0x8F78211DDCE3DF10ULL, MD5Res);
 }
 
 // Derived from:
@@ -652,7 +652,7 @@ TEST_F(DIEHashTest, MemberSdata) {
   A.addChild(std::move(PI));
 
   uint64_t MD5Res = DIEHash().computeTypeSignature(A);
-  ASSERT_EQ(0x9a216000dd3788a7ULL, MD5Res);
+  ASSERT_EQ(0x9A216000DD3788A7ULL, MD5Res);
 }
 
 // Derived from:
@@ -713,6 +713,6 @@ TEST_F(DIEHashTest, MemberBlock) {
   A.addChild(std::move(PI));
 
   uint64_t MD5Res = DIEHash(this->getAsmPrinter()).computeTypeSignature(A);
-  ASSERT_EQ(0x493af53ad3d3f651ULL, MD5Res);
+  ASSERT_EQ(0x493AF53AD3D3F651ULL, MD5Res);
 }
 }

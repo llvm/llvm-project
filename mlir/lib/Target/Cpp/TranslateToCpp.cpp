@@ -10,7 +10,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -645,8 +645,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   }
 
   // Declare variables for basic block arguments.
-  for (auto it = std::next(blocks.begin()); it != blocks.end(); ++it) {
-    Block &block = *it;
+  for (Block &block : llvm::drop_begin(blocks)) {
     for (BlockArgument &arg : block.getArguments()) {
       if (emitter.hasValueInScope(arg))
         return functionOp.emitOpError(" block argument #")

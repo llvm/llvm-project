@@ -29,15 +29,15 @@ define dso_local float @_Z3fn2v() {
 entry:
   %call = tail call zeroext i1 @_Z1av()
   %cond = select i1 %call, float 7.500000e-01, float 0.000000e+00
-  %0 = load i32, i32* @c, align 4
+  %0 = load i32, ptr @c, align 4
   %tobool2 = icmp eq i32 %0, 0
   br i1 %tobool2, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @b, align 4
   %2 = sitofp i32 %1 to float
   %conv5 = select i1 %call, float 0.000000e+00, float %2
-  store float %conv5, float* @d, align 4
+  store float %conv5, ptr @d, align 4
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then

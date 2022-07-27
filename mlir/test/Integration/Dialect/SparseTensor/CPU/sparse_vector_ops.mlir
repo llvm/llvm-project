@@ -62,8 +62,7 @@ module {
   }
 
   // Scales a sparse vector in place.
-  func.func @vector_scale_inplace(%argx: tensor<?xf64, #SparseVector>
-                             {linalg.inplaceable = true}) -> tensor<?xf64, #SparseVector> {
+  func.func @vector_scale_inplace(%argx: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %s = arith.constant 2.0 : f64
     %0 = linalg.generic #trait_scale_inpl
       outs(%argx: tensor<?xf64, #SparseVector>) {
@@ -125,7 +124,7 @@ module {
   // Sum reduces dot product of two sparse vectors.
   func.func @vector_dotprod(%arga: tensor<?xf64, #SparseVector>,
                        %argb: tensor<?xf64, #SparseVector>,
-                       %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
+                       %argx: tensor<f64>) -> tensor<f64> {
     %0 = linalg.generic #trait_dot
        ins(%arga, %argb: tensor<?xf64, #SparseVector>, tensor<?xf64, #SparseVector>)
         outs(%argx: tensor<f64>) {
@@ -147,10 +146,8 @@ module {
     vector.print %1 : vector<16xf64>
     // Dump the dense vector to verify structure is correct.
     %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
-    %2 = bufferization.to_memref %dv : memref<?xf64>
-    %3 = vector.transfer_read %2[%c0], %d0: memref<?xf64>, vector<32xf64>
-    vector.print %3 : vector<32xf64>
-    memref.dealloc %2 : memref<?xf64>
+    %2 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<32xf64>
+    vector.print %2 : vector<32xf64>
     return
   }
 
@@ -169,36 +166,36 @@ module {
          [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0 ]
     > : tensor<32xf64>
     %sv1 = sparse_tensor.convert %v1 : tensor<32xf64> to tensor<?xf64, #SparseVector>
+    // TODO: Use %sv1 when copying sparse tensors is supported.
+    %sv1_dup = sparse_tensor.convert %v1 : tensor<32xf64> to tensor<?xf64, #SparseVector>
     %sv2 = sparse_tensor.convert %v2 : tensor<32xf64> to tensor<?xf64, #SparseVector>
 
     // Setup memory for a single reduction scalar.
-    %xdata = memref.alloc() : memref<f64>
-    memref.store %d1, %xdata[] : memref<f64>
-    %x = bufferization.to_tensor %xdata : memref<f64>
+    %x = tensor.from_elements %d1 : tensor<f64>
 
     // Call sparse vector kernels.
     %0 = call @vector_scale(%sv1)
        : (tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector>
-    %1 = call @vector_scale_inplace(%sv1)
+    %1 = call @vector_scale_inplace(%sv1_dup)
        : (tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector>
-    %2 = call @vector_add(%sv1, %sv2)
+    %2 = call @vector_add(%1, %sv2)
        : (tensor<?xf64, #SparseVector>,
           tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector>
-    %3 = call @vector_mul(%sv1, %sv2)
+    %3 = call @vector_mul(%1, %sv2)
        : (tensor<?xf64, #SparseVector>,
           tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector>
-    %4 = call @vector_mul_d(%sv1, %sv2)
+    %4 = call @vector_mul_d(%1, %sv2)
        : (tensor<?xf64, #SparseVector>,
           tensor<?xf64, #SparseVector>) -> tensor<?xf64, #DenseVector>
-    %5 = call @vector_dotprod(%sv1, %sv2, %x)
+    %5 = call @vector_dotprod(%1, %sv2, %x)
        : (tensor<?xf64, #SparseVector>,
           tensor<?xf64, #SparseVector>, tensor<f64>) -> tensor<f64>
 
     //
     // Verify the results.
     //
-    // CHECK:      ( 2, 4, 6, 8, 10, 12, 14, 16, 18, -1, -1, -1, -1, -1, -1, -1 )
-    // CHECK-NEXT: ( 2, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 8, 0, 0, 10, 12, 0, 0, 0, 0, 0, 0, 14, 16, 0, 18 )
+    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1, -1 )
+    // CHECK-NEXT: ( 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 4, 0, 0, 5, 6, 0, 0, 0, 0, 0, 0, 7, 8, 0, 9 )
     // CHECK-NEXT: ( 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, -1, -1, -1, -1, -1, -1 )
     // CHECK-NEXT: ( 0, 11, 0, 12, 13, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 15, 0, 16, 0, 0, 17, 0, 0, 0, 0, 0, 0, 18, 19, 0, 20 )
     // CHECK-NEXT: ( 2, 4, 6, 8, 10, 12, 14, 16, 18, -1, -1, -1, -1, -1, -1, -1 )
@@ -212,6 +209,7 @@ module {
     // CHECK-NEXT: ( 0, 0, 0, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 204, 0, 0, 0, 0, 0, 0, 252, 304, 0, 360 )
     // CHECK-NEXT: 1169.1
     //
+
     call @dump(%sv1) : (tensor<?xf64, #SparseVector>) -> ()
     call @dump(%sv2) : (tensor<?xf64, #SparseVector>) -> ()
     call @dump(%0) : (tensor<?xf64, #SparseVector>) -> ()
@@ -221,18 +219,17 @@ module {
     %m4 = sparse_tensor.values %4 : tensor<?xf64, #DenseVector> to memref<?xf64>
     %v4 = vector.load %m4[%c0]: memref<?xf64>, vector<32xf64>
     vector.print %v4 : vector<32xf64>
-    %m5 = bufferization.to_memref %5 : memref<f64>
-    %v5 = memref.load %m5[] : memref<f64>
+    %v5 = tensor.extract %5[] : tensor<f64>
     vector.print %v5 : f64
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %sv2 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %0 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %2 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %3 : tensor<?xf64, #SparseVector>
-    sparse_tensor.release %4 : tensor<?xf64, #DenseVector>
-    memref.dealloc %xdata : memref<f64>
+    bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv1_dup : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %3 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %4 : tensor<?xf64, #DenseVector>
     return
   }
 }

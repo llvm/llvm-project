@@ -4,7 +4,7 @@
 ; In the following 4 tests, the existing call to VZU/VZA ensures clean state before
 ; the call to the unknown, so we don't need to insert a second VZU at that point.
 
-define <4 x float> @zeroupper_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
+define <4 x float> @zeroupper_v4f32(ptr%x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: zeroupper_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -23,7 +23,7 @@ define <4 x float> @zeroupper_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 ; CHECK-NEXT:    retq
   call void @llvm.x86.avx.vzeroupper()
   call void @the_unknown()
-  %loadx = load <8 x float>, <8 x float> *%x, align 32
+  %loadx = load <8 x float>, ptr%x, align 32
   %sum = fadd <8 x float> %loadx, %y
   %lo = shufflevector <8 x float> %sum, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %hi = shufflevector <8 x float> %sum, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -46,7 +46,7 @@ define <8 x float> @zeroupper_v8f32(<8 x float> %x) nounwind {
   ret <8 x float> %x
 }
 
-define <4 x float> @zeroall_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
+define <4 x float> @zeroall_v4f32(ptr%x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: zeroall_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -65,7 +65,7 @@ define <4 x float> @zeroall_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 ; CHECK-NEXT:    retq
   call void @llvm.x86.avx.vzeroall()
   call void @the_unknown()
-  %loadx = load <8 x float>, <8 x float> *%x, align 32
+  %loadx = load <8 x float>, ptr%x, align 32
   %sum = fadd <8 x float> %loadx, %y
   %lo = shufflevector <8 x float> %sum, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %hi = shufflevector <8 x float> %sum, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>

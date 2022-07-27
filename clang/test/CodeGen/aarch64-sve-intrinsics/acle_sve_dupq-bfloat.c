@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svdupq_lane_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svdupq_lane_bf16u14__SVBFloat16_tm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
@@ -39,8 +39,8 @@ svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
 // CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x bfloat> [[TMP4]], bfloat [[X5:%.*]], i64 5
 // CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x bfloat> [[TMP5]], bfloat [[X6:%.*]], i64 6
 // CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x bfloat> [[TMP6]], bfloat [[X7:%.*]], i64 7
-// CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x bfloat> @llvm.experimental.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[TMP7]], i64 0)
-// CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP8]], i64 0)
+// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[TMP7]], i64 0)
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP8]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svdupq_n_bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16(
@@ -53,8 +53,8 @@ svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x bfloat> [[TMP4]], bfloat [[X5:%.*]], i64 5
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x bfloat> [[TMP5]], bfloat [[X6:%.*]], i64 6
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x bfloat> [[TMP6]], bfloat [[X7:%.*]], i64 7
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x bfloat> @llvm.experimental.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[TMP7]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP8]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[TMP7]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP8]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP9]]
 //
 svbfloat16_t test_svdupq_n_bf16(bfloat16_t x0, bfloat16_t x1, bfloat16_t x2, bfloat16_t x3,

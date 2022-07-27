@@ -30,10 +30,9 @@ template <typename LinalgOpTy>
 struct LinalgOpTilingInterface
     : public TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
                                             LinalgOpTy> {
-
   /// Return the destination operands.
   SmallVector<Value> getDestinationOperands(Operation *op, OpBuilder &b) const {
-    return llvm::cast<LinalgOp>(op).getOutputOperands();
+    return cast<LinalgOp>(op).getOutputOperands();
   }
 
   /// Return the loop iterator type.
@@ -47,15 +46,20 @@ struct LinalgOpTilingInterface
 
   /// Return the iteration domain range.
   SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(op);
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
-    auto allShapesSizes = linalgOp.createFlatListOfOperandDims(b, loc);
+    SmallVector<OpFoldResult> allShapesSizes =
+        linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
-    Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = b.create<arith::ConstantIndexOp>(loc, 1);
-    return llvm::to_vector(llvm::map_range(
-        applyMapToValues(b, loc, map, allShapesSizes), [&](Value v) {
-          return Range{zero, v, one};
+
+    IRRewriter rewriter(b);
+    return llvm::to_vector(
+        llvm::map_range(map.getResults(), [&](AffineExpr loopExpr) {
+          OpFoldResult ofr = makeComposedFoldedAffineApply(
+              rewriter, loc, loopExpr, allShapesSizes);
+          return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
         }));
   }
 
@@ -71,9 +75,7 @@ struct LinalgOpTilingInterface
     LinalgOp linalgOp = cast<LinalgOp>(op);
     SmallVector<Value> valuesToTile = linalgOp.getInputAndOutputOperands();
     SmallVector<Value, 4> tiledOperands = makeTiledShapes(
-        b, loc, linalgOp, valuesToTile,
-        getValueOrCreateConstantIndexOp(b, loc, offsets),
-        getValueOrCreateConstantIndexOp(b, loc, sizes), {}, true);
+        b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
 
     SmallVector<Type> resultTensorTypes = llvm::to_vector(llvm::map_range(
         linalgOp.getOutputTensorOperands(), [&](OpOperand *opOperand) {
@@ -82,6 +84,7 @@ struct LinalgOpTilingInterface
 
     Operation *tiledOp =
         linalgOp.clone(b, loc, resultTensorTypes, tiledOperands);
+    offsetIndices(b, cast<LinalgOp>(tiledOp), offsets);
 
     return {tiledOp};
   }
@@ -99,28 +102,16 @@ struct LinalgOpTilingInterface
 
     AffineExpr d0;
     bindDims(b.getContext(), d0);
-
-    auto fullyComposeAffineMapAndOperands = [](OpBuilder &builder, Location loc,
-                                               AffineExpr expr,
-                                               ValueRange operands) -> Value {
-      AffineMap map = AffineMap::inferFromExprList({expr}).front();
-      SmallVector<Value> normalizedOperands(operands.begin(), operands.end());
-      mlir::fullyComposeAffineMapAndOperands(&map, &normalizedOperands);
-      canonicalizeMapAndOperands(&map, &normalizedOperands);
-      return builder.createOrFold<AffineApplyOp>(loc, map, normalizedOperands);
-    };
-
-    SmallVector<Value> sizeVals =
-        getValueOrCreateConstantIndexOp(b, loc, sizes);
-    SmallVector<Value> subShapeSizes =
-        llvm::to_vector(llvm::map_range(sizeVals, [&](Value v) {
-          return fullyComposeAffineMapAndOperands(b, loc, d0 - 1, v);
+    IRRewriter rewriter(b);
+    SmallVector<OpFoldResult> subShapeSizes =
+        llvm::to_vector(llvm::map_range(sizes, [&](OpFoldResult ofr) {
+          return makeComposedFoldedAffineApply(rewriter, loc, d0 - 1, ofr);
         }));
+
     OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
     Value sliceOpResult =
-        makeTiledShape(b, loc, outOperand->get(), sizeVals,
-                       linalgOp.getTiedIndexingMap(outOperand),
-                       getValueOrCreateConstantIndexOp(b, loc, offsets),
+        makeTiledShape(b, loc, outOperand->get(), sizes,
+                       linalgOp.getTiedIndexingMap(outOperand), offsets,
                        /*ubs*/ {}, subShapeSizes, true);
     auto sliceOp = sliceOpResult.getDefiningOp<tensor::ExtractSliceOp>();
     if (!sliceOp)
@@ -129,16 +120,65 @@ struct LinalgOpTilingInterface
     resultSizes = sliceOp.getMixedSizes();
     return success();
   }
+
+  FailureOr<Value> generateResultTileValue(Operation *op, OpBuilder &b,
+                                           unsigned resultNumber,
+                                           ValueRange dest,
+                                           ArrayRef<OpFoldResult> offsets,
+                                           ArrayRef<OpFoldResult> sizes,
+                                           bool tileDestOperands) const {
+    auto linalgOp = cast<LinalgOp>(op);
+
+    // Check that the indexing map used for the output is a projected
+    // permutation. This could be relaxed with a more general approach that can
+    // map the offsets and sizes from the result to iteration space tiles
+    // (filling in full extent for dimensions not used to access the result).
+    AffineMap indexingMap =
+        linalgOp.getTiedIndexingMapForResult(op->getResult(resultNumber));
+    if (!indexingMap.isProjectedPermutation()) {
+      return op->emitOpError(
+          "unhandled tiled implementation generation when result is not "
+          "accessed using a permuted projection");
+    }
+
+    auto numLoops = linalgOp.getNumLoops();
+    auto tilingInterfaceOp = cast<TilingInterface>(op);
+    SmallVector<OpFoldResult> iterationTileOffsets(numLoops),
+        iterationTileSizes(numLoops);
+    if (!indexingMap.isPermutation()) {
+      SmallVector<Range> iterationDomain =
+          tilingInterfaceOp.getIterationDomain(b);
+      for (const auto &range : llvm::enumerate(iterationDomain)) {
+        iterationTileOffsets[range.index()] = range.value().offset;
+        iterationTileSizes[range.index()] = range.value().size;
+      }
+    }
+    for (const auto &resultExpr : llvm::enumerate(indexingMap.getResults())) {
+      unsigned dimPosition =
+          resultExpr.value().cast<AffineDimExpr>().getPosition();
+      iterationTileOffsets[dimPosition] = offsets[resultExpr.index()];
+      iterationTileSizes[dimPosition] = sizes[resultExpr.index()];
+    }
+
+    SmallVector<Operation *> tiledOp = tilingInterfaceOp.getTiledImplementation(
+        b, dest, iterationTileOffsets, iterationTileSizes, tileDestOperands);
+    if (tiledOp.size() != 1)
+      return op->emitOpError("failed to generate tiled implementation");
+
+    return tiledOp[0]->getResult(resultNumber);
+  }
 };
 
 } // namespace
 
-template <typename OpType> static void registerOne(MLIRContext *ctx) {
+template <typename OpType>
+static void registerOne(MLIRContext *ctx) {
   OpType::template attachInterface<LinalgOpTilingInterface<OpType>>(*ctx);
 }
 
 /// Variadic helper function.
-template <typename... OpTypes> static void registerAll(MLIRContext *ctx) {
+template <typename... OpTypes>
+static void registerAll(MLIRContext *ctx) {
   // FIXME: In c++17 this can be simplified by using 'fold expressions'.
   (void)std::initializer_list<int>{0, (registerOne<OpTypes>(ctx), 0)...};
 }

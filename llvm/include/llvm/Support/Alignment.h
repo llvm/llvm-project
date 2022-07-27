@@ -84,6 +84,14 @@ public:
   /// Needed to interact with C for instance.
   uint64_t value() const { return uint64_t(1) << ShiftValue; }
 
+  // Returns the previous alignment.
+  Align previous() const {
+    assert(ShiftValue != 0 && "Undefined operation");
+    Align Out;
+    Out.ShiftValue = ShiftValue - 1;
+    return Out;
+  }
+
   /// Allow constructions of constexpr Align.
   template <size_t kValue> constexpr static LogValue Constant() {
     return LogValue{static_cast<uint8_t>(CTLog2<kValue>())};
@@ -131,7 +139,7 @@ public:
   }
 
   /// For convenience, returns a valid alignment or 1 if undefined.
-  Align valueOrOne() const { return hasValue() ? getValue() : Align(); }
+  Align valueOrOne() const { return value_or(Align()); }
 };
 
 /// Checks that SizeInBytes is a multiple of the alignment.
@@ -173,13 +181,7 @@ inline uint64_t alignTo(uint64_t Size, Align A) {
 inline uint64_t alignTo(uint64_t Size, Align A, uint64_t Skew) {
   const uint64_t Value = A.value();
   Skew %= Value;
-  return ((Size + Value - 1 - Skew) & ~(Value - 1U)) + Skew;
-}
-
-/// Returns a multiple of A needed to store `Size` bytes.
-/// Returns `Size` if current alignment is undefined.
-inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
-  return A ? alignTo(Size, A.getValue()) : Size;
+  return alignTo(Size - Skew, A) + Skew;
 }
 
 /// Aligns `Addr` to `Alignment` bytes, rounding up.
@@ -208,24 +210,8 @@ inline unsigned Log2(Align A) { return A.ShiftValue; }
 
 /// Returns the alignment that satisfies both alignments.
 /// Same semantic as MinAlign.
-inline Align commonAlignment(Align A, Align B) { return std::min(A, B); }
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
 inline Align commonAlignment(Align A, uint64_t Offset) {
   return Align(MinAlign(A.value(), Offset));
-}
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
-inline MaybeAlign commonAlignment(MaybeAlign A, MaybeAlign B) {
-  return A && B ? commonAlignment(*A, *B) : A ? A : B;
-}
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
-inline MaybeAlign commonAlignment(MaybeAlign A, uint64_t Offset) {
-  return MaybeAlign(MinAlign((*A).value(), Offset));
 }
 
 /// Returns a representation of the alignment that encodes undefined as 0.
@@ -270,14 +256,6 @@ inline bool operator>(Align Lhs, uint64_t Rhs) {
   return Lhs.value() > Rhs;
 }
 
-/// Comparisons between MaybeAlign and scalars.
-inline bool operator==(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() == Rhs : Rhs == 0;
-}
-inline bool operator!=(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() != Rhs : Rhs != 0;
-}
-
 /// Comparisons operators between Align.
 inline bool operator==(Align Lhs, Align Rhs) {
   return Lhs.ShiftValue == Rhs.ShiftValue;
@@ -313,31 +291,6 @@ bool operator<=(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator>=(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator<(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator>(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
-
-inline Align operator*(Align Lhs, uint64_t Rhs) {
-  assert(Rhs > 0 && "Rhs must be positive");
-  return Align(Lhs.value() * Rhs);
-}
-
-inline MaybeAlign operator*(MaybeAlign Lhs, uint64_t Rhs) {
-  assert(Rhs > 0 && "Rhs must be positive");
-  return Lhs ? Lhs.getValue() * Rhs : MaybeAlign();
-}
-
-inline Align operator/(Align Lhs, uint64_t Divisor) {
-  assert(llvm::isPowerOf2_64(Divisor) &&
-         "Divisor must be positive and a power of 2");
-  assert(Lhs != 1 && "Can't halve byte alignment");
-  return Align(Lhs.value() / Divisor);
-}
-
-inline Align max(MaybeAlign Lhs, Align Rhs) {
-  return Lhs && *Lhs > Rhs ? *Lhs : Rhs;
-}
-
-inline Align max(Align Lhs, MaybeAlign Rhs) {
-  return Rhs && *Rhs > Lhs ? *Rhs : Lhs;
-}
 
 #ifndef NDEBUG
 // For usage in LLVM_DEBUG macros.

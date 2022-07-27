@@ -547,7 +547,7 @@ struct IRInstructionMapper {
       // an outlined function. Also, assume-like intrinsics could be removed
       // from the region, removing arguments, causing discrepencies in the
       // number of inputs between different regions.
-      if (II.isLifetimeStartOrEnd() || II.isAssumeLikeIntrinsic())
+      if (II.isAssumeLikeIntrinsic())
         return Illegal;
       return EnableIntrinsics ? Legal : Illegal;
     }
@@ -1039,7 +1039,7 @@ public:
     // If we've already analyzed a Module or set of Modules, so we must clear
     // the SimilarityCandidates to make sure we do not have only old values
     // hanging around.
-    if (SimilarityCandidates.hasValue())
+    if (SimilarityCandidates)
       SimilarityCandidates->clear();
     else
       SimilarityCandidates = SimilarityGroupList();

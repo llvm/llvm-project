@@ -16,8 +16,8 @@
 #include "mlir/Dialect/Linalg/Transforms/TilingInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/TileUsingInterface.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -29,8 +29,9 @@ using namespace mlir;
 
 namespace {
 
-/// Construct a generic pattern applied to all TilingInterface ops that verify
-/// `filter`.
+/// Pattern for testing `TileUsingSCFForOp` pattern (that tiles operations using
+/// the `TilingInterface` with `scf.for` ops for iterating over the tiles) while
+/// using a `filter` to avoid recursive application.
 struct TestTileUsingSCFForOpWithFilter : public scf::TileUsingSCFForOp {
   TestTileUsingSCFForOpWithFilter(MLIRContext *context,
                                   scf::SCFTilingOptions options,
@@ -52,8 +53,7 @@ struct TestTileUsingSCFForOpWithFilter : public scf::TileUsingSCFForOp {
     if (failed(filter.checkAndNotify(rewriter, op)))
       return failure();
 
-    FailureOr<scf::SCFTilingResult> tilingResult =
-        returningMatchAndRewrite(op, rewriter);
+    auto tilingResult = returningMatchAndRewrite(op, rewriter);
     if (failed(tilingResult)) {
       return failure();
     }
@@ -65,6 +65,50 @@ private:
   linalg::LinalgTransformationFilter filter;
 };
 
+/// Pattern for testing `TileConsumerAndFUseProducersUsingSCFForOp` pattern
+/// (that tiles and fuses operations using the `TilingInterface` with `scf.for`
+/// ops for iterating over the tiles) while using a `filter` to avoid recursive
+/// application.
+struct TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter
+    : public scf::TileConsumerAndFuseProducersUsingSCFForOp {
+  TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter(
+      MLIRContext *context, scf::SCFTilingOptions options,
+      linalg::LinalgTransformationFilter filter =
+          linalg::LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : scf::TileConsumerAndFuseProducersUsingSCFForOp(context, options,
+                                                       benefit),
+        filter(filter) {}
+
+  /// Construct a generic pattern applied to `opName`.
+  TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter(
+      StringRef opName, MLIRContext *context, scf::SCFTilingOptions options,
+      linalg::LinalgTransformationFilter filter =
+          linalg::LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : scf::TileConsumerAndFuseProducersUsingSCFForOp(context, options,
+                                                       benefit),
+        filter(filter) {}
+
+  LogicalResult matchAndRewrite(TilingInterface op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(filter.checkAndNotify(rewriter, op)))
+      return failure();
+
+    auto tileAndFuseResult = returningMatchAndRewrite(op, rewriter);
+    if (failed(tileAndFuseResult)) {
+      return failure();
+    }
+    filter.replaceLinalgTransformationFilter(
+        rewriter, tileAndFuseResult->tiledAndFusedOps.front());
+    return success();
+  }
+
+private:
+  linalg::LinalgTransformationFilter filter;
+};
+
+/// Test pass for testing the use of `TilingInterface`.
 struct TestTilingInterfacePass
     : public PassWrapper<TestTilingInterfacePass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTilingInterfacePass)
@@ -82,29 +126,79 @@ struct TestTilingInterfacePass
     return "Test tiling using TilingInterface";
   }
 
+  Option<bool> testTiling{
+      *this, "tile-using-scf-for",
+      llvm::cl::desc(
+          "Test tiling using TilingInterface with scf.for operations"),
+      llvm::cl::init(false)};
+
+  Option<bool> testTileConsumerAndFuseProducer{
+      *this, "tile-consumer-and-fuse-producer-using-scf-for",
+      llvm::cl::desc("Test tile and fuse transformation using TilingInterface "
+                     "with scf.for operations"),
+      llvm::cl::init(false)};
+
   void runOnOperation() override;
+
+private:
+  void addTestPatterns(MLIRContext *context, RewritePatternSet &patterns);
 };
 } // namespace
 
-static void addTestPatterns(MLIRContext *context, RewritePatternSet &patterns) {
-  auto addPatternForTiling = [&](ArrayRef<int64_t> tileSizes,
-                                 StringRef filterName) {
-    scf::SCFTilingOptions tilingOptions;
-    tilingOptions.setTileSizes(tileSizes);
-    linalg::LinalgTransformationFilter filter(
-        StringAttr::get(context, filterName),
-        StringAttr::get(context, "tiled"));
-    patterns.add<TestTileUsingSCFForOpWithFilter>(context, tilingOptions,
-                                                  filter);
-  };
-  // 1. Tiling M and N dims of `linalg.matmul` on tensors.
-  addPatternForTiling({10, 20}, "simple_gemm");
-  // 2. Tiling M, N and K of `linalg.matmul` on buffers.
-  addPatternForTiling({10, 20, 30}, "simple_gemm_memref");
-  // 3. Tiling 3D parallel generic op which implements a transpose
-  addPatternForTiling({10, 0, 20}, "parallel_generic_transpose");
-  // 4. Tiling 2D conv op.
-  addPatternForTiling({0, 0, 0, 0, 10, 20, 30}, "simple_conv");
+template <class Pattern>
+static void
+addPatternForTiling(MLIRContext *context, RewritePatternSet &patterns,
+                    StringRef filterName, ArrayRef<int64_t> tileSizes,
+                    ArrayRef<unsigned> interchange = {}) {
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
+  linalg::LinalgTransformationFilter filter(
+      StringAttr::get(context, filterName), StringAttr::get(context, "tiled"));
+  patterns.add<Pattern>(context, tilingOptions, filter);
+}
+
+void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
+                                              RewritePatternSet &patterns) {
+  if (testTiling) {
+    // 1. Tiling M and N dims of `linalg.matmul` on tensors.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "simple_gemm", {10, 20});
+    // 2. Tiling M, N and K of `linalg.matmul` on buffers.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "simple_gemm_memref", {10, 20, 30});
+    // 3. Tiling 3D parallel generic op which implements a transpose
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "parallel_generic_transpose", {10, 0, 20});
+    // 4. Tiling 2D conv op.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "simple_conv", {0, 0, 0, 0, 10, 20, 30});
+    // 5. Tiling a simple op with `linalg.index` inside.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "indexed_semantics", {10, 20});
+    // 6. Tiling + interchange of an operation
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "gemm_interchange", {10, 20, 30}, {1, 2, 0});
+    return;
+  }
+  if (testTileConsumerAndFuseProducer) {
+    // 1. Tile and fuse of gemm with bias-add operation.
+    addPatternForTiling<
+        TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
+        context, patterns, "fusion", {10, 20});
+    addPatternForTiling<
+        TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
+        context, patterns, "gemm_fusion", {10});
+    addPatternForTiling<
+        TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
+        context, patterns, "gemm_interchange_fusion", {10, 20}, {1, 0});
+    addPatternForTiling<
+        TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
+        context, patterns, "gemm_plus_gemm_fusion", {10, 20});
+    addPatternForTiling<
+        TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
+        context, patterns, "gemm_sequence_fusion", {10});
+    return;
+  }
 }
 
 void TestTilingInterfacePass::runOnOperation() {

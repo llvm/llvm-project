@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX
 
-define <4 x i32> @load_zmov_4i32_to_0zzz(<4 x i32> *%ptr) {
+define <4 x i32> @load_zmov_4i32_to_0zzz(ptr%ptr) {
 ; SSE-LABEL: load_zmov_4i32_to_0zzz:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -16,12 +16,12 @@ define <4 x i32> @load_zmov_4i32_to_0zzz(<4 x i32> *%ptr) {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
 entry:
-  %X = load <4 x i32>, <4 x i32>* %ptr
+  %X = load <4 x i32>, ptr %ptr
   %Y = shufflevector <4 x i32> %X, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 4, i32 4>
   ret <4 x i32>%Y
 }
 
-define <2 x i64> @load_zmov_2i64_to_0z(<2 x i64> *%ptr) {
+define <2 x i64> @load_zmov_2i64_to_0z(ptr%ptr) {
 ; SSE-LABEL: load_zmov_2i64_to_0z:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -32,12 +32,12 @@ define <2 x i64> @load_zmov_2i64_to_0z(<2 x i64> *%ptr) {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
 entry:
-  %X = load <2 x i64>, <2 x i64>* %ptr
+  %X = load <2 x i64>, ptr %ptr
   %Y = shufflevector <2 x i64> %X, <2 x i64> zeroinitializer, <2 x i32> <i32 0, i32 2>
   ret <2 x i64>%Y
 }
 
-define <4 x i32> @load_zmov_4i32_to_0zzz_volatile(<4 x i32> *%ptr) {
+define <4 x i32> @load_zmov_4i32_to_0zzz_volatile(ptr%ptr) {
 ; SSE2-LABEL: load_zmov_4i32_to_0zzz_volatile:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps (%rdi), %xmm1
@@ -66,12 +66,12 @@ define <4 x i32> @load_zmov_4i32_to_0zzz_volatile(<4 x i32> *%ptr) {
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 entry:
-  %X = load volatile <4 x i32>, <4 x i32>* %ptr
+  %X = load volatile <4 x i32>, ptr %ptr
   %Y = shufflevector <4 x i32> %X, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 4, i32 4>
   ret <4 x i32>%Y
 }
 
-define <2 x i64> @load_zmov_2i64_to_0z_volatile(<2 x i64> *%ptr) {
+define <2 x i64> @load_zmov_2i64_to_0z_volatile(ptr%ptr) {
 ; SSE-LABEL: load_zmov_2i64_to_0z_volatile:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -84,7 +84,7 @@ define <2 x i64> @load_zmov_2i64_to_0z_volatile(<2 x i64> *%ptr) {
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX-NEXT:    retq
 entry:
-  %X = load volatile <2 x i64>, <2 x i64>* %ptr
+  %X = load volatile <2 x i64>, ptr %ptr
   %Y = shufflevector <2 x i64> %X, <2 x i64> zeroinitializer, <2 x i32> <i32 0, i32 2>
   ret <2 x i64>%Y
 }

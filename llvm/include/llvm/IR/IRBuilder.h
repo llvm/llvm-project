@@ -300,7 +300,7 @@ public:
   void setDefaultConstrainedExcept(fp::ExceptionBehavior NewExcept) {
 #ifndef NDEBUG
     Optional<StringRef> ExceptStr = convertExceptionBehaviorToStr(NewExcept);
-    assert(ExceptStr.hasValue() && "Garbage strict exception behavior!");
+    assert(ExceptStr && "Garbage strict exception behavior!");
 #endif
     DefaultConstrainedExcept = NewExcept;
   }
@@ -309,7 +309,7 @@ public:
   void setDefaultConstrainedRounding(RoundingMode NewRounding) {
 #ifndef NDEBUG
     Optional<StringRef> RoundingStr = convertRoundingModeToStr(NewRounding);
-    assert(RoundingStr.hasValue() && "Garbage strict rounding mode!");
+    assert(RoundingStr && "Garbage strict rounding mode!");
 #endif
     DefaultConstrainedRounding = NewRounding;
   }
@@ -914,18 +914,18 @@ public:
                            Name);
   }
 
-  /// Create a call to the experimental.vector.extract intrinsic.
+  /// Create a call to the vector.extract intrinsic.
   CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
                                 const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::experimental_vector_extract,
+    return CreateIntrinsic(Intrinsic::vector_extract,
                            {DstType, SrcVec->getType()}, {SrcVec, Idx}, nullptr,
                            Name);
   }
 
-  /// Create a call to the experimental.vector.insert intrinsic.
+  /// Create a call to the vector.insert intrinsic.
   CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
                                Value *Idx, const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::experimental_vector_insert,
+    return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
   }
@@ -974,7 +974,7 @@ public:
   /// This is a convenience function for code that uses aggregate return values
   /// as a vehicle for having multiple return values.
   ReturnInst *CreateAggregateRet(Value *const *retVals, unsigned N) {
-    Value *V = UndefValue::get(getCurrentFunctionReturnType());
+    Value *V = PoisonValue::get(getCurrentFunctionReturnType());
     for (unsigned i = 0; i != N; ++i)
       V = CreateInsertValue(V, retVals[i], i, "mrv");
     return Insert(ReturnInst::Create(Context, V));
@@ -1158,22 +1158,15 @@ private:
     return I;
   }
 
-  Value *foldConstant(Instruction::BinaryOps Opc, Value *L,
-                      Value *R, const Twine &Name) const {
-    auto *LC = dyn_cast<Constant>(L);
-    auto *RC = dyn_cast<Constant>(R);
-    return (LC && RC) ? Insert(Folder.CreateBinOp(Opc, LC, RC), Name) : nullptr;
-  }
-
   Value *getConstrainedFPRounding(Optional<RoundingMode> Rounding) {
     RoundingMode UseRounding = DefaultConstrainedRounding;
 
-    if (Rounding.hasValue())
-      UseRounding = Rounding.getValue();
+    if (Rounding)
+      UseRounding = Rounding.value();
 
     Optional<StringRef> RoundingStr = convertRoundingModeToStr(UseRounding);
-    assert(RoundingStr.hasValue() && "Garbage strict rounding mode!");
-    auto *RoundingMDS = MDString::get(Context, RoundingStr.getValue());
+    assert(RoundingStr && "Garbage strict rounding mode!");
+    auto *RoundingMDS = MDString::get(Context, RoundingStr.value());
 
     return MetadataAsValue::get(Context, RoundingMDS);
   }
@@ -1181,12 +1174,12 @@ private:
   Value *getConstrainedFPExcept(Optional<fp::ExceptionBehavior> Except) {
     fp::ExceptionBehavior UseExcept = DefaultConstrainedExcept;
 
-    if (Except.hasValue())
-      UseExcept = Except.getValue();
+    if (Except)
+      UseExcept = Except.value();
 
     Optional<StringRef> ExceptStr = convertExceptionBehaviorToStr(UseExcept);
-    assert(ExceptStr.hasValue() && "Garbage strict exception behavior!");
-    auto *ExceptMDS = MDString::get(Context, ExceptStr.getValue());
+    assert(ExceptStr && "Garbage strict exception behavior!");
+    auto *ExceptMDS = MDString::get(Context, ExceptStr.value());
 
     return MetadataAsValue::get(Context, ExceptMDS);
   }
@@ -1206,10 +1199,11 @@ private:
 public:
   Value *CreateAdd(Value *LHS, Value *RHS, const Twine &Name = "",
                    bool HasNUW = false, bool HasNSW = false) {
-    if (auto *V = Folder.FoldAdd(LHS, RHS, HasNUW, HasNSW))
+    if (Value *V =
+            Folder.FoldNoWrapBinOp(Instruction::Add, LHS, RHS, HasNUW, HasNSW))
       return V;
-    return CreateInsertNUWNSWBinOp(Instruction::Add, LHS, RHS, Name,
-                                   HasNUW, HasNSW);
+    return CreateInsertNUWNSWBinOp(Instruction::Add, LHS, RHS, Name, HasNUW,
+                                   HasNSW);
   }
 
   Value *CreateNSWAdd(Value *LHS, Value *RHS, const Twine &Name = "") {
@@ -1222,11 +1216,11 @@ public:
 
   Value *CreateSub(Value *LHS, Value *RHS, const Twine &Name = "",
                    bool HasNUW = false, bool HasNSW = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateSub(LC, RC, HasNUW, HasNSW), Name);
-    return CreateInsertNUWNSWBinOp(Instruction::Sub, LHS, RHS, Name,
-                                   HasNUW, HasNSW);
+    if (Value *V =
+            Folder.FoldNoWrapBinOp(Instruction::Sub, LHS, RHS, HasNUW, HasNSW))
+      return V;
+    return CreateInsertNUWNSWBinOp(Instruction::Sub, LHS, RHS, Name, HasNUW,
+                                   HasNSW);
   }
 
   Value *CreateNSWSub(Value *LHS, Value *RHS, const Twine &Name = "") {
@@ -1239,11 +1233,11 @@ public:
 
   Value *CreateMul(Value *LHS, Value *RHS, const Twine &Name = "",
                    bool HasNUW = false, bool HasNSW = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateMul(LC, RC, HasNUW, HasNSW), Name);
-    return CreateInsertNUWNSWBinOp(Instruction::Mul, LHS, RHS, Name,
-                                   HasNUW, HasNSW);
+    if (Value *V =
+            Folder.FoldNoWrapBinOp(Instruction::Mul, LHS, RHS, HasNUW, HasNSW))
+      return V;
+    return CreateInsertNUWNSWBinOp(Instruction::Mul, LHS, RHS, Name, HasNUW,
+                                   HasNSW);
   }
 
   Value *CreateNSWMul(Value *LHS, Value *RHS, const Twine &Name = "") {
@@ -1256,9 +1250,8 @@ public:
 
   Value *CreateUDiv(Value *LHS, Value *RHS, const Twine &Name = "",
                     bool isExact = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateUDiv(LC, RC, isExact), Name);
+    if (Value *V = Folder.FoldExactBinOp(Instruction::UDiv, LHS, RHS, isExact))
+      return V;
     if (!isExact)
       return Insert(BinaryOperator::CreateUDiv(LHS, RHS), Name);
     return Insert(BinaryOperator::CreateExactUDiv(LHS, RHS), Name);
@@ -1270,9 +1263,8 @@ public:
 
   Value *CreateSDiv(Value *LHS, Value *RHS, const Twine &Name = "",
                     bool isExact = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateSDiv(LC, RC, isExact), Name);
+    if (Value *V = Folder.FoldExactBinOp(Instruction::SDiv, LHS, RHS, isExact))
+      return V;
     if (!isExact)
       return Insert(BinaryOperator::CreateSDiv(LHS, RHS), Name);
     return Insert(BinaryOperator::CreateExactSDiv(LHS, RHS), Name);
@@ -1283,20 +1275,22 @@ public:
   }
 
   Value *CreateURem(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (Value *V = foldConstant(Instruction::URem, LHS, RHS, Name)) return V;
+    if (Value *V = Folder.FoldBinOp(Instruction::URem, LHS, RHS))
+      return V;
     return Insert(BinaryOperator::CreateURem(LHS, RHS), Name);
   }
 
   Value *CreateSRem(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (Value *V = foldConstant(Instruction::SRem, LHS, RHS, Name)) return V;
+    if (Value *V = Folder.FoldBinOp(Instruction::SRem, LHS, RHS))
+      return V;
     return Insert(BinaryOperator::CreateSRem(LHS, RHS), Name);
   }
 
   Value *CreateShl(Value *LHS, Value *RHS, const Twine &Name = "",
                    bool HasNUW = false, bool HasNSW = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateShl(LC, RC, HasNUW, HasNSW), Name);
+    if (Value *V =
+            Folder.FoldNoWrapBinOp(Instruction::Shl, LHS, RHS, HasNUW, HasNSW))
+      return V;
     return CreateInsertNUWNSWBinOp(Instruction::Shl, LHS, RHS, Name,
                                    HasNUW, HasNSW);
   }
@@ -1315,9 +1309,8 @@ public:
 
   Value *CreateLShr(Value *LHS, Value *RHS, const Twine &Name = "",
                     bool isExact = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateLShr(LC, RC, isExact), Name);
+    if (Value *V = Folder.FoldExactBinOp(Instruction::LShr, LHS, RHS, isExact))
+      return V;
     if (!isExact)
       return Insert(BinaryOperator::CreateLShr(LHS, RHS), Name);
     return Insert(BinaryOperator::CreateExactLShr(LHS, RHS), Name);
@@ -1335,9 +1328,8 @@ public:
 
   Value *CreateAShr(Value *LHS, Value *RHS, const Twine &Name = "",
                     bool isExact = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateAShr(LC, RC, isExact), Name);
+    if (Value *V = Folder.FoldExactBinOp(Instruction::AShr, LHS, RHS, isExact))
+      return V;
     if (!isExact)
       return Insert(BinaryOperator::CreateAShr(LHS, RHS), Name);
     return Insert(BinaryOperator::CreateExactAShr(LHS, RHS), Name);
@@ -1354,7 +1346,7 @@ public:
   }
 
   Value *CreateAnd(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (auto *V = Folder.FoldAnd(LHS, RHS))
+    if (auto *V = Folder.FoldBinOp(Instruction::And, LHS, RHS))
       return V;
     return Insert(BinaryOperator::CreateAnd(LHS, RHS), Name);
   }
@@ -1376,7 +1368,7 @@ public:
   }
 
   Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (auto *V = Folder.FoldOr(LHS, RHS))
+    if (auto *V = Folder.FoldBinOp(Instruction::Or, LHS, RHS))
       return V;
     return Insert(BinaryOperator::CreateOr(LHS, RHS), Name);
   }
@@ -1398,7 +1390,8 @@ public:
   }
 
   Value *CreateXor(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (Value *V = foldConstant(Instruction::Xor, LHS, RHS, Name)) return V;
+    if (Value *V = Folder.FoldBinOp(Instruction::Xor, LHS, RHS))
+      return V;
     return Insert(BinaryOperator::CreateXor(LHS, RHS), Name);
   }
 
@@ -1416,7 +1409,8 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fadd,
                                       L, R, nullptr, Name, FPMD);
 
-    if (Value *V = foldConstant(Instruction::FAdd, L, R, Name)) return V;
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMF))
+      return V;
     Instruction *I = setFPAttrs(BinaryOperator::CreateFAdd(L, R), FPMD, FMF);
     return Insert(I, Name);
   }
@@ -1429,9 +1423,10 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fadd,
                                       L, R, FMFSource, Name);
 
-    if (Value *V = foldConstant(Instruction::FAdd, L, R, Name)) return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFAdd(L, R), nullptr,
-                                FMFSource->getFastMathFlags());
+    FastMathFlags FMF = FMFSource->getFastMathFlags();
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMF))
+      return V;
+    Instruction *I = setFPAttrs(BinaryOperator::CreateFAdd(L, R), nullptr, FMF);
     return Insert(I, Name);
   }
 
@@ -1441,7 +1436,8 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fsub,
                                       L, R, nullptr, Name, FPMD);
 
-    if (Value *V = foldConstant(Instruction::FSub, L, R, Name)) return V;
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMF))
+      return V;
     Instruction *I = setFPAttrs(BinaryOperator::CreateFSub(L, R), FPMD, FMF);
     return Insert(I, Name);
   }
@@ -1454,9 +1450,10 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fsub,
                                       L, R, FMFSource, Name);
 
-    if (Value *V = foldConstant(Instruction::FSub, L, R, Name)) return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFSub(L, R), nullptr,
-                                FMFSource->getFastMathFlags());
+    FastMathFlags FMF = FMFSource->getFastMathFlags();
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMF))
+      return V;
+    Instruction *I = setFPAttrs(BinaryOperator::CreateFSub(L, R), nullptr, FMF);
     return Insert(I, Name);
   }
 
@@ -1466,7 +1463,8 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fmul,
                                       L, R, nullptr, Name, FPMD);
 
-    if (Value *V = foldConstant(Instruction::FMul, L, R, Name)) return V;
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMF))
+      return V;
     Instruction *I = setFPAttrs(BinaryOperator::CreateFMul(L, R), FPMD, FMF);
     return Insert(I, Name);
   }
@@ -1479,9 +1477,10 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fmul,
                                       L, R, FMFSource, Name);
 
-    if (Value *V = foldConstant(Instruction::FMul, L, R, Name)) return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFMul(L, R), nullptr,
-                                FMFSource->getFastMathFlags());
+    FastMathFlags FMF = FMFSource->getFastMathFlags();
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMF))
+      return V;
+    Instruction *I = setFPAttrs(BinaryOperator::CreateFMul(L, R), nullptr, FMF);
     return Insert(I, Name);
   }
 
@@ -1491,7 +1490,8 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fdiv,
                                       L, R, nullptr, Name, FPMD);
 
-    if (Value *V = foldConstant(Instruction::FDiv, L, R, Name)) return V;
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMF))
+      return V;
     Instruction *I = setFPAttrs(BinaryOperator::CreateFDiv(L, R), FPMD, FMF);
     return Insert(I, Name);
   }
@@ -1504,9 +1504,9 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fdiv,
                                       L, R, FMFSource, Name);
 
-    if (Value *V = foldConstant(Instruction::FDiv, L, R, Name)) return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFDiv(L, R), nullptr,
-                                FMFSource->getFastMathFlags());
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMF))
+      return V;
+    Instruction *I = setFPAttrs(BinaryOperator::CreateFDiv(L, R), nullptr, FMF);
     return Insert(I, Name);
   }
 
@@ -1516,7 +1516,7 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_frem,
                                       L, R, nullptr, Name, FPMD);
 
-    if (Value *V = foldConstant(Instruction::FRem, L, R, Name)) return V;
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMF)) return V;
     Instruction *I = setFPAttrs(BinaryOperator::CreateFRem(L, R), FPMD, FMF);
     return Insert(I, Name);
   }
@@ -1529,16 +1529,16 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_frem,
                                       L, R, FMFSource, Name);
 
-    if (Value *V = foldConstant(Instruction::FRem, L, R, Name)) return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFRem(L, R), nullptr,
-                                FMFSource->getFastMathFlags());
+    FastMathFlags FMF = FMFSource->getFastMathFlags();
+    if (Value *V = Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMF)) return V;
+    Instruction *I = setFPAttrs(BinaryOperator::CreateFRem(L, R), nullptr, FMF);
     return Insert(I, Name);
   }
 
   Value *CreateBinOp(Instruction::BinaryOps Opc,
                      Value *LHS, Value *RHS, const Twine &Name = "",
                      MDNode *FPMathTag = nullptr) {
-    if (Value *V = foldConstant(Opc, LHS, RHS, Name)) return V;
+    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS)) return V;
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
       setFPAttrs(BinOp, FPMathTag, FMF);
@@ -1572,14 +1572,10 @@ public:
       Optional<RoundingMode> Rounding = None,
       Optional<fp::ExceptionBehavior> Except = None);
 
-  Value *CreateNeg(Value *V, const Twine &Name = "",
-                   bool HasNUW = false, bool HasNSW = false) {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateNeg(VC, HasNUW, HasNSW), Name);
-    BinaryOperator *BO = Insert(BinaryOperator::CreateNeg(V), Name);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
+  Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNUW = false,
+                   bool HasNSW = false) {
+    return CreateSub(Constant::getNullValue(V->getType()), V, Name, HasNUW,
+                     HasNSW);
   }
 
   Value *CreateNSWNeg(Value *V, const Twine &Name = "") {
@@ -1592,8 +1588,8 @@ public:
 
   Value *CreateFNeg(Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateFNeg(VC), Name);
+    if (Value *Res = Folder.FoldUnOpFMF(Instruction::FNeg, V, FMF))
+      return Res;
     return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), FPMathTag, FMF),
                   Name);
   }
@@ -1602,24 +1598,22 @@ public:
   /// default FMF.
   Value *CreateFNegFMF(Value *V, Instruction *FMFSource,
                        const Twine &Name = "") {
-   if (auto *VC = dyn_cast<Constant>(V))
-     return Insert(Folder.CreateFNeg(VC), Name);
-   return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), nullptr,
-                            FMFSource->getFastMathFlags()),
+   FastMathFlags FMF = FMFSource->getFastMathFlags();
+    if (Value *Res = Folder.FoldUnOpFMF(Instruction::FNeg, V, FMF))
+      return Res;
+   return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), nullptr, FMF),
                  Name);
   }
 
   Value *CreateNot(Value *V, const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateNot(VC), Name);
-    return Insert(BinaryOperator::CreateNot(V), Name);
+    return CreateXor(V, Constant::getAllOnesValue(V->getType()), Name);
   }
 
   Value *CreateUnOp(Instruction::UnaryOps Opc,
                     Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateUnOp(Opc, VC), Name);
+    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMF))
+      return Res;
     Instruction *UnOp = UnaryOperator::Create(Opc, V);
     if (isa<FPMathOperator>(UnOp))
       setFPAttrs(UnOp, FPMathTag, FMF);
@@ -2281,9 +2275,8 @@ public:
 
   Value *CreateExtractElement(Value *Vec, Value *Idx,
                               const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(Vec))
-      if (auto *IC = dyn_cast<Constant>(Idx))
-        return Insert(Folder.CreateExtractElement(VC, IC), Name);
+    if (Value *V = Folder.FoldExtractElement(Vec, Idx))
+      return V;
     return Insert(ExtractElementInst::Create(Vec, Idx), Name);
   }
 
@@ -2304,10 +2297,8 @@ public:
 
   Value *CreateInsertElement(Value *Vec, Value *NewElt, Value *Idx,
                              const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(Vec))
-      if (auto *NC = dyn_cast<Constant>(NewElt))
-        if (auto *IC = dyn_cast<Constant>(Idx))
-          return Insert(Folder.CreateInsertElement(VC, NC, IC), Name);
+    if (Value *V = Folder.FoldInsertElement(Vec, NewElt, Idx))
+      return V;
     return Insert(InsertElementInst::Create(Vec, NewElt, Idx), Name);
   }
 
@@ -2326,9 +2317,8 @@ public:
   /// See class ShuffleVectorInst for a description of the mask representation.
   Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask,
                              const Twine &Name = "") {
-    if (auto *V1C = dyn_cast<Constant>(V1))
-      if (auto *V2C = dyn_cast<Constant>(V2))
-        return Insert(Folder.CreateShuffleVector(V1C, V2C, Mask), Name);
+    if (Value *V = Folder.FoldShuffleVector(V1, V2, Mask))
+      return V;
     return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 

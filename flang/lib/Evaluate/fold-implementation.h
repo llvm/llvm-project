@@ -70,6 +70,8 @@ public:
   Expr<T> TRANSPOSE(FunctionRef<T> &&);
   Expr<T> UNPACK(FunctionRef<T> &&);
 
+  Expr<T> TRANSFER(FunctionRef<T> &&);
+
 private:
   FoldingContext &context_;
 };
@@ -340,11 +342,9 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
           return std::move(*specific);
         }
       }
-      if (auto length{ToInt64(Fold(context_, substring->LEN()))}) {
-        if (*length == 0) {
-          return Expr<T>{Constant<T>{Scalar<T>{}}};
-        }
-      }
+      // We used to fold zero-length substrings into zero-length
+      // constants here, but that led to problems in variable
+      // definition contexts.
     }
   } else if constexpr (T::category == TypeCategory::Real) {
     if (auto *zPart{std::get_if<ComplexPart>(&designator.u)}) {
@@ -1013,6 +1013,17 @@ template <typename T> Expr<T> Folder<T>::UNPACK(FunctionRef<T> &&funcRef) {
       PackageConstant<T>(std::move(resultElements), *vector, mask->shape())};
 }
 
+std::optional<Expr<SomeType>> FoldTransfer(
+    FoldingContext &, const ActualArguments &);
+
+template <typename T> Expr<T> Folder<T>::TRANSFER(FunctionRef<T> &&funcRef) {
+  if (auto folded{FoldTransfer(context_, funcRef.arguments())}) {
+    return DEREF(UnwrapExpr<Expr<T>>(*folded));
+  } else {
+    return Expr<T>{std::move(funcRef)};
+  }
+}
+
 template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
@@ -1119,6 +1130,8 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
       return Folder<T>{context}.RESHAPE(std::move(funcRef));
     } else if (name == "spread") {
       return Folder<T>{context}.SPREAD(std::move(funcRef));
+    } else if (name == "transfer") {
+      return Folder<T>{context}.TRANSFER(std::move(funcRef));
     } else if (name == "transpose") {
       return Folder<T>{context}.TRANSPOSE(std::move(funcRef));
     } else if (name == "unpack") {
@@ -1622,7 +1635,7 @@ Expr<TO> FoldOperation(
                     "REAL(%d) to REAL(%d) conversion", Operand::kind, TO::kind);
                 RealFlagWarnings(ctx, converted.flags, buffer);
               }
-              if (ctx.flushSubnormalsToZero()) {
+              if (ctx.targetCharacteristics().areSubnormalsFlushedToZero()) {
                 converted.value = converted.value.FlushSubnormalToZero();
               }
               return ScalarConstantToExpr(std::move(converted.value));
@@ -1749,9 +1762,10 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
       }
       return Expr<T>{Constant<T>{sum.value}};
     } else {
-      auto sum{folded->first.Add(folded->second, context.rounding())};
+      auto sum{folded->first.Add(
+          folded->second, context.targetCharacteristics().roundingMode())};
       RealFlagWarnings(context, sum.flags, "addition");
-      if (context.flushSubnormalsToZero()) {
+      if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         sum.value = sum.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{sum.value}};
@@ -1774,10 +1788,10 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
       }
       return Expr<T>{Constant<T>{difference.value}};
     } else {
-      auto difference{
-          folded->first.Subtract(folded->second, context.rounding())};
+      auto difference{folded->first.Subtract(
+          folded->second, context.targetCharacteristics().roundingMode())};
       RealFlagWarnings(context, difference.flags, "subtraction");
-      if (context.flushSubnormalsToZero()) {
+      if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         difference.value = difference.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{difference.value}};
@@ -1800,9 +1814,10 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       }
       return Expr<T>{Constant<T>{product.lower}};
     } else {
-      auto product{folded->first.Multiply(folded->second, context.rounding())};
+      auto product{folded->first.Multiply(
+          folded->second, context.targetCharacteristics().roundingMode())};
       RealFlagWarnings(context, product.flags, "multiplication");
-      if (context.flushSubnormalsToZero()) {
+      if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         product.value = product.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{product.value}};
@@ -1844,7 +1859,8 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       }
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
     } else {
-      auto quotient{folded->first.Divide(folded->second, context.rounding())};
+      auto quotient{folded->first.Divide(
+          folded->second, context.targetCharacteristics().roundingMode())};
       // Don't warn about -1./0., 0./0., or 1./0. from a module file
       // they are interpreted as canonical Fortran representations of -Inf,
       // NaN, and Inf respectively.
@@ -1861,7 +1877,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       if (!isCanonicalNaNOrInf) {
         RealFlagWarnings(context, quotient.flags, "division");
       }
-      if (context.flushSubnormalsToZero()) {
+      if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         quotient.value = quotient.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{quotient.value}};
@@ -1913,7 +1929,7 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
           auto power{evaluate::IntPower(folded->first, folded->second)};
           RealFlagWarnings(context, power.flags, "power with INTEGER exponent");
-          if (context.flushSubnormalsToZero()) {
+          if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
             power.value = power.value.FlushSubnormalToZero();
           }
           return Expr<T>{Constant<T>{power.value}};

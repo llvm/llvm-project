@@ -717,7 +717,7 @@ define <16 x i8> @var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8 %
 ; Unary shuffle indices from memory
 ;
 
-define <4 x i32> @mem_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32* %i) nounwind {
+define <4 x i32> @mem_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, ptr %i) nounwind {
 ; SSE2-LABEL: mem_shuffle_v4i32_v4i32_xxxx_i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl (%rdi), %eax
@@ -791,14 +791,13 @@ define <4 x i32> @mem_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32* %i) nounwi
 ; AVX-NEXT:    vpinsrd $2, -24(%rsp,%rdx,4), %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrd $3, -24(%rsp,%rsi,4), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %p0  = getelementptr inbounds i32, i32* %i, i64 0
-  %p1  = getelementptr inbounds i32, i32* %i, i64 1
-  %p2  = getelementptr inbounds i32, i32* %i, i64 2
-  %p3  = getelementptr inbounds i32, i32* %i, i64 3
-  %i0  = load i32, i32* %p0, align 4
-  %i1  = load i32, i32* %p1, align 4
-  %i2  = load i32, i32* %p2, align 4
-  %i3  = load i32, i32* %p3, align 4
+  %p1  = getelementptr inbounds i32, ptr %i, i64 1
+  %p2  = getelementptr inbounds i32, ptr %i, i64 2
+  %p3  = getelementptr inbounds i32, ptr %i, i64 3
+  %i0  = load i32, ptr %i, align 4
+  %i1  = load i32, ptr %p1, align 4
+  %i2  = load i32, ptr %p2, align 4
+  %i3  = load i32, ptr %p3, align 4
   %x0 = extractelement <4 x i32> %x, i32 %i0
   %x1 = extractelement <4 x i32> %x, i32 %i1
   %x2 = extractelement <4 x i32> %x, i32 %i2
@@ -810,7 +809,7 @@ define <4 x i32> @mem_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32* %i) nounwi
   ret <4 x i32> %r3
 }
 
-define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* %i) nounwind {
+define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, ptr %i) nounwind {
 ; SSE2-LABEL: mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbp
@@ -1142,38 +1141,37 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; AVX-NEXT:    popq %r15
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
-  %p0  = getelementptr inbounds i8, i8* %i, i64 0
-  %p1  = getelementptr inbounds i8, i8* %i, i64 1
-  %p2  = getelementptr inbounds i8, i8* %i, i64 2
-  %p3  = getelementptr inbounds i8, i8* %i, i64 3
-  %p4  = getelementptr inbounds i8, i8* %i, i64 4
-  %p5  = getelementptr inbounds i8, i8* %i, i64 5
-  %p6  = getelementptr inbounds i8, i8* %i, i64 6
-  %p7  = getelementptr inbounds i8, i8* %i, i64 7
-  %p8  = getelementptr inbounds i8, i8* %i, i64 8
-  %p9  = getelementptr inbounds i8, i8* %i, i64 9
-  %p10 = getelementptr inbounds i8, i8* %i, i64 10
-  %p11 = getelementptr inbounds i8, i8* %i, i64 11
-  %p12 = getelementptr inbounds i8, i8* %i, i64 12
-  %p13 = getelementptr inbounds i8, i8* %i, i64 13
-  %p14 = getelementptr inbounds i8, i8* %i, i64 14
-  %p15 = getelementptr inbounds i8, i8* %i, i64 15
-  %i0  = load i8, i8* %p0 , align 4
-  %i1  = load i8, i8* %p1 , align 4
-  %i2  = load i8, i8* %p2 , align 4
-  %i3  = load i8, i8* %p3 , align 4
-  %i4  = load i8, i8* %p4 , align 4
-  %i5  = load i8, i8* %p5 , align 4
-  %i6  = load i8, i8* %p6 , align 4
-  %i7  = load i8, i8* %p7 , align 4
-  %i8  = load i8, i8* %p8 , align 4
-  %i9  = load i8, i8* %p9 , align 4
-  %i10 = load i8, i8* %p10, align 4
-  %i11 = load i8, i8* %p11, align 4
-  %i12 = load i8, i8* %p12, align 4
-  %i13 = load i8, i8* %p13, align 4
-  %i14 = load i8, i8* %p14, align 4
-  %i15 = load i8, i8* %p15, align 4
+  %p1  = getelementptr inbounds i8, ptr %i, i64 1
+  %p2  = getelementptr inbounds i8, ptr %i, i64 2
+  %p3  = getelementptr inbounds i8, ptr %i, i64 3
+  %p4  = getelementptr inbounds i8, ptr %i, i64 4
+  %p5  = getelementptr inbounds i8, ptr %i, i64 5
+  %p6  = getelementptr inbounds i8, ptr %i, i64 6
+  %p7  = getelementptr inbounds i8, ptr %i, i64 7
+  %p8  = getelementptr inbounds i8, ptr %i, i64 8
+  %p9  = getelementptr inbounds i8, ptr %i, i64 9
+  %p10 = getelementptr inbounds i8, ptr %i, i64 10
+  %p11 = getelementptr inbounds i8, ptr %i, i64 11
+  %p12 = getelementptr inbounds i8, ptr %i, i64 12
+  %p13 = getelementptr inbounds i8, ptr %i, i64 13
+  %p14 = getelementptr inbounds i8, ptr %i, i64 14
+  %p15 = getelementptr inbounds i8, ptr %i, i64 15
+  %i0  = load i8, ptr %i , align 4
+  %i1  = load i8, ptr %p1 , align 4
+  %i2  = load i8, ptr %p2 , align 4
+  %i3  = load i8, ptr %p3 , align 4
+  %i4  = load i8, ptr %p4 , align 4
+  %i5  = load i8, ptr %p5 , align 4
+  %i6  = load i8, ptr %p6 , align 4
+  %i7  = load i8, ptr %p7 , align 4
+  %i8  = load i8, ptr %p8 , align 4
+  %i9  = load i8, ptr %p9 , align 4
+  %i10 = load i8, ptr %p10, align 4
+  %i11 = load i8, ptr %p11, align 4
+  %i12 = load i8, ptr %p12, align 4
+  %i13 = load i8, ptr %p13, align 4
+  %i14 = load i8, ptr %p14, align 4
+  %i15 = load i8, ptr %p15, align 4
   %x0  = extractelement <16 x i8> %x, i8 %i0
   %x1  = extractelement <16 x i8> %x, i8 %i1
   %x2  = extractelement <16 x i8> %x, i8 %i2

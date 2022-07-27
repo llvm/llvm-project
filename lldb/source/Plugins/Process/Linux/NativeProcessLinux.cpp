@@ -234,7 +234,7 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
 
   // Wait for the child process to trap on its call to execve.
-  int wstatus;
+  int wstatus = 0;
   ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
   assert(wpid == pid);
   (void)wpid;
@@ -849,7 +849,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
     auto tgid_ret = getPIDForTID(child_pid);
     if (tgid_ret != child_pid) {
       // A new thread should have PGID matching our process' PID.
-      assert(!tgid_ret || tgid_ret.getValue() == GetID());
+      assert(!tgid_ret || *tgid_ret == GetID());
 
       NativeThreadLinux &child_thread = AddThread(child_pid, /*resume*/ true);
       ThreadWasCreated(child_thread);
@@ -947,7 +947,7 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
 
     case eStateSuspended:
     case eStateStopped:
-      llvm_unreachable("Unexpected state");
+      break;
 
     default:
       return Status("NativeProcessLinux::%s (): unexpected state %s specified "
@@ -1227,7 +1227,8 @@ llvm::Expected<uint64_t>
 NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   PopulateMemoryRegionCache();
   auto region_it = llvm::find_if(m_mem_region_cache, [](const auto &pair) {
-    return pair.first.GetExecutable() == MemoryRegionInfo::eYes;
+    return pair.first.GetExecutable() == MemoryRegionInfo::eYes &&
+        pair.first.GetShared() != MemoryRegionInfo::eYes;
   });
   if (region_it == m_mem_region_cache.end())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

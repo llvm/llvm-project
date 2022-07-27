@@ -19,8 +19,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Operator.h"
 
 namespace llvm {
 
@@ -37,28 +39,59 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
-  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
-                 bool HasNSW = false) const override {
+
+  Value *FoldBinOp(Instruction::BinaryOps Opc, Value *LHS,
+                   Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getAdd(LC, RC, HasNUW, HasNSW);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return ConstantExpr::get(Opc, LC, RC);
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
+    }
     return nullptr;
   }
 
-  Value *FoldAnd(Value *LHS, Value *RHS) const override {
+  Value *FoldExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                        bool IsExact) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getAnd(LC, RC);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return ConstantExpr::get(Opc, LC, RC,
+                                 IsExact ? PossiblyExactOperator::IsExact : 0);
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
+    }
     return nullptr;
   }
 
-  Value *FoldOr(Value *LHS, Value *RHS) const override {
+  Value *FoldNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                         bool HasNUW, bool HasNSW) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getOr(LC, RC);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc)) {
+        unsigned Flags = 0;
+        if (HasNUW)
+          Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
+        if (HasNSW)
+          Flags |= OverflowingBinaryOperator::NoSignedWrap;
+        return ConstantExpr::get(Opc, LC, RC, Flags);
+      }
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
+    }
+    return nullptr;
+  }
+
+  Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                      FastMathFlags FMF) const override {
+    return FoldBinOp(Opc, LHS, RHS);
+  }
+
+  Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                      FastMathFlags FMF) const override {
+    if (Constant *C = dyn_cast<Constant>(V))
+      return ConstantExpr::get(Opc, C);
     return nullptr;
   }
 
@@ -97,7 +130,7 @@ public:
   Value *FoldExtractValue(Value *Agg,
                           ArrayRef<unsigned> IdxList) const override {
     if (auto *CAgg = dyn_cast<Constant>(Agg))
-      return ConstantExpr::getExtractValue(CAgg, IdxList);
+      return ConstantFoldExtractValueInstruction(CAgg, IdxList);
     return nullptr;
   };
 
@@ -106,109 +139,35 @@ public:
     auto *CAgg = dyn_cast<Constant>(Agg);
     auto *CVal = dyn_cast<Constant>(Val);
     if (CAgg && CVal)
-      return ConstantExpr::getInsertValue(CAgg, CVal, IdxList);
+      return ConstantFoldInsertValueInstruction(CAgg, CVal, IdxList);
     return nullptr;
   }
 
-  //===--------------------------------------------------------------------===//
-  // Binary Operators
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateFAdd(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFAdd(LHS, RHS);
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    auto *CVec = dyn_cast<Constant>(Vec);
+    auto *CIdx = dyn_cast<Constant>(Idx);
+    if (CVec && CIdx)
+      return ConstantExpr::getExtractElement(CVec, CIdx);
+    return nullptr;
   }
 
-  Constant *CreateSub(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getSub(LHS, RHS, HasNUW, HasNSW);
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    auto *CVec = dyn_cast<Constant>(Vec);
+    auto *CNewElt = dyn_cast<Constant>(NewElt);
+    auto *CIdx = dyn_cast<Constant>(Idx);
+    if (CVec && CNewElt && CIdx)
+      return ConstantExpr::getInsertElement(CVec, CNewElt, CIdx);
+    return nullptr;
   }
 
-  Constant *CreateFSub(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFSub(LHS, RHS);
-  }
-
-  Constant *CreateMul(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getMul(LHS, RHS, HasNUW, HasNSW);
-  }
-
-  Constant *CreateFMul(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFMul(LHS, RHS);
-  }
-
-  Constant *CreateUDiv(Constant *LHS, Constant *RHS,
-                               bool isExact = false) const override {
-    return ConstantExpr::getUDiv(LHS, RHS, isExact);
-  }
-
-  Constant *CreateSDiv(Constant *LHS, Constant *RHS,
-                               bool isExact = false) const override {
-    return ConstantExpr::getSDiv(LHS, RHS, isExact);
-  }
-
-  Constant *CreateFDiv(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFDiv(LHS, RHS);
-  }
-
-  Constant *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getURem(LHS, RHS);
-  }
-
-  Constant *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getSRem(LHS, RHS);
-  }
-
-  Constant *CreateFRem(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFRem(LHS, RHS);
-  }
-
-  Constant *CreateShl(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getShl(LHS, RHS, HasNUW, HasNSW);
-  }
-
-  Constant *CreateLShr(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return ConstantExpr::getLShr(LHS, RHS, isExact);
-  }
-
-  Constant *CreateAShr(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return ConstantExpr::getAShr(LHS, RHS, isExact);
-  }
-
-  Constant *CreateOr(Constant *LHS, Constant *RHS) const {
-    return ConstantExpr::getOr(LHS, RHS);
-  }
-
-  Constant *CreateXor(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getXor(LHS, RHS);
-  }
-
-  Constant *CreateBinOp(Instruction::BinaryOps Opc,
-                        Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::get(Opc, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateNeg(Constant *C,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getNeg(C, HasNUW, HasNSW);
-  }
-
-  Constant *CreateFNeg(Constant *C) const override {
-    return ConstantExpr::getFNeg(C);
-  }
-
-  Constant *CreateNot(Constant *C) const override {
-    return ConstantExpr::getNot(C);
-  }
-
-  Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
-    return ConstantExpr::get(Opc, C);
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
+    auto *C1 = dyn_cast<Constant>(V1);
+    auto *C2 = dyn_cast<Constant>(V2);
+    if (C1 && C2)
+      return ConstantExpr::getShuffleVector(C1, C2, Mask);
+    return nullptr;
   }
 
   //===--------------------------------------------------------------------===//
@@ -269,24 +228,6 @@ public:
   Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                        Constant *RHS) const override {
     return ConstantExpr::getCompare(P, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
-    return ConstantExpr::getExtractElement(Vec, Idx);
-  }
-
-  Constant *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                Constant *Idx) const override {
-    return ConstantExpr::getInsertElement(Vec, NewElt, Idx);
-  }
-
-  Constant *CreateShuffleVector(Constant *V1, Constant *V2,
-                                ArrayRef<int> Mask) const override {
-    return ConstantExpr::getShuffleVector(V1, V2, Mask);
   }
 };
 

@@ -216,7 +216,7 @@ public:
   }
 
   bool isForeign() const {
-    assert(Foreign.hasValue() && "Foreign must be set before querying");
+    assert(Foreign && "Foreign must be set before querying");
     return *Foreign;
   }
   void setForeign(bool B) const { Foreign = B; }
@@ -414,7 +414,8 @@ public:
   bool isArgumentConstructedDirectly(unsigned Index) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
-        getState(), {getOriginExpr(), Index}, getLocationContext()).hasValue();
+               getState(), {getOriginExpr(), Index}, getLocationContext())
+        .has_value();
   }
 
   /// Some calls have parameter numbering mismatched from argument numbering.
@@ -1018,7 +1019,7 @@ public:
   SVal getObjectUnderConstruction() const {
     return ExprEngine::getObjectUnderConstruction(getState(), getOriginExpr(),
                                                   getLocationContext())
-        .getValue();
+        .value();
   }
 
   /// Number of non-placement arguments to the call. It is equal to 2 for

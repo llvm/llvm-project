@@ -6,6 +6,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_FFI
   LLVM_ENABLE_THREADS
   LLVM_ENABLE_CURL
+  LLVM_ENABLE_HTTPLIB
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_LIBXML2
   LLVM_INCLUDE_GO_TESTS
@@ -82,6 +83,7 @@ set(LLVM_TEST_DEPENDS
           llvm-dlltool
           dsymutil
           llvm-dwarfdump
+          llvm-dwarfutil
           llvm-dwp
           llvm-exegesis
           llvm-extract

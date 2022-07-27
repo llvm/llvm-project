@@ -53,6 +53,7 @@
 #include <iterator>
 #include <string>
 #include <tuple>
+#include <utility>
 
 namespace llvm {
 
@@ -1403,6 +1404,8 @@ public:
     case ISD::ATOMIC_LOAD_UMAX:
     case ISD::ATOMIC_LOAD_FADD:
     case ISD::ATOMIC_LOAD_FSUB:
+    case ISD::ATOMIC_LOAD_FMAX:
+    case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD:
     case ISD::ATOMIC_STORE:
     case ISD::MLOAD:
@@ -1468,6 +1471,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_UMAX    ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FADD    ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FSUB    ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAX    ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMIN    ||
            N->getOpcode() == ISD::ATOMIC_LOAD         ||
            N->getOpcode() == ISD::ATOMIC_STORE;
   }
@@ -2074,6 +2079,11 @@ public:
                           BitVector &UndefElements) const;
 
   bool isConstant() const;
+
+  /// If this BuildVector is constant and represents the numerical series
+  /// <a, a+n, a+2n, a+3n, ...> where a is integer and n is a non-zero integer,
+  /// the value <a,n> is returned.
+  Optional<std::pair<APInt, APInt>> isConstantSequence() const;
 
   /// Recast bit data \p SrcBitElements to \p DstEltSizeInBits wide elements.
   /// Undef elements are treated as zero, and entirely undefined elements are

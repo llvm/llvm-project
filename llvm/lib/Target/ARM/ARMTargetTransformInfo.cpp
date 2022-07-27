@@ -20,8 +20,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -33,6 +33,7 @@
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -2197,12 +2198,9 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
-                                             ScalarEvolution &SE,
-                                             AssumptionCache &AC,
-                                             TargetLibraryInfo *TLI,
-                                             DominatorTree *DT,
-                                             const LoopAccessInfo *LAI) {
+bool ARMTTIImpl::preferPredicateOverEpilogue(
+    Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
+    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL) {
   if (!EnableTailPredication) {
     LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
     return false;
@@ -2244,18 +2242,18 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
     return false;
   }
 
-  return canTailPredicateLoop(L, LI, SE, DL, LAI);
+  return canTailPredicateLoop(L, LI, SE, DL, LVL->getLAI());
 }
 
-bool ARMTTIImpl::emitGetActiveLaneMask() const {
+PredicationStyle ARMTTIImpl::emitGetActiveLaneMask() const {
   if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
-    return false;
+    return PredicationStyle::None;
 
   // Intrinsic @llvm.get.active.lane.mask is supported.
   // It is used in the MVETailPredication pass, which requires the number of
   // elements processed by this vector loop to setup the tail-predicated
   // loop.
-  return true;
+  return PredicationStyle::Data;
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,

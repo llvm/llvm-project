@@ -900,6 +900,26 @@ enum {
 #include "ELFRelocs/CSKY.def"
 };
 
+// LoongArch Specific e_flags
+enum : unsigned {
+  // Reference: https://github.com/loongson/LoongArch-Documentation.
+  // The last commit hash (main branch) is
+  // 99016636af64d02dee05e39974d4c1e55875c45b.
+  // Note that there is an open PR
+  // https://github.com/loongson/LoongArch-Documentation/pull/47
+  // talking about using 0x1, 0x2, 0x3 for ILP32S/F/D and use EI_CLASS to
+  // distinguish LP64 and ILP32. If this PR get merged, we will update
+  // the definition here.
+  // Base ABI Types.
+  EF_LOONGARCH_BASE_ABI_LP64S = 0x1,  // LP64 soft-float ABI
+  EF_LOONGARCH_BASE_ABI_LP64F = 0x2,  // LP64 single-float ABI
+  EF_LOONGARCH_BASE_ABI_LP64D = 0x3,  // LP64 double-float ABI
+  EF_LOONGARCH_BASE_ABI_ILP32S = 0x5, // ILP32 soft-float ABI
+  EF_LOONGARCH_BASE_ABI_ILP32F = 0x6, // ILP32 single-float ABI
+  EF_LOONGARCH_BASE_ABI_ILP32D = 0x7, // ILP32 double-float ABI
+  EF_LOONGARCH_BASE_ABI_MASK = 0x7,   // Mask for selecting base ABI
+};
+
 // ELF Relocation types for LoongArch
 enum {
 #include "ELFRelocs/LoongArch.def"
@@ -981,12 +1001,16 @@ enum : unsigned {
   SHT_LLVM_ADDRSIG = 0x6fff4c03,        // List of address-significant symbols
                                         // for safe ICF.
   SHT_LLVM_DEPENDENT_LIBRARIES =
-      0x6fff4c04,                    // LLVM Dependent Library Specifiers.
-  SHT_LLVM_SYMPART = 0x6fff4c05,     // Symbol partition specification.
-  SHT_LLVM_PART_EHDR = 0x6fff4c06,   // ELF header for loadable partition.
-  SHT_LLVM_PART_PHDR = 0x6fff4c07,   // Phdrs for loadable partition.
-  SHT_LLVM_BB_ADDR_MAP = 0x6fff4c08, // LLVM Basic Block Address Map.
+      0x6fff4c04,                  // LLVM Dependent Library Specifiers.
+  SHT_LLVM_SYMPART = 0x6fff4c05,   // Symbol partition specification.
+  SHT_LLVM_PART_EHDR = 0x6fff4c06, // ELF header for loadable partition.
+  SHT_LLVM_PART_PHDR = 0x6fff4c07, // Phdrs for loadable partition.
+  SHT_LLVM_BB_ADDR_MAP_V0 =
+      0x6fff4c08, // LLVM Basic Block Address Map (old version kept for
+                  // backward-compatibility).
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c09, // LLVM Call Graph Profile.
+  SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
+  SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1362,12 +1386,17 @@ enum {
   // These all contain stack unwind tables.
   PT_ARM_EXIDX = 0x70000001,
   PT_ARM_UNWIND = 0x70000001,
+  // MTE memory tag segment type
+  PT_AARCH64_MEMTAG_MTE = 0x70000002,
 
   // MIPS program header types.
   PT_MIPS_REGINFO = 0x70000000,  // Register usage information.
   PT_MIPS_RTPROC = 0x70000001,   // Runtime procedure table.
   PT_MIPS_OPTIONS = 0x70000002,  // Options segment.
   PT_MIPS_ABIFLAGS = 0x70000003, // Abiflags segment.
+
+  // RISCV program header types.
+  PT_RISCV_ATTRIBUTES = 0x70000003,
 };
 
 // Segment flag bits.

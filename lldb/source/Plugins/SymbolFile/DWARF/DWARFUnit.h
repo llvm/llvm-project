@@ -155,7 +155,7 @@ public:
   const DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
   uint8_t GetAddressByteSize() const { return m_header.GetAddressByteSize(); }
-  dw_addr_t GetAddrBase() const { return m_addr_base.getValueOr(0); }
+  dw_addr_t GetAddrBase() const { return m_addr_base.value_or(0); }
   dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_offset_t GetLineTableOffset();
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
@@ -165,6 +165,8 @@ public:
   void SetRangesBase(dw_addr_t ranges_base);
   void SetStrOffsetsBase(dw_offset_t str_offsets_base);
   virtual void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) = 0;
+
+  dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const;
 
   lldb::ByteOrder GetByteOrder() const;
 

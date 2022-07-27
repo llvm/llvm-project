@@ -7,6 +7,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test() {
 entry:
-  %0 = call float asm sideeffect "xchg $0, $1", "=r,*m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) undef, float 2.000000e+00) nounwind
+  %0 = call float asm sideeffect "xchg $0, $1", "=r,*m,0,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) undef, float 2.000000e+00) nounwind
   unreachable
 }

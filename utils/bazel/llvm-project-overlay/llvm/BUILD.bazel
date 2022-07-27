@@ -195,7 +195,7 @@ cc_library(
             "lib/Support/BLAKE3/blake3_avx512_x86-64_unix.S",
         ],
         "//conditions:default": [
-        ]
+        ],
     }),
     hdrs = glob([
         "include/llvm/Support/**/*.h",
@@ -221,7 +221,7 @@ cc_library(
         ],
         "//conditions:default": [
             "BLAKE3_USE_NEON=0",
-        ]
+        ],
     }) + select({
         "@platforms//cpu:x86_64": [
         ],
@@ -230,7 +230,7 @@ cc_library(
             "BLAKE3_NO_AVX512",
             "BLAKE3_NO_SSE2",
             "BLAKE3_NO_SSE41",
-        ]
+        ],
     }),
     includes = ["include"],
     linkopts = select({
@@ -435,6 +435,9 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
+        ":DebugInfoDWARF",
+        ":Object",
         ":Support",
         ":Symbolize",
     ],
@@ -484,7 +487,7 @@ cc_library(
         "lib/DebugInfo/Symbolize/*.cpp",
         "lib/DebugInfo/Symbolize/*.h",
     ]),
-    hdrs = glob(["include/llvm/DebugInfo/Symbolize/*.h"]),
+    hdrs = glob(["include/llvm/DebugInfo/Symbolize/*.h", "include/llvm/Debuginfod/*.h"]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -579,6 +582,10 @@ llvm_target_intrinsics_list = [
     {
         "name": "BPF",
         "intrinsic_prefix": "bpf",
+    },
+    {
+        "name": "DirectX",
+        "intrinsic_prefix": "dx",
     },
     {
         "name": "Hexagon",
@@ -2301,6 +2308,14 @@ cc_library(
         "include/llvm-c/OrcEE.h",
     ],
     copts = llvm_copts,
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "@bazel_tools//src/conditions:freebsd": [],
+        "@bazel_tools//src/conditions:darwin": [],
+        "//conditions:default": [
+            "-lrt",
+        ],
+    }),
     deps = [
         ":BitReader",
         ":BitWriter",
@@ -2352,6 +2367,14 @@ cc_library(
         "include/llvm/ExecutionEngine/Orc/TargetProcess/*.h",
     ]),
     copts = llvm_copts,
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "@bazel_tools//src/conditions:freebsd": [],
+        "@bazel_tools//src/conditions:darwin": [],
+        "//conditions:default": [
+            "-lrt",
+        ],
+    }),
     deps = [
         ":BinaryFormat",
         ":CodeGen",
@@ -2590,7 +2613,7 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "dsymutil-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "dsymutil"
+        "@TOOL_NAME@": "dsymutil",
     },
 )
 
@@ -2694,7 +2717,7 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-ar-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "llvm_ar"
+        "@TOOL_NAME@": "llvm_ar",
     },
 )
 
@@ -2896,7 +2919,7 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-cxxfilt-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "llvm_cxxfilt"
+        "@TOOL_NAME@": "llvm_cxxfilt",
     },
 )
 
@@ -2925,11 +2948,11 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":Symbolize",
         ":BitReader",
         ":Core",
-        ":Support",
         ":Debuginfod",
+        ":Support",
+        ":Symbolize",
     ],
 )
 
@@ -3439,10 +3462,9 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-objcopy-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "llvm_objcopy"
+        "@TOOL_NAME@": "llvm_objcopy",
     },
 )
-
 
 cc_binary(
     name = "llvm-objcopy",

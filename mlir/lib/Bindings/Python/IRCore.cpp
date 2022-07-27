@@ -16,7 +16,7 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/IR.h"
-#include "mlir-c/Registration.h"
+//#include "mlir-c/Registration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -474,7 +474,6 @@ py::object PyMlirContext::createFromCapsule(py::object capsule) {
 
 PyMlirContext *PyMlirContext::createNewContextForInit() {
   MlirContext context = mlirContextCreate();
-  mlirRegisterAllDialects(context);
   return new PyMlirContext(context);
 }
 
@@ -786,14 +785,13 @@ py::tuple PyDiagnostic::getNotes() {
   materializedNotes = py::tuple(numNotes);
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
-    py::object pyNoteDiag = py::cast(PyDiagnostic(noteDiag));
-    PyTuple_SET_ITEM(materializedNotes->ptr(), i, pyNoteDiag.ptr());
+    materializedNotes.value()[i] = PyDiagnostic(noteDiag);
   }
   return *materializedNotes;
 }
 
 //------------------------------------------------------------------------------
-// PyDialect, PyDialectDescriptor, PyDialects
+// PyDialect, PyDialectDescriptor, PyDialects, PyDialectRegistry
 //------------------------------------------------------------------------------
 
 MlirDialect PyDialects::getDialectForKey(const std::string &key,
@@ -805,6 +803,19 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
                      Twine("Dialect '") + key + "' not found");
   }
   return dialect;
+}
+
+py::object PyDialectRegistry::getCapsule() {
+  return py::reinterpret_steal<py::object>(
+      mlirPythonDialectRegistryToCapsule(*this));
+}
+
+PyDialectRegistry PyDialectRegistry::createFromCapsule(py::object capsule) {
+  MlirDialectRegistry rawRegistry =
+      mlirPythonCapsuleToDialectRegistry(capsule.ptr());
+  if (mlirDialectRegistryIsNull(rawRegistry))
+    throw py::error_already_set();
+  return PyDialectRegistry(rawRegistry);
 }
 
 //------------------------------------------------------------------------------
@@ -1956,8 +1967,8 @@ template <typename Container>
 static std::vector<PyType> getValueTypes(Container &container,
                                          PyMlirContextRef &context) {
   std::vector<PyType> result;
-  result.reserve(container.getNumElements());
-  for (int i = 0, e = container.getNumElements(); i < e; ++i) {
+  result.reserve(container.size());
+  for (int i = 0, e = container.size(); i < e; ++i) {
     result.push_back(
         PyType(context, mlirValueGetType(container.getElement(i).get())));
   }
@@ -1981,14 +1992,24 @@ public:
                   step),
         operation(std::move(operation)), block(block) {}
 
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("types", [](PyBlockArgumentList &self) {
+      return getValueTypes(self, self.operation->getContext());
+    });
+  }
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyBlockArgumentList, PyBlockArgument>;
+
   /// Returns the number of arguments in the list.
-  intptr_t getNumElements() {
+  intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirBlockGetNumArguments(block);
   }
 
-  /// Returns `pos`-the element in the list. Asserts on out-of-bounds.
-  PyBlockArgument getElement(intptr_t pos) {
+  /// Returns `pos`-the element in the list.
+  PyBlockArgument getRawElement(intptr_t pos) {
     MlirValue argument = mlirBlockGetArgument(block, pos);
     return PyBlockArgument(operation, argument);
   }
@@ -1999,13 +2020,6 @@ public:
     return PyBlockArgumentList(operation, block, startIndex, length, step);
   }
 
-  static void bindDerived(ClassTy &c) {
-    c.def_property_readonly("types", [](PyBlockArgumentList &self) {
-      return getValueTypes(self, self.operation->getContext());
-    });
-  }
-
-private:
   PyOperationRef operation;
   MlirBlock block;
 };
@@ -2026,12 +2040,25 @@ public:
                   step),
         operation(operation) {}
 
-  intptr_t getNumElements() {
+  void dunderSetItem(intptr_t index, PyValue value) {
+    index = wrapIndex(index);
+    mlirOperationSetOperand(operation->get(), index, value.get());
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def("__setitem__", &PyOpOperandList::dunderSetItem);
+  }
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyOpOperandList, PyValue>;
+
+  intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumOperands(operation->get());
   }
 
-  PyValue getElement(intptr_t pos) {
+  PyValue getRawElement(intptr_t pos) {
     MlirValue operand = mlirOperationGetOperand(operation->get(), pos);
     MlirOperation owner;
     if (mlirValueIsAOpResult(operand))
@@ -2049,16 +2076,6 @@ public:
     return PyOpOperandList(operation, startIndex, length, step);
   }
 
-  void dunderSetItem(intptr_t index, PyValue value) {
-    index = wrapIndex(index);
-    mlirOperationSetOperand(operation->get(), index, value.get());
-  }
-
-  static void bindDerived(ClassTy &c) {
-    c.def("__setitem__", &PyOpOperandList::dunderSetItem);
-  }
-
-private:
   PyOperationRef operation;
 };
 
@@ -2078,12 +2095,22 @@ public:
                   step),
         operation(operation) {}
 
-  intptr_t getNumElements() {
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("types", [](PyOpResultList &self) {
+      return getValueTypes(self, self.operation->getContext());
+    });
+  }
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyOpResultList, PyOpResult>;
+
+  intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumResults(operation->get());
   }
 
-  PyOpResult getElement(intptr_t index) {
+  PyOpResult getRawElement(intptr_t index) {
     PyValue value(operation, mlirOperationGetResult(operation->get(), index));
     return PyOpResult(value);
   }
@@ -2092,13 +2119,6 @@ public:
     return PyOpResultList(operation, startIndex, length, step);
   }
 
-  static void bindDerived(ClassTy &c) {
-    c.def_property_readonly("types", [](PyOpResultList &self) {
-      return getValueTypes(self, self.operation->getContext());
-    });
-  }
-
-private:
   PyOperationRef operation;
 };
 
@@ -2207,8 +2227,11 @@ void mlir::python::populateIRCore(py::module &m) {
 
   //----------------------------------------------------------------------------
   // Mapping of MlirContext.
+  // Note that this is exported as _BaseContext. The containing, Python level
+  // __init__.py will subclass it with site-specific functionality and set a
+  // "Context" attribute on this module.
   //----------------------------------------------------------------------------
-  py::class_<PyMlirContext>(m, "Context", py::module_local())
+  py::class_<PyMlirContext>(m, "_BaseContext", py::module_local())
       .def(py::init<>(&PyMlirContext::createNewContextForInit))
       .def_static("_get_live_count", &PyMlirContext::getLiveCount)
       .def("_get_context_again",
@@ -2276,7 +2299,16 @@ void mlir::python::populateIRCore(py::module &m) {
             return mlirContextIsRegisteredOperation(
                 self.get(), MlirStringRef{name.data(), name.size()});
           },
-          py::arg("operation_name"));
+          py::arg("operation_name"))
+      .def(
+          "append_dialect_registry",
+          [](PyMlirContext &self, PyDialectRegistry &registry) {
+            mlirContextAppendDialectRegistry(self.get(), registry);
+          },
+          py::arg("registry"))
+      .def("load_all_available_dialects", [](PyMlirContext &self) {
+        mlirContextLoadAllAvailableDialects(self.get());
+      });
 
   //----------------------------------------------------------------------------
   // Mapping of PyDialectDescriptor
@@ -2330,6 +2362,15 @@ void mlir::python::populateIRCore(py::module &m) {
                clazz.attr("__module__") + py::str(".") +
                clazz.attr("__name__") + py::str(")>");
       });
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyDialectRegistry
+  //----------------------------------------------------------------------------
+  py::class_<PyDialectRegistry>(m, "DialectRegistry", py::module_local())
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyDialectRegistry::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyDialectRegistry::createFromCapsule)
+      .def(py::init<>());
 
   //----------------------------------------------------------------------------
   // Mapping of Location

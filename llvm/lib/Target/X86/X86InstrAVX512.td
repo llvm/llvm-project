@@ -3769,12 +3769,16 @@ let Predicates = [HasAVX512] in {
             (VMOVDQA64Zrm addr:$src)>;
   def : Pat<(alignedloadv32i16 addr:$src),
             (VMOVDQA64Zrm addr:$src)>;
+  def : Pat<(alignedloadv32f16 addr:$src),
+            (VMOVAPSZrm addr:$src)>;
   def : Pat<(alignedloadv64i8 addr:$src),
             (VMOVDQA64Zrm addr:$src)>;
   def : Pat<(loadv16i32 addr:$src),
             (VMOVDQU64Zrm addr:$src)>;
   def : Pat<(loadv32i16 addr:$src),
             (VMOVDQU64Zrm addr:$src)>;
+  def : Pat<(loadv32f16 addr:$src),
+            (VMOVUPSZrm addr:$src)>;
   def : Pat<(loadv64i8 addr:$src),
             (VMOVDQU64Zrm addr:$src)>;
 
@@ -3783,12 +3787,16 @@ let Predicates = [HasAVX512] in {
             (VMOVDQA64Zmr addr:$dst, VR512:$src)>;
   def : Pat<(alignedstore (v32i16 VR512:$src), addr:$dst),
             (VMOVDQA64Zmr addr:$dst, VR512:$src)>;
+  def : Pat<(alignedstore (v32f16 VR512:$src), addr:$dst),
+            (VMOVAPSZmr addr:$dst, VR512:$src)>;
   def : Pat<(alignedstore (v64i8 VR512:$src), addr:$dst),
             (VMOVDQA64Zmr addr:$dst, VR512:$src)>;
   def : Pat<(store (v16i32 VR512:$src), addr:$dst),
             (VMOVDQU64Zmr addr:$dst, VR512:$src)>;
   def : Pat<(store (v32i16 VR512:$src), addr:$dst),
             (VMOVDQU64Zmr addr:$dst, VR512:$src)>;
+  def : Pat<(store (v32f16 VR512:$src), addr:$dst),
+            (VMOVUPSZmr addr:$dst, VR512:$src)>;
   def : Pat<(store (v64i8 VR512:$src), addr:$dst),
             (VMOVDQU64Zmr addr:$dst, VR512:$src)>;
 }
@@ -3799,12 +3807,16 @@ let Predicates = [HasVLX] in {
             (VMOVDQA64Z128rm addr:$src)>;
   def : Pat<(alignedloadv8i16 addr:$src),
             (VMOVDQA64Z128rm addr:$src)>;
+  def : Pat<(alignedloadv8f16 addr:$src),
+            (VMOVAPSZ128rm addr:$src)>;
   def : Pat<(alignedloadv16i8 addr:$src),
             (VMOVDQA64Z128rm addr:$src)>;
   def : Pat<(loadv4i32 addr:$src),
             (VMOVDQU64Z128rm addr:$src)>;
   def : Pat<(loadv8i16 addr:$src),
             (VMOVDQU64Z128rm addr:$src)>;
+  def : Pat<(loadv8f16 addr:$src),
+            (VMOVUPSZ128rm addr:$src)>;
   def : Pat<(loadv16i8 addr:$src),
             (VMOVDQU64Z128rm addr:$src)>;
 
@@ -3813,12 +3825,16 @@ let Predicates = [HasVLX] in {
             (VMOVDQA64Z128mr addr:$dst, VR128X:$src)>;
   def : Pat<(alignedstore (v8i16 VR128X:$src), addr:$dst),
             (VMOVDQA64Z128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(alignedstore (v8f16 VR128X:$src), addr:$dst),
+            (VMOVAPSZ128mr addr:$dst, VR128X:$src)>;
   def : Pat<(alignedstore (v16i8 VR128X:$src), addr:$dst),
             (VMOVDQA64Z128mr addr:$dst, VR128X:$src)>;
   def : Pat<(store (v4i32 VR128X:$src), addr:$dst),
             (VMOVDQU64Z128mr addr:$dst, VR128X:$src)>;
   def : Pat<(store (v8i16 VR128X:$src), addr:$dst),
             (VMOVDQU64Z128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(store (v8f16 VR128X:$src), addr:$dst),
+            (VMOVUPSZ128mr addr:$dst, VR128X:$src)>;
   def : Pat<(store (v16i8 VR128X:$src), addr:$dst),
             (VMOVDQU64Z128mr addr:$dst, VR128X:$src)>;
 
@@ -3827,12 +3843,16 @@ let Predicates = [HasVLX] in {
             (VMOVDQA64Z256rm addr:$src)>;
   def : Pat<(alignedloadv16i16 addr:$src),
             (VMOVDQA64Z256rm addr:$src)>;
+  def : Pat<(alignedloadv16f16 addr:$src),
+            (VMOVAPSZ256rm addr:$src)>;
   def : Pat<(alignedloadv32i8 addr:$src),
             (VMOVDQA64Z256rm addr:$src)>;
   def : Pat<(loadv8i32 addr:$src),
             (VMOVDQU64Z256rm addr:$src)>;
   def : Pat<(loadv16i16 addr:$src),
             (VMOVDQU64Z256rm addr:$src)>;
+  def : Pat<(loadv16f16 addr:$src),
+            (VMOVUPSZ256rm addr:$src)>;
   def : Pat<(loadv32i8 addr:$src),
             (VMOVDQU64Z256rm addr:$src)>;
 
@@ -3841,12 +3861,16 @@ let Predicates = [HasVLX] in {
             (VMOVDQA64Z256mr addr:$dst, VR256X:$src)>;
   def : Pat<(alignedstore (v16i16 VR256X:$src), addr:$dst),
             (VMOVDQA64Z256mr addr:$dst, VR256X:$src)>;
+  def : Pat<(alignedstore (v16f16 VR256X:$src), addr:$dst),
+            (VMOVAPSZ256mr addr:$dst, VR256X:$src)>;
   def : Pat<(alignedstore (v32i8 VR256X:$src), addr:$dst),
             (VMOVDQA64Z256mr addr:$dst, VR256X:$src)>;
   def : Pat<(store (v8i32 VR256X:$src), addr:$dst),
             (VMOVDQU64Z256mr addr:$dst, VR256X:$src)>;
   def : Pat<(store (v16i16 VR256X:$src), addr:$dst),
             (VMOVDQU64Z256mr addr:$dst, VR256X:$src)>;
+  def : Pat<(store (v16f16 VR256X:$src), addr:$dst),
+            (VMOVUPSZ256mr addr:$dst, VR256X:$src)>;
   def : Pat<(store (v32i8 VR256X:$src), addr:$dst),
             (VMOVDQU64Z256mr addr:$dst, VR256X:$src)>;
 }
@@ -3855,16 +3879,12 @@ let Predicates = [HasBWI] in {
             (VMOVDQU16Zrrk VR512:$src0, VK32WM:$mask, VR512:$src1)>;
   def : Pat<(v32f16 (vselect VK32WM:$mask, (v32f16 VR512:$src1), v32f16_info.ImmAllZerosV)),
             (VMOVDQU16Zrrkz VK32WM:$mask, VR512:$src1)>;
-  def : Pat<(v32f16 (alignedloadv32f16 addr:$src)),
-            (VMOVAPSZrm addr:$src)>;
   def : Pat<(v32f16 (vselect VK32WM:$mask,
                      (v32f16 (alignedloadv32f16 addr:$src)), (v32f16 VR512:$src0))),
             (VMOVDQU16Zrmk VR512:$src0, VK32WM:$mask, addr:$src)>;
   def : Pat<(v32f16 (vselect VK32WM:$mask,
                      (v32f16 (alignedloadv32f16 addr:$src)), v32f16_info.ImmAllZerosV)),
             (VMOVDQU16Zrmkz VK32WM:$mask, addr:$src)>;
-  def : Pat<(v32f16 (loadv32f16 addr:$src)),
-            (VMOVUPSZrm addr:$src)>;
   def : Pat<(v32f16 (vselect VK32WM:$mask,
                      (v32f16 (loadv32f16 addr:$src)), (v32f16 VR512:$src0))),
             (VMOVDQU16Zrmk VR512:$src0, VK32WM:$mask, addr:$src)>;
@@ -3878,10 +3898,6 @@ let Predicates = [HasBWI] in {
   def : Pat<(v32f16 (masked_load addr:$src, VK32WM:$mask, v32f16_info.ImmAllZerosV)),
             (VMOVDQU16Zrmkz VK32WM:$mask, addr:$src)>;
 
-  def : Pat<(alignedstore (v32f16 VR512:$src), addr:$dst),
-            (VMOVAPSZmr addr:$dst, VR512:$src)>;
-  def : Pat<(store (v32f16 VR512:$src), addr:$dst),
-            (VMOVUPSZmr addr:$dst, VR512:$src)>;
   def : Pat<(masked_store (v32f16 VR512:$src), addr:$dst, VK32WM:$mask),
             (VMOVDQU16Zmrk addr:$dst, VK32WM:$mask, VR512:$src)>;
 }
@@ -3890,16 +3906,12 @@ let Predicates = [HasBWI, HasVLX] in {
             (VMOVDQU16Z256rrk VR256X:$src0, VK16WM:$mask, VR256X:$src1)>;
   def : Pat<(v16f16 (vselect VK16WM:$mask, (v16f16 VR256X:$src1), v16f16x_info.ImmAllZerosV)),
             (VMOVDQU16Z256rrkz VK16WM:$mask, VR256X:$src1)>;
-  def : Pat<(v16f16 (alignedloadv16f16 addr:$src)),
-            (VMOVAPSZ256rm addr:$src)>;
   def : Pat<(v16f16 (vselect VK16WM:$mask,
                      (v16f16 (alignedloadv16f16 addr:$src)), (v16f16 VR256X:$src0))),
             (VMOVDQU16Z256rmk VR256X:$src0, VK16WM:$mask, addr:$src)>;
   def : Pat<(v16f16 (vselect VK16WM:$mask,
                      (v16f16 (alignedloadv16f16 addr:$src)), v16f16x_info.ImmAllZerosV)),
             (VMOVDQU16Z256rmkz VK16WM:$mask, addr:$src)>;
-  def : Pat<(v16f16 (loadv16f16 addr:$src)),
-            (VMOVUPSZ256rm addr:$src)>;
   def : Pat<(v16f16 (vselect VK16WM:$mask,
                      (v16f16 (loadv16f16 addr:$src)), (v16f16 VR256X:$src0))),
             (VMOVDQU16Z256rmk VR256X:$src0, VK16WM:$mask, addr:$src)>;
@@ -3913,10 +3925,6 @@ let Predicates = [HasBWI, HasVLX] in {
   def : Pat<(v16f16 (masked_load addr:$src, VK16WM:$mask, v16f16x_info.ImmAllZerosV)),
             (VMOVDQU16Z256rmkz VK16WM:$mask, addr:$src)>;
 
-  def : Pat<(alignedstore (v16f16 VR256X:$src), addr:$dst),
-            (VMOVAPSZ256mr addr:$dst, VR256X:$src)>;
-  def : Pat<(store (v16f16 VR256X:$src), addr:$dst),
-            (VMOVUPSZ256mr addr:$dst, VR256X:$src)>;
   def : Pat<(masked_store (v16f16 VR256X:$src), addr:$dst, VK16WM:$mask),
             (VMOVDQU16Z256mrk addr:$dst, VK16WM:$mask, VR256X:$src)>;
 
@@ -3924,16 +3932,12 @@ let Predicates = [HasBWI, HasVLX] in {
             (VMOVDQU16Z128rrk VR128X:$src0, VK8WM:$mask, VR128X:$src1)>;
   def : Pat<(v8f16 (vselect VK8WM:$mask, (v8f16 VR128X:$src1), v8f16x_info.ImmAllZerosV)),
             (VMOVDQU16Z128rrkz VK8WM:$mask, VR128X:$src1)>;
-  def : Pat<(v8f16 (alignedloadv8f16 addr:$src)),
-            (VMOVAPSZ128rm addr:$src)>;
   def : Pat<(v8f16 (vselect VK8WM:$mask,
                      (v8f16 (alignedloadv8f16 addr:$src)), (v8f16 VR128X:$src0))),
             (VMOVDQU16Z128rmk VR128X:$src0, VK8WM:$mask, addr:$src)>;
   def : Pat<(v8f16 (vselect VK8WM:$mask,
                      (v8f16 (alignedloadv8f16 addr:$src)), v8f16x_info.ImmAllZerosV)),
             (VMOVDQU16Z128rmkz VK8WM:$mask, addr:$src)>;
-  def : Pat<(v8f16 (loadv8f16 addr:$src)),
-            (VMOVUPSZ128rm addr:$src)>;
   def : Pat<(v8f16 (vselect VK8WM:$mask,
                      (v8f16 (loadv8f16 addr:$src)), (v8f16 VR128X:$src0))),
             (VMOVDQU16Z128rmk VR128X:$src0, VK8WM:$mask, addr:$src)>;
@@ -3947,10 +3951,6 @@ let Predicates = [HasBWI, HasVLX] in {
   def : Pat<(v8f16 (masked_load addr:$src, VK8WM:$mask, v8f16x_info.ImmAllZerosV)),
             (VMOVDQU16Z128rmkz VK8WM:$mask, addr:$src)>;
 
-  def : Pat<(alignedstore (v8f16 VR128X:$src), addr:$dst),
-            (VMOVAPSZ128mr addr:$dst, VR128X:$src)>;
-  def : Pat<(store (v8f16 VR128X:$src), addr:$dst),
-            (VMOVUPSZ128mr addr:$dst, VR128X:$src)>;
   def : Pat<(masked_store (v8f16 VR128X:$src), addr:$dst, VK8WM:$mask),
             (VMOVDQU16Z128mrk addr:$dst, VK8WM:$mask, VR128X:$src)>;
 }

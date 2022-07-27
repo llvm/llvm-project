@@ -86,7 +86,7 @@ def SPIRV_Dialect : Dialect {
 // enum class with `name`.
 class SPV_IsKnownEnumCaseFor<string name> :
     CPred<"::mlir::spirv::symbolize" # name # "("
-          "$_self.cast<IntegerAttr>().getValue().getZExtValue()).hasValue()">;
+          "$_self.cast<IntegerAttr>().getValue().getZExtValue()).has_value()">;
 
 // Wrapper over base BitEnumAttr to set common fields.
 class SPV_BitEnumAttr<string name, string description,
@@ -2080,12 +2080,12 @@ def SPV_D_MatrixStride                       : I32EnumAttrCase<"MatrixStride", 7
     Capability<[SPV_C_Matrix]>
   ];
 }
-def SPV_D_GLSLShared                         : I32EnumAttrCase<"GLSLShared", 8> {
+def SPV_D_GLShared                           : I32EnumAttrCase<"GLShared", 8> {
   list<Availability> availability = [
     Capability<[SPV_C_Shader]>
   ];
 }
-def SPV_D_GLSLPacked                         : I32EnumAttrCase<"GLSLPacked", 9> {
+def SPV_D_GLPacked                           : I32EnumAttrCase<"GLPacked", 9> {
   list<Availability> availability = [
     Capability<[SPV_C_Shader]>
   ];
@@ -2550,7 +2550,7 @@ def SPV_DecorationAttr :
     SPV_I32EnumAttr<"Decoration", "valid SPIR-V Decoration", [
       SPV_D_RelaxedPrecision, SPV_D_SpecId, SPV_D_Block, SPV_D_BufferBlock,
       SPV_D_RowMajor, SPV_D_ColMajor, SPV_D_ArrayStride, SPV_D_MatrixStride,
-      SPV_D_GLSLShared, SPV_D_GLSLPacked, SPV_D_CPacked, SPV_D_BuiltIn,
+      SPV_D_GLShared, SPV_D_GLPacked, SPV_D_CPacked, SPV_D_BuiltIn,
       SPV_D_NoPerspective, SPV_D_Flat, SPV_D_Patch, SPV_D_Centroid, SPV_D_Sample,
       SPV_D_Invariant, SPV_D_Restrict, SPV_D_Aliased, SPV_D_Volatile, SPV_D_Constant,
       SPV_D_Coherent, SPV_D_NonWritable, SPV_D_NonReadable, SPV_D_Uniform,

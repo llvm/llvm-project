@@ -309,12 +309,14 @@ uint64_t SIMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
   return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;
 }
 
-void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
+static bool isVCMPX64(const MCInstrDesc &Desc) {
+  return (Desc.TSFlags & SIInstrFlags::VOP3) &&
+         Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC);
+}
 
+void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
   int Opcode = MI.getOpcode();
   APInt Encoding, Scratch;
   getBinaryCodeForInstr(MI, Fixups, Encoding, Scratch,  STI);
@@ -327,6 +329,17 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
+  }
+
+  // GFX11 v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
+  // Documentation requires dst to be encoded as EXEC (0x7E),
+  // but it looks like the actual value encoded for dst operand
+  // is ignored by HW. It was decided to define dst as "do not care"
+  // in td files to allow disassembler accept any dst value.
+  // However, dst is encoded as EXEC for compatibility with SP3.
+  if (AMDGPU::isGFX11Plus(STI) && isVCMPX64(Desc)) {
+    assert((Encoding & 0xFF) == 0);
+    Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO);
   }
 
   for (unsigned i = 0; i < bytes; i++) {
@@ -574,5 +587,4 @@ void SIMCCodeEmitter::getMachineOpValueCommon(
   llvm_unreachable("Encoding of this operand type is not supported yet.");
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "AMDGPUGenMCCodeEmitter.inc"

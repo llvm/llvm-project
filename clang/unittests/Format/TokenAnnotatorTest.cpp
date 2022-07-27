@@ -85,6 +85,35 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("case &x:");
   EXPECT_EQ(Tokens.size(), 5u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("struct {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  Tokens = annotate("union {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  Tokens = annotate("class {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("struct {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
+  Tokens = annotate("union {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
+  Tokens = annotate("class {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
+  Tokens = annotate("int i = int{42} * 2;");
+  EXPECT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -402,6 +431,33 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[25], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[27], tok::greater, TT_TemplateCloser);
   EXPECT_TOKEN(Tokens[28], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("auto bar() -> int requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto bar() -> void requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto bar() -> MyType requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens =
+      annotate("auto bar() -> SOME_MACRO_TYPE requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens =
+      annotate("auto bar() -> qualified::type requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::kw_requires, TT_RequiresClause);
+
+  Tokens =
+      annotate("auto bar() -> Template<type> requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::kw_requires, TT_RequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -493,259 +549,171 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
 }
 
 TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
-  auto NumberOfAdditionalRequiresClauseTokens = 5u;
-  auto NumberOfTokensBeforeRequires = 5u;
+  const char *BaseCode = nullptr;
+  const char *ConstrainedCode = nullptr;
+  auto BaseTokenCount = 0u;
+  auto RequiresTokenCount = 0u;
+  auto PrefixTokenCount = 0u;
 
-  auto BaseTokens = annotate("template<typename T>\n"
-                             "T Pi = 3.14;");
-  auto ConstrainedTokens = annotate("template<typename T>\n"
-                                    "  requires Foo<T>\n"
-                                    "T Pi = 3.14;");
+  auto TestRequires = [&](int Line) {
+    const auto BaseTokens = annotate(BaseCode);
+    const auto ConstrainedTokens = annotate(ConstrainedCode);
 
-  auto NumberOfBaseTokens = 11u;
+#define LINE " (Line " << Line << ')'
 
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
+    ASSERT_EQ(BaseTokens.size(), BaseTokenCount) << BaseTokens << LINE;
+    ASSERT_EQ(ConstrainedTokens.size(), BaseTokenCount + RequiresTokenCount)
+        << LINE;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
+    for (auto I = 0u; I < BaseTokenCount; ++I) {
+      EXPECT_EQ(
+          *BaseTokens[I],
+          *ConstrainedTokens[I < PrefixTokenCount ? I : I + RequiresTokenCount])
+          << I << LINE;
     }
-  }
 
-  BaseTokens = annotate("template<typename T>\n"
-                        "struct Bar;");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "  requires Foo<T>\n"
-                               "struct Bar;");
-  NumberOfBaseTokens = 9u;
+#undef LINE
+  };
 
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
+  BaseCode = "template<typename T>\n"
+             "T Pi = 3.14;";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires Foo<T>\n"
+                    "T Pi = 3.14;";
+  BaseTokenCount = 11;
+  RequiresTokenCount = 5;
+  PrefixTokenCount = 5;
+  TestRequires(__LINE__);
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
+  BaseCode = "template<typename T>\n"
+             "struct Bar;";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires Foo<T>\n"
+                    "struct Bar;";
+  BaseTokenCount = 9;
+  TestRequires(__LINE__);
 
-  BaseTokens = annotate("template<typename T>\n"
-                        "struct Bar {"
-                        "  T foo();\n"
-                        "  T bar();\n"
-                        "};");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "  requires Foo<T>\n"
-                               "struct Bar {"
-                               "  T foo();\n"
-                               "  T bar();\n"
-                               "};");
-  NumberOfBaseTokens = 21u;
+  BaseCode = "template<typename T>\n"
+             "struct Bar {\n"
+             "  T foo();\n"
+             "  T bar();\n"
+             "};";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires Foo<T>\n"
+                    "struct Bar {\n"
+                    "  T foo();\n"
+                    "  T bar();\n"
+                    "};";
+  BaseTokenCount = 21;
+  TestRequires(__LINE__);
 
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
+  BaseCode = "template<typename T>\n"
+             "Bar(T) -> Bar<T>;";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires Foo<T>\n"
+                    "Bar(T) -> Bar<T>;";
+  BaseTokenCount = 16;
+  TestRequires(__LINE__);
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
+  BaseCode = "template<typename T>\n"
+             "T foo();";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires Foo<T>\n"
+                    "T foo();";
+  BaseTokenCount = 11;
+  TestRequires(__LINE__);
 
-  BaseTokens = annotate("template<typename T>\n"
-                        "Bar(T) -> Bar<T>;");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "  requires Foo<T>\n"
-                               "Bar(T) -> Bar<T>;");
-  NumberOfBaseTokens = 16u;
+  BaseCode = "template<typename T>\n"
+             "T foo() {\n"
+             "  auto bar = baz();\n"
+             "  return bar + T{};\n"
+             "}";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires Foo<T>\n"
+                    "T foo() {\n"
+                    "  auto bar = baz();\n"
+                    "  return bar + T{};\n"
+                    "}";
+  BaseTokenCount = 26;
+  TestRequires(__LINE__);
 
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
+  BaseCode = "template<typename T>\n"
+             "T foo();";
+  ConstrainedCode = "template<typename T>\n"
+                    "T foo() requires Foo<T>;";
+  BaseTokenCount = 11;
+  PrefixTokenCount = 9;
+  TestRequires(__LINE__);
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
+  BaseCode = "template<typename T>\n"
+             "T foo() {\n"
+             "  auto bar = baz();\n"
+             "  return bar + T{};\n"
+             "}";
+  ConstrainedCode = "template<typename T>\n"
+                    "T foo() requires Foo<T> {\n"
+                    "  auto bar = baz();\n"
+                    "  return bar + T{};\n"
+                    "}";
+  BaseTokenCount = 26;
+  TestRequires(__LINE__);
 
-  BaseTokens = annotate("template<typename T>\n"
-                        "T foo();");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "  requires Foo<T>\n"
-                               "T foo();");
-  NumberOfBaseTokens = 11u;
+  BaseCode = "template<typename T>\n"
+             "Bar(T) -> Bar<typename T::I>;";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires requires(T &&t) {\n"
+                    "             typename T::I;\n"
+                    "           }\n"
+                    "Bar(T) -> Bar<typename T::I>;";
+  BaseTokenCount = 19;
+  RequiresTokenCount = 14;
+  PrefixTokenCount = 5;
+  TestRequires(__LINE__);
 
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
+  BaseCode = "struct [[nodiscard]] zero_t {\n"
+             "  template<class T>\n"
+             "  [[nodiscard]] constexpr operator T() const { return v<T>; }\n"
+             "};";
+  ConstrainedCode =
+      "struct [[nodiscard]] zero_t {\n"
+      "  template<class T>\n"
+      "    requires requires { v<T>; }\n"
+      "  [[nodiscard]] constexpr operator T() const { return v<T>; }\n"
+      "};";
+  BaseTokenCount = 35;
+  RequiresTokenCount = 9;
+  PrefixTokenCount = 13;
+  TestRequires(__LINE__);
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
+  BaseCode = "constexpr Foo(Foo const &other)\n"
+             "    : value{other.value} {\n"
+             "  do_magic();\n"
+             "  do_more_magic();\n"
+             "}";
+  ConstrainedCode = "constexpr Foo(Foo const &other)\n"
+                    "  requires std::is_copy_constructible<T>\n"
+                    "    : value{other.value} {\n"
+                    "  do_magic();\n"
+                    "  do_more_magic();\n"
+                    "}";
+  BaseTokenCount = 26;
+  RequiresTokenCount = 7;
+  PrefixTokenCount = 8;
+  TestRequires(__LINE__);
 
-  BaseTokens = annotate("template<typename T>\n"
-                        "T foo() {\n"
-                        "  auto bar = baz();\n"
-                        "  return bar + T{};\n"
-                        "}");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "  requires Foo<T>\n"
-                               "T foo() {\n"
-                               "  auto bar = baz();\n"
-                               "  return bar + T{};\n"
-                               "}");
-  NumberOfBaseTokens = 26u;
-
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
-
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
-
-  BaseTokens = annotate("template<typename T>\n"
-                        "T foo();");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "T foo() requires Foo<T>;");
-  NumberOfBaseTokens = 11u;
-  NumberOfTokensBeforeRequires = 9u;
-
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
-
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
-
-  BaseTokens = annotate("template<typename T>\n"
-                        "T foo() {\n"
-                        "  auto bar = baz();\n"
-                        "  return bar + T{};\n"
-                        "}");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "T foo() requires Foo<T> {\n"
-                               "  auto bar = baz();\n"
-                               "  return bar + T{};\n"
-                               "}");
-  NumberOfBaseTokens = 26u;
-
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
-
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
-
-  BaseTokens = annotate("template<typename T>\n"
-                        "Bar(T) -> Bar<typename T::I>;");
-  ConstrainedTokens = annotate("template<typename T>\n"
-                               "  requires requires(T &&t) {\n"
-                               "             typename T::I;\n"
-                               "           }\n"
-                               "Bar(T) -> Bar<typename T::I>;");
-  NumberOfBaseTokens = 19u;
-  NumberOfAdditionalRequiresClauseTokens = 14u;
-  NumberOfTokensBeforeRequires = 5u;
-
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
-
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
-
-  BaseTokens = annotate("struct [[nodiscard]] zero_t {\n"
-                        "  template<class T>\n"
-                        "  [[nodiscard]] constexpr operator T() const { "
-                        "return number_zero_v<T>; }\n"
-                        "};");
-
-  ConstrainedTokens = annotate("struct [[nodiscard]] zero_t {\n"
-                               "  template<class T>\n"
-                               "    requires requires { number_zero_v<T>; }\n"
-                               "  [[nodiscard]] constexpr operator T() const { "
-                               "return number_zero_v<T>; }\n"
-                               "};");
-  NumberOfBaseTokens = 35u;
-  NumberOfAdditionalRequiresClauseTokens = 9u;
-  NumberOfTokensBeforeRequires = 13u;
-
-  ASSERT_EQ(BaseTokens.size(), NumberOfBaseTokens) << BaseTokens;
-  ASSERT_EQ(ConstrainedTokens.size(),
-            NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
-      << ConstrainedTokens;
-
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
-    if (I < NumberOfTokensBeforeRequires) {
-      EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    } else {
-      EXPECT_EQ(*BaseTokens[I],
-                *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
-          << I;
-    }
-  }
+  BaseCode = "constexpr Foo(Foo const &other)\n"
+             "    : value{other.value} {\n"
+             "  do_magic();\n"
+             "  do_more_magic();\n"
+             "}";
+  ConstrainedCode = "constexpr Foo(Foo const &other)\n"
+                    "  requires (std::is_copy_constructible<T>)\n"
+                    "    : value{other.value} {\n"
+                    "  do_magic();\n"
+                    "  do_more_magic();\n"
+                    "}";
+  RequiresTokenCount = 9;
+  TestRequires(__LINE__);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
@@ -772,6 +740,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
                     "}();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_ObjCBlockLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
+  auto Tokens = annotate("[]() constexpr {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
 }
 
 } // namespace

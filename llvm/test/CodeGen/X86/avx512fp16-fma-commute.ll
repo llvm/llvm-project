@@ -60,62 +60,62 @@ define half @fma_312_f16(half %x, half %y, half %z) {
   ret half %a
 }
 
-define half @fma_load_123_f16(half %x, half %y, half* %zp) {
+define half @fma_load_123_f16(half %x, half %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_123_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213sh (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load half, half* %zp
+  %z = load half, ptr %zp
   %a = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %a
 }
 
-define half @fma_load_213_f16(half %x, half %y, half* %zp) {
+define half @fma_load_213_f16(half %x, half %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_213_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213sh (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load half, half* %zp
+  %z = load half, ptr %zp
   %a = call half @llvm.fma.f16(half %y, half %x, half %z)
   ret half %a
 }
 
-define half @fma_load_231_f16(half %x, half %y, half* %zp) {
+define half @fma_load_231_f16(half %x, half %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_231_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231sh (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load half, half* %zp
+  %z = load half, ptr %zp
   %a = call half @llvm.fma.f16(half %y, half %z, half %x)
   ret half %a
 }
 
-define half @fma_load_321_f16(half %x, half %y, half* %zp) {
+define half @fma_load_321_f16(half %x, half %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_321_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231sh (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load half, half* %zp
+  %z = load half, ptr %zp
   %a = call half @llvm.fma.f16(half %z, half %y, half %x)
   ret half %a
 }
 
-define half @fma_load_132_f16(half %x, half %y, half* %zp) {
+define half @fma_load_132_f16(half %x, half %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_132_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132sh (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load half, half* %zp
+  %z = load half, ptr %zp
   %a = call half @llvm.fma.f16(half %x, half %z, half %y)
   ret half %a
 }
 
-define half @fma_load_312_f16(half %x, half %y, half* %zp) {
+define half @fma_load_312_f16(half %x, half %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_312_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132sh (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load half, half* %zp
+  %z = load half, ptr %zp
   %a = call half @llvm.fma.f16(half %z, half %x, half %y)
   ret half %a
 }
@@ -174,62 +174,62 @@ define <8 x half> @fma_312_v8f16(<8 x half> %x, <8 x half> %y, <8 x half> %z) {
   ret <8 x half> %a
 }
 
-define <8 x half> @fma_load_123_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp) {
+define <8 x half> @fma_load_123_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_123_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %y, <8 x half> %z)
   ret <8 x half> %a
 }
 
-define <8 x half> @fma_load_213_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp) {
+define <8 x half> @fma_load_213_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_213_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %y, <8 x half> %x, <8 x half> %z)
   ret <8 x half> %a
 }
 
-define <8 x half> @fma_load_231_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp) {
+define <8 x half> @fma_load_231_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_231_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %y, <8 x half> %z, <8 x half> %x)
   ret <8 x half> %a
 }
 
-define <8 x half> @fma_load_321_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp) {
+define <8 x half> @fma_load_321_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_321_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %z, <8 x half> %y, <8 x half> %x)
   ret <8 x half> %a
 }
 
-define <8 x half> @fma_load_132_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp) {
+define <8 x half> @fma_load_132_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_132_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %z, <8 x half> %y)
   ret <8 x half> %a
 }
 
-define <8 x half> @fma_load_312_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp) {
+define <8 x half> @fma_load_312_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_312_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %z, <8 x half> %x, <8 x half> %y)
   ret <8 x half> %a
 }
@@ -378,156 +378,156 @@ define <8 x half> @fma_maskz_312_v8f16(<8 x half> %x, <8 x half> %y, <8 x half> 
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_mask_load_123_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_mask_load_123_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_mask_load_123_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %y, <8 x half> %z)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> %x
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_mask_load_213_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_mask_load_213_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_mask_load_213_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %y, <8 x half> %x, <8 x half> %z)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> %x
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_mask_load_231_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_mask_load_231_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_mask_load_231_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %y, <8 x half> %z, <8 x half> %x)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> %x
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_mask_load_321_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_mask_load_321_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_mask_load_321_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %z, <8 x half> %y, <8 x half> %x)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> %x
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_mask_load_132_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_mask_load_132_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_mask_load_132_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %z, <8 x half> %y)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> %x
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_mask_load_312_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_mask_load_312_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_mask_load_312_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %z, <8 x half> %x, <8 x half> %y)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> %x
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_maskz_load_123_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_maskz_load_123_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_maskz_load_123_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %y, <8 x half> %z)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> zeroinitializer
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_maskz_load_213_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_maskz_load_213_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_maskz_load_213_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %y, <8 x half> %x, <8 x half> %z)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> zeroinitializer
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_maskz_load_231_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_maskz_load_231_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_maskz_load_231_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %y, <8 x half> %z, <8 x half> %x)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> zeroinitializer
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_maskz_load_321_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_maskz_load_321_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_maskz_load_321_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %z, <8 x half> %y, <8 x half> %x)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> zeroinitializer
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_maskz_load_132_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_maskz_load_132_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_maskz_load_132_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %z, <8 x half> %y)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> zeroinitializer
   ret <8 x half> %c
 }
 
-define <8 x half> @fma_maskz_load_312_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %zp, i8 %mask) {
+define <8 x half> @fma_maskz_load_312_v8f16(<8 x half> %x, <8 x half> %y, ptr %zp, i8 %mask) {
 ; CHECK-LABEL: fma_maskz_load_312_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <8 x half>, <8 x half>* %zp
+  %z = load <8 x half>, ptr %zp
   %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %z, <8 x half> %x, <8 x half> %y)
   %b = bitcast i8 %mask to <8 x i1>
   %c = select <8 x i1> %b, <8 x half> %a, <8 x half> zeroinitializer
@@ -588,62 +588,62 @@ define <16 x half> @fma_312_v16f16(<16 x half> %x, <16 x half> %y, <16 x half> %
   ret <16 x half> %a
 }
 
-define <16 x half> @fma_load_123_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp) {
+define <16 x half> @fma_load_123_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_123_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %x, <16 x half> %y, <16 x half> %z)
   ret <16 x half> %a
 }
 
-define <16 x half> @fma_load_213_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp) {
+define <16 x half> @fma_load_213_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_213_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %y, <16 x half> %x, <16 x half> %z)
   ret <16 x half> %a
 }
 
-define <16 x half> @fma_load_231_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp) {
+define <16 x half> @fma_load_231_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_231_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %y, <16 x half> %z, <16 x half> %x)
   ret <16 x half> %a
 }
 
-define <16 x half> @fma_load_321_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp) {
+define <16 x half> @fma_load_321_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_321_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %z, <16 x half> %y, <16 x half> %x)
   ret <16 x half> %a
 }
 
-define <16 x half> @fma_load_132_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp) {
+define <16 x half> @fma_load_132_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_132_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %x, <16 x half> %z, <16 x half> %y)
   ret <16 x half> %a
 }
 
-define <16 x half> @fma_load_312_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp) {
+define <16 x half> @fma_load_312_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_312_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %z, <16 x half> %x, <16 x half> %y)
   ret <16 x half> %a
 }
@@ -792,156 +792,156 @@ define <16 x half> @fma_maskz_312_v16f16(<16 x half> %x, <16 x half> %y, <16 x h
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_mask_load_123_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_mask_load_123_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_mask_load_123_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %x, <16 x half> %y, <16 x half> %z)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> %x
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_mask_load_213_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_mask_load_213_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_mask_load_213_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %y, <16 x half> %x, <16 x half> %z)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> %x
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_mask_load_231_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_mask_load_231_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_mask_load_231_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %y, <16 x half> %z, <16 x half> %x)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> %x
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_mask_load_321_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_mask_load_321_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_mask_load_321_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %z, <16 x half> %y, <16 x half> %x)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> %x
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_mask_load_132_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_mask_load_132_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_mask_load_132_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %x, <16 x half> %z, <16 x half> %y)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> %x
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_mask_load_312_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_mask_load_312_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_mask_load_312_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %z, <16 x half> %x, <16 x half> %y)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> %x
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_maskz_load_123_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_maskz_load_123_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_maskz_load_123_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %x, <16 x half> %y, <16 x half> %z)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> zeroinitializer
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_maskz_load_213_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_maskz_load_213_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_maskz_load_213_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %y, <16 x half> %x, <16 x half> %z)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> zeroinitializer
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_maskz_load_231_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_maskz_load_231_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_maskz_load_231_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %y, <16 x half> %z, <16 x half> %x)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> zeroinitializer
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_maskz_load_321_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_maskz_load_321_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_maskz_load_321_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %z, <16 x half> %y, <16 x half> %x)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> zeroinitializer
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_maskz_load_132_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_maskz_load_132_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_maskz_load_132_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %x, <16 x half> %z, <16 x half> %y)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> zeroinitializer
   ret <16 x half> %c
 }
 
-define <16 x half> @fma_maskz_load_312_v16f16(<16 x half> %x, <16 x half> %y, <16 x half>* %zp, i16 %mask) {
+define <16 x half> @fma_maskz_load_312_v16f16(<16 x half> %x, <16 x half> %y, ptr %zp, i16 %mask) {
 ; CHECK-LABEL: fma_maskz_load_312_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <16 x half>, <16 x half>* %zp
+  %z = load <16 x half>, ptr %zp
   %a = call <16 x half> @llvm.fma.v16f16(<16 x half> %z, <16 x half> %x, <16 x half> %y)
   %b = bitcast i16 %mask to <16 x i1>
   %c = select <16 x i1> %b, <16 x half> %a, <16 x half> zeroinitializer
@@ -1002,62 +1002,62 @@ define <32 x half> @fma_312_v32f16(<32 x half> %x, <32 x half> %y, <32 x half> %
   ret <32 x half> %a
 }
 
-define <32 x half> @fma_load_123_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp) {
+define <32 x half> @fma_load_123_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_123_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %x, <32 x half> %y, <32 x half> %z)
   ret <32 x half> %a
 }
 
-define <32 x half> @fma_load_213_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp) {
+define <32 x half> @fma_load_213_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_213_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %y, <32 x half> %x, <32 x half> %z)
   ret <32 x half> %a
 }
 
-define <32 x half> @fma_load_231_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp) {
+define <32 x half> @fma_load_231_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_231_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %y, <32 x half> %z, <32 x half> %x)
   ret <32 x half> %a
 }
 
-define <32 x half> @fma_load_321_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp) {
+define <32 x half> @fma_load_321_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_321_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %z, <32 x half> %y, <32 x half> %x)
   ret <32 x half> %a
 }
 
-define <32 x half> @fma_load_132_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp) {
+define <32 x half> @fma_load_132_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_132_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %x, <32 x half> %z, <32 x half> %y)
   ret <32 x half> %a
 }
 
-define <32 x half> @fma_load_312_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp) {
+define <32 x half> @fma_load_312_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_312_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %z, <32 x half> %x, <32 x half> %y)
   ret <32 x half> %a
 }
@@ -1206,156 +1206,156 @@ define <32 x half> @fma_maskz_312_v32f16(<32 x half> %x, <32 x half> %y, <32 x h
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_mask_load_123_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_mask_load_123_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_mask_load_123_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %x, <32 x half> %y, <32 x half> %z)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> %x
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_mask_load_213_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_mask_load_213_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_mask_load_213_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %y, <32 x half> %x, <32 x half> %z)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> %x
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_mask_load_231_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_mask_load_231_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_mask_load_231_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %y, <32 x half> %z, <32 x half> %x)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> %x
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_mask_load_321_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_mask_load_321_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_mask_load_321_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %z, <32 x half> %y, <32 x half> %x)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> %x
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_mask_load_132_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_mask_load_132_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_mask_load_132_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %x, <32 x half> %z, <32 x half> %y)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> %x
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_mask_load_312_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_mask_load_312_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_mask_load_312_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %z, <32 x half> %x, <32 x half> %y)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> %x
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_maskz_load_123_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_maskz_load_123_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_maskz_load_123_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %x, <32 x half> %y, <32 x half> %z)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> zeroinitializer
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_maskz_load_213_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_maskz_load_213_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_maskz_load_213_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd213ph (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %y, <32 x half> %x, <32 x half> %z)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> zeroinitializer
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_maskz_load_231_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_maskz_load_231_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_maskz_load_231_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %y, <32 x half> %z, <32 x half> %x)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> zeroinitializer
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_maskz_load_321_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_maskz_load_321_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_maskz_load_321_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd231ph (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %z, <32 x half> %y, <32 x half> %x)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> zeroinitializer
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_maskz_load_132_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_maskz_load_132_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_maskz_load_132_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %x, <32 x half> %z, <32 x half> %y)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> zeroinitializer
   ret <32 x half> %c
 }
 
-define <32 x half> @fma_maskz_load_312_v32f16(<32 x half> %x, <32 x half> %y, <32 x half>* %zp, i32 %mask) {
+define <32 x half> @fma_maskz_load_312_v32f16(<32 x half> %x, <32 x half> %y, ptr %zp, i32 %mask) {
 ; CHECK-LABEL: fma_maskz_load_312_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vfmadd132ph (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %z = load <32 x half>, <32 x half>* %zp
+  %z = load <32 x half>, ptr %zp
   %a = call <32 x half> @llvm.fma.v32f16(<32 x half> %z, <32 x half> %x, <32 x half> %y)
   %b = bitcast i32 %mask to <32 x i1>
   %c = select <32 x i1> %b, <32 x half> %a, <32 x half> zeroinitializer

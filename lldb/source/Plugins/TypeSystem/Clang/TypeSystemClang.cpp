@@ -1540,7 +1540,7 @@ static bool ClassTemplateAllowsToInstantiationArgs(
     return false;
 
   // Ensure that <typename...> != <typename>.
-  if (pack_parameter.hasValue() != instantiation_values.hasParameterPack())
+  if (pack_parameter.has_value() != instantiation_values.hasParameterPack())
     return false;
 
   // Compare the first pack parameter that was found with the first pack
@@ -7538,7 +7538,7 @@ void TypeSystemClang::SetIntegerInitializerForVariable(
          "only integer or enum types supported");
   // If the variable is an enum type, take the underlying integer type as
   // the type of the integer literal.
-  if (const EnumType *enum_type = llvm::dyn_cast<EnumType>(qt.getTypePtr())) {
+  if (const EnumType *enum_type = qt->getAs<EnumType>()) {
     const EnumDecl *enum_decl = enum_type->getDecl();
     qt = enum_decl->getIntegerType();
   }

@@ -87,6 +87,17 @@ class PredConcat<list<Predicate> lst, Predicate pred> {
       !listconcat([pred], !filter(item, lst, !ne(item, pred)));
 }
 
+// Add a Register to the list if does not already exist
+class RegAppend<list<Register> lst, Register reg> {
+  list<Register> ret =
+      !listconcat([reg], !filter(item, lst, !ne(item, reg)));
+}
+// Get the union of two Register lists
+class RegListUnion<list<Register> lstA, list<Register> lstB> {
+  list<Register> ret =
+      !foldl(lstA, lstB, temp, item, RegAppend<temp, item>.ret);
+}
+
 class PredicateControl {
   Predicate SubtargetPredicate = TruePredicate;
   Predicate AssemblerPredicate = TruePredicate;
@@ -531,63 +542,37 @@ def atomic_store_64_#as : PatFrag<(ops node:$ptr, node:$val),
 }
 } // End foreach as
 
-// TODO: Add GISelPredicateCode for the ret and noret PatFrags once
-// GlobalISelEmitter allows pattern matches where src and dst def count
-// mismatch.
-
-multiclass ret_noret_op {
-  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return true; }] in {
-    def "_ret" : PatFrag<(ops node:$ptr, node:$data),
-      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
-  }
-
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return false; }] in {
-    def "_noret" : PatFrag<(ops node:$ptr, node:$data),
-      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
-  }
+multiclass noret_op {
+  let HasNoUse = true in
+  def "_noret" : PatFrag<(ops node:$ptr, node:$data),
+    (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
 }
 
-defm int_amdgcn_flat_atomic_fadd : ret_noret_op;
-defm int_amdgcn_flat_atomic_fadd_v2bf16 : ret_noret_op;
-defm int_amdgcn_flat_atomic_fmin : ret_noret_op;
-defm int_amdgcn_flat_atomic_fmax : ret_noret_op;
-defm int_amdgcn_global_atomic_fadd : ret_noret_op;
-defm int_amdgcn_global_atomic_fadd_v2bf16 : ret_noret_op;
-defm int_amdgcn_global_atomic_fmin : ret_noret_op;
-defm int_amdgcn_global_atomic_fmax : ret_noret_op;
-defm int_amdgcn_ds_fadd_v2bf16 : ret_noret_op;
+defm int_amdgcn_flat_atomic_fadd : noret_op;
+defm int_amdgcn_flat_atomic_fadd_v2bf16 : noret_op;
+defm int_amdgcn_flat_atomic_fmin : noret_op;
+defm int_amdgcn_flat_atomic_fmax : noret_op;
+defm int_amdgcn_global_atomic_fadd : noret_op;
+defm int_amdgcn_global_atomic_fadd_v2bf16 : noret_op;
+defm int_amdgcn_global_atomic_fmin : noret_op;
+defm int_amdgcn_global_atomic_fmax : noret_op;
+defm int_amdgcn_ds_fadd_v2bf16 : noret_op;
 
-multiclass ret_noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return false; }] in {
-    defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
-  }
-
-  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return true; }] in {
-    defm "_ret" : binary_atomic_op<atomic_op, IsInt>;
-  }
+multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
+  let HasNoUse = true in
+  defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
 }
 
-multiclass ret_noret_ternary_atomic_op<SDNode atomic_op> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return false; }] in {
-    defm "_noret" : ternary_atomic_op<atomic_op>;
-  }
-
-  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return true; }] in {
-    defm "_ret" : ternary_atomic_op<atomic_op>;
-  }
+multiclass noret_ternary_atomic_op<SDNode atomic_op> {
+  let HasNoUse = true in
+  defm "_noret" : ternary_atomic_op<atomic_op>;
 }
 
 multiclass binary_atomic_op_all_as<SDNode atomic_op, bit IsInt = 1> {
   foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
     let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
       defm "_"#as : binary_atomic_op<atomic_op, IsInt>;
-      defm "_"#as : ret_noret_binary_atomic_op<atomic_op, IsInt>;
+      defm "_"#as : noret_binary_atomic_op<atomic_op, IsInt>;
     }
   }
 }
@@ -629,13 +614,15 @@ def store_align16_local: PatFrag<(ops node:$val, node:$ptr),
 
 let AddressSpaces = StoreAddress_local.AddrSpaces in {
 defm atomic_cmp_swap_local : ternary_atomic_op<atomic_cmp_swap>;
-defm atomic_cmp_swap_local : ret_noret_ternary_atomic_op<atomic_cmp_swap>;
-defm atomic_cmp_swap_local_m0 : ret_noret_ternary_atomic_op<atomic_cmp_swap_glue>;
+defm atomic_cmp_swap_local : noret_ternary_atomic_op<atomic_cmp_swap>;
+defm atomic_cmp_swap_local_m0 : noret_ternary_atomic_op<atomic_cmp_swap_glue>;
+defm atomic_cmp_swap_local_m0 : ternary_atomic_op<atomic_cmp_swap_glue>;
 }
 
 let AddressSpaces = StoreAddress_region.AddrSpaces in {
-defm atomic_cmp_swap_region : ret_noret_ternary_atomic_op<atomic_cmp_swap>;
-defm atomic_cmp_swap_region_m0 : ret_noret_ternary_atomic_op<atomic_cmp_swap_glue>;
+defm atomic_cmp_swap_region : noret_ternary_atomic_op<atomic_cmp_swap>;
+defm atomic_cmp_swap_region_m0 : noret_ternary_atomic_op<atomic_cmp_swap_glue>;
+defm atomic_cmp_swap_region_m0 : ternary_atomic_op<atomic_cmp_swap_glue>;
 }
 
 //===----------------------------------------------------------------------===//

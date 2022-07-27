@@ -190,11 +190,11 @@ void InitializeOsSupport() {
   uint32_t features = 0;
   CHECK_EQ(zx_system_get_features(ZX_FEATURE_KIND_ADDRESS_TAGGING, &features),
            ZX_OK);
-  if (features != ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI &&
+  if (!(features & ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI) &&
       flags()->fail_without_syscall_abi) {
     Printf(
-        "FATAL: HWAddressSanitizer requires a kernel with tagged address "
-        "ABI.\n");
+        "FATAL: HWAddressSanitizer requires "
+        "ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI.\n");
     Die();
   }
 #endif

@@ -109,8 +109,9 @@ clang::ToConstrainedExceptMD(LangOptions::FPExceptionModeKind Kind) {
   case LangOptions::FPE_Ignore:  return llvm::fp::ebIgnore;
   case LangOptions::FPE_MayTrap: return llvm::fp::ebMayTrap;
   case LangOptions::FPE_Strict:  return llvm::fp::ebStrict;
+  default:
+    llvm_unreachable("Unsupported FP Exception Behavior");
   }
-  llvm_unreachable("Unsupported FP Exception Behavior");
 }
 
 void CodeGenFunction::SetFastMathFlags(FPOptions FPFeatures) {
@@ -149,12 +150,11 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
 
   FMFGuard.emplace(CGF.Builder);
 
-  llvm::RoundingMode NewRoundingBehavior =
-      static_cast<llvm::RoundingMode>(FPFeatures.getRoundingMode());
+  llvm::RoundingMode NewRoundingBehavior = FPFeatures.getRoundingMode();
   CGF.Builder.setDefaultConstrainedRounding(NewRoundingBehavior);
   auto NewExceptionBehavior =
       ToConstrainedExceptMD(static_cast<LangOptions::FPExceptionModeKind>(
-          FPFeatures.getFPExceptionMode()));
+          FPFeatures.getExceptionMode()));
   CGF.Builder.setDefaultConstrainedExcept(NewExceptionBehavior);
 
   CGF.SetFastMathFlags(FPFeatures);
@@ -506,8 +506,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
       getContext().getTargetInfo().getVScaleRange(getLangOpts());
   if (VScaleRange) {
     CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
-        getLLVMContext(), VScaleRange.getValue().first,
-        VScaleRange.getValue().second));
+        getLLVMContext(), VScaleRange->first, VScaleRange->second));
   }
 
   // If we generated an unreachable return block, delete it now.
@@ -564,29 +563,6 @@ bool CodeGenFunction::AlwaysEmitXRayTypedEvents() const {
               XRayInstrKind::Typed);
 }
 
-llvm::Constant *
-CodeGenFunction::EncodeAddrForUseInPrologue(llvm::Function *F,
-                                            llvm::Constant *Addr) {
-  // Addresses stored in prologue data can't require run-time fixups and must
-  // be PC-relative. Run-time fixups are undesirable because they necessitate
-  // writable text segments, which are unsafe. And absolute addresses are
-  // undesirable because they break PIE mode.
-
-  // Add a layer of indirection through a private global. Taking its address
-  // won't result in a run-time fixup, even if Addr has linkonce_odr linkage.
-  auto *GV = new llvm::GlobalVariable(CGM.getModule(), Addr->getType(),
-                                      /*isConstant=*/true,
-                                      llvm::GlobalValue::PrivateLinkage, Addr);
-
-  // Create a PC-relative address.
-  auto *GOTAsInt = llvm::ConstantExpr::getPtrToInt(GV, IntPtrTy);
-  auto *FuncAsInt = llvm::ConstantExpr::getPtrToInt(F, IntPtrTy);
-  auto *PCRelAsInt = llvm::ConstantExpr::getSub(GOTAsInt, FuncAsInt);
-  return (IntPtrTy == Int32Ty)
-             ? PCRelAsInt
-             : llvm::ConstantExpr::getTrunc(PCRelAsInt, Int32Ty);
-}
-
 llvm::Value *
 CodeGenFunction::DecodeAddrUsedInPrologue(llvm::Value *F,
                                           llvm::Value *EncodedAddr) {
@@ -601,15 +577,17 @@ CodeGenFunction::DecodeAddrUsedInPrologue(llvm::Value *F,
                             "decoded_addr");
 }
 
-void CodeGenFunction::EmitOpenCLKernelMetadata(const FunctionDecl *FD,
-                                               llvm::Function *Fn)
-{
-  if (!FD->hasAttr<OpenCLKernelAttr>())
+void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
+                                         llvm::Function *Fn) {
+  if (!FD->hasAttr<OpenCLKernelAttr>() && !FD->hasAttr<CUDAGlobalAttr>())
     return;
 
   llvm::LLVMContext &Context = getLLVMContext();
 
-  CGM.GenOpenCLArgMetadata(Fn, FD, this);
+  CGM.GenKernelArgMetadata(Fn, FD, this);
+
+  if (!getLangOpts().OpenCL)
+    return;
 
   if (const VecTypeHintAttr *A = FD->getAttr<VecTypeHintAttr>()) {
     QualType HintQTy = A->getTypeHint();
@@ -878,7 +856,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   if (CGM.getCodeGenOpts().getProfileInstr() != CodeGenOptions::ProfileNone)
-    if (CGM.isProfileInstrExcluded(Fn, Loc))
+    if (CGM.isFunctionBlockedFromProfileInstr(Fn, Loc))
       Fn->addFnAttr(llvm::Attribute::NoProfile);
 
   unsigned Count, Offset;
@@ -924,9 +902,24 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (D && D->hasAttr<NoProfileFunctionAttr>())
     Fn->addFnAttr(llvm::Attribute::NoProfile);
 
-  if (FD && getLangOpts().OpenCL) {
+  if (D) {
+    // Function attributes take precedence over command line flags.
+    if (auto *A = D->getAttr<FunctionReturnThunksAttr>()) {
+      switch (A->getThunkType()) {
+      case FunctionReturnThunksAttr::Kind::Keep:
+        break;
+      case FunctionReturnThunksAttr::Kind::Extern:
+        Fn->addFnAttr(llvm::Attribute::FnRetThunkExtern);
+        break;
+      }
+    } else if (CGM.getCodeGenOpts().FunctionReturnThunks)
+      Fn->addFnAttr(llvm::Attribute::FnRetThunkExtern);
+  }
+
+  if (FD && (getLangOpts().OpenCL ||
+             (getLangOpts().HIP && getLangOpts().CUDAIsDevice))) {
     // Add metadata for a kernel function.
-    EmitOpenCLKernelMetadata(FD, Fn);
+    EmitKernelMetadata(FD, Fn);
   }
 
   // If we are checking function types, emit a function type signature as
@@ -939,12 +932,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           FD->getType(), EST_None);
       llvm::Constant *FTRTTIConst =
           CGM.GetAddrOfRTTIDescriptor(ProtoTy, /*ForEH=*/true);
-      llvm::Constant *FTRTTIConstEncoded =
-          EncodeAddrForUseInPrologue(Fn, FTRTTIConst);
-      llvm::Constant *PrologueStructElems[] = {PrologueSig, FTRTTIConstEncoded};
-      llvm::Constant *PrologueStructConst =
-          llvm::ConstantStruct::getAnon(PrologueStructElems, /*Packed=*/true);
-      Fn->setPrologueData(PrologueStructConst);
+      llvm::GlobalVariable *FTRTTIProxy =
+          CGM.GetOrCreateRTTIProxyGlobalVariable(FTRTTIConst);
+      llvm::LLVMContext &Ctx = Fn->getContext();
+      llvm::MDBuilder MDB(Ctx);
+      Fn->setMetadata(llvm::LLVMContext::MD_func_sanitize,
+                      MDB.createRTTIPointerPrologue(PrologueSig, FTRTTIProxy));
+      CGM.addCompilerUsedGlobal(FTRTTIProxy);
     }
   }
 
@@ -976,9 +970,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
              (getLangOpts().CUDA && FD->hasAttr<CUDAGlobalAttr>())))
     Fn->addFnAttr(llvm::Attribute::NoRecurse);
 
-  llvm::RoundingMode RM = getLangOpts().getFPRoundingMode();
+  llvm::RoundingMode RM = getLangOpts().getDefaultRoundingMode();
   llvm::fp::ExceptionBehavior FPExceptionBehavior =
-      ToConstrainedExceptMD(getLangOpts().getFPExceptionMode());
+      ToConstrainedExceptMD(getLangOpts().getDefaultExceptionMode());
   Builder.setDefaultConstrainedRounding(RM);
   Builder.setDefaultConstrainedExcept(FPExceptionBehavior);
   if ((FD && (FD->UsesFPIntrin() || FD->hasAttr<StrictFPAttr>())) ||
@@ -2224,7 +2218,6 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ConstantMatrix:
     case Type::Record:
     case Type::Enum:
-    case Type::Elaborated:
     case Type::Using:
     case Type::TemplateSpecialization:
     case Type::ObjCTypeParam:
@@ -2233,6 +2226,10 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::BitInt:
       llvm_unreachable("type class is never variably-modified!");
+
+    case Type::Elaborated:
+      type = cast<ElaboratedType>(ty)->getNamedType();
+      break;
 
     case Type::Adjusted:
       type = cast<AdjustedType>(ty)->getAdjustedType();

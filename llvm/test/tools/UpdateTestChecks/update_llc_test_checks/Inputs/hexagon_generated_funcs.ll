@@ -1,5 +1,5 @@
 ; RUN: llc -enable-machine-outliner -mtriple=hexagon-unknown-linux < %s | FileCheck %s
-;
+
 ; NOTE: Machine outliner doesn't run.
 @x = global i32 0, align 4
 

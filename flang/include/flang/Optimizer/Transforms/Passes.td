@@ -16,14 +16,14 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::func::FuncOp"> {
+class AbstractResultOptBase<string optExt, string operation> 
+  : Pass<"abstract-result-on-" # optExt # "-opt", operation> {
   let summary = "Convert fir.array, fir.box and fir.rec function result to "
                 "function argument";
   let description = [{
     This pass is required before code gen to the LLVM IR dialect,
     including the pre-cg rewrite pass.
   }];
-  let constructor = "::fir::createAbstractResultOptPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -33,6 +33,10 @@ def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::func::FuncOp"> {
            "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
            " of fir.ref<fir.array<T>>.">
   ];
+}
+
+def AbstractResultOnFuncOpt : AbstractResultOptBase<"func", "mlir::func::FuncOp"> {
+  let constructor = "::fir::createAbstractResultOnFuncOptPass()";
 }
 
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
@@ -194,6 +198,19 @@ def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
     Run region DCE and erase unreachable blocks in regions.
   }];
   let constructor = "::fir::createSimplifyRegionLitePass()";
+}
+
+def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
+  let summary = "";
+  let description = [{
+    Run algebraic simplifications for Math/Complex/etc. dialect operations.
+    This is a flang specific pass, because we may want to "tune"
+    the rewrite patterns specifically for Fortran (e.g. increase
+    the limit for constant exponent value that defines the cases
+    when pow(x, constant) is transformed into a set of multiplications, etc.).
+  }];
+  let dependentDialects = [ "mlir::math::MathDialect" ];
+  let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

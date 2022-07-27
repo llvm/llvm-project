@@ -17,6 +17,7 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__memory/swap_allocator.h>
 #include <__utility/forward.h>
 #include <__utility/swap.h>
 #include <limits>
@@ -597,8 +598,7 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
 
   template <class _Up>
   _LIBCPP_INLINE_VISIBILITY
-  static typename enable_if<__is_same_uncvref<_Up, __container_value_type>::value,
-      key_type const&>::type
+  static __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, key_type const&>
   __get_key(_Up& __t) {
     return __t.first;
   }
@@ -611,8 +611,7 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
 
   template <class _Up>
   _LIBCPP_INLINE_VISIBILITY
-  static typename enable_if<__is_same_uncvref<_Up, __container_value_type>::value,
-      __container_value_type const&>::type
+  static __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, __container_value_type const&>
   __get_value(_Up& __t) {
     return __t;
   }
@@ -1175,10 +1174,8 @@ public:
 
     template <class _First, class _Second>
     _LIBCPP_INLINE_VISIBILITY
-    typename enable_if<
-        __can_extract_map_key<_First, key_type, __container_value_type>::value,
-        pair<iterator, bool>
-    >::type __emplace_unique(_First&& __f, _Second&& __s) {
+    __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, pair<iterator, bool> >
+    __emplace_unique(_First&& __f, _Second&& __s) {
         return __emplace_unique_key_args(__f, _VSTD::forward<_First>(__f),
                                               _VSTD::forward<_Second>(__s));
     }
@@ -1219,10 +1216,8 @@ public:
 
     template <class _First, class _Second>
     _LIBCPP_INLINE_VISIBILITY
-    typename enable_if<
-        __can_extract_map_key<_First, key_type, __container_value_type>::value,
-        iterator
-    >::type __emplace_hint_unique(const_iterator __p, _First&& __f, _Second&& __s) {
+    __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, iterator>
+    __emplace_hint_unique(const_iterator __p, _First&& __f, _Second&& __s) {
         return __emplace_hint_unique_key_args(__p, __f,
                                               _VSTD::forward<_First>(__f),
                                               _VSTD::forward<_Second>(__s)).first;
@@ -1275,21 +1270,15 @@ public:
         return __emplace_hint_unique_key_args(__p, _NodeTypes::__get_key(__v), _VSTD::move(__v)).first;
     }
 
-    template <class _Vp, class = typename enable_if<
-            !is_same<typename __unconstref<_Vp>::type,
-                     __container_value_type
-            >::value
-        >::type>
+    template <class _Vp,
+              class = __enable_if_t<!is_same<typename __unconstref<_Vp>::type, __container_value_type>::value> >
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> __insert_unique(_Vp&& __v) {
         return __emplace_unique(_VSTD::forward<_Vp>(__v));
     }
 
-    template <class _Vp, class = typename enable_if<
-            !is_same<typename __unconstref<_Vp>::type,
-                     __container_value_type
-            >::value
-        >::type>
+    template <class _Vp,
+              class = __enable_if_t<!is_same<typename __unconstref<_Vp>::type, __container_value_type>::value> >
     _LIBCPP_INLINE_VISIBILITY
     iterator __insert_unique(const_iterator __p, _Vp&& __v) {
         return __emplace_hint_unique(__p, _VSTD::forward<_Vp>(__v));

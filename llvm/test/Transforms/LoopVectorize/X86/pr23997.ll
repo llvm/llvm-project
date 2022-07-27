@@ -15,7 +15,7 @@ define void @foo(i8 addrspace(1)* align 8 dereferenceable_or_null(16), i8 addrsp
 ; CHECK-NEXT:    [[DOT12:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[TMP1:%.*]], i64 16
 ; CHECK-NEXT:    [[DOT13:%.*]] = bitcast i8 addrspace(1)* [[DOT12]] to i8 addrspace(1)* addrspace(1)*
 ; CHECK-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2:%.*]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX2]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX2]], 20
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)

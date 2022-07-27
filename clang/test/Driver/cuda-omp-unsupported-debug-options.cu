@@ -25,34 +25,34 @@
 
 // Same tests for OpenMP
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -g -gz 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -g -gz 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -gdwarf -fdebug-info-for-profiling 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -gdwarf -fdebug-info-for-profiling 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -gdwarf-2 -gsplit-dwarf 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -gdwarf-2 -gsplit-dwarf 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -gdwarf-3 -glldb 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -gdwarf-3 -glldb 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -gdwarf-4 -gcodeview 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -gdwarf-4 -gcodeview 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -gdwarf-5 -gmodules 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -gdwarf-5 -gmodules 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -ggdb1 -fdebug-macro 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -ggdb1 -fdebug-macro 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -ggdb2 -ggnu-pubnames 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -ggdb2 -ggnu-pubnames 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -ggdb3 -gdwarf-aranges 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -ggdb3 -gdwarf-aranges 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -g -gcolumn-info -fdebug-types-section 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
+// RUN:   -fgpu-rdc -g -gcolumn-info -fdebug-types-section 2>&1 | FileCheck %s --check-prefixes WARN,COMMON
 
 // RUN: %clang -### -target x86_64-linux-gnu -c %s -gdwarf-5 -gembed-source 2>&1 \
 // RUN: | FileCheck %s --check-prefixes WARN-GES,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -c %s -ggdb -gembed-source -gdwarf-5 2>&1 \
 // RUN: | FileCheck %s --check-prefixes WARN-GES,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -gdwarf-5 -gembed-source 2>&1 | FileCheck %s --check-prefixes WARN-GES,COMMON
+// RUN:   -fgpu-rdc -gdwarf-5 -gembed-source 2>&1 | FileCheck %s --check-prefixes WARN-GES,COMMON
 // RUN: %clang -### -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -c %s \
-// RUN:   -ggdb -gembed-source -gdwarf-5 2>&1 | FileCheck %s --check-prefixes WARN-GES,COMMON
+// RUN:   -fgpu-rdc -ggdb -gembed-source -gdwarf-5 2>&1 | FileCheck %s --check-prefixes WARN-GES,COMMON
 
 // COMMON: warning: debug information option '{{-gz|-fdebug-info-for-profiling|-gsplit-dwarf|-glldb|-gcodeview|-gmodules|-gembed-source|-fdebug-macro|-ggnu-pubnames|-gdwarf-aranges|-fdebug-types-section}}' is not supported
 // WARN-SAME: for target 'nvptx64-nvidia-cuda' [-Wunsupported-target-opt]

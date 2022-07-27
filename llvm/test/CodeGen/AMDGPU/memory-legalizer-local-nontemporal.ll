@@ -133,12 +133,12 @@ define amdgpu_kernel void @local_nontemporal_load_0(
 ; GFX11-WGP-NEXT:    s_clause 0x1
 ; GFX11-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GFX11-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
-; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-WGP-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-WGP-NEXT:    ds_load_b32 v0, v0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: local_nontemporal_load_0:
@@ -146,12 +146,12 @@ define amdgpu_kernel void @local_nontemporal_load_0(
 ; GFX11-CU-NEXT:    s_clause 0x1
 ; GFX11-CU-NEXT:    s_load_b32 s2, s[0:1], 0x0
 ; GFX11-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
-; GFX11-CU-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-CU-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-CU-NEXT:    ds_load_b32 v0, v0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(3)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -291,6 +291,7 @@ define amdgpu_kernel void @local_nontemporal_load_1(
 ; GFX11-WGP-NEXT:    ds_load_b32 v0, v0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: local_nontemporal_load_1:
@@ -304,6 +305,7 @@ define amdgpu_kernel void @local_nontemporal_load_1(
 ; GFX11-CU-NEXT:    ds_load_b32 v0, v0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(3)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -435,9 +437,8 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX11-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x8
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
-; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-WGP-NEXT:    ds_store_b32 v0, v1
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -448,9 +449,8 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX11-CU-NEXT:    s_load_b32 s0, s[0:1], 0x8
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
-; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(3)* %out) {

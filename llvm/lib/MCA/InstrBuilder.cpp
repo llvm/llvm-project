@@ -14,15 +14,18 @@
 #include "llvm/MCA/InstrBuilder.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "llvm-mca"
+#define DEBUG_TYPE "llvm-mca-instrbuilder"
 
 namespace llvm {
 namespace mca {
+
+char RecycledInstErr::ID = 0;
 
 InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
@@ -612,7 +615,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Now add the new descriptor.
   bool IsVariadic = MCDesc.isVariadic();
-  if (!IsVariadic && !IsVariant) {
+  if ((ID->IsRecyclable = !IsVariadic && !IsVariant)) {
     Descriptors[MCI.getOpcode()] = std::move(ID);
     return *Descriptors[MCI.getOpcode()];
   }
@@ -632,14 +635,32 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI) {
   return createInstrDescImpl(MCI);
 }
 
+STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
+
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI) {
   Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;
-  std::unique_ptr<Instruction> NewIS =
-      std::make_unique<Instruction>(D, MCI.getOpcode());
+  Instruction *NewIS = nullptr;
+  std::unique_ptr<Instruction> CreatedIS;
+  bool IsInstRecycled = false;
+
+  if (!D.IsRecyclable)
+    ++NumVariantInst;
+
+  if (D.IsRecyclable && InstRecycleCB) {
+    if (auto *I = InstRecycleCB(D)) {
+      NewIS = I;
+      NewIS->reset();
+      IsInstRecycled = true;
+    }
+  }
+  if (!IsInstRecycled) {
+    CreatedIS = std::make_unique<Instruction>(D, MCI.getOpcode());
+    NewIS = CreatedIS.get();
+  }
 
   const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
   const MCSchedClassDesc &SCDesc =
@@ -668,6 +689,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
 
   // Initialize Reads first.
   MCPhysReg RegID = 0;
+  size_t Idx = 0U;
   for (const ReadDescriptor &RD : D.Reads) {
     if (!RD.isImplicitRead()) {
       // explicit read.
@@ -686,15 +708,22 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
       continue;
 
     // Okay, this is a register operand. Create a ReadState for it.
-    NewIS->getUses().emplace_back(RD, RegID);
-    ReadState &RS = NewIS->getUses().back();
+    ReadState *RS = nullptr;
+    if (IsInstRecycled && Idx < NewIS->getUses().size()) {
+      NewIS->getUses()[Idx] = ReadState(RD, RegID);
+      RS = &NewIS->getUses()[Idx++];
+    } else {
+      NewIS->getUses().emplace_back(RD, RegID);
+      RS = &NewIS->getUses().back();
+      ++Idx;
+    }
 
     if (IsDepBreaking) {
       // A mask of all zeroes means: explicit input operands are not
       // independent.
       if (Mask.isZero()) {
         if (!RD.isImplicitRead())
-          RS.setIndependentFromDef();
+          RS->setIndependentFromDef();
       } else {
         // Check if this register operand is independent according to `Mask`.
         // Note that Mask may not have enough bits to describe all explicit and
@@ -704,15 +733,21 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
         if (Mask.getBitWidth() > RD.UseIndex) {
           // Okay. This map describe register use `RD.UseIndex`.
           if (Mask[RD.UseIndex])
-            RS.setIndependentFromDef();
+            RS->setIndependentFromDef();
         }
       }
     }
   }
+  if (IsInstRecycled && Idx < NewIS->getUses().size())
+    NewIS->getUses().pop_back_n(NewIS->getUses().size() - Idx);
 
   // Early exit if there are no writes.
-  if (D.Writes.empty())
-    return std::move(NewIS);
+  if (D.Writes.empty()) {
+    if (IsInstRecycled)
+      return llvm::make_error<RecycledInstErr>(NewIS);
+    else
+      return std::move(CreatedIS);
+  }
 
   // Track register writes that implicitly clear the upper portion of the
   // underlying super-registers using an APInt.
@@ -725,6 +760,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
 
   // Initialize writes.
   unsigned WriteIndex = 0;
+  Idx = 0U;
   for (const WriteDescriptor &WD : D.Writes) {
     RegID = WD.isImplicitWrite() ? WD.RegisterID
                                  : MCI.getOperand(WD.OpIndex).getReg();
@@ -735,13 +771,26 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     }
 
     assert(RegID && "Expected a valid register ID!");
-    NewIS->getDefs().emplace_back(WD, RegID,
-                                  /* ClearsSuperRegs */ WriteMask[WriteIndex],
-                                  /* WritesZero */ IsZeroIdiom);
+    if (IsInstRecycled && Idx < NewIS->getDefs().size()) {
+      NewIS->getDefs()[Idx++] =
+          WriteState(WD, RegID,
+                     /* ClearsSuperRegs */ WriteMask[WriteIndex],
+                     /* WritesZero */ IsZeroIdiom);
+    } else {
+      NewIS->getDefs().emplace_back(WD, RegID,
+                                    /* ClearsSuperRegs */ WriteMask[WriteIndex],
+                                    /* WritesZero */ IsZeroIdiom);
+      ++Idx;
+    }
     ++WriteIndex;
   }
+  if (IsInstRecycled && Idx < NewIS->getDefs().size())
+    NewIS->getDefs().pop_back_n(NewIS->getDefs().size() - Idx);
 
-  return std::move(NewIS);
+  if (IsInstRecycled)
+    return llvm::make_error<RecycledInstErr>(NewIS);
+  else
+    return std::move(CreatedIS);
 }
 } // namespace mca
 } // namespace llvm

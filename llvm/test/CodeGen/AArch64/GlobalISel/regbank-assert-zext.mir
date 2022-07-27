@@ -166,20 +166,18 @@ body:             |
     ; CHECK: liveins: $d0, $x1, $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %w0:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: %cond:gpr(s1) = G_TRUNC %w0(s32)
     ; CHECK-NEXT: %fpr:fpr(s64) = COPY $d0
     ; CHECK-NEXT: %fpr_assert_zext:fpr(s64) = G_ASSERT_ZEXT %fpr, 32
     ; CHECK-NEXT: %gpr:gpr(s64) = COPY $x1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s64) = COPY %gpr(s64)
-    ; CHECK-NEXT: %select:fpr(s64) = G_SELECT %cond(s1), %fpr_assert_zext, [[COPY]]
+    ; CHECK-NEXT: %select:fpr(s64) = G_SELECT %w0(s32), %fpr_assert_zext, [[COPY]]
     ; CHECK-NEXT: $d0 = COPY %select(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %w0:_(s32) = COPY $w0
-    %cond:_(s1) = G_TRUNC %w0(s32)
     %fpr:_(s64) = COPY $d0
     %fpr_assert_zext:_(s64) = G_ASSERT_ZEXT %fpr, 32
     %gpr:_(s64) = COPY $x1
-    %select:_(s64) = G_SELECT %cond(s1), %fpr_assert_zext, %gpr
+    %select:_(s64) = G_SELECT %w0, %fpr_assert_zext, %gpr
     $d0 = COPY %select(s64)
     RET_ReallyLR implicit $d0
 
@@ -200,8 +198,7 @@ body:             |
   ; CHECK-NEXT:   %copy_assert_zext:fpr(s32) = G_ASSERT_ZEXT %copy1, 16
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %copy1(s32)
   ; CHECK-NEXT:   %cmp:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), %copy2
-  ; CHECK-NEXT:   %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-  ; CHECK-NEXT:   G_BRCOND %cmp_trunc(s1), %bb.1
+  ; CHECK-NEXT:   G_BRCOND %cmp(s32), %bb.1
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -225,8 +222,7 @@ body:             |
     %copy_assert_zext:_(s32) = G_ASSERT_ZEXT %copy1(s32), 16
 
     %cmp:_(s32) = G_ICMP intpred(eq), %copy1, %copy2
-    %cmp_trunc:_(s1) = G_TRUNC %cmp
-    G_BRCOND %cmp_trunc, %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.1
   bb.1:
     successors: %bb.2
@@ -255,8 +251,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %copy1(s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr(s32) = COPY %copy2(s32)
   ; CHECK-NEXT:   %cmp:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-  ; CHECK-NEXT:   G_BRCOND %cmp_trunc(s1), %bb.1
+  ; CHECK-NEXT:   G_BRCOND %cmp(s32), %bb.1
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -277,8 +272,7 @@ body:             |
     %copy1:_(s32) = COPY $s0
     %copy2:_(s32) = COPY $s1
     %cmp:_(s32) = G_ICMP intpred(eq), %copy1, %copy2
-    %cmp_trunc:_(s1) = G_TRUNC %cmp
-    G_BRCOND %cmp_trunc, %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.1
   bb.1:
     successors: %bb.2

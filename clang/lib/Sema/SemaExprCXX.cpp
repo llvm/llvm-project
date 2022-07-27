@@ -241,7 +241,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
       if (IsAcceptableResult(Type)) {
         QualType T = Context.getTypeDeclType(Type);
         MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-        return CreateParsedType(T,
+        return CreateParsedType(Context.getElaboratedType(ETK_None, nullptr, T),
                                 Context.getTrivialTypeSourceInfo(T, NameLoc));
       }
     }
@@ -1926,7 +1926,7 @@ Sema::isUnavailableAlignedAllocationFunction(const FunctionDecl &FD) const {
     return false;
   Optional<unsigned> AlignmentParam;
   if (FD.isReplaceableGlobalAllocationFunction(&AlignmentParam) &&
-      AlignmentParam.hasValue())
+      AlignmentParam)
     return true;
   return false;
 }
@@ -2231,7 +2231,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
       FindAllocationFunctions(
           StartLoc, SourceRange(PlacementLParen, PlacementRParen), Scope, Scope,
-          AllocType, ArraySize.hasValue(), PassAlignment, PlacementArgs,
+          AllocType, ArraySize.has_value(), PassAlignment, PlacementArgs,
           OperatorNew, OperatorDelete))
     return ExprError();
 
@@ -2274,10 +2274,10 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     // How many bytes do we want to allocate here?
     llvm::Optional<llvm::APInt> AllocationSize;
-    if (!ArraySize.hasValue() && !AllocType->isDependentType()) {
+    if (!ArraySize && !AllocType->isDependentType()) {
       // For non-array operator new, we only want to allocate one element.
       AllocationSize = SingleEltSize;
-    } else if (KnownArraySize.hasValue() && !AllocType->isDependentType()) {
+    } else if (KnownArraySize && !AllocType->isDependentType()) {
       // For array operator new, only deal with static array size case.
       bool Overflow;
       AllocationSize = llvm::APInt(SizeTyWidth, *KnownArraySize)
@@ -2289,7 +2289,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     }
 
     IntegerLiteral AllocationSizeLiteral(
-        Context, AllocationSize.getValueOr(llvm::APInt::getZero(SizeTyWidth)),
+        Context, AllocationSize.value_or(llvm::APInt::getZero(SizeTyWidth)),
         SizeTy, SourceLocation());
     // Otherwise, if we failed to constant-fold the allocation size, we'll
     // just give up and pass-in something opaque, that isn't a null pointer.
@@ -2314,7 +2314,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // Adjust placement args by prepending conjured size and alignment exprs.
     llvm::SmallVector<Expr *, 8> CallArgs;
     CallArgs.reserve(NumImplicitArgs + PlacementArgs.size());
-    CallArgs.emplace_back(AllocationSize.hasValue()
+    CallArgs.emplace_back(AllocationSize
                               ? static_cast<Expr *>(&AllocationSizeLiteral)
                               : &OpaqueAllocationSize);
     if (PassAlignment)
@@ -4009,7 +4009,7 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
             case StringLiteral::UTF32:
               // We don't allow UTF literals to be implicitly converted
               break;
-            case StringLiteral::Ascii:
+            case StringLiteral::Ordinary:
               return (ToPointeeType->getKind() == BuiltinType::Char_U ||
                       ToPointeeType->getKind() == BuiltinType::Char_S);
             case StringLiteral::Wide:
@@ -5394,6 +5394,39 @@ static bool evaluateTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
   return false;
 }
 
+namespace {
+void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
+                                SourceLocation KWLoc) {
+  TypeTrait Replacement;
+  switch (Kind) {
+    case UTT_HasNothrowAssign:
+    case UTT_HasNothrowMoveAssign:
+      Replacement = BTT_IsNothrowAssignable;
+      break;
+    case UTT_HasNothrowCopy:
+    case UTT_HasNothrowConstructor:
+      Replacement = TT_IsNothrowConstructible;
+      break;
+    case UTT_HasTrivialAssign:
+    case UTT_HasTrivialMoveAssign:
+      Replacement = BTT_IsTriviallyAssignable;
+      break;
+    case UTT_HasTrivialCopy:
+    case UTT_HasTrivialDefaultConstructor:
+    case UTT_HasTrivialMoveConstructor:
+      Replacement = TT_IsTriviallyConstructible;
+      break;
+    case UTT_HasTrivialDestructor:
+      Replacement = UTT_IsTriviallyDestructible;
+      break;
+    default:
+      return;
+  }
+  S.Diag(KWLoc, diag::warn_deprecated_builtin)
+    << getTraitSpelling(Kind) << getTraitSpelling(Replacement);
+}
+}
+
 ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                 ArrayRef<TypeSourceInfo *> Args,
                                 SourceLocation RParenLoc) {
@@ -5402,6 +5435,8 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   if (Kind <= UTT_Last && !CheckUnaryTypeTraitTypeCompleteness(
                                *this, Kind, KWLoc, Args[0]->getType()))
     return ExprError();
+
+  DiagnoseBuiltinDeprecation(*this, Kind, KWLoc);
 
   bool Dependent = false;
   for (unsigned I = 0, N = Args.size(); I != N; ++I) {
@@ -7295,8 +7330,9 @@ Stmt *Sema::MaybeCreateStmtWithCleanups(Stmt *SubStmt) {
   // a StmtExpr; currently this is only used for asm statements.
   // This is hacky, either create a new CXXStmtWithTemporaries statement or
   // a new AsmStmtWithTemporaries.
-  CompoundStmt *CompStmt = CompoundStmt::Create(
-      Context, SubStmt, SourceLocation(), SourceLocation());
+  CompoundStmt *CompStmt =
+      CompoundStmt::Create(Context, SubStmt, FPOptionsOverride(),
+                           SourceLocation(), SourceLocation());
   Expr *E = new (Context)
       StmtExpr(CompStmt, Context.VoidTy, SourceLocation(), SourceLocation(),
                /*FIXME TemplateDepth=*/0);
@@ -7677,8 +7713,8 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
   //   designated by the pseudo-destructor-name shall be the same type.
   if (DestructedTypeInfo) {
     QualType DestructedType = DestructedTypeInfo->getType();
-    SourceLocation DestructedTypeStart
-      = DestructedTypeInfo->getTypeLoc().getLocalSourceRange().getBegin();
+    SourceLocation DestructedTypeStart =
+        DestructedTypeInfo->getTypeLoc().getBeginLoc();
     if (!DestructedType->isDependentType() && !ObjectType->isDependentType()) {
       if (!Context.hasSameUnqualifiedType(DestructedType, ObjectType)) {
         // Detect dot pseudo destructor calls on pointer objects, e.g.:
@@ -7703,7 +7739,7 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
         } else {
           Diag(DestructedTypeStart, diag::err_pseudo_dtor_type_mismatch)
               << ObjectType << DestructedType << Base->getSourceRange()
-              << DestructedTypeInfo->getTypeLoc().getLocalSourceRange();
+              << DestructedTypeInfo->getTypeLoc().getSourceRange();
 
           // Recover by setting the destructed type to the object type.
           DestructedType = ObjectType;
@@ -7719,8 +7755,8 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
           // type.
         } else {
           Diag(DestructedTypeStart, diag::err_arc_pseudo_dtor_inconstant_quals)
-            << ObjectType << DestructedType << Base->getSourceRange()
-            << DestructedTypeInfo->getTypeLoc().getLocalSourceRange();
+              << ObjectType << DestructedType << Base->getSourceRange()
+              << DestructedTypeInfo->getTypeLoc().getSourceRange();
         }
 
         // Recover by setting the destructed type to the object type.
@@ -7744,10 +7780,10 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
     if (!ScopeType->isDependentType() && !ObjectType->isDependentType() &&
         !Context.hasSameUnqualifiedType(ScopeType, ObjectType)) {
 
-      Diag(ScopeTypeInfo->getTypeLoc().getLocalSourceRange().getBegin(),
+      Diag(ScopeTypeInfo->getTypeLoc().getSourceRange().getBegin(),
            diag::err_pseudo_dtor_type_mismatch)
-        << ObjectType << ScopeType << Base->getSourceRange()
-        << ScopeTypeInfo->getTypeLoc().getLocalSourceRange();
+          << ObjectType << ScopeType << Base->getSourceRange()
+          << ScopeTypeInfo->getTypeLoc().getSourceRange();
 
       ScopeType = QualType();
       ScopeTypeInfo = nullptr;
@@ -8239,8 +8275,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     if (const Optional<unsigned> Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, Var, S))
-      S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(),
-                                          Index.getValue());
+      S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(), *Index);
     const bool IsVarNeverAConstantExpression =
         VariableCanNeverBeAConstantExpression(Var, S.Context);
     if (!IsFullExprInstantiationDependent || IsVarNeverAConstantExpression) {
@@ -8273,7 +8308,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     if (const Optional<unsigned> Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, /*0 is 'this'*/ nullptr, S)) {
-      const unsigned FunctionScopeIndexOfCapturableLambda = Index.getValue();
+      const unsigned FunctionScopeIndexOfCapturableLambda = *Index;
       S.CheckCXXThisCapture(CurrentLSI->PotentialThisCaptureLocation,
                             /*Explicit*/ false, /*BuildAndDiagnose*/ true,
                             &FunctionScopeIndexOfCapturableLambda);
@@ -8971,14 +9006,14 @@ Sema::BuildExprRequirement(
         cast<TemplateTypeParmDecl>(TPL->getParam(0))->getTypeConstraint()
             ->getImmediatelyDeclaredConstraint();
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
-    assert(!Constraint.isInvalid() &&
-           "Substitution cannot fail as it is simply putting a type template "
-           "argument into a concept specialization expression's parameter.");
-
-    SubstitutedConstraintExpr =
-        cast<ConceptSpecializationExpr>(Constraint.get());
-    if (!SubstitutedConstraintExpr->isSatisfied())
-      Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
+    if (Constraint.isInvalid()) {
+      Status = concepts::ExprRequirement::SS_ExprSubstitutionFailure;
+    } else {
+      SubstitutedConstraintExpr =
+          cast<ConceptSpecializationExpr>(Constraint.get());
+      if (!SubstitutedConstraintExpr->isSatisfied())
+        Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
+    }
   }
   return new (Context) concepts::ExprRequirement(E, IsSimple, NoexceptLoc,
                                                  ReturnTypeRequirement, Status,

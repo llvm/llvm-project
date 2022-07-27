@@ -108,6 +108,10 @@ public:
   /// Merge the new callback encoding \p NewCB into \p ExistingCallbacks.
   MDNode *mergeCallbackEncodings(MDNode *ExistingCallbacks, MDNode *NewCB);
 
+  /// Return metadata feeding to the CodeGen about how to generate a function
+  /// prologue for the "function" santizier.
+  MDNode *createRTTIPointerPrologue(Constant *PrologueSig, Constant *RTTI);
+
   //===------------------------------------------------------------------===//
   // AA metadata.
   //===------------------------------------------------------------------===//

@@ -2,7 +2,7 @@
 ; RUN: llc -O3 < %s -mcpu=haswell -mtriple=x86_64 | FileCheck %s
 
 ; Verify that we are not exponentially increasing compiling time.
-define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8, float %9, float %10, float %11, float %12, float %13, float %14, float %15, float %16, float %17, float %18, float %19, float %20, float %21, float %22, float %23, float %24, float %25, float %26, float %27, float %28, float %29, float %30, float %31, float %32, float %33, float %34, float %35, float %36, float %37, float %38, float %39, float %40, float %41, float %42, float %43, float %44, float %45, float %46, float %47, float %48, float %49, float %50, float %51, float %52, float %53, float %54, float %55, float %56, float %57, float %58, float %59, float %60, float %61, float %62, float %63, float %64, float %65, float %66, float %67, float %68, float %69, float %70, float %71, float %72, float %73, float %74, float %75, float %76, float %77, float %78, float %79, float* %80) {
+define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8, float %9, float %10, float %11, float %12, float %13, float %14, float %15, float %16, float %17, float %18, float %19, float %20, float %21, float %22, float %23, float %24, float %25, float %26, float %27, float %28, float %29, float %30, float %31, float %32, float %33, float %34, float %35, float %36, float %37, float %38, float %39, float %40, float %41, float %42, float %43, float %44, float %45, float %46, float %47, float %48, float %49, float %50, float %51, float %52, float %53, float %54, float %55, float %56, float %57, float %58, float %59, float %60, float %61, float %62, float %63, float %64, float %65, float %66, float %67, float %68, float %69, float %70, float %71, float %72, float %73, float %74, float %75, float %76, float %77, float %78, float %79, ptr %80) {
 ; CHECK-LABEL: tester:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovaps %xmm3, %xmm15
@@ -411,6 +411,6 @@ entry:
   %286 = fmul reassoc nsz contract float %3, %285
   %287 = fsub reassoc nsz contract float %0, %286
   %288 = fmul reassoc nsz contract float %287, %283
-  store float %288, float* %80, align 4
+  store float %288, ptr %80, align 4
   ret void
 }

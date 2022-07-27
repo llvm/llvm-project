@@ -94,6 +94,10 @@ namespace std {
 #include <typeinfo>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <chrono>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -267,7 +271,7 @@ public:
         is_copy_constructible<_Tp>::value>
     >
   _LIBCPP_INLINE_VISIBILITY
-  _Tp& emplace(_Args&&... args);
+  _Tp& emplace(_Args&&...);
 
   template <class _ValueType, class _Up, class ..._Args,
     class _Tp = decay_t<_ValueType>,

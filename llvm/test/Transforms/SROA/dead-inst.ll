@@ -15,13 +15,13 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 
 %class.b = type { i64 }
 
-declare void @D(%class.b* sret(%class.b), %class.b* dereferenceable(32)) local_unnamed_addr
+declare void @D(ptr sret(%class.b), ptr dereferenceable(32)) local_unnamed_addr
 
 ; Function Attrs: nounwind
-define void @H(%class.b* noalias nocapture readnone, [2 x i64], i8* %ptr, i32 signext %v, i64 %l, i64 %idx, %class.b* nonnull dereferenceable(32) %ptr2) {
+define void @H(ptr noalias nocapture readnone, [2 x i64], ptr %ptr, i32 signext %v, i64 %l, i64 %idx, ptr nonnull dereferenceable(32) %ptr2) {
   %3 = alloca %class.b, align 8
   %.sroa.0 = alloca i64, align 8
-  store i64 0, i64* %.sroa.0, align 8
+  store i64 0, ptr %.sroa.0, align 8
   %4 = extractvalue [2 x i64] %1, 1
   switch i64 %4, label %6 [
   i64 4, label %foo
@@ -29,22 +29,20 @@ define void @H(%class.b* noalias nocapture readnone, [2 x i64], i8* %ptr, i32 si
   ]
 
 ; <label>:5:
-  %.sroa.0.0..sroa_cast3 = bitcast i64* %.sroa.0 to i8**
   br label %12
 
 ; <label>:6:
   %7 = icmp ugt i64 %4, 5
-  %.sroa.0.0..sroa_cast5 = bitcast i64* %.sroa.0 to i8**
   br i1 %7, label %8, label %12
 
 ; <label>:8:
-  %9 = load i8, i8* inttoptr (i64 4 to i8*), align 4
+  %9 = load i8, ptr inttoptr (i64 4 to ptr), align 4
   %10 = icmp eq i8 %9, 47
   %11 = select i1 %10, i64 5, i64 4
   br label %12
 
 ; <label>:12:
-  %13 = phi i8** [ %.sroa.0.0..sroa_cast3, %5 ], [ %.sroa.0.0..sroa_cast5, %8 ], [ %.sroa.0.0..sroa_cast5, %6 ]
+  %13 = phi ptr [ %.sroa.0, %5 ], [ %.sroa.0, %8 ], [ %.sroa.0, %6 ]
   %14 = phi i64 [ 4, %5 ], [ %11, %8 ], [ 4, %6 ]
   %15 = icmp ne i64 %4, 0
   %16 = icmp ugt i64 %4, %14
@@ -52,34 +50,33 @@ define void @H(%class.b* noalias nocapture readnone, [2 x i64], i8* %ptr, i32 si
   br i1 %17, label %18, label %a.exit
 
 ; <label>:18:
-  %19 = tail call i8* @memchr(i8* %ptr, i32 signext %v, i64 %l)
-  %20 = icmp eq i8* %19, null
+  %19 = tail call ptr @memchr(ptr %ptr, i32 signext %v, i64 %l)
+  %20 = icmp eq ptr %19, null
   %21 = sext i1 %20 to i64
   br label %a.exit
 
 a.exit:
   %22 = phi i64 [ -1, %12 ], [ %21, %18 ]
-  %23 = load i8*, i8** %13, align 8
+  %23 = load ptr, ptr %13, align 8
   %24 = sub nsw i64 %22, %14
-  %25 = bitcast %class.b* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %25)
-  %26 = icmp ult i64 %24, 2
-  br i1 %26, label %G.exit, label %27
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %3)
+  %25 = icmp ult i64 %24, 2
+  br i1 %25, label %G.exit, label %26
 
 ; <label>:27:
-  %28 = getelementptr inbounds i8, i8* %23, i64 %idx
-  %29 = icmp eq i8* %28, null
-  br i1 %29, label %30, label %31
+  %27 = getelementptr inbounds i8, ptr %23, i64 %idx
+  %28 = icmp eq ptr %27, null
+  br i1 %28, label %29, label %30
 
 ; <label>:30:
   unreachable
 
 ; <label>:31:
-  call void @D(%class.b* nonnull sret(%class.b) %3, %class.b* nonnull dereferenceable(32) %ptr2)
+  call void @D(ptr nonnull sret(%class.b) %3, ptr nonnull dereferenceable(32) %ptr2)
   br label %G.exit
 
 G.exit:
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %25)
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %3)
   br label %foo
 
 foo:
@@ -87,10 +84,10 @@ foo:
 }
 
 ; Function Attrs: nounwind readonly
-declare i8* @memchr(i8*, i32 signext, i64) local_unnamed_addr
+declare ptr @memchr(ptr, i32 signext, i64) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)

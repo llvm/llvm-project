@@ -12,7 +12,6 @@
 
 // template <class T>
 // struct hash
-//     : public unary_function<T, size_t>
 // {
 //     size_t operator()(T val) const;
 // };
@@ -33,8 +32,10 @@ void
 test()
 {
     typedef std::hash<SV> H;
+#if TEST_STD_VER <= 14
     static_assert((std::is_same<typename H::argument_type, SV>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+#endif
 
     typedef typename SV::value_type char_type;
     typedef std::basic_string<char_type> String;

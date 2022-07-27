@@ -37,6 +37,7 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   const RISCVSubtarget *getST() const { return ST; }
   const RISCVTargetLowering *getTLI() const { return TLI; }
 
+  unsigned getMaxVLFor(VectorType *Ty);
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -56,7 +57,12 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const;
   bool supportsScalableVectors() const { return ST->hasVInstructions(); }
+  PredicationStyle emitGetActiveLaneMask() const {
+    return ST->hasVInstructions() ? PredicationStyle::Data
+                                  : PredicationStyle::None;
+  }
   Optional<unsigned> getMaxVScale() const;
+  Optional<unsigned> getVScaleForTuning() const;
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
@@ -114,7 +120,7 @@ public:
       return false;
 
     // Only support fixed vectors if we know the minimum vector size.
-    if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+    if (isa<FixedVectorType>(DataType) && !ST->useRVVForFixedLengthVectors())
       return false;
 
     // Don't allow elements larger than the ELEN.
@@ -142,7 +148,7 @@ public:
       return false;
 
     // Only support fixed vectors if we know the minimum vector size.
-    if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+    if (isa<FixedVectorType>(DataType) && !ST->useRVVForFixedLengthVectors())
       return false;
 
     // Don't allow elements larger than the ELEN.

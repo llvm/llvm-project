@@ -31,8 +31,26 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                            RegScavenger *RS) const override;
+
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const override {
+    return MBB.erase(MI);
+  }
+
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
+
   bool hasFP(const MachineFunction &MF) const override;
   bool hasBP(const MachineFunction &MF) const;
+
+private:
+  void determineFrameLayout(MachineFunction &MF) const;
+  void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                 const DebugLoc &DL, Register DestReg, Register SrcReg,
+                 int64_t Val, MachineInstr::MIFlag Flag) const;
 };
-} // namespace llvm
+} // end namespace llvm
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCHFRAMELOWERING_H

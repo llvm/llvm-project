@@ -130,7 +130,7 @@ public:
 
   void setCounter(Counter C) { Count = C; }
 
-  bool hasStartLoc() const { return LocStart.hasValue(); }
+  bool hasStartLoc() const { return LocStart.has_value(); }
 
   void setStartLoc(SourceLocation Loc) { LocStart = Loc; }
 
@@ -139,7 +139,7 @@ public:
     return *LocStart;
   }
 
-  bool hasEndLoc() const { return LocEnd.hasValue(); }
+  bool hasEndLoc() const { return LocEnd.has_value(); }
 
   void setEndLoc(SourceLocation Loc) {
     assert(Loc.isValid() && "Setting an invalid end location");
@@ -155,7 +155,7 @@ public:
 
   void setGap(bool Gap) { GapRegion = Gap; }
 
-  bool isBranch() const { return FalseCount.hasValue(); }
+  bool isBranch() const { return FalseCount.has_value(); }
 };
 
 /// Spelling locations for the start and end of a source region.
@@ -392,7 +392,7 @@ public:
       else if (I.isPPIfElse() || I.isEmptyLine())
         SR = {SM, LocStart, LocEnd};
 
-      if (!SR.hasValue())
+      if (!SR)
         continue;
       auto Region = CounterMappingRegion::makeSkipped(
           *CovFileID, SR->LineStart, SR->ColumnStart, SR->LineEnd,
@@ -587,7 +587,7 @@ struct CounterCoverageMappingBuilder
                     Optional<SourceLocation> EndLoc = None,
                     Optional<Counter> FalseCount = None) {
 
-    if (StartLoc && !FalseCount.hasValue()) {
+    if (StartLoc && !FalseCount) {
       MostRecentLocation = *StartLoc;
     }
 

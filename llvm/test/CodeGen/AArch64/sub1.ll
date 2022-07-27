@@ -18,13 +18,26 @@ define i8 @masked_sub_i8(i8 %x) {
 ; CHECK-LABEL: masked_sub_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov w9, #7
 ; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    sub w0, w9, w8
+; CHECK-NEXT:    eor w0, w8, #0x7
 ; CHECK-NEXT:    ret
   %a = and i8 %x, 5
   %m = sub i8 7, %a
   ret i8 %m
+}
+
+; Borrow from the MSB is ok.
+
+define i8 @masked_sub_high_bit_mask_i8(i8 %x) {
+; CHECK-LABEL: masked_sub_high_bit_mask_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-96
+; CHECK-NEXT:    and w8, w0, w8
+; CHECK-NEXT:    eor w0, w8, #0x3c
+; CHECK-NEXT:    ret
+  %maskx = and i8 %x, 160 ; 0b10100000
+  %s = sub i8 60, %maskx  ; 0b00111100
+  ret i8 %s
 }
 
 define i8 @not_masked_sub_i8(i8 %x) {
@@ -43,9 +56,8 @@ define i32 @masked_sub_i32(i32 %x) {
 ; CHECK-LABEL: masked_sub_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    mov w9, #31
 ; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    sub w0, w9, w8
+; CHECK-NEXT:    eor w0, w8, #0x1f
 ; CHECK-NEXT:    ret
   %a = and i32 %x, 9
   %m = sub i32 31, %a
@@ -58,7 +70,7 @@ define <4 x i32> @masked_sub_v4i32(<4 x i32> %x) {
 ; CHECK-NEXT:    movi v1.4s, #42
 ; CHECK-NEXT:    movi v2.4s, #1, msl #8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    sub v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %a = and <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %m = sub <4 x i32> <i32 511, i32 511, i32 511, i32 511>, %a

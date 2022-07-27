@@ -2,34 +2,34 @@
 ; RUN: llc < %s -mtriple=i686-linux -mcpu=corei7-avx | FileCheck %s
 ; RUN: opt -instsimplify -disable-output < %s
 
-define <4 x i32*> @AGEP0(i32* %ptr) nounwind {
+define <4 x ptr> @AGEP0(ptr %ptr) nounwind {
 ; CHECK-LABEL: AGEP0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm0
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
-  %vecinit.i = insertelement <4 x i32*> undef, i32* %ptr, i32 0
-  %vecinit2.i = insertelement <4 x i32*> %vecinit.i, i32* %ptr, i32 1
-  %vecinit4.i = insertelement <4 x i32*> %vecinit2.i, i32* %ptr, i32 2
-  %vecinit6.i = insertelement <4 x i32*> %vecinit4.i, i32* %ptr, i32 3
-  %A2 = getelementptr i32, <4 x i32*> %vecinit6.i, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
-  %A3 = getelementptr i32, <4 x i32*> %A2, <4 x i32> <i32 10, i32 14, i32 19, i32 233>
-  ret <4 x i32*> %A3
+  %vecinit.i = insertelement <4 x ptr> undef, ptr %ptr, i32 0
+  %vecinit2.i = insertelement <4 x ptr> %vecinit.i, ptr %ptr, i32 1
+  %vecinit4.i = insertelement <4 x ptr> %vecinit2.i, ptr %ptr, i32 2
+  %vecinit6.i = insertelement <4 x ptr> %vecinit4.i, ptr %ptr, i32 3
+  %A2 = getelementptr i32, <4 x ptr> %vecinit6.i, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  %A3 = getelementptr i32, <4 x ptr> %A2, <4 x i32> <i32 10, i32 14, i32 19, i32 233>
+  ret <4 x ptr> %A3
 }
 
-define i32 @AGEP1(<4 x i32*> %param) nounwind {
+define i32 @AGEP1(<4 x ptr> %param) nounwind {
 ; CHECK-LABEL: AGEP1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractps $3, %xmm0, %eax
 ; CHECK-NEXT:    movl 16(%eax), %eax
 ; CHECK-NEXT:    retl
-  %A2 = getelementptr i32, <4 x i32*> %param, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
-  %k = extractelement <4 x i32*> %A2, i32 3
-  %v = load i32, i32* %k
+  %A2 = getelementptr i32, <4 x ptr> %param, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  %k = extractelement <4 x ptr> %A2, i32 3
+  %v = load i32, ptr %k
   ret i32 %v
 }
 
-define i32 @AGEP2(<4 x i32*> %param, <4 x i32> %off) nounwind {
+define i32 @AGEP2(<4 x ptr> %param, <4 x i32> %off) nounwind {
 ; CHECK-LABEL: AGEP2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpslld $2, %xmm1, %xmm1
@@ -37,13 +37,13 @@ define i32 @AGEP2(<4 x i32*> %param, <4 x i32> %off) nounwind {
 ; CHECK-NEXT:    vpextrd $3, %xmm0, %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
-  %A2 = getelementptr i32, <4 x i32*> %param, <4 x i32> %off
-  %k = extractelement <4 x i32*> %A2, i32 3
-  %v = load i32, i32* %k
+  %A2 = getelementptr i32, <4 x ptr> %param, <4 x i32> %off
+  %k = extractelement <4 x ptr> %A2, i32 3
+  %v = load i32, ptr %k
   ret i32 %v
 }
 
-define <4 x i32*> @AGEP3(<4 x i32*> %param, <4 x i32> %off) nounwind {
+define <4 x ptr> @AGEP3(<4 x ptr> %param, <4 x i32> %off) nounwind {
 ; CHECK-LABEL: AGEP3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
@@ -53,13 +53,13 @@ define <4 x i32*> @AGEP3(<4 x i32*> %param, <4 x i32> %off) nounwind {
 ; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
-  %A2 = getelementptr i32, <4 x i32*> %param, <4 x i32> %off
+  %A2 = getelementptr i32, <4 x ptr> %param, <4 x i32> %off
   %v = alloca i32
-  %k = insertelement <4 x i32*> %A2, i32* %v, i32 3
-  ret <4 x i32*> %k
+  %k = insertelement <4 x ptr> %A2, ptr %v, i32 3
+  ret <4 x ptr> %k
 }
 
-define <4 x i16*> @AGEP4(<4 x i16*> %param, <4 x i32> %off) nounwind {
+define <4 x ptr> @AGEP4(<4 x ptr> %param, <4 x i32> %off) nounwind {
 ; Multiply offset by two (add it to itself).
 ; add the base to the offset
 ; CHECK-LABEL: AGEP4:
@@ -67,42 +67,42 @@ define <4 x i16*> @AGEP4(<4 x i16*> %param, <4 x i32> %off) nounwind {
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
-  %A = getelementptr i16, <4 x i16*> %param, <4 x i32> %off
-  ret <4 x i16*> %A
+  %A = getelementptr i16, <4 x ptr> %param, <4 x i32> %off
+  ret <4 x ptr> %A
 }
 
-define <4 x i8*> @AGEP5(<4 x i8*> %param, <4 x i8> %off) nounwind {
+define <4 x ptr> @AGEP5(<4 x ptr> %param, <4 x i8> %off) nounwind {
 ; CHECK-LABEL: AGEP5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovsxbd %xmm1, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
-  %A = getelementptr i8, <4 x i8*> %param, <4 x i8> %off
-  ret <4 x i8*> %A
+  %A = getelementptr i8, <4 x ptr> %param, <4 x i8> %off
+  ret <4 x ptr> %A
 }
 
 
 ; The size of each element is 1 byte. No need to multiply by element size.
-define <4 x i8*> @AGEP6(<4 x i8*> %param, <4 x i32> %off) nounwind {
+define <4 x ptr> @AGEP6(<4 x ptr> %param, <4 x i32> %off) nounwind {
 ; CHECK-LABEL: AGEP6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
-  %A = getelementptr i8, <4 x i8*> %param, <4 x i32> %off
-  ret <4 x i8*> %A
+  %A = getelementptr i8, <4 x ptr> %param, <4 x i32> %off
+  ret <4 x ptr> %A
 }
 
-define <4 x i8*> @AGEP7(<4 x i8*> %param, i32 %off) nounwind {
+define <4 x ptr> @AGEP7(<4 x ptr> %param, i32 %off) nounwind {
 ; CHECK-LABEL: AGEP7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
-  %A = getelementptr i8, <4 x i8*> %param, i32 %off
-  ret <4 x i8*> %A
+  %A = getelementptr i8, <4 x ptr> %param, i32 %off
+  ret <4 x ptr> %A
 }
 
-define <4 x i16*> @AGEP8(i16* %param, <4 x i32> %off) nounwind {
+define <4 x ptr> @AGEP8(ptr %param, <4 x i32> %off) nounwind {
 ; Multiply offset by two (add it to itself).
 ; add the base to the offset
 ; CHECK-LABEL: AGEP8:
@@ -111,11 +111,11 @@ define <4 x i16*> @AGEP8(i16* %param, <4 x i32> %off) nounwind {
 ; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-  %A = getelementptr i16, i16* %param, <4 x i32> %off
-  ret <4 x i16*> %A
+  %A = getelementptr i16, ptr %param, <4 x i32> %off
+  ret <4 x ptr> %A
 }
 
-define <64 x i16*> @AGEP9(i16* %param, <64 x i32> %off) nounwind {
+define <64 x ptr> @AGEP9(ptr %param, <64 x i32> %off) nounwind {
 ; CHECK-LABEL: AGEP9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp
@@ -207,7 +207,7 @@ define <64 x i16*> @AGEP9(i16* %param, <64 x i32> %off) nounwind {
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl $4
-  %A = getelementptr i16, i16* %param, <64 x i32> %off
-  ret <64 x i16*> %A
+  %A = getelementptr i16, ptr %param, <64 x i32> %off
+  ret <64 x ptr> %A
 }
 

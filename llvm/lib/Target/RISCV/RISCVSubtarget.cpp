@@ -15,6 +15,7 @@
 #include "RISCVCallLowering.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVLegalizerInfo.h"
+#include "RISCVMacroFusion.h"
 #include "RISCVRegisterBankInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -201,6 +202,12 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 }
 
 bool RISCVSubtarget::enableSubRegLiveness() const {
-  // TODO: Enable for for RVV to better handle LMUL>1 and segment load/store.
+  // FIXME: Enable subregister liveness by default for RVV to better handle
+  // LMUL>1 and segment load/store.
   return EnableSubRegLiveness;
+}
+
+void RISCVSubtarget::getPostRAMutations(
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
+  Mutations.push_back(createRISCVMacroFusionDAGMutation());
 }

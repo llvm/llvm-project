@@ -20,7 +20,7 @@ using namespace llvm;
 static bool IsTotalBufferLimitReached(ArrayRef<cpu_id_t> cores,
                                       const TraceIntelPTStartRequest &request) {
   uint64_t required = cores.size() * request.ipt_trace_size;
-  uint64_t limit = request.process_buffer_size_limit.getValueOr(
+  uint64_t limit = request.process_buffer_size_limit.value_or(
       std::numeric_limits<uint64_t>::max());
   return required > limit;
 }
@@ -35,7 +35,8 @@ static Error IncludePerfEventParanoidMessageInError(Error &&error) {
 
 Expected<std::unique_ptr<IntelPTMultiCoreTrace>>
 IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
-                                       NativeProcessProtocol &process) {
+                                       NativeProcessProtocol &process,
+                                       Optional<int> cgroup_fd) {
   Expected<ArrayRef<cpu_id_t>> cpu_ids = GetAvailableLogicalCoreIDs();
   if (!cpu_ids)
     return cpu_ids.takeError();
@@ -52,7 +53,7 @@ IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
   for (cpu_id_t cpu_id : *cpu_ids) {
     Expected<IntelPTSingleBufferTrace> core_trace =
         IntelPTSingleBufferTrace::Start(request, /*tid=*/None, cpu_id,
-                                        /*disabled=*/true);
+                                        /*disabled=*/true, cgroup_fd);
     if (!core_trace)
       return IncludePerfEventParanoidMessageInError(core_trace.takeError());
 
@@ -68,7 +69,7 @@ IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
   }
 
   return std::unique_ptr<IntelPTMultiCoreTrace>(
-      new IntelPTMultiCoreTrace(std::move(traces), process));
+      new IntelPTMultiCoreTrace(std::move(traces), process, (bool)cgroup_fd));
 }
 
 void IntelPTMultiCoreTrace::ForEachCore(
@@ -106,10 +107,11 @@ void IntelPTMultiCoreTrace::ProcessWillResume() {
 
 TraceIntelPTGetStateResponse IntelPTMultiCoreTrace::GetState() {
   TraceIntelPTGetStateResponse state;
+  state.using_cgroup_filtering = m_using_cgroup_filtering;
 
-  for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
+  for (NativeThreadProtocol &thread : m_process.Threads())
     state.traced_threads.push_back(
-        TraceThreadState{m_process.GetThreadAtIndex(i)->GetID(), {}});
+        TraceThreadState{thread.GetID(), {}});
 
   state.cpus.emplace();
   ForEachCore([&](lldb::cpu_id_t cpu_id,

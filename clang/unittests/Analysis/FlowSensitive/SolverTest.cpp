@@ -6,269 +6,332 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
+#include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
+#include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <memory>
-#include <utility>
-#include <vector>
 
 namespace {
 
 using namespace clang;
 using namespace dataflow;
 
-class SolverTest : public ::testing::Test {
-protected:
-  // Checks if the conjunction of `Vals` is satisfiable and returns the
-  // corresponding result.
-  Solver::Result solve(llvm::DenseSet<BoolValue *> Vals) {
-    return WatchedLiteralsSolver().solve(std::move(Vals));
-  }
+using test::ConstraintContext;
+using testing::_;
+using testing::AnyOf;
+using testing::Optional;
+using testing::Pair;
+using testing::UnorderedElementsAre;
 
-  // Creates an atomic boolean value.
-  BoolValue *atom() {
-    Vals.push_back(std::make_unique<AtomicBoolValue>());
-    return Vals.back().get();
-  }
+// Checks if the conjunction of `Vals` is satisfiable and returns the
+// corresponding result.
+Solver::Result solve(llvm::DenseSet<BoolValue *> Vals) {
+  return WatchedLiteralsSolver().solve(std::move(Vals));
+}
 
-  // Creates a boolean conjunction value.
-  BoolValue *conj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<ConjunctionValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
-  }
+void expectUnsatisfiable(Solver::Result Result) {
+  EXPECT_EQ(Result.getStatus(), Solver::Result::Status::Unsatisfiable);
+  EXPECT_FALSE(Result.getSolution().has_value());
+}
 
-  // Creates a boolean disjunction value.
-  BoolValue *disj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<DisjunctionValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
-  }
+template <typename Matcher>
+void expectSatisfiable(Solver::Result Result, Matcher Solution) {
+  EXPECT_EQ(Result.getStatus(), Solver::Result::Status::Satisfiable);
+  EXPECT_THAT(Result.getSolution(), Optional(Solution));
+}
 
-  // Creates a boolean negation value.
-  BoolValue *neg(BoolValue *SubVal) {
-    Vals.push_back(std::make_unique<NegationValue>(*SubVal));
-    return Vals.back().get();
-  }
-
-  // Creates a boolean implication value.
-  BoolValue *impl(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    return disj(neg(LeftSubVal), RightSubVal);
-  }
-
-  // Creates a boolean biconditional value.
-  BoolValue *iff(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    return conj(impl(LeftSubVal, RightSubVal), impl(RightSubVal, LeftSubVal));
-  }
-
-private:
-  std::vector<std::unique_ptr<BoolValue>> Vals;
-};
-
-TEST_F(SolverTest, Var) {
-  auto X = atom();
+TEST(SolverTest, Var) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
 
   // X
-  EXPECT_EQ(solve({X}), Solver::Result::Satisfiable);
+  expectSatisfiable(
+      solve({X}),
+      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue)));
 }
 
-TEST_F(SolverTest, NegatedVar) {
-  auto X = atom();
-  auto NotX = neg(X);
+TEST(SolverTest, NegatedVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto NotX = Ctx.neg(X);
 
   // !X
-  EXPECT_EQ(solve({NotX}), Solver::Result::Satisfiable);
+  expectSatisfiable(
+      solve({NotX}),
+      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse)));
 }
 
-TEST_F(SolverTest, UnitConflict) {
-  auto X = atom();
-  auto NotX = neg(X);
+TEST(SolverTest, UnitConflict) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto NotX = Ctx.neg(X);
 
   // X ^ !X
-  EXPECT_EQ(solve({X, NotX}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({X, NotX}));
 }
 
-TEST_F(SolverTest, DistinctVars) {
-  auto X = atom();
-  auto Y = atom();
-  auto NotY = neg(Y);
+TEST(SolverTest, DistinctVars) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto NotY = Ctx.neg(Y);
 
   // X ^ !Y
-  EXPECT_EQ(solve({X, NotY}), Solver::Result::Satisfiable);
+  expectSatisfiable(
+      solve({X, NotY}),
+      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue),
+                           Pair(Y, Solver::Result::Assignment::AssignedFalse)));
 }
 
-TEST_F(SolverTest, DoubleNegation) {
-  auto X = atom();
-  auto NotX = neg(X);
-  auto NotNotX = neg(NotX);
+TEST(SolverTest, DoubleNegation) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto NotX = Ctx.neg(X);
+  auto NotNotX = Ctx.neg(NotX);
 
   // !!X ^ !X
-  EXPECT_EQ(solve({NotNotX, NotX}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({NotNotX, NotX}));
 }
 
-TEST_F(SolverTest, NegatedDisjunction) {
-  auto X = atom();
-  auto Y = atom();
-  auto XOrY = disj(X, Y);
-  auto NotXOrY = neg(XOrY);
+TEST(SolverTest, NegatedDisjunction) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XOrY = Ctx.disj(X, Y);
+  auto NotXOrY = Ctx.neg(XOrY);
 
   // !(X v Y) ^ (X v Y)
-  EXPECT_EQ(solve({NotXOrY, XOrY}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({NotXOrY, XOrY}));
 }
 
-TEST_F(SolverTest, NegatedConjunction) {
-  auto X = atom();
-  auto Y = atom();
-  auto XAndY = conj(X, Y);
-  auto NotXAndY = neg(XAndY);
+TEST(SolverTest, NegatedConjunction) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XAndY = Ctx.conj(X, Y);
+  auto NotXAndY = Ctx.neg(XAndY);
 
   // !(X ^ Y) ^ (X ^ Y)
-  EXPECT_EQ(solve({NotXAndY, XAndY}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({NotXAndY, XAndY}));
 }
 
-TEST_F(SolverTest, DisjunctionSameVars) {
-  auto X = atom();
-  auto NotX = neg(X);
-  auto XOrNotX = disj(X, NotX);
+TEST(SolverTest, DisjunctionSameVarWithNegation) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto NotX = Ctx.neg(X);
+  auto XOrNotX = Ctx.disj(X, NotX);
 
   // X v !X
-  EXPECT_EQ(solve({XOrNotX}), Solver::Result::Satisfiable);
+  expectSatisfiable(solve({XOrNotX}), _);
 }
 
-TEST_F(SolverTest, ConjunctionSameVarsConflict) {
-  auto X = atom();
-  auto NotX = neg(X);
-  auto XAndNotX = conj(X, NotX);
+TEST(SolverTest, DisjunctionSameVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto XOrX = Ctx.disj(X, X);
+
+  // X v X
+  expectSatisfiable(solve({XOrX}), _);
+}
+
+TEST(SolverTest, ConjunctionSameVarsConflict) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto NotX = Ctx.neg(X);
+  auto XAndNotX = Ctx.conj(X, NotX);
 
   // X ^ !X
-  EXPECT_EQ(solve({XAndNotX}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({XAndNotX}));
 }
 
-TEST_F(SolverTest, PureVar) {
-  auto X = atom();
-  auto Y = atom();
-  auto NotX = neg(X);
-  auto NotXOrY = disj(NotX, Y);
-  auto NotY = neg(Y);
-  auto NotXOrNotY = disj(NotX, NotY);
+TEST(SolverTest, ConjunctionSameVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto XAndX = Ctx.conj(X, X);
+
+  // X ^ X
+  expectSatisfiable(solve({XAndX}), _);
+}
+
+TEST(SolverTest, PureVar) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto NotX = Ctx.neg(X);
+  auto NotXOrY = Ctx.disj(NotX, Y);
+  auto NotY = Ctx.neg(Y);
+  auto NotXOrNotY = Ctx.disj(NotX, NotY);
 
   // (!X v Y) ^ (!X v !Y)
-  EXPECT_EQ(solve({NotXOrY, NotXOrNotY}), Solver::Result::Satisfiable);
+  expectSatisfiable(
+      solve({NotXOrY, NotXOrNotY}),
+      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse),
+                           Pair(Y, _)));
 }
 
-TEST_F(SolverTest, MustAssumeVarIsFalse) {
-  auto X = atom();
-  auto Y = atom();
-  auto XOrY = disj(X, Y);
-  auto NotX = neg(X);
-  auto NotXOrY = disj(NotX, Y);
-  auto NotY = neg(Y);
-  auto NotXOrNotY = disj(NotX, NotY);
+TEST(SolverTest, MustAssumeVarIsFalse) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XOrY = Ctx.disj(X, Y);
+  auto NotX = Ctx.neg(X);
+  auto NotXOrY = Ctx.disj(NotX, Y);
+  auto NotY = Ctx.neg(Y);
+  auto NotXOrNotY = Ctx.disj(NotX, NotY);
 
   // (X v Y) ^ (!X v Y) ^ (!X v !Y)
-  EXPECT_EQ(solve({XOrY, NotXOrY, NotXOrNotY}), Solver::Result::Satisfiable);
+  expectSatisfiable(
+      solve({XOrY, NotXOrY, NotXOrNotY}),
+      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse),
+                           Pair(Y, Solver::Result::Assignment::AssignedTrue)));
 }
 
-TEST_F(SolverTest, DeepConflict) {
-  auto X = atom();
-  auto Y = atom();
-  auto XOrY = disj(X, Y);
-  auto NotX = neg(X);
-  auto NotXOrY = disj(NotX, Y);
-  auto NotY = neg(Y);
-  auto NotXOrNotY = disj(NotX, NotY);
-  auto XOrNotY = disj(X, NotY);
+TEST(SolverTest, DeepConflict) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XOrY = Ctx.disj(X, Y);
+  auto NotX = Ctx.neg(X);
+  auto NotXOrY = Ctx.disj(NotX, Y);
+  auto NotY = Ctx.neg(Y);
+  auto NotXOrNotY = Ctx.disj(NotX, NotY);
+  auto XOrNotY = Ctx.disj(X, NotY);
 
   // (X v Y) ^ (!X v Y) ^ (!X v !Y) ^ (X v !Y)
-  EXPECT_EQ(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}),
-            Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}));
 }
 
-TEST_F(SolverTest, IffSameVars) {
-  auto X = atom();
-  auto XEqX = iff(X, X);
+TEST(SolverTest, IffIsEquivalentToDNF) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto NotX = Ctx.neg(X);
+  auto NotY = Ctx.neg(Y);
+  auto XIffY = Ctx.iff(X, Y);
+  auto XIffYDNF = Ctx.disj(Ctx.conj(X, Y), Ctx.conj(NotX, NotY));
+  auto NotEquivalent = Ctx.neg(Ctx.iff(XIffY, XIffYDNF));
+
+  // !((X <=> Y) <=> ((X ^ Y) v (!X ^ !Y)))
+  expectUnsatisfiable(solve({NotEquivalent}));
+}
+
+TEST(SolverTest, IffSameVars) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto XEqX = Ctx.iff(X, X);
 
   // X <=> X
-  EXPECT_EQ(solve({XEqX}), Solver::Result::Satisfiable);
+  expectSatisfiable(solve({XEqX}), _);
 }
 
-TEST_F(SolverTest, IffDistinctVars) {
-  auto X = atom();
-  auto Y = atom();
-  auto XEqY = iff(X, Y);
+TEST(SolverTest, IffDistinctVars) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XEqY = Ctx.iff(X, Y);
 
   // X <=> Y
-  EXPECT_EQ(solve({XEqY}), Solver::Result::Satisfiable);
+  expectSatisfiable(
+      solve({XEqY}),
+      AnyOf(UnorderedElementsAre(
+                Pair(X, Solver::Result::Assignment::AssignedTrue),
+                Pair(Y, Solver::Result::Assignment::AssignedTrue)),
+            UnorderedElementsAre(
+                Pair(X, Solver::Result::Assignment::AssignedFalse),
+                Pair(Y, Solver::Result::Assignment::AssignedFalse))));
 }
 
-TEST_F(SolverTest, IffWithUnits) {
-  auto X = atom();
-  auto Y = atom();
-  auto XEqY = iff(X, Y);
+TEST(SolverTest, IffWithUnits) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XEqY = Ctx.iff(X, Y);
 
   // (X <=> Y) ^ X ^ Y
-  EXPECT_EQ(solve({XEqY, X, Y}), Solver::Result::Satisfiable);
+  expectSatisfiable(
+      solve({XEqY, X, Y}),
+      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue),
+                           Pair(Y, Solver::Result::Assignment::AssignedTrue)));
 }
 
-TEST_F(SolverTest, IffWithUnitsConflict) {
-  auto X = atom();
-  auto Y = atom();
-  auto XEqY = iff(X, Y);
-  auto NotY = neg(Y);
+TEST(SolverTest, IffWithUnitsConflict) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XEqY = Ctx.iff(X, Y);
+  auto NotY = Ctx.neg(Y);
 
   // (X <=> Y) ^ X  !Y
-  EXPECT_EQ(solve({XEqY, X, NotY}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({XEqY, X, NotY}));
 }
 
-TEST_F(SolverTest, IffTransitiveConflict) {
-  auto X = atom();
-  auto Y = atom();
-  auto Z = atom();
-  auto XEqY = iff(X, Y);
-  auto YEqZ = iff(Y, Z);
-  auto NotX = neg(X);
+TEST(SolverTest, IffTransitiveConflict) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto Z = Ctx.atom();
+  auto XEqY = Ctx.iff(X, Y);
+  auto YEqZ = Ctx.iff(Y, Z);
+  auto NotX = Ctx.neg(X);
 
   // (X <=> Y) ^ (Y <=> Z) ^ Z ^ !X
-  EXPECT_EQ(solve({XEqY, YEqZ, Z, NotX}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({XEqY, YEqZ, Z, NotX}));
 }
 
-TEST_F(SolverTest, DeMorgan) {
-  auto X = atom();
-  auto Y = atom();
-  auto Z = atom();
-  auto W = atom();
+TEST(SolverTest, DeMorgan) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto Z = Ctx.atom();
+  auto W = Ctx.atom();
 
   // !(X v Y) <=> !X ^ !Y
-  auto A = iff(neg(disj(X, Y)), conj(neg(X), neg(Y)));
+  auto A = Ctx.iff(Ctx.neg(Ctx.disj(X, Y)), Ctx.conj(Ctx.neg(X), Ctx.neg(Y)));
 
   // !(Z ^ W) <=> !Z v !W
-  auto B = iff(neg(conj(Z, W)), disj(neg(Z), neg(W)));
+  auto B = Ctx.iff(Ctx.neg(Ctx.conj(Z, W)), Ctx.disj(Ctx.neg(Z), Ctx.neg(W)));
 
   // A ^ B
-  EXPECT_EQ(solve({A, B}), Solver::Result::Satisfiable);
+  expectSatisfiable(solve({A, B}), _);
 }
 
-TEST_F(SolverTest, RespectsAdditionalConstraints) {
-  auto X = atom();
-  auto Y = atom();
-  auto XEqY = iff(X, Y);
-  auto NotY = neg(Y);
+TEST(SolverTest, RespectsAdditionalConstraints) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XEqY = Ctx.iff(X, Y);
+  auto NotY = Ctx.neg(Y);
 
   // (X <=> Y) ^ X ^ !Y
-  EXPECT_EQ(solve({XEqY, X, NotY}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({XEqY, X, NotY}));
 }
 
-TEST_F(SolverTest, ImplicationConflict) {
-  auto X = atom();
-  auto Y = atom();
-  auto *XImplY = impl(X, Y);
-  auto *XAndNotY = conj(X, neg(Y));
+TEST(SolverTest, ImplicationIsEquivalentToDNF) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto XImpliesY = Ctx.impl(X, Y);
+  auto XImpliesYDNF = Ctx.disj(Ctx.neg(X), Y);
+  auto NotEquivalent = Ctx.neg(Ctx.iff(XImpliesY, XImpliesYDNF));
+
+  // !((X => Y) <=> (!X v Y))
+  expectUnsatisfiable(solve({NotEquivalent}));
+}
+
+TEST(SolverTest, ImplicationConflict) {
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto *XImplY = Ctx.impl(X, Y);
+  auto *XAndNotY = Ctx.conj(X, Ctx.neg(Y));
 
   // X => Y ^ X ^ !Y
-  EXPECT_EQ(solve({XImplY, XAndNotY}), Solver::Result::Unsatisfiable);
+  expectUnsatisfiable(solve({XImplY, XAndNotY}));
 }
 
 } // namespace

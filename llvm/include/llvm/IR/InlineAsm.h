@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class Error;
 class FunctionType;
 class PointerType;
 template <class ConstantClass> class ConstantUniqueMap;
@@ -83,17 +84,16 @@ public:
   const std::string &getAsmString() const { return AsmString; }
   const std::string &getConstraintString() const { return Constraints; }
 
-  /// Verify - This static method can be used by the parser to check to see if
-  /// the specified constraint string is legal for the type.  This returns true
-  /// if legal, false if not.
-  ///
-  static bool Verify(FunctionType *Ty, StringRef Constraints);
+  /// This static method can be used by the parser to check to see if the
+  /// specified constraint string is legal for the type.
+  static Error verify(FunctionType *Ty, StringRef Constraints);
 
   // Constraint String Parsing
   enum ConstraintPrefix {
     isInput,            // 'x'
     isOutput,           // '=x'
-    isClobber           // '~x'
+    isClobber,          // '~x'
+    isLabel,            // '!x'
   };
 
   using ConstraintCodeVector = std::vector<std::string>;
@@ -118,7 +118,7 @@ public:
   using ConstraintInfoVector = std::vector<ConstraintInfo>;
 
   struct ConstraintInfo {
-    /// Type - The basic type of the constraint: input/output/clobber
+    /// Type - The basic type of the constraint: input/output/clobber/label
     ///
     ConstraintPrefix Type = isInput;
 

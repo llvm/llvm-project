@@ -599,9 +599,9 @@ public:
 
   /// Add metadata to simd-ize a loop.
   ///
-  /// \param DL   Debug location for instructions added by unrolling.
-  /// \param Loop The loop to simd-ize.
-  void applySimd(DebugLoc DL, CanonicalLoopInfo *Loop);
+  /// \param Loop    The loop to simd-ize.
+  /// \param Simdlen The Simdlen length to apply to the simd loop.
+  void applySimd(CanonicalLoopInfo *Loop, ConstantInt *Simdlen);
 
   /// Generator for '#omp flush'
   ///
@@ -629,6 +629,15 @@ public:
   InsertPointTy createTask(const LocationDescription &Loc,
                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                            bool Tied = true, Value *Final = nullptr);
+
+  /// Generator for the taskgroup construct
+  ///
+  /// \param Loc The location where the taskgroup construct was encountered.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  InsertPointTy createTaskgroup(const LocationDescription &Loc,
+                                InsertPointTy AllocaIP,
+                                BodyGenCallbackTy BodyGenCB);
 
   /// Functions used to generate reductions. Such functions take two Values
   /// representing LHS and RHS of the reduction, respectively, and a reference
@@ -820,6 +829,23 @@ public:
   void emitCancelationCheckImpl(Value *CancelFlag,
                                 omp::Directive CanceledDirective,
                                 FinalizeCallbackTy ExitCB = {});
+
+  /// Generate a target region entry call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  /// \param Return Return value of the created function returned by reference.
+  /// \param DeviceID Identifier for the device via the 'device' clause.
+  /// \param NumTeams Numer of teams for the region via the 'num_teams' clause
+  ///                 or 0 if unspecified and -1 if there is no 'teams' clause.
+  /// \param NumThreads Number of threads via the 'thread_limit' clause.
+  /// \param HostPtr Pointer to the host-side pointer of the target kernel.
+  /// \param KernelArgs Array of arguments to the kernel.
+  /// \param NoWaitKernelArgs Optional array of arguments to the nowait kernel.
+  InsertPointTy emitTargetKernel(const LocationDescription &Loc, Value *&Return,
+                                 Value *Ident, Value *DeviceID, Value *NumTeams,
+                                 Value *NumThreads, Value *HostPtr,
+                                 ArrayRef<Value *> KernelArgs,
+                                 ArrayRef<Value *> NoWaitArgs = {});
 
   /// Generate a barrier runtime call.
   ///

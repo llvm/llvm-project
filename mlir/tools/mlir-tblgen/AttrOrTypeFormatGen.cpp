@@ -249,7 +249,7 @@ private:
 void DefFormat::genParser(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_parser", "odsParser");
-  ctx.addSubst("_ctx", "odsParser.getContext()");
+  ctx.addSubst("_ctxt", "odsParser.getContext()");
   ctx.withBuilder("odsBuilder");
   if (isa<AttrDef>(def))
     ctx.addSubst("_type", "odsType");
@@ -297,18 +297,23 @@ void DefFormat::genParser(MethodBody &os) {
   }
   for (const AttrOrTypeParameter &param : params) {
     os << ",\n    ";
+    std::string paramSelfStr;
+    llvm::raw_string_ostream selfOs(paramSelfStr);
     if (param.isOptional()) {
-      os << formatv("_result_{0}.getValueOr(", param.getName());
+      selfOs << formatv("(_result_{0}.value_or(", param.getName());
       if (Optional<StringRef> defaultValue = param.getDefaultValue())
-        os << tgfmt(*defaultValue, &ctx);
+        selfOs << tgfmt(*defaultValue, &ctx);
       else
-        os << param.getCppStorageType() << "()";
-      os << ")";
+        selfOs << param.getCppStorageType() << "()";
+      selfOs << "))";
     } else if (isa<AttributeSelfTypeParameter>(param)) {
-      os << tgfmt("$_type", &ctx);
+      selfOs << tgfmt("$_type", &ctx);
     } else {
-      os << formatv("*_result_{0}", param.getName());
+      selfOs << formatv("(*_result_{0})", param.getName());
     }
+    os << param.getCppType() << "("
+       << tgfmt(param.getConvertFromStorage(), &ctx.withSelf(selfOs.str()))
+       << ")";
   }
   os << ");";
 }
@@ -669,7 +674,7 @@ void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
 void DefFormat::genPrinter(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_printer", "odsPrinter");
-  ctx.addSubst("_ctx", "getContext()");
+  ctx.addSubst("_ctxt", "getContext()");
   ctx.withBuilder("odsBuilder");
   os.indent();
   os << "::mlir::Builder odsBuilder(getContext());\n";

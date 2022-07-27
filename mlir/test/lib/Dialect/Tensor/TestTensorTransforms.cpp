@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
@@ -62,10 +62,10 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::ControlConstantExtractSliceFusionFn controlFn =
       [](tensor::ExtractSliceOp op) {
-        if (!op.source().hasOneUse())
+        if (!op.getSource().hasOneUse())
           return false;
 
-        auto resultType = op.result().getType().cast<ShapedType>();
+        auto resultType = op.getResult().getType().cast<ShapedType>();
         constexpr int64_t kConstantFoldingMaxNumElements = 1024;
         return resultType.getNumElements() <= kConstantFoldingMaxNumElements;
       };

@@ -291,6 +291,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('help watchpoint s', 'help watchpoint set ')
 
     @expectedFailureNetBSD
+    @add_test_categories(["watchpoint"])
     def test_common_complete_watchpoint_ids(self):
         subcommands = ['enable', 'disable', 'delete', 'modify', 'ignore']
 
@@ -675,7 +676,7 @@ class CommandLineCompletionTestCase(TestBase):
 
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.runCmd('target stop-hook add test DONE')
+        self.runCmd('target stop-hook add -o test')
 
         for subcommand in subcommands:
             self.complete_from_to('target stop-hook ' + subcommand + ' ',

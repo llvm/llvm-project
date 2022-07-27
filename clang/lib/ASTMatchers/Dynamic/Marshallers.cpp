@@ -148,7 +148,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   for (StringRef OrFlag : Split) {
     if (llvm::Optional<llvm::Regex::RegexFlags> NextFlag =
             getRegexFlag(OrFlag.trim()))
-      Flag = Flag.getValueOr(llvm::Regex::NoFlags) | *NextFlag;
+      Flag = Flag.value_or(llvm::Regex::NoFlags) | *NextFlag;
     else
       return None;
   }

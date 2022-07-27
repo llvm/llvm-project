@@ -8,8 +8,8 @@
 
 #include <utility>
 
-#include "mlir/IR/AffineExpr.h"
 #include "AffineExprDetail.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
@@ -580,8 +580,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   if (rLhsConst && rRhsConst && firstExpr == secondExpr)
     return getAffineBinaryOpExpr(
         AffineExprKind::Mul, firstExpr,
-        getAffineConstantExpr(rLhsConst.getValue() + rRhsConst.getValue(),
-                              lhs.getContext()));
+        getAffineConstantExpr(*rLhsConst + *rRhsConst, lhs.getContext()));
 
   // When doing successive additions, bring constant to the right: turn (d0 + 2)
   // + d1 into (d0 + d1) + 2.
@@ -975,7 +974,7 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // Adds entries to `indexToExprMap`, `coefficients` and `indices`.
   auto addEntry = [&](std::pair<unsigned, signed> index, int64_t coefficient,
                       AffineExpr expr) {
-    assert(std::find(indices.begin(), indices.end(), index) == indices.end() &&
+    assert(!llvm::is_contained(indices, index) &&
            "Key is already present in indices vector and overwriting will "
            "happen in `indexToExprMap` and `coefficients`!");
 
@@ -1074,7 +1073,7 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // Constructing the simplified semi-affine sum of product/division/mod
   // expression from the flattened form in the desired sorted order of indices
   // of the various individual product/division/mod expressions.
-  std::sort(indices.begin(), indices.end());
+  llvm::sort(indices);
   for (const std::pair<unsigned, unsigned> index : indices) {
     assert(indexToExprMap.lookup(index) &&
            "cannot find key in `indexToExprMap` map");

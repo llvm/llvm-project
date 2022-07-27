@@ -637,14 +637,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Additional linker set-up and flags for Fortran. This is required in order
   // to generate executables.
-  //
-  // NOTE: Generating executables by Flang is considered an "experimental"
-  // feature and hence this is guarded with a command line option.
-  // TODO: Make this work unconditionally once Flang is mature enough.
-  if (getToolChain().getDriver().IsFlangMode() &&
-      Args.hasArg(options::OPT_flang_experimental_exec)) {
+  if (getToolChain().getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-    addFortranRuntimeLibs(CmdArgs);
+    addFortranRuntimeLibs(getToolChain(), CmdArgs);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
@@ -730,7 +725,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (const Arg *Root = Args.getLastArg(options::OPT_isysroot)) {
       // ld64 fixed the implicit -F and -L paths in ld64-605.1+.
       if (Version.getMajor() < 605 ||
-          (Version.getMajor() == 605 && Version.getMinor().getValueOr(0) < 1)) {
+          (Version.getMajor() == 605 && Version.getMinor().value_or(0) < 1)) {
 
         SmallString<128> L(Root->getValue());
         llvm::sys::path::append(L, "System", "DriverKit", "usr", "lib");
@@ -1146,25 +1141,38 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
   SmallString<128> P(getDriver().ClangExecutable);
   llvm::sys::path::remove_filename(P); // 'clang'
   llvm::sys::path::remove_filename(P); // 'bin'
+  llvm::sys::path::append(P, "lib", "arc");
 
   // 'libarclite' usually lives in the same toolchain as 'clang'. However, the
   // Swift open source toolchains for macOS distribute Clang without libarclite.
   // In that case, to allow the linker to find 'libarclite', we point to the
   // 'libarclite' in the XcodeDefault toolchain instead.
-  if (getXcodeDeveloperPath(P).empty()) {
-    if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+  if (!getVFS().exists(P)) {
+    auto updatePath = [&](const Arg *A) {
       // Try to infer the path to 'libarclite' in the toolchain from the
       // specified SDK path.
       StringRef XcodePathForSDK = getXcodeDeveloperPath(A->getValue());
-      if (!XcodePathForSDK.empty()) {
-        P = XcodePathForSDK;
-        llvm::sys::path::append(P, "Toolchains/XcodeDefault.xctoolchain/usr");
-      }
+      if (XcodePathForSDK.empty())
+        return false;
+
+      P = XcodePathForSDK;
+      llvm::sys::path::append(P, "Toolchains/XcodeDefault.xctoolchain/usr",
+                              "lib", "arc");
+      return getVFS().exists(P);
+    };
+
+    bool updated = false;
+    if (const Arg *A = Args.getLastArg(options::OPT_isysroot))
+      updated = updatePath(A);
+
+    if (!updated) {
+      if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ))
+        updatePath(A);
     }
   }
 
   CmdArgs.push_back("-force_load");
-  llvm::sys::path::append(P, "lib", "arc", "libarclite_");
+  llvm::sys::path::append(P, "libarclite_");
   // Mash in the platform.
   if (isTargetWatchOSSimulator())
     P += "watchsimulator";
@@ -1556,10 +1564,10 @@ struct DarwinPlatform {
     options::ID Opt;
     switch (Platform) {
     case DarwinPlatformKind::MacOS:
-      Opt = options::OPT_mmacosx_version_min_EQ;
+      Opt = options::OPT_mmacos_version_min_EQ;
       break;
     case DarwinPlatformKind::IPhoneOS:
-      Opt = options::OPT_miphoneos_version_min_EQ;
+      Opt = options::OPT_mios_version_min_EQ;
       break;
     case DarwinPlatformKind::TvOS:
       Opt = options::OPT_mtvos_version_min_EQ;
@@ -1732,8 +1740,8 @@ private:
 Optional<DarwinPlatform>
 getDeploymentTargetFromOSVersionArg(DerivedArgList &Args,
                                     const Driver &TheDriver) {
-  Arg *OSXVersion = Args.getLastArg(options::OPT_mmacosx_version_min_EQ);
-  Arg *iOSVersion = Args.getLastArg(options::OPT_miphoneos_version_min_EQ,
+  Arg *macOSVersion = Args.getLastArg(options::OPT_mmacos_version_min_EQ);
+  Arg *iOSVersion = Args.getLastArg(options::OPT_mios_version_min_EQ,
                                     options::OPT_mios_simulator_version_min_EQ);
   Arg *TvOSVersion =
       Args.getLastArg(options::OPT_mtvos_version_min_EQ,
@@ -1741,15 +1749,15 @@ getDeploymentTargetFromOSVersionArg(DerivedArgList &Args,
   Arg *WatchOSVersion =
       Args.getLastArg(options::OPT_mwatchos_version_min_EQ,
                       options::OPT_mwatchos_simulator_version_min_EQ);
-  if (OSXVersion) {
+  if (macOSVersion) {
     if (iOSVersion || TvOSVersion || WatchOSVersion) {
       TheDriver.Diag(diag::err_drv_argument_not_allowed_with)
-          << OSXVersion->getAsString(Args)
+          << macOSVersion->getAsString(Args)
           << (iOSVersion ? iOSVersion
                          : TvOSVersion ? TvOSVersion : WatchOSVersion)
                  ->getAsString(Args);
     }
-    return DarwinPlatform::createOSVersionArg(Darwin::MacOS, OSXVersion);
+    return DarwinPlatform::createOSVersionArg(Darwin::MacOS, macOSVersion);
   } else if (iOSVersion) {
     if (TvOSVersion || WatchOSVersion) {
       TheDriver.Diag(diag::err_drv_argument_not_allowed_with)
@@ -1927,8 +1935,8 @@ std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
 
   std::string OSVersion;
   llvm::raw_string_ostream(OSVersion)
-      << OsVersion.getMajor() << '.' << OsVersion.getMinor().getValueOr(0)
-      << '.' << OsVersion.getSubminor().getValueOr(0);
+      << OsVersion.getMajor() << '.' << OsVersion.getMinor().value_or(0) << '.'
+      << OsVersion.getSubminor().value_or(0);
   return OSVersion;
 }
 
@@ -2453,6 +2461,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
     break;
   }
 }
+
 void DarwinClang::AddCXXStdlibLibArgs(const ArgList &Args,
                                       ArgStringList &CmdArgs) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);
@@ -2460,6 +2469,8 @@ void DarwinClang::AddCXXStdlibLibArgs(const ArgList &Args,
   switch (Type) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
+    if (Args.hasArg(options::OPT_fexperimental_library))
+      CmdArgs.push_back("-lc++experimental");
     break;
 
   case ToolChain::CST_Libstdcxx:

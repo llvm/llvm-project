@@ -1,4 +1,4 @@
-//===-- TraceIntelPTMultiCpuDecoder.cpp ----0------------------------------===//
+//===-- TraceIntelPTMultiCpuDecoder.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,34 +35,61 @@ bool TraceIntelPTMultiCpuDecoder::TracesThread(lldb::tid_t tid) const {
   return m_tids.count(tid);
 }
 
-DecodedThreadSP TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
-  if (Error err = CorrelateContextSwitchesAndIntelPtTraces())
-    return std::make_shared<DecodedThread>(thread.shared_from_this(),
-                                           std::move(err));
-  auto it = m_decoded_threads.find(thread.GetID());
-  if (it != m_decoded_threads.end())
-    return it->second;
-
-  DecodedThreadSP decoded_thread_sp =
-      std::make_shared<DecodedThread>(thread.shared_from_this());
-
+Expected<Optional<uint64_t>> TraceIntelPTMultiCpuDecoder::FindLowestTSC() {
+  Optional<uint64_t> lowest_tsc;
   TraceIntelPTSP trace_sp = GetTrace();
 
-  Error err = trace_sp->OnAllCpusBinaryDataRead(
+  Error err = GetTrace()->OnAllCpusBinaryDataRead(
       IntelPTDataKinds::kIptTrace,
       [&](const DenseMap<cpu_id_t, ArrayRef<uint8_t>> &buffers) -> Error {
-        auto it = m_continuous_executions_per_thread->find(thread.GetID());
-        if (it != m_continuous_executions_per_thread->end())
-          DecodeSystemWideTraceForThread(*decoded_thread_sp, *trace_sp, buffers,
-                                         it->second);
-
+        for (auto &cpu_id_to_buffer : buffers) {
+          Expected<Optional<uint64_t>> tsc =
+              FindLowestTSCInTrace(*trace_sp, cpu_id_to_buffer.second);
+          if (!tsc)
+            return tsc.takeError();
+          if (*tsc && (!lowest_tsc || *lowest_tsc > **tsc))
+            lowest_tsc = **tsc;
+        }
         return Error::success();
       });
   if (err)
-    decoded_thread_sp->SetAsFailed(std::move(err));
+    return std::move(err);
+  return lowest_tsc;
+}
 
-  m_decoded_threads.try_emplace(thread.GetID(), decoded_thread_sp);
-  return decoded_thread_sp;
+Expected<DecodedThreadSP> TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
+  if (Error err = CorrelateContextSwitchesAndIntelPtTraces())
+    return std::move(err);
+
+  TraceIntelPTSP trace_sp = GetTrace();
+
+  return trace_sp
+      ->GetThreadTimer(thread.GetID())
+      .TimeTask("Decoding instructions", [&]() -> Expected<DecodedThreadSP> {
+        auto it = m_decoded_threads.find(thread.GetID());
+        if (it != m_decoded_threads.end())
+          return it->second;
+
+        DecodedThreadSP decoded_thread_sp = std::make_shared<DecodedThread>(
+            thread.shared_from_this(), trace_sp->GetPerfZeroTscConversion());
+
+        Error err = trace_sp->OnAllCpusBinaryDataRead(
+            IntelPTDataKinds::kIptTrace,
+            [&](const DenseMap<cpu_id_t, ArrayRef<uint8_t>> &buffers) -> Error {
+              auto it =
+                  m_continuous_executions_per_thread->find(thread.GetID());
+              if (it != m_continuous_executions_per_thread->end())
+                return DecodeSystemWideTraceForThread(
+                    *decoded_thread_sp, *trace_sp, buffers, it->second);
+
+              return Error::success();
+            });
+        if (err)
+          return std::move(err);
+
+        m_decoded_threads.try_emplace(thread.GetID(), decoded_thread_sp);
+        return decoded_thread_sp;
+      });
 }
 
 static Expected<std::vector<IntelPTThreadSubtrace>>
@@ -105,6 +132,7 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
     if (!intel_pt_subtraces)
       return intel_pt_subtraces.takeError();
 
+    m_total_psb_blocks += intel_pt_subtraces->size();
     // We'll be iterating through the thread continuous executions and the intel
     // pt subtraces sorted by time.
     auto it = intel_pt_subtraces->begin();
@@ -118,7 +146,7 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
             if (it->tsc > thread_execution.GetStartTSC()) {
               execution.intelpt_subtraces.push_back(*it);
             } else {
-              m_unattributed_intelpt_subtraces++;
+              m_unattributed_psb_blocks++;
             }
           }
           continuous_executions_per_thread[thread_execution.tid].push_back(
@@ -137,6 +165,8 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
         });
     if (err)
       return std::move(err);
+
+    m_unattributed_psb_blocks += intel_pt_subtraces->end() - it;
   }
   // We now sort the executions of each thread to have them ready for
   // instruction decoding
@@ -153,7 +183,7 @@ Error TraceIntelPTMultiCpuDecoder::CorrelateContextSwitchesAndIntelPtTraces() {
   if (m_continuous_executions_per_thread)
     return Error::success();
 
-  Error err = GetTrace()->GetTimer().ForGlobal().TimeTask<Error>(
+  Error err = GetTrace()->GetGlobalTimer().TimeTask(
       "Context switch and Intel PT traces correlation", [&]() -> Error {
         if (auto correlation = DoCorrelateContextSwitchesAndIntelPtTraces()) {
           m_continuous_executions_per_thread.emplace(std::move(*correlation));
@@ -186,4 +216,25 @@ size_t TraceIntelPTMultiCpuDecoder::GetTotalContinuousExecutionsCount() const {
   for (const auto &kv : *m_continuous_executions_per_thread)
     count += kv.second.size();
   return count;
+}
+
+size_t
+TraceIntelPTMultiCpuDecoder::GePSBBlocksCountForThread(lldb::tid_t tid) const {
+  if (!m_continuous_executions_per_thread)
+    return 0;
+  size_t count = 0;
+  auto it = m_continuous_executions_per_thread->find(tid);
+  if (it == m_continuous_executions_per_thread->end())
+    return 0;
+  for (const IntelPTThreadContinousExecution &execution : it->second)
+    count += execution.intelpt_subtraces.size();
+  return count;
+}
+
+size_t TraceIntelPTMultiCpuDecoder::GetUnattributedPSBBlocksCount() const {
+  return m_unattributed_psb_blocks;
+}
+
+size_t TraceIntelPTMultiCpuDecoder::GetTotalPSBBlocksCount() const {
+  return m_total_psb_blocks;
 }

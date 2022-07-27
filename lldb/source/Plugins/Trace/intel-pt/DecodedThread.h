@@ -53,32 +53,13 @@ public:
     return llvm::errc::not_supported;
   }
 
+  int GetLibiptErrorCode() const { return m_libipt_error_code; }
+
   void log(llvm::raw_ostream &OS) const override;
 
 private:
   int m_libipt_error_code;
   lldb::addr_t m_address;
-};
-
-/// Helper struct for building an instruction or error from the decoder.
-/// It holds associated events and timing information.
-struct DecodedInstruction {
-  DecodedInstruction() {
-    pt_insn.ip = LLDB_INVALID_ADDRESS;
-    libipt_error = pte_ok;
-  }
-
-  DecodedInstruction(int libipt_error_code) : DecodedInstruction() {
-    libipt_error = libipt_error_code;
-  }
-
-  /// \return \b true if and only if this struct holds a libipt error.
-  explicit operator bool() const;
-
-  int libipt_error;
-  lldb::TraceEvents events = (lldb::TraceEvents)0;
-  llvm::Optional<uint64_t> tsc = llvm::None;
-  pt_insn pt_insn;
 };
 
 /// \class DecodedThread
@@ -90,45 +71,7 @@ struct DecodedInstruction {
 /// stopped at. See \a Trace::GetCursorPosition for more information.
 class DecodedThread : public std::enable_shared_from_this<DecodedThread> {
 public:
-  /// \class TscRange
-  /// Class that represents the trace range associated with a given TSC.
-  /// It provides efficient iteration to the previous or next TSC range in the
-  /// decoded trace.
-  ///
-  /// TSC timestamps are emitted by the decoder infrequently, which means
-  /// that each TSC covers a range of instruction indices, which can be used to
-  /// speed up TSC lookups.
-  class TscRange {
-  public:
-    /// Check if this TSC range includes the given instruction index.
-    bool InRange(size_t insn_index) const;
-
-    /// Get the next range chronologically.
-    llvm::Optional<TscRange> Next() const;
-
-    /// Get the previous range chronologically.
-    llvm::Optional<TscRange> Prev() const;
-
-    /// Get the TSC value.
-    size_t GetTsc() const;
-    /// Get the smallest instruction index that has this TSC.
-    size_t GetStartInstructionIndex() const;
-    /// Get the largest instruction index that has this TSC.
-    size_t GetEndInstructionIndex() const;
-
-  private:
-    friend class DecodedThread;
-
-    TscRange(std::map<size_t, uint64_t>::const_iterator it,
-             const DecodedThread &decoded_thread);
-
-    /// The iterator pointing to the beginning of the range.
-    std::map<size_t, uint64_t>::const_iterator m_it;
-    /// The largest instruction index that has this TSC.
-    size_t m_end_index;
-
-    const DecodedThread *m_decoded_thread;
-  };
+  using TSC = uint64_t;
 
   // Struct holding counts for libipts errors;
   struct LibiptErrorsStats {
@@ -139,81 +82,125 @@ public:
     void RecordError(int libipt_error_code);
   };
 
+  /// A structure that represents a maximal range of trace items associated to
+  /// the same TSC value.
+  struct TSCRange {
+    TSC tsc;
+    /// Number of trace items in this range.
+    uint64_t items_count;
+    /// Index of the first trace item in this range.
+    uint64_t first_item_index;
+
+    /// \return
+    ///   \b true if and only if the given \p item_index is covered by this
+    ///   range.
+    bool InRange(uint64_t item_index) const;
+  };
+
+  /// A structure that represents a maximal range of trace items associated to
+  /// the same non-interpolated timestamps in nanoseconds.
+  struct NanosecondsRange {
+    /// The nanoseconds value for this range.
+    uint64_t nanos;
+    /// The corresponding TSC value for this range.
+    TSC tsc;
+    /// A nullable pointer to the next range.
+    NanosecondsRange *next_range;
+    /// Number of trace items in this range.
+    uint64_t items_count;
+    /// Index of the first trace item in this range.
+    uint64_t first_item_index;
+
+    /// Calculate an interpolated timestamp in nanoseconds for the given item
+    /// index. It's guaranteed that two different item indices will produce
+    /// different interpolated values.
+    ///
+    /// \param[in] item_index
+    ///   The index of the item whose timestamp will be estimated. It has to be
+    ///   part of this range.
+    ///
+    /// \param[in] beginning_of_time_nanos
+    ///   The timestamp at which tracing started.
+    ///
+    /// \param[in] tsc_conversion
+    ///   The tsc -> nanos conversion utility
+    ///
+    /// \return
+    ///   An interpolated timestamp value for the given trace item.
+    double
+    GetInterpolatedTime(uint64_t item_index, uint64_t beginning_of_time_nanos,
+                        const LinuxPerfZeroTscConversion &tsc_conversion) const;
+
+    /// \return
+    ///   \b true if and only if the given \p item_index is covered by this
+    ///   range.
+    bool InRange(uint64_t item_index) const;
+  };
+
   // Struct holding counts for events;
   struct EventsStats {
     /// A count for each individual event kind. We use an unordered map instead
     /// of a DenseMap because DenseMap can't understand enums.
-    std::unordered_map<lldb::TraceEvents, size_t> events_counts;
+    std::unordered_map<lldb::TraceEvent, size_t> events_counts;
     size_t total_count = 0;
-    size_t total_instructions_with_events = 0;
 
-    void RecordEventsForInstruction(lldb::TraceEvents events);
+    void RecordEvent(lldb::TraceEvent event);
   };
 
-  DecodedThread(lldb::ThreadSP thread_sp);
+  DecodedThread(
+      lldb::ThreadSP thread_sp,
+      const llvm::Optional<LinuxPerfZeroTscConversion> &tsc_conversion);
 
-  /// Utility constructor that initializes the trace with a provided error.
-  DecodedThread(lldb::ThreadSP thread_sp, llvm::Error &&err);
-
-  /// Append an instruction or a libipt error.
-  void Append(const DecodedInstruction &insn);
-
-  /// Append an error signaling that decoding completely failed.
-  void SetAsFailed(llvm::Error &&error);
-
-  /// Get a bitmask with the events that happened chronologically right before
-  /// the instruction pointed by the given instruction index, but after the
-  /// previous instruction.
-  lldb::TraceEvents GetEvents(int insn_index);
-
-  /// Get the total number of instruction pointers from the decoded trace.
-  /// This will include instructions that indicate errors (or gaps) in the
-  /// trace. For an instruction error, you can access its underlying error
-  /// message with the \a GetErrorByInstructionIndex() method.
-  size_t GetInstructionsCount() const;
+  /// Get the total number of instruction, errors and events from the decoded
+  /// trace.
+  uint64_t GetItemsCount() const;
 
   /// \return
-  ///     The load address of the instruction at the given index, or \a
-  ///     LLDB_INVALID_ADDRESS if it is an error.
-  lldb::addr_t GetInstructionLoadAddress(size_t insn_index) const;
+  ///   The error associated with a given trace item.
+  const char *GetErrorByIndex(uint64_t item_index) const;
 
-  /// Get the \a lldb::TraceInstructionControlFlowType categories of the
-  /// instruction.
+  /// \return
+  ///   The trace item kind given an item index.
+  lldb::TraceItemKind GetItemKindByIndex(uint64_t item_index) const;
+
+  /// \return
+  ///   The underlying event type for the given trace item index.
+  lldb::TraceEvent GetEventByIndex(int item_index) const;
+
+  /// Get the most recent CPU id before or at the given trace item index.
+  ///
+  /// \param[in] item_index
+  ///   The trace item index to compare with.
   ///
   /// \return
-  ///     The control flow categories, or \b 0 if the instruction is an error.
-  lldb::TraceInstructionControlFlowType
-  GetInstructionControlFlowType(size_t insn_index) const;
+  ///   The requested cpu id, or \a llvm::None if not available.
+  llvm::Optional<lldb::cpu_id_t> GetCPUByIndex(uint64_t item_index) const;
 
-  /// Construct the TSC range that covers the given instruction index.
-  /// This operation is O(logn) and should be used sparingly.
-  /// If the trace was collected with TSC support, all the instructions of
-  /// the trace will have associated TSCs. This means that this method will
-  /// only return \b llvm::None if there are no TSCs whatsoever in the trace.
+  /// Get a maximal range of trace items that include the given \p item_index
+  /// that have the same TSC value.
   ///
-  /// \param[in] insn_index
-  ///   The instruction index in question.
-  ///
-  /// \param[in] hint_range
-  ///   An optional range that might include the given index or might be a
-  ///   neighbor of it. It might help speed it traversals of the trace with
-  ///   short jumps.
-  llvm::Optional<TscRange> CalculateTscRange(
-      size_t insn_index,
-      const llvm::Optional<DecodedThread::TscRange> &hint_range) const;
-
-  /// Check if an instruction given by its index is an error.
-  bool IsInstructionAnError(size_t insn_idx) const;
-
-  /// Get the error associated with a given instruction index.
+  /// \param[in] item_index
+  ///   The trace item index to compare with.
   ///
   /// \return
-  ///   The error message of \b nullptr if the given index
-  ///   points to a valid instruction.
-  const char *GetErrorByInstructionIndex(size_t ins_idx);
+  ///   The requested TSC range, or \a llvm::None if not available.
+  llvm::Optional<DecodedThread::TSCRange>
+  GetTSCRangeByIndex(uint64_t item_index) const;
 
-  /// Get a new cursor for the decoded thread.
-  lldb::TraceCursorUP GetCursor();
+  /// Get a maximal range of trace items that include the given \p item_index
+  /// that have the same nanoseconds timestamp without interpolation.
+  ///
+  /// \param[in] item_index
+  ///   The trace item index to compare with.
+  ///
+  /// \return
+  ///   The requested nanoseconds range, or \a llvm::None if not available.
+  llvm::Optional<DecodedThread::NanosecondsRange>
+  GetNanosecondsRangeByIndex(uint64_t item_index);
+
+  /// \return
+  ///     The load address of the instruction at the given index.
+  lldb::addr_t GetInstructionLoadAddress(uint64_t item_index) const;
 
   /// Return an object with statistics of the TSC decoding errors that happened.
   /// A TSC error is not a fatal error and doesn't create gaps in the trace.
@@ -243,40 +230,82 @@ public:
 
   lldb::ThreadSP GetThread();
 
-  /// Append a decoding error given an llvm::Error.
-  void AppendError(llvm::Error &&error);
+  /// Notify this object that a new tsc has been seen.
+  /// If this a new TSC, an event will be created.
+  void NotifyTsc(TSC tsc);
+
+  /// Notify this object that a CPU has been seen.
+  /// If this a new CPU, an event will be created.
+  void NotifyCPU(lldb::cpu_id_t cpu_id);
+
+  /// Append a decoding error.
+  void AppendError(const IntelPTError &error);
+
+  /// Append a custom decoding.
+  void AppendCustomError(llvm::StringRef error);
+
+  /// Append an event.
+  void AppendEvent(lldb::TraceEvent);
+
+  /// Append an instruction.
+  void AppendInstruction(const pt_insn &insn);
 
 private:
-  /// Notify this class that the last added instruction or error has
-  /// an associated TSC.
-  void RecordTscForLastInstruction(uint64_t tsc);
-
   /// When adding new members to this class, make sure
   /// to update \a CalculateApproximateMemoryUsage() accordingly.
   lldb::ThreadSP m_thread_sp;
-  /// The low level storage of all instruction addresses. Each instruction has
-  /// an index in this vector and it will be used in other parts of the code.
-  std::vector<lldb::addr_t> m_instruction_ips;
-  /// The size in bytes of each instruction.
-  std::vector<uint8_t> m_instruction_sizes;
-  /// The libipt instruction class for each instruction.
-  std::vector<pt_insn_class> m_instruction_classes;
 
-  /// This map contains the TSCs of the decoded instructions. It maps
-  /// `instruction index -> TSC`, where `instruction index` is the first index
-  /// at which the mapped TSC appears. We use this representation because TSCs
-  /// are sporadic and we can think of them as ranges. If TSCs are present in
-  /// the trace, all instructions will have an associated TSC, including the
-  /// first one. Otherwise, this map will be empty.
-  std::map<uint64_t, uint64_t> m_instruction_timestamps;
+  /// We use a union to optimize the memory usage for the different kinds of
+  /// trace items.
+  union TraceItemStorage {
+    /// The load addresses of this item if it's an instruction.
+    uint64_t load_address;
+
+    /// The event kind of this item if it's an event
+    lldb::TraceEvent event;
+
+    /// The string message of this item if it's an error
+    const char *error;
+  };
+
+  /// Create a new trace item.
+  ///
+  /// \return
+  ///   The index of the new item.
+  DecodedThread::TraceItemStorage &CreateNewTraceItem(lldb::TraceItemKind kind);
+
+  /// Most of the trace data is stored here.
+  std::vector<TraceItemStorage> m_item_data;
+  /// The TraceItemKind for each trace item encoded as uint8_t. We don't include
+  /// it in TraceItemStorage to avoid padding.
+  std::vector<uint8_t> m_item_kinds;
+
+  /// This map contains the TSCs of the decoded trace items. It maps
+  /// `item index -> TSC`, where `item index` is the first index
+  /// at which the mapped TSC first appears. We use this representation because
+  /// TSCs are sporadic and we can think of them as ranges.
+  std::map<uint64_t, TSCRange> m_tscs;
   /// This is the chronologically last TSC that has been added.
-  llvm::Optional<uint64_t> m_last_tsc = llvm::None;
-  // This variables stores the messages of all the error instructions in the
-  // trace. It maps `instruction index -> error message`.
-  llvm::DenseMap<uint64_t, std::string> m_errors;
-  /// This variable stores the bitmask of events that happened right before
-  /// the instruction given as a key. It maps `instruction index -> events`.
-  llvm::DenseMap<uint64_t, lldb::TraceEvents> m_events;
+  llvm::Optional<std::map<uint64_t, TSCRange>::iterator> m_last_tsc =
+      llvm::None;
+  /// This map contains the non-interpolated nanoseconds timestamps of the
+  /// decoded trace items. It maps `item index -> nanoseconds`, where `item
+  /// index` is the first index at which the mapped nanoseconds first appears.
+  /// We use this representation because timestamps are sporadic and we think of
+  /// them as ranges.
+  std::map<uint64_t, NanosecondsRange> m_nanoseconds;
+  llvm::Optional<std::map<uint64_t, NanosecondsRange>::iterator>
+      m_last_nanoseconds = llvm::None;
+
+  // The cpu information is stored as a map. It maps `instruction index -> CPU`
+  // A CPU is associated with the next instructions that follow until the next
+  // cpu is seen.
+  std::map<uint64_t, lldb::cpu_id_t> m_cpus;
+  /// This is the chronologically last CPU ID.
+  llvm::Optional<uint64_t> m_last_cpu = llvm::None;
+
+  /// TSC -> nanos conversion utility.
+  llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
 
   /// Statistics of all tracing events.
   EventsStats m_events_stats;

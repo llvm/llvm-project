@@ -208,12 +208,15 @@ namespace tailpad {
 
 namespace metaprogramming {
 #define ONE 1
-  struct foo { char c[ONE]; }; // expected-note {{declared here}}
+struct foo {
+  char c[ONE]; // expected-note {{array 'c' declared here}}
+};
+
   template <int N> struct bar { char c[N]; }; // expected-note {{declared here}}
 
   char test(foo *F, bar<1> *B) {
     return F->c[3] + // expected-warning {{array index 3 is past the end of the array (which contains 1 element)}}
-           B->c[3]; // expected-warning {{array index 3 is past the end of the array (which contains 1 element)}}
+           B->c[3];  // expected-warning {{array index 3 is past the end of the array (which contains 1 element)}}
   }
 }
 

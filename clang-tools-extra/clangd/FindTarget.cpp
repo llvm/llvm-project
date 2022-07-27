@@ -950,7 +950,10 @@ public:
     // ElaboratedTypeLoc will reports information for its inner type loc.
     // Otherwise we loose information about inner types loc's qualifier.
     TypeLoc Inner = L.getNamedTypeLoc().getUnqualifiedLoc();
-    TypeLocsToSkip.insert(Inner.getBeginLoc());
+    if (L.getBeginLoc() == Inner.getBeginLoc())
+      return RecursiveASTVisitor::TraverseTypeLoc(Inner);
+    else
+      TypeLocsToSkip.insert(Inner.getBeginLoc());
     return RecursiveASTVisitor::TraverseElaboratedTypeLoc(L);
   }
 

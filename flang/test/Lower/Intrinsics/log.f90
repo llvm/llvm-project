@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s
 
 ! CHECK-LABEL: log_testr
 ! CHECK-SAME: (%[[AREF:.*]]: !fir.ref<f32> {{.*}}, %[[BREF:.*]]: !fir.ref<f32> {{.*}})
@@ -63,12 +63,12 @@ end subroutine
 
 ! CHECK-LABEL: private @fir.log.f32.f32
 ! CHECK-SAME: (%[[ARG32_OUTLINE:.*]]: f32) -> f32
-! CHECK: %[[RESULT32_OUTLINE:.*]] = fir.call @__fs_log_1(%[[ARG32_OUTLINE]]) : (f32) -> f32
+! CHECK: %[[RESULT32_OUTLINE:.*]] = math.log %[[ARG32_OUTLINE]] : f32
 ! CHECK: return %[[RESULT32_OUTLINE]] : f32
 
 ! CHECK-LABEL: private @fir.log.f64.f64
 ! CHECK-SAME: (%[[ARG64_OUTLINE:.*]]: f64) -> f64
-! CHECK: %[[RESULT64_OUTLINE:.*]] = fir.call @__fd_log_1(%[[ARG64_OUTLINE]]) : (f64) -> f64
+! CHECK: %[[RESULT64_OUTLINE:.*]] = math.log %[[ARG64_OUTLINE]] : f64
 ! CHECK: return %[[RESULT64_OUTLINE]] : f64
 
 ! CHECK-LABEL: private @fir.log.z4.z4
@@ -83,10 +83,10 @@ end subroutine
 
 ! CHECK-LABEL: private @fir.log10.f32.f32
 ! CHECK-SAME: (%[[ARG32_OUTLINE:.*]]: f32) -> f32
-! CHECK: %[[RESULT32_OUTLINE:.*]] = fir.call @__fs_log10_1(%[[ARG32_OUTLINE]]) : (f32) -> f32
+! CHECK: %[[RESULT32_OUTLINE:.*]] = math.log10 %[[ARG32_OUTLINE]] : f32
 ! CHECK: return %[[RESULT32_OUTLINE]] : f32
 
 ! CHECK-LABEL: private @fir.log10.f64.f64
 ! CHECK-SAME: (%[[ARG64_OUTLINE:.*]]: f64) -> f64
-! CHECK: %[[RESULT64_OUTLINE:.*]] = fir.call @__fd_log10_1(%[[ARG64_OUTLINE]]) : (f64) -> f64
+! CHECK: %[[RESULT64_OUTLINE:.*]] = math.log10 %[[ARG64_OUTLINE]] : f64
 ! CHECK: return %[[RESULT64_OUTLINE]] : f64

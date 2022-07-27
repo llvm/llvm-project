@@ -264,8 +264,7 @@ static Error processLoadCommands(const MachOConfig &MachOConfig, Object &Obj) {
       if (LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_SEGMENT_64 ||
           LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_SEGMENT) {
         return LC.Sections.empty() &&
-               MachOConfig.EmptySegmentsToRemove.contains(
-                   LC.getSegmentName().getValue());
+               MachOConfig.EmptySegmentsToRemove.contains(*LC.getSegmentName());
       }
       return false;
     };

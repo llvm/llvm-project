@@ -61,6 +61,7 @@ executable("llvm-objdump") {
     "COFFDump.cpp",
     "ELFDump.cpp",
     "MachODump.cpp",
+    "OffloadDump.cpp",
     "SourcePrinter.cpp",
     "WasmDump.cpp",
     "XCOFFDump.cpp",

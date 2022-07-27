@@ -34,7 +34,7 @@ static bool mapOptOrNull(const llvm::json::Value &params,
 
   // Field is missing or null.
   auto *v = o->get(prop);
-  if (!v || v->getAsNull().hasValue())
+  if (!v || v->getAsNull())
     return true;
   return fromJSON(*v, out, path.field(prop));
 }

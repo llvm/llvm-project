@@ -28,6 +28,7 @@ add_object_library(
     string_writer.h
   DEPENDS
     libc.src.string.memory_utils.memcpy_implementation
+    .core_structs
 )
 
 add_object_library(
@@ -38,6 +39,7 @@ add_object_library(
     file_writer.h
   DEPENDS
     libc.src.__support.File.file
+    .core_structs
 )
 
 add_object_library(
@@ -63,9 +65,16 @@ add_object_library(
     int_converter.h
     hex_converter.h
     ptr_converter.h
+    oct_converter.h
+    write_int_converter.h
+    float_inf_nan_converter.h
+    float_hex_converter.h
   DEPENDS
     .writer
     .core_structs
+    libc.src.__support.integer_to_string
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fputil
 )
 
 

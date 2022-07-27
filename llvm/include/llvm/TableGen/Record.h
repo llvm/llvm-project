@@ -311,6 +311,7 @@ protected:
     IK_CondOpInit,
     IK_FoldOpInit,
     IK_IsAOpInit,
+    IK_ExistsOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -1095,6 +1096,40 @@ public:
   std::string getAsString() const override;
 };
 
+/// !exists<type>(expr) - Dynamically determine if a record of `type` named
+/// `expr` exists.
+class ExistsOpInit : public TypedInit, public FoldingSetNode {
+private:
+  RecTy *CheckType;
+  Init *Expr;
+
+  ExistsOpInit(RecTy *CheckType, Init *Expr)
+      : TypedInit(IK_ExistsOpInit, IntRecTy::get(CheckType->getRecordKeeper())),
+        CheckType(CheckType), Expr(Expr) {}
+
+public:
+  ExistsOpInit(const ExistsOpInit &) = delete;
+  ExistsOpInit &operator=(const ExistsOpInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_ExistsOpInit; }
+
+  static ExistsOpInit *get(RecTy *CheckType, Init *Expr);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // possible to fold.
+  Init *Fold(Record *CurRec, bool IsFinal = false) const;
+
+  bool isComplete() const override { return false; }
+
+  Init *resolveReferences(Resolver &R) const override;
+
+  Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
 /// 'Opcode' - Represent a reference to an entire variable object.
 class VarInit : public TypedInit {
   Init *VarName;
@@ -1523,6 +1558,7 @@ private:
   // Location where record was instantiated, followed by the location of
   // multiclass prototypes used.
   SmallVector<SMLoc, 4> Locs;
+  SmallVector<SMLoc, 0> ForwardDeclarationLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1579,7 +1615,7 @@ public:
     return Name;
   }
 
-  const std::string getNameInitAsString() const {
+  std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
 
@@ -1587,6 +1623,13 @@ public:
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
   void appendLoc(SMLoc Loc) { Locs.push_back(Loc); }
+
+  ArrayRef<SMLoc> getForwardDeclarationLocs() const {
+    return ForwardDeclarationLocs;
+  }
+
+  // Update a class location when encountering a (re-)definition.
+  void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
   RecordRecTy *getType();

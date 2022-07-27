@@ -187,20 +187,39 @@ struct OneShotBufferizePass
       opt.createDeallocs = createDeallocs;
       opt.functionBoundaryTypeConversion =
           parseLayoutMapOption(functionBoundaryTypeConversion);
+      if (mustInferMemorySpace)
+        opt.defaultMemorySpace = None;
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
-      opt.unknownTypeConversion = parseLayoutMapOption(unknownTypeConversion);
 
-      OpFilter::Entry::FilterFn filterFn =
-          [&](Operation *op) {
-            // Filter may be specified via options.
-            if (this->dialectFilter.hasValue())
-              return llvm::is_contained(this->dialectFilter,
-                                        op->getDialect()->getNamespace());
-            // No filter specified: All other ops are allowed.
-            return true;
-          };
+      // Configure type converter.
+      BufferizationOptions::LayoutMapOption unknownTypeConversionOption =
+          parseLayoutMapOption(unknownTypeConversion);
+      opt.unknownTypeConverterFn = [=](Value value, unsigned memorySpace,
+                                       const BufferizationOptions &options) {
+        auto tensorType = value.getType().cast<TensorType>();
+        if (unknownTypeConversionOption ==
+            BufferizationOptions::LayoutMapOption::IdentityLayoutMap)
+          return bufferization::getMemRefTypeWithStaticIdentityLayout(
+              tensorType, memorySpace);
+        assert(
+            unknownTypeConversionOption ==
+                BufferizationOptions::LayoutMapOption::FullyDynamicLayoutMap &&
+            "invalid layout map option");
+        return bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
+                                                                  memorySpace);
+      };
+
+      // Configure op filter.
+      OpFilter::Entry::FilterFn filterFn = [&](Operation *op) {
+        // Filter may be specified via options.
+        if (this->dialectFilter.hasValue())
+          return llvm::is_contained(this->dialectFilter,
+                                    op->getDialect()->getNamespace());
+        // No filter specified: All other ops are allowed.
+        return true;
+      };
       opt.opFilter.allowOperation(filterFn);
     } else {
       opt = *options;
@@ -370,10 +389,6 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const BufferizationOptions &options,
                                          bool copyBeforeWrite,
                                          const OpFilter *opFilter) {
-  assert(options.unknownTypeConversion !=
-             BufferizationOptions::LayoutMapOption::InferLayoutMap &&
-         "invalid layout map option");
-
   if (copyBeforeWrite) {
     AnalysisState state(options);
     if (failed(insertTensorCopies(op, state)))
@@ -391,9 +406,16 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // Otherwise, we have to use a memref type with a fully dynamic layout map to
   // avoid copies. We are currently missing patterns for layout maps to
   // canonicalize away (or canonicalize to more precise layouts).
+  //
+  // FuncOps must be bufferized before their bodies, so add them to the worklist
+  // first.
   SmallVector<Operation *> worklist;
-  op->walk<WalkOrder::PreOrder>([&](Operation *op) {
-    if (hasTensorSemantics(op))
+  op->walk([&](func::FuncOp funcOp) {
+    if (hasTensorSemantics(funcOp))
+      worklist.push_back(funcOp);
+  });
+  op->walk<WalkOrder::PostOrder>([&](Operation *op) {
+    if (hasTensorSemantics(op) && !isa<func::FuncOp>(op))
       worklist.push_back(op);
   });
 
@@ -465,8 +487,11 @@ BufferizationOptions bufferization::getPartialBufferizationOptions() {
   options.allowUnknownOps = true;
   options.createDeallocs = false;
   options.enforceAliasingInvariants = false;
-  options.unknownTypeConversion =
-      BufferizationOptions::LayoutMapOption::IdentityLayoutMap;
+  options.unknownTypeConverterFn = [](Value value, unsigned memorySpace,
+                                      const BufferizationOptions &options) {
+    return getMemRefTypeWithStaticIdentityLayout(
+        value.getType().cast<TensorType>(), memorySpace);
+  };
   options.opFilter.allowDialect<BufferizationDialect>();
   return options;
 }

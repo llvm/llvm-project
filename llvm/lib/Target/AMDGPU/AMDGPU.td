@@ -177,6 +177,12 @@ def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "VI SGPR initialization bug requiring a fixed SGPR allocation size"
 >;
 
+def FeatureUserSGPRInit16Bug : SubtargetFeature<"user-sgpr-init16-bug",
+  "UserSGPRInit16Bug",
+  "true",
+  "Bug requiring at least 16 user+system SGPRs to be enabled"
+>;
+
 def FeatureLdsMisalignedBug : SubtargetFeature<"lds-misaligned-bug",
   "LDSMisalignedBug",
   "true",
@@ -577,6 +583,12 @@ def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
   "true",
   "Has mAI instructions"
+>;
+
+def FeatureFP8Insts : SubtargetFeature<"fp8-insts",
+  "HasFP8Insts",
+  "true",
+  "Has fp8 and bf8 instructions"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
@@ -1118,6 +1130,7 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    Feature64BitDPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
+   FeatureFP8Insts,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1259,14 +1272,17 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard]>;
 
-// Features for GFX 11.0.0 and 11.0.1
-def FeatureISAVersion11_0 : FeatureSet<
+def FeatureISAVersion11_0_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureUserSGPRInit16Bug])>;
+
+def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [])>;
+    [FeatureUserSGPRInit16Bug])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1697,6 +1713,9 @@ def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
 
 def HasShaderCyclesRegister : Predicate<"Subtarget->hasShaderCyclesRegister()">,
   AssemblerPredicate<(all_of FeatureShaderCyclesRegister)>;
+
+def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
+  AssemblerPredicate<(all_of FeatureFP8Insts)>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;

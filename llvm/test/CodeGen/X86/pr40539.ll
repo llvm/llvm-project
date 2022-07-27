@@ -24,7 +24,7 @@ define zeroext i1 @_Z9test_log2v() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   %1 = fpext float %0 to x86_fp80
   %2 = tail call x86_fp80 asm "fld1; fxch; fyl2x", "={st},0,~{st(1)},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %1)
   %conv = fptrunc x86_fp80 %2 to float
@@ -60,7 +60,7 @@ define zeroext i1 @_Z8test_cosv() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load float, float* @fpi, align 4
+  %0 = load float, ptr @fpi, align 4
   %div = fdiv float %0, 6.000000e+00
   %1 = fpext float %div to x86_fp80
   %2 = tail call x86_fp80 asm "fcos", "={st},0,~{dirflag},~{fpsr},~{flags}"(x86_fp80 %1)

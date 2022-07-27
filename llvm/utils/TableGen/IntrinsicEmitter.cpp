@@ -46,7 +46,7 @@ public:
                                     raw_ostream &OS);
   void EmitGenerator(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
-  void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints, bool IsGCC,
+  void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints, bool IsClang,
                                  raw_ostream &OS);
 };
 } // End anonymous namespace
@@ -880,14 +880,15 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
-    const CodeGenIntrinsicTable &Ints, bool IsGCC, raw_ostream &OS) {
-  StringRef CompilerName = (IsGCC ? "GCC" : "MS");
+    const CodeGenIntrinsicTable &Ints, bool IsClang, raw_ostream &OS) {
+  StringRef CompilerName = (IsClang ? "Clang" : "MS");
+  StringRef UpperCompilerName = (IsClang ? "CLANG" : "MS");
   typedef std::map<std::string, std::map<std::string, std::string>> BIMTy;
   BIMTy BuiltinMap;
   StringToOffsetTable Table;
   for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
     const std::string &BuiltinName =
-        IsGCC ? Ints[i].GCCBuiltinName : Ints[i].MSBuiltinName;
+        IsClang ? Ints[i].ClangBuiltinName : Ints[i].MSBuiltinName;
     if (!BuiltinName.empty()) {
       // Get the map for this target prefix.
       std::map<std::string, std::string> &BIM =
@@ -905,7 +906,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
   OS << "// This is used by the C front-end.  The builtin name is passed\n";
   OS << "// in as BuiltinName, and a target prefix (e.g. 'ppc') is passed\n";
   OS << "// in as TargetPrefix.  The result is assigned to 'IntrinsicID'.\n";
-  OS << "#ifdef GET_LLVM_INTRINSIC_FOR_" << CompilerName << "_BUILTIN\n";
+  OS << "#ifdef GET_LLVM_INTRINSIC_FOR_" << UpperCompilerName << "_BUILTIN\n";
 
   OS << "Intrinsic::ID Intrinsic::getIntrinsicFor" << CompilerName
      << "Builtin(const char "

@@ -64,7 +64,7 @@ class MinVersionBase<string name, I32EnumAttr scheme, I32EnumAttrCase min>
   let queryFnName = "getMinVersion";
 
   let mergeAction = "{ "
-    "if ($overall.hasValue()) { "
+    "if ($overall) { "
       "$overall = static_cast<" # scheme.returnType # ">("
                   "std::max(*$overall, $instance)); "
     "} else { $overall = $instance; }}";
@@ -83,7 +83,7 @@ class MaxVersionBase<string name, I32EnumAttr scheme, I32EnumAttrCase max>
   let queryFnName = "getMaxVersion";
 
   let mergeAction = "{ "
-    "if ($overall.hasValue()) { "
+    "if ($overall) { "
       "$overall = static_cast<" # scheme.returnType # ">("
                   "std::min(*$overall, $instance)); "
     "} else { $overall = $instance; }}";

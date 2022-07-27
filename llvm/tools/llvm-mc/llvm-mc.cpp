@@ -77,9 +77,7 @@ static cl::opt<DebugCompressionType> CompressDebugSections(
     cl::desc("Choose DWARF debug sections compression:"),
     cl::values(clEnumValN(DebugCompressionType::None, "none", "No compression"),
                clEnumValN(DebugCompressionType::Z, "zlib",
-                          "Use zlib compression"),
-               clEnumValN(DebugCompressionType::GNU, "zlib-gnu",
-                          "Use zlib-gnu compression (deprecated)")),
+                          "Use zlib compression")),
     cl::cat(MCCategory));
 
 static cl::opt<bool>
@@ -403,7 +401,7 @@ int main(int argc, char **argv) {
   MAI->setRelaxELFRelocations(RelaxELFRel);
 
   if (CompressDebugSections != DebugCompressionType::None) {
-    if (!zlib::isAvailable()) {
+    if (!compression::zlib::isAvailable()) {
       WithColor::error(errs(), ProgName)
           << "build tools with zlib to enable -compress-debug-sections";
       return 1;

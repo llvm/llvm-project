@@ -220,7 +220,8 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantExpr::get(Opcode, CLHS, CRHS);
+      if (Constant *Res = ConstantFoldBinaryOpOperands(Opcode, CLHS, CRHS, DL))
+        return Res;
 
   // Do a quick scan to see if we have this binop nearby.  If so, reuse it.
   unsigned ScanLimit = 6;
@@ -273,7 +274,9 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   }
 
   // If we haven't found this binop, insert it.
-  Instruction *BO = cast<Instruction>(Builder.CreateBinOp(Opcode, LHS, RHS));
+  // TODO: Use the Builder, which will make CreateBinOp below fold with
+  // InstSimplifyFolder.
+  Instruction *BO = Builder.Insert(BinaryOperator::Create(Opcode, LHS, RHS));
   BO->setDebugLoc(Loc);
   if (Flags & SCEV::FlagNUW)
     BO->setHasNoUnsignedWrap();
@@ -2565,9 +2568,7 @@ namespace {
 // only needed when the expression includes some subexpression that is not IV
 // derived.
 //
-// Currently, we only allow division by a nonzero constant here. If this is
-// inadequate, we could easily allow division by SCEVUnknown by using
-// ValueTracking to check isKnownNonZero().
+// Currently, we only allow division by a value provably non-zero here.
 //
 // We cannot generally expand recurrences unless the step dominates the loop
 // header. The expander handles the special case of affine recurrences by
@@ -2585,8 +2586,7 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      const SCEVConstant *SC = dyn_cast<SCEVConstant>(D->getRHS());
-      if (!SC || SC->getValue()->isZero()) {
+      if (!SE.isKnownNonZero(D->getRHS())) {
         IsUnsafe = true;
         return false;
       }
@@ -2610,18 +2610,17 @@ struct SCEVFindUnsafe {
   }
   bool isDone() const { return IsUnsafe; }
 };
-}
+} // namespace
 
-namespace llvm {
-bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE, bool CanonicalMode) {
+bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
   SCEVFindUnsafe Search(SE, CanonicalMode);
   visitAll(S, Search);
   return !Search.IsUnsafe;
 }
 
-bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
-                      ScalarEvolution &SE) {
-  if (!isSafeToExpand(S, SE))
+bool SCEVExpander::isSafeToExpandAt(const SCEV *S,
+                                    const Instruction *InsertionPoint) const {
+  if (!isSafeToExpand(S))
     return false;
   // We have to prove that the expanded site of S dominates InsertionPoint.
   // This is easy when not in the same block, but hard when S is an instruction
@@ -2670,5 +2669,4 @@ void SCEVExpanderCleaner::cleanup() {
     I->replaceAllUsesWith(UndefValue::get(I->getType()));
     I->eraseFromParent();
   }
-}
 }

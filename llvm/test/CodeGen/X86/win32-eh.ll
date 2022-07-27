@@ -4,15 +4,15 @@ declare void @may_throw_or_crash()
 declare i32 @_except_handler3(...)
 declare i32 @_except_handler4(...)
 declare i32 @__CxxFrameHandler3(...)
-declare void @llvm.eh.begincatch(i8*, i8*)
+declare void @llvm.eh.begincatch(ptr, ptr)
 declare void @llvm.eh.endcatch()
-declare i32 @llvm.eh.typeid.for(i8*)
+declare i32 @llvm.eh.typeid.for(ptr)
 
 define internal i32 @catchall_filt() {
   ret i32 1
 }
 
-define void @use_except_handler3() personality i32 (...)* @_except_handler3 {
+define void @use_except_handler3() personality ptr @_except_handler3 {
 entry:
   invoke void @may_throw_or_crash()
       to label %cont unwind label %lpad
@@ -21,7 +21,7 @@ cont:
 lpad:
   %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+  %p = catchpad within %cs [ptr @catchall_filt]
   catchret from %p to label %cont
 }
 
@@ -54,7 +54,7 @@ catch:
 ; CHECK-NEXT:  .long   _catchall_filt
 ; CHECK-NEXT:  .long   LBB1_2
 
-define void @use_except_handler4() personality i32 (...)* @_except_handler4 {
+define void @use_except_handler4() personality ptr @_except_handler4 {
 entry:
   invoke void @may_throw_or_crash()
       to label %cont unwind label %lpad
@@ -63,7 +63,7 @@ cont:
 lpad:
   %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+  %p = catchpad within %cs [ptr @catchall_filt]
   catchret from %p to label %cont
 }
 
@@ -111,7 +111,7 @@ catch:
 ; CHECK-NEXT:  .long   _catchall_filt
 ; CHECK-NEXT:  .long   LBB2_2
 
-define void @use_except_handler4_ssp() sspstrong personality i32 (...)* @_except_handler4 {
+define void @use_except_handler4_ssp() sspstrong personality ptr @_except_handler4 {
 entry:
   invoke void @may_throw_or_crash()
       to label %cont unwind label %lpad
@@ -120,7 +120,7 @@ cont:
 lpad:
   %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+  %p = catchpad within %cs [ptr @catchall_filt]
   catchret from %p to label %cont
 }
 
@@ -164,7 +164,7 @@ catch:
 ; CHECK-NEXT:  .long   _catchall_filt
 ; CHECK-NEXT:  .long   [[catch]]
 
-define void @use_CxxFrameHandler3() personality i32 (...)* @__CxxFrameHandler3 {
+define void @use_CxxFrameHandler3() personality ptr @__CxxFrameHandler3 {
   invoke void @may_throw_or_crash()
       to label %cont unwind label %catchall
 cont:
@@ -173,7 +173,7 @@ cont:
 catchall:
   %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  %p = catchpad within %cs [i8* null, i32 64, i8* null]
+  %p = catchpad within %cs [ptr null, i32 64, ptr null]
   catchret from %p to label %cont
 }
 

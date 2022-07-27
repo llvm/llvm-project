@@ -1923,3 +1923,82 @@ define i16 @srem_sext_noundef(i8 noundef %x, i8 %y) {
   %z = sub i16 %sx, %sd
   ret i16 %z
 }
+
+define i16 @zext_nuw_noundef(i8 noundef %x, i8 %y) {
+; CHECK-LABEL: @zext_nuw_noundef(
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %d = sub nuw i8 %x, %y
+  %ex = zext i8 %x to i16
+  %ed = zext i8 %d to i16
+  %z = sub i16 %ex, %ed
+  ret i16 %z
+}
+
+; negative test - requires noundef
+
+define i16 @zext_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @zext_nuw(
+; CHECK-NEXT:    [[D:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[EX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[ED:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = sub nsw i16 [[EX]], [[ED]]
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %d = sub nuw i8 %x, %y
+  %ex = zext i8 %x to i16
+  %ed = zext i8 %d to i16
+  %z = sub i16 %ex, %ed
+  ret i16 %z
+}
+
+; negative test - requires nuw
+
+define i16 @zext_noundef(i8 noundef %x, i8 %y) {
+; CHECK-LABEL: @zext_noundef(
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[EX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[ED:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = sub nsw i16 [[EX]], [[ED]]
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %d = sub i8 %x, %y
+  %ex = zext i8 %x to i16
+  %ed = zext i8 %d to i16
+  %z = sub i16 %ex, %ed
+  ret i16 %z
+}
+
+; negative test - must have common operand
+
+define i16 @zext_nsw_noundef_wrong_val(i8 noundef %x, i8 noundef %y, i8 noundef %q) {
+; CHECK-LABEL: @zext_nsw_noundef_wrong_val(
+; CHECK-NEXT:    [[D:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[EQ:%.*]] = zext i8 [[Q:%.*]] to i16
+; CHECK-NEXT:    [[ED:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = sub nsw i16 [[EQ]], [[ED]]
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %d = sub nuw i8 %x, %y
+  %eq = zext i8 %q to i16
+  %ed = zext i8 %d to i16
+  %z = sub i16 %eq, %ed
+  ret i16 %z
+}
+
+; two no-wrap analyses combine to allow reduction
+
+define i16 @urem_zext_noundef(i8 noundef %x, i8 %y) {
+; CHECK-LABEL: @urem_zext_noundef(
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[R]] to i16
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %r = urem i8 %x, %y
+  %d = sub i8 %x, %r
+  %ed = zext i8 %d to i16
+  %ex = zext i8 %x to i16
+  %z = sub i16 %ex, %ed
+  ret i16 %z
+}

@@ -12,7 +12,9 @@ compressed = pt.compressed
 dense = pt.dense
 
 passed = 0
-all_types = [pt.int8, pt.int16, pt.int32, pt.int64, pt.float32, pt.float64]
+all_types = [
+    pt.int8, pt.int16, pt.int32, pt.int64, pt.float16, pt.float32, pt.float64
+]
 for t in all_types:
   i, j = pt.get_index_vars(2)
   A = pt.tensor([2, 3], dtype=t)
@@ -29,5 +31,5 @@ for t in all_types:
   passed += np.array_equal(indices, [[0, 0], [0, 1], [1, 2]])
   passed += np.allclose(values, [20.0, 10.0, 70.0])
 
-# CHECK: Number of passed: 18
+# CHECK: Number of passed: 21
 print("Number of passed:", passed)

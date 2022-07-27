@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -57,6 +58,11 @@ using namespace llvm;
 static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
                                cl::desc("Enable the machine combiner pass"),
                                cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
+    EnableTileRAPass("x86-tile-ra",
+                     cl::desc("Enable the tile register allocation pass"),
+                     cl::init(true), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   // Register the target.
@@ -94,6 +100,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86OptimizeLEAPassPass(PR);
   initializeX86PartialReductionPass(PR);
   initializePseudoProbeInserterPass(PR);
+  initializeX86ReturnThunksPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -158,7 +165,7 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            bool JIT,
                                            Optional<Reloc::Model> RM) {
   bool is64Bit = TT.getArch() == Triple::x86_64;
-  if (!RM.hasValue()) {
+  if (!RM) {
     // JIT codegen should use static relocations by default, since it's
     // typically executed in process and not relocatable.
     if (JIT)
@@ -247,8 +254,12 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   StringRef CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString() : (StringRef)TargetCPU;
-  StringRef TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString() : (StringRef)CPU;
+  // "x86-64" is a default target setting for many front ends. In these cases,
+  // they actually request for "generic" tuning unless the "tune-cpu" was
+  // specified.
+  StringRef TuneCPU = TuneAttr.isValid() ? TuneAttr.getValueAsString()
+                      : CPU == "x86-64"  ? "generic"
+                                         : (StringRef)CPU;
   StringRef FS =
       FSAttr.isValid() ? FSAttr.getValueAsString() : (StringRef)TargetFS;
 
@@ -386,7 +397,7 @@ public:
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
   void addPreSched2() override;
-  bool addPreRewrite() override;
+  bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -569,6 +580,7 @@ void X86PassConfig::addPreEmitPass2() {
   // hand inspection of the codegen output.
   addPass(createX86SpeculativeExecutionSideEffectSuppression());
   addPass(createX86IndirectThunksPass());
+  addPass(createX86ReturnThunksPass());
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
@@ -612,11 +624,21 @@ bool X86PassConfig::addPostFastRegAllocRewrite() {
   return true;
 }
 
-bool X86PassConfig::addPreRewrite() {
-  addPass(createX86TileConfigPass());
-  return true;
-}
-
 std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
+}
+
+static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
+                                      const TargetRegisterClass &RC) {
+  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(&RC);
+}
+
+bool X86PassConfig::addRegAssignAndRewriteOptimized() {
+  // Don't support tile RA when RA is specified by command line "-regalloc".
+  if (!isCustomizedRegAlloc() && EnableTileRAPass) {
+    // Allocate tile register first.
+    addPass(createGreedyRegisterAllocator(onlyAllocateTileRegisters));
+    addPass(createX86TileConfigPass());
+  }
+  return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }

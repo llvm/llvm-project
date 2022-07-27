@@ -17,12 +17,11 @@ module {
   //
   // Computes C = A x B with all matrices dense.
   //
-  func.func @matmul1(%A: tensor<4x8xf64>,
-                %B: tensor<8x4xf64>) -> tensor<4x4xf64> {
-    %C = arith.constant dense<0.0> : tensor<4x4xf64>
+  func.func @matmul1(%A: tensor<4x8xf64>, %B: tensor<8x4xf64>,
+                     %C: tensor<4x4xf64>) -> tensor<4x4xf64> {
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64>, tensor<8x4xf64>)
-         outs(%C: tensor<4x4xf64>) -> tensor<4x4xf64>
+      outs(%C: tensor<4x4xf64>) -> tensor<4x4xf64>
     return %D: tensor<4x4xf64>
   }
 
@@ -30,7 +29,7 @@ module {
   // Computes C = A x B with all matrices sparse (SpMSpM) in CSR.
   //
   func.func @matmul2(%A: tensor<4x8xf64, #CSR>,
-                %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
+                     %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
     %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #CSR>, tensor<8x4xf64, #CSR>)
@@ -42,7 +41,7 @@ module {
   // Computes C = A x B with all matrices sparse (SpMSpM) in DCSR.
   //
   func.func @matmul3(%A: tensor<4x8xf64, #DCSR>,
-                %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
+                     %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
     %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #DCSR>, tensor<8x4xf64, #DCSR>)
@@ -91,6 +90,7 @@ module {
         [ 0.0, 0.0, 6.0, 0.0 ],
         [ 0.0, 0.0, 7.0, 8.0 ]
     ]> : tensor<8x4xf64>
+    %zero = arith.constant dense<0.0> : tensor<4x4xf64>
 
     // Convert all these matrices to sparse format.
     %a1 = sparse_tensor.convert %da : tensor<4x8xf64> to tensor<4x8xf64, #CSR>
@@ -103,8 +103,8 @@ module {
     %b4 = sparse_tensor.convert %sb : tensor<8x4xf64> to tensor<8x4xf64, #DCSR>
 
     // Call kernels with dense.
-    %0 = call @matmul1(%da, %db)
-       : (tensor<4x8xf64>, tensor<8x4xf64>) -> tensor<4x4xf64>
+    %0 = call @matmul1(%da, %db, %zero)
+       : (tensor<4x8xf64>, tensor<8x4xf64>, tensor<4x4xf64>) -> tensor<4x4xf64>
     %1 = call @matmul2(%a1, %b1)
        : (tensor<4x8xf64, #CSR>,
           tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -113,8 +113,8 @@ module {
           tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>
 
     // Call kernels with one sparse.
-    %3 = call @matmul1(%sa, %db)
-       : (tensor<4x8xf64>, tensor<8x4xf64>) -> tensor<4x4xf64>
+    %3 = call @matmul1(%sa, %db, %zero)
+       : (tensor<4x8xf64>, tensor<8x4xf64>, tensor<4x4xf64>) -> tensor<4x4xf64>
     %4 = call @matmul2(%a3, %b1)
        : (tensor<4x8xf64, #CSR>,
           tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -123,8 +123,8 @@ module {
           tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>
 
     // Call kernels with sparse.
-    %6 = call @matmul1(%sa, %sb)
-       : (tensor<4x8xf64>, tensor<8x4xf64>) -> tensor<4x4xf64>
+    %6 = call @matmul1(%sa, %sb, %zero)
+       : (tensor<4x8xf64>, tensor<8x4xf64>, tensor<4x4xf64>) -> tensor<4x4xf64>
     %7 = call @matmul2(%a3, %b3)
        : (tensor<4x8xf64, #CSR>,
           tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -138,8 +138,7 @@ module {
     // CHECK-SAME: ( 405.48, 443.88, 482.28, 520.68 ),
     // CHECK-SAME: ( 413.84, 453.04, 492.24, 531.44 ) )
     //
-    %m0 = bufferization.to_memref %0 : memref<4x4xf64>
-    %v0 = vector.transfer_read %m0[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v0 = vector.transfer_read %0[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v0 : vector<4x4xf64>
 
     //
@@ -149,8 +148,7 @@ module {
     // CHECK-SAME: ( 413.84, 453.04, 492.24, 531.44 ) )
     //
     %c1 = sparse_tensor.convert %1 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
-    %m1 = bufferization.to_memref %c1 : memref<4x4xf64>
-    %v1 = vector.transfer_read %m1[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v1 = vector.transfer_read %c1[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v1 : vector<4x4xf64>
 
     //
@@ -160,8 +158,7 @@ module {
     // CHECK-SAME: ( 413.84, 453.04, 492.24, 531.44 ) )
     //
     %c2 = sparse_tensor.convert %2 : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
-    %m2 = bufferization.to_memref %c2 : memref<4x4xf64>
-    %v2 = vector.transfer_read %m2[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v2 = vector.transfer_read %c2[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v2 : vector<4x4xf64>
 
     //
@@ -170,8 +167,7 @@ module {
     // CHECK-SAME: ( 23.46, 25.76, 28.06, 30.36 ),
     // CHECK-SAME: ( 10.8, 11.8, 12.8, 13.8 ) )
     //
-    %m3 = bufferization.to_memref %3 : memref<4x4xf64>
-    %v3 = vector.transfer_read %m3[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v3 = vector.transfer_read %3[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v3 : vector<4x4xf64>
 
     //
@@ -181,8 +177,7 @@ module {
     // CHECK-SAME: ( 10.8, 11.8, 12.8, 13.8 ) )
     //
     %c4 = sparse_tensor.convert %4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
-    %m4 = bufferization.to_memref %c4 : memref<4x4xf64>
-    %v4 = vector.transfer_read %m4[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v4 = vector.transfer_read %c4[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v4 : vector<4x4xf64>
 
     //
@@ -192,31 +187,27 @@ module {
     // CHECK-SAME: ( 10.8, 11.8, 12.8, 13.8 ) )
     //
     %c5 = sparse_tensor.convert %5 : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
-    %m5 = bufferization.to_memref %c5 : memref<4x4xf64>
-    %v5 = vector.transfer_read %m5[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v5 = vector.transfer_read %c5[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v5 : vector<4x4xf64>
 
     //
     // CHECK: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
     //
-    %m6 = bufferization.to_memref %6 : memref<4x4xf64>
-    %v6 = vector.transfer_read %m6[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v6 = vector.transfer_read %6[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v6 : vector<4x4xf64>
 
     //
     // CHECK: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
     //
     %c7 = sparse_tensor.convert %7 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
-    %m7 = bufferization.to_memref %c7 : memref<4x4xf64>
-    %v7 = vector.transfer_read %m7[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v7 = vector.transfer_read %c7[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v7 : vector<4x4xf64>
 
     //
     // CHECK: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
     //
     %c8 = sparse_tensor.convert %8 : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
-    %m8 = bufferization.to_memref %c8 : memref<4x4xf64>
-    %v8 = vector.transfer_read %m8[%c0, %c0], %d1 : memref<4x4xf64>, vector<4x4xf64>
+    %v8 = vector.transfer_read %c8[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v8 : vector<4x4xf64>
 
     //
@@ -233,29 +224,20 @@ module {
     vector.print %nz8 : vector<8xf64>
 
     // Release the resources.
-    sparse_tensor.release %a1 : tensor<4x8xf64, #CSR>
-    sparse_tensor.release %a2 : tensor<4x8xf64, #DCSR>
-    sparse_tensor.release %a3 : tensor<4x8xf64, #CSR>
-    sparse_tensor.release %a4 : tensor<4x8xf64, #DCSR>
-    sparse_tensor.release %b1 : tensor<8x4xf64, #CSR>
-    sparse_tensor.release %b2 : tensor<8x4xf64, #DCSR>
-    sparse_tensor.release %b3 : tensor<8x4xf64, #CSR>
-    sparse_tensor.release %b4 : tensor<8x4xf64, #DCSR>
-    sparse_tensor.release %1 : tensor<4x4xf64, #CSR>
-    sparse_tensor.release %2 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %4 : tensor<4x4xf64, #CSR>
-    sparse_tensor.release %5 : tensor<4x4xf64, #DCSR>
-    sparse_tensor.release %7 : tensor<4x4xf64, #CSR>
-    sparse_tensor.release %8 : tensor<4x4xf64, #DCSR>
-    memref.dealloc %m0 : memref<4x4xf64>
-    memref.dealloc %m1 : memref<4x4xf64>
-    memref.dealloc %m2 : memref<4x4xf64>
-    memref.dealloc %m3 : memref<4x4xf64>
-    memref.dealloc %m4 : memref<4x4xf64>
-    memref.dealloc %m5 : memref<4x4xf64>
-    memref.dealloc %m6 : memref<4x4xf64>
-    memref.dealloc %m7 : memref<4x4xf64>
-    memref.dealloc %m8 : memref<4x4xf64>
+    bufferization.dealloc_tensor %a1 : tensor<4x8xf64, #CSR>
+    bufferization.dealloc_tensor %a2 : tensor<4x8xf64, #DCSR>
+    bufferization.dealloc_tensor %a3 : tensor<4x8xf64, #CSR>
+    bufferization.dealloc_tensor %a4 : tensor<4x8xf64, #DCSR>
+    bufferization.dealloc_tensor %b1 : tensor<8x4xf64, #CSR>
+    bufferization.dealloc_tensor %b2 : tensor<8x4xf64, #DCSR>
+    bufferization.dealloc_tensor %b3 : tensor<8x4xf64, #CSR>
+    bufferization.dealloc_tensor %b4 : tensor<8x4xf64, #DCSR>
+    bufferization.dealloc_tensor %1 : tensor<4x4xf64, #CSR>
+    bufferization.dealloc_tensor %2 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %4 : tensor<4x4xf64, #CSR>
+    bufferization.dealloc_tensor %5 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %7 : tensor<4x4xf64, #CSR>
+    bufferization.dealloc_tensor %8 : tensor<4x4xf64, #DCSR>
 
     return
   }

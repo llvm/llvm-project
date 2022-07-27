@@ -39,12 +39,12 @@ define dso_local i32 @d() {
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
-  %bf.load = load i72, i72* bitcast (%struct.anon* @b to i72*), align 4
+  %bf.load = load i72, ptr @b, align 4
   %bf.lshr = lshr i72 %bf.load, 64
   %t0 = trunc i72 %bf.lshr to i64
   %bf.cast = and i64 %t0, 7
-  %add.ptr = getelementptr i8, i8* bitcast (i32 ()* @d to i8*), i64 %bf.cast
-  %t1 = ptrtoint i8* %add.ptr to i64
+  %add.ptr = getelementptr i8, ptr @d, i64 %bf.cast
+  %t1 = ptrtoint ptr %add.ptr to i64
   %t2 = trunc i64 %t1 to i32
   ret i32 %t2
 }

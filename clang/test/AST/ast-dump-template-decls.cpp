@@ -127,3 +127,38 @@ using type2 = typename C<int>::type1<void>;
 // CHECK-NEXT: SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar
 // CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'T' dependent depth 0 index 0
 } // namespace PR55886
+
+namespace PR56099 {
+template <typename... As> struct Y;
+template <typename... Bs> using Z = Y<Bs...>;
+template <typename... Cs> struct foo {
+  template <typename... Ds> using bind = Z<Ds..., Cs...>;
+};
+using t1 = foo<int, short>::bind<char, float>;
+// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'Y<char, float, int, short>' sugar Y
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'char' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'Bs' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'float' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'Bs' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'Bs' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'short' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'Bs' dependent contains_unexpanded_pack depth 0 index 0 pack
+
+template <typename... T> struct D {
+  template <typename... U> using B = int(int (*...p)(T, U));
+};
+using t2 = D<float, char>::B<int, short>;
+// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'B<int, short>' sugar alias B
+// CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (int (*)(float, int), int (*)(char, short))' cdecl
+// CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (float, int)' cdecl
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'float' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'U' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (char, short)' cdecl
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'char' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'short' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'U' dependent contains_unexpanded_pack depth 0 index 0 pack
+} // namespace PR56099

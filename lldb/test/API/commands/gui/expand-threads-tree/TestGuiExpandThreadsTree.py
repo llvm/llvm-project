@@ -16,6 +16,7 @@ class TestGuiExpandThreadsTree(PExpectTest):
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(bugnumber="rdar://97460266")
     def test_gui(self):
         self.build()
 

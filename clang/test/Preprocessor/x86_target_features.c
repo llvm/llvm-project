@@ -588,3 +588,11 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-crc32 -x c -E -dM -o - %s | FileCheck -check-prefix=NOCRC32 %s
 
 // NOCRC32-NOT: #define __CRC32__ 1
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mrdpru -x c -E -dM -o - %s | FileCheck -check-prefix=RDPRU %s
+
+// RDPRU: #define __RDPRU__ 1
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-rdpru -x c -E -dM -o - %s | FileCheck -check-prefix=NORDPRU %s
+
+// NORDPRU-NOT: #define __RDPRU__ 1

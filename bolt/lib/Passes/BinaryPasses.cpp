@@ -334,14 +334,14 @@ void NormalizeCFG::runOnFunctions(BinaryContext &BC) {
 }
 
 void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
-  if (Function.layout_size() > 0) {
+  if (!Function.getLayout().block_empty()) {
     unsigned Count;
     uint64_t Bytes;
     Function.markUnreachableBlocks();
     LLVM_DEBUG({
-      for (BinaryBasicBlock *BB : Function.layout()) {
-        if (!BB->isValid()) {
-          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB->getName()
+      for (BinaryBasicBlock &BB : Function) {
+        if (!BB.isValid()) {
+          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
                  << " in function " << Function << "\n";
           Function.dump();
         }
@@ -392,7 +392,7 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     modifyFunctionLayout(BF, opts::ReorderBlocks, opts::MinBranchClusters);
-    if (BF.hasLayoutChanged())
+    if (BF.getLayout().hasLayoutChanged())
       ++ModifiedFuncCount;
   };
 
@@ -439,7 +439,7 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
       OS << "             There are " << Function.getInstructionCount()
          << " number of instructions in this function.\n";
       OS << "             The edit distance for this function is: "
-         << Function.getEditDistance() << "\n\n";
+         << Function.getLayout().getEditDistance() << "\n\n";
     }
   }
 }
@@ -500,7 +500,7 @@ void ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 
   Algo->reorderBasicBlocks(BF, NewLayout);
 
-  BF.updateBasicBlockLayout(NewLayout);
+  BF.getLayout().update(NewLayout);
 }
 
 void FixupBranches::runOnFunctions(BinaryContext &BC) {
@@ -581,7 +581,7 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
     // Have we crossed hot/cold border for split functions?
     bool SeenCold = false;
 
-    for (BinaryBasicBlock *BB : BF.layout()) {
+    for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
       if (BB->isCold() && !SeenCold) {
         SeenCold = true;
         CurrentGnuArgsSize = 0;
@@ -677,7 +677,7 @@ uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
                    MIB->getTargetSymbol(*UncondBranch) == BB.getLabel()) {
           MIB->replaceBranchTarget(*UncondBranch, Succ->getLabel(), Ctx);
         } else if (!UncondBranch) {
-          assert(Function.getBasicBlockAfter(Pred, false) != Succ &&
+          assert(Function.getLayout().getBasicBlockAfter(Pred, false) != Succ &&
                  "Don't add an explicit jump to a fallthrough block.");
           Pred->addBranchInstruction(Succ);
         }
@@ -781,7 +781,7 @@ bool SimplifyConditionalTailCalls::shouldRewriteBranch(
 
 uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
   // Need updated indices to correctly detect branch' direction.
-  BF.updateLayoutIndices();
+  BF.getLayout().updateLayoutIndices();
   BF.markUnreachableBlocks();
 
   MCPlusBuilder *MIB = BF.getBinaryContext().MIB.get();
@@ -798,7 +798,7 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
     return (BB->pred_size() != 0 || BB->isLandingPad() || BB->isEntryPoint());
   };
 
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     // Locate BB with a single direct tail-call instruction.
     if (BB->getNumNonPseudos() != 1)
       continue;
@@ -915,9 +915,10 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
 
     // Find the next valid block.  Invalid blocks will be deleted
     // so they shouldn't be considered fallthrough targets.
-    const BinaryBasicBlock *NextBlock = BF.getBasicBlockAfter(PredBB, false);
+    const BinaryBasicBlock *NextBlock =
+        BF.getLayout().getBasicBlockAfter(PredBB, false);
     while (NextBlock && !isValid(NextBlock))
-      NextBlock = BF.getBasicBlockAfter(NextBlock, false);
+      NextBlock = BF.getLayout().getBasicBlockAfter(NextBlock, false);
 
     // Get the unconditional successor to this block.
     const BinaryBasicBlock *PredSucc = PredBB->getSuccessor();
@@ -1106,7 +1107,7 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
   uint64_t NumLocalLoadsFound = 0;
   uint64_t NumDynamicLocalLoadsFound = 0;
 
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     for (MCInst &Inst : *BB) {
       unsigned Opcode = Inst.getOpcode();
       const MCInstrDesc &Desc = BC.MII->get(Opcode);
@@ -1420,10 +1421,10 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   if (ProfiledFunctions.size() > 10) {
     if (opts::Verbosity >= 1) {
       outs() << "BOLT-INFO: top called functions are:\n";
-      std::sort(ProfiledFunctions.begin(), ProfiledFunctions.end(),
-                [](const BinaryFunction *A, const BinaryFunction *B) {
-                  return B->getExecutionCount() < A->getExecutionCount();
-                });
+      llvm::sort(ProfiledFunctions,
+                 [](const BinaryFunction *A, const BinaryFunction *B) {
+                   return B->getExecutionCount() < A->getExecutionCount();
+                 });
       auto SFI = ProfiledFunctions.begin();
       auto SFIend = ProfiledFunctions.end();
       for (unsigned I = 0u; I < opts::TopCalledLimit && SFI != SFIend;
@@ -1433,8 +1434,7 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!opts::PrintSortedBy.empty() &&
-      std::find(opts::PrintSortedBy.begin(), opts::PrintSortedBy.end(),
-                DynoStats::FIRST_DYNO_STAT) == opts::PrintSortedBy.end()) {
+      !llvm::is_contained(opts::PrintSortedBy, DynoStats::FIRST_DYNO_STAT)) {
 
     std::vector<const BinaryFunction *> Functions;
     std::map<const BinaryFunction *, DynoStats> Stats;
@@ -1448,24 +1448,22 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
 
     const bool SortAll =
-        std::find(opts::PrintSortedBy.begin(), opts::PrintSortedBy.end(),
-                  DynoStats::LAST_DYNO_STAT) != opts::PrintSortedBy.end();
+        llvm::is_contained(opts::PrintSortedBy, DynoStats::LAST_DYNO_STAT);
 
     const bool Ascending =
         opts::DynoStatsSortOrderOpt == opts::DynoStatsSortOrder::Ascending;
 
     if (SortAll) {
-      std::stable_sort(Functions.begin(), Functions.end(),
-                       [Ascending, &Stats](const BinaryFunction *A,
-                                           const BinaryFunction *B) {
-                         return Ascending ? Stats.at(A) < Stats.at(B)
-                                          : Stats.at(B) < Stats.at(A);
-                       });
+      llvm::stable_sort(Functions,
+                        [Ascending, &Stats](const BinaryFunction *A,
+                                            const BinaryFunction *B) {
+                          return Ascending ? Stats.at(A) < Stats.at(B)
+                                           : Stats.at(B) < Stats.at(A);
+                        });
     } else {
-      std::stable_sort(
-          Functions.begin(), Functions.end(),
-          [Ascending, &Stats](const BinaryFunction *A,
-                              const BinaryFunction *B) {
+      llvm::stable_sort(
+          Functions, [Ascending, &Stats](const BinaryFunction *A,
+                                         const BinaryFunction *B) {
             const DynoStats &StatsA = Stats.at(A);
             const DynoStats &StatsB = Stats.at(B);
             return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
@@ -1551,7 +1549,7 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
       const uint64_t HotThreshold =
           std::max<uint64_t>(BF.getKnownExecutionCount(), 1);
       bool HotSeen = false;
-      for (const BinaryBasicBlock *BB : BF.rlayout()) {
+      for (const BinaryBasicBlock *BB : BF.getLayout().rblocks()) {
         if (!HotSeen && BB->getKnownExecutionCount() > HotThreshold) {
           HotSeen = true;
           continue;
@@ -1564,11 +1562,11 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
 
     if (!SuboptimalFuncs.empty()) {
-      std::sort(SuboptimalFuncs.begin(), SuboptimalFuncs.end(),
-                [](const BinaryFunction *A, const BinaryFunction *B) {
-                  return A->getKnownExecutionCount() / A->getSize() >
-                         B->getKnownExecutionCount() / B->getSize();
-                });
+      llvm::sort(SuboptimalFuncs,
+                 [](const BinaryFunction *A, const BinaryFunction *B) {
+                   return A->getKnownExecutionCount() / A->getSize() >
+                          B->getKnownExecutionCount() / B->getSize();
+                 });
 
       outs() << "BOLT-INFO: " << SuboptimalFuncs.size()
              << " functions have "
@@ -1598,6 +1596,9 @@ void InstructionLowering::runOnFunctions(BinaryContext &BC) {
 }
 
 void StripRepRet::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86())
+    return;
+
   uint64_t NumPrefixesRemoved = 0;
   uint64_t NumBytesSaved = 0;
   for (auto &BFI : BC.getBinaryFunctions()) {

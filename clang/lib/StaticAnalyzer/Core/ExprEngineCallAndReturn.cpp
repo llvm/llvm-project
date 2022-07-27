@@ -227,6 +227,13 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
   // Step 2: generate node with bound return value: CEBNode -> BindedRetNode.
 
+  // If this variable is set to 'true' the analyzer will evaluate the call
+  // statement we are about to exit again, instead of continuing the execution
+  // from the statement after the call. This is useful for non-POD type array
+  // construction where the CXXConstructExpr is referenced only once in the CFG,
+  // but we want to evaluate it as many times as many elements the array has.
+  bool ShouldRepeatCall = false;
+
   // If the callee returns an expression, bind its value to CallExpr.
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
@@ -255,6 +262,16 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       SVal ThisV = state->getSVal(This);
       ThisV = state->getSVal(ThisV.castAs<Loc>());
       state = state->BindExpr(CCE, callerCtx, ThisV);
+
+      ShouldRepeatCall = shouldRepeatCtorCall(state, CCE, callerCtx);
+
+      if (!ShouldRepeatCall) {
+        if (getIndexOfElementToConstruct(state, CCE, callerCtx))
+          state = removeIndexOfElementToConstruct(state, CCE, callerCtx);
+
+        if (getPendingInitLoop(state, CCE, callerCtx))
+          state = removePendingInitLoop(state, CCE, callerCtx);
+      }
     }
 
     if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
@@ -358,9 +375,10 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
     // Enqueue the next element in the block.
     for (ExplodedNodeSet::iterator PSI = Dst.begin(), PSE = Dst.end();
-                                   PSI != PSE; ++PSI) {
-      Engine.getWorkList()->enqueue(*PSI, calleeCtx->getCallSiteBlock(),
-                                    calleeCtx->getIndex()+1);
+         PSI != PSE; ++PSI) {
+      unsigned Idx = calleeCtx->getIndex() + (ShouldRepeatCall ? 0 : 1);
+
+      Engine.getWorkList()->enqueue(*PSI, calleeCtx->getCallSiteBlock(), Idx);
     }
   }
 }
@@ -732,7 +750,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
       // Store the extent of the allocated object(s).
       SVal ElementCount;
-      if (const Expr *SizeExpr = CNE->getArraySize().getValueOr(nullptr)) {
+      if (const Expr *SizeExpr = CNE->getArraySize().value_or(nullptr)) {
         ElementCount = State->getSVal(SizeExpr, LCtx);
       } else {
         ElementCount = svalBuilder.makeIntVal(1, /*IsUnsigned=*/true);
@@ -800,8 +818,10 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // initializers for array fields in default move/copy constructors.
     // We still allow construction into ElementRegion targets when they don't
     // represent array elements.
-    if (CallOpts.IsArrayCtorOrDtor)
-      return CIP_DisallowedOnce;
+    if (CallOpts.IsArrayCtorOrDtor) {
+      if (!shouldInlineArrayConstruction(Pred->getState(), CtorExpr, CurLC))
+        return CIP_DisallowedOnce;
+    }
 
     // Inlining constructors requires including initializers in the CFG.
     const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
@@ -852,7 +872,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     assert(ADC->getCFGBuildOptions().AddImplicitDtors && "No CFG destructors");
     (void)ADC;
 
-    // FIXME: We don't handle constructors or destructors for arrays properly.
+    // FIXME: We don't handle destructors for arrays properly.
     if (CallOpts.IsArrayCtorOrDtor)
       return CIP_DisallowedOnce;
 
@@ -1015,8 +1035,8 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
 
   // Check if this function has been marked as non-inlinable.
   Optional<bool> MayInline = Engine.FunctionSummaries->mayInline(D);
-  if (MayInline.hasValue()) {
-    if (!MayInline.getValue())
+  if (MayInline) {
+    if (!MayInline.value())
       return false;
 
   } else {
@@ -1037,7 +1057,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   CallInlinePolicy CIP = mayInlineCallKind(Call, Pred, Opts, CallOpts);
   if (CIP != CIP_Allowed) {
     if (CIP == CIP_DisallowedAlways) {
-      assert(!MayInline.hasValue() || MayInline.getValue());
+      assert(!MayInline || *MayInline);
       Engine.FunctionSummaries->markShouldNotInline(D);
     }
     return false;
@@ -1063,6 +1083,49 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
     return false;
 
   return true;
+}
+
+bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
+                                               const CXXConstructExpr *CE,
+                                               const LocationContext *LCtx) {
+  if (!CE)
+    return false;
+
+  auto Type = CE->getType();
+
+  // FIXME: Handle other arrays types.
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(Type)) {
+    unsigned Size = getContext().getConstantArrayElementCount(CAT);
+
+    return Size <= AMgr.options.maxBlockVisitOnPath;
+  }
+
+  // Check if we're inside an ArrayInitLoopExpr, and it's sufficiently small.
+  if (auto Size = getPendingInitLoop(State, CE, LCtx))
+    return *Size <= AMgr.options.maxBlockVisitOnPath;
+
+  return false;
+}
+
+bool ExprEngine::shouldRepeatCtorCall(ProgramStateRef State,
+                                      const CXXConstructExpr *E,
+                                      const LocationContext *LCtx) {
+
+  if (!E)
+    return false;
+
+  auto Ty = E->getType();
+
+  // FIXME: Handle non constant array types
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty)) {
+    unsigned Size = getContext().getConstantArrayElementCount(CAT);
+    return Size > getIndexOfElementToConstruct(State, E, LCtx);
+  }
+
+  if (auto Size = getPendingInitLoop(State, E, LCtx))
+    return Size > getIndexOfElementToConstruct(State, E, LCtx);
+
+  return false;
 }
 
 static bool isTrivialObjectAssignment(const CallEvent &Call) {

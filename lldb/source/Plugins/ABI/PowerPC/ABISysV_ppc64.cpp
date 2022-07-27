@@ -567,7 +567,7 @@ private:
   ReturnValueExtractor(Thread &thread, CompilerType &type,
                        RegisterContext *reg_ctx, ProcessSP process_sp)
       : m_thread(thread), m_type(type),
-        m_byte_size(m_type.GetByteSize(&thread).getValueOr(0)),
+        m_byte_size(m_type.GetByteSize(&thread).value_or(0)),
         m_data_up(new DataBufferHeap(m_byte_size, 0)), m_reg_ctx(reg_ctx),
         m_process_sp(process_sp), m_byte_order(process_sp->GetByteOrder()),
         m_addr_size(

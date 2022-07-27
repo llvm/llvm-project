@@ -1004,6 +1004,7 @@ add_fp_unittest(
   SRCS
     generic_sqrtf_test.cpp
   DEPENDS
+    libc.src.math.sqrtf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
@@ -1018,6 +1019,7 @@ add_fp_unittest(
   SRCS
     generic_sqrt_test.cpp
   DEPENDS
+    libc.src.math.sqrt
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
@@ -1032,6 +1034,7 @@ add_fp_unittest(
   SRCS
     generic_sqrtl_test.cpp
   DEPENDS
+    libc.src.math.sqrtl
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
@@ -1268,6 +1271,34 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.log1pf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fmodf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmodf_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmodf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fmod_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmod_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmod
     libc.src.__support.FPUtil.fputil
 )
 

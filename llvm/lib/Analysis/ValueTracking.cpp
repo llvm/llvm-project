@@ -26,6 +26,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -1070,7 +1071,7 @@ static void computeKnownBitsFromShiftOperator(
     // bits. This check is sunk down as far as possible to avoid the expensive
     // call to isKnownNonZero if the cheaper checks above fail.
     if (ShiftAmt == 0) {
-      if (!ShifterOperandIsNonZero.hasValue())
+      if (!ShifterOperandIsNonZero)
         ShifterOperandIsNonZero =
             isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
       if (*ShifterOperandIsNonZero)
@@ -1755,8 +1756,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
           break;
         }
 
-        unsigned FirstZeroHighBit =
-            32 - countLeadingZeros(VScaleMax.getValue());
+        unsigned FirstZeroHighBit = 32 - countLeadingZeros(*VScaleMax);
         if (FirstZeroHighBit < BitWidth)
           Known.Zero.setBitsFrom(FirstZeroHighBit);
 
@@ -2297,7 +2297,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     return false;
 
   unsigned NumUsesExplored = 0;
-  for (auto *U : V->users()) {
+  for (const auto *U : V->users()) {
     // Avoid massive lists
     if (NumUsesExplored >= DomConditionsMaxUses)
       break;
@@ -2338,7 +2338,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     SmallVector<const User *, 4> WorkList;
     SmallPtrSet<const User *, 4> Visited;
-    for (auto *CmpU : U->users()) {
+    for (const auto *CmpU : U->users()) {
       assert(WorkList.empty() && "Should be!");
       if (Visited.insert(CmpU).second)
         WorkList.push_back(CmpU);
@@ -2352,7 +2352,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
         // TODO: Support similar logic of OR and EQ predicate?
         if (NonNullIfTrue)
           if (match(Curr, m_LogicalAnd(m_Value(), m_Value()))) {
-            for (auto *CurrU : Curr->users())
+            for (const auto *CurrU : Curr->users())
               if (Visited.insert(CurrU).second)
                 WorkList.push_back(CurrU);
             continue;
@@ -2697,6 +2697,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     auto *Op = FI->getOperand(0);
     if (isKnownNonZero(Op, Depth, Q) &&
         isGuaranteedNotToBePoison(Op, Q.AC, Q.CxtI, Q.DT, Depth))
+      return true;
+  } else if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (II->getIntrinsicID() == Intrinsic::vscale)
       return true;
   }
 
@@ -4175,69 +4178,83 @@ bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP,
   return true;
 }
 
+// If V refers to an initialized global constant, set Slice either to
+// its initializer if the size of its elements equals ElementSize, or,
+// for ElementSize == 8, to its representation as an array of unsiged
+// char. Return true on success.
 bool llvm::getConstantDataArrayInfo(const Value *V,
                                     ConstantDataArraySlice &Slice,
                                     unsigned ElementSize, uint64_t Offset) {
   assert(V);
 
-  // Look through bitcast instructions and geps.
-  V = V->stripPointerCasts();
-
-  // If the value is a GEP instruction or constant expression, treat it as an
-  // offset.
-  if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-    // The GEP operator should be based on a pointer to string constant, and is
-    // indexing into the string constant.
-    if (!isGEPBasedOnPointerToString(GEP, ElementSize))
-      return false;
-
-    // If the second index isn't a ConstantInt, then this is a variable index
-    // into the array.  If this occurs, we can't say anything meaningful about
-    // the string.
-    uint64_t StartIdx = 0;
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(GEP->getOperand(2)))
-      StartIdx = CI->getZExtValue();
-    else
-      return false;
-    return getConstantDataArrayInfo(GEP->getOperand(0), Slice, ElementSize,
-                                    StartIdx + Offset);
-  }
-
-  // The GEP instruction, constant or instruction, must reference a global
-  // variable that is a constant and is initialized. The referenced constant
-  // initializer is the array that we'll use for optimization.
-  const GlobalVariable *GV = dyn_cast<GlobalVariable>(V);
+  // Drill down into the pointer expression V, ignoring any intervening
+  // casts, and determine the identity of the object it references along
+  // with the cumulative byte offset into it.
+  const GlobalVariable *GV =
+    dyn_cast<GlobalVariable>(getUnderlyingObject(V));
   if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    // Fail if V is not based on constant global object.
     return false;
 
-  const ConstantDataArray *Array;
-  ArrayType *ArrayTy;
+  const DataLayout &DL = GV->getParent()->getDataLayout();
+  APInt Off(DL.getIndexTypeSizeInBits(V->getType()), 0);
+
+  if (GV != V->stripAndAccumulateConstantOffsets(DL, Off,
+                                                 /*AllowNonInbounds*/ true))
+    // Fail if a constant offset could not be determined.
+    return false;
+
+  uint64_t StartIdx = Off.getLimitedValue();
+  if (StartIdx == UINT64_MAX)
+    // Fail if the constant offset is excessive.
+    return false;
+
+  Offset += StartIdx;
+
+  ConstantDataArray *Array = nullptr;
+  ArrayType *ArrayTy = nullptr;
+
   if (GV->getInitializer()->isNullValue()) {
     Type *GVTy = GV->getValueType();
-    if ( (ArrayTy = dyn_cast<ArrayType>(GVTy)) ) {
-      // A zeroinitializer for the array; there is no ConstantDataArray.
-      Array = nullptr;
-    } else {
-      const DataLayout &DL = GV->getParent()->getDataLayout();
-      uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
-      uint64_t Length = SizeInBytes / (ElementSize / 8);
-      if (Length <= Offset)
-        return false;
+    uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
+    uint64_t Length = SizeInBytes / (ElementSize / 8);
 
-      Slice.Array = nullptr;
-      Slice.Offset = 0;
-      Slice.Length = Length - Offset;
-      return true;
-    }
-  } else {
-    // This must be a ConstantDataArray.
-    Array = dyn_cast<ConstantDataArray>(GV->getInitializer());
-    if (!Array)
-      return false;
-    ArrayTy = Array->getType();
+    Slice.Array = nullptr;
+    Slice.Offset = 0;
+    // Return an empty Slice for undersized constants to let callers
+    // transform even undefined library calls into simpler, well-defined
+    // expressions.  This is preferable to making the calls although it
+    // prevents sanitizers from detecting such calls.
+    Slice.Length = Length < Offset ? 0 : Length - Offset;
+    return true;
   }
-  if (!ArrayTy->getElementType()->isIntegerTy(ElementSize))
-    return false;
+
+  auto *Init = const_cast<Constant *>(GV->getInitializer());
+  if (auto *ArrayInit = dyn_cast<ConstantDataArray>(Init)) {
+    Type *InitElTy = ArrayInit->getElementType();
+    if (InitElTy->isIntegerTy(ElementSize)) {
+      // If Init is an initializer for an array of the expected type
+      // and size, use it as is.
+      Array = ArrayInit;
+      ArrayTy = ArrayInit->getType();
+    }
+  }
+
+  if (!Array) {
+    if (ElementSize != 8)
+      // TODO: Handle conversions to larger integral types.
+      return false;
+
+    // Otherwise extract the portion of the initializer starting
+    // at Offset as an array of bytes, and reset Offset.
+    Init = ReadByteArrayFromGlobal(GV, Offset);
+    if (!Init)
+      return false;
+
+    Offset = 0;
+    Array = dyn_cast<ConstantDataArray>(Init);
+    ArrayTy = dyn_cast<ArrayType>(Init->getType());
+  }
 
   uint64_t NumElts = ArrayTy->getArrayNumElements();
   if (Offset > NumElts)
@@ -4249,9 +4266,10 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   return true;
 }
 
-/// This function computes the length of a null-terminated C string pointed to
-/// by V. If successful, it returns true and returns the string in Str.
-/// If unsuccessful, it returns false.
+/// Extract bytes from the initializer of the constant array V, which need
+/// not be a nul-terminated string.  On success, store the bytes in Str and
+/// return true.  When TrimAtNul is set, Str will contain only the bytes up
+/// to but not including the first nul.  Return false on failure.
 bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
                                  uint64_t Offset, bool TrimAtNul) {
   ConstantDataArraySlice Slice;
@@ -4260,6 +4278,12 @@ bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
 
   if (Slice.Array == nullptr) {
     if (TrimAtNul) {
+      // Return a nul-terminated string even for an empty Slice.  This is
+      // safe because all existing SimplifyLibcalls callers require string
+      // arguments and the behavior of the functions they fold is undefined
+      // otherwise.  Folding the calls this way is preferable to making
+      // the undefined library calls, even though it prevents sanitizers
+      // from reporting such calls.
       Str = StringRef();
       return true;
     }
@@ -4339,9 +4363,13 @@ static uint64_t GetStringLengthH(const Value *V,
     return 0;
 
   if (Slice.Array == nullptr)
+    // Zeroinitializer (including an empty one).
     return 1;
 
-  // Search for nul characters
+  // Search for the first nul character.  Return a conservative result even
+  // when there is no nul.  This is safe since otherwise the string function
+  // being folded such as strlen is undefined, and can be preferable to
+  // making the undefined library call.
   unsigned NullIndex = 0;
   for (unsigned E = Slice.Length; NullIndex < E; ++NullIndex) {
     if (Slice.Array->getElementAsInteger(Slice.Offset + NullIndex) == 0)
@@ -4652,27 +4680,22 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
     F.hasFnAttribute(Attribute::SanitizeHWAddress);
 }
 
-
-bool llvm::isSafeToSpeculativelyExecute(const Value *V,
+bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         const Instruction *CtxI,
                                         const DominatorTree *DT,
                                         const TargetLibraryInfo *TLI) {
-  const Operator *Inst = dyn_cast<Operator>(V);
-  if (!Inst)
-    return false;
-  return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI, DT, TLI);
+  return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
+                                                DT, TLI);
 }
 
-bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
-                                        const Operator *Inst,
-                                        const Instruction *CtxI,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI) {
+bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
+    unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
+    const DominatorTree *DT, const TargetLibraryInfo *TLI) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
     auto hasEqualReturnAndLeadingOperandTypes =
-        [](const Operator *Inst, unsigned NumLeadingOperands) {
+        [](const Instruction *Inst, unsigned NumLeadingOperands) {
           if (Inst->getNumOperands() < NumLeadingOperands)
             return false;
           const Type *ExpectedType = Inst->getType();
@@ -4687,11 +4710,6 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
            hasEqualReturnAndLeadingOperandTypes(Inst, 1));
   }
 #endif
-
-  for (unsigned i = 0, e = Inst->getNumOperands(); i != e; ++i)
-    if (Constant *C = dyn_cast<Constant>(Inst->getOperand(i)))
-      if (C->canTrap())
-        return false;
 
   switch (Opcode) {
   default:
@@ -4955,11 +4973,18 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
   // X - (X % ?)
   // The remainder of a value can't have greater magnitude than itself,
   // so the subtraction can't overflow.
+
+  // X - (X -nuw ?)
+  // In the minimal case, this would simplify to "?", so there's no subtract
+  // at all. But if this analysis is used to peek through casts, for example,
+  // then determining no-overflow may allow other transforms.
+
   // TODO: There are other patterns like this.
   //       See simplifyICmpWithBinOpOnLHS() for candidates.
-  if (match(RHS, m_URem(m_Specific(LHS), m_Value())) &&
-      isGuaranteedNotToBeUndefOrPoison(LHS, AC, CxtI, DT))
-    return OverflowResult::NeverOverflows;
+  if (match(RHS, m_URem(m_Specific(LHS), m_Value())) ||
+      match(RHS, m_NUWSub(m_Specific(LHS), m_Value())))
+    if (isGuaranteedNotToBeUndefOrPoison(LHS, AC, CxtI, DT))
+      return OverflowResult::NeverOverflows;
 
   // Checking for conditions implied by dominating conditions may be expensive.
   // Limit it to usub_with_overflow calls for now.
@@ -5049,7 +5074,7 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
       if (DT.dominates(NoWrapEdge, Result->getParent()))
         continue;
 
-      for (auto &RU : Result->uses())
+      for (const auto &RU : Result->uses())
         if (!DT.dominates(NoWrapEdge, RU))
           return false;
     }
@@ -5621,7 +5646,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
     // whether a value is directly passed to an instruction that must take
     // well-defined operands.
 
-    for (auto &I : make_range(Begin, End)) {
+    for (const auto &I : make_range(Begin, End)) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       if (--ScanLimit == 0)
@@ -5652,7 +5677,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
   Visited.insert(BB);
 
   while (true) {
-    for (auto &I : make_range(Begin, End)) {
+    for (const auto &I : make_range(Begin, End)) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       if (--ScanLimit == 0)
@@ -6519,7 +6544,6 @@ bool llvm::matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
 static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
                             const Value *RHS, const DataLayout &DL,
                             unsigned Depth) {
-  assert(!LHS->getType()->isVectorTy() && "TODO: extend to handle vectors!");
   if (ICmpInst::isTrueWhenEqual(Pred) && LHS == RHS)
     return true;
 
@@ -6632,14 +6656,12 @@ static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
 /// Return true if "icmp APred X, C1" implies "icmp BPred X, C2" is true.
 /// Return false if "icmp APred X, C1" implies "icmp BPred X, C2" is false.
 /// Otherwise, return None if we can't infer anything.
-static Optional<bool>
-isImpliedCondMatchingImmOperands(CmpInst::Predicate APred,
-                                 const ConstantInt *C1,
-                                 CmpInst::Predicate BPred,
-                                 const ConstantInt *C2) {
-  ConstantRange DomCR =
-      ConstantRange::makeExactICmpRegion(APred, C1->getValue());
-  ConstantRange CR = ConstantRange::makeExactICmpRegion(BPred, C2->getValue());
+static Optional<bool> isImpliedCondMatchingImmOperands(CmpInst::Predicate APred,
+                                                       const APInt &C1,
+                                                       CmpInst::Predicate BPred,
+                                                       const APInt &C2) {
+  ConstantRange DomCR = ConstantRange::makeExactICmpRegion(APred, C1);
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(BPred, C2);
   ConstantRange Intersection = DomCR.intersectWith(CR);
   ConstantRange Difference = DomCR.difference(CR);
   if (Intersection.isEmptySet())
@@ -6677,14 +6699,9 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 
   // Can we infer anything when the LHS operands match and the RHS operands are
   // constants (not necessarily matching)?
-  if (ALHS == BLHS && isa<ConstantInt>(ARHS) && isa<ConstantInt>(BRHS)) {
-    if (Optional<bool> Implication = isImpliedCondMatchingImmOperands(
-            APred, cast<ConstantInt>(ARHS), BPred, cast<ConstantInt>(BRHS)))
-      return Implication;
-    // No amount of additional analysis will infer the second condition, so
-    // early exit.
-    return None;
-  }
+  const APInt *AC, *BC;
+  if (ALHS == BLHS && match(ARHS, m_APInt(AC)) && match(BRHS, m_APInt(BC)))
+    return isImpliedCondMatchingImmOperands(APred, *AC, BPred, *BC);
 
   if (APred == BPred)
     return isImpliedCondOperands(APred, ALHS, ARHS, BLHS, BRHS, DL, Depth);
@@ -6737,14 +6754,8 @@ llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
   if (RHSOp0->getType()->isVectorTy() != LHS->getType()->isVectorTy())
     return None;
 
-  Type *OpTy = LHS->getType();
-  assert(OpTy->isIntOrIntVectorTy(1) && "Expected integer type only!");
-
-  // FIXME: Extending the code below to handle vectors.
-  if (OpTy->isVectorTy())
-    return None;
-
-  assert(OpTy->isIntegerTy(1) && "implied by above");
+  assert(LHS->getType()->isIntOrIntVectorTy(1) &&
+         "Expected integer type only!");
 
   // Both LHS and RHS are icmps.
   const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);

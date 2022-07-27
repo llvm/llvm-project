@@ -15,6 +15,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include <linux/version.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -26,6 +27,7 @@ using namespace llvm;
 
 Expected<LinuxPerfZeroTscConversion>
 lldb_private::process_linux::LoadPerfTscConversionParameters() {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,12,0)
   lldb::pid_t pid = getpid();
   perf_event_attr attr;
   memset(&attr, 0, sizeof(attr));
@@ -55,6 +57,10 @@ lldb_private::process_linux::LoadPerfTscConversionParameters() {
                       err_cap);
     return llvm::createStringError(llvm::inconvertibleErrorCode(), err_msg);
   }
+#else
+  std::string err_msg = "PERF_COUNT_SW_DUMMY requires Linux 3.12";
+  return llvm::createStringError(llvm::inconvertibleErrorCode(), err_msg);
+#endif
 }
 
 void resource_handle::MmapDeleter::operator()(void *ptr) {
@@ -77,8 +83,8 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
                                           Optional<long> group_fd,
                                           unsigned long flags) {
   errno = 0;
-  long fd = syscall(SYS_perf_event_open, &attr, pid.getValueOr(-1),
-                    cpu.getValueOr(-1), group_fd.getValueOr(-1), flags);
+  long fd = syscall(SYS_perf_event_open, &attr, pid.value_or(-1),
+                    cpu.value_or(-1), group_fd.value_or(-1), flags);
   if (fd == -1) {
     std::string err_msg =
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));

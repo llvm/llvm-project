@@ -390,11 +390,11 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   // Omit if there is no avr-libc installed.
   Optional<std::string> AVRLibcRoot = findAVRLibcInstallation();
-  if (!AVRLibcRoot.hasValue())
+  if (!AVRLibcRoot)
     return;
 
   // Add 'avr-libc/include' to clang system include paths if applicable.
-  std::string AVRInc = AVRLibcRoot.getValue() + "/include";
+  std::string AVRInc = *AVRLibcRoot + "/include";
   if (llvm::sys::fs::is_directory(AVRInc))
     addSystemInclude(DriverArgs, CC1Args, AVRInc);
 }
@@ -437,7 +437,6 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                          : getToolChain().GetProgramPath(getShortName());
 
   ArgStringList CmdArgs;
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
@@ -475,9 +474,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::warn_drv_avr_stdlib_not_linked);
   }
 
-  if (SectionAddressData.hasValue()) {
-    std::string DataSectionArg = std::string("-Tdata=0x") +
-                                 llvm::utohexstr(SectionAddressData.getValue());
+  if (SectionAddressData) {
+    std::string DataSectionArg =
+        std::string("-Tdata=0x") + llvm::utohexstr(SectionAddressData.value());
     CmdArgs.push_back(Args.MakeArgString(DataSectionArg));
   } else {
     // We do not have an entry for this CPU in the address mapping table yet.
@@ -503,6 +502,7 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Add the link library specific to the MCU.
     CmdArgs.push_back(Args.MakeArgString(std::string("-l") + CPU));
 
+    AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
     CmdArgs.push_back("--end-group");
 
     // Add user specified linker script.
@@ -514,6 +514,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // than the bare minimum supports.
     if (Linker.find("avr-ld") != std::string::npos)
       CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
+  } else {
+    AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   }
 
   C.addCommand(std::make_unique<Command>(

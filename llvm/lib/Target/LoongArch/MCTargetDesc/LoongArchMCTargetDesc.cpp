@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "LoongArchGenInstrInfo.inc"
 
 #define GET_REGINFO_MC_DESC
@@ -94,7 +95,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // end namespace
 
 static MCInstrAnalysis *createLoongArchInstrAnalysis(const MCInstrInfo *Info) {
   return new LoongArchMCInstrAnalysis(Info);

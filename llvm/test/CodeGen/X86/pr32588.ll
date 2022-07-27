@@ -9,22 +9,21 @@ define void @fn1() {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $1, c(%rip)
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    cmpl $0, c(%rip)
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movl %eax, d(%rip)
 ; CHECK-NEXT:    retq
-  %t0 = load i32, i32* @c, align 4
+  %t0 = load i32, ptr @c, align 4
   %tobool1 = icmp eq i32 %t0, 0
   %xor = zext i1 %tobool1 to i32
-  %t1 = load i32, i32* @b, align 4
+  %t1 = load i32, ptr @b, align 4
   %tobool2 = icmp ne i32 %t1, 0
-  %t2 = load i32, i32* @d, align 4
+  %t2 = load i32, ptr @d, align 4
   %tobool4 = icmp ne i32 %t2, 0
   %t3 = and i1 %tobool4, %tobool2
   %sub = sext i1 %t3 to i32
   %div = sdiv i32 %sub, 2
   %add = add nsw i32 %div, %xor
-  store i32 %add, i32* @d, align 4
+  store i32 %add, ptr @d, align 4
   ret void
 }

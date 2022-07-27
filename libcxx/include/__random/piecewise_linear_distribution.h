@@ -43,8 +43,8 @@ public:
 
         param_type();
         template<class _InputIteratorB, class _InputIteratorW>
-            param_type(_InputIteratorB __fB, _InputIteratorB __lB,
-                       _InputIteratorW __fW);
+            param_type(_InputIteratorB __f_b, _InputIteratorB __l_b,
+                       _InputIteratorW __f_w);
 #ifndef _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
@@ -94,10 +94,10 @@ public:
     piecewise_linear_distribution() {}
     template<class _InputIteratorB, class _InputIteratorW>
         _LIBCPP_INLINE_VISIBILITY
-        piecewise_linear_distribution(_InputIteratorB __fB,
-                                      _InputIteratorB __lB,
-                                      _InputIteratorW __fW)
-        : __p_(__fB, __lB, __fW) {}
+        piecewise_linear_distribution(_InputIteratorB __f_b,
+                                      _InputIteratorB __l_b,
+                                      _InputIteratorW __f_w)
+        : __p_(__f_b, __l_b, __f_w) {}
 
 #ifndef _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
@@ -219,8 +219,8 @@ piecewise_linear_distribution<_RealType>::param_type::param_type()
 template<class _RealType>
 template<class _InputIteratorB, class _InputIteratorW>
 piecewise_linear_distribution<_RealType>::param_type::param_type(
-        _InputIteratorB __fB, _InputIteratorB __lB, _InputIteratorW __fW)
-    : __b_(__fB, __lB)
+        _InputIteratorB __f_b, _InputIteratorB __l_b, _InputIteratorW __f_w)
+    : __b_(__f_b, __l_b)
 {
     if (__b_.size() < 2)
     {
@@ -233,8 +233,8 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     else
     {
         __densities_.reserve(__b_.size());
-        for (size_t __i = 0; __i < __b_.size(); ++__i, ++__fW)
-            __densities_.push_back(*__fW);
+        for (size_t __i = 0; __i < __b_.size(); ++__i, ++__f_w)
+            __densities_.push_back(*__f_w);
         __init();
     }
 }

@@ -343,7 +343,8 @@ struct SysAlias {
       : Name(N), Encoding(E), FeaturesRequired(F) {}
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
-    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+    return ActiveFeatures[llvm::AArch64::FeatureAll] ||
+           (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
 
   FeatureBitset getRequiredFeatures() const { return FeaturesRequired; }
@@ -634,7 +635,8 @@ namespace AArch64SysReg {
     FeatureBitset FeaturesRequired;
 
     bool haveFeatures(FeatureBitset ActiveFeatures) const {
-      return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+      return ActiveFeatures[llvm::AArch64::FeatureAll] ||
+             (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
     }
   };
 

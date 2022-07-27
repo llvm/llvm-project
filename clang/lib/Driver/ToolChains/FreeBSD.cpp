@@ -170,7 +170,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-export-dynamic");
     if (Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-Bshareable");
-    } else {
+    } else if (!Args.hasArg(options::OPT_r)) {
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/libexec/ld-elf.so.1");
     }
@@ -389,10 +389,10 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
   // back to '/usr/lib' if it doesn't exist.
   if ((Triple.getArch() == llvm::Triple::x86 || Triple.isMIPS32() ||
        Triple.isPPC32()) &&
-      D.getVFS().exists(getDriver().SysRoot + "/usr/lib32/crt1.o"))
-    getFilePaths().push_back(getDriver().SysRoot + "/usr/lib32");
+      D.getVFS().exists(concat(getDriver().SysRoot, "/usr/lib32/crt1.o")))
+    getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib32"));
   else
-    getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
+    getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
 }
 
 ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
@@ -411,14 +411,14 @@ unsigned FreeBSD::GetDefaultDwarfVersion() const {
 void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                     llvm::opt::ArgStringList &CC1Args) const {
   addSystemInclude(DriverArgs, CC1Args,
-                   getDriver().SysRoot + "/usr/include/c++/v1");
+                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
 }
 
 void FreeBSD::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(getDriver().SysRoot + "/usr/include/c++/4.2", "", "",
-                           DriverArgs, CC1Args);
+  addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/c++/4.2"),
+                           "", "", DriverArgs, CC1Args);
 }
 
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
@@ -430,6 +430,8 @@ void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
   switch (Type) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+    if (Args.hasArg(options::OPT_fexperimental_library))
+      CmdArgs.push_back("-lc++experimental");
     break;
 
   case ToolChain::CST_Libstdcxx:
@@ -487,12 +489,14 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
-  if (IsX86_64 || IsMIPS64) {
+  if (IsAArch64 || IsX86_64 || IsMIPS64) {
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::Thread;
   }
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Function;
+  }
+  if (IsAArch64 || IsX86 || IsX86_64) {
     Res |= SanitizerKind::SafeStack;
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
@@ -500,8 +504,6 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   if (IsAArch64 || IsX86_64) {
     Res |= SanitizerKind::KernelAddress;
     Res |= SanitizerKind::KernelMemory;
-  }
-  if (IsX86_64) {
     Res |= SanitizerKind::Memory;
   }
   return Res;

@@ -128,6 +128,7 @@ namespace {
     void PrintRawSEHFinallyStmt(SEHFinallyStmt *S);
     void PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                      bool ForceNoStmt = false);
+    void PrintFPPragmas(CompoundStmt *S);
 
     void PrintExpr(Expr *E) {
       if (E)
@@ -174,10 +175,71 @@ namespace {
 /// with no newline after the }.
 void StmtPrinter::PrintRawCompoundStmt(CompoundStmt *Node) {
   OS << "{" << NL;
+  PrintFPPragmas(Node);
   for (auto *I : Node->body())
     PrintStmt(I);
 
   Indent() << "}";
+}
+
+void StmtPrinter::PrintFPPragmas(CompoundStmt *S) {
+  if (!S->hasStoredFPFeatures())
+    return;
+  FPOptionsOverride FPO = S->getStoredFPFeatures();
+  bool FEnvAccess = false;
+  if (FPO.hasAllowFEnvAccessOverride()) {
+    FEnvAccess = FPO.getAllowFEnvAccessOverride();
+    Indent() << "#pragma STDC FENV_ACCESS " << (FEnvAccess ? "ON" : "OFF")
+             << NL;
+  }
+  if (FPO.hasSpecifiedExceptionModeOverride()) {
+    LangOptions::FPExceptionModeKind EM =
+        FPO.getSpecifiedExceptionModeOverride();
+    if (!FEnvAccess || EM != LangOptions::FPE_Strict) {
+      Indent() << "#pragma clang fp exceptions(";
+      switch (FPO.getSpecifiedExceptionModeOverride()) {
+      default:
+        break;
+      case LangOptions::FPE_Ignore:
+        OS << "ignore";
+        break;
+      case LangOptions::FPE_MayTrap:
+        OS << "maytrap";
+        break;
+      case LangOptions::FPE_Strict:
+        OS << "strict";
+        break;
+      }
+      OS << ")\n";
+    }
+  }
+  if (FPO.hasConstRoundingModeOverride()) {
+    LangOptions::RoundingMode RM = FPO.getConstRoundingModeOverride();
+    Indent() << "#pragma STDC FENV_ROUND ";
+    switch (RM) {
+    case llvm::RoundingMode::TowardZero:
+      OS << "FE_TOWARDZERO";
+      break;
+    case llvm::RoundingMode::NearestTiesToEven:
+      OS << "FE_TONEAREST";
+      break;
+    case llvm::RoundingMode::TowardPositive:
+      OS << "FE_UPWARD";
+      break;
+    case llvm::RoundingMode::TowardNegative:
+      OS << "FE_DOWNWARD";
+      break;
+    case llvm::RoundingMode::NearestTiesToAway:
+      OS << "FE_TONEARESTFROMZERO";
+      break;
+    case llvm::RoundingMode::Dynamic:
+      OS << "FE_DYNAMIC";
+      break;
+    default:
+      llvm_unreachable("Invalid rounding mode");
+    }
+    OS << NL;
+  }
 }
 
 void StmtPrinter::PrintRawDecl(Decl *D) {
@@ -880,9 +942,21 @@ void StmtPrinter::VisitOMPMasterTaskLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPMaskedTaskLoopDirective(
+    OMPMaskedTaskLoopDirective *Node) {
+  Indent() << "#pragma omp masked taskloop";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPMasterTaskLoopSimdDirective(
     OMPMasterTaskLoopSimdDirective *Node) {
   Indent() << "#pragma omp master taskloop simd";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPMaskedTaskLoopSimdDirective(
+    OMPMaskedTaskLoopSimdDirective *Node) {
+  Indent() << "#pragma omp masked taskloop simd";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -892,9 +966,21 @@ void StmtPrinter::VisitOMPParallelMasterTaskLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPParallelMaskedTaskLoopDirective(
+    OMPParallelMaskedTaskLoopDirective *Node) {
+  Indent() << "#pragma omp parallel masked taskloop";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPParallelMasterTaskLoopSimdDirective(
     OMPParallelMasterTaskLoopSimdDirective *Node) {
   Indent() << "#pragma omp parallel master taskloop simd";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPParallelMaskedTaskLoopSimdDirective(
+    OMPParallelMaskedTaskLoopSimdDirective *Node) {
+  Indent() << "#pragma omp parallel masked taskloop simd";
   PrintOMPExecutableDirective(Node);
 }
 

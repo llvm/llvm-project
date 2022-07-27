@@ -3,17 +3,17 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/asm -o %t.o
 # RUN: ld.lld -T %t/lts %t.o -o %t_le
-# RUN: llvm-objdump --mcpu=pwr10 --no-show-raw-insn -d %t_le | FileCheck %s
+# RUN: llvm-objdump --no-show-raw-insn -d %t_le | FileCheck %s
 # RUN: llvm-readelf -s %t_le | FileCheck %s --check-prefix=SYM
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %t/asm -o %t.o
 # RUN: ld.lld -T %t/lts %t.o -o %t_be
-# RUN: llvm-objdump --mcpu=pwr10 --no-show-raw-insn -d %t_be | FileCheck %s
+# RUN: llvm-objdump --no-show-raw-insn -d %t_be | FileCheck %s
 # RUN: llvm-readelf -s %t_be | FileCheck %s --check-prefix=SYM
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/asm -o %t.o
 # RUN: ld.lld -T %t/lts %t.o -o %t_le --no-power10-stubs
-# RUN: llvm-objdump --mcpu=pwr10 --no-show-raw-insn -d %t_le | FileCheck %s --check-prefix=NoP10
+# RUN: llvm-objdump --no-show-raw-insn -d %t_le | FileCheck %s
 # RUN: llvm-readelf -s %t_le | FileCheck %s --check-prefix=SYM
 
 # SYM:      Symbol table '.symtab' contains 9 entries:
@@ -74,20 +74,11 @@ caller_close:
 # CHECK-NEXT:    blr
 # CHECK-LABEL: <__toc_save_callee>:
 # CHECK:         std 2, 24(1)
-# CHECK-NEXT:    paddi 12, 0, -268501028, 1
+# CHECK-NEXT:    addis 12, 2, -4098
+# CHECK-NEXT:    addi 12, 12, 32704
 # CHECK-NEXT:    mtctr 12
 # CHECK-NEXT:    bctr
 
-# NoP10-LABEL: <caller>:
-# NoP10:         bl 0x20020020
-# NoP10-NEXT:    ld 2, 24(1)
-# NoP10-NEXT:    blr
-# NoP10-LABEL: <__toc_save_callee>:
-# NoP10-NEXT:         std 2, 24(1)
-# NoP10-NEXT:    addis 12, 2, -4098
-# NoP10-NEXT:    addi 12, 12, 32704
-# NoP10-NEXT:    mtctr 12
-# NoP10-NEXT:    bctr
 .section .text_caller, "ax", %progbits
 .Lfunc_toc2:
   .quad .TOC.-.Lfunc_gep2

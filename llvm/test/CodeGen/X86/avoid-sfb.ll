@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.S = type { i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_conditional_block(%struct.S* nocapture noalias %s1 , %struct.S* nocapture noalias %s2, i32 %x, %struct.S* nocapture noalias  %s3, %struct.S* nocapture noalias readonly %s4) local_unnamed_addr #0 {
+define void @test_conditional_block(ptr nocapture noalias %s1 , ptr nocapture noalias %s2, i32 %x, ptr nocapture noalias  %s3, ptr nocapture noalias readonly %s4) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_conditional_block:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $18, %edx
@@ -79,22 +79,18 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %b = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 1
-  store i32 %x, i32* %b, align 4
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S* %s3 to i8*
-  %1 = bitcast %struct.S* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 4, i1 false)
-  %2 = bitcast %struct.S* %s2 to i8*
-  %3 = bitcast %struct.S* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 4, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_imm_store(%struct.S* nocapture noalias %s1, %struct.S* nocapture %s2, i32 %x, %struct.S* nocapture %s3) local_unnamed_addr #0 {
+define void @test_imm_store(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_imm_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $0, (%rdi)
@@ -139,18 +135,14 @@ define void @test_imm_store(%struct.S* nocapture noalias %s1, %struct.S* nocaptu
 ; CHECK-AVX512-NEXT:    movl %eax, 12(%rsi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %a = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 0
-  store i32 0, i32* %a, align 4
-  %a1 = getelementptr inbounds %struct.S, %struct.S* %s3, i64 0, i32 0
-  store i32 1, i32* %a1, align 4
-  %0 = bitcast %struct.S* %s2 to i8*
-  %1 = bitcast %struct.S* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 4, i1 false)
+  store i32 0, ptr %s1, align 4
+  store i32 1, ptr %s3, align 4
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 4, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_nondirect_br(%struct.S* nocapture noalias %s1, %struct.S* nocapture %s2, i32 %x, %struct.S* nocapture %s3, %struct.S* nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
+define void @test_nondirect_br(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_nondirect_br:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $18, %edx
@@ -239,8 +231,8 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %b = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 1
-  store i32 %x, i32* %b, align 4
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -248,22 +240,18 @@ if.end:                                           ; preds = %if.then, %entry
   br i1 %cmp1, label %if.then2, label %if.end3
 
 if.then2:                                         ; preds = %if.end
-  %d = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 3
-  store i32 %x2, i32* %d, align 4
+  %d = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 3
+  store i32 %x2, ptr %d, align 4
   br label %if.end3
 
 if.end3:                                          ; preds = %if.then2, %if.end
-  %0 = bitcast %struct.S* %s3 to i8*
-  %1 = bitcast %struct.S* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 4, i1 false)
-  %2 = bitcast %struct.S* %s2 to i8*
-  %3 = bitcast %struct.S* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 4, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_2preds_block(%struct.S* nocapture noalias %s1, %struct.S* nocapture %s2, i32 %x, %struct.S* nocapture %s3, %struct.S* nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
+define void @test_2preds_block(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_2preds_block:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %r9d, 12(%rdi)
@@ -338,29 +326,25 @@ define void @test_2preds_block(%struct.S* nocapture noalias %s1, %struct.S* noca
 ; CHECK-AVX512-NEXT:    movl %eax, 12(%rsi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %d = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 3
-  store i32 %x2, i32* %d, align 4
+  %d = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 3
+  store i32 %x2, ptr %d, align 4
   %cmp = icmp sgt i32 %x, 17
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %b = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 1
-  store i32 %x, i32* %b, align 4
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S* %s3 to i8*
-  %1 = bitcast %struct.S* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 4, i1 false)
-  %2 = bitcast %struct.S* %s2 to i8*
-  %3 = bitcast %struct.S* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 4, i1 false)
   ret void
 }
 %struct.S2 = type { i64, i64 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_type64(%struct.S2* nocapture noalias %s1, %struct.S2* nocapture %s2, i32 %x, %struct.S2* nocapture %s3, %struct.S2* nocapture readonly %s4) local_unnamed_addr #0 {
+define void @test_type64(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_type64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $18, %edx
@@ -428,23 +412,19 @@ entry:
 
 if.then:                                          ; preds = %entry
   %conv = sext i32 %x to i64
-  %b = getelementptr inbounds %struct.S2, %struct.S2* %s1, i64 0, i32 1
-  store i64 %conv, i64* %b, align 8
+  %b = getelementptr inbounds %struct.S2, ptr %s1, i64 0, i32 1
+  store i64 %conv, ptr %b, align 8
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S2* %s3 to i8*
-  %1 = bitcast %struct.S2* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 8, i1 false)
-  %2 = bitcast %struct.S2* %s2 to i8*
-  %3 = bitcast %struct.S2* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 8, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 16, i32 8, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 8, i1 false)
   ret void
 }
 %struct.S3 = type { i64, i8, i8, i16, i32 }
 
 ; Function Attrs: noinline nounwind uwtable
-define void @test_mixed_type(%struct.S3* nocapture noalias %s1, %struct.S3* nocapture %s2, i32 %x, %struct.S3* nocapture readnone %s3, %struct.S3* nocapture readnone %s4) local_unnamed_addr #0 {
+define void @test_mixed_type(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture readnone %s3, ptr nocapture readnone %s4) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_mixed_type:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $18, %edx
@@ -456,13 +436,13 @@ define void @test_mixed_type(%struct.S3* nocapture noalias %s1, %struct.S3* noca
 ; CHECK-NEXT:  .LBB5_2: # %if.end
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq %rax, (%rsi)
-; CHECK-NEXT:    movb 8(%rdi), %al
+; CHECK-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 8(%rsi)
 ; CHECK-NEXT:    movl 9(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, 9(%rsi)
 ; CHECK-NEXT:    movzwl 13(%rdi), %eax
 ; CHECK-NEXT:    movw %ax, 13(%rsi)
-; CHECK-NEXT:    movb 15(%rdi), %al
+; CHECK-NEXT:    movzbl 15(%rdi), %eax
 ; CHECK-NEXT:    movb %al, 15(%rsi)
 ; CHECK-NEXT:    retq
 ;
@@ -490,13 +470,13 @@ define void @test_mixed_type(%struct.S3* nocapture noalias %s1, %struct.S3* noca
 ; CHECK-AVX2-NEXT:  .LBB5_2: # %if.end
 ; CHECK-AVX2-NEXT:    movq (%rdi), %rax
 ; CHECK-AVX2-NEXT:    movq %rax, (%rsi)
-; CHECK-AVX2-NEXT:    movb 8(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 8(%rsi)
 ; CHECK-AVX2-NEXT:    movl 9(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movl %eax, 9(%rsi)
 ; CHECK-AVX2-NEXT:    movzwl 13(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movw %ax, 13(%rsi)
-; CHECK-AVX2-NEXT:    movb 15(%rdi), %al
+; CHECK-AVX2-NEXT:    movzbl 15(%rdi), %eax
 ; CHECK-AVX2-NEXT:    movb %al, 15(%rsi)
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -511,13 +491,13 @@ define void @test_mixed_type(%struct.S3* nocapture noalias %s1, %struct.S3* noca
 ; CHECK-AVX512-NEXT:  .LBB5_2: # %if.end
 ; CHECK-AVX512-NEXT:    movq (%rdi), %rax
 ; CHECK-AVX512-NEXT:    movq %rax, (%rsi)
-; CHECK-AVX512-NEXT:    movb 8(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl 8(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 8(%rsi)
 ; CHECK-AVX512-NEXT:    movl 9(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movl %eax, 9(%rsi)
 ; CHECK-AVX512-NEXT:    movzwl 13(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movw %ax, 13(%rsi)
-; CHECK-AVX512-NEXT:    movb 15(%rdi), %al
+; CHECK-AVX512-NEXT:    movzbl 15(%rdi), %eax
 ; CHECK-AVX512-NEXT:    movb %al, 15(%rsi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
@@ -526,23 +506,20 @@ entry:
 
 if.then:                                          ; preds = %entry
   %conv = sext i32 %x to i64
-  %a = getelementptr inbounds %struct.S3, %struct.S3* %s1, i64 0, i32 0
-  store i64 %conv, i64* %a, align 8
+  store i64 %conv, ptr %s1, align 8
   %conv1 = trunc i32 %x to i8
-  %b = getelementptr inbounds %struct.S3, %struct.S3* %s1, i64 0, i32 1
-  store i8 %conv1, i8* %b, align 8
+  %b = getelementptr inbounds %struct.S3, ptr %s1, i64 0, i32 1
+  store i8 %conv1, ptr %b, align 8
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S3* %s2 to i8*
-  %1 = bitcast %struct.S3* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 8, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 8, i1 false)
   ret void
 }
 %struct.S4 = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_multiple_blocks(%struct.S4* nocapture noalias %s1, %struct.S4* nocapture %s2) local_unnamed_addr #0 {
+define void @test_multiple_blocks(ptr nocapture noalias %s1, ptr nocapture %s2) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_multiple_blocks:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $0, 4(%rdi)
@@ -619,19 +596,17 @@ define void @test_multiple_blocks(%struct.S4* nocapture noalias %s1, %struct.S4*
 ; CHECK-AVX512-NEXT:    movq %rax, 24(%rsi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %b = getelementptr inbounds %struct.S4, %struct.S4* %s1, i64 0, i32 1
-  store i32 0, i32* %b, align 4
-  %b3 = getelementptr inbounds %struct.S4, %struct.S4* %s1, i64 0, i32 9
-  store i32 0, i32* %b3, align 4
-  %0 = bitcast %struct.S4* %s2 to i8*
-  %1 = bitcast %struct.S4* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 48, i32 4, i1 false)
+  %b = getelementptr inbounds %struct.S4, ptr %s1, i64 0, i32 1
+  store i32 0, ptr %b, align 4
+  %b3 = getelementptr inbounds %struct.S4, ptr %s1, i64 0, i32 9
+  store i32 0, ptr %b3, align 4
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 48, i32 4, i1 false)
   ret void
 }
 %struct.S5 = type { i16, i16, i16, i16, i16, i16, i16, i16 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_type16(%struct.S5* nocapture noalias %s1, %struct.S5* nocapture %s2, i32 %x, %struct.S5* nocapture %s3, %struct.S5* nocapture readonly %s4) local_unnamed_addr #0 {
+define void @test_type16(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_type16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $18, %edx
@@ -707,24 +682,20 @@ entry:
 
 if.then:                                          ; preds = %entry
   %conv = trunc i32 %x to i16
-  %b = getelementptr inbounds %struct.S5, %struct.S5* %s1, i64 0, i32 1
-  store i16 %conv, i16* %b, align 2
+  %b = getelementptr inbounds %struct.S5, ptr %s1, i64 0, i32 1
+  store i16 %conv, ptr %b, align 2
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S5* %s3 to i8*
-  %1 = bitcast %struct.S5* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 2, i1 false)
-  %2 = bitcast %struct.S5* %s2 to i8*
-  %3 = bitcast %struct.S5* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 2, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 16, i32 2, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 2, i1 false)
   ret void
 }
 
 %struct.S6 = type { [4 x i32], i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_stack(%struct.S6* noalias nocapture sret(%struct.S6) %agg.result, %struct.S6* byval(%struct.S6) nocapture readnone align 8 %s1, %struct.S6* byval(%struct.S6) nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
+define void @test_stack(ptr noalias nocapture sret(%struct.S6) %agg.result, ptr byval(%struct.S6) nocapture readnone align 8 %s1, ptr byval(%struct.S6) nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_stack:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -805,19 +776,16 @@ define void @test_stack(%struct.S6* noalias nocapture sret(%struct.S6) %agg.resu
 ; CHECK-AVX512-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %s6.sroa.0.0..sroa_cast1 = bitcast %struct.S6* %s2 to i8*
-  %s6.sroa.3.0..sroa_idx4 = getelementptr inbounds %struct.S6, %struct.S6* %s2, i64 0, i32 3
-  store i32 %x, i32* %s6.sroa.3.0..sroa_idx4, align 8
-  %0 = bitcast %struct.S6* %agg.result to i8*
-  %s6.sroa.0.0..sroa_cast2 = bitcast %struct.S6* %s1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* nonnull %s6.sroa.0.0..sroa_cast1, i64 32, i32 4, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %s6.sroa.0.0..sroa_cast2, i8* nonnull %s6.sroa.0.0..sroa_cast1, i64 32, i32 4, i1 false)
+  %s6.sroa.3.0..sroa_idx4 = getelementptr inbounds %struct.S6, ptr %s2, i64 0, i32 3
+  store i32 %x, ptr %s6.sroa.3.0..sroa_idx4, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %agg.result, ptr nonnull %s2, i64 32, i32 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull %s1, ptr nonnull %s2, i64 32, i32 4, i1 false)
 
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i32 %x, %struct.S* nocapture %s3, %struct.S* nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
+define void @test_limit_all(ptr noalias  %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_limit_all:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -1006,30 +974,26 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %d = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 3
-  store i32 %x2, i32* %d, align 4
-  tail call void @bar(%struct.S* %s1) #3
+  %d = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 3
+  store i32 %x2, ptr %d, align 4
+  tail call void @bar(ptr %s1) #3
   %cmp = icmp sgt i32 %x, 17
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %b = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 1
-  store i32 %x, i32* %b, align 4
-  tail call void @bar(%struct.S* nonnull %s1) #3
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  tail call void @bar(ptr nonnull %s1) #3
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S* %s3 to i8*
-  %1 = bitcast %struct.S* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 4, i1 false)
-  %2 = bitcast %struct.S* %s2 to i8*
-  %3 = bitcast %struct.S* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 4, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s2, i32 %x, %struct.S* nocapture %s3, %struct.S* nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
+define void @test_limit_one_pred(ptr noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_limit_one_pred:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %r15
@@ -1218,35 +1182,31 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %d = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 3
-  store i32 %x2, i32* %d, align 4
+  %d = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 3
+  store i32 %x2, ptr %d, align 4
   %cmp = icmp sgt i32 %x, 17
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %b = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 1
-  store i32 %x, i32* %b, align 4
-  tail call void @bar(%struct.S* nonnull %s1) #3
+  %b = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 1
+  store i32 %x, ptr %b, align 4
+  tail call void @bar(ptr nonnull %s1) #3
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S* %s3 to i8*
-  %1 = bitcast %struct.S* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 4, i1 false)
-  %2 = bitcast %struct.S* %s2 to i8*
-  %3 = bitcast %struct.S* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 16, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 16, i32 4, i1 false)
   ret void
 }
 
 
-declare void @bar(%struct.S*) local_unnamed_addr #1
+declare void @bar(ptr) local_unnamed_addr #1
 
 
 %struct.S7 = type { float, float, float , float, float, float, float, float }
 
 ; Function Attrs: nounwind uwtable
-define void @test_conditional_block_float(%struct.S7* nocapture noalias %s1, %struct.S7* nocapture %s2, i32 %x, %struct.S7* nocapture %s3, %struct.S7* nocapture readonly %s4, float %y) local_unnamed_addr #0 {
+define void @test_conditional_block_float(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4, float %y) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_conditional_block_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $18, %edx
@@ -1329,24 +1289,20 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %b = getelementptr inbounds %struct.S7, %struct.S7* %s1, i64 0, i32 1
-  store float 1.0, float* %b, align 4
+  %b = getelementptr inbounds %struct.S7, ptr %s1, i64 0, i32 1
+  store float 1.0, ptr %b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S7* %s3 to i8*
-  %1 = bitcast %struct.S7* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 32, i32 4, i1 false)
-  %2 = bitcast %struct.S7* %s2 to i8*
-  %3 = bitcast %struct.S7* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 32, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 32, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 32, i32 4, i1 false)
   ret void
 }
 
 %struct.S8 = type { i64, i64, i64, i64, i64, i64 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_conditional_block_ymm(%struct.S8* nocapture noalias %s1, %struct.S8* nocapture %s2, i32 %x, %struct.S8* nocapture %s3, %struct.S8* nocapture readonly %s4) local_unnamed_addr #0 {
+define void @test_conditional_block_ymm(ptr nocapture noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_conditional_block_ymm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $18, %edx
@@ -1423,21 +1379,17 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %b = getelementptr inbounds %struct.S8, %struct.S8* %s1, i64 0, i32 1
-  store i64 1, i64* %b, align 4
+  %b = getelementptr inbounds %struct.S8, ptr %s1, i64 0, i32 1
+  store i64 1, ptr %b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = bitcast %struct.S8* %s3 to i8*
-  %1 = bitcast %struct.S8* %s4 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 32, i32 4, i1 false)
-  %2 = bitcast %struct.S8* %s2 to i8*
-  %3 = bitcast %struct.S8* %s1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 32, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s3, ptr %s4, i64 32, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %s2, ptr %s1, i64 32, i32 4, i1 false)
   ret void
 }
 
-define dso_local void @test_alias(i8* nocapture %A, i32 %x) local_unnamed_addr #0 {
+define dso_local void @test_alias(ptr nocapture %A, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_alias:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, (%rdi)
@@ -1466,15 +1418,14 @@ define dso_local void @test_alias(i8* nocapture %A, i32 %x) local_unnamed_addr #
 ; CHECK-AVX512-NEXT:    vmovups %xmm0, 4(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %a = bitcast i8* %A to i32*
-  store i32 %x, i32* %a, align 4
-  %add.ptr = getelementptr inbounds i8, i8* %A, i64 4
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %add.ptr, i8* align 4 %A, i64 16, i32 4, i1 false)
+  store i32 %x, ptr %A, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %A, i64 4
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %add.ptr, ptr align 4 %A, i64 16, i32 4, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @test_noalias(i8* nocapture %A, i32 %x) local_unnamed_addr #0 {
+define dso_local void @test_noalias(ptr nocapture %A, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_noalias:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, (%rdi)
@@ -1515,14 +1466,13 @@ define dso_local void @test_noalias(i8* nocapture %A, i32 %x) local_unnamed_addr
 ; CHECK-AVX512-NEXT:    movl %eax, 32(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %a = bitcast i8* %A to i32*
-  store i32 %x, i32* %a, align 4
-  %add.ptr = getelementptr inbounds i8, i8* %A, i64 20
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %add.ptr, i8* align 4 %A, i64 16, i32 4, i1 false)
+  store i32 %x, ptr %A, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %A, i64 20
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %add.ptr, ptr align 4 %A, i64 16, i32 4, i1 false)
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32, i1) #1
 
 attributes #0 = { nounwind uwtable }

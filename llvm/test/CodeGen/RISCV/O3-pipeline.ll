@@ -26,6 +26,7 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       RISCV gather/scatter lowering
+; CHECK-NEXT:       RISCV CodeGenPrepare
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Canonicalize natural loops

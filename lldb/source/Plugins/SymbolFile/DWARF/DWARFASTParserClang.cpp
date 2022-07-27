@@ -614,7 +614,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     resolve_state = Type::ResolveState::Full;
     clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
         attrs.name.GetStringRef(), attrs.encoding,
-        attrs.byte_size.getValueOr(0) * 8);
+        attrs.byte_size.value_or(0) * 8);
     break;
 
   case DW_TAG_pointer_type:
@@ -849,7 +849,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
       bool is_signed = false;
       enumerator_clang_type.IsIntegerType(is_signed);
       ParseChildEnumerators(clang_type, is_signed,
-                            type_sp->GetByteSize(nullptr).getValueOr(0), die);
+                            type_sp->GetByteSize(nullptr).value_or(0), die);
     }
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   } else {
@@ -1297,7 +1297,7 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
     attrs.bit_stride = array_info->bit_stride;
   }
   if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
-    attrs.byte_stride = element_type->GetByteSize(nullptr).getValueOr(0);
+    attrs.byte_stride = element_type->GetByteSize(nullptr).value_or(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
   RequireCompleteType(array_element_type);
 
@@ -1532,7 +1532,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     }
 
     if (dwarf->GetUniqueDWARFASTTypeMap().Find(
-            unique_typename, die, unique_decl, attrs.byte_size.getValueOr(-1),
+            unique_typename, die, unique_decl, attrs.byte_size.value_or(-1),
             *unique_ast_entry_up)) {
       type_sp = unique_ast_entry_up->m_type_sp;
       if (type_sp) {
@@ -1757,7 +1757,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   unique_ast_entry_up->m_type_sp = type_sp;
   unique_ast_entry_up->m_die = die;
   unique_ast_entry_up->m_declaration = unique_decl;
-  unique_ast_entry_up->m_byte_size = attrs.byte_size.getValueOr(0);
+  unique_ast_entry_up->m_byte_size = attrs.byte_size.value_or(0);
   dwarf->GetUniqueDWARFASTTypeMap().Insert(unique_typename,
                                            *unique_ast_entry_up);
 
@@ -2114,7 +2114,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   if (!layout_info.field_offsets.empty() || !layout_info.base_offsets.empty() ||
       !layout_info.vbase_offsets.empty()) {
     if (type)
-      layout_info.bit_size = type->GetByteSize(nullptr).getValueOr(0) * 8;
+      layout_info.bit_size = type->GetByteSize(nullptr).value_or(0) * 8;
     if (layout_info.bit_size == 0)
       layout_info.bit_size =
           die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
@@ -2136,7 +2136,7 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
       bool is_signed = false;
       clang_type.IsIntegerType(is_signed);
       ParseChildEnumerators(clang_type, is_signed,
-                            type->GetByteSize(nullptr).getValueOr(0), die);
+                            type->GetByteSize(nullptr).value_or(0), die);
     }
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   }
@@ -2292,7 +2292,7 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   int call_file = 0;
   int call_line = 0;
   int call_column = 0;
-  DWARFExpression frame_base;
+  DWARFExpressionList frame_base;
 
   const dw_tag_t tag = die.Tag();
 
@@ -2390,6 +2390,7 @@ struct MemberAttributes {
   uint64_t data_bit_offset = UINT64_MAX;
   AccessType accessibility = eAccessNone;
   llvm::Optional<uint64_t> byte_size;
+  llvm::Optional<DWARFFormValue> const_value_form;
   DWARFFormValue encoding_form;
   /// Indicates the byte offset of the word from the base address of the
   /// structure.
@@ -2435,6 +2436,9 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
         break;
       case DW_AT_byte_size:
         byte_size = form_value.Unsigned();
+        break;
+      case DW_AT_const_value:
+        const_value_form = form_value;
         break;
       case DW_AT_data_bit_offset:
         data_bit_offset = form_value.Unsigned();
@@ -2488,7 +2492,7 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
   // are not sane, remove them. If we don't do this then we will end up
   // with a crash if we try to use this type in an expression when clang
   // becomes unhappy with its recycled debug info.
-  if (byte_size.getValueOr(0) == 0 && bit_offset < 0) {
+  if (byte_size.value_or(0) == 0 && bit_offset < 0) {
     bit_size = 0;
     bit_offset = 0;
   }
@@ -2587,12 +2591,65 @@ void DWARFASTParserClang::ParseObjCProperty(
       propAttrs.prop_getter_name, propAttrs.prop_attributes, &metadata));
 }
 
+llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
+    const CompilerType &int_type, const DWARFFormValue &form_value) const {
+  clang::QualType qt = ClangUtil::GetQualType(int_type);
+  assert(qt->isIntegralOrEnumerationType());
+  TypeSystemClang &ts = *llvm::cast<TypeSystemClang>(int_type.GetTypeSystem());
+  clang::ASTContext &ast = ts.getASTContext();
+
+  const unsigned type_bits = ast.getIntWidth(qt);
+  const bool is_unsigned = qt->isUnsignedIntegerType();
+
+  // The maximum int size supported at the moment by this function. Limited
+  // by the uint64_t return type of DWARFFormValue::Signed/Unsigned.
+  constexpr std::size_t max_bit_size = 64;
+
+  // For values bigger than 64 bit (e.g. __int128_t values),
+  // DWARFFormValue's Signed/Unsigned functions will return wrong results so
+  // emit an error for now.
+  if (type_bits > max_bit_size) {
+    auto msg = llvm::formatv("Can only parse integers with up to {0} bits, but "
+                             "given integer has {1} bits.",
+                             max_bit_size, type_bits);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), msg.str());
+  }
+
+  // Construct an APInt with the maximum bit size and the given integer.
+  llvm::APInt result(max_bit_size, form_value.Unsigned(), !is_unsigned);
+
+  // Calculate how many bits are required to represent the input value.
+  // For unsigned types, take the number of active bits in the APInt.
+  // For signed types, ask APInt how many bits are required to represent the
+  // signed integer.
+  const unsigned required_bits =
+      is_unsigned ? result.getActiveBits() : result.getMinSignedBits();
+
+  // If the input value doesn't fit into the integer type, return an error.
+  if (required_bits > type_bits) {
+    std::string value_as_str = is_unsigned
+                                   ? std::to_string(form_value.Unsigned())
+                                   : std::to_string(form_value.Signed());
+    auto msg = llvm::formatv("Can't store {0} value {1} in integer with {2} "
+                             "bits.",
+                             (is_unsigned ? "unsigned" : "signed"),
+                             value_as_str, type_bits);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), msg.str());
+  }
+
+  // Trim the result to the bit width our the int type.
+  if (result.getBitWidth() > type_bits)
+    result = result.trunc(type_bits);
+  return result;
+}
+
 void DWARFASTParserClang::ParseSingleMember(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
     lldb::AccessType default_accessibility,
     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
     FieldInfo &last_field_info) {
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   // This function can only parse DW_TAG_member.
   assert(die.Tag() == DW_TAG_member);
 
@@ -2623,9 +2680,27 @@ void DWARFASTParserClang::ParseSingleMember(
     if (var_type) {
       if (attrs.accessibility == eAccessNone)
         attrs.accessibility = eAccessPublic;
-      TypeSystemClang::AddVariableToRecordType(
-          class_clang_type, attrs.name, var_type->GetForwardCompilerType(),
-          attrs.accessibility);
+      CompilerType ct = var_type->GetForwardCompilerType();
+      clang::VarDecl *v = TypeSystemClang::AddVariableToRecordType(
+          class_clang_type, attrs.name, ct, attrs.accessibility);
+      if (!v) {
+        LLDB_LOG(log, "Failed to add variable to the record type");
+        return;
+      }
+
+      bool unused;
+      // TODO: Support float/double static members as well.
+      if (!attrs.const_value_form || !ct.IsIntegerOrEnumerationType(unused))
+        return;
+      llvm::Expected<llvm::APInt> const_value_or_err =
+          ExtractIntFromFormValue(ct, *attrs.const_value_form);
+      if (!const_value_or_err) {
+        LLDB_LOG_ERROR(log, const_value_or_err.takeError(),
+                       "Failed to add const value to variable {1}: {0}",
+                       v->getQualifiedNameAsString());
+        return;
+      }
+      TypeSystemClang::SetIntegerInitializerForVariable(v, *const_value_or_err);
     }
     return;
   }
@@ -2669,7 +2744,7 @@ void DWARFASTParserClang::ParseSingleMember(
 
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       if (objfile->GetByteOrder() == eByteOrderLittle) {
-        this_field_info.bit_offset += attrs.byte_size.getValueOr(0) * 8;
+        this_field_info.bit_offset += attrs.byte_size.value_or(0) * 8;
         this_field_info.bit_offset -= (attrs.bit_offset + attrs.bit_size);
       } else {
         this_field_info.bit_offset += attrs.bit_offset;

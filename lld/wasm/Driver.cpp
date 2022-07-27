@@ -234,7 +234,7 @@ std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef mb) {
 
 void LinkerDriver::addFile(StringRef path) {
   Optional<MemoryBufferRef> buffer = readFile(path);
-  if (!buffer.hasValue())
+  if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
 
@@ -581,7 +581,7 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
 
 static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   llvm::wasm::WasmGlobal wasmGlobal;
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   wasmGlobal.Type = {uint8_t(is64 ? WASM_TYPE_I64 : WASM_TYPE_I32), isMutable};
   wasmGlobal.InitExpr = intConst(0, is64);
   wasmGlobal.SymbolName = name;
@@ -616,11 +616,11 @@ static void createSyntheticSymbols() {
       "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
-    bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
 
   if (config->isPic) {
     WasmSym::stackPointer =
-        createUndefinedGlobal("__stack_pointer", config->is64.getValueOr(false)
+        createUndefinedGlobal("__stack_pointer", config->is64.value_or(false)
                                                      ? &mutableGlobalTypeI64
                                                      : &mutableGlobalTypeI32);
     // For PIC code, we import two global variables (__memory_base and
@@ -656,6 +656,17 @@ static void createSyntheticSymbols() {
             is64 ? i64ArgSignature : i32ArgSignature,
             "__wasm_init_tls"));
   }
+
+  if (config->isPic ||
+      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
+    // For PIC code, or when dynamically importing addresses, we create
+    // synthetic functions that apply relocations.  These get called from
+    // __wasm_call_ctors before the user-level constructors.
+    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
+        "__wasm_apply_data_relocs",
+        WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
+        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
+  }
 }
 
 static void createOptionalSymbols() {
@@ -672,7 +683,7 @@ static void createOptionalSymbols() {
     WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
-    if (config->is64.getValueOr(false))
+    if (config->is64.value_or(false))
       WasmSym::definedTableBase32 =
           symtab->addOptionalDataSymbol("__table_base32");
   }

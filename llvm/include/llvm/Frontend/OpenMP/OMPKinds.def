@@ -37,6 +37,7 @@ __OMP_TYPE(Int8Ptr)
 __OMP_TYPE(Int16Ptr)
 __OMP_TYPE(Int32Ptr)
 __OMP_TYPE(Int64Ptr)
+__OMP_TYPE(Double)
 
 OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
 
@@ -88,6 +89,8 @@ __OMP_ARRAY_TYPE(KmpCriticalName, Int32, 8)
 __OMP_STRUCT_TYPE(Ident, ident_t, Int32, Int32, Int32, Int32, Int8Ptr)
 __OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, Int8Ptr, Int8Ptr, SizeTy,
                   Int32, Int32)
+__OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, Int32, Int32, VoidPtrPtr,
+                  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, Int64)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, Int8Ptr)
 
 #undef __OMP_STRUCT_TYPE
@@ -234,6 +237,7 @@ __OMP_RTL(omp_get_place_proc_ids, false, Void, Int32, Int32Ptr)
 __OMP_RTL(omp_get_place_num, false, Int32, )
 __OMP_RTL(omp_get_partition_num_places, false, Int32, )
 __OMP_RTL(omp_get_partition_place_nums, false, Void, Int32Ptr)
+__OMP_RTL(omp_get_wtime, false, Double,)
 
 __OMP_RTL(omp_set_num_threads, false, Void, Int32)
 __OMP_RTL(omp_set_dynamic, false, Void, Int32)
@@ -412,6 +416,10 @@ __OMP_RTL(__tgt_target_teams_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int
 __OMP_RTL(__tgt_target_teams_nowait_mapper, false, Int32, IdentPtr, Int64,
           VoidPtr, Int32, VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr,
           VoidPtrPtr, VoidPtrPtr, Int32, Int32, Int32, VoidPtr, Int32, VoidPtr)
+__OMP_RTL(__tgt_target_kernel, false, Int32, IdentPtr, Int64, Int32, Int32,
+          VoidPtr, KernelArgsPtr)
+__OMP_RTL(__tgt_target_kernel_nowait, false, Int32, IdentPtr, Int64, Int32,
+          Int32, VoidPtr, KernelArgsPtr, Int32, VoidPtr, Int32, VoidPtr)
 __OMP_RTL(__tgt_register_requires, false, Void, Int64)
 __OMP_RTL(__tgt_target_data_begin_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
@@ -675,6 +683,7 @@ __OMP_RTL_ATTRS(omp_get_partition_num_places, GetterAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_partition_place_nums, GetterAttrs, AttributeSet(),
                 ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_wtime, GetterAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(omp_set_num_threads, SetterAttrs, AttributeSet(), ParamAttrs())
 __OMP_RTL_ATTRS(omp_set_dynamic, SetterAttrs, AttributeSet(), ParamAttrs())
@@ -913,7 +922,7 @@ __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
 
 __OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
   EnumAttr(NoUnwind),
-  EnumAttr(NoSync), 
+  EnumAttr(NoSync),
   AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
                 ParamAttrs(NoCaptureAttrs))
@@ -936,6 +945,10 @@ __OMP_RTL_ATTRS(__tgt_target_nowait_mapper, ForkAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__tgt_target_teams_mapper, ForkAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__tgt_target_teams_nowait_mapper, ForkAttrs, AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__tgt_target_kernel, ForkAttrs, AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__tgt_target_kernel_nowait, ForkAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__tgt_register_requires, ForkAttrs, AttributeSet(),
                 ParamAttrs())
@@ -1160,6 +1173,7 @@ __OMP_TRAIT_PROPERTY(implementation, extension, match_any)
 __OMP_TRAIT_PROPERTY(implementation, extension, match_none)
 __OMP_TRAIT_PROPERTY(implementation, extension, disable_implicit_base)
 __OMP_TRAIT_PROPERTY(implementation, extension, allow_templates)
+__OMP_TRAIT_PROPERTY(implementation, extension, bind_to_declaration)
 
 __OMP_TRAIT_SET(user)
 

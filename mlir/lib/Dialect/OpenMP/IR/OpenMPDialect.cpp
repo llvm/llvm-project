@@ -184,7 +184,7 @@ verifyScheduleModifiers(OpAsmParser &parser,
     // Translate the string. If it has no value, then it was not a valid
     // modifier!
     auto symbol = symbolizeScheduleModifier(mod);
-    if (!symbol.hasValue())
+    if (!symbol)
       return parser.emitError(parser.getNameLoc())
              << " unknown modifier type: " << mod;
   }
@@ -523,11 +523,11 @@ LogicalResult SingleOp::verify() {
 /// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` inclusive? steps
 /// steps := `step` `(`ssa-id-list`)`
 ParseResult
-parseWsLoopControl(OpAsmParser &parser, Region &region,
-                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerBound,
-                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperBound,
-                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
-                   SmallVectorImpl<Type> &loopVarTypes, UnitAttr &inclusive) {
+parseLoopControl(OpAsmParser &parser, Region &region,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerBound,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperBound,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
+                 SmallVectorImpl<Type> &loopVarTypes, UnitAttr &inclusive) {
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::Argument> ivs;
   Type loopVarType;
@@ -557,10 +557,10 @@ parseWsLoopControl(OpAsmParser &parser, Region &region,
   return parser.parseRegion(region, ivs);
 }
 
-void printWsLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
-                        ValueRange lowerBound, ValueRange upperBound,
-                        ValueRange steps, TypeRange loopVarTypes,
-                        UnitAttr inclusive) {
+void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
+                      ValueRange lowerBound, ValueRange upperBound,
+                      ValueRange steps, TypeRange loopVarTypes,
+                      UnitAttr inclusive) {
   auto args = region.front().getArguments();
   p << " (" << args << ") : " << args[0].getType() << " = (" << lowerBound
     << ") to (" << upperBound << ") ";
@@ -568,62 +568,6 @@ void printWsLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
     p << "inclusive ";
   p << "step (" << steps << ") ";
   p.printRegion(region, /*printEntryBlockArgs=*/false);
-}
-
-//===----------------------------------------------------------------------===//
-// SimdLoopOp
-//===----------------------------------------------------------------------===//
-/// Parses an OpenMP Simd construct [2.9.3.1]
-///
-/// simdloop ::= `omp.simdloop` loop-control clause-list
-/// loop-control ::= `(` ssa-id-list `)` `:` type `=`  loop-bounds
-/// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` steps
-/// steps := `step` `(`ssa-id-list`)`
-/// clause-list ::= clause clause-list | empty
-/// clause ::= TODO
-ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::Argument> ivs;
-  Type loopVarType;
-  SmallVector<OpAsmParser::UnresolvedOperand> lower, upper, steps;
-  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
-      parser.parseColonType(loopVarType) ||
-      // Parse loop bounds.
-      parser.parseEqual() ||
-      parser.parseOperandList(lower, ivs.size(),
-                              OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(lower, loopVarType, result.operands) ||
-      parser.parseKeyword("to") ||
-      parser.parseOperandList(upper, ivs.size(),
-                              OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(upper, loopVarType, result.operands) ||
-      // Parse step values.
-      parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, ivs.size(),
-                              OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(steps, loopVarType, result.operands))
-    return failure();
-
-  int numIVs = static_cast<int>(ivs.size());
-  SmallVector<int> segments{numIVs, numIVs, numIVs};
-  // TODO: Add parseClauses() when we support clauses
-  result.addAttribute("operand_segment_sizes",
-                      parser.getBuilder().getI32VectorAttr(segments));
-
-  // Now parse the body.
-  Region *body = result.addRegion();
-  for (auto &iv : ivs)
-    iv.type = loopVarType;
-  return parser.parseRegion(*body, ivs);
-}
-
-void SimdLoopOp::print(OpAsmPrinter &p) {
-  auto args = getRegion().front().getArguments();
-  p << " (" << args << ") : " << args[0].getType() << " = (" << lowerBound()
-    << ") to (" << upperBound() << ") ";
-  p << "step (" << step() << ") ";
-
-  p.printRegion(region(), /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -729,6 +673,51 @@ LogicalResult TaskOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TaskGroupOp
+//===----------------------------------------------------------------------===//
+LogicalResult TaskGroupOp::verify() {
+  return verifyReductionVarList(*this, task_reductions(),
+                                task_reduction_vars());
+}
+
+//===----------------------------------------------------------------------===//
+// TaskLoopOp
+//===----------------------------------------------------------------------===//
+SmallVector<Value> TaskLoopOp::getReductionVars() {
+  SmallVector<Value> all_reduction_nvars(in_reduction_vars().begin(),
+                                         in_reduction_vars().end());
+  all_reduction_nvars.insert(all_reduction_nvars.end(),
+                             reduction_vars().begin(), reduction_vars().end());
+  return all_reduction_nvars;
+}
+
+LogicalResult TaskLoopOp::verify() {
+  if (allocate_vars().size() != allocators_vars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+  if (failed(verifyReductionVarList(*this, reductions(), reduction_vars())) ||
+      failed(
+          verifyReductionVarList(*this, in_reductions(), in_reduction_vars())))
+    return failure();
+
+  if (reduction_vars().size() > 0 && nogroup())
+    return emitError("if a reduction clause is present on the taskloop "
+                     "directive, the nogroup clause must not be specified");
+  for (auto var : reduction_vars()) {
+    if (llvm::is_contained(in_reduction_vars(), var))
+      return emitError("the same list item cannot appear in both a reduction "
+                       "and an in_reduction clause");
+  }
+
+  if (grain_size() && num_tasks()) {
+    return emitError(
+        "the grainsize clause and num_tasks clause are mutually exclusive and "
+        "may not appear on the same taskloop directive");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // WsLoopOp
 //===----------------------------------------------------------------------===//
 
@@ -740,8 +729,8 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
         /*linear_step_vars=*/ValueRange(), /*reduction_vars=*/ValueRange(),
         /*reductions=*/nullptr, /*schedule_val=*/nullptr,
         /*schedule_chunk_var=*/nullptr, /*schedule_modifier=*/nullptr,
-        /*simd_modifier=*/false, /*collapse_val=*/nullptr, /*nowait=*/false,
-        /*ordered_val=*/nullptr, /*order_val=*/nullptr, /*inclusive=*/false);
+        /*simd_modifier=*/false, /*nowait=*/false, /*ordered_val=*/nullptr,
+        /*order_val=*/nullptr, /*inclusive=*/false);
   state.addAttributes(attributes);
 }
 
@@ -783,8 +772,7 @@ LogicalResult OrderedOp::verify() {
                          << "nested inside a worksharing-loop with ordered "
                          << "clause with parameter present";
 
-  if (container.ordered_valAttr().getInt() !=
-      (int64_t)num_loops_val().getValue())
+  if (container.ordered_valAttr().getInt() != (int64_t)*num_loops_val())
     return emitOpError() << "number of variables in depend clause does not "
                          << "match number of iteration variables in the "
                          << "doacross loop";

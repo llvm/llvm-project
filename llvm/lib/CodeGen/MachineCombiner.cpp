@@ -92,6 +92,7 @@ private:
   bool doSubstitute(unsigned NewSize, unsigned OldSize, bool OptForSize);
   bool combineInstructions(MachineBasicBlock *);
   MachineInstr *getOperandDef(const MachineOperand &MO);
+  bool isTransientMI(const MachineInstr *MI);
   unsigned getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
                     MachineTraceMetrics::Trace BlockTrace);
@@ -158,6 +159,43 @@ MachineInstr *MachineCombiner::getOperandDef(const MachineOperand &MO) {
   return DefInstr;
 }
 
+/// Return true if MI is unlikely to generate an actual target instruction.
+bool MachineCombiner::isTransientMI(const MachineInstr *MI) {
+  if (!MI->isCopy())
+    return MI->isTransient();
+
+  // If MI is a COPY, check if its src and dst registers can be coalesced.
+  Register Dst = MI->getOperand(0).getReg();
+  Register Src = MI->getOperand(1).getReg();
+
+  if (!MI->isFullCopy()) {
+    // If src RC contains super registers of dst RC, it can also be coalesced.
+    if (MI->getOperand(0).getSubReg() || Src.isPhysical() || Dst.isPhysical())
+      return false;
+
+    auto SrcSub = MI->getOperand(1).getSubReg();
+    auto SrcRC = MRI->getRegClass(Src);
+    auto DstRC = MRI->getRegClass(Dst);
+    return TRI->getMatchingSuperRegClass(SrcRC, DstRC, SrcSub) != nullptr;
+  }
+
+  if (Src.isPhysical() && Dst.isPhysical())
+    return Src == Dst;
+
+  if (Src.isVirtual() && Dst.isVirtual()) {
+    auto SrcRC = MRI->getRegClass(Src);
+    auto DstRC = MRI->getRegClass(Dst);
+    return SrcRC->hasSuperClassEq(DstRC) || SrcRC->hasSubClassEq(DstRC);
+  }
+
+  if (Src.isVirtual())
+    std::swap(Src, Dst);
+
+  // Now Src is physical register, Dst is virtual register.
+  auto DstRC = MRI->getRegClass(Dst);
+  return DstRC->contains(Src);
+}
+
 /// Computes depth of instructions in vector \InsInstr.
 ///
 /// \param InsInstrs is a vector of machine instructions
@@ -204,9 +242,10 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
         MachineInstr *DefInstr = getOperandDef(MO);
         if (DefInstr) {
           DepthOp = BlockTrace.getInstrCycles(*DefInstr).Depth;
-          LatencyOp = TSchedModel.computeOperandLatency(
-              DefInstr, DefInstr->findRegisterDefOperandIdx(MO.getReg()),
-              InstrPtr, InstrPtr->findRegisterUseOperandIdx(MO.getReg()));
+          if (!isTransientMI(DefInstr))
+            LatencyOp = TSchedModel.computeOperandLatency(
+                DefInstr, DefInstr->findRegisterDefOperandIdx(MO.getReg()),
+                InstrPtr, InstrPtr->findRegisterUseOperandIdx(MO.getReg()));
         }
       }
       IDepth = std::max(IDepth, DepthOp + LatencyOp);
@@ -277,6 +316,8 @@ static CombinerObjective getCombinerObjective(MachineCombinerPattern P) {
   case MachineCombinerPattern::REASSOC_XA_YB:
   case MachineCombinerPattern::REASSOC_XY_AMM_BMM:
   case MachineCombinerPattern::REASSOC_XMM_AMM_BMM:
+  case MachineCombinerPattern::SUBADD_OP1:
+  case MachineCombinerPattern::SUBADD_OP2:
     return CombinerObjective::MustReduceDepth;
   case MachineCombinerPattern::REASSOC_XY_BCA:
   case MachineCombinerPattern::REASSOC_XY_BAC:
@@ -303,7 +344,7 @@ std::pair<unsigned, unsigned> MachineCombiner::getLatenciesForInstrSequences(
   NewRootLatency += getLatency(&MI, NewRoot, BlockTrace);
 
   unsigned RootLatency = 0;
-  for (auto I : DelInstrs)
+  for (auto *I : DelInstrs)
     RootLatency += TSchedModel.computeInstrLatency(I);
 
   return {NewRootLatency, RootLatency};
@@ -486,7 +527,7 @@ static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
   for (auto *InstrPtr : DelInstrs) {
     InstrPtr->eraseFromParent();
     // Erase all LiveRegs defined by the removed instruction
-    for (auto I = RegUnits.begin(); I != RegUnits.end(); ) {
+    for (auto *I = RegUnits.begin(); I != RegUnits.end();) {
       if (I->MI == InstrPtr)
         I = RegUnits.erase(I);
       else

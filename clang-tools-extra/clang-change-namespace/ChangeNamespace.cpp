@@ -308,14 +308,14 @@ bool conflictInNamespace(const ASTContext &AST, llvm::StringRef QualifiedSymbol,
     // symbol name would have been shortened.
     const NamedDecl *Scope =
         LookupDecl(*AST.getTranslationUnitDecl(), NsSplitted.front());
-    for (auto I = NsSplitted.begin() + 1, E = NsSplitted.end(); I != E; ++I) {
-      if (*I == SymbolTopNs) // Handles "::ny" in "::nx::ny" case.
+    for (const auto &I : llvm::drop_begin(NsSplitted)) {
+      if (I == SymbolTopNs) // Handles "::ny" in "::nx::ny" case.
         return true;
       // Handles "::util" and "::nx::util" conflicts.
       if (Scope) {
         if (LookupDecl(*Scope, SymbolTopNs))
           return true;
-        Scope = LookupDecl(*Scope, *I);
+        Scope = LookupDecl(*Scope, I);
       }
     }
     if (Scope && LookupDecl(*Scope, SymbolTopNs))
@@ -567,14 +567,12 @@ void ChangeNamespaceTool::run(
     if (Loc.getTypeLocClass() == TypeLoc::Elaborated) {
       NestedNameSpecifierLoc NestedNameSpecifier =
           Loc.castAs<ElaboratedTypeLoc>().getQualifierLoc();
-      // This happens for friend declaration of a base class with injected class
-      // name.
-      if (!NestedNameSpecifier.getNestedNameSpecifier())
-        return;
-      const Type *SpecifierType =
-          NestedNameSpecifier.getNestedNameSpecifier()->getAsType();
-      if (SpecifierType && SpecifierType->isRecordType())
-        return;
+      // FIXME: avoid changing injected class names.
+      if (auto *NNS = NestedNameSpecifier.getNestedNameSpecifier()) {
+        const Type *SpecifierType = NNS->getAsType();
+        if (SpecifierType && SpecifierType->isRecordType())
+          return;
+      }
     }
     fixTypeLoc(Result, startLocationForType(Loc), endLocationForType(Loc), Loc);
   } else if (const auto *VarRef =

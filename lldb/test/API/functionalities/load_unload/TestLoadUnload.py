@@ -201,7 +201,6 @@ class LoadUnloadTestCase(TestBase):
         hostoslist=["windows"],
         triple='.*-android')
     @expectedFailureAll(oslist=["windows"]) # process load not implemented
-    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_lldb_process_load_and_unload_commands(self):
         self.setSvr4Support(False)
         self.run_lldb_process_load_and_unload_commands()
@@ -295,7 +294,6 @@ class LoadUnloadTestCase(TestBase):
         self.runCmd("process continue")
 
     @expectedFailureAll(oslist=["windows"]) # breakpoint not hit
-    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_load_unload(self):
         self.setSvr4Support(False)
         self.run_load_unload()
@@ -379,6 +377,7 @@ class LoadUnloadTestCase(TestBase):
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"], triple=no_match('aarch64-.*-android'))
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_static_init_during_load(self):
         """Test that we can set breakpoints correctly in static initializers"""
         self.copy_shlibs_to_remote()

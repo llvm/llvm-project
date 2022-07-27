@@ -81,23 +81,6 @@ private:
   linalg::LinalgPaddingOptions options;
 };
 
-/// Represent one application of createLinalgStrategyPromotePass.
-struct Promote : public Transformation {
-  Promote(StringRef name, linalg::LinalgPromotionOptions options,
-          LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(std::move(f)), opName(name),
-        options(std::move(options)) {}
-
-  void addToPassPipeline(OpPassManager &pm,
-                         LinalgTransformationFilter m) const override {
-    pm.addPass(createLinalgStrategyPromotePass(opName, options, m));
-  }
-
-private:
-  std::string opName;
-  linalg::LinalgPromotionOptions options;
-};
-
 /// Represent one application of createLinalgStrategyGeneralizePass.
 struct Generalize : public Transformation {
   explicit Generalize(StringRef name,
@@ -252,22 +235,6 @@ struct CodegenStrategy {
   padIf(bool b, StringRef opName, linalg::LinalgPaddingOptions options,
         LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? pad(opName, std::move(options), std::move(f)) : *this;
-  }
-  /// Append a pattern to add a level of promotion for `LinalgOpType` with
-  /// promotion `options`.
-  CodegenStrategy &
-  promote(StringRef opName, const linalg::LinalgPromotionOptions &options,
-          const LinalgTransformationFilter::FilterFunction &f = nullptr) {
-    transformationSequence.emplace_back(
-        std::make_unique<Promote>(opName, options, f));
-    return *this;
-  }
-  /// Conditionally append a pattern to add a level of promotion for
-  /// `LinalgOpType` with promotion `options`.
-  CodegenStrategy &
-  promoteIf(bool b, StringRef opName, linalg::LinalgPromotionOptions options,
-            LinalgTransformationFilter::FilterFunction f = nullptr) {
-    return b ? promote(opName, std::move(options), std::move(f)) : *this;
   }
   /// Append a pattern to generalize named operations.
   CodegenStrategy &

@@ -73,7 +73,7 @@ define <32 x i32> @test_large_vec_vaarg(i32 %n, ...) {
 ; CHECK-NEXT:    movq %rcx, (%rsp)
 ; CHECK-NEXT:    vmovaps (%rax), %ymm3
 ; CHECK-NEXT:    retq
-  %args = alloca i8*, align 4
-  %x = va_arg i8** %args, <32 x i32>
+  %args = alloca ptr, align 4
+  %x = va_arg ptr %args, <32 x i32>
   ret <32 x i32> %x
 }

@@ -183,6 +183,9 @@ protected:
   CompressionType m_compression_type;
 
   PacketResult SendPacketNoLock(llvm::StringRef payload);
+  PacketResult SendNotificationPacketNoLock(llvm::StringRef notify_type,
+                                            std::deque<std::string>& queue,
+                                            llvm::StringRef payload);
   PacketResult SendRawPacketNoLock(llvm::StringRef payload,
                                    bool skip_ack = false);
 

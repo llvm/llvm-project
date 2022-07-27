@@ -28,12 +28,12 @@
 //  ), and an extension point corresponds to a piece of native code. For
 //  example, C++ grammar has a rule:
 //
-//    contextual-override := IDENTIFIER [guard=Override]
+//   compound_statement := { statement-seq [recover=Brackets] }
 //
-//  GLR parser only conducts the reduction of the rule if the IDENTIFIER
-//  content is `override`. This Override guard is implemented in CXX.cpp by
-//  binding the ExtensionID for the `Override` value to a specific C++ function
-//  that performs the check.
+//  The `recover` attribute instructs the parser that we should perform error
+//  recovery if parsing the statement-seq fails. The `Brackets` recovery
+//  heuristic is implemented in CXX.cpp by binding the ExtensionID for the
+//  `Recovery` value to a specific C++ function that finds the recovery point.
 //
 //  Notions about the BNF grammar:
 //  - "_" is the start symbol of the augmented grammar;
@@ -57,6 +57,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <vector>
 
@@ -81,7 +82,7 @@ inline tok::TokenKind symbolToToken(SymbolID SID) {
   assert(SID < NumTerminals);
   return static_cast<tok::TokenKind>(SID);
 }
-inline SymbolID tokenSymbol(tok::TokenKind TK) {
+inline constexpr SymbolID tokenSymbol(tok::TokenKind TK) {
   return TokenFlag | static_cast<SymbolID>(TK);
 }
 
@@ -107,7 +108,7 @@ struct Rule {
   // length to 9 (this is the longest sequence in cxx grammar).
   static constexpr unsigned SizeBits = 4;
   static constexpr unsigned MaxElements = 9;
-  static_assert(MaxElements <= (1 << SizeBits), "Exceeds the maximum limit");
+  static_assert(MaxElements < (1 << SizeBits), "Exceeds the maximum limit");
   static_assert(SizeBits + SymbolBits <= 16,
                 "Must be able to store symbol ID + size efficiently");
 
@@ -117,17 +118,22 @@ struct Rule {
   uint8_t Size : SizeBits; // Size of the Sequence
   SymbolID Sequence[MaxElements];
 
-  // A guard extension controls whether a reduction of a rule will be conducted
-  // by the GLR parser.
-  // 0 is sentinel unset extension ID, indicating there is no guard extension
-  // being set for this rule.
-  ExtensionID Guard = 0;
+  // A guarded rule has extra logic to determine whether the RHS is eligible.
+  bool Guarded = false;
+
+  // Specifies the index within Sequence eligible for error recovery.
+  // Given stmt := { stmt-seq_opt }, if we fail to parse the stmt-seq then we
+  // should recover by finding the matching brace, and forcing stmt-seq to match
+  // everything between braces.
+  // For now, only a single strategy at a single point is possible.
+  uint8_t RecoveryIndex = -1;
+  ExtensionID Recovery = 0;
 
   llvm::ArrayRef<SymbolID> seq() const {
     return llvm::ArrayRef<SymbolID>(Sequence, Size);
   }
   friend bool operator==(const Rule &L, const Rule &R) {
-    return L.Target == R.Target && L.seq() == R.seq() && L.Guard == R.Guard;
+    return L.Target == R.Target && L.seq() == R.seq() && L.Guarded == R.Guarded;
   }
 };
 
@@ -138,12 +144,12 @@ struct GrammarTable;
 // It is a building block for constructing a table-based parser.
 class Grammar {
 public:
+  Grammar() = default; // Creates an invalid dummy grammar.
   explicit Grammar(std::unique_ptr<GrammarTable>);
 
   // Parses grammar from a BNF file.
   // Diagnostics emitted during parsing are stored in Diags.
-  static std::unique_ptr<Grammar> parseBNF(llvm::StringRef BNF,
-                                           std::vector<std::string> &Diags);
+  static Grammar parseBNF(llvm::StringRef BNF, std::vector<std::string> &Diags);
 
   // Returns the SymbolID of the symbol '_'.
   SymbolID underscore() const { return Underscore; };

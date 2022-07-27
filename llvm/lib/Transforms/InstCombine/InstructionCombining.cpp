@@ -523,11 +523,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
       // Transform: "(A op C1) op (B op C2)" ==> "(A op B) op (C1 op C2)"
       // if C1 and C2 are constants.
       Value *A, *B;
-      Constant *C1, *C2;
+      Constant *C1, *C2, *CRes;
       if (Op0 && Op1 &&
           Op0->getOpcode() == Opcode && Op1->getOpcode() == Opcode &&
           match(Op0, m_OneUse(m_BinOp(m_Value(A), m_Constant(C1)))) &&
-          match(Op1, m_OneUse(m_BinOp(m_Value(B), m_Constant(C2))))) {
+          match(Op1, m_OneUse(m_BinOp(m_Value(B), m_Constant(C2)))) &&
+          (CRes = ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL))) {
         bool IsNUW = hasNoUnsignedWrap(I) &&
            hasNoUnsignedWrap(*Op0) &&
            hasNoUnsignedWrap(*Op1);
@@ -544,7 +545,7 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         InsertNewInstWith(NewBO, I);
         NewBO->takeName(Op1);
         replaceOperand(I, 0, NewBO);
-        replaceOperand(I, 1, ConstantExpr::get(Opcode, C1, C2));
+        replaceOperand(I, 1, CRes);
         // Conservatively clear the optional flags, since they may not be
         // preserved by the reassociation.
         ClearSubclassDataAfterReassociation(I);
@@ -988,9 +989,27 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   // bo (sext i1 X), C --> select X, (bo -1, C), (bo 0, C)
   Constant *Ones = ConstantInt::getAllOnesValue(BO.getType());
   Constant *Zero = ConstantInt::getNullValue(BO.getType());
-  Constant *TVal = ConstantExpr::get(BO.getOpcode(), Ones, C);
-  Constant *FVal = ConstantExpr::get(BO.getOpcode(), Zero, C);
+  Value *TVal = Builder.CreateBinOp(BO.getOpcode(), Ones, C);
+  Value *FVal = Builder.CreateBinOp(BO.getOpcode(), Zero, C);
   return SelectInst::Create(X, TVal, FVal);
+}
+
+static Constant *constantFoldOperationIntoSelectOperand(
+    Instruction &I, SelectInst *SI, Value *SO) {
+  auto *ConstSO = dyn_cast<Constant>(SO);
+  if (!ConstSO)
+    return nullptr;
+
+  SmallVector<Constant *> ConstOps;
+  for (Value *Op : I.operands()) {
+    if (Op == SI)
+      ConstOps.push_back(ConstSO);
+    else if (auto *C = dyn_cast<Constant>(Op))
+      ConstOps.push_back(C);
+    else
+      llvm_unreachable("Operands should be select or constant");
+  }
+  return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
 }
 
 static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
@@ -1019,12 +1038,6 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
   // Figure out if the constant is the left or the right argument.
   bool ConstIsRHS = isa<Constant>(I.getOperand(1));
   Constant *ConstOperand = cast<Constant>(I.getOperand(ConstIsRHS));
-
-  if (auto *SOC = dyn_cast<Constant>(SO)) {
-    if (ConstIsRHS)
-      return ConstantExpr::get(I.getOpcode(), SOC, ConstOperand);
-    return ConstantExpr::get(I.getOpcode(), ConstOperand, SOC);
-  }
 
   Value *Op0 = SO, *Op1 = ConstOperand;
   if (!ConstIsRHS)
@@ -1106,8 +1119,17 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     }
   }
 
-  Value *NewTV = foldOperationIntoSelectOperand(Op, TV, Builder);
-  Value *NewFV = foldOperationIntoSelectOperand(Op, FV, Builder);
+  // Make sure that one of the select arms constant folds successfully.
+  Value *NewTV = constantFoldOperationIntoSelectOperand(Op, SI, TV);
+  Value *NewFV = constantFoldOperationIntoSelectOperand(Op, SI, FV);
+  if (!NewTV && !NewFV)
+    return nullptr;
+
+  // Create an instruction for the arm that did not fold.
+  if (!NewTV)
+    NewTV = foldOperationIntoSelectOperand(Op, TV, Builder);
+  if (!NewFV)
+    NewFV = foldOperationIntoSelectOperand(Op, FV, Builder);
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
@@ -1115,12 +1137,6 @@ static Value *foldOperationIntoPhiValue(BinaryOperator *I, Value *InV,
                                         InstCombiner::BuilderTy &Builder) {
   bool ConstIsRHS = isa<Constant>(I->getOperand(1));
   Constant *C = cast<Constant>(I->getOperand(ConstIsRHS));
-
-  if (auto *InC = dyn_cast<Constant>(InV)) {
-    if (ConstIsRHS)
-      return ConstantExpr::get(I->getOpcode(), InC, C);
-    return ConstantExpr::get(I->getOpcode(), C, InC);
-  }
 
   Value *Op0 = InV, *Op1 = C;
   if (!ConstIsRHS)
@@ -1336,6 +1352,11 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
     if (!isGuaranteedToTransferExecutionToSuccessor(&*BBIter))
       return nullptr;
 
+  // Fold constants for the predecessor block with constant incoming values.
+  Constant *NewC = ConstantFoldBinaryOpOperands(BO.getOpcode(), C0, C1, DL);
+  if (!NewC)
+    return nullptr;
+
   // Make a new binop in the predecessor block with the non-constant incoming
   // values.
   Builder.SetInsertPoint(PredBlockBranch);
@@ -1344,9 +1365,6 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
                                      Phi1->getIncomingValueForBlock(OtherBB));
   if (auto *NotFoldedNewBO = dyn_cast<BinaryOperator>(NewBO))
     NotFoldedNewBO->copyIRFlags(&BO);
-
-  // Fold constants for the predecessor block with constant incoming values.
-  Constant *NewC = ConstantExpr::get(BO.getOpcode(), C0, C1);
 
   // Replace the binop with a phi of the new values. The old phis are dead.
   PHINode *NewPhi = PHINode::Create(BO.getType(), 2);
@@ -1786,9 +1804,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
       //       for target-independent shuffle creation.
       if (I >= SrcVecNumElts || ShMask[I] < 0) {
         Constant *MaybeUndef =
-            ConstOp1 ? ConstantExpr::get(Opcode, UndefScalar, CElt)
-                     : ConstantExpr::get(Opcode, CElt, UndefScalar);
-        if (!match(MaybeUndef, m_Undef())) {
+            ConstOp1
+                ? ConstantFoldBinaryOpOperands(Opcode, UndefScalar, CElt, DL)
+                : ConstantFoldBinaryOpOperands(Opcode, CElt, UndefScalar, DL);
+        if (!MaybeUndef || !match(MaybeUndef, m_Undef())) {
           MayChange = false;
           break;
         }
@@ -2035,11 +2054,23 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (!GEP.accumulateConstantOffset(DL, Offset))
       return nullptr;
 
+    APInt OffsetOld = Offset;
     // Convert the total offset back into indices.
     SmallVector<APInt> ConstIndices =
         DL.getGEPIndicesForOffset(BaseType, Offset);
-    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
+    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero())) {
+      // If both GEP are constant-indexed, and cannot be merged in either way,
+      // convert them to a GEP of i8.
+      if (Src->hasAllConstantIndices())
+        return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
+            ? GetElementPtrInst::CreateInBounds(
+                Builder.getInt8Ty(), Src->getOperand(0),
+                Builder.getInt(OffsetOld), GEP.getName())
+            : GetElementPtrInst::Create(
+                Builder.getInt8Ty(), Src->getOperand(0),
+                Builder.getInt(OffsetOld), GEP.getName());
       return nullptr;
+    }
 
     bool IsInBounds = isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP));
     SmallVector<Value *> Indices;
@@ -2770,13 +2801,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (isFreeCall(I, &TLI) && getAllocationFamily(I, &TLI) == Family) {
+        if (getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+            getAllocationFamily(I, &TLI) == Family) {
           assert(Family);
           Users.emplace_back(I);
           continue;
         }
 
-        if (isReallocLikeFn(I, &TLI) &&
+        if (getReallocatedOperand(cast<CallBase>(I), &TLI) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
           assert(Family);
           Users.emplace_back(I);
@@ -2801,7 +2833,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
 }
 
 Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
-  assert(isa<AllocaInst>(MI) || isAllocRemovable(&cast<CallBase>(MI), &TLI));
+  assert(isa<AllocaInst>(MI) || isRemovableAlloc(&cast<CallBase>(MI), &TLI));
 
   // If we have a malloc call which is only used in any amount of comparisons to
   // null and free calls, delete the calls and replace the comparisons with true
@@ -3003,9 +3035,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   return &FI;
 }
 
-Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
-  Value *Op = FI.getArgOperand(0);
-
+Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   // free undef -> unreachable.
   if (isa<UndefValue>(Op)) {
     // Leave a marker since we can't modify the CFG here.
@@ -3020,12 +3050,10 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
 
   // If we had free(realloc(...)) with no intervening uses, then eliminate the
   // realloc() entirely.
-  if (CallInst *CI = dyn_cast<CallInst>(Op)) {
-    if (CI->hasOneUse() && isReallocLikeFn(CI, &TLI)) {
-      return eraseInstFromFunction(
-          *replaceInstUsesWith(*CI, CI->getOperand(0)));
-    }
-  }
+  CallInst *CI = dyn_cast<CallInst>(Op);
+  if (CI && CI->hasOneUse())
+    if (Value *ReallocatedOp = getReallocatedOperand(CI, &TLI))
+      return eraseInstFromFunction(*replaceInstUsesWith(*CI, ReallocatedOp));
 
   // If we optimize for code size, try to move the call to free before the null
   // test so that simplify cfg can remove the empty block and dead code

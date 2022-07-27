@@ -1761,6 +1761,10 @@ Enable support for exception handling
 
 .. option:: -fexec-charset=<arg>
 
+.. option:: -fexperimental-library, -fno-experimental-library
+
+Control whether unstable and experimental library features are enabled. This option enables various library features that are either experimental (also known as TSes), or have been but are not stable yet in the selected Standard Library implementation. It is not recommended to use this option in production code, since neither ABI nor API stability are guaranteed. This is intended to provide a preview of features that will ship in the future for experimentation purposes
+
 .. option:: -fexperimental-new-constant-interpreter
 
 Enable the experimental new constant interpreter
@@ -1872,6 +1876,10 @@ Enable sanitizer for AMDGPU target
 .. option:: -fhip-fp32-correctly-rounded-divide-sqrt, -fno-hip-fp32-correctly-rounded-divide-sqrt
 
 Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded (HIP device compilation only)
+
+.. option:: -fhip-kernel-arg-name, -fno-hip-kernel-arg-name
+
+Specify that kernel argument names are preserved (HIP only)
 
 .. option:: -fhip-new-launch-api, -fno-hip-new-launch-api
 
@@ -2325,6 +2333,10 @@ Use instrumentation data for profile-guided optimization
 
 Filename defining the list of functions/files to instrument
 
+.. option:: -fprofile-function-groups=<N>, -fprofile-selected-function-group=<i>
+
+Partition functions into <N> groups and select only functions in group <i> to be instrumented
+
 .. option:: -fprofile-remapping-file=<file>
 
 Use the remappings described in <file> to match the profile data against names in the program
@@ -2629,15 +2641,17 @@ Turn on loop unroller
 
 .. option:: -funsigned-char, -fno-unsigned-char, --unsigned-char
 
-.. option:: -funstable, -fno-unstable
-
-Enable unstable and experimental features
-
 .. option:: -funwind-tables, -fno-unwind-tables
 
 .. option:: -fuse-cxa-atexit, -fno-use-cxa-atexit
 
 .. option:: -fuse-init-array, -fno-use-init-array
+
+.. option:: -fstrict-flex-arrays=<arg>, -fno-strict-flex-arrays
+
+Control which arrays are considered as flexible arrays members. <arg>
+can be 1 (array of size 0, 1 and undefined are considered) or 2 (array of size 0
+and undefined are considered).
 
 .. option:: -fuse-ld=<arg>
 
@@ -3281,6 +3295,10 @@ Use the given offset for addressing the stack-protector guard
 
 Use the given reg for addressing the stack-protector guard
 
+.. option:: -mstack-protector-guard-symbol=<arg>
+
+Use the given symbol for addressing the stack-protector guard
+
 .. option:: -mstack-protector-guard=<arg>
 
 Use the given guard (global, tls) for addressing the stack-protector guard
@@ -3317,7 +3335,7 @@ Specify bit size of immediate TLS offsets (AArch64 ELF only): 12 (for 4KB) \| 24
 .. option:: -mtune=<arg>
 .. program:: clang
 
-Only supported on X86 and RISC-V. Otherwise accepted for compatibility with GCC.
+Only supported on X86, RISC-V and SystemZ. Otherwise accepted for compatibility with GCC.
 
 .. option:: -mtvos-version-min=<arg>, -mappletvos-version-min=<arg>
 
@@ -3438,6 +3456,10 @@ Work around VLLDM erratum CVE-2021-35465 (ARM only)
 .. option:: -mfix-cortex-a57-aes-1742098, -mfix-cortex-a72-aes-1655431, -mno-fix-cortex-a57-aes-1742098
 
 Work around Cortex-A57 Erratum 1742098 (ARM only)
+
+.. option:: -mframe-chain=<arg>
+
+Select the frame chain model used to emit frame records (Arm only). <arg> must be 'none', 'aapcs' or 'aapcs+leaf'.
 
 .. option:: -mno-bti-at-return-twice
 
@@ -3868,6 +3890,8 @@ X86
 .. option:: -mptwrite, -mno-ptwrite
 
 .. option:: -mrdpid, -mno-rdpid
+
+.. option:: -mrdpru, -mno-rdpru
 
 .. option:: -mrdrnd, -mno-rdrnd
 

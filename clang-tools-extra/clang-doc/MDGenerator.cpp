@@ -58,7 +58,7 @@ static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
        << "*";
   } else {
     OS << "*Defined at [" << L.Filename << "#" << std::to_string(L.LineNumber)
-       << "](" << StringRef{CDCtx.RepositoryUrl.getValue()}
+       << "](" << StringRef{*CDCtx.RepositoryUrl}
        << llvm::sys::path::relative_path(L.Filename) << "#"
        << std::to_string(L.LineNumber) << ")"
        << "*";
@@ -139,7 +139,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
       Members << "| " << N << " |\n";
   writeLine(Members.str(), OS);
   if (I.DefLoc)
-    writeFileDefinition(CDCtx, I.DefLoc.getValue(), OS);
+    writeFileDefinition(CDCtx, *I.DefLoc, OS);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -167,7 +167,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
                         Stream.str() + ")"),
               OS);
   if (I.DefLoc)
-    writeFileDefinition(CDCtx, I.DefLoc.getValue(), OS);
+    writeFileDefinition(CDCtx, *I.DefLoc, OS);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -227,7 +227,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
                         llvm::raw_ostream &OS) {
   writeHeader(getTagType(I.TagType) + " " + I.Name, 1, OS);
   if (I.DefLoc)
-    writeFileDefinition(CDCtx, I.DefLoc.getValue(), OS);
+    writeFileDefinition(CDCtx, *I.DefLoc, OS);
 
   if (!I.Description.empty()) {
     for (const auto &C : I.Description)

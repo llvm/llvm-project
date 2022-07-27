@@ -87,7 +87,7 @@ float func_10(float x, float y) {
 }
 
 // CHECK-LABEL: FunctionDecl {{.*}} func_10 'float (float, float)'
-// CHECK:         BinaryOperator {{.*}} 'float' '+' RoundingMode=downward
+// CHECK:         BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=downward
 
 float func_11(float x, float y) {
   if (x < 0) {
@@ -98,8 +98,8 @@ float func_11(float x, float y) {
 }
 
 // CHECK-LABEL: FunctionDecl {{.*}} func_11 'float (float, float)'
-// CHECK:         BinaryOperator {{.*}} 'float' '+' RoundingMode=upward
-// CHECK:         BinaryOperator {{.*}} 'float' '-' RoundingMode=downward
+// CHECK:         BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=upward
+// CHECK:         BinaryOperator {{.*}} 'float' '-' ConstRoundingMode=downward
 
 
 #pragma STDC FENV_ROUND FE_DYNAMIC
@@ -109,7 +109,7 @@ float func_12(float x, float y) {
 }
 
 // CHECK-LABEL: FunctionDecl {{.*}} func_12 'float (float, float)'
-// CHECK:         BinaryOperator {{.*}} 'float' '+' RoundingMode=tonearest
+// CHECK:         BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=dynamic
 
 #pragma STDC FENV_ROUND FE_TONEAREST
 
@@ -118,7 +118,7 @@ float func_13(float x, float y) {
 }
 
 // CHECK-LABEL: FunctionDecl {{.*}} func_13 'float (float, float)'
-// CHECK:         BinaryOperator {{.*}} 'float' '+' RoundingMode=tonearest
+// CHECK:         BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=tonearest
 
 
 template <typename T>
@@ -136,8 +136,54 @@ float func_15(float x, float y) {
 // CHECK:         FunctionDecl {{.*}} func_14 'T (T, T)'
 // CHECK:           CompoundStmt
 // CHECK-NEXT:        ReturnStmt
-// CHECK-NEXT:          BinaryOperator {{.*}} '+' RoundingMode=towardzero
+// CHECK-NEXT:          BinaryOperator {{.*}} '+' ConstRoundingMode=towardzero
 // CHECK:         FunctionDecl {{.*}} func_14 'float (float, float)'
 // CHECK:           CompoundStmt
 // CHECK-NEXT:        ReturnStmt
-// CHECK-NEXT:          BinaryOperator {{.*}} 'float' '+' RoundingMode=towardzero
+// CHECK-NEXT:          BinaryOperator {{.*}} 'float' '+' ConstRoundingMode=towardzero
+
+float func_16(float x, float y) {
+#pragma STDC FENV_ROUND FE_TOWARDZERO
+  if (x < 0) {
+#pragma STDC FENV_ROUND FE_UPWARD
+    return x - y;
+  }
+  return x + y;
+}
+
+// CHECK-LABEL: FunctionDecl {{.*}} func_16 'float (float, float)'
+// CHECK:         CompoundStmt {{.*}} ConstRoundingMode=towardzero
+// CHECK:           IfStmt
+// CHECK:             CompoundStmt {{.*}} ConstRoundingMode=upward
+// CHECK:               ReturnStmt
+// CHECK:                 BinaryOperator {{.*}} ConstRoundingMode=upward
+// CHECK:           ReturnStmt
+// CHECK:             BinaryOperator {{.*}} ConstRoundingMode=towardzero
+
+float func_17(float x, float y) {
+#pragma STDC FENV_ROUND FE_TOWARDZERO
+  if (x < 0) {
+#pragma STDC FENV_ROUND FE_TOWARDZERO
+    return x - y;
+  }
+  return x + y;
+}
+
+// CHECK-LABEL: FunctionDecl {{.*}} func_17 'float (float, float)'
+// CHECK:         CompoundStmt {{.*}} ConstRoundingMode=towardzero
+// CHECK:           IfStmt
+// CHECK:             CompoundStmt {{.*}}
+// CHECK:               ReturnStmt
+// CHECK:                 BinaryOperator {{.*}} ConstRoundingMode=towardzero
+// CHECK:           ReturnStmt
+// CHECK:             BinaryOperator {{.*}} ConstRoundingMode=towardzero
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+float func_18(float x, float y) {
+  return x + y;
+}
+
+// CHECK-LABEL: FunctionDecl {{.*}} func_18 'float (float, float)'
+// CHECK:         CompoundStmt {{.*}} ConstRoundingMode=downward
+// CHECK:           ReturnStmt
+// CHECK:             BinaryOperator {{.*}} ConstRoundingMode=downward

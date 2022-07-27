@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CachePruning.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <map>
 #include <set>
@@ -237,6 +238,9 @@ struct Configuration {
 
   // Used for /print-symbol-order:
   StringRef printSymbolOrder;
+
+  // Used for /vfsoverlay:
+  std::unique_ptr<llvm::vfs::FileSystem> vfs;
 
   uint64_t align = 4096;
   uint64_t imageBase = -1;

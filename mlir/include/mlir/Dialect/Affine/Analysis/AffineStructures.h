@@ -33,11 +33,11 @@ class MemRefType;
 struct MutableAffineMap;
 
 /// FlatAffineValueConstraints represents an extension of IntegerPolyhedron
-/// where each non-local identifier can have an SSA Value attached to it.
+/// where each non-local variable can have an SSA Value attached to it.
 class FlatAffineValueConstraints : public presburger::IntegerPolyhedron {
 public:
   /// Constructs a constraint system reserving memory for the specified number
-  /// of constraints and identifiers.
+  /// of constraints and variables.
   FlatAffineValueConstraints(unsigned numReservedInequalities,
                              unsigned numReservedEqualities,
                              unsigned numReservedCols, unsigned numDims,
@@ -47,11 +47,11 @@ public:
                           numReservedCols,
                           presburger::PresburgerSpace::getSetSpace(
                               numDims, numSymbols, numLocals)) {
-    assert(numReservedCols >= getNumIds() + 1);
-    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolIds());
+    assert(numReservedCols >= getNumVars() + 1);
+    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     values.reserve(numReservedCols);
     if (valArgs.empty())
-      values.resize(getNumDimAndSymbolIds(), None);
+      values.resize(getNumDimAndSymbolVars(), None);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
@@ -70,9 +70,9 @@ public:
   FlatAffineValueConstraints(const IntegerPolyhedron &fac,
                              ArrayRef<Optional<Value>> valArgs = {})
       : IntegerPolyhedron(fac) {
-    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolIds());
+    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     if (valArgs.empty())
-      values.resize(getNumDimAndSymbolIds(), None);
+      values.resize(getNumDimAndSymbolVars(), None);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
@@ -98,7 +98,7 @@ public:
   // ----+-----+-----+---------
   //  -1    0     1      >= 0
   //
-  // All dimensions as set as DimId.
+  // All dimensions as set as VarKind::SetDim.
   static FlatAffineValueConstraints
   getHyperrectangular(ValueRange ivs, ValueRange lbs, ValueRange ubs);
 
@@ -127,11 +127,11 @@ public:
 
   /// Adds constraints (lower and upper bounds) for the specified 'affine.for'
   /// operation's Value using IR information stored in its bound maps. The
-  /// right identifier is first looked up using `forOp`'s Value. Asserts if the
+  /// right variable is first looked up using `forOp`'s Value. Asserts if the
   /// Value corresponding to the 'affine.for' operation isn't found in the
   /// constraint system. Returns failure for the yet unimplemented/unsupported
-  /// cases.  Any new identifiers that are found in the bound operands of the
-  /// 'affine.for' operation are added as trailing identifiers (either
+  /// cases.  Any new variables that are found in the bound operands of the
+  /// 'affine.for' operation are added as trailing variables (either
   /// dimensional or symbolic depending on whether the operand is a valid
   /// symbol).
   //  TODO: add support for non-unit strides.
@@ -143,10 +143,10 @@ public:
   /// the nest, sorted outer-to-inner. `operands` contains the bound operands
   /// for a single bound map. All the bound maps will use the same bound
   /// operands. Note that some loops described by a computation slice might not
-  /// exist yet in the IR so the Value attached to those dimension identifiers
+  /// exist yet in the IR so the Value attached to those dimension variables
   /// might be empty. For that reason, this method doesn't perform Value
-  /// look-ups to retrieve the dimension identifier positions. Instead, it
-  /// assumes the position of the dim identifiers in the constraint system is
+  /// look-ups to retrieve the dimension variable positions. Instead, it
+  /// assumes the position of the dim variables in the constraint system is
   /// the same as the position of the loop in the loop nest.
   LogicalResult addDomainFromSliceMaps(ArrayRef<AffineMap> lbMaps,
                                        ArrayRef<AffineMap> ubMaps,
@@ -161,7 +161,7 @@ public:
   /// the columns in the current one regarding numbers and values.
   void addAffineIfOpDomain(AffineIfOp ifOp);
 
-  /// Adds a bound for the identifier at the specified position with constraints
+  /// Adds a bound for the variable at the specified position with constraints
   /// being drawn from the specified bound map. In case of an EQ bound, the
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
   /// bound map may have more than one result, for each of which an inequality
@@ -177,7 +177,7 @@ public:
   LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap,
                          bool isClosedBound);
 
-  /// Adds a bound for the identifier at the specified position with constraints
+  /// Adds a bound for the variable at the specified position with constraints
   /// being drawn from the specified bound map. In case of an EQ bound, the
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
   /// bound map may have more than one result, for each of which an inequality
@@ -187,7 +187,7 @@ public:
   /// and the upper bound is open.
   LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap);
 
-  /// Adds a bound for the identifier at the specified position with constraints
+  /// Adds a bound for the variable at the specified position with constraints
   /// being drawn from the specified bound map and operands. In case of an
   /// EQ bound, the  bound map is expected to have exactly one result. In case
   /// of a LB/UB, the bound map may have more than one result, for each of which
@@ -195,7 +195,7 @@ public:
   LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap,
                          ValueRange operands);
 
-  /// Adds a constant bound for the identifier associated with the given Value.
+  /// Adds a constant bound for the variable associated with the given Value.
   void addBound(BoundType type, Value val, int64_t value);
 
   /// The `addBound` overload above hides the inherited overloads by default, so
@@ -209,10 +209,10 @@ public:
   IntegerSet getAsIntegerSet(MLIRContext *context) const;
 
   /// Computes the lower and upper bounds of the first `num` dimensional
-  /// identifiers (starting at `offset`) as an affine map of the remaining
-  /// identifiers (dimensional and symbolic). This method is able to detect
-  /// identifiers as floordiv's and mod's of affine expressions of other
-  /// identifiers with respect to (positive) constants. Sets bound map to a
+  /// variables (starting at `offset`) as an affine map of the remaining
+  /// variables (dimensional and symbolic). This method is able to detect
+  /// variables as floordiv's and mod's of affine expressions of other
+  /// variables with respect to (positive) constants. Sets bound map to a
   /// null AffineMap if such a bound can't be found (or yet unimplemented).
   ///
   /// By default the returned lower bounds are closed and upper bounds are open.
@@ -228,29 +228,29 @@ public:
   /// system. Returns failure if `other` is a semi-affine map.
   LogicalResult composeMatchingMap(AffineMap other);
 
-  /// Gets the lower and upper bound of the `offset` + `pos`th identifier
+  /// Gets the lower and upper bound of the `offset` + `pos`th variable
   /// treating [0, offset) U [offset + num, symStartPos) as dimensions and
-  /// [symStartPos, getNumDimAndSymbolIds) as symbols, and `pos` lies in
+  /// [symStartPos, getNumDimAndSymbolVars) as symbols, and `pos` lies in
   /// [0, num). The multi-dimensional maps in the returned pair represent the
   /// max and min of potentially multiple affine expressions. The upper bound is
   /// exclusive. `localExprs` holds pre-computed AffineExpr's for all local
-  /// identifiers in the system.
+  /// variables in the system.
   std::pair<AffineMap, AffineMap>
   getLowerAndUpperBound(unsigned pos, unsigned offset, unsigned num,
                         unsigned symStartPos, ArrayRef<AffineExpr> localExprs,
                         MLIRContext *context) const;
 
-  /// Returns the bound for the identifier at `pos` from the inequality at
+  /// Returns the bound for the variable at `pos` from the inequality at
   /// `ineqPos` as a 1-d affine value map (affine map + operands). The returned
   /// affine value map can either be a lower bound or an upper bound depending
   /// on the sign of atIneq(ineqPos, pos). Asserts if the row at `ineqPos` does
-  /// not involve the `pos`th identifier.
+  /// not involve the `pos`th variable.
   void getIneqAsAffineValueMap(unsigned pos, unsigned ineqPos,
                                AffineValueMap &vmap,
                                MLIRContext *context) const;
 
   /// Adds slice lower bounds represented by lower bounds in `lbMaps` and upper
-  /// bounds in `ubMaps` to each identifier in the constraint system which has
+  /// bounds in `ubMaps` to each variable in the constraint system which has
   /// a value in `values`. Note that both lower/upper bounds share the same
   /// operand list `operands`.
   /// This function assumes `values.size` == `lbMaps.size` == `ubMaps.size`.
@@ -260,73 +260,73 @@ public:
                                ArrayRef<AffineMap> ubMaps,
                                ArrayRef<Value> operands);
 
-  /// Looks up the position of the identifier with the specified Value. Returns
+  /// Looks up the position of the variable with the specified Value. Returns
   /// true if found (false otherwise). `pos` is set to the (column) position of
-  /// the identifier.
-  bool findId(Value val, unsigned *pos) const;
+  /// the variable.
+  bool findVar(Value val, unsigned *pos) const;
 
-  /// Returns true if an identifier with the specified Value exists, false
+  /// Returns true if an variable with the specified Value exists, false
   /// otherwise.
-  bool containsId(Value val) const;
+  bool containsVar(Value mayBeVar) const;
 
-  /// Swap the posA^th identifier with the posB^th identifier.
-  void swapId(unsigned posA, unsigned posB) override;
+  /// Swap the posA^th variable with the posB^th variable.
+  void swapVar(unsigned posA, unsigned posB) override;
 
-  /// Insert identifiers of the specified kind at position `pos`. Positions are
-  /// relative to the kind of identifier. The coefficient columns corresponding
-  /// to the added identifiers are initialized to zero. `vals` are the Values
-  /// corresponding to the identifiers. Values should not be used with
-  /// IdKind::Local since values can only be attached to non-local identifiers.
+  /// Insert variables of the specified kind at position `pos`. Positions are
+  /// relative to the kind of variable. The coefficient columns corresponding
+  /// to the added variables are initialized to zero. `vals` are the Values
+  /// corresponding to the variables. Values should not be used with
+  /// VarKind::Local since values can only be attached to non-local variables.
   /// Return the absolute column position (i.e., not relative to the kind of
-  /// identifier) of the first added identifier.
+  /// variable) of the first added variable.
   ///
   /// Note: Empty Values are allowed in `vals`.
-  unsigned insertDimId(unsigned pos, unsigned num = 1) {
-    return insertId(IdKind::SetDim, pos, num);
+  unsigned insertDimVar(unsigned pos, unsigned num = 1) {
+    return insertVar(VarKind::SetDim, pos, num);
   }
-  unsigned insertSymbolId(unsigned pos, unsigned num = 1) {
-    return insertId(IdKind::Symbol, pos, num);
+  unsigned insertSymbolVar(unsigned pos, unsigned num = 1) {
+    return insertVar(VarKind::Symbol, pos, num);
   }
-  unsigned insertLocalId(unsigned pos, unsigned num = 1) {
-    return insertId(IdKind::Local, pos, num);
+  unsigned insertLocalVar(unsigned pos, unsigned num = 1) {
+    return insertVar(VarKind::Local, pos, num);
   }
-  unsigned insertDimId(unsigned pos, ValueRange vals);
-  unsigned insertSymbolId(unsigned pos, ValueRange vals);
-  unsigned insertId(presburger::IdKind kind, unsigned pos,
-                    unsigned num = 1) override;
-  unsigned insertId(presburger::IdKind kind, unsigned pos, ValueRange vals);
+  unsigned insertDimVar(unsigned pos, ValueRange vals);
+  unsigned insertSymbolVar(unsigned pos, ValueRange vals);
+  unsigned insertVar(presburger::VarKind kind, unsigned pos,
+                     unsigned num = 1) override;
+  unsigned insertVar(presburger::VarKind kind, unsigned pos, ValueRange vals);
 
-  /// Append identifiers of the specified kind after the last identifier of that
-  /// kind. The coefficient columns corresponding to the added identifiers are
+  /// Append variables of the specified kind after the last variable of that
+  /// kind. The coefficient columns corresponding to the added variables are
   /// initialized to zero. `vals` are the Values corresponding to the
-  /// identifiers. Return the position of the first added column.
+  /// variables. Return the position of the first added column.
   ///
   /// Note: Empty Values are allowed in `vals`.
-  unsigned appendDimId(ValueRange vals);
-  unsigned appendSymbolId(ValueRange vals);
-  unsigned appendDimId(unsigned num = 1) {
-    return appendId(IdKind::SetDim, num);
+  unsigned appendDimVar(ValueRange vals);
+  unsigned appendSymbolVar(ValueRange vals);
+  unsigned appendDimVar(unsigned num = 1) {
+    return appendVar(VarKind::SetDim, num);
   }
-  unsigned appendSymbolId(unsigned num = 1) {
-    return appendId(IdKind::Symbol, num);
+  unsigned appendSymbolVar(unsigned num = 1) {
+    return appendVar(VarKind::Symbol, num);
   }
-  unsigned appendLocalId(unsigned num = 1) {
-    return appendId(IdKind::Local, num);
+  unsigned appendLocalVar(unsigned num = 1) {
+    return appendVar(VarKind::Local, num);
   }
 
-  /// Removes identifiers in the column range [idStart, idLimit), and copies any
+  /// Removes variables in the column range [varStart, varLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
-  void removeIdRange(presburger::IdKind kind, unsigned idStart,
-                     unsigned idLimit) override;
-  using IntegerPolyhedron::removeIdRange;
+  void removeVarRange(presburger::VarKind kind, unsigned varStart,
+                      unsigned varLimit) override;
+  using IntegerPolyhedron::removeVarRange;
 
-  /// Add the specified values as a dim or symbol id depending on its nature, if
-  /// it already doesn't exist in the system. `val` has to be either a terminal
-  /// symbol or a loop IV, i.e., it cannot be the result affine.apply of any
-  /// symbols or loop IVs. The identifier is added to the end of the existing
-  /// dims or symbols. Additional information on the identifier is extracted
-  /// from the IR and added to the constraint system.
+  /// Add the specified values as a dim or symbol var depending on its nature,
+  /// if it already doesn't exist in the system. `val` has to be either a
+  /// terminal symbol or a loop IV, i.e., it cannot be the result affine.apply
+  /// of any symbols or loop IVs. The variable is added to the end of the
+  /// existing dims or symbols. Additional information on the variable is
+  /// extracted from the IR and added to the constraint system.
   void addInductionVarOrTerminalSymbol(Value val);
 
   /// Align `map` with this constraint system based on `operands`. Each operand
@@ -345,11 +345,11 @@ public:
   /// the same associated Value).
   LogicalResult composeMap(const AffineValueMap *vMap);
 
-  /// Projects out the identifier that is associate with Value.
+  /// Projects out the variable that is associate with Value.
   void projectOut(Value val);
   using IntegerPolyhedron::projectOut;
 
-  /// Changes all symbol identifiers which are loop IVs to dim identifiers.
+  /// Changes all symbol variables which are loop IVs to dim variables.
   void convertLoopIVSymbolsToDims();
 
   /// Updates the constraints to be the smallest bounding (enclosing) box that
@@ -357,7 +357,7 @@ public:
   /// being treated specially. For each of the dimensions, the min of the lower
   /// bounds (symbolic) and the max of the upper bounds (symbolic) is computed
   /// to determine such a bounding box. `other` is expected to have the same
-  /// dimensional identifiers as this constraint system (in the same order).
+  /// dimensional variables as this constraint system (in the same order).
   ///
   /// E.g.:
   /// 1) this   = {0 <= d0 <= 127},
@@ -372,51 +372,51 @@ public:
   LogicalResult unionBoundingBox(const FlatAffineValueConstraints &other);
   using IntegerPolyhedron::unionBoundingBox;
 
-  /// Merge and align the identifiers of `this` and `other` starting at
+  /// Merge and align the variables of `this` and `other` starting at
   /// `offset`, so that both constraint systems get the union of the contained
-  /// identifiers that is dimension-wise and symbol-wise unique; both
+  /// variables that is dimension-wise and symbol-wise unique; both
   /// constraint systems are updated so that they have the union of all
-  /// identifiers, with `this`'s original identifiers appearing first followed
-  /// by any of `other`'s identifiers that didn't appear in `this`. Local
-  /// identifiers in `other` that have the same division representation as local
-  /// identifiers in `this` are merged into one.
+  /// variables, with `this`'s original variables appearing first followed
+  /// by any of `other`'s variables that didn't appear in `this`. Local
+  /// variables in `other` that have the same division representation as local
+  /// variables in `this` are merged into one.
   //  E.g.: Input: `this`  has (%i, %j) [%M, %N]
   //               `other` has (%k, %j) [%P, %N, %M]
   //        Output: both `this`, `other` have (%i, %j, %k) [%M, %N, %P]
   //
-  void mergeAndAlignIdsWithOther(unsigned offset,
-                                 FlatAffineValueConstraints *other);
+  void mergeAndAlignVarsWithOther(unsigned offset,
+                                  FlatAffineValueConstraints *other);
 
   /// Returns true if this constraint system and `other` are in the same
-  /// space, i.e., if they are associated with the same set of identifiers,
+  /// space, i.e., if they are associated with the same set of variables,
   /// appearing in the same order. Returns false otherwise.
-  bool areIdsAlignedWithOther(const FlatAffineValueConstraints &other);
+  bool areVarsAlignedWithOther(const FlatAffineValueConstraints &other);
 
   /// Replaces the contents of this FlatAffineValueConstraints with `other`.
   void clearAndCopyFrom(const IntegerRelation &other) override;
 
-  /// Returns the Value associated with the pos^th identifier. Asserts if
-  /// no Value identifier was associated.
+  /// Returns the Value associated with the pos^th variable. Asserts if
+  /// no Value variable was associated.
   inline Value getValue(unsigned pos) const {
-    assert(pos < getNumDimAndSymbolIds() && "Invalid position");
-    assert(hasValue(pos) && "identifier's Value not set");
-    return values[pos].getValue();
+    assert(pos < getNumDimAndSymbolVars() && "Invalid position");
+    assert(hasValue(pos) && "variable's Value not set");
+    return values[pos].value();
   }
 
-  /// Returns true if the pos^th identifier has an associated Value.
+  /// Returns true if the pos^th variable has an associated Value.
   inline bool hasValue(unsigned pos) const {
-    assert(pos < getNumDimAndSymbolIds() && "Invalid position");
-    return values[pos].hasValue();
+    assert(pos < getNumDimAndSymbolVars() && "Invalid position");
+    return values[pos].has_value();
   }
 
-  /// Returns true if at least one identifier has an associated Value.
+  /// Returns true if at least one variable has an associated Value.
   bool hasValues() const;
 
-  /// Returns the Values associated with identifiers in range [start, end).
-  /// Asserts if no Value was associated with one of these identifiers.
+  /// Returns the Values associated with variables in range [start, end).
+  /// Asserts if no Value was associated with one of these variables.
   inline void getValues(unsigned start, unsigned end,
                         SmallVectorImpl<Value> *values) const {
-    assert(end <= getNumDimAndSymbolIds() && "invalid end position");
+    assert(end <= getNumDimAndSymbolVars() && "invalid end position");
     assert(start <= end && "invalid start position");
     values->clear();
     values->reserve(end - start);
@@ -424,7 +424,7 @@ public:
       values->push_back(getValue(i));
   }
   inline void getAllValues(SmallVectorImpl<Value> *values) const {
-    getValues(0, getNumDimAndSymbolIds(), values);
+    getValues(0, getNumDimAndSymbolVars(), values);
   }
 
   inline ArrayRef<Optional<Value>> getMaybeValues() const {
@@ -432,25 +432,25 @@ public:
   }
 
   inline ArrayRef<Optional<Value>>
-  getMaybeValues(presburger::IdKind kind) const {
-    assert(kind != IdKind::Local &&
-           "Local identifiers do not have any value attached to them.");
-    return {values.data() + getIdKindOffset(kind), getNumIdKind(kind)};
+  getMaybeValues(presburger::VarKind kind) const {
+    assert(kind != VarKind::Local &&
+           "Local variables do not have any value attached to them.");
+    return {values.data() + getVarKindOffset(kind), getNumVarKind(kind)};
   }
 
-  /// Sets the Value associated with the pos^th identifier.
+  /// Sets the Value associated with the pos^th variable.
   inline void setValue(unsigned pos, Value val) {
-    assert(pos < getNumDimAndSymbolIds() && "invalid id position");
+    assert(pos < getNumDimAndSymbolVars() && "invalid var position");
     values[pos] = val;
   }
 
-  /// Sets the Values associated with the identifiers in the range [start, end).
-  /// The range must contain only dim and symbol identifiers.
+  /// Sets the Values associated with the variables in the range [start, end).
+  /// The range must contain only dim and symbol variables.
   void setValues(unsigned start, unsigned end, ArrayRef<Value> values) {
-    assert(end <= getNumIds() && "invalid end position");
+    assert(end <= getNumVars() && "invalid end position");
     assert(start <= end && "invalid start position");
     assert(values.size() == end - start &&
-           "value should be provided for each identifier in the range.");
+           "value should be provided for each variable in the range.");
     for (unsigned i = start; i < end; ++i)
       setValue(i, values[i - start]);
   }
@@ -459,12 +459,12 @@ public:
   /// of symbols that are unique. Symbols in `this` and `other` should be
   /// unique. Symbols with Value as `None` are considered to be inequal to all
   /// other symbols.
-  void mergeSymbolIds(FlatAffineValueConstraints &other);
+  void mergeSymbolVars(FlatAffineValueConstraints &other);
 
 protected:
-  using IdKind = presburger::IdKind;
+  using VarKind = presburger::VarKind;
 
-  /// Returns false if the fields corresponding to various identifier counts, or
+  /// Returns false if the fields corresponding to various variable counts, or
   /// equality/inequality buffer sizes aren't consistent; true otherwise. This
   /// is meant to be used within an assert internally.
   bool hasConsistentState() const override;
@@ -482,9 +482,9 @@ protected:
   LogicalResult flattenAlignedMapAndMergeLocals(
       AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs);
 
-  /// Eliminates the identifier at the specified position using Fourier-Motzkin
+  /// Eliminates the variable at the specified position using Fourier-Motzkin
   /// variable elimination, but uses Gaussian elimination if there is an
-  /// equality involving that identifier. If the result of the elimination is
+  /// equality involving that variable. If the result of the elimination is
   /// integer exact, `*isResultIntegerExact` is set to true. If `darkShadow` is
   /// set to true, a potential under approximation (subset) of the rational
   /// shadow / exact integer shadow is computed.
@@ -493,22 +493,22 @@ protected:
                                bool *isResultIntegerExact = nullptr) override;
 
   /// Prints the number of constraints, dimensions, symbols and locals in the
-  /// FlatAffineConstraints. Also, prints for each identifier whether there is
+  /// FlatAffineConstraints. Also, prints for each variable whether there is
   /// an SSA Value attached to it.
   void printSpace(raw_ostream &os) const override;
 
-  /// Values corresponding to the (column) non-local identifiers of this
-  /// constraint system appearing in the order the identifiers correspond to
-  /// columns. Identifiers that aren't associated with any Value are set to
+  /// Values corresponding to the (column) non-local variables of this
+  /// constraint system appearing in the order the variables correspond to
+  /// columns. Variables that aren't associated with any Value are set to
   /// None.
   SmallVector<Optional<Value>, 8> values;
 };
 
 /// A FlatAffineRelation represents a set of ordered pairs (domain -> range)
-/// where "domain" and "range" are tuples of identifiers. The relation is
+/// where "domain" and "range" are tuples of variables. The relation is
 /// represented as a FlatAffineValueConstraints with separation of dimension
-/// identifiers into domain and  range. The identifiers are stored as:
-/// [domainIds, rangeIds, symbolIds, localIds, constant].
+/// variables into domain and  range. The variables are stored as:
+/// [domainVars, rangeVars, symbolVars, localVars, constant].
 class FlatAffineRelation : public FlatAffineValueConstraints {
 public:
   FlatAffineRelation(unsigned numReservedInequalities,
@@ -541,7 +541,7 @@ public:
   FlatAffineValueConstraints getDomainSet() const;
   FlatAffineValueConstraints getRangeSet() const;
 
-  /// Returns the number of identifiers corresponding to domain/range of
+  /// Returns the number of variables corresponding to domain/range of
   /// relation.
   inline unsigned getNumDomainDims() const { return numDomainDims; }
   inline unsigned getNumRangeDims() const { return numRangeDims; }
@@ -556,29 +556,30 @@ public:
   /// `(domain -> range)` is converted to `(range -> domain)`.
   void inverse();
 
-  /// Insert `num` identifiers of the specified kind after the `pos` identifier
+  /// Insert `num` variables of the specified kind after the `pos` variable
   /// of that kind. The coefficient columns corresponding to the added
-  /// identifiers are initialized to zero.
-  void insertDomainId(unsigned pos, unsigned num = 1);
-  void insertRangeId(unsigned pos, unsigned num = 1);
+  /// variables are initialized to zero.
+  void insertDomainVar(unsigned pos, unsigned num = 1);
+  void insertRangeVar(unsigned pos, unsigned num = 1);
 
-  /// Append `num` identifiers of the specified kind after the last identifier
+  /// Append `num` variables of the specified kind after the last variable
   /// of that kind. The coefficient columns corresponding to the added
-  /// identifiers are initialized to zero.
-  void appendDomainId(unsigned num = 1);
-  void appendRangeId(unsigned num = 1);
+  /// variables are initialized to zero.
+  void appendDomainVar(unsigned num = 1);
+  void appendRangeVar(unsigned num = 1);
 
-  /// Removes identifiers in the column range [idStart, idLimit), and copies any
+  /// Removes variables in the column range [varStart, varLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
-  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
-  using IntegerRelation::removeIdRange;
+  void removeVarRange(VarKind kind, unsigned varStart,
+                      unsigned varLimit) override;
+  using IntegerRelation::removeVarRange;
 
 protected:
-  // Number of dimension identifers corresponding to domain identifers.
+  // Number of dimension variables corresponding to domain variables.
   unsigned numDomainDims;
 
-  // Number of dimension identifers corresponding to range identifers.
+  // Number of dimension variables corresponding to range variables.
   unsigned numRangeDims;
 };
 
@@ -586,8 +587,8 @@ protected:
 /// dimensions, symbols, and additional variables that represent floor divisions
 /// of dimensions, symbols, and in turn other floor divisions.  Returns failure
 /// if 'expr' could not be flattened (i.e., semi-affine is not yet handled).
-/// 'cst' contains constraints that connect newly introduced local identifiers
-/// to existing dimensional and symbolic identifiers. See documentation for
+/// 'cst' contains constraints that connect newly introduced local variables
+/// to existing dimensional and symbolic variables. See documentation for
 /// AffineExprFlattener on how mod's and div's are flattened.
 LogicalResult getFlattenedAffineExpr(AffineExpr expr, unsigned numDims,
                                      unsigned numSymbols,
@@ -597,8 +598,8 @@ LogicalResult getFlattenedAffineExpr(AffineExpr expr, unsigned numDims,
 /// Flattens the result expressions of the map to their corresponding flattened
 /// forms and set in 'flattenedExprs'. Returns failure if any expression in the
 /// map could not be flattened (i.e., semi-affine is not yet handled). 'cst'
-/// contains constraints that connect newly introduced local identifiers to
-/// existing dimensional and / symbolic identifiers. See documentation for
+/// contains constraints that connect newly introduced local variables to
+/// existing dimensional and / symbolic variables. See documentation for
 /// AffineExprFlattener on how mod's and div's are flattened. For all affine
 /// expressions that share the same operands (like those of an affine map), this
 /// method should be used instead of repeatedly calling getFlattenedAffineExpr

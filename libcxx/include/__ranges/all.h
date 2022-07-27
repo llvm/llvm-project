@@ -39,6 +39,7 @@ namespace __all {
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Tp>(__t))))
+      -> decltype(_LIBCPP_AUTO_CAST(std::forward<_Tp>(__t)))
     {
       return _LIBCPP_AUTO_CAST(std::forward<_Tp>(__t));
     }

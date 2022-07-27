@@ -89,12 +89,6 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     )
 endif()
 
-if(LIBCXX_ENABLE_INCOMPLETE_FEATURES)
-  list(APPEND LIBCXX_SOURCES
-    format.cpp
-  )
-endif()
-
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
     support/win32/locale_win32.cpp
@@ -315,24 +309,32 @@ endif()
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
-if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-  set(LIBCXX_EXPERIMENTAL_SOURCES
-    experimental/memory_resource.cpp
-    )
-  add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
-  if (LIBCXX_ENABLE_SHARED)
-    target_link_libraries(cxx_experimental PRIVATE cxx_shared)
-  else()
-    target_link_libraries(cxx_experimental PRIVATE cxx_static)
-  endif()
-
-  set_target_properties(cxx_experimental
-    PROPERTIES
-      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
-      OUTPUT_NAME   "c++experimental"
+set(LIBCXX_EXPERIMENTAL_SOURCES
+  experimental/memory_resource.cpp
+  format.cpp
   )
-  cxx_add_common_build_flags(cxx_experimental)
+
+add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
+target_link_libraries(cxx_experimental PUBLIC cxx-headers)
+if (LIBCXX_ENABLE_SHARED)
+  target_link_libraries(cxx_experimental PRIVATE cxx_shared)
+else()
+  target_link_libraries(cxx_experimental PRIVATE cxx_static)
 endif()
+
+if (LIBCXX_HERMETIC_STATIC_LIBRARY)
+  # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
+  # too. Define it in the same way here, to avoid redefinition conflicts.
+  target_compile_definitions(cxx_experimental PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
+endif()
+
+set_target_properties(cxx_experimental
+  PROPERTIES
+    COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+    OUTPUT_NAME   "c++experimental"
+)
+cxx_add_common_build_flags(cxx_experimental)
+target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
 
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
@@ -369,7 +371,7 @@ if (LIBCXX_INSTALL_STATIC_LIBRARY)
     RUNTIME DESTINATION ${LIBCXX_INSTALL_RUNTIME_DIR} COMPONENT cxx)
 endif()
 
-if(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
+if (LIBCXX_INSTALL_LIBRARY)
   install(TARGETS cxx_experimental
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
@@ -386,10 +388,7 @@ endif()
 
 if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_LIBRARY)
-      set(lib_install_target cxx)
-    endif()
-    if (LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
-      set(experimental_lib_install_target cxx_experimental)
+      set(lib_install_target "cxx;cxx_experimental")
     endif()
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
@@ -399,7 +398,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
-                              ${experimental_lib_install_target}
+                              cxx_experimental
                               ${header_install_target}
                               ${pstl_install_target}
                       COMMAND "${CMAKE_COMMAND}"
@@ -407,7 +406,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
     add_custom_target(install-cxx-stripped
                       DEPENDS ${lib_install_target}
-                              ${experimental_lib_install_target}
+                              cxx_experimental
                               ${header_install_target}
                               ${pstl_install_target}
                       COMMAND "${CMAKE_COMMAND}"

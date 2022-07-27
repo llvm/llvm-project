@@ -9,11 +9,11 @@ true:
   unreachable
 
 false:
-  call void @llvm.dbg.value(metadata i8** undef, metadata !19, metadata !DIExpression()) #2, !dbg !21
+  call void @llvm.dbg.value(metadata ptr undef, metadata !19, metadata !DIExpression()) #2, !dbg !21
   ret void
 }
 
-declare i8* @pthread_getspecific()
+declare ptr @pthread_getspecific()
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

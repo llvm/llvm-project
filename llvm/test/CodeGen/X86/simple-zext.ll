@@ -4,9 +4,9 @@
 ; because it counted both the chain user and the real user against the
 ; profitability total.
 
-define void @load_zext(i32* nocapture %p){
+define void @load_zext(ptr nocapture %p){
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %and = and i32 %0, 255
   tail call void @use(i32 %and)
   ret void

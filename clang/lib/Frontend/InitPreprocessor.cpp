@@ -298,12 +298,12 @@ static void DefineFastIntType(unsigned TypeWidth, bool IsSigned,
 
 /// Get the value the ATOMIC_*_LOCK_FREE macro should have for a type with
 /// the specified properties.
-static const char *getLockFreeValue(unsigned TypeWidth, unsigned TypeAlign,
-                                    unsigned InlineWidth) {
+static const char *getLockFreeValue(unsigned TypeWidth, unsigned InlineWidth) {
   // Fully-aligned, power-of-2 sizes no larger than the inline
   // width will be inlined as lock-free operations.
-  if (TypeWidth == TypeAlign && (TypeWidth & (TypeWidth - 1)) == 0 &&
-      TypeWidth <= InlineWidth)
+  // Note: we do not need to check alignment since _Atomic(T) is always
+  // appropriately-aligned in clang.
+  if ((TypeWidth & (TypeWidth - 1)) == 0 && TypeWidth <= InlineWidth)
     return "2"; // "always lock free"
   // We cannot be certain what operations the lib calls might be
   // able to implement as lock-free on future processors.
@@ -410,7 +410,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     if (TI.getTriple().getOS() == llvm::Triple::ShaderModel) {
       VersionTuple Version = TI.getTriple().getOSVersion();
       Builder.defineMacro("__SHADER_TARGET_MAJOR", Twine(Version.getMajor()));
-      unsigned Minor = Version.getMinor().getValueOr(0);
+      unsigned Minor = Version.getMinor().value_or(0);
       Builder.defineMacro("__SHADER_TARGET_MINOR", Twine(Minor));
     }
     return;
@@ -823,21 +823,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
       if (version >= VersionTuple(2, 0))
         Builder.defineMacro("__OBJC_GNUSTEP_RUNTIME_ABI__", "20");
       else
-        Builder.defineMacro("__OBJC_GNUSTEP_RUNTIME_ABI__",
-            "1" + Twine(std::min(8U, version.getMinor().getValueOr(0))));
+        Builder.defineMacro(
+            "__OBJC_GNUSTEP_RUNTIME_ABI__",
+            "1" + Twine(std::min(8U, version.getMinor().value_or(0))));
     }
 
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::ObjFW) {
       VersionTuple tuple = LangOpts.ObjCRuntime.getVersion();
-
-      unsigned minor = 0;
-      if (tuple.getMinor().hasValue())
-        minor = tuple.getMinor().getValue();
-
-      unsigned subminor = 0;
-      if (tuple.getSubminor().hasValue())
-        subminor = tuple.getSubminor().getValue();
-
+      unsigned minor = tuple.getMinor().value_or(0);
+      unsigned subminor = tuple.getSubminor().value_or(0);
       Builder.defineMacro("__OBJFW_RUNTIME_ABI__",
                           Twine(tuple.getMajor() * 10000 + minor * 100 +
                                 subminor));
@@ -1149,7 +1143,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #define DEFINE_LOCK_FREE_MACRO(TYPE, Type)                                     \
   Builder.defineMacro(Prefix + #TYPE "_LOCK_FREE",                             \
                       getLockFreeValue(TI.get##Type##Width(),                  \
-                                       TI.get##Type##Align(),                  \
                                        InlineWidthBits));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
@@ -1164,7 +1157,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     DEFINE_LOCK_FREE_MACRO(LLONG, LongLong);
     Builder.defineMacro(Prefix + "POINTER_LOCK_FREE",
                         getLockFreeValue(TI.getPointerWidth(0),
-                                         TI.getPointerAlign(0),
                                          InlineWidthBits));
 #undef DEFINE_LOCK_FREE_MACRO
   };

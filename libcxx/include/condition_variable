@@ -261,7 +261,7 @@ condition_variable_any::wait_for(_Lock& __lock,
 }
 
 _LIBCPP_FUNC_VIS
-void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk);
+void notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
 
 _LIBCPP_END_NAMESPACE_STD
 

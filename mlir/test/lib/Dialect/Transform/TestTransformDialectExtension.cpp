@@ -115,7 +115,7 @@ mlir::test::TestProduceParamOrForwardOperandOp::apply(
 }
 
 LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::verify() {
-  if (getParameter().hasValue() ^ (getNumOperands() != 1))
+  if (getParameter().has_value() ^ (getNumOperands() != 1))
     return emitOpError() << "expects either a parameter or an operand";
   return success();
 }
@@ -198,6 +198,16 @@ DiagnosedSilenceableFailure mlir::test::TestRemoveTestExtensionOp::apply(
   state.removeExtension<TestTransformStateExtension>();
   return DiagnosedSilenceableFailure::success();
 }
+
+DiagnosedSilenceableFailure
+mlir::test::TestReversePayloadOpsOp::apply(transform::TransformResults &results,
+                                           transform::TransformState &state) {
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  auto reversedOps = llvm::to_vector(llvm::reverse(payloadOps));
+  results.set(getResult().cast<OpResult>(), reversedOps);
+  return DiagnosedSilenceableFailure::success();
+}
+
 DiagnosedSilenceableFailure mlir::test::TestTransformOpWithRegions::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   return DiagnosedSilenceableFailure::success();
@@ -226,6 +236,67 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
+DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  OperationState opState(target->getLoc(), "foo");
+  results.push_back(OpBuilder(target).create(opState));
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestWrongNumberOfMultiResultsOp::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  static int count = 0;
+  if (count++ == 0) {
+    OperationState opState(target->getLoc(), "foo");
+    results.push_back(OpBuilder(target).create(opState));
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestCorrectNumberOfMultiResultsOp::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  OperationState opState(target->getLoc(), "foo");
+  results.push_back(OpBuilder(target).create(opState));
+  results.push_back(OpBuilder(target).create(opState));
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestMixedNullAndNonNullResultsOp::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  OperationState opState(target->getLoc(), "foo");
+  results.push_back(nullptr);
+  results.push_back(OpBuilder(target).create(opState));
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestMixedSuccessAndSilenceableOp::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  if (target->hasAttr("target_me"))
+    return DiagnosedSilenceableFailure::success();
+  return emitDefaultSilenceableFailure(target);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestPrintNumberOfAssociatedPayloadIROps::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  emitRemark() << state.getPayloadOps(getHandle()).size();
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestPrintNumberOfAssociatedPayloadIROps::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getHandle(), effects);
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL
@@ -234,7 +305,9 @@ class TestTransformDialectExtension
     : public transform::TransformDialectExtension<
           TestTransformDialectExtension> {
 public:
-  TestTransformDialectExtension() {
+  using Base::Base;
+
+  void init() {
     declareDependentDialect<pdl::PDLDialect>();
     registerTransformOps<TestTransformOp,
                          TestTransformUnrestrictedOpNoInterface,

@@ -8,6 +8,7 @@
 
 #include "config/linux/app.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/threads/thread.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 
 #include <asm/prctl.h>
@@ -31,11 +32,16 @@ static constexpr long mmapSyscallNumber = SYS_mmap;
 
 AppProperties app;
 
+static ThreadAttributes main_thread_attrib;
+
 // TODO: The function is x86_64 specific. Move it to config/linux/app.h
 // and generalize it. Also, dynamic loading is not handled currently.
-void initTLS() {
-  if (app.tls.size == 0)
+void init_tls(TLSDescriptor &tls_descriptor) {
+  if (app.tls.size == 0) {
+    tls_descriptor.size = 0;
+    tls_descriptor.tp = 0;
     return;
+  }
 
   // We will assume the alignment is always a power of two.
   uintptr_t tlsSize = app.tls.size & -app.tls.align;
@@ -45,7 +51,7 @@ void initTLS() {
   // Per the x86_64 TLS ABI, the entry pointed to by the thread pointer is the
   // address of the TLS block. So, we add more size to accomodate this address
   // entry.
-  size_t tlsSizeWithAddr = tlsSize + sizeof(uintptr_t);
+  uintptr_t tlsSizeWithAddr = tlsSize + sizeof(uintptr_t);
 
   // We cannot call the mmap function here as the functions set errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
@@ -67,8 +73,21 @@ void initTLS() {
   __llvm_libc::inline_memcpy(reinterpret_cast<char *>(tlsAddr),
                              reinterpret_cast<const char *>(app.tls.address),
                              app.tls.init_size);
-  if (__llvm_libc::syscall(SYS_arch_prctl, ARCH_SET_FS, endPtr) == -1)
-    __llvm_libc::syscall(SYS_exit, 1);
+
+  tls_descriptor = {tlsSizeWithAddr, uintptr_t(tlsAddr), endPtr};
+  return;
+}
+
+void cleanup_tls(uintptr_t addr, uintptr_t size) {
+  if (size == 0)
+    return;
+  __llvm_libc::syscall(SYS_munmap, addr, size);
+}
+
+// Sets the thread pointer to |val|. Returns true on success, false on failure.
+static bool set_thread_ptr(uintptr_t val) {
+  return __llvm_libc::syscall(SYS_arch_prctl, ARCH_SET_FS, val) == -1 ? false
+                                                                      : true;
 }
 
 } // namespace __llvm_libc
@@ -101,6 +120,11 @@ extern "C" void _start() {
   // following code is a NOP.
   __asm__ __volatile__("andq $0xfffffffffffffff0, %%rsp\n\t" ::: "%rsp");
   __asm__ __volatile__("andq $0xfffffffffffffff0, %%rbp\n\t" ::: "%rbp");
+
+  auto tid = __llvm_libc::syscall(SYS_gettid);
+  if (tid <= 0)
+    __llvm_libc::syscall(SYS_exit, 1);
+  __llvm_libc::main_thread_attrib.tid = tid;
 
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
@@ -144,9 +168,15 @@ extern "C" void _start() {
     app.tls.align = phdr->p_align;
   }
 
-  __llvm_libc::initTLS();
+  __llvm_libc::TLSDescriptor tls;
+  __llvm_libc::init_tls(tls);
+  if (tls.size != 0 && !__llvm_libc::set_thread_ptr(tls.tp))
+    __llvm_libc::syscall(SYS_exit, 1);
 
-  __llvm_libc::syscall(SYS_exit, main(app.args->argc,
-                                      reinterpret_cast<char **>(app.args->argv),
-                                      reinterpret_cast<char **>(env_ptr)));
+  __llvm_libc::self.attrib = &__llvm_libc::main_thread_attrib;
+
+  int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
+                    reinterpret_cast<char **>(env_ptr));
+  __llvm_libc::cleanup_tls(tls.addr, tls.size);
+  __llvm_libc::syscall(SYS_exit, retval);
 }

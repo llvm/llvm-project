@@ -40,12 +40,12 @@ static std::string getTypeStr(const QualType &OrigT, const Decl &D,
   QualType T = OrigT;
   PrintingPolicy Policy(D.getASTContext().getLangOpts());
   Policy.SuppressStrongLifetime = true;
-  std::string Prefix = "";
+  std::string Prefix;
   // If the nullability is specified via a property attribute, use the shorter
   // `nullable` form for the method parameter.
   if (PropertyAttributes & ObjCPropertyAttribute::kind_nullability) {
     if (auto Kind = AttributedType::stripOuterNullability(T)) {
-      switch (Kind.getValue()) {
+      switch (*Kind) {
       case NullabilityKind::Nullable:
         Prefix = "nullable ";
         break;
@@ -172,7 +172,7 @@ initializerForParams(const SmallVector<MethodParameter, 8> &Params,
 /// properties and instance variables.
 class ObjCMemberwiseInitializer : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
   llvm::StringLiteral kind() const override {
     return CodeAction::REFACTOR_KIND;
   }
@@ -238,7 +238,7 @@ ObjCMemberwiseInitializer::paramsForSelection(const SelectionTree::Node *N) {
   // Base case: selected a single ivar or property.
   if (const auto *D = N->ASTNode.get<Decl>()) {
     if (auto Param = MethodParameter::parameterFor(*D)) {
-      Params.push_back(Param.getValue());
+      Params.push_back(*Param);
       return Params;
     }
   }
@@ -256,7 +256,7 @@ ObjCMemberwiseInitializer::paramsForSelection(const SelectionTree::Node *N) {
       continue;
     if (auto P = MethodParameter::parameterFor(*D))
       if (Names.insert(P->Name).second)
-        Params.push_back(P.getValue());
+        Params.push_back(*P);
   }
   return Params;
 }

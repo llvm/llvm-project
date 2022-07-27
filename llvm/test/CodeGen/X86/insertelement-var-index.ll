@@ -232,7 +232,7 @@ define <2 x double> @arg_f64_v2f64_undef(double %x, i32 %y) nounwind {
   ret <2 x double> %ins
 }
 
-define <16 x i8> @load_i8_v16i8_undef(i8* %p, i32 %y) nounwind {
+define <16 x i8> @load_i8_v16i8_undef(ptr %p, i32 %y) nounwind {
 ; SSE2-LABEL: load_i8_v16i8_undef:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzbl (%rdi), %eax
@@ -273,12 +273,12 @@ define <16 x i8> @load_i8_v16i8_undef(i8* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vpbroadcastb (%eax), %xmm0
 ; X86AVX2-NEXT:    retl
-  %x = load i8, i8* %p
+  %x = load i8, ptr %p
   %ins = insertelement <16 x i8> undef, i8 %x, i32 %y
   ret <16 x i8> %ins
 }
 
-define <8 x i16> @load_i16_v8i16_undef(i16* %p, i32 %y) nounwind {
+define <8 x i16> @load_i16_v8i16_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i16_v8i16_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl (%rdi), %eax
@@ -310,12 +310,12 @@ define <8 x i16> @load_i16_v8i16_undef(i16* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vpbroadcastw (%eax), %xmm0
 ; X86AVX2-NEXT:    retl
-  %x = load i16, i16* %p
+  %x = load i16, ptr %p
   %ins = insertelement <8 x i16> undef, i16 %x, i32 %y
   ret <8 x i16> %ins
 }
 
-define <4 x i32> @load_i32_v4i32_undef(i32* %p, i32 %y) nounwind {
+define <4 x i32> @load_i32_v4i32_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i32_v4i32_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -332,12 +332,12 @@ define <4 x i32> @load_i32_v4i32_undef(i32* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vbroadcastss (%eax), %xmm0
 ; X86AVX2-NEXT:    retl
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %ins = insertelement <4 x i32> undef, i32 %x, i32 %y
   ret <4 x i32> %ins
 }
 
-define <2 x i64> @load_i64_v2i64_undef(i64* %p, i32 %y) nounwind {
+define <2 x i64> @load_i64_v2i64_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i64_v2i64_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -354,12 +354,12 @@ define <2 x i64> @load_i64_v2i64_undef(i64* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X86AVX2-NEXT:    retl
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %ins = insertelement <2 x i64> undef, i64 %x, i32 %y
   ret <2 x i64> %ins
 }
 
-define <4 x float> @load_f32_v4f32_undef(float* %p, i32 %y) nounwind {
+define <4 x float> @load_f32_v4f32_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_f32_v4f32_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -376,12 +376,12 @@ define <4 x float> @load_f32_v4f32_undef(float* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vbroadcastss (%eax), %xmm0
 ; X86AVX2-NEXT:    retl
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %ins = insertelement <4 x float> undef, float %x, i32 %y
   ret <4 x float> %ins
 }
 
-define <2 x double> @load_f64_v2f64_undef(double* %p, i32 %y) nounwind {
+define <2 x double> @load_f64_v2f64_undef(ptr %p, i32 %y) nounwind {
 ; SSE2-LABEL: load_f64_v2f64_undef:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -403,7 +403,7 @@ define <2 x double> @load_f64_v2f64_undef(double* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X86AVX2-NEXT:    retl
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %ins = insertelement <2 x double> undef, double %x, i32 %y
   ret <2 x double> %ins
 }
@@ -634,11 +634,11 @@ define <4 x double> @arg_f64_v4f64_undef(double %x, i32 %y) nounwind {
   ret <4 x double> %ins
 }
 
-define <32 x i8> @load_i8_v32i8_undef(i8* %p, i32 %y) nounwind {
+define <32 x i8> @load_i8_v32i8_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i8_v32i8_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    andl $31, %esi
 ; SSE-NEXT:    movb %al, -40(%rsp,%rsi)
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
@@ -669,12 +669,12 @@ define <32 x i8> @load_i8_v32i8_undef(i8* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vpbroadcastb (%eax), %ymm0
 ; X86AVX2-NEXT:    retl
-  %x = load i8, i8* %p
+  %x = load i8, ptr %p
   %ins = insertelement <32 x i8> undef, i8 %x, i32 %y
   ret <32 x i8> %ins
 }
 
-define <16 x i16> @load_i16_v16i16_undef(i16* %p, i32 %y) nounwind {
+define <16 x i16> @load_i16_v16i16_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i16_v16i16_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -709,12 +709,12 @@ define <16 x i16> @load_i16_v16i16_undef(i16* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vpbroadcastw (%eax), %ymm0
 ; X86AVX2-NEXT:    retl
-  %x = load i16, i16* %p
+  %x = load i16, ptr %p
   %ins = insertelement <16 x i16> undef, i16 %x, i32 %y
   ret <16 x i16> %ins
 }
 
-define <8 x i32> @load_i32_v8i32_undef(i32* %p, i32 %y) nounwind {
+define <8 x i32> @load_i32_v8i32_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i32_v8i32_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -735,12 +735,12 @@ define <8 x i32> @load_i32_v8i32_undef(i32* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vbroadcastss (%eax), %ymm0
 ; X86AVX2-NEXT:    retl
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %ins = insertelement <8 x i32> undef, i32 %x, i32 %y
   ret <8 x i32> %ins
 }
 
-define <4 x i64> @load_i64_v4i64_undef(i64* %p, i32 %y) nounwind {
+define <4 x i64> @load_i64_v4i64_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i64_v4i64_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -761,12 +761,12 @@ define <4 x i64> @load_i64_v4i64_undef(i64* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X86AVX2-NEXT:    retl
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %ins = insertelement <4 x i64> undef, i64 %x, i32 %y
   ret <4 x i64> %ins
 }
 
-define <8 x float> @load_f32_v8f32_undef(float* %p, i32 %y) nounwind {
+define <8 x float> @load_f32_v8f32_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_f32_v8f32_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -787,12 +787,12 @@ define <8 x float> @load_f32_v8f32_undef(float* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vbroadcastss (%eax), %ymm0
 ; X86AVX2-NEXT:    retl
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %ins = insertelement <8 x float> undef, float %x, i32 %y
   ret <8 x float> %ins
 }
 
-define <4 x double> @load_f64_v4f64_undef(double* %p, i32 %y) nounwind {
+define <4 x double> @load_f64_v4f64_undef(ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_f64_v4f64_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -813,7 +813,7 @@ define <4 x double> @load_f64_v4f64_undef(double* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX2-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X86AVX2-NEXT:    retl
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %ins = insertelement <4 x double> undef, double %x, i32 %y
   ret <4 x double> %ins
 }
@@ -865,7 +865,7 @@ define <16 x i8> @arg_i8_v16i8(<16 x i8> %v, i8 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
-; X86AVX2-NEXT:    movb 8(%ebp), %cl
+; X86AVX2-NEXT:    movzbl 8(%ebp), %ecx
 ; X86AVX2-NEXT:    vmovaps %xmm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %xmm0
@@ -1156,11 +1156,11 @@ define <2 x double> @arg_f64_v2f64(<2 x double> %v, double %x, i32 %y) nounwind 
   ret <2 x double> %ins
 }
 
-define <16 x i8> @load_i8_v16i8(<16 x i8> %v, i8* %p, i32 %y) nounwind {
+define <16 x i8> @load_i8_v16i8(<16 x i8> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i8_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $15, %esi
 ; SSE-NEXT:    movb %al, -24(%rsp,%rsi)
@@ -1170,7 +1170,7 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, i8* %p, i32 %y) nounwind {
 ; AVX1OR2-LABEL: load_i8_v16i8:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    movb (%rdi), %al
+; AVX1OR2-NEXT:    movzbl (%rdi), %eax
 ; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX1OR2-NEXT:    andl $15, %esi
 ; AVX1OR2-NEXT:    movb %al, -24(%rsp,%rsi)
@@ -1180,7 +1180,7 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, i8* %p, i32 %y) nounwind {
 ; AVX512F-LABEL: load_i8_v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX512F-NEXT:    movb (%rdi), %al
+; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    andl $15, %esi
 ; AVX512F-NEXT:    movb %al, -24(%rsp,%rsi)
@@ -1203,19 +1203,19 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, i8* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
-; X86AVX2-NEXT:    movb (%ecx), %cl
+; X86AVX2-NEXT:    movzbl (%ecx), %ecx
 ; X86AVX2-NEXT:    vmovaps %xmm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %xmm0
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i8, i8* %p
+  %x = load i8, ptr %p
   %ins = insertelement <16 x i8> %v, i8 %x, i32 %y
   ret <16 x i8> %ins
 }
 
-define <8 x i16> @load_i16_v8i16(<8 x i16> %v, i16* %p, i32 %y) nounwind {
+define <8 x i16> @load_i16_v8i16(<8 x i16> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i16_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -1269,12 +1269,12 @@ define <8 x i16> @load_i16_v8i16(<8 x i16> %v, i16* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i16, i16* %p
+  %x = load i16, ptr %p
   %ins = insertelement <8 x i16> %v, i16 %x, i32 %y
   ret <8 x i16> %ins
 }
 
-define <4 x i32> @load_i32_v4i32(<4 x i32> %v, i32* %p, i32 %y) nounwind {
+define <4 x i32> @load_i32_v4i32(<4 x i32> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i32_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -1318,12 +1318,12 @@ define <4 x i32> @load_i32_v4i32(<4 x i32> %v, i32* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %ins = insertelement <4 x i32> %v, i32 %x, i32 %y
   ret <4 x i32> %ins
 }
 
-define <2 x i64> @load_i64_v2i64(<2 x i64> %v, i64* %p, i32 %y) nounwind {
+define <2 x i64> @load_i64_v2i64(<2 x i64> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i64_v2i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -1377,12 +1377,12 @@ define <2 x i64> @load_i64_v2i64(<2 x i64> %v, i64* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    popl %esi
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %ins = insertelement <2 x i64> %v, i64 %x, i32 %y
   ret <2 x i64> %ins
 }
 
-define <4 x float> @load_f32_v4f32(<4 x float> %v, float* %p, i32 %y) nounwind {
+define <4 x float> @load_f32_v4f32(<4 x float> %v, ptr %p, i32 %y) nounwind {
 ; SSE2-LABEL: load_f32_v4f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -1438,12 +1438,12 @@ define <4 x float> @load_f32_v4f32(<4 x float> %v, float* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    vbroadcastss (%eax), %xmm2
 ; X86AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; X86AVX2-NEXT:    retl
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %ins = insertelement <4 x float> %v, float %x, i32 %y
   ret <4 x float> %ins
 }
 
-define <2 x double> @load_f64_v2f64(<2 x double> %v, double* %p, i32 %y) nounwind {
+define <2 x double> @load_f64_v2f64(<2 x double> %v, ptr %p, i32 %y) nounwind {
 ; SSE2-LABEL: load_f64_v2f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -1510,7 +1510,7 @@ define <2 x double> @load_f64_v2f64(<2 x double> %v, double* %p, i32 %y) nounwin
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %ins = insertelement <2 x double> %v, double %x, i32 %y
   ret <2 x double> %ins
 }
@@ -1572,7 +1572,7 @@ define <32 x i8> @arg_i8_v32i8(<32 x i8> %v, i8 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    subl $64, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $31, %eax
-; X86AVX2-NEXT:    movb 8(%ebp), %cl
+; X86AVX2-NEXT:    movzbl 8(%ebp), %ecx
 ; X86AVX2-NEXT:    vmovaps %ymm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %ymm0
@@ -1880,11 +1880,11 @@ define <4 x double> @arg_f64_v4f64(<4 x double> %v, double %x, i32 %y) nounwind 
   ret <4 x double> %ins
 }
 
-define <32 x i8> @load_i8_v32i8(<32 x i8> %v, i8* %p, i32 %y) nounwind {
+define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i8_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $31, %esi
@@ -1900,7 +1900,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, i8* %p, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    andq $-32, %rsp
 ; AVX1OR2-NEXT:    subq $64, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    movb (%rdi), %al
+; AVX1OR2-NEXT:    movzbl (%rdi), %eax
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX1OR2-NEXT:    andl $31, %esi
 ; AVX1OR2-NEXT:    movb %al, (%rsp,%rsi)
@@ -1916,7 +1916,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, i8* %p, i32 %y) nounwind {
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $64, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX512F-NEXT:    movb (%rdi), %al
+; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512F-NEXT:    andl $31, %esi
 ; AVX512F-NEXT:    movb %al, (%rsp,%rsi)
@@ -1941,19 +1941,19 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, i8* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $31, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
-; X86AVX2-NEXT:    movb (%ecx), %cl
+; X86AVX2-NEXT:    movzbl (%ecx), %ecx
 ; X86AVX2-NEXT:    vmovaps %ymm0, (%esp)
 ; X86AVX2-NEXT:    movb %cl, (%esp,%eax)
 ; X86AVX2-NEXT:    vmovaps (%esp), %ymm0
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i8, i8* %p
+  %x = load i8, ptr %p
   %ins = insertelement <32 x i8> %v, i8 %x, i32 %y
   ret <32 x i8> %ins
 }
 
-define <16 x i16> @load_i16_v16i16(<16 x i16> %v, i16* %p, i32 %y) nounwind {
+define <16 x i16> @load_i16_v16i16(<16 x i16> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i16_v16i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -2021,12 +2021,12 @@ define <16 x i16> @load_i16_v16i16(<16 x i16> %v, i16* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i16, i16* %p
+  %x = load i16, ptr %p
   %ins = insertelement <16 x i16> %v, i16 %x, i32 %y
   ret <16 x i16> %ins
 }
 
-define <8 x i32> @load_i32_v8i32(<8 x i32> %v, i32* %p, i32 %y) nounwind {
+define <8 x i32> @load_i32_v8i32(<8 x i32> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i32_v8i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -2078,12 +2078,12 @@ define <8 x i32> @load_i32_v8i32(<8 x i32> %v, i32* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %ins = insertelement <8 x i32> %v, i32 %x, i32 %y
   ret <8 x i32> %ins
 }
 
-define <4 x i64> @load_i64_v4i64(<4 x i64> %v, i64* %p, i32 %y) nounwind {
+define <4 x i64> @load_i64_v4i64(<4 x i64> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i64_v4i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -2145,12 +2145,12 @@ define <4 x i64> @load_i64_v4i64(<4 x i64> %v, i64* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    popl %esi
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %ins = insertelement <4 x i64> %v, i64 %x, i32 %y
   ret <4 x i64> %ins
 }
 
-define <8 x float> @load_f32_v8f32(<8 x float> %v, float* %p, i32 %y) nounwind {
+define <8 x float> @load_f32_v8f32(<8 x float> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_f32_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -2198,12 +2198,12 @@ define <8 x float> @load_f32_v8f32(<8 x float> %v, float* %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    vbroadcastss (%eax), %ymm2
 ; X86AVX2-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
 ; X86AVX2-NEXT:    retl
-  %x = load float, float* %p
+  %x = load float, ptr %p
   %ins = insertelement <8 x float> %v, float %x, i32 %y
   ret <8 x float> %ins
 }
 
-define <4 x double> @load_f64_v4f64(<4 x double> %v, double* %p, i32 %y) nounwind {
+define <4 x double> @load_f64_v4f64(<4 x double> %v, ptr %p, i32 %y) nounwind {
 ; SSE-LABEL: load_f64_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -2262,14 +2262,14 @@ define <4 x double> @load_f64_v4f64(<4 x double> %v, double* %p, i32 %y) nounwin
 ; X86AVX2-NEXT:    movl %ebp, %esp
 ; X86AVX2-NEXT:    popl %ebp
 ; X86AVX2-NEXT:    retl
-  %x = load double, double* %p
+  %x = load double, ptr %p
   %ins = insertelement <4 x double> %v, double %x, i32 %y
   ret <4 x double> %ins
 }
 
 ; Don't die trying to insert to an invalid index.
 
-define i32 @PR44139(<16 x i64>* %p) {
+define i32 @PR44139(ptr %p) {
 ; SSE-LABEL: PR44139:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl (%rdi), %eax
@@ -2308,14 +2308,14 @@ define i32 @PR44139(<16 x i64>* %p) {
 ; X86AVX2-NEXT:    xorl %edx, %edx
 ; X86AVX2-NEXT:    divl %ecx
 ; X86AVX2-NEXT:    retl
-  %L = load <16 x i64>, <16 x i64>* %p
+  %L = load <16 x i64>, ptr %p
   %E1 = extractelement <16 x i64> %L, i64 0
   %tempvector = insertelement <16 x i64> undef, i64 %E1, i32 0
   %vector = shufflevector <16 x i64> %tempvector, <16 x i64> undef, <16 x i32> zeroinitializer
   %C3 = icmp sgt i64 9223372036854775807, -9223372036854775808
   %t0 = trunc <16 x i64> %vector to <16 x i32>
   %I4 = insertelement <16 x i64> %vector, i64 %E1, i1 %C3
-  store <16 x i64> %I4, <16 x i64>* %p
+  store <16 x i64> %I4, ptr %p
   %elt = extractelement <16 x i32> %t0, i32 0
   %B = srem i32 %elt, -2147483648
   %B9 = udiv i32 %elt, %B

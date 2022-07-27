@@ -46,6 +46,9 @@ static inline bool isVector(MVT VT) {
 static inline bool isScalar(MVT VT) {
   return !VT.isVector();
 }
+static inline bool isScalarInteger(MVT VT) {
+  return VT.isScalarInteger();
+}
 
 template <typename Predicate>
 static bool berase_if(MachineValueTypeSet &S, Predicate P) {
@@ -59,6 +62,17 @@ static bool berase_if(MachineValueTypeSet &S, Predicate P) {
     S.erase(T);
   }
   return Erased;
+}
+
+void MachineValueTypeSet::writeToStream(raw_ostream &OS) const {
+  SmallVector<MVT, 4> Types(begin(), end());
+  array_pod_sort(Types.begin(), Types.end());
+
+  OS << '[';
+  ListSeparator LS(" ");
+  for (const MVT &T : Types)
+    OS << LS << ValueTypeByHwMode::getMVTName(T);
+  OS << ']';
 }
 
 // --- TypeSetByHwMode
@@ -193,20 +207,9 @@ void TypeSetByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '{';
   for (unsigned M : Modes) {
     OS << ' ' << getModeName(M) << ':';
-    writeToStream(get(M), OS);
+    get(M).writeToStream(OS);
   }
   OS << " }";
-}
-
-void TypeSetByHwMode::writeToStream(const SetType &S, raw_ostream &OS) {
-  SmallVector<MVT, 4> Types(S.begin(), S.end());
-  array_pod_sort(Types.begin(), Types.end());
-
-  OS << '[';
-  ListSeparator LS(" ");
-  for (const MVT &T : Types)
-    OS << LS << ValueTypeByHwMode::getMVTName(T);
-  OS << ']';
 }
 
 bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
@@ -253,6 +256,10 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
 }
 
 namespace llvm {
+  raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
+    T.writeToStream(OS);
+    return OS;
+  }
   raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
     T.writeToStream(OS);
     return OS;
@@ -266,10 +273,11 @@ void TypeSetByHwMode::dump() const {
 
 bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
   bool OutP = Out.count(MVT::iPTR), InP = In.count(MVT::iPTR);
-  auto Int = [&In](MVT T) -> bool { return !In.count(T); };
+  // Complement of In.
+  auto CompIn = [&In](MVT T) -> bool { return !In.count(T); };
 
   if (OutP == InP)
-    return berase_if(Out, Int);
+    return berase_if(Out, CompIn);
 
   // Compute the intersection of scalars separately to account for only
   // one set containing iPTR.
@@ -285,42 +293,64 @@ bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
   // { iPTR i32 } * { i32 i64 }      -> { i32 i64 }
   // { iPTR i32 } * { i32 i64 i128 } -> { iPTR i32 }
 
-  // Compute the difference between the two sets in such a way that the
-  // iPTR is in the set that is being subtracted. This is to see if there
-  // are any extra scalars in the set without iPTR that are not in the
-  // set containing iPTR. Then the iPTR could be considered a "wildcard"
-  // matching these scalars. If there is only one such scalar, it would
-  // replace the iPTR, if there are more, the iPTR would be retained.
-  SetType Diff;
+  // Let In' = elements only in In, Out' = elements only in Out, and
+  // IO = elements common to both. Normally IO would be returned as the result
+  // of the intersection, but we need to account for iPTR being a "wildcard" of
+  // sorts. Since elements in IO are those that match both sets exactly, they
+  // will all belong to the output. If any of the "leftovers" (i.e. In' or
+  // Out') contain iPTR, it means that the other set doesn't have it, but it
+  // could have (1) a more specific type, or (2) a set of types that is less
+  // specific. The "leftovers" from the other set is what we want to examine
+  // more closely.
+
+  auto subtract = [](const SetType &A, const SetType &B) {
+    SetType Diff = A;
+    berase_if(Diff, [&B](MVT T) { return B.count(T); });
+    return Diff;
+  };
+
   if (InP) {
-    Diff = Out;
-    berase_if(Diff, [&In](MVT T) { return In.count(T); });
-    // Pre-remove these elements and rely only on InP/OutP to determine
-    // whether a change has been made.
-    berase_if(Out, [&Diff](MVT T) { return Diff.count(T); });
-  } else {
-    Diff = In;
-    berase_if(Diff, [&Out](MVT T) { return Out.count(T); });
-    Out.erase(MVT::iPTR);
+    SetType OutOnly = subtract(Out, In);
+    if (OutOnly.empty()) {
+      // This means that Out \subset In, so no change to Out.
+      return false;
+    }
+    unsigned NumI = llvm::count_if(OutOnly, isScalarInteger);
+    if (NumI == 1 && OutOnly.size() == 1) {
+      // There is only one element in Out', and it happens to be a scalar
+      // integer that should be kept as a match for iPTR in In.
+      return false;
+    }
+    berase_if(Out, CompIn);
+    if (NumI == 1) {
+      // Replace the iPTR with the leftover scalar integer.
+      Out.insert(*llvm::find_if(OutOnly, isScalarInteger));
+    } else if (NumI > 1) {
+      Out.insert(MVT::iPTR);
+    }
+    return true;
   }
 
-  // The actual intersection.
-  bool Changed = berase_if(Out, Int);
-  unsigned NumD = Diff.size();
-  if (NumD == 0)
-    return Changed;
-
-  if (NumD == 1) {
-    Out.insert(*Diff.begin());
-    // This is a change only if Out was the one with iPTR (which is now
-    // being replaced).
-    Changed |= OutP;
-  } else {
-    // Multiple elements from Out are now replaced with iPTR.
-    Out.insert(MVT::iPTR);
-    Changed |= !OutP;
+  // OutP == true
+  SetType InOnly = subtract(In, Out);
+  unsigned SizeOut = Out.size();
+  berase_if(Out, CompIn);   // This will remove at least the iPTR.
+  unsigned NumI = llvm::count_if(InOnly, isScalarInteger);
+  if (NumI == 0) {
+    // iPTR deleted from Out.
+    return true;
   }
-  return Changed;
+  if (NumI == 1) {
+    // Replace the iPTR with the leftover scalar integer.
+    Out.insert(*llvm::find_if(InOnly, isScalarInteger));
+    return true;
+  }
+
+  // NumI > 1: Keep the iPTR in Out.
+  Out.insert(MVT::iPTR);
+  // If iPTR was the only element initially removed from Out, then Out
+  // has not changed.
+  return SizeOut != Out.size();
 }
 
 bool TypeSetByHwMode::validate() const {
@@ -902,7 +932,7 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
 }
 
 bool TreePredicateFn::hasPredCode() const {
-  return isLoad() || isStore() || isAtomic() ||
+  return isLoad() || isStore() || isAtomic() || hasNoUse() ||
          !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
@@ -947,12 +977,15 @@ std::string TreePredicateFn::getPredCode() const {
     if (isAnyExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsAnyExtLoad requires IsLoad");
-    if (isSignExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsSignExtLoad requires IsLoad");
-    if (isZeroExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsZeroExtLoad requires IsLoad");
+
+    if (!isAtomic()) {
+      if (isSignExtLoad())
+        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                        "IsSignExtLoad requires IsLoad or IsAtomic");
+      if (isZeroExtLoad())
+        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                        "IsZeroExtLoad requires IsLoad or IsAtomic");
+    }
   }
 
   if (isStore()) {
@@ -973,8 +1006,9 @@ std::string TreePredicateFn::getPredCode() const {
   if (isAtomic()) {
     if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
         getAddressSpaces() == nullptr &&
-        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
-        !isAtomicOrderingAcquireRelease() &&
+        // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
+        !isZeroExtLoad() && !isSignExtLoad() && !isAtomicOrderingAcquire() &&
+        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1075,6 +1109,10 @@ std::string TreePredicateFn::getPredCode() const {
     Code += "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
             "return false;\n";
 
+  // TODO: Handle atomic sextload/zextload normally when ATOMIC_LOAD is removed.
+  if (isAtomic() && (isZeroExtLoad() || isSignExtLoad()))
+    Code += "return false;\n";
+
   if (isLoad() || isStore()) {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
 
@@ -1124,6 +1162,9 @@ std::string TreePredicateFn::getPredCode() const {
                   .str();
   }
 
+  if (hasNoUse())
+    Code += "if (!SDValue(N, 0).use_empty()) return false;\n";
+
   std::string PredicateCode =
       std::string(PatFragRec->getRecord()->getValueAsString("PredicateCode"));
 
@@ -1166,6 +1207,9 @@ bool TreePredicateFn::isPredefinedPredicateEqualTo(StringRef Field,
 }
 bool TreePredicateFn::usesOperands() const {
   return isPredefinedPredicateEqualTo("PredicateCodeUsesOperands", true);
+}
+bool TreePredicateFn::hasNoUse() const {
+  return isPredefinedPredicateEqualTo("HasNoUse", true);
 }
 bool TreePredicateFn::isLoad() const {
   return isPredefinedPredicateEqualTo("IsLoad", true);

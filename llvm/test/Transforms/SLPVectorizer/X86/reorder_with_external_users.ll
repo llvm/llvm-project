@@ -109,3 +109,159 @@ seed_loop:
   %phi4 = phi double [ %mul4, %bb1 ], [ 0.0, %seed_loop ]
   br label %seed_loop
 }
+
+; We have to be careful when the tree contains add/sub patterns that could be
+; combined into a single addsub instruction. Reordering can block the pattern.
+define void @addsub_and_external_users(double *%A, double *%ptr) {
+; CHECK-LABEL: @addsub_and_external_users(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    [[LD:%.*]] = load double, double* undef, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[LD]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP4]], <double 2.100000e+00, double 2.200000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], <double 3.100000e+00, double 3.200000e+00>
+; CHECK-NEXT:    [[PTRA0:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[PTRA0]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[SHUFFLE]], <2 x double>* [[TMP7]], align 8
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP6]], <double 4.100000e+00, double 4.200000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i32 1
+; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    ret void
+;
+bb1:
+  %ld = load double, double* undef
+
+  %sub1 = fsub double %ld, 1.1
+  %add2 = fadd double %ld, 1.2
+
+  %div1 = fdiv double %sub1, 2.1
+  %div2 = fdiv double %add2, 2.2
+
+  %mul1 = fmul double %div1, 3.1
+  %mul2 = fmul double %div2, 3.2
+
+  ; These are external vectorizable stores with operands in reverse order.
+  %ptrA1 = getelementptr inbounds double, double* %A, i64 1
+  %ptrA0 = getelementptr inbounds double, double* %A, i64 0
+  store double %mul2, double *%ptrA0
+  store double %mul1, double *%ptrA1
+  br label %bb2
+
+bb2:
+  %addS1 = fadd double %mul1, 4.1
+  %addS2 = fadd double %mul2, 4.2
+  %seed = fcmp ogt double %addS1, %addS2
+  ret void
+}
+
+; This contains a sub/add bundle, reordering it will make it better.
+define void @subadd_and_external_users(double *%A, double *%ptr) {
+; CHECK-LABEL: @subadd_and_external_users(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    [[LD:%.*]] = load double, double* undef, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[LD]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP4]], <double 2.200000e+00, double 2.100000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], <double 3.200000e+00, double 3.100000e+00>
+; CHECK-NEXT:    [[PTRA0:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[PTRA0]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP6]], <2 x double>* [[TMP7]], align 8
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP6]], <double 4.200000e+00, double 4.100000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i32 1
+; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    ret void
+;
+bb1:
+  %ld = load double, double* undef
+
+  %add1 = fadd double %ld, 1.1
+  %sub2 = fsub double %ld, 1.2
+
+  %div1 = fdiv double %add1, 2.1
+  %div2 = fdiv double %sub2, 2.2
+
+  %mul1 = fmul double %div1, 3.1
+  %mul2 = fmul double %div2, 3.2
+
+  ; These are external vectorizable stores with operands in reverse order.
+  %ptrA1 = getelementptr inbounds double, double* %A, i64 1
+  %ptrA0 = getelementptr inbounds double, double* %A, i64 0
+  store double %mul2, double *%ptrA0
+  store double %mul1, double *%ptrA1
+  br label %bb2
+
+bb2:
+  %addS1 = fadd double %mul1, 4.1
+  %addS2 = fadd double %mul2, 4.2
+  %seed = fcmp ogt double %addS1, %addS2
+  ret void
+}
+
+define void @alt_but_not_addsub_and_external_users(double *%A, double *%ptr) {
+; CHECK-LABEL: @alt_but_not_addsub_and_external_users(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    [[LD:%.*]] = load double, double* undef, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[LD]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x double> [[SHUFFLE]], <double 1.400000e+00, double 1.300000e+00, double 1.200000e+00, double 1.100000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x double> [[SHUFFLE]], <double 1.400000e+00, double 1.300000e+00, double 1.200000e+00, double 1.100000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <4 x double> [[TMP3]], <double 2.400000e+00, double 2.300000e+00, double 2.200000e+00, double 2.100000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP4]], <double 3.400000e+00, double 3.300000e+00, double 3.200000e+00, double 3.100000e+00>
+; CHECK-NEXT:    [[PTRA0:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[PTRA0]] to <4 x double>*
+; CHECK-NEXT:    store <4 x double> [[TMP5]], <4 x double>* [[TMP6]], align 8
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x double> [ [[TMP5]], [[BB1:%.*]] ], [ <double 4.400000e+00, double 4.300000e+00, double 4.200000e+00, double 4.100000e+00>, [[BB2]] ]
+; CHECK-NEXT:    br label [[BB2]]
+;
+bb1:
+  %ld = load double, double* undef
+
+  %sub1 = fsub double %ld, 1.1
+  %add2 = fadd double %ld, 1.2
+  %add3 = fadd double %ld, 1.3
+  %sub4 = fsub double %ld, 1.4
+
+  %div1 = fdiv double %sub1, 2.1
+  %div2 = fdiv double %add2, 2.2
+  %div3 = fdiv double %add3, 2.3
+  %div4 = fdiv double %sub4, 2.4
+
+  %mul1 = fmul double %div1, 3.1
+  %mul2 = fmul double %div2, 3.2
+  %mul3 = fmul double %div3, 3.3
+  %mul4 = fmul double %div4, 3.4
+
+  ; These are external vectorizable stores with operands in reverse order.
+  %ptrA3 = getelementptr inbounds double, double* %A, i64 3
+  %ptrA2 = getelementptr inbounds double, double* %A, i64 2
+  %ptrA1 = getelementptr inbounds double, double* %A, i64 1
+  %ptrA0 = getelementptr inbounds double, double* %A, i64 0
+  store double %mul4, double *%ptrA0
+  store double %mul3, double *%ptrA1
+  store double %mul2, double *%ptrA2
+  store double %mul1, double *%ptrA3
+  br label %bb2
+
+bb2:
+  %phi1 = phi double [ %mul1, %bb1 ], [ 4.1, %bb2 ]
+  %phi2 = phi double [ %mul2, %bb1 ], [ 4.2, %bb2 ]
+  %phi3 = phi double [ %mul3, %bb1 ], [ 4.3, %bb2 ]
+  %phi4 = phi double [ %mul4, %bb1 ], [ 4.4, %bb2 ]
+  br label %bb2
+}

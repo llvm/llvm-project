@@ -2,19 +2,19 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx  | FileCheck %s --check-prefixes=CHECK,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX2
 
-define void @PR32957(<2 x float>* %in, <8 x float>* %out) {
+define void @PR32957(ptr %in, ptr %out) {
 ; CHECK-LABEL: PR32957:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %ld = load <2 x float>, <2 x float>* %in, align 8
+  %ld = load <2 x float>, ptr %in, align 8
   %ext = extractelement <2 x float> %ld, i64 0
   %ext2 = extractelement <2 x float> %ld, i64 1
   %ins = insertelement <8 x float> <float undef, float undef, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0>, float %ext, i64 0
   %ins2 = insertelement <8 x float> %ins, float %ext2, i64 1
-  store <8 x float> %ins2, <8 x float>* %out, align 32
+  store <8 x float> %ins2, ptr %out, align 32
   ret void
 }
 
@@ -69,24 +69,24 @@ define void @concat_of_broadcast_v2f64_v4f64() {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 alloca_0:
-  store float 9.000000e+00, float* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 30256) to float*), align 16
-  store <2 x i32> <i32 1, i32 1>, <2 x i32>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 46348) to <2 x i32>*), align 4
+  store float 9.000000e+00, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 30256), align 16
+  store <2 x i32> <i32 1, i32 1>, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 46348), align 4
   br label %loop.4942
 
 loop.4942:                                        ; preds = %loop.4942, %alloca_0
   br i1 undef, label %loop.4942, label %ifmerge.1298
 
 ifmerge.1298:                                     ; preds = %loop.4942
-  %gepload4638 = load float, float* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 28324) to float*), align 4
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 48296) to <2 x float>*), align 8
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 48304) to <2 x float>*), align 16
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 48312) to <2 x float>*), align 8
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 48320) to <2 x float>*), align 32
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 47372) to <2 x float>*), align 4
+  %gepload4638 = load float, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 28324), align 4
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 48296), align 8
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 48304), align 16
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 48312), align 8
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 48320), align 32
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 47372), align 4
   ret void
 }
 
-define <4 x float> @concat_of_broadcast_v4f32_v8f32(<8 x float>* %a0, <8 x float>* %a1, <8 x float>* %a2) {
+define <4 x float> @concat_of_broadcast_v4f32_v8f32(ptr %a0, ptr %a1, ptr %a2) {
 ; AVX1-LABEL: concat_of_broadcast_v4f32_v8f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovaps (%rdi), %ymm0
@@ -113,9 +113,9 @@ define <4 x float> @concat_of_broadcast_v4f32_v8f32(<8 x float>* %a0, <8 x float
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %ld0 = load volatile <8 x float>, <8 x float>* %a0
-  %ld1 = load volatile <8 x float>, <8 x float>* %a1
-  %ld2 = load volatile <8 x float>, <8 x float>* %a2
+  %ld0 = load volatile <8 x float>, ptr %a0
+  %ld1 = load volatile <8 x float>, ptr %a1
+  %ld2 = load volatile <8 x float>, ptr %a2
   %shuffle = shufflevector <8 x float> %ld0, <8 x float> %ld1, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 4, i32 undef, i32 undef, i32 8>
   %shuffle1 = shufflevector <8 x float> %ld2, <8 x float> %shuffle, <4 x i32> <i32 6, i32 15, i32 12, i32 3>
   ret <4 x float> %shuffle1

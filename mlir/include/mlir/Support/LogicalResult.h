@@ -74,7 +74,8 @@ inline bool failed(LogicalResult result) { return result.failed(); }
 /// This class provides support for representing a failure result, or a valid
 /// value of type `T`. This allows for integrating with LogicalResult, while
 /// also providing a value on the success path.
-template <typename T> class LLVM_NODISCARD FailureOr : public Optional<T> {
+template <typename T>
+class LLVM_NODISCARD FailureOr : public Optional<T> {
 public:
   /// Allow constructing from a LogicalResult. The result *must* be a failure.
   /// Success results should use a proper instance of type `T`.
@@ -90,12 +91,12 @@ public:
   FailureOr(const FailureOr<U> &other)
       : Optional<T>(failed(other) ? Optional<T>() : Optional<T>(*other)) {}
 
-  operator LogicalResult() const { return success(this->hasValue()); }
+  operator LogicalResult() const { return success(this->has_value()); }
 
 private:
   /// Hide the bool conversion as it easily creates confusion.
   using Optional<T>::operator bool;
-  using Optional<T>::hasValue;
+  using Optional<T>::has_value;
 };
 
 /// This class represents success/failure for parsing-like operations that find

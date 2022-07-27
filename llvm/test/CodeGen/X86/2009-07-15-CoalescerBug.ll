@@ -1,38 +1,38 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10
 
-	%struct.ANY = type { i8* }
-	%struct.AV = type { %struct.XPVAV*, i32, i32 }
-	%struct.CLONE_PARAMS = type { %struct.AV*, i64, %struct.PerlInterpreter* }
-	%struct.CV = type { %struct.XPVCV*, i32, i32 }
-	%struct.DIR = type { i32, i64, i64, i8*, i32, i64, i64, i32, %struct.__darwin_pthread_mutex_t, %struct._telldir* }
-	%struct.GP = type { %struct.SV*, i32, %struct.io*, %struct.CV*, %struct.AV*, %struct.HV*, %struct.GV*, %struct.CV*, i32, i32, i32, i8* }
-	%struct.GV = type { %struct.XPVGV*, i32, i32 }
-	%struct.HE = type { %struct.HE*, %struct.HEK*, %struct.SV* }
+	%struct.ANY = type { ptr }
+	%struct.AV = type { ptr, i32, i32 }
+	%struct.CLONE_PARAMS = type { ptr, i64, ptr }
+	%struct.CV = type { ptr, i32, i32 }
+	%struct.DIR = type { i32, i64, i64, ptr, i32, i64, i64, i32, %struct.__darwin_pthread_mutex_t, ptr }
+	%struct.GP = type { ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i32, ptr }
+	%struct.GV = type { ptr, i32, i32 }
+	%struct.HE = type { ptr, ptr, ptr }
 	%struct.HEK = type { i32, i32, [1 x i8] }
-	%struct.HV = type { %struct.XPVHV*, i32, i32 }
-	%struct.MAGIC = type { %struct.MAGIC*, %struct.MGVTBL*, i16, i8, i8, %struct.SV*, i8*, i32 }
-	%struct.MGVTBL = type { i32 (%struct.SV*, %struct.MAGIC*)*, i32 (%struct.SV*, %struct.MAGIC*)*, i32 (%struct.SV*, %struct.MAGIC*)*, i32 (%struct.SV*, %struct.MAGIC*)*, i32 (%struct.SV*, %struct.MAGIC*)*, i32 (%struct.SV*, %struct.MAGIC*, %struct.SV*, i8*, i32)*, i32 (%struct.MAGIC*, %struct.CLONE_PARAMS*)* }
-	%struct.OP = type { %struct.OP*, %struct.OP*, %struct.OP* ()*, i64, i16, i16, i8, i8 }
-	%struct.PMOP = type { %struct.OP*, %struct.OP*, %struct.OP* ()*, i64, i16, i16, i8, i8, %struct.OP*, %struct.OP*, %struct.OP*, %struct.OP*, %struct.PMOP*, %struct.REGEXP*, i32, i32, i8, %struct.HV* }
-	%struct.PerlIO_funcs = type { i64, i8*, i64, i32, i64 (%struct.PerlIOl**, i8*, %struct.SV*, %struct.PerlIO_funcs*)*, i64 (%struct.PerlIOl**)*, %struct.PerlIOl** (%struct.PerlIO_funcs*, %struct.PerlIO_list_t*, i64, i8*, i32, i32, i32, %struct.PerlIOl**, i32, %struct.SV**)*, i64 (%struct.PerlIOl**)*, %struct.SV* (%struct.PerlIOl**, %struct.CLONE_PARAMS*, i32)*, i64 (%struct.PerlIOl**)*, %struct.PerlIOl** (%struct.PerlIOl**, %struct.PerlIOl**, %struct.CLONE_PARAMS*, i32)*, i64 (%struct.PerlIOl**, i8*, i64)*, i64 (%struct.PerlIOl**, i8*, i64)*, i64 (%struct.PerlIOl**, i8*, i64)*, i64 (%struct.PerlIOl**, i64, i32)*, i64 (%struct.PerlIOl**)*, i64 (%struct.PerlIOl**)*, i64 (%struct.PerlIOl**)*, i64 (%struct.PerlIOl**)*, i64 (%struct.PerlIOl**)*, i64 (%struct.PerlIOl**)*, void (%struct.PerlIOl**)*, void (%struct.PerlIOl**)*, i8* (%struct.PerlIOl**)*, i64 (%struct.PerlIOl**)*, i8* (%struct.PerlIOl**)*, i64 (%struct.PerlIOl**)*, void (%struct.PerlIOl**, i8*, i64)* }
-	%struct.PerlIO_list_t = type { i64, i64, i64, %struct.PerlIO_pair_t* }
-	%struct.PerlIO_pair_t = type { %struct.PerlIO_funcs*, %struct.SV* }
-	%struct.PerlIOl = type { %struct.PerlIOl*, %struct.PerlIO_funcs*, i32 }
+	%struct.HV = type { ptr, i32, i32 }
+	%struct.MAGIC = type { ptr, ptr, i16, i8, i8, ptr, ptr, i32 }
+	%struct.MGVTBL = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+	%struct.OP = type { ptr, ptr, ptr, i64, i16, i16, i8, i8 }
+	%struct.PMOP = type { ptr, ptr, ptr, i64, i16, i16, i8, i8, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i8, ptr }
+	%struct.PerlIO_funcs = type { i64, ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+	%struct.PerlIO_list_t = type { i64, i64, i64, ptr }
+	%struct.PerlIO_pair_t = type { ptr, ptr }
+	%struct.PerlIOl = type { ptr, ptr, i32 }
 	%struct.PerlInterpreter = type { i8 }
-	%struct.REGEXP = type { i32*, i32*, %struct.regnode*, %struct.reg_substr_data*, i8*, %struct.reg_data*, i8*, i32*, i32, i32, i32, i32, i32, i32, i32, i32, [1 x %struct.regnode] }
-	%struct.SV = type { i8*, i32, i32 }
-	%struct.XPVAV = type { i8*, i64, i64, i64, double, %struct.MAGIC*, %struct.HV*, %struct.SV**, %struct.SV*, i8 }
-	%struct.XPVCV = type { i8*, i64, i64, i64, double, %struct.MAGIC*, %struct.HV*, %struct.HV*, %struct.OP*, %struct.OP*, void (%struct.CV*)*, %struct.ANY, %struct.GV*, i8*, i64, %struct.AV*, %struct.CV*, i16, i32 }
-	%struct.XPVGV = type { i8*, i64, i64, i64, double, %struct.MAGIC*, %struct.HV*, %struct.GP*, i8*, i64, %struct.HV*, i8 }
-	%struct.XPVHV = type { i8*, i64, i64, i64, double, %struct.MAGIC*, %struct.HV*, i32, %struct.HE*, %struct.PMOP*, i8* }
-	%struct.XPVIO = type { i8*, i64, i64, i64, double, %struct.MAGIC*, %struct.HV*, %struct.PerlIOl**, %struct.PerlIOl**, %struct.anon, i64, i64, i64, i64, i8*, %struct.GV*, i8*, %struct.GV*, i8*, %struct.GV*, i16, i8, i8 }
+	%struct.REGEXP = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, [1 x %struct.regnode] }
+	%struct.SV = type { ptr, i32, i32 }
+	%struct.XPVAV = type { ptr, i64, i64, i64, double, ptr, ptr, ptr, ptr, i8 }
+	%struct.XPVCV = type { ptr, i64, i64, i64, double, ptr, ptr, ptr, ptr, ptr, ptr, %struct.ANY, ptr, ptr, i64, ptr, ptr, i16, i32 }
+	%struct.XPVGV = type { ptr, i64, i64, i64, double, ptr, ptr, ptr, ptr, i64, ptr, i8 }
+	%struct.XPVHV = type { ptr, i64, i64, i64, double, ptr, ptr, i32, ptr, ptr, ptr }
+	%struct.XPVIO = type { ptr, i64, i64, i64, double, ptr, ptr, ptr, ptr, %struct.anon, i64, i64, i64, i64, ptr, ptr, ptr, ptr, ptr, ptr, i16, i8, i8 }
 	%struct.__darwin_pthread_mutex_t = type { i64, [56 x i8] }
 	%struct._telldir = type opaque
-	%struct.anon = type { %struct.DIR* }
-	%struct.io = type { %struct.XPVIO*, i32, i32 }
-	%struct.reg_data = type { i32, i8*, [1 x i8*] }
+	%struct.anon = type { ptr }
+	%struct.io = type { ptr, i32, i32 }
+	%struct.reg_data = type { i32, ptr, [1 x ptr] }
 	%struct.reg_substr_data = type { [3 x %struct.reg_substr_datum] }
-	%struct.reg_substr_datum = type { i32, i32, %struct.SV*, %struct.SV* }
+	%struct.reg_substr_datum = type { i32, i32, ptr, ptr }
 	%struct.regnode = type { i8, i8, i16 }
 
 define i32 @Perl_yylex() nounwind ssp {
@@ -237,8 +237,7 @@ bb1545:		; preds = %bb1544
 	br i1 undef, label %bb1563, label %bb1558
 
 bb1558:		; preds = %bb1545
-	%0 = load %struct.SV*, %struct.SV** undef		; <%struct.SV*> [#uses=1]
-	%1 = bitcast %struct.SV* %0 to %struct.GV*		; <%struct.GV*> [#uses=5]
+	%0 = load ptr, ptr undef		; <ptr> [#uses=1]
 	br i1 undef, label %bb1563, label %bb1559
 
 bb1559:		; preds = %bb1558
@@ -254,7 +253,7 @@ bb1562:		; preds = %bb1561
 	br label %bb1563
 
 bb1563:		; preds = %bb1562, %bb1561, %bb1560, %bb1559, %bb1558, %bb1545
-	%gv19.3 = phi %struct.GV* [ %1, %bb1562 ], [ undef, %bb1545 ], [ %1, %bb1558 ], [ %1, %bb1559 ], [ %1, %bb1560 ], [ %1, %bb1561 ]		; <%struct.GV*> [#uses=0]
+	%gv19.3 = phi ptr [ %0, %bb1562 ], [ undef, %bb1545 ], [ %0, %bb1558 ], [ %0, %bb1559 ], [ %0, %bb1560 ], [ %0, %bb1561 ]		; <ptr> [#uses=0]
 	br i1 undef, label %bb1565, label %reserved_word
 
 bb1565:		; preds = %bb1563, %bb1544

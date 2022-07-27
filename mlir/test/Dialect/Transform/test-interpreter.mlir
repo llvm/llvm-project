@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file --verify-diagnostics
+// RUN: mlir-opt %s --test-transform-dialect-interpreter -allow-unregistered-dialect --split-input-file --verify-diagnostics
 
 // expected-remark @below {{applying transformation}}
 transform.test_transform_op
@@ -375,6 +375,255 @@ transform.with_pdl_patterns {
     // expected-error @below {{only isolated-from-above ops can be alternative scopes}}
     alternatives %1 {
     ^bb2(%arg2: !pdl.operation):
+    }
+  }
+}
+// -----
+
+func.func @foo() {
+  // expected-note @below {{when applied to this op}}
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // expected-error @below {{applications of transform.test_wrong_number_of_results expected to produce 3 results (actually produced 1).}}
+    // expected-note @below {{If you need variadic results, consider a generic `apply` instead of the specialized `applyToOne`.}}
+    // expected-note @below {{Producing 3 null results is allowed if the use case warrants it.}}
+    transform.test_wrong_number_of_results %0
+  }
+}
+
+// -----
+
+func.func @foo() {
+  "op" () : () -> ()
+  // expected-note @below {{when applied to this op}}
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // expected-error @below {{applications of transform.test_wrong_number_of_multi_results expected to produce 1 results (actually produced 0)}}
+    // expected-note @below {{If you need variadic results, consider a generic `apply` instead of the specialized `applyToOne`.}}
+    // expected-note @below {{Producing 1 null results is allowed if the use case warrants it.}}
+    transform.test_wrong_number_of_multi_results %0
+  }
+}
+
+// -----
+
+func.func @foo() {
+  "op" () : () -> ()
+  "op" () : () -> ()
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // Transform matches 3 ops and produces 2 results.
+    %1:2 = transform.test_correct_number_of_multi_results %0
+  }
+}
+
+// -----
+
+func.func @foo() {
+  "wrong_op_name" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // Transform fails to match any but still produces 2 results.
+    %1:2 = transform.test_correct_number_of_multi_results %0
+  }
+}
+
+// -----
+
+func.func @foo() {
+  // expected-note @below {{when applied to this op}}
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // expected-error @below {{unexpected application of transform.test_mixed_null_and_non_null_results produces both null and non null results.}}
+    transform.test_mixed_null_and_non_null_results %0
+  }
+}
+
+// -----
+
+// Expecting to match all operations by merging the handles that matched addi
+// and subi separately.
+func.func @foo(%arg0: index) {
+  // expected-remark @below {{matched}}
+  %0 = arith.addi %arg0, %arg0 : index
+  // expected-remark @below {{matched}}
+  %1 = arith.subi %arg0, %arg0 : index
+  // expected-remark @below {{matched}}
+  %2 = arith.addi %0, %1 : index
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @addi : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "arith.addi"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+  pdl.pattern @subi : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "arith.subi"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @addi in %arg1
+    %1 = pdl_match @subi in %arg1
+    %2 = merge_handles %0, %1
+    test_print_remark_at_operand %2, "matched"
+  }
+}
+
+// -----
+
+func.func @foo() {
+  "op" () { target_me } : () -> ()
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    transform.test_mixed_sucess_and_silenceable %0
+  }
+}
+
+// -----
+
+module {
+  func.func private @foo()
+  func.func private @bar()
+
+  transform.with_pdl_patterns {
+  ^bb0(%arg0: !pdl.operation):
+    pdl.pattern @func : benefit(1) {
+      %0 = pdl.operands
+      %1 = pdl.types
+      %2 = pdl.operation "func.func"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+      pdl.rewrite %2 with "transform.dialect"
+    }
+
+    transform.sequence %arg0 {
+    ^bb0(%arg1: !pdl.operation):
+      %0 = pdl_match @func in %arg1
+      %1 = replicate num(%0) %arg1
+      // expected-remark @below {{2}}
+      test_print_number_of_associated_payload_ir_ops %1
+      %2 = replicate num(%0) %1
+      // expected-remark @below {{4}}
+      test_print_number_of_associated_payload_ir_ops %2
+    }
+  }
+}
+
+// -----
+
+func.func @bar() {
+  // expected-remark @below {{transform applied}}
+  %0 = arith.constant 0 : i32
+  // expected-remark @below {{transform applied}}
+  %1 = arith.constant 1 : i32
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @const : benefit(1) {
+    %r = pdl.types
+    %0 = pdl.operation "arith.constant" -> (%r : !pdl.range<type>)
+    pdl.rewrite %0 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %f = pdl_match @const in %arg1
+    transform.foreach %f {
+    ^bb2(%arg2: !pdl.operation):
+      // expected-remark @below {{1}}
+      transform.test_print_number_of_associated_payload_ir_ops %arg2
+      transform.test_print_remark_at_operand %arg2, "transform applied"
     }
   }
 }

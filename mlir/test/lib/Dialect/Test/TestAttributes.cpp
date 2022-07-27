@@ -114,10 +114,10 @@ TestI64ElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-LogicalResult
-TestAttrWithFormatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                               int64_t one, std::string two, IntegerAttr three,
-                               ArrayRef<int> four) {
+LogicalResult TestAttrWithFormatAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, int64_t one, std::string two,
+    IntegerAttr three, ArrayRef<int> four,
+    ArrayRef<AttrWithTypeBuilderAttr> arrayOfAttrWithTypeBuilderAttr) {
   if (four.size() != static_cast<unsigned>(one))
     return emitError() << "expected 'one' to equal 'four.size()'";
   return success();
@@ -173,25 +173,18 @@ void TestSubElementsAccessAttr::walkImmediateSubElements(
   walkAttrsFn(getThird());
 }
 
-SubElementAttrInterface TestSubElementsAccessAttr::replaceImmediateSubAttribute(
-    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
-  Attribute first = getFirst();
-  Attribute second = getSecond();
-  Attribute third = getThird();
-  for (auto &it : replacements) {
-    switch (it.first) {
-    case 0:
-      first = it.second;
-      break;
-    case 1:
-      second = it.second;
-      break;
-    case 2:
-      third = it.second;
-      break;
-    }
-  }
-  return get(getContext(), first, second, third);
+Attribute TestSubElementsAccessAttr::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  assert(replAttrs.size() == 3 && "invalid number of replacement attributes");
+  return get(getContext(), replAttrs[0], replAttrs[1], replAttrs[2]);
+}
+
+//===----------------------------------------------------------------------===//
+// TestExtern1DI64ElementsAttr
+//===----------------------------------------------------------------------===//
+
+ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
+  return getHandle().getData()->getData();
 }
 
 //===----------------------------------------------------------------------===//

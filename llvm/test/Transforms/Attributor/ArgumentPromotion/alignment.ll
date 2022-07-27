@@ -5,16 +5,18 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 define void @f() {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@f() {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    call void @g()
-; IS__TUNIT____-NEXT:    ret void
+; IS________OPM-LABEL: define {{[^@]+}}@f() {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[A:%.*]] = alloca i32, align 1
+; IS________OPM-NEXT:    call void @g(i32* noalias nocapture nofree noundef nonnull readonly dereferenceable(4) [[A]])
+; IS________OPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f() {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = alloca i32, align 1
-; IS__CGSCC_OPM-NEXT:    call void @g(i32* noalias nocapture nofree noundef nonnull readonly dereferenceable(4) [[A]])
-; IS__CGSCC_OPM-NEXT:    ret void
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f() {
+; IS__TUNIT_NPM-NEXT:  entry:
+; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32, align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 1
+; IS__TUNIT_NPM-NEXT:    call void @g(i32 [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f() {
 ; IS__CGSCC_NPM-NEXT:  entry:
@@ -28,23 +30,19 @@ entry:
 }
 
 define internal void @g(i32* %a) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@g() {
-; IS__TUNIT____-NEXT:    call void @z(i32 undef)
-; IS__TUNIT____-NEXT:    ret void
+; IS________OPM-LABEL: define {{[^@]+}}@g
+; IS________OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly dereferenceable(4) [[A:%.*]]) {
+; IS________OPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A]], align 1
+; IS________OPM-NEXT:    call void @z(i32 [[AA]])
+; IS________OPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@g
-; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly dereferenceable(4) [[A:%.*]]) {
-; IS__CGSCC_OPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A]], align 1
-; IS__CGSCC_OPM-NEXT:    call void @z(i32 [[AA]])
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@g
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) {
-; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A_PRIV]], align 1
-; IS__CGSCC_NPM-NEXT:    call void @z(i32 [[AA]])
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM-LABEL: define {{[^@]+}}@g
+; IS________NPM-SAME: (i32 [[TMP0:%.*]]) {
+; IS________NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
+; IS________NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV]], align 4
+; IS________NPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A_PRIV]], align 1
+; IS________NPM-NEXT:    call void @z(i32 [[AA]])
+; IS________NPM-NEXT:    ret void
 ;
   %aa = load i32, i32* %a, align 1
   call void @z(i32 %aa)

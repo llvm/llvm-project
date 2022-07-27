@@ -20,14 +20,19 @@ add_header_library(
     libc.src.__support.threads.mutex_common
 )
 
-add_header_library(
+add_object_library(
   thread
-  HDRS
-    thread.h
+  SRCS
+    thread.cpp
   DEPENDS
     .futex_word_type
+    libc.config.linux.app_h
     libc.include.sys_syscall
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.error
-    libc.src.__support.threads.thread_attrib
+    libc.src.__support.threads.thread_common
+  COMPILE_OPTIONS
+    -O3
+    -fno-omit-frame-pointer # This allows us to sniff out the thread args from
+                            # the new thread's stack reliably.
 )

@@ -222,7 +222,7 @@ define <32 x i16> @v32i16(<32 x i16> %x, <32 x i16> %y) nounwind {
 
 ; Too narrow vectors, legalized by widening.
 
-define void @v8i8(<8 x i8>* %px, <8 x i8>* %py, <8 x i8>* %pz) nounwind {
+define void @v8i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v8i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -238,14 +238,14 @@ define void @v8i8(<8 x i8>* %px, <8 x i8>* %py, <8 x i8>* %pz) nounwind {
 ; AVX-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <8 x i8>, <8 x i8>* %px
-  %y = load <8 x i8>, <8 x i8>* %py
+  %x = load <8 x i8>, ptr %px
+  %y = load <8 x i8>, ptr %py
   %z = call <8 x i8> @llvm.uadd.sat.v8i8(<8 x i8> %x, <8 x i8> %y)
-  store <8 x i8> %z, <8 x i8>* %pz
+  store <8 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
+define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v4i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -261,14 +261,14 @@ define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
 ; AVX-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <4 x i8>, <4 x i8>* %px
-  %y = load <4 x i8>, <4 x i8>* %py
+  %x = load <4 x i8>, ptr %px
+  %y = load <4 x i8>, ptr %py
   %z = call <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8> %x, <4 x i8> %y)
-  store <4 x i8> %z, <4 x i8>* %pz
+  store <4 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
+define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE2-LABEL: v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl (%rdi), %eax
@@ -310,14 +310,14 @@ define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
 ; AVX-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrw $0, %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <2 x i8>, <2 x i8>* %px
-  %y = load <2 x i8>, <2 x i8>* %py
+  %x = load <2 x i8>, ptr %px
+  %y = load <2 x i8>, ptr %py
   %z = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %x, <2 x i8> %y)
-  store <2 x i8> %z, <2 x i8>* %pz
+  store <2 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v4i16(<4 x i16>* %px, <4 x i16>* %py, <4 x i16>* %pz) nounwind {
+define void @v4i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v4i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -333,14 +333,14 @@ define void @v4i16(<4 x i16>* %px, <4 x i16>* %py, <4 x i16>* %pz) nounwind {
 ; AVX-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <4 x i16>, <4 x i16>* %px
-  %y = load <4 x i16>, <4 x i16>* %py
+  %x = load <4 x i16>, ptr %px
+  %y = load <4 x i16>, ptr %py
   %z = call <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16> %x, <4 x i16> %y)
-  store <4 x i16> %z, <4 x i16>* %pz
+  store <4 x i16> %z, ptr %pz
   ret void
 }
 
-define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
+define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -356,10 +356,10 @@ define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
 ; AVX-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <2 x i16>, <2 x i16>* %px
-  %y = load <2 x i16>, <2 x i16>* %py
+  %x = load <2 x i16>, ptr %px
+  %y = load <2 x i16>, ptr %py
   %z = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> %x, <2 x i16> %y)
-  store <2 x i16> %z, <2 x i16>* %pz
+  store <2 x i16> %z, ptr %pz
   ret void
 }
 
@@ -377,7 +377,7 @@ define <12 x i8> @v12i8(<12 x i8> %x, <12 x i8> %y) nounwind {
   ret <12 x i8> %z
 }
 
-define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind {
+define void @v12i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v12i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -417,19 +417,19 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %x = load <12 x i16>, <12 x i16>* %px
-  %y = load <12 x i16>, <12 x i16>* %py
+  %x = load <12 x i16>, ptr %px
+  %y = load <12 x i16>, ptr %py
   %z = call <12 x i16> @llvm.uadd.sat.v12i16(<12 x i16> %x, <12 x i16> %y)
-  store <12 x i16> %z, <12 x i16>* %pz
+  store <12 x i16> %z, ptr %pz
   ret void
 }
 
 ; Scalarization
 
-define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
+define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v1i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    addb (%rsi), %al
 ; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    movl $255, %ecx
@@ -439,21 +439,21 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ;
 ; AVX-LABEL: v1i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %al
+; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    addb (%rsi), %al
 ; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    movl $255, %ecx
 ; AVX-NEXT:    cmovael %eax, %ecx
 ; AVX-NEXT:    movb %cl, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <1 x i8>, <1 x i8>* %px
-  %y = load <1 x i8>, <1 x i8>* %py
+  %x = load <1 x i8>, ptr %px
+  %y = load <1 x i8>, ptr %py
   %z = call <1 x i8> @llvm.uadd.sat.v1i8(<1 x i8> %x, <1 x i8> %y)
-  store <1 x i8> %z, <1 x i8>* %pz
+  store <1 x i8> %z, ptr %pz
   ret void
 }
 
-define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
+define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v1i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl (%rdi), %eax
@@ -471,10 +471,10 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; AVX-NEXT:    cmovael %eax, %ecx
 ; AVX-NEXT:    movw %cx, (%rdx)
 ; AVX-NEXT:    retq
-  %x = load <1 x i16>, <1 x i16>* %px
-  %y = load <1 x i16>, <1 x i16>* %py
+  %x = load <1 x i16>, ptr %px
+  %y = load <1 x i16>, ptr %py
   %z = call <1 x i16> @llvm.uadd.sat.v1i16(<1 x i16> %x, <1 x i16> %y)
-  store <1 x i16> %z, <1 x i16>* %pz
+  store <1 x i16> %z, ptr %pz
   ret void
 }
 

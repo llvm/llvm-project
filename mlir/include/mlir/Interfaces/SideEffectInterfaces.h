@@ -53,7 +53,8 @@ public:
   TypeID getEffectID() const { return id; }
 
   /// Returns a unique instance for the given effect class.
-  template <typename DerivedEffect> static DerivedEffect *get() {
+  template <typename DerivedEffect>
+  static DerivedEffect *get() {
     static_assert(std::is_base_of<Effect, DerivedEffect>::value,
                   "expected DerivedEffect to inherit from Effect");
 
@@ -134,7 +135,8 @@ struct AutomaticAllocationScopeResource
 /// applied, and an optional symbol reference or value(either operand, result,
 /// or region entry argument) that the effect is applied to, and an optional
 /// parameters attribute further specifying the details of the effect.
-template <typename EffectT> class EffectInstance {
+template <typename EffectT>
+class EffectInstance {
 public:
   EffectInstance(EffectT *effect, Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource) {}
@@ -248,9 +250,11 @@ struct Write : public Effect::Base<Write> {};
 // SideEffect Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns true if this operation only has the given effect on `value`.
+/// Returns true if `op` has only an effect of type `EffectTy` (and of no other
+/// type) on `value`. If no value is provided, simply check if effects of that
+/// type and only of that type are present.
 template <typename EffectTy>
-bool hasSingleEffect(Operation *op, Value value);
+bool hasSingleEffect(Operation *op, Value value = nullptr);
 
 /// Return true if the given operation is unused, and has no side effects on
 /// memory that prevent erasing.

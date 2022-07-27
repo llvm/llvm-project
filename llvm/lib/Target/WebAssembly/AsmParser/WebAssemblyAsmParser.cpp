@@ -375,7 +375,7 @@ public:
       auto Type = WebAssembly::parseType(Lexer.getTok().getString());
       if (!Type)
         return error("unknown type: ", Lexer.getTok());
-      Types.push_back(Type.getValue());
+      Types.push_back(*Type);
       Parser.Lex();
       if (!isNext(AsmToken::Comma))
         break;
@@ -817,8 +817,7 @@ public:
       // Now set this symbol with the correct type.
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-      WasmSym->setGlobalType(
-          wasm::WasmGlobalType{uint8_t(Type.getValue()), Mutable});
+      WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(*Type), Mutable});
       // And emit the directive again.
       TOut.emitGlobalType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -848,7 +847,7 @@ public:
       // symbol
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-      wasm::WasmTableType Type = {uint8_t(ElemType.getValue()), Limits};
+      wasm::WasmTableType Type = {uint8_t(*ElemType), Limits};
       WasmSym->setTableType(Type);
       TOut.emitTableType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");

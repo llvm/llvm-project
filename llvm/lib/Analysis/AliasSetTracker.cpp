@@ -233,8 +233,8 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
   if (AliasAny)
     return true;
 
-  assert(Inst->mayReadOrWriteMemory() &&
-         "Instruction must either read or write memory.");
+  if (!Inst->mayReadOrWriteMemory())
+    return false;
 
   for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
     if (auto *UnknownInst = getUnknownInst(i)) {
@@ -579,7 +579,7 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   AliasAnyAS->Access = AliasSet::ModRefAccess;
   AliasAnyAS->AliasAny = true;
 
-  for (auto Cur : ASVector) {
+  for (auto *Cur : ASVector) {
     // If Cur was already forwarding, just forward to the new AS instead.
     AliasSet *FwdTo = Cur->Forward;
     if (FwdTo) {

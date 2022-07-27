@@ -35,3 +35,10 @@
 // RUN: not %clang -cc1 -triple riscv64-unknown-elf -target-feature +e 2>&1 | FileCheck %s -check-prefix=RV64-WITH-E
 
 // RV64-WITH-E: error: invalid feature combination: standard user-level extension 'e' requires 'rv32'
+
+// RUN: not %clang -c --target=riscv64-linux-gnu -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-DWARF
+// RUN: not %clang -c --target=riscv64 -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-DWARF
+// RUN: %clang -### -c --target=riscv64 -mno-relax -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=SPLIT-DWARF
+
+// ERR-SPLIT-DWARF: error: -gsplit-dwarf{{.*}} is unsupported with RISC-V linker relaxation (-mrelax)
+// SPLIT-DWARF:     "-split-dwarf-file"

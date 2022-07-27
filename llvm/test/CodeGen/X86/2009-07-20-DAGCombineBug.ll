@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=i686--
 
-@bsBuff = internal global i32 0		; <i32*> [#uses=1]
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @bsGetUInt32 to i8*)], section "llvm.metadata"		; <[1 x i8*]*> [#uses=0]
+@bsBuff = internal global i32 0		; <ptr> [#uses=1]
+@llvm.used = appending global [1 x ptr] [ptr @bsGetUInt32], section "llvm.metadata"		; <ptr> [#uses=0]
 
 define fastcc i32 @bsGetUInt32() nounwind ssp {
 entry:
-	%bsBuff.promoted44 = load i32, i32* @bsBuff		; <i32> [#uses=1]
+	%bsBuff.promoted44 = load i32, ptr @bsBuff		; <i32> [#uses=1]
 	%0 = add i32 0, -8		; <i32> [#uses=1]
 	%1 = lshr i32 %bsBuff.promoted44, %0		; <i32> [#uses=1]
 	%2 = shl i32 %1, 8		; <i32> [#uses=1]

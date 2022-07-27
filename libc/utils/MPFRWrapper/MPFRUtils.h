@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/TypeTraits.h"
 #include "utils/UnitTest/Test.h"
+#include "utils/testutils/RoundingModeUtils.h"
 
 #include <stdint.h>
 
@@ -56,6 +57,7 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
+  Fmod,
   Hypot,
   EndBinaryOperationsSingleOutput,
 
@@ -74,17 +76,8 @@ enum class Operation : int {
   EndTernaryOperationsSingleOutput,
 };
 
-enum class RoundingMode : uint8_t { Upward, Downward, TowardZero, Nearest };
-
-int get_fe_rounding(RoundingMode mode);
-
-struct ForceRoundingMode {
-  ForceRoundingMode(RoundingMode);
-  ~ForceRoundingMode();
-
-  int old_rounding_mode;
-  int rounding_mode;
-};
+using __llvm_libc::testutils::ForceRoundingMode;
+using __llvm_libc::testutils::RoundingMode;
 
 template <typename T> struct BinaryInput {
   static_assert(

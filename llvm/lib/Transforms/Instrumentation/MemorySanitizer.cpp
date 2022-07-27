@@ -417,6 +417,14 @@ static const MemoryMapParams Linux_AArch64_MemoryMapParams = {
   0x01000000000,   // OriginBase
 };
 
+// aarch64 FreeBSD
+static const MemoryMapParams FreeBSD_AArch64_MemoryMapParams = {
+  0x1800000000000,  // AndMask
+  0x0400000000000,  // XorMask
+  0x0200000000000,  // ShadowBase
+  0x0700000000000,  // OriginBase
+};
+
 // i386 FreeBSD
 static const MemoryMapParams FreeBSD_I386_MemoryMapParams = {
   0x000180000000,  // AndMask
@@ -464,6 +472,11 @@ static const PlatformMemoryMapParams Linux_S390_MemoryMapParams = {
 static const PlatformMemoryMapParams Linux_ARM_MemoryMapParams = {
   nullptr,
   &Linux_AArch64_MemoryMapParams,
+};
+
+static const PlatformMemoryMapParams FreeBSD_ARM_MemoryMapParams = {
+  nullptr,
+  &FreeBSD_AArch64_MemoryMapParams,
 };
 
 static const PlatformMemoryMapParams FreeBSD_X86_MemoryMapParams = {
@@ -894,6 +907,9 @@ void MemorySanitizer::initializeModule(Module &M) {
     switch (TargetTriple.getOS()) {
       case Triple::FreeBSD:
         switch (TargetTriple.getArch()) {
+          case Triple::aarch64:
+            MapParams = FreeBSD_ARM_MemoryMapParams.bits64;
+            break;
           case Triple::x86_64:
             MapParams = FreeBSD_X86_MemoryMapParams.bits64;
             break;
@@ -4848,8 +4864,8 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
-        MaybeAlign ArgAlign = CB.getParamAlign(ArgNo);
-        if (!ArgAlign || *ArgAlign < Align(8))
+        Align ArgAlign = CB.getParamAlign(ArgNo).value_or(Align(8));
+        if (ArgAlign < 8)
           ArgAlign = Align(8);
         VAArgOffset = alignTo(VAArgOffset, ArgAlign);
         if (!IsFixed) {
@@ -4865,27 +4881,27 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
                              kShadowTLSAlignment, ArgSize);
           }
         }
-        VAArgOffset += alignTo(ArgSize, 8);
+        VAArgOffset += alignTo(ArgSize, Align(8));
       } else {
         Value *Base;
         uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-        uint64_t ArgAlign = 8;
+        Align ArgAlign = Align(8);
         if (A->getType()->isArrayTy()) {
           // Arrays are aligned to element size, except for long double
           // arrays, which are aligned to 8 bytes.
           Type *ElementTy = A->getType()->getArrayElementType();
           if (!ElementTy->isPPC_FP128Ty())
-            ArgAlign = DL.getTypeAllocSize(ElementTy);
+            ArgAlign = Align(DL.getTypeAllocSize(ElementTy));
         } else if (A->getType()->isVectorTy()) {
           // Vectors are naturally aligned.
-          ArgAlign = DL.getTypeAllocSize(A->getType());
+          ArgAlign = Align(ArgSize);
         }
         if (ArgAlign < 8)
-          ArgAlign = 8;
+          ArgAlign = Align(8);
         VAArgOffset = alignTo(VAArgOffset, ArgAlign);
         if (DL.isBigEndian()) {
-          // Adjusting the shadow for argument with size < 8 to match the placement
-          // of bits in big endian system
+          // Adjusting the shadow for argument with size < 8 to match the
+          // placement of bits in big endian system
           if (ArgSize < 8)
             VAArgOffset += (8 - ArgSize);
         }
@@ -4896,7 +4912,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
             IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
         }
         VAArgOffset += ArgSize;
-        VAArgOffset = alignTo(VAArgOffset, 8);
+        VAArgOffset = alignTo(VAArgOffset, Align(8));
       }
       if (IsFixed)
         VAArgBase = VAArgOffset;

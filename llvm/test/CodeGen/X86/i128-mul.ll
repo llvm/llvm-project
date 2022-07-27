@@ -98,7 +98,7 @@ define i64 @foo(i64 %x, i64 %y) nounwind {
 ; <rdar://problem/14096009> superfluous multiply by high part of
 ; zero-extended value.
 
-define i64 @mul1(i64 %n, i64* nocapture %z, i64* nocapture %x, i64 %y) nounwind {
+define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X86-NOBMI-LABEL: mul1:
 ; X86-NOBMI:       # %bb.0: # %entry
 ; X86-NOBMI-NEXT:    pushl %ebp
@@ -312,15 +312,15 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %carry.013 = phi i64 [ %conv6, %for.body ], [ 0, %entry ]
   %i.012 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i64, i64* %x, i64 %i.012
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %x, i64 %i.012
+  %0 = load i64, ptr %arrayidx, align 8
   %conv2 = zext i64 %0 to i128
   %mul = mul i128 %conv2, %conv
   %conv3 = zext i64 %carry.013 to i128
   %add = add i128 %mul, %conv3
   %conv4 = trunc i128 %add to i64
-  %arrayidx5 = getelementptr inbounds i64, i64* %z, i64 %i.012
-  store i64 %conv4, i64* %arrayidx5, align 8
+  %arrayidx5 = getelementptr inbounds i64, ptr %z, i64 %i.012
+  store i64 %conv4, ptr %arrayidx5, align 8
   %shr = lshr i128 %add, 64
   %conv6 = trunc i128 %shr to i64
   %inc = add i64 %i.012, 1

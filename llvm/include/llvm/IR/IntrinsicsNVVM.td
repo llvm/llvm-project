@@ -556,7 +556,7 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
 }
 
 let TargetPrefix = "nvvm" in {
-  def int_nvvm_prmt : GCCBuiltin<"__nvvm_prmt">,
+  def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable]>;
 
@@ -566,7 +566,7 @@ let TargetPrefix = "nvvm" in {
 
   foreach operation = ["min", "max"] in {
     def int_nvvm_f # operation # _d :
-      GCCBuiltin<!strconcat("__nvvm_f", operation, "_d")>,
+      ClangBuiltin<!strconcat("__nvvm_f", operation, "_d")>,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
@@ -574,7 +574,7 @@ let TargetPrefix = "nvvm" in {
       "_xorsign_abs_f", "_ftz_xorsign_abs_f", "_nan_xorsign_abs_f",
       "_ftz_nan_xorsign_abs_f"] in {
       def int_nvvm_f # operation # variant :
-        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        ClangBuiltin<!strconcat("__nvvm_f", operation, variant)>,
         DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
           [IntrNoMem, IntrSpeculatable, Commutative]>;
     }
@@ -583,7 +583,7 @@ let TargetPrefix = "nvvm" in {
       "_xorsign_abs_f16", "_ftz_xorsign_abs_f16", "_nan_xorsign_abs_f16",
       "_ftz_nan_xorsign_abs_f16"] in {
       def int_nvvm_f # operation # variant :
-        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        ClangBuiltin<!strconcat("__nvvm_f", operation, variant)>,
         DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty],
           [IntrNoMem, IntrSpeculatable, Commutative]>;
     }
@@ -592,7 +592,7 @@ let TargetPrefix = "nvvm" in {
       "_ftz_nan_f16x2", "_xorsign_abs_f16x2", "_ftz_xorsign_abs_f16x2",
       "_nan_xorsign_abs_f16x2", "_ftz_nan_xorsign_abs_f16x2"] in {
       def int_nvvm_f # operation # variant :
-        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        ClangBuiltin<!strconcat("__nvvm_f", operation, variant)>,
         DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty],
           [IntrNoMem, IntrSpeculatable, Commutative]>;
     }
@@ -600,7 +600,7 @@ let TargetPrefix = "nvvm" in {
     foreach variant = ["_bf16", "_nan_bf16", "_xorsign_abs_bf16",
       "_nan_xorsign_abs_bf16"] in {
       def int_nvvm_f # operation # variant :
-        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        ClangBuiltin<!strconcat("__nvvm_f", operation, variant)>,
         DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
           [IntrNoMem, IntrSpeculatable, Commutative]>;
     }
@@ -608,7 +608,7 @@ let TargetPrefix = "nvvm" in {
     foreach variant = ["_bf16x2", "_nan_bf16x2", "_xorsign_abs_bf16x2",
       "_nan_xorsign_abs_bf16x2"] in {
       def int_nvvm_f # operation # variant :
-        GCCBuiltin<!strconcat("__nvvm_f", operation, variant)>,
+        ClangBuiltin<!strconcat("__nvvm_f", operation, variant)>,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
           [IntrNoMem, IntrSpeculatable, Commutative]>;
     }
@@ -618,62 +618,62 @@ let TargetPrefix = "nvvm" in {
 // Multiplication
 //
 
-  def int_nvvm_mulhi_i : GCCBuiltin<"__nvvm_mulhi_i">,
+  def int_nvvm_mulhi_i : ClangBuiltin<"__nvvm_mulhi_i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mulhi_ui : GCCBuiltin<"__nvvm_mulhi_ui">,
+  def int_nvvm_mulhi_ui : ClangBuiltin<"__nvvm_mulhi_ui">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-  def int_nvvm_mulhi_ll : GCCBuiltin<"__nvvm_mulhi_ll">,
+  def int_nvvm_mulhi_ll : ClangBuiltin<"__nvvm_mulhi_ll">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mulhi_ull : GCCBuiltin<"__nvvm_mulhi_ull">,
+  def int_nvvm_mulhi_ull : ClangBuiltin<"__nvvm_mulhi_ull">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-  def int_nvvm_mul_rn_ftz_f : GCCBuiltin<"__nvvm_mul_rn_ftz_f">,
+  def int_nvvm_mul_rn_ftz_f : ClangBuiltin<"__nvvm_mul_rn_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rn_f : GCCBuiltin<"__nvvm_mul_rn_f">,
+  def int_nvvm_mul_rn_f : ClangBuiltin<"__nvvm_mul_rn_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rz_ftz_f : GCCBuiltin<"__nvvm_mul_rz_ftz_f">,
+  def int_nvvm_mul_rz_ftz_f : ClangBuiltin<"__nvvm_mul_rz_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rz_f : GCCBuiltin<"__nvvm_mul_rz_f">,
+  def int_nvvm_mul_rz_f : ClangBuiltin<"__nvvm_mul_rz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rm_ftz_f : GCCBuiltin<"__nvvm_mul_rm_ftz_f">,
+  def int_nvvm_mul_rm_ftz_f : ClangBuiltin<"__nvvm_mul_rm_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rm_f : GCCBuiltin<"__nvvm_mul_rm_f">,
+  def int_nvvm_mul_rm_f : ClangBuiltin<"__nvvm_mul_rm_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rp_ftz_f : GCCBuiltin<"__nvvm_mul_rp_ftz_f">,
+  def int_nvvm_mul_rp_ftz_f : ClangBuiltin<"__nvvm_mul_rp_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rp_f : GCCBuiltin<"__nvvm_mul_rp_f">,
+  def int_nvvm_mul_rp_f : ClangBuiltin<"__nvvm_mul_rp_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-  def int_nvvm_mul_rn_d : GCCBuiltin<"__nvvm_mul_rn_d">,
+  def int_nvvm_mul_rn_d : ClangBuiltin<"__nvvm_mul_rn_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rz_d : GCCBuiltin<"__nvvm_mul_rz_d">,
+  def int_nvvm_mul_rz_d : ClangBuiltin<"__nvvm_mul_rz_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rm_d : GCCBuiltin<"__nvvm_mul_rm_d">,
+  def int_nvvm_mul_rm_d : ClangBuiltin<"__nvvm_mul_rm_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul_rp_d : GCCBuiltin<"__nvvm_mul_rp_d">,
+  def int_nvvm_mul_rp_d : ClangBuiltin<"__nvvm_mul_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-  def int_nvvm_mul24_i : GCCBuiltin<"__nvvm_mul24_i">,
+  def int_nvvm_mul24_i : ClangBuiltin<"__nvvm_mul24_i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_mul24_ui : GCCBuiltin<"__nvvm_mul24_ui">,
+  def int_nvvm_mul24_ui : ClangBuiltin<"__nvvm_mul24_ui">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
@@ -681,51 +681,51 @@ let TargetPrefix = "nvvm" in {
 // Div
 //
 
-  def int_nvvm_div_approx_ftz_f : GCCBuiltin<"__nvvm_div_approx_ftz_f">,
+  def int_nvvm_div_approx_ftz_f : ClangBuiltin<"__nvvm_div_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
-  def int_nvvm_div_approx_f : GCCBuiltin<"__nvvm_div_approx_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
-
-  def int_nvvm_div_rn_ftz_f : GCCBuiltin<"__nvvm_div_rn_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
-  def int_nvvm_div_rn_f : GCCBuiltin<"__nvvm_div_rn_f">,
+  def int_nvvm_div_approx_f : ClangBuiltin<"__nvvm_div_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
 
-  def int_nvvm_div_rz_ftz_f : GCCBuiltin<"__nvvm_div_rz_ftz_f">,
+  def int_nvvm_div_rn_ftz_f : ClangBuiltin<"__nvvm_div_rn_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
-  def int_nvvm_div_rz_f : GCCBuiltin<"__nvvm_div_rz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
-
-  def int_nvvm_div_rm_ftz_f : GCCBuiltin<"__nvvm_div_rm_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-        [IntrNoMem]>;
-  def int_nvvm_div_rm_f : GCCBuiltin<"__nvvm_div_rm_f">,
+  def int_nvvm_div_rn_f : ClangBuiltin<"__nvvm_div_rn_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
 
-  def int_nvvm_div_rp_ftz_f : GCCBuiltin<"__nvvm_div_rp_ftz_f">,
+  def int_nvvm_div_rz_ftz_f : ClangBuiltin<"__nvvm_div_rz_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
-  def int_nvvm_div_rp_f : GCCBuiltin<"__nvvm_div_rp_f">,
+  def int_nvvm_div_rz_f : ClangBuiltin<"__nvvm_div_rz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
 
-  def int_nvvm_div_rn_d : GCCBuiltin<"__nvvm_div_rn_d">,
+  def int_nvvm_div_rm_ftz_f : ClangBuiltin<"__nvvm_div_rm_ftz_f">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+  def int_nvvm_div_rm_f : ClangBuiltin<"__nvvm_div_rm_f">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+
+  def int_nvvm_div_rp_ftz_f : ClangBuiltin<"__nvvm_div_rp_ftz_f">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+  def int_nvvm_div_rp_f : ClangBuiltin<"__nvvm_div_rp_f">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+
+  def int_nvvm_div_rn_d : ClangBuiltin<"__nvvm_div_rn_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem]>;
-  def int_nvvm_div_rz_d : GCCBuiltin<"__nvvm_div_rz_d">,
+  def int_nvvm_div_rz_d : ClangBuiltin<"__nvvm_div_rz_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem]>;
-  def int_nvvm_div_rm_d : GCCBuiltin<"__nvvm_div_rm_d">,
+  def int_nvvm_div_rm_d : ClangBuiltin<"__nvvm_div_rm_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem]>;
-  def int_nvvm_div_rp_d : GCCBuiltin<"__nvvm_div_rp_d">,
+  def int_nvvm_div_rp_d : ClangBuiltin<"__nvvm_div_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem]>;
 
@@ -733,10 +733,10 @@ let TargetPrefix = "nvvm" in {
 // Sad
 //
 
-  def int_nvvm_sad_i : GCCBuiltin<"__nvvm_sad_i">,
+  def int_nvvm_sad_i : ClangBuiltin<"__nvvm_sad_i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, Commutative]>;
-  def int_nvvm_sad_ui : GCCBuiltin<"__nvvm_sad_ui">,
+  def int_nvvm_sad_ui : ClangBuiltin<"__nvvm_sad_ui">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, Commutative]>;
 
@@ -744,29 +744,29 @@ let TargetPrefix = "nvvm" in {
 // Floor  Ceil
 //
 
-  def int_nvvm_floor_ftz_f : GCCBuiltin<"__nvvm_floor_ftz_f">,
+  def int_nvvm_floor_ftz_f : ClangBuiltin<"__nvvm_floor_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_floor_f : GCCBuiltin<"__nvvm_floor_f">,
+  def int_nvvm_floor_f : ClangBuiltin<"__nvvm_floor_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_floor_d : GCCBuiltin<"__nvvm_floor_d">,
+  def int_nvvm_floor_d : ClangBuiltin<"__nvvm_floor_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_ceil_ftz_f : GCCBuiltin<"__nvvm_ceil_ftz_f">,
+  def int_nvvm_ceil_ftz_f : ClangBuiltin<"__nvvm_ceil_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ceil_f : GCCBuiltin<"__nvvm_ceil_f">,
+  def int_nvvm_ceil_f : ClangBuiltin<"__nvvm_ceil_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ceil_d : GCCBuiltin<"__nvvm_ceil_d">,
+  def int_nvvm_ceil_d : ClangBuiltin<"__nvvm_ceil_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Abs
 //
 
-  def int_nvvm_fabs_ftz_f : GCCBuiltin<"__nvvm_fabs_ftz_f">,
+  def int_nvvm_fabs_ftz_f : ClangBuiltin<"__nvvm_fabs_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_f : GCCBuiltin<"__nvvm_fabs_f">,
+  def int_nvvm_fabs_f : ClangBuiltin<"__nvvm_fabs_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_d : GCCBuiltin<"__nvvm_fabs_d">,
+  def int_nvvm_fabs_d : ClangBuiltin<"__nvvm_fabs_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
@@ -775,10 +775,10 @@ let TargetPrefix = "nvvm" in {
 
   foreach unary = ["abs", "neg"] in {
     def int_nvvm_ # unary # _bf16 :
-      GCCBuiltin<!strconcat("__nvvm_", unary, "_bf16")>,
+      ClangBuiltin<!strconcat("__nvvm_", unary, "_bf16")>,
       DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty], [IntrNoMem]>;
     def int_nvvm_ # unary # _bf16x2 :
-      GCCBuiltin<!strconcat("__nvvm_", unary, "_bf16x2")>,
+      ClangBuiltin<!strconcat("__nvvm_", unary, "_bf16x2")>,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
   }
 
@@ -786,72 +786,72 @@ let TargetPrefix = "nvvm" in {
 // Round
 //
 
-  def int_nvvm_round_ftz_f : GCCBuiltin<"__nvvm_round_ftz_f">,
+  def int_nvvm_round_ftz_f : ClangBuiltin<"__nvvm_round_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_round_f : GCCBuiltin<"__nvvm_round_f">,
+  def int_nvvm_round_f : ClangBuiltin<"__nvvm_round_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_round_d : GCCBuiltin<"__nvvm_round_d">,
+  def int_nvvm_round_d : ClangBuiltin<"__nvvm_round_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Trunc
 //
 
-  def int_nvvm_trunc_ftz_f : GCCBuiltin<"__nvvm_trunc_ftz_f">,
+  def int_nvvm_trunc_ftz_f : ClangBuiltin<"__nvvm_trunc_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_trunc_f : GCCBuiltin<"__nvvm_trunc_f">,
+  def int_nvvm_trunc_f : ClangBuiltin<"__nvvm_trunc_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_trunc_d : GCCBuiltin<"__nvvm_trunc_d">,
+  def int_nvvm_trunc_d : ClangBuiltin<"__nvvm_trunc_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Saturate
 //
 
-  def int_nvvm_saturate_ftz_f : GCCBuiltin<"__nvvm_saturate_ftz_f">,
+  def int_nvvm_saturate_ftz_f : ClangBuiltin<"__nvvm_saturate_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_saturate_f : GCCBuiltin<"__nvvm_saturate_f">,
+  def int_nvvm_saturate_f : ClangBuiltin<"__nvvm_saturate_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_saturate_d : GCCBuiltin<"__nvvm_saturate_d">,
+  def int_nvvm_saturate_d : ClangBuiltin<"__nvvm_saturate_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Exp2  Log2
 //
 
-  def int_nvvm_ex2_approx_ftz_f : GCCBuiltin<"__nvvm_ex2_approx_ftz_f">,
+  def int_nvvm_ex2_approx_ftz_f : ClangBuiltin<"__nvvm_ex2_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_ex2_approx_f : GCCBuiltin<"__nvvm_ex2_approx_f">,
+  def int_nvvm_ex2_approx_f : ClangBuiltin<"__nvvm_ex2_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_ex2_approx_d : GCCBuiltin<"__nvvm_ex2_approx_d">,
+  def int_nvvm_ex2_approx_d : ClangBuiltin<"__nvvm_ex2_approx_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_ex2_approx_f16 : GCCBuiltin<"__nvvm_ex2_approx_f16">,
+  def int_nvvm_ex2_approx_f16 : ClangBuiltin<"__nvvm_ex2_approx_f16">,
       DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty], [IntrNoMem]>;
-  def int_nvvm_ex2_approx_f16x2 : GCCBuiltin<"__nvvm_ex2_approx_f16x2">,
+  def int_nvvm_ex2_approx_f16x2 : ClangBuiltin<"__nvvm_ex2_approx_f16x2">,
       DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty], [IntrNoMem]>;
 
-  def int_nvvm_lg2_approx_ftz_f : GCCBuiltin<"__nvvm_lg2_approx_ftz_f">,
+  def int_nvvm_lg2_approx_ftz_f : ClangBuiltin<"__nvvm_lg2_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_lg2_approx_f : GCCBuiltin<"__nvvm_lg2_approx_f">,
+  def int_nvvm_lg2_approx_f : ClangBuiltin<"__nvvm_lg2_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_lg2_approx_d : GCCBuiltin<"__nvvm_lg2_approx_d">,
+  def int_nvvm_lg2_approx_d : ClangBuiltin<"__nvvm_lg2_approx_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
 
 //
 // Sin  Cos
 //
 
-  def int_nvvm_sin_approx_ftz_f : GCCBuiltin<"__nvvm_sin_approx_ftz_f">,
+  def int_nvvm_sin_approx_ftz_f : ClangBuiltin<"__nvvm_sin_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sin_approx_f : GCCBuiltin<"__nvvm_sin_approx_f">,
+  def int_nvvm_sin_approx_f : ClangBuiltin<"__nvvm_sin_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 
-  def int_nvvm_cos_approx_ftz_f : GCCBuiltin<"__nvvm_cos_approx_ftz_f">,
+  def int_nvvm_cos_approx_ftz_f : ClangBuiltin<"__nvvm_cos_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_cos_approx_f : GCCBuiltin<"__nvvm_cos_approx_f">,
+  def int_nvvm_cos_approx_f : ClangBuiltin<"__nvvm_cos_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 
 //
@@ -860,7 +860,7 @@ let TargetPrefix = "nvvm" in {
 
   foreach variant = ["_rn_f16", "_rn_ftz_f16", "_rn_sat_f16",
     "_rn_ftz_sat_f16", "_rn_relu_f16", "_rn_ftz_relu_f16"] in {
-    def int_nvvm_fma # variant : GCCBuiltin<!strconcat("__nvvm_fma", variant)>,
+    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
         DefaultAttrsIntrinsic<[llvm_half_ty],
           [llvm_half_ty, llvm_half_ty, llvm_half_ty],
           [IntrNoMem, IntrSpeculatable]>;
@@ -868,21 +868,21 @@ let TargetPrefix = "nvvm" in {
 
   foreach variant = ["_rn_f16x2", "_rn_ftz_f16x2", "_rn_sat_f16x2",
     "_rn_ftz_sat_f16x2", "_rn_relu_f16x2", "_rn_ftz_relu_f16x2"] in {
-    def int_nvvm_fma # variant : GCCBuiltin<!strconcat("__nvvm_fma", variant)>,
+    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
       DefaultAttrsIntrinsic<[llvm_v2f16_ty],
         [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty],
         [IntrNoMem, IntrSpeculatable]>;
   }
 
   foreach variant = ["_rn_bf16", "_rn_relu_bf16"] in {
-    def int_nvvm_fma # variant : GCCBuiltin<!strconcat("__nvvm_fma", variant)>,
+    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
       DefaultAttrsIntrinsic<[llvm_i16_ty],
         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
         [IntrNoMem, IntrSpeculatable]>;
   }
 
   foreach variant = ["_rn_bf16x2", "_rn_relu_bf16x2"] in {
-    def int_nvvm_fma # variant : GCCBuiltin<!strconcat("__nvvm_fma", variant)>,
+    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
       DefaultAttrsIntrinsic<[llvm_i32_ty],
         [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable]>;
@@ -890,14 +890,14 @@ let TargetPrefix = "nvvm" in {
 
   foreach variant = ["_rn_ftz_f", "_rn_f", "_rz_ftz_f", "_rz_f", "_rm_ftz_f",
     "_rm_f", "_rp_ftz_f", "_rp_f"] in {
-    def int_nvvm_fma # variant : GCCBuiltin<!strconcat("__nvvm_fma", variant)>,
+    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
       DefaultAttrsIntrinsic<[llvm_float_ty],
         [llvm_float_ty, llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable]>;
   }
 
   foreach variant = ["_rn_d", "_rz_d", "_rm_d", "_rp_d"] in {
-    def int_nvvm_fma # variant : GCCBuiltin<!strconcat("__nvvm_fma", variant)>,
+    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
       DefaultAttrsIntrinsic<[llvm_double_ty],
         [llvm_double_ty, llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable]>;
@@ -907,123 +907,123 @@ let TargetPrefix = "nvvm" in {
 // Rcp
 //
 
-  def int_nvvm_rcp_rn_ftz_f : GCCBuiltin<"__nvvm_rcp_rn_ftz_f">,
+  def int_nvvm_rcp_rn_ftz_f : ClangBuiltin<"__nvvm_rcp_rn_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rn_f : GCCBuiltin<"__nvvm_rcp_rn_f">,
+  def int_nvvm_rcp_rn_f : ClangBuiltin<"__nvvm_rcp_rn_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rz_ftz_f : GCCBuiltin<"__nvvm_rcp_rz_ftz_f">,
+  def int_nvvm_rcp_rz_ftz_f : ClangBuiltin<"__nvvm_rcp_rz_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rz_f : GCCBuiltin<"__nvvm_rcp_rz_f">,
+  def int_nvvm_rcp_rz_f : ClangBuiltin<"__nvvm_rcp_rz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rm_ftz_f : GCCBuiltin<"__nvvm_rcp_rm_ftz_f">,
+  def int_nvvm_rcp_rm_ftz_f : ClangBuiltin<"__nvvm_rcp_rm_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rm_f : GCCBuiltin<"__nvvm_rcp_rm_f">,
+  def int_nvvm_rcp_rm_f : ClangBuiltin<"__nvvm_rcp_rm_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rp_ftz_f : GCCBuiltin<"__nvvm_rcp_rp_ftz_f">,
+  def int_nvvm_rcp_rp_ftz_f : ClangBuiltin<"__nvvm_rcp_rp_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rp_f : GCCBuiltin<"__nvvm_rcp_rp_f">,
+  def int_nvvm_rcp_rp_f : ClangBuiltin<"__nvvm_rcp_rp_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 
-  def int_nvvm_rcp_rn_d : GCCBuiltin<"__nvvm_rcp_rn_d">,
+  def int_nvvm_rcp_rn_d : ClangBuiltin<"__nvvm_rcp_rn_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rz_d : GCCBuiltin<"__nvvm_rcp_rz_d">,
+  def int_nvvm_rcp_rz_d : ClangBuiltin<"__nvvm_rcp_rz_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rm_d : GCCBuiltin<"__nvvm_rcp_rm_d">,
+  def int_nvvm_rcp_rm_d : ClangBuiltin<"__nvvm_rcp_rm_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_rp_d : GCCBuiltin<"__nvvm_rcp_rp_d">,
+  def int_nvvm_rcp_rp_d : ClangBuiltin<"__nvvm_rcp_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
 
-  def int_nvvm_rcp_approx_ftz_f : GCCBuiltin<"__nvvm_rcp_approx_ftz_f">,
+  def int_nvvm_rcp_approx_ftz_f : ClangBuiltin<"__nvvm_rcp_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rcp_approx_ftz_d : GCCBuiltin<"__nvvm_rcp_approx_ftz_d">,
+  def int_nvvm_rcp_approx_ftz_d : ClangBuiltin<"__nvvm_rcp_approx_ftz_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
 
 //
 // Sqrt
 //
 
-  def int_nvvm_sqrt_f : GCCBuiltin<"__nvvm_sqrt_f">,
+  def int_nvvm_sqrt_f : ClangBuiltin<"__nvvm_sqrt_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rn_ftz_f : GCCBuiltin<"__nvvm_sqrt_rn_ftz_f">,
+  def int_nvvm_sqrt_rn_ftz_f : ClangBuiltin<"__nvvm_sqrt_rn_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rn_f : GCCBuiltin<"__nvvm_sqrt_rn_f">,
+  def int_nvvm_sqrt_rn_f : ClangBuiltin<"__nvvm_sqrt_rn_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rz_ftz_f : GCCBuiltin<"__nvvm_sqrt_rz_ftz_f">,
+  def int_nvvm_sqrt_rz_ftz_f : ClangBuiltin<"__nvvm_sqrt_rz_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rz_f : GCCBuiltin<"__nvvm_sqrt_rz_f">,
+  def int_nvvm_sqrt_rz_f : ClangBuiltin<"__nvvm_sqrt_rz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rm_ftz_f : GCCBuiltin<"__nvvm_sqrt_rm_ftz_f">,
+  def int_nvvm_sqrt_rm_ftz_f : ClangBuiltin<"__nvvm_sqrt_rm_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rm_f : GCCBuiltin<"__nvvm_sqrt_rm_f">,
+  def int_nvvm_sqrt_rm_f : ClangBuiltin<"__nvvm_sqrt_rm_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rp_ftz_f : GCCBuiltin<"__nvvm_sqrt_rp_ftz_f">,
+  def int_nvvm_sqrt_rp_ftz_f : ClangBuiltin<"__nvvm_sqrt_rp_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rp_f : GCCBuiltin<"__nvvm_sqrt_rp_f">,
+  def int_nvvm_sqrt_rp_f : ClangBuiltin<"__nvvm_sqrt_rp_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_approx_ftz_f : GCCBuiltin<"__nvvm_sqrt_approx_ftz_f">,
+  def int_nvvm_sqrt_approx_ftz_f : ClangBuiltin<"__nvvm_sqrt_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_approx_f : GCCBuiltin<"__nvvm_sqrt_approx_f">,
+  def int_nvvm_sqrt_approx_f : ClangBuiltin<"__nvvm_sqrt_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 
-  def int_nvvm_sqrt_rn_d : GCCBuiltin<"__nvvm_sqrt_rn_d">,
+  def int_nvvm_sqrt_rn_d : ClangBuiltin<"__nvvm_sqrt_rn_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rz_d : GCCBuiltin<"__nvvm_sqrt_rz_d">,
+  def int_nvvm_sqrt_rz_d : ClangBuiltin<"__nvvm_sqrt_rz_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rm_d : GCCBuiltin<"__nvvm_sqrt_rm_d">,
+  def int_nvvm_sqrt_rm_d : ClangBuiltin<"__nvvm_sqrt_rm_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_sqrt_rp_d : GCCBuiltin<"__nvvm_sqrt_rp_d">,
+  def int_nvvm_sqrt_rp_d : ClangBuiltin<"__nvvm_sqrt_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
 
 //
 // Rsqrt
 //
 
-  def int_nvvm_rsqrt_approx_ftz_f : GCCBuiltin<"__nvvm_rsqrt_approx_ftz_f">,
+  def int_nvvm_rsqrt_approx_ftz_f : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rsqrt_approx_f : GCCBuiltin<"__nvvm_rsqrt_approx_f">,
+  def int_nvvm_rsqrt_approx_f : ClangBuiltin<"__nvvm_rsqrt_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_nvvm_rsqrt_approx_d : GCCBuiltin<"__nvvm_rsqrt_approx_d">,
+  def int_nvvm_rsqrt_approx_d : ClangBuiltin<"__nvvm_rsqrt_approx_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
 
 //
 // Add
 //
 
-  def int_nvvm_add_rn_ftz_f : GCCBuiltin<"__nvvm_add_rn_ftz_f">,
+  def int_nvvm_add_rn_ftz_f : ClangBuiltin<"__nvvm_add_rn_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rn_f : GCCBuiltin<"__nvvm_add_rn_f">,
+  def int_nvvm_add_rn_f : ClangBuiltin<"__nvvm_add_rn_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rz_ftz_f : GCCBuiltin<"__nvvm_add_rz_ftz_f">,
+  def int_nvvm_add_rz_ftz_f : ClangBuiltin<"__nvvm_add_rz_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rz_f : GCCBuiltin<"__nvvm_add_rz_f">,
+  def int_nvvm_add_rz_f : ClangBuiltin<"__nvvm_add_rz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rm_ftz_f : GCCBuiltin<"__nvvm_add_rm_ftz_f">,
+  def int_nvvm_add_rm_ftz_f : ClangBuiltin<"__nvvm_add_rm_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rm_f : GCCBuiltin<"__nvvm_add_rm_f">,
+  def int_nvvm_add_rm_f : ClangBuiltin<"__nvvm_add_rm_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rp_ftz_f : GCCBuiltin<"__nvvm_add_rp_ftz_f">,
+  def int_nvvm_add_rp_ftz_f : ClangBuiltin<"__nvvm_add_rp_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rp_f : GCCBuiltin<"__nvvm_add_rp_f">,
+  def int_nvvm_add_rp_f : ClangBuiltin<"__nvvm_add_rp_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-  def int_nvvm_add_rn_d : GCCBuiltin<"__nvvm_add_rn_d">,
+  def int_nvvm_add_rn_d : ClangBuiltin<"__nvvm_add_rn_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rz_d : GCCBuiltin<"__nvvm_add_rz_d">,
+  def int_nvvm_add_rz_d : ClangBuiltin<"__nvvm_add_rz_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rm_d : GCCBuiltin<"__nvvm_add_rm_d">,
+  def int_nvvm_add_rm_d : ClangBuiltin<"__nvvm_add_rm_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
-  def int_nvvm_add_rp_d : GCCBuiltin<"__nvvm_add_rp_d">,
+  def int_nvvm_add_rp_d : ClangBuiltin<"__nvvm_add_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
@@ -1031,258 +1031,258 @@ let TargetPrefix = "nvvm" in {
 // Convert
 //
 
-  def int_nvvm_d2f_rn_ftz : GCCBuiltin<"__nvvm_d2f_rn_ftz">,
+  def int_nvvm_d2f_rn_ftz : ClangBuiltin<"__nvvm_d2f_rn_ftz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2f_rn : GCCBuiltin<"__nvvm_d2f_rn">,
+  def int_nvvm_d2f_rn : ClangBuiltin<"__nvvm_d2f_rn">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2f_rz_ftz : GCCBuiltin<"__nvvm_d2f_rz_ftz">,
+  def int_nvvm_d2f_rz_ftz : ClangBuiltin<"__nvvm_d2f_rz_ftz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2f_rz : GCCBuiltin<"__nvvm_d2f_rz">,
+  def int_nvvm_d2f_rz : ClangBuiltin<"__nvvm_d2f_rz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2f_rm_ftz : GCCBuiltin<"__nvvm_d2f_rm_ftz">,
+  def int_nvvm_d2f_rm_ftz : ClangBuiltin<"__nvvm_d2f_rm_ftz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2f_rm : GCCBuiltin<"__nvvm_d2f_rm">,
+  def int_nvvm_d2f_rm : ClangBuiltin<"__nvvm_d2f_rm">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2f_rp_ftz : GCCBuiltin<"__nvvm_d2f_rp_ftz">,
+  def int_nvvm_d2f_rp_ftz : ClangBuiltin<"__nvvm_d2f_rp_ftz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2f_rp : GCCBuiltin<"__nvvm_d2f_rp">,
+  def int_nvvm_d2f_rp : ClangBuiltin<"__nvvm_d2f_rp">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_d2i_rn : GCCBuiltin<"__nvvm_d2i_rn">,
+  def int_nvvm_d2i_rn : ClangBuiltin<"__nvvm_d2i_rn">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2i_rz : GCCBuiltin<"__nvvm_d2i_rz">,
+  def int_nvvm_d2i_rz : ClangBuiltin<"__nvvm_d2i_rz">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2i_rm : GCCBuiltin<"__nvvm_d2i_rm">,
+  def int_nvvm_d2i_rm : ClangBuiltin<"__nvvm_d2i_rm">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2i_rp : GCCBuiltin<"__nvvm_d2i_rp">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-
-  def int_nvvm_d2ui_rn : GCCBuiltin<"__nvvm_d2ui_rn">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ui_rz : GCCBuiltin<"__nvvm_d2ui_rz">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ui_rm : GCCBuiltin<"__nvvm_d2ui_rm">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ui_rp : GCCBuiltin<"__nvvm_d2ui_rp">,
+  def int_nvvm_d2i_rp : ClangBuiltin<"__nvvm_d2i_rp">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_i2d_rn : GCCBuiltin<"__nvvm_i2d_rn">,
+  def int_nvvm_d2ui_rn : ClangBuiltin<"__nvvm_d2ui_rn">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_d2ui_rz : ClangBuiltin<"__nvvm_d2ui_rz">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_d2ui_rm : ClangBuiltin<"__nvvm_d2ui_rm">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_d2ui_rp : ClangBuiltin<"__nvvm_d2ui_rp">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+
+  def int_nvvm_i2d_rn : ClangBuiltin<"__nvvm_i2d_rn">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_i2d_rz : GCCBuiltin<"__nvvm_i2d_rz">,
+  def int_nvvm_i2d_rz : ClangBuiltin<"__nvvm_i2d_rz">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_i2d_rm : GCCBuiltin<"__nvvm_i2d_rm">,
+  def int_nvvm_i2d_rm : ClangBuiltin<"__nvvm_i2d_rm">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_i2d_rp : GCCBuiltin<"__nvvm_i2d_rp">,
+  def int_nvvm_i2d_rp : ClangBuiltin<"__nvvm_i2d_rp">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_ui2d_rn : GCCBuiltin<"__nvvm_ui2d_rn">,
+  def int_nvvm_ui2d_rn : ClangBuiltin<"__nvvm_ui2d_rn">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ui2d_rz : GCCBuiltin<"__nvvm_ui2d_rz">,
+  def int_nvvm_ui2d_rz : ClangBuiltin<"__nvvm_ui2d_rz">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ui2d_rm : GCCBuiltin<"__nvvm_ui2d_rm">,
+  def int_nvvm_ui2d_rm : ClangBuiltin<"__nvvm_ui2d_rm">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ui2d_rp : GCCBuiltin<"__nvvm_ui2d_rp">,
+  def int_nvvm_ui2d_rp : ClangBuiltin<"__nvvm_ui2d_rp">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_f2i_rn_ftz : GCCBuiltin<"__nvvm_f2i_rn_ftz">,
+  def int_nvvm_f2i_rn_ftz : ClangBuiltin<"__nvvm_f2i_rn_ftz">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2i_rn : GCCBuiltin<"__nvvm_f2i_rn">,
+  def int_nvvm_f2i_rn : ClangBuiltin<"__nvvm_f2i_rn">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2i_rz_ftz : GCCBuiltin<"__nvvm_f2i_rz_ftz">,
+  def int_nvvm_f2i_rz_ftz : ClangBuiltin<"__nvvm_f2i_rz_ftz">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2i_rz : GCCBuiltin<"__nvvm_f2i_rz">,
+  def int_nvvm_f2i_rz : ClangBuiltin<"__nvvm_f2i_rz">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2i_rm_ftz : GCCBuiltin<"__nvvm_f2i_rm_ftz">,
+  def int_nvvm_f2i_rm_ftz : ClangBuiltin<"__nvvm_f2i_rm_ftz">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2i_rm : GCCBuiltin<"__nvvm_f2i_rm">,
+  def int_nvvm_f2i_rm : ClangBuiltin<"__nvvm_f2i_rm">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2i_rp_ftz : GCCBuiltin<"__nvvm_f2i_rp_ftz">,
+  def int_nvvm_f2i_rp_ftz : ClangBuiltin<"__nvvm_f2i_rp_ftz">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2i_rp : GCCBuiltin<"__nvvm_f2i_rp">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-
-  def int_nvvm_f2ui_rn_ftz : GCCBuiltin<"__nvvm_f2ui_rn_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ui_rn : GCCBuiltin<"__nvvm_f2ui_rn">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ui_rz_ftz : GCCBuiltin<"__nvvm_f2ui_rz_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ui_rz : GCCBuiltin<"__nvvm_f2ui_rz">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ui_rm_ftz : GCCBuiltin<"__nvvm_f2ui_rm_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ui_rm : GCCBuiltin<"__nvvm_f2ui_rm">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ui_rp_ftz : GCCBuiltin<"__nvvm_f2ui_rp_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ui_rp : GCCBuiltin<"__nvvm_f2ui_rp">,
+  def int_nvvm_f2i_rp : ClangBuiltin<"__nvvm_f2i_rp">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_i2f_rn : GCCBuiltin<"__nvvm_i2f_rn">,
+  def int_nvvm_f2ui_rn_ftz : ClangBuiltin<"__nvvm_f2ui_rn_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ui_rn : ClangBuiltin<"__nvvm_f2ui_rn">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ui_rz_ftz : ClangBuiltin<"__nvvm_f2ui_rz_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ui_rz : ClangBuiltin<"__nvvm_f2ui_rz">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ui_rm_ftz : ClangBuiltin<"__nvvm_f2ui_rm_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ui_rm : ClangBuiltin<"__nvvm_f2ui_rm">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ui_rp_ftz : ClangBuiltin<"__nvvm_f2ui_rp_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ui_rp : ClangBuiltin<"__nvvm_f2ui_rp">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+
+  def int_nvvm_i2f_rn : ClangBuiltin<"__nvvm_i2f_rn">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_i2f_rz : GCCBuiltin<"__nvvm_i2f_rz">,
+  def int_nvvm_i2f_rz : ClangBuiltin<"__nvvm_i2f_rz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_i2f_rm : GCCBuiltin<"__nvvm_i2f_rm">,
+  def int_nvvm_i2f_rm : ClangBuiltin<"__nvvm_i2f_rm">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_i2f_rp : GCCBuiltin<"__nvvm_i2f_rp">,
+  def int_nvvm_i2f_rp : ClangBuiltin<"__nvvm_i2f_rp">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_ui2f_rn : GCCBuiltin<"__nvvm_ui2f_rn">,
+  def int_nvvm_ui2f_rn : ClangBuiltin<"__nvvm_ui2f_rn">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ui2f_rz : GCCBuiltin<"__nvvm_ui2f_rz">,
+  def int_nvvm_ui2f_rz : ClangBuiltin<"__nvvm_ui2f_rz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ui2f_rm : GCCBuiltin<"__nvvm_ui2f_rm">,
+  def int_nvvm_ui2f_rm : ClangBuiltin<"__nvvm_ui2f_rm">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ui2f_rp : GCCBuiltin<"__nvvm_ui2f_rp">,
+  def int_nvvm_ui2f_rp : ClangBuiltin<"__nvvm_ui2f_rp">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_lohi_i2d : GCCBuiltin<"__nvvm_lohi_i2d">,
+  def int_nvvm_lohi_i2d : ClangBuiltin<"__nvvm_lohi_i2d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-  def int_nvvm_d2i_lo : GCCBuiltin<"__nvvm_d2i_lo">,
+  def int_nvvm_d2i_lo : ClangBuiltin<"__nvvm_d2i_lo">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2i_hi : GCCBuiltin<"__nvvm_d2i_hi">,
+  def int_nvvm_d2i_hi : ClangBuiltin<"__nvvm_d2i_hi">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_f2ll_rn_ftz : GCCBuiltin<"__nvvm_f2ll_rn_ftz">,
+  def int_nvvm_f2ll_rn_ftz : ClangBuiltin<"__nvvm_f2ll_rn_ftz">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ll_rn : GCCBuiltin<"__nvvm_f2ll_rn">,
+  def int_nvvm_f2ll_rn : ClangBuiltin<"__nvvm_f2ll_rn">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ll_rz_ftz : GCCBuiltin<"__nvvm_f2ll_rz_ftz">,
+  def int_nvvm_f2ll_rz_ftz : ClangBuiltin<"__nvvm_f2ll_rz_ftz">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ll_rz : GCCBuiltin<"__nvvm_f2ll_rz">,
+  def int_nvvm_f2ll_rz : ClangBuiltin<"__nvvm_f2ll_rz">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ll_rm_ftz : GCCBuiltin<"__nvvm_f2ll_rm_ftz">,
+  def int_nvvm_f2ll_rm_ftz : ClangBuiltin<"__nvvm_f2ll_rm_ftz">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ll_rm : GCCBuiltin<"__nvvm_f2ll_rm">,
+  def int_nvvm_f2ll_rm : ClangBuiltin<"__nvvm_f2ll_rm">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ll_rp_ftz : GCCBuiltin<"__nvvm_f2ll_rp_ftz">,
+  def int_nvvm_f2ll_rp_ftz : ClangBuiltin<"__nvvm_f2ll_rp_ftz">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ll_rp : GCCBuiltin<"__nvvm_f2ll_rp">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-
-  def int_nvvm_f2ull_rn_ftz : GCCBuiltin<"__nvvm_f2ull_rn_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ull_rn : GCCBuiltin<"__nvvm_f2ull_rn">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ull_rz_ftz : GCCBuiltin<"__nvvm_f2ull_rz_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ull_rz : GCCBuiltin<"__nvvm_f2ull_rz">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ull_rm_ftz : GCCBuiltin<"__nvvm_f2ull_rm_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ull_rm : GCCBuiltin<"__nvvm_f2ull_rm">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ull_rp_ftz : GCCBuiltin<"__nvvm_f2ull_rp_ftz">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2ull_rp : GCCBuiltin<"__nvvm_f2ull_rp">,
+  def int_nvvm_f2ll_rp : ClangBuiltin<"__nvvm_f2ll_rp">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_d2ll_rn : GCCBuiltin<"__nvvm_d2ll_rn">,
+  def int_nvvm_f2ull_rn_ftz : ClangBuiltin<"__nvvm_f2ull_rn_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ull_rn : ClangBuiltin<"__nvvm_f2ull_rn">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ull_rz_ftz : ClangBuiltin<"__nvvm_f2ull_rz_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ull_rz : ClangBuiltin<"__nvvm_f2ull_rz">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ull_rm_ftz : ClangBuiltin<"__nvvm_f2ull_rm_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ull_rm : ClangBuiltin<"__nvvm_f2ull_rm">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ull_rp_ftz : ClangBuiltin<"__nvvm_f2ull_rp_ftz">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f2ull_rp : ClangBuiltin<"__nvvm_f2ull_rp">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+
+  def int_nvvm_d2ll_rn : ClangBuiltin<"__nvvm_d2ll_rn">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ll_rz : GCCBuiltin<"__nvvm_d2ll_rz">,
+  def int_nvvm_d2ll_rz : ClangBuiltin<"__nvvm_d2ll_rz">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ll_rm : GCCBuiltin<"__nvvm_d2ll_rm">,
+  def int_nvvm_d2ll_rm : ClangBuiltin<"__nvvm_d2ll_rm">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ll_rp : GCCBuiltin<"__nvvm_d2ll_rp">,
+  def int_nvvm_d2ll_rp : ClangBuiltin<"__nvvm_d2ll_rp">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_d2ull_rn : GCCBuiltin<"__nvvm_d2ull_rn">,
+  def int_nvvm_d2ull_rn : ClangBuiltin<"__nvvm_d2ull_rn">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ull_rz : GCCBuiltin<"__nvvm_d2ull_rz">,
+  def int_nvvm_d2ull_rz : ClangBuiltin<"__nvvm_d2ull_rz">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ull_rm : GCCBuiltin<"__nvvm_d2ull_rm">,
+  def int_nvvm_d2ull_rm : ClangBuiltin<"__nvvm_d2ull_rm">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_d2ull_rp : GCCBuiltin<"__nvvm_d2ull_rp">,
+  def int_nvvm_d2ull_rp : ClangBuiltin<"__nvvm_d2ull_rp">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_ll2f_rn : GCCBuiltin<"__nvvm_ll2f_rn">,
+  def int_nvvm_ll2f_rn : ClangBuiltin<"__nvvm_ll2f_rn">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ll2f_rz : GCCBuiltin<"__nvvm_ll2f_rz">,
+  def int_nvvm_ll2f_rz : ClangBuiltin<"__nvvm_ll2f_rz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ll2f_rm : GCCBuiltin<"__nvvm_ll2f_rm">,
+  def int_nvvm_ll2f_rm : ClangBuiltin<"__nvvm_ll2f_rm">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ll2f_rp : GCCBuiltin<"__nvvm_ll2f_rp">,
+  def int_nvvm_ll2f_rp : ClangBuiltin<"__nvvm_ll2f_rp">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2f_rn : GCCBuiltin<"__nvvm_ull2f_rn">,
+  def int_nvvm_ull2f_rn : ClangBuiltin<"__nvvm_ull2f_rn">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2f_rz : GCCBuiltin<"__nvvm_ull2f_rz">,
+  def int_nvvm_ull2f_rz : ClangBuiltin<"__nvvm_ull2f_rz">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2f_rm : GCCBuiltin<"__nvvm_ull2f_rm">,
+  def int_nvvm_ull2f_rm : ClangBuiltin<"__nvvm_ull2f_rm">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2f_rp : GCCBuiltin<"__nvvm_ull2f_rp">,
+  def int_nvvm_ull2f_rp : ClangBuiltin<"__nvvm_ull2f_rp">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_ll2d_rn : GCCBuiltin<"__nvvm_ll2d_rn">,
+  def int_nvvm_ll2d_rn : ClangBuiltin<"__nvvm_ll2d_rn">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ll2d_rz : GCCBuiltin<"__nvvm_ll2d_rz">,
+  def int_nvvm_ll2d_rz : ClangBuiltin<"__nvvm_ll2d_rz">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ll2d_rm : GCCBuiltin<"__nvvm_ll2d_rm">,
+  def int_nvvm_ll2d_rm : ClangBuiltin<"__nvvm_ll2d_rm">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ll2d_rp : GCCBuiltin<"__nvvm_ll2d_rp">,
+  def int_nvvm_ll2d_rp : ClangBuiltin<"__nvvm_ll2d_rp">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2d_rn : GCCBuiltin<"__nvvm_ull2d_rn">,
+  def int_nvvm_ull2d_rn : ClangBuiltin<"__nvvm_ull2d_rn">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2d_rz : GCCBuiltin<"__nvvm_ull2d_rz">,
+  def int_nvvm_ull2d_rz : ClangBuiltin<"__nvvm_ull2d_rz">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2d_rm : GCCBuiltin<"__nvvm_ull2d_rm">,
+  def int_nvvm_ull2d_rm : ClangBuiltin<"__nvvm_ull2d_rm">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_ull2d_rp : GCCBuiltin<"__nvvm_ull2d_rp">,
+  def int_nvvm_ull2d_rp : ClangBuiltin<"__nvvm_ull2d_rp">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_f2h_rn_ftz : GCCBuiltin<"__nvvm_f2h_rn_ftz">,
+  def int_nvvm_f2h_rn_ftz : ClangBuiltin<"__nvvm_f2h_rn_ftz">,
       DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_f2h_rn : GCCBuiltin<"__nvvm_f2h_rn">,
+  def int_nvvm_f2h_rn : ClangBuiltin<"__nvvm_f2h_rn">,
       DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_ff2bf16x2_rn : GCCBuiltin<"__nvvm_ff2bf16x2_rn">,
+  def int_nvvm_ff2bf16x2_rn : ClangBuiltin<"__nvvm_ff2bf16x2_rn">,
        Intrinsic<[llvm_i32_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_ff2bf16x2_rn_relu : GCCBuiltin<"__nvvm_ff2bf16x2_rn_relu">,
+  def int_nvvm_ff2bf16x2_rn_relu : ClangBuiltin<"__nvvm_ff2bf16x2_rn_relu">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_ff2bf16x2_rz : GCCBuiltin<"__nvvm_ff2bf16x2_rz">,
+  def int_nvvm_ff2bf16x2_rz : ClangBuiltin<"__nvvm_ff2bf16x2_rz">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_ff2bf16x2_rz_relu : GCCBuiltin<"__nvvm_ff2bf16x2_rz_relu">,
+  def int_nvvm_ff2bf16x2_rz_relu : ClangBuiltin<"__nvvm_ff2bf16x2_rz_relu">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem]>;
 
-  def int_nvvm_ff2f16x2_rn : GCCBuiltin<"__nvvm_ff2f16x2_rn">,
+  def int_nvvm_ff2f16x2_rn : ClangBuiltin<"__nvvm_ff2f16x2_rn">,
       Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_ff2f16x2_rn_relu : GCCBuiltin<"__nvvm_ff2f16x2_rn_relu">,
+  def int_nvvm_ff2f16x2_rn_relu : ClangBuiltin<"__nvvm_ff2f16x2_rn_relu">,
       Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_ff2f16x2_rz : GCCBuiltin<"__nvvm_ff2f16x2_rz">,
+  def int_nvvm_ff2f16x2_rz : ClangBuiltin<"__nvvm_ff2f16x2_rz">,
       Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_ff2f16x2_rz_relu : GCCBuiltin<"__nvvm_ff2f16x2_rz_relu">,
+  def int_nvvm_ff2f16x2_rz_relu : ClangBuiltin<"__nvvm_ff2f16x2_rz_relu">,
       Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
-  def int_nvvm_f2bf16_rn : GCCBuiltin<"__nvvm_f2bf16_rn">,
+  def int_nvvm_f2bf16_rn : ClangBuiltin<"__nvvm_f2bf16_rn">,
       Intrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_f2bf16_rn_relu : GCCBuiltin<"__nvvm_f2bf16_rn_relu">,
+  def int_nvvm_f2bf16_rn_relu : ClangBuiltin<"__nvvm_f2bf16_rn_relu">,
       Intrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_f2bf16_rz : GCCBuiltin<"__nvvm_f2bf16_rz">,
+  def int_nvvm_f2bf16_rz : ClangBuiltin<"__nvvm_f2bf16_rz">,
       Intrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
-  def int_nvvm_f2bf16_rz_relu : GCCBuiltin<"__nvvm_f2bf16_rz_relu">,
+  def int_nvvm_f2bf16_rz_relu : ClangBuiltin<"__nvvm_f2bf16_rz_relu">,
        Intrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
-  def int_nvvm_f2tf32_rna : GCCBuiltin<"__nvvm_f2tf32_rna">,
+  def int_nvvm_f2tf32_rna : ClangBuiltin<"__nvvm_f2tf32_rna">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
 //
 // Bitcast
 //
 
-  def int_nvvm_bitcast_f2i : GCCBuiltin<"__nvvm_bitcast_f2i">,
+  def int_nvvm_bitcast_f2i : ClangBuiltin<"__nvvm_bitcast_f2i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_bitcast_i2f : GCCBuiltin<"__nvvm_bitcast_i2f">,
+  def int_nvvm_bitcast_i2f : ClangBuiltin<"__nvvm_bitcast_i2f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-  def int_nvvm_bitcast_ll2d : GCCBuiltin<"__nvvm_bitcast_ll2d">,
+  def int_nvvm_bitcast_ll2d : ClangBuiltin<"__nvvm_bitcast_ll2d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_bitcast_d2ll : GCCBuiltin<"__nvvm_bitcast_d2ll">,
+  def int_nvvm_bitcast_d2ll : ClangBuiltin<"__nvvm_bitcast_d2ll">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 // FNS
 
-  def int_nvvm_fns : GCCBuiltin<"__nvvm_fns">,
+  def int_nvvm_fns : ClangBuiltin<"__nvvm_fns">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrNoMem]>;
 
@@ -1331,149 +1331,149 @@ let TargetPrefix = "nvvm" in {
 
   // The builtin for "bar.sync 0" is called __syncthreads.  Unlike most of the
   // intrinsics in this file, this one is a user-facing API.
-  def int_nvvm_barrier0 : GCCBuiltin<"__syncthreads">,
+  def int_nvvm_barrier0 : ClangBuiltin<"__syncthreads">,
       Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
   // Synchronize all threads in the CTA at barrier 'n'.
-  def int_nvvm_barrier_n : GCCBuiltin<"__nvvm_bar_n">,
+  def int_nvvm_barrier_n : ClangBuiltin<"__nvvm_bar_n">,
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   // Synchronize 'm', a multiple of warp size, (arg 2) threads in
   // the CTA at barrier 'n' (arg 1).
-  def int_nvvm_barrier : GCCBuiltin<"__nvvm_bar">,
+  def int_nvvm_barrier : ClangBuiltin<"__nvvm_bar">,
       Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier0_popc : GCCBuiltin<"__nvvm_bar0_popc">,
+  def int_nvvm_barrier0_popc : ClangBuiltin<"__nvvm_bar0_popc">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier0_and : GCCBuiltin<"__nvvm_bar0_and">,
+  def int_nvvm_barrier0_and : ClangBuiltin<"__nvvm_bar0_and">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier0_or : GCCBuiltin<"__nvvm_bar0_or">,
+  def int_nvvm_barrier0_or : ClangBuiltin<"__nvvm_bar0_or">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
   def int_nvvm_bar_sync :
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>,
-      GCCBuiltin<"__nvvm_bar_sync">;
+      ClangBuiltin<"__nvvm_bar_sync">;
   def int_nvvm_bar_warp_sync :
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>,
-      GCCBuiltin<"__nvvm_bar_warp_sync">;
+      ClangBuiltin<"__nvvm_bar_warp_sync">;
 
   // barrier.sync id[, cnt]
   def int_nvvm_barrier_sync :
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>,
-      GCCBuiltin<"__nvvm_barrier_sync">;
+      ClangBuiltin<"__nvvm_barrier_sync">;
   def int_nvvm_barrier_sync_cnt :
       Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>,
-      GCCBuiltin<"__nvvm_barrier_sync_cnt">;
+      ClangBuiltin<"__nvvm_barrier_sync_cnt">;
 
   // Membar
-  def int_nvvm_membar_cta : GCCBuiltin<"__nvvm_membar_cta">,
+  def int_nvvm_membar_cta : ClangBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], [IntrNoCallback]>;
-  def int_nvvm_membar_gl : GCCBuiltin<"__nvvm_membar_gl">,
+  def int_nvvm_membar_gl : ClangBuiltin<"__nvvm_membar_gl">,
       Intrinsic<[], [], [IntrNoCallback]>;
-  def int_nvvm_membar_sys : GCCBuiltin<"__nvvm_membar_sys">,
+  def int_nvvm_membar_sys : ClangBuiltin<"__nvvm_membar_sys">,
       Intrinsic<[], [], [IntrNoCallback]>;
 
 // Async Copy
 def int_nvvm_cp_async_mbarrier_arrive :
-    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive">,
+    ClangBuiltin<"__nvvm_cp_async_mbarrier_arrive">,
     Intrinsic<[],[llvm_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_cp_async_mbarrier_arrive_shared :
-    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive_shared">,
+    ClangBuiltin<"__nvvm_cp_async_mbarrier_arrive_shared">,
     Intrinsic<[],[llvm_shared_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_cp_async_mbarrier_arrive_noinc :
-    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive_noinc">,
+    ClangBuiltin<"__nvvm_cp_async_mbarrier_arrive_noinc">,
     Intrinsic<[],[llvm_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_cp_async_mbarrier_arrive_noinc_shared :
-    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive_noinc_shared">,
+    ClangBuiltin<"__nvvm_cp_async_mbarrier_arrive_noinc_shared">,
     Intrinsic<[],[llvm_shared_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_cp_async_ca_shared_global_4 :
-    GCCBuiltin<"__nvvm_cp_async_ca_shared_global_4">,
+    ClangBuiltin<"__nvvm_cp_async_ca_shared_global_4">,
     Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.ca.shared.global.4">;
 def int_nvvm_cp_async_ca_shared_global_8 :
-    GCCBuiltin<"__nvvm_cp_async_ca_shared_global_8">,
+    ClangBuiltin<"__nvvm_cp_async_ca_shared_global_8">,
     Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.ca.shared.global.8">;
 def int_nvvm_cp_async_ca_shared_global_16 :
-    GCCBuiltin<"__nvvm_cp_async_ca_shared_global_16">,
+    ClangBuiltin<"__nvvm_cp_async_ca_shared_global_16">,
     Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.ca.shared.global.16">;
 def int_nvvm_cp_async_cg_shared_global_16 :
-    GCCBuiltin<"__nvvm_cp_async_cg_shared_global_16">,
+    ClangBuiltin<"__nvvm_cp_async_cg_shared_global_16">,
     Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.cg.shared.global.16">;
 
 def int_nvvm_cp_async_commit_group :
-    GCCBuiltin<"__nvvm_cp_async_commit_group">,
+    ClangBuiltin<"__nvvm_cp_async_commit_group">,
     Intrinsic<[],[],[]>;
 
 def int_nvvm_cp_async_wait_group :
-    GCCBuiltin<"__nvvm_cp_async_wait_group">,
+    ClangBuiltin<"__nvvm_cp_async_wait_group">,
     Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
 
 def int_nvvm_cp_async_wait_all :
-    GCCBuiltin<"__nvvm_cp_async_wait_all">,
+    ClangBuiltin<"__nvvm_cp_async_wait_all">,
     Intrinsic<[],[],[]>;
 
 // mbarrier
-def int_nvvm_mbarrier_init : GCCBuiltin<"__nvvm_mbarrier_init">,
+def int_nvvm_mbarrier_init : ClangBuiltin<"__nvvm_mbarrier_init">,
     Intrinsic<[],[llvm_i64ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_init_shared :
-    GCCBuiltin<"__nvvm_mbarrier_init_shared">,
+    ClangBuiltin<"__nvvm_mbarrier_init_shared">,
     Intrinsic<[],[llvm_shared_i64ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
 
-def int_nvvm_mbarrier_inval : GCCBuiltin<"__nvvm_mbarrier_inval">,
+def int_nvvm_mbarrier_inval : ClangBuiltin<"__nvvm_mbarrier_inval">,
     Intrinsic<[],[llvm_i64ptr_ty],
     [IntrConvergent, IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 def int_nvvm_mbarrier_inval_shared :
-    GCCBuiltin<"__nvvm_mbarrier_inval_shared">,
+    ClangBuiltin<"__nvvm_mbarrier_inval_shared">,
     Intrinsic<[],[llvm_shared_i64ptr_ty],
     [IntrConvergent, IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
-def int_nvvm_mbarrier_arrive : GCCBuiltin<"__nvvm_mbarrier_arrive">,
+def int_nvvm_mbarrier_arrive : ClangBuiltin<"__nvvm_mbarrier_arrive">,
     Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_shared :
-    GCCBuiltin<"__nvvm_mbarrier_arrive_shared">,
+    ClangBuiltin<"__nvvm_mbarrier_arrive_shared">,
     Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_noComplete :
-    GCCBuiltin<"__nvvm_mbarrier_arrive_noComplete">,
+    ClangBuiltin<"__nvvm_mbarrier_arrive_noComplete">,
     Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_noComplete_shared :
-    GCCBuiltin<"__nvvm_mbarrier_arrive_noComplete_shared">,
+    ClangBuiltin<"__nvvm_mbarrier_arrive_noComplete_shared">,
     Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty,
     llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_mbarrier_arrive_drop :
-    GCCBuiltin<"__nvvm_mbarrier_arrive_drop">,
+    ClangBuiltin<"__nvvm_mbarrier_arrive_drop">,
     Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_drop_shared :
-    GCCBuiltin<"__nvvm_mbarrier_arrive_drop_shared">,
+    ClangBuiltin<"__nvvm_mbarrier_arrive_drop_shared">,
     Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_drop_noComplete :
-    GCCBuiltin<"__nvvm_mbarrier_arrive_drop_noComplete">,
+    ClangBuiltin<"__nvvm_mbarrier_arrive_drop_noComplete">,
     Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_drop_noComplete_shared :
-    GCCBuiltin<"__nvvm_mbarrier_arrive_drop_noComplete_shared">,
+    ClangBuiltin<"__nvvm_mbarrier_arrive_drop_noComplete_shared">,
     Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty,
     llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_mbarrier_test_wait :
-    GCCBuiltin<"__nvvm_mbarrier_test_wait">,
+    ClangBuiltin<"__nvvm_mbarrier_test_wait">,
     Intrinsic<[llvm_i1_ty],[llvm_i64ptr_ty, llvm_i64_ty],[IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_test_wait_shared :
-    GCCBuiltin<"__nvvm_mbarrier_test_wait_shared">,
+    ClangBuiltin<"__nvvm_mbarrier_test_wait_shared">,
     Intrinsic<[llvm_i1_ty],[llvm_shared_i64ptr_ty, llvm_i64_ty],[IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_mbarrier_pending_count :
-    GCCBuiltin<"__nvvm_mbarrier_pending_count">,
+    ClangBuiltin<"__nvvm_mbarrier_pending_count">,
     Intrinsic<[llvm_i32_ty],[llvm_i64_ty],[IntrNoMem, IntrConvergent, IntrNoCallback]>;
 
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
@@ -1584,149 +1584,149 @@ def int_nvvm_reflect :
 def int_nvvm_isspacep_const
   : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.isspacep.const">,
-    GCCBuiltin<"__nvvm_isspacep_const">;
+    ClangBuiltin<"__nvvm_isspacep_const">;
 def int_nvvm_isspacep_global
   : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.isspacep.global">,
-    GCCBuiltin<"__nvvm_isspacep_global">;
+    ClangBuiltin<"__nvvm_isspacep_global">;
 def int_nvvm_isspacep_local
   : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.isspacep.local">,
-    GCCBuiltin<"__nvvm_isspacep_local">;
+    ClangBuiltin<"__nvvm_isspacep_local">;
 def int_nvvm_isspacep_shared
   : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.isspacep.shared">,
-    GCCBuiltin<"__nvvm_isspacep_shared">;
+    ClangBuiltin<"__nvvm_isspacep_shared">;
 
 // Environment register read
 def int_nvvm_read_ptx_sreg_envreg0
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg0">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg0">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg0">;
 def int_nvvm_read_ptx_sreg_envreg1
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg1">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg1">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg1">;
 def int_nvvm_read_ptx_sreg_envreg2
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg2">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg2">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg2">;
 def int_nvvm_read_ptx_sreg_envreg3
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg3">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg3">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg3">;
 def int_nvvm_read_ptx_sreg_envreg4
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg4">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg4">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg4">;
 def int_nvvm_read_ptx_sreg_envreg5
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg5">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg5">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg5">;
 def int_nvvm_read_ptx_sreg_envreg6
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg6">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg6">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg6">;
 def int_nvvm_read_ptx_sreg_envreg7
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg7">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg7">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg7">;
 def int_nvvm_read_ptx_sreg_envreg8
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg8">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg8">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg8">;
 def int_nvvm_read_ptx_sreg_envreg9
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg9">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg9">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg9">;
 def int_nvvm_read_ptx_sreg_envreg10
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg10">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg10">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg10">;
 def int_nvvm_read_ptx_sreg_envreg11
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg11">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg11">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg11">;
 def int_nvvm_read_ptx_sreg_envreg12
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg12">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg12">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg12">;
 def int_nvvm_read_ptx_sreg_envreg13
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg13">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg13">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg13">;
 def int_nvvm_read_ptx_sreg_envreg14
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg14">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg14">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg14">;
 def int_nvvm_read_ptx_sreg_envreg15
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg15">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg15">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg15">;
 def int_nvvm_read_ptx_sreg_envreg16
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg16">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg16">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg16">;
 def int_nvvm_read_ptx_sreg_envreg17
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg17">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg17">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg17">;
 def int_nvvm_read_ptx_sreg_envreg18
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg18">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg18">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg18">;
 def int_nvvm_read_ptx_sreg_envreg19
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg19">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg19">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg19">;
 def int_nvvm_read_ptx_sreg_envreg20
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg20">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg20">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg20">;
 def int_nvvm_read_ptx_sreg_envreg21
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg21">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg21">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg21">;
 def int_nvvm_read_ptx_sreg_envreg22
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg22">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg22">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg22">;
 def int_nvvm_read_ptx_sreg_envreg23
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg23">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg23">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg23">;
 def int_nvvm_read_ptx_sreg_envreg24
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg24">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg24">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg24">;
 def int_nvvm_read_ptx_sreg_envreg25
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg25">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg25">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg25">;
 def int_nvvm_read_ptx_sreg_envreg26
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg26">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg26">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg26">;
 def int_nvvm_read_ptx_sreg_envreg27
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg27">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg27">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg27">;
 def int_nvvm_read_ptx_sreg_envreg28
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg28">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg28">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg28">;
 def int_nvvm_read_ptx_sreg_envreg29
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg29">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg29">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg29">;
 def int_nvvm_read_ptx_sreg_envreg30
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg30">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg30">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg30">;
 def int_nvvm_read_ptx_sreg_envreg31
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
               "llvm.nvvm.read.ptx.sreg.envreg31">,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_envreg31">;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_envreg31">;
 
 
 // Texture Fetch
@@ -3214,62 +3214,62 @@ def int_nvvm_suld_3d_v4i32_zero
 def int_nvvm_txq_channel_order
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.channel.order">,
-    GCCBuiltin<"__nvvm_txq_channel_order">;
+    ClangBuiltin<"__nvvm_txq_channel_order">;
 def int_nvvm_txq_channel_data_type
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.channel.data.type">,
-    GCCBuiltin<"__nvvm_txq_channel_data_type">;
+    ClangBuiltin<"__nvvm_txq_channel_data_type">;
 def int_nvvm_txq_width
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.width">,
-    GCCBuiltin<"__nvvm_txq_width">;
+    ClangBuiltin<"__nvvm_txq_width">;
 def int_nvvm_txq_height
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.height">,
-    GCCBuiltin<"__nvvm_txq_height">;
+    ClangBuiltin<"__nvvm_txq_height">;
 def int_nvvm_txq_depth
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.depth">,
-    GCCBuiltin<"__nvvm_txq_depth">;
+    ClangBuiltin<"__nvvm_txq_depth">;
 def int_nvvm_txq_array_size
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.array.size">,
-    GCCBuiltin<"__nvvm_txq_array_size">;
+    ClangBuiltin<"__nvvm_txq_array_size">;
 def int_nvvm_txq_num_samples
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.num.samples">,
-    GCCBuiltin<"__nvvm_txq_num_samples">;
+    ClangBuiltin<"__nvvm_txq_num_samples">;
 def int_nvvm_txq_num_mipmap_levels
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.txq.num.mipmap.levels">,
-    GCCBuiltin<"__nvvm_txq_num_mipmap_levels">;
+    ClangBuiltin<"__nvvm_txq_num_mipmap_levels">;
 
 //===- Surface Query ------------------------------------------------------===//
 
 def int_nvvm_suq_channel_order
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.suq.channel.order">,
-    GCCBuiltin<"__nvvm_suq_channel_order">;
+    ClangBuiltin<"__nvvm_suq_channel_order">;
 def int_nvvm_suq_channel_data_type
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.suq.channel.data.type">,
-    GCCBuiltin<"__nvvm_suq_channel_data_type">;
+    ClangBuiltin<"__nvvm_suq_channel_data_type">;
 def int_nvvm_suq_width
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.suq.width">,
-    GCCBuiltin<"__nvvm_suq_width">;
+    ClangBuiltin<"__nvvm_suq_width">;
 def int_nvvm_suq_height
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.suq.height">,
-    GCCBuiltin<"__nvvm_suq_height">;
+    ClangBuiltin<"__nvvm_suq_height">;
 def int_nvvm_suq_depth
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.suq.depth">,
-    GCCBuiltin<"__nvvm_suq_depth">;
+    ClangBuiltin<"__nvvm_suq_depth">;
 def int_nvvm_suq_array_size
   : Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.suq.array.size">,
-    GCCBuiltin<"__nvvm_suq_array_size">;
+    ClangBuiltin<"__nvvm_suq_array_size">;
 
 
 //===- Handle Query -------------------------------------------------------===//
@@ -3277,15 +3277,15 @@ def int_nvvm_suq_array_size
 def int_nvvm_istypep_sampler
   : Intrinsic<[llvm_i1_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.istypep.sampler">,
-    GCCBuiltin<"__nvvm_istypep_sampler">;
+    ClangBuiltin<"__nvvm_istypep_sampler">;
 def int_nvvm_istypep_surface
   : Intrinsic<[llvm_i1_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.istypep.surface">,
-    GCCBuiltin<"__nvvm_istypep_surface">;
+    ClangBuiltin<"__nvvm_istypep_surface">;
 def int_nvvm_istypep_texture
   : Intrinsic<[llvm_i1_ty], [llvm_i64_ty], [IntrNoMem],
               "llvm.nvvm.istypep.texture">,
-    GCCBuiltin<"__nvvm_istypep_texture">;
+    ClangBuiltin<"__nvvm_istypep_texture">;
 
 
 
@@ -3296,810 +3296,810 @@ def int_nvvm_istypep_texture
 def int_nvvm_sust_b_1d_i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i8_clamp">;
 def int_nvvm_sust_b_1d_i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i16_clamp">;
 def int_nvvm_sust_b_1d_i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i32_clamp">;
 def int_nvvm_sust_b_1d_i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i64_clamp">;
 def int_nvvm_sust_b_1d_v2i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v2i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i8_clamp">;
 def int_nvvm_sust_b_1d_v2i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v2i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i16_clamp">;
 def int_nvvm_sust_b_1d_v2i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.v2i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i32_clamp">;
 def int_nvvm_sust_b_1d_v2i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.v2i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i64_clamp">;
 def int_nvvm_sust_b_1d_v4i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v4i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i8_clamp">;
 def int_nvvm_sust_b_1d_v4i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v4i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i16_clamp">;
 def int_nvvm_sust_b_1d_v4i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.v4i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i32_clamp">;
 
 
 def int_nvvm_sust_b_1d_array_i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i8_clamp">;
 def int_nvvm_sust_b_1d_array_i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i16_clamp">;
 def int_nvvm_sust_b_1d_array_i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i32_clamp">;
 def int_nvvm_sust_b_1d_array_i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.array.i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i64_clamp">;
 def int_nvvm_sust_b_1d_array_v2i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i8_clamp">;
 def int_nvvm_sust_b_1d_array_v2i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i16_clamp">;
 def int_nvvm_sust_b_1d_array_v2i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i32_clamp">;
 def int_nvvm_sust_b_1d_array_v2i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i64_clamp">;
 def int_nvvm_sust_b_1d_array_v4i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i8_clamp">;
 def int_nvvm_sust_b_1d_array_v4i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i16_clamp">;
 def int_nvvm_sust_b_1d_array_v4i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i32_clamp">;
 
 
 def int_nvvm_sust_b_2d_i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i8_clamp">;
 def int_nvvm_sust_b_2d_i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i16_clamp">;
 def int_nvvm_sust_b_2d_i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i32_clamp">;
 def int_nvvm_sust_b_2d_i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i64_clamp">;
 def int_nvvm_sust_b_2d_v2i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v2i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i8_clamp">;
 def int_nvvm_sust_b_2d_v2i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v2i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i16_clamp">;
 def int_nvvm_sust_b_2d_v2i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.v2i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i32_clamp">;
 def int_nvvm_sust_b_2d_v2i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.v2i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i64_clamp">;
 def int_nvvm_sust_b_2d_v4i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v4i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i8_clamp">;
 def int_nvvm_sust_b_2d_v4i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v4i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i16_clamp">;
 def int_nvvm_sust_b_2d_v4i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.v4i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i32_clamp">;
 
 
 def int_nvvm_sust_b_2d_array_i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i8_clamp">;
 def int_nvvm_sust_b_2d_array_i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i16_clamp">;
 def int_nvvm_sust_b_2d_array_i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i32_clamp">;
 def int_nvvm_sust_b_2d_array_i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.array.i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i64_clamp">;
 def int_nvvm_sust_b_2d_array_v2i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i8_clamp">;
 def int_nvvm_sust_b_2d_array_v2i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i16_clamp">;
 def int_nvvm_sust_b_2d_array_v2i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i32_clamp">;
 def int_nvvm_sust_b_2d_array_v2i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i64_clamp">;
 def int_nvvm_sust_b_2d_array_v4i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i8_clamp">;
 def int_nvvm_sust_b_2d_array_v4i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i16_clamp">;
 def int_nvvm_sust_b_2d_array_v4i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i32_clamp">;
 
 
 def int_nvvm_sust_b_3d_i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i8_clamp">;
 def int_nvvm_sust_b_3d_i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i16_clamp">;
 def int_nvvm_sust_b_3d_i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i32_clamp">;
 def int_nvvm_sust_b_3d_i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.3d.i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i64_clamp">;
 def int_nvvm_sust_b_3d_v2i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v2i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i8_clamp">;
 def int_nvvm_sust_b_3d_v2i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v2i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i16_clamp">;
 def int_nvvm_sust_b_3d_v2i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.v2i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i32_clamp">;
 def int_nvvm_sust_b_3d_v2i64_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.3d.v2i64.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i64_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i64_clamp">;
 def int_nvvm_sust_b_3d_v4i8_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v4i8.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i8_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i8_clamp">;
 def int_nvvm_sust_b_3d_v4i16_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v4i16.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i16_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i16_clamp">;
 def int_nvvm_sust_b_3d_v4i32_clamp
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.v4i32.clamp">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i32_clamp">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i32_clamp">;
 
 
 // .trap variant
 def int_nvvm_sust_b_1d_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i8_trap">;
 def int_nvvm_sust_b_1d_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i16_trap">;
 def int_nvvm_sust_b_1d_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i32_trap">;
 def int_nvvm_sust_b_1d_i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i64_trap">;
 def int_nvvm_sust_b_1d_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i8_trap">;
 def int_nvvm_sust_b_1d_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i16_trap">;
 def int_nvvm_sust_b_1d_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i32_trap">;
 def int_nvvm_sust_b_1d_v2i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.v2i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i64_trap">;
 def int_nvvm_sust_b_1d_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i8_trap">;
 def int_nvvm_sust_b_1d_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i16_trap">;
 def int_nvvm_sust_b_1d_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i32_trap">;
 
 
 def int_nvvm_sust_b_1d_array_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i8_trap">;
 def int_nvvm_sust_b_1d_array_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i16_trap">;
 def int_nvvm_sust_b_1d_array_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i32_trap">;
 def int_nvvm_sust_b_1d_array_i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.array.i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i64_trap">;
 def int_nvvm_sust_b_1d_array_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i8_trap">;
 def int_nvvm_sust_b_1d_array_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i16_trap">;
 def int_nvvm_sust_b_1d_array_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i32_trap">;
 def int_nvvm_sust_b_1d_array_v2i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i64_trap">;
 def int_nvvm_sust_b_1d_array_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i8_trap">;
 def int_nvvm_sust_b_1d_array_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i16_trap">;
 def int_nvvm_sust_b_1d_array_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i32_trap">;
 
 
 def int_nvvm_sust_b_2d_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i8_trap">;
 def int_nvvm_sust_b_2d_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i16_trap">;
 def int_nvvm_sust_b_2d_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i32_trap">;
 def int_nvvm_sust_b_2d_i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i64_trap">;
 def int_nvvm_sust_b_2d_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i8_trap">;
 def int_nvvm_sust_b_2d_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i16_trap">;
 def int_nvvm_sust_b_2d_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i32_trap">;
 def int_nvvm_sust_b_2d_v2i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.v2i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i64_trap">;
 def int_nvvm_sust_b_2d_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i8_trap">;
 def int_nvvm_sust_b_2d_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i16_trap">;
 def int_nvvm_sust_b_2d_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i32_trap">;
 
 
 def int_nvvm_sust_b_2d_array_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i8_trap">;
 def int_nvvm_sust_b_2d_array_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i16_trap">;
 def int_nvvm_sust_b_2d_array_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i32_trap">;
 def int_nvvm_sust_b_2d_array_i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.array.i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i64_trap">;
 def int_nvvm_sust_b_2d_array_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i8_trap">;
 def int_nvvm_sust_b_2d_array_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i16_trap">;
 def int_nvvm_sust_b_2d_array_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i32_trap">;
 def int_nvvm_sust_b_2d_array_v2i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i64_trap">;
 def int_nvvm_sust_b_2d_array_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i8_trap">;
 def int_nvvm_sust_b_2d_array_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i16_trap">;
 def int_nvvm_sust_b_2d_array_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i32_trap">;
 
 
 def int_nvvm_sust_b_3d_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i8_trap">;
 def int_nvvm_sust_b_3d_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i16_trap">;
 def int_nvvm_sust_b_3d_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i32_trap">;
 def int_nvvm_sust_b_3d_i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.3d.i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i64_trap">;
 def int_nvvm_sust_b_3d_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i8_trap">;
 def int_nvvm_sust_b_3d_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i16_trap">;
 def int_nvvm_sust_b_3d_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i32_trap">;
 def int_nvvm_sust_b_3d_v2i64_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.3d.v2i64.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i64_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i64_trap">;
 def int_nvvm_sust_b_3d_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i8_trap">;
 def int_nvvm_sust_b_3d_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i16_trap">;
 def int_nvvm_sust_b_3d_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i32_trap">;
 
 
 // .zero variant
 def int_nvvm_sust_b_1d_i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i8_zero">;
 def int_nvvm_sust_b_1d_i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i16_zero">;
 def int_nvvm_sust_b_1d_i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i32_zero">;
 def int_nvvm_sust_b_1d_i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_i64_zero">;
 def int_nvvm_sust_b_1d_v2i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v2i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i8_zero">;
 def int_nvvm_sust_b_1d_v2i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v2i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i16_zero">;
 def int_nvvm_sust_b_1d_v2i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.v2i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i32_zero">;
 def int_nvvm_sust_b_1d_v2i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.v2i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v2i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v2i64_zero">;
 def int_nvvm_sust_b_1d_v4i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v4i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i8_zero">;
 def int_nvvm_sust_b_1d_v4i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.v4i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i16_zero">;
 def int_nvvm_sust_b_1d_v4i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.v4i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_v4i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_v4i32_zero">;
 
 
 def int_nvvm_sust_b_1d_array_i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i8_zero">;
 def int_nvvm_sust_b_1d_array_i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i16_zero">;
 def int_nvvm_sust_b_1d_array_i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i32_zero">;
 def int_nvvm_sust_b_1d_array_i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.array.i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_i64_zero">;
 def int_nvvm_sust_b_1d_array_v2i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i8_zero">;
 def int_nvvm_sust_b_1d_array_v2i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i16_zero">;
 def int_nvvm_sust_b_1d_array_v2i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i32_zero">;
 def int_nvvm_sust_b_1d_array_v2i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.1d.array.v2i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v2i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v2i64_zero">;
 def int_nvvm_sust_b_1d_array_v4i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i8_zero">;
 def int_nvvm_sust_b_1d_array_v4i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i16_zero">;
 def int_nvvm_sust_b_1d_array_v4i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.1d.array.v4i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_1d_array_v4i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_1d_array_v4i32_zero">;
 
 
 def int_nvvm_sust_b_2d_i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i8_zero">;
 def int_nvvm_sust_b_2d_i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i16_zero">;
 def int_nvvm_sust_b_2d_i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i32_zero">;
 def int_nvvm_sust_b_2d_i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_i64_zero">;
 def int_nvvm_sust_b_2d_v2i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v2i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i8_zero">;
 def int_nvvm_sust_b_2d_v2i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v2i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i16_zero">;
 def int_nvvm_sust_b_2d_v2i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.v2i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i32_zero">;
 def int_nvvm_sust_b_2d_v2i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.v2i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v2i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v2i64_zero">;
 def int_nvvm_sust_b_2d_v4i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v4i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i8_zero">;
 def int_nvvm_sust_b_2d_v4i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.v4i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i16_zero">;
 def int_nvvm_sust_b_2d_v4i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.v4i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_v4i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_v4i32_zero">;
 
 
 def int_nvvm_sust_b_2d_array_i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i8_zero">;
 def int_nvvm_sust_b_2d_array_i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i16_zero">;
 def int_nvvm_sust_b_2d_array_i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i32_zero">;
 def int_nvvm_sust_b_2d_array_i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.array.i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_i64_zero">;
 def int_nvvm_sust_b_2d_array_v2i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i8_zero">;
 def int_nvvm_sust_b_2d_array_v2i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i16_zero">;
 def int_nvvm_sust_b_2d_array_v2i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i32_zero">;
 def int_nvvm_sust_b_2d_array_v2i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.2d.array.v2i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v2i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v2i64_zero">;
 def int_nvvm_sust_b_2d_array_v4i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i8_zero">;
 def int_nvvm_sust_b_2d_array_v4i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i16_zero">;
 def int_nvvm_sust_b_2d_array_v4i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.2d.array.v4i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_2d_array_v4i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_2d_array_v4i32_zero">;
 
 
 def int_nvvm_sust_b_3d_i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i8_zero">;
 def int_nvvm_sust_b_3d_i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i16_zero">;
 def int_nvvm_sust_b_3d_i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i32_zero">;
 def int_nvvm_sust_b_3d_i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.3d.i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_i64_zero">;
 def int_nvvm_sust_b_3d_v2i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v2i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i8_zero">;
 def int_nvvm_sust_b_3d_v2i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v2i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i16_zero">;
 def int_nvvm_sust_b_3d_v2i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.v2i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i32_zero">;
 def int_nvvm_sust_b_3d_v2i64_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i64_ty, llvm_i64_ty], [],
               "llvm.nvvm.sust.b.3d.v2i64.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v2i64_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v2i64_zero">;
 def int_nvvm_sust_b_3d_v4i8_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v4i8.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i8_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i8_zero">;
 def int_nvvm_sust_b_3d_v4i16_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.b.3d.v4i16.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i16_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i16_zero">;
 def int_nvvm_sust_b_3d_v4i32_zero
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.b.3d.v4i32.zero">,
-    GCCBuiltin<"__nvvm_sust_b_3d_v4i32_zero">;
+    ClangBuiltin<"__nvvm_sust_b_3d_v4i32_zero">;
 
 
 
@@ -4108,245 +4108,245 @@ def int_nvvm_sust_b_3d_v4i32_zero
 def int_nvvm_sust_p_1d_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_i8_trap">;
 def int_nvvm_sust_p_1d_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_i16_trap">;
 def int_nvvm_sust_p_1d_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.1d.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_i32_trap">;
 def int_nvvm_sust_p_1d_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_v2i8_trap">;
 def int_nvvm_sust_p_1d_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_v2i16_trap">;
 def int_nvvm_sust_p_1d_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.1d.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_v2i32_trap">;
 def int_nvvm_sust_p_1d_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_v4i8_trap">;
 def int_nvvm_sust_p_1d_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_v4i16_trap">;
 def int_nvvm_sust_p_1d_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.1d.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_v4i32_trap">;
 
 
 def int_nvvm_sust_p_1d_array_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.array.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_i8_trap">;
 def int_nvvm_sust_p_1d_array_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.array.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_i16_trap">;
 def int_nvvm_sust_p_1d_array_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.1d.array.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_i32_trap">;
 def int_nvvm_sust_p_1d_array_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.array.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_v2i8_trap">;
 def int_nvvm_sust_p_1d_array_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.array.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_v2i16_trap">;
 def int_nvvm_sust_p_1d_array_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.1d.array.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_v2i32_trap">;
 def int_nvvm_sust_p_1d_array_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.array.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_v4i8_trap">;
 def int_nvvm_sust_p_1d_array_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.1d.array.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_v4i16_trap">;
 def int_nvvm_sust_p_1d_array_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.1d.array.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_1d_array_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_1d_array_v4i32_trap">;
 
 
 def int_nvvm_sust_p_2d_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_i8_trap">;
 def int_nvvm_sust_p_2d_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_i16_trap">;
 def int_nvvm_sust_p_2d_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.2d.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_i32_trap">;
 def int_nvvm_sust_p_2d_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_v2i8_trap">;
 def int_nvvm_sust_p_2d_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_v2i16_trap">;
 def int_nvvm_sust_p_2d_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.2d.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_v2i32_trap">;
 def int_nvvm_sust_p_2d_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_v4i8_trap">;
 def int_nvvm_sust_p_2d_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_v4i16_trap">;
 def int_nvvm_sust_p_2d_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.2d.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_v4i32_trap">;
 
 
 def int_nvvm_sust_p_2d_array_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.array.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_i8_trap">;
 def int_nvvm_sust_p_2d_array_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.array.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_i16_trap">;
 def int_nvvm_sust_p_2d_array_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.2d.array.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_i32_trap">;
 def int_nvvm_sust_p_2d_array_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.array.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_v2i8_trap">;
 def int_nvvm_sust_p_2d_array_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.array.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_v2i16_trap">;
 def int_nvvm_sust_p_2d_array_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.2d.array.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_v2i32_trap">;
 def int_nvvm_sust_p_2d_array_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.array.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_v4i8_trap">;
 def int_nvvm_sust_p_2d_array_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.2d.array.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_v4i16_trap">;
 def int_nvvm_sust_p_2d_array_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.2d.array.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_2d_array_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_2d_array_v4i32_trap">;
 
 
 def int_nvvm_sust_p_3d_i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.3d.i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_i8_trap">;
 def int_nvvm_sust_p_3d_i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.3d.i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_i16_trap">;
 def int_nvvm_sust_p_3d_i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.3d.i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_i32_trap">;
 def int_nvvm_sust_p_3d_v2i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.3d.v2i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_v2i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_v2i8_trap">;
 def int_nvvm_sust_p_3d_v2i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.3d.v2i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_v2i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_v2i16_trap">;
 def int_nvvm_sust_p_3d_v2i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.3d.v2i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_v2i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_v2i32_trap">;
 def int_nvvm_sust_p_3d_v4i8_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.3d.v4i8.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_v4i8_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_v4i8_trap">;
 def int_nvvm_sust_p_3d_v4i16_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [],
               "llvm.nvvm.sust.p.3d.v4i16.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_v4i16_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_v4i16_trap">;
 def int_nvvm_sust_p_3d_v4i32_trap
   : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.3d.v4i32.trap">,
-    GCCBuiltin<"__nvvm_sust_p_3d_v4i32_trap">;
+    ClangBuiltin<"__nvvm_sust_p_3d_v4i32_trap">;
 
 
 def int_nvvm_rotate_b32
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
               [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.b32">,
-              GCCBuiltin<"__nvvm_rotate_b32">;
+              ClangBuiltin<"__nvvm_rotate_b32">;
 
 def int_nvvm_rotate_b64
   : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
              [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.b64">,
-             GCCBuiltin<"__nvvm_rotate_b64">;
+             ClangBuiltin<"__nvvm_rotate_b64">;
 
 def int_nvvm_rotate_right_b64
   : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
               [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.right.b64">,
-              GCCBuiltin<"__nvvm_rotate_right_b64">;
+              ClangBuiltin<"__nvvm_rotate_right_b64">;
 
 def int_nvvm_swap_lo_hi_b64
   : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
               [IntrNoMem, IntrSpeculatable], "llvm.nvvm.swap.lo.hi.b64">,
-              GCCBuiltin<"__nvvm_swap_lo_hi_b64">;
+              ClangBuiltin<"__nvvm_swap_lo_hi_b64">;
 
 
 // Accessing special registers.
@@ -4358,30 +4358,30 @@ multiclass PTXReadSRegIntrinsic_v4i32<string regname> {
 //    def _v4i16 : Intrinsic<[llvm_v4i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
   def _x     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_x">;
+               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_x">;
   def _y     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_y">;
+               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_y">;
   def _z     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_z">;
+               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_z">;
   def _w     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_w">;
+               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_w">;
 }
 
 class PTXReadSRegIntrinsic_r32<string name>
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 class PTXReadSRegIntrinsic_r64<string name>
   : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
 // Intrinsics to read registers with non-constant values. E.g. the values that
 // do change over the kernel lifetime. Such reads should not be CSE'd.
 class PTXReadNCSRegIntrinsic_r32<string name>
   : Intrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback]>,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 class PTXReadNCSRegIntrinsic_r64<string name>
   : Intrinsic<[llvm_i64_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback]>,
-    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+    ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
 defm int_nvvm_read_ptx_sreg_tid : PTXReadSRegIntrinsic_v4i32<"tid">;
 defm int_nvvm_read_ptx_sreg_ntid : PTXReadSRegIntrinsic_v4i32<"ntid">;
@@ -4428,7 +4428,7 @@ foreach sync = [false, true] in {
       foreach return_pred = [false, true] in {
         foreach i = [SHFL_INFO<sync, mode, type, return_pred>] in {
           if i.withGccBuiltin then {
-            def i.Name : GCCBuiltin<i.Builtin>,
+            def i.Name : ClangBuiltin<i.Builtin>,
                          Intrinsic<i.RetTy, i.ArgsTy,
                                    [IntrInaccessibleMemOnly, IntrConvergent,
                                    IntrNoCallback],
@@ -4453,22 +4453,22 @@ foreach sync = [false, true] in {
 def int_nvvm_vote_all :
   Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.all">,
-  GCCBuiltin<"__nvvm_vote_all">;
+  ClangBuiltin<"__nvvm_vote_all">;
 // vote.any pred
 def int_nvvm_vote_any :
   Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.any">,
-  GCCBuiltin<"__nvvm_vote_any">;
+  ClangBuiltin<"__nvvm_vote_any">;
 // vote.uni pred
 def int_nvvm_vote_uni :
   Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.uni">,
-  GCCBuiltin<"__nvvm_vote_uni">;
+  ClangBuiltin<"__nvvm_vote_uni">;
 // vote.ballot pred
 def int_nvvm_vote_ballot :
   Intrinsic<[llvm_i32_ty], [llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.ballot">,
-  GCCBuiltin<"__nvvm_vote_ballot">;
+  ClangBuiltin<"__nvvm_vote_ballot">;
 
 //
 // VOTE.SYNC
@@ -4478,22 +4478,22 @@ def int_nvvm_vote_ballot :
 def int_nvvm_vote_all_sync :
   Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.all.sync">,
-  GCCBuiltin<"__nvvm_vote_all_sync">;
+  ClangBuiltin<"__nvvm_vote_all_sync">;
 // vote.sync.any mask, pred
 def int_nvvm_vote_any_sync :
   Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.any.sync">,
-  GCCBuiltin<"__nvvm_vote_any_sync">;
+  ClangBuiltin<"__nvvm_vote_any_sync">;
 // vote.sync.uni mask, pred
 def int_nvvm_vote_uni_sync :
   Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.uni.sync">,
-  GCCBuiltin<"__nvvm_vote_uni_sync">;
+  ClangBuiltin<"__nvvm_vote_uni_sync">;
 // vote.sync.ballot mask, pred
 def int_nvvm_vote_ballot_sync :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.ballot.sync">,
-  GCCBuiltin<"__nvvm_vote_ballot_sync">;
+  ClangBuiltin<"__nvvm_vote_ballot_sync">;
 
 //
 // MATCH.SYNC
@@ -4502,12 +4502,12 @@ def int_nvvm_vote_ballot_sync :
 def int_nvvm_match_any_sync_i32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.match.any.sync.i32">,
-  GCCBuiltin<"__nvvm_match_any_sync_i32">;
+  ClangBuiltin<"__nvvm_match_any_sync_i32">;
 // match.any.sync.b64 mask, value
 def int_nvvm_match_any_sync_i64 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i64_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.match.any.sync.i64">,
-  GCCBuiltin<"__nvvm_match_any_sync_i64">;
+  ClangBuiltin<"__nvvm_match_any_sync_i64">;
 
 // match.all instruction have two variants -- one returns a single value, another
 // returns a pair {value, predicate}. We currently only implement the latter as
@@ -4526,42 +4526,42 @@ def int_nvvm_match_all_sync_i64p :
 // REDUX.SYNC
 //
 // redux.sync.min.u32 dst, src, membermask;
-def int_nvvm_redux_sync_umin : GCCBuiltin<"__nvvm_redux_sync_umin">,
+def int_nvvm_redux_sync_umin : ClangBuiltin<"__nvvm_redux_sync_umin">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 // redux.sync.max.u32 dst, src, membermask;
-def int_nvvm_redux_sync_umax : GCCBuiltin<"__nvvm_redux_sync_umax">,
+def int_nvvm_redux_sync_umax : ClangBuiltin<"__nvvm_redux_sync_umax">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 // redux.sync.add.s32 dst, src, membermask;
-def int_nvvm_redux_sync_add : GCCBuiltin<"__nvvm_redux_sync_add">,
+def int_nvvm_redux_sync_add : ClangBuiltin<"__nvvm_redux_sync_add">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 // redux.sync.min.s32 dst, src, membermask;
-def int_nvvm_redux_sync_min : GCCBuiltin<"__nvvm_redux_sync_min">,
+def int_nvvm_redux_sync_min : ClangBuiltin<"__nvvm_redux_sync_min">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 // redux.sync.max.s32 dst, src, membermask;
-def int_nvvm_redux_sync_max : GCCBuiltin<"__nvvm_redux_sync_max">,
+def int_nvvm_redux_sync_max : ClangBuiltin<"__nvvm_redux_sync_max">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 // redux.sync.and.b32 dst, src, membermask;
-def int_nvvm_redux_sync_and : GCCBuiltin<"__nvvm_redux_sync_and">,
+def int_nvvm_redux_sync_and : ClangBuiltin<"__nvvm_redux_sync_and">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 // redux.sync.xor.b32 dst, src, membermask;
-def int_nvvm_redux_sync_xor : GCCBuiltin<"__nvvm_redux_sync_xor">,
+def int_nvvm_redux_sync_xor : ClangBuiltin<"__nvvm_redux_sync_xor">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 // redux.sync.or.b32 dst, src, membermask;
-def int_nvvm_redux_sync_or : GCCBuiltin<"__nvvm_redux_sync_or">,
+def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 

@@ -378,6 +378,10 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <thread>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <chrono>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -521,12 +525,12 @@ _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_NO_EXCEPTIONS
 _LIBCPP_AVAILABILITY_FUTURE_ERROR
 #endif
-void __throw_future_error(future_errc _Ev)
+void __throw_future_error(future_errc __ev)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
-    throw future_error(make_error_code(_Ev));
+    throw future_error(make_error_code(__ev));
 #else
-    ((void)_Ev);
+    ((void)__ev);
     _VSTD::abort();
 #endif
 }
@@ -1102,7 +1106,7 @@ future<_Rp>::future(__assoc_state<_Rp>* __state)
 
 struct __release_shared_count
 {
-    void operator()(__shared_count* p) {p->__release_shared();}
+    void operator()(__shared_count* __p) {__p->__release_shared();}
 };
 
 template <class _Rp>

@@ -1007,6 +1007,12 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     }
   }
 
+  if (D->hasDefinition()) {
+    if (D->hasAttr<FinalAttr>()) {
+      Out << " final";
+    }
+  }
+
   if (D->isCompleteDefinition()) {
     // Print the base classes
     if (D->getNumBases()) {

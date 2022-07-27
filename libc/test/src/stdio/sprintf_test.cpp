@@ -8,7 +8,21 @@
 
 #include "src/stdio/sprintf.h"
 
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PlatformDefs.h"
 #include "utils/UnitTest/Test.h"
+#include "utils/testutils/RoundingModeUtils.h"
+
+class LlvmLibcSPrintfTest : public __llvm_libc::testing::Test {
+protected:
+  char buff[64];
+  int written;
+};
+
+// Subtract 1 from sizeof(expected_str) to account for the null byte.
+#define ASSERT_STREQ_LEN(actual_written, actual_str, expected_str)             \
+  EXPECT_EQ(actual_written, static_cast<int>(sizeof(expected_str) - 1));       \
+  EXPECT_STREQ(actual_str, expected_str);
 
 TEST(LlvmLibcSPrintfTest, SimpleNoConv) {
   char buff[64];
@@ -92,7 +106,7 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
 
   // Length Modifier Tests.
 
-  written = __llvm_libc::sprintf(buff, "%hhu", 257); // 0x10001
+  written = __llvm_libc::sprintf(buff, "%hhu", 257); // 0x101
   EXPECT_EQ(written, 1);
   ASSERT_STREQ(buff, "1");
 
@@ -361,6 +375,526 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   written = __llvm_libc::sprintf(buff, "%p", buff);
   EXPECT_GT(written, 0);
 }
+
+TEST(LlvmLibcSPrintfTest, OctConv) {
+  char buff[64];
+  int written;
+
+  // Basic Tests.
+
+  written = __llvm_libc::sprintf(buff, "%o", 01234);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "1234");
+
+  written = __llvm_libc::sprintf(buff, "%o", 04567);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "4567");
+
+  // Length Modifier Tests.
+
+  written = __llvm_libc::sprintf(buff, "%hho", 0401);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "1");
+
+  written = __llvm_libc::sprintf(buff, "%llo", 01777777777777777777777ull);
+  EXPECT_EQ(written, 22);
+  ASSERT_STREQ(buff, "1777777777777777777777"); // ull max
+
+  written = __llvm_libc::sprintf(buff, "%to", ~ptrdiff_t(0));
+  if (sizeof(ptrdiff_t) == 8) {
+    EXPECT_EQ(written, 22);
+    ASSERT_STREQ(buff, "1777777777777777777777");
+  } else if (sizeof(ptrdiff_t) == 4) {
+    EXPECT_EQ(written, 11);
+    ASSERT_STREQ(buff, "37777777777");
+  }
+
+  // Min Width Tests.
+
+  written = __llvm_libc::sprintf(buff, "%4o", 0701);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, " 701");
+
+  written = __llvm_libc::sprintf(buff, "%2o", 0107);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "107");
+
+  // Precision Tests.
+
+  written = __llvm_libc::sprintf(buff, "%o", 0);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "0");
+
+  written = __llvm_libc::sprintf(buff, "%.0o", 0);
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, "");
+
+  written = __llvm_libc::sprintf(buff, "%.5o", 0153);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00153");
+
+  written = __llvm_libc::sprintf(buff, "%.2o", 0135);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "135");
+
+  // Flag Tests.
+
+  written = __llvm_libc::sprintf(buff, "%-5o", 0246);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "246  ");
+
+  written = __llvm_libc::sprintf(buff, "%#o", 0234);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "0234");
+
+  written = __llvm_libc::sprintf(buff, "%05o", 0470);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00470");
+
+  written = __llvm_libc::sprintf(buff, "%0#6o", 0753);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "000753");
+
+  written = __llvm_libc::sprintf(buff, "%-#6o", 0642);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0642  ");
+
+  // Combined Tests.
+
+  written = __llvm_libc::sprintf(buff, "%#-07o", 0703);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "0703   ");
+
+  written = __llvm_libc::sprintf(buff, "%7.5o", 0314);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "  00314");
+
+  written = __llvm_libc::sprintf(buff, "%#9.5o", 0234);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "    00234");
+
+  written = __llvm_libc::sprintf(buff, "%-7.5o", 0260);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "00260  ");
+
+  written = __llvm_libc::sprintf(buff, "%5.4o", 010000);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "10000");
+
+  // Multiple Conversion Tests.
+
+  written = __llvm_libc::sprintf(buff, "%10o %-#10o", 0456, 0123);
+  EXPECT_EQ(written, 21);
+  ASSERT_STREQ(buff, "       456 0123      ");
+
+  written = __llvm_libc::sprintf(buff, "%-5.4o%#.4o", 075, 025);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "0075 0025");
+
+  written = __llvm_libc::sprintf(buff, "%04hho %#.5llo %-6.3zo", 256 + 077,
+                                 01000000000000ll, size_t(2));
+  EXPECT_EQ(written, 26);
+  ASSERT_STREQ(buff, "0077 01000000000000 002   ");
+}
+
+#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
+
+TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
+  __llvm_libc::testutils::ForceRoundingMode r(
+      __llvm_libc::testutils::RoundingMode::Nearest);
+  double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
+  double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
+
+  written = __llvm_libc::sprintf(buff, "%a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%A", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "-0X1P+0");
+
+  written = __llvm_libc::sprintf(buff, "%a", -0x1.abcdef12345p0);
+  ASSERT_STREQ_LEN(written, buff, "-0x1.abcdef12345p+0");
+
+  written = __llvm_libc::sprintf(buff, "%A", 0x1.abcdef12345p0);
+  ASSERT_STREQ_LEN(written, buff, "0X1.ABCDEF12345P+0");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0x0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%a", 1.0e100);
+  ASSERT_STREQ_LEN(written, buff, "0x1.249ad2594c37dp+332");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0.1);
+  ASSERT_STREQ_LEN(written, buff, "0x1.999999999999ap-4");
+
+  // Subnormal Tests.
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1027);
+  ASSERT_STREQ_LEN(written, buff, "0x0.08p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1025);
+  ASSERT_STREQ_LEN(written, buff, "0x0.2p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0.8p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1022);
+  ASSERT_STREQ_LEN(written, buff, "0x1p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1074);
+  ASSERT_STREQ_LEN(written, buff, "0x0.0000000000001p-1022");
+
+  // Inf/Nan Tests.
+
+  written = __llvm_libc::sprintf(buff, "%a", inf);
+  ASSERT_STREQ_LEN(written, buff, "inf");
+
+  written = __llvm_libc::sprintf(buff, "%A", -inf);
+  ASSERT_STREQ_LEN(written, buff, "-INF");
+
+  written = __llvm_libc::sprintf(buff, "%a", nan);
+  ASSERT_STREQ_LEN(written, buff, "nan");
+
+  written = __llvm_libc::sprintf(buff, "%A", -nan);
+  ASSERT_STREQ_LEN(written, buff, "-NAN");
+
+  // Length Modifier Tests.
+
+  written = __llvm_libc::sprintf(buff, "%La", 0.1L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0xc.ccccccccccccccdp-7");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x1.999999999999ap-4");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
+#endif
+
+  written = __llvm_libc::sprintf(buff, "%La", 1.0e1000L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0xf.38db1f9dd3dac05p+3318");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "inf");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.e71b63f3ba7b580af1a52d2a7379p+3321");
+#endif
+
+  written = __llvm_libc::sprintf(buff, "%La", 1.0e-1000L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x8.68a9188a89e1467p-3325");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x0p+0");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.0d152311513c28ce202627c06ec2p-3322");
+#endif
+
+  // Min Width Tests.
+
+  written = __llvm_libc::sprintf(buff, "%15a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "         0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%15a", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "        -0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%15a", 1.0e10);
+  ASSERT_STREQ_LEN(written, buff, " 0x1.2a05f2p+33");
+
+  written = __llvm_libc::sprintf(buff, "%15a", -1.0e10);
+  ASSERT_STREQ_LEN(written, buff, "-0x1.2a05f2p+33");
+
+  written = __llvm_libc::sprintf(buff, "%10a", 1.0e10);
+  ASSERT_STREQ_LEN(written, buff, "0x1.2a05f2p+33");
+
+  written = __llvm_libc::sprintf(buff, "%5a", inf);
+  ASSERT_STREQ_LEN(written, buff, "  inf");
+
+  written = __llvm_libc::sprintf(buff, "%5a", -nan);
+  ASSERT_STREQ_LEN(written, buff, " -nan");
+
+  // Precision Tests.
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0x0.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0.1);
+  ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0fp0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.07p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.18p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.2p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.ffp0);
+  ASSERT_STREQ_LEN(written, buff, "0x2.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 1.25);
+  ASSERT_STREQ_LEN(written, buff, "0x1.40000p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 1.25);
+  ASSERT_STREQ_LEN(written, buff, "0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 1.75);
+  ASSERT_STREQ_LEN(written, buff, "0x2p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0.8p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.8p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0.cp-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0p-1024);
+  ASSERT_STREQ_LEN(written, buff, "0x0.4p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 0x1.0p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 0x1.8p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x1p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 0x1.0p-1024);
+  ASSERT_STREQ_LEN(written, buff, "0x0p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.2a", 0x1.0p-1027);
+  ASSERT_STREQ_LEN(written, buff, "0x0.08p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0p-1027);
+  ASSERT_STREQ_LEN(written, buff, "0x0.0p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0x0.00000p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 0x1.008p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.00800p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 0x1.008p10);
+  ASSERT_STREQ_LEN(written, buff, "0x1.00800p+10");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", nan);
+  ASSERT_STREQ_LEN(written, buff, "nan");
+
+  written = __llvm_libc::sprintf(buff, "%.1La", 0.1L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+#endif
+
+  written = __llvm_libc::sprintf(buff, "%.1La", 0xf.fffffffffffffffp16380L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "inf");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
+#endif
+
+  // Rounding Mode Tests.
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::Nearest);
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.2p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.2p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
+  }
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::Upward);
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.2p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.2p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
+  }
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::Downward);
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.2p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.2p+0");
+  }
+
+  {
+    __llvm_libc::testutils::ForceRoundingMode r(
+        __llvm_libc::testutils::RoundingMode::TowardZero);
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", 0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.08p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.18p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.04p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.0p+0");
+
+    written = __llvm_libc::sprintf(buff, "%.1a", -0x1.14p0);
+    ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
+  }
+
+  // Flag Tests.
+
+  written = __llvm_libc::sprintf(buff, "%+a", nan);
+  ASSERT_STREQ_LEN(written, buff, "+nan");
+
+  written = __llvm_libc::sprintf(buff, "% A", inf);
+  ASSERT_STREQ_LEN(written, buff, " INF");
+
+  written = __llvm_libc::sprintf(buff, "%-5a", inf);
+  ASSERT_STREQ_LEN(written, buff, "inf  ");
+
+  written = __llvm_libc::sprintf(buff, "%+-5A", nan);
+  ASSERT_STREQ_LEN(written, buff, "+NAN ");
+
+  written = __llvm_libc::sprintf(buff, "%+a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "+0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "% a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, " 0x0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%-10a", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "0x1.8p+0  ");
+
+  written = __llvm_libc::sprintf(buff, "%#a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.p+0");
+
+  written = __llvm_libc::sprintf(buff, "%#.0a", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "0x2.p+0");
+
+  written = __llvm_libc::sprintf(buff, "%010a", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "0x001.8p+0");
+
+  written = __llvm_libc::sprintf(buff, "%+- #0a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "+0x0.p+0");
+
+  // Combined Tests.
+
+  written = __llvm_libc::sprintf(buff, "%12.3a %-12.3A", 0.1, 256.0);
+  ASSERT_STREQ_LEN(written, buff, "  0x1.99ap-4 0X1.000P+8  ");
+
+  written = __llvm_libc::sprintf(buff, "%+-#12.3a % 012.3a", 0.1256, 1256.0);
+  ASSERT_STREQ_LEN(written, buff, "+0x1.014p-3   0x1.3a0p+10");
+}
+#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
+
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+TEST(LlvmLibcSPrintfTest, WriteIntConv) {
+  char buff[64];
+  int written;
+  int test_val = -1;
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "12345%n67890", &test_val);
+  EXPECT_EQ(written, 10);
+  EXPECT_EQ(test_val, 5);
+  ASSERT_STREQ(buff, "1234567890");
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "%n", &test_val);
+  EXPECT_EQ(written, 0);
+  EXPECT_EQ(test_val, 0);
+  ASSERT_STREQ(buff, "");
+
+  test_val = 0x100;
+  written = __llvm_libc::sprintf(buff, "ABC%hhnDEF", &test_val);
+  EXPECT_EQ(written, 6);
+  EXPECT_EQ(test_val, 0x103);
+  ASSERT_STREQ(buff, "ABCDEF");
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "%s%n", "87654321", &test_val);
+  EXPECT_EQ(written, 8);
+  EXPECT_EQ(test_val, 8);
+  ASSERT_STREQ(buff, "87654321");
+
+  written = __llvm_libc::sprintf(buff, "abc123%n", nullptr);
+  EXPECT_LT(written, 0);
+}
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
 
 #ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSPrintfTest, IndexModeParsing) {

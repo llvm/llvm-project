@@ -393,31 +393,25 @@ class RegisterCommandsTestCase(TestBase):
                     st0regname +
                     ' = 0'])
 
-            has_avx = False
-            has_mpx = False
-            # Returns an SBValueList.
+            # Check if AVX/MPX registers are defined at all.
             registerSets = currentFrame.GetRegisters()
-            for registerSet in registerSets:
-                set_name = registerSet.GetName().lower()
-                if 'advanced vector extensions' in set_name:
-                    has_avx = True
-                # Darwin reports AVX registers as part of "Floating Point Registers"
-                elif self.platformIsDarwin() and 'floating point registers' in set_name:
-                    has_avx = registerSet.GetChildMemberWithName('ymm0').IsValid()
-
-                # FreeBSD/NetBSD reports missing register sets differently
-                # at the moment and triggers false positive here.
-                # TODO: remove FreeBSD/NetBSD exception when we make unsupported
-                # register groups correctly disappear.
-                if ('memory protection extension' in registerSet.GetName().lower()
-                        and self.getPlatform() not in ["freebsd", "netbsd"]):
-                    has_mpx = True
+            registers = frozenset(reg.GetName() for registerSet in registerSets
+                                  for reg in registerSet)
+            has_avx_regs = "ymm0" in registers
+            has_mpx_regs = "bnd0" in registers
+            # Check if they are actually present.
+            self.runCmd("register read -a")
+            output = self.res.GetOutput()
+            has_avx = "ymm0 =" in output
+            has_mpx = "bnd0 =" in output
 
             if has_avx:
                 new_value = "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x0c 0x0d 0x0e 0x0f}"
                 self.write_and_read(currentFrame, "ymm0", new_value)
                 self.write_and_read(currentFrame, "ymm7", new_value)
                 self.expect("expr $ymm0", substrs=['vector_type'])
+            elif has_avx_regs:
+                self.expect("register read ymm0", substrs=["error: unavailable"])
             else:
                 self.expect("register read ymm0", substrs=["Invalid register name 'ymm0'"],
                             error=True)
@@ -434,6 +428,8 @@ class RegisterCommandsTestCase(TestBase):
                 new_value = "{0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08}"
                 self.write_and_read(currentFrame, "bndstatus", new_value)
                 self.expect("expr $bndstatus", substrs = ['vector_type'])
+            elif has_mpx_regs:
+                self.expect("register read bnd0", substrs=["error: unavailable"])
             else:
                 self.expect("register read bnd0", substrs=["Invalid register name 'bnd0'"],
                             error=True)

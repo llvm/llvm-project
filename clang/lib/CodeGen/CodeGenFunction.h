@@ -1529,10 +1529,7 @@ public:
 
   /// Get the profiler's count for the given statement.
   uint64_t getProfileCount(const Stmt *S) {
-    Optional<uint64_t> Count = PGO.getStmtCount(S);
-    if (!Count.hasValue())
-      return 0;
-    return *Count;
+    return PGO.getStmtCount(S).value_or(0);
   }
 
   /// Set the profiler's current count.
@@ -1971,8 +1968,7 @@ private:
 
   /// Add OpenCL kernel arg metadata and the kernel attribute metadata to
   /// the function metadata.
-  void EmitOpenCLKernelMetadata(const FunctionDecl *FD,
-                                llvm::Function *Fn);
+  void EmitKernelMetadata(const FunctionDecl *FD, llvm::Function *Fn);
 
 public:
   CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext=false);
@@ -2359,10 +2355,6 @@ public:
   /// AlwaysEmitXRayTypedEvents - Return true if clang must unconditionally emit
   /// XRay typed event handling calls.
   bool AlwaysEmitXRayTypedEvents() const;
-
-  /// Encode an address into a form suitable for use in a function prologue.
-  llvm::Constant *EncodeAddrForUseInPrologue(llvm::Function *F,
-                                             llvm::Constant *Addr);
 
   /// Decode an address used in a function prologue, encoded by \c
   /// EncodeAddrForUseInPrologue.
@@ -3498,7 +3490,11 @@ public:
   void EmitOMPTargetTaskBasedDirective(const OMPExecutableDirective &S,
                                        const RegionCodeGenTy &BodyGen,
                                        OMPTargetDataInfo &InputInfo);
-
+  void processInReduction(const OMPExecutableDirective &S,
+                          OMPTaskDataTy &Data,
+                          CodeGenFunction &CGF,
+                          const CapturedStmt *CS,
+                          OMPPrivateScope &Scope);
   void EmitOMPMetaDirective(const OMPMetaDirective &S);
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);

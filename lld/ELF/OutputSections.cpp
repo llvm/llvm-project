@@ -350,7 +350,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
   // concatenated with the next shard.
   auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
   auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
-  parallelForEachN(0, numShards, [&](size_t i) {
+  parallelFor(0, numShards, [&](size_t i) {
     shardsOut[i] = deflateShard(shardsIn[i], level,
                                 i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
     shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
@@ -409,7 +409,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
 
     buf[0] = 0x78; // CMF
     buf[1] = 0x01; // FLG: best speed
-    parallelForEachN(0, compressed.numShards, [&](size_t i) {
+    parallelFor(0, compressed.numShards, [&](size_t i) {
       memcpy(buf + offsets[i], compressed.shards[i].data(),
              compressed.shards[i].size());
     });
@@ -419,13 +419,14 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
   }
 
   // Write leading padding.
-  SmallVector<InputSection *, 0> sections = getInputSections(*this);
+  SmallVector<InputSection *, 0> storage;
+  ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   std::array<uint8_t, 4> filler = getFiller();
   bool nonZeroFiller = read32(filler.data()) != 0;
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
 
-  parallelForEachN(0, sections.size(), [&](size_t i) {
+  parallelFor(0, sections.size(), [&](size_t i) {
     InputSection *isec = sections[i];
     if (auto *s = dyn_cast<SyntheticSection>(isec))
       s->writeTo(buf + isec->outSecOff);
@@ -592,12 +593,24 @@ InputSection *elf::getFirstInputSection(const OutputSection *os) {
   return nullptr;
 }
 
-SmallVector<InputSection *, 0> elf::getInputSections(const OutputSection &os) {
-  SmallVector<InputSection *, 0> ret;
-  for (SectionCommand *cmd : os.commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
-      ret.insert(ret.end(), isd->sections.begin(), isd->sections.end());
-  return ret;
+ArrayRef<InputSection *>
+elf::getInputSections(const OutputSection &os,
+                      SmallVector<InputSection *, 0> &storage) {
+  ArrayRef<InputSection *> ret;
+  storage.clear();
+  for (SectionCommand *cmd : os.commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    if (ret.empty()) {
+      ret = isd->sections;
+    } else {
+      if (storage.empty())
+        storage.assign(ret.begin(), ret.end());
+      storage.insert(storage.end(), isd->sections.begin(), isd->sections.end());
+    }
+  }
+  return storage.empty() ? ret : makeArrayRef(storage);
 }
 
 // Sorts input sections by section name suffixes, so that .foo.N comes
@@ -622,8 +635,9 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
 void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
   assert(config->writeAddends && config->checkDynamicRelocs);
   assert(type == SHT_REL || type == SHT_RELA);
-  SmallVector<InputSection *, 0> sections = getInputSections(*this);
-  parallelForEachN(0, sections.size(), [&](size_t i) {
+  SmallVector<InputSection *, 0> storage;
+  ArrayRef<InputSection *> sections = getInputSections(*this, storage);
+  parallelFor(0, sections.size(), [&](size_t i) {
     // When linking with -r or --emit-relocs we might also call this function
     // for input .rel[a].<sec> sections which we simply pass through to the
     // output. We skip over those and only look at the synthetic relocation

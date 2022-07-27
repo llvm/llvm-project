@@ -1862,8 +1862,10 @@ void basic_parser_impl::printOptionInfo(const Option &O,
       outs() << " <" << getValueStr(O, ValName) << ">...";
     } else if (O.getValueExpectedFlag() == ValueOptional)
       outs() << "[=<" << getValueStr(O, ValName) << ">]";
-    else
-      outs() << "=<" << getValueStr(O, ValName) << '>';
+    else {
+      outs() << (O.ArgStr.size() == 1 ? " <" : "=<") << getValueStr(O, ValName)
+             << '>';
+    }
   }
 
   Option::printHelpStr(O.HelpStr, GlobalWidth, getOptionWidth(O));
@@ -2380,7 +2382,7 @@ protected:
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
       for (auto &Cat : Opt->Categories) {
-        assert(find(SortedCategories, Cat) != SortedCategories.end() &&
+        assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
       }

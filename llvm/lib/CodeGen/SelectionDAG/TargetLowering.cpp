@@ -654,6 +654,14 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
 SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     SelectionDAG &DAG, unsigned Depth) const {
+  EVT VT = Op.getValueType();
+
+  // Pretend we don't know anything about scalable vectors for now.
+  // TODO: We can probably do more work on simplifying the operations for
+  // scalable vectors, but for now we just bail out.
+  if (VT.isScalableVector())
+    return SDValue();
+
   // Limit search depth.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
@@ -664,7 +672,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
   // Not demanding any bits/elts from Op.
   if (DemandedBits == 0 || DemandedElts == 0)
-    return DAG.getUNDEF(Op.getValueType());
+    return DAG.getUNDEF(VT);
 
   bool IsLE = DAG.getDataLayout().isLittleEndian();
   unsigned NumElts = DemandedElts.getBitWidth();
@@ -894,6 +902,13 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, SelectionDAG &DAG,
     unsigned Depth) const {
   EVT VT = Op.getValueType();
+
+  // Pretend we don't know anything about scalable vectors for now.
+  // TODO: We can probably do more work on simplifying the operations for
+  // scalable vectors, but for now we just bail out.
+  if (VT.isScalableVector())
+    return SDValue();
+
   APInt DemandedElts = VT.isVector()
                            ? APInt::getAllOnes(VT.getVectorNumElements())
                            : APInt(1, 1);
@@ -1056,13 +1071,13 @@ bool TargetLowering::SimplifyDemandedBits(
   // TODO: We can probably do more work on calculating the known bits and
   // simplifying the operations for scalable vectors, but for now we just
   // bail out.
-  if (Op.getValueType().isScalableVector())
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector())
     return false;
 
   bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
   unsigned NumElts = OriginalDemandedElts.getBitWidth();
-  assert((!Op.getValueType().isVector() ||
-          NumElts == Op.getValueType().getVectorNumElements()) &&
+  assert((!VT.isVector() || NumElts == VT.getVectorNumElements()) &&
          "Unexpected vector size");
 
   APInt DemandedBits = OriginalDemandedBits;
@@ -1072,6 +1087,10 @@ bool TargetLowering::SimplifyDemandedBits(
 
   // Undef operand.
   if (Op.isUndef())
+    return false;
+
+  // We can't simplify target constants.
+  if (Op.getOpcode() == ISD::TargetConstant)
     return false;
 
   if (Op.getOpcode() == ISD::Constant) {
@@ -1088,18 +1107,16 @@ bool TargetLowering::SimplifyDemandedBits(
   }
 
   // Other users may use these bits.
-  EVT VT = Op.getValueType();
+  bool HasMultiUse = false;
   if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
-    if (Depth != 0) {
-      // If not at the root, Just compute the Known bits to
-      // simplify things downstream.
-      Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
+    if (Depth >= SelectionDAG::MaxRecursionDepth) {
+      // Limit search depth.
       return false;
     }
-    // If this is the root being simplified, allow it to have multiple uses,
-    // just set the DemandedBits/Elts to all bits.
+    // Allow multiple uses, just set the DemandedBits/Elts to all bits.
     DemandedBits = APInt::getAllOnes(BitWidth);
     DemandedElts = APInt::getAllOnes(NumElts);
+    HasMultiUse = true;
   } else if (OriginalDemandedBits == 0 || OriginalDemandedElts == 0) {
     // Not demanding any bits/elts from Op.
     return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
@@ -1110,8 +1127,6 @@ bool TargetLowering::SimplifyDemandedBits(
 
   KnownBits Known2;
   switch (Op.getOpcode()) {
-  case ISD::TargetConstant:
-    llvm_unreachable("Can't simplify this node");
   case ISD::SCALAR_TO_VECTOR: {
     if (!DemandedElts[0])
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
@@ -1362,6 +1377,29 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    // AND(INSERT_SUBVECTOR(C,X,I),M) -> INSERT_SUBVECTOR(AND(C,M),X,I)
+    // iff 'C' is Undef/Constant and AND(X,M) == X (for DemandedBits).
+    if (Op0.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        (Op0.getOperand(0).isUndef() ||
+         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0).getNode())) &&
+        Op0->hasOneUse()) {
+      unsigned NumSubElts =
+          Op0.getOperand(1).getValueType().getVectorNumElements();
+      unsigned SubIdx = Op0.getConstantOperandVal(2);
+      APInt DemandedSub =
+          APInt::getBitsSet(NumElts, SubIdx, SubIdx + NumSubElts);
+      KnownBits KnownSubMask =
+          TLO.DAG.computeKnownBits(Op1, DemandedSub & DemandedElts, Depth + 1);
+      if (DemandedBits.isSubsetOf(KnownSubMask.One)) {
+        SDValue NewAnd =
+            TLO.DAG.getNode(ISD::AND, dl, VT, Op0.getOperand(0), Op1);
+        SDValue NewInsert =
+            TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT, NewAnd,
+                            Op0.getOperand(1), Op0.getOperand(2));
+        return TLO.CombineTo(Op, NewInsert);
+      }
+    }
+
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1))
       return true;
@@ -1370,20 +1408,6 @@ bool TargetLowering::SimplifyDemandedBits(
                              Known2, TLO, Depth + 1))
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
-
-    // Attempt to avoid multi-use ops if we don't need anything from them.
-    if (!DemandedBits.isAllOnes() || !DemandedElts.isAllOnes()) {
-      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
-          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
-      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
-          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
-      if (DemandedOp0 || DemandedOp1) {
-        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
-        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
-        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
-        return TLO.CombineTo(Op, NewOp);
-      }
-    }
 
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
@@ -1402,6 +1426,20 @@ bool TargetLowering::SimplifyDemandedBits(
     if (ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
       return true;
 
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!DemandedBits.isAllOnes() || !DemandedElts.isAllOnes()) {
+      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
+          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      if (DemandedOp0 || DemandedOp1) {
+        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
+        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
+
     Known &= Known2;
     break;
   }
@@ -1418,6 +1456,19 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
+    // If all of the demanded bits are known zero on one side, return the other.
+    // These bits cannot contribute to the result of the 'or'.
+    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero))
+      return TLO.CombineTo(Op, Op0);
+    if (DemandedBits.isSubsetOf(Known.One | Known2.Zero))
+      return TLO.CombineTo(Op, Op1);
+    // If the RHS is a constant, see if we can simplify it.
+    if (ShrinkDemandedConstant(Op, DemandedBits, DemandedElts, TLO))
+      return true;
+    // If the operation can be done in a smaller type, do so.
+    if (ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
+      return true;
+
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!DemandedBits.isAllOnes() || !DemandedElts.isAllOnes()) {
       SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
@@ -1432,18 +1483,32 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
-    // If all of the demanded bits are known zero on one side, return the other.
-    // These bits cannot contribute to the result of the 'or'.
-    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero))
-      return TLO.CombineTo(Op, Op0);
-    if (DemandedBits.isSubsetOf(Known.One | Known2.Zero))
-      return TLO.CombineTo(Op, Op1);
-    // If the RHS is a constant, see if we can simplify it.
-    if (ShrinkDemandedConstant(Op, DemandedBits, DemandedElts, TLO))
-      return true;
-    // If the operation can be done in a smaller type, do so.
-    if (ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
-      return true;
+    // (or (and X, C1), (and (or X, Y), C2)) -> (or (and X, C1|C2), (and Y, C2))
+    // TODO: Use SimplifyMultipleUseDemandedBits to peek through masks.
+    if (Op0.getOpcode() == ISD::AND && Op1.getOpcode() == ISD::AND &&
+        Op0->hasOneUse() && Op1->hasOneUse()) {
+      // Attempt to match all commutations - m_c_Or would've been useful!
+      for (int I = 0; I != 2; ++I) {
+        SDValue X = Op.getOperand(I).getOperand(0);
+        SDValue C1 = Op.getOperand(I).getOperand(1);
+        SDValue Alt = Op.getOperand(1 - I).getOperand(0);
+        SDValue C2 = Op.getOperand(1 - I).getOperand(1);
+        if (Alt.getOpcode() == ISD::OR) {
+          for (int J = 0; J != 2; ++J) {
+            if (X == Alt.getOperand(J)) {
+              SDValue Y = Alt.getOperand(1 - J);
+              if (SDValue C12 = TLO.DAG.FoldConstantArithmetic(ISD::OR, dl, VT,
+                                                               {C1, C2})) {
+                SDValue MaskX = TLO.DAG.getNode(ISD::AND, dl, VT, X, C12);
+                SDValue MaskY = TLO.DAG.getNode(ISD::AND, dl, VT, Y, C2);
+                return TLO.CombineTo(
+                    Op, TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
+              }
+            }
+          }
+        }
+      }
+    }
 
     Known |= Known2;
     break;
@@ -1461,20 +1526,6 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
-    // Attempt to avoid multi-use ops if we don't need anything from them.
-    if (!DemandedBits.isAllOnes() || !DemandedElts.isAllOnes()) {
-      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
-          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
-      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
-          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
-      if (DemandedOp0 || DemandedOp1) {
-        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
-        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
-        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
-        return TLO.CombineTo(Op, NewOp);
-      }
-    }
-
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'xor'.
     if (DemandedBits.isSubsetOf(Known.Zero))
@@ -1491,7 +1542,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (DemandedBits.isSubsetOf(Known.Zero | Known2.Zero))
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, VT, Op0, Op1));
 
-    ConstantSDNode* C = isConstOrConstSplat(Op1, DemandedElts);
+    ConstantSDNode *C = isConstOrConstSplat(Op1, DemandedElts);
     if (C) {
       // If one side is a constant, and all of the set bits in the constant are
       // also known set on the other side, turn this into an AND, as we know
@@ -1512,12 +1563,52 @@ bool TargetLowering::SimplifyDemandedBits(
         SDValue New = TLO.DAG.getNOT(dl, Op0, VT);
         return TLO.CombineTo(Op, New);
       }
+
+      unsigned Op0Opcode = Op0.getOpcode();
+      if ((Op0Opcode == ISD::SRL || Op0Opcode == ISD::SHL) && Op0.hasOneUse()) {
+        if (ConstantSDNode *ShiftC =
+                isConstOrConstSplat(Op0.getOperand(1), DemandedElts)) {
+          // Don't crash on an oversized shift. We can not guarantee that a
+          // bogus shift has been simplified to undef.
+          if (ShiftC->getAPIntValue().ult(BitWidth)) {
+            uint64_t ShiftAmt = ShiftC->getZExtValue();
+            APInt Ones = APInt::getAllOnes(BitWidth);
+            Ones = Op0Opcode == ISD::SHL ? Ones.shl(ShiftAmt)
+                                         : Ones.lshr(ShiftAmt);
+            const TargetLowering &TLI = TLO.DAG.getTargetLoweringInfo();
+            if ((DemandedBits & C->getAPIntValue()) == (DemandedBits & Ones) &&
+                TLI.isDesirableToCommuteXorWithShift(Op.getNode())) {
+              // If the xor constant is a demanded mask, do a 'not' before the
+              // shift:
+              // xor (X << ShiftC), XorC --> (not X) << ShiftC
+              // xor (X >> ShiftC), XorC --> (not X) >> ShiftC
+              SDValue Not = TLO.DAG.getNOT(dl, Op0.getOperand(0), VT);
+              return TLO.CombineTo(Op, TLO.DAG.getNode(Op0Opcode, dl, VT, Not,
+                                                       Op0.getOperand(1)));
+            }
+          }
+        }
+      }
     }
 
     // If we can't turn this into a 'not', try to shrink the constant.
     if (!C || !C->isAllOnes())
       if (ShrinkDemandedConstant(Op, DemandedBits, DemandedElts, TLO))
         return true;
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!DemandedBits.isAllOnes() || !DemandedElts.isAllOnes()) {
+      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
+          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      if (DemandedOp0 || DemandedOp1) {
+        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
+        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
 
     Known ^= Known2;
     break;
@@ -1535,6 +1626,19 @@ bool TargetLowering::SimplifyDemandedBits(
     // If the operands are constants, see if we can simplify them.
     if (ShrinkDemandedConstant(Op, DemandedBits, DemandedElts, TLO))
       return true;
+
+    // Only known if known in both the LHS and RHS.
+    Known = KnownBits::commonBits(Known, Known2);
+    break;
+  case ISD::VSELECT:
+    if (SimplifyDemandedBits(Op.getOperand(2), DemandedBits, DemandedElts,
+                             Known, TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedBits(Op.getOperand(1), DemandedBits, DemandedElts,
+                             Known2, TLO, Depth + 1))
+      return true;
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // Only known if known in both the LHS and RHS.
     Known = KnownBits::commonBits(Known, Known2);
@@ -1687,6 +1791,26 @@ bool TargetLowering::SimplifyDemandedBits(
       if ((ShAmt < DemandedBits.getActiveBits()) &&
           ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
         return true;
+    } else {
+      // This is a variable shift, so we can't shift the demand mask by a known
+      // amount. But if we are not demanding high bits, then we are not
+      // demanding those bits from the pre-shifted operand either.
+      if (unsigned CTLZ = DemandedBits.countLeadingZeros()) {
+        APInt DemandedFromOp(APInt::getLowBitsSet(BitWidth, BitWidth - CTLZ));
+        if (SimplifyDemandedBits(Op0, DemandedFromOp, DemandedElts, Known, TLO,
+                                 Depth + 1)) {
+          SDNodeFlags Flags = Op.getNode()->getFlags();
+          if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
+            // Disable the nsw and nuw flags. We can no longer guarantee that we
+            // won't wrap after simplification.
+            Flags.setNoSignedWrap(false);
+            Flags.setNoUnsignedWrap(false);
+            Op->setFlags(Flags);
+          }
+          return true;
+        }
+        Known.resetAll();
+      }
     }
 
     // If we are only demanding sign bits then we can use the shift source
@@ -1959,9 +2083,9 @@ bool TargetLowering::SimplifyDemandedBits(
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umin(Known0, Known1);
     if (Optional<bool> IsULE = KnownBits::ule(Known0, Known1))
-      return TLO.CombineTo(Op, IsULE.getValue() ? Op0 : Op1);
+      return TLO.CombineTo(Op, IsULE.value() ? Op0 : Op1);
     if (Optional<bool> IsULT = KnownBits::ult(Known0, Known1))
-      return TLO.CombineTo(Op, IsULT.getValue() ? Op0 : Op1);
+      return TLO.CombineTo(Op, IsULT.value() ? Op0 : Op1);
     break;
   }
   case ISD::UMAX: {
@@ -1972,9 +2096,9 @@ bool TargetLowering::SimplifyDemandedBits(
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umax(Known0, Known1);
     if (Optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
-      return TLO.CombineTo(Op, IsUGE.getValue() ? Op0 : Op1);
+      return TLO.CombineTo(Op, IsUGE.value() ? Op0 : Op1);
     if (Optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
-      return TLO.CombineTo(Op, IsUGT.getValue() ? Op0 : Op1);
+      return TLO.CombineTo(Op, IsUGT.value() ? Op0 : Op1);
     break;
   }
   case ISD::BITREVERSE: {
@@ -2065,7 +2189,8 @@ bool TargetLowering::SimplifyDemandedBits(
     // bit is demanded.
     InputDemandedBits.setBit(ExVTBits - 1);
 
-    if (SimplifyDemandedBits(Op0, InputDemandedBits, Known, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op0, InputDemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
@@ -2472,9 +2597,7 @@ bool TargetLowering::SimplifyDemandedBits(
         // won't wrap after simplification.
         Flags.setNoSignedWrap(false);
         Flags.setNoUnsignedWrap(false);
-        SDValue NewOp =
-            TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1, Flags);
-        return TLO.CombineTo(Op, NewOp);
+        Op->setFlags(Flags);
       }
       return true;
     }
@@ -2574,7 +2697,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
   // If we know the value of all of the demanded bits, return this as a
   // constant.
-  if (DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
+  if (!isTargetCanonicalConstantNode(Op) &&
+      DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
     const SDNode *N = Op.getNode();
     for (SDNode *Op :
@@ -2591,6 +2715,12 @@ bool TargetLowering::SimplifyDemandedBits(
           TLO.DAG.getConstantFP(
               APFloat(TLO.DAG.EVTToAPFloatSemantics(VT), Known.One), dl, VT));
   }
+
+  // A multi use 'all demanded elts' simplify failed to find any knownbits.
+  // Try again just for the original demanded elts.
+  // Ensure we do this AFTER constant folding above.
+  if (HasMultiUse && Known.isUnknown() && !OriginalDemandedElts.isAllOnes())
+    Known = TLO.DAG.computeKnownBits(Op, OriginalDemandedElts, Depth);
 
   return false;
 }
@@ -3016,15 +3146,15 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::VSELECT: {
+    SDValue Sel = Op.getOperand(0);
+    SDValue LHS = Op.getOperand(1);
+    SDValue RHS = Op.getOperand(2);
+
     // Try to transform the select condition based on the current demanded
     // elements.
-    // TODO: If a condition element is undef, we can choose from one arm of the
-    //       select (and if one arm is undef, then we can propagate that to the
-    //       result).
-    // TODO - add support for constant vselect masks (see IR version of this).
-    APInt UnusedUndef, UnusedZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, UnusedUndef,
-                                   UnusedZero, TLO, Depth + 1))
+    APInt UndefSel, UndefZero;
+    if (SimplifyDemandedVectorElts(Sel, DemandedElts, UndefSel, UndefZero, TLO,
+                                   Depth + 1))
       return true;
 
     // See if we can simplify either vselect operand.
@@ -3032,15 +3162,24 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     APInt DemandedRHS(DemandedElts);
     APInt UndefLHS, ZeroLHS;
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedLHS, UndefLHS,
-                                   ZeroLHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHS, UndefLHS, ZeroLHS, TLO,
+                                   Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op.getOperand(2), DemandedRHS, UndefRHS,
-                                   ZeroRHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHS, UndefRHS, ZeroRHS, TLO,
+                                   Depth + 1))
       return true;
 
     KnownUndef = UndefLHS & UndefRHS;
     KnownZero = ZeroLHS & ZeroRHS;
+
+    // If we know that the selected element is always zero, we don't need the
+    // select value element.
+    APInt DemandedSel = DemandedElts & ~KnownZero;
+    if (DemandedSel != DemandedElts)
+      if (SimplifyDemandedVectorElts(Sel, DemandedSel, UndefSel, UndefZero, TLO,
+                                     Depth + 1))
+        return true;
+
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
@@ -3247,6 +3386,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    TLO, Depth + 1))
       return true;
 
+    // If every element pair has a zero/undef then just fold to zero.
+    // fold (and x, undef) -> 0  /  (and x, 0) -> 0
+    // fold (mul x, undef) -> 0  /  (mul x, 0) -> 0
+    if (DemandedElts.isSubsetOf(SrcZero | KnownZero | SrcUndef | KnownUndef))
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
+
     // If either side has a zero element, then the result element is zero, even
     // if the other is an UNDEF.
     // TODO: Extend getKnownUndefForVectorBinop to also deal with known zeros
@@ -3256,7 +3401,6 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef &= ~KnownZero;
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
-    // TODO - use KnownUndef to relax the demandedelts?
     if (!DemandedElts.isAllOnes())
       if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
         return true;
@@ -5159,6 +5303,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
   // ConstraintOperands list.
   unsigned ArgNo = 0; // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0; // ResNo - The result number of the next output.
+  unsigned LabelNo = 0; // LabelNo - CallBr indirect dest number.
 
   for (InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     ConstraintOperands.emplace_back(std::move(CI));
@@ -5195,6 +5340,14 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     case InlineAsm::isInput:
       OpInfo.CallOperandVal = Call.getArgOperand(ArgNo);
       break;
+    case InlineAsm::isLabel:
+      OpInfo.CallOperandVal =
+          cast<CallBrInst>(&Call)->getBlockAddressForIndirectDest(LabelNo);
+      OpInfo.ConstraintVT =
+          getAsmOperandValueType(DL, OpInfo.CallOperandVal->getType())
+              .getSimpleVT();
+      ++LabelNo;
+      continue;
     case InlineAsm::isClobber:
       // Nothing to do.
       break;
@@ -5224,17 +5377,13 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
         case 32:
         case 64:
         case 128:
-          OpInfo.ConstraintVT =
-              MVT::getVT(IntegerType::get(OpTy->getContext(), BitSize), true);
+          OpTy = IntegerType::get(OpTy->getContext(), BitSize);
           break;
         }
-      } else if (PointerType *PT = dyn_cast<PointerType>(OpTy)) {
-        unsigned PtrSize = DL.getPointerSizeInBits(PT->getAddressSpace());
-        OpInfo.ConstraintVT = MVT::getIntegerVT(PtrSize);
-      } else {
-        OpInfo.ConstraintVT = MVT::getVT(OpTy, true);
       }
 
+      EVT VT = getAsmOperandValueType(DL, OpTy, true);
+      OpInfo.ConstraintVT = VT.isSimple() ? VT.getSimpleVT() : MVT::Other;
       ArgNo++;
     }
   }
@@ -5811,22 +5960,22 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     // FIXME: We should use a narrower constant when the upper
     // bits are known to be zero.
     const APInt& Divisor = C->getAPIntValue();
-    UnsignedDivisonByConstantInfo magics = UnsignedDivisonByConstantInfo::get(Divisor);
+    UnsignedDivisionByConstantInfo magics =
+        UnsignedDivisionByConstantInfo::get(Divisor);
     unsigned PreShift = 0, PostShift = 0;
 
     // If the divisor is even, we can avoid using the expensive fixup by
     // shifting the divided value upfront.
-    if (magics.IsAdd != 0 && !Divisor[0]) {
+    if (magics.IsAdd && !Divisor[0]) {
       PreShift = Divisor.countTrailingZeros();
       // Get magic number for the shifted divisor.
-      magics = UnsignedDivisonByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
-      assert(magics.IsAdd == 0 && "Should use cheap fixup now");
+      magics =
+          UnsignedDivisionByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
+      assert(!magics.IsAdd && "Should use cheap fixup now");
     }
 
-    APInt Magic = magics.Magic;
-
     unsigned SelNPQ;
-    if (magics.IsAdd == 0 || Divisor.isOne()) {
+    if (!magics.IsAdd || Divisor.isOne()) {
       assert(magics.ShiftAmount < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
       PostShift = magics.ShiftAmount;
@@ -5837,7 +5986,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     }
 
     PreShifts.push_back(DAG.getConstant(PreShift, dl, ShSVT));
-    MagicFactors.push_back(DAG.getConstant(Magic, dl, SVT));
+    MagicFactors.push_back(DAG.getConstant(magics.Magic, dl, SVT));
     NPQFactors.push_back(
         DAG.getConstant(SelNPQ ? APInt::getOneBitSet(EltBits, EltBits - 1)
                                : APInt::getZero(EltBits),
@@ -7818,7 +7967,7 @@ SDValue TargetLowering::expandCTLZ(SDNode *Node, SelectionDAG &DAG) const {
   // return popcount(~x);
   //
   // Ref: "Hacker's Delight" by Henry Warren
-  for (unsigned i = 0; (1U << i) <= (NumBitsPerElt / 2); ++i) {
+  for (unsigned i = 0; (1U << i) < NumBitsPerElt; ++i) {
     SDValue Tmp = DAG.getConstant(1ULL << i, dl, ShVT);
     Op = DAG.getNode(ISD::OR, dl, VT, Op,
                      DAG.getNode(ISD::SRL, dl, VT, Op, Tmp));

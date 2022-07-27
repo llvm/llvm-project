@@ -24,11 +24,12 @@ x86AssemblyInspectionEngine::x86AssemblyInspectionEngine(const ArchSpec &arch)
     : m_cur_insn(nullptr), m_machine_ip_regnum(LLDB_INVALID_REGNUM),
       m_machine_sp_regnum(LLDB_INVALID_REGNUM),
       m_machine_fp_regnum(LLDB_INVALID_REGNUM),
+      m_machine_alt_fp_regnum(LLDB_INVALID_REGNUM),
       m_lldb_ip_regnum(LLDB_INVALID_REGNUM),
       m_lldb_sp_regnum(LLDB_INVALID_REGNUM),
       m_lldb_fp_regnum(LLDB_INVALID_REGNUM),
-
-      m_reg_map(), m_arch(arch), m_cpu(k_cpu_unspecified), m_wordsize(-1),
+      m_lldb_alt_fp_regnum(LLDB_INVALID_REGNUM), m_reg_map(), m_arch(arch),
+      m_cpu(k_cpu_unspecified), m_wordsize(-1),
       m_register_map_initialized(false), m_disasm_context() {
   m_disasm_context =
       ::LLVMCreateDisasm(arch.GetTriple().getTriple().c_str(), nullptr,
@@ -967,7 +968,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
   UnwindPlan::RowSP prologue_completed_row; // copy of prologue row of CFI
   int prologue_completed_sp_bytes_offset_from_cfa; // The sp value before the
                                                    // epilogue started executed
-  bool prologue_completed_is_aligned;
+  bool prologue_completed_is_aligned = false;
   std::vector<bool> prologue_completed_saved_registers;
 
   while (current_func_text_offset < size) {

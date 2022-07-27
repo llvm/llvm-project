@@ -124,7 +124,7 @@ public:
   }
 
   // Returns true if no more instructions may be added to this group.
-  bool isFull() { return MaxSize.hasValue() && Collection.size() >= *MaxSize; }
+  bool isFull() { return MaxSize && Collection.size() >= *MaxSize; }
 
   // Returns true if SU can be added to this SchedGroup.
   bool canAddSU(SUnit &SU, const SIInstrInfo *TII) {

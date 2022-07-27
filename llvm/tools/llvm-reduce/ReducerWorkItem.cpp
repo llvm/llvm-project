@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReducerWorkItem.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -17,11 +18,14 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -30,6 +34,8 @@ extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
                                          cl::cat(LLVMReduceOptions));
+
+void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx, const char *ToolName);
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -285,6 +291,12 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     }
   }
 
+  DenseSet<const uint32_t *> ConstRegisterMasks;
+
+  // Track predefined/named regmasks which we ignore.
+  for (const uint32_t *Mask : TRI->getRegMasks())
+    ConstRegisterMasks.insert(Mask);
+
   // Clone instructions.
   for (auto &SrcMBB : *SrcMF) {
     auto *DstMBB = Src2DstMBB[&SrcMBB];
@@ -303,8 +315,17 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         // Update MBB.
         if (DstMO.isMBB())
           DstMO.setMBB(Src2DstMBB[DstMO.getMBB()]);
-        else if (DstMO.isRegMask())
+        else if (DstMO.isRegMask()) {
           DstMRI->addPhysRegsUsedFromRegMask(DstMO.getRegMask());
+
+          if (!ConstRegisterMasks.count(DstMO.getRegMask())) {
+            uint32_t *DstMask = DstMF->allocateRegMask();
+            std::memcpy(DstMask, SrcMO.getRegMask(),
+                        sizeof(*DstMask) *
+                            MachineOperand::getRegMaskSize(TRI->getNumRegs()));
+            DstMO.setRegMask(DstMask);
+          }
+        }
 
         DstMI->addOperand(DstMO);
       }
@@ -352,6 +373,13 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   return DstMF;
 }
 
+static void initializeTargetInfo() {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+}
+
 std::unique_ptr<ReducerWorkItem>
 parseReducerWorkItem(const char *ToolName, StringRef Filename,
                      LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
@@ -361,6 +389,8 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
   auto MMM = std::make_unique<ReducerWorkItem>();
 
   if (IsMIR) {
+    initializeTargetInfo();
+
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
     if (std::error_code EC = FileOrErr.getError()) {
       WithColor::error(errs(), ToolName) << EC.message() << '\n';
@@ -409,17 +439,31 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
     MMM->M = std::move(M);
   } else {
     SMDiagnostic Err;
-    std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
-    if (!Result) {
-      Err.print(ToolName, errs());
-      return std::unique_ptr<ReducerWorkItem>();
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFileOrSTDIN(Filename);
+    if (std::error_code EC = MB.getError()) {
+      WithColor::error(errs(), ToolName) << Filename << ": " << EC.message() << "\n";
+      return nullptr;
     }
-    MMM->M = std::move(Result);
+
+    if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
+                  (const unsigned char *)(*MB)->getBufferEnd())) {
+      std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
+      if (!Result) {
+        Err.print(ToolName, errs());
+        return nullptr;
+      }
+      MMM->M = std::move(Result);
+    } else {
+      readBitcode(*MMM, MemoryBufferRef(**MB), Ctxt, ToolName);
+
+      if (MMM->LTOInfo->IsThinLTO && MMM->LTOInfo->EnableSplitLTOUnit)
+       initializeTargetInfo();
+    }
   }
   if (verifyReducerWorkItem(*MMM, &errs())) {
     WithColor::error(errs(), ToolName)
         << Filename << " - input module is broken!\n";
-    return std::unique_ptr<ReducerWorkItem>();
+    return nullptr;
   }
   return MMM;
 }

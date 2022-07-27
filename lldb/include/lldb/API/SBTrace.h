@@ -12,8 +12,6 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 
-class TraceImpl;
-
 namespace lldb {
 
 class LLDB_API SBTrace {
@@ -22,6 +20,32 @@ public:
   SBTrace();
 
   SBTrace(const lldb::TraceSP &trace_sp);
+
+  /// See SBDebugger::LoadTraceFromFile.
+  static SBTrace LoadTraceFromFile(SBError &error, SBDebugger &debugger,
+                                   const SBFileSpec &trace_description_file);
+
+  /// Save the trace to the specified directory, which will be created if
+  /// needed. This will also create a a file \a <directory>/trace.json with the
+  /// main properties of the trace session, along with others files which
+  /// contain the actual trace data. The trace.json file can be used later as
+  /// input for the "trace load" command to load the trace in LLDB, or for the
+  /// method \a SBDebugger.LoadTraceFromFile().
+  ///
+  /// \param[out] error
+  ///   This will be set with an error in case of failures.
+  ///
+  /// \param[in] directory
+  ///   The directory where the trace files will be saved.
+  ///
+  /// \param[in] compact
+  ///   Try not to save to disk information irrelevant to the traced processes.
+  ///   Each trace plug-in implements this in a different fashion.
+  ///
+  /// \return
+  ///   A \a SBFileSpec pointing to the bundle description file.
+  SBFileSpec SaveToDisk(SBError &error, const SBFileSpec &bundle_dir,
+                        bool compact = false);
 
   /// \return
   ///     A description of the parameters to use for the \a SBTrace::Start

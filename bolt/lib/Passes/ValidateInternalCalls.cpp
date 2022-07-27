@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/ValidateInternalCalls.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/FrameAnalysis.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include <queue>
 
 #define DEBUG_TYPE "bolt-internalcalls"
 
@@ -90,34 +93,43 @@ public:
 
 } // end anonymous namespace
 
-bool ValidateInternalCalls::fixCFGForPIC(BinaryFunction &Function) const {
-  const BinaryContext &BC = Function.getBinaryContext();
-  for (BinaryBasicBlock &BB : Function) {
-    for (auto II = BB.begin(); II != BB.end(); ++II) {
-      MCInst &Inst = *II;
-      BinaryBasicBlock *Target = getInternalCallTarget(Function, Inst);
-      if (!Target || BC.MIB->hasAnnotation(Inst, getProcessedICTag()))
-        continue;
+void ValidateInternalCalls::fixCFGForPIC(BinaryFunction &Function) const {
+  std::queue<BinaryBasicBlock *> Work;
+  for (BinaryBasicBlock &BB : Function)
+    Work.emplace(&BB);
 
-      BC.MIB->addAnnotation(Inst, getProcessedICTag(), 0U);
-      InstructionListType MovedInsts = BB.splitInstructions(&Inst);
-      if (!MovedInsts.empty()) {
-        // Split this block at the call instruction. Create an unreachable
-        // block.
-        std::vector<std::unique_ptr<BinaryBasicBlock>> NewBBs;
-        NewBBs.emplace_back(Function.createBasicBlock());
-        NewBBs.back()->setOffset(0);
-        NewBBs.back()->addInstructions(MovedInsts.begin(), MovedInsts.end());
-        BB.moveAllSuccessorsTo(NewBBs.back().get());
-        Function.insertBasicBlocks(&BB, std::move(NewBBs));
-      }
-      // Update successors
-      BB.removeAllSuccessors();
-      BB.addSuccessor(Target, BB.getExecutionCount(), 0ULL);
-      return true;
+  while (!Work.empty()) {
+    BinaryBasicBlock &BB = *Work.front();
+    Work.pop();
+
+    // Search for the next internal call.
+    const BinaryBasicBlock::iterator InternalCall =
+        llvm::find_if(BB, [&](const MCInst &Inst) {
+          return getInternalCallTarget(Function, Inst) != nullptr;
+        });
+
+    // No internal call? Done with this block.
+    if (InternalCall == BB.end())
+      continue;
+
+    BinaryBasicBlock *Target = getInternalCallTarget(Function, *InternalCall);
+    InstructionListType MovedInsts = BB.splitInstructions(&*InternalCall);
+    if (!MovedInsts.empty()) {
+      // Split this block at the call instruction.
+      std::unique_ptr<BinaryBasicBlock> NewBB = Function.createBasicBlock();
+      NewBB->setOffset(0);
+      NewBB->addInstructions(MovedInsts.begin(), MovedInsts.end());
+      BB.moveAllSuccessorsTo(NewBB.get());
+
+      Work.emplace(NewBB.get());
+      std::vector<std::unique_ptr<BinaryBasicBlock>> NewBBs;
+      NewBBs.emplace_back(std::move(NewBB));
+      Function.insertBasicBlocks(&BB, std::move(NewBBs));
     }
+    // Update successors
+    BB.removeAllSuccessors();
+    BB.addSuccessor(Target, BB.getExecutionCount(), 0ULL);
   }
-  return false;
 }
 
 bool ValidateInternalCalls::fixCFGForIC(BinaryFunction &Function) const {
@@ -161,7 +173,7 @@ bool ValidateInternalCalls::fixCFGForIC(BinaryFunction &Function) const {
       // Connect this block with the returning block of the caller
       BinaryBasicBlock *CallerBlock = Info.getInsnToBBMap()[&ReachingInst];
       BinaryBasicBlock *ReturnDestBlock =
-          Function.getBasicBlockAfter(CallerBlock);
+          Function.getLayout().getBasicBlockAfter(CallerBlock);
       BB.addSuccessor(ReturnDestBlock, BB.getExecutionCount(), 0);
     }
   };
@@ -194,9 +206,7 @@ bool ValidateInternalCalls::hasTailCallsInRange(
 }
 
 bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
-  while (fixCFGForPIC(Function)) {
-  }
-  clearAnnotations(Function);
+  fixCFGForPIC(Function);
   while (fixCFGForIC(Function)) {
   }
 

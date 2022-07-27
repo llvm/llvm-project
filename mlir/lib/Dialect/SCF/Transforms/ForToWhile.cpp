@@ -12,9 +12,9 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/SCF/Passes.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -100,11 +100,11 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
 struct ForToWhileLoop : public SCFForToWhileLoopBase<ForToWhileLoop> {
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    MLIRContext *ctx = funcOp.getContext();
+    auto *parentOp = getOperation();
+    MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopLoweringPattern>(ctx);
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
   }
 };
 } // namespace

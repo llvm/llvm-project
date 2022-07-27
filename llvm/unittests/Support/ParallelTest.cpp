@@ -40,7 +40,7 @@ TEST(Parallel, parallel_for) {
   // writing.
   uint32_t range[2050];
   std::fill(range, range + 2050, 1);
-  parallelForEachN(0, 2049, [&range](size_t I) { ++range[I]; });
+  parallelFor(0, 2049, [&range](size_t I) { ++range[I]; });
 
   uint32_t expected[2049];
   std::fill(expected, expected + 2049, 2);

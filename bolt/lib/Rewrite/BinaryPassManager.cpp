@@ -268,7 +268,7 @@ void BinaryFunctionPassManager::runPasses() {
                        TimerGroupDesc, TimeOpts);
 
     callWithDynoStats([this, &Pass] { Pass->runOnFunctions(BC); }, BFs,
-                      Pass->getName(), opts::DynoStatsAll);
+                      Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
 
     if (opts::VerifyCFG &&
         !std::accumulate(
@@ -307,10 +307,15 @@ void BinaryFunctionPassManager::runPasses() {
 void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
-  const DynoStats InitialDynoStats = getDynoStats(BC.getBinaryFunctions());
+  const DynoStats InitialDynoStats =
+      getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
 
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());
+
+  if (BC.isAArch64())
+    Manager.registerPass(
+        std::make_unique<VeneerElimination>(PrintVeneerElimination));
 
   if (opts::Instrument)
     Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
@@ -337,10 +342,6 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
                        opts::ICF);
-
-  if (BC.isAArch64())
-    Manager.registerPass(
-        std::make_unique<VeneerElimination>(PrintVeneerElimination));
 
   Manager.registerPass(
       std::make_unique<SpecializeMemcpy1>(NeverPrint, opts::SpecializeMemcpy1),

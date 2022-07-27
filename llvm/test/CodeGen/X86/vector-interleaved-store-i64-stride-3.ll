@@ -8,7 +8,7 @@
 
 ; These patterns are produced by LoopVectorizer for interleaved stores.
 
-define void @store_i64_stride3_vf2(<2 x i64>* %in.vecptr0, <2 x i64>* %in.vecptr1, <2 x i64>* %in.vecptr2, <6 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd (%rdi), %xmm0
@@ -64,21 +64,21 @@ define void @store_i64_stride3_vf2(<2 x i64>* %in.vecptr0, <2 x i64>* %in.vecptr
 ; AVX512-NEXT:    vmovaps %ymm0, (%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <2 x i64>, <2 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <2 x i64>, <2 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <2 x i64>, <2 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <2 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <2 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <2 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <2 x i64> %in.vec0, <2 x i64> %in.vec1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %concat2u = shufflevector <2 x i64> %in.vec2, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %concat012 = shufflevector <4 x i64> %concat01, <4 x i64> %concat2u, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
   %interleaved.vec = shufflevector <6 x i64> %concat012, <6 x i64> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
 
-  store <6 x i64> %interleaved.vec, <6 x i64>* %out.vec, align 32
+  store <6 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }
 
-define void @store_i64_stride3_vf4(<4 x i64>* %in.vecptr0, <4 x i64>* %in.vecptr1, <4 x i64>* %in.vecptr2, <12 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
@@ -162,21 +162,21 @@ define void @store_i64_stride3_vf4(<4 x i64>* %in.vecptr0, <4 x i64>* %in.vecptr
 ; AVX512-NEXT:    vmovdqa %ymm2, 64(%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <4 x i64>, <4 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <4 x i64>, <4 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <4 x i64>, <4 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <4 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <4 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <4 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <4 x i64> %in.vec0, <4 x i64> %in.vec1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %concat2u = shufflevector <4 x i64> %in.vec2, <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %concat012 = shufflevector <8 x i64> %concat01, <8 x i64> %concat2u, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %interleaved.vec = shufflevector <12 x i64> %concat012, <12 x i64> poison, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
 
-  store <12 x i64> %interleaved.vec, <12 x i64>* %out.vec, align 32
+  store <12 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }
 
-define void @store_i64_stride3_vf8(<8 x i64>* %in.vecptr0, <8 x i64>* %in.vecptr1, <8 x i64>* %in.vecptr2, <24 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm3
@@ -325,21 +325,21 @@ define void @store_i64_stride3_vf8(<8 x i64>* %in.vecptr0, <8 x i64>* %in.vecptr
 ; AVX512-NEXT:    vmovdqu64 %zmm4, (%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <8 x i64>, <8 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <8 x i64>, <8 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <8 x i64>, <8 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <8 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <8 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <8 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <8 x i64> %in.vec0, <8 x i64> %in.vec1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %concat2u = shufflevector <8 x i64> %in.vec2, <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %concat012 = shufflevector <16 x i64> %concat01, <16 x i64> %concat2u, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   %interleaved.vec = shufflevector <24 x i64> %concat012, <24 x i64> poison, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
 
-  store <24 x i64> %interleaved.vec, <24 x i64>* %out.vec, align 32
+  store <24 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }
 
-define void @store_i64_stride3_vf16(<16 x i64>* %in.vecptr0, <16 x i64>* %in.vecptr1, <16 x i64>* %in.vecptr2, <48 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
@@ -648,16 +648,16 @@ define void @store_i64_stride3_vf16(<16 x i64>* %in.vecptr0, <16 x i64>* %in.vec
 ; AVX512-NEXT:    vmovdqu64 %zmm7, (%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <16 x i64>, <16 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <16 x i64>, <16 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <16 x i64>, <16 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <16 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <16 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <16 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <16 x i64> %in.vec0, <16 x i64> %in.vec1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %concat2u = shufflevector <16 x i64> %in.vec2, <16 x i64> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %concat012 = shufflevector <32 x i64> %concat01, <32 x i64> %concat2u, <48 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
   %interleaved.vec = shufflevector <48 x i64> %concat012, <48 x i64> poison, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
 
-  store <48 x i64> %interleaved.vec, <48 x i64>* %out.vec, align 32
+  store <48 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }

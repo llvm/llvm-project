@@ -1,15 +1,70 @@
 // RUN: mlir-opt %s -convert-math-to-libm -canonicalize | FileCheck %s
 
+// CHECK-DAG: @atan(f64) -> f64
+// CHECK-DAG: @atanf(f32) -> f32
 // CHECK-DAG: @erf(f64) -> f64
 // CHECK-DAG: @erff(f32) -> f32
 // CHECK-DAG: @expm1(f64) -> f64
 // CHECK-DAG: @expm1f(f32) -> f32
 // CHECK-DAG: @atan2(f64, f64) -> f64
 // CHECK-DAG: @atan2f(f32, f32) -> f32
+// CHECK-DAG: @tan(f64) -> f64
+// CHECK-DAG: @tanf(f32) -> f32
 // CHECK-DAG: @tanh(f64) -> f64
 // CHECK-DAG: @tanhf(f32) -> f32
 // CHECK-DAG: @round(f64) -> f64
 // CHECK-DAG: @roundf(f32) -> f32
+// CHECK-DAG: @cos(f64) -> f64
+// CHECK-DAG: @cosf(f32) -> f32
+// CHECK-DAG: @sin(f64) -> f64
+// CHECK-DAG: @sinf(f32) -> f32
+
+// CHECK-LABEL: func @atan_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+// CHECK-SAME: %[[HALF:.*]]: f16
+// CHECK-SAME: %[[BFLOAT:.*]]: bf16
+func.func @atan_caller(%float: f32, %double: f64, %half: f16, %bfloat: bf16) -> (f32, f64, f16, bf16)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @atanf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.atan %float : f32
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @atan(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.atan %double : f64
+  // CHECK: %[[HALF_PROMOTED:.*]] = arith.extf %[[HALF]] : f16 to f32
+  // CHECK: %[[HALF_CALL:.*]] = call @atanf(%[[HALF_PROMOTED]]) : (f32) -> f32
+  // CHECK: %[[HALF_RESULT:.*]] = arith.truncf %[[HALF_CALL]] : f32 to f16
+  %half_result = math.atan %half : f16
+  // CHECK: %[[BFLOAT_PROMOTED:.*]] = arith.extf %[[BFLOAT]] : bf16 to f32
+  // CHECK: %[[BFLOAT_CALL:.*]] = call @atanf(%[[BFLOAT_PROMOTED]]) : (f32) -> f32
+  // CHECK: %[[BFLOAT_RESULT:.*]] = arith.truncf %[[BFLOAT_CALL]] : f32 to bf16
+  %bfloat_result = math.atan %bfloat : bf16
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]], %[[HALF_RESULT]], %[[BFLOAT_RESULT]]
+  return %float_result, %double_result, %half_result, %bfloat_result : f32, f64, f16, bf16
+}
+
+// CHECK-LABEL:   func @atan_vec_caller(
+// CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
+// CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
+// CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : vector<2xf32>
+// CHECK:           %[[OUT0_F32:.*]] = call @atanf(%[[IN0_F32]]) : (f32) -> f32
+// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
+// CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : vector<2xf32>
+// CHECK:           %[[OUT1_F32:.*]] = call @atanf(%[[IN1_F32]]) : (f32) -> f32
+// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : vector<2xf64>
+// CHECK:           %[[OUT0_F64:.*]] = call @atan(%[[IN0_F64]]) : (f64) -> f64
+// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
+// CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : vector<2xf64>
+// CHECK:           %[[OUT1_F64:.*]] = call @atan(%[[IN1_F64]]) : (f64) -> f64
+// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:         }
+func.func @atan_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+  %float_result = math.atan %float : vector<2xf32>
+  %double_result = math.atan %double : vector<2xf64>
+  return %float_result, %double_result : vector<2xf32>, vector<2xf64>
+}
 
 // CHECK-LABEL: func @tanh_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
@@ -57,6 +112,30 @@ func.func @erf_caller(%float: f32, %double: f64) -> (f32, f64)  {
   %double_result = math.erf %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL:   func @erf_vec_caller(
+// CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
+// CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+func.func @erf_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+  // CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+  // CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
+  // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : vector<2xf32>
+  // CHECK:           %[[OUT0_F32:.*]] = call @erff(%[[IN0_F32]]) : (f32) -> f32
+  // CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
+  // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : vector<2xf32>
+  // CHECK:           %[[OUT1_F32:.*]] = call @erff(%[[IN1_F32]]) : (f32) -> f32
+  // CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+  %float_result = math.erf %float : vector<2xf32>
+  // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : vector<2xf64>
+  // CHECK:           %[[OUT0_F64:.*]] = call @erf(%[[IN0_F64]]) : (f64) -> f64
+  // CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
+  // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : vector<2xf64>
+  // CHECK:           %[[OUT1_F64:.*]] = call @erf(%[[IN1_F64]]) : (f64) -> f64
+  // CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+  %double_result = math.erf %double : vector<2xf64>
+  // CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+  return %float_result, %double_result : vector<2xf32>, vector<2xf64>
 }
 
 // CHECK-LABEL: func @expm1_caller
@@ -128,4 +207,99 @@ func.func @round_caller(%float: f32, %double: f64) -> (f32, f64) {
   %double_result = math.round %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @cos_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @cos_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @cosf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.cos %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @cos(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.cos %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @sin_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @sin_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @sinf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.sin %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @sin(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.sin %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL:   func @round_vec_caller(
+// CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
+// CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+func.func @round_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+  // CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+  // CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
+  // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : vector<2xf32>
+  // CHECK:           %[[OUT0_F32:.*]] = call @roundf(%[[IN0_F32]]) : (f32) -> f32
+  // CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
+  // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : vector<2xf32>
+  // CHECK:           %[[OUT1_F32:.*]] = call @roundf(%[[IN1_F32]]) : (f32) -> f32
+  // CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+  %float_result = math.round %float : vector<2xf32>
+  // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : vector<2xf64>
+  // CHECK:           %[[OUT0_F64:.*]] = call @round(%[[IN0_F64]]) : (f64) -> f64
+  // CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
+  // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : vector<2xf64>
+  // CHECK:           %[[OUT1_F64:.*]] = call @round(%[[IN1_F64]]) : (f64) -> f64
+  // CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+  %double_result = math.round %double : vector<2xf64>
+  // CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+  return %float_result, %double_result : vector<2xf32>, vector<2xf64>
+}
+
+// CHECK-LABEL: func @tan_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+// CHECK-SAME: %[[HALF:.*]]: f16
+// CHECK-SAME: %[[BFLOAT:.*]]: bf16
+func.func @tan_caller(%float: f32, %double: f64, %half: f16, %bfloat: bf16) -> (f32, f64, f16, bf16)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @tanf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.tan %float : f32
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @tan(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.tan %double : f64
+  // CHECK: %[[HALF_PROMOTED:.*]] = arith.extf %[[HALF]] : f16 to f32
+  // CHECK: %[[HALF_CALL:.*]] = call @tanf(%[[HALF_PROMOTED]]) : (f32) -> f32
+  // CHECK: %[[HALF_RESULT:.*]] = arith.truncf %[[HALF_CALL]] : f32 to f16
+  %half_result = math.tan %half : f16
+  // CHECK: %[[BFLOAT_PROMOTED:.*]] = arith.extf %[[BFLOAT]] : bf16 to f32
+  // CHECK: %[[BFLOAT_CALL:.*]] = call @tanf(%[[BFLOAT_PROMOTED]]) : (f32) -> f32
+  // CHECK: %[[BFLOAT_RESULT:.*]] = arith.truncf %[[BFLOAT_CALL]] : f32 to bf16
+  %bfloat_result = math.tan %bfloat : bf16
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]], %[[HALF_RESULT]], %[[BFLOAT_RESULT]]
+  return %float_result, %double_result, %half_result, %bfloat_result : f32, f64, f16, bf16
+}
+
+// CHECK-LABEL:   func @tan_vec_caller(
+// CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
+// CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
+// CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : vector<2xf32>
+// CHECK:           %[[OUT0_F32:.*]] = call @tanf(%[[IN0_F32]]) : (f32) -> f32
+// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
+// CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : vector<2xf32>
+// CHECK:           %[[OUT1_F32:.*]] = call @tanf(%[[IN1_F32]]) : (f32) -> f32
+// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : vector<2xf64>
+// CHECK:           %[[OUT0_F64:.*]] = call @tan(%[[IN0_F64]]) : (f64) -> f64
+// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
+// CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : vector<2xf64>
+// CHECK:           %[[OUT1_F64:.*]] = call @tan(%[[IN1_F64]]) : (f64) -> f64
+// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:         }
+func.func @tan_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+  %float_result = math.tan %float : vector<2xf32>
+  %double_result = math.tan %double : vector<2xf64>
+  return %float_result, %double_result : vector<2xf32>, vector<2xf64>
 }

@@ -20,7 +20,7 @@ llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
                                             const URI &U) {
   OS << U.scheme << "://[" << U.hostname << ']';
   if (U.port)
-    OS << ':' << U.port.getValue();
+    OS << ':' << *U.port;
   return OS << U.path;
 }
 

@@ -89,10 +89,7 @@ define void @test4() nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 40, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ]
-; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) #[[ATTR0]]
-; CHECK-NEXT:    [[DOTINT]] = add nsw i32 [[IV_INT]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double 4.000000e+01) #[[ATTR0]]
 ; CHECK-NEXT:    br i1 false, label [[BB]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -366,5 +363,57 @@ backedge:
   br i1 %cmp2, label %bb, label %return
 
 return:		; preds = %bb
+  ret void
+}
+
+declare void @use.i16(i16)
+declare void @use.i32(i32)
+declare void @use.i64(i64)
+declare void @use.float(float)
+
+define void @pr55505_remove_redundant_fptosi_for_float_iv(i32 %index, ptr %dst) {
+; CHECK-LABEL: @pr55505_remove_redundant_fptosi_for_float_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[FLOAT_IV_INT:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[FLOAT_IV_NEXT_INT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[FLOAT_IV_INT]] to float
+; CHECK-NEXT:    call void @use.float(float [[INDVAR_CONV]])
+; CHECK-NEXT:    call void @use.i32(i32 [[FLOAT_IV_INT]])
+; CHECK-NEXT:    [[CONV_I16:%.*]] = fptosi float [[INDVAR_CONV]] to i16
+; CHECK-NEXT:    [[CONV_I64:%.*]] = fptosi float [[INDVAR_CONV]] to i64
+; CHECK-NEXT:    call void @use.i16(i16 [[CONV_I16]])
+; CHECK-NEXT:    call void @use.i64(i64 [[CONV_I64]])
+; CHECK-NEXT:    [[UCONV_I16:%.*]] = fptoui float [[INDVAR_CONV]] to i16
+; CHECK-NEXT:    [[UCONV_I64:%.*]] = fptoui float [[INDVAR_CONV]] to i64
+; CHECK-NEXT:    call void @use.i16(i16 [[UCONV_I16]])
+; CHECK-NEXT:    call void @use.i64(i64 [[UCONV_I64]])
+; CHECK-NEXT:    [[FLOAT_IV_NEXT_INT]] = add nsw i32 [[FLOAT_IV_INT]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[FLOAT_IV_NEXT_INT]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %float.iv = phi float [ 1.000000e+03, %entry ], [ %float.iv.next, %loop ]
+  call void @use.float(float %float.iv)
+  %conv.i32 = fptosi float %float.iv to i32
+  call void @use.i32(i32 %conv.i32)
+  %conv.i16 = fptosi float %float.iv to i16
+  %conv.i64 = fptosi float %float.iv to i64
+  call void @use.i16(i16 %conv.i16)
+  call void @use.i64(i64 %conv.i64)
+  %uconv.i16 = fptoui float %float.iv to i16
+  %uconv.i64 = fptoui float %float.iv to i64
+  call void @use.i16(i16 %uconv.i16)
+  call void @use.i64(i64 %uconv.i64)
+  %float.iv.next = fadd float %float.iv, -1.000000e+00
+  %cmp = fcmp ogt float %float.iv.next, 0.000000e+00
+  br i1 %cmp, label %loop, label %exit
+
+exit:
   ret void
 }

@@ -761,7 +761,7 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     if (!hasLValuePath()) {
       // No lvalue path: just print the offset.
       CharUnits O = getLValueOffset();
-      CharUnits S = Ctx ? Ctx->getTypeSizeInCharsIfKnown(InnerTy).getValueOr(
+      CharUnits S = Ctx ? Ctx->getTypeSizeInCharsIfKnown(InnerTy).value_or(
                               CharUnits::Zero())
                         : CharUnits::Zero();
       if (!O.isZero()) {

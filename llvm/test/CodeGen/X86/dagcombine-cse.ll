@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin -mattr=+sse2 | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse2 | FileCheck %s --check-prefix=X64
 
-define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) nounwind  {
+define i32 @t(ptr %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) nounwind  {
 ; X86-LABEL: t:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -22,14 +22,12 @@ define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) n
 entry:
 	%tmp7 = mul i32 %idxY, %ref_frame_stride		; <i32> [#uses=2]
 	%tmp9 = add i32 %tmp7, %idxX		; <i32> [#uses=1]
-	%tmp11 = getelementptr i8, i8* %ref_frame_ptr, i32 %tmp9		; <i8*> [#uses=1]
-	%tmp1112 = bitcast i8* %tmp11 to i32*		; <i32*> [#uses=1]
-	%tmp13 = load i32, i32* %tmp1112, align 4		; <i32> [#uses=1]
+	%tmp11 = getelementptr i8, ptr %ref_frame_ptr, i32 %tmp9		; <ptr> [#uses=1]
+	%tmp13 = load i32, ptr %tmp11, align 4		; <i32> [#uses=1]
 	%tmp18 = add i32 %idxX, 4		; <i32> [#uses=1]
 	%tmp20.sum = add i32 %tmp18, %tmp7		; <i32> [#uses=1]
-	%tmp21 = getelementptr i8, i8* %ref_frame_ptr, i32 %tmp20.sum		; <i8*> [#uses=1]
-	%tmp2122 = bitcast i8* %tmp21 to i16*		; <i16*> [#uses=1]
-	%tmp23 = load i16, i16* %tmp2122, align 2		; <i16> [#uses=1]
+	%tmp21 = getelementptr i8, ptr %ref_frame_ptr, i32 %tmp20.sum		; <ptr> [#uses=1]
+	%tmp23 = load i16, ptr %tmp21, align 2		; <i16> [#uses=1]
 	%tmp2425 = zext i16 %tmp23 to i64		; <i64> [#uses=1]
 	%tmp26 = shl i64 %tmp2425, 32		; <i64> [#uses=1]
 	%tmp2728 = zext i32 %tmp13 to i64		; <i64> [#uses=1]
@@ -42,4 +40,100 @@ entry:
 	%tmp47 = bitcast <8 x i16> %tmp43 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp48 = extractelement <4 x i32> %tmp47, i32 0		; <i32> [#uses=1]
 	ret i32 %tmp48
+}
+
+; Test CSE for SDAG nodes with multiple results (UMUL_LOHI).
+define i96 @square_high(i96 %x) nounwind {
+; X86-LABEL: square_high:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    mull %edi
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    mull %edi
+; X86-NEXT:    addl %eax, %ebx
+; X86-NEXT:    movl %edx, %ebp
+; X86-NEXT:    adcl $0, %ebp
+; X86-NEXT:    addl %eax, %ebx
+; X86-NEXT:    adcl %edx, %ebp
+; X86-NEXT:    setb %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    mull %esi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    addl %ebp, %ebx
+; X86-NEXT:    adcl %edx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    mull %edi
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    movl %eax, %ebp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    addl %edi, %esi
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    addl %ebp, %ebx
+; X86-NEXT:    adcl %esi, %ecx
+; X86-NEXT:    setb %al
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    adcl $0, %edi
+; X86-NEXT:    addl %ebp, %ebx
+; X86-NEXT:    adcl %ecx, %esi
+; X86-NEXT:    setb %cl
+; X86-NEXT:    adcl %edx, %edi
+; X86-NEXT:    addb $255, %cl
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    setb %ah
+; X86-NEXT:    addb $255, %al
+; X86-NEXT:    adcl %edx, %ecx
+; X86-NEXT:    movzbl %ah, %ebx
+; X86-NEXT:    adcl $0, %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    mull %eax
+; X86-NEXT:    addl %eax, %edi
+; X86-NEXT:    adcl %edx, %ebx
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %edi, %edx
+; X86-NEXT:    movl %ebx, %ecx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: square_high:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    mulq %rdi
+; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    movq %rax, %rsi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    mulq %rdi
+; X64-NEXT:    addq %rsi, %rdx
+; X64-NEXT:    movq %r8, %rax
+; X64-NEXT:    adcq $0, %rax
+; X64-NEXT:    addq %rdx, %rsi
+; X64-NEXT:    adcq %r8, %rax
+; X64-NEXT:    imulq %rcx, %rcx
+; X64-NEXT:    addq %rax, %rcx
+; X64-NEXT:    shrdq $32, %rcx, %rsi
+; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    movq %rcx, %rdx
+; X64-NEXT:    retq
+entry:
+  %conv = zext i96 %x to i192
+  %mul = mul nuw i192 %conv, %conv
+  %shr = lshr i192 %mul, 96
+  %conv2 = trunc i192 %shr to i96
+  ret i96 %conv2
 }

@@ -766,8 +766,8 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value absArg = b.create<complex::AbsOp>(elementType, arg);
     Value addAbs = b.create<arith::AddFOp>(absLhs, absArg);
 
-    Value half = b.create<arith::ConstantOp>(
-                        elementType, b.getFloatAttr(elementType, 0.5));
+    Value half = b.create<arith::ConstantOp>(elementType,
+                                             b.getFloatAttr(elementType, 0.5));
     Value halfAddAbs = b.create<arith::MulFOp>(addAbs, half);
     Value sqrtAddAbs = b.create<math::SqrtOp>(halfAddAbs);
 
@@ -1009,6 +1009,26 @@ struct RsqrtOpConversion : public OpConversionPattern<complex::RsqrtOp> {
   }
 };
 
+struct AngleOpConversion : public OpConversionPattern<complex::AngleOp> {
+  using OpConversionPattern<complex::AngleOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::AngleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto type = op.getType();
+
+    Value real =
+        rewriter.create<complex::ReOp>(loc, type, adaptor.getComplex());
+    Value imag =
+        rewriter.create<complex::ImOp>(loc, type, adaptor.getComplex());
+
+    rewriter.replaceOpWithNewOp<math::Atan2Op>(op, imag, real);
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
@@ -1016,6 +1036,7 @@ void mlir::populateComplexToStandardConversionPatterns(
   // clang-format off
   patterns.add<
       AbsOpConversion,
+      AngleOpConversion,
       Atan2OpConversion,
       BinaryComplexOpConversion<complex::AddOp, arith::AddFOp>,
       BinaryComplexOpConversion<complex::SubOp, arith::SubFOp>,

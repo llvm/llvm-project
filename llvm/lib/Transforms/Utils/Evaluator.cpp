@@ -217,10 +217,13 @@ Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
   P = cast<Constant>(P->stripAndAccumulateConstantOffsets(
       DL, Offset, /* AllowNonInbounds */ true));
   Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(P->getType()));
-  auto *GV = dyn_cast<GlobalVariable>(P);
-  if (!GV)
-    return nullptr;
+  if (auto *GV = dyn_cast<GlobalVariable>(P))
+    return ComputeLoadResult(GV, Ty, Offset);
+  return nullptr;
+}
 
+Constant *Evaluator::ComputeLoadResult(GlobalVariable *GV, Type *Ty,
+                                       const APInt &Offset) {
   auto It = MutatedMemory.find(GV);
   if (It != MutatedMemory.end())
     return It->second.read(Ty, Offset, DL);
@@ -298,9 +301,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     LLVM_DEBUG(dbgs() << "Evaluating Instruction: " << *CurInst << "\n");
 
     if (StoreInst *SI = dyn_cast<StoreInst>(CurInst)) {
-      if (!SI->isSimple()) {
-        LLVM_DEBUG(dbgs() << "Store is not simple! Can not evaluate.\n");
-        return false;  // no volatile/atomic accesses.
+      if (SI->isVolatile()) {
+        LLVM_DEBUG(dbgs() << "Store is volatile! Can not evaluate.\n");
+        return false;  // no volatile accesses.
       }
       Constant *Ptr = getVal(SI->getOperand(1));
       Constant *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI);
@@ -333,55 +336,11 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       auto Res = MutatedMemory.try_emplace(GV, GV->getInitializer());
       if (!Res.first->second.write(Val, Offset, DL))
         return false;
-    } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(CurInst)) {
-      InstResult = ConstantExpr::get(BO->getOpcode(),
-                                     getVal(BO->getOperand(0)),
-                                     getVal(BO->getOperand(1)));
-      LLVM_DEBUG(dbgs() << "Found a BinaryOperator! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (CmpInst *CI = dyn_cast<CmpInst>(CurInst)) {
-      InstResult = ConstantExpr::getCompare(CI->getPredicate(),
-                                            getVal(CI->getOperand(0)),
-                                            getVal(CI->getOperand(1)));
-      LLVM_DEBUG(dbgs() << "Found a CmpInst! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (CastInst *CI = dyn_cast<CastInst>(CurInst)) {
-      InstResult = ConstantExpr::getCast(CI->getOpcode(),
-                                         getVal(CI->getOperand(0)),
-                                         CI->getType());
-      LLVM_DEBUG(dbgs() << "Found a Cast! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (SelectInst *SI = dyn_cast<SelectInst>(CurInst)) {
-      InstResult = ConstantExpr::getSelect(getVal(SI->getOperand(0)),
-                                           getVal(SI->getOperand(1)),
-                                           getVal(SI->getOperand(2)));
-      LLVM_DEBUG(dbgs() << "Found a Select! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (auto *EVI = dyn_cast<ExtractValueInst>(CurInst)) {
-      InstResult = ConstantExpr::getExtractValue(
-          getVal(EVI->getAggregateOperand()), EVI->getIndices());
-      LLVM_DEBUG(dbgs() << "Found an ExtractValueInst! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (auto *IVI = dyn_cast<InsertValueInst>(CurInst)) {
-      InstResult = ConstantExpr::getInsertValue(
-          getVal(IVI->getAggregateOperand()),
-          getVal(IVI->getInsertedValueOperand()), IVI->getIndices());
-      LLVM_DEBUG(dbgs() << "Found an InsertValueInst! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(CurInst)) {
-      Constant *P = getVal(GEP->getOperand(0));
-      SmallVector<Constant*, 8> GEPOps;
-      for (Use &Op : llvm::drop_begin(GEP->operands()))
-        GEPOps.push_back(getVal(Op));
-      InstResult =
-          ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), P, GEPOps,
-                                         cast<GEPOperator>(GEP)->isInBounds());
-      LLVM_DEBUG(dbgs() << "Found a GEP! Simplifying: " << *InstResult << "\n");
     } else if (LoadInst *LI = dyn_cast<LoadInst>(CurInst)) {
-      if (!LI->isSimple()) {
+      if (LI->isVolatile()) {
         LLVM_DEBUG(
-            dbgs() << "Found a Load! Not a simple load, can not evaluate.\n");
-        return false;  // no volatile/atomic accesses.
+            dbgs() << "Found a Load! Volatile load, can not evaluate.\n");
+        return false;  // no volatile accesses.
       }
 
       Constant *Ptr = getVal(LI->getOperand(0));
@@ -436,16 +395,39 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
                               << "intrinsic.\n");
             return false;
           }
-          Constant *Ptr = getVal(MSI->getDest());
-          Constant *Val = getVal(MSI->getValue());
-          Constant *DestVal =
-              ComputeLoadResult(getVal(Ptr), MSI->getValue()->getType());
-          if (Val->isNullValue() && DestVal && DestVal->isNullValue()) {
-            // This memset is a no-op.
-            LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
-            ++CurInst;
-            continue;
+
+          auto *LenC = dyn_cast<ConstantInt>(getVal(MSI->getLength()));
+          if (!LenC) {
+            LLVM_DEBUG(dbgs() << "Memset with unknown length.\n");
+            return false;
           }
+
+          Constant *Ptr = getVal(MSI->getDest());
+          APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+          Ptr = cast<Constant>(Ptr->stripAndAccumulateConstantOffsets(
+              DL, Offset, /* AllowNonInbounds */ true));
+          auto *GV = dyn_cast<GlobalVariable>(Ptr);
+          if (!GV) {
+            LLVM_DEBUG(dbgs() << "Memset with unknown base.\n");
+            return false;
+          }
+
+          Constant *Val = getVal(MSI->getValue());
+          APInt Len = LenC->getValue();
+          while (Len != 0) {
+            Constant *DestVal = ComputeLoadResult(GV, Val->getType(), Offset);
+            if (DestVal != Val) {
+              LLVM_DEBUG(dbgs() << "Memset is not a no-op at offset "
+                                << Offset << " of " << *GV << ".\n");
+              return false;
+            }
+            ++Offset;
+            --Len;
+          }
+
+          LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
+          ++CurInst;
+          continue;
         }
 
         if (II->isLifetimeStartOrEnd()) {
@@ -600,11 +582,16 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       LLVM_DEBUG(dbgs() << "Successfully evaluated block.\n");
       return true;
     } else {
-      // Did not know how to evaluate this!
-      LLVM_DEBUG(
-          dbgs() << "Failed to evaluate block due to unhandled instruction."
-                    "\n");
-      return false;
+      SmallVector<Constant *> Ops;
+      for (Value *Op : CurInst->operands())
+        Ops.push_back(getVal(Op));
+      InstResult = ConstantFoldInstOperands(&*CurInst, Ops, DL, TLI);
+      if (!InstResult) {
+        LLVM_DEBUG(dbgs() << "Cannot fold instruction: " << *CurInst << "\n");
+        return false;
+      }
+      LLVM_DEBUG(dbgs() << "Folded instruction " << *CurInst << " to "
+                        << *InstResult << "\n");
     }
 
     if (!CurInst->use_empty()) {

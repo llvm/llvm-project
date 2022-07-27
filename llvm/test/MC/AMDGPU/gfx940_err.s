@@ -72,6 +72,30 @@ buffer_wbl2 scc
 v_dot2_u32_u16 v0, 1, v0, s2 op_sel:[0,1,0,1] op_sel_hi:[0,0,1,1]
 // GFX940: error: invalid op_sel operand
 
+v_cvt_f32_fp8 v1, sext(v3) src0_sel:BYTE_1
+// GFX940: error: not a valid operand.
+
+v_cvt_pk_f32_bf8 v[2:3], sext(v3) src0_sel:BYTE_1
+// GFX940: error: not a valid operand.
+
+v_cvt_sr_bf8_f32 v1, v2, -v3
+// GFX940: error: not a valid operand.
+
+v_cvt_sr_fp8_f32 v1, v2, -v3
+// GFX940: error: not a valid operand.
+
+v_cvt_sr_fp8_f32 v1, v2, v3 clamp
+// GFX940: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f32 v1, v2, v3 mul:2
+// GFX940: error: invalid operand for instruction
+
+v_cvt_pk_fp8_f32 v1, v2, v3 clamp
+// GFX940: error: invalid operand for instruction
+
+v_cvt_pk_fp8_f32 v1, v2, v3 mul:2
+// GFX940: error: invalid operand for instruction
+
 s_getreg_b32 s1, hwreg(HW_REG_FLAT_SCR_LO)
 // GFX940: error: specified hardware register is not supported on this GPU
 

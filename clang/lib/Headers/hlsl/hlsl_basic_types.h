@@ -27,38 +27,38 @@ typedef long int64_t;
 // built-in vector data types:
 
 #ifdef __HLSL_ENABLE_16_BIT
-typedef int16_t int16_t2 __attribute__((ext_vector_type(2)));
-typedef int16_t int16_t3 __attribute__((ext_vector_type(3)));
-typedef int16_t int16_t4 __attribute__((ext_vector_type(4)));
-typedef uint16_t uint16_t2 __attribute__((ext_vector_type(2)));
-typedef uint16_t uint16_t3 __attribute__((ext_vector_type(3)));
-typedef uint16_t uint16_t4 __attribute__((ext_vector_type(4)));
+typedef vector<int16_t, 2> int16_t2;
+typedef vector<int16_t, 3> int16_t3;
+typedef vector<int16_t, 4> int16_t4;
+typedef vector<uint16_t, 2> uint16_t2;
+typedef vector<uint16_t, 3> uint16_t3;
+typedef vector<uint16_t, 4> uint16_t4;
 #endif
 
-typedef int int2 __attribute__((ext_vector_type(2)));
-typedef int int3 __attribute__((ext_vector_type(3)));
-typedef int int4 __attribute__((ext_vector_type(4)));
-typedef uint uint2 __attribute__((ext_vector_type(2)));
-typedef uint uint3 __attribute__((ext_vector_type(3)));
-typedef uint uint4 __attribute__((ext_vector_type(4)));
-typedef int64_t int64_t2 __attribute__((ext_vector_type(2)));
-typedef int64_t int64_t3 __attribute__((ext_vector_type(3)));
-typedef int64_t int64_t4 __attribute__((ext_vector_type(4)));
-typedef uint64_t uint64_t2 __attribute__((ext_vector_type(2)));
-typedef uint64_t uint64_t3 __attribute__((ext_vector_type(3)));
-typedef uint64_t uint64_t4 __attribute__((ext_vector_type(4)));
+typedef vector<int, 2> int2;
+typedef vector<int, 3> int3;
+typedef vector<int, 4> int4;
+typedef vector<uint, 2> uint2;
+typedef vector<uint, 3> uint3;
+typedef vector<uint, 4> uint4;
+typedef vector<int64_t, 2> int64_t2;
+typedef vector<int64_t, 3> int64_t3;
+typedef vector<int64_t, 4> int64_t4;
+typedef vector<uint64_t, 2> uint64_t2;
+typedef vector<uint64_t, 3> uint64_t3;
+typedef vector<uint64_t, 4> uint64_t4;
 
 #ifdef __HLSL_ENABLE_16_BIT
-typedef half half2 __attribute__((ext_vector_type(2)));
-typedef half half3 __attribute__((ext_vector_type(3)));
-typedef half half4 __attribute__((ext_vector_type(4)));
+typedef vector<half, 2> half2;
+typedef vector<half, 3> half3;
+typedef vector<half, 4> half4;
 #endif
 
-typedef float float2 __attribute__((ext_vector_type(2)));
-typedef float float3 __attribute__((ext_vector_type(3)));
-typedef float float4 __attribute__((ext_vector_type(4)));
-typedef double double2 __attribute__((ext_vector_type(2)));
-typedef double double3 __attribute__((ext_vector_type(3)));
-typedef double double4 __attribute__((ext_vector_type(4)));
+typedef vector<float, 2> float2;
+typedef vector<float, 3> float3;
+typedef vector<float, 4> float4;
+typedef vector<double, 2> double2;
+typedef vector<double, 3> double3;
+typedef vector<double, 4> double4;
 
 #endif //_HLSL_HLSL_BASIC_TYPES_H_

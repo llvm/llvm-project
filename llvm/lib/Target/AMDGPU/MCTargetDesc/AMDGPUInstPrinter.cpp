@@ -542,7 +542,7 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
            STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
     O << "0.15915494309189532";
   else {
-    assert(isUInt<32>(Imm) || Imm == 0x3fc45f306dc9c882);
+    assert(isUInt<32>(Imm) || isInt<32>(Imm));
 
     // In rare situations, we will have a 32-bit literal in a 64-bit
     // operand. This is technically allowed for the encoding of s_mov_b64.
@@ -627,7 +627,7 @@ void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
 
 bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,
                                         unsigned OpNo) const {
-  return OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) &&
+  return OpNo == 0 && (Desc.TSFlags & SIInstrFlags::DPP) &&
          (Desc.TSFlags & SIInstrFlags::VOPC) &&
          (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
           Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO));
@@ -644,8 +644,7 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   // If there are printed modifiers, printOperandAndFPInputMods or
   // printOperandAndIntInputMods will be called instead
   if ((OpNo == 0 ||
-       (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP)) ||
-       (OpNo == 2 && (Desc.TSFlags & SIInstrFlags::DPP) && ModIdx != -1)) &&
+       (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) && ModIdx != -1)) &&
       (Desc.TSFlags & SIInstrFlags::VOPC) &&
       (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
        Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO)))

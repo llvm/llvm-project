@@ -31,14 +31,14 @@ namespace {
 /// at position \p Key.
 void serializeObject(Object &Paren, StringRef Key, Optional<Object> Obj) {
   if (Obj)
-    Paren[Key] = std::move(Obj.getValue());
+    Paren[Key] = std::move(Obj.value());
 }
 
 /// Helper function to inject a JSON array \p Array into object \p Paren at
 /// position \p Key.
 void serializeArray(Object &Paren, StringRef Key, Optional<Array> Array) {
   if (Array)
-    Paren[Key] = std::move(Array.getValue());
+    Paren[Key] = std::move(Array.value());
 }
 
 /// Serialize a \c VersionTuple \p V with the Symbol Graph semantic version
@@ -63,8 +63,8 @@ Optional<Object> serializeSemanticVersion(const VersionTuple &V) {
 
   Object Version;
   Version["major"] = V.getMajor();
-  Version["minor"] = V.getMinor().getValueOr(0);
-  Version["patch"] = V.getSubminor().getValueOr(0);
+  Version["minor"] = V.getMinor().value_or(0);
+  Version["patch"] = V.getSubminor().value_or(0);
   return Version;
 }
 
@@ -351,7 +351,7 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     Kind["displayName"] = "Instance Variable";
     break;
   case APIRecord::RK_ObjCMethod:
-    if (dyn_cast<ObjCMethodRecord>(&Record)->IsInstanceMethod) {
+    if (cast<ObjCMethodRecord>(&Record)->IsInstanceMethod) {
       Kind["identifier"] = AddLangPrefix("method");
       Kind["displayName"] = "Instance Method";
     } else {
@@ -360,8 +360,13 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     }
     break;
   case APIRecord::RK_ObjCProperty:
-    Kind["identifier"] = AddLangPrefix("property");
-    Kind["displayName"] = "Instance Property";
+    if (cast<ObjCPropertyRecord>(&Record)->isClassProperty()) {
+      Kind["identifier"] = AddLangPrefix("type.property");
+      Kind["displayName"] = "Type Property";
+    } else {
+      Kind["identifier"] = AddLangPrefix("property");
+      Kind["displayName"] = "Instance Property";
+    }
     break;
   case APIRecord::RK_ObjCInterface:
     Kind["identifier"] = AddLangPrefix("class");

@@ -17,32 +17,23 @@ declare i32 @snprintf(i8*, i64, i8*, ...)
 
 define void @fold_snprintf_member_pC(i32* %pi) {
 ; CHECK-LABEL: @fold_snprintf_member_pC(
-; CHECK-NEXT:    [[IA0A:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0))
-; CHECK-NEXT:    store i32 [[IA0A]], i32* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA0AP1:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1))
+; CHECK-NEXT:    store i32 1, i32* [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[PIA0AP1:%.*]] = getelementptr i32, i32* [[PI]], i64 1
-; CHECK-NEXT:    store i32 [[IA0AP1]], i32* [[PIA0AP1]], align 4
-; CHECK-NEXT:    [[IA0B:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0))
+; CHECK-NEXT:    store i32 0, i32* [[PIA0AP1]], align 4
 ; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i32, i32* [[PI]], i64 2
-; CHECK-NEXT:    store i32 [[IA0B]], i32* [[PIA0B]], align 4
-; CHECK-NEXT:    [[IA0BP1:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1))
+; CHECK-NEXT:    store i32 2, i32* [[PIA0B]], align 4
 ; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i32, i32* [[PI]], i64 3
-; CHECK-NEXT:    store i32 [[IA0BP1]], i32* [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[IA0BP2:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 2))
+; CHECK-NEXT:    store i32 1, i32* [[PIA0BP1]], align 4
 ; CHECK-NEXT:    [[PIA0BP2:%.*]] = getelementptr i32, i32* [[PI]], i64 4
-; CHECK-NEXT:    store i32 [[IA0BP2]], i32* [[PIA0BP2]], align 4
-; CHECK-NEXT:    [[IA0C:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 2, i64 0))
+; CHECK-NEXT:    store i32 0, i32* [[PIA0BP2]], align 4
 ; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i32, i32* [[PI]], i64 5
-; CHECK-NEXT:    store i32 [[IA0C]], i32* [[PIA0C]], align 4
-; CHECK-NEXT:    [[IA1A:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 0))
+; CHECK-NEXT:    store i32 3, i32* [[PIA0C]], align 4
 ; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i32, i32* [[PI]], i64 6
-; CHECK-NEXT:    store i32 [[IA1A]], i32* [[PIA1A]], align 4
-; CHECK-NEXT:    [[IA1B:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 0))
+; CHECK-NEXT:    store i32 4, i32* [[PIA1A]], align 4
 ; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i32, i32* [[PI]], i64 7
-; CHECK-NEXT:    store i32 [[IA1B]], i32* [[PIA1B]], align 4
-; CHECK-NEXT:    [[IA1C:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @pcnt_s, i64 0, i64 0), i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 2, i64 0))
+; CHECK-NEXT:    store i32 5, i32* [[PIA1B]], align 4
 ; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i32, i32* [[PI]], i64 8
-; CHECK-NEXT:    store i32 [[IA1C]], i32* [[PIA1C]], align 4
+; CHECK-NEXT:    store i32 6, i32* [[PIA1C]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @pcnt_s, i32 0, i32 0

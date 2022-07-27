@@ -1023,7 +1023,7 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
                                          StringKind SK) {
   unsigned CharByteWidth = 0;
   switch (SK) {
-  case Ascii:
+  case Ordinary:
   case UTF8:
     CharByteWidth = Target.getCharWidth();
     break;
@@ -1123,7 +1123,8 @@ StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
 
 void StringLiteral::outputString(raw_ostream &OS) const {
   switch (getKind()) {
-  case Ascii: break; // no prefix.
+  case Ordinary:
+    break; // no prefix.
   case Wide:  OS << 'L'; break;
   case UTF8:  OS << "u8"; break;
   case UTF16: OS << 'u'; break;
@@ -1231,7 +1232,7 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                                  const LangOptions &Features,
                                  const TargetInfo &Target, unsigned *StartToken,
                                  unsigned *StartTokenByteOffset) const {
-  assert((getKind() == StringLiteral::Ascii ||
+  assert((getKind() == StringLiteral::Ordinary ||
           getKind() == StringLiteral::UTF8) &&
          "Only narrow string literals are currently supported");
 

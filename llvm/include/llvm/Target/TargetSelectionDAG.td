@@ -651,6 +651,10 @@ def atomic_load_fadd : SDNode<"ISD::ATOMIC_LOAD_FADD" , SDTFPAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_fsub : SDNode<"ISD::ATOMIC_LOAD_FSUB" , SDTFPAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_fmax : SDNode<"ISD::ATOMIC_LOAD_FMAX", SDTFPAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_fmin : SDNode<"ISD::ATOMIC_LOAD_FMIN", SDTFPAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,
                     [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -700,6 +704,9 @@ def concat_vectors : SDNode<"ISD::CONCAT_VECTORS",
 // backend, at least, needs it.
 def vector_extract_subvec : SDNode<"ISD::EXTRACT_SUBVECTOR",
     SDTypeProfile<1, 2, [SDTCisInt<2>, SDTCisVec<1>, SDTCisVec<0>]>,
+    []>;
+def vector_insert_subvec : SDNode<"ISD::INSERT_SUBVECTOR",
+    SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVec<2>, SDTCisInt<3>]>,
     []>;
 
 // This operator does subvector type checking.
@@ -804,6 +811,10 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // existing rules from SelectionDAG for many common cases.
   // They will be tested prior to the code in pred and must not be used in
   // ImmLeaf and its subclasses.
+
+  // If set to true, a predicate is added that checks for the absence of use of
+  // the first result.
+  bit HasNoUse = ?;
 
   // Is the desired pre-packaged predicate for a load?
   bit IsLoad = ?;
@@ -1619,18 +1630,34 @@ defm atomic_load_umax : binary_atomic_op<atomic_load_umax>;
 defm atomic_store     : binary_atomic_op<atomic_store>;
 defm atomic_cmp_swap  : ternary_atomic_op<atomic_cmp_swap>;
 
+/// Atomic load which zeroes the excess high bits.
+def atomic_load_zext :
+  PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsZeroExtLoad = true;
+}
+
+/// Atomic load which sign extends the excess high bits.
+def atomic_load_sext :
+  PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsSignExtLoad = true;
+}
+
 def atomic_load_8 :
   PatFrag<(ops node:$ptr),
           (atomic_load node:$ptr)> {
   let IsAtomic = true;
   let MemoryVT = i8;
 }
+
 def atomic_load_16 :
   PatFrag<(ops node:$ptr),
           (atomic_load node:$ptr)> {
   let IsAtomic = true;
   let MemoryVT = i16;
 }
+
 def atomic_load_32 :
   PatFrag<(ops node:$ptr),
           (atomic_load node:$ptr)> {
@@ -1643,6 +1670,40 @@ def atomic_load_64 :
   let IsAtomic = true;
   let MemoryVT = i64;
 }
+
+def atomic_load_zext_8 :
+  PatFrag<(ops node:$ptr), (atomic_load_zext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i8;
+}
+
+def atomic_load_zext_16 :
+  PatFrag<(ops node:$ptr), (atomic_load_zext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i16;
+}
+
+def atomic_load_sext_8 :
+  PatFrag<(ops node:$ptr), (atomic_load_sext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i8;
+}
+
+def atomic_load_sext_16 :
+  PatFrag<(ops node:$ptr), (atomic_load_sext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i16;
+}
+
+// Atomic load which zeroes or anyextends the high bits.
+def atomic_load_az_8 : PatFrags<(ops node:$op),
+                                [(atomic_load_8 node:$op),
+                                 (atomic_load_zext_8 node:$op)]>;
+
+// Atomic load which zeroes or anyextends the high bits.
+def atomic_load_az_16 : PatFrags<(ops node:$op),
+                                 [(atomic_load_16 node:$op),
+                                  (atomic_load_zext_16 node:$op)]>;
 
 def nonext_masked_gather :
   PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),

@@ -113,7 +113,7 @@ define void @func_large() !prof !0 {
 ; CHECK3: b9
 
 b0:
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   call void @a()
   call void @a()

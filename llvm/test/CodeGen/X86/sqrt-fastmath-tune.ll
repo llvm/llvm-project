@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=skylake     | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64      | FileCheck %s --check-prefixes=X86-64
 
 define float @f32_no_daz(float %f) #0 {
 ; NHM-LABEL: f32_no_daz:
@@ -26,6 +27,11 @@ define float @f32_no_daz(float %f) #0 {
 ; FAST-SCALAR:       # %bb.0:
 ; FAST-SCALAR-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; FAST-SCALAR-NEXT:    retq
+;
+; X86-64-LABEL: f32_no_daz:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    sqrtss %xmm0, %xmm0
+; X86-64-NEXT:    retq
   %call = tail call fast float @llvm.sqrt.f32(float %f) #2
   ret float %call
 }
@@ -82,6 +88,23 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; FAST-VECTOR:       # %bb.0:
 ; FAST-VECTOR-NEXT:    vsqrtps %xmm0, %xmm0
 ; FAST-VECTOR-NEXT:    retq
+;
+; X86-64-LABEL: v4f32_no_daz:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    rsqrtps %xmm0, %xmm1
+; X86-64-NEXT:    movaps %xmm0, %xmm2
+; X86-64-NEXT:    mulps %xmm1, %xmm2
+; X86-64-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; X86-64-NEXT:    mulps %xmm2, %xmm3
+; X86-64-NEXT:    mulps %xmm1, %xmm2
+; X86-64-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X86-64-NEXT:    mulps %xmm3, %xmm2
+; X86-64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X86-64-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; X86-64-NEXT:    cmpleps %xmm0, %xmm1
+; X86-64-NEXT:    andps %xmm2, %xmm1
+; X86-64-NEXT:    movaps %xmm1, %xmm0
+; X86-64-NEXT:    retq
   %call = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %f) #2
   ret <4 x float> %call
 }
@@ -153,6 +176,38 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; FAST-VECTOR:       # %bb.0:
 ; FAST-VECTOR-NEXT:    vsqrtps %ymm0, %ymm0
 ; FAST-VECTOR-NEXT:    retq
+;
+; X86-64-LABEL: v8f32_no_daz:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    rsqrtps %xmm0, %xmm2
+; X86-64-NEXT:    movaps %xmm0, %xmm4
+; X86-64-NEXT:    mulps %xmm2, %xmm4
+; X86-64-NEXT:    movaps {{.*#+}} xmm5 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; X86-64-NEXT:    movaps %xmm4, %xmm3
+; X86-64-NEXT:    mulps %xmm5, %xmm3
+; X86-64-NEXT:    mulps %xmm2, %xmm4
+; X86-64-NEXT:    movaps {{.*#+}} xmm6 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; X86-64-NEXT:    addps %xmm6, %xmm4
+; X86-64-NEXT:    mulps %xmm3, %xmm4
+; X86-64-NEXT:    movaps {{.*#+}} xmm7 = [NaN,NaN,NaN,NaN]
+; X86-64-NEXT:    andps %xmm7, %xmm0
+; X86-64-NEXT:    movaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; X86-64-NEXT:    movaps %xmm2, %xmm3
+; X86-64-NEXT:    cmpleps %xmm0, %xmm3
+; X86-64-NEXT:    andps %xmm4, %xmm3
+; X86-64-NEXT:    rsqrtps %xmm1, %xmm0
+; X86-64-NEXT:    movaps %xmm1, %xmm4
+; X86-64-NEXT:    mulps %xmm0, %xmm4
+; X86-64-NEXT:    mulps %xmm4, %xmm5
+; X86-64-NEXT:    mulps %xmm0, %xmm4
+; X86-64-NEXT:    addps %xmm6, %xmm4
+; X86-64-NEXT:    mulps %xmm5, %xmm4
+; X86-64-NEXT:    andps %xmm7, %xmm1
+; X86-64-NEXT:    cmpleps %xmm1, %xmm2
+; X86-64-NEXT:    andps %xmm4, %xmm2
+; X86-64-NEXT:    movaps %xmm3, %xmm0
+; X86-64-NEXT:    movaps %xmm2, %xmm1
+; X86-64-NEXT:    retq
   %call = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %f) #2
   ret <8 x float> %call
 }
@@ -179,6 +234,11 @@ define float @f32_daz(float %f) #1 {
 ; FAST-SCALAR:       # %bb.0:
 ; FAST-SCALAR-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; FAST-SCALAR-NEXT:    retq
+;
+; X86-64-LABEL: f32_daz:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    sqrtss %xmm0, %xmm0
+; X86-64-NEXT:    retq
   %call = tail call fast float @llvm.sqrt.f32(float %f) #2
   ret float %call
 }
@@ -230,6 +290,21 @@ define <4 x float> @v4f32_daz(<4 x float> %f) #1 {
 ; FAST-VECTOR:       # %bb.0:
 ; FAST-VECTOR-NEXT:    vsqrtps %xmm0, %xmm0
 ; FAST-VECTOR-NEXT:    retq
+;
+; X86-64-LABEL: v4f32_daz:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    rsqrtps %xmm0, %xmm1
+; X86-64-NEXT:    movaps %xmm0, %xmm2
+; X86-64-NEXT:    mulps %xmm1, %xmm2
+; X86-64-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; X86-64-NEXT:    mulps %xmm2, %xmm3
+; X86-64-NEXT:    mulps %xmm1, %xmm2
+; X86-64-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X86-64-NEXT:    mulps %xmm3, %xmm2
+; X86-64-NEXT:    xorps %xmm1, %xmm1
+; X86-64-NEXT:    cmpneqps %xmm1, %xmm0
+; X86-64-NEXT:    andps %xmm2, %xmm0
+; X86-64-NEXT:    retq
   %call = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %f) #2
   ret <4 x float> %call
 }
@@ -292,6 +367,32 @@ define <8 x float> @v8f32_daz(<8 x float> %f) #1 {
 ; FAST-VECTOR:       # %bb.0:
 ; FAST-VECTOR-NEXT:    vsqrtps %ymm0, %ymm0
 ; FAST-VECTOR-NEXT:    retq
+;
+; X86-64-LABEL: v8f32_daz:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    rsqrtps %xmm0, %xmm2
+; X86-64-NEXT:    movaps %xmm0, %xmm3
+; X86-64-NEXT:    mulps %xmm2, %xmm3
+; X86-64-NEXT:    movaps {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; X86-64-NEXT:    movaps %xmm3, %xmm5
+; X86-64-NEXT:    mulps %xmm4, %xmm5
+; X86-64-NEXT:    mulps %xmm2, %xmm3
+; X86-64-NEXT:    movaps {{.*#+}} xmm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; X86-64-NEXT:    addps %xmm2, %xmm3
+; X86-64-NEXT:    mulps %xmm5, %xmm3
+; X86-64-NEXT:    xorps %xmm5, %xmm5
+; X86-64-NEXT:    cmpneqps %xmm5, %xmm0
+; X86-64-NEXT:    andps %xmm3, %xmm0
+; X86-64-NEXT:    rsqrtps %xmm1, %xmm3
+; X86-64-NEXT:    movaps %xmm1, %xmm6
+; X86-64-NEXT:    mulps %xmm3, %xmm6
+; X86-64-NEXT:    mulps %xmm6, %xmm4
+; X86-64-NEXT:    mulps %xmm3, %xmm6
+; X86-64-NEXT:    addps %xmm2, %xmm6
+; X86-64-NEXT:    mulps %xmm4, %xmm6
+; X86-64-NEXT:    cmpneqps %xmm5, %xmm1
+; X86-64-NEXT:    andps %xmm6, %xmm1
+; X86-64-NEXT:    retq
   %call = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %f) #2
   ret <8 x float> %call
 }

@@ -119,7 +119,7 @@ define <2 x i32> @trunc_usat_v2i64_v2i32(<2 x i64> %a0) {
   ret <2 x i32> %3
 }
 
-define void @trunc_usat_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
+define void @trunc_usat_v2i64_v2i32_store(<2 x i64> %a0, ptr %p1) {
 ; SSE2-LABEL: trunc_usat_v2i64_v2i32_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
@@ -220,7 +220,7 @@ define void @trunc_usat_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
   %1 = icmp ult <2 x i64> %a0, <i64 4294967295, i64 4294967295>
   %2 = select <2 x i1> %1, <2 x i64> %a0, <2 x i64> <i64 4294967295, i64 4294967295>
   %3 = trunc <2 x i64> %2 to <2 x i32>
-  store <2 x i32> %3, <2 x i32>* %p1
+  store <2 x i32> %3, ptr %p1
   ret void
 }
 
@@ -430,7 +430,7 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
   ret <4 x i32> %3
 }
 
-define <8 x i32> @trunc_usat_v8i64_v8i32(<8 x i64>* %p0) {
+define <8 x i32> @trunc_usat_v8i64_v8i32(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm9
@@ -706,7 +706,7 @@ define <8 x i32> @trunc_usat_v8i64_v8i32(<8 x i64>* %p0) {
 ; SKX-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; SKX-NEXT:    vpmovusqd %zmm0, %ymm0
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp ult <8 x i64> %a0, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %3 = trunc <8 x i64> %2 to <8 x i32>
@@ -840,7 +840,7 @@ define <2 x i16> @trunc_usat_v2i64_v2i16(<2 x i64> %a0) {
   ret <2 x i16> %3
 }
 
-define void @trunc_usat_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16>* %p1) {
+define void @trunc_usat_v2i64_v2i16_store(<2 x i64> %a0, ptr %p1) {
 ; SSE2-LABEL: trunc_usat_v2i64_v2i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
@@ -968,7 +968,7 @@ define void @trunc_usat_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16>* %p1) {
   %1 = icmp ult <2 x i64> %a0, <i64 65535, i64 65535>
   %2 = select <2 x i1> %1, <2 x i64> %a0, <2 x i64> <i64 65535, i64 65535>
   %3 = trunc <2 x i64> %2 to <2 x i16>
-  store <2 x i16> %3, <2 x i16>* %p1
+  store <2 x i16> %3, ptr %p1
   ret void
 }
 
@@ -1145,7 +1145,7 @@ define <4 x i16> @trunc_usat_v4i64_v4i16(<4 x i64> %a0) {
   ret <4 x i16> %3
 }
 
-define void @trunc_usat_v4i64_v4i16_store(<4 x i64> %a0, <4 x i16> *%p1) {
+define void @trunc_usat_v4i64_v4i16_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_usat_v4i64_v4i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535]
@@ -1321,11 +1321,11 @@ define void @trunc_usat_v4i64_v4i16_store(<4 x i64> %a0, <4 x i16> *%p1) {
   %1 = icmp ult <4 x i64> %a0, <i64 65535, i64 65535, i64 65535, i64 65535>
   %2 = select <4 x i1> %1, <4 x i64> %a0, <4 x i64> <i64 65535, i64 65535, i64 65535, i64 65535>
   %3 = trunc <4 x i64> %2 to <4 x i16>
-  store <4 x i16> %3, <4 x i16> *%p1
+  store <4 x i16> %3, ptr%p1
   ret void
 }
 
-define <8 x i16> @trunc_usat_v8i64_v8i16(<8 x i64>* %p0) {
+define <8 x i16> @trunc_usat_v8i64_v8i16(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm4
@@ -1587,7 +1587,7 @@ define <8 x i16> @trunc_usat_v8i64_v8i16(<8 x i64>* %p0) {
 ; SKX-NEXT:    vpmovusqw %zmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp ult <8 x i64> %a0, <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %3 = trunc <8 x i64> %2 to <8 x i16>
@@ -1676,7 +1676,7 @@ define <4 x i16> @trunc_usat_v4i32_v4i16(<4 x i32> %a0) {
   ret <4 x i16> %3
 }
 
-define void @trunc_usat_v4i32_v4i16_store(<4 x i32> %a0, <4 x i16> *%p1) {
+define void @trunc_usat_v4i32_v4i16_store(<4 x i32> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_usat_v4i32_v4i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
@@ -1760,7 +1760,7 @@ define void @trunc_usat_v4i32_v4i16_store(<4 x i32> %a0, <4 x i16> *%p1) {
   %1 = icmp ult <4 x i32> %a0, <i32 65535, i32 65535, i32 65535, i32 65535>
   %2 = select <4 x i1> %1, <4 x i32> %a0, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>
   %3 = trunc <4 x i32> %2 to <4 x i16>
-  store <4 x i16> %3, <4 x i16> *%p1
+  store <4 x i16> %3, ptr%p1
   ret void
 }
 
@@ -1878,7 +1878,7 @@ define <8 x i16> @trunc_usat_v8i32_v8i16(<8 x i32> %a0) {
   ret <8 x i16> %3
 }
 
-define <16 x i16> @trunc_usat_v16i32_v16i16(<16 x i32>* %p0) {
+define <16 x i16> @trunc_usat_v16i32_v16i16(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v16i32_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm5
@@ -2019,7 +2019,7 @@ define <16 x i16> @trunc_usat_v16i32_v16i16(<16 x i32>* %p0) {
 ; SKX-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; SKX-NEXT:    vpmovusdw %zmm0, %ymm0
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp ult <16 x i32> %a0, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
   %3 = trunc <16 x i32> %2 to <16 x i16>
@@ -2132,7 +2132,7 @@ define <2 x i8> @trunc_usat_v2i64_v2i8(<2 x i64> %a0) {
   ret <2 x i8> %3
 }
 
-define void @trunc_usat_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8>* %p1) {
+define void @trunc_usat_v2i64_v2i8_store(<2 x i64> %a0, ptr %p1) {
 ; SSE2-LABEL: trunc_usat_v2i64_v2i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
@@ -2238,7 +2238,7 @@ define void @trunc_usat_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8>* %p1) {
   %1 = icmp ult <2 x i64> %a0, <i64 255, i64 255>
   %2 = select <2 x i1> %1, <2 x i64> %a0, <2 x i64> <i64 255, i64 255>
   %3 = trunc <2 x i64> %2 to <2 x i8>
-  store <2 x i8> %3, <2 x i8>* %p1
+  store <2 x i8> %3, ptr %p1
   ret void
 }
 
@@ -2419,7 +2419,7 @@ define <4 x i8> @trunc_usat_v4i64_v4i8(<4 x i64> %a0) {
   ret <4 x i8> %3
 }
 
-define void @trunc_usat_v4i64_v4i8_store(<4 x i64> %a0, <4 x i8> *%p1) {
+define void @trunc_usat_v4i64_v4i8_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_usat_v4i64_v4i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
@@ -2599,11 +2599,11 @@ define void @trunc_usat_v4i64_v4i8_store(<4 x i64> %a0, <4 x i8> *%p1) {
   %1 = icmp ult <4 x i64> %a0, <i64 255, i64 255, i64 255, i64 255>
   %2 = select <4 x i1> %1, <4 x i64> %a0, <4 x i64> <i64 255, i64 255, i64 255, i64 255>
   %3 = trunc <4 x i64> %2 to <4 x i8>
-  store <4 x i8> %3, <4 x i8> *%p1
+  store <4 x i8> %3, ptr%p1
   ret void
 }
 
-define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64>* %p0) {
+define <8 x i8> @trunc_usat_v8i64_v8i8(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm6
@@ -2854,14 +2854,14 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64>* %p0) {
 ; SKX-NEXT:    vpmovusqb %zmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp ult <8 x i64> %a0, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %3 = trunc <8 x i64> %2 to <8 x i8>
   ret <8 x i8> %3
 }
 
-define void @trunc_usat_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) {
+define void @trunc_usat_v8i64_v8i8_store(ptr %p0, ptr%p1) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm6
@@ -3116,15 +3116,15 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) {
 ; SKX-NEXT:    vpmovusqb %zmm0, (%rsi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp ult <8 x i64> %a0, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %3 = trunc <8 x i64> %2 to <8 x i8>
-  store <8 x i8> %3, <8 x i8> *%p1
+  store <8 x i8> %3, ptr%p1
   ret void
 }
 
-define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64>* %p0) {
+define <16 x i8> @trunc_usat_v16i64_v16i8(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v16i64_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa 96(%rdi), %xmm9
@@ -3580,7 +3580,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64>* %p0) {
 ; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i64>, <16 x i64>* %p0
+  %a0 = load <16 x i64>, ptr %p0
   %1 = icmp ult <16 x i64> %a0, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %2 = select <16 x i1> %1, <16 x i64> %a0, <16 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %3 = trunc <16 x i64> %2 to <16 x i8>
@@ -3670,7 +3670,7 @@ define <4 x i8> @trunc_usat_v4i32_v4i8(<4 x i32> %a0) {
   ret <4 x i8> %3
 }
 
-define void @trunc_usat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
+define void @trunc_usat_v4i32_v4i8_store(<4 x i32> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_usat_v4i32_v4i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
@@ -3757,7 +3757,7 @@ define void @trunc_usat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
   %1 = icmp ult <4 x i32> %a0, <i32 255, i32 255, i32 255, i32 255>
   %2 = select <4 x i1> %1, <4 x i32> %a0, <4 x i32> <i32 255, i32 255, i32 255, i32 255>
   %3 = trunc <4 x i32> %2 to <4 x i8>
-  store <4 x i8> %3, <4 x i8> *%p1
+  store <4 x i8> %3, ptr%p1
   ret void
 }
 
@@ -3871,7 +3871,7 @@ define <8 x i8> @trunc_usat_v8i32_v8i8(<8 x i32> %a0) {
   ret <8 x i8> %3
 }
 
-define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
+define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_usat_v8i32_v8i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255]
@@ -3985,11 +3985,11 @@ define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
   %1 = icmp ult <8 x i32> %a0, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %2 = select <8 x i1> %1, <8 x i32> %a0, <8 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %3 = trunc <8 x i32> %2 to <8 x i8>
-  store <8 x i8> %3, <8 x i8> *%p1
+  store <8 x i8> %3, ptr%p1
   ret void
 }
 
-define <16 x i8> @trunc_usat_v16i32_v16i8(<16 x i32>* %p0) {
+define <16 x i8> @trunc_usat_v16i32_v16i8(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v16i32_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm6
@@ -4122,14 +4122,14 @@ define <16 x i8> @trunc_usat_v16i32_v16i8(<16 x i32>* %p0) {
 ; SKX-NEXT:    vpmovusdb %zmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp ult <16 x i32> %a0, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %3 = trunc <16 x i32> %2 to <16 x i8>
   ret <16 x i8> %3
 }
 
-define void @trunc_usat_v16i32_v16i8_store(<16 x i32>* %p0, <16 x i8>* %p1) {
+define void @trunc_usat_v16i32_v16i8_store(ptr %p0, ptr %p1) {
 ; SSE2-LABEL: trunc_usat_v16i32_v16i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm6
@@ -4267,11 +4267,11 @@ define void @trunc_usat_v16i32_v16i8_store(<16 x i32>* %p0, <16 x i8>* %p1) {
 ; SKX-NEXT:    vpmovusdb %zmm0, (%rsi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp ult <16 x i32> %a0, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %3 = trunc <16 x i32> %2 to <16 x i8>
-  store <16 x i8> %3, <16 x i8>* %p1
+  store <16 x i8> %3, ptr %p1
   ret void
 }
 
@@ -4339,7 +4339,7 @@ define <8 x i8> @trunc_usat_v8i16_v8i8(<8 x i16> %a0) {
   ret <8 x i8> %3
 }
 
-define void @trunc_usat_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
+define void @trunc_usat_v8i16_v8i8_store(<8 x i16> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_usat_v8i16_v8i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -4406,7 +4406,7 @@ define void @trunc_usat_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
   %1 = icmp ult <8 x i16> %a0, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %2 = select <8 x i1> %1, <8 x i16> %a0, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %3 = trunc <8 x i16> %2 to <8 x i8>
-  store <8 x i8> %3, <8 x i8> *%p1
+  store <8 x i8> %3, ptr%p1
   ret void
 }
 
@@ -4502,7 +4502,7 @@ define <16 x i8> @trunc_usat_v16i16_v16i8(<16 x i16> %a0) {
   ret <16 x i8> %3
 }
 
-define <32 x i8> @trunc_usat_v32i16_v32i8(<32 x i16>* %p0) {
+define <32 x i8> @trunc_usat_v32i16_v32i8(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v32i16_v32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -4625,14 +4625,14 @@ define <32 x i8> @trunc_usat_v32i16_v32i8(<32 x i16>* %p0) {
 ; SKX-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; SKX-NEXT:    vpmovuswb %zmm0, %ymm0
 ; SKX-NEXT:    retq
-  %a0 = load <32 x i16>, <32 x i16>* %p0
+  %a0 = load <32 x i16>, ptr %p0
   %1 = icmp ult <32 x i16> %a0, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %2 = select <32 x i1> %1, <32 x i16> %a0, <32 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %3 = trunc <32 x i16> %2 to <32 x i8>
   ret <32 x i8> %3
 }
 
-define <32 x i8> @trunc_usat_v32i32_v32i8(<32 x i32>* %p0) {
+define <32 x i8> @trunc_usat_v32i32_v32i8(ptr %p0) {
 ; SSE2-LABEL: trunc_usat_v32i32_v32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm11
@@ -4861,7 +4861,7 @@ define <32 x i8> @trunc_usat_v32i32_v32i8(<32 x i32>* %p0) {
 ; SKX-NEXT:    vpmovusdb %zmm1, %xmm1
 ; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
-  %a0 = load <32 x i32>, <32 x i32>* %p0
+  %a0 = load <32 x i32>, ptr %p0
   %1 = icmp ult <32 x i32> %a0, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %2 = select <32 x i1> %1, <32 x i32> %a0, <32 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %3 = trunc <32 x i32> %2 to <32 x i8>

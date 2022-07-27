@@ -182,6 +182,8 @@ Function types are converted to LLVM dialect function types as follows:
     individual pointers;
 -   the conversion of `memref`-typed arguments is subject to
     [calling conventions](TargetLLVMIR.md#calling-conventions).
+-   if a function type has boolean attribute `func.varargs` being set, the
+    converted LLVM function will be variadic.
 
 Examples:
 
@@ -252,6 +254,11 @@ Examples:
 // potentially with other non-memref typed results.
 !llvm.func<struct<(struct<(ptr<f32>, ptr<f32>, i64)>,
                    struct<(ptr<double>, ptr<double>, i64)>)> ()>
+
+// If "func.varargs" attribute is set:
+(i32) -> () attributes { "func.varargs" = true }
+// the corresponding LLVM function will be variadic:
+!llvm.func<void (i32, ...)>
 ```
 
 Conversion patterns are available to convert built-in function operations and
@@ -546,6 +553,17 @@ llvm.func @caller(%arg0: !llvm.ptr<f32>) {
 The "bare pointer" calling convention does not support unranked memrefs as their
 shape cannot be known at compile time.
 
+### Generic alloction and deallocation functions
+
+When converting the Memref dialect, allocations and deallocations are converted
+into calls to `malloc` (`aligned_alloc` if aligned allocations are requested)
+and `free`. However, it is possible to convert them to more generic functions
+which can be implemented by a runtime library, thus allowing custom allocation
+strategies or runtime profiling. When the conversion pass is  instructed to
+perform such operation, the names of the calles are `_mlir_alloc`,
+`_mlir_aligned_alloc` and `_mlir_free`. Their signatures are the same of
+`malloc`, `aligned_alloc` and `free`.
+
 ### C-compatible wrapper emission
 
 In practical cases, it may be desirable to have externally-facing functions with
@@ -746,6 +764,18 @@ descriptors passed by pointer would have to be transferred to the device memory,
 which introduces significant overhead. In such situations, auxiliary interface
 functions are executed on host and only pass the values through device function
 invocation mechanism.
+
+Limitation: Right now we cannot generate C interface for variadic functions,
+regardless of being non-external or external. Because C functions are unable to
+"forward" variadic arguments like this:
+```c
+void bar(int, ...);
+
+void foo(int x, ...) {
+  // ERROR: no way to forward variadic arguments.
+  void bar(x, ...);
+}
+```
 
 ### Address Computation
 

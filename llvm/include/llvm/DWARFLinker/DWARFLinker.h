@@ -9,6 +9,7 @@
 #ifndef LLVM_DWARFLINKER_DWARFLINKER_H
 #define LLVM_DWARFLINKER_DWARFLINKER_H
 
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
@@ -36,25 +37,6 @@ enum class DwarfLinkerAccelTableKind : uint8_t {
   Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
   Pub,     ///< .debug_pubnames, .debug_pubtypes
 };
-
-/// Partial address range. Besides an offset, only the
-/// HighPC is stored. The structure is stored in a map where the LowPC is the
-/// key.
-struct ObjFileAddressRange {
-  /// Function HighPC.
-  uint64_t HighPC;
-  /// Offset to apply to the linked address.
-  /// should be 0 for not-linked object file.
-  int64_t Offset;
-
-  ObjFileAddressRange(uint64_t EndPC, int64_t Offset)
-      : HighPC(EndPC), Offset(Offset) {}
-
-  ObjFileAddressRange() : HighPC(0), Offset(0) {}
-};
-
-/// Map LowPC to ObjFileAddressRange.
-using RangesTy = std::map<uint64_t, ObjFileAddressRange>;
 
 /// AddressesMap represents information about valid addresses used
 /// by debug information. Valid addresses are those which points to
@@ -142,7 +124,7 @@ public:
   /// original \p Entries.
   virtual void emitRangesEntries(
       int64_t UnitPcOffset, uint64_t OrigLowPc,
-      const FunctionIntervals::const_iterator &FuncRange,
+      Optional<std::pair<AddressRange, int64_t>> FuncRange,
       const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
       unsigned AddressSize) = 0;
 
@@ -365,6 +347,8 @@ private:
     /// Given a DIE, update its incompleteness based on whether the DIEs it
     /// references are incomplete.
     UpdateRefIncompleteness,
+    /// Given a DIE, mark it as ODR Canonical if applicable.
+    MarkODRCanonicalDie,
   };
 
   /// This class represents an item in the work list. The type defines what kind
@@ -463,6 +447,10 @@ private:
                             unsigned Flags, const UnitListTy &Units,
                             const DWARFFile &File,
                             SmallVectorImpl<WorklistItem> &Worklist);
+
+  /// Mark context corresponding to the specified \p Die as having canonical
+  /// die, if applicable.
+  void markODRCanonicalDie(const DWARFDie &Die, CompileUnit &CU);
 
   /// \defgroup FindRootDIEs Find DIEs corresponding to Address map entries.
   ///
@@ -685,9 +673,6 @@ private:
     /// \returns is a name was found.
     bool getDIENames(const DWARFDie &Die, AttributesInfo &Info,
                      OffsetsStringPool &StringPool, bool StripTemplate = false);
-
-    /// Create a copy of abbreviation Abbrev.
-    void copyAbbrev(const DWARFAbbreviationDeclaration &Abbrev, bool hasODR);
 
     uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
                                     const DWARFFile &File,

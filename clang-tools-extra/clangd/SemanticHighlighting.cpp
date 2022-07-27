@@ -30,7 +30,9 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include <algorithm>
 
 namespace clang {
@@ -521,6 +523,8 @@ llvm::Optional<HighlightingModifier> scopeModifier(const Type *T) {
 /// e.g. highlights dependent names and 'auto' as the underlying type.
 class CollectExtraHighlightings
     : public RecursiveASTVisitor<CollectExtraHighlightings> {
+  using Base = RecursiveASTVisitor<CollectExtraHighlightings>;
+
 public:
   CollectExtraHighlightings(HighlightingsBuilder &H) : H(H) {}
 
@@ -531,21 +535,64 @@ public:
     return true;
   }
 
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    if (Init->isMemberInitializer())
+      if (auto *Member = Init->getMember())
+        highlightMutableReferenceArgument(Member->getType(), Init->getInit());
+    return Base::TraverseConstructorInitializer(Init);
+  }
+
   bool VisitCallExpr(CallExpr *E) {
     // Highlighting parameters passed by non-const reference does not really
     // make sense for literals...
     if (isa<UserDefinedLiteral>(E))
       return true;
 
-    // FIXME ...here it would make sense though.
-    if (isa<CXXOperatorCallExpr>(E))
-      return true;
+    // FIXME: consider highlighting parameters of some other overloaded
+    // operators as well
+    llvm::ArrayRef<const Expr *> Args = {E->getArgs(), E->getNumArgs()};
+    if (auto *CallOp = dyn_cast<CXXOperatorCallExpr>(E)) {
+      switch (CallOp->getOperator()) {
+      case OO_Call:
+      case OO_Subscript:
+        Args = Args.drop_front(); // Drop object parameter
+        break;
+      default:
+        return true;
+      }
+    }
 
     highlightMutableReferenceArguments(
-        dyn_cast_or_null<FunctionDecl>(E->getCalleeDecl()),
-        {E->getArgs(), E->getNumArgs()});
+        dyn_cast_or_null<FunctionDecl>(E->getCalleeDecl()), Args);
 
     return true;
+  }
+
+  void highlightMutableReferenceArgument(QualType T, const Expr *Arg) {
+    if (!Arg)
+      return;
+
+    // Is this parameter passed by non-const reference?
+    // FIXME The condition T->idDependentType() could be relaxed a bit,
+    // e.g. std::vector<T>& is dependent but we would want to highlight it
+    if (!T->isLValueReferenceType() ||
+        T.getNonReferenceType().isConstQualified() || T->isDependentType()) {
+      return;
+    }
+
+    llvm::Optional<SourceLocation> Location;
+
+    // FIXME Add "unwrapping" for ArraySubscriptExpr and UnaryOperator,
+    //  e.g. highlight `a` in `a[i]`
+    // FIXME Handle dependent expression types
+    if (auto *DR = dyn_cast<DeclRefExpr>(Arg))
+      Location = DR->getLocation();
+    else if (auto *M = dyn_cast<MemberExpr>(Arg))
+      Location = M->getMemberLoc();
+
+    if (Location)
+      H.addExtraModifier(*Location,
+                         HighlightingModifier::UsedAsMutableReference);
   }
 
   void
@@ -560,31 +607,7 @@ public:
       // highlighting modifier to the corresponding expression
       for (size_t I = 0;
            I < std::min(size_t(ProtoType->getNumParams()), Args.size()); ++I) {
-        auto T = ProtoType->getParamType(I);
-
-        // Is this parameter passed by non-const reference?
-        // FIXME The condition !T->idDependentType() could be relaxed a bit,
-        // e.g. std::vector<T>& is dependent but we would want to highlight it
-        if (T->isLValueReferenceType() &&
-            !T.getNonReferenceType().isConstQualified() &&
-            !T->isDependentType()) {
-          if (auto *Arg = Args[I]) {
-            llvm::Optional<SourceLocation> Location;
-
-            // FIXME Add "unwrapping" for ArraySubscriptExpr and UnaryOperator,
-            //  e.g. highlight `a` in `a[i]`
-            // FIXME Handle dependent expression types
-            if (auto *DR = dyn_cast<DeclRefExpr>(Arg)) {
-              Location = DR->getLocation();
-            } else if (auto *M = dyn_cast<MemberExpr>(Arg)) {
-              Location = M->getMemberLoc();
-            }
-
-            if (Location)
-              H.addExtraModifier(*Location,
-                                 HighlightingModifier::UsedAsMutableReference);
-          }
-        }
+        highlightMutableReferenceArgument(ProtoType->getParamType(I), Args[I]);
       }
     }
   }
@@ -918,33 +941,69 @@ bool operator<(const HighlightingToken &L, const HighlightingToken &R) {
 }
 
 std::vector<SemanticToken>
-toSemanticTokens(llvm::ArrayRef<HighlightingToken> Tokens) {
+toSemanticTokens(llvm::ArrayRef<HighlightingToken> Tokens,
+                 llvm::StringRef Code) {
   assert(std::is_sorted(Tokens.begin(), Tokens.end()));
   std::vector<SemanticToken> Result;
+  // In case we split a HighlightingToken into multiple tokens (e.g. because it
+  // was spanning multiple lines), this tracks the last one. This prevents
+  // having a copy all the time.
+  HighlightingToken Scratch;
   const HighlightingToken *Last = nullptr;
   for (const HighlightingToken &Tok : Tokens) {
     Result.emplace_back();
-    SemanticToken &Out = Result.back();
+    SemanticToken *Out = &Result.back();
     // deltaStart/deltaLine are relative if possible.
     if (Last) {
-      assert(Tok.R.start.line >= Last->R.start.line);
-      Out.deltaLine = Tok.R.start.line - Last->R.start.line;
-      if (Out.deltaLine == 0) {
+      assert(Tok.R.start.line >= Last->R.end.line);
+      Out->deltaLine = Tok.R.start.line - Last->R.end.line;
+      if (Out->deltaLine == 0) {
         assert(Tok.R.start.character >= Last->R.start.character);
-        Out.deltaStart = Tok.R.start.character - Last->R.start.character;
+        Out->deltaStart = Tok.R.start.character - Last->R.start.character;
       } else {
-        Out.deltaStart = Tok.R.start.character;
+        Out->deltaStart = Tok.R.start.character;
       }
     } else {
-      Out.deltaLine = Tok.R.start.line;
-      Out.deltaStart = Tok.R.start.character;
+      Out->deltaLine = Tok.R.start.line;
+      Out->deltaStart = Tok.R.start.character;
     }
-    assert(Tok.R.end.line == Tok.R.start.line);
-    Out.length = Tok.R.end.character - Tok.R.start.character;
-    Out.tokenType = static_cast<unsigned>(Tok.Kind);
-    Out.tokenModifiers = Tok.Modifiers;
-
+    Out->tokenType = static_cast<unsigned>(Tok.Kind);
+    Out->tokenModifiers = Tok.Modifiers;
     Last = &Tok;
+
+    if (Tok.R.end.line == Tok.R.start.line) {
+      Out->length = Tok.R.end.character - Tok.R.start.character;
+    } else {
+      // If the token spans a line break, split it into multiple pieces for each
+      // line.
+      // This is slow, but multiline tokens are rare.
+      // FIXME: There's a client capability for supporting multiline tokens,
+      // respect that.
+      auto TokStartOffset = llvm::cantFail(positionToOffset(Code, Tok.R.start));
+      // Note that the loop doesn't cover the last line, which has a special
+      // length.
+      for (int I = Tok.R.start.line; I < Tok.R.end.line; ++I) {
+        auto LineEnd = Code.find('\n', TokStartOffset);
+        assert(LineEnd != Code.npos);
+        Out->length = LineEnd - TokStartOffset;
+        // Token continues on next line, right after the line break.
+        TokStartOffset = LineEnd + 1;
+        Result.emplace_back();
+        Out = &Result.back();
+        *Out = Result[Result.size() - 2];
+        // New token starts at the first column of the next line.
+        Out->deltaLine = 1;
+        Out->deltaStart = 0;
+      }
+      // This is the token on last line.
+      Out->length = Tok.R.end.character;
+      // Update the start location for last token, as that's used in the
+      // relative delta calculation for following tokens.
+      Scratch = *Last;
+      Scratch.R.start.line = Tok.R.end.line;
+      Scratch.R.start.character = 0;
+      Last = &Scratch;
+    }
   }
   return Result;
 }

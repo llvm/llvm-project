@@ -289,18 +289,14 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
   LLVM_DEBUG(dbgs() << "TripCount=" << *TripCount << "\n");
 
   const SCEV *RefCost = nullptr;
-  if (isConsecutive(L, CLS)) {
+  const SCEV *Stride = nullptr;
+  if (isConsecutive(L, Stride, CLS)) {
     // If the indexed reference is 'consecutive' the cost is
     // (TripCount*Stride)/CLS.
-    const SCEV *Coeff = getLastCoefficient();
-    const SCEV *ElemSize = Sizes.back();
-    assert(Coeff->getType() == ElemSize->getType() &&
-           "Expecting the same type");
-    const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
+    assert(Stride != nullptr &&
+           "Stride should not be null for consecutive access!");
     Type *WiderType = SE.getWiderType(Stride->getType(), TripCount->getType());
     const SCEV *CacheLineSize = SE.getConstant(WiderType, CLS);
-    if (SE.isKnownNegative(Stride))
-      Stride = SE.getNegativeSCEV(Stride);
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
     TripCount = SE.getNoopOrAnyExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
@@ -464,7 +460,8 @@ bool IndexedReference::isLoopInvariant(const Loop &L) const {
   return allCoeffForLoopAreZero;
 }
 
-bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
+bool IndexedReference::isConsecutive(const Loop &L, const SCEV *&Stride,
+                                     unsigned CLS) const {
   // The indexed reference is 'consecutive' if the only coefficient that uses
   // the loop induction variable is the last one...
   const SCEV *LastSubscript = Subscripts.back();
@@ -478,7 +475,19 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
   // ...and the access stride is less than the cache line size.
   const SCEV *Coeff = getLastCoefficient();
   const SCEV *ElemSize = Sizes.back();
-  const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
+  Type *WiderType = SE.getWiderType(Coeff->getType(), ElemSize->getType());
+  // FIXME: This assumes that all values are signed integers which may
+  // be incorrect in unusual codes and incorrectly use sext instead of zext.
+  // for (uint32_t i = 0; i < 512; ++i) {
+  //   uint8_t trunc = i;
+  //   A[trunc] = 42;
+  // }
+  // This consecutively iterates twice over A. If `trunc` is sign-extended,
+  // we would conclude that this may iterate backwards over the array.
+  // However, LoopCacheAnalysis is heuristic anyway and transformations must
+  // not result in wrong optimizations if the heuristic was incorrect.
+  Stride = SE.getMulExpr(SE.getNoopOrSignExtend(Coeff, WiderType),
+                         SE.getNoopOrSignExtend(ElemSize, WiderType));
   const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
 
   Stride = SE.isKnownNegative(Stride) ? SE.getNegativeSCEV(Stride) : Stride;
@@ -645,8 +654,8 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
         Optional<bool> HasSpacialReuse =
             R->hasSpacialReuse(Representative, CLS, AA);
 
-        if ((HasTemporalReuse.hasValue() && *HasTemporalReuse) ||
-            (HasSpacialReuse.hasValue() && *HasSpacialReuse)) {
+        if ((HasTemporalReuse && *HasTemporalReuse) ||
+            (HasSpacialReuse && *HasSpacialReuse)) {
           RefGroup.push_back(std::move(R));
           Added = true;
           break;

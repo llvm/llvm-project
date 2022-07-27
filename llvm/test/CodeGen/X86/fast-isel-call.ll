@@ -17,10 +17,10 @@ BB2:
 }
 declare zeroext i1 @foo()  nounwind
 
-declare void @foo2(%struct.s* byval(%struct.s))
+declare void @foo2(ptr byval(%struct.s))
 
-define void @test2(%struct.s* %d) nounwind {
-  call void @foo2(%struct.s* byval(%struct.s) %d )
+define void @test2(ptr %d) nounwind {
+  call void @foo2(ptr byval(%struct.s) %d )
   ret void
 ; CHECK-LABEL: test2:
 ; CHECK: movl	(%eax), %ecx
@@ -31,10 +31,10 @@ define void @test2(%struct.s* %d) nounwind {
 ; CHECK: movl	%eax, 8(%esp)
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 
-define void @test3(i8* %a) {
-  call void @llvm.memset.p0i8.i32(i8* %a, i8 0, i32 100, i1 false)
+define void @test3(ptr %a) {
+  call void @llvm.memset.p0.i32(ptr %a, i8 0, i32 100, i1 false)
   ret void
 ; CHECK-LABEL: test3:
 ; CHECK:   movl	{{.*}}, (%esp)
@@ -43,10 +43,10 @@ define void @test3(i8* %a) {
 ; CHECK:   calll {{.*}}memset
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
-define void @test4(i8* %a, i8* %b) {
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %b, i32 100, i1 false)
+define void @test4(ptr %a, ptr %b) {
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %b, i32 100, i1 false)
   ret void
 ; CHECK-LABEL: test4:
 ; CHECK:   movl	{{.*}}, (%esp)
@@ -66,10 +66,10 @@ entry:
 ; CHECK: movl $43, (%esp)
 ; CHECK: calll {{.*}}thiscallfun
 ; CHECK: addl $8, %esp
-  call x86_thiscallcc void @thiscallfun(%struct.S* %s, i32 43)
+  call x86_thiscallcc void @thiscallfun(ptr %s, i32 43)
   ret void
 }
-declare x86_thiscallcc void @thiscallfun(%struct.S*, i32) #1
+declare x86_thiscallcc void @thiscallfun(ptr, i32) #1
 
 ; STDERR-NOT: FastISel missed call:   call x86_stdcallcc void @stdcallfun
 define void @test6() {

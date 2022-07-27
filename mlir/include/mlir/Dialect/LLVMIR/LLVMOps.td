@@ -14,9 +14,9 @@
 #define LLVMIR_OPS
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -347,8 +347,8 @@ def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
 // of LLVM ops that accept such an attribute.
 class MemoryOpWithAlignmentBase {
   code setAlignmentCode = [{
-    if ($alignment.hasValue()) {
-      auto align = $alignment.getValue();
+    if ($alignment.has_value()) {
+      auto align = $alignment.value();
       if (align != 0)
         inst->setAlignment(llvm::Align(align));
     }
@@ -433,6 +433,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ValueRange":$indices,
                "ArrayRef<int32_t>":$structIndices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+               "ValueRange":$indices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+	OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+               "ValueRange":$indices,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ValueRange":$indices, "ArrayRef<int32_t>":$structIndices,
@@ -580,7 +586,7 @@ def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "CreateFPTrunc",
 def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       AttrSizedOperandSegments,
                       DeclareOpInterfaceMethods<BranchOpInterface>,
-                      Terminator]> {
+                      DeclareOpInterfaceMethods<CallOpInterface>, Terminator]> {
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
@@ -616,7 +622,8 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 }
 
 def LLVM_CallOp : LLVM_Op<"call",
-                          [DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
+                          [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+                           DeclareOpInterfaceMethods<CallOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
 
@@ -1240,7 +1247,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     }
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() {
-      return getValue().getValueOr(Attribute());
+      return getValue().value_or(Attribute());
     }
     /// Return the initializer region. This may be empty, but if it is not it
     /// terminates in an `llvm.return` op with the initializer value.
@@ -1322,7 +1329,8 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface, Symbol
+    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface,
+    CallableOpInterface, Symbol
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -1389,6 +1397,13 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
 
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getFunctionType().getReturnTypes(); }
+
+    /// Returns the callable region, which is the function body.
+    Region *getCallableRegion() { return &getBody(); }
+
+    /// Returns the callable result type, which is the function return type.
+    ArrayRef<Type> getCallableResults() { return getFunctionType().getReturnType(); }
+
   }];
 
   let hasCustomAssemblyFormat = 1;

@@ -44,6 +44,7 @@ tsc_tick_count __kmp_stats_start_time;
 volatile int __kmp_init_serial = FALSE;
 volatile int __kmp_init_gtid = FALSE;
 volatile int __kmp_init_common = FALSE;
+volatile int __kmp_need_register_serial = TRUE;
 volatile int __kmp_init_middle = FALSE;
 volatile int __kmp_init_parallel = FALSE;
 volatile int __kmp_init_hidden_helper = FALSE;
@@ -284,6 +285,7 @@ kmp_affin_mask_t *__kmp_affinity_masks = NULL;
 unsigned __kmp_affinity_num_masks = 0;
 
 char *__kmp_cpuinfo_file = NULL;
+bool __kmp_affin_reset = 0;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -425,7 +427,13 @@ int __kmp_env_consistency_check = FALSE; /* KMP_CONSISTENCY_CHECK specified? */
 // 0 = never yield;
 // 1 = always yield (default);
 // 2 = yield only if oversubscribed
+#if KMP_OS_DARWIN && KMP_ARCH_AARCH64
+// Set to 0 for environments where yield is slower
+kmp_int32 __kmp_use_yield = 0;
+#else
 kmp_int32 __kmp_use_yield = 1;
+#endif
+
 // This will be 1 if KMP_USE_YIELD environment variable was set explicitly
 kmp_int32 __kmp_use_yield_exp_set = 0;
 
@@ -442,6 +450,7 @@ kmp_uint64 __kmp_pause_init = 1; // for tpause
 KMP_ALIGN_CACHE
 kmp_info_t **__kmp_threads = NULL;
 kmp_root_t **__kmp_root = NULL;
+kmp_old_threads_list_t *__kmp_old_threads_list = NULL;
 
 /* data read/written to often by primary threads */
 KMP_ALIGN_CACHE

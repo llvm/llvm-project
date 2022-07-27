@@ -348,7 +348,7 @@ define <4 x i64> @test_mm256_broadcastsi128_si256(<2 x i64> %a0) {
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_mm256_broadcastsi128_si256_mem(<2 x i64>* %p0) {
+define <4 x i64> @test_mm256_broadcastsi128_si256_mem(ptr %p0) {
 ; X86-LABEL: test_mm256_broadcastsi128_si256_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -359,7 +359,7 @@ define <4 x i64> @test_mm256_broadcastsi128_si256_mem(<2 x i64>* %p0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
-  %a0 = load <2 x i64>, <2 x i64>* %p0
+  %a0 = load <2 x i64>, ptr %p0
   %res = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x i64> %res
 }
@@ -744,7 +744,7 @@ define <4 x i64> @test_mm256_hsubs_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 }
 declare <16 x i16> @llvm.x86.avx2.phsub.sw(<16 x i16>, <16 x i16>) nounwind readnone
 
-define <2 x i64> @test_mm_i32gather_epi32(i32 *%a0, <2 x i64> %a1) {
+define <2 x i64> @test_mm_i32gather_epi32(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i32gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -761,16 +761,16 @@ define <2 x i64> @test_mm_i32gather_epi32(i32 *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i32 *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
   %mask = bitcast <2 x i64> <i64 -1, i64 -1> to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> undef, i8* %arg0, <4 x i32> %arg1, <4 x i32> %mask, i8 2)
+  %call = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> undef, ptr %arg0, <4 x i32> %arg1, <4 x i32> %mask, i8 2)
   %bc = bitcast <4 x i32> %call to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32>, i8*, <4 x i32>, <4 x i32>, i8) nounwind readonly
+declare <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32>, ptr, <4 x i32>, <4 x i32>, i8) nounwind readonly
 
-define <2 x i64> @test_mm_mask_i32gather_epi32(<2 x i64> %a0, i32 *%a1, <2 x i64> %a2, <2 x i64> %a3) {
+define <2 x i64> @test_mm_mask_i32gather_epi32(<2 x i64> %a0, ptr%a1, <2 x i64> %a2, <2 x i64> %a3) {
 ; X86-LABEL: test_mm_mask_i32gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -782,15 +782,15 @@ define <2 x i64> @test_mm_mask_i32gather_epi32(<2 x i64> %a0, i32 *%a1, <2 x i64
 ; X64-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %arg1 = bitcast i32 *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <2 x i64> %a2 to <4 x i32>
   %arg3 = bitcast <2 x i64> %a3 to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> %arg0, i8* %arg1, <4 x i32> %arg2, <4 x i32> %arg3, i8 2)
+  %call = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> %arg0, ptr %arg1, <4 x i32> %arg2, <4 x i32> %arg3, i8 2)
   %bc = bitcast <4 x i32> %call to <2 x i64>
   ret <2 x i64> %bc
 }
 
-define <4 x i64> @test_mm256_i32gather_epi32(i32 *%a0, <4 x i64> %a1) {
+define <4 x i64> @test_mm256_i32gather_epi32(ptr%a0, <4 x i64> %a1) {
 ; X86-LABEL: test_mm256_i32gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -807,16 +807,16 @@ define <4 x i64> @test_mm256_i32gather_epi32(i32 *%a0, <4 x i64> %a1) {
 ; X64-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm0,2), %ymm1
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i32 *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
   %mask = bitcast <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1> to <8 x i32>
-  %call = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> undef, i8* %arg0, <8 x i32> %arg1, <8 x i32> %mask, i8 2)
+  %call = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> undef, ptr %arg0, <8 x i32> %arg1, <8 x i32> %mask, i8 2)
   %bc = bitcast <8 x i32> %call to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32>, i8*, <8 x i32>, <8 x i32>, i8) nounwind readonly
+declare <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32>, ptr, <8 x i32>, <8 x i32>, i8) nounwind readonly
 
-define <4 x i64> @test_mm256_mask_i32gather_epi32(<4 x i64> %a0, i32 *%a1, <4 x i64> %a2, <4 x i64> %a3) {
+define <4 x i64> @test_mm256_mask_i32gather_epi32(<4 x i64> %a0, ptr%a1, <4 x i64> %a2, <4 x i64> %a3) {
 ; X86-LABEL: test_mm256_mask_i32gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -828,15 +828,15 @@ define <4 x i64> @test_mm256_mask_i32gather_epi32(<4 x i64> %a0, i32 *%a1, <4 x 
 ; X64-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
-  %arg1 = bitcast i32 *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <4 x i64> %a2 to <8 x i32>
   %arg3 = bitcast <4 x i64> %a3 to <8 x i32>
-  %call = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> %arg0, i8* %arg1, <8 x i32> %arg2, <8 x i32> %arg3, i8 2)
+  %call = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> %arg0, ptr %arg1, <8 x i32> %arg2, <8 x i32> %arg3, i8 2)
   %bc = bitcast <8 x i32> %call to <4 x i64>
   ret <4 x i64> %bc
 }
 
-define <2 x i64> @test_mm_i32gather_epi64(i64 *%a0, <2 x i64> %a1) {
+define <2 x i64> @test_mm_i32gather_epi64(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i32gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -853,14 +853,14 @@ define <2 x i64> @test_mm_i32gather_epi64(i64 *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64 *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> undef, i8* %arg0, <4 x i32> %arg1, <2 x i64> <i64 -1, i64 -1>, i8 2)
+  %res = call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> undef, ptr %arg0, <4 x i32> %arg1, <2 x i64> <i64 -1, i64 -1>, i8 2)
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64>, i8*, <4 x i32>, <2 x i64>, i8) nounwind readonly
+declare <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64>, ptr, <4 x i32>, <2 x i64>, i8) nounwind readonly
 
-define <2 x i64> @test_mm_mask_i32gather_epi64(<2 x i64> %a0, i64 *%a1, <2 x i64> %a2, <2 x i64> %a3) {
+define <2 x i64> @test_mm_mask_i32gather_epi64(<2 x i64> %a0, ptr%a1, <2 x i64> %a2, <2 x i64> %a3) {
 ; X86-LABEL: test_mm_mask_i32gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -871,13 +871,13 @@ define <2 x i64> @test_mm_mask_i32gather_epi64(<2 x i64> %a0, i64 *%a1, <2 x i64
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast i64 *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <2 x i64> %a2 to <4 x i32>
-  %res = call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> %a0, i8* %arg1, <4 x i32> %arg2, <2 x i64> %a3, i8 2)
+  %res = call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> %a0, ptr %arg1, <4 x i32> %arg2, <2 x i64> %a3, i8 2)
   ret <2 x i64> %res
 }
 
-define <4 x i64> @test_mm256_i32gather_epi64(i64 *%a0, <2 x i64> %a1) {
+define <4 x i64> @test_mm256_i32gather_epi64(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm256_i32gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -894,14 +894,14 @@ define <4 x i64> @test_mm256_i32gather_epi64(i64 *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm0,2), %ymm1
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64 *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> undef, i8* %arg0, <4 x i32> %arg1, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, i8 2)
+  %res = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> undef, ptr %arg0, <4 x i32> %arg1, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, i8 2)
   ret <4 x i64> %res
 }
-declare <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64>, i8*, <4 x i32>, <4 x i64>, i8) nounwind readonly
+declare <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64>, ptr, <4 x i32>, <4 x i64>, i8) nounwind readonly
 
-define <4 x i64> @test_mm256_mask_i32gather_epi64(<4 x i64> %a0, i64 *%a1, <2 x i64> %a2, <4 x i64> %a3) {
+define <4 x i64> @test_mm256_mask_i32gather_epi64(<4 x i64> %a0, ptr%a1, <2 x i64> %a2, <4 x i64> %a3) {
 ; X86-LABEL: test_mm256_mask_i32gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -912,13 +912,13 @@ define <4 x i64> @test_mm256_mask_i32gather_epi64(<4 x i64> %a0, i64 *%a1, <2 x 
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast i64 *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <2 x i64> %a2 to <4 x i32>
-  %res = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %a0, i8* %arg1, <4 x i32> %arg2, <4 x i64> %a3, i8 2)
+  %res = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %a0, ptr %arg1, <4 x i32> %arg2, <4 x i64> %a3, i8 2)
   ret <4 x i64> %res
 }
 
-define <2 x double> @test_mm_i32gather_pd(double *%a0, <2 x i64> %a1) {
+define <2 x double> @test_mm_i32gather_pd(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i32gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -935,17 +935,17 @@ define <2 x double> @test_mm_i32gather_pd(double *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovapd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
   %cmp = fcmp oeq <2 x double> zeroinitializer, zeroinitializer
   %sext = sext <2 x i1> %cmp to <2 x i64>
   %mask = bitcast <2 x i64> %sext to <2 x double>
-  %res = call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> undef, i8* %arg0, <4 x i32> %arg1, <2 x double> %mask, i8 2)
+  %res = call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> undef, ptr %arg0, <4 x i32> %arg1, <2 x double> %mask, i8 2)
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double>, i8*, <4 x i32>, <2 x double>, i8) nounwind readonly
+declare <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double>, ptr, <4 x i32>, <2 x double>, i8) nounwind readonly
 
-define <2 x double> @test_mm_mask_i32gather_pd(<2 x double> %a0, double *%a1, <2 x i64> %a2, <2 x double> %a3) {
+define <2 x double> @test_mm_mask_i32gather_pd(<2 x double> %a0, ptr%a1, <2 x i64> %a2, <2 x double> %a3) {
 ; X86-LABEL: test_mm_mask_i32gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -956,13 +956,13 @@ define <2 x double> @test_mm_mask_i32gather_pd(<2 x double> %a0, double *%a1, <2
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast double *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <2 x i64> %a2 to <4 x i32>
-  %res = call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> %a0, i8* %arg1, <4 x i32> %arg2, <2 x double> %a3, i8 2)
+  %res = call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> %a0, ptr %arg1, <4 x i32> %arg2, <2 x double> %a3, i8 2)
   ret <2 x double> %res
 }
 
-define <4 x double> @test_mm256_i32gather_pd(double *%a0, <2 x i64> %a1) {
+define <4 x double> @test_mm256_i32gather_pd(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm256_i32gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -979,15 +979,15 @@ define <4 x double> @test_mm256_i32gather_pd(double *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm0,2), %ymm1
 ; X64-NEXT:    vmovapd %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
   %mask = call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> zeroinitializer, <4 x double> zeroinitializer, i8 0)
-  %res = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8* %arg0, <4 x i32> %arg1, <4 x double> %mask, i8 2)
+  %res = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, ptr %arg0, <4 x i32> %arg1, <4 x double> %mask, i8 2)
   ret <4 x double> %res
 }
-declare <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double>, i8*, <4 x i32>, <4 x double>, i8) nounwind readonly
+declare <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double>, ptr, <4 x i32>, <4 x double>, i8) nounwind readonly
 
-define <4 x double> @test_mm256_mask_i32gather_pd(<4 x double> %a0, double *%a1, <2 x i64> %a2, <4 x double> %a3) {
+define <4 x double> @test_mm256_mask_i32gather_pd(<4 x double> %a0, ptr%a1, <2 x i64> %a2, <4 x double> %a3) {
 ; X86-LABEL: test_mm256_mask_i32gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -998,13 +998,13 @@ define <4 x double> @test_mm256_mask_i32gather_pd(<4 x double> %a0, double *%a1,
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,2), %ymm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast double *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <2 x i64> %a2 to <4 x i32>
-  %res = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> %a0, i8* %arg1, <4 x i32> %arg2, <4 x double> %a3, i8 2)
+  %res = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> %a0, ptr %arg1, <4 x i32> %arg2, <4 x double> %a3, i8 2)
   ret <4 x double> %res
 }
 
-define <4 x float> @test_mm_i32gather_ps(float *%a0, <2 x i64> %a1) {
+define <4 x float> @test_mm_i32gather_ps(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i32gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1021,17 +1021,17 @@ define <4 x float> @test_mm_i32gather_ps(float *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vgatherdps %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
   %cmp = fcmp oeq <4 x float> zeroinitializer, zeroinitializer
   %sext = sext <4 x i1> %cmp to <4 x i32>
   %mask = bitcast <4 x i32> %sext to <4 x float>
-  %call = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> undef, i8* %arg0, <4 x i32> %arg1, <4 x float> %mask, i8 2)
+  %call = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> undef, ptr %arg0, <4 x i32> %arg1, <4 x float> %mask, i8 2)
   ret <4 x float> %call
 }
-declare <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float>, i8*, <4 x i32>, <4 x float>, i8) nounwind readonly
+declare <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float>, ptr, <4 x i32>, <4 x float>, i8) nounwind readonly
 
-define <4 x float> @test_mm_mask_i32gather_ps(<4 x float> %a0, float *%a1, <2 x i64> %a2, <4 x float> %a3) {
+define <4 x float> @test_mm_mask_i32gather_ps(<4 x float> %a0, ptr%a1, <2 x i64> %a2, <4 x float> %a3) {
 ; X86-LABEL: test_mm_mask_i32gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1042,13 +1042,13 @@ define <4 x float> @test_mm_mask_i32gather_ps(<4 x float> %a0, float *%a1, <2 x 
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast float *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <2 x i64> %a2 to <4 x i32>
-  %call = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> %a0, i8* %arg1, <4 x i32> %arg2, <4 x float> %a3, i8 2)
+  %call = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> %a0, ptr %arg1, <4 x i32> %arg2, <4 x float> %a3, i8 2)
   ret <4 x float> %call
 }
 
-define <8 x float> @test_mm256_i32gather_ps(float *%a0, <4 x i64> %a1) {
+define <8 x float> @test_mm256_i32gather_ps(ptr%a0, <4 x i64> %a1) {
 ; X86-LABEL: test_mm256_i32gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1065,15 +1065,15 @@ define <8 x float> @test_mm256_i32gather_ps(float *%a0, <4 x i64> %a1) {
 ; X64-NEXT:    vgatherdps %ymm2, (%rdi,%ymm0,2), %ymm1
 ; X64-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
   %mask = call <8 x float> @llvm.x86.avx.cmp.ps.256(<8 x float> zeroinitializer, <8 x float> zeroinitializer, i8 0)
-  %call = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, i8* %arg0, <8 x i32> %arg1, <8 x float> %mask, i8 2)
+  %call = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr %arg0, <8 x i32> %arg1, <8 x float> %mask, i8 2)
   ret <8 x float> %call
 }
-declare <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float>, i8*, <8 x i32>, <8 x float>, i8) nounwind readonly
+declare <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float>, ptr, <8 x i32>, <8 x float>, i8) nounwind readonly
 
-define <8 x float> @test_mm256_mask_i32gather_ps(<8 x float> %a0, float *%a1, <4 x i64> %a2, <8 x float> %a3) {
+define <8 x float> @test_mm256_mask_i32gather_ps(<8 x float> %a0, ptr%a1, <4 x i64> %a2, <8 x float> %a3) {
 ; X86-LABEL: test_mm256_mask_i32gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1084,13 +1084,13 @@ define <8 x float> @test_mm256_mask_i32gather_ps(<8 x float> %a0, float *%a1, <4
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,2), %ymm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast float *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg2 = bitcast <4 x i64> %a2 to <8 x i32>
-  %call = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> %a0, i8* %arg1, <8 x i32> %arg2, <8 x float> %a3, i8 2)
+  %call = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> %a0, ptr %arg1, <8 x i32> %arg2, <8 x float> %a3, i8 2)
   ret <8 x float> %call
 }
 
-define <2 x i64> @test_mm_i64gather_epi32(i32 *%a0, <2 x i64> %a1) {
+define <2 x i64> @test_mm_i64gather_epi32(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i64gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1107,15 +1107,15 @@ define <2 x i64> @test_mm_i64gather_epi32(i32 *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i32 *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %mask = bitcast <2 x i64> <i64 -1, i64 -1> to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32> undef, i8* %arg0, <2 x i64> %a1, <4 x i32> %mask, i8 2)
+  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32> undef, ptr %arg0, <2 x i64> %a1, <4 x i32> %mask, i8 2)
   %bc = bitcast <4 x i32> %call to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32>, i8*, <2 x i64>, <4 x i32>, i8) nounwind readonly
+declare <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32>, ptr, <2 x i64>, <4 x i32>, i8) nounwind readonly
 
-define <2 x i64> @test_mm_mask_i64gather_epi32(<2 x i64> %a0, i32 *%a1, <2 x i64> %a2, <2 x i64> %a3) {
+define <2 x i64> @test_mm_mask_i64gather_epi32(<2 x i64> %a0, ptr%a1, <2 x i64> %a2, <2 x i64> %a3) {
 ; X86-LABEL: test_mm_mask_i64gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1127,14 +1127,14 @@ define <2 x i64> @test_mm_mask_i64gather_epi32(<2 x i64> %a0, i32 *%a1, <2 x i64
 ; X64-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %arg1 = bitcast i32 *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg3 = bitcast <2 x i64> %a3 to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32> %arg0, i8* %arg1, <2 x i64> %a2, <4 x i32> %arg3, i8 2)
+  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32> %arg0, ptr %arg1, <2 x i64> %a2, <4 x i32> %arg3, i8 2)
   %bc = bitcast <4 x i32> %call to <2 x i64>
   ret <2 x i64> %bc
 }
 
-define <2 x i64> @test_mm256_i64gather_epi32(i32 *%a0, <4 x i64> %a1) {
+define <2 x i64> @test_mm256_i64gather_epi32(ptr%a0, <4 x i64> %a1) {
 ; X86-LABEL: test_mm256_i64gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1153,15 +1153,15 @@ define <2 x i64> @test_mm256_i64gather_epi32(i32 *%a0, <4 x i64> %a1) {
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast i32 *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %mask = bitcast <2 x i64> <i64 -1, i64 -1> to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> undef, i8* %arg0, <4 x i64> %a1, <4 x i32> %mask, i8 2)
+  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> undef, ptr %arg0, <4 x i64> %a1, <4 x i32> %mask, i8 2)
   %bc = bitcast <4 x i32> %call to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32>, i8*, <4 x i64>, <4 x i32>, i8) nounwind readonly
+declare <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32>, ptr, <4 x i64>, <4 x i32>, i8) nounwind readonly
 
-define <2 x i64> @test_mm256_mask_i64gather_epi32(<2 x i64> %a0, i32 *%a1, <4 x i64> %a2, <2 x i64> %a3) {
+define <2 x i64> @test_mm256_mask_i64gather_epi32(<2 x i64> %a0, ptr%a1, <4 x i64> %a2, <2 x i64> %a3) {
 ; X86-LABEL: test_mm256_mask_i64gather_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1175,14 +1175,14 @@ define <2 x i64> @test_mm256_mask_i64gather_epi32(<2 x i64> %a0, i32 *%a1, <4 x 
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %arg1 = bitcast i32 *%a1 to i8*
+  %arg1 = bitcast ptr%a1 to ptr
   %arg3 = bitcast <2 x i64> %a3 to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> %arg0, i8* %arg1, <4 x i64> %a2, <4 x i32> %arg3, i8 2)
+  %call = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> %arg0, ptr %arg1, <4 x i64> %a2, <4 x i32> %arg3, i8 2)
   %bc = bitcast <4 x i32> %call to <2 x i64>
   ret <2 x i64> %bc
 }
 
-define <2 x i64> @test_mm_i64gather_epi64(i64 *%a0, <2 x i64> %a1) {
+define <2 x i64> @test_mm_i64gather_epi64(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i64gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1199,13 +1199,13 @@ define <2 x i64> @test_mm_i64gather_epi64(i64 *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64 *%a0 to i8*
-  %call = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> undef, i8* %arg0, <2 x i64> %a1, <2 x i64> <i64 -1, i64 -1>, i8 2)
+  %arg0 = bitcast ptr%a0 to ptr
+  %call = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> undef, ptr %arg0, <2 x i64> %a1, <2 x i64> <i64 -1, i64 -1>, i8 2)
   ret <2 x i64> %call
 }
-declare <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64>, i8*, <2 x i64>, <2 x i64>, i8) nounwind readonly
+declare <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64>, ptr, <2 x i64>, <2 x i64>, i8) nounwind readonly
 
-define <2 x i64> @test_mm_mask_i64gather_epi64(<2 x i64> %a0, i64 *%a1, <2 x i64> %a2, <2 x i64> %a3) {
+define <2 x i64> @test_mm_mask_i64gather_epi64(<2 x i64> %a0, ptr%a1, <2 x i64> %a2, <2 x i64> %a3) {
 ; X86-LABEL: test_mm_mask_i64gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1216,12 +1216,12 @@ define <2 x i64> @test_mm_mask_i64gather_epi64(<2 x i64> %a0, i64 *%a1, <2 x i64
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast i64 *%a1 to i8*
-  %call = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> %a0, i8* %arg1, <2 x i64> %a2, <2 x i64> %a3, i8 2)
+  %arg1 = bitcast ptr%a1 to ptr
+  %call = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> %a0, ptr %arg1, <2 x i64> %a2, <2 x i64> %a3, i8 2)
   ret <2 x i64> %call
 }
 
-define <4 x i64> @test_mm256_i64gather_epi64(i64 *%a0, <4 x i64> %a1) {
+define <4 x i64> @test_mm256_i64gather_epi64(ptr%a0, <4 x i64> %a1) {
 ; X86-LABEL: test_mm256_i64gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1238,13 +1238,13 @@ define <4 x i64> @test_mm256_i64gather_epi64(i64 *%a0, <4 x i64> %a1) {
 ; X64-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm0,2), %ymm1
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64 *%a0 to i8*
-  %call = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> undef, i8* %arg0, <4 x i64> %a1, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, i8 2)
+  %arg0 = bitcast ptr%a0 to ptr
+  %call = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> undef, ptr %arg0, <4 x i64> %a1, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, i8 2)
   ret <4 x i64> %call
 }
-declare <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64>, i8*, <4 x i64>, <4 x i64>, i8) nounwind readonly
+declare <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64>, ptr, <4 x i64>, <4 x i64>, i8) nounwind readonly
 
-define <4 x i64> @test_mm256_mask_i64gather_epi64(<4 x i64> %a0, i64 *%a1, <4 x i64> %a2, <4 x i64> %a3) {
+define <4 x i64> @test_mm256_mask_i64gather_epi64(<4 x i64> %a0, ptr%a1, <4 x i64> %a2, <4 x i64> %a3) {
 ; X86-LABEL: test_mm256_mask_i64gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1255,12 +1255,12 @@ define <4 x i64> @test_mm256_mask_i64gather_epi64(<4 x i64> %a0, i64 *%a1, <4 x 
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast i64 *%a1 to i8*
-  %call = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %a0, i8* %arg1, <4 x i64> %a2, <4 x i64> %a3, i8 2)
+  %arg1 = bitcast ptr%a1 to ptr
+  %call = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %a0, ptr %arg1, <4 x i64> %a2, <4 x i64> %a3, i8 2)
   ret <4 x i64> %call
 }
 
-define <2 x double> @test_mm_i64gather_pd(double *%a0, <2 x i64> %a1) {
+define <2 x double> @test_mm_i64gather_pd(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i64gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1277,16 +1277,16 @@ define <2 x double> @test_mm_i64gather_pd(double *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovapd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %cmp = fcmp oeq <2 x double> zeroinitializer, zeroinitializer
   %sext = sext <2 x i1> %cmp to <2 x i64>
   %mask = bitcast <2 x i64> %sext to <2 x double>
-  %call = call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> undef, i8* %arg0, <2 x i64> %a1, <2 x double> %mask, i8 2)
+  %call = call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> undef, ptr %arg0, <2 x i64> %a1, <2 x double> %mask, i8 2)
   ret <2 x double> %call
 }
-declare <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double>, i8*, <2 x i64>, <2 x double>, i8) nounwind readonly
+declare <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double>, ptr, <2 x i64>, <2 x double>, i8) nounwind readonly
 
-define <2 x double> @test_mm_mask_i64gather_pd(<2 x double> %a0, double *%a1, <2 x i64> %a2, <2 x double> %a3) {
+define <2 x double> @test_mm_mask_i64gather_pd(<2 x double> %a0, ptr%a1, <2 x i64> %a2, <2 x double> %a3) {
 ; X86-LABEL: test_mm_mask_i64gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1297,12 +1297,12 @@ define <2 x double> @test_mm_mask_i64gather_pd(<2 x double> %a0, double *%a1, <2
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast double *%a1 to i8*
-  %call = call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> %a0, i8* %arg1, <2 x i64> %a2, <2 x double> %a3, i8 2)
+  %arg1 = bitcast ptr%a1 to ptr
+  %call = call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> %a0, ptr %arg1, <2 x i64> %a2, <2 x double> %a3, i8 2)
   ret <2 x double> %call
 }
 
-define <4 x double> @test_mm256_i64gather_pd(double *%a0, <4 x i64> %a1) {
+define <4 x double> @test_mm256_i64gather_pd(ptr%a0, <4 x i64> %a1) {
 ; X86-LABEL: test_mm256_i64gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1319,14 +1319,14 @@ define <4 x double> @test_mm256_i64gather_pd(double *%a0, <4 x i64> %a1) {
 ; X64-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm0,2), %ymm1
 ; X64-NEXT:    vmovapd %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %mask = call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> zeroinitializer, <4 x double> zeroinitializer, i8 0)
-  %call = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8* %arg0, <4 x i64> %a1, <4 x double> %mask, i8 2)
+  %call = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, ptr %arg0, <4 x i64> %a1, <4 x double> %mask, i8 2)
   ret <4 x double> %call
 }
-declare <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double>, i8*, <4 x i64>, <4 x double>, i8) nounwind readonly
+declare <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double>, ptr, <4 x i64>, <4 x double>, i8) nounwind readonly
 
-define <4 x double> @test_mm256_mask_i64gather_pd(<4 x double> %a0, i64 *%a1, <4 x i64> %a2, <4 x double> %a3) {
+define <4 x double> @test_mm256_mask_i64gather_pd(<4 x double> %a0, ptr%a1, <4 x i64> %a2, <4 x double> %a3) {
 ; X86-LABEL: test_mm256_mask_i64gather_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1337,12 +1337,12 @@ define <4 x double> @test_mm256_mask_i64gather_pd(<4 x double> %a0, i64 *%a1, <4
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,2), %ymm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast i64 *%a1 to i8*
-  %call = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> %a0, i8* %arg1, <4 x i64> %a2, <4 x double> %a3, i8 2)
+  %arg1 = bitcast ptr%a1 to ptr
+  %call = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> %a0, ptr %arg1, <4 x i64> %a2, <4 x double> %a3, i8 2)
   ret <4 x double> %call
 }
 
-define <4 x float> @test_mm_i64gather_ps(float *%a0, <2 x i64> %a1) {
+define <4 x float> @test_mm_i64gather_ps(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i64gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1359,16 +1359,16 @@ define <4 x float> @test_mm_i64gather_ps(float *%a0, <2 x i64> %a1) {
 ; X64-NEXT:    vgatherqps %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %cmp = fcmp oeq <4 x float> zeroinitializer, zeroinitializer
   %sext = sext <4 x i1> %cmp to <4 x i32>
   %mask = bitcast <4 x i32> %sext to <4 x float>
-  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> undef, i8* %arg0, <2 x i64> %a1, <4 x float> %mask, i8 2)
+  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> undef, ptr %arg0, <2 x i64> %a1, <4 x float> %mask, i8 2)
   ret <4 x float> %call
 }
-declare <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float>, i8*, <2 x i64>, <4 x float>, i8) nounwind readonly
+declare <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float>, ptr, <2 x i64>, <4 x float>, i8) nounwind readonly
 
-define <4 x float> @test_mm_mask_i64gather_ps(<4 x float> %a0, float *%a1, <2 x i64> %a2, <4 x float> %a3) {
+define <4 x float> @test_mm_mask_i64gather_ps(<4 x float> %a0, ptr%a1, <2 x i64> %a2, <4 x float> %a3) {
 ; X86-LABEL: test_mm_mask_i64gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1379,12 +1379,12 @@ define <4 x float> @test_mm_mask_i64gather_ps(<4 x float> %a0, float *%a1, <2 x 
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0
 ; X64-NEXT:    retq
-  %arg1 = bitcast float *%a1 to i8*
-  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> %a0, i8* %arg1, <2 x i64> %a2, <4 x float> %a3, i8 2)
+  %arg1 = bitcast ptr%a1 to ptr
+  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> %a0, ptr %arg1, <2 x i64> %a2, <4 x float> %a3, i8 2)
   ret <4 x float> %call
 }
 
-define <4 x float> @test_mm256_i64gather_ps(float *%a0, <4 x i64> %a1) {
+define <4 x float> @test_mm256_i64gather_ps(ptr%a0, <4 x i64> %a1) {
 ; X86-LABEL: test_mm256_i64gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1403,16 +1403,16 @@ define <4 x float> @test_mm256_i64gather_ps(float *%a0, <4 x i64> %a1) {
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float *%a0 to i8*
+  %arg0 = bitcast ptr%a0 to ptr
   %cmp = fcmp oeq <4 x float> zeroinitializer, zeroinitializer
   %sext = sext <4 x i1> %cmp to <4 x i32>
   %mask = bitcast <4 x i32> %sext to <4 x float>
-  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, i8* %arg0, <4 x i64> %a1, <4 x float> %mask, i8 2)
+  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, ptr %arg0, <4 x i64> %a1, <4 x float> %mask, i8 2)
   ret <4 x float> %call
 }
-declare <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float>, i8*, <4 x i64>, <4 x float>, i8) nounwind readonly
+declare <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float>, ptr, <4 x i64>, <4 x float>, i8) nounwind readonly
 
-define <4 x float> @test_mm256_mask_i64gather_ps(<4 x float> %a0, float *%a1, <4 x i64> %a2, <4 x float> %a3) {
+define <4 x float> @test_mm256_mask_i64gather_ps(<4 x float> %a0, ptr%a1, <4 x i64> %a2, <4 x float> %a3) {
 ; X86-LABEL: test_mm256_mask_i64gather_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1425,8 +1425,8 @@ define <4 x float> @test_mm256_mask_i64gather_ps(<4 x float> %a0, float *%a1, <4
 ; X64-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,2), %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg1 = bitcast float *%a1 to i8*
-  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> %a0, i8* %arg1, <4 x i64> %a2, <4 x float> %a3, i8 2)
+  %arg1 = bitcast ptr%a1 to ptr
+  %call = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> %a0, ptr %arg1, <4 x i64> %a2, <4 x float> %a3, i8 2)
   ret <4 x float> %call
 }
 
@@ -1477,7 +1477,7 @@ define <4 x i64> @test_mm256_maddubs_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 }
 declare <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>) nounwind readnone
 
-define <2 x i64> @test_mm_maskload_epi32(i32* %a0, <2 x i64> %a1) nounwind {
+define <2 x i64> @test_mm_maskload_epi32(ptr %a0, <2 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm_maskload_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1488,15 +1488,14 @@ define <2 x i64> @test_mm_maskload_epi32(i32* %a0, <2 x i64> %a1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i32* %a0 to i8*
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.avx2.maskload.d(i8* %arg0, <4 x i32> %arg1)
+  %call = call <4 x i32> @llvm.x86.avx2.maskload.d(ptr %a0, <4 x i32> %arg1)
   %bc = bitcast <4 x i32> %call to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.avx2.maskload.d(i8*, <4 x i32>) nounwind readonly
+declare <4 x i32> @llvm.x86.avx2.maskload.d(ptr, <4 x i32>) nounwind readonly
 
-define <4 x i64> @test_mm256_maskload_epi32(i32* %a0, <4 x i64> %a1) nounwind {
+define <4 x i64> @test_mm256_maskload_epi32(ptr %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm256_maskload_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1507,15 +1506,14 @@ define <4 x i64> @test_mm256_maskload_epi32(i32* %a0, <4 x i64> %a1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i32* %a0 to i8*
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
-  %call = call <8 x i32> @llvm.x86.avx2.maskload.d.256(i8* %arg0, <8 x i32> %arg1)
+  %call = call <8 x i32> @llvm.x86.avx2.maskload.d.256(ptr %a0, <8 x i32> %arg1)
   %bc = bitcast <8 x i32> %call to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <8 x i32> @llvm.x86.avx2.maskload.d.256(i8*, <8 x i32>) nounwind readonly
+declare <8 x i32> @llvm.x86.avx2.maskload.d.256(ptr, <8 x i32>) nounwind readonly
 
-define <2 x i64> @test_mm_maskload_epi64(i64* %a0, <2 x i64> %a1) nounwind {
+define <2 x i64> @test_mm_maskload_epi64(ptr %a0, <2 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm_maskload_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1526,13 +1524,12 @@ define <2 x i64> @test_mm_maskload_epi64(i64* %a0, <2 x i64> %a1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64* %a0 to i8*
-  %res = call <2 x i64> @llvm.x86.avx2.maskload.q(i8* %arg0, <2 x i64> %a1)
+  %res = call <2 x i64> @llvm.x86.avx2.maskload.q(ptr %a0, <2 x i64> %a1)
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.avx2.maskload.q(i8*, <2 x i64>) nounwind readonly
+declare <2 x i64> @llvm.x86.avx2.maskload.q(ptr, <2 x i64>) nounwind readonly
 
-define <4 x i64> @test_mm256_maskload_epi64(i64* %a0, <4 x i64> %a1) nounwind {
+define <4 x i64> @test_mm256_maskload_epi64(ptr %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm256_maskload_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1543,13 +1540,12 @@ define <4 x i64> @test_mm256_maskload_epi64(i64* %a0, <4 x i64> %a1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64* %a0 to i8*
-  %res = call <4 x i64> @llvm.x86.avx2.maskload.q.256(i8* %arg0, <4 x i64> %a1)
+  %res = call <4 x i64> @llvm.x86.avx2.maskload.q.256(ptr %a0, <4 x i64> %a1)
   ret <4 x i64> %res
 }
-declare <4 x i64> @llvm.x86.avx2.maskload.q.256(i8*, <4 x i64>) nounwind readonly
+declare <4 x i64> @llvm.x86.avx2.maskload.q.256(ptr, <4 x i64>) nounwind readonly
 
-define void @test_mm_maskstore_epi32(float* %a0, <2 x i64> %a1, <2 x i64> %a2) nounwind {
+define void @test_mm_maskstore_epi32(ptr %a0, <2 x i64> %a1, <2 x i64> %a2) nounwind {
 ; X86-LABEL: test_mm_maskstore_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1560,15 +1556,14 @@ define void @test_mm_maskstore_epi32(float* %a0, <2 x i64> %a1, <2 x i64> %a2) n
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to i8*
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
   %arg2 = bitcast <2 x i64> %a2 to <4 x i32>
-  call void @llvm.x86.avx2.maskstore.d(i8* %arg0, <4 x i32> %arg1, <4 x i32> %arg2)
+  call void @llvm.x86.avx2.maskstore.d(ptr %a0, <4 x i32> %arg1, <4 x i32> %arg2)
   ret void
 }
-declare void @llvm.x86.avx2.maskstore.d(i8*, <4 x i32>, <4 x i32>) nounwind readnone
+declare void @llvm.x86.avx2.maskstore.d(ptr, <4 x i32>, <4 x i32>) nounwind readnone
 
-define void @test_mm256_maskstore_epi32(float* %a0, <4 x i64> %a1, <4 x i64> %a2) nounwind {
+define void @test_mm256_maskstore_epi32(ptr %a0, <4 x i64> %a1, <4 x i64> %a2) nounwind {
 ; X86-LABEL: test_mm256_maskstore_epi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1581,15 +1576,14 @@ define void @test_mm256_maskstore_epi32(float* %a0, <4 x i64> %a1, <4 x i64> %a2
 ; X64-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to i8*
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
   %arg2 = bitcast <4 x i64> %a2 to <8 x i32>
-  call void @llvm.x86.avx2.maskstore.d.256(i8* %arg0, <8 x i32> %arg1, <8 x i32> %arg2)
+  call void @llvm.x86.avx2.maskstore.d.256(ptr %a0, <8 x i32> %arg1, <8 x i32> %arg2)
   ret void
 }
-declare void @llvm.x86.avx2.maskstore.d.256(i8*, <8 x i32>, <8 x i32>) nounwind readnone
+declare void @llvm.x86.avx2.maskstore.d.256(ptr, <8 x i32>, <8 x i32>) nounwind readnone
 
-define void @test_mm_maskstore_epi64(i64* %a0, <2 x i64> %a1, <2 x i64> %a2) nounwind {
+define void @test_mm_maskstore_epi64(ptr %a0, <2 x i64> %a1, <2 x i64> %a2) nounwind {
 ; X86-LABEL: test_mm_maskstore_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1600,13 +1594,12 @@ define void @test_mm_maskstore_epi64(i64* %a0, <2 x i64> %a1, <2 x i64> %a2) nou
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64* %a0 to i8*
-  call void @llvm.x86.avx2.maskstore.q(i8* %arg0, <2 x i64> %a1, <2 x i64> %a2)
+  call void @llvm.x86.avx2.maskstore.q(ptr %a0, <2 x i64> %a1, <2 x i64> %a2)
   ret void
 }
-declare void @llvm.x86.avx2.maskstore.q(i8*, <2 x i64>, <2 x i64>) nounwind readnone
+declare void @llvm.x86.avx2.maskstore.q(ptr, <2 x i64>, <2 x i64>) nounwind readnone
 
-define void @test_mm256_maskstore_epi64(i64* %a0, <4 x i64> %a1, <4 x i64> %a2) nounwind {
+define void @test_mm256_maskstore_epi64(ptr %a0, <4 x i64> %a1, <4 x i64> %a2) nounwind {
 ; X86-LABEL: test_mm256_maskstore_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1619,11 +1612,10 @@ define void @test_mm256_maskstore_epi64(i64* %a0, <4 x i64> %a1, <4 x i64> %a2) 
 ; X64-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64* %a0 to i8*
-  call void @llvm.x86.avx2.maskstore.q.256(i8* %arg0, <4 x i64> %a1, <4 x i64> %a2)
+  call void @llvm.x86.avx2.maskstore.q.256(ptr %a0, <4 x i64> %a1, <4 x i64> %a2)
   ret void
 }
-declare void @llvm.x86.avx2.maskstore.q.256(i8*, <4 x i64>, <4 x i64>) nounwind readnone
+declare void @llvm.x86.avx2.maskstore.q.256(ptr, <4 x i64>, <4 x i64>) nounwind readnone
 
 define <4 x i64> @test_mm256_max_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_max_epi8:
@@ -2435,7 +2427,7 @@ define <4 x i64> @test_mm256_srlv_epi64(<4 x i64> %a0, <4 x i64> %a1) {
 }
 declare <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64>, <4 x i64>) nounwind readnone
 
-define <4 x i64> @test_mm256_stream_load_si256(<4 x i64> *%a0) {
+define <4 x i64> @test_mm256_stream_load_si256(ptr%a0) {
 ; X86-LABEL: test_mm256_stream_load_si256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2446,11 +2438,11 @@ define <4 x i64> @test_mm256_stream_load_si256(<4 x i64> *%a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovntdqa (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast <4 x i64> *%a0 to i8*
-  %res = call <4 x i64> @llvm.x86.avx2.movntdqa(i8* %arg0)
+  %arg0 = bitcast ptr%a0 to ptr
+  %res = call <4 x i64> @llvm.x86.avx2.movntdqa(ptr %arg0)
   ret <4 x i64> %res
 }
-declare <4 x i64> @llvm.x86.avx2.movntdqa(i8*) nounwind readonly
+declare <4 x i64> @llvm.x86.avx2.movntdqa(ptr) nounwind readonly
 
 define <4 x i64> @test_mm256_sub_epi8(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; CHECK-LABEL: test_mm256_sub_epi8:

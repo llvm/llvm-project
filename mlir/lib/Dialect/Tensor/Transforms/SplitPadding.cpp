@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -27,7 +27,7 @@ using namespace mlir;
 /// Returns true if the the given `attrOrValue` is a constant zero.
 static bool isZero(OpFoldResult attrOrValue) {
   if (Optional<int64_t> val = getConstantIntValue(attrOrValue))
-    return val.getValue() == 0;
+    return *val == 0;
   return false;
 }
 
@@ -75,7 +75,7 @@ struct SplitPadding final : public OpRewritePattern<tensor::PadOp> {
     // Build the scf.if op itself. For the "then" branch, we can elide the
     // padding. For the "else" branch, we retain the clone op.
     auto thenBuilder = [&padOp](OpBuilder &builder, Location loc) {
-      builder.create<scf::YieldOp>(loc, padOp.source());
+      builder.create<scf::YieldOp>(loc, padOp.getSource());
     };
     auto elseBuilder = [&padOp](OpBuilder &builder, Location loc) {
       Operation *newOp = builder.clone(*padOp);

@@ -15,15 +15,20 @@
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/readable_traits.h>
 #include <__memory/addressof.h>
+#include <__ranges/access.h>
+#include <__ranges/concepts.h>
+#include <__ranges/subrange.h>
 #include <__utility/move.h>
 #include <type_traits>
 
@@ -136,7 +141,7 @@ public:
 #if _LIBCPP_STD_VER > 17
     _LIBCPP_INLINE_VISIBILITY
     constexpr pointer operator->() const
-      requires is_pointer_v<_Iter> || requires(const _Iter i) { i.operator->(); }
+      requires is_pointer_v<_Iter> || requires(const _Iter __i) { __i.operator->(); }
     {
       if constexpr (is_pointer_v<_Iter>) {
         return std::prev(current);
@@ -191,6 +196,12 @@ public:
     }
 #endif // _LIBCPP_STD_VER > 17
 };
+
+template <class _Iter>
+struct __is_reverse_iterator : false_type {};
+
+template <class _Iter>
+struct __is_reverse_iterator<reverse_iterator<_Iter> > : true_type {};
 
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
@@ -322,48 +333,195 @@ reverse_iterator<_Iter> make_reverse_iterator(_Iter __i)
 }
 #endif
 
+#if _LIBCPP_STD_VER <= 17
 template <class _Iter>
-using _ReverseWrapper = reverse_iterator<reverse_iterator<_Iter> >;
+using __unconstrained_reverse_iterator = reverse_iterator<_Iter>;
+#else
+
+// __unconstrained_reverse_iterator allows us to use reverse iterators in the implementation of algorithms by working
+// around a language issue in C++20.
+// In C++20, when a reverse iterator wraps certain C++20-hostile iterators, calling comparison operators on it will
+// result in a compilation error. However, calling comparison operators on the pristine hostile iterator is not
+// an error. Thus, we cannot use reverse_iterators in the implementation of an algorithm that accepts a
+// C++20-hostile iterator. This class is an internal workaround -- it is a copy of reverse_iterator with
+// tweaks to make it support hostile iterators.
+//
+// A C++20-hostile iterator is one that defines a comparison operator where one of the arguments is an exact match
+// and the other requires an implicit conversion, for example:
+//   friend bool operator==(const BaseIter&, const DerivedIter&);
+//
+// C++20 rules for rewriting equality operators create another overload of this function with parameters reversed:
+//   friend bool operator==(const DerivedIter&, const BaseIter&);
+//
+// This creates an ambiguity in overload resolution.
+//
+// Clang treats this ambiguity differently in different contexts. When operator== is actually called in the function
+// body, the code is accepted with a warning. When a concept requires operator== to be a valid expression, however,
+// it evaluates to false. Thus, the implementation of reverse_iterator::operator== can actually call operator== on its
+// base iterators, but the constraints on reverse_iterator::operator== prevent it from being considered during overload
+// resolution. This class simply removes the problematic constraints from comparison functions.
+template <class _Iter>
+class __unconstrained_reverse_iterator {
+  _Iter __iter_;
+
+public:
+  static_assert(__is_cpp17_bidirectional_iterator<_Iter>::value);
+
+  using iterator_type = _Iter;
+  using iterator_category =
+      _If<__is_cpp17_random_access_iterator<_Iter>::value, random_access_iterator_tag, __iterator_category_type<_Iter>>;
+  using pointer = __iterator_pointer_type<_Iter>;
+  using value_type = iter_value_t<_Iter>;
+  using difference_type = iter_difference_t<_Iter>;
+  using reference = iter_reference_t<_Iter>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator() = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator(const __unconstrained_reverse_iterator&) = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __unconstrained_reverse_iterator(_Iter __iter) : __iter_(__iter) {}
+
+  _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() const { return __iter_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr reference operator*() const {
+    auto __tmp = __iter_;
+    return *--__tmp;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr pointer operator->() const {
+    if constexpr (is_pointer_v<_Iter>) {
+      return std::prev(__iter_);
+    } else {
+      return std::prev(__iter_).operator->();
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator& operator++() {
+    --__iter_;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator operator++(int) {
+    auto __tmp = *this;
+    --__iter_;
+    return __tmp;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator& operator--() {
+    ++__iter_;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator operator--(int) {
+    auto __tmp = *this;
+    ++__iter_;
+    return __tmp;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator& operator+=(difference_type __n) {
+    __iter_ -= __n;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator& operator-=(difference_type __n) {
+    __iter_ += __n;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator operator+(difference_type __n) const {
+    return __unconstrained_reverse_iterator(__iter_ - __n);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator operator-(difference_type __n) const {
+    return __unconstrained_reverse_iterator(__iter_ + __n);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __unconstrained_reverse_iterator& __other) const {
+    return __other.__iter_ - __iter_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator[](difference_type __n) const { return *(*this + __n); }
+
+  // Deliberately unconstrained unlike the comparison functions in `reverse_iterator` -- see the class comment for the
+  // rationale.
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator==(const __unconstrained_reverse_iterator& __lhs, const __unconstrained_reverse_iterator& __rhs) {
+    return __lhs.base() == __rhs.base();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator!=(const __unconstrained_reverse_iterator& __lhs, const __unconstrained_reverse_iterator& __rhs) {
+    return __lhs.base() != __rhs.base();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator<(const __unconstrained_reverse_iterator& __lhs, const __unconstrained_reverse_iterator& __rhs) {
+    return __lhs.base() > __rhs.base();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator>(const __unconstrained_reverse_iterator& __lhs, const __unconstrained_reverse_iterator& __rhs) {
+    return __lhs.base() < __rhs.base();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator<=(const __unconstrained_reverse_iterator& __lhs, const __unconstrained_reverse_iterator& __rhs) {
+    return __lhs.base() >= __rhs.base();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator>=(const __unconstrained_reverse_iterator& __lhs, const __unconstrained_reverse_iterator& __rhs) {
+    return __lhs.base() <= __rhs.base();
+  }
+};
+
+template <class _Iter>
+struct __is_reverse_iterator<__unconstrained_reverse_iterator<_Iter>> : true_type {};
+
+#endif // _LIBCPP_STD_VER <= 17
+
+template <template <class> class _RevIter1, template <class> class _RevIter2, class _Iter>
+struct __unwrap_reverse_iter_impl {
+  using _UnwrappedIter = decltype(__unwrap_iter_impl<_Iter>::__unwrap(std::declval<_Iter>()));
+  using _ReverseWrapper = _RevIter1<_RevIter2<_Iter> >;
+
+  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ReverseWrapper
+  __rewrap(_ReverseWrapper __orig_iter, _UnwrappedIter __unwrapped_iter) {
+    return _ReverseWrapper(
+        _RevIter2<_Iter>(__unwrap_iter_impl<_Iter>::__rewrap(__orig_iter.base().base(), __unwrapped_iter)));
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _UnwrappedIter __unwrap(_ReverseWrapper __i) _NOEXCEPT {
+    return __unwrap_iter_impl<_Iter>::__unwrap(__i.base().base());
+  }
+};
+
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+template <ranges::bidirectional_range _Range>
+_LIBCPP_HIDE_FROM_ABI constexpr ranges::
+    subrange<reverse_iterator<ranges::iterator_t<_Range>>, reverse_iterator<ranges::iterator_t<_Range>>>
+    __reverse_range(_Range&& __range) {
+  auto __first = ranges::begin(__range);
+  return {std::make_reverse_iterator(ranges::next(__first, ranges::end(__range))), std::make_reverse_iterator(__first)};
+}
+#endif
 
 template <class _Iter, bool __b>
-struct __unwrap_iter_impl<_ReverseWrapper<_Iter>, __b> {
-  static _LIBCPP_CONSTEXPR decltype(std::__unwrap_iter(std::declval<_Iter>()))
-  __apply(_ReverseWrapper<_Iter> __i) _NOEXCEPT {
-    return std::__unwrap_iter(__i.base().base());
-  }
-};
+struct __unwrap_iter_impl<reverse_iterator<reverse_iterator<_Iter> >, __b>
+    : __unwrap_reverse_iter_impl<reverse_iterator, reverse_iterator, _Iter> {};
 
-template <class _OrigIter, class _UnwrappedIter>
-struct __rewrap_iter_impl<_ReverseWrapper<_OrigIter>, _UnwrappedIter> {
-  template <class _Iter>
-  struct _ReverseWrapperCount {
-    static _LIBCPP_CONSTEXPR const size_t value = 1;
-  };
+#if _LIBCPP_STD_VER > 17
 
-  template <class _Iter>
-  struct _ReverseWrapperCount<_ReverseWrapper<_Iter> > {
-    static _LIBCPP_CONSTEXPR const size_t value = 1 + _ReverseWrapperCount<_Iter>::value;
-  };
+template <class _Iter, bool __b>
+struct __unwrap_iter_impl<reverse_iterator<__unconstrained_reverse_iterator<_Iter>>, __b>
+    : __unwrap_reverse_iter_impl<reverse_iterator, __unconstrained_reverse_iterator, _Iter> {};
 
-  template <size_t _RewrapCount, class _OIter, class _UIter, __enable_if_t<_RewrapCount != 0, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _ReverseWrapper<_OIter> __rewrap(_ReverseWrapper<_OIter> __iter1,
-                                                                                  _UIter __iter2) {
-    return _ReverseWrapper<_OIter>(
-        reverse_iterator<_OIter>(__rewrap<_RewrapCount - 1>(__iter1.base().base(), __iter2)));
-  }
+template <class _Iter, bool __b>
+struct __unwrap_iter_impl<__unconstrained_reverse_iterator<reverse_iterator<_Iter>>, __b>
+    : __unwrap_reverse_iter_impl<__unconstrained_reverse_iterator, reverse_iterator, _Iter> {};
 
-  template <size_t _RewrapCount, class _OIter, class _UIter, __enable_if_t<_RewrapCount == 0, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR decltype(std::__rewrap_iter(std::declval<_OIter>(),
-                                                                             std::declval<_UIter>()))
-  __rewrap(_OIter __iter1, _UIter __iter2) {
-    return std::__rewrap_iter(__iter1, __iter2);
-  }
+template <class _Iter, bool __b>
+struct __unwrap_iter_impl<__unconstrained_reverse_iterator<__unconstrained_reverse_iterator<_Iter>>, __b>
+    : __unwrap_reverse_iter_impl<__unconstrained_reverse_iterator, __unconstrained_reverse_iterator, _Iter> {};
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _ReverseWrapper<_OrigIter> __apply(_ReverseWrapper<_OrigIter> __iter1,
-                                                                                    _UnwrappedIter __iter2) {
-    return __rewrap<_ReverseWrapperCount<_OrigIter>::value>(__iter1, __iter2);
-  }
-};
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

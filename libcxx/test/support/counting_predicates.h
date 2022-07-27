@@ -10,6 +10,8 @@
 #define TEST_SUPPORT_COUNTING_PREDICATES_H
 
 #include <cstddef>
+#include <utility>
+#include "test_macros.h"
 
 template <typename Predicate, typename Arg>
 struct unary_counting_predicate {
@@ -48,5 +50,28 @@ private:
     Predicate p_;
     mutable size_t count_;
 };
+
+#if TEST_STD_VER > 14
+
+template <class Predicate>
+class counting_predicate {
+  Predicate pred_;
+  int* count_ = nullptr;
+
+public:
+  constexpr counting_predicate() = default;
+  constexpr counting_predicate(Predicate pred, int& count) : pred_(std::move(pred)), count_(&count) {}
+
+  template <class... Args>
+  constexpr decltype(auto) operator()(Args&& ...args) const {
+    ++(*count_);
+    return pred_(std::forward<Args>(args)...);
+  }
+};
+
+template <class Predicate>
+counting_predicate(Predicate pred, int& count) -> counting_predicate<Predicate>;
+
+#endif // TEST_STD_VER > 14
 
 #endif // TEST_SUPPORT_COUNTING_PREDICATES_H

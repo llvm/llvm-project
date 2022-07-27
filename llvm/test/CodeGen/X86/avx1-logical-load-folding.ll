@@ -3,7 +3,7 @@
 ; RUN: llc < %s -O3 -disable-peephole -mtriple=x86_64-apple-macosx10.9.0 -mcpu=corei7-avx -mattr=+avx | FileCheck %s --check-prefix=X64
 
 ; Function Attrs: nounwind ssp uwtable
-define void @test1(float* %A, float* %C) #0 {
+define void @test1(ptr %A, ptr %C) #0 {
 ; X86-LABEL: test1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -19,18 +19,17 @@ define void @test1(float* %A, float* %C) #0 {
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %tmp1 = bitcast float* %A to <8 x float>*
-  %tmp2 = load <8 x float>, <8 x float>* %tmp1, align 32
+  %tmp2 = load <8 x float>, ptr %A, align 32
   %tmp3 = bitcast <8 x float> %tmp2 to <8 x i32>
   %tmp4 = and <8 x i32> %tmp3, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %tmp5 = bitcast <8 x i32> %tmp4 to <8 x float>
   %tmp6 = extractelement <8 x float> %tmp5, i32 0
-  store float %tmp6, float* %C
+  store float %tmp6, ptr %C
   ret void
 }
 
 ; Function Attrs: nounwind ssp uwtable
-define void @test2(float* %A, float* %C) #0 {
+define void @test2(ptr %A, ptr %C) #0 {
 ; X86-LABEL: test2:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -46,18 +45,17 @@ define void @test2(float* %A, float* %C) #0 {
 ; X64-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %tmp1 = bitcast float* %A to <8 x float>*
-  %tmp2 = load <8 x float>, <8 x float>* %tmp1, align 32
+  %tmp2 = load <8 x float>, ptr %A, align 32
   %tmp3 = bitcast <8 x float> %tmp2 to <8 x i32>
   %tmp4 = or <8 x i32> %tmp3, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %tmp5 = bitcast <8 x i32> %tmp4 to <8 x float>
   %tmp6 = extractelement <8 x float> %tmp5, i32 0
-  store float %tmp6, float* %C
+  store float %tmp6, ptr %C
   ret void
 }
 
 ; Function Attrs: nounwind ssp uwtable
-define void @test3(float* %A, float* %C) #0 {
+define void @test3(ptr %A, ptr %C) #0 {
 ; X86-LABEL: test3:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -73,17 +71,16 @@ define void @test3(float* %A, float* %C) #0 {
 ; X64-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %tmp1 = bitcast float* %A to <8 x float>*
-  %tmp2 = load <8 x float>, <8 x float>* %tmp1, align 32
+  %tmp2 = load <8 x float>, ptr %A, align 32
   %tmp3 = bitcast <8 x float> %tmp2 to <8 x i32>
   %tmp4 = xor <8 x i32> %tmp3, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %tmp5 = bitcast <8 x i32> %tmp4 to <8 x float>
   %tmp6 = extractelement <8 x float> %tmp5, i32 0
-  store float %tmp6, float* %C
+  store float %tmp6, ptr %C
   ret void
 }
 
-define void @test4(float* %A, float* %C) #0 {
+define void @test4(ptr %A, ptr %C) #0 {
 ; X86-LABEL: test4:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -99,13 +96,12 @@ define void @test4(float* %A, float* %C) #0 {
 ; X64-NEXT:    vandnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %tmp1 = bitcast float* %A to <8 x float>*
-  %tmp2 = load <8 x float>, <8 x float>* %tmp1, align 32
+  %tmp2 = load <8 x float>, ptr %A, align 32
   %tmp3 = bitcast <8 x float> %tmp2 to <8 x i32>
   %tmp4 = xor <8 x i32> %tmp3, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %tmp5 = and <8 x i32> %tmp4, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %tmp6 = bitcast <8 x i32> %tmp5 to <8 x float>
   %tmp7 = extractelement <8 x float> %tmp6, i32 0
-  store float %tmp7, float * %C
+  store float %tmp7, ptr %C
   ret void
 }

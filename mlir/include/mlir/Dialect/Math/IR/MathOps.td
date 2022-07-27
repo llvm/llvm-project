@@ -363,6 +363,7 @@ def Math_ExpOp : Math_FloatUnaryOp<"exp"> {
     %a = math.exp %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -390,6 +391,7 @@ def Math_Exp2Op : Math_FloatUnaryOp<"exp2"> {
     %a = math.exp2 %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -496,6 +498,7 @@ def Math_LogOp : Math_FloatUnaryOp<"log"> {
     %y = math.log %x : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -517,6 +520,7 @@ def Math_Log10Op : Math_FloatUnaryOp<"log10"> {
     %y = math.log10 %x : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -540,6 +544,7 @@ def Math_Log1pOp : Math_FloatUnaryOp<"log1p"> {
     %y = math.log1p %x : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,6 +638,26 @@ def Math_SqrtOp : Math_FloatUnaryOp<"sqrt"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TanOp
+//===----------------------------------------------------------------------===//
+
+def Math_TanOp : Math_FloatUnaryOp<"tan"> {
+  let summary = "tangent of the specified value";
+  let description = [{
+    The `tan` operation computes the tangent. It takes one operand
+    of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar tangent value.
+    %a = math.tan %b : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TanhOp
 //===----------------------------------------------------------------------===//
 
@@ -667,7 +692,10 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
 
     The `round` operation returns the operand rounded to the nearest integer
     value in floating-point format. It takes one operand of floating point type
-    (i.e., scalar, tensor or vector) and produces one result of the same type.
+    (i.e., scalar, tensor or vector) and produces one result of the same type.  The
+    operation rounds the argument to the nearest integer value in floating-point
+    format, rounding halfway cases away from zero, regardless of the current
+    rounding direction.
 
     Example:
 

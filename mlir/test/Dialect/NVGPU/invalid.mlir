@@ -1,5 +1,123 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
+func.func @ldmatrix_address_space_f16_x4(%arg0: memref<128x128xf16, 2>) ->  vector<4x1xf16> {
+  %c0  = arith.constant 0 : index
+  // expected-error @+1 {{expected nvgpu.ldmatrix srcMemref must have memory space 3}}
+  %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 4 : i32} : memref<128x128xf16, 2> -> vector<4x1xf16>
+  return %a : vector<4x1xf16>
+}
+// -----
+
+func.func @ldmatrix_num_elements_f16_x4(%arg0: memref<128x128xf16, 3>) ->  vector<4x1xf16> {
+  %c0  = arith.constant 0 : index
+  // expected-error @+1 {{expected vector register shape[1] = 2}}
+  %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 4 : i32} : memref<128x128xf16, 3> -> vector<4x1xf16>
+  return %a : vector<4x1xf16>
+}
+// -----
+
+func.func @ldmatrix_num_tiles_f16_x4(%arg0: memref<128x128xf16, 3>) ->  vector<2x2xf16> {
+  %c0  = arith.constant 0 : index
+  // expected-error @+1 {{expected vector register shape[0] and numTiles to match}}
+  %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 4 : i32} : memref<128x128xf16, 3> -> vector<2x2xf16>
+  return %a : vector<2x2xf16>
+}
+// -----
+
+func.func @ldmatrix_num_tiles_f32_x4(%arg0: memref<128x128xf32, 3>) ->  vector<4x2xf32> {
+  %c0  = arith.constant 0 : index
+  // expected-error @+1 {{expected vector register shape[1] = 1}}
+  %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 4 : i32} : memref<128x128xf32, 3> -> vector<4x2xf32>
+  return %a : vector<4x2xf32>
+}
+// -----
+
+func.func @ldmatrix_trans_f32_x4(%arg0: memref<128x128xf32, 3>) ->  vector<4x1xf32> {
+  %c0  = arith.constant 0 : index
+  // expected-error @+1 {{nvgpu.ldmatrix transpose works only at 16b granularity}}
+  %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = true, numTiles = 4 : i32} : memref<128x128xf32, 3> -> vector<4x1xf32>
+  return %a : vector<4x1xf32>
+}
+// -----
+
+func.func @ldmatrix_type_x4(%arg0: memref<128x128xf32, 3>) ->  vector<4x2xf16> {
+  %c0  = arith.constant 0 : index
+  // expected-error @+1 {{'nvgpu.ldmatrix' op failed to verify that srcMemref and res have same element type}}
+  %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 4 : i32} : memref<128x128xf32, 3> -> vector<4x2xf16>
+  return %a : vector<4x2xf16>
+}
+// -----
+
+func.func @m16n8k16_fp16_vector_shape_a(%arg0: vector<4x4xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{expected 256 warp-wide matrix A elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x4xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>    
+  return %d : vector<2x2xf16>
+}
+// -----
+
+func.func @m16n8k16_fp16_vector_shape_b(%arg0: vector<4x2xf16>, %arg1: vector<2x4xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{expected 128 warp-wide matrix B elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x2xf16>, vector<2x4xf16>, vector<2x2xf16>) -> vector<2x2xf16>    
+  return %d : vector<2x2xf16>
+}
+// -----
+
+func.func @m16n8k16_fp16_vector_shape_c(%arg0: vector<4x2xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x4xf16>) -> vector<2x4xf16> {
+  // expected-error @+1 {{expected 128 warp-wide matrix C elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x2xf16>, vector<2x2xf16>, vector<2x4xf16>) -> vector<2x4xf16>    
+  return %d : vector<2x4xf16>
+}
+// -----
+
+func.func @m16n8k16_fp16_vector_shape_a_extended(%arg0: vector<2x4xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{expected matrix A to be shaped (4 x 2)}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<2x4xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>    
+  return %d : vector<2x2xf16>
+}
+// -----
+
+func.func @m16n8k8_fp32_vector_shape_a(%arg0: vector<4x2xf32>, %arg1: vector<2x1xf32>, %arg2: vector<2x2xf32>) -> vector<2x2xf32> {
+  // expected-error @+1 {{expected 128 warp-wide matrix A elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 8]} : (vector<4x2xf32>, vector<2x1xf32>, vector<2x2xf32>) -> vector<2x2xf32>    
+  return %d : vector<2x2xf32>
+}
+// -----
+
+func.func @m16n8k8_fp32_vector_shape_a_extended(%arg0: vector<1x4xf32>, %arg1: vector<2x1xf32>, %arg2: vector<2x2xf32>) -> vector<2x2xf32> {
+  // expected-error @+1 {{expected matrix A to be shaped (4 x 1)}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 8]} : (vector<1x4xf32>, vector<2x1xf32>, vector<2x2xf32>) -> vector<2x2xf32>    
+  return %d : vector<2x2xf32>
+}
+// -----
+
+func.func @m8n8k4_fp64_vector_shape_a(%arg0: vector<1x2xf64>, %arg1: vector<1x1xf64>, %arg2: vector<1x2xf64>) -> vector<1x2xf64> {
+  // expected-error @+1 {{expected 32 warp-wide matrix A elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [8, 8, 4]} : (vector<1x2xf64>, vector<1x1xf64>, vector<1x2xf64>) -> vector<1x2xf64>    
+  return %d : vector<1x2xf64>
+}
+// -----
+
+func.func @m8n8k4_fp64_vector_shape_c_extended(%arg0: vector<1x1xf64>, %arg1: vector<1x1xf64>, %arg2: vector<2x1xf64>) -> vector<2x1xf64> {
+  // expected-error @+1 {{expected matrix C to be shaped (1 x 2)}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [8, 8, 4]} : (vector<1x1xf64>, vector<1x1xf64>, vector<2x1xf64>) -> vector<2x1xf64>    
+  return %d : vector<2x1xf64>
+}
+// -----
+
+func.func @m16n8k32_int8_vector_shape_b(%arg0: vector<4x4xi8>, %arg1: vector<4x4xi8>, %arg2: vector<2x2xi32>) -> vector<2x2xi32> {
+  // expected-error @+1 {{expected 256 warp-wide matrix B elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 32]} : (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
+// -----
+
+func.func @m16n8k32_int32_datatype(%arg0: vector<4x4xi32>, %arg1: vector<2x4xi8>, %arg2: vector<2x2xi32>) -> vector<2x2xi32> {
+  // expected-error @+1 {{op failed to verify that matrixA and matrixB have same element type}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 32]} : (vector<4x4xi32>, vector<2x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
+// -----
+
 func.func @async_cp_memory_space(%dst : memref<16xf32>, %src : memref<16xf32>, %i : index) -> () {
   // expected-error @+1 {{destination memref must have memory space 3}}
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16xf32> to memref<16xf32>

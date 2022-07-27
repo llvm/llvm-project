@@ -158,7 +158,7 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
       return parser.emitError(predicateLoc)
              << "'" << predicateAttr.getValue()
              << "' is an incorrect value of the 'predicate' attribute";
-    predicateValue = static_cast<int64_t>(predicate.getValue());
+    predicateValue = static_cast<int64_t>(*predicate);
   } else {
     Optional<FCmpPredicate> predicate =
         symbolizeFCmpPredicate(predicateAttr.getValue());
@@ -166,7 +166,7 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
       return parser.emitError(predicateLoc)
              << "'" << predicateAttr.getValue()
              << "' is an incorrect value of the 'predicate' attribute";
-    predicateValue = static_cast<int64_t>(predicate.getValue());
+    predicateValue = static_cast<int64_t>(*predicate);
   }
 
   result.attributes.set("predicate",
@@ -215,7 +215,7 @@ void AllocaOp::print(OpAsmPrinter &p) {
       FunctionType::get(getContext(), {getArraySize().getType()}, {getType()});
 
   p << ' ' << getArraySize() << " x " << elemTy;
-  if (getAlignment().hasValue() && *getAlignment() != 0)
+  if (getAlignment() && *getAlignment() != 0)
     p.printOptionalAttrDict((*this)->getAttrs(), {kElemTypeAttrName});
   else
     p.printOptionalAttrDict((*this)->getAttrs(),
@@ -237,9 +237,9 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
 
   Optional<NamedAttribute> alignmentAttr =
       result.attributes.getNamed("alignment");
-  if (alignmentAttr.hasValue()) {
+  if (alignmentAttr.has_value()) {
     auto alignmentInt =
-        alignmentAttr.getValue().getValue().dyn_cast<IntegerAttr>();
+        alignmentAttr.value().getValue().dyn_cast<IntegerAttr>();
     if (!alignmentInt)
       return parser.emitError(parser.getNameLoc(),
                               "expected integer alignment");
@@ -272,11 +272,11 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
 /// the attribute, but not both.
 static LogicalResult verifyOpaquePtr(Operation *op, LLVMPointerType ptrType,
                                      Optional<Type> ptrElementType) {
-  if (ptrType.isOpaque() && !ptrElementType.hasValue()) {
+  if (ptrType.isOpaque() && !ptrElementType.has_value()) {
     return op->emitOpError() << "expected '" << kElemTypeAttrName
                              << "' attribute if opaque pointer type is used";
   }
-  if (!ptrType.isOpaque() && ptrElementType.hasValue()) {
+  if (!ptrType.isOpaque() && ptrElementType.has_value()) {
     return op->emitOpError()
            << "unexpected '" << kElemTypeAttrName
            << "' attribute when non-opaque pointer type is used";
@@ -485,7 +485,8 @@ recordStructIndices(Type baseGEPType, unsigned indexPos,
   unsigned dynamicIndexPos = indexPos;
   if (!isStaticIndex)
     dynamicIndexPos = llvm::count(structIndices.take_front(indexPos + 1),
-                                  LLVM::GEPOp::kDynamicIndex) - 1;
+                                  LLVM::GEPOp::kDynamicIndex) -
+                      1;
 
   return llvm::TypeSwitch<Type, llvm::Error>(baseGEPType)
       .Case<LLVMStructType>([&](LLVMStructType structType) -> llvm::Error {
@@ -564,6 +565,13 @@ static Type extractVectorElementType(Type type) {
   if (auto fixedVectorType = type.dyn_cast<LLVMFixedVectorType>())
     return fixedVectorType.getElementType();
   return type;
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Type elementType, Value basePtr, ValueRange indices,
+                  ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, resultType, elementType, basePtr, indices,
+        SmallVector<int32_t>(indices.size(), kDynamicIndex), attributes);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
@@ -898,6 +906,18 @@ SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
                                       : getUnwindDestOperandsMutable());
 }
 
+CallInterfaceCallable InvokeOp::getCallableForCallee() {
+  // Direct call.
+  if (FlatSymbolRefAttr calleeAttr = getCalleeAttr())
+    return calleeAttr;
+  // Indirect call, callee Value is the first operand.
+  return getOperand(0);
+}
+
+Operation::operand_range InvokeOp::getArgOperands() {
+  return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
+}
+
 LogicalResult InvokeOp::verify() {
   if (getNumResults() > 1)
     return emitOpError("must have 0 or 1 result");
@@ -916,13 +936,13 @@ LogicalResult InvokeOp::verify() {
 
 void InvokeOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
-  bool isDirect = callee.hasValue();
+  bool isDirect = callee.has_value();
 
   p << ' ';
 
   // Either function name or pointer
   if (isDirect)
-    p.printSymbolName(callee.getValue());
+    p.printSymbolName(callee.value());
   else
     p << getOperand(0);
 
@@ -1040,7 +1060,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 LogicalResult LandingpadOp::verify() {
   Value value;
   if (LLVMFuncOp func = (*this)->getParentOfType<LLVMFuncOp>()) {
-    if (!func.getPersonality().hasValue())
+    if (!func.getPersonality())
       return emitError(
           "llvm.landingpad needs to be in a function with a personality");
   }
@@ -1124,6 +1144,18 @@ ParseResult LandingpadOp::parse(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 // Verifying/Printing/parsing for LLVM::CallOp.
 //===----------------------------------------------------------------------===//
+
+CallInterfaceCallable CallOp::getCallableForCallee() {
+  // Direct call.
+  if (FlatSymbolRefAttr calleeAttr = getCalleeAttr())
+    return calleeAttr;
+  // Indirect call, callee Value is the first operand.
+  return getOperand(0);
+}
+
+Operation::operand_range CallOp::getArgOperands() {
+  return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
+}
 
 LogicalResult CallOp::verify() {
   if (getNumResults() > 1)
@@ -1209,13 +1241,13 @@ LogicalResult CallOp::verify() {
 
 void CallOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
-  bool isDirect = callee.hasValue();
+  bool isDirect = callee.has_value();
 
   // Print the direct callee if present as a function attribute, or an indirect
   // callee (first operand) otherwise.
   p << ' ';
   if (isDirect)
-    p.printSymbolName(callee.getValue());
+    p.printSymbolName(callee.value());
   else
     p << getOperand(0);
 
@@ -1987,8 +2019,8 @@ LogicalResult GlobalOp::verify() {
   }
 
   Optional<uint64_t> alignAttr = getAlignment();
-  if (alignAttr.hasValue()) {
-    uint64_t value = alignAttr.getValue();
+  if (alignAttr.has_value()) {
+    uint64_t value = alignAttr.value();
     if (!llvm::isPowerOf2_64(value))
       return emitError() << "alignment attribute is not a power of 2";
   }
@@ -2132,7 +2164,6 @@ LogicalResult ShuffleVectorOp::verify() {
 // Add the entry block to the function.
 Block *LLVMFuncOp::addEntryBlock() {
   assert(empty() && "function already has an entry block");
-  assert(!isVarArg() && "unimplemented: non-external variadic functions");
 
   auto *entry = new Block;
   push_back(entry);
@@ -2331,9 +2362,6 @@ LogicalResult LLVMFuncOp::verify() {
     return success();
   }
 
-  if (isVarArg())
-    return emitOpError("only external functions can be variadic");
-
   return success();
 }
 
@@ -2425,7 +2453,7 @@ static ParseResult parseAtomicBinOp(OpAsmParser &parser, OperationState &result,
            << "' attribute";
   }
 
-  auto value = static_cast<int64_t>(kind.getValue());
+  auto value = static_cast<int64_t>(*kind);
   auto attr = parser.getBuilder().getI64IntegerAttr(value);
   result.addAttribute(attrName, attr);
 
@@ -2452,7 +2480,7 @@ static ParseResult parseAtomicOrdering(OpAsmParser &parser,
            << "' attribute";
   }
 
-  auto value = static_cast<int64_t>(kind.getValue());
+  auto value = static_cast<int64_t>(*kind);
   auto attr = parser.getBuilder().getI64IntegerAttr(value);
   result.addAttribute(attrName, attr);
 
@@ -2748,7 +2776,7 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
                                << "' to be a dictionary attribute";
     Optional<NamedAttribute> parallelAccessGroup =
         loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
-    if (parallelAccessGroup.hasValue()) {
+    if (parallelAccessGroup) {
       auto accessGroups = parallelAccessGroup->getValue().dyn_cast<ArrayAttr>();
       if (!accessGroups)
         return op->emitOpError()
@@ -2777,8 +2805,7 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
 
     Optional<NamedAttribute> loopOptions =
         loopAttr.getNamed(LLVMDialect::getLoopOptionsAttrName());
-    if (loopOptions.hasValue() &&
-        !loopOptions->getValue().isa<LoopOptionsAttr>())
+    if (loopOptions && !loopOptions->getValue().isa<LoopOptionsAttr>())
       return op->emitOpError()
              << "expected '" << LLVMDialect::getLoopOptionsAttrName()
              << "' to be a `loopopts` attribute";
@@ -3010,7 +3037,7 @@ LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setOption(LoopOptionCase tag,
   auto option = llvm::find_if(
       options, [tag](auto option) { return option.first == tag; });
   if (option != options.end()) {
-    if (value.hasValue())
+    if (value)
       option->second = *value;
     else
       options.erase(option);

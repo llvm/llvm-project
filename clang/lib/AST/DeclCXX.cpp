@@ -827,7 +827,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
   // Handle member functions.
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
-    if (const auto *DD = dyn_cast<CXXDestructorDecl>(D))
+    if (isa<CXXDestructorDecl>(D))
       SMKind |= SMF_Destructor;
 
     if (Method->isCopyAssignmentOperator()) {
@@ -2410,7 +2410,7 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
     return false;
 
   QualType ParamType = getParamDecl(0)->getType();
-  if (!isa<RValueReferenceType>(ParamType))
+  if (!ParamType->isRValueReferenceType())
     return false;
   ParamType = ParamType->getPointeeType();
 
@@ -2566,7 +2566,7 @@ SourceLocation CXXCtorInitializer::getSourceLocation() const {
     return getMemberLocation();
 
   if (const auto *TSInfo = Initializee.get<TypeSourceInfo *>())
-    return TSInfo->getTypeLoc().getLocalSourceRange().getBegin();
+    return TSInfo->getTypeLoc().getBeginLoc();
 
   return {};
 }

@@ -172,10 +172,17 @@ struct TestStatisticPass
   StringRef getArgument() const final { return "test-stats-pass"; }
   StringRef getDescription() const final { return "Test pass statistics"; }
 
+  // Use a couple of statistics to verify their ordering
+  // in the print out. The statistics are registered in the order
+  // of construction, so put "num-ops2" before "num-ops" and
+  // make sure that the order is reversed.
+  Statistic opCountDuplicate{this, "num-ops2",
+                             "Number of operations counted one more time"};
   Statistic opCount{this, "num-ops", "Number of operations counted"};
 
   void runOnOperation() final {
     getOperation()->walk([&](Operation *) { ++opCount; });
+    getOperation()->walk([&](Operation *) { ++opCountDuplicate; });
   }
 };
 } // namespace

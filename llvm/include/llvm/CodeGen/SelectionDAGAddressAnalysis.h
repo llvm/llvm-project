@@ -49,7 +49,7 @@ public:
   SDValue getBase() const { return Base; }
   SDValue getIndex() { return Index; }
   SDValue getIndex() const { return Index; }
-  bool hasValidOffset() const { return Offset.hasValue(); }
+  bool hasValidOffset() const { return Offset.has_value(); }
   int64_t getOffset() const { return *Offset; }
 
   // Returns true if `Other` and `*this` are both some offset from the same base

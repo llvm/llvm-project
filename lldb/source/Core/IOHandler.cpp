@@ -436,7 +436,7 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   }
 
   if (got_line) {
-    line = got_line.getValue();
+    line = *got_line;
     if (m_data_recorder)
       m_data_recorder->Record(line, true);
   }

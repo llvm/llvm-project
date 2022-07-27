@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_MSVCPATHS_H
-#define LLVM_SUPPORT_MSVCPATHS_H
+#ifndef LLVM_WINDOWSDRIVER_MSVCPATHS_H
+#define LLVM_WINDOWSDRIVER_MSVCPATHS_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"

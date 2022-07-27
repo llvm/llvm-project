@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -O0 -mtriple=x86_64-unknown-unknown -mattr=+amx-tile -verify-machineinstrs | FileCheck %s
 
-define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
+define void @test_amx(ptr %pointer, ptr %base, i64 %stride) {
 ; CHECK-LABEL: test_amx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ldtilecfg (%rdi)
@@ -13,26 +13,26 @@ define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
 ; CHECK-NEXT:    tileloaddt1 (%rsi,%rdx), %tmm3
 ; CHECK-NEXT:    tilestored %tmm3, (%rsi,%rdx)
 ; CHECK-NEXT:    retq
-  call void @llvm.x86.ldtilecfg(i8* %pointer)
+  call void @llvm.x86.ldtilecfg(ptr %pointer)
 
-  call void @llvm.x86.sttilecfg(i8* %pointer)
+  call void @llvm.x86.sttilecfg(ptr %pointer)
 
   call void @llvm.x86.tilerelease()
 
   call void @llvm.x86.tilezero(i8 3)
 
-  call void @llvm.x86.tileloadd64(i8 3, i8* %base, i64 %stride)
+  call void @llvm.x86.tileloadd64(i8 3, ptr %base, i64 %stride)
 
-  call void @llvm.x86.tileloaddt164(i8 3, i8* %base, i64 %stride)
+  call void @llvm.x86.tileloaddt164(i8 3, ptr %base, i64 %stride)
 
-  call void @llvm.x86.tilestored64(i8 3, i8* %base, i64 %stride)
+  call void @llvm.x86.tilestored64(i8 3, ptr %base, i64 %stride)
   ret void
 }
 
-declare void @llvm.x86.tileloadd64(i8 %tile, i8* %base, i64 %stride)
-declare void @llvm.x86.tileloaddt164(i8 %tile, i8* %base, i64 %stride)
-declare void @llvm.x86.tilestored64(i8 %tile, i8* %base, i64 %stride)
-declare void @llvm.x86.ldtilecfg(i8* %pointer)
-declare void @llvm.x86.sttilecfg(i8* %pointer)
+declare void @llvm.x86.tileloadd64(i8 %tile, ptr %base, i64 %stride)
+declare void @llvm.x86.tileloaddt164(i8 %tile, ptr %base, i64 %stride)
+declare void @llvm.x86.tilestored64(i8 %tile, ptr %base, i64 %stride)
+declare void @llvm.x86.ldtilecfg(ptr %pointer)
+declare void @llvm.x86.sttilecfg(ptr %pointer)
 declare void @llvm.x86.tilerelease()
 declare void @llvm.x86.tilezero(i8 %tile)

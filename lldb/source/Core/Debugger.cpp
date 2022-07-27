@@ -1313,7 +1313,7 @@ void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
                               uint64_t completed, uint64_t total,
                               llvm::Optional<lldb::user_id_t> debugger_id) {
   // Check if this progress is for a specific debugger.
-  if (debugger_id.hasValue()) {
+  if (debugger_id) {
     // It is debugger specific, grab it and deliver the event if the debugger
     // still exists.
     DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
@@ -1406,11 +1406,27 @@ void Debugger::ReportError(std::string message,
                        debugger_id, once);
 }
 
+static std::shared_ptr<LogHandler>
+CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
+                 size_t buffer_size) {
+  switch (log_handler_kind) {
+  case eLogHandlerStream:
+    return std::make_shared<StreamLogHandler>(fd, should_close, buffer_size);
+  case eLogHandlerCircular:
+    return std::make_shared<RotatingLogHandler>(buffer_size);
+  case eLogHandlerSystem:
+    return std::make_shared<SystemLogHandler>();
+  case eLogHandlerCallback:
+    return {};
+  }
+  return {};
+}
+
 bool Debugger::EnableLog(llvm::StringRef channel,
                          llvm::ArrayRef<const char *> categories,
                          llvm::StringRef log_file, uint32_t log_options,
+                         size_t buffer_size, LogHandlerKind log_handler_kind,
                          llvm::raw_ostream &error_stream) {
-  const bool should_close = true;
 
   std::shared_ptr<LogHandler> log_handler_sp;
   if (m_callback_handler_sp) {
@@ -1419,8 +1435,9 @@ bool Debugger::EnableLog(llvm::StringRef channel,
     log_options |=
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file.empty()) {
-    log_handler_sp = std::make_shared<StreamLogHandler>(
-        GetOutputFile().GetDescriptor(), !should_close);
+    log_handler_sp =
+        CreateLogHandler(log_handler_kind, GetOutputFile().GetDescriptor(),
+                         /*should_close=*/false, buffer_size);
   } else {
     auto pos = m_stream_handlers.find(log_file);
     if (pos != m_stream_handlers.end())
@@ -1440,16 +1457,16 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         return false;
       }
 
-      log_handler_sp = std::make_shared<StreamLogHandler>(
-          (*file)->GetDescriptor(), should_close);
+      log_handler_sp =
+          CreateLogHandler(log_handler_kind, (*file)->GetDescriptor(),
+                           /*should_close=*/true, buffer_size);
       m_stream_handlers[log_file] = log_handler_sp;
     }
   }
   assert(log_handler_sp);
 
   if (log_options == 0)
-    log_options =
-        LLDB_LOG_OPTION_PREPEND_THREAD_NAME | LLDB_LOG_OPTION_THREADSAFE;
+    log_options = LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
 
   return Log::EnableLogChannel(log_handler_sp, log_options, channel, categories,
                                error_stream);
@@ -1818,9 +1835,20 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // going to show the progress.
   const uint64_t id = data->GetID();
   if (m_current_event_id) {
+    Log *log = GetLog(LLDBLog::Events);
+    if (log && log->GetVerbose()) {
+      StreamString log_stream;
+      log_stream.AsRawOstream()
+          << static_cast<void *>(this) << " Debugger(" << GetID()
+          << ")::HandleProgressEvent( m_current_event_id = "
+          << *m_current_event_id << ", data = { ";
+      data->Dump(&log_stream);
+      log_stream << " } )";
+      log->PutString(log_stream.GetString());
+    }
     if (id != *m_current_event_id)
       return;
-    if (data->GetCompleted())
+    if (data->GetCompleted() == data->GetTotal())
       m_current_event_id.reset();
   } else {
     m_current_event_id = id;
@@ -1843,7 +1871,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // Print over previous line, if any.
   output->Printf("\r");
 
-  if (data->GetCompleted()) {
+  if (data->GetCompleted() == data->GetTotal()) {
     // Clear the current line.
     output->Printf("\x1B[2K");
     output->Flush();

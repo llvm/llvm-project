@@ -47,6 +47,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -104,6 +105,10 @@ static llvm::cl::opt<bool> warnStdViolation("Mstandard",
 
 static llvm::cl::opt<bool> warnIsError("Werror",
                                        llvm::cl::desc("warnings are errors"),
+                                       llvm::cl::init(false));
+
+static llvm::cl::opt<bool> dumpSymbols("dump-symbols",
+                                       llvm::cl::desc("dump the symbol table"),
                                        llvm::cl::init(false));
 
 static llvm::cl::opt<bool> pftDumpTest(
@@ -189,6 +194,11 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
                    << "could not find module file for __fortran_type_info\n";
   }
 
+  if (dumpSymbols) {
+    semantics.DumpSymbols(llvm::outs());
+    return mlir::success();
+  }
+
   if (pftDumpTest) {
     if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
@@ -207,7 +217,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fir::fromDefaultKinds(defKinds)});
   auto burnside = Fortran::lower::LoweringBridge::create(
-      ctx, defKinds, semanticsContext.intrinsics(), parsing.allCooked(), "",
+      ctx, defKinds, semanticsContext.intrinsics(),
+      semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
       kindMap);
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
@@ -245,8 +256,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     // run the default canned pipeline
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
-    // Add default optimizer pass pipeline.
-    fir::createDefaultFIROptimizerPassPipeline(pm);
+    // Add O2 optimizer pass pipeline.
+    fir::createDefaultFIROptimizerPassPipeline(pm, llvm::OptimizationLevel::O2);
   }
 
   if (mlir::succeeded(pm.run(mlirModule))) {

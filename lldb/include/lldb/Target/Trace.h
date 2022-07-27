@@ -56,21 +56,24 @@ public:
   ///     A stream object to dump the information to.
   virtual void Dump(Stream *s) const = 0;
 
-  /// Save the trace of a live process to the specified directory, which
-  /// will be created if needed.
-  /// This will also create a a file \a <directory>/trace.json with the main
-  /// properties of the trace session, along with others files which contain
-  /// the actual trace data. The trace.json file can be used later as input
-  /// for the "trace load" command to load the trace in LLDB.
-  /// The process being trace is not a live process, return an error.
+  /// Save the trace to the specified directory, which will be created if
+  /// needed. This will also create a a file \a <directory>/trace.json with the
+  /// main properties of the trace session, along with others files which
+  /// contain the actual trace data. The trace.json file can be used later as
+  /// input for the "trace load" command to load the trace in LLDB.
   ///
   /// \param[in] directory
   ///   The directory where the trace files will be saved.
   ///
+  /// \param[in] compact
+  ///   Try not to save to disk information irrelevant to the traced processes.
+  ///   Each trace plug-in implements this in a different fashion.
+  ///
   /// \return
-  ///   \a llvm::success if the operation was successful, or an \a llvm::Error
-  ///   otherwise.
-  virtual llvm::Error SaveLiveTraceToDisk(FileSpec directory) = 0;
+  ///   A \a FileSpec pointing to the bundle description file, or an \a
+  ///   llvm::Error otherwise.
+  virtual llvm::Expected<FileSpec> SaveToDisk(FileSpec directory,
+                                              bool compact) = 0;
 
   /// Find a trace plug-in using JSON data.
   ///
@@ -102,17 +105,14 @@ public:
   ///     The debugger instance where new Targets will be created as part of the
   ///     JSON data parsing.
   ///
-  /// \param[in] trace_session_file
-  ///     The contents of the trace session file describing the trace session.
-  ///     See \a TraceSessionFileParser::BuildSchema for more information about
-  ///     the schema of this JSON file.
+  /// \param[in] bundle_description
+  ///     The trace bundle description object describing the trace session.
   ///
-  /// \param[in] session_file_dir
-  ///     The path to the directory that contains the session file. It's used to
-  ///     resolved relative paths in the session file.
+  /// \param[in] bundle_dir
+  ///     The path to the directory that contains the trace bundle.
   static llvm::Expected<lldb::TraceSP>
   FindPluginForPostMortemProcess(Debugger &debugger,
-                                 const llvm::json::Value &trace_session_file,
+                                 const llvm::json::Value &bundle_description,
                                  llvm::StringRef session_file_dir);
 
   /// Find a trace plug-in to trace a live process.
@@ -137,6 +137,23 @@ public:
   static llvm::Expected<llvm::StringRef>
   FindPluginSchema(llvm::StringRef plugin_name);
 
+  /// Load a trace from a trace description file and create Targets,
+  /// Processes and Threads based on the contents of such file.
+  ///
+  /// \param[in] debugger
+  ///     The debugger instance where new Targets will be created as part of the
+  ///     JSON data parsing.
+  ///
+  /// \param[in] trace_description_file
+  ///   The file containing the necessary information to load the trace.
+  ///
+  /// \return
+  ///     A \a TraceSP instance, or an \a llvm::Error if loading the trace
+  ///     fails.
+  static llvm::Expected<lldb::TraceSP>
+  LoadPostMortemTraceFromFile(Debugger &debugger,
+                              const FileSpec &trace_description_file);
+
   /// Get the command handle for the "process trace start" command.
   virtual lldb::CommandObjectSP
   GetProcessTraceStartCommand(CommandInterpreter &interpreter) = 0;
@@ -153,9 +170,9 @@ public:
   ///
   /// \return
   ///     A \a TraceCursorUP. If the thread is not traced or its trace
-  ///     information failed to load, the corresponding error is embedded in the
-  ///     trace.
-  virtual lldb::TraceCursorUP GetCursor(Thread &thread) = 0;
+  ///     information failed to load, an \a llvm::Error is returned.
+  virtual llvm::Expected<lldb::TraceCursorUP>
+  CreateNewCursor(Thread &thread) = 0;
 
   /// Dump general info about a given thread's trace. Each Trace plug-in
   /// decides which data to show.
@@ -169,7 +186,8 @@ public:
   /// \param[in] verbose
   ///     If \b true, print detailed info
   ///     If \b false, print compact info
-  virtual void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) = 0;
+  virtual void DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
+                             bool json) = 0;
 
   /// Check if a thread is currently traced by this object.
   ///

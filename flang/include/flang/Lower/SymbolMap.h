@@ -302,6 +302,13 @@ public:
     return shallowLookupSymbol(*sym);
   }
 
+  /// Find `symbol` and return its value if it appears in the one level up map
+  /// such as for the host variable in host-association in OpenMP code.
+  SymbolBox lookupOneLevelUpSymbol(semantics::SymbolRef sym);
+  SymbolBox lookupOneLevelUpSymbol(const semantics::Symbol *sym) {
+    return lookupOneLevelUpSymbol(*sym);
+  }
+
   /// Add a new binding from the ac-do-variable `var` to `value`.
   void pushImpliedDoBinding(AcDoVar var, mlir::Value value) {
     impliedDoStack.emplace_back(var, value);

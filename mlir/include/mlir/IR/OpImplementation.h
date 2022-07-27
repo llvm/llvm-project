@@ -20,8 +20,81 @@
 #include "llvm/Support/SMLoc.h"
 
 namespace mlir {
-
+class AsmParsedResourceEntry;
+class AsmResourceBuilder;
 class Builder;
+
+//===----------------------------------------------------------------------===//
+// AsmDialectResourceHandle
+//===----------------------------------------------------------------------===//
+
+/// This class represents an opaque handle to a dialect resource entry.
+class AsmDialectResourceHandle {
+public:
+  AsmDialectResourceHandle() = default;
+  AsmDialectResourceHandle(void *resource, TypeID resourceID, Dialect *dialect)
+      : resource(resource), opaqueID(resourceID), dialect(dialect) {}
+  bool operator==(const AsmDialectResourceHandle &other) const {
+    return resource == other.resource;
+  }
+
+  /// Return an opaque pointer to the referenced resource.
+  void *getResource() const { return resource; }
+
+  /// Return the type ID of the resource.
+  TypeID getTypeID() const { return opaqueID; }
+
+  /// Return the dialect that owns the resource.
+  Dialect *getDialect() const { return dialect; }
+
+private:
+  /// The opaque handle to the dialect resource.
+  void *resource = nullptr;
+  /// The type of the resource referenced.
+  TypeID opaqueID;
+  /// The dialect owning the given resource.
+  Dialect *dialect;
+};
+
+/// This class represents a CRTP base class for dialect resource handles. It
+/// abstracts away various utilities necessary for defined derived resource
+/// handles.
+template <typename DerivedT, typename ResourceT, typename DialectT>
+class AsmDialectResourceHandleBase : public AsmDialectResourceHandle {
+public:
+  using Dialect = DialectT;
+
+  /// Construct a handle from a pointer to the resource. The given pointer
+  /// should be guaranteed to live beyond the life of this handle.
+  AsmDialectResourceHandleBase(ResourceT *resource, DialectT *dialect)
+      : AsmDialectResourceHandle(resource, TypeID::get<DerivedT>(), dialect) {}
+  AsmDialectResourceHandleBase(AsmDialectResourceHandle handle)
+      : AsmDialectResourceHandle(handle) {
+    assert(handle.getTypeID() == TypeID::get<DerivedT>());
+  }
+
+  /// Return the resource referenced by this handle.
+  ResourceT *getResource() {
+    return static_cast<ResourceT *>(AsmDialectResourceHandle::getResource());
+  }
+  const ResourceT *getResource() const {
+    return const_cast<AsmDialectResourceHandleBase *>(this)->getResource();
+  }
+
+  /// Return the dialect that owns the resource.
+  DialectT *getDialect() const {
+    return static_cast<DialectT *>(AsmDialectResourceHandle::getDialect());
+  }
+
+  /// Support llvm style casting.
+  static bool classof(const AsmDialectResourceHandle *handle) {
+    return handle->getTypeID() == TypeID::get<DerivedT>();
+  }
+};
+
+inline llvm::hash_code hash_value(const AsmDialectResourceHandle &param) {
+  return llvm::hash_value(param.getResource());
+}
 
 //===----------------------------------------------------------------------===//
 // AsmPrinter
@@ -70,6 +143,19 @@ public:
     attrOrType.print(*this);
   }
 
+  /// Print the provided array of attributes or types in the context of an
+  /// operation custom printer/parser: this will invoke directly the print
+  /// method on the attribute class and skip the `#dialect.mnemonic` prefix in
+  /// most cases.
+  template <typename AttrOrType,
+            std::enable_if_t<detect_has_print_method<AttrOrType>::value>
+                *sfinae = nullptr>
+  void printStrippedAttrOrType(ArrayRef<AttrOrType> attrOrTypes) {
+    llvm::interleaveComma(
+        attrOrTypes, getStream(),
+        [this](AttrOrType attrOrType) { printStrippedAttrOrType(attrOrType); });
+  }
+
   /// SFINAE for printing the provided attribute in the context of an operation
   /// custom printer in the case where the attribute does not define a print
   /// method.
@@ -93,6 +179,9 @@ public:
   /// with '@'. The reference is surrounded with ""'s and escaped if it has any
   /// special or non-printable characters in it.
   virtual void printSymbolName(StringRef symbolRef);
+
+  /// Print a handle to the given dialect resource.
+  void printResourceHandle(const AsmDialectResourceHandle &resource);
 
   /// Print an optional arrow followed by a type list.
   template <typename TypeRange>
@@ -481,45 +570,6 @@ public:
   /// Parse a quoted string token if present.
   virtual ParseResult parseOptionalString(std::string *string) = 0;
 
-  /// Parse a given keyword.
-  ParseResult parseKeyword(StringRef keyword, const Twine &msg = "") {
-    auto loc = getCurrentLocation();
-    if (parseOptionalKeyword(keyword))
-      return emitError(loc, "expected '") << keyword << "'" << msg;
-    return success();
-  }
-
-  /// Parse a keyword into 'keyword'.
-  ParseResult parseKeyword(StringRef *keyword) {
-    auto loc = getCurrentLocation();
-    if (parseOptionalKeyword(keyword))
-      return emitError(loc, "expected valid keyword");
-    return success();
-  }
-
-  /// Parse the given keyword if present.
-  virtual ParseResult parseOptionalKeyword(StringRef keyword) = 0;
-
-  /// Parse a keyword, if present, into 'keyword'.
-  virtual ParseResult parseOptionalKeyword(StringRef *keyword) = 0;
-
-  /// Parse a keyword, if present, and if one of the 'allowedValues',
-  /// into 'keyword'
-  virtual ParseResult
-  parseOptionalKeyword(StringRef *keyword,
-                       ArrayRef<StringRef> allowedValues) = 0;
-
-  /// Parse a keyword or a quoted string.
-  ParseResult parseKeywordOrString(std::string *result) {
-    if (failed(parseOptionalKeywordOrString(result)))
-      return emitError(getCurrentLocation())
-             << "expected valid keyword or string";
-    return success();
-  }
-
-  /// Parse an optional keyword or string.
-  virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
-
   /// Parse a `(` token.
   virtual ParseResult parseLParen() = 0;
 
@@ -625,6 +675,115 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Keyword Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// This class represents a StringSwitch like class that is useful for parsing
+  /// expected keywords. On construction, it invokes `parseKeyword` and
+  /// processes each of the provided cases statements until a match is hit. The
+  /// provided `ResultT` must be assignable from `failure()`.
+  template <typename ResultT = ParseResult>
+  class KeywordSwitch {
+  public:
+    KeywordSwitch(AsmParser &parser)
+        : parser(parser), loc(parser.getCurrentLocation()) {
+      if (failed(parser.parseKeywordOrCompletion(&keyword)))
+        result = failure();
+    }
+
+    /// Case that uses the provided value when true.
+    KeywordSwitch &Case(StringLiteral str, ResultT value) {
+      return Case(str, [&](StringRef, SMLoc) { return std::move(value); });
+    }
+    KeywordSwitch &Default(ResultT value) {
+      return Default([&](StringRef, SMLoc) { return std::move(value); });
+    }
+    /// Case that invokes the provided functor when true. The parameters passed
+    /// to the functor are the keyword, and the location of the keyword (in case
+    /// any errors need to be emitted).
+    template <typename FnT>
+    std::enable_if_t<!std::is_convertible<FnT, ResultT>::value, KeywordSwitch &>
+    Case(StringLiteral str, FnT &&fn) {
+      if (result)
+        return *this;
+
+      // If the word was empty, record this as a completion.
+      if (keyword.empty())
+        parser.codeCompleteExpectedTokens(str);
+      else if (keyword == str)
+        result.emplace(std::move(fn(keyword, loc)));
+      return *this;
+    }
+    template <typename FnT>
+    std::enable_if_t<!std::is_convertible<FnT, ResultT>::value, KeywordSwitch &>
+    Default(FnT &&fn) {
+      if (!result)
+        result.emplace(fn(keyword, loc));
+      return *this;
+    }
+
+    /// Returns true if this switch has a value yet.
+    bool hasValue() const { return result.has_value(); }
+
+    /// Return the result of the switch.
+    LLVM_NODISCARD operator ResultT() {
+      if (!result)
+        return parser.emitError(loc, "unexpected keyword: ") << keyword;
+      return std::move(*result);
+    }
+
+  private:
+    /// The parser used to construct this switch.
+    AsmParser &parser;
+
+    /// The location of the keyword, used to emit errors as necessary.
+    SMLoc loc;
+
+    /// The parsed keyword itself.
+    StringRef keyword;
+
+    /// The result of the switch statement or none if currently unknown.
+    Optional<ResultT> result;
+  };
+
+  /// Parse a given keyword.
+  ParseResult parseKeyword(StringRef keyword) {
+    return parseKeyword(keyword, "");
+  }
+  virtual ParseResult parseKeyword(StringRef keyword, const Twine &msg) = 0;
+
+  /// Parse a keyword into 'keyword'.
+  ParseResult parseKeyword(StringRef *keyword) {
+    auto loc = getCurrentLocation();
+    if (parseOptionalKeyword(keyword))
+      return emitError(loc, "expected valid keyword");
+    return success();
+  }
+
+  /// Parse the given keyword if present.
+  virtual ParseResult parseOptionalKeyword(StringRef keyword) = 0;
+
+  /// Parse a keyword, if present, into 'keyword'.
+  virtual ParseResult parseOptionalKeyword(StringRef *keyword) = 0;
+
+  /// Parse a keyword, if present, and if one of the 'allowedValues',
+  /// into 'keyword'
+  virtual ParseResult
+  parseOptionalKeyword(StringRef *keyword,
+                       ArrayRef<StringRef> allowedValues) = 0;
+
+  /// Parse a keyword or a quoted string.
+  ParseResult parseKeywordOrString(std::string *result) {
+    if (failed(parseOptionalKeywordOrString(result)))
+      return emitError(getCurrentLocation())
+             << "expected valid keyword or string";
+    return success();
+  }
+
+  /// Parse an optional keyword or string.
+  virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
+
+  //===--------------------------------------------------------------------===//
   // Attribute/Type Parsing
   //===--------------------------------------------------------------------===//
 
@@ -633,14 +792,14 @@ public:
   /// unlike `OpBuilder::getType`, this method does not implicitly insert a
   /// context parameter.
   template <typename T, typename... ParamsT>
-  T getChecked(SMLoc loc, ParamsT &&...params) {
+  auto getChecked(SMLoc loc, ParamsT &&...params) {
     return T::getChecked([&] { return emitError(loc); },
                          std::forward<ParamsT>(params)...);
   }
   /// A variant of `getChecked` that uses the result of `getNameLoc` to emit
   /// errors.
   template <typename T, typename... ParamsT>
-  T getChecked(ParamsT &&...params) {
+  auto getChecked(ParamsT &&...params) {
     return T::getChecked([&] { return emitError(getNameLoc()); },
                          std::forward<ParamsT>(params)...);
   }
@@ -857,6 +1016,24 @@ public:
                                               NamedAttrList &attrs) = 0;
 
   //===--------------------------------------------------------------------===//
+  // Resource Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a handle to a resource within the assembly format.
+  template <typename ResourceT>
+  FailureOr<ResourceT> parseResourceHandle() {
+    SMLoc handleLoc = getCurrentLocation();
+    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(
+        getContext()->getOrLoadDialect<typename ResourceT::Dialect>());
+    if (failed(handle))
+      return failure();
+    if (auto *result = dyn_cast<ResourceT>(&*handle))
+      return std::move(*result);
+    return emitError(handleLoc) << "provided resource handle differs from the "
+                                   "expected resource type";
+  }
+
+  //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
 
@@ -1011,6 +1188,23 @@ public:
   /// juxtaposed with an element type, as in "xf32", leaving the "f32" as the
   /// next token.
   virtual ParseResult parseXInDimensionList() = 0;
+
+protected:
+  /// Parse a handle to a resource within the assembly format for the given
+  /// dialect.
+  virtual FailureOr<AsmDialectResourceHandle>
+  parseResourceHandle(Dialect *dialect) = 0;
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a keyword, or an empty string if the current location signals a code
+  /// completion.
+  virtual ParseResult parseKeywordOrCompletion(StringRef *keyword) = 0;
+
+  /// Signal the code completion of a set of expected tokens.
+  virtual void codeCompleteExpectedTokens(ArrayRef<StringRef> tokens) = 0;
 
 private:
   AsmParser(const AsmParser &) = delete;
@@ -1324,6 +1518,12 @@ using OpAsmSetBlockNameFn = function_ref<void(Block *, StringRef)>;
 class OpAsmDialectInterface
     : public DialectInterface::Base<OpAsmDialectInterface> {
 public:
+  OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
+
+  //===------------------------------------------------------------------===//
+  // Aliases
+  //===------------------------------------------------------------------===//
+
   /// Holds the result of `getAlias` hook call.
   enum class AliasResult {
     /// The object (type or attribute) is not supported by the hook
@@ -1336,8 +1536,6 @@ public:
     FinalAlias
   };
 
-  OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
-
   /// Hooks for getting an alias identifier alias for a given symbol, that is
   /// not necessarily a part of this dialect. The identifier is used in place of
   /// the symbol when printing textual IR. These aliases must not contain `.` or
@@ -1348,6 +1546,41 @@ public:
   virtual AliasResult getAlias(Type type, raw_ostream &os) const {
     return AliasResult::NoAlias;
   }
+
+  //===--------------------------------------------------------------------===//
+  // Resources
+  //===--------------------------------------------------------------------===//
+
+  /// Declare a resource with the given key, returning a handle to use for any
+  /// references of this resource key within the IR during parsing. The result
+  /// of `getResourceKey` on the returned handle is permitted to be different
+  /// than `key`.
+  virtual FailureOr<AsmDialectResourceHandle>
+  declareResource(StringRef key) const {
+    return failure();
+  }
+
+  /// Return a key to use for the given resource. This key should uniquely
+  /// identify this resource within the dialect.
+  virtual std::string
+  getResourceKey(const AsmDialectResourceHandle &handle) const {
+    llvm_unreachable(
+        "Dialect must implement `getResourceKey` when defining resources");
+  }
+
+  /// Hook for parsing resource entries. Returns failure if the entry was not
+  /// valid, or could otherwise not be processed correctly. Any necessary errors
+  /// can be emitted via the provided entry.
+  virtual LogicalResult parseResource(AsmParsedResourceEntry &entry) const;
+
+  /// Hook for building resources to use during printing. The given `op` may be
+  /// inspected to help determine what information to include.
+  /// `referencedResources` contains all of the resources detected when printing
+  /// 'op'.
+  virtual void
+  buildResources(Operation *op,
+                 const SetVector<AsmDialectResourceHandle> &referencedResources,
+                 AsmResourceBuilder &builder) const {}
 };
 } // namespace mlir
 
@@ -1357,5 +1590,26 @@ public:
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
 #include "mlir/IR/OpAsmInterface.h.inc"
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::AsmDialectResourceHandle> {
+  static inline mlir::AsmDialectResourceHandle getEmptyKey() {
+    return {DenseMapInfo<void *>::getEmptyKey(),
+            DenseMapInfo<mlir::TypeID>::getEmptyKey(), nullptr};
+  }
+  static inline mlir::AsmDialectResourceHandle getTombstoneKey() {
+    return {DenseMapInfo<void *>::getTombstoneKey(),
+            DenseMapInfo<mlir::TypeID>::getTombstoneKey(), nullptr};
+  }
+  static unsigned getHashValue(const mlir::AsmDialectResourceHandle &handle) {
+    return DenseMapInfo<void *>::getHashValue(handle.getResource());
+  }
+  static bool isEqual(const mlir::AsmDialectResourceHandle &lhs,
+                      const mlir::AsmDialectResourceHandle &rhs) {
+    return lhs.getResource() == rhs.getResource();
+  }
+};
+} // namespace llvm
 
 #endif

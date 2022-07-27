@@ -174,6 +174,43 @@ TEST(ParameterHints, NoNameRValueReference) {
   )cpp");
 }
 
+TEST(ParameterHints, NoNameVariadicDeclaration) {
+  // No hint for anonymous variadic parameter
+  assertParameterHints(R"cpp(
+    template <typename... Args>
+    void foo(Args&& ...);
+    void bar() {
+      foo(42);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, NoNameVariadicForwarded) {
+  // No hint for anonymous variadic parameter
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void foo(int);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(std::forward<Args>(args)...); }
+    void baz() {
+      bar(42);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, NoNameVariadicPlain) {
+  // No hint for anonymous variadic parameter
+  assertParameterHints(R"cpp(
+    void foo(int);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(args...); }
+    void baz() {
+      bar(42);
+    }
+  )cpp");
+}
+
 TEST(ParameterHints, NameInDefinition) {
   // Parameter name picked up from definition if necessary.
   assertParameterHints(R"cpp(
@@ -184,6 +221,36 @@ TEST(ParameterHints, NameInDefinition) {
     void foo(int param) {};
   )cpp",
                        ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, NamePartiallyInDefinition) {
+  // Parameter name picked up from definition if necessary.
+  assertParameterHints(R"cpp(
+    void foo(int, int b);
+    void bar() {
+      foo($param1[[42]], $param2[[42]]);
+    }
+    void foo(int a, int) {};
+  )cpp",
+                       ExpectedHint{"a: ", "param1"},
+                       ExpectedHint{"b: ", "param2"});
+}
+
+TEST(ParameterHints, NameInDefinitionVariadic) {
+  // Parameter name picked up from definition in a resolved forwarded parameter.
+  assertParameterHints(R"cpp(
+    void foo(int, int);
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(args...);
+    }
+    void baz() {
+      bar($param1[[42]], $param2[[42]]);
+    }
+    void foo(int a, int b) {};
+  )cpp",
+                       ExpectedHint{"a: ", "param1"},
+                       ExpectedHint{"b: ", "param2"});
 }
 
 TEST(ParameterHints, NameMismatch) {
@@ -256,6 +323,455 @@ TEST(ParameterHints, NameRValueReference) {
     }
   )cpp",
                        ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, VariadicForwardedConstructor) {
+  // Name hint for variadic parameter using std::forward in a constructor call
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    struct S { S(int a); };
+    template <typename T, typename... Args>
+    T bar(Args&&... args) { return T{std::forward<Args>(args)...}; }
+    void baz() {
+      int b;
+      bar<S>($param[[b]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param"});
+}
+
+TEST(ParameterHints, VariadicPlainConstructor) {
+  // Name hint for variadic parameter in a constructor call
+  assertParameterHints(R"cpp(
+    struct S { S(int a); };
+    template <typename T, typename... Args>
+    T bar(Args&&... args) { return T{args...}; }
+    void baz() {
+      int b;
+      bar<S>($param[[b]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param"});
+}
+
+TEST(ParameterHints, VariadicForwardedNewConstructor) {
+  // Name hint for variadic parameter using std::forward in a new expression
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    struct S { S(int a); };
+    template <typename T, typename... Args>
+    T* bar(Args&&... args) { return new T{std::forward<Args>(args)...}; }
+    void baz() {
+      int b;
+      bar<S>($param[[b]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param"});
+}
+
+TEST(ParameterHints, VariadicPlainNewConstructor) {
+  // Name hint for variadic parameter in a new expression
+  assertParameterHints(R"cpp(
+    struct S { S(int a); };
+    template <typename T, typename... Args>
+    T* bar(Args&&... args) { return new T{args...}; }
+    void baz() {
+      int b;
+      bar<S>($param[[b]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param"});
+}
+
+TEST(ParameterHints, VariadicForwarded) {
+  // Name for variadic parameter using std::forward
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void foo(int a);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(std::forward<Args>(args)...); }
+    void baz() {
+      int b;
+      bar($param[[b]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param"});
+}
+
+TEST(ParameterHints, VariadicPlain) {
+  // Name hint for variadic parameter
+  assertParameterHints(R"cpp(
+    void foo(int a);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(args...); }
+    void baz() {
+      bar($param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param"});
+}
+
+TEST(ParameterHints, VariadicPlainWithPackFirst) {
+  // Name hint for variadic parameter when the parameter pack is not the last
+  // template parameter
+  assertParameterHints(R"cpp(
+    void foo(int a);
+    template <typename... Args, typename Arg>
+    void bar(Arg, Args&&... args) { return foo(args...); }
+    void baz() {
+      bar(1, $param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param"});
+}
+
+TEST(ParameterHints, VariadicSplitTwolevel) {
+  // Name for variadic parameter that involves both head and tail parameters to
+  // deal with.
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void baz(int, int b, double);
+    template <typename... Args>
+    void foo(int a, Args&&... args) {
+      return baz(1, std::forward<Args>(args)..., 1.0);
+    }
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(std::forward<Args>(args)...); }
+    void bazz() {
+      bar($param1[[32]], $param2[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"a: ", "param1"},
+                       ExpectedHint{"b: ", "param2"});
+}
+
+TEST(ParameterHints, VariadicNameFromSpecialization) {
+  // We don't try to resolve forwarding parameters if the function call uses a
+  // specialization.
+  assertParameterHints(R"cpp(
+    void foo(int a);
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(args...);
+    }
+    template <>
+    void bar<int>(int b);
+    void baz() {
+      bar($param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"b: ", "param"});
+}
+
+TEST(ParameterHints, VariadicNameFromSpecializationRecursive) {
+  // We don't try to resolve forwarding parameters inside a forwarding function
+  // call if that function call uses a specialization.
+  assertParameterHints(R"cpp(
+    void foo2(int a);
+    template <typename... Args>
+    void foo(Args... args) {
+      foo2(args...);
+    }
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(args...);
+    }
+    template <>
+    void foo<int>(int b);
+    void baz() {
+      bar($param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"b: ", "param"});
+}
+
+TEST(ParameterHints, VariadicOverloaded) {
+  // Name for variadic parameter for an overloaded function with unique number
+  // of parameters.
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(
+      R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void baz(int b, int c);
+    void baz(int bb, int cc, int dd);
+    template <typename... Args>
+    void foo(int a, Args&&... args) {
+      return baz(std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(std::forward<Args>(args)...); }
+    void bazz() {
+      bar($param1[[32]], $param2[[42]], $param3[[52]]);
+      bar($param4[[1]], $param5[[2]], $param6[[3]], $param7[[4]]);
+    }
+  )cpp",
+      ExpectedHint{"a: ", "param1"}, ExpectedHint{"b: ", "param2"},
+      ExpectedHint{"c: ", "param3"}, ExpectedHint{"a: ", "param4"},
+      ExpectedHint{"bb: ", "param5"}, ExpectedHint{"cc: ", "param6"},
+      ExpectedHint{"dd: ", "param7"});
+}
+
+TEST(ParameterHints, VariadicRecursive) {
+  // make_tuple-like recursive variadic call
+  assertParameterHints(
+      R"cpp(
+    void foo();
+
+    template <typename Head, typename... Tail>
+    void foo(Head head, Tail... tail) {
+      foo(tail...);
+    }
+
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(args...);
+    }
+
+    int main() {
+      bar(1, 2, 3);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, VariadicVarargs) {
+  // variadic call involving varargs (to make sure we don't crash)
+  assertParameterHints(R"cpp(
+    void foo(int fixed, ...);
+    template <typename... Args>
+    void bar(Args&&... args) {
+      foo(args...);
+    }
+
+    void baz() {
+      bar($fixed[[41]], 42, 43);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, VariadicTwolevelUnresolved) {
+  // the same setting as VariadicVarargs, only with parameter pack
+  assertParameterHints(R"cpp(
+    template <typename... Args>
+    void foo(int fixed, Args&& ... args);
+    template <typename... Args>
+    void bar(Args&&... args) {
+      foo(args...);
+    }
+
+    void baz() {
+      bar($fixed[[41]], 42, 43);
+    }
+  )cpp",
+                       ExpectedHint{"fixed: ", "fixed"});
+}
+
+TEST(ParameterHints, VariadicTwoCalls) {
+  // only the first call using the parameter pack should be picked up
+  assertParameterHints(
+      R"cpp(
+    void f1(int a, int b);
+    void f2(int c, int d);
+
+    bool cond;
+
+    template <typename... Args>
+    void foo(Args... args) {
+      if (cond) {
+        f1(args...);
+      } else {
+        f2(args...);
+      }
+    }
+
+    int main() {
+      foo($param1[[1]], $param2[[2]]);
+    }
+  )cpp",
+      ExpectedHint{"a: ", "param1"}, ExpectedHint{"b: ", "param2"});
+}
+
+TEST(ParameterHints, VariadicInfinite) {
+  // infinite recursion should not break clangd
+  assertParameterHints(
+      R"cpp(
+    template <typename... Args>
+    void foo(Args...);
+
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(args...);
+    }
+
+    template <typename... Args>
+    void foo(Args... args) {
+      bar(args...);
+    }
+
+    int main() {
+      foo(1, 2);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, VariadicDuplicatePack) {
+  // edge cases with multiple adjacent packs should work
+  assertParameterHints(
+      R"cpp(
+    void foo(int a, int b, int c, int);
+
+    template <typename... Args>
+    void bar(int, Args... args, int d) {
+      foo(args..., d);
+    }
+
+    template <typename... Args>
+    void baz(Args... args, Args... args2) {
+      bar<Args..., int>(1, args..., args2...);
+    }
+
+    int main() {
+      baz<int, int>($p1[[1]], $p2[[2]], $p3[[3]], $p4[[4]]);
+    }
+  )cpp",
+      ExpectedHint{"a: ", "p1"}, ExpectedHint{"b: ", "p2"},
+      ExpectedHint{"c: ", "p3"}, ExpectedHint{"d: ", "p4"});
+}
+
+TEST(ParameterHints, VariadicEmplace) {
+  // emplace-like calls should forward constructor parameters
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(
+      R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    using size_t = decltype(sizeof(0));
+    void *operator new(size_t, void *);
+    struct S {
+      S(int A);
+      S(int B, int C);
+    };
+    struct alloc {
+      template <typename T>
+      T* allocate();
+      template <typename T, typename... Args>
+      void construct(T* ptr, Args&&... args) {
+        ::new ((void*)ptr) T{std::forward<Args>(args)...};
+      }
+    };
+    template <typename T>
+    struct container {
+      template <typename... Args>
+      void emplace(Args&&... args) {
+        alloc a;
+        auto ptr = a.template allocate<T>();
+        a.construct(ptr, std::forward<Args>(args)...);
+      }
+    };
+    void foo() {
+      container<S> c;
+      c.emplace($param1[[1]]);
+      c.emplace($param2[[2]], $param3[[3]]);
+    }
+  )cpp",
+      ExpectedHint{"A: ", "param1"}, ExpectedHint{"B: ", "param2"},
+      ExpectedHint{"C: ", "param3"});
+}
+
+TEST(ParameterHints, VariadicReferenceHint) {
+  assertParameterHints(R"cpp(
+    void foo(int&);
+    template <typename... Args>
+    void bar(Args... args) { return foo(args...); }
+    void baz() {
+      int a;
+      bar(a);
+      bar(1);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, VariadicReferenceHintForwardingRef) {
+  assertParameterHints(R"cpp(
+    void foo(int&);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(args...); }
+    void baz() {
+      int a;
+      bar($param[[a]]);
+      bar(1);
+    }
+  )cpp",
+                       ExpectedHint{"&: ", "param"});
+}
+
+TEST(ParameterHints, VariadicReferenceHintForwardingRefStdForward) {
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void foo(int&);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(std::forward<Args>(args)...); }
+    void baz() {
+      int a;
+      bar($param[[a]]);
+    }
+  )cpp",
+                       ExpectedHint{"&: ", "param"});
+}
+
+TEST(ParameterHints, VariadicNoReferenceHintForwardingRefStdForward) {
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void foo(int);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(std::forward<Args>(args)...); }
+    void baz() {
+      int a;
+      bar(a);
+      bar(1);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, VariadicNoReferenceHintUnresolvedForward) {
+  assertParameterHints(R"cpp(
+    template <typename... Args>
+    void foo(Args&&... args);
+    void bar() {
+      int a;
+      foo(a);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, MatchingNameVariadicForwarded) {
+  // No name hint for variadic parameter with matching name
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void foo(int a);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(std::forward<Args>(args)...); }
+    void baz() {
+      int a;
+      bar(a);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, MatchingNameVariadicPlain) {
+  // No name hint for variadic parameter with matching name
+  assertParameterHints(R"cpp(
+    void foo(int a);
+    template <typename... Args>
+    void bar(Args&&... args) { return foo(args...); }
+    void baz() {
+      int a;
+      bar(a);
+    }
+  )cpp");
 }
 
 TEST(ParameterHints, Operator) {
@@ -470,7 +986,7 @@ TEST(ParameterHints, VarargsFunction) {
   assertParameterHints(R"cpp(
     void foo(int fixed, ...);
 
-    void bar() { 
+    void bar() {
       foo($fixed[[41]], 42, 43);
     }
   )cpp",
@@ -913,6 +1429,51 @@ TEST(InlayHints, RestrictRange) {
               ElementsAre(labelIs(": int"), labelIs(": char")));
 }
 
+TEST(ParameterHints, ArgPacksAndConstructors) {
+  assertParameterHints(
+      R"cpp(
+    struct Foo{ Foo(); Foo(int x); };
+    void foo(Foo a, int b);
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(args...);
+    }
+    template <typename... Args>
+    void baz(Args... args) { foo($param1[[Foo{args...}]], $param2[[1]]); }
+
+    template <typename... Args>
+    void bax(Args... args) { foo($param3[[{args...}]], args...); }
+
+    void foo() {
+      bar($param4[[Foo{}]], $param5[[42]]);
+      bar($param6[[42]], $param7[[42]]);
+      baz($param8[[42]]);
+      bax($param9[[42]]);
+    }
+  )cpp",
+      ExpectedHint{"a: ", "param1"}, ExpectedHint{"b: ", "param2"},
+      ExpectedHint{"a: ", "param3"}, ExpectedHint{"a: ", "param4"},
+      ExpectedHint{"b: ", "param5"}, ExpectedHint{"a: ", "param6"},
+      ExpectedHint{"b: ", "param7"}, ExpectedHint{"x: ", "param8"},
+      ExpectedHint{"b: ", "param9"});
+}
+
+TEST(ParameterHints, DoesntExpandAllArgs) {
+  assertParameterHints(
+      R"cpp(
+    void foo(int x, int y);
+    int id(int a, int b, int c);
+    template <typename... Args>
+    void bar(Args... args) {
+      foo(id($param1[[args]], $param2[[1]], $param3[[args]])...);
+    }
+    void foo() {
+      bar(1, 2); // FIXME: We could have `bar(a: 1, a: 2)` here.
+    }
+  )cpp",
+      ExpectedHint{"a: ", "param1"}, ExpectedHint{"b: ", "param2"},
+      ExpectedHint{"c: ", "param3"});
+}
 // FIXME: Low-hanging fruit where we could omit a type hint:
 //  - auto x = TypeName(...);
 //  - auto x = (TypeName) (...);

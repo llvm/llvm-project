@@ -97,7 +97,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    assert(AST.getDiagnostics().hasValue() &&
+    assert(AST.getDiagnostics() &&
            "We issue callback only with fresh preambles");
     std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
@@ -166,6 +166,7 @@ ClangdServer::Options::operator TUScheduler::Options() const {
   Opts.StorePreamblesInMemory = StorePreamblesInMemory;
   Opts.UpdateDebounce = UpdateDebounce;
   Opts.ContextProvider = ContextProvider;
+  Opts.PreambleThrottler = PreambleThrottler;
   return Opts;
 }
 
@@ -411,10 +412,10 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       clang::clangd::trace::Span Tracer("Completion results callback");
       CB(std::move(Result));
     }
-    if (SpecFuzzyFind && SpecFuzzyFind->NewReq.hasValue()) {
+    if (SpecFuzzyFind && SpecFuzzyFind->NewReq) {
       std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
       CachedCompletionFuzzyFindRequestByFile[File] =
-          SpecFuzzyFind->NewReq.getValue();
+          SpecFuzzyFind->NewReq.value();
     }
     // SpecFuzzyFind is only destroyed after speculative fuzzy find finishes.
     // We don't want `codeComplete` to wait for the async call if it doesn't use
@@ -538,7 +539,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     // prepareRename is latency-sensitive: we don't query the index, as we
     // only need main-file references
     auto Results =
-        clangd::rename({Pos, NewName.getValueOr("__clangd_rename_placeholder"),
+        clangd::rename({Pos, NewName.value_or("__clangd_rename_placeholder"),
                         InpAST->AST, File, /*FS=*/nullptr,
                         /*Index=*/nullptr, RenameOpts});
     if (!Results) {
@@ -672,7 +673,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       }
       Effect = T.takeError();
     }
-    assert(Effect.hasValue() && "Expected at least one selection");
+    assert(Effect && "Expected at least one selection");
     if (*Effect && (*Effect)->FormatEdits) {
       // Format tweaks that require it centrally here.
       for (auto &It : (*Effect)->ApplyEdits) {
@@ -815,7 +816,7 @@ void ClangdServer::workspaceSymbols(
       "getWorkspaceSymbols", /*Path=*/"",
       [Query = Query.str(), Limit, CB = std::move(CB), this]() mutable {
         CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
-                                       WorkspaceRoot.getValueOr("")));
+                                       WorkspaceRoot.value_or("")));
       });
 }
 

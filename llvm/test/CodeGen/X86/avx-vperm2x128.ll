@@ -17,7 +17,7 @@ entry:
   ret <8 x float> %shuffle
 }
 
-define <8 x float> @shuffle_v8f32_45670123_mem(<8 x float>* %pa, <8 x float>* %pb) nounwind uwtable readnone ssp {
+define <8 x float> @shuffle_v8f32_45670123_mem(ptr %pa, ptr %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: shuffle_v8f32_45670123_mem:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 $35, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3,0,1]
@@ -28,8 +28,8 @@ define <8 x float> @shuffle_v8f32_45670123_mem(<8 x float>* %pa, <8 x float>* %p
 ; AVX2-NEXT:    vpermpd $78, (%rdi), %ymm0 # ymm0 = mem[2,3,0,1]
 ; AVX2-NEXT:    retq
 entry:
-  %a = load <8 x float>, <8 x float>* %pa
-  %b = load <8 x float>, <8 x float>* %pb
+  %a = load <8 x float>, ptr %pa
+  %b = load <8 x float>, ptr %pb
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   ret <8 x float> %shuffle
 }
@@ -59,14 +59,14 @@ entry:
   ret <8 x float> %shuffle
 }
 
-define <8 x float> @shuffle_v8f32_01230123_mem(<8 x float>* %pa, <8 x float>* %pb) nounwind uwtable readnone ssp {
+define <8 x float> @shuffle_v8f32_01230123_mem(ptr %pa, ptr %pb) nounwind uwtable readnone ssp {
 ; ALL-LABEL: shuffle_v8f32_01230123_mem:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vbroadcastf128 (%rdi), %ymm0 # ymm0 = mem[0,1,0,1]
 ; ALL-NEXT:    retq
 entry:
-  %a = load <8 x float>, <8 x float>* %pa
-  %b = load <8 x float>, <8 x float>* %pb
+  %a = load <8 x float>, ptr %pa
+  %b = load <8 x float>, ptr %pb
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <8 x float> %shuffle
 }
@@ -86,14 +86,14 @@ entry:
   ret <8 x float> %shuffle
 }
 
-define <8 x float> @shuffle_v8f32_45674567_mem(<8 x float>* %pa, <8 x float>* %pb) nounwind uwtable readnone ssp {
+define <8 x float> @shuffle_v8f32_45674567_mem(ptr %pa, ptr %pb) nounwind uwtable readnone ssp {
 ; ALL-LABEL: shuffle_v8f32_45674567_mem:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vbroadcastf128 16(%rdi), %ymm0 # ymm0 = mem[0,1,0,1]
 ; ALL-NEXT:    retq
 entry:
-  %a = load <8 x float>, <8 x float>* %pa
-  %b = load <8 x float>, <8 x float>* %pb
+  %a = load <8 x float>, ptr %pa
+  %b = load <8 x float>, ptr %pb
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %shuffle
 }
@@ -210,7 +210,7 @@ entry:
   ret <16 x i16> %shuffle
 }
 
-define <16 x i16> @shuffle_v16i16_4501_mem(<16 x i16>* %a, <16 x i16>* %b) nounwind uwtable readnone ssp {
+define <16 x i16> @shuffle_v16i16_4501_mem(ptr %a, ptr %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: shuffle_v16i16_4501_mem:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
@@ -227,8 +227,8 @@ define <16 x i16> @shuffle_v16i16_4501_mem(<16 x i16>* %a, <16 x i16>* %b) nounw
 ; AVX2-NEXT:    vperm2i128 $2, (%rsi), %ymm0, %ymm0 # ymm0 = mem[0,1],ymm0[0,1]
 ; AVX2-NEXT:    retq
 entry:
-  %c = load <16 x i16>, <16 x i16>* %a
-  %d = load <16 x i16>, <16 x i16>* %b
+  %c = load <16 x i16>, ptr %a
+  %d = load <16 x i16>, ptr %b
   %c2 = add <16 x i16> %c, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %shuffle = shufflevector <16 x i16> %c2, <16 x i16> %d, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <16 x i16> %shuffle
@@ -525,7 +525,7 @@ define <4 x i64> @shuffle_v4i64_67zz(<4 x i64> %a, <4 x i64> %b) {
 
 ;;; Memory folding cases
 
-define <4 x double> @ld0_hi0_lo1_4f64(<4 x double> * %pa, <4 x double> %b) nounwind uwtable readnone ssp {
+define <4 x double> @ld0_hi0_lo1_4f64(ptr %pa, <4 x double> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld0_hi0_lo1_4f64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 $3, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3],ymm0[0,1]
@@ -539,13 +539,13 @@ define <4 x double> @ld0_hi0_lo1_4f64(<4 x double> * %pa, <4 x double> %b) nounw
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %a = load <4 x double>, <4 x double> * %pa
+  %a = load <4 x double>, ptr %pa
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   %res = fadd <4 x double> %shuffle, <double 1.0, double 1.0, double 1.0, double 1.0>
   ret <4 x double> %res
 }
 
-define <4 x double> @ld1_hi0_hi1_4f64(<4 x double> %a, <4 x double> * %pb) nounwind uwtable readnone ssp {
+define <4 x double> @ld1_hi0_hi1_4f64(<4 x double> %a, ptr %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_4f64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 $49, (%rdi), %ymm0, %ymm0 # ymm0 = ymm0[2,3],mem[2,3]
@@ -559,13 +559,13 @@ define <4 x double> @ld1_hi0_hi1_4f64(<4 x double> %a, <4 x double> * %pb) nounw
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %b = load <4 x double>, <4 x double> * %pb
+  %b = load <4 x double>, ptr %pb
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   %res = fadd <4 x double> %shuffle, <double 1.0, double 1.0, double 1.0, double 1.0>
   ret <4 x double> %res
 }
 
-define <8 x float> @ld0_hi0_lo1_8f32(<8 x float> * %pa, <8 x float> %b) nounwind uwtable readnone ssp {
+define <8 x float> @ld0_hi0_lo1_8f32(ptr %pa, <8 x float> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld0_hi0_lo1_8f32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 $3, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3],ymm0[0,1]
@@ -579,13 +579,13 @@ define <8 x float> @ld0_hi0_lo1_8f32(<8 x float> * %pa, <8 x float> %b) nounwind
 ; AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %a = load <8 x float>, <8 x float> * %pa
+  %a = load <8 x float>, ptr %pa
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %res = fadd <8 x float> %shuffle, <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>
   ret <8 x float> %res
 }
 
-define <8 x float> @ld1_hi0_hi1_8f32(<8 x float> %a, <8 x float> * %pb) nounwind uwtable readnone ssp {
+define <8 x float> @ld1_hi0_hi1_8f32(<8 x float> %a, ptr %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_8f32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vperm2f128 $49, (%rdi), %ymm0, %ymm0 # ymm0 = ymm0[2,3],mem[2,3]
@@ -599,13 +599,13 @@ define <8 x float> @ld1_hi0_hi1_8f32(<8 x float> %a, <8 x float> * %pb) nounwind
 ; AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %b = load <8 x float>, <8 x float> * %pb
+  %b = load <8 x float>, ptr %pb
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   %res = fadd <8 x float> %shuffle, <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>
   ret <8 x float> %res
 }
 
-define <4 x i64> @ld0_hi0_lo1_4i64(<4 x i64> * %pa, <4 x i64> %b) nounwind uwtable readnone ssp {
+define <4 x i64> @ld0_hi0_lo1_4i64(ptr %pa, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld0_hi0_lo1_4i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
@@ -620,13 +620,13 @@ define <4 x i64> @ld0_hi0_lo1_4i64(<4 x i64> * %pa, <4 x i64> %b) nounwind uwtab
 ; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %a = load <4 x i64>, <4 x i64> * %pa
+  %a = load <4 x i64>, ptr %pa
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   %res = add <4 x i64> %shuffle, <i64 1, i64 2, i64 3, i64 4>
   ret <4 x i64> %res
 }
 
-define <4 x i64> @ld1_hi0_hi1_4i64(<4 x i64> %a, <4 x i64> * %pb) nounwind uwtable readnone ssp {
+define <4 x i64> @ld1_hi0_hi1_4i64(<4 x i64> %a, ptr %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_4i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
@@ -642,13 +642,13 @@ define <4 x i64> @ld1_hi0_hi1_4i64(<4 x i64> %a, <4 x i64> * %pb) nounwind uwtab
 ; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %b = load <4 x i64>, <4 x i64> * %pb
+  %b = load <4 x i64>, ptr %pb
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   %res = add <4 x i64> %shuffle, <i64 1, i64 2, i64 3, i64 4>
   ret <4 x i64> %res
 }
 
-define <8 x i32> @ld0_hi0_lo1_8i32(<8 x i32> * %pa, <8 x i32> %b) nounwind uwtable readnone ssp {
+define <8 x i32> @ld0_hi0_lo1_8i32(ptr %pa, <8 x i32> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld0_hi0_lo1_8i32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
@@ -663,13 +663,13 @@ define <8 x i32> @ld0_hi0_lo1_8i32(<8 x i32> * %pa, <8 x i32> %b) nounwind uwtab
 ; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %a = load <8 x i32>, <8 x i32> * %pa
+  %a = load <8 x i32>, ptr %pa
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %res = add <8 x i32> %shuffle, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
   ret <8 x i32> %res
 }
 
-define <8 x i32> @ld1_hi0_hi1_8i32(<8 x i32> %a, <8 x i32> * %pb) nounwind uwtable readnone ssp {
+define <8 x i32> @ld1_hi0_hi1_8i32(<8 x i32> %a, ptr %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_8i32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
@@ -685,13 +685,13 @@ define <8 x i32> @ld1_hi0_hi1_8i32(<8 x i32> %a, <8 x i32> * %pb) nounwind uwtab
 ; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
-  %b = load <8 x i32>, <8 x i32> * %pb
+  %b = load <8 x i32>, ptr %pb
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   %res = add <8 x i32> %shuffle, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
   ret <8 x i32> %res
 }
 
-define void @PR50053(<4 x i64>* nocapture %0, <4 x i64>* nocapture readonly %1) {
+define void @PR50053(ptr nocapture %0, ptr nocapture readonly %1) {
 ; ALL-LABEL: PR50053:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovaps (%rsi), %ymm0
@@ -701,19 +701,18 @@ define void @PR50053(<4 x i64>* nocapture %0, <4 x i64>* nocapture readonly %1) 
 ; ALL-NEXT:    vmovaps %ymm0, 32(%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
-  %3 = load <4 x i64>, <4 x i64>* %1, align 32
-  %4 = getelementptr inbounds <4 x i64>, <4 x i64>* %1, i64 1
-  %5 = bitcast <4 x i64>* %4 to <2 x i64>*
-  %6 = load <2 x i64>, <2 x i64>* %5, align 16
-  %7 = getelementptr inbounds <2 x i64>, <2 x i64>* %5, i64 1
-  %8 = load <2 x i64>, <2 x i64>* %7, align 16
-  %9 = shufflevector <2 x i64> %6, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  %10 = shufflevector <4 x i64> %3, <4 x i64> %9, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  store <4 x i64> %10, <4 x i64>* %0, align 32
-  %11 = shufflevector <2 x i64> %8, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  %12 = shufflevector <4 x i64> %11, <4 x i64> %3, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-  %13 = getelementptr inbounds <4 x i64>, <4 x i64>* %0, i64 1
-  store <4 x i64> %12, <4 x i64>* %13, align 32
+  %3 = load <4 x i64>, ptr %1, align 32
+  %4 = getelementptr inbounds <4 x i64>, ptr %1, i64 1
+  %5 = load <2 x i64>, ptr %4, align 16
+  %6 = getelementptr inbounds <2 x i64>, ptr %4, i64 1
+  %7 = load <2 x i64>, ptr %6, align 16
+  %8 = shufflevector <2 x i64> %5, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %9 = shufflevector <4 x i64> %3, <4 x i64> %8, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  store <4 x i64> %9, ptr %0, align 32
+  %10 = shufflevector <2 x i64> %7, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %11 = shufflevector <4 x i64> %10, <4 x i64> %3, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %12 = getelementptr inbounds <4 x i64>, ptr %0, i64 1
+  store <4 x i64> %11, ptr %12, align 32
   ret void
 }
 

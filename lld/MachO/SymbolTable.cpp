@@ -83,9 +83,17 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
         }
       } else {
-        error("duplicate symbol: " + toString(*defined) + "\n>>> defined in " +
-              toString(defined->getFile()) + "\n>>> defined in " +
-              toString(file));
+        std::string src1 = defined->getSourceLocation();
+        std::string src2 = isec ? isec->getSourceLocation(value) : "";
+
+        std::string message =
+            "duplicate symbol: " + toString(*defined) + "\n>>> defined in ";
+        if (!src1.empty())
+          message += src1 + "\n>>>            ";
+        message += toString(defined->getFile()) + "\n>>> defined in ";
+        if (!src2.empty())
+          message += src2 + "\n>>>            ";
+        error(message + toString(file));
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -107,6 +115,13 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
       isReferencedDynamically, noDeadStrip, overridesWeakDef,
       isWeakDefCanBeHidden, interposable);
   return defined;
+}
+
+Defined *SymbolTable::aliasDefined(Defined *src, StringRef target) {
+  return addDefined(target, src->getFile(), src->isec, src->value, src->size,
+                    src->isWeakDef(), src->privateExtern, src->thumb,
+                    src->referencedDynamically, src->noDeadStrip,
+                    src->weakDefCanBeHidden);
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
@@ -324,6 +339,10 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
     return true;
   }
 
+  // Leave dtrace symbols, since we will handle them when we do the relocation
+  if (name.startswith("___dtrace_"))
+    return true;
+
   // Handle -U.
   if (config->explicitDynamicLookups.count(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());
@@ -381,8 +400,11 @@ void macho::reportPendingUndefinedSymbols() {
          locations.codeReferences) {
       if (i >= maxUndefinedReferences)
         break;
-      // TODO: Get source file/line from debug information.
-      message += "\n>>> referenced by " + loc.isec->getLocation(loc.offset);
+      message += "\n>>> referenced by ";
+      std::string src = loc.isec->getSourceLocation(loc.offset);
+      if (!src.empty())
+        message += src + "\n>>>               ";
+      message += loc.isec->getLocation(loc.offset);
       ++i;
     }
 

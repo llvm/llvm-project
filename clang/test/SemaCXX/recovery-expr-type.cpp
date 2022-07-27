@@ -101,7 +101,7 @@ void test() {
 namespace test8 {
 typedef int arr[];
 int v = arr(); // expected-error {{array types cannot be value-initialized}} \
-                  expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'test8::arr'}}
+                  expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'arr'}}
 }
 
 namespace test9 {
@@ -146,10 +146,10 @@ void crash2() { constexpr int s = fun(); }
 
 namespace test13 {
 enum Circular {             // expected-note {{not complete until the closing '}'}}
-  Circular_A = Circular(1), // expected-error {{'test13::Circular' is an incomplete type}}
+  Circular_A = Circular(1), // expected-error {{'Circular' is an incomplete type}}
 };
 // Enumerators can be evaluated (they evaluate as zero, but we don't care).
-static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static_assert failed}}
+static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static assertion failed}}
 }
 
 namespace test14 {

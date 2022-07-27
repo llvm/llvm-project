@@ -15,12 +15,12 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
-// CHECK-LABEL: func @sparse_release(
+// CHECK-LABEL: func @sparse_dealloc(
 // CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>
-//       CHECK: sparse_tensor.release %[[A]] : tensor<128xf64, #{{.*}}>
+//       CHECK: bufferization.dealloc_tensor %[[A]] : tensor<128xf64, #{{.*}}>
 //       CHECK: return
-func.func @sparse_release(%arg0: tensor<128xf64, #SparseVector>) {
-  sparse_tensor.release %arg0 : tensor<128xf64, #SparseVector>
+func.func @sparse_dealloc(%arg0: tensor<128xf64, #SparseVector>) {
+  bufferization.dealloc_tensor %arg0 : tensor<128xf64, #SparseVector>
   return
 }
 
@@ -267,4 +267,26 @@ func.func @sparse_unary(%arg0: f64) -> i64 {
     }
     absent={}
   return %r : i64
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_reduce_2d_to_1d(
+//  CHECK-SAME:   %[[A:.*]]: f64, %[[B:.*]]: f64) -> f64 {
+//       CHECK:   %[[Z:.*]] = arith.constant 0.000000e+00 : f64
+//       CHECK:   %[[C1:.*]] = sparse_tensor.reduce %[[A]], %[[B]], %[[Z]] : f64 {
+//       CHECK:       ^bb0(%[[A1:.*]]: f64, %[[B1:.*]]: f64):
+//       CHECK:         sparse_tensor.yield %[[A1]] : f64
+//       CHECK:     }
+//       CHECK:   return %[[C1]] : f64
+//       CHECK: }
+func.func @sparse_reduce_2d_to_1d(%arg0: f64, %arg1: f64) -> f64 {
+  %cf0 = arith.constant 0.0 : f64
+  %r = sparse_tensor.reduce %arg0, %arg1, %cf0 : f64 {
+      ^bb0(%x: f64, %y: f64):
+        sparse_tensor.yield %x : f64
+    }
+  return %r : f64
 }

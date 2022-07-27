@@ -51,6 +51,25 @@ Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
   return SymbolBox::None{};
 }
 
+/// Skip one level when looking up the symbol. The use case is such as looking
+/// up the host variable symbol box by skipping the associated level in
+/// host-association in OpenMP code.
+Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupOneLevelUpSymbol(
+    Fortran::semantics::SymbolRef symRef) {
+  Fortran::semantics::SymbolRef sym = symRef.get().GetUltimate();
+  auto jmap = symbolMapStack.rbegin();
+  auto jend = symbolMapStack.rend();
+  if (jmap == jend)
+    return SymbolBox::None{};
+  // Skip one level in symbol map stack.
+  for (++jmap; jmap != jend; ++jmap) {
+    auto iter = jmap->find(&*sym);
+    if (iter != jmap->end())
+      return iter->second;
+  }
+  return SymbolBox::None{};
+}
+
 mlir::Value
 Fortran::lower::SymMap::lookupImpliedDo(Fortran::lower::SymMap::AcDoVar var) {
   for (auto [marker, binding] : llvm::reverse(impliedDoStack))

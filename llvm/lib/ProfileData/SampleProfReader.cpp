@@ -877,15 +877,13 @@ std::error_code SampleProfileReaderExtBinaryBase::decompressSection(
   if (std::error_code EC = CompressSize.getError())
     return EC;
 
-  if (!llvm::zlib::isAvailable())
+  if (!llvm::compression::zlib::isAvailable())
     return sampleprof_error::zlib_unavailable;
 
-  StringRef CompressedStrings(reinterpret_cast<const char *>(Data),
-                              *CompressSize);
-  char *Buffer = Allocator.Allocate<char>(DecompressBufSize);
+  uint8_t *Buffer = Allocator.Allocate<uint8_t>(DecompressBufSize);
   size_t UCSize = DecompressBufSize;
-  llvm::Error E =
-      zlib::uncompress(CompressedStrings, Buffer, UCSize);
+  llvm::Error E = compression::zlib::uncompress(
+      makeArrayRef(Data, *CompressSize), Buffer, UCSize);
   if (E)
     return sampleprof_error::uncompress_failed;
   DecompressBuf = reinterpret_cast<const uint8_t *>(Buffer);

@@ -71,13 +71,15 @@ template <typename ConcreteType, typename ValueT, typename Traits,
 class Interface : public BaseType {
 public:
   using Concept = typename Traits::Concept;
-  template <typename T> using Model = typename Traits::template Model<T>;
+  template <typename T>
+  using Model = typename Traits::template Model<T>;
   template <typename T>
   using FallbackModel = typename Traits::template FallbackModel<T>;
   using InterfaceBase =
       Interface<ConcreteType, ValueT, Traits, BaseType, BaseTrait>;
   template <typename T, typename U>
   using ExternalModel = typename Traits::template ExternalModel<T, U>;
+  using ValueType = ValueT;
 
   /// This is a special trait that registers a given interface with an object.
   template <typename ConcreteT>
@@ -103,6 +105,9 @@ public:
       : BaseType(t), impl(t ? ConcreteType::getInterfaceFor(t) : nullptr) {
     assert((!t || impl) && "expected value to provide interface instance");
   }
+
+  /// Constructor for DenseMapInfo's empty key and tombstone key.
+  Interface(ValueT t, std::nullptr_t) : BaseType(t), impl(nullptr) {}
 
   /// Support 'classof' by checking if the given object defines the concrete
   /// interface.
@@ -201,7 +206,8 @@ public:
 
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this map, null otherwise.
-  template <typename T> typename T::Concept *lookup() const {
+  template <typename T>
+  typename T::Concept *lookup() const {
     return reinterpret_cast<typename T::Concept *>(lookup(T::getInterfaceID()));
   }
 
@@ -264,7 +270,40 @@ private:
   SmallVector<std::pair<TypeID, void *>> interfaces;
 };
 
+template <typename ConcreteType, typename ValueT, typename Traits,
+          typename BaseType,
+          template <typename, template <typename> class> class BaseTrait>
+void isInterfaceImpl(
+    Interface<ConcreteType, ValueT, Traits, BaseType, BaseTrait> &);
+
+template <typename T>
+using is_interface_t = decltype(isInterfaceImpl(std::declval<T &>()));
+
+template <typename T>
+using IsInterface = llvm::is_detected<is_interface_t, T>;
+
 } // namespace detail
 } // namespace mlir
+
+namespace llvm {
+
+template <typename T>
+struct DenseMapInfo<T, std::enable_if_t<mlir::detail::IsInterface<T>::value>> {
+  using ValueTypeInfo = llvm::DenseMapInfo<typename T::ValueType>;
+
+  static T getEmptyKey() { return T(ValueTypeInfo::getEmptyKey(), nullptr); }
+
+  static T getTombstoneKey() {
+    return T(ValueTypeInfo::getTombstoneKey(), nullptr);
+  }
+
+  static unsigned getHashValue(T val) {
+    return ValueTypeInfo::getHashValue(val);
+  }
+
+  static bool isEqual(T lhs, T rhs) { return ValueTypeInfo::isEqual(lhs, rhs); }
+};
+
+} // namespace llvm
 
 #endif

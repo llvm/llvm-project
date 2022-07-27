@@ -6,7 +6,7 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32"
 target triple = "i386-apple-darwin10.0"
 
-define void @foo() personality i32 (...)* @__gxx_personality_v0 {
+define void @foo() personality ptr @__gxx_personality_v0 {
 invcont5:
   br label %bb15
 
@@ -22,13 +22,13 @@ bb18.i5.i:                                        ; preds = %.noexc6.i.i, %bb51.
           to label %.noexc6.i.i unwind label %lpad.i.i ; <float> [#uses=0]
 
 lpad.i.i:                                         ; preds = %bb18.i5.i, %.noexc6.i.i
-  %lpadval.i.i = landingpad { i8*, i32 }
-          catch i8* null
+  %lpadval.i.i = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 
 lpad59.i:                                         ; preds = %bb15
-  %lpadval60.i.i = landingpad { i8*, i32 }
-          catch i8* null
+  %lpadval60.i.i = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 
 bb15:                                             ; preds = %.noexc3, %invcont5

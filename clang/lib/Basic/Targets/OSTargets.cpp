@@ -73,19 +73,19 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     char Str[7];
     if (OsVersion.getMajor() < 10) {
       Str[0] = '0' + OsVersion.getMajor();
-      Str[1] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
-      Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
-      Str[3] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
-      Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
+      Str[1] = '0' + (OsVersion.getMinor().value_or(0) / 10);
+      Str[2] = '0' + (OsVersion.getMinor().value_or(0) % 10);
+      Str[3] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
+      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
       Str[5] = '\0';
     } else {
       // Handle versions >= 10.
       Str[0] = '0' + (OsVersion.getMajor() / 10);
       Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
-      Str[3] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
-      Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
-      Str[5] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
+      Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
+      Str[3] = '0' + (OsVersion.getMinor().value_or(0) % 10);
+      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
+      Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
       Str[6] = '\0';
     }
     if (Triple.isTvOS())
@@ -98,23 +98,23 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     assert(OsVersion < VersionTuple(10) && "Invalid version!");
     char Str[6];
     Str[0] = '0' + OsVersion.getMajor();
-    Str[1] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
-    Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
-    Str[3] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
-    Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
+    Str[1] = '0' + (OsVersion.getMinor().value_or(0) / 10);
+    Str[2] = '0' + (OsVersion.getMinor().value_or(0) % 10);
+    Str[3] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
+    Str[4] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
     Str[5] = '\0';
     Builder.defineMacro("__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__", Str);
   } else if (Triple.isDriverKit()) {
     assert(OsVersion.getMajor() < 100 &&
-           OsVersion.getMinor().getValueOr(0) < 100 &&
-           OsVersion.getSubminor().getValueOr(0) < 100 && "Invalid version!");
+           OsVersion.getMinor().value_or(0) < 100 &&
+           OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
     char Str[7];
     Str[0] = '0' + (OsVersion.getMajor() / 10);
     Str[1] = '0' + (OsVersion.getMajor() % 10);
-    Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
-    Str[3] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
-    Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
-    Str[5] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
+    Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
+    Str[3] = '0' + (OsVersion.getMinor().value_or(0) % 10);
+    Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
+    Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
     Str[6] = '\0';
     Builder.defineMacro("__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__", Str);
   } else if (Triple.isMacOSX()) {
@@ -127,17 +127,17 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     if (OsVersion < VersionTuple(10, 10)) {
       Str[0] = '0' + (OsVersion.getMajor() / 10);
       Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + std::min(OsVersion.getMinor().getValueOr(0), 9U);
-      Str[3] = '0' + std::min(OsVersion.getSubminor().getValueOr(0), 9U);
+      Str[2] = '0' + std::min(OsVersion.getMinor().value_or(0), 9U);
+      Str[3] = '0' + std::min(OsVersion.getSubminor().value_or(0), 9U);
       Str[4] = '\0';
     } else {
       // Handle versions > 10.9.
       Str[0] = '0' + (OsVersion.getMajor() / 10);
       Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + (OsVersion.getMinor().getValueOr(0) / 10);
-      Str[3] = '0' + (OsVersion.getMinor().getValueOr(0) % 10);
-      Str[4] = '0' + (OsVersion.getSubminor().getValueOr(0) / 10);
-      Str[5] = '0' + (OsVersion.getSubminor().getValueOr(0) % 10);
+      Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
+      Str[3] = '0' + (OsVersion.getMinor().value_or(0) % 10);
+      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
+      Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
       Str[6] = '\0';
     }
     Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);

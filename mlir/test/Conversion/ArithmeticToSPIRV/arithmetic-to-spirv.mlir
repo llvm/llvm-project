@@ -30,8 +30,8 @@ func.func @int32_scalar(%lhs: i32, %rhs: i32) {
 // CHECK-LABEL: @int32_scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @int32_scalar_srem(%lhs: i32, %rhs: i32) {
-  // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
-  // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
+  // CHECK: %[[LABS:.+]] = spv.GL.SAbs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.GL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
@@ -62,8 +62,8 @@ func.func @index_scalar(%lhs: index, %rhs: index) {
 func.func @index_scalar_srem(%lhs: index, %rhs: index) {
   // CHECK: %[[LHS:.+]] = builtin.unrealized_conversion_cast %[[A]] : index to i32
   // CHECK: %[[RHS:.+]] = builtin.unrealized_conversion_cast %[[B]] : index to i32
-  // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
-  // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
+  // CHECK: %[[LABS:.+]] = spv.GL.SAbs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.GL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
@@ -109,8 +109,8 @@ func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
 func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
-  // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : vector<3xi16>
-  // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : vector<3xi16>
+  // CHECK: %[[LABS:.+]] = spv.GL.SAbs %[[LHS]] : vector<3xi16>
+  // CHECK: %[[RABS:.+]] = spv.GL.SAbs %[[RHS]] : vector<3xi16>
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : vector<3xi16>
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : vector<3xi16>
@@ -401,8 +401,8 @@ func.func @vec1cmpi(%arg0 : vector<1xi32>, %arg1 : vector<1xi32>) {
   return
 }
 
-// CHECK-LABEL: @boolcmpi
-func.func @boolcmpi(%arg0 : i1, %arg1 : i1) {
+// CHECK-LABEL: @boolcmpi_equality
+func.func @boolcmpi_equality(%arg0 : i1, %arg1 : i1) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : i1
   // CHECK: spv.LogicalNotEqual
@@ -410,8 +410,19 @@ func.func @boolcmpi(%arg0 : i1, %arg1 : i1) {
   return
 }
 
-// CHECK-LABEL: @vec1boolcmpi
-func.func @vec1boolcmpi(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
+// CHECK-LABEL: @boolcmpi_unsigned
+func.func @boolcmpi_unsigned(%arg0 : i1, %arg1 : i1) {
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.UGreaterThanEqual
+  %0 = arith.cmpi uge, %arg0, %arg1 : i1
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.ULessThan
+  %1 = arith.cmpi ult, %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @vec1boolcmpi_equality
+func.func @vec1boolcmpi_equality(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : vector<1xi1>
   // CHECK: spv.LogicalNotEqual
@@ -419,14 +430,37 @@ func.func @vec1boolcmpi(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
   return
 }
 
-// CHECK-LABEL: @vecboolcmpi
-func.func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+// CHECK-LABEL: @vec1boolcmpi_unsigned
+func.func @vec1boolcmpi_unsigned(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.UGreaterThanEqual
+  %0 = arith.cmpi uge, %arg0, %arg1 : vector<1xi1>
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.ULessThan
+  %1 = arith.cmpi ult, %arg0, %arg1 : vector<1xi1>
+  return
+}
+
+// CHECK-LABEL: @vecboolcmpi_equality
+func.func @vecboolcmpi_equality(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : vector<4xi1>
   // CHECK: spv.LogicalNotEqual
   %1 = arith.cmpi ne, %arg0, %arg1 : vector<4xi1>
   return
 }
+
+// CHECK-LABEL: @vecboolcmpi_unsigned
+func.func @vecboolcmpi_unsigned(%arg0 : vector<3xi1>, %arg1 : vector<3xi1>) {
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.UGreaterThanEqual
+  %0 = arith.cmpi uge, %arg0, %arg1 : vector<3xi1>
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.ULessThan
+  %1 = arith.cmpi ult, %arg0, %arg1 : vector<3xi1>
+  return
+}
+
 
 } // end module
 
@@ -918,8 +952,8 @@ module attributes {
 // CHECK-LABEL: @scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_srem(%lhs: i32, %rhs: i32) {
-  // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : i32
-  // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : i32
+  // CHECK: %[[LABS:.+]] = spv.CL.s_abs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.CL.s_abs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
@@ -931,8 +965,8 @@ func.func @scalar_srem(%lhs: i32, %rhs: i32) {
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
 func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
-  // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : vector<3xi16>
-  // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : vector<3xi16>
+  // CHECK: %[[LABS:.+]] = spv.CL.s_abs %[[LHS]] : vector<3xi16>
+  // CHECK: %[[RABS:.+]] = spv.CL.s_abs %[[RHS]] : vector<3xi16>
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : vector<3xi16>
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : vector<3xi16>
@@ -987,13 +1021,13 @@ func.func @int32_scalar(%lhs: i32, %rhs: i32) {
   %4 = arith.divui %lhs, %rhs: i32
   // CHECK: spv.UMod %{{.*}}, %{{.*}}: i32
   %5 = arith.remui %lhs, %rhs: i32
-  // CHECK: spv.GLSL.SMax %{{.*}}, %{{.*}}: i32
+  // CHECK: spv.GL.SMax %{{.*}}, %{{.*}}: i32
   %6 = arith.maxsi %lhs, %rhs : i32
-  // CHECK: spv.GLSL.UMax %{{.*}}, %{{.*}}: i32
+  // CHECK: spv.GL.UMax %{{.*}}, %{{.*}}: i32
   %7 = arith.maxui %lhs, %rhs : i32
-  // CHECK: spv.GLSL.SMin %{{.*}}, %{{.*}}: i32
+  // CHECK: spv.GL.SMin %{{.*}}, %{{.*}}: i32
   %8 = arith.minsi %lhs, %rhs : i32
-  // CHECK: spv.GLSL.UMin %{{.*}}, %{{.*}}: i32
+  // CHECK: spv.GL.UMin %{{.*}}, %{{.*}}: i32
   %9 = arith.minui %lhs, %rhs : i32
   return
 }
@@ -1001,8 +1035,8 @@ func.func @int32_scalar(%lhs: i32, %rhs: i32) {
 // CHECK-LABEL: @scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_srem(%lhs: i32, %rhs: i32) {
-  // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
-  // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
+  // CHECK: %[[LABS:.+]] = spv.GL.SAbs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.GL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
@@ -1032,9 +1066,9 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   %3 = arith.divf %lhs, %rhs: f32
   // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
   %4 = arith.remf %lhs, %rhs: f32
-  // CHECK: spv.GLSL.FMax %{{.*}}, %{{.*}}: f32
+  // CHECK: spv.GL.FMax %{{.*}}, %{{.*}}: f32
   %5 = arith.maxf %lhs, %rhs: f32
-  // CHECK: spv.GLSL.FMin %{{.*}}, %{{.*}}: f32
+  // CHECK: spv.GL.FMin %{{.*}}, %{{.*}}: f32
   %6 = arith.minf %lhs, %rhs: f32
   return
 }
@@ -1052,8 +1086,8 @@ func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
 func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
-  // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : vector<3xi16>
-  // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : vector<3xi16>
+  // CHECK: %[[LABS:.+]] = spv.GL.SAbs %[[LHS]] : vector<3xi16>
+  // CHECK: %[[RABS:.+]] = spv.GL.SAbs %[[RHS]] : vector<3xi16>
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
   // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : vector<3xi16>
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : vector<3xi16>

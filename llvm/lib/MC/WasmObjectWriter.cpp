@@ -1570,9 +1570,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         continue;
 
       const auto &WS = static_cast<const MCSymbolWasm &>(S);
-      LLVM_DEBUG(dbgs()
-                 << "MCSymbol: "
-                 << toString(WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA))
+      LLVM_DEBUG(
+          dbgs() << "MCSymbol: "
+                 << toString(WS.getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA))
                  << " '" << S << "'"
                  << " isDefined=" << S.isDefined() << " isExternal="
                  << S.isExternal() << " isTemporary=" << S.isTemporary()
@@ -1809,7 +1809,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();
-    Info.Kind = WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA);
+    Info.Kind = WS.getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA);
     Info.Flags = Flags;
     if (!WS.isData()) {
       assert(WasmIndices.count(&WS) > 0);

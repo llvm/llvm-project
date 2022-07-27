@@ -41,7 +41,7 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
   //   1. Either single entry (when maxRanks == 1).
   //   2. Or as an array whose rank must match that of the mixed sizes.
   // So that the result type is well-formed.
-  if (!(op.getMixedOffsets().size() == 1 && maxRanks[0] == 1) &&
+  if (!(op.getMixedOffsets().size() == 1 && maxRanks[0] == 1) && // NOLINT
       op.getMixedOffsets().size() != op.getMixedSizes().size())
     return op->emitError(
                "expected mixed offsets rank to match mixed sizes rank (")
@@ -179,25 +179,6 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
   return true;
 }
 
-void OffsetSizeAndStrideOpInterface::expandToRank(
-    Value target, SmallVector<OpFoldResult> &offsets,
-    SmallVector<OpFoldResult> &sizes, SmallVector<OpFoldResult> &strides,
-    llvm::function_ref<OpFoldResult(Value, int64_t)> createOrFoldDim) {
-  auto shapedType = target.getType().cast<ShapedType>();
-  unsigned rank = shapedType.getRank();
-  assert(offsets.size() == sizes.size() && "mismatched lengths");
-  assert(offsets.size() == strides.size() && "mismatched lengths");
-  assert(offsets.size() <= rank && "rank overflow");
-  MLIRContext *ctx = target.getContext();
-  Attribute zero = IntegerAttr::get(IndexType::get(ctx), APInt(64, 0));
-  Attribute one = IntegerAttr::get(IndexType::get(ctx), APInt(64, 1));
-  for (unsigned i = offsets.size(); i < rank; ++i) {
-    offsets.push_back(zero);
-    sizes.push_back(createOrFoldDim(target, i));
-    strides.push_back(one);
-  }
-}
-
 SmallVector<OpFoldResult, 4>
 mlir::getMixedOffsets(OffsetSizeAndStrideOpInterface op,
                       ArrayAttr staticOffsets, ValueRange offsets) {
@@ -241,4 +222,32 @@ mlir::getMixedStrides(OffsetSizeAndStrideOpInterface op,
       res.push_back(staticStrides[idx]);
   }
   return res;
+}
+
+static std::pair<ArrayAttr, SmallVector<Value>>
+decomposeMixedImpl(OpBuilder &b,
+                   const SmallVectorImpl<OpFoldResult> &mixedValues,
+                   const int64_t dynamicValuePlaceholder) {
+  SmallVector<int64_t> staticValues;
+  SmallVector<Value> dynamicValues;
+  for (const auto &it : mixedValues) {
+    if (it.is<Attribute>()) {
+      staticValues.push_back(it.get<Attribute>().cast<IntegerAttr>().getInt());
+    } else {
+      staticValues.push_back(ShapedType::kDynamicStrideOrOffset);
+      dynamicValues.push_back(it.get<Value>());
+    }
+  }
+  return {b.getI64ArrayAttr(staticValues), dynamicValues};
+}
+
+std::pair<ArrayAttr, SmallVector<Value>> mlir::decomposeMixedStridesOrOffsets(
+    OpBuilder &b, const SmallVectorImpl<OpFoldResult> &mixedValues) {
+  return decomposeMixedImpl(b, mixedValues, ShapedType::kDynamicStrideOrOffset);
+}
+
+std::pair<ArrayAttr, SmallVector<Value>>
+mlir::decomposeMixedSizes(OpBuilder &b,
+                          const SmallVectorImpl<OpFoldResult> &mixedValues) {
+  return decomposeMixedImpl(b, mixedValues, ShapedType::kDynamicSize);
 }

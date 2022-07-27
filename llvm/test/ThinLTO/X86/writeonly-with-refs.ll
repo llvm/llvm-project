@@ -19,8 +19,8 @@
 ; RUN:    -r=%t1,_Z3foov,l \
 ; RUN:    -r=%t2,_Z3foov,pl \
 ; RUN:    -r=%t2,outer,pl
-; RUN: opt -function-import -import-all-index -enable-import-metadata -summary-file %t1.thinlto.bc %t1 -o %t1.out
-; RUN: opt -function-import -import-all-index -summary-file %t2.thinlto.bc %t2 -o %t2.out
+; RUN: opt -passes=function-import -import-all-index -enable-import-metadata -summary-file %t1.thinlto.bc %t1 -o %t1.out
+; RUN: opt -passes=function-import -import-all-index -summary-file %t2.thinlto.bc %t2 -o %t2.out
 ; RUN: llvm-dis %t1.out -o - | FileCheck %s
 ; RUN: llvm-dis %t2.out -o - | FileCheck %s
 

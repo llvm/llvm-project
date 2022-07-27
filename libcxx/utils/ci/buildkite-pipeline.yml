@@ -127,7 +127,7 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "GCC 11 / C++latest"
+  - label: "GCC 12 / C++latest"
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
       - "**/test-results.xml"
@@ -189,7 +189,7 @@ steps:
     timeout_in_minutes: 120
 
   # Tests with the supported compilers.
-  - label: "GCC 11 / C++11"
+  - label: "GCC 12 / C++11"
     command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
     artifact_paths:
       - "**/test-results.xml"
@@ -336,7 +336,6 @@ steps:
       timeout_in_minutes: 120
 
   # Tests with various build configurations.
-
   - label: "Static libraries"
     command: "libcxx/utils/ci/run-buildbot generic-static"
     artifact_paths:
@@ -381,6 +380,20 @@ steps:
 
   - label: "Debug mode"
     command: "libcxx/utils/ci/run-buildbot generic-debug-mode"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "No transitive includes"
+    command: "libcxx/utils/ci/run-buildbot generic-no-transitive-includes"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"

@@ -19,6 +19,19 @@ def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
                            AssemblerPredicate<(all_of FeatureStdExtM),
                            "'M' (Integer Multiplication and Division)">;
 
+def FeatureStdExtZmmul
+    : SubtargetFeature<"zmmul", "HasStdExtZmmul", "true",
+                       "'Zmmul' (Integer Multiplication)">;
+def HasStdExtZmmul : Predicate<"Subtarget->hasStdExtZmmul()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZmmul),
+                               "'Zmmul' (Integer Multiplication)">;
+
+def HasStdExtMOrZmmul
+    : Predicate<"Subtarget->hasStdExtM() || Subtarget->hasStdExtZmmul()">,
+                AssemblerPredicate<(any_of FeatureStdExtM, FeatureStdExtZmmul),
+                                   "'M' (Integer Multiplication and Division) or "
+                                   "'Zmmul' (Integer Multiplication)">;
+
 def FeatureStdExtA
     : SubtargetFeature<"a", "HasStdExtA", "true",
                        "'A' (Atomic Instructions)">;
@@ -400,6 +413,27 @@ def FeatureStdExtZvfh
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
                        [FeatureStdExtZve32f]>;
 
+def FeatureStdExtZicbom
+    : SubtargetFeature<"zicbom", "HasStdExtZicbom", "true",
+                       "'Zicbom' (Cache-Block Management Instructions)">;
+def HasStdExtZicbom : Predicate<"Subtarget->hasStdExtZicbom()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZicbom),
+                                "'Zicbom' (Cache-Block Management Instructions)">;
+
+def FeatureStdExtZicboz
+    : SubtargetFeature<"zicboz", "HasStdExtZicboz", "true",
+                       "'Zicboz' (Cache-Block Zero Instructions)">;
+def HasStdExtZicboz : Predicate<"Subtarget->hasStdExtZicboz()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZicboz),
+                                "'Zicboz' (Cache-Block Zero Instructions)">;
+
+def FeatureStdExtZicbop
+    : SubtargetFeature<"zicbop", "HasStdExtZicbop", "true",
+                       "'Zicbop' (Cache-Block Prefetch Instructions)">;
+def HasStdExtZicbop : Predicate<"Subtarget->hasStdExtZicbop()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZicbop),
+                                "'Zicbop' (Cache-Block Prefetch Instructions)">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
@@ -435,12 +469,17 @@ def FeatureUnalignedScalarMem
                       "true", "Has reasonably performant unaligned scalar "
                       "loads and stores">;
 
+def TuneLUIADDIFusion
+    : SubtargetFeature<"lui-addi-fusion", "HasLUIADDIFusion",
+                       "true", "Enable LUI+ADDI macrofusion">;
+
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference.">;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
-                                   "SiFive 7-Series processors">;
+                                   "SiFive 7-Series processors",
+                                   [TuneNoDefaultUnroll]>;
 
 //===----------------------------------------------------------------------===//
 // Named operands for CSR instructions.
@@ -474,9 +513,9 @@ def : ProcessorModel<"rocket-rv32", RocketModel, []>;
 def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
 
 def : ProcessorModel<"sifive-7-rv32", SiFive7Model, [],
-                     [TuneSiFive7, TuneNoDefaultUnroll]>;
+                     [TuneSiFive7]>;
 def : ProcessorModel<"sifive-7-rv64", SiFive7Model, [Feature64Bit],
-                     [TuneSiFive7, TuneNoDefaultUnroll]>;
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-e20", RocketModel, [FeatureStdExtM,
                                                  FeatureStdExtC]>;
@@ -503,7 +542,7 @@ def : ProcessorModel<"sifive-e76", SiFive7Model, [FeatureStdExtM,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
                                                   FeatureStdExtC],
-                     [TuneSiFive7, TuneNoDefaultUnroll]>;
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-s21", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -528,7 +567,7 @@ def : ProcessorModel<"sifive-s76", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
                                                   FeatureStdExtC],
-                     [TuneSiFive7, TuneNoDefaultUnroll]>;
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -543,7 +582,7 @@ def : ProcessorModel<"sifive-u74", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
                                                   FeatureStdExtC],
-                     [TuneSiFive7, TuneNoDefaultUnroll]>;
+                     [TuneSiFive7]>;
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.

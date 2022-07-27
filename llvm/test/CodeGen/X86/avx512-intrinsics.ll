@@ -413,7 +413,7 @@ define <2 x double> @test_rndscale_sd_mask(<2 x double> %a, <2 x double> %b, <2 
   ret <2 x double>%res
 }
 
-define <2 x double> @test_rndscale_sd_mask_load(<2 x double> %a, <2 x double>* %bptr, <2 x double> %c, i8 %mask) {
+define <2 x double> @test_rndscale_sd_mask_load(<2 x double> %a, ptr %bptr, <2 x double> %c, i8 %mask) {
 ; X64-LABEL: test_rndscale_sd_mask_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -429,7 +429,7 @@ define <2 x double> @test_rndscale_sd_mask_load(<2 x double> %a, <2 x double>* %
 ; X86-NEXT:    vrndscalesd $11, (%eax), %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovapd %xmm1, %xmm0
 ; X86-NEXT:    retl
-  %b = load <2 x double>, <2 x double>* %bptr
+  %b = load <2 x double>, ptr %bptr
   %res = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask, i32 11, i32 4)
   ret <2 x double>%res
 }
@@ -462,7 +462,7 @@ define <4 x float> @test_rndscale_ss(<4 x float> %a, <4 x float> %b) {
   ret <4 x float>%res
 }
 
-define <4 x float> @test_rndscale_ss_load(<4 x float> %a, <4 x float>* %bptr) {
+define <4 x float> @test_rndscale_ss_load(<4 x float> %a, ptr %bptr) {
 ; X64-LABEL: test_rndscale_ss_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
@@ -473,7 +473,7 @@ define <4 x float> @test_rndscale_ss_load(<4 x float> %a, <4 x float>* %bptr) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vroundss $11, (%eax), %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %b = load <4 x float>, <4 x float>* %bptr
+  %b = load <4 x float>, ptr %bptr
   %res = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %a, <4 x float> %b, <4 x float> undef, i8 -1, i32 11, i32 4)
   ret <4 x float>%res
 }
@@ -901,7 +901,7 @@ define i32 @test_x86_avx512_cvttss2si(<4 x float> %a0) {
 }
 declare i32 @llvm.x86.avx512.cvttss2si(<4 x float>, i32) nounwind readnone
 
-define i32 @test_x86_avx512_cvttss2si_load(<4 x float>* %a0) {
+define i32 @test_x86_avx512_cvttss2si_load(ptr %a0) {
 ; X64-LABEL: test_x86_avx512_cvttss2si_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttss2si (%rdi), %eax
@@ -912,7 +912,7 @@ define i32 @test_x86_avx512_cvttss2si_load(<4 x float>* %a0) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvttss2si (%eax), %eax
 ; X86-NEXT:    retl
-  %a1 = load <4 x float>, <4 x float>* %a0
+  %a1 = load <4 x float>, ptr %a0
   %res = call i32 @llvm.x86.avx512.cvttss2si(<4 x float> %a1, i32 4) ;
   ret i32 %res
 }
@@ -1007,7 +1007,7 @@ define i32 @test_x86_avx512_cvtss2si32(<4 x float> %a0) {
 }
 declare i32 @llvm.x86.avx512.vcvtss2si32(<4 x float>, i32) nounwind readnone
 
-define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16 %mask, <16 x i16> * %dst) {
+define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16 %mask, ptr %dst) {
 ; X64-LABEL: test_x86_vcvtps2ph_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
@@ -1031,7 +1031,7 @@ define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16
   %res1 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> zeroinitializer, i16 -1)
   %res2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> zeroinitializer, i16 %mask)
   %res3 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> %src, i16 %mask)
-  store <16 x i16> %res1, <16 x i16> * %dst
+  store <16 x i16> %res1, ptr %dst
   %res  = add <16 x i16> %res2, %res3
   ret <16 x i16> %res
 }
@@ -1089,7 +1089,7 @@ define <8 x double> @test_vminpd(<8 x double> %a0, <8 x double> %a1) {
 }
 declare <8 x double> @llvm.x86.avx512.min.pd.512(<8 x double>, <8 x double>, i32)
 
-define void @test_mask_store_ss(i8* %ptr, <4 x float> %data, i8 %mask) {
+define void @test_mask_store_ss(ptr %ptr, <4 x float> %data, i8 %mask) {
 ; X64-LABEL: test_mask_store_ss:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -1099,18 +1099,17 @@ define void @test_mask_store_ss(i8* %ptr, <4 x float> %data, i8 %mask) {
 ; X86-LABEL: test_mask_store_ss:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    kmovw %ecx, %k1
 ; X86-NEXT:    vmovss %xmm0, (%eax) {%k1}
 ; X86-NEXT:    retl
   %1 = and i8 %mask, 1
-  %2 = bitcast i8* %ptr to <4 x float>*
-  %3 = bitcast i8 %1 to <8 x i1>
-  %extract = shufflevector <8 x i1> %3, <8 x i1> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %data, <4 x float>* %2, i32 1, <4 x i1> %extract)
+  %2 = bitcast i8 %1 to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  call void @llvm.masked.store.v4f32.p0(<4 x float> %data, ptr %ptr, i32 1, <4 x i1> %extract)
   ret void
 }
-declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>) #1
+declare void @llvm.masked.store.v4f32.p0(<4 x float>, ptr, i32, <4 x i1>) #1
 
 
 declare <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float>, <16 x float>, i32)
@@ -2350,7 +2349,7 @@ define <4 x float> @test_add_ss_rn(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res
 }
 
-define <4 x float> @test_mask_add_ss_current_memfold(<4 x float> %a0, float* %a1, <4 x float> %a2, i8 %mask) {
+define <4 x float> @test_mask_add_ss_current_memfold(<4 x float> %a0, ptr %a1, <4 x float> %a2, i8 %mask) {
 ; X64-LABEL: test_mask_add_ss_current_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2366,7 +2365,7 @@ define <4 x float> @test_mask_add_ss_current_memfold(<4 x float> %a0, float* %a1
 ; X86-NEXT:    vaddss (%eax), %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
-  %a1.val = load float, float* %a1
+  %a1.val = load float, ptr %a1
   %a1v0 = insertelement <4 x float> undef, float %a1.val, i32 0
   %a1v1 = insertelement <4 x float> %a1v0, float 0.000000e+00, i32 1
   %a1v2 = insertelement <4 x float> %a1v1, float 0.000000e+00, i32 2
@@ -2375,7 +2374,7 @@ define <4 x float> @test_mask_add_ss_current_memfold(<4 x float> %a0, float* %a1
   ret <4 x float> %res
 }
 
-define <4 x float> @test_maskz_add_ss_current_memfold(<4 x float> %a0, float* %a1, i8 %mask) {
+define <4 x float> @test_maskz_add_ss_current_memfold(<4 x float> %a0, ptr %a1, i8 %mask) {
 ; X64-LABEL: test_maskz_add_ss_current_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2389,7 +2388,7 @@ define <4 x float> @test_maskz_add_ss_current_memfold(<4 x float> %a0, float* %a
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vaddss (%eax), %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %a1.val = load float, float* %a1
+  %a1.val = load float, ptr %a1
   %a1v0 = insertelement <4 x float> undef, float %a1.val, i32 0
   %a1v1 = insertelement <4 x float> %a1v0, float 0.000000e+00, i32 1
   %a1v2 = insertelement <4 x float> %a1v1, float 0.000000e+00, i32 2
@@ -2521,7 +2520,7 @@ define <2 x double> @test_add_sd_rn(<2 x double> %a0, <2 x double> %a1) {
   ret <2 x double> %res
 }
 
-define <2 x double> @test_mask_add_sd_current_memfold(<2 x double> %a0, double* %a1, <2 x double> %a2, i8 %mask) {
+define <2 x double> @test_mask_add_sd_current_memfold(<2 x double> %a0, ptr %a1, <2 x double> %a2, i8 %mask) {
 ; X64-LABEL: test_mask_add_sd_current_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2537,14 +2536,14 @@ define <2 x double> @test_mask_add_sd_current_memfold(<2 x double> %a0, double* 
 ; X86-NEXT:    vaddsd (%eax), %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovapd %xmm1, %xmm0
 ; X86-NEXT:    retl
-  %a1.val = load double, double* %a1
+  %a1.val = load double, ptr %a1
   %a1v0 = insertelement <2 x double> undef, double %a1.val, i32 0
   %a1v = insertelement <2 x double> %a1v0, double 0.000000e+00, i32 1
   %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1v, <2 x double> %a2, i8 %mask, i32 4)
   ret <2 x double> %res
 }
 
-define <2 x double> @test_maskz_add_sd_current_memfold(<2 x double> %a0, double* %a1, i8 %mask) {
+define <2 x double> @test_maskz_add_sd_current_memfold(<2 x double> %a0, ptr %a1, i8 %mask) {
 ; X64-LABEL: test_maskz_add_sd_current_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2558,7 +2557,7 @@ define <2 x double> @test_maskz_add_sd_current_memfold(<2 x double> %a0, double*
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vaddsd (%eax), %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %a1.val = load double, double* %a1
+  %a1.val = load double, ptr %a1
   %a1v0 = insertelement <2 x double> undef, double %a1.val, i32 0
   %a1v = insertelement <2 x double> %a1v0, double 0.000000e+00, i32 1
   %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1v, <2 x double> zeroinitializer, i8 %mask, i32 4)
@@ -2657,7 +2656,7 @@ define <4 x float> @test_max_ss(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res
 }
 
-define <4 x float> @test_mask_max_ss_memfold(<4 x float> %a0, float* %a1, <4 x float> %a2, i8 %mask) {
+define <4 x float> @test_mask_max_ss_memfold(<4 x float> %a0, ptr %a1, <4 x float> %a2, i8 %mask) {
 ; X64-LABEL: test_mask_max_ss_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2673,7 +2672,7 @@ define <4 x float> @test_mask_max_ss_memfold(<4 x float> %a0, float* %a1, <4 x f
 ; X86-NEXT:    vmaxss (%eax), %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
-  %a1.val = load float, float* %a1
+  %a1.val = load float, ptr %a1
   %a1v0 = insertelement <4 x float> undef, float %a1.val, i32 0
   %a1v1 = insertelement <4 x float> %a1v0, float 0.000000e+00, i32 1
   %a1v2 = insertelement <4 x float> %a1v1, float 0.000000e+00, i32 2
@@ -2682,7 +2681,7 @@ define <4 x float> @test_mask_max_ss_memfold(<4 x float> %a0, float* %a1, <4 x f
   ret <4 x float> %res
 }
 
-define <4 x float> @test_maskz_max_ss_memfold(<4 x float> %a0, float* %a1, i8 %mask) {
+define <4 x float> @test_maskz_max_ss_memfold(<4 x float> %a0, ptr %a1, i8 %mask) {
 ; X64-LABEL: test_maskz_max_ss_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2696,7 +2695,7 @@ define <4 x float> @test_maskz_max_ss_memfold(<4 x float> %a0, float* %a1, i8 %m
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmaxss (%eax), %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %a1.val = load float, float* %a1
+  %a1.val = load float, ptr %a1
   %a1v0 = insertelement <4 x float> undef, float %a1.val, i32 0
   %a1v1 = insertelement <4 x float> %a1v0, float 0.000000e+00, i32 1
   %a1v2 = insertelement <4 x float> %a1v1, float 0.000000e+00, i32 2
@@ -2796,7 +2795,7 @@ define <2 x double> @test_max_sd(<2 x double> %a0, <2 x double> %a1) {
   ret <2 x double> %res
 }
 
-define <2 x double> @test_mask_max_sd_memfold(<2 x double> %a0, double* %a1, <2 x double> %a2, i8 %mask) {
+define <2 x double> @test_mask_max_sd_memfold(<2 x double> %a0, ptr %a1, <2 x double> %a2, i8 %mask) {
 ; X64-LABEL: test_mask_max_sd_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2812,14 +2811,14 @@ define <2 x double> @test_mask_max_sd_memfold(<2 x double> %a0, double* %a1, <2 
 ; X86-NEXT:    vmaxsd (%eax), %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovapd %xmm1, %xmm0
 ; X86-NEXT:    retl
-  %a1.val = load double, double* %a1
+  %a1.val = load double, ptr %a1
   %a1v0 = insertelement <2 x double> undef, double %a1.val, i32 0
   %a1v = insertelement <2 x double> %a1v0, double 0.000000e+00, i32 1
   %res = call <2 x double> @llvm.x86.avx512.mask.max.sd.round(<2 x double>%a0, <2 x double> %a1v, <2 x double> %a2, i8 %mask, i32 4)
   ret <2 x double> %res
 }
 
-define <2 x double> @test_maskz_max_sd_memfold(<2 x double> %a0, double* %a1, i8 %mask) {
+define <2 x double> @test_maskz_max_sd_memfold(<2 x double> %a0, ptr %a1, i8 %mask) {
 ; X64-LABEL: test_maskz_max_sd_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2833,7 +2832,7 @@ define <2 x double> @test_maskz_max_sd_memfold(<2 x double> %a0, double* %a1, i8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmaxsd (%eax), %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %a1.val = load double, double* %a1
+  %a1.val = load double, ptr %a1
   %a1v0 = insertelement <2 x double> undef, double %a1.val, i32 0
   %a1v = insertelement <2 x double> %a1v0, double 0.000000e+00, i32 1
   %res = call <2 x double> @llvm.x86.avx512.mask.max.sd.round(<2 x double>%a0, <2 x double> %a1v, <2 x double> zeroinitializer, i8 %mask, i32 4)
@@ -2871,7 +2870,7 @@ define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss (<4 x float> %a, i32 %b)
   ret <4 x float> %res
 }
 
-define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss_mem(<4 x float> %a, i32* %ptr) {
+define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss_mem(<4 x float> %a, ptr %ptr) {
 ; X64-LABEL: test_x86_avx512__mm_cvt_roundu32_ss_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
@@ -2884,7 +2883,7 @@ define <4 x float> @test_x86_avx512__mm_cvt_roundu32_ss_mem(<4 x float> %a, i32*
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    vcvtusi2ss %eax, {rd-sae}, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %b = load i32, i32* %ptr
+  %b = load i32, ptr %ptr
   %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 9) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -2903,7 +2902,7 @@ define <4 x float> @test_x86_avx512__mm_cvtu32_ss(<4 x float> %a, i32 %b) {
   ret <4 x float> %res
 }
 
-define <4 x float> @test_x86_avx512__mm_cvtu32_ss_mem(<4 x float> %a, i32* %ptr) {
+define <4 x float> @test_x86_avx512__mm_cvtu32_ss_mem(<4 x float> %a, ptr %ptr) {
 ; X64-LABEL: test_x86_avx512__mm_cvtu32_ss_mem:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtusi2ssl (%rdi), %xmm0, %xmm0
@@ -2914,7 +2913,7 @@ define <4 x float> @test_x86_avx512__mm_cvtu32_ss_mem(<4 x float> %a, i32* %ptr)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtusi2ssl (%eax), %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %b = load i32, i32* %ptr
+  %b = load i32, ptr %ptr
   %res = call <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float> %a, i32 %b, i32 4) ; <<<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -2922,7 +2921,7 @@ declare <4 x float> @llvm.x86.avx512.cvtusi2ss(<4 x float>, i32, i32) nounwind r
 
 declare <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>)
 
-define <16 x i32>@test_int_x86_avx512_vpermi2var_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p) {
+define <16 x i32>@test_int_x86_avx512_vpermi2var_d_512(<16 x i32> %x0, <16 x i32> %x1, ptr %x2p) {
 ; X64-LABEL: test_int_x86_avx512_vpermi2var_d_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpermt2d (%rdi), %zmm1, %zmm0
@@ -2933,12 +2932,12 @@ define <16 x i32>@test_int_x86_avx512_vpermi2var_d_512(<16 x i32> %x0, <16 x i32
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpermt2d (%eax), %zmm1, %zmm0
 ; X86-NEXT:    retl
-  %x2 = load <16 x i32>, <16 x i32>* %x2p
+  %x2 = load <16 x i32>, ptr %x2p
   %1 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
   ret <16 x i32> %1
 }
 
-define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, i16 %x3) {
+define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 x i32> %x1, ptr %x2p, i16 %x3) {
 ; X64-LABEL: test_int_x86_avx512_mask_vpermi2var_d_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -2953,7 +2952,7 @@ define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 
 ; X86-NEXT:    vpermi2d (%eax), %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; X86-NEXT:    retl
-  %x2 = load <16 x i32>, <16 x i32>* %x2p
+  %x2 = load <16 x i32>, ptr %x2p
   %1 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
   %2 = bitcast i16 %x3 to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
@@ -3057,7 +3056,7 @@ define <8 x i64>@test_int_x86_avx512_mask_vpermi2var_q_512(<8 x i64> %x0, <8 x i
   ret <8 x i64> %3
 }
 
-define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, i16 %x3) {
+define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16 x i32> %x1, ptr %x2p, i16 %x3) {
 ; X64-LABEL: test_int_x86_avx512_maskz_vpermt2var_d_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3070,14 +3069,14 @@ define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpermi2d (%eax), %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %x2 = load <16 x i32>, <16 x i32>* %x2p
+  %x2 = load <16 x i32>, ptr %x2p
   %1 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2)
   %2 = bitcast i16 %x3 to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
   ret <16 x i32> %3
 }
 
-define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <8 x double> %x1, double* %x2ptr, i8 %x3) {
+define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <8 x double> %x1, ptr %x2ptr, i8 %x3) {
 ; X64-LABEL: test_int_x86_avx512_maskz_vpermt2var_pd_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3091,7 +3090,7 @@ define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <
 ; X86-NEXT:    kmovw %ecx, %k1
 ; X86-NEXT:    vpermi2pd (%eax){1to8}, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
-  %x2s = load double, double* %x2ptr
+  %x2s = load double, ptr %x2ptr
   %x2ins = insertelement <8 x double> undef, double %x2s, i32 0
   %x2 = shufflevector <8 x double> %x2ins, <8 x double> undef, <8 x i32> zeroinitializer
   %1 = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %x1, <8 x i64> %x0, <8 x double> %x2)
@@ -3246,9 +3245,9 @@ define <16 x i8>@test_int_x86_avx512_mask_pmov_qb_512(<8 x i64> %x0, <16 x i8> %
     ret <16 x i8> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmov.qb.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmov.qb.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmov_qb_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmov_qb_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmov_qb_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3266,8 +3265,8 @@ define void @test_int_x86_avx512_mask_pmov_qb_mem_512(i8* %ptr, <8 x i64> %x1, i
 ; X86-NEXT:    vpmovqb %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmov.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmov.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmov.qb.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmov.qb.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3304,9 +3303,9 @@ define <16 x i8>@test_int_x86_avx512_mask_pmovs_qb_512(<8 x i64> %x0, <16 x i8> 
     ret <16 x i8> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovs.qb.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmovs.qb.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmovs_qb_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmovs_qb_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovs_qb_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3324,8 +3323,8 @@ define void @test_int_x86_avx512_mask_pmovs_qb_mem_512(i8* %ptr, <8 x i64> %x1, 
 ; X86-NEXT:    vpmovsqb %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovs.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmovs.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmovs.qb.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmovs.qb.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3362,9 +3361,9 @@ define <16 x i8>@test_int_x86_avx512_mask_pmovus_qb_512(<8 x i64> %x0, <16 x i8>
     ret <16 x i8> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovus.qb.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmovus.qb.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmovus_qb_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmovus_qb_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovus_qb_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3382,8 +3381,8 @@ define void @test_int_x86_avx512_mask_pmovus_qb_mem_512(i8* %ptr, <8 x i64> %x1,
 ; X86-NEXT:    vpmovusqb %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovus.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmovus.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmovus.qb.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmovus.qb.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3420,9 +3419,9 @@ define <8 x i16>@test_int_x86_avx512_mask_pmov_qw_512(<8 x i64> %x0, <8 x i16> %
     ret <8 x i16> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmov.qw.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmov.qw.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmov_qw_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmov_qw_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmov_qw_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3440,8 +3439,8 @@ define void @test_int_x86_avx512_mask_pmov_qw_mem_512(i8* %ptr, <8 x i64> %x1, i
 ; X86-NEXT:    vpmovqw %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmov.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmov.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmov.qw.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmov.qw.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3478,9 +3477,9 @@ define <8 x i16>@test_int_x86_avx512_mask_pmovs_qw_512(<8 x i64> %x0, <8 x i16> 
     ret <8 x i16> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovs.qw.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmovs.qw.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmovs_qw_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmovs_qw_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovs_qw_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3498,8 +3497,8 @@ define void @test_int_x86_avx512_mask_pmovs_qw_mem_512(i8* %ptr, <8 x i64> %x1, 
 ; X86-NEXT:    vpmovsqw %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovs.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmovs.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmovs.qw.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmovs.qw.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3536,9 +3535,9 @@ define <8 x i16>@test_int_x86_avx512_mask_pmovus_qw_512(<8 x i64> %x0, <8 x i16>
     ret <8 x i16> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovus.qw.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmovus.qw.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmovus_qw_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmovus_qw_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovus_qw_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3556,8 +3555,8 @@ define void @test_int_x86_avx512_mask_pmovus_qw_mem_512(i8* %ptr, <8 x i64> %x1,
 ; X86-NEXT:    vpmovusqw %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovus.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmovus.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmovus.qw.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmovus.qw.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3610,9 +3609,9 @@ define <8 x i32>@test_int_x86_avx512_maskz_pmov_qd_512(<8 x i64> %x0,  i8 %x2) {
   ret <8 x i32> %3
 }
 
-declare void @llvm.x86.avx512.mask.pmov.qd.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmov.qd.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmov_qd_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmov_qd_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmov_qd_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3630,8 +3629,8 @@ define void @test_int_x86_avx512_mask_pmov_qd_mem_512(i8* %ptr, <8 x i64> %x1, i
 ; X86-NEXT:    vpmovqd %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmov.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmov.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmov.qd.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmov.qd.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3682,9 +3681,9 @@ define <8 x i32>@test_int_x86_avx512_maskz_pmovs_qd_512(<8 x i64> %x0, i8 %x2) {
   ret <8 x i32> %res
 }
 
-declare void @llvm.x86.avx512.mask.pmovs.qd.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmovs.qd.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmovs_qd_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmovs_qd_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovs_qd_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3702,8 +3701,8 @@ define void @test_int_x86_avx512_mask_pmovs_qd_mem_512(i8* %ptr, <8 x i64> %x1, 
 ; X86-NEXT:    vpmovsqd %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovs.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmovs.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmovs.qd.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmovs.qd.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3754,9 +3753,9 @@ define <8 x i32>@test_int_x86_avx512_maskz_pmovus_qd_512(<8 x i64> %x0, i8 %x2) 
   ret <8 x i32> %res
 }
 
-declare void @llvm.x86.avx512.mask.pmovus.qd.mem.512(i8* %ptr, <8 x i64>, i8)
+declare void @llvm.x86.avx512.mask.pmovus.qd.mem.512(ptr %ptr, <8 x i64>, i8)
 
-define void @test_int_x86_avx512_mask_pmovus_qd_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
+define void @test_int_x86_avx512_mask_pmovus_qd_mem_512(ptr %ptr, <8 x i64> %x1, i8 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovus_qd_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3774,8 +3773,8 @@ define void @test_int_x86_avx512_mask_pmovus_qd_mem_512(i8* %ptr, <8 x i64> %x1,
 ; X86-NEXT:    vpmovusqd %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovus.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
-    call void @llvm.x86.avx512.mask.pmovus.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 %x2)
+    call void @llvm.x86.avx512.mask.pmovus.qd.mem.512(ptr %ptr, <8 x i64> %x1, i8 -1)
+    call void @llvm.x86.avx512.mask.pmovus.qd.mem.512(ptr %ptr, <8 x i64> %x1, i8 %x2)
     ret void
 }
 
@@ -3811,9 +3810,9 @@ define <16 x i8>@test_int_x86_avx512_mask_pmov_db_512(<16 x i32> %x0, <16 x i8> 
     ret <16 x i8> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmov.db.mem.512(i8* %ptr, <16 x i32>, i16)
+declare void @llvm.x86.avx512.mask.pmov.db.mem.512(ptr %ptr, <16 x i32>, i16)
 
-define void @test_int_x86_avx512_mask_pmov_db_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
+define void @test_int_x86_avx512_mask_pmov_db_mem_512(ptr %ptr, <16 x i32> %x1, i16 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmov_db_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3830,8 +3829,8 @@ define void @test_int_x86_avx512_mask_pmov_db_mem_512(i8* %ptr, <16 x i32> %x1, 
 ; X86-NEXT:    vpmovdb %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmov.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
-    call void @llvm.x86.avx512.mask.pmov.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 %x2)
+    call void @llvm.x86.avx512.mask.pmov.db.mem.512(ptr %ptr, <16 x i32> %x1, i16 -1)
+    call void @llvm.x86.avx512.mask.pmov.db.mem.512(ptr %ptr, <16 x i32> %x1, i16 %x2)
     ret void
 }
 
@@ -3867,9 +3866,9 @@ define <16 x i8>@test_int_x86_avx512_mask_pmovs_db_512(<16 x i32> %x0, <16 x i8>
     ret <16 x i8> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovs.db.mem.512(i8* %ptr, <16 x i32>, i16)
+declare void @llvm.x86.avx512.mask.pmovs.db.mem.512(ptr %ptr, <16 x i32>, i16)
 
-define void @test_int_x86_avx512_mask_pmovs_db_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
+define void @test_int_x86_avx512_mask_pmovs_db_mem_512(ptr %ptr, <16 x i32> %x1, i16 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovs_db_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3886,8 +3885,8 @@ define void @test_int_x86_avx512_mask_pmovs_db_mem_512(i8* %ptr, <16 x i32> %x1,
 ; X86-NEXT:    vpmovsdb %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovs.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
-    call void @llvm.x86.avx512.mask.pmovs.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 %x2)
+    call void @llvm.x86.avx512.mask.pmovs.db.mem.512(ptr %ptr, <16 x i32> %x1, i16 -1)
+    call void @llvm.x86.avx512.mask.pmovs.db.mem.512(ptr %ptr, <16 x i32> %x1, i16 %x2)
     ret void
 }
 
@@ -3923,9 +3922,9 @@ define <16 x i8>@test_int_x86_avx512_mask_pmovus_db_512(<16 x i32> %x0, <16 x i8
     ret <16 x i8> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovus.db.mem.512(i8* %ptr, <16 x i32>, i16)
+declare void @llvm.x86.avx512.mask.pmovus.db.mem.512(ptr %ptr, <16 x i32>, i16)
 
-define void @test_int_x86_avx512_mask_pmovus_db_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
+define void @test_int_x86_avx512_mask_pmovus_db_mem_512(ptr %ptr, <16 x i32> %x1, i16 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovus_db_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3942,8 +3941,8 @@ define void @test_int_x86_avx512_mask_pmovus_db_mem_512(i8* %ptr, <16 x i32> %x1
 ; X86-NEXT:    vpmovusdb %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovus.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
-    call void @llvm.x86.avx512.mask.pmovus.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 %x2)
+    call void @llvm.x86.avx512.mask.pmovus.db.mem.512(ptr %ptr, <16 x i32> %x1, i16 -1)
+    call void @llvm.x86.avx512.mask.pmovus.db.mem.512(ptr %ptr, <16 x i32> %x1, i16 %x2)
     ret void
 }
 
@@ -3977,9 +3976,9 @@ define <16 x i16>@test_int_x86_avx512_mask_pmov_dw_512(<16 x i32> %x0, <16 x i16
     ret <16 x i16> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmov.dw.mem.512(i8* %ptr, <16 x i32>, i16)
+declare void @llvm.x86.avx512.mask.pmov.dw.mem.512(ptr %ptr, <16 x i32>, i16)
 
-define void @test_int_x86_avx512_mask_pmov_dw_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
+define void @test_int_x86_avx512_mask_pmov_dw_mem_512(ptr %ptr, <16 x i32> %x1, i16 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmov_dw_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -3996,8 +3995,8 @@ define void @test_int_x86_avx512_mask_pmov_dw_mem_512(i8* %ptr, <16 x i32> %x1, 
 ; X86-NEXT:    vpmovdw %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmov.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
-    call void @llvm.x86.avx512.mask.pmov.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 %x2)
+    call void @llvm.x86.avx512.mask.pmov.dw.mem.512(ptr %ptr, <16 x i32> %x1, i16 -1)
+    call void @llvm.x86.avx512.mask.pmov.dw.mem.512(ptr %ptr, <16 x i32> %x1, i16 %x2)
     ret void
 }
 
@@ -4031,9 +4030,9 @@ define <16 x i16>@test_int_x86_avx512_mask_pmovs_dw_512(<16 x i32> %x0, <16 x i1
     ret <16 x i16> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovs.dw.mem.512(i8* %ptr, <16 x i32>, i16)
+declare void @llvm.x86.avx512.mask.pmovs.dw.mem.512(ptr %ptr, <16 x i32>, i16)
 
-define void @test_int_x86_avx512_mask_pmovs_dw_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
+define void @test_int_x86_avx512_mask_pmovs_dw_mem_512(ptr %ptr, <16 x i32> %x1, i16 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovs_dw_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -4050,8 +4049,8 @@ define void @test_int_x86_avx512_mask_pmovs_dw_mem_512(i8* %ptr, <16 x i32> %x1,
 ; X86-NEXT:    vpmovsdw %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovs.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
-    call void @llvm.x86.avx512.mask.pmovs.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 %x2)
+    call void @llvm.x86.avx512.mask.pmovs.dw.mem.512(ptr %ptr, <16 x i32> %x1, i16 -1)
+    call void @llvm.x86.avx512.mask.pmovs.dw.mem.512(ptr %ptr, <16 x i32> %x1, i16 %x2)
     ret void
 }
 
@@ -4085,9 +4084,9 @@ define <16 x i16>@test_int_x86_avx512_mask_pmovus_dw_512(<16 x i32> %x0, <16 x i
     ret <16 x i16> %res4
 }
 
-declare void @llvm.x86.avx512.mask.pmovus.dw.mem.512(i8* %ptr, <16 x i32>, i16)
+declare void @llvm.x86.avx512.mask.pmovus.dw.mem.512(ptr %ptr, <16 x i32>, i16)
 
-define void @test_int_x86_avx512_mask_pmovus_dw_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
+define void @test_int_x86_avx512_mask_pmovus_dw_mem_512(ptr %ptr, <16 x i32> %x1, i16 %x2) {
 ; X64-LABEL: test_int_x86_avx512_mask_pmovus_dw_mem_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -4104,8 +4103,8 @@ define void @test_int_x86_avx512_mask_pmovus_dw_mem_512(i8* %ptr, <16 x i32> %x1
 ; X86-NEXT:    vpmovusdw %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-    call void @llvm.x86.avx512.mask.pmovus.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
-    call void @llvm.x86.avx512.mask.pmovus.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 %x2)
+    call void @llvm.x86.avx512.mask.pmovus.dw.mem.512(ptr %ptr, <16 x i32> %x1, i16 -1)
+    call void @llvm.x86.avx512.mask.pmovus.dw.mem.512(ptr %ptr, <16 x i32> %x1, i16 %x2)
     ret void
 }
 
@@ -4790,7 +4789,7 @@ define <4 x float>@test_int_x86_avx512_mask_getmant_ss(<4 x float> %x0, <4 x flo
   ret <4 x float> %res13
 }
 
-define <4 x float> @test_int_x86_avx512_mask_getmant_ss_load(<4 x float> %x0, <4 x float>* %x1p) {
+define <4 x float> @test_int_x86_avx512_mask_getmant_ss_load(<4 x float> %x0, ptr %x1p) {
 ; X64-LABEL: test_int_x86_avx512_mask_getmant_ss_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vgetmantss $11, (%rdi), %xmm0, %xmm0
@@ -4801,7 +4800,7 @@ define <4 x float> @test_int_x86_avx512_mask_getmant_ss_load(<4 x float> %x0, <4
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vgetmantss $11, (%eax), %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %x1 = load <4 x float>, <4 x float>* %x1p
+  %x1 = load <4 x float>, ptr %x1p
   %res = call <4 x float> @llvm.x86.avx512.mask.getmant.ss(<4 x float> %x0, <4 x float> %x1, i32 11, <4 x float> undef, i8 -1, i32 4)
   ret <4 x float> %res
 }
@@ -5429,7 +5428,7 @@ define <8 x double>@test_int_x86_avx512_mask_fixupimm_pd_512(<8 x double> %x0, <
   ret <8 x double> %res4
 }
 
-define <8 x double>@test_int_x86_avx512_mask_fixupimm_pd_512_load(<8 x double> %x0, <8 x double> %x1, <8 x i64>* %x2ptr) {
+define <8 x double>@test_int_x86_avx512_mask_fixupimm_pd_512_load(<8 x double> %x0, <8 x double> %x1, ptr %x2ptr) {
 ; X64-LABEL: test_int_x86_avx512_mask_fixupimm_pd_512_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vfixupimmpd $3, (%rdi), %zmm1, %zmm0
@@ -5440,7 +5439,7 @@ define <8 x double>@test_int_x86_avx512_mask_fixupimm_pd_512_load(<8 x double> %
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vfixupimmpd $3, (%eax), %zmm1, %zmm0
 ; X86-NEXT:    retl
-  %x2 = load <8 x i64>, <8 x i64>* %x2ptr
+  %x2 = load <8 x i64>, ptr %x2ptr
   %res = call <8 x double> @llvm.x86.avx512.mask.fixupimm.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x i64> %x2, i32 3, i8 -1, i32 4)
   ret <8 x double> %res
 }
@@ -5592,7 +5591,7 @@ define <16 x float>@test_int_x86_avx512_mask_fixupimm_ps_512(<16 x float> %x0, <
   ret <16 x float> %res4
 }
 
-define <16 x float>@test_int_x86_avx512_mask_fixupimm_ps_512_load(<16 x float> %x0, <16 x float> %x1, <16 x i32>* %x2ptr) {
+define <16 x float>@test_int_x86_avx512_mask_fixupimm_ps_512_load(<16 x float> %x0, <16 x float> %x1, ptr %x2ptr) {
 ; X64-LABEL: test_int_x86_avx512_mask_fixupimm_ps_512_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vfixupimmps $5, (%rdi), %zmm1, %zmm0
@@ -5603,7 +5602,7 @@ define <16 x float>@test_int_x86_avx512_mask_fixupimm_ps_512_load(<16 x float> %
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vfixupimmps $5, (%eax), %zmm1, %zmm0
 ; X86-NEXT:    retl
-  %x2 = load <16 x i32>, <16 x i32>* %x2ptr
+  %x2 = load <16 x i32>, ptr %x2ptr
   %res = call <16 x float> @llvm.x86.avx512.mask.fixupimm.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x i32> %x2, i32 5, i16 -1, i32 4)
   ret <16 x float> %res
 }
@@ -5736,7 +5735,7 @@ define <2 x double> @test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %x0, <2 x d
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_vfmadd_sd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm0, %xmm3
 ; X86-NEXT:    vfmadd213sd {{.*#+}} xmm3 {%k1} = (xmm1 * xmm3) + xmm2
@@ -5787,7 +5786,7 @@ define <4 x float> @test_int_x86_avx512_mask_vfmadd_ss(<4 x float> %x0, <4 x flo
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_vfmadd_ss:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm0, %xmm3
 ; X86-NEXT:    vfmadd213ss {{.*#+}} xmm3 {%k1} = (xmm1 * xmm3) + xmm2
@@ -5835,7 +5834,7 @@ define <2 x double>@test_int_x86_avx512_maskz_vfmadd_sd(<2 x double> %x0, <2 x d
 ;
 ; X86-LABEL: test_int_x86_avx512_maskz_vfmadd_sd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm0, %xmm3
 ; X86-NEXT:    vfmadd213sd {{.*#+}} xmm3 {%k1} {z} = (xmm1 * xmm3) + xmm2
@@ -5877,7 +5876,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss(<4 x float> %x0, <4 x flo
 ;
 ; X86-LABEL: test_int_x86_avx512_maskz_vfmadd_ss:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm0, %xmm3
 ; X86-NEXT:    vfmadd213ss {{.*#+}} xmm3 {%k1} {z} = (xmm1 * xmm3) + xmm2
@@ -5905,7 +5904,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss(<4 x float> %x0, <4 x flo
 }
 
 ; Make sure we don't commute this to fold the load as that source isn't commutable.
-define <4 x float> @test_int_x86_avx512_maskz_vfmadd_ss_load0(i8 zeroext %0, <4 x float>* nocapture readonly %1, float %2, float %3) {
+define <4 x float> @test_int_x86_avx512_maskz_vfmadd_ss_load0(i8 zeroext %0, ptr nocapture readonly %1, float %2, float %3) {
 ; X64-LABEL: test_int_x86_avx512_maskz_vfmadd_ss_load0:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rsi), %xmm2
@@ -5917,13 +5916,13 @@ define <4 x float> @test_int_x86_avx512_maskz_vfmadd_ss_load0(i8 zeroext %0, <4 
 ; X86-LABEL: test_int_x86_avx512_maskz_vfmadd_ss_load0:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %xmm0
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vfmadd132ss {{.*#+}} xmm0 {%k1} {z} = (xmm0 * mem) + xmm1
 ; X86-NEXT:    retl
-  %5 = load <4 x float>, <4 x float>* %1, align 16
+  %5 = load <4 x float>, ptr %1, align 16
   %6 = extractelement <4 x float> %5, i64 0
   %7 = tail call float @llvm.fma.f32(float %6, float %2, float %3) #2
   %8 = bitcast i8 %0 to <8 x i1>
@@ -5948,7 +5947,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmadd_sd(<2 x double> %x0, <2 x 
 ;
 ; X86-LABEL: test_int_x86_avx512_mask3_vfmadd_sd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm2, %xmm3
 ; X86-NEXT:    vfmadd231sd {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) + xmm3
@@ -5999,7 +5998,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x fl
 ;
 ; X86-LABEL: test_int_x86_avx512_mask3_vfmadd_ss:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm2, %xmm3
 ; X86-NEXT:    vfmadd231ss {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) + xmm3
@@ -6035,7 +6034,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x fl
   ret <4 x float> %res4
 }
 
-define void @fmadd_ss_mask_memfold(float* %a, float* %b, i8 %c) {
+define void @fmadd_ss_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ; X64-LABEL: fmadd_ss_mask_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -6048,7 +6047,7 @@ define void @fmadd_ss_mask_memfold(float* %a, float* %b, i8 %c) {
 ;
 ; X86-LABEL: fmadd_ss_mask_memfold:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -6058,13 +6057,13 @@ define void @fmadd_ss_mask_memfold(float* %a, float* %b, i8 %c) {
 ; X86-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; X86-NEXT:    vmovss %xmm0, (%edx)
 ; X86-NEXT:    retl
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -6078,11 +6077,11 @@ define void @fmadd_ss_mask_memfold(float* %a, float* %b, i8 %c) {
   %7 = select i1 %6, float %4, float %1
   %8 = insertelement <4 x float> %av, float %7, i64 0
   %sr = extractelement <4 x float> %8, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fmadd_ss_maskz_memfold(float* %a, float* %b, i8 %c) {
+define void @fmadd_ss_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ; X64-LABEL: fmadd_ss_maskz_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -6094,7 +6093,7 @@ define void @fmadd_ss_maskz_memfold(float* %a, float* %b, i8 %c) {
 ;
 ; X86-LABEL: fmadd_ss_maskz_memfold:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -6103,13 +6102,13 @@ define void @fmadd_ss_maskz_memfold(float* %a, float* %b, i8 %c) {
 ; X86-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    vmovss %xmm0, (%edx)
 ; X86-NEXT:    retl
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -6123,11 +6122,11 @@ define void @fmadd_ss_maskz_memfold(float* %a, float* %b, i8 %c) {
   %7 = select i1 %6, float %4, float 0.000000e+00
   %8 = insertelement <4 x float> %av, float %7, i64 0
   %sr = extractelement <4 x float> %8, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fmadd_sd_mask_memfold(double* %a, double* %b, i8 %c) {
+define void @fmadd_sd_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ; X64-LABEL: fmadd_sd_mask_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -6140,7 +6139,7 @@ define void @fmadd_sd_mask_memfold(double* %a, double* %b, i8 %c) {
 ;
 ; X86-LABEL: fmadd_sd_mask_memfold:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -6150,11 +6149,11 @@ define void @fmadd_sd_mask_memfold(double* %a, double* %b, i8 %c) {
 ; X86-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; X86-NEXT:    vmovsd %xmm0, (%edx)
 ; X86-NEXT:    retl
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
   %1 = extractelement <2 x double> %av, i64 0
@@ -6166,11 +6165,11 @@ define void @fmadd_sd_mask_memfold(double* %a, double* %b, i8 %c) {
   %7 = select i1 %6, double %4, double %1
   %8 = insertelement <2 x double> %av, double %7, i64 0
   %sr = extractelement <2 x double> %8, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fmadd_sd_maskz_memfold(double* %a, double* %b, i8 %c) {
+define void @fmadd_sd_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ; X64-LABEL: fmadd_sd_maskz_memfold:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -6182,7 +6181,7 @@ define void @fmadd_sd_maskz_memfold(double* %a, double* %b, i8 %c) {
 ;
 ; X86-LABEL: fmadd_sd_maskz_memfold:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -6191,11 +6190,11 @@ define void @fmadd_sd_maskz_memfold(double* %a, double* %b, i8 %c) {
 ; X86-NEXT:    vmovsd %xmm0, %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    vmovsd %xmm0, (%edx)
 ; X86-NEXT:    retl
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
   %1 = extractelement <2 x double> %av, i64 0
@@ -6207,7 +6206,7 @@ define void @fmadd_sd_maskz_memfold(double* %a, double* %b, i8 %c) {
   %7 = select i1 %6, double %4, double 0.000000e+00
   %8 = insertelement <2 x double> %av, double %7, i64 0
   %sr = extractelement <2 x double> %8, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
@@ -6226,7 +6225,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmsub_sd(<2 x double> %x0, <2 x 
 ;
 ; X86-LABEL: test_int_x86_avx512_mask3_vfmsub_sd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm2, %xmm3
 ; X86-NEXT:    vfmsub231sd {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) - xmm3
@@ -6283,7 +6282,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmsub_ss(<4 x float> %x0, <4 x fl
 ;
 ; X86-LABEL: test_int_x86_avx512_mask3_vfmsub_ss:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm2, %xmm3
 ; X86-NEXT:    vfmsub231ss {{.*#+}} xmm3 {%k1} = (xmm0 * xmm1) - xmm3
@@ -6340,7 +6339,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfnmsub_sd(<2 x double> %x0, <2 x
 ;
 ; X86-LABEL: test_int_x86_avx512_mask3_vfnmsub_sd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovapd %xmm2, %xmm3
 ; X86-NEXT:    vfnmsub231sd {{.*#+}} xmm3 {%k1} = -(xmm0 * xmm1) - xmm3
@@ -6400,7 +6399,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x f
 ;
 ; X86-LABEL: test_int_x86_avx512_mask3_vfnmsub_ss:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovaps %xmm2, %xmm3
 ; X86-NEXT:    vfnmsub231ss {{.*#+}} xmm3 {%k1} = -(xmm0 * xmm1) - xmm3
@@ -6445,7 +6444,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfnmsub_ss(<4 x float> %x0, <4 x f
   ret <4 x float> %res4
 }
 
-define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x float> %x1, float *%ptr_b ,i8 %x3,i32 %x4) {
+define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x float> %x1, ptr%ptr_b ,i8 %x3,i32 %x4) {
 ; X64-LABEL: test_int_x86_avx512_mask3_vfmadd_ss_rm:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -6456,12 +6455,12 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; X86-LABEL: test_int_x86_avx512_mask3_vfmadd_ss_rm:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    kmovw %ecx, %k1
 ; X86-NEXT:    vfmadd231ss {{.*#+}} xmm1 {%k1} = (xmm0 * mem) + xmm1
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
-  %q = load float, float* %ptr_b
+  %q = load float, ptr %ptr_b
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
   %1 = extractelement <4 x float> %x0, i64 0
   %2 = extractelement <4 x float> %vecinit.i, i64 0
@@ -6474,7 +6473,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x 
   ret <4 x float> %8
 }
 
-define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss_rm(<4 x float> %x0, <4 x float> %x1,float *%ptr_b ,i8 %x3,i32 %x4) {
+define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss_rm(<4 x float> %x0, <4 x float> %x1,ptr%ptr_b ,i8 %x3,i32 %x4) {
 ; X64-LABEL: test_int_x86_avx512_mask_vfmadd_ss_rm:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -6484,11 +6483,11 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss_rm(<4 x float> %x0, <4 x f
 ; X86-LABEL: test_int_x86_avx512_mask_vfmadd_ss_rm:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    kmovw %ecx, %k1
 ; X86-NEXT:    vfmadd132ss {{.*#+}} xmm0 {%k1} = (xmm0 * mem) + xmm1
 ; X86-NEXT:    retl
-  %q = load float, float* %ptr_b
+  %q = load float, ptr %ptr_b
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
   %1 = extractelement <4 x float> %x0, i64 0
   %2 = extractelement <4 x float> %vecinit.i, i64 0
@@ -6502,13 +6501,13 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss_rm(<4 x float> %x0, <4 x f
 }
 
 
-define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss_rm(<4 x float> %x0, <4 x float> %x1,float *%ptr_b ,i8 %x3,i32 %x4) {
+define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss_rm(<4 x float> %x0, <4 x float> %x1,ptr%ptr_b ,i8 %x3,i32 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vfmadd_ss_rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %q = load float, float* %ptr_b
+  %q = load float, ptr %ptr_b
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
   %1 = extractelement <4 x float> %x0, i64 0
   %2 = extractelement <4 x float> %x1, i64 0

@@ -295,7 +295,7 @@ void TokenLexer::ExpandFunctionArguments() {
       // the closing r_paren of the __VA_OPT__.
       if (!Tokens[I].is(tok::r_paren) || !VCtx.sawClosingParen()) {
         // Lazily expand __VA_ARGS__ when we see the first __VA_OPT__.
-        if (!CalledWithVariadicArguments.hasValue()) {
+        if (!CalledWithVariadicArguments) {
           CalledWithVariadicArguments =
               ActualArgs->invokedWithVariadicArgument(Macro, PP);
         }

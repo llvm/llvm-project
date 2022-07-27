@@ -278,8 +278,9 @@ def add_release_notes(module_path, module, check_name):
 # Adds a test for the check.
 def write_test(module_path, module, check_name, test_extension):
   check_name_dashes = module + '-' + check_name
-  filename = os.path.normpath(os.path.join(module_path, '../../test/clang-tidy/checkers',
-                                           check_name_dashes + '.' + test_extension))
+  filename = os.path.normpath(os.path.join(
+    module_path, '..', '..', 'test', 'clang-tidy', 'checkers',
+    module, check_name + '.' + test_extension))
   print('Creating %s...' % filename)
   with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write("""// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t

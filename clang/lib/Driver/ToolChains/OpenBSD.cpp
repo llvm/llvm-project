@@ -17,6 +17,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -146,7 +147,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-Bdynamic");
     if (Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-shared");
-    } else {
+    } else if (!Args.hasArg(options::OPT_r)) {
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/usr/libexec/ld.so");
     }
@@ -283,7 +284,7 @@ SanitizerMask OpenBSD::getSupportedSanitizers() const {
 OpenBSD::OpenBSD(const Driver &D, const llvm::Triple &Triple,
                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
+  getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
 }
 
 void OpenBSD::AddClangSystemIncludeArgs(
@@ -316,13 +317,14 @@ void OpenBSD::AddClangSystemIncludeArgs(
     return;
   }
 
-  addExternCSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/usr/include");
+  addExternCSystemInclude(DriverArgs, CC1Args,
+                          concat(D.SysRoot, "/usr/include"));
 }
 
 void OpenBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                     llvm::opt::ArgStringList &CC1Args) const {
   addSystemInclude(DriverArgs, CC1Args,
-                   getDriver().SysRoot + "/usr/include/c++/v1");
+                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
 }
 
 void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
@@ -330,16 +332,27 @@ void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
   bool Profiling = Args.hasArg(options::OPT_pg);
 
   CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+  if (Args.hasArg(options::OPT_fexperimental_library))
+    CmdArgs.push_back("-lc++experimental");
   CmdArgs.push_back(Profiling ? "-lc++abi_p" : "-lc++abi");
   CmdArgs.push_back(Profiling ? "-lpthread_p" : "-lpthread");
 }
 
-std::string OpenBSD::getCompilerRT(const ArgList &Args,
-                                   StringRef Component,
+std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
                                    FileType Type) const {
-  SmallString<128> Path(getDriver().SysRoot);
-  llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
-  return std::string(Path.str());
+  if (Component == "builtins") {
+    SmallString<128> Path(getDriver().SysRoot);
+    llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
+    return std::string(Path.str());
+  }
+  SmallString<128> P(getDriver().ResourceDir);
+  std::string CRTBasename =
+      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  llvm::sys::path::append(P, "lib", CRTBasename);
+  // Checks if this is the base system case which uses a different location.
+  if (getVFS().exists(P))
+    return std::string(P.str());
+  return ToolChain::getCompilerRT(Args, Component, Type);
 }
 
 Tool *OpenBSD::buildAssembler() const {

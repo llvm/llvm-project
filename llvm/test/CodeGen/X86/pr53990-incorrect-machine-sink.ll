@@ -3,7 +3,7 @@
 
 declare void @clobber()
 
-define void @test(i1 %c, i64* %p, i64* noalias %p2) nounwind {
+define void @test(i1 %c, ptr %p, ptr noalias %p2) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -26,7 +26,7 @@ define void @test(i1 %c, i64* %p, i64* noalias %p2) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rax,8)
 entry:
-  %val = load i64, i64* %p, align 8
+  %val = load i64, ptr %p, align 8
   br label %loop
 
 loop:
@@ -54,7 +54,7 @@ clobber:
   br label %sink
 
 sink:
-  store i64 %val, i64* %p2, align 8
+  store i64 %val, ptr %p2, align 8
   br label %latch
 
 latch:

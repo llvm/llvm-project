@@ -34,6 +34,8 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
               llvm::ArrayRef<LocalVariableAddrGap> gaps) {
   lldb::addr_t start =
       index.MakeVirtualAddress(range.ISectStart, range.OffsetStart);
+  if (start == LLDB_INVALID_ADDRESS)
+    return {};
   lldb::addr_t end = start + range.Range;
 
   Variable::RangeList result;
@@ -473,7 +475,7 @@ llvm::StringRef lldb_private::npdb::DropNameScope(llvm::StringRef name) {
 }
 
 VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
-  VariableInfo result;
+  VariableInfo result = {};
 
   if (sym.kind() == S_REGREL32) {
     RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
@@ -600,7 +602,7 @@ static RegisterId GetBaseFrameRegister(PdbIndex &index,
 }
 
 VariableInfo lldb_private::npdb::GetVariableLocationInfo(
-    PdbIndex &index, PdbCompilandSymId var_id, Block &block,
+    PdbIndex &index, PdbCompilandSymId var_id, Block &func_block,
     lldb::ModuleSP module) {
 
   CVSymbol sym = index.ReadSymbolRecord(var_id);
@@ -640,14 +642,8 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
 
       Variable::RangeList ranges = MakeRangeList(index, loc.Range, loc.Gaps);
 
-      // TODO: may be better to pass function scope and not lookup it every
-      // time? find nearest parent function block
-      Block *cur = &block;
-      while (cur->GetParent()) {
-        cur = cur->GetParent();
-      }
       PdbCompilandSymId func_scope_id =
-          PdbSymUid(cur->GetID()).asCompilandSym();
+          PdbSymUid(func_block.GetID()).asCompilandSym();
       CVSymbol func_block_cvs = index.ReadSymbolRecord(func_scope_id);
       lldbassert(func_block_cvs.kind() == S_GPROC32 ||
                  func_block_cvs.kind() == S_LPROC32);
@@ -733,9 +729,14 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
         }
         if (IsTagRecord(class_cvt)) {
           TagRecord tag_record = CVTagRecord::create(class_cvt).asTag();
-          CVType field_list = index.tpi().getType(tag_record.FieldList);
+          CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
+          FieldListRecord field_list;
+          if (llvm::Error error =
+                  TypeDeserializer::deserializeAs<FieldListRecord>(
+                      field_list_cvt, field_list))
+            llvm::consumeError(std::move(error));
           FindMembersSize find_members_size(members_info, index.tpi());
-          if (llvm::Error err = visitMemberRecordStream(field_list.data(),
+          if (llvm::Error err = visitMemberRecordStream(field_list.Data,
                                                         find_members_size)) {
             llvm::consumeError(std::move(err));
             break;

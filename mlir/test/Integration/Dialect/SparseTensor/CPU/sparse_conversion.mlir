@@ -134,12 +134,12 @@ module {
     // CHECK-NEXT: ( 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 1, 2, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0 )
-    // CHECK-NEXT: ( 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 2, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0 )
-    // CHECK-NEXT: ( 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 2, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0 )
+    // CHECK-NEXT: ( 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK-NEXT: ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK-NEXT: ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 )
+    // CHECK-NEXT: ( 0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK-NEXT: ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK-NEXT: ( 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0 )
     // CHECK-NEXT: ( 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 1, 2, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0 )
@@ -211,12 +211,12 @@ module {
     call @dumpidx(%v10) : (memref<?xindex>) -> ()
     call @dumpidx(%v11) : (memref<?xindex>) -> ()
     call @dumpidx(%v12) : (memref<?xindex>) -> ()
-    call @dumpidx(%v10) : (memref<?xindex>) -> ()
-    call @dumpidx(%v11) : (memref<?xindex>) -> ()
-    call @dumpidx(%v12) : (memref<?xindex>) -> ()
-    call @dumpidx(%v10) : (memref<?xindex>) -> ()
-    call @dumpidx(%v11) : (memref<?xindex>) -> ()
-    call @dumpidx(%v12) : (memref<?xindex>) -> ()
+    call @dumpidx(%v20) : (memref<?xindex>) -> ()
+    call @dumpidx(%v21) : (memref<?xindex>) -> ()
+    call @dumpidx(%v22) : (memref<?xindex>) -> ()
+    call @dumpidx(%v30) : (memref<?xindex>) -> ()
+    call @dumpidx(%v31) : (memref<?xindex>) -> ()
+    call @dumpidx(%v32) : (memref<?xindex>) -> ()
 
     call @dumpidx(%a10) : (memref<?xindex>) -> ()
     call @dumpidx(%a11) : (memref<?xindex>) -> ()
@@ -249,15 +249,15 @@ module {
     call @dumpidx(%i32) : (memref<?xindex>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %1 : tensor<2x3x4xf64, #Tensor1>
-    sparse_tensor.release %2 : tensor<2x3x4xf64, #Tensor2>
-    sparse_tensor.release %3 : tensor<2x3x4xf64, #Tensor3>
-    sparse_tensor.release %b : tensor<2x3x4xf64, #Tensor1>
-    sparse_tensor.release %c : tensor<2x3x4xf64, #Tensor1>
-    sparse_tensor.release %d : tensor<2x3x4xf64, #Tensor2>
-    sparse_tensor.release %f : tensor<2x3x4xf64, #Tensor2>
-    sparse_tensor.release %g : tensor<2x3x4xf64, #Tensor3>
-    sparse_tensor.release %h : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %1 : tensor<2x3x4xf64, #Tensor1>
+    bufferization.dealloc_tensor %2 : tensor<2x3x4xf64, #Tensor2>
+    bufferization.dealloc_tensor %3 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %b : tensor<2x3x4xf64, #Tensor1>
+    bufferization.dealloc_tensor %c : tensor<2x3x4xf64, #Tensor1>
+    bufferization.dealloc_tensor %d : tensor<2x3x4xf64, #Tensor2>
+    bufferization.dealloc_tensor %f : tensor<2x3x4xf64, #Tensor2>
+    bufferization.dealloc_tensor %g : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %h : tensor<2x3x4xf64, #Tensor3>
 
     return
   }

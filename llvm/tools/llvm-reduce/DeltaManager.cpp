@@ -35,6 +35,8 @@
 #include "deltas/ReduceOperands.h"
 #include "deltas/ReduceOperandsSkip.h"
 #include "deltas/ReduceOperandsToArgs.h"
+#include "deltas/ReduceRegisterDefs.h"
+#include "deltas/ReduceRegisterMasks.h"
 #include "deltas/ReduceRegisterUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
 #include "deltas/ReduceVirtualRegisters.h"
@@ -51,44 +53,50 @@ static cl::opt<std::string>
                 cl::cat(LLVMReduceOptions));
 
 #define DELTA_PASSES                                                           \
-  DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)                 \
-  DELTA_PASS("aliases", reduceAliasesDeltaPass)                                \
-  DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)                 \
-  DELTA_PASS("functions", reduceFunctionsDeltaPass)                            \
-  DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                       \
-  DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                     \
-  DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                   \
-  DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)        \
-  DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                       \
-  DELTA_PASS("metadata", reduceMetadataDeltaPass)                              \
-  DELTA_PASS("arguments", reduceArgumentsDeltaPass)                            \
-  DELTA_PASS("instructions", reduceInstructionsDeltaPass)                      \
-  DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)           \
-  DELTA_PASS("operands-zero", reduceOperandsZeroDeltaPass)                     \
-  DELTA_PASS("operands-one", reduceOperandsOneDeltaPass)                       \
-  DELTA_PASS("operands-undef", reduceOperandsUndefDeltaPass)                   \
-  DELTA_PASS("operands-to-args", reduceOperandsToArgsDeltaPass)                \
-  DELTA_PASS("operands-skip", reduceOperandsSkipDeltaPass)                     \
-  DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                  \
-  DELTA_PASS("attributes", reduceAttributesDeltaPass)                          \
-  DELTA_PASS("module-data", reduceModuleDataDeltaPass)
+  do {                                                                         \
+    DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)               \
+    DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
+    DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
+    DELTA_PASS("functions", reduceFunctionsDeltaPass)                          \
+    DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                     \
+    DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                   \
+    DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                 \
+    DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)      \
+    DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                     \
+    DELTA_PASS("metadata", reduceMetadataDeltaPass)                            \
+    DELTA_PASS("arguments", reduceArgumentsDeltaPass)                          \
+    DELTA_PASS("instructions", reduceInstructionsDeltaPass)                    \
+    DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)         \
+    DELTA_PASS("operands-zero", reduceOperandsZeroDeltaPass)                   \
+    DELTA_PASS("operands-one", reduceOperandsOneDeltaPass)                     \
+    DELTA_PASS("operands-nan", reduceOperandsNaNDeltaPass)                     \
+    DELTA_PASS("operands-to-args", reduceOperandsToArgsDeltaPass)              \
+    DELTA_PASS("operands-skip", reduceOperandsSkipDeltaPass)                   \
+    DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                \
+    DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
+    DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
+  } while (false)
 
 #define DELTA_PASSES_MIR                                                       \
-  DELTA_PASS("instructions", reduceInstructionsMIRDeltaPass)                   \
-  DELTA_PASS("ir-instruction-references",                                      \
-             reduceIRInstructionReferencesDeltaPass)                           \
-  DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)          \
-  DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)    \
-  DELTA_PASS("instruction-flags", reduceInstructionFlagsMIRDeltaPass)          \
-  DELTA_PASS("register-uses", reduceRegisterUsesMIRDeltaPass)                  \
-  DELTA_PASS("register-hints", reduceVirtualRegisterHintsDeltaPass)
+  do {                                                                         \
+    DELTA_PASS("instructions", reduceInstructionsMIRDeltaPass)                 \
+    DELTA_PASS("ir-instruction-references",                                    \
+               reduceIRInstructionReferencesDeltaPass)                         \
+    DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)        \
+    DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)  \
+    DELTA_PASS("instruction-flags", reduceInstructionFlagsMIRDeltaPass)        \
+    DELTA_PASS("register-uses", reduceRegisterUsesMIRDeltaPass)                \
+    DELTA_PASS("register-defs", reduceRegisterDefsMIRDeltaPass)                \
+    DELTA_PASS("register-hints", reduceVirtualRegisterHintsDeltaPass)          \
+    DELTA_PASS("register-masks", reduceRegisterMasksMIRDeltaPass)              \
+  } while (false)
 
 static void runAllDeltaPasses(TestRunner &Tester) {
 #define DELTA_PASS(NAME, FUNC) FUNC(Tester);
   if (Tester.getProgram().isMIR()) {
-    DELTA_PASSES_MIR
+    DELTA_PASSES_MIR;
   } else {
-    DELTA_PASSES
+    DELTA_PASSES;
   }
 #undef DELTA_PASS
 }
@@ -100,9 +108,9 @@ static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
     return;                                                                    \
   }
   if (Tester.getProgram().isMIR()) {
-    DELTA_PASSES_MIR
+    DELTA_PASSES_MIR;
   } else {
-    DELTA_PASSES
+    DELTA_PASSES;
   }
 #undef DELTA_PASS
   errs() << "unknown pass \"" << PassName << "\"\n";
@@ -113,9 +121,9 @@ void llvm::printDeltaPasses(raw_ostream &OS) {
   OS << "Delta passes (pass to `--delta-passes=` as a comma separated list):\n";
 #define DELTA_PASS(NAME, FUNC) OS << "  " << NAME << "\n";
   OS << " IR:\n";
-  DELTA_PASSES
+  DELTA_PASSES;
   OS << " MIR:\n";
-  DELTA_PASSES_MIR
+  DELTA_PASSES_MIR;
 #undef DELTA_PASS
 }
 

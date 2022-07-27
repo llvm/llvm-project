@@ -476,7 +476,8 @@ private:
   static constexpr Symbol::Flags ompFlagsRequireNewSymbol{
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpLinear,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
-      Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock};
+      Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock,
+      Symbol::Flag::OmpCopyIn};
 
   static constexpr Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate};
@@ -580,6 +581,10 @@ Symbol *DirectiveAttributeVisitor<T>::DeclarePrivateAccessEntity(
   if (object.owner() != currScope()) {
     auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
     symbol.set(flag);
+    if (flag == Symbol::Flag::OmpCopyIn) {
+      // The symbol in copyin clause must be threadprivate entity.
+      symbol.set(Symbol::Flag::OmpThreadprivate);
+    }
     return &symbol;
   } else {
     object.set(flag);
@@ -1470,7 +1475,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
     if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
-        !IsObjectWithDSA(*symbol)) {
+        !IsObjectWithDSA(*symbol) && !IsNamedConstant(*symbol)) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly
       //       determined data-sharing attributes (2.15.1.1).

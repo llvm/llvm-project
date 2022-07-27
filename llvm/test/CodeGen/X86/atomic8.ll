@@ -8,22 +8,22 @@ define void @atomic_fetch_add8() nounwind {
 ; X32-LABEL:   atomic_fetch_add8:
 entry:
 ; 32-bit
-  %t1 = atomicrmw add  i8* @sc8, i8 1 acquire
+  %t1 = atomicrmw add  ptr @sc8, i8 1 acquire
 ; X64:       lock
 ; X64:       incb
 ; X32:       lock
 ; X32:       incb
-  %t2 = atomicrmw add  i8* @sc8, i8 3 acquire
+  %t2 = atomicrmw add  ptr @sc8, i8 3 acquire
 ; X64:       lock
 ; X64:       addb $3
 ; X32:       lock
 ; X32:       addb $3
-  %t3 = atomicrmw add  i8* @sc8, i8 5 acquire
+  %t3 = atomicrmw add  ptr @sc8, i8 5 acquire
 ; X64:       lock
 ; X64:       xaddb
 ; X32:       lock
 ; X32:       xaddb
-  %t4 = atomicrmw add  i8* @sc8, i8 %t3 acquire
+  %t4 = atomicrmw add  ptr @sc8, i8 %t3 acquire
 ; X64:       lock
 ; X64:       addb
 ; X32:       lock
@@ -36,22 +36,22 @@ entry:
 define void @atomic_fetch_sub8() nounwind {
 ; X64-LABEL:   atomic_fetch_sub8:
 ; X32-LABEL:   atomic_fetch_sub8:
-  %t1 = atomicrmw sub  i8* @sc8, i8 1 acquire
+  %t1 = atomicrmw sub  ptr @sc8, i8 1 acquire
 ; X64:       lock
 ; X64:       decb
 ; X32:       lock
 ; X32:       decb
-  %t2 = atomicrmw sub  i8* @sc8, i8 3 acquire
+  %t2 = atomicrmw sub  ptr @sc8, i8 3 acquire
 ; X64:       lock
 ; X64:       subb $3
 ; X32:       lock
 ; X32:       subb $3
-  %t3 = atomicrmw sub  i8* @sc8, i8 5 acquire
+  %t3 = atomicrmw sub  ptr @sc8, i8 5 acquire
 ; X64:       lock
 ; X64:       xaddb
 ; X32:       lock
 ; X32:       xaddb
-  %t4 = atomicrmw sub  i8* @sc8, i8 %t3 acquire
+  %t4 = atomicrmw sub  ptr @sc8, i8 %t3 acquire
 ; X64:       lock
 ; X64:       subb
 ; X32:       lock
@@ -64,19 +64,19 @@ define void @atomic_fetch_sub8() nounwind {
 define void @atomic_fetch_and8() nounwind {
 ; X64-LABEL:   atomic_fetch_and8:
 ; X32-LABEL:   atomic_fetch_and8:
-  %t1 = atomicrmw and  i8* @sc8, i8 3 acquire
+  %t1 = atomicrmw and  ptr @sc8, i8 3 acquire
 ; X64:       lock
 ; X64:       andb $3
 ; X32:       lock
 ; X32:       andb $3
-  %t2 = atomicrmw and  i8* @sc8, i8 5 acquire
+  %t2 = atomicrmw and  ptr @sc8, i8 5 acquire
 ; X64:       andb
 ; X64:       lock
 ; X64:       cmpxchgb
 ; X32:       andb
 ; X32:       lock
 ; X32:       cmpxchgb
-  %t3 = atomicrmw and  i8* @sc8, i8 %t2 acquire
+  %t3 = atomicrmw and  ptr @sc8, i8 %t2 acquire
 ; X64:       lock
 ; X64:       andb
 ; X32:       lock
@@ -89,19 +89,19 @@ define void @atomic_fetch_and8() nounwind {
 define void @atomic_fetch_or8() nounwind {
 ; X64-LABEL:   atomic_fetch_or8:
 ; X32-LABEL:   atomic_fetch_or8:
-  %t1 = atomicrmw or   i8* @sc8, i8 3 acquire
+  %t1 = atomicrmw or   ptr @sc8, i8 3 acquire
 ; X64:       lock
 ; X64:       orb $3
 ; X32:       lock
 ; X32:       orb $3
-  %t2 = atomicrmw or   i8* @sc8, i8 5 acquire
+  %t2 = atomicrmw or   ptr @sc8, i8 5 acquire
 ; X64:       orb
 ; X64:       lock
 ; X64:       cmpxchgb
 ; X32:       orb
 ; X32:       lock
 ; X32:       cmpxchgb
-  %t3 = atomicrmw or   i8* @sc8, i8 %t2 acquire
+  %t3 = atomicrmw or   ptr @sc8, i8 %t2 acquire
 ; X64:       lock
 ; X64:       orb
 ; X32:       lock
@@ -114,19 +114,19 @@ define void @atomic_fetch_or8() nounwind {
 define void @atomic_fetch_xor8() nounwind {
 ; X64-LABEL:   atomic_fetch_xor8:
 ; X32-LABEL:   atomic_fetch_xor8:
-  %t1 = atomicrmw xor  i8* @sc8, i8 3 acquire
+  %t1 = atomicrmw xor  ptr @sc8, i8 3 acquire
 ; X64:       lock
 ; X64:       xorb $3
 ; X32:       lock
 ; X32:       xorb $3
-  %t2 = atomicrmw xor  i8* @sc8, i8 5 acquire
+  %t2 = atomicrmw xor  ptr @sc8, i8 5 acquire
 ; X64:       xorb
 ; X64:       lock
 ; X64:       cmpxchgb
 ; X32:       xorb
 ; X32:       lock
 ; X32:       cmpxchgb
-  %t3 = atomicrmw xor  i8* @sc8, i8 %t2 acquire
+  %t3 = atomicrmw xor  ptr @sc8, i8 %t2 acquire
 ; X64:       lock
 ; X64:       xorb
 ; X32:       lock
@@ -139,7 +139,7 @@ define void @atomic_fetch_xor8() nounwind {
 define void @atomic_fetch_nand8(i8 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_nand8:
 ; X32-LABEL:   atomic_fetch_nand8:
-  %t1 = atomicrmw nand i8* @sc8, i8 %x acquire
+  %t1 = atomicrmw nand ptr @sc8, i8 %x acquire
 ; X64:       andb
 ; X64:       notb
 ; X64:       lock
@@ -156,7 +156,7 @@ define void @atomic_fetch_nand8(i8 %x) nounwind {
 define void @atomic_fetch_max8(i8 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_max8:
 ; X32-LABEL:   atomic_fetch_max8:
-  %t1 = atomicrmw max  i8* @sc8, i8 %x acquire
+  %t1 = atomicrmw max  ptr @sc8, i8 %x acquire
 ; X64:       movb
 ; X64:       movb
 ; X64:       subb
@@ -176,7 +176,7 @@ define void @atomic_fetch_max8(i8 %x) nounwind {
 define void @atomic_fetch_min8(i8 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_min8:
 ; X32-LABEL:   atomic_fetch_min8:
-  %t1 = atomicrmw min  i8* @sc8, i8 %x acquire
+  %t1 = atomicrmw min  ptr @sc8, i8 %x acquire
 ; X64:       movb
 ; X64:       movb
 ; X64:       subb
@@ -196,7 +196,7 @@ define void @atomic_fetch_min8(i8 %x) nounwind {
 define void @atomic_fetch_umax8(i8 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_umax8:
 ; X32-LABEL:   atomic_fetch_umax8:
-  %t1 = atomicrmw umax i8* @sc8, i8 %x acquire
+  %t1 = atomicrmw umax ptr @sc8, i8 %x acquire
 ; X64:       movb
 ; X64:       movb
 ; X64:       subb
@@ -216,7 +216,7 @@ define void @atomic_fetch_umax8(i8 %x) nounwind {
 define void @atomic_fetch_umin8(i8 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_umin8:
 ; X32-LABEL:   atomic_fetch_umin8:
-  %t1 = atomicrmw umin i8* @sc8, i8 %x acquire
+  %t1 = atomicrmw umin ptr @sc8, i8 %x acquire
 ; X64:       movb
 ; X64:       movb
 ; X64:       subb
@@ -236,7 +236,7 @@ define void @atomic_fetch_umin8(i8 %x) nounwind {
 define void @atomic_fetch_cmpxchg8() nounwind {
 ; X64-LABEL:   atomic_fetch_cmpxchg8:
 ; X32-LABEL:   atomic_fetch_cmpxchg8:
-  %t1 = cmpxchg i8* @sc8, i8 0, i8 1 acquire acquire
+  %t1 = cmpxchg ptr @sc8, i8 0, i8 1 acquire acquire
 ; X64:       lock
 ; X64:       cmpxchgb
 ; X32:       lock
@@ -249,7 +249,7 @@ define void @atomic_fetch_cmpxchg8() nounwind {
 define void @atomic_fetch_store8(i8 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_store8:
 ; X32-LABEL:   atomic_fetch_store8:
-  store atomic i8 %x, i8* @sc8 release, align 4
+  store atomic i8 %x, ptr @sc8 release, align 4
 ; X64-NOT:   lock
 ; X64:       movb
 ; X32-NOT:   lock
@@ -262,7 +262,7 @@ define void @atomic_fetch_store8(i8 %x) nounwind {
 define void @atomic_fetch_swap8(i8 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_swap8:
 ; X32-LABEL:   atomic_fetch_swap8:
-  %t1 = atomicrmw xchg i8* @sc8, i8 %x acquire
+  %t1 = atomicrmw xchg ptr @sc8, i8 %x acquire
 ; X64-NOT:   lock
 ; X64:       xchgb
 ; X32-NOT:   lock

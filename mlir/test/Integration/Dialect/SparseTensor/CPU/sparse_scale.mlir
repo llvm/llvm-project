@@ -31,8 +31,7 @@ module {
   //
   // A kernel that scales a sparse matrix A by a factor of 2.0.
   //
-  func.func @sparse_scale(%argx: tensor<8x8xf32, #CSR>
-                     {linalg.inplaceable = true}) -> tensor<8x8xf32, #CSR> {
+  func.func @sparse_scale(%argx: tensor<8x8xf32, #CSR>) -> tensor<8x8xf32, #CSR> {
     %c = arith.constant 2.0 : f32
     %0 = linalg.generic #trait_scale
       outs(%argx: tensor<8x8xf32, #CSR>) {
@@ -78,7 +77,7 @@ module {
     vector.print %v : vector<16xf32>
 
     // Release the resources.
-    sparse_tensor.release %1 : tensor<8x8xf32, #CSR>
+    bufferization.dealloc_tensor %1 : tensor<8x8xf32, #CSR>
 
     return
   }

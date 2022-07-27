@@ -3,9 +3,9 @@
 ; Increment in loop bb.i28.i adjusted to 2, to prevent loop reversal from
 ; kicking in.
 
-declare fastcc void @rdft(i32, i32, double*, i32*, double*)
+declare fastcc void @rdft(i32, i32, ptr, ptr, ptr)
 
-define fastcc void @mp_sqrt(i32 %n, i32 %radix, i32* %in, i32* %out, i32* %tmp1, i32* %tmp2, i32 %nfft, double* %tmp1fft, double* %tmp2fft, i32* %ip, double* %w) nounwind {
+define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, ptr %tmp2, i32 %nfft, ptr %tmp1fft, ptr %tmp2fft, ptr %ip, ptr %w) nounwind {
 ; CHECK-LABEL: mp_sqrt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
@@ -144,7 +144,7 @@ cond_true29.i:		; preds = %cond_next.i
 	ret void
 
 cond_next36.i:		; preds = %cond_next.i
-	store i32 %tmp22.i, i32* null, align 4
+	store i32 %tmp22.i, ptr null, align 4
 	%tmp8.i14.i = select i1 %foo, i32 1, i32 0		; <i32> [#uses=1]
 	br label %bb.i28.i
 
@@ -164,36 +164,36 @@ bb.i28.i:		; preds = %bb.i28.i, %cond_next36.i
 
 mp_unexp_d2mp.exit29.i:		; preds = %bb.i28.i
 	%tmp46.i = sub i32 0, %tmp22.i		; <i32> [#uses=1]
-	store i32 %tmp46.i, i32* null, align 4
+	store i32 %tmp46.i, ptr null, align 4
 	br i1 %exitcond40.i, label %bb.i.i, label %mp_sqrt_init.exit
 
 bb.i.i:		; preds = %bb.i.i, %mp_unexp_d2mp.exit29.i
 	br label %bb.i.i
 
 mp_sqrt_init.exit:		; preds = %mp_unexp_d2mp.exit29.i
-	tail call fastcc void @mp_mul_csqu( i32 0, double* %tmp1fft )
-	tail call fastcc void @rdft( i32 0, i32 -1, double* null, i32* %ip, double* %w )
-	tail call fastcc void @mp_mul_d2i( i32 0, i32 %radix, i32 0, double* %tmp1fft, i32* %tmp2 )
+	tail call fastcc void @mp_mul_csqu( i32 0, ptr %tmp1fft )
+	tail call fastcc void @rdft( i32 0, i32 -1, ptr null, ptr %ip, ptr %w )
+	tail call fastcc void @mp_mul_d2i( i32 0, i32 %radix, i32 0, ptr %tmp1fft, ptr %tmp2 )
 	br i1 %exitcond40.i, label %cond_false.i, label %cond_true36.i
 
 cond_true36.i:		; preds = %mp_sqrt_init.exit
 	ret void
 
 cond_false.i:		; preds = %mp_sqrt_init.exit
-	tail call fastcc void @mp_round( i32 0, i32 %radix, i32 0, i32* %out )
-	tail call fastcc void @mp_add( i32 0, i32 %radix, i32* %tmp1, i32* %tmp2, i32* %tmp1 )
-	tail call fastcc void @mp_sub( i32 0, i32 %radix, i32* %in, i32* %tmp2, i32* %tmp2 )
-	tail call fastcc void @mp_round( i32 0, i32 %radix, i32 0, i32* %tmp1 )
-	tail call fastcc void @mp_mul_d2i( i32 0, i32 %radix, i32 %tmp7.i3, double* %tmp2fft, i32* %tmp2 )
+	tail call fastcc void @mp_round( i32 0, i32 %radix, i32 0, ptr %out )
+	tail call fastcc void @mp_add( i32 0, i32 %radix, ptr %tmp1, ptr %tmp2, ptr %tmp1 )
+	tail call fastcc void @mp_sub( i32 0, i32 %radix, ptr %in, ptr %tmp2, ptr %tmp2 )
+	tail call fastcc void @mp_round( i32 0, i32 %radix, i32 0, ptr %tmp1 )
+	tail call fastcc void @mp_mul_d2i( i32 0, i32 %radix, i32 %tmp7.i3, ptr %tmp2fft, ptr %tmp2 )
 	ret void
 }
 
-declare fastcc void @mp_add(i32, i32, i32*, i32*, i32*)
+declare fastcc void @mp_add(i32, i32, ptr, ptr, ptr)
 
-declare fastcc void @mp_sub(i32, i32, i32*, i32*, i32*)
+declare fastcc void @mp_sub(i32, i32, ptr, ptr, ptr)
 
-declare fastcc void @mp_round(i32, i32, i32, i32*)
+declare fastcc void @mp_round(i32, i32, i32, ptr)
 
-declare fastcc void @mp_mul_csqu(i32, double*)
+declare fastcc void @mp_mul_csqu(i32, ptr)
 
-declare fastcc void @mp_mul_d2i(i32, i32, i32, double*, i32*)
+declare fastcc void @mp_mul_d2i(i32, i32, i32, ptr, ptr)

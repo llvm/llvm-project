@@ -1,14 +1,14 @@
 ; RUN: llc < %s -stack-symbol-ordering=0 -mcpu=generic -stackrealign -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; rdar://11496434
-declare void @t1_helper(i32*)
-declare void @t3_helper(i32*, i32*)
+declare void @t1_helper(ptr)
+declare void @t3_helper(ptr, ptr)
 
 ; Test when forcing stack alignment
 define i32 @t8() nounwind uwtable {
 entry:
   %a = alloca i32, align 4
-  call void @t1_helper(i32* %a) nounwind
-  %0 = load i32, i32* %a, align 4
+  call void @t1_helper(ptr %a) nounwind
+  %0 = load i32, ptr %a, align 4
   %add = add nsw i32 %0, 13
   ret i32 %add
 
@@ -25,8 +25,8 @@ define i32 @t9(i64 %sz) nounwind uwtable {
 entry:
   %a = alloca i32, align 4
   %vla = alloca i32, i64 %sz, align 16
-  call void @t3_helper(i32* %a, i32* %vla) nounwind
-  %0 = load i32, i32* %a, align 4
+  call void @t3_helper(ptr %a, ptr %vla) nounwind
+  %0 = load i32, ptr %a, align 4
   %add = add nsw i32 %0, 13
   ret i32 %add
 

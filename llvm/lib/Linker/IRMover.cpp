@@ -1046,7 +1046,7 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   if (Function *F = dyn_cast<Function>(NewGV))
     if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
       NewGV->eraseFromParent();
-      NewGV = Remangled.getValue();
+      NewGV = *Remangled;
       NeedsRenaming = false;
     }
 
@@ -1273,14 +1273,19 @@ Error IRLinker::linkModuleFlagsMetadata() {
   // First build a map of the existing module flags and requirements.
   DenseMap<MDString *, std::pair<MDNode *, unsigned>> Flags;
   SmallSetVector<MDNode *, 16> Requirements;
+  SmallVector<unsigned, 0> Mins;
+  DenseSet<MDString *> SeenMin;
   for (unsigned I = 0, E = DstModFlags->getNumOperands(); I != E; ++I) {
     MDNode *Op = DstModFlags->getOperand(I);
-    ConstantInt *Behavior = mdconst::extract<ConstantInt>(Op->getOperand(0));
+    uint64_t Behavior =
+        mdconst::extract<ConstantInt>(Op->getOperand(0))->getZExtValue();
     MDString *ID = cast<MDString>(Op->getOperand(1));
 
-    if (Behavior->getZExtValue() == Module::Require) {
+    if (Behavior == Module::Require) {
       Requirements.insert(cast<MDNode>(Op->getOperand(2)));
     } else {
+      if (Behavior == Module::Min)
+        Mins.push_back(I);
       Flags[ID] = std::make_pair(Op, I);
     }
   }
@@ -1296,6 +1301,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
     unsigned DstIndex;
     std::tie(DstOp, DstIndex) = Flags.lookup(ID);
     unsigned SrcBehaviorValue = SrcBehavior->getZExtValue();
+    SeenMin.insert(ID);
 
     // If this is a requirement, add it and continue.
     if (SrcBehaviorValue == Module::Require) {
@@ -1309,6 +1315,10 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
     // If there is no existing flag with this ID, just add it.
     if (!DstOp) {
+      if (SrcBehaviorValue == Module::Min) {
+        Mins.push_back(DstModFlags->getNumOperands());
+        SeenMin.erase(ID);
+      }
       Flags[ID] = std::make_pair(SrcOp, DstModFlags->getNumOperands());
       DstModFlags->addOperand(SrcOp);
       continue;
@@ -1357,11 +1367,20 @@ Error IRLinker::linkModuleFlagsMetadata() {
                          DstM.getModuleIdentifier() + "'");
     }
 
-    auto replaceDstValue = [&](MDNode *New) {
+    auto ensureDistinctOp = [&](MDNode *DstValue) {
+      assert(isa<MDTuple>(DstValue) &&
+             "Expected MDTuple when appending module flags");
+      if (DstValue->isDistinct())
+        return dyn_cast<MDTuple>(DstValue);
+      ArrayRef<MDOperand> DstOperands = DstValue->operands();
+      MDTuple *New = MDTuple::getDistinct(
+          DstM.getContext(),
+          SmallVector<Metadata *, 4>(DstOperands.begin(), DstOperands.end()));
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
-      MDNode *Flag = MDNode::get(DstM.getContext(), FlagOps);
+      MDNode *Flag = MDTuple::getDistinct(DstM.getContext(), FlagOps);
       DstModFlags->setOperand(DstIndex, Flag);
       Flags[ID].first = Flag;
+      return New;
     };
 
     // Emit a warning if the values differ and either source or destination
@@ -1438,29 +1457,38 @@ Error IRLinker::linkModuleFlagsMetadata() {
       break;
     }
     case Module::Append: {
-      MDNode *DstValue = cast<MDNode>(DstOp->getOperand(2));
+      MDTuple *DstValue = ensureDistinctOp(cast<MDNode>(DstOp->getOperand(2)));
       MDNode *SrcValue = cast<MDNode>(SrcOp->getOperand(2));
-      SmallVector<Metadata *, 8> MDs;
-      MDs.reserve(DstValue->getNumOperands() + SrcValue->getNumOperands());
-      MDs.append(DstValue->op_begin(), DstValue->op_end());
-      MDs.append(SrcValue->op_begin(), SrcValue->op_end());
-
-      replaceDstValue(MDNode::get(DstM.getContext(), MDs));
+      for (const auto &O : SrcValue->operands())
+        DstValue->push_back(O);
       break;
     }
     case Module::AppendUnique: {
       SmallSetVector<Metadata *, 16> Elts;
-      MDNode *DstValue = cast<MDNode>(DstOp->getOperand(2));
+      MDTuple *DstValue = ensureDistinctOp(cast<MDNode>(DstOp->getOperand(2)));
       MDNode *SrcValue = cast<MDNode>(SrcOp->getOperand(2));
       Elts.insert(DstValue->op_begin(), DstValue->op_end());
       Elts.insert(SrcValue->op_begin(), SrcValue->op_end());
-
-      replaceDstValue(MDNode::get(DstM.getContext(),
-                                  makeArrayRef(Elts.begin(), Elts.end())));
+      for (auto I = DstValue->getNumOperands(); I < Elts.size(); I++)
+        DstValue->push_back(Elts[I]);
       break;
     }
     }
 
+  }
+
+  // For the Min behavior, set the value to 0 if either module does not have the
+  // flag.
+  for (auto Idx : Mins) {
+    MDNode *Op = DstModFlags->getOperand(Idx);
+    MDString *ID = cast<MDString>(Op->getOperand(1));
+    if (!SeenMin.count(ID)) {
+      ConstantInt *V = mdconst::extract<ConstantInt>(Op->getOperand(2));
+      Metadata *FlagOps[] = {
+          Op->getOperand(0), ID,
+          ConstantAsMetadata::get(ConstantInt::get(V->getType(), 0))};
+      DstModFlags->setOperand(Idx, MDNode::get(DstM.getContext(), FlagOps));
+    }
   }
 
   // Check all of the requirements.

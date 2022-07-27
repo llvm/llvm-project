@@ -20,16 +20,9 @@ func.func @interchange_generic(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  pdl.pattern @match_generic : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = pdl.operation "linalg.generic"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    rewrite %0 with "transform.dialect"
-  }
-
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
-    %0 = pdl_match @match_generic in %arg1
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     transform.structured.interchange %0 { iterator_interchange = [1, 0]}
   }
 }
@@ -37,24 +30,17 @@ transform.with_pdl_patterns {
 // -----
 
 func.func @interchange_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-note @below {{attempted to apply to this op}}
+  // expected-note @below {{when applied to this op}}
   %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  pdl.pattern @match_generic : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = pdl.operation "linalg.matmul"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    rewrite %0 with "transform.dialect"
-  }
-
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
-    %0 = pdl_match @match_generic in %arg1
-    // expected-error @below {{applies to linalg.generic ops}}
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    // expected-error @below {{transform applied to the wrong op kind}}
     transform.structured.interchange %0 { iterator_interchange = [1, 0]}
   }
 }

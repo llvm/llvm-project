@@ -21,22 +21,22 @@ entry:
   %c5.addr = alloca i8, align 1
   %c6.addr = alloca i8, align 1
   %s.addr = alloca i16, align 2
-  store i8 %c1, i8* %c1.addr, align 1
-  store float %f1, float* %f1.addr, align 4
-  store i8 %c2, i8* %c2.addr, align 1
-  store i8 %c3, i8* %c3.addr, align 1
-  store i8 %c4, i8* %c4.addr, align 1
-  store i8 %c5, i8* %c5.addr, align 1
-  store i8 %c6, i8* %c6.addr, align 1
-  store i16 %s, i16* %s.addr, align 2
-  store i8 97, i8* %c1.addr, align 1, !dbg !9
-  store float 0x3FB99999A0000000, float* %f1.addr, align 4, !dbg !10
-  store i8 5, i8* %c2.addr, align 1, !dbg !11
-  store i8 6, i8* %c3.addr, align 1, !dbg !12
-  store i8 7, i8* %c4.addr, align 1, !dbg !13
-  store i8 115, i8* %c5.addr, align 1, !dbg !14
-  store i8 102, i8* %c6.addr, align 1, !dbg !15
-  store i16 77, i16* %s.addr, align 2, !dbg !16
+  store i8 %c1, ptr %c1.addr, align 1
+  store float %f1, ptr %f1.addr, align 4
+  store i8 %c2, ptr %c2.addr, align 1
+  store i8 %c3, ptr %c3.addr, align 1
+  store i8 %c4, ptr %c4.addr, align 1
+  store i8 %c5, ptr %c5.addr, align 1
+  store i8 %c6, ptr %c6.addr, align 1
+  store i16 %s, ptr %s.addr, align 2
+  store i8 97, ptr %c1.addr, align 1, !dbg !9
+  store float 0x3FB99999A0000000, ptr %f1.addr, align 4, !dbg !10
+  store i8 5, ptr %c2.addr, align 1, !dbg !11
+  store i8 6, ptr %c3.addr, align 1, !dbg !12
+  store i8 7, ptr %c4.addr, align 1, !dbg !13
+  store i8 115, ptr %c5.addr, align 1, !dbg !14
+  store i8 102, ptr %c6.addr, align 1, !dbg !15
+  store i16 77, ptr %s.addr, align 2, !dbg !16
   ret void, !dbg !17
 }
 

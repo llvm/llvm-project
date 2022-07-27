@@ -284,7 +284,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl() {
       LLVM_DEBUG(Die.dump(dbgs()));
     }
     this->addProbe(*FunctionName, *CFGHash, *CounterPtr - CountersStart,
-                   FunctionPtr.getValueOr(0), *NumCounters);
+                   FunctionPtr.value_or(0), *NumCounters);
   };
   for (auto &CU : DICtx->normal_units())
     for (const auto &Entry : CU->dies())

@@ -98,6 +98,56 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
   ASSERT_EQ(1u, callback_count);
 }
 
+TEST_F(MainLoopTest, PendingCallback) {
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_TRUE(socketpair[0]->Write(&X, len).Success());
+
+  MainLoop loop;
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      socketpair[1],
+      [&](MainLoopBase &loop) {
+        // Both callbacks should be called before the loop terminates.
+        loop.AddPendingCallback(make_callback());
+        loop.AddPendingCallback(make_callback());
+        loop.RequestTermination();
+      },
+      error);
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(2u, callback_count);
+}
+
+TEST_F(MainLoopTest, PendingCallbackCalledOnlyOnce) {
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_TRUE(socketpair[0]->Write(&X, len).Success());
+
+  MainLoop loop;
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      socketpair[1],
+      [&](MainLoopBase &loop) {
+        // Add one pending callback on the first iteration.
+        if (callback_count == 0) {
+          loop.AddPendingCallback([&](MainLoopBase &loop) {
+            callback_count++;
+          });
+        }
+        // Terminate the loop on second iteration.
+        if (callback_count++ >= 1)
+          loop.RequestTermination();
+      },
+      error);
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+  ASSERT_TRUE(loop.Run().Success());
+  // 2 iterations of read callback + 1 call of pending callback.
+  ASSERT_EQ(3u, callback_count);
+}
+
 #ifdef LLVM_ON_UNIX
 TEST_F(MainLoopTest, DetectsEOF) {
 

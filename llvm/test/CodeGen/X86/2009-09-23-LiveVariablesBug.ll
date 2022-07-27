@@ -5,19 +5,19 @@
 %struct._lck_mtx_ = type { %union.anon }
 %struct._lck_rw_t_internal_ = type <{ i16, i8, i8, i32, i32, i32 }>
 %struct.anon = type { i64, i64, [2 x i8], i8, i8, i32 }
-%struct.memory_object = type { i32, i32, %struct.memory_object_pager_ops* }
-%struct.memory_object_control = type { i32, i32, %struct.vm_object* }
-%struct.memory_object_pager_ops = type { void (%struct.memory_object*)*, void (%struct.memory_object*)*, i32 (%struct.memory_object*, %struct.memory_object_control*, i32)*, i32 (%struct.memory_object*)*, i32 (%struct.memory_object*, i64, i32, i32, i32*)*, i32 (%struct.memory_object*, i64, i32, i64*, i32*, i32, i32, i32)*, i32 (%struct.memory_object*, i64, i32)*, i32 (%struct.memory_object*, i64, i64, i32)*, i32 (%struct.memory_object*, i64, i64, i32)*, i32 (%struct.memory_object*, i32)*, i32 (%struct.memory_object*)*, i8* }
-%struct.queue_entry = type { %struct.queue_entry*, %struct.queue_entry* }
-%struct.upl = type { %struct._lck_mtx_, i32, i32, %struct.vm_object*, i64, i32, i64, %struct.vm_object*, i32, i8* }
+%struct.memory_object = type { i32, i32, ptr }
+%struct.memory_object_control = type { i32, i32, ptr }
+%struct.memory_object_pager_ops = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+%struct.queue_entry = type { ptr, ptr }
+%struct.upl = type { %struct._lck_mtx_, i32, i32, ptr, i64, i32, i64, ptr, i32, ptr }
 %struct.upl_page_info = type <{ i32, i8, [3 x i8] }>
-%struct.vm_object = type { %struct.queue_entry, %struct._lck_rw_t_internal_, i64, %struct.vm_page*, i32, i32, i32, i32, %struct.vm_object*, %struct.vm_object*, i64, %struct.memory_object*, i64, %struct.memory_object_control*, i32, i16, i16, [2 x i8], i8, i8, %struct.queue_entry, %struct.queue_entry, i64, i32, i32, i32, i8*, i64, i8, i8, [2 x i8], %struct.queue_entry }
-%struct.vm_page = type { %struct.queue_entry, %struct.queue_entry, %struct.vm_page*, %struct.vm_object*, i64, [2 x i8], i8, i8, i32, i8, i8, i8, i8, i32 }
+%struct.vm_object = type { %struct.queue_entry, %struct._lck_rw_t_internal_, i64, ptr, i32, i32, i32, i32, ptr, ptr, i64, ptr, i64, ptr, i32, i16, i16, [2 x i8], i8, i8, %struct.queue_entry, %struct.queue_entry, i64, i32, i32, i32, ptr, i64, i8, i8, [2 x i8], %struct.queue_entry }
+%struct.vm_page = type { %struct.queue_entry, %struct.queue_entry, ptr, ptr, i64, [2 x i8], i8, i8, i32, i8, i8, i8, i8, i32 }
 %union.anon = type { %struct.anon }
 
-declare i64 @OSAddAtomic64(i64, i64*) noredzone noimplicitfloat
+declare i64 @OSAddAtomic64(i64, ptr) noredzone noimplicitfloat
 
-define i32 @upl_commit_range(%struct.upl* %upl, i32 %offset, i32 %size, i32 %flags, %struct.upl_page_info* %page_list, i32 %count, i32* nocapture %empty) nounwind noredzone noimplicitfloat {
+define i32 @upl_commit_range(ptr %upl, i32 %offset, i32 %size, i32 %flags, ptr %page_list, i32 %count, ptr nocapture %empty) nounwind noredzone noimplicitfloat {
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -67,8 +67,8 @@ if.then616:                                       ; preds = %if.end306
   br i1 undef, label %commit_next_page, label %do.body716
 
 do.body716:                                       ; preds = %if.then616
-  %call721 = call i64 @OSAddAtomic64(i64 1, i64* undef) nounwind noredzone noimplicitfloat ; <i64> [#uses=0]
-  call void asm sideeffect "movq\090x0($0),%rdi\0A\09movq\090x8($0),%rsi\0A\09.section __DATA, __data\0A\09.globl __dtrace_probeDOLLAR${:uid}4794___vminfo____pgrec\0A\09__dtrace_probeDOLLAR${:uid}4794___vminfo____pgrec:.quad 1f\0A\09.text\0A\091:nop\0A\09nop\0A\09nop\0A\09", "r,~{memory},~{di},~{si},~{dirflag},~{fpsr},~{flags}"(i64* undef) nounwind
+  %call721 = call i64 @OSAddAtomic64(i64 1, ptr undef) nounwind noredzone noimplicitfloat ; <i64> [#uses=0]
+  call void asm sideeffect "movq\090x0($0),%rdi\0A\09movq\090x8($0),%rsi\0A\09.section __DATA, __data\0A\09.globl __dtrace_probeDOLLAR${:uid}4794___vminfo____pgrec\0A\09__dtrace_probeDOLLAR${:uid}4794___vminfo____pgrec:.quad 1f\0A\09.text\0A\091:nop\0A\09nop\0A\09nop\0A\09", "r,~{memory},~{di},~{si},~{dirflag},~{fpsr},~{flags}"(ptr undef) nounwind
   br label %commit_next_page
 
 if.end796:                                        ; preds = %if.end306

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
 
@@ -118,7 +119,7 @@ class CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
 /// Converts math.ctlz to SPIR-V ops.
 ///
 /// SPIR-V does not have a direct operations for counting leading zeros. If
-/// Shader capability is supported, we can leverage GLSL FindUMsb to calculate
+/// Shader capability is supported, we can leverage GL FindUMsb to calculate
 /// it.
 class CountLeadingZerosPattern final
     : public OpConversionPattern<math::CountLeadingZerosOp> {
@@ -146,11 +147,11 @@ class CountLeadingZerosPattern final
     Value val31 = getScalarOrVectorI32Constant(type, 31, rewriter, loc);
     Value val32 = getScalarOrVectorI32Constant(type, 32, rewriter, loc);
 
-    Value msb = rewriter.create<spirv::GLSLFindUMsbOp>(loc, input);
+    Value msb = rewriter.create<spirv::GLFindUMsbOp>(loc, input);
     // We need to subtract from 31 given that the index returned by GLSL
     // FindUMsb is counted from the least significant bit. Theoretically this
     // also gives the correct result even if the integer has all zero bits, in
-    // which case GLSL FindUMsb would return -1.
+    // which case GL FindUMsb would return -1.
     Value subMsb = rewriter.create<spirv::ISubOp>(loc, val31, msb);
     // However, certain Vulkan implementations have driver bugs for the corner
     // case where the input is zero. And.. it can be smart to optimize a select
@@ -218,17 +219,54 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     if (!dstType)
       return failure();
 
-    // Per GLSL Pow extended instruction spec:
+    // Per GL Pow extended instruction spec:
     // "Result is undefined if x < 0. Result is undefined if x = 0 and y <= 0."
     Location loc = powfOp.getLoc();
     Value zero =
         spirv::ConstantOp::getZero(adaptor.getLhs().getType(), loc, rewriter);
     Value lessThan =
         rewriter.create<spirv::FOrdLessThanOp>(loc, adaptor.getLhs(), zero);
-    Value abs = rewriter.create<spirv::GLSLFAbsOp>(loc, adaptor.getLhs());
-    Value pow = rewriter.create<spirv::GLSLPowOp>(loc, abs, adaptor.getRhs());
+    Value abs = rewriter.create<spirv::GLFAbsOp>(loc, adaptor.getLhs());
+    Value pow = rewriter.create<spirv::GLPowOp>(loc, abs, adaptor.getRhs());
     Value negate = rewriter.create<spirv::FNegateOp>(loc, pow);
     rewriter.replaceOpWithNewOp<spirv::SelectOp>(powfOp, lessThan, negate, pow);
+    return success();
+  }
+};
+
+/// Converts math.round to GLSL SPIRV extended ops.
+struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(math::RoundOp roundOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = roundOp.getLoc();
+    auto operand = roundOp.getOperand();
+    auto ty = operand.getType();
+    auto ety = getElementTypeOrSelf(ty);
+
+    auto zero = spirv::ConstantOp::getZero(ty, loc, rewriter);
+    auto one = spirv::ConstantOp::getOne(ty, loc, rewriter);
+    Value half;
+    if (VectorType vty = ty.dyn_cast<VectorType>()) {
+      half = rewriter.create<spirv::ConstantOp>(
+          loc, vty,
+          DenseElementsAttr::get(vty,
+                                 rewriter.getFloatAttr(ety, 0.5).getValue()));
+    } else {
+      half = rewriter.create<spirv::ConstantOp>(
+          loc, ty, rewriter.getFloatAttr(ety, 0.5));
+    }
+
+    auto abs = rewriter.create<spirv::GLFAbsOp>(loc, operand);
+    auto floor = rewriter.create<spirv::GLFloorOp>(loc, abs);
+    auto sub = rewriter.create<spirv::FSubOp>(loc, abs, floor);
+    auto greater =
+        rewriter.create<spirv::FOrdGreaterThanEqualOp>(loc, sub, half);
+    auto select = rewriter.create<spirv::SelectOp>(loc, greater, one, zero);
+    auto add = rewriter.create<spirv::FAddOp>(loc, floor, select);
+    rewriter.replaceOpWithNewOp<math::CopySignOp>(roundOp, add, operand);
     return success();
   }
 };
@@ -247,36 +285,37 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
   // GLSL patterns
   patterns
-      .add<CountLeadingZerosPattern, Log1pOpPattern<spirv::GLSLLogOp>,
-           ExpM1OpPattern<spirv::GLSLExpOp>, PowFOpPattern,
-           spirv::ElementwiseOpPattern<math::AbsOp, spirv::GLSLFAbsOp>,
-           spirv::ElementwiseOpPattern<math::CeilOp, spirv::GLSLCeilOp>,
-           spirv::ElementwiseOpPattern<math::CosOp, spirv::GLSLCosOp>,
-           spirv::ElementwiseOpPattern<math::ExpOp, spirv::GLSLExpOp>,
-           spirv::ElementwiseOpPattern<math::FloorOp, spirv::GLSLFloorOp>,
-           spirv::ElementwiseOpPattern<math::FmaOp, spirv::GLSLFmaOp>,
-           spirv::ElementwiseOpPattern<math::LogOp, spirv::GLSLLogOp>,
-           spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
-           spirv::ElementwiseOpPattern<math::SinOp, spirv::GLSLSinOp>,
-           spirv::ElementwiseOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
-           spirv::ElementwiseOpPattern<math::TanhOp, spirv::GLSLTanhOp>>(
+      .add<CountLeadingZerosPattern, Log1pOpPattern<spirv::GLLogOp>,
+           ExpM1OpPattern<spirv::GLExpOp>, PowFOpPattern, RoundOpPattern,
+           spirv::ElementwiseOpPattern<math::AbsOp, spirv::GLFAbsOp>,
+           spirv::ElementwiseOpPattern<math::CeilOp, spirv::GLCeilOp>,
+           spirv::ElementwiseOpPattern<math::CosOp, spirv::GLCosOp>,
+           spirv::ElementwiseOpPattern<math::ExpOp, spirv::GLExpOp>,
+           spirv::ElementwiseOpPattern<math::FloorOp, spirv::GLFloorOp>,
+           spirv::ElementwiseOpPattern<math::FmaOp, spirv::GLFmaOp>,
+           spirv::ElementwiseOpPattern<math::LogOp, spirv::GLLogOp>,
+           spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::GLInverseSqrtOp>,
+           spirv::ElementwiseOpPattern<math::SinOp, spirv::GLSinOp>,
+           spirv::ElementwiseOpPattern<math::SqrtOp, spirv::GLSqrtOp>,
+           spirv::ElementwiseOpPattern<math::TanhOp, spirv::GLTanhOp>>(
           typeConverter, patterns.getContext());
 
   // OpenCL patterns
-  patterns.add<Log1pOpPattern<spirv::OCLLogOp>, ExpM1OpPattern<spirv::OCLExpOp>,
-               spirv::ElementwiseOpPattern<math::AbsOp, spirv::OCLFAbsOp>,
-               spirv::ElementwiseOpPattern<math::CeilOp, spirv::OCLCeilOp>,
-               spirv::ElementwiseOpPattern<math::CosOp, spirv::OCLCosOp>,
-               spirv::ElementwiseOpPattern<math::ErfOp, spirv::OCLErfOp>,
-               spirv::ElementwiseOpPattern<math::ExpOp, spirv::OCLExpOp>,
-               spirv::ElementwiseOpPattern<math::FloorOp, spirv::OCLFloorOp>,
-               spirv::ElementwiseOpPattern<math::FmaOp, spirv::OCLFmaOp>,
-               spirv::ElementwiseOpPattern<math::LogOp, spirv::OCLLogOp>,
-               spirv::ElementwiseOpPattern<math::PowFOp, spirv::OCLPowOp>,
-               spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::OCLRsqrtOp>,
-               spirv::ElementwiseOpPattern<math::SinOp, spirv::OCLSinOp>,
-               spirv::ElementwiseOpPattern<math::SqrtOp, spirv::OCLSqrtOp>,
-               spirv::ElementwiseOpPattern<math::TanhOp, spirv::OCLTanhOp>>(
+  patterns.add<Log1pOpPattern<spirv::CLLogOp>, ExpM1OpPattern<spirv::CLExpOp>,
+               spirv::ElementwiseOpPattern<math::AbsOp, spirv::CLFAbsOp>,
+               spirv::ElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
+               spirv::ElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
+               spirv::ElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,
+               spirv::ElementwiseOpPattern<math::ExpOp, spirv::CLExpOp>,
+               spirv::ElementwiseOpPattern<math::FloorOp, spirv::CLFloorOp>,
+               spirv::ElementwiseOpPattern<math::FmaOp, spirv::CLFmaOp>,
+               spirv::ElementwiseOpPattern<math::LogOp, spirv::CLLogOp>,
+               spirv::ElementwiseOpPattern<math::PowFOp, spirv::CLPowOp>,
+               spirv::ElementwiseOpPattern<math::RoundOp, spirv::CLRoundOp>,
+               spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::CLRsqrtOp>,
+               spirv::ElementwiseOpPattern<math::SinOp, spirv::CLSinOp>,
+               spirv::ElementwiseOpPattern<math::SqrtOp, spirv::CLSqrtOp>,
+               spirv::ElementwiseOpPattern<math::TanhOp, spirv::CLTanhOp>>(
       typeConverter, patterns.getContext());
 }
 

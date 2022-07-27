@@ -258,7 +258,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
 
     auto HPTOpt =
         Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
-    if (HPTOpt.hasValue() && !HungarianNotation.checkOptionValid(I))
+    if (HPTOpt && !HungarianNotation.checkOptionValid(I))
       configurationDiag("invalid identifier naming option '%0'") << StyleString;
 
     memcpy(&StyleString[StyleSize], "IgnoredRegexp", 13);
@@ -279,7 +279,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
         !IgnoredRegexpStr.empty() || HPTOpt)
       Styles[I].emplace(std::move(CaseOptional), std::move(Prefix),
                         std::move(Postfix), IgnoredRegexpStr.str(),
-                        HPTOpt.getValueOr(IdentifierNamingCheck::HPT_Off));
+                        HPTOpt.value_or(IdentifierNamingCheck::HPT_Off));
   }
   bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
   return {std::move(Styles), std::move(HNOption), IgnoreMainLike};
@@ -1045,7 +1045,7 @@ std::string IdentifierNamingCheck::fixupWithStyle(
   Name.consume_back(Style.Suffix);
   std::string Fixed = fixupWithCase(
       Type, Name, D, Style, HNOption,
-      Style.Case.getValueOr(IdentifierNamingCheck::CaseType::CT_AnyCase));
+      Style.Case.value_or(IdentifierNamingCheck::CaseType::CT_AnyCase));
 
   std::string HungarianPrefix;
   using HungarianPrefixType = IdentifierNamingCheck::HungarianPrefixType;

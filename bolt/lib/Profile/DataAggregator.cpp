@@ -77,7 +77,7 @@ MaxSamples("max-samples",
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
-static cl::opt<bool> ReadPreAggregated(
+cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
@@ -114,10 +114,10 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
     sections.push_back(
         {Section.getName(), Section.getAddress(), Section.getEndAddress()});
   }
-  std::sort(sections.begin(), sections.end(),
-            [](const SectionNameAndRange &A, const SectionNameAndRange &B) {
-              return A.BeginAddress < B.BeginAddress;
-            });
+  llvm::sort(sections,
+             [](const SectionNameAndRange &A, const SectionNameAndRange &B) {
+               return A.BeginAddress < B.BeginAddress;
+             });
   return sections;
 }
 }
@@ -294,23 +294,22 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 
   FileBuf = std::move(*MB);
   ParsingBuf = FileBuf->getBuffer();
-  if (ParsingBuf.empty()) {
-    errs() << "PERF2BOLT-WARNING: build-id will not be checked because perf "
-              "data was recorded without it\n";
-    return;
-  }
 
-  Col = 0;
-  Line = 1;
   Optional<StringRef> FileName = getFileNameForBuildID(FileBuildID);
   if (!FileName) {
-    errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
-              "This indicates the input binary supplied for data aggregation "
-              "is not the same recorded by perf when collecting profiling "
-              "data, or there were no samples recorded for the binary. "
-              "Use -ignore-build-id option to override.\n";
-    if (!opts::IgnoreBuildID)
-      abort();
+    if (hasAllBuildIDs()) {
+      errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
+                "This indicates the input binary supplied for data aggregation "
+                "is not the same recorded by perf when collecting profiling "
+                "data, or there were no samples recorded for the binary. "
+                "Use -ignore-build-id option to override.\n";
+      if (!opts::IgnoreBuildID)
+        abort();
+    } else {
+      errs() << "PERF2BOLT-WARNING: build-id will not be checked because perf "
+                "data was recorded without it\n";
+      return;
+    }
   } else if (*FileName != llvm::sys::path::filename(BC->getFilename())) {
     errs() << "PERF2BOLT-WARNING: build-id matched a different file name\n";
     BuildIDBinaryName = std::string(*FileName);
@@ -877,7 +876,7 @@ bool DataAggregator::recordTrace(
   // the previous block (that instruction should be a call).
   if (From == FromBB->getOffset() && !BF.containsAddress(FirstLBR.From) &&
       !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
-    BinaryBasicBlock *PrevBB = BF.BasicBlocksLayout[FromBB->getIndex() - 1];
+    BinaryBasicBlock *PrevBB = BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
       const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
       if (Instr && BC.MIB->isCall(*Instr))
@@ -897,10 +896,10 @@ bool DataAggregator::recordTrace(
     return true;
 
   // Process blocks in the original layout order.
-  BinaryBasicBlock *BB = BF.BasicBlocksLayout[FromBB->getIndex()];
+  BinaryBasicBlock *BB = BF.getLayout().getBlock(FromBB->getIndex());
   assert(BB == FromBB && "index mismatch");
   while (BB != ToBB) {
-    BinaryBasicBlock *NextBB = BF.BasicBlocksLayout[BB->getIndex() + 1];
+    BinaryBasicBlock *NextBB = BF.getLayout().getBlock(BB->getIndex() + 1);
     assert((NextBB && NextBB->getOffset() > BB->getOffset()) && "bad layout");
 
     // Check for bad LBRs.
@@ -1272,13 +1271,6 @@ DataAggregator::parseAggregatedLBREntry() {
   return AggregatedLBREntry{From.get(), To.get(),
                             static_cast<uint64_t>(Frequency.get()), Mispreds,
                             Type};
-}
-
-bool DataAggregator::hasData() {
-  if (ParsingBuf.size() == 0)
-    return false;
-
-  return true;
 }
 
 bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
@@ -2152,6 +2144,11 @@ DataAggregator::parseNameBuildIDPair() {
   if (std::error_code EC = BuildIDStr.getError())
     return NoneType();
 
+  // If one of the strings is missing, don't issue a parsing error, but still
+  // do not return a value.
+  if (ParsingBuf[0] == '\n')
+    return NoneType();
+
   ErrorOr<StringRef> NameStr = parseString(FieldSeparator, true);
   if (std::error_code EC = NameStr.getError())
     return NoneType();
@@ -2160,16 +2157,48 @@ DataAggregator::parseNameBuildIDPair() {
   return std::make_pair(NameStr.get(), BuildIDStr.get());
 }
 
+bool DataAggregator::hasAllBuildIDs() {
+  const StringRef SavedParsingBuf = ParsingBuf;
+
+  if (!hasData())
+    return false;
+
+  bool HasInvalidEntries = false;
+  while (hasData()) {
+    if (!parseNameBuildIDPair()) {
+      HasInvalidEntries = true;
+      break;
+    }
+  }
+
+  ParsingBuf = SavedParsingBuf;
+
+  return !HasInvalidEntries;
+}
+
 Optional<StringRef>
 DataAggregator::getFileNameForBuildID(StringRef FileBuildID) {
+  const StringRef SavedParsingBuf = ParsingBuf;
+
+  StringRef FileName;
   while (hasData()) {
     Optional<std::pair<StringRef, StringRef>> IDPair = parseNameBuildIDPair();
-    if (!IDPair)
-      return NoneType();
+    if (!IDPair) {
+      consumeRestOfLine();
+      continue;
+    }
 
-    if (IDPair->second.startswith(FileBuildID))
-      return sys::path::filename(IDPair->first);
+    if (IDPair->second.startswith(FileBuildID)) {
+      FileName = sys::path::filename(IDPair->first);
+      break;
+    }
   }
+
+  ParsingBuf = SavedParsingBuf;
+
+  if (!FileName.empty())
+    return FileName;
+
   return NoneType();
 }
 

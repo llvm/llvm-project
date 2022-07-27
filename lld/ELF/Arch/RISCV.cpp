@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -36,6 +38,7 @@ public:
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  bool relaxOnce(int pass) const override;
 };
 
 } // end anonymous namespace
@@ -54,6 +57,7 @@ enum Op {
 
 enum Reg {
   X_RA = 1,
+  X_TP = 4,
   X_T0 = 5,
   X_T1 = 6,
   X_T2 = 7,
@@ -71,6 +75,19 @@ static uint32_t rtype(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2) {
 }
 static uint32_t utype(uint32_t op, uint32_t rd, uint32_t imm) {
   return op | (rd << 7) | (imm << 12);
+}
+
+// Extract bits v[begin:end], where range is inclusive, and begin must be < 63.
+static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
+  return (v & ((1ULL << (begin + 1)) - 1)) >> end;
+}
+
+static uint32_t setLO12_I(uint32_t insn, uint32_t imm) {
+  return (insn & 0xfffff) | (imm << 20);
+}
+static uint32_t setLO12_S(uint32_t insn, uint32_t imm) {
+  return (insn & 0x1fff07f) | (extractBits(imm, 11, 5) << 25) |
+         (extractBits(imm, 4, 0) << 7);
 }
 
 RISCV::RISCV() {
@@ -111,12 +128,12 @@ static uint32_t getEFlags(InputFile *f) {
 uint32_t RISCV::calcEFlags() const {
   // If there are only binary input files (from -b binary), use a
   // value of 0 for the ELF header flags.
-  if (objectFiles.empty())
+  if (ctx->objectFiles.empty())
     return 0;
 
-  uint32_t target = getEFlags(objectFiles.front());
+  uint32_t target = getEFlags(ctx->objectFiles.front());
 
-  for (InputFile *f : objectFiles) {
+  for (InputFile *f : ctx->objectFiles) {
     uint32_t eflags = getEFlags(f);
     if (eflags & EF_RISCV_RVC)
       target |= EF_RISCV_RVC;
@@ -267,26 +284,16 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_TPREL_LO12_I:
   case R_RISCV_TPREL_LO12_S:
     return R_TPREL;
-  case R_RISCV_RELAX:
-  case R_RISCV_TPREL_ADD:
-    return R_NONE;
   case R_RISCV_ALIGN:
-    // Not just a hint; always padded to the worst-case number of NOPs, so may
-    // not currently be aligned, and without linker relaxation support we can't
-    // delete NOPs to realign.
-    errorOrWarn(getErrorLocation(loc) + "relocation R_RISCV_ALIGN requires "
-                "unimplemented linker relaxation; recompile with -mno-relax");
-    return R_NONE;
+    return R_RELAX_HINT;
+  case R_RISCV_TPREL_ADD:
+  case R_RISCV_RELAX:
+    return config->relax ? R_RELAX_HINT : R_NONE;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
-}
-
-// Extract bits V[Begin:End], where range is inclusive, and Begin must be < 63.
-static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
-  return (v & ((1ULL << (begin + 1)) - 1)) >> end;
 }
 
 void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -301,7 +308,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
 
   case R_RISCV_RVC_BRANCH: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 8, rel);
+    checkInt(loc, val, 9, rel);
     checkAlignment(loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE383;
     uint16_t imm8 = extractBits(val, 8, 8) << 12;
@@ -316,7 +323,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_RVC_JUMP: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 11, rel);
+    checkInt(loc, val, 12, rel);
     checkAlignment(loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE003;
     uint16_t imm11 = extractBits(val, 11, 11) << 12;
@@ -347,7 +354,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_JAL: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 20, rel);
+    checkInt(loc, val, 21, rel);
     checkAlignment(loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0xFFF;
@@ -362,7 +369,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_BRANCH: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 12, rel);
+    checkInt(loc, val, 13, rel);
     checkAlignment(loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0x1FFF07F;
@@ -405,7 +412,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_LO12_I: {
     uint64_t hi = (val + 0x800) >> 12;
     uint64_t lo = val - (hi << 12);
-    write32le(loc, (read32le(loc) & 0xFFFFF) | ((lo & 0xFFF) << 20));
+    write32le(loc, setLO12_I(read32le(loc), lo & 0xfff));
     return;
   }
 
@@ -414,9 +421,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_LO12_S: {
     uint64_t hi = (val + 0x800) >> 12;
     uint64_t lo = val - (hi << 12);
-    uint32_t imm11_5 = extractBits(lo, 11, 5) << 25;
-    uint32_t imm4_0 = extractBits(lo, 4, 0) << 7;
-    write32le(loc, (read32le(loc) & 0x1FFF07F) | imm11_5 | imm4_0);
+    write32le(loc, setLO12_S(read32le(loc), lo));
     return;
   }
 
@@ -473,6 +478,337 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   default:
     llvm_unreachable("unknown relocation");
+  }
+}
+
+namespace {
+struct SymbolAnchor {
+  uint64_t offset;
+  Defined *d;
+  bool end; // true for the anchor of st_value+st_size
+};
+} // namespace
+
+struct elf::RISCVRelaxAux {
+  // This records symbol start and end offsets which will be adjusted according
+  // to the nearest relocDeltas element.
+  SmallVector<SymbolAnchor, 0> anchors;
+  // For relocations[i], the actual offset is r_offset - (i ? relocDeltas[i-1] :
+  // 0).
+  std::unique_ptr<uint32_t[]> relocDeltas;
+  // For relocations[i], the actual type is relocTypes[i].
+  std::unique_ptr<RelType[]> relocTypes;
+  SmallVector<uint32_t, 0> writes;
+};
+
+static void initSymbolAnchors() {
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      sec->relaxAux = make<RISCVRelaxAux>();
+      if (sec->relocations.size()) {
+        sec->relaxAux->relocDeltas =
+            std::make_unique<uint32_t[]>(sec->relocations.size());
+        sec->relaxAux->relocTypes =
+            std::make_unique<RelType[]>(sec->relocations.size());
+      }
+    }
+  }
+  // Store anchors (st_value and st_value+st_size) for symbols relative to text
+  // sections.
+  for (InputFile *file : ctx->objectFiles)
+    for (Symbol *sym : file->getSymbols()) {
+      auto *d = dyn_cast<Defined>(sym);
+      if (!d || d->file != file)
+        continue;
+      if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
+        if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
+          // If sec is discarded, relaxAux will be nullptr.
+          sec->relaxAux->anchors.push_back({d->value, d, false});
+          sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
+        }
+    }
+  // Sort anchors by offset so that we can find the closest relocation
+  // efficiently. For a zero size symbol, ensure that its start anchor precedes
+  // its end anchor. For two symbols with anchors at the same offset, their
+  // order does not matter.
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      llvm::sort(sec->relaxAux->anchors, [](auto &a, auto &b) {
+        return std::make_pair(a.offset, a.end) <
+               std::make_pair(b.offset, b.end);
+      });
+    }
+  }
+}
+
+// Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
+static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
+                      Relocation &r, uint32_t &remove) {
+  const bool rvc = config->eflags & EF_RISCV_RVC;
+  const Symbol &sym = *r.sym;
+  const uint64_t insnPair = read64le(sec.rawData.data() + r.offset);
+  const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
+  const uint64_t dest =
+      (r.expr == R_PLT_PC ? sym.getPltVA() : sym.getVA()) + r.addend;
+  const int64_t displace = dest - loc;
+
+  if (rvc && isInt<12>(displace) && rd == 0) {
+    sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
+    sec.relaxAux->writes.push_back(0xa001); // c.j
+    remove = 6;
+  } else if (rvc && isInt<12>(displace) && rd == X_RA &&
+             !config->is64) { // RV32C only
+    sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
+    sec.relaxAux->writes.push_back(0x2001); // c.jal
+    remove = 6;
+  } else if (isInt<21>(displace)) {
+    sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
+    sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
+    remove = 4;
+  }
+}
+
+// Relax local-exec TLS when hi20 is zero.
+static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
+                       Relocation &r, uint32_t &remove) {
+  uint64_t val = r.sym->getVA(r.addend);
+  if (hi20(val) != 0)
+    return;
+  uint32_t insn = read32le(sec.rawData.data() + r.offset);
+  switch (r.type) {
+  case R_RISCV_TPREL_HI20:
+  case R_RISCV_TPREL_ADD:
+    // Remove lui rd, %tprel_hi(x) and add rd, rd, tp, %tprel_add(x).
+    sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+    remove = 4;
+    break;
+  case R_RISCV_TPREL_LO12_I:
+    // addi rd, rd, %tprel_lo(x) => addi rd, tp, st_value(x)
+    sec.relaxAux->relocTypes[i] = R_RISCV_32;
+    insn = (insn & ~(31 << 15)) | (X_TP << 15);
+    sec.relaxAux->writes.push_back(setLO12_I(insn, val));
+    break;
+  case R_RISCV_TPREL_LO12_S:
+    // sw rs, %tprel_lo(x)(rd) => sw rs, st_value(x)(rd)
+    sec.relaxAux->relocTypes[i] = R_RISCV_32;
+    insn = (insn & ~(31 << 15)) | (X_TP << 15);
+    sec.relaxAux->writes.push_back(setLO12_S(insn, val));
+    break;
+  }
+}
+
+static bool relax(InputSection &sec) {
+  const uint64_t secAddr = sec.getVA();
+  auto &aux = *sec.relaxAux;
+  bool changed = false;
+
+  // Get st_value delta for symbols relative to this section from the previous
+  // iteration.
+  DenseMap<const Defined *, uint64_t> valueDelta;
+  ArrayRef<SymbolAnchor> sa = makeArrayRef(aux.anchors);
+  uint32_t delta = 0;
+  for (auto it : llvm::enumerate(sec.relocations)) {
+    for (; sa.size() && sa[0].offset <= it.value().offset; sa = sa.slice(1))
+      if (!sa[0].end)
+        valueDelta[sa[0].d] = delta;
+    delta = aux.relocDeltas[it.index()];
+  }
+  for (const SymbolAnchor &sa : sa)
+    if (!sa.end)
+      valueDelta[sa.d] = delta;
+  sa = makeArrayRef(aux.anchors);
+  delta = 0;
+
+  std::fill_n(aux.relocTypes.get(), sec.relocations.size(), R_RISCV_NONE);
+  aux.writes.clear();
+  for (auto it : llvm::enumerate(sec.relocations)) {
+    Relocation &r = it.value();
+    const size_t i = it.index();
+    const uint64_t loc = secAddr + r.offset - delta;
+    uint32_t &cur = aux.relocDeltas[i], remove = 0;
+    switch (r.type) {
+    case R_RISCV_ALIGN: {
+      const uint64_t nextLoc = loc + r.addend;
+      const uint64_t align = PowerOf2Ceil(r.addend + 2);
+      // All bytes beyond the alignment boundary should be removed.
+      remove = nextLoc - ((loc + align - 1) & -align);
+      assert(static_cast<int32_t>(remove) >= 0 &&
+             "R_RISCV_ALIGN needs expanding the content");
+      break;
+    }
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT:
+      if (i + 1 != sec.relocations.size() &&
+          sec.relocations[i + 1].type == R_RISCV_RELAX)
+        relaxCall(sec, i, loc, r, remove);
+      break;
+    case R_RISCV_TPREL_HI20:
+    case R_RISCV_TPREL_ADD:
+    case R_RISCV_TPREL_LO12_I:
+    case R_RISCV_TPREL_LO12_S:
+      if (i + 1 != sec.relocations.size() &&
+          sec.relocations[i + 1].type == R_RISCV_RELAX)
+        relaxTlsLe(sec, i, loc, r, remove);
+      break;
+    }
+
+    // For all anchors whose offsets are <= r.offset, they are preceded by
+    // the previous relocation whose `relocDeltas` value equals `delta`.
+    // Decrease their st_value and update their st_size.
+    for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1)) {
+      if (sa[0].end)
+        sa[0].d->size = sa[0].offset - delta - sa[0].d->value;
+      else
+        sa[0].d->value -= delta - valueDelta.find(sa[0].d)->second;
+    }
+    delta += remove;
+    if (delta != cur) {
+      cur = delta;
+      changed = true;
+    }
+  }
+
+  for (const SymbolAnchor &a : sa) {
+    if (a.end)
+      a.d->size = a.offset - delta - a.d->value;
+    else
+      a.d->value -= delta - valueDelta.find(a.d)->second;
+  }
+  // Inform assignAddresses that the size has changed.
+  if (!isUInt<16>(delta))
+    fatal("section size decrease is too large");
+  sec.bytesDropped = delta;
+  return changed;
+}
+
+// When relaxing just R_RISCV_ALIGN, relocDeltas is usually changed only once in
+// the absence of a linker script. For call and load/store R_RISCV_RELAX, code
+// shrinkage may reduce displacement and make more relocations eligible for
+// relaxation. Code shrinkage may increase displacement to a call/load/store
+// target at a higher fixed address, invalidating an earlier relaxation. Any
+// change in section sizes can have cascading effect and require another
+// relaxation pass.
+bool RISCV::relaxOnce(int pass) const {
+  llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
+  if (config->relocatable)
+    return false;
+
+  if (pass == 0)
+    initSymbolAnchors();
+
+  SmallVector<InputSection *, 0> storage;
+  bool changed = false;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage))
+      changed |= relax(*sec);
+  }
+  return changed;
+}
+
+void elf::riscvFinalizeRelax(int passes) {
+  llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
+  log("relaxation passes: " + Twine(passes));
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      RISCVRelaxAux &aux = *sec->relaxAux;
+      if (!aux.relocDeltas)
+        continue;
+
+      auto &rels = sec->relocations;
+      ArrayRef<uint8_t> old = sec->rawData;
+      size_t newSize =
+          old.size() - aux.relocDeltas[sec->relocations.size() - 1];
+      size_t writesIdx = 0;
+      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint64_t offset = 0;
+      int64_t delta = 0;
+      sec->rawData = makeArrayRef(p, newSize);
+      sec->bytesDropped = 0;
+
+      // Update section content: remove NOPs for R_RISCV_ALIGN and rewrite
+      // instructions for relaxed relocations.
+      for (size_t i = 0, e = rels.size(); i != e; ++i) {
+        uint32_t remove = aux.relocDeltas[i] - delta;
+        delta = aux.relocDeltas[i];
+        if (remove == 0 && aux.relocTypes[i] == R_RISCV_NONE)
+          continue;
+
+        // Copy from last location to the current relocated location.
+        const Relocation &r = rels[i];
+        uint64_t size = r.offset - offset;
+        memcpy(p, old.data() + offset, size);
+        p += size;
+
+        // For R_RISCV_ALIGN, we will place `offset` in a location (among NOPs)
+        // to satisfy the alignment requirement. If `remove` is a multiple of 4,
+        // it is as if we have skipped some NOPs. Otherwise we are in the middle
+        // of a 4-byte NOP, and we need to rewrite the NOP sequence.
+        int64_t skip = 0;
+        if (r.type == R_RISCV_ALIGN) {
+          if (remove % 4 != 0) {
+            skip = r.addend - remove;
+            int64_t j = 0;
+            for (; j + 4 <= skip; j += 4)
+              write32le(p + j, 0x00000013); // nop
+            if (j != skip) {
+              assert(j + 2 == skip);
+              write16le(p + j, 0x0001); // c.nop
+            }
+          }
+        } else if (RelType newType = aux.relocTypes[i]) {
+          switch (newType) {
+          case R_RISCV_RELAX:
+            // Used by relaxTlsLe to indicate the relocation is ignored.
+            break;
+          case R_RISCV_RVC_JUMP:
+            skip = 2;
+            write16le(p, aux.writes[writesIdx++]);
+            break;
+          case R_RISCV_JAL:
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            break;
+          case R_RISCV_32:
+            // Used by relaxTlsLe to write a uint32_t then suppress the handling
+            // in relocateAlloc.
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            aux.relocTypes[i] = R_RISCV_NONE;
+            break;
+          default:
+            llvm_unreachable("unsupported type");
+          }
+        }
+
+        p += skip;
+        offset = r.offset + skip + remove;
+      }
+      memcpy(p, old.data() + offset, old.size() - offset);
+
+      // Subtract the previous relocDeltas value from the relocation offset.
+      // For a pair of R_RISCV_CALL/R_RISCV_RELAX with the same offset, decrease
+      // their r_offset by the same delta.
+      delta = 0;
+      for (size_t i = 0, e = rels.size(); i != e;) {
+        uint64_t cur = rels[i].offset;
+        do {
+          rels[i].offset -= delta;
+          if (aux.relocTypes[i] != R_RISCV_NONE)
+            rels[i].type = aux.relocTypes[i];
+        } while (++i != e && rels[i].offset == cur);
+        delta = aux.relocDeltas[i - 1];
+      }
+    }
   }
 }
 

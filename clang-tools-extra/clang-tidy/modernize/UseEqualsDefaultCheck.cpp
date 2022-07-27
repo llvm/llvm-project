@@ -153,22 +153,24 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
     //   ((Base*)this)->operator=((Base)Other);
     //
     // So we are looking for a member call that fulfills:
-    if (match(traverse(TK_AsIs,
-                       compoundStmt(has(ignoringParenImpCasts(cxxMemberCallExpr(
-                           // - The object is an implicit cast of 'this' to a
-                           // pointer to
-                           //   a base class.
-                           onImplicitObjectArgument(implicitCastExpr(
-                               hasImplicitDestinationType(
-                                   pointsTo(type(equalsNode(Base)))),
-                               hasSourceExpression(cxxThisExpr()))),
-                           // - The called method is the operator=.
-                           callee(cxxMethodDecl(isCopyAssignmentOperator())),
-                           // - The argument is (an implicit cast to a Base of)
-                           // the argument taken by "Operator".
-                           argumentCountIs(1),
-                           hasArgument(0, declRefExpr(to(varDecl(
-                                              equalsNode(Param)))))))))),
+    if (match(traverse(
+                  TK_AsIs,
+                  compoundStmt(has(ignoringParenImpCasts(cxxMemberCallExpr(
+                      // - The object is an implicit cast of 'this' to a
+                      // pointer to
+                      //   a base class.
+                      onImplicitObjectArgument(implicitCastExpr(
+                          hasImplicitDestinationType(hasCanonicalType(pointsTo(
+                              type(equalsNode(Base->getCanonicalTypeInternal()
+                                                  .getTypePtr()))))),
+                          hasSourceExpression(cxxThisExpr()))),
+                      // - The called method is the operator=.
+                      callee(cxxMethodDecl(isCopyAssignmentOperator())),
+                      // - The argument is (an implicit cast to a Base of)
+                      // the argument taken by "Operator".
+                      argumentCountIs(1),
+                      hasArgument(
+                          0, declRefExpr(to(varDecl(equalsNode(Param)))))))))),
               *Compound, *Context)
             .empty())
       return false;

@@ -19,10 +19,8 @@ entry:
 define i32 @f0(ptr addrspace(1), ptr addrspace(4)) #1 {
 entry:
   %2 = getelementptr inbounds %struct.__block_literal_generic, ptr addrspace(4) %1, i64 0, i32 3
-  %3 = bitcast ptr addrspace(4) %1 to ptr addrspace(4)
-  %4 = bitcast ptr addrspace(4) %2 to ptr addrspace(4)
-  %5 = load ptr, ptr addrspace(4) %4, align 8
-  %call = tail call i32 %5(ptr addrspace(4) %3, ptr addrspace(1) %0) #2
+  %3 = load ptr, ptr addrspace(4) %2, align 8
+  %call = tail call i32 %3(ptr addrspace(4) %1, ptr addrspace(1) %0) #2
   ret i32 %call
 }
 

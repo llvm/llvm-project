@@ -16,7 +16,55 @@ New entries should be added directly below the "Version" header.
 Version 15.0
 ------------
 
-* b0fd9497af6d - [libc++] Add a lightweight overridable assertion handler
+* f1c30135417f - [libc++] Drop the legacy debug mode symbols by default
+
+  This commit removed symbols implementing debug mode in the non-debug
+  configuration of the library. Using the debug mode now requires a
+  differently-configured version of libc++. This is technically an ABI
+  break, however any user having been using the debug mode support previously
+  was already at risk of non-benign ODR violations, and in practice we
+  never found it to work reliably.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNKSt3__111__libcpp_db15__decrementableEPKv
+  Symbol removed: _ZNKSt3__111__libcpp_db15__find_c_from_iEPv
+  Symbol removed: _ZNKSt3__111__libcpp_db15__subscriptableEPKvl
+  Symbol removed: _ZNKSt3__111__libcpp_db17__dereferenceableEPKv
+  Symbol removed: _ZNKSt3__111__libcpp_db17__find_c_and_lockEPv
+  Symbol removed: _ZNKSt3__111__libcpp_db22__less_than_comparableEPKvS2_
+  Symbol removed: _ZNKSt3__111__libcpp_db6unlockEv
+  Symbol removed: _ZNKSt3__111__libcpp_db8__find_cEPv
+  Symbol removed: _ZNKSt3__111__libcpp_db9__addableEPKvl
+  Symbol removed: _ZNKSt3__119__libcpp_debug_info4whatEv
+  Symbol removed: _ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: _ZNSt3__111__libcpp_db10__insert_iEPv
+  Symbol removed: _ZNSt3__111__libcpp_db11__insert_icEPvPKv
+  Symbol removed: _ZNSt3__111__libcpp_db15__iterator_copyEPvPKv
+  Symbol removed: _ZNSt3__111__libcpp_db16__invalidate_allEPv
+  Symbol removed: _ZNSt3__111__libcpp_db4swapEPvS1_
+  Symbol removed: _ZNSt3__111__libcpp_db9__erase_cEPv
+  Symbol removed: _ZNSt3__111__libcpp_db9__erase_iEPv
+  Symbol removed: _ZNSt3__111__libcpp_dbC1Ev
+  Symbol removed: _ZNSt3__111__libcpp_dbC2Ev
+  Symbol removed: _ZNSt3__111__libcpp_dbD1Ev
+  Symbol removed: _ZNSt3__111__libcpp_dbD2Ev
+  Symbol removed: _ZNSt3__114__get_const_dbEv
+  Symbol removed: _ZNSt3__123__libcpp_debug_functionE
+  Symbol removed: _ZNSt3__127__libcpp_set_debug_functionEPFvRKNS_19__libcpp_debug_infoEE
+  Symbol removed: _ZNSt3__129__libcpp_abort_debug_functionERKNS_19__libcpp_debug_infoE
+  Symbol removed: _ZNSt3__18__c_node5__addEPNS_8__i_nodeE
+  Symbol removed: _ZNSt3__18__c_nodeD0Ev
+  Symbol removed: _ZNSt3__18__c_nodeD1Ev
+  Symbol removed: _ZNSt3__18__c_nodeD2Ev
+  Symbol removed: _ZNSt3__18__get_dbEv
+  Symbol removed: _ZNSt3__18__i_nodeD1Ev
+  Symbol removed: _ZNSt3__18__i_nodeD2Ev
+  Symbol removed: _ZTINSt3__18__c_nodeE
+  Symbol removed: _ZTSNSt3__18__c_nodeE
+  Symbol removed: _ZTVNSt3__18__c_nodeE
+
+* b0fd9497af6d and 7de5aca84c54 - [libc++] Add a lightweight overridable assertion handler
 
   This patch adds a lightweight assertion handler mechanism that can be
   overriden at link-time in a fashion similar to `operator new`. A default
@@ -25,7 +73,7 @@ Version 15.0
 
   All platforms
   -------------
-  Symbol added: _ZNSt3__126__libcpp_assertion_handlerEPKciS1_S1_
+  Symbol added: _ZNSt3__126__libcpp_assertion_handlerEPKcz
 
 ------------
 Version 14.0

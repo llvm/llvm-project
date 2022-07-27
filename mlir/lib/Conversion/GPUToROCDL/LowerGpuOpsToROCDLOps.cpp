@@ -23,7 +23,6 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
-#include "mlir/Conversion/VectorToROCDL/VectorToROCDL.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -55,39 +54,47 @@ namespace {
 struct LowerGpuOpsToROCDLOpsPass
     : public ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
   LowerGpuOpsToROCDLOpsPass() = default;
-  LowerGpuOpsToROCDLOpsPass(unsigned indexBitwidth, gpu::amd::Runtime runtime) {
+  LowerGpuOpsToROCDLOpsPass(const std::string &chipset, unsigned indexBitwidth,
+                            gpu::amd::Runtime runtime) {
+    this->chipset = chipset;
     this->indexBitwidth = indexBitwidth;
     this->runtime = runtime;
   }
 
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
+    MLIRContext *ctx = m.getContext();
 
     // Request C wrapper emission.
     for (auto func : m.getOps<func::FuncOp>()) {
       func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(&getContext()));
+                    UnitAttr::get(ctx));
+    }
+
+    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
+    if (failed(maybeChipset)) {
+      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+      return signalPassFailure();
     }
 
     /// Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(
-        m.getContext(),
-        DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
+        ctx, DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    LLVMTypeConverter converter(m.getContext(), options);
+    LLVMTypeConverter converter(ctx, options);
 
-    RewritePatternSet patterns(m.getContext());
-    RewritePatternSet llvmPatterns(m.getContext());
+    RewritePatternSet patterns(ctx);
+    RewritePatternSet llvmPatterns(ctx);
 
     populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     mlir::arith::populateArithmeticToLLVMConversionPatterns(converter,
                                                             llvmPatterns);
-    populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns);
+    populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
+                                            *maybeChipset);
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
-    populateVectorToROCDLConversionPatterns(converter, llvmPatterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
     populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
     populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
@@ -180,7 +187,9 @@ void mlir::populateGpuToROCDLConversionPatterns(
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToROCDLOpsPass(unsigned indexBitwidth,
+mlir::createLowerGpuOpsToROCDLOpsPass(const std::string &chipset,
+                                      unsigned indexBitwidth,
                                       gpu::amd::Runtime runtime) {
-  return std::make_unique<LowerGpuOpsToROCDLOpsPass>(indexBitwidth, runtime);
+  return std::make_unique<LowerGpuOpsToROCDLOpsPass>(chipset, indexBitwidth,
+                                                     runtime);
 }

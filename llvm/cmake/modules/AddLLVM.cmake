@@ -863,19 +863,15 @@ macro(add_llvm_library name)
   endif()
 endmacro(add_llvm_library name)
 
-macro(add_llvm_executable name)
-  cmake_parse_arguments(ARG
-    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS;GENERATE_DRIVER"
-    "ENTITLEMENTS;BUNDLE_PATH"
-    "DEPENDS"
-    ${ARGN})
+macro(generate_llvm_objects name)
+  cmake_parse_arguments(ARG "GENERATE_DRIVER" "" "DEPENDS" ${ARGN})
 
   llvm_process_sources( ALL_FILES ${ARG_UNPARSED_ARGUMENTS} )
 
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
 
   # Generate objlib
-  if(LLVM_ENABLE_OBJLIB OR ARG_GENERATE_DRIVER)
+  if(LLVM_ENABLE_OBJLIB OR (ARG_GENERATE_DRIVER AND LLVM_TOOL_LLVM_DRIVER_BUILD))
     # Generate an obj library for both targets.
     set(obj_name "obj.${name}")
     add_library(${obj_name} OBJECT EXCLUDE_FROM_ALL
@@ -903,15 +899,25 @@ macro(add_llvm_executable name)
 
     list(APPEND ALL_FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
 
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_COMPONENTS ${LLVM_LINK_COMPONENTS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_DEPS ${ARG_DEPENDS} ${LLVM_COMMON_DEPENDS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_OBJLIBS "${obj_name}")
-    
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
-    target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
-    llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
-  endif()
+    if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_COMPONENTS ${LLVM_LINK_COMPONENTS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_DEPS ${ARG_DEPENDS} ${LLVM_COMMON_DEPENDS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_OBJLIBS "${obj_name}")
 
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
+      target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
+      llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
+    endif()
+  endif()
+endmacro()
+
+macro(add_llvm_executable name)
+  cmake_parse_arguments(ARG
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS"
+    "ENTITLEMENTS;BUNDLE_PATH"
+    ""
+    ${ARGN})
+  generate_llvm_objects(${name} ${ARG_UNPARSED_ARGUMENTS})
   add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
 
   if(XCODE)
@@ -1083,8 +1089,11 @@ function(process_llvm_pass_plugins)
 
       ## Part 1: Extension header to be included whenever we need extension
       #  processing.
-      set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
-      set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+      if(NOT DEFINED LLVM_INSTALL_PACKAGE_DIR)
+          message(FATAL_ERROR "LLVM_INSTALL_PACKAGE_DIR must be defined and writable. GEN_CONFIG should only be passe when building LLVM proper.")
+      endif()
+      # LLVM_INSTALL_PACKAGE_DIR might be absolute, so don't reuse below.
+      set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
       file(WRITE
           "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
           "set(LLVM_STATIC_EXTENSIONS ${LLVM_STATIC_EXTENSIONS})")
@@ -1275,32 +1284,42 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     )
 endif()
 
-macro(add_llvm_tool name)
+macro(llvm_add_tool project name)
+  cmake_parse_arguments(ARG "DEPENDS;GENERATE_DRIVER" "" "" ${ARGN})
   if( NOT LLVM_BUILD_TOOLS )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-  add_llvm_executable(${name} ${ARGN})
+  if(ARG_GENERATE_DRIVER AND LLVM_TOOL_LLVM_DRIVER_BUILD)
+    generate_llvm_objects(${name} ${ARGN})
+    add_custom_target(${name} DEPENDS llvm-driver)
+  else()
+    add_llvm_executable(${name} ${ARGN})
 
-  if ( ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-    if( LLVM_BUILD_TOOLS )
-      get_target_export_arg(${name} LLVM export_to_llvmexports)
-      install(TARGETS ${name}
-              ${export_to_llvmexports}
-              RUNTIME DESTINATION ${LLVM_TOOLS_INSTALL_DIR}
-              COMPONENT ${name})
+    if ( ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+      if( LLVM_BUILD_TOOLS )
+        get_target_export_arg(${name} LLVM export_to_llvmexports)
+        install(TARGETS ${name}
+                ${export_to_llvmexports}
+                RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
+                COMPONENT ${name})
 
-      if (NOT LLVM_ENABLE_IDE)
-        add_llvm_install_targets(install-${name}
-                                 DEPENDS ${name}
-                                 COMPONENT ${name})
+        if (NOT LLVM_ENABLE_IDE)
+          add_llvm_install_targets(install-${name}
+                                  DEPENDS ${name}
+                                  COMPONENT ${name})
+        endif()
       endif()
     endif()
+    if( LLVM_BUILD_TOOLS )
+      set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+    endif()
+    set_target_properties(${name} PROPERTIES FOLDER "Tools")
   endif()
-  if( LLVM_BUILD_TOOLS )
-    set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
-  endif()
-  set_target_properties(${name} PROPERTIES FOLDER "Tools")
-endmacro(add_llvm_tool name)
+endmacro(llvm_add_tool project name)
+
+macro(add_llvm_tool name)
+  llvm_add_tool(LLVM ${ARGV})
+endmacro()
 
 
 macro(add_llvm_example name)
@@ -1934,7 +1953,7 @@ endfunction()
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
     cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER" "PARAMS;DEPENDS;ARGS" ${ARGN})
-    
+
     if (NOT ARG_FOLDER)
       set(ARG_FOLDER "Test Subdirectories")
     endif()
@@ -1990,16 +2009,21 @@ function(llvm_install_library_symlink name dest type)
 
   set(output_dir lib${LLVM_LIBDIR_SUFFIX})
   if(WIN32 AND "${type}" STREQUAL "SHARED")
-    set(output_dir bin)
+    set(output_dir "${CMAKE_INSTALL_BINDIR}")
   endif()
 
   install(SCRIPT ${INSTALL_SYMLINK}
-          CODE "install_symlink(${full_name} ${full_dest} ${output_dir})"
+          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\")"
           COMPONENT ${component})
 
 endfunction()
 
-function(llvm_install_symlink name dest)
+function(llvm_install_symlink project name dest)
+  get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
+  if(LLVM_TOOL_LLVM_DRIVER_BUILD AND ${dest} IN_LIST LLVM_DRIVER_TOOLS)
+    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_SYMLINKS ${name})
+    return()
+  endif()
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
@@ -2020,9 +2044,14 @@ function(llvm_install_symlink name dest)
 
   set(full_name ${name}${CMAKE_EXECUTABLE_SUFFIX})
   set(full_dest ${dest}${CMAKE_EXECUTABLE_SUFFIX})
+  if (${dest} STREQUAL "llvm-driver")
+    set(full_dest llvm${CMAKE_EXECUTABLE_SUFFIX})
+  endif()
+
+  set(output_dir "${${project}_TOOLS_INSTALL_DIR}")
 
   install(SCRIPT ${INSTALL_SYMLINK}
-          CODE "install_symlink(${full_name} ${full_dest} ${LLVM_TOOLS_INSTALL_DIR})"
+          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\")"
           COMPONENT ${component})
 
   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
@@ -2033,7 +2062,7 @@ function(llvm_install_symlink name dest)
   endif()
 endfunction()
 
-function(add_llvm_tool_symlink link_name target)
+function(llvm_add_tool_symlink project link_name target)
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "OUTPUT_DIR" "" ${ARGN})
 
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
@@ -2115,9 +2144,13 @@ function(add_llvm_tool_symlink link_name target)
     endif()
 
     if ((TOOL_IS_TOOLCHAIN OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY) AND LLVM_BUILD_TOOLS)
-      llvm_install_symlink(${link_name} ${target})
+      llvm_install_symlink("${project}" ${link_name} ${target})
     endif()
   endif()
+endfunction()
+
+function(add_llvm_tool_symlink link_name target)
+  llvm_add_tool_symlink(LLVM ${ARGV})
 endfunction()
 
 function(llvm_externalize_debuginfo name)

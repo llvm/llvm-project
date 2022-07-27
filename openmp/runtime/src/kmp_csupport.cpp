@@ -632,6 +632,11 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
                 "team %p\n",
                 global_tid, this_thr->th.th_task_team, this_thr->th.th_team));
     }
+#if KMP_AFFINITY_SUPPORTED
+    if (this_thr->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+      __kmp_reset_root_init_mask(global_tid);
+    }
+#endif
   } else {
     if (__kmp_tasking_mode != tskm_immediate_exec) {
       KA_TRACE(20, ("__kmpc_end_serialized_parallel: T#%d decreasing nesting "
@@ -2021,6 +2026,11 @@ void KMP_EXPAND_NAME(ompc_display_affinity)(char const *format) {
   }
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
+#if KMP_AFFINITY_SUPPORTED
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+    __kmp_reset_root_init_mask(gtid);
+  }
+#endif
   __kmp_aux_display_affinity(gtid, format);
 }
 
@@ -2034,6 +2044,11 @@ size_t KMP_EXPAND_NAME(ompc_capture_affinity)(char *buffer, size_t buf_size,
   }
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
+#if KMP_AFFINITY_SUPPORTED
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+    __kmp_reset_root_init_mask(gtid);
+  }
+#endif
   __kmp_str_buf_init(&capture_buf);
   num_required = __kmp_aux_capture_affinity(gtid, format, &capture_buf);
   if (buffer && buf_size) {
@@ -2222,6 +2237,61 @@ void __kmpc_copyprivate(ident_t *loc, kmp_int32 gtid, size_t cpy_size,
     }
 #endif
   }
+}
+
+/* --------------------------------------------------------------------------*/
+/*!
+@ingroup THREADPRIVATE
+@param loc       source location information
+@param gtid      global thread number
+@param cpy_data  pointer to the data to be saved/copied or 0
+@return          the saved pointer to the data
+
+__kmpc_copyprivate_light is a lighter version of __kmpc_copyprivate:
+__kmpc_copyprivate_light only saves the pointer it's given (if it's not 0, so
+coming from single), and returns that pointer in all calls (for single thread
+it's not needed). This version doesn't do any actual data copying. Data copying
+has to be done somewhere else, e.g. inline in the generated code. Due to this,
+this function doesn't have any barrier at the end of the function, like
+__kmpc_copyprivate does, so generated code needs barrier after copying of all
+data was done.
+*/
+void *__kmpc_copyprivate_light(ident_t *loc, kmp_int32 gtid, void *cpy_data) {
+  void **data_ptr;
+
+  KC_TRACE(10, ("__kmpc_copyprivate_light: called T#%d\n", gtid));
+
+  KMP_MB();
+
+  data_ptr = &__kmp_team_from_gtid(gtid)->t.t_copypriv_data;
+
+  if (__kmp_env_consistency_check) {
+    if (loc == 0) {
+      KMP_WARNING(ConstructIdentInvalid);
+    }
+  }
+
+  // ToDo: Optimize the following barrier
+
+  if (cpy_data)
+    *data_ptr = cpy_data;
+
+#if OMPT_SUPPORT
+  ompt_frame_t *ompt_frame;
+  if (ompt_enabled.enabled) {
+    __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
+    if (ompt_frame->enter_frame.ptr == NULL)
+      ompt_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+    OMPT_STORE_RETURN_ADDRESS(gtid);
+  }
+#endif
+/* This barrier is not a barrier region boundary */
+#if USE_ITT_NOTIFY
+  __kmp_threads[gtid]->th.th_ident = loc;
+#endif
+  __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+
+  return *data_ptr;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -4348,7 +4418,7 @@ void *omp_aligned_calloc(size_t align, size_t nmemb, size_t size,
 void *omp_realloc(void *ptr, size_t size, omp_allocator_handle_t allocator,
                   omp_allocator_handle_t free_allocator) {
   return __kmp_realloc(__kmp_entry_gtid(), ptr, size, allocator,
-                        free_allocator);
+                       free_allocator);
 }
 
 void omp_free(void *ptr, omp_allocator_handle_t allocator) {

@@ -533,3 +533,79 @@ entry:
   %ret = add i32 %cond1, %cond2
   ret i32 %ret
 }
+
+define float @CascadedSelect(float noundef %a) {
+; RV32I-LABEL: CascadedSelect:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a1, %hi(.LCPI8_0)
+; RV32I-NEXT:    flw ft0, %lo(.LCPI8_0)(a1)
+; RV32I-NEXT:    fmv.w.x ft1, a0
+; RV32I-NEXT:    flt.s a0, ft0, ft1
+; RV32I-NEXT:    bnez a0, .LBB8_3
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    fmv.w.x ft0, zero
+; RV32I-NEXT:    flt.s a0, ft1, ft0
+; RV32I-NEXT:    bnez a0, .LBB8_3
+; RV32I-NEXT:  # %bb.2: # %entry
+; RV32I-NEXT:    fmv.s ft0, ft1
+; RV32I-NEXT:  .LBB8_3: # %entry
+; RV32I-NEXT:    fmv.x.w a0, ft0
+; RV32I-NEXT:    ret
+;
+; RV32IBT-LABEL: CascadedSelect:
+; RV32IBT:       # %bb.0: # %entry
+; RV32IBT-NEXT:    lui a1, %hi(.LCPI8_0)
+; RV32IBT-NEXT:    flw ft0, %lo(.LCPI8_0)(a1)
+; RV32IBT-NEXT:    fmv.w.x ft1, a0
+; RV32IBT-NEXT:    flt.s a0, ft0, ft1
+; RV32IBT-NEXT:    bnez a0, .LBB8_3
+; RV32IBT-NEXT:  # %bb.1: # %entry
+; RV32IBT-NEXT:    fmv.w.x ft0, zero
+; RV32IBT-NEXT:    flt.s a0, ft1, ft0
+; RV32IBT-NEXT:    bnez a0, .LBB8_3
+; RV32IBT-NEXT:  # %bb.2: # %entry
+; RV32IBT-NEXT:    fmv.s ft0, ft1
+; RV32IBT-NEXT:  .LBB8_3: # %entry
+; RV32IBT-NEXT:    fmv.x.w a0, ft0
+; RV32IBT-NEXT:    ret
+;
+; RV64I-LABEL: CascadedSelect:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    lui a1, %hi(.LCPI8_0)
+; RV64I-NEXT:    flw ft0, %lo(.LCPI8_0)(a1)
+; RV64I-NEXT:    fmv.w.x ft1, a0
+; RV64I-NEXT:    flt.s a0, ft0, ft1
+; RV64I-NEXT:    bnez a0, .LBB8_3
+; RV64I-NEXT:  # %bb.1: # %entry
+; RV64I-NEXT:    fmv.w.x ft0, zero
+; RV64I-NEXT:    flt.s a0, ft1, ft0
+; RV64I-NEXT:    bnez a0, .LBB8_3
+; RV64I-NEXT:  # %bb.2: # %entry
+; RV64I-NEXT:    fmv.s ft0, ft1
+; RV64I-NEXT:  .LBB8_3: # %entry
+; RV64I-NEXT:    fmv.x.w a0, ft0
+; RV64I-NEXT:    ret
+;
+; RV64IBT-LABEL: CascadedSelect:
+; RV64IBT:       # %bb.0: # %entry
+; RV64IBT-NEXT:    lui a1, %hi(.LCPI8_0)
+; RV64IBT-NEXT:    flw ft0, %lo(.LCPI8_0)(a1)
+; RV64IBT-NEXT:    fmv.w.x ft1, a0
+; RV64IBT-NEXT:    flt.s a0, ft0, ft1
+; RV64IBT-NEXT:    bnez a0, .LBB8_3
+; RV64IBT-NEXT:  # %bb.1: # %entry
+; RV64IBT-NEXT:    fmv.w.x ft0, zero
+; RV64IBT-NEXT:    flt.s a0, ft1, ft0
+; RV64IBT-NEXT:    bnez a0, .LBB8_3
+; RV64IBT-NEXT:  # %bb.2: # %entry
+; RV64IBT-NEXT:    fmv.s ft0, ft1
+; RV64IBT-NEXT:  .LBB8_3: # %entry
+; RV64IBT-NEXT:    fmv.x.w a0, ft0
+; RV64IBT-NEXT:    ret
+entry:
+  %cmp = fcmp ogt float %a, 1.000000e+00
+  %cmp1 = fcmp olt float %a, 0.000000e+00
+  %.a = select i1 %cmp1, float 0.000000e+00, float %a
+  %retval.0 = select i1 %cmp, float 1.000000e+00, float %.a
+  ret float %retval.0
+}

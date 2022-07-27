@@ -41,7 +41,6 @@ define void @outer2(i32 %N) {
 ;
 ; CHECK-LABEL: @outer2(
 ; CHECK-NOT: call void @inner2
-; CHECK-NOT: call void @inner2
 ; CHECK: ret void
 
   call void @inner2( i32 %N )
@@ -112,7 +111,7 @@ define i32 @outer5(i32 %x) {
   ret i32 %call
 }
 
-; We alwaysinline a function that call itself recursively.
+; We never inline a function that calls itself recursively.
 define internal void @inner6(i32 %x) alwaysinline {
 ; CHECK-LABEL: @inner6(
 entry:

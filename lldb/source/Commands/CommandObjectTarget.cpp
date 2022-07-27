@@ -17,6 +17,7 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupArchitecture.h"
@@ -47,12 +48,18 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -135,26 +142,6 @@ static uint32_t DumpTargetList(TargetList &target_list,
   }
   return num_targets;
 }
-
-// Note that the negation in the argument name causes a slightly confusing
-// mapping of the enum values.
-static constexpr OptionEnumValueElement g_dependents_enumeration[] = {
-    {
-        eLoadDependentsDefault,
-        "default",
-        "Only load dependents when the target is an executable.",
-    },
-    {
-        eLoadDependentsNo,
-        "true",
-        "Don't load dependents, even if the target is an executable.",
-    },
-    {
-        eLoadDependentsYes,
-        "false",
-        "Load dependents, even if the target is not an executable.",
-    },
-};
 
 #define LLDB_OPTIONS_target_dependents
 #include "CommandOptions.inc"
@@ -299,12 +286,6 @@ protected:
 
       const char *file_path = command.GetArgumentAtIndex(0);
       LLDB_SCOPED_TIMERF("(lldb) target create '%s'", file_path);
-      FileSpec file_spec;
-
-      if (file_path) {
-        file_spec.SetFile(file_path, FileSpec::Style::native);
-        FileSystem::Instance().Resolve(file_spec);
-      }
 
       bool must_set_platform_path = false;
 
@@ -332,6 +313,18 @@ protected:
       // CreateTarget() we can't rely on the selected platform.
 
       PlatformSP platform_sp = target_sp->GetPlatform();
+
+      FileSpec file_spec;
+      if (file_path) {
+        file_spec.SetFile(file_path, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(file_spec);
+
+        // Try to resolve the exe based on PATH and/or platform-specific
+        // suffixes, but only if using the host platform.
+        if (platform_sp && platform_sp->IsHost() &&
+            !FileSystem::Instance().Exists(file_spec))
+          FileSystem::Instance().ResolveExecutableLocation(file_spec);
+      }
 
       if (remote_file) {
         if (platform_sp) {
@@ -481,18 +474,14 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    if (args.GetArgumentCount() == 0) {
-      Stream &strm = result.GetOutputStream();
+    Stream &strm = result.GetOutputStream();
 
-      bool show_stopped_process_status = false;
-      if (DumpTargetList(GetDebugger().GetTargetList(),
-                         show_stopped_process_status, strm) == 0) {
-        strm.PutCString("No targets.\n");
-      }
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-    } else {
-      result.AppendError("the 'target list' command takes no arguments\n");
+    bool show_stopped_process_status = false;
+    if (DumpTargetList(GetDebugger().GetTargetList(),
+                       show_stopped_process_status, strm) == 0) {
+      strm.PutCString("No targets.\n");
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
     return result.Succeeded();
   }
 };
@@ -505,6 +494,8 @@ public:
       : CommandObjectParsed(
             interpreter, "target select",
             "Select a target as the current target by target index.", nullptr) {
+    CommandArgumentData target_arg{eArgTypeTargetID, eArgRepeatPlain};
+    m_arguments.push_back({target_arg});
   }
 
   ~CommandObjectTargetSelect() override = default;
@@ -569,6 +560,8 @@ public:
     m_option_group.Append(&m_all_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_cleanup_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
+    CommandArgumentData target_arg{eArgTypeTargetID, eArgRepeatStar};
+    m_arguments.push_back({target_arg});
   }
 
   ~CommandObjectTargetDelete() override = default;
@@ -1224,10 +1217,6 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = &GetSelectedTarget();
-    if (command.GetArgumentCount() != 0) {
-      result.AppendError("list takes no arguments\n");
-      return result.Succeeded();
-    }
 
     target->GetImageSearchPathList().Dump(&result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1915,26 +1904,6 @@ protected:
   }
 };
 
-#pragma mark CommandObjectTargetModulesDumpSymtab
-
-static constexpr OptionEnumValueElement g_sort_option_enumeration[] = {
-    {
-        eSortOrderNone,
-        "none",
-        "No sorting, use the original symbol table order.",
-    },
-    {
-        eSortOrderByAddress,
-        "address",
-        "Sort output by symbol address.",
-    },
-    {
-        eSortOrderByName,
-        "name",
-        "Sort output by symbol name.",
-    },
-};
-
 #define LLDB_OPTIONS_target_modules_dump_symtab
 #include "CommandOptions.inc"
 
@@ -2149,6 +2118,59 @@ protected:
     else {
       result.AppendError("no matching executable images found");
     }
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectTargetModulesDumpClangPCMInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesDumpClangPCMInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules dump pcm-info",
+            "Dump information about the given clang module (pcm).") {
+    // Take a single file argument.
+    CommandArgumentData arg{eArgTypeFilename, eArgRepeatPlain};
+    m_arguments.push_back({arg});
+  }
+
+  ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument.",
+                                   m_cmd_name.c_str());
+      return false;
+    }
+
+    const char *pcm_path = command.GetArgumentAtIndex(0);
+    FileSpec pcm_file{pcm_path};
+
+    if (pcm_file.GetFileNameExtension().GetStringRef() != ".pcm") {
+      result.AppendError("file must have a .pcm extension");
+      return false;
+    }
+
+    if (!FileSystem::Instance().Exists(pcm_file)) {
+      result.AppendError("pcm file does not exist");
+      return false;
+    }
+
+    clang::CompilerInstance compiler;
+    compiler.createDiagnostics();
+
+    const char *clang_args[] = {"clang", pcm_path};
+    compiler.setInvocation(clang::createInvocation(clang_args));
+
+    clang::DumpModuleInfoAction dump_module_info;
+    dump_module_info.OutputStream = &result.GetOutputStream().AsRawOstream();
+    // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
+    compiler.getPCHContainerOperations()->registerReader(
+        std::make_unique<clang::ObjectFilePCHContainerReader>());
+
+    if (compiler.ExecuteAction(dump_module_info))
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+
     return result.Succeeded();
   }
 };
@@ -2404,10 +2426,10 @@ public:
   CommandObjectTargetModulesDump(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
             interpreter, "target modules dump",
-            "Commands for dumping information about one or "
-            "more target modules.",
+            "Commands for dumping information about one or more target "
+            "modules.",
             "target modules dump "
-            "[headers|symtab|sections|ast|symfile|line-table] "
+            "[objfile|symtab|sections|ast|symfile|line-table|pcm-info] "
             "[<file1> <file2> ...]") {
     LoadSubCommand("objfile",
                    CommandObjectSP(
@@ -2427,6 +2449,10 @@ public:
     LoadSubCommand("line-table",
                    CommandObjectSP(new CommandObjectTargetModulesDumpLineTable(
                        interpreter)));
+    LoadSubCommand(
+        "pcm-info",
+        CommandObjectSP(
+            new CommandObjectTargetModulesDumpClangPCMInfo(interpreter)));
   }
 
   ~CommandObjectTargetModulesDump() override = default;
@@ -2448,6 +2474,8 @@ public:
                           LLDB_OPT_SET_1);
     m_option_group.Append(&m_symbol_file, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
+    CommandArgumentData module_arg{eArgTypePath, eArgRepeatStar};
+    m_arguments.push_back({module_arg});
   }
 
   ~CommandObjectTargetModulesAdd() override = default;
@@ -4013,6 +4041,8 @@ public:
     m_option_group.Append(&m_current_stack_option, LLDB_OPT_SET_2,
                           LLDB_OPT_SET_2);
     m_option_group.Finalize();
+    CommandArgumentData module_arg{eArgTypeShlibName, eArgRepeatPlain};
+    m_arguments.push_back({module_arg});
   }
 
   ~CommandObjectTargetSymbolsAdd() override = default;
@@ -4586,7 +4616,7 @@ public:
       m_class_name.clear();
       m_function_name.clear();
       m_line_start = 0;
-      m_line_end = UINT_MAX;
+      m_line_end = LLDB_INVALID_LINE_NUMBER;
       m_file_name.clear();
       m_module_name.clear();
       m_func_name_type_mask = eFunctionNameTypeAuto;
@@ -4607,23 +4637,23 @@ public:
     std::string m_class_name;
     std::string m_function_name;
     uint32_t m_line_start = 0;
-    uint32_t m_line_end;
+    uint32_t m_line_end = LLDB_INVALID_LINE_NUMBER;
     std::string m_file_name;
     std::string m_module_name;
     uint32_t m_func_name_type_mask =
         eFunctionNameTypeAuto; // A pick from lldb::FunctionNameType.
-    lldb::tid_t m_thread_id;
-    uint32_t m_thread_index;
+    lldb::tid_t m_thread_id = LLDB_INVALID_THREAD_ID;
+    uint32_t m_thread_index = UINT32_MAX;
     std::string m_thread_name;
     std::string m_queue_name;
     bool m_sym_ctx_specified = false;
-    bool m_no_inlines;
+    bool m_no_inlines = false;
     bool m_thread_specified = false;
     // Instance variables to hold the values for one_liner options.
     bool m_use_one_liner = false;
     std::vector<std::string> m_one_liner;
 
-    bool m_auto_continue;
+    bool m_auto_continue = false;
   };
 
   CommandObjectTargetStopHookAdd(CommandInterpreter &interpreter)
@@ -4861,7 +4891,10 @@ public:
   CommandObjectTargetStopHookDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook delete",
                             "Delete a stop-hook.",
-                            "target stop-hook delete [<idx>]") {}
+                            "target stop-hook delete [<idx>]") {
+    CommandArgumentData hook_arg{eArgTypeStopHookID, eArgRepeatStar};
+    m_arguments.push_back({hook_arg});
+  }
 
   ~CommandObjectTargetStopHookDelete() override = default;
 
@@ -4915,6 +4948,8 @@ public:
                                            bool enable, const char *name,
                                            const char *help, const char *syntax)
       : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable) {
+    CommandArgumentData hook_arg{eArgTypeStopHookID, eArgRepeatStar};
+    m_arguments.push_back({hook_arg});
   }
 
   ~CommandObjectTargetStopHookEnableDisable() override = default;
@@ -4970,8 +5005,7 @@ class CommandObjectTargetStopHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetStopHookList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook list",
-                            "List all stop-hooks.",
-                            "target stop-hook list [<type>]") {}
+                            "List all stop-hooks.", "target stop-hook list") {}
 
   ~CommandObjectTargetStopHookList() override = default;
 
@@ -5043,11 +5077,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendError("target dump typesystem doesn't take arguments.");
-      return result.Succeeded();
-    }
-
     // Go over every scratch TypeSystem and dump to the command output.
     for (TypeSystem *ts : GetSelectedTarget().GetScratchTypeSystems())
       ts->Dump(result.GetOutputStream().AsRawOstream());

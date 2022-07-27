@@ -6,9 +6,8 @@
 define i32 @shl48sar47(i64 %a) #0 {
 ; CHECK-LABEL: shl48sar47:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movswq %di, %rax
+; CHECK-NEXT:    movswl %di, %eax
 ; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 48
   %2 = ashr exact i64 %1, 47
@@ -32,9 +31,8 @@ define i32 @shl48sar49(i64 %a) #0 {
 define i32 @shl56sar55(i64 %a) #0 {
 ; CHECK-LABEL: shl56sar55:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsbq %dil, %rax
+; CHECK-NEXT:    movsbl %dil, %eax
 ; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 56
   %2 = ashr exact i64 %1, 55

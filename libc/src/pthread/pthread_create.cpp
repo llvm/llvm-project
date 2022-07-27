@@ -16,14 +16,14 @@
 
 namespace __llvm_libc {
 
-static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread<int>),
-              "Mismatch between pthread_t and internal Thread<int>.");
+static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
+              "Mismatch between pthread_t and internal Thread.");
 
 LLVM_LIBC_FUNCTION(int, pthread_create,
                    (pthread_t *__restrict th,
                     const pthread_attr_t *__restrict attr,
                     __pthread_start_t func, void *arg)) {
-  auto *thread = reinterpret_cast<__llvm_libc::Thread<void *> *>(th);
+  auto *thread = reinterpret_cast<__llvm_libc::Thread *>(th);
   int result = thread->run(func, arg, nullptr, 0);
   if (result != 0 && result != EPERM)
     return EAGAIN;

@@ -623,7 +623,7 @@ template <class ELFT> static void markUsedLocalSymbols() {
   // See MarkLive<ELFT>::resolveReloc().
   if (config->gcSections)
     return;
-  for (ELFFileBase *file : objectFiles) {
+  for (ELFFileBase *file : ctx->objectFiles) {
     ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
     for (InputSectionBase *s : f->getSections()) {
       InputSection *isec = dyn_cast_or_null<InputSection>(s);
@@ -694,7 +694,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   llvm::TimeTraceScope timeScope("Add local symbols");
   if (config->copyRelocs && config->discard != DiscardPolicy::None)
     markUsedLocalSymbols<ELFT>();
-  for (ELFFileBase *file : objectFiles) {
+  for (ELFFileBase *file : ctx->objectFiles) {
     for (Symbol *b : file->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
@@ -1297,7 +1297,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   for (Symbol *sym : symtab->symbols())
     addSym(*sym);
 
-  for (ELFFileBase *file : objectFiles)
+  for (ELFFileBase *file : ctx->objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       addSym(*sym);
 
@@ -1312,12 +1312,16 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 // Sorts the sections in ISD according to the provided section order.
 static void
 sortISDBySectionOrder(InputSectionDescription *isd,
-                      const DenseMap<const InputSectionBase *, int> &order) {
+                      const DenseMap<const InputSectionBase *, int> &order,
+                      bool executableOutputSection) {
   SmallVector<InputSection *, 0> unorderedSections;
   SmallVector<std::pair<InputSection *, int>, 0> orderedSections;
   uint64_t unorderedSize = 0;
+  uint64_t totalSize = 0;
 
   for (InputSection *isec : isd->sections) {
+    if (executableOutputSection)
+      totalSize += isec->getSize();
     auto i = order.find(isec);
     if (i == order.end()) {
       unorderedSections.push_back(isec);
@@ -1355,8 +1359,15 @@ sortISDBySectionOrder(InputSectionDescription *isd,
   // of the second block of cold code can call the hot code without a thunk. So
   // we effectively double the amount of code that could potentially call into
   // the hot code without a thunk.
+  //
+  // The above is not necessary if total size of input sections in this "isd"
+  // is small. Note that we assume all input sections are executable if the
+  // output section is executable (which is not always true but supposed to
+  // cover most cases).
   size_t insPt = 0;
-  if (target->getThunkSectionSpacing() && !orderedSections.empty()) {
+  if (executableOutputSection && !orderedSections.empty() &&
+      target->getThunkSectionSpacing() &&
+      totalSize >= target->getThunkSectionSpacing()) {
     uint64_t unorderedPos = 0;
     for (; insPt != unorderedSections.size(); ++insPt) {
       unorderedPos += unorderedSections[insPt]->getSize();
@@ -1397,7 +1408,7 @@ static void sortSection(OutputSection &osec,
   if (!order.empty())
     for (SectionCommand *b : osec.commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(b))
-        sortISDBySectionOrder(isd, order);
+        sortISDBySectionOrder(isd, order, osec.flags & SHF_EXECINSTR);
 
   if (script->hasSectionsCommand)
     return;
@@ -1630,14 +1641,17 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (config->emachine == EM_HEXAGON)
     hexagonTLSSymbolUpdate(outputSections);
 
-  int assignPasses = 0;
+  uint32_t pass = 0, assignPasses = 0;
   for (;;) {
-    bool changed = target->needsThunks && tc.createThunks(outputSections);
+    bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
+                                       : target->relaxOnce(pass);
+    ++pass;
 
     // With Thunk Size much smaller than branch range we expect to
     // converge quickly; if we get to 15 something has gone wrong.
-    if (changed && tc.pass >= 15) {
-      error("thunk creation not converged");
+    if (changed && pass >= 15) {
+      error(target->needsThunks ? "thunk creation not converged"
+                                : "relaxation not converged");
       break;
     }
 
@@ -1675,6 +1689,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       }
     }
   }
+  if (!config->relocatable && config->emachine == EM_RISCV)
+    riscvFinalizeRelax(pass);
 
   if (config->relocatable)
     for (OutputSection *sec : outputSections)
@@ -1697,7 +1713,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 // block sections, input sections can shrink when the jump instructions at
 // the end of the section are relaxed.
 static void fixSymbolsAfterShrinking() {
-  for (InputFile *File : objectFiles) {
+  for (InputFile *File : ctx->objectFiles) {
     parallelForEach(File->getSymbols(), [&](Symbol *Sym) {
       auto *def = dyn_cast<Defined>(Sym);
       if (!def)
@@ -1741,6 +1757,7 @@ static void fixSymbolsAfterShrinking() {
 // option is used.
 template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   assert(config->optimizeBBJumps);
+  SmallVector<InputSection *, 0> storage;
 
   script->assignAddresses();
   // For every output section that has executable input sections, this
@@ -1752,7 +1769,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   for (OutputSection *osec : outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
-    SmallVector<InputSection *, 0> sections = getInputSections(*osec);
+    ArrayRef<InputSection *> sections = getInputSections(*osec, storage);
     size_t numDeleted = 0;
     // Delete all fall through jump instructions.  Also, check if two
     // consecutive jump instructions can be flipped so that a fall
@@ -1772,7 +1789,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   fixSymbolsAfterShrinking();
 
   for (OutputSection *osec : outputSections)
-    for (InputSection *is : getInputSections(*osec))
+    for (InputSection *is : getInputSections(*osec, storage))
       is->trim();
 }
 
@@ -1947,7 +1964,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // ld.bfd traces all DT_NEEDED to emulate the logic of the dynamic linker to
     // catch more cases. That is too much for us. Our approach resembles the one
     // used in ld.gold, achieves a good balance to be useful but not too smart.
-    for (SharedFile *file : sharedFiles) {
+    for (SharedFile *file : ctx->sharedFiles) {
       bool allNeededIsKnown =
           llvm::all_of(file->dtNeeded, [&](StringRef needed) {
             return symtab->soNames.count(CachedHashStringRef(needed));
@@ -1956,8 +1973,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         continue;
       for (Symbol *sym : file->requiredSymbols)
         if (sym->isUndefined() && !sym->isWeak())
-          diagnose(toString(file) + ": undefined reference to " +
-                   toString(*sym) + " [--no-allow-shlib-undefined]");
+          diagnose("undefined reference due to --no-allow-shlib-undefined: " +
+                   toString(*sym) + "\n>>> referenced by " + toString(file));
     }
   }
 
@@ -2165,9 +2182,10 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
   if (!config->executeOnly)
     return;
 
+  SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : outputSections)
     if (osec->flags & SHF_EXECINSTR)
-      for (InputSection *isec : getInputSections(*osec))
+      for (InputSection *isec : getInputSections(*osec, storage))
         if (!(isec->flags & SHF_EXECINSTR))
           error("cannot place " + toString(isec) + " into " +
                 toString(osec->name) +
@@ -2465,7 +2483,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
            (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
           cmd->type == SHT_LLVM_PART_EHDR)
         cmd->addrExpr = [] {
-          return alignTo(script->getDot(), config->maxPageSize);
+          return alignToPowerOf2(script->getDot(), config->maxPageSize);
         };
       // PT_TLS is at the start of the first RW PT_LOAD. If `p` includes PT_TLS,
       // it must be the RW. Align to p_align(PT_TLS) to make sure
@@ -2482,13 +2500,13 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // blocks correctly. We need to keep the workaround for a while.
       else if (Out::tlsPhdr && Out::tlsPhdr->firstSec == p->firstSec)
         cmd->addrExpr = [] {
-          return alignTo(script->getDot(), config->maxPageSize) +
-                 alignTo(script->getDot() % config->maxPageSize,
-                         Out::tlsPhdr->p_align);
+          return alignToPowerOf2(script->getDot(), config->maxPageSize) +
+                 alignToPowerOf2(script->getDot() % config->maxPageSize,
+                                 Out::tlsPhdr->p_align);
         };
       else
         cmd->addrExpr = [] {
-          return alignTo(script->getDot(), config->maxPageSize) +
+          return alignToPowerOf2(script->getDot(), config->maxPageSize) +
                  script->getDot() % config->maxPageSize;
         };
     }
@@ -2522,7 +2540,7 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
 
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
-    return alignTo(off, os->alignment);
+     return alignToPowerOf2(off, os->alignment);
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
@@ -2581,15 +2599,15 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     // following section to avoid loading non-segments parts of the file.
     if (config->zSeparate != SeparateSegmentKind::None && lastRX &&
         lastRX->lastSec == sec)
-      off = alignTo(off, config->maxPageSize);
+      off = alignToPowerOf2(off, config->maxPageSize);
   }
   for (OutputSection *osec : outputSections)
     if (!(osec->flags & SHF_ALLOC)) {
-      osec->offset = alignTo(off, osec->alignment);
+      osec->offset = alignToPowerOf2(off, osec->alignment);
       off = osec->offset + osec->size;
     }
 
-  sectionHeaderOff = alignTo(off, config->wordsize);
+  sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);
 
   // Our logic assumes that sections have rising VA within the same segment.
@@ -2641,8 +2659,9 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
       // musl/glibc ld.so rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
       // rounds up.
-      p->p_memsz = alignTo(p->p_offset + p->p_memsz, config->commonPageSize) -
-                   p->p_offset;
+      p->p_memsz =
+          alignToPowerOf2(p->p_offset + p->p_memsz, config->commonPageSize) -
+          p->p_offset;
     }
   }
 }
@@ -2862,8 +2881,9 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
         fillTrap(Out::bufferStart +
                      alignDown(p->firstSec->offset + p->p_filesz, 4),
-                 Out::bufferStart + alignTo(p->firstSec->offset + p->p_filesz,
-                                            config->maxPageSize));
+                 Out::bufferStart +
+                     alignToPowerOf2(p->firstSec->offset + p->p_filesz,
+                                     config->maxPageSize));
 
     // Round up the file size of the last segment to the page boundary iff it is
     // an executable segment to ensure that other tools don't accidentally
@@ -2875,7 +2895,7 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
     if (last && (last->p_flags & PF_X))
       last->p_memsz = last->p_filesz =
-          alignTo(last->p_filesz, config->maxPageSize);
+          alignToPowerOf2(last->p_filesz, config->maxPageSize);
   }
 }
 
@@ -2915,7 +2935,7 @@ computeHash(llvm::MutableArrayRef<uint8_t> hashBuf,
   std::unique_ptr<uint8_t[]> hashes(new uint8_t[hashesSize]);
 
   // Compute hash values.
-  parallelForEachN(0, chunks.size(), [&](size_t i) {
+  parallelFor(0, chunks.size(), [&](size_t i) {
     hashFn(hashes.get() + i * hashBuf.size(), chunks[i]);
   });
 

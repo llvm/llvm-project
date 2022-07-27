@@ -97,6 +97,18 @@ walkSymbolTable(MutableArrayRef<Region> regions,
   return WalkResult::advance();
 }
 
+/// Walk all of the operations nested under, and including, the given operation,
+/// without traversing into any nested symbol tables. Stops walking if the
+/// result of the callback is anything other than `WalkResult::advance`.
+static Optional<WalkResult>
+walkSymbolTable(Operation *op,
+                function_ref<Optional<WalkResult>(Operation *)> callback) {
+  Optional<WalkResult> result = callback(op);
+  if (result != WalkResult::advance() || op->hasTrait<OpTrait::SymbolTable>())
+    return result;
+  return walkSymbolTable(op->getRegions(), callback);
+}
+
 //===----------------------------------------------------------------------===//
 // SymbolTable
 //===----------------------------------------------------------------------===//
@@ -465,21 +477,11 @@ LogicalResult detail::verifySymbol(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 /// Walk all of the symbol references within the given operation, invoking the
-/// provided callback for each found use. The callbacks takes as arguments: the
-/// use of the symbol, and the nested access chain to the attribute within the
-/// operation dictionary. An access chain is a set of indices into nested
-/// container attributes. For example, a symbol use in an attribute dictionary
-/// that looks like the following:
-///
-///    {use = [{other_attr, @symbol}]}
-///
-/// May have the following access chain:
-///
-///     [0, 0, 1]
-///
-static WalkResult walkSymbolRefs(
-    Operation *op,
-    function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
+/// provided callback for each found use. The callbacks takes the use of the
+/// symbol.
+static WalkResult
+walkSymbolRefs(Operation *op,
+               function_ref<WalkResult(SymbolTable::SymbolUse)> callback) {
   // Check to see if the operation has any attributes.
   DictionaryAttr attrDict = op->getAttrDictionary();
   if (attrDict.empty())
@@ -507,20 +509,19 @@ static WalkResult walkSymbolRefs(
                           WorklistItem &worklistItem) -> WalkResult {
     for (Attribute attr :
          llvm::drop_begin(worklistItem.immediateSubElements, index)) {
-      /// Check for a nested container attribute, these will also need to be
-      /// walked.
-      if (auto interface = attr.dyn_cast<SubElementAttrInterface>()) {
+      // Invoke the provided callback if we find a symbol use and check for a
+      // requested interrupt.
+      if (auto symbolRef = attr.dyn_cast<SymbolRefAttr>()) {
+        if (callback({op, symbolRef}).wasInterrupted())
+          return WalkResult::interrupt();
+
+        /// Check for a nested container attribute, these will also need to be
+        /// walked.
+      } else if (auto interface = attr.dyn_cast<SubElementAttrInterface>()) {
         attrWorklist.emplace_back(interface);
         curAccessChain.push_back(-1);
         return WalkResult::advance();
       }
-
-      // Invoke the provided callback if we find a symbol use and check for a
-      // requested interrupt.
-      if (auto symbolRef = attr.dyn_cast<SymbolRefAttr>())
-        if (callback({op, symbolRef}, curAccessChain).wasInterrupted())
-          return WalkResult::interrupt();
-
       // Make sure to keep the index counter in sync.
       ++index;
     }
@@ -546,9 +547,9 @@ static WalkResult walkSymbolRefs(
 /// Walk all of the uses, for any symbol, that are nested within the given
 /// regions, invoking the provided callback for each. This does not traverse
 /// into any nested symbol tables.
-static Optional<WalkResult> walkSymbolUses(
-    MutableArrayRef<Region> regions,
-    function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
+static Optional<WalkResult>
+walkSymbolUses(MutableArrayRef<Region> regions,
+               function_ref<WalkResult(SymbolTable::SymbolUse)> callback) {
   return walkSymbolTable(regions, [&](Operation *op) -> Optional<WalkResult> {
     // Check that this isn't a potentially unknown symbol table.
     if (isPotentiallyUnknownSymbolTable(op))
@@ -560,9 +561,9 @@ static Optional<WalkResult> walkSymbolUses(
 /// Walk all of the uses, for any symbol, that are nested within the given
 /// operation 'from', invoking the provided callback for each. This does not
 /// traverse into any nested symbol tables.
-static Optional<WalkResult> walkSymbolUses(
-    Operation *from,
-    function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
+static Optional<WalkResult>
+walkSymbolUses(Operation *from,
+               function_ref<WalkResult(SymbolTable::SymbolUse)> callback) {
   // If this operation has regions, and it, as well as its dialect, isn't
   // registered then conservatively fail. The operation may define a
   // symbol table, so we can't opaquely know if we should traverse to find
@@ -608,9 +609,18 @@ struct SymbolScope {
                 typename llvm::function_traits<CallbackT>::result_t,
                 void>::value> * = nullptr>
   Optional<WalkResult> walk(CallbackT cback) {
-    return walk([=](SymbolTable::SymbolUse use, ArrayRef<int>) {
+    return walk([=](SymbolTable::SymbolUse use) {
       return cback(use), WalkResult::advance();
     });
+  }
+
+  /// Walk all of the operations nested under the current scope without
+  /// traversing into any nested symbol tables.
+  template <typename CallbackT>
+  Optional<WalkResult> walkSymbolTable(CallbackT &&cback) {
+    if (Region *region = limit.dyn_cast<Region *>())
+      return ::walkSymbolTable(*region, cback);
+    return ::walkSymbolTable(limit.get<Operation *>(), cback);
   }
 
   /// The representation of the symbol within this scope.
@@ -723,7 +733,7 @@ static bool isReferencePrefixOf(SymbolRefAttr subRef, SymbolRefAttr ref) {
 template <typename FromT>
 static Optional<SymbolTable::UseRange> getSymbolUsesImpl(FromT from) {
   std::vector<SymbolTable::SymbolUse> uses;
-  auto walkFn = [&](SymbolTable::SymbolUse symbolUse, ArrayRef<int>) {
+  auto walkFn = [&](SymbolTable::SymbolUse symbolUse) {
     uses.push_back(symbolUse);
     return WalkResult::advance();
   };
@@ -792,7 +802,7 @@ template <typename SymbolT, typename IRUnitT>
 static bool symbolKnownUseEmptyImpl(SymbolT symbol, IRUnitT *limit) {
   for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
     // Walk all of the symbol uses looking for a reference to 'symbol'.
-    if (scope.walk([&](SymbolTable::SymbolUse symbolUse, ArrayRef<int>) {
+    if (scope.walk([&](SymbolTable::SymbolUse symbolUse) {
           return isReferencePrefixOf(scope.symbol, symbolUse.getSymbolRef())
                      ? WalkResult::interrupt()
                      : WalkResult::advance();
@@ -822,50 +832,6 @@ bool SymbolTable::symbolKnownUseEmpty(Operation *symbol, Region *from) {
 //===----------------------------------------------------------------------===//
 // SymbolTable::replaceAllSymbolUses
 
-/// Rebuild the given attribute container after replacing all references to a
-/// symbol with the updated attribute in 'accesses'.
-static SubElementAttrInterface rebuildAttrAfterRAUW(
-    SubElementAttrInterface container,
-    ArrayRef<std::pair<SmallVector<int, 1>, SymbolRefAttr>> accesses,
-    unsigned depth) {
-  // Given a range of Attributes, update the ones referred to by the given
-  // access chains to point to the new symbol attribute.
-
-  SmallVector<std::pair<size_t, Attribute>> replacements;
-
-  SmallVector<Attribute> subElements;
-  container.walkImmediateSubElements(
-      [&](Attribute attribute) { subElements.push_back(attribute); },
-      [](Type) {});
-  for (unsigned i = 0, e = accesses.size(); i != e;) {
-    ArrayRef<int> access = accesses[i].first;
-
-    // Check to see if this is a leaf access, i.e. a SymbolRef.
-    if (access.size() == depth + 1) {
-      replacements.emplace_back(access.back(), accesses[i].second);
-      ++i;
-      continue;
-    }
-
-    // Otherwise, this is a container. Collect all of the accesses for this
-    // index and recurse. The recursion here is bounded by the size of the
-    // largest access array.
-    auto nestedAccesses = accesses.drop_front(i).take_while([&](auto &it) {
-      ArrayRef<int> nextAccess = it.first;
-      return nextAccess.size() > depth + 1 &&
-             nextAccess[depth] == access[depth];
-    });
-    auto result = rebuildAttrAfterRAUW(subElements[access[depth]],
-                                       nestedAccesses, depth + 1);
-    replacements.emplace_back(access[depth], result);
-
-    // Skip over all of the accesses that refer to the nested container.
-    i += nestedAccesses.size();
-  }
-
-  return container.replaceImmediateSubAttribute(replacements);
-}
-
 /// Generates a new symbol reference attribute with a new leaf reference.
 static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
                                         FlatSymbolRefAttr newLeafAttr) {
@@ -880,77 +846,43 @@ static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
 template <typename SymbolT, typename IRUnitT>
 static LogicalResult
 replaceAllSymbolUsesImpl(SymbolT symbol, StringAttr newSymbol, IRUnitT *limit) {
-  // A collection of operations along with their new attribute dictionary.
-  std::vector<std::pair<Operation *, DictionaryAttr>> updatedAttrDicts;
-
-  // The current operation being processed.
-  Operation *curOp = nullptr;
-
-  // The set of access chains into the attribute dictionary of the current
-  // operation, as well as the replacement attribute to use.
-  SmallVector<std::pair<SmallVector<int, 1>, SymbolRefAttr>, 1> accessChains;
-
-  // Generate a new attribute dictionary for the current operation by replacing
-  // references to the old symbol.
-  auto generateNewAttrDict = [&] {
-    auto oldDict = curOp->getAttrDictionary();
-    auto newDict = rebuildAttrAfterRAUW(oldDict, accessChains, /*depth=*/0);
-    return newDict.cast<DictionaryAttr>();
-  };
-
   // Generate a new attribute to replace the given attribute.
   FlatSymbolRefAttr newLeafAttr = FlatSymbolRefAttr::get(newSymbol);
   for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
+    SymbolRefAttr oldAttr = scope.symbol;
     SymbolRefAttr newAttr = generateNewRefAttr(scope.symbol, newLeafAttr);
-    auto walkFn = [&](SymbolTable::SymbolUse symbolUse,
-                      ArrayRef<int> accessChain) {
-      SymbolRefAttr useRef = symbolUse.getSymbolRef();
-      if (!isReferencePrefixOf(scope.symbol, useRef))
-        return WalkResult::advance();
 
-      // If we have a valid match, check to see if this is a proper
-      // subreference. If it is, then we will need to generate a different new
-      // attribute specifically for this use.
-      SymbolRefAttr replacementRef = newAttr;
-      if (useRef != scope.symbol) {
-        if (scope.symbol.isa<FlatSymbolRefAttr>()) {
-          replacementRef =
-              SymbolRefAttr::get(newSymbol, useRef.getNestedReferences());
-        } else {
-          auto nestedRefs = llvm::to_vector<4>(useRef.getNestedReferences());
-          nestedRefs[scope.symbol.getNestedReferences().size() - 1] =
-              newLeafAttr;
-          replacementRef =
-              SymbolRefAttr::get(useRef.getRootReference(), nestedRefs);
+    auto walkFn = [&](Operation *op) -> Optional<WalkResult> {
+      auto remapAttrFn = [&](Attribute attr) -> Attribute {
+        if (attr == oldAttr)
+          return newAttr;
+        // Handle prefix matches.
+        if (SymbolRefAttr symRef = attr.dyn_cast<SymbolRefAttr>()) {
+          if (isReferencePrefixOf(oldAttr, symRef)) {
+            auto oldNestedRefs = oldAttr.getNestedReferences();
+            auto nestedRefs = symRef.getNestedReferences();
+            if (oldNestedRefs.empty())
+              return SymbolRefAttr::get(newSymbol, nestedRefs);
+
+            auto newNestedRefs = llvm::to_vector<4>(nestedRefs);
+            newNestedRefs[oldNestedRefs.size() - 1] = newLeafAttr;
+            return SymbolRefAttr::get(symRef.getRootReference(), newNestedRefs);
+          }
         }
-      }
+        return attr;
+      };
+      // Generate a new attribute dictionary by replacing references to the old
+      // symbol.
+      auto newDict = op->getAttrDictionary().replaceSubElements(remapAttrFn);
+      if (!newDict)
+        return WalkResult::interrupt();
 
-      // If there was a previous operation, generate a new attribute dict
-      // for it. This means that we've finished processing the current
-      // operation, so generate a new dictionary for it.
-      if (curOp && symbolUse.getUser() != curOp) {
-        updatedAttrDicts.push_back({curOp, generateNewAttrDict()});
-        accessChains.clear();
-      }
-
-      // Record this access.
-      curOp = symbolUse.getUser();
-      accessChains.push_back({llvm::to_vector<1>(accessChain), replacementRef});
+      op->setAttrs(newDict.template cast<DictionaryAttr>());
       return WalkResult::advance();
     };
-    if (!scope.walk(walkFn))
+    if (!scope.walkSymbolTable(walkFn))
       return failure();
-
-    // Check to see if we have a dangling op that needs to be processed.
-    if (curOp) {
-      updatedAttrDicts.push_back({curOp, generateNewAttrDict()});
-      curOp = nullptr;
-    }
   }
-
-  // Update the attribute dictionaries as necessary.
-  for (auto &it : updatedAttrDicts)
-    it.first->setAttrs(it.second);
   return success();
 }
 
@@ -1066,10 +998,9 @@ void SymbolUserMap::replaceAllUsesWith(Operation *symbol,
   auto it = symbolToUsers.find(symbol);
   if (it == symbolToUsers.end())
     return;
-  SetVector<Operation *> &users = it->second;
 
   // Replace the uses within the users of `symbol`.
-  for (Operation *user : users)
+  for (Operation *user : it->second)
     (void)SymbolTable::replaceAllSymbolUses(symbol, newSymbolName, user);
 
   // Move the current users of `symbol` to the new symbol if it is in the
@@ -1077,13 +1008,16 @@ void SymbolUserMap::replaceAllUsesWith(Operation *symbol,
   Operation *newSymbol =
       symbolTable.lookupSymbolIn(symbol->getParentOp(), newSymbolName);
   if (newSymbol != symbol) {
-    // Transfer over the users to the new symbol.
-    auto newIt = symbolToUsers.find(newSymbol);
-    if (newIt == symbolToUsers.end())
-      symbolToUsers.try_emplace(newSymbol, std::move(users));
+    // Transfer over the users to the new symbol.  The reference to the old one
+    // is fetched again as the iterator is invalidated during the insertion.
+    auto newIt = symbolToUsers.try_emplace(newSymbol, SetVector<Operation *>{});
+    auto oldIt = symbolToUsers.find(symbol);
+    assert(oldIt != symbolToUsers.end() && "missing old users list");
+    if (newIt.second)
+      newIt.first->second = std::move(oldIt->second);
     else
-      newIt->second.set_union(users);
-    symbolToUsers.erase(symbol);
+      newIt.first->second.set_union(oldIt->second);
+    symbolToUsers.erase(oldIt);
   }
 }
 

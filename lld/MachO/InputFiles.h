@@ -12,6 +12,7 @@
 #include "MachOStructs.h"
 #include "Target.h"
 
+#include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -21,6 +22,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
 #include <vector>
@@ -118,6 +120,7 @@ public:
 
   std::vector<Symbol *> symbols;
   std::vector<Section *> sections;
+  ArrayRef<uint8_t> objCImageInfo;
 
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
@@ -153,20 +156,29 @@ struct FDE {
 class ObjFile final : public InputFile {
 public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-          bool lazy = false);
+          bool lazy = false, bool forceHidden = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   template <class LP> void parse();
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
+  std::string sourceFile() const;
+  // Parses line table information for diagnostics. compileUnit should be used
+  // for other purposes.
+  lld::DWARFCache *getDwarf();
+
   llvm::DWARFUnit *compileUnit = nullptr;
+  std::unique_ptr<lld::DWARFCache> dwarfCache;
   Section *addrSigSection = nullptr;
   const uint32_t modTime;
+  bool forceHidden;
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
+  std::vector<OptimizationHint> optimizationHints;
 
 private:
+  llvm::once_flag initDwarf;
   template <class LP> void parseLazy();
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
@@ -179,6 +191,7 @@ private:
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
   void parseDebugInfo();
+  void parseOptimizationHints(ArrayRef<uint8_t> data);
   void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
   void registerEhFrames(Section &ehFrameSection);
@@ -239,6 +252,7 @@ private:
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
   void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
+  void parseExportedSymbols(uint32_t offset, uint32_t size);
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
@@ -246,7 +260,8 @@ private:
 // .a file
 class ArchiveFile final : public InputFile {
 public:
-  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file);
+  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file,
+                       bool forceHidden);
   void addLazySymbols();
   void fetch(const llvm::object::Archive::Symbol &);
   // LLD normally doesn't use Error for error-handling, but the underlying
@@ -260,16 +275,20 @@ private:
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
   llvm::DenseSet<uint64_t> seen;
+  // Load all symbols with hidden visibility (-load_hidden).
+  bool forceHidden;
 };
 
 class BitcodeFile final : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                       uint64_t offsetInArchive, bool lazy = false);
+                       uint64_t offsetInArchive, bool lazy = false,
+                       bool forceHidden = false);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
 
   std::unique_ptr<llvm::lto::InputFile> obj;
+  bool forceHidden;
 
 private:
   void parseLazy();

@@ -37,33 +37,28 @@ struct X86_64 : TargetInfo {
                             uint64_t entryAddr) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
-  const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
-};
 
+  void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                         uint8_t *loc) const override;
+};
 } // namespace
 
-const RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
-  static const std::array<RelocAttrs, 10> relocAttrsArray{{
+static constexpr std::array<RelocAttrs, 10> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-      {"UNSIGNED",
-       B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
-      {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-      {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
-      {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
-      {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
-      {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
-      {"SIGNED_1", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-      {"SIGNED_2", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-      {"SIGNED_4", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-      {"TLV", B(PCREL) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
+    {"UNSIGNED",
+     B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
+    {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
+    {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
+    {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
+    {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
+    {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
+    {"SIGNED_1", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
+    {"SIGNED_2", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
+    {"SIGNED_4", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
+    {"TLV", B(PCREL) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
 #undef B
-  }};
-  assert(type < relocAttrsArray.size() && "invalid relocation type");
-  if (type >= relocAttrsArray.size())
-    return invalidRelocAttrs;
-  return relocAttrsArray[type];
-}
+}};
 
 static int pcrelOffset(uint8_t type) {
   switch (type) {
@@ -193,9 +188,31 @@ X86_64::X86_64() : TargetInfo(LP64()) {
   stubSize = sizeof(stub);
   stubHelperHeaderSize = sizeof(stubHelperHeader);
   stubHelperEntrySize = sizeof(stubHelperEntry);
+
+  relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }
 
 TargetInfo *macho::createX86_64TargetInfo() {
   static X86_64 t;
   return &t;
+}
+
+void X86_64::handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                               uint8_t *loc) const {
+  assert(r.type == X86_64_RELOC_BRANCH);
+
+  if (config->outputType == MH_OBJECT)
+    return;
+
+  if (sym->getName().startswith("___dtrace_probe")) {
+    // change call site to a NOP
+    loc[-1] = 0x90;
+    write32le(loc, 0x00401F0F);
+  } else if (sym->getName().startswith("___dtrace_isenabled")) {
+    // change call site to a clear eax
+    loc[-1] = 0x33;
+    write32le(loc, 0x909090C0);
+  } else {
+    error("Unrecognized dtrace symbol prefix: " + toString(*sym));
+  }
 }

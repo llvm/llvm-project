@@ -6,7 +6,7 @@
 @e = dso_local global i32 0
 @j = dso_local global i32 0
 
-define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
+define dso_local void @n(ptr %o, i32 %p, i32 %u) nounwind {
 ; CHECK-LABEL: n:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -82,12 +82,12 @@ define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call i32 @c()
-  %call1 = tail call i32 @l(i32* %o)
+  %call1 = tail call i32 @l(ptr %o)
   %tobool = icmp eq i32 %call1, 0
   br i1 %tobool, label %if.end, label %cleanup
 
 if.end:                                           ; preds = %entry
-  %0 = load i32, i32* @e
+  %0 = load i32, ptr @e
   %tobool3 = icmp eq i32 %0, 0
   br i1 %tobool3, label %if.end8, label %if.then4, !prof !0
 
@@ -116,19 +116,19 @@ if.end12:                                         ; preds = %if.end8
   br i1 %tobool13, label %if.else, label %if.then14
 
 if.then14:                                        ; preds = %if.end12
-  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@n, %if.then20.critedge))
+  callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %cleanup [label %if.then20.critedge]
 
 if.then20.critedge:                               ; preds = %if.then14
-  %1 = load i32, i32* @j
+  %1 = load i32, ptr @j
   %conv21 = sext i32 %u to i64
-  %call22 = tail call i32 @k(i32 %1, i64 1, i32* %o, i64 %conv21)
+  %call22 = tail call i32 @k(i32 %1, i64 1, ptr %o, i64 %conv21)
   br label %cleanup
 
 if.else:                                          ; preds = %if.end12
-  %2 = load i64, i64* null
+  %2 = load i64, ptr null
   %inc = add i64 %2, 1
-  store i64 %inc, i64* null
+  store i64 %inc, ptr null
   br label %cleanup
 
 cleanup:                                          ; preds = %if.else, %if.then20.critedge, %if.then14, %entry
@@ -137,12 +137,12 @@ cleanup:                                          ; preds = %if.else, %if.then20
 
 declare dso_local i32 @c()
 
-declare dso_local i32 @l(i32*)
+declare dso_local i32 @l(ptr)
 
 declare dso_local i32 @m(i64)
 
 declare dso_local i32 @i(i32)
 
-declare dso_local i32 @k(i32, i64, i32*, i64)
+declare dso_local i32 @k(i32, i64, ptr, i64)
 
 !0 = !{!"branch_weights", i32 2000, i32 1}

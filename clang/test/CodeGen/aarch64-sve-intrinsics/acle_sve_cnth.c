@@ -7,13 +7,13 @@
 
 // CHECK-LABEL: @test_svcnth(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 // CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z11test_svcnthv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -24,12 +24,12 @@ uint64_t test_svcnth()
 
 // CHECK-LABEL: @test_svcnth_pat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 0)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svcnth_patv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 0)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat()
@@ -143,12 +143,12 @@ uint64_t test_svcnth_pat_8()
 
 // CHECK-LABEL: @test_svcnth_pat_9(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 9)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 9)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcnth_pat_9v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 9)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 9)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat_9()
@@ -158,12 +158,12 @@ uint64_t test_svcnth_pat_9()
 
 // CHECK-LABEL: @test_svcnth_pat_10(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 10)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 10)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcnth_pat_10v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 10)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 10)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat_10()
@@ -173,12 +173,12 @@ uint64_t test_svcnth_pat_10()
 
 // CHECK-LABEL: @test_svcnth_pat_11(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 11)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 11)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcnth_pat_11v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 11)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 11)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat_11()
@@ -188,12 +188,12 @@ uint64_t test_svcnth_pat_11()
 
 // CHECK-LABEL: @test_svcnth_pat_12(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 12)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 12)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcnth_pat_12v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 12)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 12)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat_12()
@@ -203,12 +203,12 @@ uint64_t test_svcnth_pat_12()
 
 // CHECK-LABEL: @test_svcnth_pat_13(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 13)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 13)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcnth_pat_13v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 13)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 13)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat_13()
@@ -218,12 +218,12 @@ uint64_t test_svcnth_pat_13()
 
 // CHECK-LABEL: @test_svcnth_pat_14(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 29)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 29)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcnth_pat_14v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 29)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 29)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat_14()
@@ -233,12 +233,12 @@ uint64_t test_svcnth_pat_14()
 
 // CHECK-LABEL: @test_svcnth_pat_15(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 30)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 30)
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcnth_pat_15v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.aarch64.sve.cnth(i32 30)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 30)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_svcnth_pat_15()
@@ -248,13 +248,13 @@ uint64_t test_svcnth_pat_15()
 
 // CHECK-LABEL: @test_svcnth_pat_16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 // CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcnth_pat_16v(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //

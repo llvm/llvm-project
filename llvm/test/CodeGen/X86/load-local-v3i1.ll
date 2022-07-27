@@ -7,12 +7,12 @@
 ; This was done in the type-legalizing of the DAG, when legalizing the load.
 
 ; Function Attrs: argmemonly nounwind readonly
-declare <3 x i32> @llvm.masked.load.v3i32.p1v3i32(<3 x i32> addrspace(1)*, i32, <3 x i1>, <3 x i32>)
+declare <3 x i32> @llvm.masked.load.v3i32.p1(ptr addrspace(1), i32, <3 x i1>, <3 x i32>)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.masked.store.v3i32.p1v3i32(<3 x i32>, <3 x i32> addrspace(1)*, i32, <3 x i1>)
+declare void @llvm.masked.store.v3i32.p1(<3 x i32>, ptr addrspace(1), i32, <3 x i1>)
 
-define  <3 x i32> @masked_load_v3(i32 addrspace(1)*, <3 x i1>) {
+define  <3 x i32> @masked_load_v3(ptr addrspace(1), <3 x i1>) {
 ; CHECK-LABEL: masked_load_v3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andb $1, %sil
@@ -45,12 +45,11 @@ define  <3 x i32> @masked_load_v3(i32 addrspace(1)*, <3 x i1>) {
 ; CHECK-NEXT:    pinsrd $2, 8(%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %2 = bitcast i32 addrspace(1)* %0 to <3 x i32> addrspace(1)*
-  %3 = call <3 x i32> @llvm.masked.load.v3i32.p1v3i32(<3 x i32> addrspace(1)* %2, i32 4, <3 x i1> %1, <3 x i32> undef)
-  ret <3 x i32> %3
+  %2 = call <3 x i32> @llvm.masked.load.v3i32.p1(ptr addrspace(1) %0, i32 4, <3 x i1> %1, <3 x i32> undef)
+  ret <3 x i32> %2
 }
 
-define void @masked_store4_v3(<3 x i32>, i32 addrspace(1)*, <3 x i1>) {
+define void @masked_store4_v3(<3 x i32>, ptr addrspace(1), <3 x i1>) {
 ; CHECK-LABEL: masked_store4_v3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andb $1, %sil
@@ -82,12 +81,11 @@ define void @masked_store4_v3(<3 x i32>, i32 addrspace(1)*, <3 x i1>) {
 ; CHECK-NEXT:    extractps $2, %xmm0, 8(%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %3 = bitcast i32 addrspace(1)* %1 to <3 x i32> addrspace(1)*
-  call void @llvm.masked.store.v3i32.p1v3i32(<3 x i32> %0, <3 x i32> addrspace(1)* %3, i32 4, <3 x i1> %2)
+  call void @llvm.masked.store.v3i32.p1(<3 x i32> %0, ptr addrspace(1) %1, i32 4, <3 x i1> %2)
   ret void
 }
 
-define void @local_load_v3i1(i32 addrspace(1)* %out, i32 addrspace(1)* %in, <3 x i1>* %predicate_ptr) nounwind {
+define void @local_load_v3i1(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr %predicate_ptr) nounwind {
 ; CHECK-LABEL: local_load_v3i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -96,7 +94,7 @@ define void @local_load_v3i1(i32 addrspace(1)* %out, i32 addrspace(1)* %in, <3 x
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rdi, %r14
-; CHECK-NEXT:    movb (%rdx), %al
+; CHECK-NEXT:    movzbl (%rdx), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrb %cl
 ; CHECK-NEXT:    andb $1, %cl
@@ -122,8 +120,8 @@ define void @local_load_v3i1(i32 addrspace(1)* %out, i32 addrspace(1)* %in, <3 x
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-  %predicate = load <3 x i1>, <3 x i1>* %predicate_ptr
-  %load1 = call <3 x i32> @masked_load_v3(i32 addrspace(1)* %in, <3 x i1> %predicate)
-  call void @masked_store4_v3(<3 x i32> %load1, i32 addrspace(1)* %out, <3 x i1> %predicate)
+  %predicate = load <3 x i1>, ptr %predicate_ptr
+  %load1 = call <3 x i32> @masked_load_v3(ptr addrspace(1) %in, <3 x i1> %predicate)
+  call void @masked_store4_v3(<3 x i32> %load1, ptr addrspace(1) %out, <3 x i1> %predicate)
   ret void
 }

@@ -786,7 +786,7 @@ struct FormatStyle {
   };
 
   /// The template declaration breaking style to use.
-  /// \version 7
+  /// \version 3.4
   BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
 
   /// A vector of strings that should be interpreted as attributes/qualifiers
@@ -2589,12 +2589,17 @@ struct FormatStyle {
     LK_TableGen,
     /// Should be used for Protocol Buffer messages in text format
     /// (https://developers.google.com/protocol-buffers/).
-    LK_TextProto
+    LK_TextProto,
+    /// Should be used for Verilog and SystemVerilog.
+    /// https://standards.ieee.org/ieee/1800/6700/
+    /// https://sci-hub.st/10.1109/IEEESTD.2018.8299595
+    LK_Verilog
   };
   bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
   bool isCSharp() const { return Language == LK_CSharp; }
   bool isJson() const { return Language == LK_Json; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
+  bool isVerilog() const { return Language == LK_Verilog; }
 
   /// Language, this format style is targeted at.
   /// \version 3.5
@@ -4285,6 +4290,8 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
     return "TableGen";
   case FormatStyle::LK_TextProto:
     return "TextProto";
+  case FormatStyle::LK_Verilog:
+    return "Verilog";
   default:
     return "Unknown";
   }

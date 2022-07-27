@@ -6,6 +6,7 @@ executable("llvm-reduce") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/Utils",
   ]
   include_dirs = [ "." ]
@@ -34,10 +35,13 @@ executable("llvm-reduce") {
     "deltas/ReduceOperands.cpp",
     "deltas/ReduceOperandsSkip.cpp",
     "deltas/ReduceOperandsToArgs.cpp",
+    "deltas/ReduceRegisterDefs.cpp",
+    "deltas/ReduceRegisterMasks.cpp",
     "deltas/ReduceRegisterUses.cpp",
     "deltas/ReduceSpecialGlobals.cpp",
     "deltas/ReduceVirtualRegisters.cpp",
     "deltas/SimplifyInstructions.cpp",
+    "deltas/Utils.cpp",
     "llvm-reduce.cpp",
   ]
 }

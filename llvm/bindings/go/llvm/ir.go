@@ -909,22 +909,12 @@ func ConstNot(v Value) (rv Value)             { rv.C = C.LLVMConstNot(v.C); retu
 func ConstAdd(lhs, rhs Value) (v Value)       { v.C = C.LLVMConstAdd(lhs.C, rhs.C); return }
 func ConstNSWAdd(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstNSWAdd(lhs.C, rhs.C); return }
 func ConstNUWAdd(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstNUWAdd(lhs.C, rhs.C); return }
-func ConstFAdd(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstFAdd(lhs.C, rhs.C); return }
 func ConstSub(lhs, rhs Value) (v Value)       { v.C = C.LLVMConstSub(lhs.C, rhs.C); return }
 func ConstNSWSub(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstNSWSub(lhs.C, rhs.C); return }
 func ConstNUWSub(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstNUWSub(lhs.C, rhs.C); return }
-func ConstFSub(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstFSub(lhs.C, rhs.C); return }
 func ConstMul(lhs, rhs Value) (v Value)       { v.C = C.LLVMConstMul(lhs.C, rhs.C); return }
 func ConstNSWMul(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstNSWMul(lhs.C, rhs.C); return }
 func ConstNUWMul(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstNUWMul(lhs.C, rhs.C); return }
-func ConstFMul(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstFMul(lhs.C, rhs.C); return }
-func ConstUDiv(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstUDiv(lhs.C, rhs.C); return }
-func ConstSDiv(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstSDiv(lhs.C, rhs.C); return }
-func ConstExactSDiv(lhs, rhs Value) (v Value) { v.C = C.LLVMConstExactSDiv(lhs.C, rhs.C); return }
-func ConstFDiv(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstFDiv(lhs.C, rhs.C); return }
-func ConstURem(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstURem(lhs.C, rhs.C); return }
-func ConstSRem(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstSRem(lhs.C, rhs.C); return }
-func ConstFRem(lhs, rhs Value) (v Value)      { v.C = C.LLVMConstFRem(lhs.C, rhs.C); return }
 func ConstAnd(lhs, rhs Value) (v Value)       { v.C = C.LLVMConstAnd(lhs.C, rhs.C); return }
 func ConstOr(lhs, rhs Value) (v Value)        { v.C = C.LLVMConstOr(lhs.C, rhs.C); return }
 func ConstXor(lhs, rhs Value) (v Value)       { v.C = C.LLVMConstXor(lhs.C, rhs.C); return }
@@ -990,30 +980,6 @@ func ConstInsertElement(vec, elem, i Value) (rv Value) {
 }
 func ConstShuffleVector(veca, vecb, mask Value) (rv Value) {
 	rv.C = C.LLVMConstShuffleVector(veca.C, vecb.C, mask.C)
-	return
-}
-
-//TODO
-//LLVMValueRef LLVMConstExtractValue(LLVMValueRef AggConstant, unsigned *IdxList,
-//                                   unsigned NumIdx);
-
-func ConstExtractValue(agg Value, indices []uint32) (rv Value) {
-	n := len(indices)
-	if n == 0 {
-		panic("one or more indices are required")
-	}
-	ptr := (*C.unsigned)(&indices[0])
-	rv.C = C.LLVMConstExtractValue(agg.C, ptr, C.unsigned(n))
-	return
-}
-
-func ConstInsertValue(agg, val Value, indices []uint32) (rv Value) {
-	n := len(indices)
-	if n == 0 {
-		panic("one or more indices are required")
-	}
-	ptr := (*C.unsigned)(&indices[0])
-	rv.C = C.LLVMConstInsertValue(agg.C, val.C, ptr, C.unsigned(n))
 	return
 }
 

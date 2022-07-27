@@ -32,7 +32,7 @@
 ; X86-FreeBSD: Segmented stacks not supported on FreeBSD i386
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define void @test_basic() #0 {
 ; X86-Linux-LABEL: test_basic:
@@ -267,11 +267,11 @@ define void @test_basic() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB0_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
 	ret void
 }
 
-define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
+define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
 ; X86-Linux-LABEL: test_nested:
 ; X86-Linux:       # %bb.0:
 ; X86-Linux-NEXT:    cmpl %gs:48, %esp
@@ -615,10 +615,10 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-MinGW-NEXT:    movq %rax, %r10
 ; X64-MinGW-NEXT:    jmp .LBB1_2
 ; X64-MinGW-NEXT:    .seh_endproc
-       %addend = load i32 , i32 * %closure
+       %addend = load i32 , ptr %closure
        %result = add i32 %other, %addend
        %mem = alloca i32, i32 10
-       call void @dummy_use (i32* %mem, i32 10)
+       call void @dummy_use (ptr %mem, i32 10)
        ret i32 %result
 }
 
@@ -869,7 +869,7 @@ define void @test_large() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB2_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 3)
+        call void @dummy_use (ptr %mem, i32 3)
         ret void
 }
 
@@ -1106,7 +1106,7 @@ define fastcc void @test_fastcc() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB3_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
         ret void
 }
 
@@ -1357,7 +1357,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB4_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 3)
+        call void @dummy_use (ptr %mem, i32 3)
         ret void
 }
 
@@ -1612,7 +1612,7 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-MinGW-NEXT:    jmp .LBB5_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 %a)
+        call void @dummy_use (ptr %mem, i32 %a)
         ret void
 }
 
@@ -1868,7 +1868,7 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 
 ; Test that unused nested argument doesn't need saving/restoring.
 
-define i32 @test_nested_unused(i32 * nest %unused) #0 {
+define i32 @test_nested_unused(ptr nest %unused) #0 {
 ; X86-Linux-LABEL: test_nested_unused:
 ; X86-Linux:       # %bb.0:
 ; X86-Linux-NEXT:    cmpl %gs:48, %esp
@@ -2117,7 +2117,7 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-MinGW-NEXT:    jmp .LBB9_2
 ; X64-MinGW-NEXT:    .seh_endproc
        %mem = alloca i32, i32 10
-       call void @dummy_use (i32* %mem, i32 10)
+       call void @dummy_use (ptr %mem, i32 10)
        ret i32 123
 }
 

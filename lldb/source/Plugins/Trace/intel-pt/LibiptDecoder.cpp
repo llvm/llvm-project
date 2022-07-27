@@ -16,16 +16,6 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-// Simple struct used by the decoder to keep the state of the most
-// recent TSC and a flag indicating whether TSCs are enabled, not enabled
-// or we just don't yet.
-struct TscInfo {
-  uint64_t tsc = 0;
-  LazyBool has_tsc = eLazyBoolCalculate;
-
-  explicit operator bool() const { return has_tsc == eLazyBoolYes; }
-};
-
 /// Class that decodes a raw buffer for a single thread using the low level
 /// libipt library.
 ///
@@ -58,7 +48,7 @@ public:
       int status = pt_insn_sync_forward(&m_decoder);
 
       if (IsLibiptError(status)) {
-        m_decoded_thread.Append(DecodedInstruction(status));
+        m_decoded_thread.AppendError(IntelPTError(status));
         break;
       }
 
@@ -71,25 +61,13 @@ public:
   void DecodePSB(uint64_t psb_offset) {
     int status = pt_insn_sync_set(&m_decoder, psb_offset);
     if (IsLibiptError(status)) {
-      m_decoded_thread.Append(DecodedInstruction(status));
+      m_decoded_thread.AppendError(IntelPTError(status));
       return;
     }
     DecodeInstructionsAndEvents(status, /*stop_on_psb_change=*/true);
   }
 
 private:
-  /// Invoke the low level function \a pt_insn_next and store the decoded
-  /// instruction in the given \a DecodedInstruction.
-  ///
-  /// \param[out] insn
-  ///   The instruction builder where the pt_insn information will be stored.
-  ///
-  /// \return
-  ///   The status returned by pt_insn_next.
-  int DecodeNextInstruction(DecodedInstruction &insn) {
-    return pt_insn_next(&m_decoder, &insn.pt_insn, sizeof(insn.pt_insn));
-  }
-
   /// Decode all the instructions and events until an error is found, the end
   /// of the trace is reached, or optionally a new PSB is reached.
   ///
@@ -104,29 +82,25 @@ private:
     pt_insn_get_sync_offset(&m_decoder,
                             &psb_offset); // this can't fail because we got here
 
-    while (true) {
-      DecodedInstruction insn = ProcessPTEvents(status);
-      if (!insn) {
-        m_decoded_thread.Append(insn);
-        break;
-      }
-
+    while (ProcessPTEvents(status)) {
       if (stop_on_psb_change) {
         uint64_t cur_psb_offset;
-        pt_insn_get_sync_offset(
-            &m_decoder, &cur_psb_offset); // this can't fail because we got here
+        // this can't fail because we got here
+        pt_insn_get_sync_offset(&m_decoder, &cur_psb_offset);
         if (cur_psb_offset != psb_offset)
           break;
       }
 
-      // The status returned by DecodeNextInstruction will need to be processed
+      // The status returned by pt_insn_next will need to be processed
       // by ProcessPTEvents in the next loop if it is not an error.
-      if (IsLibiptError(status = DecodeNextInstruction(insn))) {
-        insn.libipt_error = status;
-        m_decoded_thread.Append(insn);
+      pt_insn insn;
+      std::memset(&insn, 0, sizeof insn);
+      if (IsLibiptError(status =
+                            pt_insn_next(&m_decoder, &insn, sizeof(insn)))) {
+        m_decoded_thread.AppendError(IntelPTError(status, insn.ip));
         break;
       }
-      m_decoded_thread.Append(insn);
+      m_decoded_thread.AppendInstruction(insn);
     }
   }
 
@@ -151,7 +125,7 @@ private:
 
     // We make this call to record any synchronization errors.
     if (IsLibiptError(status))
-      m_decoded_thread.Append(DecodedInstruction(status));
+      m_decoded_thread.AppendError(IntelPTError(status));
 
     return status;
   }
@@ -165,16 +139,18 @@ private:
   ///   synchronization.
   ///
   /// \return
-  ///   A \a DecodedInstruction with event, tsc and error information.
-  DecodedInstruction ProcessPTEvents(int status) {
-    DecodedInstruction insn;
+  ///   \b true if no errors were found processing the events.
+  bool ProcessPTEvents(int status) {
     while (status & pts_event_pending) {
       pt_event event;
       status = pt_insn_event(&m_decoder, &event, sizeof(event));
       if (IsLibiptError(status)) {
-        insn.libipt_error = status;
-        break;
+        m_decoded_thread.AppendError(IntelPTError(status));
+        return false;
       }
+
+      if (event.has_tsc)
+        m_decoded_thread.NotifyTsc(event.tsc);
 
       switch (event.type) {
       case ptev_enabled:
@@ -182,69 +158,30 @@ private:
         break;
       case ptev_disabled:
         // The CPU paused tracing the program, e.g. due to ip filtering.
+        m_decoded_thread.AppendEvent(lldb::eTraceEventDisabledHW);
+        break;
       case ptev_async_disabled:
         // The kernel or user code paused tracing the program, e.g.
         // a breakpoint or a ioctl invocation pausing the trace, or a
         // context switch happened.
-
-        if (m_decoded_thread.GetInstructionsCount() > 0) {
-          // A paused event before the first instruction can be safely
-          // discarded.
-          insn.events |= eTraceEventPaused;
-        }
+        m_decoded_thread.AppendEvent(lldb::eTraceEventDisabledSW);
         break;
       case ptev_overflow:
         // The CPU internal buffer had an overflow error and some instructions
         // were lost.
-        insn.libipt_error = -pte_overflow;
+        m_decoded_thread.AppendError(IntelPTError(-pte_overflow));
         break;
       default:
         break;
       }
     }
 
-    // We refresh the TSC that might have changed after processing the events.
-    // See
-    // https://github.com/intel/libipt/blob/master/doc/man/pt_evt_next.3.md
-    RefreshTscInfo();
-    if (m_tsc_info)
-      insn.tsc = m_tsc_info.tsc;
-    return insn;
-  }
-
-  /// Query the decoder for the most recent TSC timestamp and update
-  /// the inner tsc information accordingly.
-  void RefreshTscInfo() {
-    if (m_tsc_info.has_tsc == eLazyBoolNo)
-      return;
-
-    uint64_t new_tsc;
-    int tsc_status;
-    if (IsLibiptError(tsc_status = pt_insn_time(&m_decoder, &new_tsc, nullptr,
-                                                nullptr))) {
-      if (IsTscUnavailable(tsc_status)) {
-        // We now know that the trace doesn't support TSC, so we won't try
-        // again.
-        // See
-        // https://github.com/intel/libipt/blob/master/doc/man/pt_qry_time.3.md
-        m_tsc_info.has_tsc = eLazyBoolNo;
-      } else {
-        // We don't add TSC decoding errors in the decoded trace itself to
-        // prevent creating unnecessary gaps, but we can count how many of
-        // these errors happened. In this case we reuse the previous correct
-        // TSC we saw, as it's better than no TSC at all.
-        m_decoded_thread.RecordTscError(tsc_status);
-      }
-    } else {
-      m_tsc_info.tsc = new_tsc;
-      m_tsc_info.has_tsc = eLazyBoolYes;
-    }
+    return true;
   }
 
 private:
   pt_insn_decoder &m_decoder;
   DecodedThread &m_decoded_thread;
-  TscInfo m_tsc_info;
 };
 
 /// Callback used by libipt for reading the process memory.
@@ -308,23 +245,24 @@ static Error SetupMemoryImage(PtInsnDecoderUP &decoder_up, Process &process) {
   return Error::success();
 }
 
-void lldb_private::trace_intel_pt::DecodeSingleTraceForThread(DecodedThread &decoded_thread,
-                                               TraceIntelPT &trace_intel_pt,
-                                               ArrayRef<uint8_t> buffer) {
+Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(
+    DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
+    ArrayRef<uint8_t> buffer) {
   Expected<PtInsnDecoderUP> decoder_up =
       CreateInstructionDecoder(trace_intel_pt, buffer);
   if (!decoder_up)
-    return decoded_thread.SetAsFailed(decoder_up.takeError());
+    return decoder_up.takeError();
 
   if (Error err = SetupMemoryImage(*decoder_up,
                                    *decoded_thread.GetThread()->GetProcess()))
-    return decoded_thread.SetAsFailed(std::move(err));
+    return err;
 
   LibiptDecoder libipt_decoder(*decoder_up.get(), decoded_thread);
   libipt_decoder.DecodeUntilEndOfTrace();
+  return Error::success();
 }
 
-void lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
+Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
     DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
     const DenseMap<lldb::cpu_id_t, llvm::ArrayRef<uint8_t>> &buffers,
     const std::vector<IntelPTThreadContinousExecution> &executions) {
@@ -333,11 +271,11 @@ void lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
     Expected<PtInsnDecoderUP> decoder_up =
         CreateInstructionDecoder(trace_intel_pt, cpu_id_buffer.second);
     if (!decoder_up)
-      return decoded_thread.SetAsFailed(decoder_up.takeError());
+      return decoder_up.takeError();
 
     if (Error err = SetupMemoryImage(*decoder_up,
                                      *decoded_thread.GetThread()->GetProcess()))
-      return decoded_thread.SetAsFailed(std::move(err));
+      return err;
 
     decoders.try_emplace(cpu_id_buffer.first,
                          LibiptDecoder(*decoder_up->release(), decoded_thread));
@@ -347,28 +285,42 @@ void lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
   for (size_t i = 0; i < executions.size(); i++) {
     const IntelPTThreadContinousExecution &execution = executions[i];
 
+
     auto variant = execution.thread_execution.variant;
+    // We report the TSCs we are sure of
+    switch (variant) {
+    case ThreadContinuousExecution::Variant::Complete:
+      decoded_thread.NotifyTsc(execution.thread_execution.tscs.complete.start);
+      break;
+    case ThreadContinuousExecution::Variant::OnlyStart:
+      decoded_thread.NotifyTsc(
+          execution.thread_execution.tscs.only_start.start);
+      break;
+    default:
+      break;
+    }
+
+    decoded_thread.NotifyCPU(execution.thread_execution.cpu_id);
+
     // If we haven't seen a PSB yet, then it's fine not to show errors
     if (has_seen_psbs) {
       if (execution.intelpt_subtraces.empty()) {
-        decoded_thread.AppendError(createStringError(
-            inconvertibleErrorCode(),
-            formatv("Unable to find intel pt data for thread execution with "
-                    "tsc = {0} on cpu id = {1}",
-                    execution.thread_execution.GetLowestKnownTSC(),
-                    execution.thread_execution.cpu_id)));
+        decoded_thread.AppendCustomError(
+            formatv("Unable to find intel pt data for thread "
+                    "execution on cpu id = {0}",
+                    execution.thread_execution.cpu_id)
+                .str());
       }
 
       // If the first execution is incomplete because it doesn't have a previous
-      // context switch in its cpu, all good.
+      // context switch in its cpu, all good, otherwise we report the error.
       if (variant == ThreadContinuousExecution::Variant::OnlyEnd ||
           variant == ThreadContinuousExecution::Variant::HintedStart) {
-        decoded_thread.AppendError(createStringError(
-            inconvertibleErrorCode(),
-            formatv("Thread execution starting at tsc = {0} on cpu id = {1} "
-                    "doesn't have a matching context switch in.",
-                    execution.thread_execution.GetLowestKnownTSC(),
-                    execution.thread_execution.cpu_id)));
+        decoded_thread.AppendCustomError(
+            formatv("Unable to find the context switch in for the thread "
+                    "execution starting on cpu id = {0}",
+                    execution.thread_execution.cpu_id)
+                .str());
       }
     }
 
@@ -380,6 +332,18 @@ void lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
       decoder.DecodePSB(intel_pt_execution.psb_offset);
     }
 
+    // We report the TSCs we are sure of
+    switch (variant) {
+    case ThreadContinuousExecution::Variant::Complete:
+      decoded_thread.NotifyTsc(execution.thread_execution.tscs.complete.end);
+      break;
+    case ThreadContinuousExecution::Variant::OnlyEnd:
+      decoded_thread.NotifyTsc(execution.thread_execution.tscs.only_end.end);
+      break;
+    default:
+      break;
+    }
+
     // If we haven't seen a PSB yet, then it's fine not to show errors
     if (has_seen_psbs) {
       // If the last execution is incomplete because it doesn't have a following
@@ -387,15 +351,15 @@ void lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
       if ((variant == ThreadContinuousExecution::Variant::OnlyStart &&
            i + 1 != executions.size()) ||
           variant == ThreadContinuousExecution::Variant::HintedEnd) {
-        decoded_thread.AppendError(createStringError(
-            inconvertibleErrorCode(),
-            formatv("Thread execution starting at tsc = {0} on cpu id = {1} "
-                    "doesn't have a matching context switch out",
-                    execution.thread_execution.GetLowestKnownTSC(),
-                    execution.thread_execution.cpu_id)));
+        decoded_thread.AppendCustomError(
+            formatv("Unable to find the context switch out for the thread "
+                    "execution on cpu id = {0}",
+                    execution.thread_execution.cpu_id)
+                .str());
       }
     }
   }
+  return Error::success();
 }
 
 bool IntelPTThreadContinousExecution::operator<(
@@ -441,4 +405,23 @@ lldb_private::trace_intel_pt::SplitTraceInContinuousExecutions(
     });
   }
   return executions;
+}
+
+Expected<Optional<uint64_t>>
+lldb_private::trace_intel_pt::FindLowestTSCInTrace(TraceIntelPT &trace_intel_pt,
+                                                   ArrayRef<uint8_t> buffer) {
+  Expected<PtInsnDecoderUP> decoder_up =
+      CreateInstructionDecoder(trace_intel_pt, buffer);
+  if (!decoder_up)
+    return decoder_up.takeError();
+
+  pt_insn_decoder *decoder = decoder_up.get().get();
+  int status = pte_ok;
+  if (IsLibiptError(status = pt_insn_sync_forward(decoder)))
+    return None;
+
+  uint64_t tsc;
+  if (IsLibiptError(pt_insn_time(decoder, &tsc, nullptr, nullptr)))
+    return None;
+  return tsc;
 }

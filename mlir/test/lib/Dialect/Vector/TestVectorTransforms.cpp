@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -356,8 +356,7 @@ struct TestVectorUnrollingPatterns
   }
 
   ListOption<int64_t> unrollOrder{*this, "unroll-order",
-                                  llvm::cl::desc("set the unroll order"),
-                                  llvm::cl::ZeroOrMore};
+                                  llvm::cl::desc("set the unroll order")};
 
   Option<bool> unrollBasedOnType{
       *this, "unroll-based-on-type",
@@ -413,7 +412,7 @@ struct TestVectorDistributePatterns
                                   perm, ctx);
         Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
             builder, op.getOperation(), ids, mul, map);
-        if (ops.hasValue()) {
+        if (ops) {
           SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
           op.getResult().replaceAllUsesExcept(ops->insert.getResult(),
                                               extractOp);
@@ -474,7 +473,7 @@ struct TestVectorToLoopPatterns
       Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
           builder, op.getOperation(), {forOp.getInductionVar()}, {multiplicity},
           map);
-      if (ops.hasValue()) {
+      if (ops) {
         SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
         op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);
       }

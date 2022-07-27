@@ -254,7 +254,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
 
   // The parser verifies that there is a string literal here.
-  assert(AsmString->isAscii());
+  assert(AsmString->isOrdinary());
 
   FunctionDecl *FD = dyn_cast<FunctionDecl>(getCurLexicalContext());
   llvm::StringMap<bool> FeatureMap;
@@ -262,7 +262,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   for (unsigned i = 0; i != NumOutputs; i++) {
     StringLiteral *Literal = Constraints[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef OutputName;
     if (Names[i])
@@ -353,7 +353,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   for (unsigned i = NumOutputs, e = NumOutputs + NumInputs; i != e; i++) {
     StringLiteral *Literal = Constraints[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef InputName;
     if (Names[i])
@@ -459,7 +459,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   // Check that the clobbers are valid.
   for (unsigned i = 0; i != NumClobbers; i++) {
     StringLiteral *Literal = Clobbers[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef Clobber = Literal->getString();
 

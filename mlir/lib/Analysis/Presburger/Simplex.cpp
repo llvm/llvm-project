@@ -31,23 +31,28 @@ scaleAndAddForAssert(ArrayRef<int64_t> a, int64_t scale, ArrayRef<int64_t> b) {
   return res;
 }
 
-SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM, unsigned symbolOffset,
-                         unsigned nSymbol)
-    : usingBigM(mustUseBigM), nRedundant(0), nSymbol(nSymbol),
+SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM)
+    : usingBigM(mustUseBigM), nRedundant(0), nSymbol(0),
       tableau(0, getNumFixedCols() + nVar), empty(false) {
-  assert(symbolOffset + nSymbol <= nVar);
-
   colUnknown.insert(colUnknown.begin(), getNumFixedCols(), nullIndex);
   for (unsigned i = 0; i < nVar; ++i) {
     var.emplace_back(Orientation::Column, /*restricted=*/false,
                      /*pos=*/getNumFixedCols() + i);
     colUnknown.push_back(i);
   }
+}
 
-  // Move the symbols to be in columns [3, 3 + nSymbol).
-  for (unsigned i = 0; i < nSymbol; ++i) {
-    var[symbolOffset + i].isSymbol = true;
-    swapColumns(var[symbolOffset + i].pos, getNumFixedCols() + i);
+SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM,
+                         const llvm::SmallBitVector &isSymbol)
+    : SimplexBase(nVar, mustUseBigM) {
+  assert(isSymbol.size() == nVar && "invalid bitmask!");
+  // Invariant: nSymbol is the number of symbols that have been marked
+  // already and these occupy the columns
+  // [getNumFixedCols(), getNumFixedCols() + nSymbol).
+  for (unsigned symbolIdx : isSymbol.set_bits()) {
+    var[symbolIdx].isSymbol = true;
+    swapColumns(var[symbolIdx].pos, getNumFixedCols() + nSymbol);
+    ++nSymbol;
   }
 }
 
@@ -429,7 +434,7 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
 }
 
 void SymbolicLexSimplex::recordOutput(SymbolicLexMin &result) const {
-  Matrix output(0, domainPoly.getNumIds() + 1);
+  Matrix output(0, domainPoly.getNumVars() + 1);
   output.reserveRows(result.lexmin.getNumOutputs());
   for (const Unknown &u : var) {
     if (u.isSymbol)
@@ -502,7 +507,7 @@ LogicalResult SymbolicLexSimplex::doNonBranchingPivots() {
 }
 
 SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
-  SymbolicLexMin result(nSymbol, var.size() - nSymbol);
+  SymbolicLexMin result(domainPoly.getSpace(), var.size() - nSymbol);
 
   /// The algorithm is more naturally expressed recursively, but we implement
   /// it iteratively here to avoid potential issues with stack overflows in the
@@ -868,7 +873,7 @@ Optional<SimplexBase::Pivot> Simplex::findPivot(int row,
   Direction newDirection =
       tableau(row, *col) < 0 ? flippedDirection(direction) : direction;
   Optional<unsigned> maybePivotRow = findPivotRow(row, newDirection, *col);
-  return Pivot{maybePivotRow.getValueOr(row), *col};
+  return Pivot{maybePivotRow.value_or(row), *col};
 }
 
 /// Swap the associated unknowns for the row and the column.
@@ -1162,7 +1167,7 @@ void Simplex::undoLastConstraint() {
       pivot(*maybeRow, column);
     } else {
       Optional<unsigned> row = findAnyPivotRow(column);
-      assert(row.hasValue() && "Pivot should always exist for a constraint!");
+      assert(row && "Pivot should always exist for a constraint!");
       pivot(*row, column);
     }
   }
@@ -1181,7 +1186,7 @@ void LexSimplexBase::undoLastConstraint() {
     // long as we get the unknown to row orientation and remove it.
     unsigned column = con.back().pos;
     Optional<unsigned> row = findAnyPivotRow(column);
-    assert(row.hasValue() && "Pivot should always exist for a constraint!");
+    assert(row && "Pivot should always exist for a constraint!");
     pivot(*row, column);
   }
   removeLastConstraintRowOrientation();
@@ -1295,7 +1300,7 @@ void SimplexBase::appendVariable(unsigned count) {
 
 /// Add all the constraints from the given IntegerRelation.
 void SimplexBase::intersectIntegerRelation(const IntegerRelation &rel) {
-  assert(rel.getNumIds() == getNumVariables() &&
+  assert(rel.getNumVars() == getNumVariables() &&
          "IntegerRelation must have same dimensionality as simplex");
   for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i)
     addInequality(rel.getInequality(i));

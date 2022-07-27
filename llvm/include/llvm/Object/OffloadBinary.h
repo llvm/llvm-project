@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BINARYFORMAT_OFFLOADING_H
-#define LLVM_BINARYFORMAT_OFFLOADING_H
+#ifndef LLVM_OBJECT_OFFLOADBINARY_H
+#define LLVM_OBJECT_OFFLOADBINARY_H
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -62,6 +62,9 @@ public:
   using string_iterator = StringMap<StringRef>::const_iterator;
   using string_iterator_range = iterator_range<string_iterator>;
 
+  /// The current version of the binary used for backwards compatibility.
+  static const uint32_t Version = 1;
+
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
     ImageKind TheImageKind;
@@ -77,7 +80,7 @@ public:
   /// Serialize the contents of \p File to a binary buffer to be read later.
   static std::unique_ptr<MemoryBuffer> write(const OffloadingImage &);
 
-  static uint64_t getAlignment() { return alignof(Header); }
+  static uint64_t getAlignment() { return 8; }
 
   ImageKind getImageKind() const { return TheEntry->TheImageKind; }
   OffloadKind getOffloadKind() const { return TheEntry->TheOffloadKind; }
@@ -100,10 +103,9 @@ public:
 
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
 
-private:
   struct Header {
     uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
-    uint32_t Version = 1;                        // Version identifier.
+    uint32_t Version = OffloadBinary::Version;   // Version identifier.
     uint64_t Size;        // Size in bytes of this entire binary.
     uint64_t EntryOffset; // Offset of the metadata entry in bytes.
     uint64_t EntrySize;   // Size of the metadata entry in bytes.
@@ -124,6 +126,7 @@ private:
     uint64_t ValueOffset;
   };
 
+private:
   OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
                 const Entry *TheEntry)
       : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),

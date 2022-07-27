@@ -419,8 +419,8 @@ nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
 // Nest an op-agnostic pass manager. This will operate on any viable
 // operation, e.g. func.func, spv.func, spv.module, builtin.module, etc.
 OpPassManager &nestedAnyPM = nestedModulePM.nestAny();
-nestedFunctionPM.addPass(createCanonicalizePass());
-nestedFunctionPM.addPass(createCSEPass());
+nestedAnyPM.addPass(createCanonicalizePass());
+nestedAnyPM.addPass(createCSEPass());
 
 // Run the pass manager on the top-level module.
 ModuleOp m = ...;
@@ -780,7 +780,7 @@ struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
       llvm::cl::desc("An example option"), llvm::cl::init(true)};
   ListOption<int64_t> listOption{
       *this, "example-list",
-      llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore};
+      llvm::cl::desc("An example list option")};
 
   // Specify any statistics.
   Statistic statistic{this, "example-statistic", "An example statistic"};
@@ -816,7 +816,7 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
     Option<"option", "example-option", "bool", /*default=*/"true",
            "An example option">,
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option", "llvm::cl::ZeroOrMore">
+               "An example list option">
   ];
 
   // Specify any statistics.
@@ -952,7 +952,7 @@ The `ListOption` class takes the following fields:
 def MyPass : Pass<"my-pass"> {
   let options = [
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option", "llvm::cl::ZeroOrMore">
+               "An example list option">
   ];
 }
 ```
@@ -1262,22 +1262,31 @@ generate reproducibles in the event of a crash, or a
 `mlir-pass-pipeline-crash-reproducer`. In either case, an argument is provided that
 corresponds to the output `.mlir` file name that the reproducible should be
 written to. The reproducible contains the configuration of the pass manager that
-was executing, as well as the initial IR before any passes were run. A potential
-reproducible may have the form:
+was executing, as well as the initial IR before any passes were run. The reproducer
+is stored within the assembly format as an external resource. A potential reproducible
+may have the form:
 
 ```mlir
-// configuration: -pass-pipeline='func.func(cse,canonicalize),inline' -verify-each
-
 module {
   func.func @foo() {
     ...
   }
 }
+
+{-#
+  external_resources: {
+    mlir_reproducer: {
+      pipeline: "func.func(cse,canonicalize),inline",
+      disable_threading: true,
+      verify_each: true
+    }
+  }
+#-}
 ```
 
-The configuration dumped can be passed to `mlir-opt` by specifying
-`-run-reproducer` flag. This will result in parsing the first line configuration
-of the reproducer and adding those to the command line options.
+The configuration dumped can be passed to `mlir-opt`. This will result in
+parsing the configuration of the reproducer and adjusting the necessary opt
+state, e.g. configuring the pass manager, context, etc.
 
 Beyond specifying a filename, one can also register a `ReproducerStreamFactory`
 function that would be invoked in the case of a crash and the reproducer written
@@ -1297,15 +1306,23 @@ not always be available.
 Note: Local reproducer generation requires that multi-threading is
 disabled(`-mlir-disable-threading`)
 
-For example, if the failure in the previous example came from `canonicalize`,
-the following reproducer will be generated:
+For example, if the failure in the previous example came from the `canonicalize` pass,
+the following reproducer would be generated:
 
 ```mlir
-// configuration: -pass-pipeline='func.func(canonicalize)' -verify-each -mlir-disable-threading
-
 module {
   func.func @foo() {
     ...
   }
 }
+
+{-#
+  external_resources: {
+    mlir_reproducer: {
+      pipeline: "func.func(canonicalize)",
+      disable_threading: true,
+      verify_each: true
+    }
+  }
+#-}
 ```

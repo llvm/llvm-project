@@ -304,7 +304,7 @@ private:
         MayTakeTrivial = false;
       }
       // Is this the best branch so far? (Including if it's #if 1).
-      if (TookTrivial || !C.Taken.hasValue() || BranchScore > Best) {
+      if (TookTrivial || !C.Taken || BranchScore > Best) {
         Best = BranchScore;
         C.Taken = I;
       }

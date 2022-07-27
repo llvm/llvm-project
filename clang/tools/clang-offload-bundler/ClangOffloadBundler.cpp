@@ -1255,7 +1255,7 @@ static Error UnbundleArchive() {
 
     Optional<StringRef> OptionalCurBundleID = *CurBundleIDOrErr;
     // No device code in this child, skip.
-    if (!OptionalCurBundleID.hasValue())
+    if (!OptionalCurBundleID)
       continue;
     StringRef CodeObject = *OptionalCurBundleID;
 
@@ -1318,7 +1318,7 @@ static Error UnbundleArchive() {
       if (!NextTripleOrErr)
         return NextTripleOrErr.takeError();
 
-      CodeObject = ((*NextTripleOrErr).hasValue()) ? **NextTripleOrErr : "";
+      CodeObject = NextTripleOrErr->value_or("");
     } // End of processing of all bundle entries of this child of input archive.
   }   // End of while over children of input archive.
 

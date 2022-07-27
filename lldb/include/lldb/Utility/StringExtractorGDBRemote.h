@@ -136,6 +136,7 @@ public:
     eServerPacketType_vAttachName,
     eServerPacketType_vCont,
     eServerPacketType_vCont_actions, // vCont?
+    eServerPacketType_vKill,
     eServerPacketType_vRun,
 
     eServerPacketType_stop_reason, // '?'
@@ -174,7 +175,11 @@ public:
     eServerPacketType_QMemTags, // write memory tags
 
     eServerPacketType_qLLDBSaveCore,
-    eServerPacketType_QSetIgnoredExceptions
+    eServerPacketType_QSetIgnoredExceptions,
+    eServerPacketType_QNonStop,
+    eServerPacketType_vStopped,
+    eServerPacketType_vCtrlC,
+    eServerPacketType_vStdio,
   };
 
   ServerPacketType GetServerPacketType() const;

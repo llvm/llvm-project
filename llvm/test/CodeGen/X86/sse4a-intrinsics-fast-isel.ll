@@ -47,7 +47,7 @@ define <2 x i64> @test_mm_insert_si64(<2 x i64> %x, <2 x i64> %y) {
 }
 declare <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64>, <2 x i64>) nounwind readnone
 
-define void @test_stream_sd(double* %p, <2 x double> %a) {
+define void @test_stream_sd(ptr %p, <2 x double> %a) {
 ; X86-LABEL: test_stream_sd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -59,11 +59,11 @@ define void @test_stream_sd(double* %p, <2 x double> %a) {
 ; X64-NEXT:    movntsd %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %1 = extractelement <2 x double> %a, i64 0
-  store double %1, double* %p, align 1, !nontemporal !1
+  store double %1, ptr %p, align 1, !nontemporal !1
   ret void
 }
 
-define void @test_mm_stream_ss(float* %p, <4 x float> %a) {
+define void @test_mm_stream_ss(ptr %p, <4 x float> %a) {
 ; X86-LABEL: test_mm_stream_ss:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -75,7 +75,7 @@ define void @test_mm_stream_ss(float* %p, <4 x float> %a) {
 ; X64-NEXT:    movntss %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %1 = extractelement <4 x float> %a, i64 0
-  store float %1, float* %p, align 1, !nontemporal !1
+  store float %1, ptr %p, align 1, !nontemporal !1
   ret void
 }
 

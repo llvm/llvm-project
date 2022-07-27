@@ -13,49 +13,49 @@ eon     z5.b, z5.b, #0xf9
 // CHECK-INST: eor     z5.b, z5.b, #0x6
 // CHECK-ENCODING: [0x25,0x3e,0x40,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 25 3e 40 05 <unknown>
+// CHECK-UNKNOWN: 05403e25 <unknown>
 
 eon     z23.h, z23.h, #0xfff9
 // CHECK-INST: eor     z23.h, z23.h, #0x6
 // CHECK-ENCODING: [0x37,0x7c,0x40,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 37 7c 40 05 <unknown>
+// CHECK-UNKNOWN: 05407c37 <unknown>
 
 eon     z0.s, z0.s, #0xfffffff9
 // CHECK-INST: eor     z0.s, z0.s, #0x6
 // CHECK-ENCODING: [0x20,0xf8,0x40,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 20 f8 40 05 <unknown>
+// CHECK-UNKNOWN: 0540f820 <unknown>
 
 eon     z0.d, z0.d, #0xfffffffffffffff9
 // CHECK-INST: eor     z0.d, z0.d, #0x6
 // CHECK-ENCODING: [0x20,0xf8,0x43,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 20 f8 43 05 <unknown>
+// CHECK-UNKNOWN: 0543f820 <unknown>
 
 eon     z5.b, z5.b, #0x6
 // CHECK-INST: eor     z5.b, z5.b, #0xf9
 // CHECK-ENCODING: [0xa5,0x2e,0x40,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: a5 2e 40 05 <unknown>
+// CHECK-UNKNOWN: 05402ea5 <unknown>
 
 eon     z23.h, z23.h, #0x6
 // CHECK-INST: eor     z23.h, z23.h, #0xfff9
 // CHECK-ENCODING: [0xb7,0x6d,0x40,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: b7 6d 40 05 <unknown>
+// CHECK-UNKNOWN: 05406db7 <unknown>
 
 eon     z0.s, z0.s, #0x6
 // CHECK-INST: eor     z0.s, z0.s, #0xfffffff9
 // CHECK-ENCODING: [0xa0,0xeb,0x40,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: a0 eb 40 05 <unknown>
+// CHECK-UNKNOWN: 0540eba0 <unknown>
 
 eon     z0.d, z0.d, #0x6
 // CHECK-INST: eor     z0.d, z0.d, #0xfffffffffffffff9
 // CHECK-ENCODING: [0xa0,0xef,0x43,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: a0 ef 43 05 <unknown>
+// CHECK-UNKNOWN: 0543efa0 <unknown>
 
 
 // --------------------------------------------------------------------------//
@@ -65,10 +65,10 @@ movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+// CHECK-UNKNOWN: 0420bce0 <unknown>
 
 eon     z0.d, z0.d, #0x6
 // CHECK-INST: eor	z0.d, z0.d, #0xfffffffffffffff9
 // CHECK-ENCODING: [0xa0,0xef,0x43,0x05]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: a0 ef 43 05 <unknown>
+// CHECK-UNKNOWN: 0543efa0 <unknown>

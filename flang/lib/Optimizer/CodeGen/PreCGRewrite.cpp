@@ -260,8 +260,7 @@ public:
 
 class CodeGenRewrite : public fir::CodeGenRewriteBase<CodeGenRewrite> {
 public:
-  void runOnOperation() override final {
-    auto op = getOperation();
+  void runOn(mlir::Operation *op, mlir::Region &region) {
     auto &context = getContext();
     mlir::OpBuilder rewriter(&context);
     mlir::ConversionTarget target(context);
@@ -284,7 +283,60 @@ public:
                       "error in running the pre-codegen conversions");
       signalPassFailure();
     }
+    // Erase any residual.
+    simplifyRegion(region);
   }
+
+  void runOnOperation() override final {
+    // Call runOn on all top level regions that may contain emboxOp/arrayCoorOp.
+    auto mod = getOperation();
+    for (auto func : mod.getOps<mlir::func::FuncOp>())
+      runOn(func, func.getBody());
+    for (auto global : mod.getOps<fir::GlobalOp>())
+      runOn(global, global.getRegion());
+  }
+
+  // Clean up the region.
+  void simplifyRegion(mlir::Region &region) {
+    for (auto &block : region.getBlocks())
+      for (auto &op : block.getOperations()) {
+        for (auto &reg : op.getRegions())
+          simplifyRegion(reg);
+        maybeEraseOp(&op);
+      }
+    doDCE();
+  }
+
+  /// Run a simple DCE cleanup to remove any dead code after the rewrites.
+  void doDCE() {
+    std::vector<mlir::Operation *> workList;
+    workList.swap(opsToErase);
+    while (!workList.empty()) {
+      for (auto *op : workList) {
+        std::vector<mlir::Value> opOperands(op->operand_begin(),
+                                            op->operand_end());
+        LLVM_DEBUG(llvm::dbgs() << "DCE on " << *op << '\n');
+        ++numDCE;
+        op->erase();
+        for (auto opnd : opOperands)
+          maybeEraseOp(opnd.getDefiningOp());
+      }
+      workList.clear();
+      workList.swap(opsToErase);
+    }
+  }
+
+  void maybeEraseOp(mlir::Operation *op) {
+    if (!op)
+      return;
+    if (op->hasTrait<mlir::OpTrait::IsTerminator>())
+      return;
+    if (mlir::isOpTriviallyDead(op))
+      opsToErase.push_back(op);
+  }
+
+private:
+  std::vector<mlir::Operation *> opsToErase;
 };
 
 } // namespace

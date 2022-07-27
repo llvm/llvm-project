@@ -23,7 +23,7 @@ define dso_local void @c() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i64, i64* @b, align 8, !tbaa !2
+  %0 = load i64, ptr @b, align 8, !tbaa !2
   %mul = mul nsw i64 %0, -5
   %mul1 = mul nsw i64 %0, 45
   %and = and i64 %mul, %mul1
@@ -31,7 +31,7 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i8 0, i8* @a, align 1, !tbaa !6
+  store i8 0, ptr @a, align 1, !tbaa !6
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then

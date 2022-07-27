@@ -717,8 +717,9 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
     // duration of the inliner pass, and thus the lifetime of the owned advisor.
     // The one we would get from the MAM can be invalidated as a result of the
     // inliner's activity.
-    OwnedAdvisor =
-        std::make_unique<DefaultInlineAdvisor>(M, FAM, getInlineParams());
+    OwnedAdvisor = std::make_unique<DefaultInlineAdvisor>(
+        M, FAM, getInlineParams(),
+        InlineContext{LTOPhase, InlinePass::CGSCCInliner});
 
     if (!CGSCCInlineReplayFile.empty())
       OwnedAdvisor = getReplayInlineAdvisor(
@@ -727,7 +728,9 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                                 CGSCCInlineReplayScope,
                                 CGSCCInlineReplayFallback,
                                 {CGSCCInlineReplayFormat}},
-          /*EmitRemarks=*/true);
+          /*EmitRemarks=*/true,
+          InlineContext{LTOPhase,
+                              InlinePass::ReplayCGSCCInliner});
 
     return *OwnedAdvisor;
   }
@@ -904,7 +907,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       int CBCostMult =
           getStringFnAttrAsInt(
               *CB, InlineConstants::FunctionInlineCostMultiplierAttributeName)
-              .getValueOr(1);
+              .value_or(1);
 
       // Setup the data structure used to plumb customization into the
       // `InlineFunction` routine.
@@ -1111,9 +1114,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
 ModuleInlinerWrapperPass::ModuleInlinerWrapperPass(InlineParams Params,
                                                    bool MandatoryFirst,
+                                                   InlineContext IC,
                                                    InliningAdvisorMode Mode,
                                                    unsigned MaxDevirtIterations)
-    : Params(Params), Mode(Mode), MaxDevirtIterations(MaxDevirtIterations) {
+    : Params(Params), IC(IC), Mode(Mode),
+      MaxDevirtIterations(MaxDevirtIterations) {
   // Run the inliner first. The theory is that we are walking bottom-up and so
   // the callees have already been fully optimized, and we want to inline them
   // into the callers so that our optimizations can reflect that.
@@ -1136,7 +1141,8 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
                      {CGSCCInlineReplayFile,
                       CGSCCInlineReplayScope,
                       CGSCCInlineReplayFallback,
-                      {CGSCCInlineReplayFormat}})) {
+                      {CGSCCInlineReplayFormat}},
+                     IC)) {
     M.getContext().emitError(
         "Could not setup Inlining Advisor for the requested "
         "mode and/or options");

@@ -1946,7 +1946,7 @@ define <2 x i64> @mul_v2i64_60_120(<2 x i64> %x) nounwind {
 ; sort of issue is more likely to occur when there is a loop and one of the
 ; multiply inputs is loop invariant.
 ; FIXME: We should be able to insert an AssertZExt for this.
-define <2 x i64> @mul_v2i64_zext_cross_bb(<2 x i32>* %in, <2 x i32>* %y) {
+define <2 x i64> @mul_v2i64_zext_cross_bb(ptr %in, ptr %y) {
 ; X86-SSE2-LABEL: mul_v2i64_zext_cross_bb:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1991,18 +1991,18 @@ define <2 x i64> @mul_v2i64_zext_cross_bb(<2 x i32>* %in, <2 x i32>* %y) {
 ; X64-AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
 ; X64-AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
-  %a = load <2 x i32>, <2 x i32>* %in
+  %a = load <2 x i32>, ptr %in
   %b = zext <2 x i32> %a to <2 x i64>
   br label %foo
 
 foo:
-  %c = load <2 x i32>, <2 x i32>* %y
+  %c = load <2 x i32>, ptr %y
   %d = zext <2 x i32> %c to <2 x i64>
   %e = mul <2 x i64> %b, %d
   ret <2 x i64> %e
 }
 
-define <4 x i64> @mul_v4i64_zext_cross_bb(<4 x i32>* %in, <4 x i32>* %y) {
+define <4 x i64> @mul_v4i64_zext_cross_bb(ptr %in, ptr %y) {
 ; X86-SSE2-LABEL: mul_v4i64_zext_cross_bb:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2081,12 +2081,12 @@ define <4 x i64> @mul_v4i64_zext_cross_bb(<4 x i32>* %in, <4 x i32>* %y) {
 ; X64-AVX512DQ-NEXT:    vpmovzxdq {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; X64-AVX512DQ-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; X64-AVX512DQ-NEXT:    retq
-  %a = load <4 x i32>, <4 x i32>* %in
+  %a = load <4 x i32>, ptr %in
   %b = zext <4 x i32> %a to <4 x i64>
   br label %foo
 
 foo:
-  %c = load <4 x i32>, <4 x i32>* %y
+  %c = load <4 x i32>, ptr %y
   %d = zext <4 x i32> %c to <4 x i64>
   %e = mul <4 x i64> %b, %d
   ret <4 x i64> %e

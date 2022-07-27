@@ -44,13 +44,10 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; LE-NEXT:    lxvd2x 2, 0, 3
 ; LE-NEXT:    vmrghh 5, 0, 5
 ; LE-NEXT:    xxmrglw 0, 36, 34
-; LE-NEXT:    vspltish 4, 15
 ; LE-NEXT:    xxmrglw 1, 37, 35
 ; LE-NEXT:    xxswapd 35, 2
 ; LE-NEXT:    xxmrgld 34, 1, 0
 ; LE-NEXT:    xxlor 34, 34, 35
-; LE-NEXT:    vslh 2, 2, 4
-; LE-NEXT:    vsrah 2, 2, 4
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: pr25080:
@@ -96,12 +93,9 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; BE-NEXT:    vperm 3, 0, 3, 1
 ; BE-NEXT:    xxmrghw 0, 36, 34
 ; BE-NEXT:    xxmrghw 1, 35, 37
-; BE-NEXT:    vspltish 3, 15
 ; BE-NEXT:    xxmrghd 34, 1, 0
 ; BE-NEXT:    lxvw4x 0, 0, 3
 ; BE-NEXT:    xxlor 34, 34, 0
-; BE-NEXT:    vslh 2, 2, 3
-; BE-NEXT:    vsrah 2, 2, 3
 ; BE-NEXT:    blr
 entry:
   %0 = trunc <8 x i32> %a to <8 x i23>

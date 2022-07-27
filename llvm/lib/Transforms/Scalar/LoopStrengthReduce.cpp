@@ -1950,6 +1950,7 @@ class LSRInstance {
   Loop *const L;
   MemorySSAUpdater *MSSAU;
   TTI::AddressingModeKind AMK;
+  mutable SCEVExpander Rewriter;
   bool Changed = false;
 
   /// This is the insert position that the current loop's induction variable
@@ -1998,7 +1999,7 @@ class LSRInstance {
                         SmallVectorImpl<ChainUsers> &ChainUsersVec);
   void FinalizeChain(IVChain &Chain);
   void CollectChains();
-  void GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
+  void GenerateIVChain(const IVChain &Chain,
                        SmallVectorImpl<WeakTrackingVH> &DeadInsts);
 
   void CollectInterestingTypesAndFactors();
@@ -2068,22 +2069,19 @@ class LSRInstance {
   void Solve(SmallVectorImpl<const Formula *> &Solution) const;
 
   BasicBlock::iterator
-    HoistInsertPosition(BasicBlock::iterator IP,
-                        const SmallVectorImpl<Instruction *> &Inputs) const;
-  BasicBlock::iterator
-    AdjustInsertPositionForExpand(BasicBlock::iterator IP,
-                                  const LSRFixup &LF,
-                                  const LSRUse &LU,
-                                  SCEVExpander &Rewriter) const;
+  HoistInsertPosition(BasicBlock::iterator IP,
+                      const SmallVectorImpl<Instruction *> &Inputs) const;
+  BasicBlock::iterator AdjustInsertPositionForExpand(BasicBlock::iterator IP,
+                                                     const LSRFixup &LF,
+                                                     const LSRUse &LU) const;
 
   Value *Expand(const LSRUse &LU, const LSRFixup &LF, const Formula &F,
-                BasicBlock::iterator IP, SCEVExpander &Rewriter,
+                BasicBlock::iterator IP,
                 SmallVectorImpl<WeakTrackingVH> &DeadInsts) const;
   void RewriteForPHI(PHINode *PN, const LSRUse &LU, const LSRFixup &LF,
-                     const Formula &F, SCEVExpander &Rewriter,
+                     const Formula &F,
                      SmallVectorImpl<WeakTrackingVH> &DeadInsts) const;
   void Rewrite(const LSRUse &LU, const LSRFixup &LF, const Formula &F,
-               SCEVExpander &Rewriter,
                SmallVectorImpl<WeakTrackingVH> &DeadInsts) const;
   void ImplementSolution(const SmallVectorImpl<const Formula *> &Solution);
 
@@ -3183,7 +3181,7 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
 
 /// Generate an add or subtract for each IVInc in a chain to materialize the IV
 /// user's operand from the previous IV user's operand.
-void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
+void LSRInstance::GenerateIVChain(const IVChain &Chain,
                                   SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   // Find the new IVOperand for the head of the chain. It may have been replaced
   // by LSR.
@@ -3335,7 +3333,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
 
         // x == y  -->  x - y == 0
         const SCEV *N = SE.getSCEV(NV);
-        if (SE.isLoopInvariant(N, L) && isSafeToExpand(N, SE) &&
+        if (SE.isLoopInvariant(N, L) && Rewriter.isSafeToExpand(N) &&
             (!NV->getType()->isPointerTy() ||
              SE.getPointerBase(N) == SE.getPointerBase(S))) {
           // S is normalized, so normalize N before folding it into S
@@ -3343,6 +3341,21 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
           N = normalizeForPostIncUse(N, TmpPostIncLoops, SE);
           Kind = LSRUse::ICmpZero;
           S = SE.getMinusSCEV(N, S);
+        } else if (L->isLoopInvariant(NV) &&
+                   (!isa<Instruction>(NV) ||
+                    DT.dominates(cast<Instruction>(NV), L->getHeader())) &&
+                   !NV->getType()->isPointerTy()) {
+          // If we can't generally expand the expression (e.g. it contains
+          // a divide), but it is already at a loop invariant point before the
+          // loop, wrap it in an unknown (to prevent the expander from trying
+          // to re-expand in a potentially unsafe way.)  The restriction to
+          // integer types is required because the unknown hides the base, and
+          // SCEV can't compute the difference of two unknown pointers.
+          N = SE.getUnknown(NV);
+          N = normalizeForPostIncUse(N, TmpPostIncLoops, SE);
+          Kind = LSRUse::ICmpZero;
+          S = SE.getMinusSCEV(N, S);
+          assert(!isa<SCEVCouldNotCompute>(S));
         }
 
         // -1 and the negations of all interesting strides (except the negation
@@ -3385,10 +3398,10 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
 
 /// Insert a formula for the given expression into the given use, separating out
 /// loop-variant portions from loop-invariant and loop-computable portions.
-void
-LSRInstance::InsertInitialFormula(const SCEV *S, LSRUse &LU, size_t LUIdx) {
+void LSRInstance::InsertInitialFormula(const SCEV *S, LSRUse &LU,
+                                       size_t LUIdx) {
   // Mark uses whose expressions cannot be expanded.
-  if (!isSafeToExpand(S, SE, /*CanonicalMode*/ false))
+  if (!Rewriter.isSafeToExpand(S))
     LU.RigidFormula = true;
 
   Formula F;
@@ -4080,23 +4093,24 @@ void LSRInstance::GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base) {
           continue;
         // Divide out the factor, ignoring high bits, since we'll be
         // scaling the value back up in the end.
-        if (const SCEV *Quotient = getExactSDiv(AR, FactorS, SE, true)) {
-          // TODO: This could be optimized to avoid all the copying.
-          Formula F = Base;
-          F.ScaledReg = Quotient;
-          F.deleteBaseReg(F.BaseRegs[i]);
-          // The canonical representation of 1*reg is reg, which is already in
-          // Base. In that case, do not try to insert the formula, it will be
-          // rejected anyway.
-          if (F.Scale == 1 && (F.BaseRegs.empty() ||
-                               (AR->getLoop() != L && LU.AllFixupsOutsideLoop)))
-            continue;
-          // If AllFixupsOutsideLoop is true and F.Scale is 1, we may generate
-          // non canonical Formula with ScaledReg's loop not being L.
-          if (F.Scale == 1 && LU.AllFixupsOutsideLoop)
-            F.canonicalize(*L);
-          (void)InsertFormula(LU, LUIdx, F);
-        }
+        if (const SCEV *Quotient = getExactSDiv(AR, FactorS, SE, true))
+          if (!Quotient->isZero()) {
+            // TODO: This could be optimized to avoid all the copying.
+            Formula F = Base;
+            F.ScaledReg = Quotient;
+            F.deleteBaseReg(F.BaseRegs[i]);
+            // The canonical representation of 1*reg is reg, which is already in
+            // Base. In that case, do not try to insert the formula, it will be
+            // rejected anyway.
+            if (F.Scale == 1 && (F.BaseRegs.empty() ||
+                                 (AR->getLoop() != L && LU.AllFixupsOutsideLoop)))
+              continue;
+            // If AllFixupsOutsideLoop is true and F.Scale is 1, we may generate
+            // non canonical Formula with ScaledReg's loop not being L.
+            if (F.Scale == 1 && LU.AllFixupsOutsideLoop)
+              F.canonicalize(*L);
+            (void)InsertFormula(LU, LUIdx, F);
+          }
       }
     }
   }
@@ -5205,11 +5219,8 @@ LSRInstance::HoistInsertPosition(BasicBlock::iterator IP,
 
 /// Determine an input position which will be dominated by the operands and
 /// which will dominate the result.
-BasicBlock::iterator
-LSRInstance::AdjustInsertPositionForExpand(BasicBlock::iterator LowestIP,
-                                           const LSRFixup &LF,
-                                           const LSRUse &LU,
-                                           SCEVExpander &Rewriter) const {
+BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
+    BasicBlock::iterator LowestIP, const LSRFixup &LF, const LSRUse &LU) const {
   // Collect some instructions which must be dominated by the
   // expanding replacement. These must be dominated by any operands that
   // will be required in the expansion.
@@ -5272,14 +5283,13 @@ LSRInstance::AdjustInsertPositionForExpand(BasicBlock::iterator LowestIP,
 /// is called "expanding").
 Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
                            const Formula &F, BasicBlock::iterator IP,
-                           SCEVExpander &Rewriter,
                            SmallVectorImpl<WeakTrackingVH> &DeadInsts) const {
   if (LU.RigidFormula)
     return LF.OperandValToReplace;
 
   // Determine an input position which will be dominated by the operands and
   // which will dominate the result.
-  IP = AdjustInsertPositionForExpand(IP, LF, LU, Rewriter);
+  IP = AdjustInsertPositionForExpand(IP, LF, LU);
   Rewriter.setInsertPoint(&*IP);
 
   // Inform the Rewriter if we have a post-increment use, so that it can
@@ -5451,7 +5461,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 /// to be expanded in multiple places.
 void LSRInstance::RewriteForPHI(
     PHINode *PN, const LSRUse &LU, const LSRFixup &LF, const Formula &F,
-    SCEVExpander &Rewriter, SmallVectorImpl<WeakTrackingVH> &DeadInsts) const {
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts) const {
   DenseMap<BasicBlock *, Value *> Inserted;
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
     if (PN->getIncomingValue(i) == LF.OperandValToReplace) {
@@ -5506,8 +5516,8 @@ void LSRInstance::RewriteForPHI(
       if (!Pair.second)
         PN->setIncomingValue(i, Pair.first->second);
       else {
-        Value *FullV = Expand(LU, LF, F, BB->getTerminator()->getIterator(),
-                              Rewriter, DeadInsts);
+        Value *FullV =
+            Expand(LU, LF, F, BB->getTerminator()->getIterator(), DeadInsts);
 
         // If this is reuse-by-noop-cast, insert the noop cast.
         Type *OpTy = LF.OperandValToReplace->getType();
@@ -5566,15 +5576,14 @@ void LSRInstance::RewriteForPHI(
 /// is called "expanding"), and update the UserInst to reference the newly
 /// expanded value.
 void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
-                          const Formula &F, SCEVExpander &Rewriter,
+                          const Formula &F,
                           SmallVectorImpl<WeakTrackingVH> &DeadInsts) const {
   // First, find an insertion point that dominates UserInst. For PHI nodes,
   // find the nearest block which dominates all the relevant uses.
   if (PHINode *PN = dyn_cast<PHINode>(LF.UserInst)) {
-    RewriteForPHI(PN, LU, LF, F, Rewriter, DeadInsts);
+    RewriteForPHI(PN, LU, LF, F, DeadInsts);
   } else {
-    Value *FullV =
-      Expand(LU, LF, F, LF.UserInst->getIterator(), Rewriter, DeadInsts);
+    Value *FullV = Expand(LU, LF, F, LF.UserInst->getIterator(), DeadInsts);
 
     // If this is reuse-by-noop-cast, insert the noop cast.
     Type *OpTy = LF.OperandValToReplace->getType();
@@ -5600,27 +5609,6 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     DeadInsts.emplace_back(OperandIsInstr);
 }
 
-// Check if there are any loop exit values which are only used once within the
-// loop which may potentially be optimized with a call to rewriteLoopExitValue.
-static bool LoopExitValHasSingleUse(Loop *L) {
-  BasicBlock *ExitBB = L->getExitBlock();
-  if (!ExitBB)
-    return false;
-
-  for (PHINode &ExitPhi : ExitBB->phis()) {
-    if (ExitPhi.getNumIncomingValues() != 1)
-      break;
-
-    BasicBlock *Pred = ExitPhi.getIncomingBlock(0);
-    Value *IVNext = ExitPhi.getIncomingValueForBlock(Pred);
-    // One use would be the exit phi node, and there should be only one other
-    // use for this to be considered.
-    if (IVNext->getNumUses() == 2)
-      return true;
-  }
-  return false;
-}
-
 /// Rewrite all the fixup locations with new values, following the chosen
 /// solution.
 void LSRInstance::ImplementSolution(
@@ -5629,13 +5617,6 @@ void LSRInstance::ImplementSolution(
   // we can remove them after we are done working.
   SmallVector<WeakTrackingVH, 16> DeadInsts;
 
-  SCEVExpander Rewriter(SE, L->getHeader()->getModule()->getDataLayout(), "lsr",
-                        false);
-#ifndef NDEBUG
-  Rewriter.setDebugType(DEBUG_TYPE);
-#endif
-  Rewriter.disableCanonicalMode();
-  Rewriter.enableLSRMode();
   Rewriter.setIVIncInsertPos(L, IVIncInsertPos);
 
   // Mark phi nodes that terminate chains so the expander tries to reuse them.
@@ -5647,12 +5628,12 @@ void LSRInstance::ImplementSolution(
   // Expand the new value definitions and update the users.
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
     for (const LSRFixup &Fixup : Uses[LUIdx].Fixups) {
-      Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], Rewriter, DeadInsts);
+      Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], DeadInsts);
       Changed = true;
     }
 
   for (const IVChain &Chain : IVChainVec) {
-    GenerateIVChain(Chain, Rewriter, DeadInsts);
+    GenerateIVChain(Chain, DeadInsts);
     Changed = true;
   }
 
@@ -5717,8 +5698,10 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                          const TargetTransformInfo &TTI, AssumptionCache &AC,
                          TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU)
     : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), TLI(TLI), TTI(TTI), L(L),
-      MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0 ?
-        PreferredAddresingMode : TTI.getPreferredAddressingMode(L, &SE)) {
+      MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0
+                            ? PreferredAddresingMode
+                            : TTI.getPreferredAddressingMode(L, &SE)),
+      Rewriter(SE, L->getHeader()->getModule()->getDataLayout(), "lsr", false) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
@@ -5752,6 +5735,14 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   LLVM_DEBUG(dbgs() << "\nLSR on loop ";
              L->getHeader()->printAsOperand(dbgs(), /*PrintType=*/false);
              dbgs() << ":\n");
+
+  // Configure SCEVExpander already now, so the correct mode is used for
+  // isSafeToExpand() checks.
+#ifndef NDEBUG
+  Rewriter.setDebugType(DEBUG_TYPE);
+#endif
+  Rewriter.disableCanonicalMode();
+  Rewriter.enableLSRMode();
 
   // First, perform some low-level loop optimizations.
   OptimizeShadowIV();
@@ -6405,8 +6396,8 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
     // less DWARF ops than an iteration count-based expression.
     if (Optional<APInt> Offset =
             SE.computeConstantDifference(DVIRec.SCEVs[i], SCEVInductionVar)) {
-      if (Offset.getValue().getMinSignedBits() <= 64)
-        SalvageExpr->createOffsetExpr(Offset.getValue().getSExtValue(),
+      if (Offset.value().getMinSignedBits() <= 64)
+        SalvageExpr->createOffsetExpr(Offset.value().getSExtValue(),
                                       LSRInductionVar);
     } else if (!SalvageExpr->createIterCountExpr(DVIRec.SCEVs[i], IterCountExpr,
                                                  SE))
@@ -6626,12 +6617,12 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   // When this is the case, if the exit value of the IV can be calculated using
   // SCEV, we can replace the exit block PHI with the final value of the IV and
   // skip the updates in each loop iteration.
-  if (L->isRecursivelyLCSSAForm(DT, LI) && LoopExitValHasSingleUse(L)) {
+  if (L->isRecursivelyLCSSAForm(DT, LI) && L->getExitBlock()) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
     SCEVExpander Rewriter(SE, DL, "lsr", false);
     int Rewrites = rewriteLoopExitValues(L, &LI, &TLI, &SE, &TTI, Rewriter, &DT,
-                                         OnlyCheapRepl, DeadInsts);
+                                         UnusedIndVarInLoop, DeadInsts);
     if (Rewrites) {
       Changed = true;
       RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts, &TLI,

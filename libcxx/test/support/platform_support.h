@@ -14,6 +14,8 @@
 #ifndef PLATFORM_SUPPORT_H
 #define PLATFORM_SUPPORT_H
 
+#include "test_macros.h"
+
 // locale names
 #define LOCALE_en_US           "en_US"
 #define LOCALE_en_US_UTF_8     "en_US.UTF-8"
@@ -73,21 +75,18 @@ std::string get_temp_file_name()
         abort();
     }
 #else
-    std::string Name;
-    int FD = -1;
-    do {
-        Name = "libcxx.XXXXXX";
-        FD = mkstemp(&Name[0]);
-        if (FD == -1 && errno == EINVAL) {
-            perror("mkstemp");
-            abort();
-        }
-    } while (FD == -1);
+    std::string Name = "libcxx.XXXXXX";
+    int FD = mkstemp(&Name[0]);
+    if (FD == -1) {
+        perror("mkstemp");
+        abort();
+    }
     close(FD);
     return Name;
 #endif
 }
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 #ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
 inline
 std::wstring get_wide_temp_file_name()
@@ -96,6 +95,7 @@ std::wstring get_wide_temp_file_name()
         get_temp_file_name());
 }
 #endif // _LIBCPP_HAS_OPEN_WITH_WCHAR
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 #if defined(_CS_GNU_LIBC_VERSION)
 inline bool glibc_version_less_than(char const* version) {

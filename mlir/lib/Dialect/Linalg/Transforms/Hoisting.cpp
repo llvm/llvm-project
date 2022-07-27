@@ -19,7 +19,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -76,11 +76,11 @@ static bool isEqualOffsetSizeOrStride(OpFoldResult op1, OpFoldResult op2) {
 /// Return true is all offsets, sizes and strides are equal.
 static bool sameOffsetsSizesAndStrides(tensor::ExtractSliceOp s,
                                        tensor::InsertSliceOp si) {
-  if (s.static_offsets().size() != si.static_offsets().size())
+  if (s.getStaticOffsets().size() != si.getStaticOffsets().size())
     return false;
-  if (s.static_sizes().size() != si.static_sizes().size())
+  if (s.getStaticSizes().size() != si.getStaticSizes().size())
     return false;
-  if (s.static_strides().size() != si.static_strides().size())
+  if (s.getStaticStrides().size() != si.getStaticStrides().size())
     return false;
   for (auto it : llvm::zip(s.getMixedOffsets(), si.getMixedOffsets()))
     if (!isEqualOffsetSizeOrStride(std::get<0>(it), std::get<1>(it)))
@@ -118,7 +118,7 @@ static HoistableRead findMatchingTransferRead(HoistableWrite write,
     if (write.insertSliceOp) {
       sliceOp = dyn_cast<tensor::ExtractSliceOp>(user);
       if (!sliceOp || sliceOp.getResult().getType() !=
-                          write.insertSliceOp.source().getType())
+                          write.insertSliceOp.getSource().getType())
         continue;
 
       LLVM_DEBUG(DBGS() << "check whether sameOffsetsSizesAndStrides: "
@@ -235,12 +235,12 @@ getLoopInvariantTransferWriteOpDefining(scf::ForOp forOp,
   if (auto insertSliceOp = v.getDefiningOp<tensor::InsertSliceOp>()) {
     // Inserted slice must come from vector.transfer_write.
     auto write =
-        insertSliceOp.source().getDefiningOp<vector::TransferWriteOp>();
+        insertSliceOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     if (!write)
       return HoistableWrite();
 
     // Tensor inserted into must be a BBArg at position matching yieldOperand's.
-    auto bbArg = insertSliceOp.dest().dyn_cast<BlockArgument>();
+    auto bbArg = insertSliceOp.getDest().dyn_cast<BlockArgument>();
     if (!bbArg || bbArg.getOwner()->getParentOp() != forOp ||
         bbArg.getArgNumber() != /*num iv=*/1 + yieldOperand.getOperandNumber())
       return HoistableWrite();
@@ -285,7 +285,7 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
 
   // Update the source tensor.
   if (read.extractSliceOp)
-    read.extractSliceOp.sourceMutable().assign(
+    read.extractSliceOp.getSourceMutable().assign(
         forOp.getInitArgs()[initArgNumber]);
   else
     read.transferReadOp.getSourceMutable().assign(
@@ -299,7 +299,7 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
   // Update the yield.
   auto yieldOp = cast<scf::YieldOp>(forOp.getRegion().front().getTerminator());
   if (write.insertSliceOp)
-    yieldOp->setOperand(initArgNumber, write.insertSliceOp.dest());
+    yieldOp->setOperand(initArgNumber, write.insertSliceOp.getDest());
   else
     yieldOp->setOperand(initArgNumber, write.transferWriteOp.getSource());
 
@@ -321,8 +321,9 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
     newForOp.getResult(initArgNumber)
         .replaceAllUsesWith(write.insertSliceOp.getResult());
     write.transferWriteOp.getSourceMutable().assign(
-        read.extractSliceOp.result());
-    write.insertSliceOp.destMutable().assign(read.extractSliceOp.source());
+        read.extractSliceOp.getResult());
+    write.insertSliceOp.getDestMutable().assign(
+        read.extractSliceOp.getSource());
   } else {
     newForOp.getResult(initArgNumber)
         .replaceAllUsesWith(write.transferWriteOp.getResult());

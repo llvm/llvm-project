@@ -80,7 +80,7 @@ private:
 
   inline void toNext() {
     Optional<QueueElement> Head = VisitQueue.front();
-    QueueElement H = Head.getValue();
+    QueueElement H = *Head;
     NodeRef Node = H.first;
     Optional<ChildItTy> &ChildIt = H.second;
 

@@ -234,8 +234,7 @@ private:
   void CheckCycleConstraints(const parser::OpenMPLoopConstruct &x);
   template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
   void CheckAtomicMemoryOrderClause(
-      const parser::OmpAtomicClauseList &, const parser::OmpAtomicClauseList &);
-  void CheckAtomicMemoryOrderClause(const parser::OmpAtomicClauseList &);
+      const parser::OmpAtomicClauseList *, const parser::OmpAtomicClauseList *);
   void CheckAtomicUpdateAssignmentStmt(const parser::AssignmentStmt &);
   void CheckAtomicConstructStructure(const parser::OpenMPAtomicConstruct &);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
@@ -269,6 +268,7 @@ private:
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
+  template <typename D> void CheckHintClause(D *, D *);
 
   enum directiveNestType {
     SIMDNest,

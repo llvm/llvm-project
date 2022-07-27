@@ -1,4 +1,8 @@
 # RUN: yaml2obj %s -o %t
+# RUN: yaml2obj %s -o %t.debug
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %s -o %t.dir/UPPER_CASE
+# RUN: yaml2obj %s -o %t.dir/UPPER_CASE.debug
 
 ## Default ABI is msvc:
 # RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
@@ -9,6 +13,57 @@
 # RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi gnu" \
 # RUN:   -f %t -o "image list --triple --basename" -o exit | \
 # RUN:   FileCheck -DABI=gnu -DFILENAME=%basename_t.tmp %s
+
+## Default ABI is msvc, module override is gnu:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=gnu" \
+# RUN:   -f %t -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=%basename_t.tmp %s
+
+## Default ABI is gnu, module override is msvc:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi gnu" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=msvc" \
+# RUN:   -f %t -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=msvc -DFILENAME=%basename_t.tmp %s
+
+## Default ABI is msvc, module override is gnu (with .debug suffix):
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=gnu" \
+# RUN:   -f %t.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=%basename_t.tmp.debug %s
+
+## Default ABI is gnu, module override is msvc (with .debug suffix):
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi gnu" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=msvc" \
+# RUN:   -f %t.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=msvc -DFILENAME=%basename_t.tmp.debug %s
+
+## Check that case-sensitive match is chosen before lower-case:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case=msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi UPPER_CASE=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE %s
+
+## Check that lower-case match with .debug suffix is chosen before case-sensitive match without .debug suffix:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi UPPER_CASE=msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case.debug=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE.debug %s
+
+## Check that case-sensitive match without .debug suffix is chosen before lower-case match without .debug suffix:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case.debug=msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi UPPER_CASE.debug=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE.debug %s
+
+## Check that lower-case match without .debug suffix works:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case.debug=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE.debug %s
 
 # CHECK-LABEL: image list --triple --basename
 # CHECK-NEXT: x86_64-pc-windows-[[ABI]] [[FILENAME]]

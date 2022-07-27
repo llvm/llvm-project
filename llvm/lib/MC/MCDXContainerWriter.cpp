@@ -114,7 +114,7 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm,
       const Triple &TT = Asm.getContext().getTargetTriple();
       VersionTuple Version = TT.getOSVersion();
       Header.MajorVersion = static_cast<uint8_t>(Version.getMajor());
-      if (Version.getMinor().hasValue())
+      if (Version.getMinor())
         Header.MinorVersion = static_cast<uint8_t>(*Version.getMinor());
       if (TT.hasEnvironment())
         Header.ShaderKind =

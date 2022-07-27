@@ -34,7 +34,7 @@
 // format. Struct kernel_stat is defined as 'struct stat' in asm/stat.h. To
 // access stat from asm/stat.h, without conflicting with definition in
 // sys/stat.h, we use this trick.
-#if defined(__mips64)
+#if SANITIZER_MIPS64
 #include <asm/unistd.h>
 #include <sys/types.h>
 #define stat kernel_stat
@@ -76,6 +76,10 @@
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 #include <sys/personality.h>
+#endif
+
+#if SANITIZER_LINUX && defined(__loongarch__)
+#  include <sys/sysmacros.h>
 #endif
 
 #if SANITIZER_FREEBSD
@@ -124,8 +128,9 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 // Are we using 32-bit or 64-bit Linux syscalls?
 // x32 (which defines __x86_64__) has SANITIZER_WORDSIZE == 32
 // but it still needs to use 64-bit syscalls.
-#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) ||       \
-                        SANITIZER_WORDSIZE == 64)
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) || \
+                        SANITIZER_WORDSIZE == 64 ||                      \
+                        (defined(__mips__) && _MIPS_SIM == _ABIN32))
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
 #else
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
@@ -187,6 +192,8 @@ ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 #    include "sanitizer_syscall_linux_arm.inc"
 #  elif SANITIZER_LINUX && defined(__hexagon__)
 #    include "sanitizer_syscall_linux_hexagon.inc"
+#  elif SANITIZER_LINUX && SANITIZER_LOONGARCH64
+#    include "sanitizer_syscall_linux_loongarch64.inc"
 #  else
 #    include "sanitizer_syscall_generic.inc"
 #  endif
@@ -289,7 +296,29 @@ static void stat64_to_stat(struct stat64 *in, struct stat *out) {
 }
 #endif
 
-#if defined(__mips64)
+#if SANITIZER_LINUX && defined(__loongarch__)
+static void statx_to_stat(struct statx *in, struct stat *out) {
+  internal_memset(out, 0, sizeof(*out));
+  out->st_dev = makedev(in->stx_dev_major, in->stx_dev_minor);
+  out->st_ino = in->stx_ino;
+  out->st_mode = in->stx_mode;
+  out->st_nlink = in->stx_nlink;
+  out->st_uid = in->stx_uid;
+  out->st_gid = in->stx_gid;
+  out->st_rdev = makedev(in->stx_rdev_major, in->stx_rdev_minor);
+  out->st_size = in->stx_size;
+  out->st_blksize = in->stx_blksize;
+  out->st_blocks = in->stx_blocks;
+  out->st_atime = in->stx_atime.tv_sec;
+  out->st_atim.tv_nsec = in->stx_atime.tv_nsec;
+  out->st_mtime = in->stx_mtime.tv_sec;
+  out->st_mtim.tv_nsec = in->stx_mtime.tv_nsec;
+  out->st_ctime = in->stx_ctime.tv_sec;
+  out->st_ctim.tv_nsec = in->stx_ctime.tv_nsec;
+}
+#endif
+
+#if SANITIZER_MIPS64
 // Undefine compatibility macros from <sys/stat.h>
 // so that they would not clash with the kernel_stat
 // st_[a|m|c]time fields
@@ -340,48 +369,65 @@ static void kernel_stat_to_stat(struct kernel_stat *in, struct stat *out) {
 #endif
 
 uptr internal_stat(const char *path, void *buf) {
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
-#    elif SANITIZER_LINUX
-#      if (SANITIZER_WORDSIZE == 64 || SANITIZER_X32) && !SANITIZER_SPARC
+#  elif SANITIZER_LINUX
+#    if defined(__loongarch__)
+  struct statx bufx;
+  int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
+                             AT_NO_AUTOMOUNT, STATX_BASIC_STATS, (uptr)&bufx);
+  statx_to_stat(&bufx, (struct stat *)buf);
+  return res;
+#    elif (SANITIZER_WORDSIZE == 64 || SANITIZER_X32 ||    \
+           (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+        !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
-#      else
+#    else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
                              (uptr)&buf64, 0);
   stat64_to_stat(&buf64, (struct stat *)buf);
   return res;
-#      endif
-#    else
+#    endif
+#  else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(stat64), path, &buf64);
   stat64_to_stat(&buf64, (struct stat *)buf);
   return res;
-#    endif
+#  endif
 }
 
 uptr internal_lstat(const char *path, void *buf) {
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
-#    elif SANITIZER_LINUX
-#      if (defined(_LP64) || SANITIZER_X32) && !SANITIZER_SPARC
+#  elif SANITIZER_LINUX
+#    if defined(__loongarch__)
+  struct statx bufx;
+  int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
+                             AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT,
+                             STATX_BASIC_STATS, (uptr)&bufx);
+  statx_to_stat(&bufx, (struct stat *)buf);
+  return res;
+#    elif (defined(_LP64) || SANITIZER_X32 ||              \
+           (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+        !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
-#      else
+#    else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
                              (uptr)&buf64, AT_SYMLINK_NOFOLLOW);
   stat64_to_stat(&buf64, (struct stat *)buf);
   return res;
-#      endif
-#    else
+#    endif
+#  else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(lstat64), path, &buf64);
   stat64_to_stat(&buf64, (struct stat *)buf);
   return res;
-#    endif
+#  endif
 }
 
 uptr internal_fstat(fd_t fd, void *buf) {
@@ -392,9 +438,15 @@ uptr internal_fstat(fd_t fd, void *buf) {
   int res = internal_syscall(SYSCALL(fstat), fd, &kbuf);
   kernel_stat_to_stat(&kbuf, (struct stat *)buf);
   return res;
-# else
+#      elif SANITIZER_LINUX && defined(__loongarch__)
+  struct statx bufx;
+  int res = internal_syscall(SYSCALL(statx), fd, 0, AT_EMPTY_PATH,
+                             STATX_BASIC_STATS, (uptr)&bufx);
+  statx_to_stat(&bufx, (struct stat *)buf);
+  return res;
+#      else
   return internal_syscall(SYSCALL(fstat), fd, (uptr)buf);
-# endif
+#      endif
 #else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstat64), fd, &buf64);
@@ -440,15 +492,15 @@ uptr internal_unlink(const char *path) {
 }
 
 uptr internal_rename(const char *oldpath, const char *newpath) {
-#if defined(__riscv) && defined(__linux__)
+#  if (defined(__riscv) || defined(__loongarch__)) && defined(__linux__)
   return internal_syscall(SYSCALL(renameat2), AT_FDCWD, (uptr)oldpath, AT_FDCWD,
                           (uptr)newpath, 0);
-#    elif SANITIZER_LINUX
+#  elif SANITIZER_LINUX
   return internal_syscall(SYSCALL(renameat), AT_FDCWD, (uptr)oldpath, AT_FDCWD,
                           (uptr)newpath);
-#    else
+#  else
   return internal_syscall(SYSCALL(rename), (uptr)oldpath, (uptr)newpath);
-#    endif
+#  endif
 }
 
 uptr internal_sched_yield() {
@@ -758,7 +810,14 @@ uptr internal_lseek(fd_t fd, OFF_T offset, int whence) {
 uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5) {
   return internal_syscall(SYSCALL(prctl), option, arg2, arg3, arg4, arg5);
 }
-#endif
+#      if defined(__x86_64__)
+#        include <asm/unistd_64.h>
+// Currently internal_arch_prctl() is only needed on x86_64.
+uptr internal_arch_prctl(int option, uptr arg2) {
+  return internal_syscall(__NR_arch_prctl, option, arg2);
+}
+#      endif
+#    endif
 
 uptr internal_sigaltstack(const void *ss, void *oss) {
   return internal_syscall(SYSCALL(sigaltstack), (uptr)ss, (uptr)oss);
@@ -1057,7 +1116,7 @@ uptr GetMaxVirtualAddress() {
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
 #elif SANITIZER_RISCV64
   return (1ULL << 38) - 1;
-# elif defined(__mips64)
+# elif SANITIZER_MIPS64
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 # elif defined(__s390x__)
   return (1ULL << 53) - 1;  // 0x001fffffffffffffUL;
@@ -2164,6 +2223,11 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.pc;
   *bp = ucontext->uc_mcontext.r30;
   *sp = ucontext->uc_mcontext.r29;
+#  elif defined(__loongarch__)
+  ucontext_t *ucontext = (ucontext_t *)context;
+  *pc = ucontext->uc_mcontext.__pc;
+  *bp = ucontext->uc_mcontext.__gregs[22];
+  *sp = ucontext->uc_mcontext.__gregs[3];
 #  else
 #    error "Unsupported arch"
 #  endif
@@ -2173,10 +2237,6 @@ void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
 
 void InitializePlatformEarly() {
   // Do nothing.
-}
-
-void MaybeReexec() {
-  // No need to re-exec on Linux.
 }
 
 void CheckASLR() {

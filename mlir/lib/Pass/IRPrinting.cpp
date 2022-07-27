@@ -62,7 +62,8 @@ public:
   }
 
 private:
-  template <typename T> void addDataToHash(llvm::SHA1 &hasher, const T &data) {
+  template <typename T>
+  void addDataToHash(llvm::SHA1 &hasher, const T &data) {
     hasher.update(
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
   }
@@ -125,7 +126,8 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
     beforePassFingerPrints.try_emplace(pass, op);
 
   config->printBeforeIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << "// -----// IR Dump Before " << pass->getName();
+    out << "// -----// IR Dump Before " << pass->getName() << " ("
+        << pass->getArgument() << ")";
     printIR(op, config->shouldPrintAtModuleScope(), out,
             config->getOpPrintingFlags());
     out << "\n\n";
@@ -155,7 +157,8 @@ void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
   }
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << "// -----// IR Dump After " << pass->getName();
+    out << "// -----// IR Dump After " << pass->getName() << " ("
+        << pass->getArgument() << ")";
     printIR(op, config->shouldPrintAtModuleScope(), out,
             config->getOpPrintingFlags());
     out << "\n\n";
@@ -169,7 +172,8 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
     beforePassFingerPrints.erase(pass);
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("// -----// IR Dump After {0} Failed", pass->getName());
+    out << formatv("// -----// IR Dump After {0} Failed ({1})", pass->getName(),
+                   pass->getArgument());
     printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
     out << "\n\n";
   });

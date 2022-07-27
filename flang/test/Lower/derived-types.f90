@@ -1,7 +1,7 @@
 ! Test basic parts of derived type entities lowering
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
-! Note: only testing non parametrized derived type here.
+! Note: only testing non parameterized derived type here.
 
 module d
   type r

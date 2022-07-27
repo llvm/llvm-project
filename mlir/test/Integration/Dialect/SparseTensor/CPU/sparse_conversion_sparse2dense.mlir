@@ -51,57 +51,41 @@ module {
   }
   func.func @dumpAndRelease_234(%arg0: tensor<2x3x4xf64>) {
     call @dump(%arg0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<2x3x4xf64>
-    memref.dealloc %1 : memref<2x3x4xf64>
     return
   }
   func.func @dumpAndRelease_p34(%arg0: tensor<?x3x4xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x3x4xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<?x3x4xf64>
-    memref.dealloc %1 : memref<?x3x4xf64>
     return
   }
   func.func @dumpAndRelease_2p4(%arg0: tensor<2x?x4xf64>) {
     %0 = tensor.cast %arg0 : tensor<2x?x4xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<2x?x4xf64>
-    memref.dealloc %1 : memref<2x?x4xf64>
     return
   }
   func.func @dumpAndRelease_23p(%arg0: tensor<2x3x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<2x3x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<2x3x?xf64>
-    memref.dealloc %1 : memref<2x3x?xf64>
     return
   }
   func.func @dumpAndRelease_2pp(%arg0: tensor<2x?x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<2x?x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<2x?x?xf64>
-    memref.dealloc %1 : memref<2x?x?xf64>
     return
   }
   func.func @dumpAndRelease_p3p(%arg0: tensor<?x3x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x3x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<?x3x?xf64>
-    memref.dealloc %1 : memref<?x3x?xf64>
     return
   }
   func.func @dumpAndRelease_pp4(%arg0: tensor<?x?x4xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x?x4xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<?x?x4xf64>
-    memref.dealloc %1 : memref<?x?x4xf64>
     return
   }
   func.func @dumpAndRelease_ppp(%arg0: tensor<?x?x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x?x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<?x?x?xf64>
-    memref.dealloc %1 : memref<?x?x?xf64>
     return
   }
 
@@ -213,24 +197,24 @@ module {
     //
     // Release sparse tensors.
     //
-    sparse_tensor.release %s2341 : tensor<2x3x4xf64, #Tensor1>
-    sparse_tensor.release %s2342 : tensor<2x3x4xf64, #Tensor2>
-    sparse_tensor.release %s2343 : tensor<2x3x4xf64, #Tensor3>
-    sparse_tensor.release %s2344 : tensor<2x3x4xf64, #Tensor4>
-    sparse_tensor.release %s2345 : tensor<2x3x4xf64, #Tensor5>
-    sparse_tensor.release %s2346 : tensor<2x3x4xf64, #Tensor6>
-    sparse_tensor.release %sp344 : tensor<?x3x4xf64, #Tensor4>
-    sparse_tensor.release %sp345 : tensor<?x3x4xf64, #Tensor5>
-    sparse_tensor.release %sp346 : tensor<?x3x4xf64, #Tensor6>
-    sparse_tensor.release %s2p44 : tensor<2x?x4xf64, #Tensor4>
-    sparse_tensor.release %s2p45 : tensor<2x?x4xf64, #Tensor5>
-    sparse_tensor.release %s2p46 : tensor<2x?x4xf64, #Tensor6>
-    sparse_tensor.release %s23p4 : tensor<2x3x?xf64, #Tensor4>
-    sparse_tensor.release %s23p5 : tensor<2x3x?xf64, #Tensor5>
-    sparse_tensor.release %s23p6 : tensor<2x3x?xf64, #Tensor6>
-    sparse_tensor.release %s2pp4 : tensor<2x?x?xf64, #Tensor4>
-    sparse_tensor.release %s2pp5 : tensor<2x?x?xf64, #Tensor5>
-    sparse_tensor.release %s2pp6 : tensor<2x?x?xf64, #Tensor6>
+    bufferization.dealloc_tensor %s2341 : tensor<2x3x4xf64, #Tensor1>
+    bufferization.dealloc_tensor %s2342 : tensor<2x3x4xf64, #Tensor2>
+    bufferization.dealloc_tensor %s2343 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %s2344 : tensor<2x3x4xf64, #Tensor4>
+    bufferization.dealloc_tensor %s2345 : tensor<2x3x4xf64, #Tensor5>
+    bufferization.dealloc_tensor %s2346 : tensor<2x3x4xf64, #Tensor6>
+    bufferization.dealloc_tensor %sp344 : tensor<?x3x4xf64, #Tensor4>
+    bufferization.dealloc_tensor %sp345 : tensor<?x3x4xf64, #Tensor5>
+    bufferization.dealloc_tensor %sp346 : tensor<?x3x4xf64, #Tensor6>
+    bufferization.dealloc_tensor %s2p44 : tensor<2x?x4xf64, #Tensor4>
+    bufferization.dealloc_tensor %s2p45 : tensor<2x?x4xf64, #Tensor5>
+    bufferization.dealloc_tensor %s2p46 : tensor<2x?x4xf64, #Tensor6>
+    bufferization.dealloc_tensor %s23p4 : tensor<2x3x?xf64, #Tensor4>
+    bufferization.dealloc_tensor %s23p5 : tensor<2x3x?xf64, #Tensor5>
+    bufferization.dealloc_tensor %s23p6 : tensor<2x3x?xf64, #Tensor6>
+    bufferization.dealloc_tensor %s2pp4 : tensor<2x?x?xf64, #Tensor4>
+    bufferization.dealloc_tensor %s2pp5 : tensor<2x?x?xf64, #Tensor5>
+    bufferization.dealloc_tensor %s2pp6 : tensor<2x?x?xf64, #Tensor6>
 
     return
   }

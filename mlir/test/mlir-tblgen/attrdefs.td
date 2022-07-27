@@ -21,16 +21,19 @@ include "mlir/IR/OpBase.td"
 
 // DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(
 // DEF-SAME: ::mlir::AsmParser &parser,
-// DEF-SAME: ::llvm::StringRef mnemonic, ::mlir::Type type,
+// DEF-SAME: ::llvm::StringRef *mnemonic, ::mlir::Type type,
 // DEF-SAME: ::mlir::Attribute &value) {
-// DEF: if (mnemonic == ::test::CompoundAAttr::getMnemonic()) {
+// DEF: return ::mlir::AsmParser::KeywordSwitch<::mlir::OptionalParseResult>(parser)
+// DEF: .Case(::test::CompoundAAttr::getMnemonic()
 // DEF-NEXT: value = ::test::CompoundAAttr::parse(parser, type);
 // DEF-NEXT: return ::mlir::success(!!value);
-// DEF-NEXT: }
-// DEF-NEXT: if (mnemonic == ::test::IndexAttr::getMnemonic()) {
+// DEF-NEXT: })
+// DEF-NEXT: .Case(::test::IndexAttr::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
 // DEF-NEXT:   return ::mlir::success(!!value);
-// DEF: return {};
+// DEF: .Default([&](llvm::StringRef keyword,
+// DEF-NEXT:   *mnemonic = keyword;
+// DEF-NEXT:   return llvm::None;
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
@@ -145,3 +148,33 @@ def F_ParamWithAccessorTypeAttr : TestAttr<"ParamWithAccessorType"> {
 // DEF: ParamWithAccessorTypeAttrStorage
 // DEF: ParamWithAccessorTypeAttrStorage(std::string param)
 // DEF: StringRef ParamWithAccessorTypeAttr::getParam()
+
+def G_BuilderWithReturnTypeAttr : TestAttr<"BuilderWithReturnType"> {
+  let parameters = (ins "int":$a);
+  let genVerifyDecl = 1;
+  let builders = [AttrBuilder<(ins), [{ return {}; }], "::mlir::Attribute">];
+}
+
+// DECL-LABEL: class BuilderWithReturnTypeAttr
+// DECL: ::mlir::Attribute get(
+// DECL: ::mlir::Attribute getChecked(
+
+def H_TestExtraClassAttr : TestAttr<"TestExtraClass"> {
+  let extraClassDeclaration = [{
+    /// Test Method
+    static int getFoo(int i);
+  }];
+  let extraClassDefinition = [{
+    int $cppClass::getFoo(int i) {
+      return i+1;
+    }
+  }];
+}
+
+// DECL-LABEL: TestExtraClassAttr : public ::mlir::Attribute
+// DECL: /// Test Method
+// DECL-NEXT: static int getFoo(int i);
+
+// DEF-LABEL: int TestExtraClassAttr::getFoo(int i) {
+// DEF: return i+1;
+// DEF-NEXT: }

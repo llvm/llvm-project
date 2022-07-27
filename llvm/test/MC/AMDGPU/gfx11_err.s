@@ -57,6 +57,10 @@ v_cvt_f16_u16_e64_dpp v5, s1 dpp8:[7,6,5,4,3,2,1,0]
 v_cvt_f16_u16_e64_dpp v5, s1 row_shl:1 row_mask:0xf bank_mask:0xf
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
+; disallow space between colons
+v_dual_mul_f32 v0, v0, v2 : : v_dual_mul_f32 v1, v1, v3
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
+
 // On GFX11, v_dot8_i32_i4 is a valid SP3 alias for v_dot8_i32_iu4.
 // However, we intentionally leave it unimplemented because on other
 // processors v_dot8_i32_i4 denotes an instruction of a different
@@ -73,3 +77,9 @@ v_dot4_i32_i8 v0, v1, v2, v3
 
 v_dot4c_i32_i8 v0, v1, v2
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cmp_class_f16_e64_dpp s105, s2, v2 row_ror:15
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cmpx_class_f32_e64_dpp s1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

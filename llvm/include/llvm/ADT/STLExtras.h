@@ -444,6 +444,16 @@ public:
     findNextValid();
     return *this;
   }
+
+  decltype(auto) operator*() const {
+    assert(BaseT::wrapped() != End && "Cannot dereference end iterator!");
+    return BaseT::operator*();
+  }
+
+  decltype(auto) operator->() const {
+    assert(BaseT::wrapped() != End && "Cannot dereference end iterator!");
+    return BaseT::operator->();
+  }
 };
 
 /// Specialization of filter_iterator_base for forward iteration only.

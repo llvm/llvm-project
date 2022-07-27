@@ -93,7 +93,7 @@ void LoopUnroll::runOnOperation() {
     // an outer one may delete gathered inner ones).
     getOperation().walk([&](AffineForOp forOp) {
       Optional<uint64_t> tripCount = getConstantTripCount(forOp);
-      if (tripCount.hasValue() && tripCount.getValue() <= unrollFullThreshold)
+      if (tripCount && *tripCount <= unrollFullThreshold)
         loops.push_back(forOp);
     });
     for (auto forOp : loops)

@@ -17,12 +17,12 @@ TEST(PresburgerSpaceTest, insertId) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 1);
 
   // Try inserting 2 domain ids.
-  space.insertId(IdKind::Domain, 0, 2);
-  EXPECT_EQ(space.getNumDomainIds(), 4u);
+  space.insertVar(VarKind::Domain, 0, 2);
+  EXPECT_EQ(space.getNumDomainVars(), 4u);
 
   // Try inserting 1 range ids.
-  space.insertId(IdKind::Range, 0, 1);
-  EXPECT_EQ(space.getNumRangeIds(), 3u);
+  space.insertVar(VarKind::Range, 0, 1);
+  EXPECT_EQ(space.getNumRangeVars(), 3u);
 }
 
 TEST(PresburgerSpaceTest, insertIdSet) {
@@ -31,80 +31,80 @@ TEST(PresburgerSpaceTest, insertIdSet) {
   // Try inserting 2 dimension ids. The space should have 4 range ids since
   // spaces which do not distinguish between domain, range are implemented like
   // this.
-  space.insertId(IdKind::SetDim, 0, 2);
-  EXPECT_EQ(space.getNumRangeIds(), 4u);
+  space.insertVar(VarKind::SetDim, 0, 2);
+  EXPECT_EQ(space.getNumRangeVars(), 4u);
 }
 
 TEST(PresburgerSpaceTest, removeIdRange) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3);
 
   // Remove 1 domain identifier.
-  space.removeIdRange(IdKind::Domain, 0, 1);
-  EXPECT_EQ(space.getNumDomainIds(), 1u);
+  space.removeVarRange(VarKind::Domain, 0, 1);
+  EXPECT_EQ(space.getNumDomainVars(), 1u);
 
   // Remove 1 symbol and 1 range identifier.
-  space.removeIdRange(IdKind::Symbol, 0, 1);
-  space.removeIdRange(IdKind::Range, 0, 1);
-  EXPECT_EQ(space.getNumDomainIds(), 1u);
-  EXPECT_EQ(space.getNumRangeIds(), 0u);
-  EXPECT_EQ(space.getNumSymbolIds(), 2u);
+  space.removeVarRange(VarKind::Symbol, 0, 1);
+  space.removeVarRange(VarKind::Range, 0, 1);
+  EXPECT_EQ(space.getNumDomainVars(), 1u);
+  EXPECT_EQ(space.getNumRangeVars(), 0u);
+  EXPECT_EQ(space.getNumSymbolVars(), 2u);
 }
 
-TEST(PresburgerSpaceTest, insertIdAttachment) {
+TEST(PresburgerSpaceTest, insertVarIdentifier) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 1, 0);
-  space.resetAttachments<int *>();
+  space.resetIds<int *>();
 
-  // Attach attachment to domain ids.
-  int attachments[2] = {0, 1};
-  space.setAttachment<int *>(IdKind::Domain, 0, &attachments[0]);
-  space.setAttachment<int *>(IdKind::Domain, 1, &attachments[1]);
+  // Attach identifiers to domain ids.
+  int identifiers[2] = {0, 1};
+  space.setId<int *>(VarKind::Domain, 0, &identifiers[0]);
+  space.setId<int *>(VarKind::Domain, 1, &identifiers[1]);
 
   // Try inserting 2 domain ids.
-  space.insertId(IdKind::Domain, 0, 2);
-  EXPECT_EQ(space.getNumDomainIds(), 4u);
+  space.insertVar(VarKind::Domain, 0, 2);
+  EXPECT_EQ(space.getNumDomainVars(), 4u);
 
   // Try inserting 1 range ids.
-  space.insertId(IdKind::Range, 0, 1);
-  EXPECT_EQ(space.getNumRangeIds(), 3u);
+  space.insertVar(VarKind::Range, 0, 1);
+  EXPECT_EQ(space.getNumRangeVars(), 3u);
 
-  // Check if the attachments for the old ids are still attached properly.
-  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Domain, 2), attachments[0]);
-  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Domain, 3), attachments[1]);
+  // Check if the identifiers for the old ids are still attached properly.
+  EXPECT_EQ(*space.getId<int *>(VarKind::Domain, 2), identifiers[0]);
+  EXPECT_EQ(*space.getId<int *>(VarKind::Domain, 3), identifiers[1]);
 }
 
-TEST(PresburgerSpaceTest, removeIdRangeAttachment) {
+TEST(PresburgerSpaceTest, removeVarRangeIdentifier) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3, 0);
-  space.resetAttachments<int *>();
+  space.resetIds<int *>();
 
-  int attachments[6] = {0, 1, 2, 3, 4, 5};
+  int identifiers[6] = {0, 1, 2, 3, 4, 5};
 
-  // Attach attachments to domain identifiers.
-  space.setAttachment<int *>(IdKind::Domain, 0, &attachments[0]);
-  space.setAttachment<int *>(IdKind::Domain, 1, &attachments[1]);
+  // Attach identifiers to domain identifiers.
+  space.setId<int *>(VarKind::Domain, 0, &identifiers[0]);
+  space.setId<int *>(VarKind::Domain, 1, &identifiers[1]);
 
-  // Attach attachments to range identifiers.
-  space.setAttachment<int *>(IdKind::Range, 0, &attachments[2]);
+  // Attach identifiers to range identifiers.
+  space.setId<int *>(VarKind::Range, 0, &identifiers[2]);
 
-  // Attach attachments to symbol identifiers.
-  space.setAttachment<int *>(IdKind::Symbol, 0, &attachments[3]);
-  space.setAttachment<int *>(IdKind::Symbol, 1, &attachments[4]);
-  space.setAttachment<int *>(IdKind::Symbol, 2, &attachments[5]);
+  // Attach identifiers to symbol identifiers.
+  space.setId<int *>(VarKind::Symbol, 0, &identifiers[3]);
+  space.setId<int *>(VarKind::Symbol, 1, &identifiers[4]);
+  space.setId<int *>(VarKind::Symbol, 2, &identifiers[5]);
 
   // Remove 1 domain identifier.
-  space.removeIdRange(IdKind::Domain, 0, 1);
-  EXPECT_EQ(space.getNumDomainIds(), 1u);
+  space.removeVarRange(VarKind::Domain, 0, 1);
+  EXPECT_EQ(space.getNumDomainVars(), 1u);
 
   // Remove 1 symbol and 1 range identifier.
-  space.removeIdRange(IdKind::Symbol, 0, 1);
-  space.removeIdRange(IdKind::Range, 0, 1);
-  EXPECT_EQ(space.getNumDomainIds(), 1u);
-  EXPECT_EQ(space.getNumRangeIds(), 0u);
-  EXPECT_EQ(space.getNumSymbolIds(), 2u);
+  space.removeVarRange(VarKind::Symbol, 0, 1);
+  space.removeVarRange(VarKind::Range, 0, 1);
+  EXPECT_EQ(space.getNumDomainVars(), 1u);
+  EXPECT_EQ(space.getNumRangeVars(), 0u);
+  EXPECT_EQ(space.getNumSymbolVars(), 2u);
 
-  // Check if domain attachments are attached properly.
-  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Domain, 0), attachments[1]);
+  // Check if domain identifiers are attached properly.
+  EXPECT_EQ(*space.getId<int *>(VarKind::Domain, 0), identifiers[1]);
 
-  // Check if symbol attachments are attached properly.
-  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Range, 0), attachments[4]);
-  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Range, 1), attachments[5]);
+  // Check if symbol identifiers are attached properly.
+  EXPECT_EQ(*space.getId<int *>(VarKind::Range, 0), identifiers[4]);
+  EXPECT_EQ(*space.getId<int *>(VarKind::Range, 1), identifiers[5]);
 }

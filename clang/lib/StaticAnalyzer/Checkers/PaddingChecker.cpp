@@ -182,7 +182,7 @@ public:
       return false;
     };
 
-    if (std::any_of(RD->field_begin(), RD->field_end(), IsTrickyField))
+    if (llvm::any_of(RD->fields(), IsTrickyField))
       return true;
     return false;
   }
@@ -332,10 +332,10 @@ public:
     }
 
     Os << " (" << BaselinePad.getQuantity() << " padding bytes, where "
-       << OptimalPad.getQuantity() << " is optimal). \n"
-       << "Optimal fields order: \n";
+       << OptimalPad.getQuantity() << " is optimal). "
+       << "Optimal fields order: ";
     for (const auto *FD : OptimalFieldsOrder)
-      Os << FD->getName() << ", \n";
+      Os << FD->getName() << ", ";
     Os << "consider reordering the fields or adding explicit padding "
           "members.";
 

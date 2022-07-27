@@ -12,22 +12,22 @@ entry:
   ret i32 %tmp11
 }
 
-declare dso_local swifttailcc i8* @alias_callee()
+declare dso_local swifttailcc ptr @alias_callee()
 
-define swifttailcc noalias i8* @noalias_caller() nounwind {
+define swifttailcc noalias ptr @noalias_caller() nounwind {
 ; CHECK-LABEL: noalias_caller:
 ; CHECK:    jmp alias_callee
-  %p = musttail call swifttailcc i8* @alias_callee()
-  ret i8* %p
+  %p = musttail call swifttailcc ptr @alias_callee()
+  ret ptr %p
 }
 
-declare dso_local swifttailcc noalias i8* @noalias_callee()
+declare dso_local swifttailcc noalias ptr @noalias_callee()
 
-define dso_local swifttailcc i8* @alias_caller() nounwind {
+define dso_local swifttailcc ptr @alias_caller() nounwind {
 ; CHECK-LABEL: alias_caller:
 ; CHECK:    jmp noalias_callee # TAILCALL
-  %p = musttail call swifttailcc noalias i8* @noalias_callee()
-  ret i8* %p
+  %p = musttail call swifttailcc noalias ptr @noalias_callee()
+  ret ptr %p
 }
 
 declare dso_local swifttailcc i32 @i32_callee()

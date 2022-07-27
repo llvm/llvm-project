@@ -91,6 +91,8 @@ ReportAccMoves("ppc-report-acc-moves",
                cl::Hidden, cl::init(false));
 #endif
 
+extern cl::opt<bool> DisableAutoPairedVecSt;
+
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
 
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
@@ -1199,6 +1201,59 @@ static void emitAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsPrimed,
 #endif
 }
 
+static void spillRegPairs(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator II, DebugLoc DL,
+                          const TargetInstrInfo &TII, Register SrcReg,
+                          unsigned FrameIndex, bool IsLittleEndian,
+                          bool IsKilled, bool TwoPairs) {
+  unsigned Offset = 0;
+  if (TwoPairs)
+    Offset = IsLittleEndian ? 48 : 0;
+  else
+    Offset = IsLittleEndian ? 16 : 0;
+  Register Reg = (SrcReg > PPC::VSRp15) ? PPC::V0 + (SrcReg - PPC::VSRp16) * 2
+                                        : PPC::VSL0 + (SrcReg - PPC::VSRp0) * 2;
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                        .addReg(Reg, getKillRegState(IsKilled)),
+                    FrameIndex, Offset);
+  Offset += IsLittleEndian ? -16 : 16;
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                        .addReg(Reg + 1, getKillRegState(IsKilled)),
+                    FrameIndex, Offset);
+  if (TwoPairs) {
+    Offset += IsLittleEndian ? -16 : 16;
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                          .addReg(Reg + 2, getKillRegState(IsKilled)),
+                      FrameIndex, Offset);
+    Offset += IsLittleEndian ? -16 : 16;
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                          .addReg(Reg + 3, getKillRegState(IsKilled)),
+                      FrameIndex, Offset);
+  }
+}
+
+/// Remove any STXVP[X] instructions and split them out into a pair of
+/// STXV[X] instructions if --disable-auto-paired-vec-st is specified on
+/// the command line.
+void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
+                                           unsigned FrameIndex) const {
+  assert(DisableAutoPairedVecSt &&
+         "Expecting to do this only if paired vector stores are disabled.");
+  MachineInstr &MI = *II; // STXVP <SrcReg>, <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  Register SrcReg = MI.getOperand(0).getReg();
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+  bool IsKilled = MI.getOperand(0).isKill();
+  spillRegPairs(MBB, II, DL, TII, SrcReg, FrameIndex, IsLittleEndian, IsKilled,
+                /* TwoPairs */ false);
+  // Discard the original instruction.
+  MBB.erase(II);
+}
+
 /// lowerACCSpilling - Generate the code for spilling the accumulator register.
 /// Similarly to other spills/reloads that use pseudo-ops, we do not actually
 /// eliminate the FrameIndex here nor compute the stack offset. We simply
@@ -1228,12 +1283,17 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   // adjust the offset of the store that is within the 64-byte stack slot.
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(Reg, getKillRegState(IsKilled)),
-                    FrameIndex, IsLittleEndian ? 32 : 0);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(Reg + 1, getKillRegState(IsKilled)),
-                    FrameIndex, IsLittleEndian ? 0 : 32);
+  if (DisableAutoPairedVecSt)
+    spillRegPairs(MBB, II, DL, TII, Reg, FrameIndex, IsLittleEndian, IsKilled,
+                  /* TwoPairs */ true);
+  else {
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                          .addReg(Reg, getKillRegState(IsKilled)),
+                      FrameIndex, IsLittleEndian ? 32 : 0);
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                          .addReg(Reg + 1, getKillRegState(IsKilled)),
+                      FrameIndex, IsLittleEndian ? 0 : 32);
+  }
   if (IsPrimed && !IsKilled)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMTACC), SrcReg).addReg(SrcReg);
 
@@ -1468,6 +1528,9 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return;
   } else if (OpC == PPC::RESTORE_ACC || OpC == PPC::RESTORE_UACC) {
     lowerACCRestore(II, FrameIndex);
+    return;
+  } else if (OpC == PPC::STXVP && DisableAutoPairedVecSt) {
+    lowerOctWordSpilling(II, FrameIndex);
     return;
   } else if (OpC == PPC::SPILL_QUADWORD) {
     lowerQuadwordSpilling(II, FrameIndex);

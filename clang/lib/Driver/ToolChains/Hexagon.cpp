@@ -230,7 +230,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(G.getValue())));
+    CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));
   }
 
   Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
@@ -340,8 +340,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(G.getValue())));
-    UseG0 = G.getValue() == 0;
+    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(G.value())));
+    UseG0 = G.value() == 0;
   }
 
   CmdArgs.push_back("-o");
@@ -569,7 +569,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
   // Assume G0 with -shared.
   bool HasG0 = Args.hasArg(options::OPT_shared);
   if (auto G = getSmallDataThreshold(Args))
-    HasG0 = G.getValue() == 0;
+    HasG0 = *G == 0;
 
   const std::string CpuVer = GetTargetCPUVersion(Args).str();
   for (auto &Dir : RootDirs) {
@@ -614,6 +614,8 @@ void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
   switch (Type) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
+    if (Args.hasArg(options::OPT_fexperimental_library))
+      CmdArgs.push_back("-lc++experimental");
     CmdArgs.push_back("-lc++abi");
     CmdArgs.push_back("-lunwind");
     break;

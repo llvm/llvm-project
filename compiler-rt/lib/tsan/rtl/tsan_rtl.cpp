@@ -197,30 +197,45 @@ static void DoResetImpl(uptr epoch) {
   }
 
   DPrintf("Resetting shadow...\n");
-  if (!MmapFixedSuperNoReserve(ShadowBeg(), ShadowEnd() - ShadowBeg(),
-                               "shadow")) {
+  auto shadow_begin = ShadowBeg();
+  auto shadow_end = ShadowEnd();
+#if SANITIZER_GO
+  CHECK_NE(0, ctx->mapped_shadow_begin);
+  shadow_begin = ctx->mapped_shadow_begin;
+  shadow_end = ctx->mapped_shadow_end;
+  VPrintf(2, "shadow_begin-shadow_end: (0x%zx-0x%zx)\n",
+          shadow_begin, shadow_end);
+#endif
+
+#if SANITIZER_WINDOWS
+  auto resetFailed =
+      !ZeroMmapFixedRegion(shadow_begin, shadow_end - shadow_begin);
+#else
+  auto resetFailed =
+      !MmapFixedSuperNoReserve(shadow_begin, shadow_end-shadow_begin, "shadow");
+#endif
+  if (resetFailed) {
     Printf("failed to reset shadow memory\n");
     Die();
   }
   DPrintf("Resetting meta shadow...\n");
   ctx->metamap.ResetClocks();
+  StoreShadow(&ctx->last_spurious_race, Shadow::kEmpty);
   ctx->resetting = false;
 }
 
 // Clang does not understand locking all slots in the loop:
 // error: expecting mutex 'slot.mtx' to be held at start of each loop
 void DoReset(ThreadState* thr, uptr epoch) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-  {
-    for (auto& slot : ctx->slots) {
-      slot.mtx.Lock();
-      if (UNLIKELY(epoch == 0))
-        epoch = ctx->global_epoch;
-      if (UNLIKELY(epoch != ctx->global_epoch)) {
-        // Epoch can't change once we've locked the first slot.
-        CHECK_EQ(slot.sid, 0);
-        slot.mtx.Unlock();
-        return;
-      }
+  for (auto& slot : ctx->slots) {
+    slot.mtx.Lock();
+    if (UNLIKELY(epoch == 0))
+      epoch = ctx->global_epoch;
+    if (UNLIKELY(epoch != ctx->global_epoch)) {
+      // Epoch can't change once we've locked the first slot.
+      CHECK_EQ(slot.sid, 0);
+      slot.mtx.Unlock();
+      return;
     }
   }
   DPrintf("#%d: DoReset epoch=%lu\n", thr ? thr->tid : -1, epoch);
@@ -370,7 +385,6 @@ Context::Context()
       }),
       racy_mtx(MutexTypeRacy),
       racy_stacks(),
-      racy_addresses(),
       fired_suppressions_mtx(MutexTypeFired),
       slot_mtx(MutexTypeSlots),
       resetting() {
@@ -559,18 +573,50 @@ void UnmapShadow(ThreadState *thr, uptr addr, uptr size) {
 #endif
 
 void MapShadow(uptr addr, uptr size) {
+  // Ensure thead registry lock held, so as to synchronize
+  // with DoReset, which also access the mapped_shadow_* ctxt fields.
+  ThreadRegistryLock lock0(&ctx->thread_registry);
+  static bool data_mapped = false;
+
+#if !SANITIZER_GO
   // Global data is not 64K aligned, but there are no adjacent mappings,
   // so we can get away with unaligned mapping.
   // CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
   const uptr kPageSize = GetPageSizeCached();
   uptr shadow_begin = RoundDownTo((uptr)MemToShadow(addr), kPageSize);
   uptr shadow_end = RoundUpTo((uptr)MemToShadow(addr + size), kPageSize);
-  if (!MmapFixedSuperNoReserve(shadow_begin, shadow_end - shadow_begin,
-                               "shadow"))
+  if (!MmapFixedNoReserve(shadow_begin, shadow_end - shadow_begin, "shadow"))
     Die();
+#else
+  uptr shadow_begin = RoundDownTo((uptr)MemToShadow(addr), (64 << 10));
+  uptr shadow_end = RoundUpTo((uptr)MemToShadow(addr + size), (64 << 10));
+  VPrintf(2, "MapShadow for (0x%zx-0x%zx), begin/end: (0x%zx-0x%zx)\n",
+          addr, addr + size, shadow_begin, shadow_end);
+
+  if (!data_mapped) {
+    // First call maps data+bss.
+    if (!MmapFixedSuperNoReserve(shadow_begin, shadow_end - shadow_begin, "shadow"))
+      Die();
+  } else {
+    VPrintf(2, "ctx->mapped_shadow_{begin,end} = (0x%zx-0x%zx)\n",
+            ctx->mapped_shadow_begin, ctx->mapped_shadow_end);
+    // Second and subsequent calls map heap.
+    if (shadow_end <= ctx->mapped_shadow_end)
+      return;
+    if (ctx->mapped_shadow_begin < shadow_begin)
+      ctx->mapped_shadow_begin = shadow_begin;
+    if (shadow_begin < ctx->mapped_shadow_end)
+      shadow_begin = ctx->mapped_shadow_end;
+    VPrintf(2, "MapShadow begin/end = (0x%zx-0x%zx)\n",
+            shadow_begin, shadow_end);
+    if (!MmapFixedSuperNoReserve(shadow_begin, shadow_end - shadow_begin,
+                                 "shadow"))
+      Die();
+    ctx->mapped_shadow_end = shadow_end;
+  }
+#endif
 
   // Meta shadow is 2:1, so tread carefully.
-  static bool data_mapped = false;
   static uptr mapped_meta_end = 0;
   uptr meta_begin = (uptr)MemToMeta(addr);
   uptr meta_end = (uptr)MemToMeta(addr + size);
@@ -587,8 +633,7 @@ void MapShadow(uptr addr, uptr size) {
     // Windows wants 64K alignment.
     meta_begin = RoundDownTo(meta_begin, 64 << 10);
     meta_end = RoundUpTo(meta_end, 64 << 10);
-    if (meta_end <= mapped_meta_end)
-      return;
+    CHECK_GT(meta_end, mapped_meta_end);
     if (meta_begin < mapped_meta_end)
       meta_begin = mapped_meta_end;
     if (!MmapFixedSuperNoReserve(meta_begin, meta_end - meta_begin,
@@ -651,9 +696,6 @@ void Initialize(ThreadState *thr) {
   __tsan::InitializePlatformEarly();
 
 #if !SANITIZER_GO
-  // Re-exec ourselves if we need to set additional env or command line args.
-  MaybeReexec();
-
   InitializeAllocator();
   ReplaceSystemMalloc();
 #endif
@@ -722,8 +764,10 @@ void MaybeSpawnBackgroundThread() {
 int Finalize(ThreadState *thr) {
   bool failed = false;
 
+#if !SANITIZER_GO
   if (common_flags()->print_module_map == 1)
     DumpProcessMap();
+#endif
 
   if (flags()->atexit_sleep_ms > 0 && ThreadCount(thr) > 1)
     internal_usleep(u64(flags()->atexit_sleep_ms) * 1000);
@@ -951,6 +995,15 @@ void TraceSwitchPartImpl(ThreadState* thr) {
     for (uptr i = 0; i < d.count; i++)
       TraceMutexLock(thr, d.write ? EventType::kLock : EventType::kRLock, 0,
                      d.addr, d.stack_id);
+  }
+  // Callers of TraceSwitchPart expect that TraceAcquire will always succeed
+  // after the call. It's possible that TryTraceFunc/TraceMutexLock above
+  // filled the trace part exactly up to the TracePart::kAlignment gap
+  // and the next TraceAcquire won't succeed. Skip the gap to avoid that.
+  EventFunc *ev;
+  if (!TraceAcquire(thr, &ev)) {
+    CHECK(TraceSkipGap(thr));
+    CHECK(TraceAcquire(thr, &ev));
   }
   {
     Lock lock(&ctx->slot_mtx);

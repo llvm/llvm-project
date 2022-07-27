@@ -69,6 +69,7 @@ public:
   bool tryMLAV64LaneV128(SDNode *N);
   bool tryMULLV64LaneV128(unsigned IntNo, SDNode *N);
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
+  bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
   bool SelectNegArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
   bool SelectArithShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
@@ -238,6 +239,16 @@ public:
   template <unsigned Low, unsigned High, bool AllowSaturation = false>
   bool SelectSVEShiftImm(SDValue N, SDValue &Imm) {
     return SelectSVEShiftImm(N, Low, High, AllowSaturation, Imm);
+  }
+
+  bool SelectSVEShiftSplatImmR(SDValue N, SDValue &Imm) {
+    if (N->getOpcode() != ISD::SPLAT_VECTOR)
+      return false;
+
+    EVT EltVT = N->getValueType(0).getVectorElementType();
+    return SelectSVEShiftImm(N->getOperand(0), /* Low */ 1,
+                             /* High */ EltVT.getFixedSizeInBits(),
+                             /* AllowSaturation */ true, Imm);
   }
 
   // Returns a suitable CNT/INC/DEC/RDVL multiplier to calculate VSCALE*N.
@@ -878,6 +889,30 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
   // (harmlessly) synthesize one by injected an EXTRACT_SUBREG here.
   assert(Ext != AArch64_AM::UXTX && Ext != AArch64_AM::SXTX);
   Reg = narrowIfNeeded(CurDAG, Reg);
+  Shift = CurDAG->getTargetConstant(getArithExtendImm(Ext, ShiftVal), SDLoc(N),
+                                    MVT::i32);
+  return isWorthFolding(N);
+}
+
+/// SelectArithUXTXRegister - Select a "UXTX register" operand. This
+/// operand is refered by the instructions have SP operand
+bool AArch64DAGToDAGISel::SelectArithUXTXRegister(SDValue N, SDValue &Reg,
+                                                  SDValue &Shift) {
+  unsigned ShiftVal = 0;
+  AArch64_AM::ShiftExtendType Ext;
+
+  if (N.getOpcode() != ISD::SHL)
+    return false;
+
+  ConstantSDNode *CSD = dyn_cast<ConstantSDNode>(N.getOperand(1));
+  if (!CSD)
+    return false;
+  ShiftVal = CSD->getZExtValue();
+  if (ShiftVal > 4)
+    return false;
+
+  Ext = AArch64_AM::UXTX;
+  Reg = N.getOperand(0);
   Shift = CurDAG->getTargetConstant(getArithExtendImm(Ext, ShiftVal), SDLoc(N),
                                     MVT::i32);
   return isWorthFolding(N);
@@ -4039,6 +4074,24 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       }
       break;
     }
+    case Intrinsic::swift_async_context_addr: {
+      SDLoc DL(Node);
+      SDValue Chain = Node->getOperand(0);
+      SDValue CopyFP = CurDAG->getCopyFromReg(Chain, DL, AArch64::FP, MVT::i64);
+      SDValue Res = SDValue(
+          CurDAG->getMachineNode(AArch64::SUBXri, DL, MVT::i64, CopyFP,
+                                 CurDAG->getTargetConstant(8, DL, MVT::i32),
+                                 CurDAG->getTargetConstant(0, DL, MVT::i32)),
+          0);
+      ReplaceUses(SDValue(Node, 0), Res);
+      ReplaceUses(SDValue(Node, 1), CopyFP.getValue(1));
+      CurDAG->RemoveDeadNode(Node);
+
+      auto &MF = CurDAG->getMachineFunction();
+      MF.getFrameInfo().setFrameAddressIsTaken(true);
+      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+      return;
+    }
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -4084,18 +4137,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (tryMULLV64LaneV128(IntNo, Node))
         return;
       break;
-    case Intrinsic::swift_async_context_addr: {
-      SDLoc DL(Node);
-      CurDAG->SelectNodeTo(Node, AArch64::SUBXri, MVT::i64,
-                           CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
-                                                  AArch64::FP, MVT::i64),
-                           CurDAG->getTargetConstant(8, DL, MVT::i32),
-                           CurDAG->getTargetConstant(0, DL, MVT::i32));
-      auto &MF = CurDAG->getMachineFunction();
-      MF.getFrameInfo().setFrameAddressIsTaken(true);
-      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
-      return;
-    }
     }
     break;
   }
@@ -5246,9 +5287,12 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
 }
 
 bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
-                                             SDValue &Vector, SDValue &Offset) {
-  if (N.getOpcode() != ISD::ADD)
-    return false;
+                                             SDValue &Base, SDValue &Offset) {
+  if (N.getOpcode() != ISD::ADD) {
+    Base = N;
+    Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
+    return true;
+  }
 
   // Process an ADD node.
   const SDValue LHS = N.getOperand(0);
@@ -5261,7 +5305,7 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
     if (ImmOff < 0 || ImmOff > MaxSize)
       return false;
 
-    Vector = LHS;
+    Base = LHS;
     Offset = CurDAG->getTargetConstant(ImmOff, SDLoc(N), MVT::i64);
     return true;
   }

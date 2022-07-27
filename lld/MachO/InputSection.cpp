@@ -29,8 +29,8 @@ using namespace lld::macho;
 // Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
-static_assert(sizeof(void *) != 8 ||
-                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
+                                         sizeof(std::vector<Reloc>) + 104,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -55,17 +55,21 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
   return sym->getVA();
 }
 
+const Defined *InputSection::getContainingSymbol(uint64_t off) const {
+  auto *nextSym = llvm::upper_bound(
+      symbols, off, [](uint64_t a, const Defined *b) { return a < b->value; });
+  if (nextSym == symbols.begin())
+    return nullptr;
+  return *std::prev(nextSym);
+}
+
 std::string InputSection::getLocation(uint64_t off) const {
   // First, try to find a symbol that's near the offset. Use it as a reference
   // point.
-  auto *nextSym = llvm::upper_bound(
-      symbols, off, [](uint64_t a, const Defined *b) { return a < b->value; });
-  if (nextSym != symbols.begin()) {
-    auto &sym = *std::prev(nextSym);
-    return (toString(getFile()) + ":(symbol " + sym->getName() + "+0x" +
+  if (auto *sym = getContainingSymbol(off))
+    return (toString(getFile()) + ":(symbol " + toString(*sym) + "+0x" +
             Twine::utohexstr(off - sym->value) + ")")
         .str();
-  }
 
   // If that fails, use the section itself as a reference point.
   for (const Subsection &subsec : section.subsections) {
@@ -74,9 +78,59 @@ std::string InputSection::getLocation(uint64_t off) const {
       break;
     }
   }
+
   return (toString(getFile()) + ":(" + getName() + "+0x" +
           Twine::utohexstr(off) + ")")
       .str();
+}
+
+std::string InputSection::getSourceLocation(uint64_t off) const {
+  auto *obj = dyn_cast_or_null<ObjFile>(getFile());
+  if (!obj)
+    return {};
+
+  DWARFCache *dwarf = obj->getDwarf();
+  if (!dwarf)
+    return std::string();
+
+  for (const Subsection &subsec : section.subsections) {
+    if (subsec.isec == this) {
+      off += subsec.offset;
+      break;
+    }
+  }
+
+  auto createMsg = [&](StringRef path, unsigned line) {
+    std::string filename = sys::path::filename(path).str();
+    std::string lineStr = (":" + Twine(line)).str();
+    if (filename == path)
+      return filename + lineStr;
+    return (filename + lineStr + " (" + path + lineStr + ")").str();
+  };
+
+  // First, look up a function for a given offset.
+  if (Optional<DILineInfo> li = dwarf->getDILineInfo(
+          section.addr + off, object::SectionedAddress::UndefSection))
+    return createMsg(li->FileName, li->Line);
+
+  // If it failed, look up again as a variable.
+  if (const Defined *sym = getContainingSymbol(off)) {
+    // Symbols are generally prefixed with an underscore, which is not included
+    // in the debug information.
+    StringRef symName = sym->getName();
+    if (!symName.empty() && symName[0] == '_')
+      symName = symName.substr(1);
+
+    if (Optional<std::pair<std::string, unsigned>> fileLine =
+            dwarf->getVariableLoc(symName))
+      return createMsg(fileLine->first, fileLine->second);
+  }
+
+  // Try to get the source file's name from the DWARF information.
+  if (obj->compileUnit)
+    return obj->sourceFile();
+
+  return {};
 }
 
 void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
@@ -123,6 +177,10 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
 
   memcpy(buf, data.data(), data.size());
 
+  std::vector<uint64_t> relocTargets;
+  if (!optimizationHints.empty())
+    relocTargets.reserve(relocs.size());
+
   for (size_t i = 0; i < relocs.size(); i++) {
     const Reloc &r = relocs[i];
     uint8_t *loc = buf + r.offset;
@@ -143,6 +201,12 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
+      // For dtrace symbols, do not handle them as normal undefined symbols
+      if (referentSym->getName().startswith("___dtrace_")) {
+        // Change dtrace call site to pre-defined instructions
+        target->handleDtraceReloc(referentSym, r, loc);
+        continue;
+      }
       referentVA = resolveSymbolVA(referentSym, r.type) + r.addend;
 
       if (isThreadLocalVariables(getFlags())) {
@@ -158,7 +222,13 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       referentVA = referentIsec->getVA(r.addend);
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
+
+    if (!optimizationHints.empty())
+      relocTargets.push_back(referentVA);
   }
+
+  if (!optimizationHints.empty())
+    target->applyOptimizationHints(buf, this, relocTargets);
 }
 
 ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,
@@ -272,6 +342,11 @@ bool macho::isClassRefsSection(const InputSection *isec) {
 
 bool macho::isEhFrameSection(const InputSection *isec) {
   return isec->getName() == section_names::ehFrame &&
+         isec->getSegName() == segment_names::text;
+}
+
+bool macho::isGccExceptTabSection(const InputSection *isec) {
+  return isec->getName() == section_names::gccExceptTab &&
          isec->getSegName() == segment_names::text;
 }
 

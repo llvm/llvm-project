@@ -65,7 +65,7 @@ define <8 x i16> @ashr_add_and(<8 x i16> %x) nounwind {
 
 ; negative test - extra uses may lead to extra instructions when custom-lowered
 
-define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, <16 x i8>* %p1, <16 x i8>* %p2) nounwind {
+define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, ptr %p1, ptr %p2) nounwind {
 ; SSE-LABEL: ashr_xor_and_commute_uses:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
@@ -86,9 +86,9 @@ define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, <16 x i8>* %p1, <16 x 
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %signsplat = ashr <16 x i8> %x, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
-  store <16 x i8> %signsplat, <16 x i8>* %p1
+  store <16 x i8> %signsplat, ptr %p1
   %flipsign = xor <16 x i8> %x, <i8 undef, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>
-  store <16 x i8> %flipsign, <16 x i8>* %p2
+  store <16 x i8> %flipsign, ptr %p2
   %res = and <16 x i8> %flipsign, %signsplat
   ret <16 x i8> %res
 }
@@ -2080,7 +2080,7 @@ vector.ph:
   ret <8 x i16> %res
 }
 
-define void @subus_v8i8(<8 x i8>* %p1, <8 x i8>* %p2) {
+define void @subus_v8i8(ptr %p1, ptr %p2) {
 ; SSE-LABEL: subus_v8i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -2096,16 +2096,16 @@ define void @subus_v8i8(<8 x i8>* %p1, <8 x i8>* %p2) {
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <8 x i8>, <8 x i8>* %p1, align 8
-  %ld2 = load <8 x i8>, <8 x i8>* %p2, align 8
+  %ld1 = load <8 x i8>, ptr %p1, align 8
+  %ld2 = load <8 x i8>, ptr %p2, align 8
   %1 = sub <8 x i8> %ld1, %ld2
   %2 = icmp ugt <8 x i8> %ld1, %ld2
   %sh3 = select <8 x i1> %2, <8 x i8> %1, <8 x i8> zeroinitializer
-  store <8 x i8> %sh3, <8 x i8>* %p1, align 8
+  store <8 x i8> %sh3, ptr %p1, align 8
   ret void
 }
 
-define void @subus_v4i8(<4 x i8>* %p1, <4 x i8>* %p2) {
+define void @subus_v4i8(ptr %p1, ptr %p2) {
 ; SSE-LABEL: subus_v4i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -2121,16 +2121,16 @@ define void @subus_v4i8(<4 x i8>* %p1, <4 x i8>* %p2) {
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <4 x i8>, <4 x i8>* %p1, align 8
-  %ld2 = load <4 x i8>, <4 x i8>* %p2, align 8
+  %ld1 = load <4 x i8>, ptr %p1, align 8
+  %ld2 = load <4 x i8>, ptr %p2, align 8
   %1 = sub <4 x i8> %ld1, %ld2
   %2 = icmp ugt <4 x i8> %ld1, %ld2
   %sh3 = select <4 x i1> %2, <4 x i8> %1, <4 x i8> zeroinitializer
-  store <4 x i8> %sh3, <4 x i8>* %p1, align 8
+  store <4 x i8> %sh3, ptr %p1, align 8
   ret void
 }
 
-define void @subus_v2i8(<2 x i8>* %p1, <2 x i8>* %p2) {
+define void @subus_v2i8(ptr %p1, ptr %p2) {
 ; SSE2OR3-LABEL: subus_v2i8:
 ; SSE2OR3:       # %bb.0:
 ; SSE2OR3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -2155,16 +2155,16 @@ define void @subus_v2i8(<2 x i8>* %p1, <2 x i8>* %p2) {
 ; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <2 x i8>, <2 x i8>* %p1, align 8
-  %ld2 = load <2 x i8>, <2 x i8>* %p2, align 8
+  %ld1 = load <2 x i8>, ptr %p1, align 8
+  %ld2 = load <2 x i8>, ptr %p2, align 8
   %1 = sub <2 x i8> %ld1, %ld2
   %2 = icmp ugt <2 x i8> %ld1, %ld2
   %sh3 = select <2 x i1> %2, <2 x i8> %1, <2 x i8> zeroinitializer
-  store <2 x i8> %sh3, <2 x i8>* %p1, align 8
+  store <2 x i8> %sh3, ptr %p1, align 8
   ret void
 }
 
-define void @subus_v4i16(<4 x i16>* %p1, <4 x i16>* %p2) {
+define void @subus_v4i16(ptr %p1, ptr %p2) {
 ; SSE-LABEL: subus_v4i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -2180,16 +2180,16 @@ define void @subus_v4i16(<4 x i16>* %p1, <4 x i16>* %p2) {
 ; AVX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <4 x i16>, <4 x i16>* %p1, align 8
-  %ld2 = load <4 x i16>, <4 x i16>* %p2, align 8
+  %ld1 = load <4 x i16>, ptr %p1, align 8
+  %ld2 = load <4 x i16>, ptr %p2, align 8
   %1 = sub <4 x i16> %ld1, %ld2
   %2 = icmp ugt <4 x i16> %ld1, %ld2
   %sh3 = select <4 x i1> %2, <4 x i16> %1, <4 x i16> zeroinitializer
-  store <4 x i16> %sh3, <4 x i16>* %p1, align 8
+  store <4 x i16> %sh3, ptr %p1, align 8
   ret void
 }
 
-define void @subus_v2i16(<2 x i16>* %p1, <2 x i16>* %p2) {
+define void @subus_v2i16(ptr %p1, ptr %p2) {
 ; SSE-LABEL: subus_v2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -2205,12 +2205,12 @@ define void @subus_v2i16(<2 x i16>* %p1, <2 x i16>* %p2) {
 ; AVX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <2 x i16>, <2 x i16>* %p1, align 8
-  %ld2 = load <2 x i16>, <2 x i16>* %p2, align 8
+  %ld1 = load <2 x i16>, ptr %p1, align 8
+  %ld2 = load <2 x i16>, ptr %p2, align 8
   %1 = sub <2 x i16> %ld1, %ld2
   %2 = icmp ugt <2 x i16> %ld1, %ld2
   %sh3 = select <2 x i1> %2, <2 x i16> %1, <2 x i16> zeroinitializer
-  store <2 x i16> %sh3, <2 x i16>* %p1, align 8
+  store <2 x i16> %sh3, ptr %p1, align 8
   ret void
 }
 

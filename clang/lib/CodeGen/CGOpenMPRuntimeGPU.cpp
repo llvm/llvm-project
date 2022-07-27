@@ -3663,7 +3663,7 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
     CheckVarsEscapingDeclContext VarChecker(CGF, llvm::None);
     VarChecker.Visit(Body);
     I->getSecond().SecondaryLocalVarData.emplace();
-    DeclToAddrMapTy &Data = I->getSecond().SecondaryLocalVarData.getValue();
+    DeclToAddrMapTy &Data = *I->getSecond().SecondaryLocalVarData;
     for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
       assert(VD->isCanonicalDecl() && "Expected canonical declaration");
       Data.insert(std::make_pair(VD, MappedVarData()));

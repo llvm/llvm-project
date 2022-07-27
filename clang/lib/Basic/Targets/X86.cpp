@@ -239,7 +239,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512ER = true;
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
-      HasFloat16 = true;
     } else if (Feature == "+avx512pf") {
       HasAVX512PF = true;
     } else if (Feature == "+avx512dq") {
@@ -298,6 +297,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCLDEMOTE = true;
     } else if (Feature == "+rdpid") {
       HasRDPID = true;
+    } else if (Feature == "+rdpru") {
+      HasRDPRU = true;
     } else if (Feature == "+kl") {
       HasKL = true;
     } else if (Feature == "+widekl") {
@@ -354,6 +355,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                            .Case("+sse", SSE1)
                            .Default(NoSSE);
     SSELevel = std::max(SSELevel, Level);
+
+    HasFloat16 = SSELevel >= SSE2;
 
     MMX3DNowEnum ThreeDNowLevel = llvm::StringSwitch<MMX3DNowEnum>(Feature)
                                       .Case("+3dnowa", AMD3DNowAthlon)
@@ -742,6 +745,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__WIDEKL__");
   if (HasRDPID)
     Builder.defineMacro("__RDPID__");
+  if (HasRDPRU)
+    Builder.defineMacro("__RDPRU__");
   if (HasCLDEMOTE)
     Builder.defineMacro("__CLDEMOTE__");
   if (HasWAITPKG)
@@ -925,6 +930,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("prfchw", true)
       .Case("ptwrite", true)
       .Case("rdpid", true)
+      .Case("rdpru", true)
       .Case("rdrnd", true)
       .Case("rdseed", true)
       .Case("rtm", true)
@@ -1020,6 +1026,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("prfchw", HasPRFCHW)
       .Case("ptwrite", HasPTWRITE)
       .Case("rdpid", HasRDPID)
+      .Case("rdpru", HasRDPRU)
       .Case("rdrnd", HasRDRND)
       .Case("rdseed", HasRDSEED)
       .Case("retpoline-external-thunk", HasRetpolineExternalThunk)

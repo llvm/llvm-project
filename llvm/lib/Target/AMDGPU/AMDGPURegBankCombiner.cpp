@@ -153,7 +153,10 @@ bool AMDGPURegBankCombinerHelper::matchIntMinMaxToMed3(
   if (!isVgprRegBank(Dst))
     return false;
 
-  if (MRI.getType(Dst).isVector())
+  // med3 for i16 is only available on gfx9+, and not available for v2i16.
+  LLT Ty = MRI.getType(Dst);
+  if ((Ty != LLT::scalar(16) || !Subtarget.hasMed3_16()) &&
+      Ty != LLT::scalar(32))
     return false;
 
   MinMaxMedOpc OpcodeTriple = getMinMaxPair(MI.getOpcode());

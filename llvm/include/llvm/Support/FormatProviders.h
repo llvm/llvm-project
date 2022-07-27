@@ -313,7 +313,7 @@ struct format_provider<T,
       S = FloatStyle::Fixed;
 
     Optional<size_t> Precision = parseNumericPrecision(Style);
-    if (!Precision.hasValue())
+    if (!Precision)
       Precision = getDefaultPrecision(S);
 
     write_double(Stream, static_cast<double>(V), S, Precision);

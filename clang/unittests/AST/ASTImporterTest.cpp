@@ -420,14 +420,15 @@ TEST_P(ImportExpr, ImportParenListExpr) {
       "typedef dummy<int> declToImport;"
       "template class dummy<int>;",
       Lang_CXX03, "", Lang_CXX03, Verifier,
-      typedefDecl(hasType(templateSpecializationType(
+      typedefDecl(hasType(elaboratedType(namesType(templateSpecializationType(
           hasDeclaration(classTemplateSpecializationDecl(hasSpecializedTemplate(
-              classTemplateDecl(hasTemplateDecl(cxxRecordDecl(hasMethod(allOf(
-                  hasName("f"),
-                  hasBody(compoundStmt(has(declStmt(hasSingleDecl(
-                      varDecl(hasInitializer(parenListExpr(has(unaryOperator(
-                          hasOperatorName("*"),
-                          hasUnaryOperand(cxxThisExpr())))))))))))))))))))))));
+              classTemplateDecl(hasTemplateDecl(cxxRecordDecl(hasMethod(
+                  allOf(hasName("f"),
+                        hasBody(compoundStmt(has(declStmt(hasSingleDecl(varDecl(
+                            hasInitializer(parenListExpr(has(unaryOperator(
+                                hasOperatorName("*"),
+                                hasUnaryOperand(
+                                    cxxThisExpr())))))))))))))))))))))))));
 }
 
 TEST_P(ImportExpr, ImportSwitch) {
@@ -514,20 +515,19 @@ TEST_P(ImportExpr, ImportPredefinedExpr) {
 
 TEST_P(ImportExpr, ImportInitListExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport(
-      "void declToImport() {"
-      "  struct point { double x; double y; };"
-      "  point ptarray[10] = { [2].y = 1.0, [2].x = 2.0,"
-      "                        [0].x = 1.0 }; }",
-      Lang_CXX03, "", Lang_CXX03, Verifier,
-      functionDecl(hasDescendant(initListExpr(
-          has(cxxConstructExpr(requiresZeroInitialization())),
-          has(initListExpr(
-              hasType(asString("struct point")), has(floatLiteral(equals(1.0))),
-              has(implicitValueInitExpr(hasType(asString("double")))))),
-          has(initListExpr(hasType(asString("struct point")),
-                           has(floatLiteral(equals(2.0))),
-                           has(floatLiteral(equals(1.0)))))))));
+  testImport("void declToImport() {"
+             "  struct point { double x; double y; };"
+             "  point ptarray[10] = { [2].y = 1.0, [2].x = 2.0,"
+             "                        [0].x = 1.0 }; }",
+             Lang_CXX03, "", Lang_CXX03, Verifier,
+             functionDecl(hasDescendant(initListExpr(
+                 has(cxxConstructExpr(requiresZeroInitialization())),
+                 has(initListExpr(
+                     hasType(asString("point")), has(floatLiteral(equals(1.0))),
+                     has(implicitValueInitExpr(hasType(asString("double")))))),
+                 has(initListExpr(hasType(asString("point")),
+                                  has(floatLiteral(equals(2.0))),
+                                  has(floatLiteral(equals(1.0)))))))));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Expr, CXXDefaultInitExpr>
@@ -582,8 +582,8 @@ TEST_P(ImportType, ImportUsingType) {
   testImport("struct C {};"
              "void declToImport() { using ::C; new C{}; }",
              Lang_CXX11, "", Lang_CXX11, Verifier,
-             functionDecl(hasDescendant(
-                 cxxNewExpr(hasType(pointerType(pointee(usingType())))))));
+             functionDecl(hasDescendant(cxxNewExpr(hasType(pointerType(
+                 pointee(elaboratedType(namesType(usingType())))))))));
 }
 
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
@@ -680,7 +680,8 @@ TEST_P(ImportType, ImportDeducedTemplateSpecialization) {
              "class C { public: C(T); };"
              "C declToImport(123);",
              Lang_CXX17, "", Lang_CXX17, Verifier,
-             varDecl(hasType(deducedTemplateSpecializationType())));
+             varDecl(hasType(elaboratedType(
+                 namesType(deducedTemplateSpecializationType())))));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, SizeOfPackExpr>
@@ -897,9 +898,9 @@ TEST_P(ImportDecl, ImportUsingTemplate) {
              "void declToImport() {"
              "using ns::S;  X<S> xi; }",
              Lang_CXX11, "", Lang_CXX11, Verifier,
-             functionDecl(
-                 hasDescendant(varDecl(hasTypeLoc(templateSpecializationTypeLoc(
-                     hasAnyTemplateArgumentLoc(templateArgumentLoc())))))));
+             functionDecl(hasDescendant(varDecl(hasTypeLoc(elaboratedTypeLoc(
+                 hasNamedTypeLoc(templateSpecializationTypeLoc(
+                     hasAnyTemplateArgumentLoc(templateArgumentLoc())))))))));
 }
 
 TEST_P(ImportDecl, ImportUsingEnumDecl) {
@@ -920,8 +921,9 @@ TEST_P(ImportDecl, ImportUsingPackDecl) {
       "template<typename ...T> struct C : T... { using T::operator()...; };"
       "C<A, B> declToImport;",
       Lang_CXX20, "", Lang_CXX20, Verifier,
-      varDecl(hasType(templateSpecializationType(hasDeclaration(
-          classTemplateSpecializationDecl(hasDescendant(usingPackDecl())))))));
+      varDecl(hasType(elaboratedType(namesType(templateSpecializationType(
+          hasDeclaration(classTemplateSpecializationDecl(
+              hasDescendant(usingPackDecl())))))))));
 }
 
 /// \brief Matches shadow declarations introduced into a scope by a
@@ -6320,6 +6322,24 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 
 struct ImportAutoFunctions : ASTImporterOptionSpecificTestBase {};
 
+TEST_P(ImportAutoFunctions, ReturnWithTemplateWithIntegerArgDeclaredInside) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template<int> struct Tmpl {};
+      auto foo() {
+        constexpr int X = 1;
+        return Tmpl<X>();
+      }
+      )",
+      Lang_CXX14, "input0.cc");
+  FunctionDecl *From = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("foo")));
+
+  FunctionDecl *To = Import(From, Lang_CXX14);
+  EXPECT_TRUE(To);
+  EXPECT_TRUE(isa<AutoType>(To->getReturnType()));
+}
+
 TEST_P(ImportAutoFunctions, ReturnWithTemplateWithStructDeclaredInside1) {
   Decl *FromTU = getTuDecl(
       R"(
@@ -7144,7 +7164,7 @@ TEST_P(CTAD, DeductionGuideShouldReferToANonLocalTypedef) {
   ParmVarDecl *Param = Guide->getParamDecl(0);
   // The type of the first param (which is a typedef) should match the typedef
   // in the global scope.
-  EXPECT_EQ(Param->getType()->castAs<TypedefType>()->getDecl(), Typedef);
+  EXPECT_EQ(Param->getType()->getAs<TypedefType>()->getDecl(), Typedef);
 }
 
 TEST_P(CTAD, DeductionGuideShouldReferToANonLocalTypedefInParamPtr) {
@@ -7185,7 +7205,7 @@ TEST_P(CTAD, DeductionGuideShouldCopyALocalTypedef) {
   auto *Typedef = FirstDeclMatcher<TypedefNameDecl>().match(
       TU, typedefNameDecl(hasName("U")));
   ParmVarDecl *Param = Guide->getParamDecl(0);
-  EXPECT_NE(Param->getType()->castAs<TypedefType>()->getDecl(), Typedef);
+  EXPECT_NE(Param->getType()->getAs<TypedefType>()->getDecl(), Typedef);
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, CTAD,

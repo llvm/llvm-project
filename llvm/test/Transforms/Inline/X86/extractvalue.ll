@@ -8,6 +8,7 @@ target triple = "x86_64-unknown-unknown"
 ; Check that extractvalue's are free.
 
 ; CHECK: Analyzing call of callee... (caller:caller_range)
+; CHECK-NEXT: Initial cost: -35
 ; CHECK-NEXT: define i32 @callee({ i32, i32 } %arg) {
 ; CHECK-NEXT: ; cost before = -35, cost after = -35, threshold before = 0, threshold after = 0, cost delta = 0
 ; CHECK-NEXT:   %r = extractvalue { i32, i32 } %arg, 0

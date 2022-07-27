@@ -5,7 +5,7 @@
 ; zero.
 ; rdar://12027825
 
-define void @foo(i8 %arg4, i32 %arg5, i32* %arg14) nounwind {
+define void @foo(i8 %arg4, i32 %arg5, ptr %arg14) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %bb
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
@@ -45,6 +45,6 @@ bb:
   %tmp144 = zext i8 %tmp143 to i32
   %tmp145 = add i32 %tmp144, 2062143348
   %tmp152 = sub i32 %tmp145, 0
-  store i32 %tmp152, i32* %arg14
+  store i32 %tmp152, ptr %arg14
   ret void
 }

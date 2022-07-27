@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 
 #include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/UInt128.h"
 #include "src/__support/architectures.h"
 
 #if !defined(LLVM_LIBC_ARCH_X86)
@@ -32,7 +33,7 @@ template <> struct Padding<4> { static constexpr unsigned VALUE = 16; };
 template <> struct Padding<8> { static constexpr unsigned VALUE = 48; };
 
 template <> struct FPBits<long double> {
-  using UIntType = __uint128_t;
+  using UIntType = UInt128;
 
   static constexpr int EXPONENT_BIAS = 0x3FFF;
   static constexpr int MAX_EXPONENT = 0x7FFF;
@@ -58,6 +59,10 @@ template <> struct FPBits<long double> {
   }
 
   UIntType get_mantissa() const { return bits & FloatProp::MANTISSA_MASK; }
+
+  UIntType get_explicit_mantissa() const {
+    return bits & (FloatProp::MANTISSA_MASK | FloatProp::EXPLICIT_BIT_MASK);
+  }
 
   void set_unbiased_exponent(UIntType expVal) {
     expVal =

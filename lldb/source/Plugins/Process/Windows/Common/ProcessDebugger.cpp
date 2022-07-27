@@ -281,10 +281,6 @@ Status ProcessDebugger::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   SIZE_T num_of_bytes_read = 0;
   if (!::ReadProcessMemory(process.GetNativeProcess().GetSystemHandle(), addr,
                            buf, size, &num_of_bytes_read)) {
-    // Reading from the process can fail for a number of reasons - set the
-    // error code and make sure that the number of bytes read is set back to 0
-    // because in some scenarios the value of bytes_read returned from the API
-    // is garbage.
     error.SetError(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "reading failed with error: {0}", error);
   } else {
@@ -445,7 +441,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   // AllocationBase is defined for MEM_COMMIT and MEM_RESERVE but not MEM_FREE.
   if (mem_info.State != MEM_FREE) {
     info.GetRange().SetRangeBase(
-        reinterpret_cast<addr_t>(mem_info.AllocationBase));
+        reinterpret_cast<addr_t>(mem_info.BaseAddress));
     info.GetRange().SetRangeEnd(reinterpret_cast<addr_t>(mem_info.BaseAddress) +
                                 mem_info.RegionSize);
     info.SetMapped(MemoryRegionInfo::eYes);

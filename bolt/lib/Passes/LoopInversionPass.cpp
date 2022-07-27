@@ -31,11 +31,11 @@ namespace bolt {
 
 bool LoopInversionPass::runOnFunction(BinaryFunction &BF) {
   bool IsChanged = false;
-  if (BF.layout_size() < 3 || !BF.hasValidProfile())
+  if (BF.getLayout().block_size() < 3 || !BF.hasValidProfile())
     return false;
 
-  BF.updateLayoutIndices();
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  BF.getLayout().updateLayoutIndices();
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->succ_size() != 1 || BB->pred_size() != 1)
       continue;
 
@@ -72,12 +72,12 @@ bool LoopInversionPass::runOnFunction(BinaryFunction &BF) {
   }
 
   if (IsChanged) {
-    BinaryFunction::BasicBlockOrderType NewOrder = BF.getLayout();
-    std::sort(NewOrder.begin(), NewOrder.end(),
-              [&](BinaryBasicBlock *BB1, BinaryBasicBlock *BB2) {
-                return BB1->getLayoutIndex() < BB2->getLayoutIndex();
-              });
-    BF.updateBasicBlockLayout(NewOrder);
+    BinaryFunction::BasicBlockOrderType NewOrder(BF.getLayout().block_begin(),
+                                                 BF.getLayout().block_end());
+    llvm::sort(NewOrder, [&](BinaryBasicBlock *BB1, BinaryBasicBlock *BB2) {
+      return BB1->getLayoutIndex() < BB2->getLayoutIndex();
+    });
+    BF.getLayout().update(NewOrder);
   }
 
   return IsChanged;

@@ -128,25 +128,25 @@ protected:
 TEST_F(VPIntrinsicTest, VPIntrinsicsDefScopes) {
   Optional<Intrinsic::ID> ScopeVPID;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
-  ASSERT_FALSE(ScopeVPID.hasValue());                                          \
+  ASSERT_FALSE(ScopeVPID.has_value());                                         \
   ScopeVPID = Intrinsic::VPID;
 #define END_REGISTER_VP_INTRINSIC(VPID)                                        \
-  ASSERT_TRUE(ScopeVPID.hasValue());                                           \
-  ASSERT_EQ(ScopeVPID.getValue(), Intrinsic::VPID);                            \
+  ASSERT_TRUE(ScopeVPID.has_value());                                          \
+  ASSERT_EQ(ScopeVPID.value(), Intrinsic::VPID);                               \
   ScopeVPID = None;
 
   Optional<ISD::NodeType> ScopeOPC;
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
-  ASSERT_FALSE(ScopeOPC.hasValue());                                           \
+  ASSERT_FALSE(ScopeOPC.has_value());                                          \
   ScopeOPC = ISD::SDOPC;
 #define END_REGISTER_VP_SDNODE(SDOPC)                                          \
-  ASSERT_TRUE(ScopeOPC.hasValue());                                            \
-  ASSERT_EQ(ScopeOPC.getValue(), ISD::SDOPC);                                  \
+  ASSERT_TRUE(ScopeOPC.has_value());                                           \
+  ASSERT_EQ(ScopeOPC.value(), ISD::SDOPC);                                     \
   ScopeOPC = None;
 #include "llvm/IR/VPIntrinsics.def"
 
-  ASSERT_FALSE(ScopeVPID.hasValue());
-  ASSERT_FALSE(ScopeOPC.hasValue());
+  ASSERT_FALSE(ScopeVPID.has_value());
+  ASSERT_FALSE(ScopeOPC.has_value());
 }
 
 /// Check that every VP intrinsic in the test module is recognized as a VP
@@ -233,8 +233,8 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     ASSERT_TRUE(F.isIntrinsic());
     Optional<unsigned> MaskParamPos =
         VPIntrinsic::getMaskParamPos(F.getIntrinsicID());
-    if (MaskParamPos.hasValue()) {
-      Type *MaskParamType = F.getArg(MaskParamPos.getValue())->getType();
+    if (MaskParamPos) {
+      Type *MaskParamType = F.getArg(MaskParamPos.value())->getType();
       ASSERT_TRUE(MaskParamType->isVectorTy());
       ASSERT_TRUE(
           cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
@@ -242,8 +242,8 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
 
     Optional<unsigned> VecLenParamPos =
         VPIntrinsic::getVectorLengthParamPos(F.getIntrinsicID());
-    if (VecLenParamPos.hasValue()) {
-      Type *VecLenParamType = F.getArg(VecLenParamPos.getValue())->getType();
+    if (VecLenParamPos) {
+      Type *VecLenParamType = F.getArg(VecLenParamPos.value())->getType();
       ASSERT_TRUE(VecLenParamType->isIntegerTy(32));
     }
   }
@@ -406,13 +406,13 @@ TEST_F(VPIntrinsicTest, VPReductions) {
 
     if (!VPReductionIntrinsic::isVPReduction(ID)) {
       EXPECT_EQ(VPRedI, nullptr);
-      EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).hasValue(), false);
-      EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).hasValue(), false);
+      EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).has_value(), false);
+      EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).has_value(), false);
       continue;
     }
 
-    EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).hasValue(), true);
-    EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).hasValue(), true);
+    EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).has_value(), true);
+    EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).has_value(), true);
     ASSERT_NE(VPRedI, nullptr);
     EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID),
               VPRedI->getStartParamPos());

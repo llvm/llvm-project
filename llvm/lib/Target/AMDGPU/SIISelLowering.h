@@ -48,6 +48,7 @@ private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
   SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;
+  SDValue getLDSKernelId(SelectionDAG &DAG, const SDLoc &SL) const;
   SDValue lowerKernargMemParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                    const SDLoc &SL, SDValue Chain,
                                    uint64_t Offset, Align Alignment,
@@ -394,6 +395,7 @@ public:
                               MachineBasicBlock *BB) const override;
 
   bool hasBitPreservingFPLogic(EVT VT) const override;
+  bool hasAtomicFaddRtnForTy(SDValue &Op) const;
   bool enableAggressiveFMAFusion(EVT VT) const override;
   bool enableAggressiveFMAFusion(LLT Ty) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -485,10 +487,10 @@ public:
   AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
-  virtual const TargetRegisterClass *
-  getRegClassFor(MVT VT, bool isDivergent) const override;
-  virtual bool requiresUniformRegister(MachineFunction &MF,
-                                       const Value *V) const override;
+  const TargetRegisterClass *getRegClassFor(MVT VT,
+                                            bool isDivergent) const override;
+  bool requiresUniformRegister(MachineFunction &MF,
+                               const Value *V) const override;
   Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
   void allocateHSAUserSGPRs(CCState &CCInfo,

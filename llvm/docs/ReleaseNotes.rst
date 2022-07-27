@@ -47,35 +47,11 @@ Non-comprehensive list of changes in this release
 Update on required toolchains to build LLVM
 -------------------------------------------
 
-With LLVM 15.x we will raise the version requirements of the toolchain used
-to build LLVM. The new requirements are as follows:
-
-* GCC >= 7.1
-* Clang >= 5.0
-* Apple Clang >= 9.3
-* Visual Studio 2019 >= 16.7
-
-In LLVM 15.x these requirements will be "soft" requirements and the version
-check can be skipped by passing -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON
-to CMake.
-
-With the release of LLVM 16.x these requirements will be hard and LLVM developers
-can start using C++17 features, making it impossible to build with older
-versions of these toolchains.
-
 Changes to the LLVM IR
 ----------------------
 
 Changes to building LLVM
 ------------------------
-
-* Omitting ``CMAKE_BUILD_TYPE`` when using a single configuration generator is now
-  an error. You now have to pass ``-DCMAKE_BUILD_TYPE=<type>`` in order to configure
-  LLVM. This is done to help new users of LLVM select the correct type: since building
-  LLVM in Debug mode is very resource intensive, we want to make sure that new users
-  make the choice that lines up with their usage. We have also improved documentation
-  around this setting that should help new users. You can find this documentation
-  `here <https://llvm.org/docs/CMake.html#cmake-build-type>`_.
 
 Changes to TableGen
 -------------------
@@ -86,29 +62,16 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
-* 8 and 16-bit atomic loads and stores are now supported
-
-
 Changes to the ARM Backend
 --------------------------
-
-* Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
-* Added support for the Armv8.1-M PACBTI-M extension.
-* Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
-* Added support for the Armv8.1-M PACBTI-M extension.
-* Removed the deprecation of ARMv8-A T32 Complex IT blocks. No deprecation
-  warnings will be generated and -mrestrict-it is now always off by default.
-  Previously it was on by default for Armv8 and off for all other architecture
-  versions.
-* Added a pass to workaround Cortex-A57 Erratum 1742098 and Cortex-A72
-  Erratum 1655431. This is enabled by default when targeting either CPU.
-* Implemented generation of Windows SEH unwind information.
-* Switched the MinGW target to use SEH instead of DWARF for unwind information.
 
 Changes to the AVR Backend
 --------------------------
 
 * ...
+
+Changes to the DirectX Backend
+------------------------------
 
 Changes to the Hexagon Backend
 ------------------------------
@@ -128,8 +91,6 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* The Zvfh extension was added.
-
 Changes to the WebAssembly Backend
 ----------------------------------
 
@@ -138,18 +99,12 @@ Changes to the WebAssembly Backend
 Changes to the X86 Backend
 --------------------------
 
-* Support ``half`` type on SSE2 and above targets.
-
 Changes to the OCaml bindings
 -----------------------------
 
 
 Changes to the C API
 --------------------
-
-* Add ``LLVMGetCastOpcode`` function to aid users of ``LLVMBuildCast`` in
-  resolving the best cast operation given a source value and destination type.
-  This function is a direct wrapper of ``CastInst::getCastOpcode``.
 
 Changes to the Go bindings
 --------------------------
@@ -164,6 +119,12 @@ Changes to the DAG infrastructure
 ---------------------------------
 
 
+Changes to the Metadata Info
+---------------------------------
+
+* Add Module Flags Metadata ``stack-protector-guard-symbol`` which specify a
+  symbol for addressing the stack-protector guard.
+
 Changes to the Debug Info
 ---------------------------------
 
@@ -175,36 +136,12 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* The "memory region" command now has a "--all" option to list all
-  memory regions (including unmapped ranges). This is the equivalent
-  of using address 0 then repeating the command until all regions
-  have been listed.
-* Added "--show-tags" option to the "memory find" command. This is off by default.
-  When enabled, if the target value is found in tagged memory, the tags for that
-  memory will be shown inline with the memory contents.
-* Various memory related parts of LLDB have been updated to handle
-  non-address bits (such as AArch64 pointer signatures):
-
-  * "memory read", "memory write" and "memory find" can now be used with
-    addresses with non-address bits.
-  * All the read and write memory methods on SBProccess and SBTarget can
-    be used with addreses with non-address bits.
-  * When printing a pointer expression, LLDB can now dereference the result
-    even if it has non-address bits.
-  * The memory cache now ignores non-address bits when looking up memory
-    locations. This prevents us reading locations multiple times, or not
-    writing out new values if the addresses have different non-address bits.
-
 Changes to Sanitizers
 ---------------------
 
 
 Other Changes
 -------------
-* The code for the `LLVM Visual Studio integration
-  <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_
-  has been removed. This had been obsolete and abandoned since Visual Studio
-  started including an integration by default in 2019.
 
 External Open Source Projects Using LLVM 15
 ===========================================

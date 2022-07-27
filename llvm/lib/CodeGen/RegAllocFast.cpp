@@ -359,7 +359,16 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
   // If this block loops back to itself, it is necessary to check whether the
   // use comes after the def.
   if (MBB->isSuccessor(MBB)) {
-    SelfLoopDef = MRI->getUniqueVRegDef(VirtReg);
+    // Find the first def in the self loop MBB.
+    for (const MachineInstr &DefInst : MRI->def_instructions(VirtReg)) {
+      if (DefInst.getParent() != MBB) {
+        MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+        return true;
+      } else {
+        if (!SelfLoopDef || dominates(*MBB, DefInst.getIterator(), SelfLoopDef))
+          SelfLoopDef = &DefInst;
+      }
+    }
     if (!SelfLoopDef) {
       MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
       return true;
@@ -1469,7 +1478,7 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   RegUnitStates.assign(TRI->getNumRegUnits(), regFree);
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 
-  for (auto &LiveReg : MBB.liveouts())
+  for (const auto &LiveReg : MBB.liveouts())
     setPhysRegState(LiveReg.PhysReg, regPreAssigned);
 
   Coalesced.clear();
@@ -1571,8 +1580,7 @@ FunctionPass *llvm::createFastRegisterAllocator() {
   return new RegAllocFast();
 }
 
-FunctionPass *llvm::createFastRegisterAllocator(
-  std::function<bool(const TargetRegisterInfo &TRI,
-                     const TargetRegisterClass &RC)> Ftor, bool ClearVirtRegs) {
+FunctionPass *llvm::createFastRegisterAllocator(RegClassFilterFunc Ftor,
+                                                bool ClearVirtRegs) {
   return new RegAllocFast(Ftor, ClearVirtRegs);
 }

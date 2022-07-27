@@ -9,9 +9,10 @@
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/Patterns.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
@@ -127,17 +128,21 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
 // LoopPeelOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<scf::ForOp> transform::LoopPeelOp::applyToOne(scf::ForOp loop) {
+DiagnosedSilenceableFailure
+transform::LoopPeelOp::applyToOne(scf::ForOp target,
+                                  SmallVector<Operation *> &results,
+                                  transform::TransformState &state) {
   scf::ForOp result;
-  IRRewriter rewriter(loop->getContext());
+  IRRewriter rewriter(target->getContext());
+  // This helper returns failure when peeling does not occur (i.e. when the IR
+  // is not modified). This is not a failure for the op as the postcondition:
+  //    "the loop trip count is divisible by the step"
+  // is valid.
   LogicalResult status =
-      scf::peelAndCanonicalizeForLoop(rewriter, loop, result);
-  if (failed(status)) {
-    if (getFailIfAlreadyDivisible())
-      return reportUnknownTransformError(loop);
-    return loop;
-  }
-  return result;
+      scf::peelAndCanonicalizeForLoop(rewriter, target, result);
+  // TODO: Return both the peeled loop and the remainder loop.
+  results.push_back(failed(status) ? target : result);
+  return DiagnosedSilenceableFailure(success());
 }
 
 //===----------------------------------------------------------------------===//
@@ -175,12 +180,15 @@ loopScheduling(scf::ForOp forOp,
   for (const auto &it : wrappedSchedule) {
     for (Operation *op : it.second) {
       unsigned cycle = opCycles[op];
-      schedule.push_back(std::make_pair(op, cycle / iterationInterval));
+      schedule.emplace_back(op, cycle / iterationInterval);
     }
   }
 }
 
-FailureOr<scf::ForOp> transform::LoopPipelineOp::applyToOne(scf::ForOp loop) {
+DiagnosedSilenceableFailure
+transform::LoopPipelineOp::applyToOne(scf::ForOp target,
+                                      SmallVector<Operation *> &results,
+                                      transform::TransformState &state) {
   scf::PipeliningOption options;
   options.getScheduleFn =
       [this](scf::ForOp forOp,
@@ -188,25 +196,33 @@ FailureOr<scf::ForOp> transform::LoopPipelineOp::applyToOne(scf::ForOp loop) {
         loopScheduling(forOp, schedule, getIterationInterval(),
                        getReadLatency());
       };
-
-  scf::ForLoopPipeliningPattern pattern(options, loop->getContext());
+  scf::ForLoopPipeliningPattern pattern(options, target->getContext());
   SimpleRewriter rewriter(getContext());
-  rewriter.setInsertionPoint(loop);
+  rewriter.setInsertionPoint(target);
   FailureOr<scf::ForOp> patternResult =
-      pattern.returningMatchAndRewrite(loop, rewriter);
-  if (failed(patternResult))
-    return reportUnknownTransformError(loop);
-  return patternResult;
+      pattern.returningMatchAndRewrite(target, rewriter);
+  if (succeeded(patternResult)) {
+    results.push_back(*patternResult);
+    return DiagnosedSilenceableFailure(success());
+  }
+  results.assign(1, nullptr);
+  return emitDefaultSilenceableFailure(target);
 }
 
 //===----------------------------------------------------------------------===//
 // LoopUnrollOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::LoopUnrollOp::applyToOne(scf::ForOp loop) {
-  if (failed(loopUnrollByFactor(loop, getFactor())))
-    return reportUnknownTransformError(loop);
-  return success();
+DiagnosedSilenceableFailure
+transform::LoopUnrollOp::applyToOne(scf::ForOp target,
+                                    SmallVector<Operation *> &results,
+                                    transform::TransformState &state) {
+  if (failed(loopUnrollByFactor(target, getFactor()))) {
+    Diagnostic diag(target->getLoc(), DiagnosticSeverity::Note);
+    diag << "op failed to unroll";
+    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+  }
+  return DiagnosedSilenceableFailure(success());
 }
 
 //===----------------------------------------------------------------------===//
@@ -218,9 +234,14 @@ class SCFTransformDialectExtension
     : public transform::TransformDialectExtension<
           SCFTransformDialectExtension> {
 public:
-  SCFTransformDialectExtension() {
-    declareDependentDialect<AffineDialect>();
-    declareDependentDialect<func::FuncDialect>();
+  using Base::Base;
+
+  void init() {
+    declareDependentDialect<pdl::PDLDialect>();
+
+    declareGeneratedDialect<AffineDialect>();
+    declareGeneratedDialect<func::FuncDialect>();
+
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.cpp.inc"

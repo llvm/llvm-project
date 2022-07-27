@@ -33,7 +33,7 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   }
 
   uint64_t Major = Version.getMajor();
-  uint64_t Minor = Version.getMinor().getValue();
+  uint64_t Minor = *Version.getMinor();
 
   auto &Ctx = M.getContext();
   IRBuilder<> B(M.getContext());

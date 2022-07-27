@@ -406,7 +406,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   Constant *C, *C1;
   if (match(Op0, m_Constant(C)) &&
       match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
-    Constant *NewC = ConstantExpr::get(I.getOpcode(), C, C1);
+    Value *NewC = Builder.CreateBinOp(I.getOpcode(), C, C1);
     return BinaryOperator::Create(I.getOpcode(), NewC, A);
   }
 
@@ -566,6 +566,13 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
         return false;
     return true;
   }
+  case Instruction::Mul: {
+    const APInt *MulConst;
+    // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
+    return !IsLeftShift && match(I->getOperand(1), m_APInt(MulConst)) &&
+           MulConst->isNegatedPowerOf2() &&
+           MulConst->countTrailingZeros() == NumBits;
+  }
   }
 }
 
@@ -680,6 +687,17 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
                                               isLeftShift, IC, DL));
     return PN;
   }
+  case Instruction::Mul: {
+    assert(!isLeftShift && "Unexpected shift direction!");
+    auto *Neg = BinaryOperator::CreateNeg(I->getOperand(0));
+    IC.InsertNewInstWith(Neg, *I);
+    unsigned TypeWidth = I->getType()->getScalarSizeInBits();
+    APInt Mask = APInt::getLowBitsSet(TypeWidth, TypeWidth - NumBits);
+    auto *And = BinaryOperator::CreateAnd(Neg,
+                                          ConstantInt::get(I->getType(), Mask));
+    And->takeName(I);
+    return IC.InsertNewInstWith(And, *I);
+  }
   }
 }
 
@@ -709,8 +727,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   Constant *C2;
   Value *X;
   if (match(Op0, m_BinOp(I.getOpcode(), m_Constant(C2), m_Value(X))))
-    return BinaryOperator::Create(I.getOpcode(),
-                                  ConstantExpr::get(I.getOpcode(), C2, C1), X);
+    return BinaryOperator::Create(
+        I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), C2, C1), X);
 
   const APInt *Op1C;
   if (!match(C1, m_APInt(Op1C)))
@@ -750,8 +768,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     const APInt *Op0C;
     if (match(Op0BO->getOperand(1), m_APInt(Op0C))) {
       if (canShiftBinOpWithConstantRHS(I, Op0BO)) {
-        Constant *NewRHS = ConstantExpr::get(
-            I.getOpcode(), cast<Constant>(Op0BO->getOperand(1)), C1);
+        Value *NewRHS =
+            Builder.CreateBinOp(I.getOpcode(), Op0BO->getOperand(1), C1);
 
         Value *NewShift =
             Builder.CreateBinOp(I.getOpcode(), Op0BO->getOperand(0), C1);
@@ -779,8 +797,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     if (!isa<Constant>(FalseVal) && TBO->getOperand(0) == FalseVal &&
         match(TBO->getOperand(1), m_APInt(C)) &&
         canShiftBinOpWithConstantRHS(I, TBO)) {
-      Constant *NewRHS = ConstantExpr::get(
-          I.getOpcode(), cast<Constant>(TBO->getOperand(1)), C1);
+      Value *NewRHS =
+          Builder.CreateBinOp(I.getOpcode(), TBO->getOperand(1), C1);
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
@@ -796,8 +814,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     if (!isa<Constant>(TrueVal) && FBO->getOperand(0) == TrueVal &&
         match(FBO->getOperand(1), m_APInt(C)) &&
         canShiftBinOpWithConstantRHS(I, FBO)) {
-      Constant *NewRHS = ConstantExpr::get(
-          I.getOpcode(), cast<Constant>(FBO->getOperand(1)), C1);
+      Value *NewRHS =
+          Builder.CreateBinOp(I.getOpcode(), FBO->getOperand(1), C1);
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);

@@ -153,7 +153,7 @@ static llvm::json::Object encodeError(llvm::Error error) {
 
 /// Decode the given JSON object into an error.
 llvm::Error decodeError(const llvm::json::Object &o) {
-  StringRef msg = o.getString("message").getValueOr("Unspecified error");
+  StringRef msg = o.getString("message").value_or("Unspecified error");
   if (Optional<int64_t> code = o.getInteger("code"))
     return llvm::make_error<LSPError>(msg.str(), ErrorCode(*code));
   return llvm::make_error<llvm::StringError>(llvm::inconvertibleErrorCode(),

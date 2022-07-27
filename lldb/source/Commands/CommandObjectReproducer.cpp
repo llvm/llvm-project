@@ -11,6 +11,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/GDBRemote.h"
@@ -24,94 +25,8 @@ using namespace llvm;
 using namespace lldb_private;
 using namespace lldb_private::repro;
 
-enum ReproducerProvider {
-  eReproducerProviderCommands,
-  eReproducerProviderFiles,
-  eReproducerProviderSymbolFiles,
-  eReproducerProviderGDB,
-  eReproducerProviderProcessInfo,
-  eReproducerProviderVersion,
-  eReproducerProviderWorkingDirectory,
-  eReproducerProviderHomeDirectory,
-  eReproducerProviderNone
-};
-
-static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
-    {
-        eReproducerProviderCommands,
-        "commands",
-        "Command Interpreter Commands",
-    },
-    {
-        eReproducerProviderFiles,
-        "files",
-        "Files",
-    },
-    {
-        eReproducerProviderSymbolFiles,
-        "symbol-files",
-        "Symbol Files",
-    },
-    {
-        eReproducerProviderGDB,
-        "gdb",
-        "GDB Remote Packets",
-    },
-    {
-        eReproducerProviderProcessInfo,
-        "processes",
-        "Process Info",
-    },
-    {
-        eReproducerProviderVersion,
-        "version",
-        "Version",
-    },
-    {
-        eReproducerProviderWorkingDirectory,
-        "cwd",
-        "Working Directory",
-    },
-    {
-        eReproducerProviderHomeDirectory,
-        "home",
-        "Home Directory",
-    },
-    {
-        eReproducerProviderNone,
-        "none",
-        "None",
-    },
-};
-
-static constexpr OptionEnumValues ReproducerProviderType() {
-  return OptionEnumValues(g_reproducer_provider_type);
-}
-
 #define LLDB_OPTIONS_reproducer_dump
 #include "CommandOptions.inc"
-
-enum ReproducerCrashSignal {
-  eReproducerCrashSigill,
-  eReproducerCrashSigsegv,
-};
-
-static constexpr OptionEnumValueElement g_reproducer_signaltype[] = {
-    {
-        eReproducerCrashSigill,
-        "SIGILL",
-        "Illegal instruction",
-    },
-    {
-        eReproducerCrashSigsegv,
-        "SIGSEGV",
-        "Segmentation fault",
-    },
-};
-
-static constexpr OptionEnumValues ReproducerSignalType() {
-  return OptionEnumValues(g_reproducer_signaltype);
-}
 
 #define LLDB_OPTIONS_reproducer_xcrash
 #include "CommandOptions.inc"
@@ -182,12 +97,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     auto &r = Reproducer::Instance();
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
@@ -260,12 +169,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     auto &r = Reproducer::Instance();
 
     if (!r.IsCapturing()) {
@@ -309,12 +212,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     auto &r = Reproducer::Instance();
     if (r.IsCapturing()) {
       result.GetOutputStream() << "Reproducer is in capture mode.\n";
@@ -394,12 +291,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     llvm::Optional<Loader> loader_storage;
     Loader *loader =
         GetLoaderFromPathOrCurrent(loader_storage, result, m_options.file);

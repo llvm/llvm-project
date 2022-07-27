@@ -75,9 +75,9 @@ define i32 @dec_pgso(i32 %x) !prof !14 {
 }
 
 declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
-declare void @other(i32* ) nounwind;
+declare void @other(ptr ) nounwind;
 
-define void @cond_ae_to_cond_ne(i32* %p) nounwind {
+define void @cond_ae_to_cond_ne(ptr %p) nounwind {
 ; INCDEC-LABEL: cond_ae_to_cond_ne:
 ; INCDEC:       # %bb.0: # %entry
 ; INCDEC-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -98,15 +98,15 @@ define void @cond_ae_to_cond_ne(i32* %p) nounwind {
 ; ADD-NEXT:  .LBB6_1: # %return
 ; ADD-NEXT:    retl
 entry:
-  %t0 = load i32, i32* %p, align 8
+  %t0 = load i32, ptr %p, align 8
   %add_ov = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %t0, i32 1)
   %inc = extractvalue { i32, i1 } %add_ov, 0
-  store i32 %inc, i32* %p, align 8
+  store i32 %inc, ptr %p, align 8
   %ov = extractvalue { i32, i1 } %add_ov, 1
   br i1 %ov, label %if.end4, label %return
 
 if.end4:
-  tail call void @other(i32* %p) nounwind
+  tail call void @other(ptr %p) nounwind
   br label %return
 
 return:
@@ -120,7 +120,7 @@ declare void @external_a()
 declare void @external_b()
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8, i8)
 
-define void @test_tail_call(i32* %ptr) nounwind {
+define void @test_tail_call(ptr %ptr) nounwind {
 ; INCDEC-LABEL: test_tail_call:
 ; INCDEC:       # %bb.0: # %entry
 ; INCDEC-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -149,18 +149,18 @@ define void @test_tail_call(i32* %ptr) nounwind {
 ; ADD-NEXT:  .LBB7_2: # %else
 ; ADD-NEXT:    jmp external_b@PLT # TAILCALL
 entry:
-  %val = load i32, i32* %ptr
+  %val = load i32, ptr %ptr
   %add_ov = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %val, i32 1)
   %inc = extractvalue { i32, i1 } %add_ov, 0
-  store i32 %inc, i32* %ptr
+  store i32 %inc, ptr %ptr
   %cmp = extractvalue { i32, i1 } %add_ov, 1
-  %aval = load volatile i8, i8* @a
+  %aval = load volatile i8, ptr @a
   %add_ov2 = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %aval, i8 1)
   %inc2 = extractvalue { i8, i1 } %add_ov2, 0
-  store volatile i8 %inc2, i8* @a
+  store volatile i8 %inc2, ptr @a
   %cmp2 = extractvalue { i8, i1 } %add_ov2, 1
   %conv5 = zext i1 %cmp2 to i8
-  store i8 %conv5, i8* @d
+  store i8 %conv5, ptr @d
   br i1 %cmp, label %then, label %else
 
 then:

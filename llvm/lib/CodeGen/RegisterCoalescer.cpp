@@ -1148,7 +1148,7 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     // we need to keep the copy of B = A at the end of Pred if we remove
     // B = A from MBB.
     bool ValB_Changed = false;
-    for (auto VNI : IntB.valnos) {
+    for (auto *VNI : IntB.valnos) {
       if (VNI->isUnused())
         continue;
       if (PVal->def < VNI->def && VNI->def < LIS->getMBBEndIdx(Pred)) {
@@ -1306,7 +1306,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   }
   if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
-  if (!TII->isTriviallyReMaterializable(*DefMI, AA))
+  if (!TII->isTriviallyReMaterializable(*DefMI))
     return false;
   if (!definesFullReg(*DefMI, SrcReg))
     return false;

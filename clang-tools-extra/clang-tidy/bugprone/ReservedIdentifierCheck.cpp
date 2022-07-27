@@ -132,7 +132,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
     auto InProgressFixup = [&] {
       return Info
           .map([](const FailureInfo &Info) { return StringRef(Info.Fixup); })
-          .getValueOr(Name);
+          .value_or(Name);
     };
     if (auto Fixup = getDoubleUnderscoreFixup(InProgressFixup(), LangOpts))
       AppendFailure(DoubleUnderscoreTag, std::move(*Fixup));

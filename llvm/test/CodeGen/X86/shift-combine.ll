@@ -21,12 +21,12 @@ define dso_local i32 @test_lshr_and(i32 %x) {
 ; X64-NEXT:    retq
   %tmp2 = lshr i32 %x, 2
   %tmp3 = and i32 %tmp2, 3
-  %tmp4 = getelementptr [4 x i32], [4 x i32]* @array, i32 0, i32 %tmp3
-  %tmp5 = load i32, i32* %tmp4, align 4
+  %tmp4 = getelementptr [4 x i32], ptr @array, i32 0, i32 %tmp3
+  %tmp5 = load i32, ptr %tmp4, align 4
   ret i32 %tmp5
 }
 
-define dso_local i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
+define dso_local ptr @test_exact1(i32 %a, i32 %b, ptr %x)  {
 ; X32-LABEL: test_exact1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -44,11 +44,11 @@ define dso_local i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = ashr exact i32 %sub, 3
-  %gep = getelementptr inbounds i32, i32* %x, i32 %shr
-  ret i32* %gep
+  %gep = getelementptr inbounds i32, ptr %x, i32 %shr
+  ret ptr %gep
 }
 
-define dso_local i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
+define dso_local ptr @test_exact2(i32 %a, i32 %b, ptr %x)  {
 ; X32-LABEL: test_exact2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -66,11 +66,11 @@ define dso_local i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = ashr exact i32 %sub, 3
-  %gep = getelementptr inbounds i32, i32* %x, i32 %shr
-  ret i32* %gep
+  %gep = getelementptr inbounds i32, ptr %x, i32 %shr
+  ret ptr %gep
 }
 
-define dso_local i32* @test_exact3(i32 %a, i32 %b, i32* %x)  {
+define dso_local ptr @test_exact3(i32 %a, i32 %b, ptr %x)  {
 ; X32-LABEL: test_exact3:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -87,11 +87,11 @@ define dso_local i32* @test_exact3(i32 %a, i32 %b, i32* %x)  {
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = ashr exact i32 %sub, 2
-  %gep = getelementptr inbounds i32, i32* %x, i32 %shr
-  ret i32* %gep
+  %gep = getelementptr inbounds i32, ptr %x, i32 %shr
+  ret ptr %gep
 }
 
-define dso_local i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
+define dso_local ptr @test_exact4(i32 %a, i32 %b, ptr %x)  {
 ; X32-LABEL: test_exact4:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -109,11 +109,11 @@ define dso_local i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = lshr exact i32 %sub, 3
-  %gep = getelementptr inbounds i32, i32* %x, i32 %shr
-  ret i32* %gep
+  %gep = getelementptr inbounds i32, ptr %x, i32 %shr
+  ret ptr %gep
 }
 
-define dso_local i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
+define dso_local ptr @test_exact5(i32 %a, i32 %b, ptr %x)  {
 ; X32-LABEL: test_exact5:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -131,11 +131,11 @@ define dso_local i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = lshr exact i32 %sub, 3
-  %gep = getelementptr inbounds i32, i32* %x, i32 %shr
-  ret i32* %gep
+  %gep = getelementptr inbounds i32, ptr %x, i32 %shr
+  ret ptr %gep
 }
 
-define dso_local i32* @test_exact6(i32 %a, i32 %b, i32* %x)  {
+define dso_local ptr @test_exact6(i32 %a, i32 %b, ptr %x)  {
 ; X32-LABEL: test_exact6:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -151,8 +151,8 @@ define dso_local i32* @test_exact6(i32 %a, i32 %b, i32* %x)  {
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = lshr exact i32 %sub, 2
-  %gep = getelementptr inbounds i32, i32* %x, i32 %shr
-  ret i32* %gep
+  %gep = getelementptr inbounds i32, ptr %x, i32 %shr
+  ret ptr %gep
 }
 
 ; PR42644 - https://bugs.llvm.org/show_bug.cgi?id=42644
@@ -180,7 +180,7 @@ define i64 @ashr_add_shl_i32(i64 %r) nounwind {
 define i64 @ashr_add_shl_i8(i64 %r) nounwind {
 ; X32-LABEL: ashr_add_shl_i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addb $2, %al
 ; X32-NEXT:    movsbl %al, %eax
 ; X32-NEXT:    movl %eax, %edx
@@ -204,8 +204,8 @@ define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X32-NEXT:    incb %dh
@@ -304,7 +304,7 @@ define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) nounwind {
   ret i64 %conv1
 }
 
-define dso_local i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, i32* %p) nounwind {
+define dso_local i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, ptr %p) nounwind {
 ; X32-LABEL: ashr_add_shl_i32_i8_extra_use1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -325,12 +325,12 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, i32* %p) nounwind {
 ; X64-NEXT:    retq
   %conv = shl i32 %r, 24
   %sext = add i32 %conv, 33554432
-  store i32 %sext, i32* %p
+  store i32 %sext, ptr %p
   %conv1 = ashr i32 %sext, 24
   ret i32 %conv1
 }
 
-define dso_local i32 @ashr_add_shl_i32_i8_extra_use2(i32 %r, i32* %p) nounwind {
+define dso_local i32 @ashr_add_shl_i32_i8_extra_use2(i32 %r, ptr %p) nounwind {
 ; X32-LABEL: ashr_add_shl_i32_i8_extra_use2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -350,13 +350,13 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use2(i32 %r, i32* %p) nounwind {
 ; X64-NEXT:    sarl $24, %eax
 ; X64-NEXT:    retq
   %conv = shl i32 %r, 24
-  store i32 %conv, i32* %p
+  store i32 %conv, ptr %p
   %sext = add i32 %conv, 33554432
   %conv1 = ashr i32 %sext, 24
   ret i32 %conv1
 }
 
-define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, i32* %p1, i32* %p2) nounwind {
+define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: ashr_add_shl_i32_i8_extra_use3:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -379,9 +379,9 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, i32* %p1, i32* %p2)
 ; X64-NEXT:    sarl $24, %eax
 ; X64-NEXT:    retq
   %conv = shl i32 %r, 24
-  store i32 %conv, i32* %p1
+  store i32 %conv, ptr %p1
   %sext = add i32 %conv, 33554432
-  store i32 %sext, i32* %p2
+  store i32 %sext, ptr %p2
   %conv1 = ashr i32 %sext, 24
   ret i32 %conv1
 }
@@ -405,8 +405,8 @@ define dso_local void @PR42880(i32 %t0) {
 ; X64-NEXT:  # %bb.2: # %if
 ; X64-NEXT:  .LBB16_1: # %then
   %sub = add nsw i32 %t0, -1
-  %add.ptr.i94 = getelementptr inbounds %"class.QPainterPath", %"class.QPainterPath"* null, i32 %sub
-  %x = ptrtoint %"class.QPainterPath"* %add.ptr.i94 to i32
+  %add.ptr.i94 = getelementptr inbounds %"class.QPainterPath", ptr null, i32 %sub
+  %x = ptrtoint ptr %add.ptr.i94 to i32
   %sub2 = sub i32 %x, 0
   %div = sdiv exact i32 %sub2, 24
   br i1 undef, label %if, label %then
@@ -417,4 +417,92 @@ then:
 
 if:
   unreachable
+}
+
+; The mul here is the equivalent of (neg (shl X, 32)).
+define i64 @ashr_add_neg_shl_i32(i64 %r) nounwind {
+; X32-LABEL: ashr_add_neg_shl_i32:
+; X32:       # %bb.0:
+; X32-NEXT:    movl $1, %eax
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    sarl $31, %edx
+; X32-NEXT:    retl
+;
+; X64-LABEL: ashr_add_neg_shl_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    cltq
+; X64-NEXT:    retq
+  %conv = mul i64 %r, -4294967296
+  %sext = add i64 %conv, 4294967296
+  %conv1 = ashr i64 %sext, 32
+  ret i64 %conv1
+}
+
+; The mul here is the equivalent of (neg (shl X, 56)).
+define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
+; X32-LABEL: ashr_add_neg_shl_i8:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shll $24, %eax
+; X32-NEXT:    movl $33554432, %edx # imm = 0x2000000
+; X32-NEXT:    subl %eax, %edx
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    sarl $24, %eax
+; X32-NEXT:    sarl $31, %edx
+; X32-NEXT:    retl
+;
+; X64-LABEL: ashr_add_neg_shl_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $2, %al
+; X64-NEXT:    subb %dil, %al
+; X64-NEXT:    movsbq %al, %rax
+; X64-NEXT:    retq
+  %conv = mul i64 %r, -72057594037927936
+  %sext = add i64 %conv, 144115188075855872
+  %conv1 = ashr i64 %sext, 56
+  ret i64 %conv1
+}
+
+; The mul here is the equivalent of (neg (shl X, 24)).
+define <4 x i32> @ashr_add_neg_shl_v4i8(<4 x i32> %r) nounwind {
+; X32-LABEL: ashr_add_neg_shl_v4i8:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb $1, %cl
+; X32-NEXT:    movb $1, %dl
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %dl
+; X32-NEXT:    movsbl %dl, %edx
+; X32-NEXT:    movb $1, %ch
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    movsbl %ch, %esi
+; X32-NEXT:    movb $1, %ch
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    movsbl %ch, %edi
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movsbl %cl, %ecx
+; X32-NEXT:    movl %ecx, 12(%eax)
+; X32-NEXT:    movl %edi, 8(%eax)
+; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    movl %edx, (%eax)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    retl $4
+;
+; X64-LABEL: ashr_add_neg_shl_v4i8:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $24, %xmm0
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [16777216,16777216,16777216,16777216]
+; X64-NEXT:    psubd %xmm0, %xmm1
+; X64-NEXT:    psrad $24, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    retq
+  %conv = mul <4 x i32> %r, <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
+  %sext = add <4 x i32> %conv, <i32 16777216, i32 16777216, i32 16777216, i32 16777216>
+  %conv1 = ashr <4 x i32> %sext, <i32 24, i32 24, i32 24, i32 24>
+  ret <4 x i32> %conv1
 }

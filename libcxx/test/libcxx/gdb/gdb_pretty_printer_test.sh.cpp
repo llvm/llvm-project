@@ -14,8 +14,8 @@
 // TODO: Investigate this failure, which happens only with the Bootstrapping build.
 // UNSUPPORTED: clang-13, clang-14, clang-15
 
-// TODO: Investigate this failure on GCC 11.2 (in Ubuntu Jammy)
-// UNSUPPORTED: gcc-11.2
+// TODO: Investigate this failure on GCC 12 (in Ubuntu Jammy)
+// UNSUPPORTED: gcc-12
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.

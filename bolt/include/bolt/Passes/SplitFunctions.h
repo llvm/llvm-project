@@ -18,18 +18,29 @@ namespace bolt {
 
 /// Split function code in multiple parts.
 class SplitFunctions : public BinaryFunctionPass {
-public:
-  /// Settings for splitting function bodies into hot/cold partitions.
-  enum SplittingType : char {
-    ST_NONE = 0, /// Do not split functions.
-    ST_LARGE,    /// In non-relocation mode, only split functions that
-                 /// are too large to fit into the original space.
-    ST_ALL,      /// Split all functions.
-  };
-
 private:
   /// Split function body into fragments.
-  void splitFunction(BinaryFunction &Function);
+  template <typename SplitStrategy>
+  void splitFunction(BinaryFunction &Function, SplitStrategy Strategy = {});
+
+  /// Map basic block labels to their trampoline block labels.
+  using TrampolineSetType = DenseMap<const MCSymbol *, const MCSymbol *>;
+
+  using BasicBlockOrderType = BinaryFunction::BasicBlockOrderType;
+
+  /// Create trampoline landing pads for exception handling code to guarantee
+  /// that every landing pad is placed in the same function fragment as the
+  /// corresponding thrower block. The trampoline landing pad, when created,
+  /// will redirect the execution to the real landing pad in a different
+  /// fragment.
+  TrampolineSetType createEHTrampolines(BinaryFunction &Function) const;
+
+  /// Merge trampolines into \p Layout without trampolines. The merge will place
+  /// a trampoline immediately before its destination. Used to revert the effect
+  /// of trampolines after createEHTrampolines().
+  BasicBlockOrderType
+  mergeEHTrampolines(BinaryFunction &BF, BasicBlockOrderType &Layout,
+                     const TrampolineSetType &Trampolines) const;
 
   std::atomic<uint64_t> SplitBytesHot{0ull};
   std::atomic<uint64_t> SplitBytesCold{0ull};

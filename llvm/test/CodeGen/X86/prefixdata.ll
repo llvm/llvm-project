@@ -22,7 +22,7 @@ define void @f() prefix i32 1 {
 ; ELF: .type g,@function
 ; ELF-NEXT: .quad	i
 ; ELF-NEXT: g:
-define void @g() prefix i32* @i {
+define void @g() prefix ptr @i {
   ret void
 }
 

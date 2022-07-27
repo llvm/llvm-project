@@ -14,8 +14,8 @@ define void @fp80(x86_fp80) {
 }
 
 ; CHECK: error: couldn't allocate input reg for constraint 'f'
-define void @f_constraint_i128(i128* %0) {
-  %2 = load i128, i128* %0, align 16
+define void @f_constraint_i128(ptr %0) {
+  %2 = load i128, ptr %0, align 16
   tail call void asm sideeffect "", "f"(i128 %2)
   ret void
 }
