@@ -70,7 +70,7 @@ namespace {
 //   keyword: `INT` becomes `INT`;
 //   terminal: `IDENTIFIER` becomes `IDENTIFIER`;
 std::string mangleSymbol(SymbolID SID, const Grammar &G) {
-  static std::string *TokNames = new std::string[]{
+  static auto &TokNames = *new std::vector<std::string>{
 #define TOK(X) llvm::StringRef(#X).upper(),
 #define KEYWORD(Keyword, Condition) llvm::StringRef(#Keyword).upper(),
 #include "clang/Basic/TokenKinds.def"
