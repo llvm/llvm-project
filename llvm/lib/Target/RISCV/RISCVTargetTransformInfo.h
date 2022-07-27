@@ -57,6 +57,7 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const;
   bool supportsScalableVectors() const { return ST->hasVInstructions(); }
+  bool enableScalableVectorization() const { return ST->hasVInstructions(); }
   PredicationStyle emitGetActiveLaneMask() const {
     return ST->hasVInstructions() ? PredicationStyle::Data
                                   : PredicationStyle::None;
