@@ -71,7 +71,13 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   case Instruction::Add:
   case Instruction::Or:
   case Instruction::Xor:
+    Takes12BitImm = true;
+    break;
   case Instruction::Mul:
+    // Negated power of 2 is a shift and a negate.
+    if (Imm.isNegatedPowerOf2())
+      return TTI::TCC_Free;
+    // FIXME: There is no MULI instruction.
     Takes12BitImm = true;
     break;
   case Instruction::Sub:
