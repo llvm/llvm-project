@@ -627,3 +627,52 @@ transform.with_pdl_patterns {
     }
   }
 }
+
+// -----
+
+func.func @bar() {
+  scf.execute_region {
+    // expected-remark @below {{transform applied}}
+    %0 = arith.constant 0 : i32
+    scf.yield
+  }
+
+  scf.execute_region {
+    // expected-remark @below {{transform applied}}
+    %1 = arith.constant 1 : i32
+    // expected-remark @below {{transform applied}}
+    %2 = arith.constant 2 : i32
+    scf.yield
+  }
+
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @const : benefit(1) {
+    %r = pdl.types
+    %0 = pdl.operation "arith.constant" -> (%r : !pdl.range<type>)
+    pdl.rewrite %0 with "transform.dialect"
+  }
+
+  pdl.pattern @execute_region : benefit(1) {
+    %r = pdl.types
+    %0 = pdl.operation "scf.execute_region" -> (%r : !pdl.range<type>)
+    pdl.rewrite %0 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %f = pdl_match @execute_region in %arg1
+    %results = transform.foreach %f -> !pdl.operation {
+    ^bb2(%arg2: !pdl.operation):
+      %g = transform.pdl_match @const in %arg2
+      transform.yield %g : !pdl.operation
+    }
+
+    // expected-remark @below {{3}}
+    transform.test_print_number_of_associated_payload_ir_ops %results
+    transform.test_print_remark_at_operand %results, "transform applied"
+  }
+}
