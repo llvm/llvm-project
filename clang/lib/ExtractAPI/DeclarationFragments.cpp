@@ -692,6 +692,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
   return Fragments.appendSpace()
       .append(getFragmentsForType(Property->getType(),
                                   Property->getASTContext(), After))
+      .appendSpace()
       .append(Property->getName(),
               DeclarationFragments::FragmentKind::Identifier)
       .append(std::move(After));
