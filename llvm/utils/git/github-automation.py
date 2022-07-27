@@ -301,7 +301,7 @@ class ReleaseWorkflow:
         pulls = repo.get_pulls(head=head)
         return pulls.totalCount != 0
 
-    def create_pull_request(self, owner:str, branch:str) -> bool:
+    def create_pull_request(self, owner:str, repo_name:str, branch:str) -> bool:
         """
         reate a pull request in `self.branch_repo_name`.  The base branch of the
         pull request will be choosen based on the the milestone attached to
@@ -327,7 +327,7 @@ class ReleaseWorkflow:
             push_done = False
             for i in range(0,5):
                 try:
-                    local_repo.git.fetch(f'https://github.com/{owner}/llvm-project', f'{branch}:{branch}')
+                    local_repo.git.fetch(f'https://github.com/{owner}/{repo_name}', f'{branch}:{branch}')
                     local_repo.git.push(self.push_url, f'{branch}:{head_branch}', force=True)
                     push_done = True
                     break
@@ -392,8 +392,9 @@ class ReleaseWorkflow:
                 m = re.match('([^/]+)/([^/]+)/(.+)', args)
                 if m:
                     owner = m.group(1)
+                    repo = m.group(2)
                     branch = m.group(3)
-                    return self.create_pull_request(owner, branch)
+                    return self.create_pull_request(owner, repo, branch)
 
         print("Do not understand input:")
         print(sys.stdin.readlines())
