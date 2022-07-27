@@ -30,6 +30,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_tuple:
   case Token::kw_vector:
   case Token::inttype:
+  case Token::kw_f8E5M2:
   case Token::kw_bf16:
   case Token::kw_f16:
   case Token::kw_f32:
@@ -286,6 +287,9 @@ Type Parser::parseNonFunctionType() {
   }
 
   // float-type
+  case Token::kw_f8E5M2:
+    consumeToken(Token::kw_f8E5M2);
+    return builder.getFloat8E5M2Type();
   case Token::kw_bf16:
     consumeToken(Token::kw_bf16);
     return builder.getBF16Type();
