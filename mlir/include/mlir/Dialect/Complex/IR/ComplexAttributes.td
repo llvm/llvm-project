@@ -34,8 +34,9 @@ def Complex_NumberAttr : Complex_Attr<"Number", "number"> {
     ```
   }];
 
-  let parameters = (ins APFloatParameter<"">:$real, APFloatParameter<"">:$imag, AttributeSelfTypeParameter<"">:$type);
-
+  let parameters = (ins APFloatParameter<"">:$real,
+                        APFloatParameter<"">:$imag,
+                        AttributeSelfTypeParameter<"">:$type);
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
 }
