@@ -557,7 +557,7 @@ class Input {
 public:
   template <size_t N2>
   TEST_CONSTEXPR_CXX20 Input(std::array<T, N2> from) {
-    static_assert(N2 <= N);
+    static_assert(N2 <= N, "");
 
     std::copy(from.begin(), from.end(), begin());
     size_ = N2;
