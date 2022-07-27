@@ -97,119 +97,119 @@ void DWARFTypePrinter::appendPointerLikeTypeBefore(DWARFDie D, DWARFDie Inner,
 DWARFDie
 DWARFTypePrinter::appendUnqualifiedNameBefore(DWARFDie D,
                                               std::string *OriginalFullName) {
+  Word = true;
+  if (!D) {
+    OS << "void";
+    return DWARFDie();
+  }
+  DWARFDie InnerDIE;
+  auto Inner = [&] { return InnerDIE = resolveReferencedType(D); };
+  const dwarf::Tag T = D.getTag();
+  switch (T) {
+  case DW_TAG_pointer_type: {
+    appendPointerLikeTypeBefore(D, Inner(), "*");
+    break;
+  }
+  case DW_TAG_subroutine_type: {
+    appendQualifiedNameBefore(Inner());
+    if (Word) {
+      OS << ' ';
+    }
+    Word = false;
+    break;
+  }
+  case DW_TAG_array_type: {
+    appendQualifiedNameBefore(Inner());
+    break;
+  }
+  case DW_TAG_reference_type:
+    appendPointerLikeTypeBefore(D, Inner(), "&");
+    break;
+  case DW_TAG_rvalue_reference_type:
+    appendPointerLikeTypeBefore(D, Inner(), "&&");
+    break;
+  case DW_TAG_ptr_to_member_type: {
+    appendQualifiedNameBefore(Inner());
+    if (needsParens(InnerDIE))
+      OS << '(';
+    else if (Word)
+      OS << ' ';
+    if (DWARFDie Cont = resolveReferencedType(D, DW_AT_containing_type)) {
+      appendQualifiedName(Cont);
+      EndedWithTemplate = false;
+      OS << "::";
+    }
+    OS << "*";
+    Word = false;
+    break;
+  }
+  case DW_TAG_APPLE_ptrauth_type:
+    appendQualifiedNameBefore(Inner());
+    break;
+  case DW_TAG_const_type:
+  case DW_TAG_volatile_type:
+    appendConstVolatileQualifierBefore(D);
+    break;
+  case DW_TAG_namespace: {
+    if (const char *Name = dwarf::toString(D.find(DW_AT_name), nullptr))
+      OS << Name;
+    else
+      OS << "(anonymous namespace)";
+    break;
+  }
+  case DW_TAG_unspecified_type: {
+    StringRef TypeName = D.getShortName();
+    if (TypeName == "decltype(nullptr)")
+      TypeName = "std::nullptr_t";
     Word = true;
-    if (!D) {
-      OS << "void";
+    OS << TypeName;
+    EndedWithTemplate = false;
+    break;
+  }
+    /*
+  case DW_TAG_structure_type:
+  case DW_TAG_class_type:
+  case DW_TAG_enumeration_type:
+  case DW_TAG_base_type:
+  */
+  default: {
+    const char *NamePtr = dwarf::toString(D.find(DW_AT_name), nullptr);
+    if (!NamePtr) {
+      appendTypeTagName(D.getTag());
       return DWARFDie();
     }
-    DWARFDie InnerDIE;
-    auto Inner = [&] { return InnerDIE = resolveReferencedType(D); };
-    const dwarf::Tag T = D.getTag();
-    switch (T) {
-    case DW_TAG_pointer_type: {
-      appendPointerLikeTypeBefore(D, Inner(), "*");
+    Word = true;
+    StringRef Name = NamePtr;
+    static constexpr StringRef MangledPrefix = "_STN|";
+    if (Name.startswith(MangledPrefix)) {
+      Name = Name.drop_front(MangledPrefix.size());
+      auto Separator = Name.find('|');
+      assert(Separator != StringRef::npos);
+      StringRef BaseName = Name.substr(0, Separator);
+      StringRef TemplateArgs = Name.substr(Separator + 1);
+      if (OriginalFullName)
+        *OriginalFullName = (BaseName + TemplateArgs).str();
+      Name = BaseName;
+    } else
+      EndedWithTemplate = Name.endswith(">");
+    OS << Name;
+    // This check would be insufficient for operator overloads like
+    // "operator>>" - but for now Clang doesn't try to simplify them, so this
+    // is OK. Add more nuanced operator overload handling here if/when needed.
+    if (Name.endswith(">"))
       break;
-    }
-    case DW_TAG_subroutine_type: {
-      appendQualifiedNameBefore(Inner());
-      if (Word) {
-        OS << ' ';
-      }
-      Word = false;
+    if (!appendTemplateParameters(D))
       break;
-    }
-    case DW_TAG_array_type: {
-      appendQualifiedNameBefore(Inner());
-      break;
-    }
-    case DW_TAG_reference_type:
-      appendPointerLikeTypeBefore(D, Inner(), "&");
-      break;
-    case DW_TAG_rvalue_reference_type:
-      appendPointerLikeTypeBefore(D, Inner(), "&&");
-      break;
-    case DW_TAG_ptr_to_member_type: {
-      appendQualifiedNameBefore(Inner());
-      if (needsParens(InnerDIE))
-        OS << '(';
-      else if (Word)
-        OS << ' ';
-      if (DWARFDie Cont = resolveReferencedType(D, DW_AT_containing_type)) {
-        appendQualifiedName(Cont);
-        EndedWithTemplate = false;
-        OS << "::";
-      }
-      OS << "*";
-      Word = false;
-      break;
-    }
-    case DW_TAG_APPLE_ptrauth_type:
-      appendQualifiedNameBefore(Inner());
-      break;
-    case DW_TAG_const_type:
-    case DW_TAG_volatile_type:
-      appendConstVolatileQualifierBefore(D);
-      break;
-    case DW_TAG_namespace: {
-      if (const char *Name = dwarf::toString(D.find(DW_AT_name), nullptr))
-        OS << Name;
-      else
-        OS << "(anonymous namespace)";
-      break;
-    }
-    case DW_TAG_unspecified_type: {
-      StringRef TypeName = D.getShortName();
-      if (TypeName == "decltype(nullptr)")
-        TypeName = "std::nullptr_t";
-      Word = true;
-      OS << TypeName;
-      EndedWithTemplate = false;
-      break;
-    }
-      /*
-    case DW_TAG_structure_type:
-    case DW_TAG_class_type:
-    case DW_TAG_enumeration_type:
-    case DW_TAG_base_type:
-    */
-    default: {
-      const char *NamePtr = dwarf::toString(D.find(DW_AT_name), nullptr);
-      if (!NamePtr) {
-        appendTypeTagName(D.getTag());
-        return DWARFDie();
-      }
-      Word = true;
-      StringRef Name = NamePtr;
-      static constexpr StringRef MangledPrefix = "_STN|";
-      if (Name.startswith(MangledPrefix)) {
-        Name = Name.drop_front(MangledPrefix.size());
-        auto Separator = Name.find('|');
-        assert(Separator != StringRef::npos);
-        StringRef BaseName = Name.substr(0, Separator);
-        StringRef TemplateArgs = Name.substr(Separator + 1);
-        if (OriginalFullName)
-          *OriginalFullName = (BaseName + TemplateArgs).str();
-        Name = BaseName;
-      } else
-        EndedWithTemplate = Name.endswith(">");
-      OS << Name;
-      // This check would be insufficient for operator overloads like
-      // "operator>>" - but for now Clang doesn't try to simplify them, so this
-      // is OK. Add more nuanced operator overload handling here if/when needed.
-      if (Name.endswith(">"))
-        break;
-      if (!appendTemplateParameters(D))
-        break;
 
-      if (EndedWithTemplate)
-        OS << ' ';
-      OS << '>';
-      EndedWithTemplate = true;
-      Word = true;
-      break;
-    }
-    }
-    return InnerDIE;
+    if (EndedWithTemplate)
+      OS << ' ';
+    OS << '>';
+    EndedWithTemplate = true;
+    Word = true;
+    break;
+  }
+  }
+  return InnerDIE;
 }
 
 void DWARFTypePrinter::appendUnqualifiedNameAfter(
