@@ -83,32 +83,20 @@ const NamedDecl *getDefinition(const NamedDecl *D) {
   if (const auto *CTD = dyn_cast<ClassTemplateDecl>(D))
     if (const auto *RD = CTD->getTemplatedDecl())
       return RD->getDefinition();
-  // Objective-C classes can have three types of declarations:
-  //
-  // - forward declaration: @class MyClass;
-  // - true declaration (interface definition): @interface MyClass ... @end
-  // - true definition (implementation): @implementation MyClass ... @end
-  //
-  // Objective-C categories are extensions are on classes:
-  //
-  // - declaration: @interface MyClass (Ext) ... @end
-  // - definition: @implementation MyClass (Ext) ... @end
-  //
-  // With one special case, a class extension, which is normally used to keep
-  // some declarations internal to a file without exposing them in a header.
-  //
-  // - class extension declaration: @interface MyClass () ... @end
-  // - which really links to class definition: @implementation MyClass ... @end
-  if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(D))
-    return ID->getImplementation();
-  if (const auto *CD = dyn_cast<ObjCCategoryDecl>(D)) {
-    if (CD->IsClassExtension()) {
-      if (const auto *ID = CD->getClassInterface())
-        return ID->getImplementation();
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    if (MD->isThisDeclarationADefinition())
+      return MD;
+    // Look for the method definition inside the implementation decl.
+    auto *DeclCtx = cast<Decl>(MD->getDeclContext());
+    if (DeclCtx->isInvalidDecl())
       return nullptr;
-    }
-    return CD->getImplementation();
+
+    if (const auto *CD = dyn_cast<ObjCContainerDecl>(DeclCtx))
+      if (const auto *Impl = getCorrespondingObjCImpl(CD))
+        return Impl->getMethod(MD->getSelector(), MD->isInstanceMethod());
   }
+  if (const auto *CD = dyn_cast<ObjCContainerDecl>(D))
+    return getCorrespondingObjCImpl(CD);
   // Only a single declaration is allowed.
   if (isa<ValueDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
       isa<TemplateTemplateParmDecl>(D)) // except cases above

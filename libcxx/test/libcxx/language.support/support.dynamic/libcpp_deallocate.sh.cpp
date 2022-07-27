@@ -9,8 +9,6 @@
 // test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // The dylibs shipped before macosx10.13 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results
 // in a link error.

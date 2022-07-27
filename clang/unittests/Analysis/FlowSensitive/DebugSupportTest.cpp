@@ -64,33 +64,24 @@ TEST(BoolValueDebugStringTest, Disjunction) {
 }
 
 TEST(BoolValueDebugStringTest, Implication) {
-  // B0 => B1, implemented as !B0 v B1
+  // B0 => B1
   ConstraintContext Ctx;
-  auto B = Ctx.disj(Ctx.neg(Ctx.atom()), Ctx.atom());
+  auto B = Ctx.impl(Ctx.atom(), Ctx.atom());
 
-  auto Expected = R"((or
-    (not
-        B0)
+  auto Expected = R"((=>
+    B0
     B1))";
   EXPECT_THAT(debugString(*B), StrEq(Expected));
 }
 
 TEST(BoolValueDebugStringTest, Iff) {
-  // B0 <=> B1, implemented as (!B0 v B1) ^ (B0 v !B1)
+  // B0 <=> B1
   ConstraintContext Ctx;
-  auto B0 = Ctx.atom();
-  auto B1 = Ctx.atom();
-  auto B = Ctx.conj(Ctx.disj(Ctx.neg(B0), B1), Ctx.disj(B0, Ctx.neg(B1)));
+  auto B = Ctx.iff(Ctx.atom(), Ctx.atom());
 
-  auto Expected = R"((and
-    (or
-        (not
-            B0)
-        B1)
-    (or
-        B0
-        (not
-            B1))))";
+  auto Expected = R"((=
+    B0
+    B1))";
   EXPECT_THAT(debugString(*B), StrEq(Expected));
 }
 

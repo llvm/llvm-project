@@ -191,11 +191,11 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
     ClangASTImporter::NamespaceMapSP namespace_map =
         m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
-    LLDB_LOGV(log, "      CTD Inspecting namespace map{0} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
-
     if (!namespace_map)
       return nullptr;
+
+    LLDB_LOGV(log, "      CTD Inspecting namespace map{0} ({1} entries)",
+              namespace_map.get(), namespace_map->size());
 
     for (const ClangASTImporter::NamespaceMapItem &item : *namespace_map) {
       LLDB_LOG(log, "      CTD Searching namespace {0} in module {1}",

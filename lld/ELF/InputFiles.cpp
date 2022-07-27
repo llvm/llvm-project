@@ -460,9 +460,9 @@ static void addDependentLibrary(StringRef specifier, const InputFile *f) {
   if (!config->dependentLibraries)
     return;
   if (Optional<std::string> s = searchLibraryBaseName(specifier))
-    driver->addFile(*s, /*withLOption=*/true);
+    driver->addFile(saver().save(*s), /*withLOption=*/true);
   else if (Optional<std::string> s = findFromSearchPaths(specifier))
-    driver->addFile(*s, /*withLOption=*/true);
+    driver->addFile(saver().save(*s), /*withLOption=*/true);
   else if (fs::exists(specifier))
     driver->addFile(specifier, /*withLOption=*/false);
   else

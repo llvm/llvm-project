@@ -220,6 +220,13 @@ private:
   ///     returned if the decoder couldn't be properly set up.
   llvm::Expected<DecodedThreadSP> Decode(Thread &thread);
 
+  /// \return
+  ///     The lowest timestamp in nanoseconds in all traces if available, \a
+  ///     llvm::None if all the traces were empty or no trace contained no
+  ///     timing information, or an \a llvm::Error if it was not possible to set
+  ///     up the decoder for some trace.
+  llvm::Expected<llvm::Optional<uint64_t>> FindBeginningOfTimeNanos();
+
   // Dump out trace info in JSON format
   void DumpTraceInfoAsJson(Thread &thread, Stream &s, bool verbose);
 
@@ -236,6 +243,8 @@ private:
     /// It is provided by either a trace bundle or a live process to convert TSC
     /// counters to and from nanos. It might not be available on all hosts.
     llvm::Optional<LinuxPerfZeroTscConversion> tsc_conversion;
+    llvm::Optional<uint64_t> beginning_of_time_nanos;
+    bool beginning_of_time_nanos_calculated = false;
   } m_storage;
 
   /// It is provided by either a trace bundle or a live process' "cpuInfo"

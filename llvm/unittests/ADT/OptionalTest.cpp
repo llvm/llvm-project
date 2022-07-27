@@ -210,11 +210,9 @@ TEST(OptionalTest, InPlaceConstructionNonDefaultConstructibleTest) {
 TEST(OptionalTest, GetValueOr) {
   Optional<int> A;
   EXPECT_EQ(42, A.value_or(42));
-  EXPECT_EQ(42, A.getValueOr(42));
 
   A = 5;
   EXPECT_EQ(5, A.value_or(42));
-  EXPECT_EQ(5, A.getValueOr(42));
 }
 
 struct MultiArgConstructor {
@@ -600,23 +598,6 @@ TEST(OptionalTest, MoveValueOr) {
   A = MoveOnly(5);
   MoveOnly::ResetCounts();
   EXPECT_EQ(5, std::move(A).value_or(MoveOnly(42)).val);
-  EXPECT_EQ(1u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(2u, MoveOnly::Destructions);
-}
-
-TEST(OptionalTest, MoveGetValueOr) {
-  Optional<MoveOnly> A;
-
-  MoveOnly::ResetCounts();
-  EXPECT_EQ(42, std::move(A).getValueOr(MoveOnly(42)).val);
-  EXPECT_EQ(1u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(2u, MoveOnly::Destructions);
-
-  A = MoveOnly(5);
-  MoveOnly::ResetCounts();
-  EXPECT_EQ(5, std::move(A).getValueOr(MoveOnly(42)).val);
   EXPECT_EQ(1u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(2u, MoveOnly::Destructions);

@@ -873,27 +873,6 @@ RVVIntrinsic::RVVIntrinsic(
     Name += "_m";
   }
 
-  // Init RISC-V extensions
-  for (const auto &T : OutInTypes) {
-    if (T->isFloatVector(16) || T->isFloat(16))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::Zvfh;
-    if (T->isFloatVector(32))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELenFp32;
-    if (T->isFloatVector(64))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELenFp64;
-    if (T->isVector(64))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELen64;
-  }
-  for (auto Feature : RequiredFeatures) {
-    if (Feature == "RV64")
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::RV64;
-    // Note: Full multiply instruction (mulh, mulhu, mulhsu, smul) for EEW=64
-    // require V.
-    if (Feature == "FullMultiply" &&
-        (RISCVPredefinedMacros & RISCVPredefinedMacro::VectorMaxELen64))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::V;
-  }
-
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
   InputTypes.assign(OutInTypes.begin() + 1, OutInTypes.end());
@@ -930,6 +909,48 @@ std::string RVVIntrinsic::getSuffixStr(
   return join(SuffixStrs, "_");
 }
 
+llvm::SmallVector<PrototypeDescriptor>
+RVVIntrinsic::computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
+                                  bool IsMasked, bool HasMaskedOffOperand,
+                                  bool HasVL, unsigned NF) {
+  SmallVector<PrototypeDescriptor> NewPrototype(Prototype.begin(),
+                                                Prototype.end());
+  if (IsMasked) {
+    // If HasMaskedOffOperand, insert result type as first input operand.
+    if (HasMaskedOffOperand) {
+      if (NF == 1) {
+        NewPrototype.insert(NewPrototype.begin() + 1, NewPrototype[0]);
+      } else {
+        // Convert
+        // (void, op0 address, op1 address, ...)
+        // to
+        // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
+        PrototypeDescriptor MaskoffType = NewPrototype[1];
+        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+        for (unsigned I = 0; I < NF; ++I)
+          NewPrototype.insert(NewPrototype.begin() + NF + 1, MaskoffType);
+      }
+    }
+    if (HasMaskedOffOperand && NF > 1) {
+      // Convert
+      // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
+      // to
+      // (void, op0 address, op1 address, ..., mask, maskedoff0, maskedoff1,
+      // ...)
+      NewPrototype.insert(NewPrototype.begin() + NF + 1,
+                          PrototypeDescriptor::Mask);
+    } else {
+      // If IsMasked, insert PrototypeDescriptor:Mask as first input operand.
+      NewPrototype.insert(NewPrototype.begin() + 1, PrototypeDescriptor::Mask);
+    }
+  }
+
+  // If HasVL, append PrototypeDescriptor:VL to last operand
+  if (HasVL)
+    NewPrototype.push_back(PrototypeDescriptor::VL);
+  return NewPrototype;
+}
+
 SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   SmallVector<PrototypeDescriptor> PrototypeDescriptors;
   const StringRef Primaries("evwqom0ztul");
@@ -949,6 +970,31 @@ SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
     Prototypes = Prototypes.drop_front(Idx + 1);
   }
   return PrototypeDescriptors;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
+  OS << "{";
+  OS << "\"" << Record.Name << "\",";
+  if (Record.OverloadedName == nullptr ||
+      StringRef(Record.OverloadedName).empty())
+    OS << "nullptr,";
+  else
+    OS << "\"" << Record.OverloadedName << "\",";
+  OS << Record.PrototypeIndex << ",";
+  OS << Record.SuffixIndex << ",";
+  OS << Record.OverloadedSuffixIndex << ",";
+  OS << (int)Record.PrototypeLength << ",";
+  OS << (int)Record.SuffixLength << ",";
+  OS << (int)Record.OverloadedSuffixSize << ",";
+  OS << (int)Record.RequiredExtensions << ",";
+  OS << (int)Record.TypeRangeMask << ",";
+  OS << (int)Record.Log2LMULMask << ",";
+  OS << (int)Record.NF << ",";
+  OS << (int)Record.HasMasked << ",";
+  OS << (int)Record.HasVL << ",";
+  OS << (int)Record.HasMaskedOffOperand << ",";
+  OS << "},\n";
+  return OS;
 }
 
 } // end namespace RISCV

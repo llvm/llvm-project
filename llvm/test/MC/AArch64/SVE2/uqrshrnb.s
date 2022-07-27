@@ -13,34 +13,34 @@ uqrshrnb     z0.b, z0.h, #1
 // CHECK-INST: uqrshrnb	z0.b, z0.h, #1
 // CHECK-ENCODING: [0x00,0x38,0x2f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 00 38 2f 45 <unknown>
+// CHECK-UNKNOWN: 452f3800 <unknown>
 
 uqrshrnb     z31.b, z31.h, #8
 // CHECK-INST: uqrshrnb	z31.b, z31.h, #8
 // CHECK-ENCODING: [0xff,0x3b,0x28,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff 3b 28 45 <unknown>
+// CHECK-UNKNOWN: 45283bff <unknown>
 
 uqrshrnb     z0.h, z0.s, #1
 // CHECK-INST: uqrshrnb	z0.h, z0.s, #1
 // CHECK-ENCODING: [0x00,0x38,0x3f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 00 38 3f 45 <unknown>
+// CHECK-UNKNOWN: 453f3800 <unknown>
 
 uqrshrnb     z31.h, z31.s, #16
 // CHECK-INST: uqrshrnb	z31.h, z31.s, #16
 // CHECK-ENCODING: [0xff,0x3b,0x30,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff 3b 30 45 <unknown>
+// CHECK-UNKNOWN: 45303bff <unknown>
 
 uqrshrnb     z0.s, z0.d, #1
 // CHECK-INST: uqrshrnb	z0.s, z0.d, #1
 // CHECK-ENCODING: [0x00,0x38,0x7f,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: 00 38 7f 45 <unknown>
+// CHECK-UNKNOWN: 457f3800 <unknown>
 
 uqrshrnb     z31.s, z31.d, #32
 // CHECK-INST: uqrshrnb	z31.s, z31.d, #32
 // CHECK-ENCODING: [0xff,0x3b,0x60,0x45]
 // CHECK-ERROR: instruction requires: sve2 or sme
-// CHECK-UNKNOWN: ff 3b 60 45 <unknown>
+// CHECK-UNKNOWN: 45603bff <unknown>

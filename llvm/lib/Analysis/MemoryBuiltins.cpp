@@ -115,9 +115,7 @@ struct AllocFnsTy {
 // FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
 // know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
-    {LibFunc_malloc,                            {MallocLike,       1,  0, -1, -1, MallocFamily::Malloc}},
     {LibFunc_vec_malloc,                        {MallocLike,       1,  0, -1, -1, MallocFamily::VecMalloc}},
-    {LibFunc_valloc,                            {MallocLike,       1,  0, -1, -1, MallocFamily::Malloc}},
     {LibFunc_Znwj,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int)
     {LibFunc_ZnwjRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int, nothrow)
     {LibFunc_ZnwjSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t)
@@ -142,13 +140,9 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
     {LibFunc_msvc_new_array_int_nothrow,        {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned int, nothrow)
     {LibFunc_msvc_new_array_longlong,           {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long)
     {LibFunc_msvc_new_array_longlong_nothrow,   {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long, nothrow)
-    {LibFunc_aligned_alloc,                     {AlignedAllocLike, 2,  1, -1,  0, MallocFamily::Malloc}},
     {LibFunc_memalign,                          {AlignedAllocLike, 2,  1, -1,  0, MallocFamily::Malloc}},
-    {LibFunc_calloc,                            {CallocLike,       2,  0,  1, -1, MallocFamily::Malloc}},
     {LibFunc_vec_calloc,                        {CallocLike,       2,  0,  1, -1, MallocFamily::VecMalloc}},
-    {LibFunc_realloc,                           {ReallocLike,      2,  1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_vec_realloc,                       {ReallocLike,      2,  1, -1, -1, MallocFamily::VecMalloc}},
-    {LibFunc_reallocf,                          {ReallocLike,      2,  1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_strdup,                            {StrDupLike,       1, -1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_dunder_strdup,                     {StrDupLike,       1, -1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_strndup,                           {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
@@ -488,7 +482,6 @@ struct FreeFnsTy {
 
 // clang-format off
 static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
-    {LibFunc_free,                               {1, MallocFamily::Malloc}},
     {LibFunc_vec_free,                           {1, MallocFamily::VecMalloc}},
     {LibFunc_ZdlPv,                              {1, MallocFamily::CPPNew}},             // operator delete(void*)
     {LibFunc_ZdaPv,                              {1, MallocFamily::CPPNewArray}},        // operator delete[](void*)

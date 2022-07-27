@@ -6,4 +6,4 @@ vfp2:
   vadd.f32 s0, s1, s2
 
 @CHECK-LABEL: vfp2
-@CHECK: 81 0a 30 ee vadd.f32 s0, s1, s2
+@CHECK: ee300a81    vadd.f32 s0, s1, s2

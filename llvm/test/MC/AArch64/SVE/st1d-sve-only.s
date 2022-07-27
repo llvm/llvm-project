@@ -15,52 +15,52 @@ st1d    { z0.d }, p0, [x0, z0.d, uxtw]
 // CHECK-INST: st1d    { z0.d }, p0, [x0, z0.d, uxtw]
 // CHECK-ENCODING: [0x00,0x80,0x80,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 80 80 e5 <unknown>
+// CHECK-UNKNOWN: e5808000 <unknown>
 
 st1d    { z0.d }, p0, [x0, z0.d, sxtw]
 // CHECK-INST: st1d    { z0.d }, p0, [x0, z0.d, sxtw]
 // CHECK-ENCODING: [0x00,0xc0,0x80,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 c0 80 e5 <unknown>
+// CHECK-UNKNOWN: e580c000 <unknown>
 
 st1d    { z0.d }, p0, [x0, z0.d, uxtw #3]
 // CHECK-INST: st1d    { z0.d }, p0, [x0, z0.d, uxtw #3]
 // CHECK-ENCODING: [0x00,0x80,0xa0,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 80 a0 e5 <unknown>
+// CHECK-UNKNOWN: e5a08000 <unknown>
 
 st1d    { z0.d }, p0, [x0, z0.d, sxtw #3]
 // CHECK-INST: st1d    { z0.d }, p0, [x0, z0.d, sxtw #3]
 // CHECK-ENCODING: [0x00,0xc0,0xa0,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 c0 a0 e5 <unknown>
+// CHECK-UNKNOWN: e5a0c000 <unknown>
 
 st1d    { z0.d }, p0, [x0, z0.d]
 // CHECK-INST: st1d    { z0.d }, p0, [x0, z0.d]
 // CHECK-ENCODING: [0x00,0xa0,0x80,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 a0 80 e5 <unknown>
+// CHECK-UNKNOWN: e580a000 <unknown>
 
 st1d    { z0.d }, p0, [x0, z0.d, lsl #3]
 // CHECK-INST: st1d    { z0.d }, p0, [x0, z0.d, lsl #3]
 // CHECK-ENCODING: [0x00,0xa0,0xa0,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 a0 a0 e5 <unknown>
+// CHECK-UNKNOWN: e5a0a000 <unknown>
 
 st1d    { z31.d }, p7, [z31.d, #248]
 // CHECK-INST: st1d    { z31.d }, p7, [z31.d, #248]
 // CHECK-ENCODING: [0xff,0xbf,0xdf,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: ff bf df e5 <unknown>
+// CHECK-UNKNOWN: e5dfbfff <unknown>
 
 st1d    { z0.d }, p7, [z0.d, #0]
 // CHECK-INST: st1d    { z0.d }, p7, [z0.d]
 // CHECK-ENCODING: [0x00,0xbc,0xc0,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 bc c0 e5 <unknown>
+// CHECK-UNKNOWN: e5c0bc00 <unknown>
 
 st1d    { z0.d }, p7, [z0.d]
 // CHECK-INST: st1d    { z0.d }, p7, [z0.d]
 // CHECK-ENCODING: [0x00,0xbc,0xc0,0xe5]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 bc c0 e5 <unknown>
+// CHECK-UNKNOWN: e5c0bc00 <unknown>

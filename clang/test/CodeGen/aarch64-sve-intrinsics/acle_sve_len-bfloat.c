@@ -16,13 +16,13 @@
 
 // CHECK-LABEL: @test_svlen_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 // CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svlen_bf16u14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //

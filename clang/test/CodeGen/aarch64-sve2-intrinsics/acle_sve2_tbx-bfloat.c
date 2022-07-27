@@ -16,12 +16,12 @@
 
 // CHECK-LABEL: @test_svtbx_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbx.nxv8bf16(<vscale x 8 x bfloat> [[FALLBACK:%.*]], <vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbx.nxv8bf16(<vscale x 8 x bfloat> [[FALLBACK:%.*]], <vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svtbx_bf16u14__SVBFloat16_tu14__SVBFloat16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbx.nxv8bf16(<vscale x 8 x bfloat> [[FALLBACK:%.*]], <vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[INDICES:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbx.nxv8bf16(<vscale x 8 x bfloat> [[FALLBACK:%.*]], <vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_svtbx_bf16(svbfloat16_t fallback, svbfloat16_t data, svuint16_t indices) {

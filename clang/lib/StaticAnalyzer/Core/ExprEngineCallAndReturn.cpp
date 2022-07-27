@@ -265,9 +265,13 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
       ShouldRepeatCall = shouldRepeatCtorCall(state, CCE, callerCtx);
 
-      if (!ShouldRepeatCall &&
-          getIndexOfElementToConstruct(state, CCE, callerCtx))
-        state = removeIndexOfElementToConstruct(state, CCE, callerCtx);
+      if (!ShouldRepeatCall) {
+        if (getIndexOfElementToConstruct(state, CCE, callerCtx))
+          state = removeIndexOfElementToConstruct(state, CCE, callerCtx);
+
+        if (getPendingInitLoop(state, CCE, callerCtx))
+          state = removePendingInitLoop(state, CCE, callerCtx);
+      }
     }
 
     if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
@@ -815,8 +819,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // We still allow construction into ElementRegion targets when they don't
     // represent array elements.
     if (CallOpts.IsArrayCtorOrDtor) {
-      if (!shouldInlineArrayConstruction(
-              dyn_cast<ArrayType>(CtorExpr->getType())))
+      if (!shouldInlineArrayConstruction(Pred->getState(), CtorExpr, CurLC))
         return CIP_DisallowedOnce;
     }
 
@@ -1082,9 +1085,13 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   return true;
 }
 
-bool ExprEngine::shouldInlineArrayConstruction(const ArrayType *Type) {
-  if (!Type)
+bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
+                                               const CXXConstructExpr *CE,
+                                               const LocationContext *LCtx) {
+  if (!CE)
     return false;
+
+  auto Type = CE->getType();
 
   // FIXME: Handle other arrays types.
   if (const auto *CAT = dyn_cast<ConstantArrayType>(Type)) {
@@ -1092,6 +1099,10 @@ bool ExprEngine::shouldInlineArrayConstruction(const ArrayType *Type) {
 
     return Size <= AMgr.options.maxBlockVisitOnPath;
   }
+
+  // Check if we're inside an ArrayInitLoopExpr, and it's sufficiently small.
+  if (auto Size = getPendingInitLoop(State, CE, LCtx))
+    return *Size <= AMgr.options.maxBlockVisitOnPath;
 
   return false;
 }
@@ -1110,6 +1121,9 @@ bool ExprEngine::shouldRepeatCtorCall(ProgramStateRef State,
     unsigned Size = getContext().getConstantArrayElementCount(CAT);
     return Size > getIndexOfElementToConstruct(State, E, LCtx);
   }
+
+  if (auto Size = getPendingInitLoop(State, E, LCtx))
+    return Size > getIndexOfElementToConstruct(State, E, LCtx);
 
   return false;
 }

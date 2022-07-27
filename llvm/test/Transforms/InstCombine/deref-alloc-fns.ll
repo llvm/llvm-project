@@ -3,13 +3,13 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu < %s -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,GNU
 
 
-declare noalias i8* @malloc(i64)
-declare noalias i8* @calloc(i64, i64)
-declare noalias i8* @realloc(i8* nocapture, i64)
+declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias i8* @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+declare noalias i8* @realloc(i8* nocapture, i64) allockind("realloc") allocsize(1) "alloc-family"="malloc"
 declare noalias nonnull i8* @_Znam(i64) ; throwing version of 'new'
 declare noalias nonnull i8* @_Znwm(i64) ; throwing version of 'new'
 declare noalias i8* @strdup(i8*)
-declare noalias i8* @aligned_alloc(i64, i64)
+declare noalias i8* @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
 declare noalias align 16 i8* @memalign(i64, i64)
 ; new[](unsigned int, align_val_t)
 declare noalias i8* @_ZnajSt11align_val_t(i64 %size, i64 %align)

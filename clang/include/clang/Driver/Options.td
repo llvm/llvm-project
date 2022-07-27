@@ -3679,6 +3679,10 @@ def mabi_EQ_vec_extabi : Flag<["-"], "mabi=vec-extabi">, Group<m_Group>, Flags<[
   MarshallingInfoFlag<LangOpts<"EnableAIXExtendedAltivecABI">>;
 def mabi_EQ_vec_default : Flag<["-"], "mabi=vec-default">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Enable the default Altivec ABI on AIX (AIX only). Uses only volatile vector registers.">;
+def mabi_EQ_quadword_atomics : Flag<["-"], "mabi=quadword-atomics">,
+  Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.">,
+  MarshallingInfoFlag<LangOpts<"EnableAIXQuadwordAtomicsABI">>;
 def mvsx : Flag<["-"], "mvsx">, Group<m_ppc_Features_Group>;
 def mno_vsx : Flag<["-"], "mno-vsx">, Group<m_ppc_Features_Group>;
 def msecure_plt : Flag<["-"], "msecure-plt">, Group<m_ppc_Features_Group>;

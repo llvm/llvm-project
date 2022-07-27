@@ -13,22 +13,22 @@ ld1rw   { z0.s }, p0/z, [x0]
 // CHECK-INST: ld1rw   { z0.s }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0xc0,0x40,0x85]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 c0 40 85 <unknown>
+// CHECK-UNKNOWN: 8540c000 <unknown>
 
 ld1rw   { z0.d }, p0/z, [x0]
 // CHECK-INST: ld1rw   { z0.d }, p0/z, [x0]
 // CHECK-ENCODING: [0x00,0xe0,0x40,0x85]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 00 e0 40 85 <unknown>
+// CHECK-UNKNOWN: 8540e000 <unknown>
 
 ld1rw   { z31.s }, p7/z, [sp, #252]
 // CHECK-INST: ld1rw   { z31.s }, p7/z, [sp, #252]
 // CHECK-ENCODING: [0xff,0xdf,0x7f,0x85]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff df 7f 85 <unknown>
+// CHECK-UNKNOWN: 857fdfff <unknown>
 
 ld1rw   { z31.d }, p7/z, [sp, #252]
 // CHECK-INST: ld1rw   { z31.d }, p7/z, [sp, #252]
 // CHECK-ENCODING: [0xff,0xff,0x7f,0x85]
 // CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: ff ff 7f 85 <unknown>
+// CHECK-UNKNOWN: 857fffff <unknown>

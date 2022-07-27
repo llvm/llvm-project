@@ -248,7 +248,7 @@ public:
     addExpr(Inst, getImm());
   }
 };
-} // end anonymous namespace
+} // end namespace
 
 #define GET_REGISTER_MATCHER
 #define GET_SUBTARGET_FEATURE_NAME

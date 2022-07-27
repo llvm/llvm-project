@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace fir {
@@ -101,7 +102,8 @@ public:
   virtual bool
   createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
 
-  virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym) = 0;
+  virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                                    mlir::Block *lastPrivBlock = nullptr) = 0;
 
   /// Collect the set of ultimate symbols of symbols with \p flag in \p eval
   /// region if \p isUltimateSymbol is true. Otherwise, collect the set of

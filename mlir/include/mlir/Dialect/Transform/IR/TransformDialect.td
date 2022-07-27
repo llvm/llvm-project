@@ -64,6 +64,14 @@ def Transform_Dialect : Dialect {
     correspond to groups of outer and inner loops, respectively, produced by
     the tiling transformation.
 
+    A Transform IR value such as `%0` may be associated with multiple payload
+    operations. This is conceptually a set of operations and no assumptions
+    should be made about the order of ops. Most Transform IR ops support
+    operand values that are mapped to multiple operations. They usually apply
+    the respective transformation for every mapped op ("batched execution").
+    Deviations from this convention are described in the documentation of
+    Transform IR ops.
+
     Overall, Transform IR ops are expected to be contained in a single top-level
     op. Such top-level ops specify how to apply the transformations described
     by the operations they contain, e.g., `transform.sequence` executes

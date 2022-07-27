@@ -92,6 +92,11 @@ void LLVMArrayType::walkImmediateSubElements(
   walkTypesFn(getElementType());
 }
 
+Type LLVMArrayType::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  return get(replTypes.front(), getNumElements());
+}
+
 //===----------------------------------------------------------------------===//
 // Function type.
 //===----------------------------------------------------------------------===//
@@ -164,6 +169,11 @@ void LLVMFunctionType::walkImmediateSubElements(
     function_ref<void(Type)> walkTypesFn) const {
   for (Type type : llvm::concat<const Type>(getReturnTypes(), getParams()))
     walkTypesFn(type);
+}
+
+Type LLVMFunctionType::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  return get(replTypes.front(), replTypes.drop_front(), isVarArg());
 }
 
 //===----------------------------------------------------------------------===//
@@ -372,6 +382,11 @@ void LLVMPointerType::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
   walkTypesFn(getElementType());
+}
+
+Type LLVMPointerType::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  return get(replTypes.front(), getAddressSpace());
 }
 
 //===----------------------------------------------------------------------===//
@@ -617,6 +632,13 @@ void LLVMStructType::walkImmediateSubElements(
     walkTypesFn(type);
 }
 
+Type LLVMStructType::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  // TODO: It's not clear how we support replacing sub-elements of mutable
+  // types.
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Vector types.
 //===----------------------------------------------------------------------===//
@@ -653,7 +675,7 @@ Type LLVMFixedVectorType::getElementType() const {
   return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
 }
 
-unsigned LLVMFixedVectorType::getNumElements() {
+unsigned LLVMFixedVectorType::getNumElements() const {
   return getImpl()->numElements;
 }
 
@@ -672,6 +694,11 @@ void LLVMFixedVectorType::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
   walkTypesFn(getElementType());
+}
+
+Type LLVMFixedVectorType::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  return get(replTypes[0], getNumElements());
 }
 
 //===----------------------------------------------------------------------===//
@@ -696,7 +723,7 @@ Type LLVMScalableVectorType::getElementType() const {
   return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
 }
 
-unsigned LLVMScalableVectorType::getMinNumElements() {
+unsigned LLVMScalableVectorType::getMinNumElements() const {
   return getImpl()->numElements;
 }
 
@@ -718,6 +745,11 @@ void LLVMScalableVectorType::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
   walkTypesFn(getElementType());
+}
+
+Type LLVMScalableVectorType::replaceImmediateSubElements(
+    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
+  return get(replTypes[0], getMinNumElements());
 }
 
 //===----------------------------------------------------------------------===//
