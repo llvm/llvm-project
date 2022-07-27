@@ -20,7 +20,7 @@
 
 #include "test_comparisons.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
     typedef std::vector<bool> VB;
     {
         const VB v1, v2;
@@ -75,6 +75,15 @@ int main(int, char**) {
         assert(!(std::vector<bool>() > std::vector<bool>()));
         assert( (std::vector<bool>() >= std::vector<bool>()));
     }
+
+    return true;
+}
+
+int main(int, char**) {
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
 
     return 0;
 }

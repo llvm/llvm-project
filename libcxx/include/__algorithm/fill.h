@@ -20,6 +20,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// fill isn't specialized for std::memset, because the compiler already optimizes the loop to a call to std::memset.
+
 template <class _ForwardIterator, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
