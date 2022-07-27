@@ -8756,7 +8756,8 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
     //        Other decls (e.g. namespaces) also have this shortcoming.
     return;
   }
-  Context.setPrimaryMergedDecl(NewDecl, OldConcept);
+  // We unwrap canonical decl late to check for module visibility.
+  Context.setPrimaryMergedDecl(NewDecl, OldConcept->getCanonicalDecl());
 }
 
 /// \brief Strips various properties off an implicit instantiation
