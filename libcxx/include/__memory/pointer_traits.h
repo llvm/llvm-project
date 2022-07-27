@@ -122,7 +122,7 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits
 private:
     struct __nat {};
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     static pointer pointer_to(typename conditional<is_void<element_type>::value,
                                            __nat, element_type>::type& __r)
         {return pointer::pointer_to(__r);}

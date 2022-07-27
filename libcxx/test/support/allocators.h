@@ -9,6 +9,7 @@
 #ifndef ALLOCATORS_H
 #define ALLOCATORS_H
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -201,8 +202,8 @@ public:
         typedef MaybePOCCAAllocator<U, POCCAValue> other;
     };
 
-    MaybePOCCAAllocator() = default;
-    MaybePOCCAAllocator(int id, bool* copy_assigned_into)
+    TEST_CONSTEXPR MaybePOCCAAllocator() = default;
+    TEST_CONSTEXPR MaybePOCCAAllocator(int id, bool* copy_assigned_into)
         : id_(id), copy_assigned_into_(copy_assigned_into) {}
 
     template <class U>
@@ -210,7 +211,7 @@ public:
         : id_(that.id_), copy_assigned_into_(that.copy_assigned_into_) {}
 
     MaybePOCCAAllocator(const MaybePOCCAAllocator&) = default;
-    MaybePOCCAAllocator& operator=(const MaybePOCCAAllocator& a)
+    TEST_CONSTEXPR_CXX14 MaybePOCCAAllocator& operator=(const MaybePOCCAAllocator& a)
     {
         id_ = a.id();
         if (copy_assigned_into_)
@@ -218,26 +219,26 @@ public:
         return *this;
     }
 
-    T* allocate(std::size_t n)
+    TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n)
     {
-        return static_cast<T*>(::operator new(n * sizeof(T)));
+        return std::allocator<T>().allocate(n);
     }
 
-    void deallocate(T* ptr, std::size_t)
+    TEST_CONSTEXPR_CXX20 void deallocate(T* ptr, std::size_t n)
     {
-        ::operator delete(ptr);
+        std::allocator<T>().deallocate(ptr, n);
     }
 
-    int id() const { return id_; }
+    TEST_CONSTEXPR int id() const { return id_; }
 
     template <class U>
-    friend bool operator==(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
+    TEST_CONSTEXPR friend bool operator==(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
     {
         return lhs.id() == rhs.id();
     }
 
     template <class U>
-    friend bool operator!=(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
+    TEST_CONSTEXPR friend bool operator!=(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
     {
         return !(lhs == rhs);
     }

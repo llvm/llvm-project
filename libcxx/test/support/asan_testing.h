@@ -16,17 +16,19 @@ extern "C" int __sanitizer_verify_contiguous_container
      ( const void *beg, const void *mid, const void *end );
 
 template <typename T, typename Alloc>
-bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &c )
+TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &c )
 {
-    if ( std::is_same<Alloc, std::allocator<T> >::value && c.data() != NULL)
-        return __sanitizer_verify_contiguous_container (
+    if (std::__libcpp_is_constant_evaluated())
+        return true;
+    if (std::is_same<Alloc, std::allocator<T> >::value && c.data() != NULL)
+        return __sanitizer_verify_contiguous_container(
             c.data(), c.data() + c.size(), c.data() + c.capacity()) != 0;
     return true;
 }
 
 #else
 template <typename T, typename Alloc>
-bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &)
+TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &)
 {
     return true;
 }
