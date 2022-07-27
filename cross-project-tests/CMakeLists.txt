@@ -16,11 +16,12 @@ set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(CROSS_PROJECT_TEST_DEPS
   FileCheck
+  check-gdb-llvm-support
   count
   llvm-dwarfdump
   llvm-config
   llvm-objdump
-  check-gdb-llvm-support
+  split-file
   not
   )
 
