@@ -20,6 +20,12 @@
 namespace clang {
 namespace dataflow {
 
+struct TransferOptions {
+  /// Determines whether to analyze function bodies when present in the
+  /// translation unit.
+  bool ContextSensitive = false;
+};
+
 /// Maps statements to the environments of basic blocks that contain them.
 class StmtToEnvMap {
 public:
@@ -36,7 +42,8 @@ public:
 /// Requirements:
 ///
 ///  `S` must not be `ParenExpr` or `ExprWithCleanups`.
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
+              TransferOptions Options);
 
 } // namespace dataflow
 } // namespace clang
