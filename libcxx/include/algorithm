@@ -331,6 +331,23 @@ namespace ranges {
     constexpr borrowed_iterator_t<R>
       ranges::sort_heap(R&& r, Comp comp = {}, Proj proj = {});                             // since C++20
 
+  template<random_access_iterator I, sentinel_for<I> S, class Proj = identity,
+            indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>
+    constexpr bool is_heap(I first, S last, Comp comp = {}, Proj proj = {});                // Since C++20
+
+  template<random_access_range R, class Proj = identity,
+            indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
+    constexpr bool is_heap(R&& r, Comp comp = {}, Proj proj = {});                          // Since C++20
+
+  template<random_access_iterator I, sentinel_for<I> S, class Proj = identity,
+           indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>
+    constexpr I is_heap_until(I first, S last, Comp comp = {}, Proj proj = {});             // Since C++20
+
+  template<random_access_range R, class Proj = identity,
+           indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
+    constexpr borrowed_iterator_t<R>
+      is_heap_until(R&& r, Comp comp = {}, Proj proj = {});                                 // Since C++20
+
   template<bidirectional_iterator I, sentinel_for<I> S>
     requires permutable<I>
     constexpr I ranges::reverse(I first, S last);                                           // since C++20
@@ -1590,6 +1607,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_generate.h>
 #include <__algorithm/ranges_generate_n.h>
 #include <__algorithm/ranges_includes.h>
+#include <__algorithm/ranges_is_heap.h>
+#include <__algorithm/ranges_is_heap_until.h>
 #include <__algorithm/ranges_is_partitioned.h>
 #include <__algorithm/ranges_is_sorted.h>
 #include <__algorithm/ranges_is_sorted_until.h>
