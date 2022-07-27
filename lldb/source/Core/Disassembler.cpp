@@ -577,6 +577,30 @@ AddressClass Instruction::GetAddressClass() {
   return m_address_class;
 }
 
+const char *Instruction::GetNameForInstructionControlFlowKind(
+    lldb::InstructionControlFlowKind instruction_control_flow_kind) {
+  switch (instruction_control_flow_kind) {
+  case eInstructionControlFlowKindUnknown:
+    return "unknown";
+  case eInstructionControlFlowKindOther:
+    return "other";
+  case eInstructionControlFlowKindCall:
+    return "call";
+  case eInstructionControlFlowKindReturn:
+    return "return";
+  case eInstructionControlFlowKindJump:
+    return "jump";
+  case eInstructionControlFlowKindCondJump:
+    return "cond jump";
+  case eInstructionControlFlowKindFarCall:
+    return "far call";
+  case eInstructionControlFlowKindFarReturn:
+    return "far return";
+  case eInstructionControlFlowKindFarJump:
+    return "far jump";
+  }
+}
+
 void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                        bool show_address, bool show_bytes,
                        bool show_control_flow_kind,
@@ -618,35 +642,10 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   }
 
   if (show_control_flow_kind) {
-    switch (GetControlFlowKind(exe_ctx)) {
-    case eInstructionControlFlowKindUnknown:
-      ss.Printf("%-12s", "unknown");
-      break;
-    case eInstructionControlFlowKindOther:
-      ss.Printf("%-12s", "other");
-      break;
-    case eInstructionControlFlowKindCall:
-      ss.Printf("%-12s", "call");
-      break;
-    case eInstructionControlFlowKindReturn:
-      ss.Printf("%-12s", "return");
-      break;
-    case eInstructionControlFlowKindJump:
-      ss.Printf("%-12s", "jump");
-      break;
-    case eInstructionControlFlowKindCondJump:
-      ss.Printf("%-12s", "cond jump");
-      break;
-    case eInstructionControlFlowKindFarCall:
-      ss.Printf("%-12s", "far call");
-      break;
-    case eInstructionControlFlowKindFarReturn:
-      ss.Printf("%-12s", "far return");
-      break;
-    case eInstructionControlFlowKindFarJump:
-      ss.Printf("%-12s", "far jump");
-      break;
-    }
+    lldb::InstructionControlFlowKind instruction_control_flow_kind =
+        GetControlFlowKind(exe_ctx);
+    ss.Printf("%-12s", GetNameForInstructionControlFlowKind(
+                           instruction_control_flow_kind));
   }
 
   const size_t opcode_pos = ss.GetSizeOfLastLine();
