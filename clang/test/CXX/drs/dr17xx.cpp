@@ -67,7 +67,7 @@ namespace dr1753 { // dr1753: 11
     n.dr1753::~T(); // expected-error {{'dr1753' does not refer to a type name in pseudo-destructor}}
     n.dr1753::T::~T();
 
-    n.A::~T(); // expected-error {{the type of object expression ('dr1753::T' (aka 'int')) does not match the type being destroyed ('dr1753::A') in pseudo-destructor expression}}
+    n.A::~T(); // expected-error {{the type of object expression ('T' (aka 'int')) does not match the type being destroyed ('A') in pseudo-destructor expression}}
     n.A::T::~T();
 
     n.B::~T(); // expected-error {{'B' does not refer to a type name in pseudo-destructor expression}}

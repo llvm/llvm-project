@@ -172,6 +172,6 @@ struct B1 { // expected-note 2 {{candidate constructor (the implicit}}
 
 B1 test_move() {
   __block B0 b;
-  return b; // expected-error {{no viable conversion from returned value of type 'MoveBlockVariable::B0' to function return type 'MoveBlockVariable::B1'}}
+  return b; // expected-error {{no viable conversion from returned value of type 'B0' to function return type 'B1'}}
 }
 }

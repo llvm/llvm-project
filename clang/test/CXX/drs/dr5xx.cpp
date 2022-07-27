@@ -954,7 +954,7 @@ namespace dr591 { // dr591: no
 
   template<typename T> struct A<T>::B::C : A<T> {
     // FIXME: Should find member of non-dependent base class A<T>.
-    M m; // expected-error {{incomplete type 'dr591::A::B::M' (aka 'void'}}
+    M m; // expected-error {{incomplete type 'M' (aka 'void'}}
   };
 }
 

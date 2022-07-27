@@ -31,17 +31,17 @@ void test() {
 // CHECK-NEXT: |   |-CXXOperatorCallExpr {{.*}} <line:16:3, col:7> 'void' '+'
 // CHECK-NEXT: |   | |-ImplicitCastExpr {{.*}} <col:5> 'void (*)(E, E)' <FunctionToPointerDecay>
 // CHECK-NEXT: |   | | `-DeclRefExpr {{.*}} <col:5> 'void (E, E)' lvalue Function {{.*}} 'operator+' 'void (E, E)'
-// CHECK-NEXT: |   | |-ImplicitCastExpr {{.*}} <col:3> 'E' <LValueToRValue>
-// CHECK-NEXT: |   | | `-DeclRefExpr {{.*}} <col:3> 'E' lvalue Var {{.*}} 'e' 'E'
-// CHECK-NEXT: |   | `-ImplicitCastExpr {{.*}} <col:7> 'E' <LValueToRValue>
-// CHECK-NEXT: |   |   `-DeclRefExpr {{.*}} <col:7> 'E' lvalue Var {{.*}} 'e' 'E'
+// CHECK-NEXT: |   | |-ImplicitCastExpr {{.*}} <col:3> 'E':'E' <LValueToRValue>
+// CHECK-NEXT: |   | | `-DeclRefExpr {{.*}} <col:3> 'E':'E' lvalue Var {{.*}} 'e' 'E':'E'
+// CHECK-NEXT: |   | `-ImplicitCastExpr {{.*}} <col:7> 'E':'E' <LValueToRValue>
+// CHECK-NEXT: |   |   `-DeclRefExpr {{.*}} <col:7> 'E':'E' lvalue Var {{.*}} 'e' 'E':'E'
 // CHECK-NEXT: |   `-CXXOperatorCallExpr {{.*}} <line:17:3, col:7> 'void' ','
 // CHECK-NEXT: |     |-ImplicitCastExpr {{.*}} <col:5> 'void (*)(E, E)' <FunctionToPointerDecay>
 // CHECK-NEXT: |     | `-DeclRefExpr {{.*}} <col:5> 'void (E, E)' lvalue Function {{.*}} 'operator,' 'void (E, E)'
-// CHECK-NEXT: |     |-ImplicitCastExpr {{.*}} <col:3> 'E' <LValueToRValue>
-// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} <col:3> 'E' lvalue Var {{.*}} 'e' 'E'
-// CHECK-NEXT: |     `-ImplicitCastExpr {{.*}} <col:7> 'E' <LValueToRValue>
-// CHECK-NEXT: |       `-DeclRefExpr {{.*}} <col:7> 'E' lvalue Var {{.*}} 'e' 'E'
+// CHECK-NEXT: |     |-ImplicitCastExpr {{.*}} <col:3> 'E':'E' <LValueToRValue>
+// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} <col:3> 'E':'E' lvalue Var {{.*}} 'e' 'E':'E'
+// CHECK-NEXT: |     `-ImplicitCastExpr {{.*}} <col:7> 'E':'E' <LValueToRValue>
+// CHECK-NEXT: |       `-DeclRefExpr {{.*}} <col:7> 'E':'E' lvalue Var {{.*}} 'e' 'E':'E'
 
 namespace a {
   void operator-(E, E);

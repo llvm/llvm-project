@@ -47,7 +47,7 @@ namespace test3 {
 // Can't be virtual even if there's a non-virtual path.
 namespace test4 {
   struct A : Base {};
-  struct Derived : Base, virtual A {}; // expected-warning  {{direct base 'Base' is inaccessible due to ambiguity:\n    struct test4::Derived -> struct Base\n    struct test4::Derived -> struct test4::A -> struct Base}}
+  struct Derived : Base, virtual A {}; // expected-warning  {{direct base 'Base' is inaccessible due to ambiguity:\n    struct test4::Derived -> Base\n    struct test4::Derived -> A -> Base}}
   void test() {
     int (Derived::*d) = data_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'test4::Derived':}}
     int (Derived::*m)() = method_ptr; // expected-error {{ambiguous conversion from pointer to member of base class 'Base' to pointer to member of derived class 'test4::Derived':}}

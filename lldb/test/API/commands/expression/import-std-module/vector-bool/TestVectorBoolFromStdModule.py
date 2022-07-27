@@ -19,7 +19,7 @@ class TestBoolVector(TestBase):
                                           lldb.SBFileSpec("main.cpp"))
 
         vector_type = "std::vector<bool>"
-        size_type = vector_type + "::size_type"
+        size_type = "size_type"
 
         self.runCmd("settings set target.import-std-module true")
 

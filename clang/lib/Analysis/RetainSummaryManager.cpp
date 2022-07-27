@@ -892,7 +892,7 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 /// has a typedef with a given name @c Name.
 static bool hasTypedefNamed(QualType QT,
                             StringRef Name) {
-  while (auto *T = dyn_cast<TypedefType>(QT)) {
+  while (auto *T = QT->getAs<TypedefType>()) {
     const auto &Context = T->getDecl()->getASTContext();
     if (T->getDecl()->getIdentifier() == &Context.Idents.get(Name))
       return true;
