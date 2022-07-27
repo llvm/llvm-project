@@ -849,6 +849,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
                            ? &llvm::APFloat::IEEEquad()
                            : &llvm::APFloat::PPCDoubleDouble();
   Opts.IEEE128 = 1;
+  if (getTriple().isOSAIX() && Opts.EnableAIXQuadwordAtomicsABI &&
+      HasQuadwordAtomics)
+    MaxAtomicInlineWidth = 128;
 }
 
 ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {

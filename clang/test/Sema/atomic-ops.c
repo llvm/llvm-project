@@ -10,6 +10,12 @@
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
 // RUN:   -target-cpu pwr8 -DPPC64_PWR8
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
+// RUN:   -target-cpu pwr8
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
+// RUN:   -mabi=quadword-atomics -target-cpu pwr8 -DPPC64_PWR8
 
 // Basic parsing/Sema tests for __c11_atomic_*
 
