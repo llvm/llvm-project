@@ -64,47 +64,23 @@ LogicalResult complex::NumberAttr::verify(
 }
 
 void complex::NumberAttr::print(AsmPrinter &printer) const {
-  printer << "<:";
-  printer.printType(getType());
-  printer << " ";
-  printer.printFloat(getReal());
-  printer << ", ";
-  printer.printFloat(getImag());
-  printer << ">";
+  printer << "<:" << getType() << " " << getReal() << ", " << getImag() << ">";
 }
 
 Attribute complex::NumberAttr::parse(AsmParser &parser, Type odsType) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  if (failed(parser.parseColon()))
-    return {};
-
   Type type;
-  if (failed(parser.parseType(type)))
-    return {};
-
-  double real;
-  if (failed(parser.parseFloat(real)))
-    return {};
-
-  if (failed(parser.parseComma()))
-    return {};
-
-  double imag;
-  if (failed(parser.parseFloat(imag)))
-    return {};
-
-  if (failed(parser.parseGreater()))
+  double real, imag;
+  if (parser.parseLess() || parser.parseColon() || parser.parseType(type) ||
+      parser.parseFloat(real) || parser.parseComma() ||
+      parser.parseFloat(imag) || parser.parseGreater())
     return {};
 
   bool unused = false;
-  auto realFloat = APFloat(real);
+  APFloat realFloat(real);
   realFloat.convert(type.cast<FloatType>().getFloatSemantics(),
                     APFloat::rmNearestTiesToEven, &unused);
-  auto imagFloat = APFloat(imag);
+  APFloat imagFloat(imag);
   imagFloat.convert(type.cast<FloatType>().getFloatSemantics(),
                     APFloat::rmNearestTiesToEven, &unused);
-
   return NumberAttr::get(parser.getContext(), realFloat, imagFloat, type);
 }
