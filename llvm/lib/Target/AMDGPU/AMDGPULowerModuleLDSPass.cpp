@@ -149,11 +149,42 @@ public:
   }
 
   bool runOnModule(Module &M) override {
+    LLVMContext &Ctx = M.getContext();
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
+
     std::vector<GlobalVariable *> ModuleScopeVariables =
         AMDGPU::findVariablesToLower(M, nullptr);
-    Changed |= processUsedLDS(CG, M, ModuleScopeVariables);
+    if (!ModuleScopeVariables.empty()) {
+      GlobalVariable *SGV =
+          processUsedLDS(CG, M, ModuleScopeVariables, nullptr);
+
+      // This ensures the variable is allocated when called functions access it.
+      // It also lets other passes, specifically PromoteAlloca, accurately
+      // calculate how much LDS will be used by the kernel after lowering.
+
+      IRBuilder<> Builder(Ctx);
+      for (Function &Func : M.functions()) {
+        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
+          const CallGraphNode *N = CG[&Func];
+          const bool CalleesRequireModuleLDS = N->size() > 0;
+
+          if (CalleesRequireModuleLDS) {
+            // If a function this kernel might call requires module LDS,
+            // annotate the kernel to let later passes know it will allocate
+            // this structure, even if not apparent from the IR.
+            markUsedByKernel(Builder, &Func, SGV);
+          } else {
+            // However if we are certain this kernel cannot call a function that
+            // requires module LDS, annotate the kernel so the backend can elide
+            // the allocation without repeating callgraph walks.
+            Func.addFnAttr("amdgpu-elide-module-lds");
+          }
+        }
+      }
+
+      Changed = true;
+    }
 
     for (Function &F : M.functions()) {
       if (F.isDeclaration())
@@ -162,9 +193,13 @@ public:
       // Only lower compute kernels' LDS.
       if (!AMDGPU::isKernel(F.getCallingConv()))
         continue;
+
       std::vector<GlobalVariable *> KernelUsedVariables =
           AMDGPU::findVariablesToLower(M, &F);
-      Changed |= processUsedLDS(CG, M, KernelUsedVariables, &F);
+      if (!KernelUsedVariables.empty()) {
+        processUsedLDS(CG, M, KernelUsedVariables, &F);
+        Changed = true;
+      }
     }
 
     return Changed;
@@ -306,16 +341,12 @@ private:
     return {SGV, std::move(Map)};
   }
 
-  bool processUsedLDS(CallGraph const &CG, Module &M,
-                      std::vector<GlobalVariable *> const &LDSVarsToTransform,
-                      Function *F = nullptr) {
+  GlobalVariable *
+  processUsedLDS(CallGraph const &CG, Module &M,
+                 std::vector<GlobalVariable *> const &LDSVarsToTransform,
+                 Function *F) {
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
-
-    if (LDSVarsToTransform.empty()) {
-      // No variables to rewrite, no changes made.
-      return false;
-    }
 
     std::string VarName(
         F ? (Twine("llvm.amdgcn.kernel.") + F->getName() + ".lds").str()
@@ -396,31 +427,7 @@ private:
       refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
 
-    // This ensures the variable is allocated when called functions access it.
-    // It also lets other passes, specifically PromoteAlloca, accurately
-    // calculate how much LDS will be used by the kernel after lowering.
-    if (!F) {
-      IRBuilder<> Builder(Ctx);
-      for (Function &Func : M.functions()) {
-        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
-          const CallGraphNode *N = CG[&Func];
-          const bool CalleesRequireModuleLDS = N->size() > 0;
-
-          if (CalleesRequireModuleLDS) {
-            // If a function this kernel might call requires module LDS,
-            // annotate the kernel to let later passes know it will allocate
-            // this structure, even if not apparent from the IR.
-            markUsedByKernel(Builder, &Func, SGV);
-          } else {
-            // However if we are certain this kernel cannot call a function that
-            // requires module LDS, annotate the kernel so the backend can elide
-            // the allocation without repeating callgraph walks.
-            Func.addFnAttr("amdgpu-elide-module-lds");
-          }
-        }
-      }
-    }
-    return true;
+    return SGV;
   }
 
   void refineUsesAlignmentAndAA(Value *Ptr, Align A, const DataLayout &DL,
