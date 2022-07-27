@@ -109,10 +109,10 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::for_each_n(first, count, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::includes(first, last, first2, last2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::includes(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_heap(a, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_heap_until(first, last, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_heap_until(a, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_heap(a, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_heap_until(first, last, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_heap_until(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_partitioned(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_partitioned(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::is_permutation(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);

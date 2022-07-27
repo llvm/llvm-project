@@ -132,6 +132,14 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     }
   }
 
+  if (Function *PublicTypeTestFunc =
+          M.getFunction(Intrinsic::getName(Intrinsic::public_type_test))) {
+    for (const Use &U : PublicTypeTestFunc->uses()) {
+      auto CI = cast<CallInst>(U.getUser());
+      ExternalizeTypeId(CI, 1);
+    }
+  }
+
   if (Function *TypeCheckedLoadFunc =
           M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load))) {
     for (const Use &U : TypeCheckedLoadFunc->uses()) {

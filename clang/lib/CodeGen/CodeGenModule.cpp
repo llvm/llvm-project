@@ -96,16 +96,18 @@ static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   llvm_unreachable("invalid C++ ABI kind");
 }
 
-CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
+CodeGenModule::CodeGenModule(ASTContext &C,
+                             IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                             const HeaderSearchOptions &HSO,
                              const PreprocessorOptions &PPO,
                              const CodeGenOptions &CGO, llvm::Module &M,
                              DiagnosticsEngine &diags,
                              CoverageSourceInfo *CoverageInfo)
-    : Context(C), LangOpts(C.getLangOpts()), HeaderSearchOpts(HSO),
-      PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
-      Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
-      VMContext(M.getContext()), Types(*this), VTables(*this),
-      SanitizerMD(new SanitizerMetadata(*this)) {
+    : Context(C), LangOpts(C.getLangOpts()), FS(std::move(FS)),
+      HeaderSearchOpts(HSO), PreprocessorOpts(PPO), CodeGenOpts(CGO),
+      TheModule(M), Diags(diags), Target(C.getTargetInfo()),
+      ABI(createCXXABI(*this)), VMContext(M.getContext()), Types(*this),
+      VTables(*this), SanitizerMD(new SanitizerMetadata(*this)) {
 
   // Initialize the type cache.
   llvm::LLVMContext &LLVMContext = M.getContext();
@@ -795,18 +797,17 @@ void CodeGenModule::Release() {
       Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
       Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
       Arch == llvm::Triple::aarch64_be) {
-    getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
-                              LangOpts.BranchTargetEnforcement);
-
-    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address",
-                              LangOpts.hasSignReturnAddress());
-
-    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address-all",
-                              LangOpts.isSignReturnAddressScopeAll());
-
-    getModule().addModuleFlag(llvm::Module::Min,
-                              "sign-return-address-with-bkey",
-                              !LangOpts.isSignReturnAddressWithAKey());
+    if (LangOpts.BranchTargetEnforcement)
+      getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
+                                1);
+    if (LangOpts.hasSignReturnAddress())
+      getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 1);
+    if (LangOpts.isSignReturnAddressScopeAll())
+      getModule().addModuleFlag(llvm::Module::Min, "sign-return-address-all",
+                                1);
+    if (!LangOpts.isSignReturnAddressWithAKey())
+      getModule().addModuleFlag(llvm::Module::Min,
+                                "sign-return-address-with-bkey", 1);
   }
 
   if (!CodeGenOpts.MemoryProfileOutput.empty()) {

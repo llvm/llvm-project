@@ -114,8 +114,8 @@ constexpr bool test_all() {
   test(std::ranges::is_sorted, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::is_sorted_until, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::includes, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
-  //test(std::ranges::is_heap, in, &Foo::binary_pred, &Bar::val);
-  //test(std::ranges::is_heap_until, in, &Foo::binary_pred, &Bar::val);
+  test(std::ranges::is_heap, in, &Foo::binary_pred, &Bar::val);
+  test(std::ranges::is_heap_until, in, &Foo::binary_pred, &Bar::val);
   //std::ranges::clamp(b, a, c, &Foo::binary_pred);
   //test(std::ranges::is_permutation, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::for_each, in, &Foo::unary_pred, &Bar::val);
@@ -128,8 +128,7 @@ constexpr bool test_all() {
     std::array out_transform = {false, true, true};
     test(std::ranges::transform, in, out_transform.begin(), &Foo::unary_pred, &Bar::val);
   }
-  //test(std::ranges::generate, in, &Bar::create);
-  //std::ranges::generate_n(in.begin(), count, &Bar::create);
+  // Whether `ranges::generate{,_n}` invokes `gen` via `std::invoke` is not observable.
   //test(std::ranges::remove_copy, in, out, x, &Bar::val);
   //test(std::ranges::remove_copy_if, in, out, &Foo::unary_pred, &Bar::val);
   // `replace*` algorithms only use the projection to compare the elements, not to write them.

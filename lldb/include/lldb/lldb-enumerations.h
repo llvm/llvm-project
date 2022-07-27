@@ -1159,12 +1159,6 @@ enum SaveCoreStyle {
   eSaveCoreStackOnly = 3,
 };
 
-// Type of counter values associated with instructions in a trace.
-enum TraceCounter {
-  // Timestamp counter, like the one offered by Intel CPUs (TSC).
-  eTraceCounterTSC = 0,
-};
-
 /// Events that might happen during a trace session.
 enum TraceEvent {
   /// Tracing was disabled for some time due to a software trigger
@@ -1174,6 +1168,8 @@ enum TraceEvent {
   /// Event due to CPU change for a thread. This event is also fired when
   /// suddenly it's not possible to identify the cpu of a given thread.
   eTraceEventCPUChanged,
+  /// Event due to a CPU HW clock tick
+  eTraceEventHWClockTick,
 };
 
 // Enum used to identify which kind of item a \a TraceCursor is pointing at

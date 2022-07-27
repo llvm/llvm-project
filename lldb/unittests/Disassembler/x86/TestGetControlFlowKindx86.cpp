@@ -137,7 +137,8 @@ TEST_F(TestGetControlFlowKindx86, TestX86_64Instruction) {
     for (size_t i = 0; i < num_of_instructions; ++i) {
       InstructionSP inst_sp;
       inst_sp = inst_list.GetInstructionAtIndex(i);
-      InstructionControlFlowKind kind = inst_sp->GetControlFlowKind(arch);
+      ExecutionContext exe_ctx (nullptr, nullptr, nullptr);
+      InstructionControlFlowKind kind = inst_sp->GetControlFlowKind(&exe_ctx);
       EXPECT_EQ(kind, result[i]);
     }
   }

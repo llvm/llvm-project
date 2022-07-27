@@ -202,6 +202,10 @@ Bug Fixes
   considered to have one positive bit in order to represent the underlying
   value. This effects whether we consider the store of the value one to be well
   defined.
+- An operator introduced to the scope via a `using` statement now correctly references this
+  statement in clangd (hover over the symbol, jump to definition) as well as in the AST dump.
+  This also fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/#55095>`_ as a
+  side-effect.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -435,6 +439,11 @@ Attribute Changes in Clang
   ``__attribute__((function_return("keep")))`` was added. This is intended to
   be used by the Linux kernel to mitigate RETBLEED.
 
+- Ignore the `__preferred_name__` attribute when writing for C++20 module interfaces.
+  This is a short-term workaround intentionally since clang doesn't take care of the
+  serialization and deserialization of `__preferred_name__`.  See
+  https://github.com/llvm/llvm-project/issues/56490 for example.
+
 Windows Support
 ---------------
 
@@ -583,6 +592,8 @@ ABI Changes in Clang
 
 OpenMP Support in Clang
 -----------------------
+* Added the support for ``atomic compare`` and ``atomic compare capture``
+  (``-fopenmp-version=51`` is required).
 
 ...
 

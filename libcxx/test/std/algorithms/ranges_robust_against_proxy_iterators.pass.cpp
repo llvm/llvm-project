@@ -70,7 +70,7 @@ constexpr void run_tests() {
   auto unary_pred = [](const Proxy<T&>&) { return true; };
   //auto binary_pred = [](const Proxy<T>&, const Proxy<T>&) { return return false; };
   auto binary_func = [](const Proxy<T>&, const Proxy<T>&) -> Proxy<T> { return Proxy<T>(T()); };
-  //auto gen = [] { return Proxy<T>(T{42}); };
+  auto gen = [] { return Proxy<T>(T{42}); };
 
   test(std::ranges::any_of, in, unary_pred);
   test(std::ranges::all_of, in, unary_pred);
@@ -101,8 +101,8 @@ constexpr void run_tests() {
   test(std::ranges::is_sorted, in);
   test(std::ranges::is_sorted_until, in);
   test(std::ranges::includes, in, in2);
-  //test(std::ranges::is_heap, in);
-  //test(std::ranges::is_heap_until, in);
+  test(std::ranges::is_heap, in);
+  test(std::ranges::is_heap_until, in);
   //test(std::ranges::is_permutation, in, in2);
   test(std::ranges::for_each, in, std::identity{});
   std::ranges::for_each_n(in.begin(), count, std::identity{});
@@ -122,8 +122,8 @@ constexpr void run_tests() {
     test(std::ranges::transform, in, out, std::identity{});
     test(std::ranges::transform, in, in2, out, binary_func);
   }
-  //test(std::ranges::generate, in, gen);
-  //std::ranges::generate_n(in.begin(), count, gen);
+  test(std::ranges::generate, in, gen);
+  std::ranges::generate_n(in.begin(), count, gen);
   if constexpr (std::copyable<T>) {
   //test(std::ranges::remove_copy, in, out, x);
   //test(std::ranges::remove_copy_if, in, out, unary_pred);
