@@ -655,6 +655,7 @@ libc_math_function(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":common_constants",
         ":range_reduction",
     ],
 )
