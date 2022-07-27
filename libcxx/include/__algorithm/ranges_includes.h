@@ -56,7 +56,9 @@ struct __fn {
         std::move(__last1),
         std::move(__first2),
         std::move(__last2),
-        ranges::__make_projected_comp(__comp, __proj1, __proj2));
+        std::move(__comp),
+        std::move(__proj1),
+        std::move(__proj2));
   }
 
   template <
@@ -73,7 +75,9 @@ struct __fn {
         ranges::end(__range1),
         ranges::begin(__range2),
         ranges::end(__range2),
-        ranges::__make_projected_comp(__comp, __proj1, __proj2));
+        std::move(__comp),
+        std::move(__proj1),
+        std::move(__proj2));
   }
 };
 
