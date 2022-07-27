@@ -320,6 +320,18 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   case DW_TAG_volatile_type:
     s.PutCString("volatile ");
     break;
+  case DW_TAG_LLVM_ptrauth_type: {
+    unsigned key = GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_key, 0);
+    bool isAddressDiscriminated = GetAttributeValueAsUnsigned(
+        DW_AT_LLVM_ptrauth_address_discriminated, 0);
+    unsigned extraDiscriminator =
+        GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_extra_discriminator, 0);
+    bool isaPointer =
+        GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_isa_pointer, 0);
+    s.Printf("__ptrauth(%d, %d, 0x0%x, %d)", key, isAddressDiscriminated,
+             extraDiscriminator, isaPointer);
+    break;
+  }
   default:
     return;
   }
