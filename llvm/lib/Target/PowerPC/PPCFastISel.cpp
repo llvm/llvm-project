@@ -831,7 +831,7 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
   // FIXME: Operands are not in canonical order at -O0, so an immediate
   // operand in position 1 is a lost opportunity for now.  We are
   // similar to ARM in this regard.
-  long Imm = 0;
+  int64_t Imm = 0;
   bool UseImm = false;
   const bool HasSPE = Subtarget->hasSPE();
 
@@ -841,7 +841,8 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
     if (SrcVT == MVT::i64 || SrcVT == MVT::i32 || SrcVT == MVT::i16 ||
         SrcVT == MVT::i8 || SrcVT == MVT::i1) {
       const APInt &CIVal = ConstInt->getValue();
-      Imm = (IsZExt) ? (long)CIVal.getZExtValue() : (long)CIVal.getSExtValue();
+      Imm = (IsZExt) ? (int64_t)CIVal.getZExtValue() :
+                       (int64_t)CIVal.getSExtValue();
       if ((IsZExt && isUInt<16>(Imm)) || (!IsZExt && isInt<16>(Imm)))
         UseImm = true;
     }
