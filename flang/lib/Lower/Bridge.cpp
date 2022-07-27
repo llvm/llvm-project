@@ -44,7 +44,6 @@
 #include "flang/Runtime/iostat.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/RegionUtils.h"
