@@ -226,6 +226,9 @@ public:
 
   virtual bool IsCall() { return false; }
 
+  static const char *GetNameForInstructionControlFlowKind(
+      lldb::InstructionControlFlowKind instruction_control_flow_kind);
+
 protected:
   Address m_address; // The section offset address of this instruction
                      // We include an address class in the Instruction class to

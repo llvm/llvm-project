@@ -92,7 +92,7 @@ constexpr bool test_all() {
 
   auto unary_pred = [](int i) { return i > 0; };
   auto binary_pred = [](int i, int j) { return i < j; };
-  //auto gen = [] { return 42; };
+  auto gen = [] { return 42; };
 
   std::array in = {1, 2, 3};
   std::array in2 = {4, 5, 6};
@@ -125,7 +125,7 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::search_n, in, count, x);
   dangling_1st(std::ranges::find_end, in, in2);
   dangling_1st(std::ranges::is_sorted_until, in);
-  //dangling_1st(std::ranges::is_heap_until, in);
+  dangling_1st(std::ranges::is_heap_until, in);
   dangling_1st<for_each_result<dangling, decltype(unary_pred)>>(std::ranges::for_each, in, unary_pred);
   dangling_1st<copy_result<dangling, int*>>(std::ranges::copy, in, out);
   // TODO: uncomment `copy_backward` once https://reviews.llvm.org/D128864 lands.
@@ -145,7 +145,7 @@ constexpr bool test_all() {
     dangling_both<binary_transform_result<dangling, dangling, bool*>>(
         std::ranges::transform, in, in2, out_transform.begin(), binary_pred);
   }
-  //dangling_1st(std::ranges::generate, in, gen);
+  dangling_1st(std::ranges::generate, in, gen);
   //dangling_1st<remove_copy_result<dangling, int*>>(std::ranges::remove_copy, in, out, x);
   //dangling_1st<remove_copy_if_result<dangling, int*>>(std::ranges::remove_copy_if, in, out, unary_pred);
   dangling_1st(std::ranges::replace, in, x, x);

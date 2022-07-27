@@ -100,6 +100,9 @@ class AMDGPULowerModuleLDS : public ModulePass {
   static void
   removeFromUsedLists(Module &M,
                       const std::vector<GlobalVariable *> &LocalVars) {
+    // The verifier rejects used lists containing an inttoptr of a constant
+    // so remove the variables from these lists before replaceAllUsesWith
+
     SmallPtrSet<Constant *, 32> LocalVarsSet;
     for (GlobalVariable *LocalVar : LocalVars)
       if (Constant *C = dyn_cast<Constant>(LocalVar->stripPointerCasts()))
@@ -149,12 +152,59 @@ public:
   }
 
   bool runOnModule(Module &M) override {
+    LLVMContext &Ctx = M.getContext();
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
+
+    // Move variables used by functions into amdgcn.module.lds
     std::vector<GlobalVariable *> ModuleScopeVariables =
         AMDGPU::findVariablesToLower(M, nullptr);
-    Changed |= processUsedLDS(CG, M, ModuleScopeVariables);
+    if (!ModuleScopeVariables.empty()) {
+      std::string VarName = "llvm.amdgcn.module.lds";
 
+      GlobalVariable *SGV;
+      DenseMap<GlobalVariable *, Constant *> LDSVarsToConstantGEP;
+      std::tie(SGV, LDSVarsToConstantGEP) =
+          createLDSVariableReplacement(M, VarName, ModuleScopeVariables);
+
+      appendToCompilerUsed(
+          M, {static_cast<GlobalValue *>(
+                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+                     cast<Constant>(SGV), Type::getInt8PtrTy(Ctx)))});
+
+      removeFromUsedLists(M, ModuleScopeVariables);
+      replaceLDSVariablesWithStruct(M, ModuleScopeVariables, SGV,
+                                    LDSVarsToConstantGEP,
+                                    [](Use &) { return true; });
+
+      // This ensures the variable is allocated when called functions access it.
+      // It also lets other passes, specifically PromoteAlloca, accurately
+      // calculate how much LDS will be used by the kernel after lowering.
+
+      IRBuilder<> Builder(Ctx);
+      for (Function &Func : M.functions()) {
+        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
+          const CallGraphNode *N = CG[&Func];
+          const bool CalleesRequireModuleLDS = N->size() > 0;
+
+          if (CalleesRequireModuleLDS) {
+            // If a function this kernel might call requires module LDS,
+            // annotate the kernel to let later passes know it will allocate
+            // this structure, even if not apparent from the IR.
+            markUsedByKernel(Builder, &Func, SGV);
+          } else {
+            // However if we are certain this kernel cannot call a function that
+            // requires module LDS, annotate the kernel so the backend can elide
+            // the allocation without repeating callgraph walks.
+            Func.addFnAttr("amdgpu-elide-module-lds");
+          }
+        }
+      }
+
+      Changed = true;
+    }
+
+    // Move variables used by kernels into per-kernel instances
     for (Function &F : M.functions()) {
       if (F.isDeclaration())
         continue;
@@ -162,9 +212,37 @@ public:
       // Only lower compute kernels' LDS.
       if (!AMDGPU::isKernel(F.getCallingConv()))
         continue;
+
       std::vector<GlobalVariable *> KernelUsedVariables =
           AMDGPU::findVariablesToLower(M, &F);
-      Changed |= processUsedLDS(CG, M, KernelUsedVariables, &F);
+
+      // Replace all constant uses with instructions if they belong to the
+      // current kernel. Unnecessary, removing will cause test churn.
+      for (size_t I = 0; I < KernelUsedVariables.size(); I++) {
+        GlobalVariable *GV = KernelUsedVariables[I];
+        for (User *U : make_early_inc_range(GV->users())) {
+          if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
+            AMDGPU::replaceConstantUsesInFunction(C, &F);
+        }
+        GV->removeDeadConstantUsers();
+      }
+
+      if (!KernelUsedVariables.empty()) {
+        std::string VarName =
+            (Twine("llvm.amdgcn.kernel.") + F.getName() + ".lds").str();
+        GlobalVariable *SGV;
+        DenseMap<GlobalVariable *, Constant *> LDSVarsToConstantGEP;
+        std::tie(SGV, LDSVarsToConstantGEP) =
+            createLDSVariableReplacement(M, VarName, KernelUsedVariables);
+
+        removeFromUsedLists(M, KernelUsedVariables);
+        replaceLDSVariablesWithStruct(
+            M, KernelUsedVariables, SGV, LDSVarsToConstantGEP, [&F](Use &U) {
+              Instruction *I = dyn_cast<Instruction>(U.getUser());
+              return I && I->getFunction() == &F;
+            });
+        Changed = true;
+      }
     }
 
     return Changed;
@@ -306,36 +384,14 @@ private:
     return {SGV, std::move(Map)};
   }
 
-  bool processUsedLDS(CallGraph const &CG, Module &M,
-                      std::vector<GlobalVariable *> const &LDSVarsToTransform,
-                      Function *F = nullptr) {
+  template <typename PredicateTy>
+  void replaceLDSVariablesWithStruct(
+      Module &M, std::vector<GlobalVariable *> const &LDSVarsToTransform,
+      GlobalVariable *SGV,
+      DenseMap<GlobalVariable *, Constant *> &LDSVarsToConstantGEP,
+      PredicateTy Predicate) {
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
-
-    if (LDSVarsToTransform.empty()) {
-      // No variables to rewrite, no changes made.
-      return false;
-    }
-
-    std::string VarName(
-        F ? (Twine("llvm.amdgcn.kernel.") + F->getName() + ".lds").str()
-          : "llvm.amdgcn.module.lds");
-
-    GlobalVariable *SGV;
-    DenseMap<GlobalVariable *, Constant *> LDSVarToConstantGEP;
-    std::tie(SGV, LDSVarToConstantGEP) =
-        createLDSVariableReplacement(M, VarName, LDSVarsToTransform);
-
-    if (!F) {
-      appendToCompilerUsed(
-          M, {static_cast<GlobalValue *>(
-                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-                     cast<Constant>(SGV), Type::getInt8PtrTy(Ctx)))});
-    }
-
-    // The verifier rejects used lists containing an inttoptr of a constant
-    // so remove the variables from these lists before replaceAllUsesWith
-    removeFromUsedLists(M, LDSVarsToTransform);
 
     // Create alias.scope and their lists. Each field in the new structure
     // does not alias with all other fields.
@@ -357,25 +413,9 @@ private:
     // field of the instance that will be allocated by AMDGPUMachineFunction
     for (size_t I = 0; I < NumberVars; I++) {
       GlobalVariable *GV = LDSVarsToTransform[I];
-      Constant *GEP = LDSVarToConstantGEP[GV];
+      Constant *GEP = LDSVarsToConstantGEP[GV];
 
-      if (F) {
-        // Replace all constant uses with instructions if they belong to the
-        // current kernel.
-        for (User *U : make_early_inc_range(GV->users())) {
-          if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
-            AMDGPU::replaceConstantUsesInFunction(C, F);
-        }
-
-        GV->removeDeadConstantUsers();
-
-        GV->replaceUsesWithIf(GEP, [F](Use &U) {
-          Instruction *I = dyn_cast<Instruction>(U.getUser());
-          return I && I->getFunction() == F;
-        });
-      } else {
-        GV->replaceAllUsesWith(GEP);
-      }
+      GV->replaceUsesWithIf(GEP, Predicate);
       if (GV->use_empty()) {
         GV->eraseFromParent();
       }
@@ -395,32 +435,6 @@ private:
 
       refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
-
-    // This ensures the variable is allocated when called functions access it.
-    // It also lets other passes, specifically PromoteAlloca, accurately
-    // calculate how much LDS will be used by the kernel after lowering.
-    if (!F) {
-      IRBuilder<> Builder(Ctx);
-      for (Function &Func : M.functions()) {
-        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
-          const CallGraphNode *N = CG[&Func];
-          const bool CalleesRequireModuleLDS = N->size() > 0;
-
-          if (CalleesRequireModuleLDS) {
-            // If a function this kernel might call requires module LDS,
-            // annotate the kernel to let later passes know it will allocate
-            // this structure, even if not apparent from the IR.
-            markUsedByKernel(Builder, &Func, SGV);
-          } else {
-            // However if we are certain this kernel cannot call a function that
-            // requires module LDS, annotate the kernel so the backend can elide
-            // the allocation without repeating callgraph walks.
-            Func.addFnAttr("amdgpu-elide-module-lds");
-          }
-        }
-      }
-    }
-    return true;
   }
 
   void refineUsesAlignmentAndAA(Value *Ptr, Align A, const DataLayout &DL,
