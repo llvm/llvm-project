@@ -118,12 +118,17 @@ def ForeachOp : TransformDialectOp<"foreach",
     the entire sequence fails immediately leaving the payload IR in potentially
     invalid state, i.e., this operation offers no transformation rollback
     capabilities.
+
+    This op generates as many handles as the terminating YieldOp has operands.
+    For each result, the payload ops of the corresponding YieldOp operand are
+    merged and mapped to the same resulting handle.
   }];
 
   let arguments = (ins PDL_Operation:$target);
-  let results = (outs);
+  let results = (outs Variadic<PDL_Operation>:$results);
   let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = "$target $body attr-dict";
+  let assemblyFormat = "$target (`->` type($results)^)? $body attr-dict";
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Allow the dialect prefix to be omitted.
@@ -132,6 +137,8 @@ def ForeachOp : TransformDialectOp<"foreach",
     BlockArgument getIterationVariable() {
       return getBody().front().getArgument(0);
     }
+
+    transform::YieldOp getYieldOp();
   }];
 }
 
