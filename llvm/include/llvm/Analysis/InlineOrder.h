@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/InstrTypes.h"
 #include <algorithm>
 #include <utility>
@@ -19,6 +20,8 @@
 namespace llvm {
 class CallBase;
 class Function;
+
+enum class InlinePriorityMode : int { NoPriority, Size, Cost, OptRatio };
 
 template <typename T> class InlineOrder {
 public:
@@ -39,6 +42,10 @@ public:
 
   bool empty() { return !size(); }
 };
+
+std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
+getInlineOrder(InlinePriorityMode UseInlinePriority,
+               FunctionAnalysisManager &FAM, const InlineParams &Params);
 
 template <typename T, typename Container = SmallVector<T, 16>>
 class DefaultInlineOrder : public InlineOrder<T> {
@@ -82,14 +89,58 @@ class SizePriority : public InlinePriority {
   using PriorityT = unsigned;
   DenseMap<const CallBase *, PriorityT> Priorities;
 
-  static PriorityT evaluate(const CallBase *CB) {
+  PriorityT evaluate(const CallBase *CB) {
     Function *Callee = CB->getCalledFunction();
     return Callee->getInstructionCount();
   }
 
-  static bool isMoreDesirable(const PriorityT &P1, const PriorityT &P2) {
+  bool isMoreDesirable(const PriorityT &P1, const PriorityT &P2) const {
     return P1 < P2;
   }
+
+public:
+  bool hasLowerPriority(const CallBase *L, const CallBase *R) const override {
+    const auto I1 = Priorities.find(L);
+    const auto I2 = Priorities.find(R);
+    assert(I1 != Priorities.end() && I2 != Priorities.end());
+    return isMoreDesirable(I2->second, I1->second);
+  }
+
+  // Update the priority associated with CB.
+  void update(const CallBase *CB) override { Priorities[CB] = evaluate(CB); };
+
+  bool updateAndCheckDecreased(const CallBase *CB) override {
+    auto It = Priorities.find(CB);
+    const auto OldPriority = It->second;
+    It->second = evaluate(CB);
+    const auto NewPriority = It->second;
+    return isMoreDesirable(OldPriority, NewPriority);
+  }
+};
+
+class CostPriority : public InlinePriority {
+  using PriorityT = int;
+  DenseMap<const CallBase *, PriorityT> Priorities;
+  std::function<InlineCost(const CallBase *)> getInlineCost;
+
+  PriorityT evaluate(const CallBase *CB) {
+    auto IC = getInlineCost(CB);
+    int cost = 0;
+    if (IC.isVariable())
+      cost = IC.getCost();
+    else
+      cost = IC.isNever() ? INT_MAX : INT_MIN;
+    return cost;
+  }
+
+  bool isMoreDesirable(const PriorityT &P1, const PriorityT &P2) const {
+    return P1 < P2;
+  }
+
+public:
+  CostPriority() = delete;
+  CostPriority(std::function<InlineCost(const CallBase *)> getInlineCost)
+      : getInlineCost(getInlineCost){};
 
   bool hasLowerPriority(const CallBase *L, const CallBase *R) const override {
     const auto I1 = Priorities.find(L);
@@ -98,7 +149,6 @@ class SizePriority : public InlinePriority {
     return isMoreDesirable(I2->second, I1->second);
   }
 
-public:
   // Update the priority associated with CB.
   void update(const CallBase *CB) override { Priorities[CB] = evaluate(CB); };
 
@@ -184,5 +234,6 @@ private:
   DenseMap<CallBase *, int> InlineHistoryMap;
   std::unique_ptr<InlinePriority> PriorityPtr;
 };
+
 } // namespace llvm
 #endif // LLVM_ANALYSIS_INLINEORDER_H
