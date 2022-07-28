@@ -7014,7 +7014,6 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/Quant/FakeQuantSupport.h",
-        "include/mlir/Dialect/Quant/Passes.h",
         "include/mlir/Dialect/Quant/QuantOps.h",
         "include/mlir/Dialect/Quant/QuantTypes.h",
         "include/mlir/Dialect/Quant/UniformSupport.h",
