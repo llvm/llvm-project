@@ -4621,21 +4621,6 @@ SourceRange EnumDecl::getSourceRange() const {
   return Res;
 }
 
-void EnumDecl::getValueRange(llvm::APInt &Max, llvm::APInt &Min) const {
-  unsigned Bitwidth = getASTContext().getIntWidth(getIntegerType());
-  unsigned NumNegativeBits = getNumNegativeBits();
-  unsigned NumPositiveBits = getNumPositiveBits();
-
-  if (NumNegativeBits) {
-    unsigned NumBits = std::max(NumNegativeBits, NumPositiveBits + 1);
-    Max = llvm::APInt(Bitwidth, 1) << (NumBits - 1);
-    Min = -Max;
-  } else {
-    Max = llvm::APInt(Bitwidth, 1) << NumPositiveBits;
-    Min = llvm::APInt::getZero(Bitwidth);
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // RecordDecl Implementation
 //===----------------------------------------------------------------------===//
