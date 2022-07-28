@@ -53,7 +53,10 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
     Function *CurrentFunction = &*F;
 
     // Only configuring functions with certain prefixes
-    if (CurrentFunction->getName().str().find("fACCreate") != std::string::npos) {
+    if(!CurrentFunction->hasName()) {
+
+    }
+    else if (CurrentFunction->getName().str().find("fACCreate") != std::string::npos) {
       confFunction(CurrentFunction, &ACInitFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
@@ -127,7 +130,8 @@ void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
                                                           long *NumInstrumentedInstructions) {
   BasicBlock::iterator NextInst(CurrentBB->getFirstNonPHIOrDbg());
   while(NextInst->getOpcode() == 56 &&
-         (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
+         (!static_cast<CallInst*>(&*NextInst)->getCalledFunction() ||
+          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
           static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))
     NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
@@ -147,9 +151,12 @@ void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* Curre
                                                                long *NumInstrumentedInstructions) {
   BasicBlock::iterator NextInst(CurrentBB->getFirstNonPHIOrDbg());
   while(NextInst->getOpcode() == 56 &&
-         (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
-          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))
+         (!static_cast<CallInst*>(&*NextInst)->getCalledFunction() ||
+          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
+          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate")) {
     NextInst++;
+    errs() << *NextInst << "\n";
+  }
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 
   long int NumberOfCalls = 0;
@@ -212,7 +219,7 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
   assert((CGCreateNode!=nullptr) && (ACfp32UnaryFunction!=nullptr) &&
          (ACfp64UnaryFunction!=nullptr) && "Function not initialized!");
   Operation OpType;
-  string FunctionName;
+  string FunctionName = "";
 
 
   switch (BaseInstruction->getOpcode()) {
@@ -221,7 +228,9 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
     OpType = Operation::TruncToFloat;
     break;
   case 56:
-    FunctionName = static_cast<CallInst*>(BaseInstruction)->getCalledFunction()->getName().str();
+    if(static_cast<CallInst*>(BaseInstruction)->getCalledFunction() &&
+        static_cast<CallInst*>(BaseInstruction)->getCalledFunction()->hasName())
+      FunctionName = static_cast<CallInst*>(BaseInstruction)->getCalledFunction()->getName().str();
     transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
     if (FunctionName.find("asin") != std::string::npos)
       OpType = Operation::ArcSin;
@@ -276,7 +285,7 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
                                                 EmptyValue);
 
   Value *LeftOpRegisterNamePointer;
-  if(!isa<Constant>(BaseInstruction->getOperand(0)))
+  if(!isa<Constant>(BaseInstruction->getOperand(0)) && !isa<Argument>(BaseInstruction->getOperand(0)))
     LeftOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpRegisterNamePointer = EmptyValuePointer;
@@ -310,7 +319,7 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
   CallInst *CGCallInstruction = nullptr;
 
   Value *LeftOpInstructionValuePointer;
-  if(!isa<Constant>(BaseInstruction->getOperand(0)))
+  if(!isa<Constant>(BaseInstruction->getOperand(0)) && !isa<Argument>(BaseInstruction->getOperand(0)))
     LeftOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpInstructionValuePointer = EmptyValuePointer;
@@ -374,13 +383,13 @@ void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
                                                 EmptyValue);
 
   Value *LeftOpRegisterNamePointer;
-  if(!isa<Constant>(BaseInstruction->getOperand(0)))
+  if(!isa<Constant>(BaseInstruction->getOperand(0)) && !isa<Argument>(BaseInstruction->getOperand(0)))
     LeftOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpRegisterNamePointer = EmptyValuePointer;
 
   Value *RightOpRegisterNamePointer;
-  if(!isa<Constant>(BaseInstruction->getOperand(1)))
+  if(!isa<Constant>(BaseInstruction->getOperand(1)) && !isa<Argument>(BaseInstruction->getOperand(1)))
     RightOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(1)));
   else
     RightOpRegisterNamePointer = EmptyValuePointer;
@@ -415,13 +424,13 @@ void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
   CallInst *CGCallInstruction = nullptr;
 
   Value *LeftOpInstructionValuePointer;
-  if(!isa<Constant>(BaseInstruction->getOperand(0)))
+  if(!isa<Constant>(BaseInstruction->getOperand(0)) && !isa<Argument>(BaseInstruction->getOperand(0)))
     LeftOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
   else
     LeftOpInstructionValuePointer = EmptyValuePointer;
 
   Value *RightOpInstructionValuePointer;
-  if(!isa<Constant>(BaseInstruction->getOperand(1)))
+  if(!isa<Constant>(BaseInstruction->getOperand(1)) && !isa<Argument>(BaseInstruction->getOperand(1)))
     RightOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(1)));
   else
     RightOpInstructionValuePointer = EmptyValuePointer;
@@ -509,7 +518,11 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
 
     // Instrument Amplification Factor Calculating Function
     if(CurrentInstruction->getOpcode() == Instruction::Call) {
-      string FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
+
+      string FunctionName = "";
+      if(static_cast<CallInst*>(CurrentInstruction)->getCalledFunction() &&
+          static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->hasName())
+        FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
       transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
       if(FunctionName.find("markforresult") != std::string::npos) {
         instrumentCallsForAFAnalysis(static_cast<Instruction*>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get()),
@@ -710,6 +723,7 @@ bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
 }
 
 bool ACInstrumentation::isUnwantedFunction(const Function *Func) {
+  assert(Func->hasName());
   return Func->getName().str().find("fAC") != std::string::npos ||
          Func->getName().str().find("fCG") != std::string::npos ||
          Func->getName().str().find("fAF") != std::string::npos ||
