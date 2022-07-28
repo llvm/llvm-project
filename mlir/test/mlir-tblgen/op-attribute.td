@@ -158,7 +158,7 @@ def Test2_Dialect : Dialect {
 def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
   let arguments = (ins
       SomeAttr:$aAttr,
-      DefaultValuedAttr<SomeAttr, "4.2">:$bAttr,
+      DefaultValuedOptionalAttr<SomeAttr, "4.2">:$bAttr,
       OptionalAttr<SomeAttr>:$cAttr
   );
 }
@@ -255,7 +255,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DEF-NEXT:     odsState.addAttribute(getCAttrAttrName(odsState.name), cAttr);
 
 // DEF:      void AgetOp::build(
-// DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
+// DEF:        some-return-type aAttr, /*optional*/some-return-type bAttr, /*optional*/some-attr-kind cAttr
 // DEF:        odsState.addAttribute(getAAttrAttrName(odsState.name), some-const-builder-call(odsBuilder, aAttr));
 
 // DEF:      void AgetOp::build(
