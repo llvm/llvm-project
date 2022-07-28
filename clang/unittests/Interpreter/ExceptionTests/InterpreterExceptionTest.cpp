@@ -99,6 +99,10 @@ extern "C" int throw_exception() {
   const clang::CompilerInstance *CI = Interp->getCompilerInstance();
   const llvm::Triple &Triple = CI->getASTContext().getTargetInfo().getTriple();
 
+  // AIX is unsupported.
+  if (Triple.isOSAIX())
+    return;
+
   // FIXME: ARM fails due to `Not implemented relocation type!`
   if (Triple.isARM())
     return;
