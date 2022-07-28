@@ -494,3 +494,41 @@ scf::TileConsumerAndFuseProducersUsingSCFForOp::returningMatchAndRewrite(
                   tileAndFuseResult.loops.back(), rewriter);
   return tileAndFuseResult;
 }
+
+//===----------------------------------------------------------------------===//
+// LowerToLoopsUsingSCFForOp
+//===----------------------------------------------------------------------===//
+
+FailureOr<SmallVector<scf::ForOp>>
+scf::LowerToLoopsUsingSCFForOp::returningMatchAndRewrite(
+    TilingInterface op, PatternRewriter &rewriter) const {
+  SmallVector<Range> domain = op.getIterationDomain(rewriter);
+
+  // TODO: Handle cases where the op has results if needed.
+  if (op->getNumResults() > 0) {
+    return rewriter.notifyMatchFailure(
+        op, "unable to lower to loops operations with return values");
+  }
+
+  SmallVector<Value> ivs;
+  SmallVector<scf::ForOp> loops;
+  Location loc = op.getLoc();
+  for (auto loopRange : domain) {
+    Value offsetVal =
+        getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.offset);
+    Value sizeVal =
+        getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.size);
+    Value strideVal =
+        getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.stride);
+    auto loop = rewriter.create<scf::ForOp>(op.getLoc(), offsetVal, sizeVal,
+                                            strideVal, ValueRange{});
+    loops.push_back(loop);
+    ivs.push_back(loop.getInductionVar());
+    rewriter.setInsertionPoint(loop.getBody()->getTerminator());
+  }
+  if (failed(op.generateScalarImplementation(rewriter, op.getLoc(), ivs))) {
+    return failure();
+  }
+  rewriter.eraseOp(op);
+  return loops;
+}

@@ -65,7 +65,7 @@ private:
   linalg::LinalgTransformationFilter filter;
 };
 
-/// Pattern for testing `TileConsumerAndFUseProducersUsingSCFForOp` pattern
+/// Pattern for testing `TileConsumerAndFuseProducersUsingSCFForOp` pattern
 /// (that tiles and fuses operations using the `TilingInterface` with `scf.for`
 /// ops for iterating over the tiles) while using a `filter` to avoid recursive
 /// application.
@@ -138,6 +138,12 @@ struct TestTilingInterfacePass
                      "with scf.for operations"),
       llvm::cl::init(false)};
 
+  Option<bool> testLoweringToScalar{
+      *this, "lower-to-scalar-using-scf-for",
+      llvm::cl::desc("Test lowering to scalar implementation using "
+                     "TilingInterface with scf.for operations"),
+      llvm::cl::init(false)};
+
   void runOnOperation() override;
 
 private:
@@ -198,6 +204,9 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
         TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter>(
         context, patterns, "gemm_sequence_fusion", {10});
     return;
+  }
+  if (testLoweringToScalar) {
+    patterns.add<scf::LowerToLoopsUsingSCFForOp>(context);
   }
 }
 

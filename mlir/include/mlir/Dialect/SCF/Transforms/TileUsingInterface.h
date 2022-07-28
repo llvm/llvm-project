@@ -141,6 +141,23 @@ private:
   TileUsingSCFForOp tilingPattern;
 };
 
+/// Pattern to lower operations that implement the `TilingInterface` to
+/// loops/scalar IR using `scf.for`.
+struct LowerToLoopsUsingSCFForOp
+    : public OpInterfaceRewritePattern<TilingInterface> {
+  using OpInterfaceRewritePattern<TilingInterface>::OpInterfaceRewritePattern;
+
+  /// `matchAndRewrite` implementation that returns the significant transformed
+  /// pieces of IR.
+  FailureOr<SmallVector<scf::ForOp>>
+  returningMatchAndRewrite(TilingInterface op, PatternRewriter &rewriter) const;
+
+  LogicalResult matchAndRewrite(TilingInterface op,
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(op, rewriter);
+  }
+};
+
 } // namespace scf
 } // namespace mlir
 
