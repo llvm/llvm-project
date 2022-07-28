@@ -32,8 +32,7 @@ module attributes {gpu.container_module} {
   // CHECK-DAG: [[C256:%.*]] = llvm.mlir.constant(256 : i32) : i32
   // CHECK-DAG: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
   // CHECK: [[ADDRESSOF:%.*]] = llvm.mlir.addressof @[[GLOBAL]]
-  // CHECK: [[C0:%.*]] = llvm.mlir.constant(0 : index)
-  // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}[[C0]], [[C0]]]
+  // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}0, 0]
   // CHECK-SAME: -> !llvm.ptr<i8>
 
   // CHECK: [[MODULE:%.*]] = llvm.call @mgpuModuleLoad([[BINARY]])

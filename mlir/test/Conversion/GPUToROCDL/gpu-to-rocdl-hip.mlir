@@ -12,8 +12,7 @@ gpu.module @test_module {
     // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
     // CHECK-NEXT: %[[DESC0:.*]] = llvm.call @__ockl_printf_begin(%0) : (i64) -> i64
     // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr<array<14 x i8>>
-    // CHECK-NEXT: %[[CST1:.*]] = llvm.mlir.constant(0 : i64) : i64
-    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][%[[CST1]], %[[CST1]]] : (!llvm.ptr<array<14 x i8>>, i64, i64) -> !llvm.ptr<i8>
+    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr<array<14 x i8>>) -> !llvm.ptr<i8>
     // CHECK-NEXT: %[[FORMATLEN:.*]] = llvm.mlir.constant(14 : i64) : i64
     // CHECK-NEXT: %[[ISLAST:.*]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK-NEXT: %[[ISNTLAST:.*]] = llvm.mlir.constant(0 : i32) : i32
@@ -29,8 +28,7 @@ gpu.module @test_module {
     // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
     // CHECK-NEXT: %[[DESC0:.*]] = llvm.call @__ockl_printf_begin(%0) : (i64) -> i64
     // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL1]] : !llvm.ptr<array<11 x i8>>
-    // CHECK-NEXT: %[[CST1:.*]] = llvm.mlir.constant(0 : i64) : i64
-    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][%[[CST1]], %[[CST1]]] : (!llvm.ptr<array<11 x i8>>, i64, i64) -> !llvm.ptr<i8>
+    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr<array<11 x i8>>) -> !llvm.ptr<i8>
     // CHECK-NEXT: %[[FORMATLEN:.*]] = llvm.mlir.constant(11 : i64) : i64
     // CHECK-NEXT: %[[ISLAST:.*]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK-NEXT: %[[ISNTLAST:.*]] = llvm.mlir.constant(0 : i32) : i32

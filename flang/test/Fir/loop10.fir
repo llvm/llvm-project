@@ -13,7 +13,7 @@ func.func @x(%addr : !fir.ref<!fir.array<10x10xi32>>) -> index {
     // CHECK-DAG: %[[COL:.*]] = phi i64 {{.*}} [ 11,
     // CHECK: icmp sgt i64 %[[COL]], 0
     fir.do_loop %jv = %c0 to %c10 step %c1 {
-      // CHECK: getelementptr {{.*}} %[[ADDR]], i64 0, i64 %[[R]], i64 %[[C]]
+      // CHECK: getelementptr {{.*}} %[[ADDR]], i32 0, i64 %[[R]], i64 %[[C]]
       %ptr = fir.coordinate_of %addr, %jv, %iv : (!fir.ref<!fir.array<10x10xi32>>, index, index) -> !fir.ref<i32>
       %c22 = arith.constant 22 : i32
       // CHECK: store i32 22,
