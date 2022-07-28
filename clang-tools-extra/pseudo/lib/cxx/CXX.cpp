@@ -312,6 +312,14 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
            IF__CONSTEXPR__L_PAREN__init_statement__condition__R_PAREN__statement,
        guardNextTokenNotElse},
 
+      // Implement C++ [basic.lookup.qual.general]:
+      //   If a name, template-id, or decltype-specifier is followed by a
+      //   ​::​, it shall designate a namespace, class, enumeration, or
+      //   dependent type, and the ​::​ is never interpreted as a complete
+      //   nested-name-specifier.
+      {rule::nested_name_specifier::COLONCOLON,
+       TOKEN_GUARD(coloncolon, Tok.prev().Kind != tok::identifier)},
+
       // The grammar distinguishes (only) user-defined vs plain string literals,
       // where the clang lexer distinguishes (only) encoding types.
       {rule::user_defined_string_literal_chunk::STRING_LITERAL,
