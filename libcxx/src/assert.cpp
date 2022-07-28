@@ -14,9 +14,13 @@
 
 #ifdef __BIONIC__
 #  include <android/api-level.h>
-#  include <syslog.h>
+#  if __ANDROID_API__ >= 21
+#    include <syslog.h>
 extern "C" void android_set_abort_message(const char* msg);
-#endif
+#  else
+#    include <assert.h>
+#  endif // __ANDROID_API__ >= 21
+#endif   // __BIONIC__
 
 #if defined(__APPLE__) && __has_include(<CrashReporterClient.h>)
 #  include <CrashReporterClient.h>
@@ -48,14 +52,22 @@ void __libcpp_assertion_handler(char const* format, ...) {
   vasprintf(&buffer, format, list);
   CRSetCrashLogMessage(buffer);
 #elif defined(__BIONIC__)
-  // Show error in tombstone.
   vasprintf(&buffer, format, list);
+
+#  if __ANDROID_API__ >= 21
+  // Show error in tombstone.
   android_set_abort_message(buffer);
 
   // Show error in logcat.
   openlog("libc++", 0, 0);
   syslog(LOG_CRIT, "%s", buffer);
   closelog();
+#  else
+  // The good error reporting wasn't available in Android until L. Since we're
+  // about to abort anyway, just call __assert2, which will log _somewhere_
+  // (tombstone and/or logcat) in older releases.
+  __assert2(__FILE__, __LINE__, __func__, buffer);
+#  endif // __ANDROID_API__ >= 21
 #endif
   va_end(list);
 
