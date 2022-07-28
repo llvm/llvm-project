@@ -538,7 +538,7 @@
    <key>type</key><string>Called C++ object pointer is null</string>
    <key>check_name</key><string>core.CallAndMessage</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>c5bd8e35fb6da070914016804720ae4d</string>
+   <key>issue_hash_content_of_line_in_context</key><string>f15e85d881c87a35df8a4d30e1db5ed7</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_ic_null</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -815,7 +815,7 @@
    <key>type</key><string>Called C++ object pointer is null</string>
    <key>check_name</key><string>core.CallAndMessage</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>e23397f9f2eff1b08593c2b2db137494</string>
+   <key>issue_hash_content_of_line_in_context</key><string>8efb5c75089d50fcdc228e06741f4ab5</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_cast</string>
   <key>issue_hash_function_offset</key><string>2</string>

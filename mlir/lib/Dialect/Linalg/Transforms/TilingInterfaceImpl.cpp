@@ -32,7 +32,7 @@ struct LinalgOpTilingInterface
                                             LinalgOpTy> {
   /// Return the destination operands.
   SmallVector<Value> getDestinationOperands(Operation *op, OpBuilder &b) const {
-    return llvm::cast<LinalgOp>(op).getOutputOperands();
+    return cast<LinalgOp>(op).getOutputOperands();
   }
 
   /// Return the loop iterator type.
@@ -50,13 +50,16 @@ struct LinalgOpTilingInterface
     b.setInsertionPoint(op);
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
-    auto allShapesSizes = linalgOp.createFlatListOfOperandDims(b, loc);
+    SmallVector<OpFoldResult> allShapesSizes =
+        linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
-    Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = b.create<arith::ConstantIndexOp>(loc, 1);
-    return llvm::to_vector(llvm::map_range(
-        applyMapToValues(b, loc, map, allShapesSizes), [&](Value v) {
-          return Range{zero, v, one};
+
+    IRRewriter rewriter(b);
+    return llvm::to_vector(
+        llvm::map_range(map.getResults(), [&](AffineExpr loopExpr) {
+          OpFoldResult ofr = makeComposedFoldedAffineApply(
+              rewriter, loc, loopExpr, allShapesSizes);
+          return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
         }));
   }
 
@@ -71,11 +74,8 @@ struct LinalgOpTilingInterface
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
     SmallVector<Value> valuesToTile = linalgOp.getInputAndOutputOperands();
-    SmallVector<Value> offsetValues =
-        getValueOrCreateConstantIndexOp(b, loc, offsets);
     SmallVector<Value, 4> tiledOperands = makeTiledShapes(
-        b, loc, linalgOp, valuesToTile, offsetValues,
-        getValueOrCreateConstantIndexOp(b, loc, sizes), {}, true);
+        b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
 
     SmallVector<Type> resultTensorTypes = llvm::to_vector(llvm::map_range(
         linalgOp.getOutputTensorOperands(), [&](OpOperand *opOperand) {
@@ -84,7 +84,7 @@ struct LinalgOpTilingInterface
 
     Operation *tiledOp =
         linalgOp.clone(b, loc, resultTensorTypes, tiledOperands);
-    offsetIndices(b, cast<LinalgOp>(tiledOp), offsetValues);
+    offsetIndices(b, cast<LinalgOp>(tiledOp), offsets);
 
     return {tiledOp};
   }
@@ -102,28 +102,16 @@ struct LinalgOpTilingInterface
 
     AffineExpr d0;
     bindDims(b.getContext(), d0);
-
-    auto fullyComposeAffineMapAndOperands = [](OpBuilder &builder, Location loc,
-                                               AffineExpr expr,
-                                               ValueRange operands) -> Value {
-      AffineMap map = AffineMap::inferFromExprList({expr}).front();
-      SmallVector<Value> normalizedOperands(operands.begin(), operands.end());
-      mlir::fullyComposeAffineMapAndOperands(&map, &normalizedOperands);
-      canonicalizeMapAndOperands(&map, &normalizedOperands);
-      return builder.createOrFold<AffineApplyOp>(loc, map, normalizedOperands);
-    };
-
-    SmallVector<Value> sizeVals =
-        getValueOrCreateConstantIndexOp(b, loc, sizes);
-    SmallVector<Value> subShapeSizes =
-        llvm::to_vector(llvm::map_range(sizeVals, [&](Value v) {
-          return fullyComposeAffineMapAndOperands(b, loc, d0 - 1, v);
+    IRRewriter rewriter(b);
+    SmallVector<OpFoldResult> subShapeSizes =
+        llvm::to_vector(llvm::map_range(sizes, [&](OpFoldResult ofr) {
+          return makeComposedFoldedAffineApply(rewriter, loc, d0 - 1, ofr);
         }));
+
     OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
     Value sliceOpResult =
-        makeTiledShape(b, loc, outOperand->get(), sizeVals,
-                       linalgOp.getTiedIndexingMap(outOperand),
-                       getValueOrCreateConstantIndexOp(b, loc, offsets),
+        makeTiledShape(b, loc, outOperand->get(), sizes,
+                       linalgOp.getTiedIndexingMap(outOperand), offsets,
                        /*ubs*/ {}, subShapeSizes, true);
     auto sliceOp = sliceOpResult.getDefiningOp<tensor::ExtractSliceOp>();
     if (!sliceOp)

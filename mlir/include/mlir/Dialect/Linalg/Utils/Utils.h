@@ -48,6 +48,8 @@ bool isPermutation(ArrayRef<int64_t> permutation);
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
+OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
+                               int64_t dim);
 
 /// Given an operation, retrieves the value of each dynamic dimension through
 /// constructing the necessary DimOp operators.
@@ -177,24 +179,19 @@ bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
                    Value consumedView, LinalgOp producer);
 
-/// Creates either a memref.subview or a tensor.extract_slice with the given
-/// offsets/sizes/strides based on the type of `value`.
-Value createSlice(OpBuilder &builder, Location loc, Value value,
-                  ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
-                  ArrayRef<OpFoldResult> strides);
-
 /// Computes tile offsets, given a list of loop `ivs` and `tileSizes`. In case a
 /// tile size is zero (i.e., no tiling), the corresponding offset is also zero.
-SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
-                                      ValueRange ivs, ValueRange tileSizes);
+SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
+                                             ArrayRef<OpFoldResult> ivs,
+                                             ArrayRef<OpFoldResult> tileSizes);
 
 /// Computes tile sizes, given a list of `tileSizes` and dimension
 /// sizes (`sizeBounds`). In case a tile size is zero (i.e., no tiling), the
 /// corresponding result size is the corresponding value from `sizeBounds`.
 /// Note: The returned tile sizes are closed intervals.
-SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc,
-                                    ValueRange tileSizes,
-                                    ArrayRef<Value> sizeBounds);
+SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
+                                           ArrayRef<OpFoldResult> tileSizes,
+                                           ArrayRef<OpFoldResult> sizeBounds);
 
 /// Returns the list of tensor output types produced when the given structured
 /// operation `op` is applied to the given `operands`. Note that `operands` are
@@ -214,6 +211,8 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
 /// necessary.
 Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
                               OpFoldResult opFoldResult);
+Value materializeOpFoldResult(OpBuilder &b, Location loc,
+                              OpFoldResult opFoldResult);
 
 /// Creates an extract_slice/subview op for a single `valueToTile` with
 /// `builder`. This new operation extracts a tile of `valueToTile`, starting
@@ -221,8 +220,9 @@ Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
 /// controls whether to omit the partial/boundary tile condition check in cases
 /// where we statically know that it is unnecessary.
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
-                     ValueRange tileSizes, AffineMap map, ValueRange lbs,
-                     ValueRange ubs, ValueRange subShapeSizes,
+                     ArrayRef<OpFoldResult> tileSizes, AffineMap map,
+                     ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
+                     ArrayRef<OpFoldResult> subShapeSizes,
                      bool omitPartialTileCheck);
 
 /// Creates extract_slice/subview ops for all `valuesToTile` of the given
@@ -236,18 +236,20 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
 /// Note that a constant zero in `tileSizes` means no tiling at that implicit
 /// loop. The number of non-zero values in `tileSizes` should be equal to the
 /// number of values in `ivs`.
-SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
-                                      LinalgOp linalgOp,
-                                      ArrayRef<Value> valuesToTile,
-                                      ValueRange ivs, ValueRange tileSizes,
-                                      ArrayRef<Value> sizeBounds,
-                                      bool omitPartialTileCheck);
+SmallVector<Value> makeTiledShapes(OpBuilder &builder, Location loc,
+                                   LinalgOp linalgOp, ValueRange valuesToTile,
+                                   ArrayRef<OpFoldResult> ivs,
+                                   ArrayRef<OpFoldResult> tileSizes,
+                                   ArrayRef<OpFoldResult> sizeBounds,
+                                   bool omitPartialTileCheck);
 
 /// Add the specified offsets to any `linalg.index` ops contained in the given
 /// `linalgOp`. The offsets are provided in the same order as iteration space
 /// dimensions. Null offests are assumed to be zero.
-void offsetIndices(OpBuilder &b, LinalgOp linalgOp, ArrayRef<Value> offests);
-void offsetIndices(RewriterBase &b, LinalgOp linalgOp, ArrayRef<Value> offests);
+void offsetIndices(OpBuilder &b, LinalgOp linalgOp,
+                   ArrayRef<OpFoldResult> offests);
+void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
+                   ArrayRef<OpFoldResult> offests);
 
 using FusableOpDependencesTy = llvm::MapVector<
     Operation *,

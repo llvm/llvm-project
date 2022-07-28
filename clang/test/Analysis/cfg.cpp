@@ -53,7 +53,7 @@ void checkDeclStmts() {
 // CHECK-NEXT: Succs (1): B1
 // CHECK: [B1]
 // CHECK-NEXT:   1: e
-// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, LValueToRValue, enum EmptyE)
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, LValueToRValue, EmptyE)
 // CHECK-NEXT:   3: [B1.2] (ImplicitCastExpr, IntegralCast, int)
 // CHECK-NEXT:   T: switch [B1.3]
 // CHECK-NEXT:   Preds (1): B2
@@ -93,12 +93,12 @@ public:
 // CHECK-NEXT:   Succs (1): B1
 // CHECK: [B1]
 // CHECK-NEXT:   1:  CFGNewAllocator(A *)
-// WARNINGS-NEXT:   2:  (CXXConstructExpr, class A)
-// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], class A)
+// WARNINGS-NEXT:   2:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], A)
 // CHECK-NEXT:   3: new A([B1.2])
 // CHECK-NEXT:   4: A *a = new A();
 // CHECK-NEXT:   5: a
-// CHECK-NEXT:   6: [B1.5] (ImplicitCastExpr, LValueToRValue, class A *)
+// CHECK-NEXT:   6: [B1.5] (ImplicitCastExpr, LValueToRValue, A *)
 // CHECK-NEXT:   7: [B1.6]->~A() (Implicit destructor)
 // CHECK-NEXT:   8: delete [B1.6]
 // CHECK-NEXT:   Preds (1): B2
@@ -116,12 +116,12 @@ void test_deletedtor() {
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
 // CHECK-NEXT:   2: CFGNewAllocator(A *)
-// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A[5])
-// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A[5])
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, A[5])
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], A[5])
 // CHECK-NEXT:   4: new A {{\[\[}}B1.1]]
 // CHECK-NEXT:   5: A *a = new A [5];
 // CHECK-NEXT:   6: a
-// CHECK-NEXT:   7: [B1.6] (ImplicitCastExpr, LValueToRValue, class A *)
+// CHECK-NEXT:   7: [B1.6] (ImplicitCastExpr, LValueToRValue, A *)
 // CHECK-NEXT:   8: [B1.7]->~A() (Implicit destructor)
 // CHECK-NEXT:   9: delete [] [B1.7]
 // CHECK-NEXT:   Preds (1): B2
@@ -148,7 +148,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK-LABEL: int test1(int *x)
 // CHECK: 1: 1
 // CHECK-NEXT: 2: return
-// CHECK-NEXT: ~NoReturnSingleSuccessor::B() (Implicit destructor)
+// CHECK-NEXT: ~B() (Implicit destructor)
 // CHECK-NEXT: Preds (1)
 // CHECK-NEXT: Succs (1): B0
   int test1(int *x) {
@@ -309,8 +309,8 @@ int test_enum_with_extension_default(enum MyEnum value) {
 // CHECK-NEXT:  3: [B1.2] (ImplicitCastExpr, ArrayToPointerDecay, int *)
 // CHECK-NEXT:  4: [B1.3] (ImplicitCastExpr, BitCast, void *)
 // CHECK-NEXT:  5: CFGNewAllocator(MyClass *)
-// WARNINGS-NEXT:  6:  (CXXConstructExpr, class MyClass)
-// ANALYZER-NEXT:  6:  (CXXConstructExpr, [B1.7], class MyClass)
+// WARNINGS-NEXT:  6:  (CXXConstructExpr, MyClass)
+// ANALYZER-NEXT:  6:  (CXXConstructExpr, [B1.7], MyClass)
 // CHECK-NEXT:  7: new ([B1.4]) MyClass([B1.6])
 // CHECK-NEXT:  8: MyClass *obj = new (buffer) MyClass();
 // CHECK-NEXT:  Preds (1): B2
@@ -342,8 +342,8 @@ void test_placement_new() {
 // CHECK-NEXT:  4: [B1.3] (ImplicitCastExpr, BitCast, void *)
 // CHECK-NEXT:  5: 5
 // CHECK-NEXT:  6: CFGNewAllocator(MyClass *)
-// WARNINGS-NEXT:  7:  (CXXConstructExpr, class MyClass[5])
-// ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], class MyClass[5])
+// WARNINGS-NEXT:  7:  (CXXConstructExpr, MyClass[5])
+// ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], MyClass[5])
 // CHECK-NEXT:  8: new ([B1.4]) MyClass {{\[\[}}B1.5]]
 // CHECK-NEXT:  9: MyClass *obj = new (buffer) MyClass [5];
 // CHECK-NEXT:  Preds (1): B2
@@ -418,10 +418,10 @@ void test_lifetime_extended_temporaries() {
 // CHECK:  [B2 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:  [B1]
-// WARNINGS-NEXT:    1:  (CXXConstructExpr, struct pr37688_deleted_union_destructor::A)
-// ANALYZER-NEXT:    1:  (CXXConstructExpr, [B1.2], struct pr37688_deleted_union_destructor::A)
-// CHECK-NEXT:    2: pr37688_deleted_union_destructor::A a;
-// CHECK-NEXT:    3: [B1.2].~pr37688_deleted_union_destructor::A() (Implicit destructor)
+// WARNINGS-NEXT:    1:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:    1:  (CXXConstructExpr, [B1.2], A)
+// CHECK-NEXT:    2: A a;
+// CHECK-NEXT:    3: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:  [B0 (EXIT)]
@@ -577,13 +577,13 @@ int vla_evaluate(int x) {
 
 // CHECK-LABEL: void CommaTemp::f()
 // CHECK:       [B1]
-// CHECK-NEXT:    1: CommaTemp::A() (CXXConstructExpr,
+// CHECK-NEXT:    1: A() (CXXConstructExpr,
 // CHECK-NEXT:    2: [B1.1] (BindTemporary)
-// CHECK-NEXT:    3: CommaTemp::B() (CXXConstructExpr,
+// CHECK-NEXT:    3: B() (CXXConstructExpr,
 // CHECK-NEXT:    4: [B1.3] (BindTemporary)
 // CHECK-NEXT:    5: ... , [B1.4]
-// CHECK-NEXT:    6: ~CommaTemp::B() (Temporary object destructor)
-// CHECK-NEXT:    7: ~CommaTemp::A() (Temporary object destructor)
+// CHECK-NEXT:    6: ~B() (Temporary object destructor)
+// CHECK-NEXT:    7: ~A() (Temporary object destructor)
 namespace CommaTemp {
   struct A { ~A(); };
   struct B { ~B(); };
@@ -611,8 +611,8 @@ void CommaTemp::f() {
 // CHECK-NEXT:    Preds (2): B3 B4
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B3]
-// WARNINGS-NEXT: 1:  (CXXConstructExpr, struct ClassWithDtor)
-// ANALYZER-NEXT: 1:  (CXXConstructExpr, [B3.2], struct ClassWithDtor)
+// WARNINGS-NEXT: 1:  (CXXConstructExpr, ClassWithDtor)
+// ANALYZER-NEXT: 1:  (CXXConstructExpr, [B3.2], ClassWithDtor)
 // CHECK-NEXT:    2: thread_local ClassWithDtor a;
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B2
