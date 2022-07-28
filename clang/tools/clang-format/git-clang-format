@@ -198,16 +198,16 @@ def main():
     return 0
 
   if opts.diff:
-    print_diff(old_tree, new_tree)
-  elif opts.diffstat:
-    print_diffstat(old_tree, new_tree)
-  else:
-    changed_files = apply_changes(old_tree, new_tree, force=opts.force,
-                                  patch_mode=opts.patch)
-    if (opts.verbose >= 0 and not opts.patch) or opts.verbose >= 1:
-      print('changed files:')
-      for filename in changed_files:
-        print('    %s' % filename)
+    return print_diff(old_tree, new_tree)
+  if opts.diffstat:
+    return print_diffstat(old_tree, new_tree)
+
+  changed_files = apply_changes(old_tree, new_tree, force=opts.force,
+                                patch_mode=opts.patch)
+  if (opts.verbose >= 0 and not opts.patch) or opts.verbose >= 1:
+    print('changed files:')
+    for filename in changed_files:
+      print('    %s' % filename)
 
   return 1
 
@@ -536,8 +536,8 @@ def print_diff(old_tree, new_tree):
   # We also only print modified files since `new_tree` only contains the files
   # that were modified, so unmodified files would show as deleted without the
   # filter.
-  subprocess.check_call(['git', 'diff', '--diff-filter=M', old_tree, new_tree,
-                         '--'])
+  return subprocess.run(['git', 'diff', '--diff-filter=M',
+                         '--exit-code', old_tree, new_tree]).returncode
 
 def print_diffstat(old_tree, new_tree):
   """Print the diffstat between the two trees to stdout."""
@@ -548,8 +548,8 @@ def print_diffstat(old_tree, new_tree):
   # We also only print modified files since `new_tree` only contains the files
   # that were modified, so unmodified files would show as deleted without the
   # filter.
-  subprocess.check_call(['git', 'diff', '--diff-filter=M', '--stat', old_tree, new_tree,
-                         '--'])
+  return subprocess.run(['git', 'diff', '--diff-filter=M', '--exit-code',
+                         '--stat', old_tree, new_tree]).returncode
 
 def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
   """Apply the changes in `new_tree` to the working directory.
@@ -575,7 +575,7 @@ def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
     # better message, "Apply ... to index and worktree".  This is not quite
     # right, since it won't be applied to the user's index, but oh well.
     with temporary_index_file(old_tree):
-      subprocess.check_call(['git', 'checkout', '--patch', new_tree])
+      subprocess.run(['git', 'checkout', '--patch', new_tree], check=True)
     index_tree = old_tree
   else:
     with temporary_index_file(new_tree):
