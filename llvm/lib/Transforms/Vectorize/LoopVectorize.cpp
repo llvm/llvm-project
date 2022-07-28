@@ -1451,8 +1451,14 @@ public:
     // don't need to mark it as a predicated instruction. Tail folding may
     // introduce additional predication, but we're guaranteed to always have
     // at least one active lane.  We call Legal->blockNeedsPredication here
-    // because it doesn't query tail-folding.
-    if (Legal->isUniformMemOp(*I) && isa<LoadInst>(I) &&
+    // because it doesn't query tail-folding.  For stores, we need to prove
+    // both speculation safety (which follows from the same argument as loads),
+    // but also must prove the value being stored is correct.  The easiest
+    // form of the later is to require that all values stored are the same.
+    if (Legal->isUniformMemOp(*I) &&
+        (isa<LoadInst>(I) ||
+         (isa<StoreInst>(I) &&
+          TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
         !Legal->blockNeedsPredication(I->getParent()))
       return false;
     if (!blockNeedsPredicationForAnyReason(I->getParent()))
