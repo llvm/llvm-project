@@ -139,6 +139,75 @@ TEST_F(FormatTestVerilog, Delay) {
                                 "x = x;"));
 }
 
+TEST_F(FormatTestVerilog, Hierarchy) {
+  verifyFormat("module x;\n"
+               "endmodule");
+  // Test that the end label is on the same line as the end keyword.
+  verifyFormat("module x;\n"
+               "endmodule : x");
+  // Test that things inside are indented.
+  verifyFormat("module x;\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endmodule");
+  verifyFormat("program x;\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endprogram");
+  verifyFormat("interface x;\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endinterface");
+  verifyFormat("task x;\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endtask");
+  verifyFormat("function x;\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endfunction");
+  verifyFormat("class x;\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endclass");
+  // Test that they nest.
+  verifyFormat("module x;\n"
+               "  program x;\n"
+               "    program x;\n"
+               "    endprogram\n"
+               "  endprogram\n"
+               "endmodule");
+  // Test that an extern declaration doesn't change the indentation.
+  verifyFormat("extern module x;\n"
+               "x = x;");
+  // Test complex headers
+  verifyFormat("extern module x\n"
+               "    import x.x::x::*;\n"
+               "    import x;\n"
+               "    #(parameter x)\n"
+               "    (output x);");
+  verifyFormat("module x\n"
+               "    import x.x::x::*;\n"
+               "    import x;\n"
+               "    #(parameter x)\n"
+               "    (output x);\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endmodule : x");
+  verifyFormat("virtual class x\n"
+               "    (x)\n"
+               "    extends x(x)\n"
+               "    implements x, x, x;\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endclass : x\n");
+  verifyFormat("function automatic logic [1 : 0] x\n"
+               "    (input x);\n"
+               "  generate\n"
+               "  endgenerate\n"
+               "endfunction : x");
+}
+
 TEST_F(FormatTestVerilog, If) {
   verifyFormat("if (x)\n"
                "  x = x;");

@@ -831,6 +831,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   ASSERT_EQ(Tokens.size(), 7u);
   EXPECT_TOKEN(Tokens[1], tok::colon, TT_VerilogBlockLabelColon);
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_VerilogBlockLabelColon);
+  // Test that the dimension colon is annotated correctly.
+  Tokens = Annotate("var [1 : 0] x;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_BitFieldColon);
+  Tokens = Annotate("extern function [1 : 0] x;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_BitFieldColon);
 }
 
 } // namespace

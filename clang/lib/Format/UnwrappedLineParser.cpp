@@ -839,8 +839,13 @@ FormatToken *UnwrappedLineParser::parseBlock(
     }
   };
 
+  // Whether this is a Verilog-specific block that has a special header like a
+  // module.
+  const bool VerilogHierarchy =
+      Style.isVerilog() && Keywords.isVerilogHierarchy(*FormatTok);
   assert((FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) ||
-          (Style.isVerilog() && Keywords.isVerilogBegin(*FormatTok))) &&
+          (Style.isVerilog() &&
+           (Keywords.isVerilogBegin(*FormatTok) || VerilogHierarchy))) &&
          "'{' or macro block token expected");
   FormatToken *Tok = FormatTok;
   const bool FollowedByComment = Tokens->peekNextToken()->is(tok::comment);
@@ -850,14 +855,20 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   // For Whitesmiths mode, jump to the next level prior to skipping over the
   // braces.
-  if (AddLevels > 0 && Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)
+  if (!VerilogHierarchy && AddLevels > 0 &&
+      Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
     ++Line->Level;
+  }
 
   size_t PPStartHash = computePPHash();
 
   const unsigned InitialLevel = Line->Level;
-  nextToken(/*LevelDifference=*/AddLevels);
-  HandleVerilogBlockLabel();
+  if (VerilogHierarchy) {
+    AddLevels += parseVerilogHierarchyHeader();
+  } else {
+    nextToken(/*LevelDifference=*/AddLevels);
+    HandleVerilogBlockLabel();
+  }
 
   // Bail out if there are too many levels. Otherwise, the stack might overflow.
   if (Line->Level > 300)
@@ -1552,7 +1563,14 @@ void UnwrappedLineParser::parseStructuralElement(
     return;
   case tok::kw_extern:
     nextToken();
-    if (FormatTok->is(tok::string_literal)) {
+    if (Style.isVerilog()) {
+      // In Verilog and extern module declaration looks like a start of module.
+      // But there is no body and endmodule. So we handle it separately.
+      if (Keywords.isVerilogHierarchy(*FormatTok)) {
+        parseVerilogHierarchyHeader();
+        return;
+      }
+    } else if (FormatTok->is(tok::string_literal)) {
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         if (Style.BraceWrapping.AfterExternBlock)
@@ -1751,9 +1769,15 @@ void UnwrappedLineParser::parseStructuralElement(
         parseEnum();
       }
       break;
+    case tok::kw_class:
+      if (Style.isVerilog()) {
+        parseBlock();
+        addUnwrappedLine();
+        return;
+      }
+      LLVM_FALLTHROUGH;
     case tok::kw_struct:
     case tok::kw_union:
-    case tok::kw_class:
       if (parseStructLike())
         return;
       break;
@@ -1889,7 +1913,8 @@ void UnwrappedLineParser::parseStructuralElement(
       }
 
       if (Style.isVerilog()) {
-        if (Keywords.isVerilogBegin(*FormatTok)) {
+        if (Keywords.isVerilogBegin(*FormatTok) ||
+            Keywords.isVerilogHierarchy(*FormatTok)) {
           parseBlock();
           addUnwrappedLine();
           return;
@@ -3998,6 +4023,137 @@ void UnwrappedLineParser::parseStatementMacro() {
   addUnwrappedLine();
 }
 
+void UnwrappedLineParser::parseVerilogHierarchyIdentifier() {
+  // consume things like a::`b.c[d:e] or a::*
+  while (true) {
+    if (FormatTok->isOneOf(tok::star, tok::period, tok::periodstar,
+                           tok::coloncolon, tok::hash) ||
+        Keywords.isVerilogIdentifier(*FormatTok)) {
+      nextToken();
+    } else if (FormatTok->is(tok::l_square)) {
+      parseSquare();
+    } else {
+      break;
+    }
+  }
+}
+
+void UnwrappedLineParser::parseVerilogSensitivityList() {
+  assert(FormatTok->is(tok::at));
+  nextToken();
+  // A block event expression has 2 at signs.
+  if (FormatTok->is(tok::at))
+    nextToken();
+  switch (FormatTok->Tok.getKind()) {
+  case tok::star:
+    nextToken();
+    break;
+  case tok::l_paren:
+    parseParens();
+    break;
+  default:
+    parseVerilogHierarchyIdentifier();
+    break;
+  }
+}
+
+unsigned UnwrappedLineParser::parseVerilogHierarchyHeader() {
+  unsigned AddLevels = 0;
+
+  if (FormatTok->is(Keywords.kw_clocking)) {
+    nextToken();
+    if (Keywords.isVerilogIdentifier(*FormatTok))
+      nextToken();
+    if (FormatTok->is(tok::at))
+      parseVerilogSensitivityList();
+    if (FormatTok->is(tok::semi))
+      nextToken();
+  } else if (FormatTok->isOneOf(tok::kw_case, Keywords.kw_casex,
+                                Keywords.kw_casez, Keywords.kw_randcase,
+                                Keywords.kw_randsequence)) {
+    if (Style.IndentCaseLabels)
+      ++AddLevels;
+    nextToken();
+    if (FormatTok->is(tok::l_paren))
+      parseParens();
+    if (FormatTok->isOneOf(Keywords.kw_inside, Keywords.kw_matches))
+      nextToken();
+    // The case header has no semicolon.
+  } else {
+    // "module" etc.
+    nextToken();
+    // all the words like the name of the module and specifiers like
+    // "automatic" and the width of function return type
+    while (true) {
+      if (FormatTok->is(tok::l_square)) {
+        auto Prev = FormatTok->getPreviousNonComment();
+        if (Prev && Keywords.isVerilogIdentifier(*Prev))
+          Prev->setFinalizedType(TT_VerilogDimensionedTypeName);
+        parseSquare();
+      } else if (Keywords.isVerilogIdentifier(*FormatTok) ||
+                 FormatTok->isOneOf(Keywords.kw_automatic, tok::kw_static)) {
+        nextToken();
+      } else {
+        break;
+      }
+    }
+
+    auto NewLine = [this]() {
+      addUnwrappedLine();
+      Line->IsContinuation = true;
+    };
+
+    // package imports
+    while (FormatTok->is(Keywords.kw_import)) {
+      NewLine();
+      nextToken();
+      parseVerilogHierarchyIdentifier();
+      if (FormatTok->is(tok::semi))
+        nextToken();
+    }
+
+    // parameters and ports
+    if (FormatTok->is(Keywords.kw_verilogHash)) {
+      NewLine();
+      nextToken();
+      if (FormatTok->is(tok::l_paren))
+        parseParens();
+    }
+    if (FormatTok->is(tok::l_paren)) {
+      NewLine();
+      parseParens();
+    }
+
+    // extends and implements
+    if (FormatTok->is(Keywords.kw_extends)) {
+      NewLine();
+      nextToken();
+      parseVerilogHierarchyIdentifier();
+      if (FormatTok->is(tok::l_paren))
+        parseParens();
+    }
+    if (FormatTok->is(Keywords.kw_implements)) {
+      NewLine();
+      do {
+        nextToken();
+        parseVerilogHierarchyIdentifier();
+      } while (FormatTok->is(tok::comma));
+    }
+
+    // Coverage event for cover groups.
+    if (FormatTok->is(tok::at)) {
+      NewLine();
+      parseVerilogSensitivityList();
+    }
+
+    if (FormatTok->is(tok::semi))
+      nextToken(/*LevelDifference=*/1);
+    addUnwrappedLine();
+  }
+
+  return AddLevels;
+}
+
 LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
                                                  StringRef Prefix = "") {
   llvm::dbgs() << Prefix << "Line(" << Line.Level
@@ -4035,6 +4191,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   Line->Tokens.clear();
   Line->MatchingOpeningBlockLineIndex = UnwrappedLine::kInvalidIndex;
   Line->FirstStartColumn = 0;
+  Line->IsContinuation = false;
 
   if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
     --Line->Level;
