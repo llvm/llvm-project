@@ -1116,7 +1116,7 @@ pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 // Putting accesses to DeviceInfo global behind a function call prior
 // to changing to use init_plugin/deinit_plugin calls
 static RTLDeviceInfoTy DeviceInfoState;
-RTLDeviceInfoTy& DeviceInfo() { return DeviceInfoState; }
+static RTLDeviceInfoTy& DeviceInfo() { return DeviceInfoState; }
 
 namespace {
 
