@@ -1833,6 +1833,7 @@ cc_library(
         ":AffineAnalysis",
         ":AffineDialect",
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":DialectUtils",

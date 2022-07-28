@@ -505,7 +505,7 @@ static void rewriteToObjCProperty(const ObjCMethodDecl *Getter,
   if (LParenAdded)
     PropertyString += ')';
   QualType RT = Getter->getReturnType();
-  if (!isa<TypedefType>(RT)) {
+  if (!RT->getAs<TypedefType>()) {
     // strip off any ARC lifetime qualifier.
     QualType CanResultTy = Context.getCanonicalType(RT);
     if (CanResultTy.getQualifiers().hasObjCLifetime()) {
@@ -1053,7 +1053,7 @@ static bool TypeIsInnerPointer(QualType T) {
   // Also, typedef-of-pointer-to-incomplete-struct is something that we assume
   // is not an innter pointer type.
   QualType OrigT = T;
-  while (const TypedefType *TD = dyn_cast<TypedefType>(T.getTypePtr()))
+  while (const auto *TD = T->getAs<TypedefType>())
     T = TD->getDecl()->getUnderlyingType();
   if (OrigT == T || !T->isPointerType())
     return true;
@@ -1355,9 +1355,6 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
 static bool IsVoidStarType(QualType Ty) {
   if (!Ty->isPointerType())
     return false;
-
-  while (const TypedefType *TD = dyn_cast<TypedefType>(Ty.getTypePtr()))
-    Ty = TD->getDecl()->getUnderlyingType();
 
   // Is the type void*?
   const PointerType* PT = Ty->castAs<PointerType>();

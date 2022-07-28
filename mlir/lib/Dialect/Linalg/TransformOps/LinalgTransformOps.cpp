@@ -740,8 +740,9 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
     }
 
     rewriter.setInsertionPoint(linalgOp);
-    std::tie(first.emplace_back(), second.emplace_back()) =
-        linalg::splitOp(rewriter, linalgOp, getDimension(), std::get<1>(pair));
+    std::tie(first.emplace_back(), second.emplace_back()) = linalg::splitOp(
+        rewriter, cast<TilingInterface>(linalgOp.getOperation()),
+        getDimension(), std::get<1>(pair));
   }
 
   results.set(getFirst().cast<OpResult>(), first);

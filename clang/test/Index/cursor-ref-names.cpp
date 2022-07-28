@@ -33,7 +33,7 @@ int main()
 // CHECK: cursor-ref-names.cpp:18:5: CallExpr=func:8:10 Extent=[18:5 - 18:16]
 // CHECK: cursor-ref-names.cpp:18:10: MemberRefExpr=func:8:10 SingleRefName=[18:10 - 18:14] RefName=[18:10 - 18:14] Extent=[18:5 - 18:14]
 // CHECK: cursor-ref-names.cpp:18:5: DeclRefExpr=inst:17:9 Extent=[18:5 - 18:9]
-// CHECK: cursor-ref-names.cpp:19:5: CallExpr=operator[]:4:9 Extent=[19:5 - 19:12] 
+// CHECK: cursor-ref-names.cpp:19:5: CallExpr=operator[]:4:9{{(\Q SingleRefName=[19:9 - 19:12] RefName=[19:9 - 19:10] RefName=[19:11 - 19:12]\E)?}} Extent=[19:5 - 19:12]
 // CHECK: cursor-ref-names.cpp:19:5: DeclRefExpr=inst:17:9 Extent=[19:5 - 19:9]
 // CHECK: cursor-ref-names.cpp:19:9: DeclRefExpr=operator[]:4:9 Extent=[19:9 - 19:10]
 // CHECK: cursor-ref-names.cpp:20:5: CallExpr=operator[]:4:9 Extent=[20:5 - 20:23]

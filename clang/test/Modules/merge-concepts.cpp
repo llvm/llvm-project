@@ -28,6 +28,10 @@ module "library" {
 		export *
 		header "concepts.h"
 	}
+	module "compare" {
+		export *
+		header "compare.h"
+	}
 	module "format" {
 		export *
 		header "format.h"
@@ -47,18 +51,33 @@ module "library" {
 #define SAME_AS_H
 
 template <class T, class U>
-concept same_as = __is_same(T, U);
+concept same_as_impl = __is_same(T, U);
 
+template <class T, class U>
+concept same_as = same_as_impl<T, U> && same_as_impl<U, T>;
 #endif // SAME_AS_H
+
+
+//--- compare.h
+#ifndef COMPARE_H
+#define COMPARE_H
+
+#include "same_as.h"
+#include "concepts.h"
+
+template <class T> void foo()
+  requires same_as<T, int>
+{}
+#endif // COMPARE_H
 
 //--- format.h
 #ifndef FORMAT_H
 #define FORMAT_H
 
-#include "concepts.h"
 #include "same_as.h"
+#include "concepts.h"
 
-template <class T> void foo()
+template <class T> void bar()
   requires same_as<T, int>
 {}
 

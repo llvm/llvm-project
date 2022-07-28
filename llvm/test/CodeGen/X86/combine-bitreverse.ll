@@ -349,19 +349,17 @@ define i64 @test_bitreverse_shli_bitreverse_i64(i64 %a) nounwind {
 ; X64-LABEL: test_bitreverse_shli_bitreverse_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bswapq %rdi
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $4, %rax
-; X64-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; X64-NEXT:    andq %rcx, %rax
-; X64-NEXT:    andq %rcx, %rdi
-; X64-NEXT:    shlq $4, %rdi
-; X64-NEXT:    orq %rax, %rdi
-; X64-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    andq %rax, %rcx
-; X64-NEXT:    shrq $2, %rdi
-; X64-NEXT:    andq %rax, %rdi
-; X64-NEXT:    leaq (%rdi,%rcx,4), %rax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X64-NEXT:    shll $4, %eax
+; X64-NEXT:    shrl $4, %edi
+; X64-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
+; X64-NEXT:    orl %eax, %edi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X64-NEXT:    shrl $2, %edi
+; X64-NEXT:    andl $858993459, %edi # imm = 0x33333333
+; X64-NEXT:    leal (%rdi,%rax,4), %eax
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    andl $357913941, %ecx # imm = 0x15555555
 ; X64-NEXT:    shrl %eax

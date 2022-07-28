@@ -58,6 +58,50 @@ std::string readOrDie(llvm::StringRef Path) {
 }
 } // namespace
 
+namespace clang {
+namespace pseudo {
+namespace {
+
+// Mangles a symbol name into a valid identifier.
+//
+// These follow names in the grammar fairly closely:
+//   nonterminal: `ptr-declartor` becomes `ptr_declarator`;
+//   punctuator: `,` becomes `COMMA`;
+//   keyword: `INT` becomes `INT`;
+//   terminal: `IDENTIFIER` becomes `IDENTIFIER`;
+std::string mangleSymbol(SymbolID SID, const Grammar &G) {
+  static auto &TokNames = *new std::vector<std::string>{
+#define TOK(X) llvm::StringRef(#X).upper(),
+#define KEYWORD(Keyword, Condition) llvm::StringRef(#Keyword).upper(),
+#include "clang/Basic/TokenKinds.def"
+      };
+  if (isToken(SID))
+    return TokNames[symbolToToken(SID)];
+  std::string Name = G.symbolName(SID).str();
+  // translation-unit -> translation_unit
+  std::replace(Name.begin(), Name.end(), '-', '_');
+  return Name;
+}
+
+// Mangles the RHS of a rule definition into a valid identifier.
+// 
+// These are unique only for a fixed LHS.
+// e.g. for the grammar rule `ptr-declarator := ptr-operator ptr-declarator`,
+// it is `ptr_operator__ptr_declarator`.
+std::string mangleRule(RuleID RID, const Grammar &G) {
+  const auto &R = G.lookupRule(RID);
+  std::string MangleName = mangleSymbol(R.seq().front(), G);
+  for (SymbolID S : R.seq().drop_front()) {
+    MangleName.append("__");
+    MangleName.append(mangleSymbol(S, G));
+  }
+  return MangleName;
+}
+
+} // namespace
+} // namespace pseudo
+} // namespace clang
+
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "");
 
@@ -81,21 +125,26 @@ int main(int argc, char *argv[]) {
   case EmitSymbolList:
     Out.os() << R"cpp(
 #ifndef NONTERMINAL
-#define NONTERMINAL(X, Y)
+#define NONTERMINAL(NAME, ID)
 #endif
 #ifndef RULE
-#define RULE(X, Y)
+#define RULE(LHS, RHS, ID)
 #endif
 #ifndef EXTENSION
-#define EXTENSION(X, Y)
+#define EXTENSION(NAME, ID)
 #endif
 )cpp";
     for (clang::pseudo::SymbolID ID = 0; ID < G.table().Nonterminals.size();
-         ++ID)
-      Out.os() << llvm::formatv("NONTERMINAL({0}, {1})\n", G.mangleSymbol(ID),
-                                ID);
-    for (clang::pseudo::RuleID RID = 0; RID < G.table().Rules.size(); ++RID)
-      Out.os() << llvm::formatv("RULE({0}, {1})\n", G.mangleRule(RID), RID);
+         ++ID) {
+      Out.os() << llvm::formatv("NONTERMINAL({0}, {1})\n",
+                                clang::pseudo::mangleSymbol(ID, G), ID);
+      for (const clang::pseudo::Rule &R : G.rulesFor(ID)) {
+        clang::pseudo::RuleID RID = &R - G.table().Rules.data();
+        Out.os() << llvm::formatv("RULE({0}, {1}, {2})\n",
+                                  clang::pseudo::mangleSymbol(R.Target, G),
+                                  clang::pseudo::mangleRule(RID, G), RID);
+      }
+    }
     for (clang::pseudo::ExtensionID EID = 1 /*skip the sentinel 0 value*/;
          EID < G.table().AttributeValues.size(); ++EID) {
       llvm::StringRef Name = G.table().AttributeValues[EID];

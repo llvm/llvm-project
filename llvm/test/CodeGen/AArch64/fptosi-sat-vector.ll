@@ -2616,36 +2616,36 @@ define <8 x i100> @test_signed_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    mov w8, #1895825407
 ; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x25, #-34359738368
-; CHECK-NEXT:    mov x23, #34359738367
+; CHECK-NEXT:    mov x22, #34359738367
 ; CHECK-NEXT:    fmov s9, w8
 ; CHECK-NEXT:    fcmp s8, s10
 ; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, x25, x1, lt
+; CHECK-NEXT:    csel x8, x25, x1, lt
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    csel x9, x23, x9, gt
-; CHECK-NEXT:    csinv x8, x8, xzr, le
+; CHECK-NEXT:    csinv x9, x9, xzr, le
+; CHECK-NEXT:    csel x8, x22, x8, gt
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    fcvt s8, h0
 ; CHECK-NEXT:    csel x8, xzr, x8, vs
 ; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
-; CHECK-NEXT:    csel x8, xzr, x9, vs
 ; CHECK-NEXT:    str x8, [sp, #72] // 8-byte Folded Spill
+; CHECK-NEXT:    csel x8, xzr, x9, vs
+; CHECK-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    fcmp s8, s10
 ; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    csel x9, x25, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    csel x9, x23, x9, gt
+; CHECK-NEXT:    csel x9, x22, x9, gt
 ; CHECK-NEXT:    csinv x8, x8, xzr, le
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    csel x8, xzr, x8, vs
-; CHECK-NEXT:    csel x22, xzr, x9, vs
+; CHECK-NEXT:    csel x10, xzr, x8, vs
+; CHECK-NEXT:    csel x8, xzr, x9, vs
 ; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    str x8, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x8, x10, [sp, #8] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    fcmp s8, s10
@@ -2654,10 +2654,10 @@ define <8 x i100> @test_signed_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    csinv x9, x9, xzr, le
-; CHECK-NEXT:    csel x8, x23, x8, gt
+; CHECK-NEXT:    csel x8, x22, x8, gt
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    csel x24, xzr, x8, vs
+; CHECK-NEXT:    csel x26, xzr, x8, vs
 ; CHECK-NEXT:    csel x8, xzr, x9, vs
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    str x8, [sp, #32] // 8-byte Folded Spill
@@ -2669,40 +2669,39 @@ define <8 x i100> @test_signed_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    csinv x9, x9, xzr, le
-; CHECK-NEXT:    csel x8, x23, x8, gt
+; CHECK-NEXT:    csel x8, x22, x8, gt
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    csel x27, xzr, x8, vs
+; CHECK-NEXT:    csel x28, xzr, x8, vs
 ; CHECK-NEXT:    csel x8, xzr, x9, vs
 ; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    str x8, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    fcmp s8, s10
 ; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, x25, x1, lt
+; CHECK-NEXT:    csel x8, x25, x1, lt
+; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    csel x9, x23, x9, gt
-; CHECK-NEXT:    csinv x8, x8, xzr, le
+; CHECK-NEXT:    csinv x9, x9, xzr, le
+; CHECK-NEXT:    csel x8, x22, x8, gt
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    csel x8, xzr, x8, vs
-; CHECK-NEXT:    csel x29, xzr, x9, vs
+; CHECK-NEXT:    csel x27, xzr, x8, vs
+; CHECK-NEXT:    csel x20, xzr, x9, vs
 ; CHECK-NEXT:    fmov s0, s8
-; CHECK-NEXT:    str x8, [sp] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    fcmp s8, s10
 ; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
 ; CHECK-NEXT:    csel x9, x25, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    csel x9, x23, x9, gt
+; CHECK-NEXT:    csel x9, x22, x9, gt
 ; CHECK-NEXT:    csinv x8, x8, xzr, le
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    csel x20, xzr, x8, vs
-; CHECK-NEXT:    csel x28, xzr, x9, vs
+; CHECK-NEXT:    csel x29, xzr, x8, vs
+; CHECK-NEXT:    csel x21, xzr, x9, vs
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
@@ -2712,65 +2711,54 @@ define <8 x i100> @test_signed_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    csinv x9, x9, xzr, le
-; CHECK-NEXT:    csel x8, x23, x8, gt
+; CHECK-NEXT:    csel x8, x22, x8, gt
 ; CHECK-NEXT:    fcmp s8, s8
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    csel x21, xzr, x8, vs
-; CHECK-NEXT:    csel x26, xzr, x9, vs
+; CHECK-NEXT:    csel x23, xzr, x8, vs
+; CHECK-NEXT:    csel x24, xzr, x9, vs
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    fmov d0, x20
 ; CHECK-NEXT:    fcmp s8, s10
-; CHECK-NEXT:    ldr x11, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    lsr x10, x28, #28
-; CHECK-NEXT:    ldr d1, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    lsr x12, x29, #28
-; CHECK-NEXT:    mov v0.d[1], x28
+; CHECK-NEXT:    extr x9, x21, x29, #28
+; CHECK-NEXT:    bfi x23, x20, #36, #28
+; CHECK-NEXT:    extr x11, x27, x20, #28
+; CHECK-NEXT:    str x24, [x19]
 ; CHECK-NEXT:    csel x8, x25, x1, lt
-; CHECK-NEXT:    csel x9, xzr, x0, lt
+; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    stur x11, [x19, #75]
-; CHECK-NEXT:    ldr x13, [sp, #32] // 8-byte Folded Reload
-; CHECK-NEXT:    csinv x9, x9, xzr, le
-; CHECK-NEXT:    csel x8, x23, x8, gt
+; CHECK-NEXT:    stur x9, [x19, #41]
+; CHECK-NEXT:    stp x23, x11, [x19, #8]
+; CHECK-NEXT:    lsr x11, x27, #28
+; CHECK-NEXT:    csinv x9, x10, xzr, le
+; CHECK-NEXT:    lsr x10, x21, #28
+; CHECK-NEXT:    csel x8, x22, x8, gt
 ; CHECK-NEXT:    fcmp s8, s8
-; CHECK-NEXT:    fmov x11, d0
-; CHECK-NEXT:    stur x13, [x19, #50]
-; CHECK-NEXT:    mov v1.d[1], x29
-; CHECK-NEXT:    ldr d0, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    csel x9, xzr, x9, vs
 ; CHECK-NEXT:    strb w10, [x19, #49]
-; CHECK-NEXT:    extr x10, x28, x11, #28
 ; CHECK-NEXT:    csel x8, xzr, x8, vs
-; CHECK-NEXT:    bfi x8, x11, #36, #28
-; CHECK-NEXT:    strb w12, [x19, #24]
+; CHECK-NEXT:    ldr x10, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    csel x9, xzr, x9, vs
+; CHECK-NEXT:    bfi x8, x29, #36, #28
+; CHECK-NEXT:    strb w11, [x19, #24]
+; CHECK-NEXT:    stur x10, [x19, #75]
+; CHECK-NEXT:    ldp x12, x11, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    stur x9, [x19, #25]
-; CHECK-NEXT:    fmov x12, d1
-; CHECK-NEXT:    stur x10, [x19, #41]
-; CHECK-NEXT:    lsr x9, x22, #28
-; CHECK-NEXT:    ldr d1, [sp, #24] // 8-byte Folded Reload
 ; CHECK-NEXT:    stur x8, [x19, #33]
+; CHECK-NEXT:    ldr x8, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    extr x10, x12, x11, #28
+; CHECK-NEXT:    bfi x28, x11, #36, #28
+; CHECK-NEXT:    stur x8, [x19, #50]
+; CHECK-NEXT:    ldr x9, [sp, #24] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x11, [sp, #72] // 8-byte Folded Reload
-; CHECK-NEXT:    extr x18, x29, x12, #28
-; CHECK-NEXT:    mov v0.d[1], x22
-; CHECK-NEXT:    bfi x21, x12, #36, #28
-; CHECK-NEXT:    str x26, [x19]
-; CHECK-NEXT:    mov v1.d[1], x11
-; CHECK-NEXT:    lsr x10, x11, #28
-; CHECK-NEXT:    mov x13, x11
-; CHECK-NEXT:    stp x21, x18, [x19, #8]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    strb w9, [x19, #99]
-; CHECK-NEXT:    strb w10, [x19, #74]
-; CHECK-NEXT:    fmov x11, d1
-; CHECK-NEXT:    extr x12, x22, x8, #28
-; CHECK-NEXT:    bfi x27, x8, #36, #28
-; CHECK-NEXT:    extr x8, x13, x11, #28
-; CHECK-NEXT:    bfi x24, x11, #36, #28
-; CHECK-NEXT:    stur x12, [x19, #91]
-; CHECK-NEXT:    stur x27, [x19, #83]
+; CHECK-NEXT:    stur x10, [x19, #91]
+; CHECK-NEXT:    stur x28, [x19, #83]
+; CHECK-NEXT:    extr x8, x11, x9, #28
+; CHECK-NEXT:    bfi x26, x9, #36, #28
+; CHECK-NEXT:    lsr x9, x12, #28
 ; CHECK-NEXT:    stur x8, [x19, #66]
-; CHECK-NEXT:    stur x24, [x19, #58]
+; CHECK-NEXT:    lsr x8, x11, #28
+; CHECK-NEXT:    stur x26, [x19, #58]
+; CHECK-NEXT:    strb w9, [x19, #99]
+; CHECK-NEXT:    strb w8, [x19, #74]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #176] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #160] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x24, x23, [sp, #144] // 16-byte Folded Reload

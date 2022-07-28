@@ -213,20 +213,18 @@ Environment Environment::pushCall(const CallExpr *Call) const {
 
   const auto *FuncDecl = Call->getDirectCallee();
   assert(FuncDecl != nullptr);
-  const auto *Body = FuncDecl->getBody();
-  assert(Body != nullptr);
+  assert(FuncDecl->getBody() != nullptr);
   // FIXME: In order to allow the callee to reference globals, we probably need
   // to call `initGlobalVars` here in some way.
 
   auto ParamIt = FuncDecl->param_begin();
-  auto ParamEnd = FuncDecl->param_end();
   auto ArgIt = Call->arg_begin();
   auto ArgEnd = Call->arg_end();
 
   // FIXME: Parameters don't always map to arguments 1:1; examples include
   // overloaded operators implemented as member functions, and parameter packs.
   for (; ArgIt != ArgEnd; ++ParamIt, ++ArgIt) {
-    assert(ParamIt != ParamEnd);
+    assert(ParamIt != FuncDecl->param_end());
 
     const VarDecl *Param = *ParamIt;
     const Expr *Arg = *ArgIt;
