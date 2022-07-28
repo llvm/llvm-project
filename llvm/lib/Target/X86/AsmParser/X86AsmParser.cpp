@@ -3847,7 +3847,13 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
   } else if (isVFCMULCPH(Opcode) || isVFCMULCSH(Opcode) || isVFMULCPH(Opcode) ||
              isVFMULCSH(Opcode)) {
     unsigned Dest = Inst.getOperand(0).getReg();
-    for (unsigned i = 1; i < Inst.getNumOperands(); i++)
+    // The mask variants have different operand list. Scan from the third
+    // operand to avoid emitting incorrect warning.
+    //    VFMULCPHZrr   Dest, Src1, Src2
+    //    VFMULCPHZrrk  Dest, Dest, Mask, Src1, Src2
+    //    VFMULCPHZrrkz Dest, Mask, Src1, Src2
+    for (unsigned i = TSFlags & X86II::EVEX_K ? 2 : 1;
+         i < Inst.getNumOperands(); i++)
       if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
         return Warning(Ops[0]->getStartLoc(), "Destination register should be "
                                               "distinct from source registers");
