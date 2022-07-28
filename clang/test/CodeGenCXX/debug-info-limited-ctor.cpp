@@ -77,3 +77,14 @@ void L() {
 // Check that types are being added to retained types list.
 // CHECK-DAG: !DICompileUnit{{.*}}retainedTypes: ![[RETAINED:[0-9]+]]
 // CHECK-DAG: ![[RETAINED]] = {{.*}}![[C]]
+
+
+struct VTableAndCtor {
+  virtual void f1();
+  VTableAndCtor();
+};
+
+VTableAndCtor::VTableAndCtor() {
+}
+
+// CHECK-DAG: !DICompositeType({{.*}}name: "VTableAndCtor", {{.*}}flags: DIFlagFwdDecl
