@@ -61,9 +61,10 @@ getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
 }
 
 template <typename T>
-static void createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
-                                 const T *clause,
-                                 Block *lastPrivBlock = nullptr) {
+static void
+createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
+                     const T *clause,
+                     [[maybe_unused]] Block *lastPrivBlock = nullptr) {
   const Fortran::parser::OmpObjectList &ompObjectList = clause->v;
   for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
     Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
