@@ -67,7 +67,7 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 1
 PackConstructorInitializers: NextLine
 
-PenaltyIndentedWhitespace: 61
+PenaltyIndentedWhitespace: 2
 
 Language: Cpp
 Standard: c++20
