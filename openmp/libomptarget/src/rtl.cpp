@@ -67,6 +67,23 @@ __attribute__((constructor(101))) void init() {
 
 __attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
+
+  for (auto *R : PM->RTLs.UsedRTLs) {
+    // Plugins can either destroy their local state using global variables
+    // or attribute(destructor) functions or by implementing deinit_plugin
+    // The hazard with plugin local destructors is they may be called before
+    // or after this destructor. If the plugin is destroyed using global
+    // state before this library finishes calling into it the plugin is
+    // likely to crash. If good fortune means the plugin outlives this
+    // library then there may be no crash.
+    // Using deinit_plugin and no global destructors from the plugin works.
+    if (R->deinit_plugin) {
+      if (R->deinit_plugin() != OFFLOAD_SUCCESS) {
+        DP("Failure deinitializing RTL %s!\n", R->RTLName.c_str());
+      }
+    }
+  }
+
   delete PM;
 
 #ifdef OMPTARGET_PROFILE_ENABLED
@@ -567,13 +584,6 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
   PM->TblMapMtx.unlock();
 
   // TODO: Write some RTL->unload_image(...) function?
-  for (auto *R : UsedRTLs) {
-    if (R->deinit_plugin) {
-      if (R->deinit_plugin() != OFFLOAD_SUCCESS) {
-        DP("Failure deinitializing RTL %s!\n", R->RTLName.c_str());
-      }
-    }
-  }
 
   DP("Done unregistering library!\n");
 }
