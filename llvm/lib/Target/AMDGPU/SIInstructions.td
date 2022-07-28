@@ -341,6 +341,7 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   let isConvergent = 1;
   let FixedSize = 1;
   let Size = 0;
+  let isMeta = 1;
 }
 
 // SI pseudo instructions. These are used by the CFG structurizer pass

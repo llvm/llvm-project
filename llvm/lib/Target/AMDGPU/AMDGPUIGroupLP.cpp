@@ -232,8 +232,7 @@ bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
 
 bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   bool Result = false;
-  if (MI.isMetaInstruction() || MI.getOpcode() == AMDGPU::SCHED_BARRIER ||
-      MI.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+  if (MI.isMetaInstruction())
     Result = false;
 
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
