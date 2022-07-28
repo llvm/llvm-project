@@ -1113,10 +1113,21 @@ public:
 
 pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Putting accesses to DeviceInfo global behind a function call prior
-// to changing to use init_plugin/deinit_plugin calls
-static RTLDeviceInfoTy DeviceInfoState;
-static RTLDeviceInfoTy& DeviceInfo() { return DeviceInfoState; }
+static RTLDeviceInfoTy *DeviceInfoState = nullptr;
+static RTLDeviceInfoTy &DeviceInfo() { return *DeviceInfoState; }
+
+int32_t __tgt_rtl_init_plugin() {
+  DeviceInfoState = new RTLDeviceInfoTy;
+  return (DeviceInfoState && DeviceInfoState->ConstructionSucceeded)
+             ? OFFLOAD_SUCCESS
+             : OFFLOAD_FAIL;
+}
+
+int32_t __tgt_rtl_deinit_plugin() {
+  if (DeviceInfoState)
+    delete DeviceInfoState;
+  return OFFLOAD_SUCCESS;
+}
 
 namespace {
 
@@ -2050,9 +2061,6 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
      info->Arch);
   return true;
 }
-
-int32_t __tgt_rtl_init_plugin() { return OFFLOAD_SUCCESS; }
-int32_t __tgt_rtl_deinit_plugin() { return OFFLOAD_SUCCESS; }
 
 int __tgt_rtl_number_of_devices() {
   // If the construction failed, no methods are safe to call
