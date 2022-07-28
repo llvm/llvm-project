@@ -56,26 +56,26 @@ the subject that you can get, so it will not be discussed in this document.
 Here are some useful links:
 
 #. `cppreference.com
-   <http://en.cppreference.com/w/>`_ - an excellent
+   <https://en.cppreference.com/w/>`_ - an excellent
    reference for the STL and other parts of the standard C++ library.
+
+#. `cplusplus.com
+   <https://cplusplus.com/reference/>`_ - another excellent
+   reference like the one above.
 
 #. `C++ In a Nutshell <http://www.tempest-sw.com/cpp/>`_ - This is an O'Reilly
    book in the making.  It has a decent Standard Library Reference that rivals
    Dinkumware's, and is unfortunately no longer free since the book has been
    published.
 
-#. `C++ Frequently Asked Questions <http://www.parashift.com/c++-faq-lite/>`_.
-
-#. `SGI's STL Programmer's Guide <http://www.sgi.com/tech/stl/>`_ - Contains a
-   useful `Introduction to the STL
-   <http://www.sgi.com/tech/stl/stl_introduction.html>`_.
+#. `C++ Frequently Asked Questions <https://www.parashift.com/c++-faq-lite/>`_.
 
 #. `Bjarne Stroustrup's C++ Page
-   <http://www.stroustrup.com/C++.html>`_.
+   <https://www.stroustrup.com/C++.html>`_.
 
-#. `Bruce Eckel's Thinking in C++, 2nd ed. Volume 2 Revision 4.0
+#. `Bruce Eckel's Thinking in C++, 2nd ed. Volume 2.
    (even better, get the book)
-   <http://www.mindview.net/Books/TICPP/ThinkingInCPP2e.html>`_.
+   <https://archive.org/details/TICPP2ndEdVolTwo>`_.
 
 You are also encouraged to take a look at the :doc:`LLVM Coding Standards
 <CodingStandards>` guide which focuses on how to write maintainable code more

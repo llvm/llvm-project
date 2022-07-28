@@ -61,15 +61,14 @@ func.func @interchange_reduction(%input: tensor<12x7x25xf32>) -> tensor<12x25xf3
   %five = arith.constant 5.0 : f32
   %init = linalg.init_tensor [12, 25] : tensor<12x25xf32>
 
-//   CHECK-DAG:  %[[C4:.+]] = arith.constant 4 : index
-//   CHECK-DAG:  %[[C5:.+]] = arith.constant 5 : index
-//   CHECK-DAG:  %[[C7:.+]] = arith.constant 7 : index
-
 //       CHECK: %[[INIT:.+]] = linalg.init_tensor [12, 25]
+//   CHECK-DAG: %[[C5:.+]] = arith.constant 5 : index
+//   CHECK-DAG: %[[C7:.+]] = arith.constant 7 : index
 //       CHECK: scf.for %[[IV0:.+]] = %{{.+}} to %{{.+}} step %[[C5]] iter_args(%[[FOR_ARG0:.+]] = %[[INIT]])
 //       CHECK:   scf.for %[[IV1:.+]] = %{{.+}} to %{{.+}} step %[[C7]] iter_args(%[[FOR_ARG1:.+]] = %[[FOR_ARG0]])
 //       CHECK:     %[[OUT_SLICE0:.+]] = tensor.extract_slice %[[FOR_ARG1]][%[[IV0]], %[[IV1]]]
 //       CHECK:     %[[FILL:.+]] = linalg.fill {{.+}} outs(%[[OUT_SLICE0]] : tensor<?x?xf32>)
+//       CHECK:     %[[C4:.+]] = arith.constant 4 : index
 //       CHECK:     scf.for %[[IV2:.+]] = %{{.+}} to %{{.+}} step %[[C4]] iter_args(%[[FOR_ARG2:.+]] = %[[FILL]])
 //       CHECK:       %[[IN_SLICE:.+]] = tensor.extract_slice %[[INPUT]]
 //       CHECK:       %[[OUT_SLICE2:.+]] = tensor.extract_slice %[[FOR_ARG2]][0, 0]

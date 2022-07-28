@@ -327,6 +327,11 @@ static cl::opt<bool> EnablePromoteKernelArguments(
     cl::desc("Enable promotion of flat kernel pointer arguments to global"),
     cl::Hidden, cl::init(true));
 
+static cl::opt<bool> EnableImageIntrinsicOptimizer(
+    "amdgpu-enable-image-intrinsic-optimizer",
+    cl::desc("Enable image intrinsic optimizer pass"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -397,6 +402,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
+  initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
   initializeGCNNSAReassignPass(*PR);
@@ -672,6 +678,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
              ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
           PM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-image-intrinsic-opt") {
+          PM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
           return true;
         }
         if (PassName == "amdgpu-usenative") {
@@ -1012,6 +1022,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // A call to propagate attributes pass in the backend in case opt was not run.
   addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
+
+  if (isPassEnabled(EnableImageIntrinsicOptimizer))
+    addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
   addPass(createAMDGPULowerIntrinsicsPass());
 

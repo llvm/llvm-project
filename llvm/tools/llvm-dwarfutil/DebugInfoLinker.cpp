@@ -8,7 +8,6 @@
 
 #include "DebugInfoLinker.h"
 #include "Error.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/DWARFLinker/DWARFLinker.h"
 #include "llvm/DWARFLinker/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -211,29 +210,8 @@ private:
   const Options &Opts;
 };
 
-static bool knownByDWARFUtil(StringRef SecName) {
-  return llvm::StringSwitch<bool>(SecName)
-      .Case(".debug_info", true)
-      .Case(".debug_types", true)
-      .Case(".debug_abbrev", true)
-      .Case(".debug_loc", true)
-      .Case(".debug_loclists", true)
-      .Case(".debug_frame", true)
-      .Case(".debug_aranges", true)
-      .Case(".debug_ranges", true)
-      .Case(".debug_rnglists", true)
-      .Case(".debug_line", true)
-      .Case(".debug_line_str", true)
-      .Case(".debug_addr", true)
-      .Case(".debug_macro", true)
-      .Case(".debug_macinfo", true)
-      .Case(".debug_str", true)
-      .Case(".debug_str_offsets", true)
-      .Default(false);
-}
-
-Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
-                    raw_pwrite_stream &OutStream) {
+bool linkDebugInfo(object::ObjectFile &File, const Options &Options,
+                   raw_pwrite_stream &OutStream) {
 
   auto ReportWarn = [&](const Twine &Message, StringRef Context,
                         const DWARFDie *Die) {
@@ -257,11 +235,8 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
   // Create output streamer.
   DwarfStreamer OutStreamer(OutputFileType::Object, OutStream, nullptr,
                             ReportWarn, ReportWarn);
-  Triple TargetTriple = File.makeTriple();
-  if (!OutStreamer.init(TargetTriple, formatv("cannot create a stream for {0}",
-                                              TargetTriple.getTriple())
-                                          .str()))
-    return createStringError(std::errc::invalid_argument, "");
+  if (!OutStreamer.init(File.makeTriple(), ""))
+    return false;
 
   // Create DWARF linker.
   DWARFLinker DebugInfoLinker(&OutStreamer, DwarfLinkerClient::LLD);
@@ -281,16 +256,6 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
 
   std::unique_ptr<DWARFContext> Context = DWARFContext::create(File);
 
-  // Unknown debug sections would be removed. Display warning
-  // for such sections.
-  for (SectionName Sec : Context->getDWARFObj().getSectionNames()) {
-    if (isDebugSection(Sec.Name) && !knownByDWARFUtil(Sec.Name))
-      warning(
-          formatv("'{0}' is not currently supported: section will be skipped",
-                  Sec.Name),
-          Options.InputFileName);
-  }
-
   // Add object files to the DWARFLinker.
   AddresssMapForLinking[0] =
       std::make_unique<ObjFileAddressMap>(*Context, Options, File);
@@ -303,11 +268,9 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
     DebugInfoLinker.addObjectFile(*ObjectsForLinking[I]);
 
   // Link debug info.
-  if (Error Err = DebugInfoLinker.link())
-    return Err;
-
+  DebugInfoLinker.link();
   OutStreamer.finish();
-  return Error::success();
+  return true;
 }
 
 } // end of namespace dwarfutil

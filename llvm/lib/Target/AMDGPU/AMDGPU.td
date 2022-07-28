@@ -279,6 +279,12 @@ def FeatureImageGather4D16Bug : SubtargetFeature<"image-gather4-d16-bug",
   "Image Gather4 D16 hardware bug"
 >;
 
+def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
+  "HasMSAALoadDstSelBug",
+  "true",
+  "MSAA loads not honoring dst_sel bug"
+>;
+
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
   "ldsbankcount"#Value,
   "LDSBankCount",
@@ -1309,18 +1315,22 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard]>;
 
-def FeatureISAVersion11_0_0 : FeatureSet<
+def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureMSAALoadDstSelBug])>;
+
+def FeatureISAVersion11_0_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureGFX11ExtraVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureGFX11ExtraVGPRs])>;
 
 // Features for GFX 11.0.2 and 11.0.3
 def FeatureISAVersion11_0_2 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureUserSGPRInit16Bug])>;
 
 // Features for GFX 11.5.0

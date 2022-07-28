@@ -790,33 +790,6 @@ AffineApplyOp mlir::makeComposedAffineApply(OpBuilder &b, Location loc,
       values);
 }
 
-OpFoldResult
-mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
-                                    AffineMap map,
-                                    ArrayRef<OpFoldResult> operands) {
-  assert(map.getNumResults() == 1 && "building affine.apply with !=1 result");
-
-  SmallVector<Operation *> constants;
-  SmallVector<Value> actualValues;
-  materializeConstants(b, loc, operands, constants, actualValues);
-  composeAffineMapAndOperands(&map, &actualValues);
-  OpFoldResult result = createOrFold<AffineApplyOp>(b, loc, actualValues, map);
-  if (result.is<Attribute>()) {
-    for (Operation *op : constants)
-      b.eraseOp(op);
-  }
-  return result;
-}
-
-OpFoldResult
-mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
-                                    AffineExpr expr,
-                                    ArrayRef<OpFoldResult> operands) {
-  return makeComposedFoldedAffineApply(
-      b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}).front(),
-      operands);
-}
-
 /// Composes the given affine map with the given list of operands, pulling in
 /// the maps from any affine.apply operations that supply the operands.
 static void composeMultiResultAffineMap(AffineMap &map,
@@ -847,6 +820,44 @@ static void composeMultiResultAffineMap(AffineMap &map,
   canonicalizeMapAndOperands(&map, &operands);
 }
 
+OpFoldResult
+mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+                                    AffineMap map,
+                                    ArrayRef<OpFoldResult> operands) {
+  assert(map.getNumResults() == 1 && "building affine.apply with !=1 result");
+
+  SmallVector<Operation *> constants;
+  SmallVector<Value> actualValues;
+  materializeConstants(b, loc, operands, constants, actualValues);
+  composeAffineMapAndOperands(&map, &actualValues);
+  OpFoldResult result = createOrFold<AffineApplyOp>(b, loc, actualValues, map);
+
+  // Constants are always folded into affine min/max because they can be
+  // represented as constant expressions, so delete them.
+  for (Operation *op : constants)
+    b.eraseOp(op);
+  return result;
+}
+
+OpFoldResult
+mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+                                    AffineExpr expr,
+                                    ArrayRef<OpFoldResult> operands) {
+  return makeComposedFoldedAffineApply(
+      b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}).front(),
+      operands);
+}
+
+SmallVector<OpFoldResult> mlir::makeComposedFoldedMultiResultAffineApply(
+    RewriterBase &b, Location loc, AffineMap map,
+    ArrayRef<OpFoldResult> operands) {
+  return llvm::to_vector(llvm::map_range(
+      llvm::seq<unsigned>(0, map.getNumResults()), [&](unsigned i) {
+        return makeComposedFoldedAffineApply(b, loc, map.getSubMap({i}),
+                                             operands);
+      }));
+}
+
 Value mlir::makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
                                   ValueRange operands) {
   SmallVector<Value> allOperands = llvm::to_vector(operands);
@@ -854,20 +865,34 @@ Value mlir::makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
   return b.createOrFold<AffineMinOp>(loc, b.getIndexType(), map, allOperands);
 }
 
-OpFoldResult
-mlir::makeComposedFoldedAffineMin(RewriterBase &b, Location loc, AffineMap map,
-                                  ArrayRef<OpFoldResult> operands) {
+template <typename OpTy>
+static OpFoldResult makeComposedFoldedMinMax(RewriterBase &b, Location loc,
+                                             AffineMap map,
+                                             ArrayRef<OpFoldResult> operands) {
   SmallVector<Operation *> constants;
   SmallVector<Value> actualValues;
   materializeConstants(b, loc, operands, constants, actualValues);
   composeMultiResultAffineMap(map, actualValues);
   OpFoldResult result =
-      createOrFold<AffineMinOp>(b, loc, actualValues, b.getIndexType(), map);
-  if (result.is<Attribute>()) {
-    for (Operation *op : constants)
-      b.eraseOp(op);
-  }
+      createOrFold<OpTy>(b, loc, actualValues, b.getIndexType(), map);
+
+  // Constants are always folded into affine min/max because they can be
+  // represented as constant expressions, so delete them.
+  for (Operation *op : constants)
+    b.eraseOp(op);
   return result;
+}
+
+OpFoldResult
+mlir::makeComposedFoldedAffineMin(RewriterBase &b, Location loc, AffineMap map,
+                                  ArrayRef<OpFoldResult> operands) {
+  return makeComposedFoldedMinMax<AffineMinOp>(b, loc, map, operands);
+}
+
+OpFoldResult
+mlir::makeComposedFoldedAffineMax(RewriterBase &b, Location loc, AffineMap map,
+                                  ArrayRef<OpFoldResult> operands) {
+  return makeComposedFoldedMinMax<AffineMaxOp>(b, loc, map, operands);
 }
 
 /// Fully compose map with operands and canonicalize the result.
@@ -894,40 +919,6 @@ SmallVector<Value, 4> mlir::applyMapToValues(OpBuilder &b, Location loc,
     res.push_back(createFoldedComposedAffineApply(b, loc, map, values));
   }
   return res;
-}
-
-SmallVector<OpFoldResult>
-mlir::applyMapToValues(RewriterBase &b, Location loc, AffineMap map,
-                       ArrayRef<OpFoldResult> values) {
-  // Materialize constants and keep track of produced operations so we can clean
-  // them up later.
-  SmallVector<Operation *> constants;
-  SmallVector<Value> actualValues;
-  materializeConstants(b, loc, values, constants, actualValues);
-
-  // Compose, fold and construct maps for each result independently because they
-  // may simplify more effectively.
-  SmallVector<OpFoldResult> results;
-  results.reserve(map.getNumResults());
-  bool foldedAll = true;
-  for (auto i : llvm::seq<unsigned>(0, map.getNumResults())) {
-    AffineMap submap = map.getSubMap({i});
-    SmallVector<Value> operands = actualValues;
-    fullyComposeAffineMapAndOperands(&submap, &operands);
-    canonicalizeMapAndOperands(&submap, &operands);
-    results.push_back(createOrFold<AffineApplyOp>(b, loc, operands, submap));
-    if (!results.back().is<Attribute>())
-      foldedAll = false;
-  }
-
-  // If the entire map could be folded, remove the constants that were used in
-  // the initial ops.
-  if (foldedAll) {
-    for (Operation *constant : constants)
-      b.eraseOp(constant);
-  }
-
-  return results;
 }
 
 // A symbol may appear as a dim in affine.apply operations. This function

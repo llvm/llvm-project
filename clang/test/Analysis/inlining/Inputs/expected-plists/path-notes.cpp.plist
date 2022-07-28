@@ -1384,7 +1384,7 @@
    <key>type</key><string>Dereference of null pointer</string>
    <key>check_name</key><string>core.NullDereference</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>675157873c1414a885eb1f429b26f389</string>
+   <key>issue_hash_content_of_line_in_context</key><string>9261b182b35fa6b6f1d0c750c41f4933</string>
   <key>issue_hash_function_offset</key><string>1</string>
   <key>location</key>
   <dict>
@@ -1714,7 +1714,7 @@
    <key>type</key><string>Dereference of null pointer</string>
    <key>check_name</key><string>core.NullDereference</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>aff5e83726a1ce1144580e4c80bde47c</string>
+   <key>issue_hash_content_of_line_in_context</key><string>a073d3adfe741b2e3d871c7442446e3b</string>
   <key>issue_hash_function_offset</key><string>1</string>
   <key>location</key>
   <dict>
@@ -2046,7 +2046,7 @@
    <key>type</key><string>Dereference of null pointer</string>
    <key>check_name</key><string>core.NullDereference</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>9484c73e190dfe4b8c6c5bdfad9700c1</string>
+   <key>issue_hash_content_of_line_in_context</key><string>37a2ac98868b90fdc54ac673daab004f</string>
   <key>issue_context_kind</key><string>C++ method</string>
   <key>issue_context</key><string>operator=</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -2381,7 +2381,7 @@
    <key>type</key><string>Dereference of null pointer</string>
    <key>check_name</key><string>core.NullDereference</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>a0f0ac76cf282b61236bfac7eb2eca62</string>
+   <key>issue_hash_content_of_line_in_context</key><string>350efb59f475dca2427e8ac4c72f33f1</string>
   <key>issue_context_kind</key><string>C++ method</string>
   <key>issue_context</key><string>operator=</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -4188,7 +4188,7 @@
    <key>type</key><string>Dereference of null pointer</string>
    <key>check_name</key><string>core.NullDereference</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>749bda64658e48896477213e90176f5e</string>
+   <key>issue_hash_content_of_line_in_context</key><string>59af00b5ddf4849d000d583bb5722c8a</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -4750,7 +4750,7 @@
    <key>type</key><string>Called C++ object pointer is null</string>
    <key>check_name</key><string>core.CallAndMessage</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>8b577b362ffa5a7290d00d03635c1fca</string>
+   <key>issue_hash_content_of_line_in_context</key><string>f5a1486363a2814a8268d71daf54a2f8</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testDeclRefExprToReferenceInGetDerefExpr</string>
   <key>issue_hash_function_offset</key><string>8</string>
