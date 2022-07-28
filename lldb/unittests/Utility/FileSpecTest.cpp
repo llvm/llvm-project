@@ -450,3 +450,29 @@ TEST(FileSpecTest, OperatorBool) {
   EXPECT_FALSE(FileSpec(""));
   EXPECT_TRUE(FileSpec("/foo/bar"));
 }
+
+
+TEST(FileSpecTest, TestAbsoluteCaching) {
+  // Test that if we modify a path that we recalculate if a path is relative
+  // or absolute correctly. The test below calls set accessors and functions
+  // that change the path and verifies that the FileSpec::IsAbsolute() returns
+  // the correct value.
+  FileSpec file = PosixSpec("/tmp/a");
+  EXPECT_TRUE(file.IsAbsolute());
+  file.ClearDirectory();
+  EXPECT_FALSE(file.IsAbsolute());
+  file.SetDirectory("/tmp");
+  EXPECT_TRUE(file.IsAbsolute());
+  file.SetDirectory(".");
+  EXPECT_FALSE(file.IsAbsolute());
+  file.SetPath("/log.txt");
+  EXPECT_TRUE(file.IsAbsolute());
+  file.RemoveLastPathComponent();
+  EXPECT_TRUE(file.IsAbsolute());
+  file.ClearFilename();
+  EXPECT_FALSE(file.IsAbsolute());
+  file.AppendPathComponent("foo.txt");
+  EXPECT_FALSE(file.IsAbsolute());
+  file.PrependPathComponent("/tmp");
+  EXPECT_TRUE(file.IsAbsolute());
+}
