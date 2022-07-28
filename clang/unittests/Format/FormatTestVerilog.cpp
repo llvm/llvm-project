@@ -45,6 +45,27 @@ protected:
   }
 };
 
+TEST_F(FormatTestVerilog, BasedLiteral) {
+  verifyFormat("x = '0;");
+  verifyFormat("x = '1;");
+  verifyFormat("x = 'X;");
+  verifyFormat("x = 'x;");
+  verifyFormat("x = 'Z;");
+  verifyFormat("x = 'z;");
+  verifyFormat("x = 659;");
+  verifyFormat("x = 'h837ff;");
+  verifyFormat("x = 'o7460;");
+  verifyFormat("x = 4'b1001;");
+  verifyFormat("x = 5'D3;");
+  verifyFormat("x = 3'b01x;");
+  verifyFormat("x = 12'hx;");
+  verifyFormat("x = 16'hz;");
+  verifyFormat("x = -8'd6;");
+  verifyFormat("x = 4'shf;");
+  verifyFormat("x = -4'sd15;");
+  verifyFormat("x = 16'sd?;");
+}
+
 TEST_F(FormatTestVerilog, Delay) {
   // Delay by the default unit.
   verifyFormat("#0;");
@@ -137,6 +158,64 @@ TEST_F(FormatTestVerilog, If) {
                "  x = {x};\n"
                "else\n"
                "  {x} = {x};");
+}
+
+TEST_F(FormatTestVerilog, Operators) {
+  // Test that unary operators are not followed by space.
+  verifyFormat("x = +x;");
+  verifyFormat("x = -x;");
+  verifyFormat("x = !x;");
+  verifyFormat("x = ~x;");
+  verifyFormat("x = &x;");
+  verifyFormat("x = ~&x;");
+  verifyFormat("x = |x;");
+  verifyFormat("x = ~|x;");
+  verifyFormat("x = ^x;");
+  verifyFormat("x = ~^x;");
+  verifyFormat("x = ^~x;");
+  verifyFormat("x = ++x;");
+  verifyFormat("x = --x;");
+
+  // Test that operators don't get split.
+  verifyFormat("x = x++;");
+  verifyFormat("x = x--;");
+  verifyFormat("x = x ** x;");
+  verifyFormat("x = x << x;");
+  verifyFormat("x = x >> x;");
+  verifyFormat("x = x <<< x;");
+  verifyFormat("x = x >>> x;");
+  verifyFormat("x = x <= x;");
+  verifyFormat("x = x >= x;");
+  verifyFormat("x = x == x;");
+  verifyFormat("x = x != x;");
+  verifyFormat("x = x === x;");
+  verifyFormat("x = x !== x;");
+  verifyFormat("x = x ==? x;");
+  verifyFormat("x = x !=? x;");
+  verifyFormat("x = x ~^ x;");
+  verifyFormat("x = x ^~ x;");
+  verifyFormat("x = x && x;");
+  verifyFormat("x = x || x;");
+  verifyFormat("x = x->x;");
+  verifyFormat("x = x <-> x;");
+  verifyFormat("x += x;");
+  verifyFormat("x -= x;");
+  verifyFormat("x *= x;");
+  verifyFormat("x /= x;");
+  verifyFormat("x %= x;");
+  verifyFormat("x &= x;");
+  verifyFormat("x ^= x;");
+  verifyFormat("x |= x;");
+  verifyFormat("x <<= x;");
+  verifyFormat("x >>= x;");
+  verifyFormat("x <<<= x;");
+  verifyFormat("x >>>= x;");
+  verifyFormat("x <= x;");
+
+  // Test that space is added between operators.
+  EXPECT_EQ("x = x < -x;", format("x=x<-x;"));
+  EXPECT_EQ("x = x << -x;", format("x=x<<-x;"));
+  EXPECT_EQ("x = x <<< -x;", format("x=x<<<-x;"));
 }
 
 TEST_F(FormatTestVerilog, Preprocessor) {

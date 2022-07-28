@@ -135,6 +135,8 @@ namespace format {
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  /* for the base in a number literal, not including the quote */              \
+  TYPE(VerilogNumberBase)                                                      \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a
@@ -367,6 +369,9 @@ public:
     setType(T);
   }
   bool isTypeFinalized() const { return TypeIsFinalized; }
+
+  /// Used to set an operator precedence explicitly.
+  prec::Level ForcedPrecedence = prec::Unknown;
 
   /// The number of newlines immediately before the \c Token.
   ///
@@ -697,6 +702,8 @@ public:
   }
 
   prec::Level getPrecedence() const {
+    if (ForcedPrecedence != prec::Unknown)
+      return ForcedPrecedence;
     return getBinOpPrecedence(Tok.getKind(), /*GreaterThanIsOperator=*/true,
                               /*CPlusPlus11=*/true);
   }
@@ -1119,6 +1126,7 @@ struct AdditionalKeywords {
     // Symbols that are treated as keywords.
     kw_verilogHash = &IdentTable.get("#");
     kw_verilogHashHash = &IdentTable.get("##");
+    kw_apostrophe = &IdentTable.get("\'");
 
     // Keep this at the end of the constructor to make sure everything here
     // is
@@ -1511,11 +1519,14 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_verilogHash;
   IdentifierInfo *kw_verilogHashHash;
 
+  // Symbols in Verilog that don't exist in C++.
+  IdentifierInfo *kw_apostrophe;
+
   /// Returns \c true if \p Tok is a keyword or an identifier.
   bool isWordLike(const FormatToken &Tok) const {
     // getIdentifierinfo returns non-null for keywords as well as identifiers.
     return Tok.Tok.getIdentifierInfo() != nullptr &&
-           !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash);
+           !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
   }
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
@@ -1642,6 +1653,11 @@ struct AdditionalKeywords {
              CSharpExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
                  CSharpExtraKeywords.end();
     }
+  }
+
+  bool isVerilogWordOperator(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_before, kw_intersect, kw_dist, kw_iff, kw_inside,
+                       kw_with);
   }
 
   bool isVerilogIdentifier(const FormatToken &Tok) const {

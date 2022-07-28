@@ -38,6 +38,8 @@ protected:
   EXPECT_EQ((FormatTok)->Tok.getKind(), Kind) << *(FormatTok)
 #define EXPECT_TOKEN_TYPE(FormatTok, Type)                                     \
   EXPECT_EQ((FormatTok)->getType(), Type) << *(FormatTok)
+#define EXPECT_TOKEN_PRECEDENCE(FormatTok, Prec)                               \
+  EXPECT_EQ((FormatTok)->getPrecedence(), Prec) << *(FormatTok)
 #define EXPECT_TOKEN(FormatTok, Kind, Type)                                    \
   do {                                                                         \
     EXPECT_TOKEN_KIND(FormatTok, Kind);                                        \
@@ -762,6 +764,67 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::arrow, TT_LambdaArrow);
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_LambdaLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
+  auto Annotate = [this](llvm::StringRef Code) {
+    return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));
+  };
+  // Test that unary operators get labeled as such and that operators like '++'
+  // don't get split.
+  tok::TokenKind Unary[] = {tok::plus,  tok::minus,    tok::exclaim,
+                            tok::tilde, tok::amp,      tok::pipe,
+                            tok::caret, tok::plusplus, tok::minusminus};
+  for (auto Kind : Unary) {
+    auto Tokens =
+        Annotate(std::string("x = ") + tok::getPunctuatorSpelling(Kind) + "x;");
+    ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+    EXPECT_TOKEN(Tokens[2], Kind, TT_UnaryOperator);
+  }
+  // Operators formed by joining two operators like '^~'. For some of these
+  // joined operators, we don't have a separate type, so we only test for their
+  // precedence.
+  std::pair<prec::Level, std::string> JoinedBinary[] = {
+      {prec::Comma, "<->"},       {prec::Assignment, "+="},
+      {prec::Assignment, "-="},   {prec::Assignment, "*="},
+      {prec::Assignment, "/="},   {prec::Assignment, "%="},
+      {prec::Assignment, "&="},   {prec::Assignment, "^="},
+      {prec::Assignment, "<<="},  {prec::Assignment, ">>="},
+      {prec::Assignment, "<<<="}, {prec::Assignment, ">>>="},
+      {prec::LogicalOr, "||"},    {prec::LogicalAnd, "&&"},
+      {prec::Equality, "=="},     {prec::Equality, "!="},
+      {prec::Equality, "==="},    {prec::Equality, "!=="},
+      {prec::Equality, "==?"},    {prec::Equality, "!=?"},
+      {prec::ExclusiveOr, "~^"},  {prec::ExclusiveOr, "^~"},
+  };
+  for (auto Operator : JoinedBinary) {
+    auto Tokens = Annotate(std::string("x = x ") + Operator.second + " x;");
+    ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+    EXPECT_TOKEN_TYPE(Tokens[3], TT_BinaryOperator);
+    EXPECT_TOKEN_PRECEDENCE(Tokens[3], Operator.first);
+  }
+  // '~^' and '^~' can be unary as well as binary operators.
+  auto Tokens = Annotate("x = ~^x;");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN_TYPE(Tokens[2], TT_UnaryOperator);
+  Tokens = Annotate("x = ^~x;");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN_TYPE(Tokens[2], TT_UnaryOperator);
+  // The unary operators '~&' and '~|' can only be unary operators. The current
+  // implementation treats each of them as separate unary '~' and '&' or '|'
+  // operators, which is enough for formatting purposes. In FormatTestVerilog,
+  // there is a test that there is no space in between. And even if a new line
+  // is inserted between the '~' and '|', the semantic meaning is the same as
+  // the joined operator, so the CanBreakBefore property doesn't need to be
+  // false for the second operator.
+  Tokens = Annotate("x = ~&x;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::tilde, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[3], tok::amp, TT_UnaryOperator);
+  Tokens = Annotate("x = ~|x;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::tilde, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[3], tok::pipe, TT_UnaryOperator);
 }
 
 } // namespace

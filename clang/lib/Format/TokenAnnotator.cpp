@@ -1842,7 +1842,8 @@ private:
           Current,
           Contexts.back().CanBeExpression && Contexts.back().IsExpression,
           Contexts.back().ContextType == Context::TemplateArgument));
-    } else if (Current.isOneOf(tok::minus, tok::plus, tok::caret)) {
+    } else if (Current.isOneOf(tok::minus, tok::plus, tok::caret) ||
+               (Style.isVerilog() && Current.is(tok::pipe))) {
       Current.setType(determinePlusMinusCaretUsage(Current));
       if (Current.is(TT_UnaryOperator) && Current.is(tok::caret))
         Contexts.back().CaretFound = true;
@@ -3995,6 +3996,23 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          (Left.is(tok::r_paren) && Left.MatchingParen &&
           Left.MatchingParen->endsSequence(tok::l_paren, tok::at)))) {
       return true;
+    }
+    // Don't add embedded spaces in a number literal like `16'h1?ax` or an array
+    // literal like `'{}`.
+    if (Left.is(Keywords.kw_apostrophe) ||
+        (Left.is(TT_VerilogNumberBase) && Right.is(tok::numeric_constant))) {
+      return false;
+    }
+    // Don't add spaces between a casting type and the quote or repetition count
+    // and the brace.
+    if ((Right.is(Keywords.kw_apostrophe) ||
+         (Right.is(BK_BracedInit) && Right.is(tok::l_brace))) &&
+        !(Left.isOneOf(Keywords.kw_assign, Keywords.kw_unique) ||
+          Keywords.isVerilogWordOperator(Left)) &&
+        (Left.isOneOf(tok::r_square, tok::r_paren, tok::r_brace,
+                      tok::numeric_constant) ||
+         Keywords.isWordLike(Left))) {
+      return false;
     }
   }
   if (Left.is(TT_ImplicitStringLiteral))
