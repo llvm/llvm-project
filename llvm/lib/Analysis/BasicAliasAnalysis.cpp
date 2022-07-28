@@ -751,31 +751,30 @@ static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   if (Call->doesNotAccessMemory())
     // Can't do better than this.
-    return FMRB_DoesNotAccessMemory;
-
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
+    return FunctionModRefBehavior::none();
 
   // If the callsite knows it only reads memory, don't return worse
   // than that.
+  ModRefInfo MR = ModRefInfo::ModRef;
   if (Call->onlyReadsMemory())
-    Min = FMRB_OnlyReadsMemory;
+    MR = ModRefInfo::Ref;
   else if (Call->onlyWritesMemory())
-    Min = FMRB_OnlyWritesMemory;
+    MR = ModRefInfo::Mod;
 
+  FunctionModRefBehavior Min(MR);
   if (Call->onlyAccessesArgMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
+    Min = FunctionModRefBehavior::argMemOnly(MR);
   else if (Call->onlyAccessesInaccessibleMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleMem);
+    Min = FunctionModRefBehavior::inaccessibleMemOnly(MR);
   else if (Call->onlyAccessesInaccessibleMemOrArgMem())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleOrArgMem);
+    Min = FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
 
   // If the call has operand bundles then aliasing attributes from the function
   // it calls do not directly apply to the call.  This can be made more precise
   // in the future.
   if (!Call->hasOperandBundles())
     if (const Function *F = Call->getCalledFunction())
-      Min =
-          FunctionModRefBehavior(Min & getBestAAResults().getModRefBehavior(F));
+      Min &= getBestAAResults().getModRefBehavior(F);
 
   return Min;
 }
@@ -785,24 +784,22 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   // If the function declares it doesn't access memory, we can't do better.
   if (F->doesNotAccessMemory())
-    return FMRB_DoesNotAccessMemory;
-
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
+    return FunctionModRefBehavior::none();
 
   // If the function declares it only reads memory, go with that.
+  ModRefInfo MR = ModRefInfo::ModRef;
   if (F->onlyReadsMemory())
-    Min = FMRB_OnlyReadsMemory;
+    MR = ModRefInfo::Ref;
   else if (F->onlyWritesMemory())
-    Min = FMRB_OnlyWritesMemory;
+    MR = ModRefInfo::Mod;
 
   if (F->onlyAccessesArgMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
-  else if (F->onlyAccessesInaccessibleMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleMem);
-  else if (F->onlyAccessesInaccessibleMemOrArgMem())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleOrArgMem);
-
-  return Min;
+    return FunctionModRefBehavior::argMemOnly(MR);
+  if (F->onlyAccessesInaccessibleMemory())
+    return FunctionModRefBehavior::inaccessibleMemOnly(MR);
+  if (F->onlyAccessesInaccessibleMemOrArgMem())
+    return FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
+  return FunctionModRefBehavior(MR);
 }
 
 /// Returns true if this is a writeonly (i.e Mod only) parameter.
@@ -1057,12 +1054,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(Call1, Intrinsic::experimental_guard))
-    return isModSet(createModRefInfo(getModRefBehavior(Call2)))
+    return isModSet(getModRefBehavior(Call2).getModRef())
                ? ModRefInfo::Ref
                : ModRefInfo::NoModRef;
 
   if (isIntrinsicCall(Call2, Intrinsic::experimental_guard))
-    return isModSet(createModRefInfo(getModRefBehavior(Call1)))
+    return isModSet(getModRefBehavior(Call1).getModRef())
                ? ModRefInfo::Mod
                : ModRefInfo::NoModRef;
 
