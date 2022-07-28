@@ -441,5 +441,46 @@ TEST_F(FormatTestVerilog, Preprocessor) {
   }
 }
 
+TEST_F(FormatTestVerilog, Primitive) {
+  verifyFormat("primitive multiplexer\n"
+               "    (mux, control, dataA, dataB);\n"
+               "  output mux;\n"
+               "  input control, dataA, dataB;\n"
+               "  table\n"
+               "    0 1 ? : 1;\n"
+               "    0 0 ? : 0;\n"
+               "    1 ? 1 : 1;\n"
+               "    1 ? 0 : 0;\n"
+               "    x 0 0 : 0;\n"
+               "    x 1 1 : 1;\n"
+               "  endtable\n"
+               "endprimitive");
+  verifyFormat("primitive latch\n"
+               "    (q, ena_, data);\n"
+               "  output q;\n"
+               "  reg q;\n"
+               "  input ena_, data;\n"
+               "  table\n"
+               "    0 1 : ? : 1;\n"
+               "    0 0 : ? : 0;\n"
+               "    1 ? : ? : -;\n"
+               "    ? * : ? : -;\n"
+               "  endtable\n"
+               "endprimitive");
+  verifyFormat("primitive d\n"
+               "    (q, clock, data);\n"
+               "  output q;\n"
+               "  reg q;\n"
+               "  input clock, data;\n"
+               "  table\n"
+               "    (01) 0 : ? : 0;\n"
+               "    (01) 1 : ? : 1;\n"
+               "    (0?) 1 : 1 : 1;\n"
+               "    (0?) 0 : 0 : 0;\n"
+               "    (?0) ? : ? : -;\n"
+               "    (?\?) ? : ? : -;\n"
+               "  endtable\n"
+               "endprimitive");
+}
 } // namespace format
 } // end namespace clang
