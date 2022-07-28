@@ -4,11 +4,11 @@ set(LLVM_LINK_COMPONENTS
   )
 
 if(LLVM_USE_HOST_TOOLS)
-  build_native_tool(make-confusable-table make_confusable_table)
+  build_native_tool(clang-tidy-confusable-chars-gen make_confusable_table)
   set(make_confusable_table_target "${make_confusable_table}")
 else()
-  set(make_confusable_table $<TARGET_FILE:make-confusable-table>)
-  set(make_confusable_table_target make-confusable-table)
+  set(make_confusable_table $<TARGET_FILE:clang-tidy-confusable-chars-gen>)
+  set(make_confusable_table_target clang-tidy-confusable-chars-gen)
 endif()
 
 add_subdirectory(ConfusableTable)
