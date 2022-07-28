@@ -20,6 +20,12 @@
 extern "C" {
 #endif
 
+// First method called on the plugin
+int32_t __tgt_rtl_init_plugin();
+
+// Last method called on the plugin
+int32_t __tgt_rtl_deinit_plugin();
+
 // Return the number of available devices of the type supported by the
 // target RTL.
 int32_t __tgt_rtl_number_of_devices(void);
