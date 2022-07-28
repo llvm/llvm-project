@@ -459,15 +459,12 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     // The number of dimensions of the sequence
     unsigned getDimension() const { return getShape().size(); }
 
-    // Is the interior of the sequence constant? Check if the array is
-    // one of constant shape (`array<C...xCxT>`), unknown shape
-    // (`array<*xT>`), or rows with shape and ending with column(s) of
-    // unknown extent (`array<C...xCx?...x?xT>`).
-    bool hasConstantInterior() const;
-
-    // Is the shape of the sequence constant?
-    bool hasConstantShape() const {
-      return getConstantRows() == getDimension();
+    // Is the shape of the sequence dynamic?
+    bool hasDynamicExtents() const {
+      for(const auto d : getShape())
+        if (d == getUnknownExtent())
+          return true;
+      return false;
     }
 
     // Does the sequence have unknown shape? (`array<* x T>`)

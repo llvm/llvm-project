@@ -81,7 +81,7 @@ public:
       return rewriteDynamicShape(embox, rewriter, shapeVal);
     if (auto boxTy = embox.getType().dyn_cast<fir::BoxType>())
       if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
-        if (seqTy.hasConstantShape())
+        if (!seqTy.hasDynamicExtents())
           return rewriteStaticShape(embox, rewriter, seqTy);
     return mlir::failure();
   }
