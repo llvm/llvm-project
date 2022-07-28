@@ -177,6 +177,12 @@ inline bool hasDependence(DependenceResult result) {
   return result.value == DependenceResult::HasDependence;
 }
 
+/// Returns true if the provided DependenceResult corresponds to the absence of
+/// a dependence.
+inline bool noDependence(DependenceResult result) {
+  return result.value == DependenceResult::NoDependence;
+}
+
 /// Returns in 'depCompsVec', dependence components for dependences between all
 /// load and store ops in loop nest rooted at 'forOp', at loop depths in range
 /// [1, maxLoopDepth].
