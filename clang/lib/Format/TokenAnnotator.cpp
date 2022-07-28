@@ -3310,6 +3310,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     }
   }
 
+  // trailing return type 'auto': []() -> auto {}, auto foo() -> auto {}
+  if (Left.is(tok::kw_auto) &&
+      Right.isOneOf(TT_LambdaLBrace, TT_FunctionLBrace))
+    return true;
+
   // auto{x} auto(x)
   if (Left.is(tok::kw_auto) && Right.isOneOf(tok::l_paren, tok::l_brace))
     return false;
