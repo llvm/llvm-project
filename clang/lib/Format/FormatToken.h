@@ -137,6 +137,10 @@ namespace format {
   TYPE(UntouchableMacroFunc)                                                   \
   /* like in begin : block */                                                  \
   TYPE(VerilogBlockLabelColon)                                                 \
+  /* The square bracket for the dimension part of the type name.               \
+   * In 'logic [1:0] x[1:0]', only the first '['. This way we can have space   \
+   * before the first bracket but not the second. */                           \
+  TYPE(VerilogDimensionedTypeName)                                             \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
   TYPE(Unknown)
@@ -1741,6 +1745,22 @@ struct AdditionalKeywords {
                        kw_endprogram, kw_endproperty, kw_endsequence,
                        kw_endspecify, kw_endtable, kw_endtask, kw_join,
                        kw_join_any, kw_join_none);
+  }
+
+  /// Returns whether \p Tok is a Verilog keyword that opens a module, etc.
+  bool isVerilogHierarchy(const FormatToken &Tok) const {
+    if (Tok.endsSequence(kw_function, kw_with))
+      return false;
+    if (Tok.is(kw_property)) {
+      const FormatToken *Prev = Tok.getPreviousNonComment();
+      return !(Prev &&
+               Prev->isOneOf(tok::kw_restrict, kw_assert, kw_assume, kw_cover));
+    }
+    return Tok.isOneOf(tok::kw_case, tok::kw_class, kw_function, kw_module,
+                       kw_interface, kw_package, kw_casex, kw_casez, kw_checker,
+                       kw_clocking, kw_covergroup, kw_macromodule, kw_primitive,
+                       kw_program, kw_property, kw_randcase, kw_randsequence,
+                       kw_task);
   }
 
   /// Whether the token begins a block.
