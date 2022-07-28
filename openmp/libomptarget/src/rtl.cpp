@@ -109,6 +109,17 @@ void RTLsTy::loadRTLs() {
     // Retrieve the RTL information from the runtime library.
     RTLInfoTy &R = AllRTLs.back();
 
+    // Remove plugin on failure to call optional init_plugin
+    *((void **)&R.init_plugin) = dlsym(DynlibHandle, "__tgt_rtl_init_plugin");
+    if (R.init_plugin) {
+      int32_t Rc = R.init_plugin();
+      if (Rc != OFFLOAD_SUCCESS) {
+        DP("Unable to initialize library '%s': %u!\n", Name, Rc);
+        AllRTLs.pop_back();
+        continue;
+      }
+    }
+
     bool ValidPlugin = true;
 
     if (!(*((void **)&R.is_valid_binary) =
@@ -167,6 +178,8 @@ void RTLsTy::loadRTLs() {
        R.NumberOfDevices);
 
     // Optional functions
+    *((void **)&R.deinit_plugin) =
+        dlsym(DynlibHandle, "__tgt_rtl_deinit_plugin");
     *((void **)&R.is_valid_binary_info) =
         dlsym(DynlibHandle, "__tgt_rtl_is_valid_binary_info");
     *((void **)&R.deinit_device) =
@@ -553,8 +566,14 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
 
   PM->TblMapMtx.unlock();
 
-  // TODO: Remove RTL and the devices it manages if it's not used anymore?
   // TODO: Write some RTL->unload_image(...) function?
+  for (auto *R : UsedRTLs) {
+    if (R->deinit_plugin) {
+      if (R->deinit_plugin() != OFFLOAD_SUCCESS) {
+        DP("Failure deinitializing RTL %s!\n", R->RTLName.c_str());
+      }
+    }
+  }
 
   DP("Done unregistering library!\n");
 }
