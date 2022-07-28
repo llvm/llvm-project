@@ -728,6 +728,28 @@ llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 :
 
 // -----
 
+// CHECK-LABEL: @simdloop_simple_multiple_simdlen
+llvm.func @simdloop_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
+  omp.simdloop simdlen(2) for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    // The form of the emitted IR is controlled by OpenMPIRBuilder and
+    // tested there. Just check that the right metadata is added.
+    // CHECK: llvm.access.group
+    // CHECK-NEXT: llvm.access.group
+    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    llvm.store %3, %4 : !llvm.ptr<f32>
+    llvm.store %3, %5 : !llvm.ptr<f32>
+    omp.yield
+  }
+  llvm.return
+}
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+// CHECK-NEXT: llvm.loop.vectorize.width{{.*}}i64 2
+
+// -----
+
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
