@@ -1709,8 +1709,8 @@ bool DevirtModule::tryVirtualConstProp(
   // rather than using function attributes to perform local optimization.
   for (VirtualCallTarget &Target : TargetsForSlot) {
     if (Target.Fn->isDeclaration() ||
-        computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn)) !=
-            FMRB_DoesNotAccessMemory ||
+        !computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn))
+             .doesNotAccessMemory() ||
         Target.Fn->arg_empty() || !Target.Fn->arg_begin()->use_empty() ||
         Target.Fn->getReturnType() != RetType)
       return false;
