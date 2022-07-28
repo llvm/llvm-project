@@ -77,7 +77,7 @@ Permutation,sort,Konstantin Varlamov,`D127557 <https://llvm.org/D127557>`_,✅
 Permutation,stable_sort,Konstantin Varlamov,`D127834 <https://llvm.org/D127834>`_,✅
 Permutation,nth_element,Konstantin Varlamov,`D128149 <https://llvm.org/D128149>`_,✅
 Permutation,partial_sort,Konstantin Varlamov,`D128744 <https://llvm.org/D128744>`_,✅
-Permutation,inplace_merge,Not assigned,n/a,Not started
+Permutation,inplace_merge,Hui Xie,`D130627 <https://llvm.org/D130627>`_,✅
 Permutation,make_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
 Permutation,push_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
 Permutation,pop_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
