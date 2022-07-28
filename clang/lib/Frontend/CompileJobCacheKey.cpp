@@ -56,18 +56,29 @@ clang::createCompileJobCacheKey(CASDB &CAS, ArrayRef<const char *> CC1Args,
 
 Optional<llvm::cas::CASID>
 clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
-                                const CompilerInvocation &Invocation) {
+                                const CompilerInvocation &OriginalInvocation) {
+  CompilerInvocation InvocationForCacheKey(OriginalInvocation);
+  FrontendOptions &FrontendOpts = InvocationForCacheKey.getFrontendOpts();
+  DiagnosticOptions &DiagOpts = InvocationForCacheKey.getDiagnosticOpts();
+  // Keep the key independent of the paths of these outputs.
+  FrontendOpts.OutputFile = "-";
+  InvocationForCacheKey.getDependencyOutputOpts().OutputFile = "-";
+  // We always generate the serialized diagnostics so the key is independent of
+  // the presence of '--serialize-diagnostics'.
+  DiagOpts.DiagnosticSerializationFile.clear();
+
   // Generate a new command-line in case Invocation has been canonicalized.
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
   llvm::SmallVector<const char *> Argv;
   Argv.push_back("-cc1");
-  Invocation.generateCC1CommandLine(
+  InvocationForCacheKey.generateCC1CommandLine(
       Argv, [&Saver](const llvm::Twine &T) { return Saver.save(T).data(); });
 
   // FIXME: currently correct since the main executable is always in the root
   // from scanning, but we should probably make it explicit here...
-  StringRef RootIDString = Invocation.getFileSystemOpts().CASFileSystemRootID;
+  StringRef RootIDString =
+      InvocationForCacheKey.getFileSystemOpts().CASFileSystemRootID;
   Expected<llvm::cas::CASID> RootID = CAS.parseID(RootIDString);
   if (!RootID) {
     llvm::consumeError(RootID.takeError());
