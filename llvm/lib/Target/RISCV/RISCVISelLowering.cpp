@@ -1876,8 +1876,8 @@ static SDValue lowerFTRUNC_FCEIL_FFLOOR(SDValue Op, SelectionDAG &DAG) {
 // floor(X + copysign(nextafter(0.5, 0.0), X)).
 // FIXME: Could be shorter by changing rounding mode, but we don't have FRM
 // dependencies modeled yet.
-// FIXME: Use masked operations to avoid final merge.
-static SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG) {
+static SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG,
+                           const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   assert(VT.isVector() && "Unexpected type");
 
@@ -1885,44 +1885,70 @@ static SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG) {
 
   SDValue Src = Op.getOperand(0);
 
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+    Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+  }
+
+  SDValue TrueMask, VL;
+  std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
   // Freeze the source since we are increasing the number of uses.
-  Src = DAG.getFreeze(Op.getOperand(0));
+  Src = DAG.getFreeze(Src);
 
   // We do the conversion on the absolute value and fix the sign at the end.
-  SDValue Abs = DAG.getNode(ISD::FABS, DL, VT, Src);
+  SDValue Abs =
+      DAG.getNode(RISCVISD::FABS_VL, DL, ContainerVT, Src, TrueMask, VL);
 
   // Determine the largest integer that can be represented exactly. This and
   // values larger than it don't have any fractional bits so don't need to
   // be converted.
-  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
+  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(ContainerVT);
   unsigned Precision = APFloat::semanticsPrecision(FltSem);
   APFloat MaxVal = APFloat(FltSem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
                           /*IsSigned*/ false, APFloat::rmNearestTiesToEven);
-  SDValue MaxValNode = DAG.getConstantFP(MaxVal, DL, VT);
+  SDValue MaxValNode =
+      DAG.getConstantFP(MaxVal, DL, ContainerVT.getVectorElementType());
+  SDValue MaxValSplat = DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, ContainerVT,
+                                    DAG.getUNDEF(ContainerVT), MaxValNode, VL);
 
   // If abs(Src) was larger than MaxVal or nan, keep it.
-  MVT SetccVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
-  SDValue Mask = DAG.getSetCC(DL, SetccVT, Abs, MaxValNode, ISD::SETOLT);
+  MVT SetccVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+  SDValue Mask = DAG.getNode(RISCVISD::SETCC_VL, DL, SetccVT, Abs, MaxValSplat,
+                             DAG.getCondCode(ISD::SETOLT), TrueMask, VL);
 
   bool Ignored;
   APFloat Point5Pred = APFloat(0.5f);
   Point5Pred.convert(FltSem, APFloat::rmNearestTiesToEven, &Ignored);
   Point5Pred.next(/*nextDown*/ true);
+  SDValue SplatVal =
+      DAG.getConstantFP(Point5Pred, DL, ContainerVT.getVectorElementType());
+  SDValue Splat = DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, ContainerVT,
+                              DAG.getUNDEF(ContainerVT), SplatVal, VL);
 
   // Add the adjustment.
-  SDValue Adjust = DAG.getNode(ISD::FADD, DL, VT, Abs,
-                               DAG.getConstantFP(Point5Pred, DL, VT));
+  SDValue Adjust =
+      DAG.getNode(RISCVISD::FADD_VL, DL, ContainerVT, Abs, Splat, Mask, VL);
 
   // Truncate to integer and convert back to fp.
-  MVT IntVT = VT.changeVectorElementTypeToInteger();
-  SDValue Truncated = DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, Adjust);
-  Truncated = DAG.getNode(ISD::SINT_TO_FP, DL, VT, Truncated);
+  MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
+  SDValue Truncated =
+      DAG.getNode(RISCVISD::FP_TO_SINT_VL, DL, IntVT, Adjust, Mask, VL);
 
-  // Restore the original sign.
-  Truncated = DAG.getNode(ISD::FCOPYSIGN, DL, VT, Truncated, Src);
+  Truncated = DAG.getNode(RISCVISD::SINT_TO_FP_VL, DL, ContainerVT, Truncated,
+                          Mask, VL);
 
-  return DAG.getSelect(DL, VT, Mask, Truncated, Src);
+  // Restore the original sign and merge the original source to masked off
+  // lanes.
+  Truncated = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Truncated,
+                          Src, Mask, Src, VL);
+
+  if (!VT.isFixedLengthVector())
+    return Truncated;
+
+  return convertFromScalableVector(VT, Truncated, DAG, Subtarget);
 }
 
 struct VIDSequence {
@@ -3417,7 +3443,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FFLOOR:
     return lowerFTRUNC_FCEIL_FFLOOR(Op, DAG);
   case ISD::FROUND:
-    return lowerFROUND(Op, DAG);
+    return lowerFROUND(Op, DAG, Subtarget);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_SMAX:
