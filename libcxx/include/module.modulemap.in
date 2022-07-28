@@ -420,6 +420,7 @@ module std [system] {
       module unique                          { private header "__algorithm/unique.h" }
       module unique_copy                     { private header "__algorithm/unique_copy.h" }
       module unwrap_iter                     { private header "__algorithm/unwrap_iter.h" }
+      module unwrap_range                    { private header "__algorithm/unwrap_range.h" }
       module upper_bound                     { private header "__algorithm/upper_bound.h" }
     }
   }
