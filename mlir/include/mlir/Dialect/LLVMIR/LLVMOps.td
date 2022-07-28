@@ -423,51 +423,75 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
 
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
-                   Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$indices,
-                   I32ElementsAttr:$structIndices,
+                   Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$dynamicIndices,
+                   DenseI32ArrayAttr:$rawConstantIndices,
                    OptionalAttr<TypeAttr>:$elem_type);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
+
+  let description = [{
+    This operation mirrors LLVM IRs 'getelementptr' operation that is used to
+    perform pointer arithmetic.
+
+    Like in LLVM IR, it is possible to use both constants as well as SSA values
+    as indices. In the case of indexing within a structure, it is required to
+    either use constant indices directly, or supply a constant SSA value.
+
+    Examples:
+
+    ```mlir
+    // GEP with an SSA value offset
+    %0 = llvm.getelementptr %1[%2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+
+    // GEP with a constant offset
+    %0 = llvm.getelementptr %1[3] : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+
+    // GEP with constant offsets into a structure
+    %0 = llvm.getelementptr %1[0, 1]
+       : (!llvm.ptr<struct(i32, f32)>) -> !llvm.ptr<f32>
+    ```
+  }];
+
   let builders = [
-    OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ValueRange":$indices,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ValueRange":$indices,
-               "ArrayRef<int32_t>":$structIndices,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
                "ValueRange":$indices,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-	OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
-               "ValueRange":$indices,
+    OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ValueRange":$indices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ArrayRef<GEPArg>":$indices,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
-               "ValueRange":$indices, "ArrayRef<int32_t>":$structIndices,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+               "ArrayRef<GEPArg>":$indices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
   let llvmBuilder = [{
     SmallVector<llvm::Value *> indices;
-    indices.reserve($structIndices.size());
-    unsigned operandIdx = 0;
-    for (int32_t structIndex : $structIndices.getValues<int32_t>()) {
-      if (structIndex == GEPOp::kDynamicIndex)
-        indices.push_back($indices[operandIdx++]);
+    indices.reserve($rawConstantIndices.size());
+    GEPIndicesAdaptor<decltype($dynamicIndices)>
+        gepIndices(op.getRawConstantIndicesAttr(), $dynamicIndices);
+    for (PointerUnion<IntegerAttr, llvm::Value*> valueOrAttr : gepIndices) {
+      if (llvm::Value* value = valueOrAttr.dyn_cast<llvm::Value*>())
+        indices.push_back(value);
       else
-        indices.push_back(builder.getInt32(structIndex));
+        indices.push_back(
+            builder.getInt32(valueOrAttr.get<IntegerAttr>().getInt()));
     }
     Type baseElementType = op.getSourceElementType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
     $res = builder.CreateGEP(elementType, $base, indices);
   }];
   let assemblyFormat = [{
-    $base `[` custom<GEPIndices>($indices, $structIndices) `]` attr-dict
+    $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
     `:` functional-type(operands, results) (`,` $elem_type^)?
   }];
 
   let extraClassDeclaration = [{
-    constexpr static int kDynamicIndex = std::numeric_limits<int32_t>::min();
+    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
 
     /// Returns the type pointed to by the pointer argument of this GEP.
     Type getSourceElementType();
+
+    GEPIndicesAdaptor<ValueRange> getIndices();
   }];
   let hasFolder = 1;
   let hasVerifier = 1;

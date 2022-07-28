@@ -755,7 +755,10 @@ public:
 
   /// Implicit conversion to ArrayRef<T>.
   operator ArrayRef<T>() const;
-  ArrayRef<T> asArrayRef() { return ArrayRef<T>{*this}; }
+  ArrayRef<T> asArrayRef() const { return ArrayRef<T>{*this}; }
+
+  /// Random access to elements.
+  T operator[](std::size_t index) const { return asArrayRef()[index]; }
 
   /// Builder from ArrayRef<T>.
   static DenseArrayAttr get(MLIRContext *context, ArrayRef<T> content);
@@ -1014,6 +1017,14 @@ struct PointerLikeTypeTraits<mlir::StringAttr>
     : public PointerLikeTypeTraits<mlir::Attribute> {
   static inline mlir::StringAttr getFromVoidPointer(void *p) {
     return mlir::StringAttr::getFromOpaquePointer(p);
+  }
+};
+
+template <>
+struct PointerLikeTypeTraits<mlir::IntegerAttr>
+    : public PointerLikeTypeTraits<mlir::Attribute> {
+  static inline mlir::IntegerAttr getFromVoidPointer(void *p) {
+    return mlir::IntegerAttr::getFromOpaquePointer(p);
   }
 };
 
