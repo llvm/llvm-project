@@ -68,7 +68,7 @@ MaxEmptyLinesToKeep: 1
 NamespaceIndentation: Inner
 PackConstructorInitializers: NextLine
 
-PenaltyIndentedWhitespace: 61
+PenaltyIndentedWhitespace: 2
 
 Language: Cpp
 Standard: c++20
