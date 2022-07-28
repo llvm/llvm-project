@@ -23,7 +23,7 @@
 "`P2136R3 <https://wg21.link/P2136R3>`__","LWG","invoke_r","June 2021","",""
 "`P2166R1 <https://wg21.link/P2166R1>`__","LWG","A Proposal to Prohibit std::basic_string and std::basic_string_view construction from nullptr","June 2021","|Complete|","13.0"
 "","","","","",""
-"`P0288R9 <https://wg21.link/P0288R9>`__","LWG","``any_invocable``","October 2021","",""
+"`P0288R9 <https://wg21.link/P0288R9>`__","LWG","``move_only_function``","October 2021","|Complete|","16.0"
 "`P0798R8 <https://wg21.link/P0798R8>`__","LWG","Monadic operations for ``std::optional``","October 2021","|Complete|","14.0"
 "`P0849R8 <https://wg21.link/P0849R8>`__","LWG","``auto(x)``: ``DECAY_COPY`` in the language","October 2021","|Complete|","14.0"
 "`P1072R10 <https://wg21.link/P1072R10>`__","LWG","``basic_string::resize_and_overwrite``","October 2021","|Complete|","14.0"

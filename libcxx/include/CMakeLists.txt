@@ -315,6 +315,8 @@ set(files
   __functional/is_transparent.h
   __functional/mem_fn.h
   __functional/mem_fun_ref.h
+  __functional/move_only_function.h
+  __functional/move_only_function_impl.h
   __functional/not_fn.h
   __functional/operations.h
   __functional/perfect_forward.h
@@ -591,6 +593,7 @@ set(files
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_move_assignable.h
   __type_traits/is_trivially_move_constructible.h
+  __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unsigned.h
