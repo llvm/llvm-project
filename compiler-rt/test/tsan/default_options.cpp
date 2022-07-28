@@ -2,6 +2,9 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#if (__APPLE__)
+__attribute__((weak))
+#endif
 extern "C" const char *__tsan_default_options() {
   return "report_bugs=0";
 }
