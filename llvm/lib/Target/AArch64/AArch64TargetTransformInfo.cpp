@@ -1683,6 +1683,9 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2 },
 
+    // Complex: to v4f64
+    { ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32,  4 },
+    { ISD::UINT_TO_FP, MVT::v4f64, MVT::v4i32,  4 },
 
     // LowerVectorFP_TO_INT
     { ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f32, 1 },
