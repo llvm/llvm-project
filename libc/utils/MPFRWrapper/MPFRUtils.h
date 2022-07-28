@@ -44,6 +44,7 @@ enum class Operation : int {
   Sinh,
   Sqrt,
   Tan,
+  Tanh,
   Trunc,
   EndUnaryOperationsSingleOutput,
 

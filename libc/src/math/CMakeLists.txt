@@ -189,6 +189,7 @@ add_math_entrypoint_object(sqrtf)
 add_math_entrypoint_object(sqrtl)
 
 add_math_entrypoint_object(tan)
+add_math_entrypoint_object(tanhf)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

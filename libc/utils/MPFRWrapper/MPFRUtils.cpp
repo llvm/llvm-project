@@ -355,6 +355,12 @@ public:
     return result;
   }
 
+  MPFRNumber tanh() const {
+    MPFRNumber result(*this);
+    mpfr_tanh(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber trunc() const {
     MPFRNumber result(*this);
     mpfr_trunc(result.value, value);
@@ -527,6 +533,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.sqrt();
   case Operation::Tan:
     return mpfrInput.tan();
+  case Operation::Tanh:
+    return mpfrInput.tanh();
   case Operation::Trunc:
     return mpfrInput.trunc();
   default:
