@@ -327,7 +327,7 @@ namespace test11 {
 }
 
 namespace PR35586 {
-  enum C { R, G, B };
+  enum C { R=-1, G, B };
   enum B { F = (enum C) -1, T}; // this should compile cleanly, it used to assert.
 };
 
