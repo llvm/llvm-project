@@ -2473,7 +2473,10 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits) {
   default:
     return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, *this);
   case ISD::Constant: {
-    const APInt &CVal = cast<ConstantSDNode>(V)->getAPIntValue();
+    auto *C = cast<ConstantSDNode>(V);
+    if (C->isOpaque())
+      break;
+    const APInt &CVal = C->getAPIntValue();
     APInt NewVal = CVal & DemandedBits;
     if (NewVal != CVal)
       return getConstant(NewVal, SDLoc(V), V.getValueType());
