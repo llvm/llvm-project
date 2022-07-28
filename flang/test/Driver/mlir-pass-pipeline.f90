@@ -52,7 +52,7 @@ end program
 ! ALL-NEXT: BoxedProcedurePass
 
 ! ALL-NEXT: 'func.func' Pipeline
-! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:   AbstractResultOnFuncOpt
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated

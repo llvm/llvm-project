@@ -2857,7 +2857,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
   for (auto *Node : CheckerPreStmt) {
 
     // The constructor visitior has already taken care of everything.
-    if (auto *CE = dyn_cast<CXXConstructExpr>(Ex->getSubExpr()))
+    if (isa<CXXConstructExpr>(Ex->getSubExpr()))
       break;
 
     const LocationContext *LCtx = Node->getLocationContext();

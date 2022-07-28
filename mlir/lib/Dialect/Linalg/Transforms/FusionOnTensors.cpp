@@ -141,19 +141,19 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   Location loc = producerOp.getLoc();
 
   // Obtain the `producerOp` loop bounds and the `sliceOp` ranges.
-  SmallVector<Value> producerLoopBounds;
+  SmallVector<OpFoldResult> producerLoopBounds;
   llvm::transform(producerOp.createLoopRanges(b, loc),
                   std::back_inserter(producerLoopBounds),
-                  [](Range range) { return range.size; });
+                  [&](Range range) { return range.size; });
   SmallVector<Range> sliceOpRanges = sliceOp.getOrCreateRanges(b, loc);
 
   // Tile the producer operands given the `sliceOp` ranges. Iterate the
   // `tiledSliceDimIndices` and store the tile offset and size for the tiled
   // slice dimension.
-  auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
-  SmallVector<Value> tileIvs(producerOp.getNumLoops(), nullptr);
-  SmallVector<Value> tileSizes(producerOp.getNumLoops(), zero);
-  SmallVector<Value> allIvs(producerOp.getNumLoops(), nullptr);
+  SmallVector<OpFoldResult> tileIvs(producerOp.getNumLoops(), nullptr);
+  SmallVector<OpFoldResult> tileSizes(producerOp.getNumLoops(),
+                                      b.getIndexAttr(0));
+  SmallVector<OpFoldResult> allIvs(producerOp.getNumLoops(), nullptr);
   for (auto it : zip(tiledSliceDimIndices, tiledProducerLoopIndices)) {
     int64_t tiledSliceDim = std::get<0>(it);
     int64_t tiledProducerLoop = std::get<1>(it);
@@ -161,7 +161,7 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
     tileSizes[tiledProducerLoop] = sliceOpRanges[tiledSliceDim].size;
     allIvs[tiledProducerLoop] = tileIvs[tiledProducerLoop];
   }
-  erase_value(tileIvs, nullptr);
+  erase_value(tileIvs, OpFoldResult());
   SmallVector<Value> tiledOperands = producerOp.getInputAndOutputOperands();
   tiledOperands = makeTiledShapes(b, loc, producerOp, tiledOperands, tileIvs,
                                   tileSizes, producerLoopBounds,

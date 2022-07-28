@@ -609,15 +609,15 @@ struct Z {
 
 struct W : Z {
   // CHECK-LABEL: VFTable for 'return_adjustment::Z' in 'return_adjustment::W' (2 entries).
-  // CHECK-NEXT: 0 | return_adjustment::X *return_adjustment::W::foo()
+  // CHECK-NEXT: 0 | X *return_adjustment::W::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
-  // CHECK-NEXT: 1 | return_adjustment::X *return_adjustment::W::foo()
+  // CHECK-NEXT: 1 | X *return_adjustment::W::foo()
 
-  // CHECK-LABEL: Thunks for 'return_adjustment::X *return_adjustment::W::foo()' (1 entry).
+  // CHECK-LABEL: Thunks for 'X *return_adjustment::W::foo()' (1 entry).
   // CHECK-NEXT: 0 | [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'return_adjustment::W' (1 entry).
-  // CHECK-NEXT: 1 | return_adjustment::X *return_adjustment::W::foo()
+  // CHECK-NEXT: 1 | X *return_adjustment::W::foo()
 
   virtual X* foo();
 };
@@ -627,18 +627,18 @@ void use(W *obj) { obj->foo(); }
 
 struct T : W {
   // CHECK-LABEL: VFTable for 'return_adjustment::Z' in 'return_adjustment::W' in 'return_adjustment::T' (3 entries).
-  // CHECK-NEXT: 0 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 0 | Y *return_adjustment::T::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
-  // CHECK-NEXT: 1 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 1 | Y *return_adjustment::T::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct return_adjustment::X *'): vbase #2, 0 non-virtual]
-  // CHECK-NEXT: 2 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 2 | Y *return_adjustment::T::foo()
 
-  // CHECK-LABEL: Thunks for 'return_adjustment::Y *return_adjustment::T::foo()' (2 entries).
+  // CHECK-LABEL: Thunks for 'Y *return_adjustment::T::foo()' (2 entries).
   // CHECK-NEXT: 0 | [return adjustment (to type 'struct A *'): vbase #1, 0 non-virtual]
   // CHECK-NEXT: 1 | [return adjustment (to type 'struct return_adjustment::X *'): vbase #2, 0 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'return_adjustment::T' (1 entry).
-  // CHECK-NEXT: 2 | return_adjustment::Y *return_adjustment::T::foo()
+  // CHECK-NEXT: 2 | Y *return_adjustment::T::foo()
 
   virtual Y* foo();
 };
@@ -652,15 +652,15 @@ struct U : virtual A {
 
 struct V : Z {
   // CHECK-LABEL: VFTable for 'return_adjustment::Z' in 'return_adjustment::V' (2 entries).
-  // CHECK-NEXT: 0 | return_adjustment::U *return_adjustment::V::foo()
+  // CHECK-NEXT: 0 | U *return_adjustment::V::foo()
   // CHECK-NEXT:     [return adjustment (to type 'struct A *'): vbptr at offset 4, vbase #1, 0 non-virtual]
-  // CHECK-NEXT: 1 | return_adjustment::U *return_adjustment::V::foo()
+  // CHECK-NEXT: 1 | U *return_adjustment::V::foo()
 
-  // CHECK-LABEL: Thunks for 'return_adjustment::U *return_adjustment::V::foo()' (1 entry).
+  // CHECK-LABEL: Thunks for 'U *return_adjustment::V::foo()' (1 entry).
   // CHECK-NEXT: 0 | [return adjustment (to type 'struct A *'): vbptr at offset 4, vbase #1, 0 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'return_adjustment::V' (1 entry).
-  // CHECK-NEXT: 1 | return_adjustment::U *return_adjustment::V::foo()
+  // CHECK-NEXT: 1 | U *return_adjustment::V::foo()
 
   virtual U* foo();
 };

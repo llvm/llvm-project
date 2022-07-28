@@ -556,6 +556,15 @@ def FeatureAAPCSFrameChainLeaf : SubtargetFeature<"aapcs-frame-chain-leaf",
                                                   "for leaf functions",
                                                   [FeatureAAPCSFrameChain]>;
 
+// Assume that lock-free 32-bit atomics are available, even if the target
+// and operating system combination would not usually provide them. The user
+// is responsible for providing any necessary __sync implementations. Code
+// built with this feature is not ABI-compatible with code built without this
+// feature, if atomic variables are exposed across the ABI boundary.
+def FeatureAtomics32 : SubtargetFeature<
+    "atomics-32", "HasForced32BitAtomics", "true",
+    "Assume that lock-free 32-bit atomics are available">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
