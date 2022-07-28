@@ -97,10 +97,10 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
       "Expected inlined-at fields to agree");
   auto MIB = buildInstrNoInsert(TargetOpcode::DBG_VALUE);
 
-  auto *NumericConstant = [&] {
+  auto *NumericConstant = [&] () -> const Constant* {
     if (const auto *CE = dyn_cast<ConstantExpr>(&C))
       if (CE->getOpcode() == Instruction::IntToPtr)
-        return cast<const Constant>(CE->getOperand(0));
+        return CE->getOperand(0);
     return &C;
   }();
 
