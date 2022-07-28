@@ -2991,6 +2991,40 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "DwarfutilOptionsTableGen",
+    strip_include_prefix = "tools/llvm-dwarfutil",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-dwarfutil/Options.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-dwarfutil/Options.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_binary(
+    name = "llvm-dwarfutil",
+    srcs = glob([
+        "tools/llvm-dwarfutil/*.cpp",
+        "tools/llvm-dwarfutil/*.h",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
+        ":DWARFLinker",
+        ":DwarfutilOptionsTableGen",
+        ":MC",
+        ":ObjCopy",
+        ":Object",
+        ":Option",
+        ":Support",
+        ":Target",
+    ],
+)
+
 cc_binary(
     name = "llvm-dwp",
     srcs = glob([
