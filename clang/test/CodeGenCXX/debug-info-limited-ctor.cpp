@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -debug-info-kind=constructor -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=constructor -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM %s
 
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "A"{{.*}}DIFlagTypePassByValue
 struct A {
@@ -87,4 +88,4 @@ struct VTableAndCtor {
 VTableAndCtor::VTableAndCtor() {
 }
 
-// CHECK-DAG: !DICompositeType({{.*}}name: "VTableAndCtor", {{.*}}flags: DIFlagFwdDecl
+// ITANIUM-DAG: !DICompositeType({{.*}}name: "VTableAndCtor", {{.*}}flags: DIFlagFwdDecl
