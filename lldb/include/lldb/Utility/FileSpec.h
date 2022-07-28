@@ -416,10 +416,24 @@ protected:
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
+  /// Called anytime m_directory or m_filename is changed to clear any cached
+  /// state in this object.
+  void PathWasModified() {
+    m_is_resolved = false;
+    m_absolute = Absolute::Calculate;
+  }
+
+  enum class Absolute : uint8_t {
+    Calculate,
+    Yes,
+    No
+  };
+
   // Member variables
   ConstString m_directory;            ///< The uniqued directory path
   ConstString m_filename;             ///< The uniqued filename path
   mutable bool m_is_resolved = false; ///< True if this path has been resolved.
+  mutable Absolute m_absolute = Absolute::Calculate; ///< Cache absoluteness.
   Style m_style; ///< The syntax that this path uses (e.g. Windows / Posix)
 };
 
