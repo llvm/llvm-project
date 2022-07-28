@@ -1798,6 +1798,7 @@ struct Elf64_Nhdr {
 // Legal values for ch_type field of compressed section header.
 enum {
   ELFCOMPRESS_ZLIB = 1,            // ZLIB/DEFLATE algorithm.
+  ELFCOMPRESS_ZSTD = 2,            // Zstandard algorithm
   ELFCOMPRESS_LOOS = 0x60000000,   // Start of OS-specific.
   ELFCOMPRESS_HIOS = 0x6fffffff,   // End of OS-specific.
   ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.
