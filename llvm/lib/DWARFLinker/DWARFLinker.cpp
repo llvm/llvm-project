@@ -2343,7 +2343,7 @@ void DWARFLinker::addObjectFile(DWARFFile &File) {
     updateAccelKind(*ObjectContexts.back().File.Dwarf);
 }
 
-bool DWARFLinker::link() {
+Error DWARFLinker::link() {
   assert(Options.NoOutput || TheDwarfEmitter);
 
   // A unique ID that identifies each compile unit.
@@ -2409,6 +2409,58 @@ bool DWARFLinker::link() {
     // Setup access to the debug info.
     if (!OptContext.File.Dwarf)
       continue;
+
+    // Check whether type units are presented.
+    if (!OptContext.File.Dwarf->types_section_units().empty()) {
+      reportWarning("type units are not currently supported: file will "
+                    "be skipped",
+                    OptContext.File);
+      OptContext.Skip = true;
+      continue;
+    }
+
+    // Check for unsupported sections. Following sections can be referenced
+    // from .debug_info section. Current DWARFLinker implementation does not
+    // support or update references to these tables. Thus we report warning
+    // and skip corresponding object file.
+    if (!OptContext.File.Dwarf->getDWARFObj()
+             .getRnglistsSection()
+             .Data.empty()) {
+      reportWarning("'.debug_rnglists' is not currently supported: file "
+                    "will be skipped",
+                    OptContext.File);
+      OptContext.Skip = true;
+      continue;
+    }
+
+    if (!OptContext.File.Dwarf->getDWARFObj()
+             .getLoclistsSection()
+             .Data.empty()) {
+      reportWarning("'.debug_loclists' is not currently supported: file "
+                    "will be skipped",
+                    OptContext.File);
+      OptContext.Skip = true;
+      continue;
+    }
+
+    if (!OptContext.File.Dwarf->getDWARFObj().getMacroSection().Data.empty()) {
+      reportWarning("'.debug_macro' is not currently supported: file "
+                    "will be skipped",
+                    OptContext.File);
+      OptContext.Skip = true;
+      continue;
+    }
+
+    if (OptContext.File.Dwarf->getDWARFObj().getMacinfoSection().size() > 0) {
+      if (OptContext.File.Dwarf->getDWARFObj().getMacinfoSection().find_if(
+              [](char Sym) { return Sym != 0; }) != StringRef::npos) {
+        reportWarning("'.debug_macinfo' is not currently supported: file "
+                      "will be skipped",
+                      OptContext.File);
+        OptContext.Skip = true;
+        continue;
+      }
+    }
 
     // In a first phase, just read in the debug info and load all clang modules.
     OptContext.CompileUnits.reserve(
@@ -2660,7 +2712,7 @@ bool DWARFLinker::link() {
               "---------------\n\n";
   }
 
-  return true;
+  return Error::success();
 }
 
 bool DWARFLinker::verify(const DWARFFile &File) {
