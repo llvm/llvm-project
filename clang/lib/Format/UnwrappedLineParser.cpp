@@ -1888,6 +1888,14 @@ void UnwrappedLineParser::parseStructuralElement(
         return;
       }
 
+      if (Style.isVerilog()) {
+        if (Keywords.isVerilogBegin(*FormatTok)) {
+          parseBlock();
+          addUnwrappedLine();
+          return;
+        }
+      }
+
       if (FormatTok->is(Keywords.kw_interface)) {
         if (parseStructLike())
           return;

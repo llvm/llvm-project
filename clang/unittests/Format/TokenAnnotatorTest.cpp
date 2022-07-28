@@ -825,6 +825,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::tilde, TT_UnaryOperator);
   EXPECT_TOKEN(Tokens[3], tok::pipe, TT_UnaryOperator);
+  // Test for block label colons.
+  Tokens = Annotate("begin : x\n"
+                    "end : x");
+  ASSERT_EQ(Tokens.size(), 7u);
+  EXPECT_TOKEN(Tokens[1], tok::colon, TT_VerilogBlockLabelColon);
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_VerilogBlockLabelColon);
 }
 
 } // namespace

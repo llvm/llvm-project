@@ -947,6 +947,12 @@ private:
           Tok->setType(TT_CSharpNamedArgumentColon);
           break;
         }
+      } else if (Style.isVerilog() && Tok->isNot(TT_BinaryOperator)) {
+        if (Keywords.isVerilogEnd(*Tok->Previous) ||
+            Keywords.isVerilogBegin(*Tok->Previous)) {
+          Tok->setType(TT_VerilogBlockLabelColon);
+        }
+        break;
       }
       if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
           Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||

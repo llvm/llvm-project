@@ -135,6 +135,8 @@ namespace format {
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  /* like in begin : block */                                                  \
+  TYPE(VerilogBlockLabelColon)                                                 \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
   TYPE(Unknown)
@@ -995,6 +997,7 @@ struct AdditionalKeywords {
     kw_when = &IdentTable.get("when");
     kw_where = &IdentTable.get("where");
 
+    // Verilog keywords
     kw_always = &IdentTable.get("always");
     kw_always_comb = &IdentTable.get("always_comb");
     kw_always_ff = &IdentTable.get("always_ff");
