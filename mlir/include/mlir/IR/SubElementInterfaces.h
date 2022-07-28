@@ -16,6 +16,14 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Visitors.h"
+
+namespace mlir {
+template <typename T>
+using SubElementReplFn = function_ref<T(T)>;
+template <typename T>
+using SubElementResultReplFn = function_ref<std::pair<T, WalkResult>(T)>;
+} // namespace mlir
 
 /// Include the definitions of the sub elemnt interfaces.
 #include "mlir/IR/SubElementAttrInterfaces.h.inc"
