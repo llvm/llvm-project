@@ -79,9 +79,11 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
                                      const SIRegisterInfo *SRI,
                                      unsigned SGPRPressure,
                                      unsigned VGPRPressure) {
-
   Cand.SU = SU;
   Cand.AtTop = AtTop;
+
+  if (!DAG->isTrackingPressure())
+    return;
 
   // getDownwardPressure() and getUpwardPressure() make temporary changes to
   // the tracker, so we need to pass those function a non-const copy.
@@ -165,8 +167,12 @@ void GCNMaxOccupancySchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                                          SchedCandidate &Cand) {
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo*>(TRI);
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
-  unsigned SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
-  unsigned VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+  unsigned SGPRPressure = 0;
+  unsigned VGPRPressure = 0;
+  if (DAG->isTrackingPressure()) {
+    SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
+    VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+  }
   ReadyQueue &Q = Zone.Available;
   for (SUnit *SU : Q) {
 
