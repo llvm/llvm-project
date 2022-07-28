@@ -205,6 +205,16 @@ func.func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
 
 // -----
 
+func.func @omp_simdloop_pretty_simdlen(%lb : index, %ub : index, %step : index) -> () {
+  // expected-error @below {{op attribute 'simdlen' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.simdloop simdlen(0) for (%iv): index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 // expected-error @below {{op expects initializer region with one argument of the reduction type}}
 omp.reduction.declare @add_f32 : f64
 init {
