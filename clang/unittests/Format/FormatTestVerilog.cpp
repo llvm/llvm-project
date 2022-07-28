@@ -66,6 +66,56 @@ TEST_F(FormatTestVerilog, BasedLiteral) {
   verifyFormat("x = 16'sd?;");
 }
 
+TEST_F(FormatTestVerilog, Block) {
+  verifyFormat("begin\n"
+               "  x = x;\n"
+               "end");
+  verifyFormat("begin : x\n"
+               "  x = x;\n"
+               "end : x");
+  verifyFormat("begin\n"
+               "  x = x;\n"
+               "  x = x;\n"
+               "end");
+  verifyFormat("fork\n"
+               "  x = x;\n"
+               "join");
+  verifyFormat("fork\n"
+               "  x = x;\n"
+               "join_any");
+  verifyFormat("fork\n"
+               "  x = x;\n"
+               "join_none");
+  verifyFormat("generate\n"
+               "  x = x;\n"
+               "endgenerate");
+  verifyFormat("generate : x\n"
+               "  x = x;\n"
+               "endgenerate : x");
+  // Nested blocks.
+  verifyFormat("begin\n"
+               "  begin\n"
+               "  end\n"
+               "end");
+  verifyFormat("begin : x\n"
+               "  begin\n"
+               "  end\n"
+               "end : x");
+  verifyFormat("begin : x\n"
+               "  begin : x\n"
+               "  end : x\n"
+               "end : x");
+  verifyFormat("begin\n"
+               "  begin : x\n"
+               "  end : x\n"
+               "end");
+  // Test that 'disable fork' and 'rand join' don't get mistaken as blocks.
+  verifyFormat("disable fork;\n"
+               "x = x;");
+  verifyFormat("rand join x x;\n"
+               "x = x;");
+}
+
 TEST_F(FormatTestVerilog, Delay) {
   // Delay by the default unit.
   verifyFormat("#0;");
@@ -129,10 +179,6 @@ TEST_F(FormatTestVerilog, If) {
                "  x = x;\n"
                "  x = x;\n"
                "end");
-  verifyFormat("disable fork;\n"
-               "x = x;");
-  verifyFormat("rand join x x;\n"
-               "x = x;");
   verifyFormat("if (x) fork\n"
                "  x = x;\n"
                "join");
