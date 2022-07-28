@@ -44,7 +44,6 @@
 #include "flang/Runtime/iostat.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -479,6 +478,7 @@ public:
     // new copied value.
     // Not able to use replaceAllUsesWith() because uses outside
     // the loop body should not use the clone.
+    // FIXME: Call privatization before the loop operation.
     mlir::Region &curRegion = getFirOpBuilder().getRegion();
     mlir::Value oldVal = fir::getBase(hexv);
     mlir::Value cloneVal = fir::getBase(exv);

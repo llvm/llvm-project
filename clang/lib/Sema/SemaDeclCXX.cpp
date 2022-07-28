@@ -4364,17 +4364,13 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     }
 
     if (BaseType.isNull()) {
-      BaseType = Context.getTypeDeclType(TyD);
+      BaseType = getElaboratedType(ETK_None, SS, Context.getTypeDeclType(TyD));
       MarkAnyDeclReferenced(TyD->getLocation(), TyD, /*OdrUse=*/false);
-      if (SS.isSet()) {
-        BaseType = Context.getElaboratedType(ETK_None, SS.getScopeRep(),
-                                             BaseType);
-        TInfo = Context.CreateTypeSourceInfo(BaseType);
-        ElaboratedTypeLoc TL = TInfo->getTypeLoc().castAs<ElaboratedTypeLoc>();
-        TL.getNamedTypeLoc().castAs<TypeSpecTypeLoc>().setNameLoc(IdLoc);
-        TL.setElaboratedKeywordLoc(SourceLocation());
-        TL.setQualifierLoc(SS.getWithLocInContext(Context));
-      }
+      TInfo = Context.CreateTypeSourceInfo(BaseType);
+      ElaboratedTypeLoc TL = TInfo->getTypeLoc().castAs<ElaboratedTypeLoc>();
+      TL.getNamedTypeLoc().castAs<TypeSpecTypeLoc>().setNameLoc(IdLoc);
+      TL.setElaboratedKeywordLoc(SourceLocation());
+      TL.setQualifierLoc(SS.getWithLocInContext(Context));
     }
   }
 
@@ -4470,10 +4466,10 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
 MemInitResult
 Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
                                  CXXRecordDecl *ClassDecl) {
-  SourceLocation NameLoc = TInfo->getTypeLoc().getLocalSourceRange().getBegin();
+  SourceLocation NameLoc = TInfo->getTypeLoc().getSourceRange().getBegin();
   if (!LangOpts.CPlusPlus11)
     return Diag(NameLoc, diag::err_delegating_ctor)
-      << TInfo->getTypeLoc().getLocalSourceRange();
+           << TInfo->getTypeLoc().getSourceRange();
   Diag(NameLoc, diag::warn_cxx98_compat_delegating_ctor);
 
   bool InitList = true;
@@ -4534,12 +4530,11 @@ MemInitResult
 Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
                            Expr *Init, CXXRecordDecl *ClassDecl,
                            SourceLocation EllipsisLoc) {
-  SourceLocation BaseLoc
-    = BaseTInfo->getTypeLoc().getLocalSourceRange().getBegin();
+  SourceLocation BaseLoc = BaseTInfo->getTypeLoc().getBeginLoc();
 
   if (!BaseType->isDependentType() && !BaseType->isRecordType())
     return Diag(BaseLoc, diag::err_base_init_does_not_name_class)
-             << BaseType << BaseTInfo->getTypeLoc().getLocalSourceRange();
+           << BaseType << BaseTInfo->getTypeLoc().getSourceRange();
 
   // C++ [class.base.init]p2:
   //   [...] Unless the mem-initializer-id names a nonstatic data
@@ -4597,8 +4592,8 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
         Dependent = true;
       else
         return Diag(BaseLoc, diag::err_not_direct_base_or_virtual)
-          << BaseType << Context.getTypeDeclType(ClassDecl)
-          << BaseTInfo->getTypeLoc().getLocalSourceRange();
+               << BaseType << Context.getTypeDeclType(ClassDecl)
+               << BaseTInfo->getTypeLoc().getSourceRange();
     }
   }
 
@@ -11046,7 +11041,7 @@ void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     bool AcceptableReturnType = false;
     bool MightInstantiateToSpecialization = false;
     if (auto RetTST =
-            TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>()) {
+            TSI->getTypeLoc().getAsAdjusted<TemplateSpecializationTypeLoc>()) {
       TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
       bool TemplateMatches =
           Context.hasSameTemplateName(SpecifiedName, GuidedTemplate);
@@ -16644,7 +16639,7 @@ FriendDecl *Sema::CheckFriendTypeDecl(SourceLocation LocStart,
   assert(TSInfo && "NULL TypeSourceInfo for friend type declaration");
 
   QualType T = TSInfo->getType();
-  SourceRange TypeRange = TSInfo->getTypeLoc().getLocalSourceRange();
+  SourceRange TypeRange = TSInfo->getTypeLoc().getSourceRange();
 
   // C++03 [class.friend]p2:
   //   An elaborated-type-specifier shall be used in a friend declaration

@@ -74,7 +74,7 @@ struct Address {
     int FI;
   } Base;
 
-  long Offset;
+  int64_t Offset;
 
   // Innocuous defaults for our address.
   Address()
@@ -338,7 +338,7 @@ bool PPCFastISel::PPCComputeAddress(const Value *Obj, Address &Addr) {
       break;
     case Instruction::GetElementPtr: {
       Address SavedAddr = Addr;
-      long TmpOffset = Addr.Offset;
+      int64_t TmpOffset = Addr.Offset;
 
       // Iterate through the GEP folding the constants into offsets where
       // we can.
@@ -437,8 +437,7 @@ void PPCFastISel::PPCSimplifyAddress(Address &Addr, bool &UseOffset,
 
   if (!UseOffset) {
     IntegerType *OffsetTy = Type::getInt64Ty(*Context);
-    const ConstantInt *Offset =
-      ConstantInt::getSigned(OffsetTy, (int64_t)(Addr.Offset));
+    const ConstantInt *Offset = ConstantInt::getSigned(OffsetTy, Addr.Offset);
     IndexReg = PPCMaterializeInt(Offset, MVT::i64);
     assert(IndexReg && "Unexpected error in PPCMaterializeInt!");
   }
@@ -831,7 +830,7 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
   // FIXME: Operands are not in canonical order at -O0, so an immediate
   // operand in position 1 is a lost opportunity for now.  We are
   // similar to ARM in this regard.
-  long Imm = 0;
+  int64_t Imm = 0;
   bool UseImm = false;
   const bool HasSPE = Subtarget->hasSPE();
 
@@ -841,7 +840,8 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
     if (SrcVT == MVT::i64 || SrcVT == MVT::i32 || SrcVT == MVT::i16 ||
         SrcVT == MVT::i8 || SrcVT == MVT::i1) {
       const APInt &CIVal = ConstInt->getValue();
-      Imm = (IsZExt) ? (long)CIVal.getZExtValue() : (long)CIVal.getSExtValue();
+      Imm = (IsZExt) ? (int64_t)CIVal.getZExtValue() :
+                       (int64_t)CIVal.getSExtValue();
       if ((IsZExt && isUInt<16>(Imm)) || (!IsZExt && isInt<16>(Imm)))
         UseImm = true;
     }

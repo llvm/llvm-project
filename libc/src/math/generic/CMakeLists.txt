@@ -79,6 +79,7 @@ add_entrypoint_object(
     range_reduction.h
     range_reduction_fma.h
   DEPENDS
+    .common_constants
     libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.fputil

@@ -165,8 +165,11 @@ public:
   bool IsValid(ProvenanceRange range) const {
     return range.size() > 0 && range_.Contains(range);
   }
+  void setShowColors(bool showColors) { showColors_ = showColors; }
+  bool getShowColors() const { return showColors_; }
   void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
-      const std::string &message, bool echoSourceLine = false) const;
+      const std::string &message, const std::string &prefix,
+      llvm::raw_ostream::Colors color, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
       Provenance, std::size_t *offset = nullptr) const;
   const char *GetSource(ProvenanceRange) const;
@@ -214,6 +217,7 @@ private:
   std::vector<std::unique_ptr<SourceFile>> ownedSourceFiles_;
   std::list<std::string> searchPath_;
   Encoding encoding_{Encoding::UTF_8};
+  bool showColors_{false};
 };
 
 // Represents the result of preprocessing and prescanning a single source

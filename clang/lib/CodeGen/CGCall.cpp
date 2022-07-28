@@ -2863,7 +2863,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           // Set `align` attribute if any.
           const auto *AVAttr = PVD->getAttr<AlignValueAttr>();
           if (!AVAttr)
-            if (const auto *TOTy = dyn_cast<TypedefType>(OTy))
+            if (const auto *TOTy = OTy->getAs<TypedefType>())
               AVAttr = TOTy->getDecl()->getAttr<AlignValueAttr>();
           if (AVAttr && !SanOpts.has(SanitizerKind::Alignment)) {
             // If alignment-assumption sanitizer is enabled, we do *not* add

@@ -439,7 +439,8 @@ __attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
   synchronize::threadsAligned();
 }
 
-void __kmpc_barrier_simple_generic(IdentTy *Loc, int32_t TId) {
+__attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
+                                                             int32_t TId) {
   FunctionTracingRAII();
   synchronize::threads();
 }

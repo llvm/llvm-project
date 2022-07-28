@@ -7,8 +7,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.ReturnValue %0: !spv.struct<(f32, !spv.struct<(!spv.array<4xf32>, f32)>)>
   }
   spv.func @composite_construct_vector(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xf32> "None" {
-    // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : vector<3xf32>
-    %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : vector<3xf32>
+    // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : (f32, f32, f32) -> vector<3xf32>
+    %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : (f32, f32, f32) -> vector<3xf32>
     spv.ReturnValue %0: vector<3xf32>
   }
   spv.func @vector_dynamic_extract(%vec: vector<4xf32>, %id : i32) -> f32 "None" {

@@ -5946,9 +5946,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
-  if (Args.hasFlag(options::OPT_fstack_size_section,
-                   options::OPT_fno_stack_size_section, RawTriple.isPS4()))
-    CmdArgs.push_back("-fstack-size-section");
+  Args.addOptInFlag(CmdArgs, options::OPT_fstack_size_section,
+                    options::OPT_fno_stack_size_section);
 
   if (Args.hasArg(options::OPT_fstack_usage)) {
     CmdArgs.push_back("-stack-usage-file");
@@ -8652,7 +8651,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(
       Args.MakeArgString("--host-triple=" + TheTriple.getTriple()));
   if (Args.hasArg(options::OPT_v))
-    CmdArgs.push_back("--verbose");
+    CmdArgs.push_back("--wrapper-verbose");
 
   if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
     if (!A->getOption().matches(options::OPT_g0))

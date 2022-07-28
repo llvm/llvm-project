@@ -351,7 +351,7 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     Kind["displayName"] = "Instance Variable";
     break;
   case APIRecord::RK_ObjCMethod:
-    if (dyn_cast<ObjCMethodRecord>(&Record)->IsInstanceMethod) {
+    if (cast<ObjCMethodRecord>(&Record)->IsInstanceMethod) {
       Kind["identifier"] = AddLangPrefix("method");
       Kind["displayName"] = "Instance Method";
     } else {
@@ -360,8 +360,13 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     }
     break;
   case APIRecord::RK_ObjCProperty:
-    Kind["identifier"] = AddLangPrefix("property");
-    Kind["displayName"] = "Instance Property";
+    if (cast<ObjCPropertyRecord>(&Record)->isClassProperty()) {
+      Kind["identifier"] = AddLangPrefix("type.property");
+      Kind["displayName"] = "Type Property";
+    } else {
+      Kind["identifier"] = AddLangPrefix("property");
+      Kind["displayName"] = "Instance Property";
+    }
     break;
   case APIRecord::RK_ObjCInterface:
     Kind["identifier"] = AddLangPrefix("class");

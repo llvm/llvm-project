@@ -1833,6 +1833,7 @@ cc_library(
         ":AffineAnalysis",
         ":AffineDialect",
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":DialectUtils",
@@ -6263,7 +6264,6 @@ cc_library(
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
         ":QuantOps",
-        ":QuantPassIncGen",
         ":ROCDLDialect",
         ":ReconcileUnrealizedCasts",
         ":SCFDialect",
@@ -7002,23 +7002,6 @@ gentbl_cc_library(
     deps = [":QuantizationOpsTdFiles"],
 )
 
-gentbl_cc_library(
-    name = "QuantPassIncGen",
-    strip_include_prefix = "include",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-                "-name=Quant",
-            ],
-            "include/mlir/Dialect/Quant/Passes.h.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Quant/Passes.td",
-    deps = [":PassBaseTdFiles"],
-)
-
 cc_library(
     name = "QuantOps",
     srcs = [
@@ -7026,19 +7009,13 @@ cc_library(
         "lib/Dialect/Quant/IR/QuantTypes.cpp",
         "lib/Dialect/Quant/IR/TypeDetail.h",
         "lib/Dialect/Quant/IR/TypeParser.cpp",
-        "lib/Dialect/Quant/Transforms/ConvertConst.cpp",
-        "lib/Dialect/Quant/Transforms/ConvertSimQuant.cpp",
-        "lib/Dialect/Quant/Transforms/PassDetail.h",
         "lib/Dialect/Quant/Utils/FakeQuantSupport.cpp",
-        "lib/Dialect/Quant/Utils/QuantizeUtils.cpp",
         "lib/Dialect/Quant/Utils/UniformSupport.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/Quant/FakeQuantSupport.h",
-        "include/mlir/Dialect/Quant/Passes.h",
         "include/mlir/Dialect/Quant/QuantOps.h",
         "include/mlir/Dialect/Quant/QuantTypes.h",
-        "include/mlir/Dialect/Quant/QuantizeUtils.h",
         "include/mlir/Dialect/Quant/UniformSupport.h",
     ],
     includes = ["include"],
@@ -7049,7 +7026,6 @@ cc_library(
         ":InferTypeOpInterface",
         ":Pass",
         ":QuantOpsIncGen",
-        ":QuantPassIncGen",
         ":SideEffectInterfaces",
         ":TransformUtils",
         "//llvm:Support",
@@ -8117,6 +8093,24 @@ td_library(
 )
 
 gentbl_cc_library(
+    name = "ComplexAttributesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Complex/IR/ComplexAttributes.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Complex/IR/ComplexAttributes.td",
+    deps = [":ComplexOpsTdFiles"],
+)
+
+gentbl_cc_library(
     name = "ComplexBaseIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
@@ -8170,6 +8164,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
+        ":ComplexAttributesIncGen",
         ":ComplexBaseIncGen",
         ":ComplexOpsIncGen",
         ":IR",

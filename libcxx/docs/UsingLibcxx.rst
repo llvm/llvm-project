@@ -444,3 +444,20 @@ distributions with types other than ``short``, ``int``, ``long``, ``long long``,
 undefined. As an extension, libc++ supports instantiating ``binomial_distribution``, ``discrete_distribution``,
 ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``, and ``uniform_int_distribution``
 with ``int8_t``, ``__int128_t`` and their unsigned versions.
+
+Extended integral type support
+------------------------------
+
+Several platforms support the 128-bit integral types ``__int128_t`` and
+``__uint128_t``. When these types are present they can be used in the headers
+as required by the Standard:
+
+* ``<bits>``
+* ``<charconv>``
+* ``<functional>``
+* ``<type_traits>``
+
+As an extension these types can be used in the following headers:
+
+* ``<format>``
+* ``<random>``

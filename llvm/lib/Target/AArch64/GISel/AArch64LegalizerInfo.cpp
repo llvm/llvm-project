@@ -662,8 +662,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
-  // TODO: Handle vector types.
   getActionDefinitionsBuilder(G_CTTZ)
+      .lowerIf(isVector(0))
       .clampScalar(0, s32, s64)
       .scalarSameSizeAs(1, 0)
       .customFor({s32, s64});
@@ -875,7 +875,7 @@ bool AArch64LegalizerInfo::legalizeRotate(MachineInstr &MI,
   (void)AmtTy;
   assert(AmtTy.isScalar() && "Expected a scalar rotate");
   assert(AmtTy.getSizeInBits() < 64 && "Expected this rotate to be legal");
-  auto NewAmt = Helper.MIRBuilder.buildSExt(LLT::scalar(64), AmtReg);
+  auto NewAmt = Helper.MIRBuilder.buildZExt(LLT::scalar(64), AmtReg);
   Helper.Observer.changingInstr(MI);
   MI.getOperand(2).setReg(NewAmt.getReg(0));
   Helper.Observer.changedInstr(MI);

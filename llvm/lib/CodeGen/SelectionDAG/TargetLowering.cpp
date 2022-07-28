@@ -1089,6 +1089,10 @@ bool TargetLowering::SimplifyDemandedBits(
   if (Op.isUndef())
     return false;
 
+  // We can't simplify target constants.
+  if (Op.getOpcode() == ISD::TargetConstant)
+    return false;
+
   if (Op.getOpcode() == ISD::Constant) {
     // We know all of the bits for a constant!
     Known = KnownBits::makeConstant(cast<ConstantSDNode>(Op)->getAPIntValue());
@@ -1103,17 +1107,16 @@ bool TargetLowering::SimplifyDemandedBits(
   }
 
   // Other users may use these bits.
+  bool HasMultiUse = false;
   if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
-    if (Depth != 0) {
-      // If not at the root, Just compute the Known bits to
-      // simplify things downstream.
-      Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
+    if (Depth >= SelectionDAG::MaxRecursionDepth) {
+      // Limit search depth.
       return false;
     }
-    // If this is the root being simplified, allow it to have multiple uses,
-    // just set the DemandedBits/Elts to all bits.
+    // Allow multiple uses, just set the DemandedBits/Elts to all bits.
     DemandedBits = APInt::getAllOnes(BitWidth);
     DemandedElts = APInt::getAllOnes(NumElts);
+    HasMultiUse = true;
   } else if (OriginalDemandedBits == 0 || OriginalDemandedElts == 0) {
     // Not demanding any bits/elts from Op.
     return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
@@ -1124,8 +1127,6 @@ bool TargetLowering::SimplifyDemandedBits(
 
   KnownBits Known2;
   switch (Op.getOpcode()) {
-  case ISD::TargetConstant:
-    llvm_unreachable("Can't simplify this node");
   case ISD::SCALAR_TO_VECTOR: {
     if (!DemandedElts[0])
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
@@ -2420,6 +2421,7 @@ bool TargetLowering::SimplifyDemandedBits(
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
     Known.Zero |= ~InMask;
+    Known.One &= (~Known.Zero);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -2714,6 +2716,12 @@ bool TargetLowering::SimplifyDemandedBits(
           TLO.DAG.getConstantFP(
               APFloat(TLO.DAG.EVTToAPFloatSemantics(VT), Known.One), dl, VT));
   }
+
+  // A multi use 'all demanded elts' simplify failed to find any knownbits.
+  // Try again just for the original demanded elts.
+  // Ensure we do this AFTER constant folding above.
+  if (HasMultiUse && Known.isUnknown() && !OriginalDemandedElts.isAllOnes())
+    Known = TLO.DAG.computeKnownBits(Op, OriginalDemandedElts, Depth);
 
   return false;
 }

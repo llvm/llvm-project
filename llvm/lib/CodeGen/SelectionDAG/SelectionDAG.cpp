@@ -3508,7 +3508,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertZext: {
     EVT VT = cast<VTSDNode>(Op.getOperand(1))->getVT();
     APInt InMask = APInt::getLowBitsSet(BitWidth, VT.getSizeInBits());
-    Known = computeKnownBits(Op.getOperand(0), Depth+1);
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known.Zero |= (~InMask);
     Known.One  &= (~Known.Zero);
     break;

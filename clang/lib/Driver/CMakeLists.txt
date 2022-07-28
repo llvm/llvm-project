@@ -3,6 +3,7 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
   MC
+  Object
   Option
   ProfileData
   Support

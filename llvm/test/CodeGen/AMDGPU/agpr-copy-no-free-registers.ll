@@ -530,7 +530,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    v_cvt_f32_u32_e32 v0, s1
-; GFX908-NEXT:    s_sub_i32 s4, 0, s1
+; GFX908-NEXT:    s_sub_i32 s7, 0, s1
 ; GFX908-NEXT:    s_lshr_b32 s5, s6, 16
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v25, s6
 ; GFX908-NEXT:    v_rcp_iflag_f32_e32 v0, v0
@@ -540,10 +540,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX908-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX908-NEXT:    v_mov_b32_e32 v7, s3
-; GFX908-NEXT:    s_lshl_b64 s[6:7], s[8:9], 5
-; GFX908-NEXT:    v_mov_b32_e32 v6, s2
-; GFX908-NEXT:    v_mul_lo_u32 v2, s4, v0
 ; GFX908-NEXT:    s_mov_b32 s4, 0
+; GFX908-NEXT:    v_mov_b32_e32 v6, s2
+; GFX908-NEXT:    v_mul_lo_u32 v2, s7, v0
+; GFX908-NEXT:    s_lshl_b64 s[6:7], s[8:9], 5
 ; GFX908-NEXT:    v_mul_hi_u32 v2, v0, v2
 ; GFX908-NEXT:    v_add_u32_e32 v0, v0, v2
 ; GFX908-NEXT:    v_mul_hi_u32 v0, s0, v0

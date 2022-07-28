@@ -7819,7 +7819,7 @@ ASTContext::getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
 /// 'l' or 'L' , but not always.  For typedefs, we need to use
 /// 'i' or 'I' instead if encoding a struct field, or a pointer!
 void ASTContext::getLegacyIntegralTypeEncoding (QualType &PointeeTy) const {
-  if (isa<TypedefType>(PointeeTy.getTypePtr())) {
+  if (PointeeTy->getAs<TypedefType>()) {
     if (const auto *BT = PointeeTy->getAs<BuiltinType>()) {
       if (BT->getKind() == BuiltinType::ULong && getIntWidth(PointeeTy) == 32)
         PointeeTy = UnsignedIntTy;
@@ -8107,7 +8107,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     // pointee gets emitted _before_ the '^'.  The read-only qualifier of
     // the pointer itself gets ignored, _unless_ we are looking at a typedef!
     // Also, do not emit the 'r' for anything but the outermost type!
-    if (isa<TypedefType>(T.getTypePtr())) {
+    if (T->getAs<TypedefType>()) {
       if (Options.IsOutermostType() && T.isConstQualified()) {
         isReadOnly = true;
         S += 'r';

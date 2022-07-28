@@ -39,7 +39,7 @@ public:
   static DebugMacroEntry
   CreateIndirectEntry(const DebugMacrosSP &debug_macros_sp);
 
-  DebugMacroEntry() : m_type(INVALID) {}
+  DebugMacroEntry() : m_type(INVALID), m_line(0), m_debug_line_file_idx(0) {}
 
   ~DebugMacroEntry() = default;
 
