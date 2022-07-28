@@ -2,12 +2,15 @@
 
 # RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
 # RUN: llvm-objcopy --compress-debug-sections %t.o %t-compressed.o
-# RUN: llvm-readobj -S %t-compressed.o | FileCheck %s
+# RUN: llvm-readobj -S --sd %t-compressed.o | FileCheck %s
 
 # CHECK: Name: .debug_foo
 # CHECK-NEXT: Type: SHT_PROGBITS
 # CHECK-NEXT: Flags [
 # CHECK-NEXT: SHF_COMPRESSED
 # CHECK-NEXT: ]
+# CHECK:      SectionData (
+## ch_type = ELFCOMPRESS_ZLIB (1)
+# CHECK-NEXT:   0000: 01000000 {{.*}}
 # CHECK-NOT: Name: .debug_foo
 
