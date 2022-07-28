@@ -19,3 +19,6 @@
 // RUN: %clang -### -c -target powerpc64 %s -mcpu=pwr8 2>&1 | FileCheck %s --check-prefix=NO_PPC64
 
 // NO_PPC64-NOT: "-target-cpu" "ppc64"
+
+// RUN: %clang -### -c --target=powerpc64 %s -mcpu=generic -mtune=pwr9 2>&1 | FileCheck %s --check-prefix=TUNE
+// TUNE: "-target-cpu" "ppc64" "-tune-cpu" "pwr9"
