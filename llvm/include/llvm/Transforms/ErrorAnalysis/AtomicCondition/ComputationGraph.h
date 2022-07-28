@@ -103,7 +103,7 @@ void fCGprintStringArray(char **ArrayToPrint) {
 
 void fCGInitialize() {
   ComputationGraph *CGObject = NULL;
-  int64_t Size = 1000;
+  int64_t Size = 1000000;
 
   // Allocating the graph itself
   if(( CGObject = (ComputationGraph*)malloc(sizeof(ComputationGraph))) == NULL) {
@@ -498,6 +498,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
 #endif
         CurrPair = CurrPair->Next;
       }
+      assert(CurrPair != NULL);
       LeftOpNodeId = CurrPair->NodeId;
 #if FAF_DEBUG>=2
       printf("\t\tPair Found: %s->%d\n", CurrPair->InstructionString, CurrPair->NodeId);
@@ -507,6 +508,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
       while (CurrNode != NULL && CurrNode->NodeId != LeftOpNodeId) {
         CurrNode = CurrNode->Next;
       }
+      assert(CurrNode != NULL);
       Node->LeftNode = CurrNode;
     }
 
@@ -544,6 +546,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
 #endif
         CurrPair = CurrPair->Next;
       }
+      assert(CurrPair != NULL);
       LeftOpNodeId = CurrPair->NodeId;
 #if FAF_DEBUG>=2
       printf("\t\tPair Found: %s->%d\n", CurrPair->InstructionString, CurrPair->NodeId);
@@ -551,8 +554,10 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
 
       CurrNode = CG->NodesLinkedListHead;
       while (CurrNode != NULL && CurrNode->NodeId != LeftOpNodeId) {
+//        printf("CurrNode Instruction: %s, Node ID: %d\n", CurrNode->InstructionString, CurrNode->NodeId);
         CurrNode = CurrNode->Next;
       }
+      assert(CurrNode != NULL);
       Node->LeftNode = CurrNode;
     }
 
@@ -578,6 +583,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
 #endif
         CurrPair = CurrPair->Next;
       }
+      assert(CurrPair != NULL);
       RightOpNodeId = CurrPair->NodeId;
 #if FAF_DEBUG>=2
       printf("\t\tPair Found: %s->%d\n", CurrPair->InstructionString, CurrPair->NodeId);
@@ -587,6 +593,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
       while (CurrNode != NULL && CurrNode->NodeId != RightOpNodeId) {
         CurrNode = CurrNode->Next;
       }
+      assert(CurrNode != NULL);
       Node->RightNode = CurrNode;
     }
 

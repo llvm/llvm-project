@@ -98,7 +98,7 @@ void fAFcreateLogDirectory(char *DirectoryName) {
 
 void fACCreate() {
   ACTable *AtomicConditionsTable = NULL;
-  int64_t Size = 1000;
+  int64_t Size = 1000000;
 
   // Allocating the table itself
   if(( AtomicConditionsTable = (ACTable*)malloc(sizeof(ACTable))) == NULL) {

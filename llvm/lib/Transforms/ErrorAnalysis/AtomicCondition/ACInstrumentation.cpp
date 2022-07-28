@@ -212,6 +212,42 @@ void ACInstrumentation::instrumentCallsForMemoryLoadOperation(
   return;
 }
 
+// Creates a node for LLVM Cast instructions that DO NOT convert from one
+// floating-point to another floating-point format in the computation graph.
+void ACInstrumentation::instrumentCallsForCastOperation(
+    Instruction *BaseInstruction, long *NumInstrumentedInstructions) {
+  assert((CGCreateNode!=nullptr) && "Function not initialized!");
+
+  BasicBlock::iterator NextInst(BaseInstruction);
+  NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+  std::vector<Value *> Args;
+
+  CallInst *CGCallInstruction = nullptr;
+
+  Constant *EmptyValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
+                                                      "",
+                                                      true);
+
+  Value *EmptyValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
+                                                EmptyValue->getType(),
+                                                true,
+                                                GlobalValue::InternalLinkage,
+                                                EmptyValue);
+
+  Args.push_back(createInstructionGlobalString(BaseInstruction));
+  Args.push_back(EmptyValuePointer);
+  Args.push_back(EmptyValuePointer);
+  Args.push_back(InstructionBuilder.getInt32(NodeKind::Register));
+  ArrayRef<Value *> ArgsRef(Args);
+
+  CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, ArgsRef);
+  *NumInstrumentedInstructions+=1;
+
+  assert(CGCallInstruction && "Invalid call instruction!");
+  return;
+}
+
 // Instruments a call to calculate atomic condition for unary floating point
 // instructions and creates a node for this instruction in the computation graph.
 void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
@@ -448,6 +484,40 @@ void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
   return;
 }
 
+void ACInstrumentation::instrumentCallsForNonACIntrinsicFunction(
+    Instruction *BaseInstruction, long *NumInstrumentedInstructions) {
+  assert((CGCreateNode!=nullptr) && "Function not initialized!");
+
+  BasicBlock::iterator NextInst(BaseInstruction);
+  NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+  std::vector<Value *> Args;
+
+  CallInst *CGCallInstruction = nullptr;
+
+  Constant *EmptyValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
+                                                      "",
+                                                      true);
+
+  Value *EmptyValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
+                                                EmptyValue->getType(),
+                                                true,
+                                                GlobalValue::InternalLinkage,
+                                                EmptyValue);
+
+  Args.push_back(createInstructionGlobalString(BaseInstruction));
+  Args.push_back(EmptyValuePointer);
+  Args.push_back(EmptyValuePointer);
+  Args.push_back(InstructionBuilder.getInt32(NodeKind::Register));
+  ArrayRef<Value *> ArgsRef(Args);
+
+  CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, ArgsRef);
+  *NumInstrumentedInstructions+=1;
+
+  assert(CGCallInstruction && "Invalid call instruction!");
+  return;
+}
+
 // Instruments a call to calculate Amplification Factor of this Nodes
 void ACInstrumentation::instrumentCallsForAFAnalysis(
     Instruction *BaseInstruction, Instruction *LocationToInstrument,
@@ -493,9 +563,9 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
 //  if (ACInstrumentation::isUnwantedFunction(BB->getParent()))
 //    return;
   instrumentCallRecordingPHIInstructions(BB,
-                                       &*NumInstrumentedInstructions);
+                                       NumInstrumentedInstructions);
   instrumentCallRecordingBasicBlock(BB,
-                                    &*NumInstrumentedInstructions);
+                                    NumInstrumentedInstructions);
 
   for (BasicBlock::iterator I = BB->begin();
        I != BB->end(); ++I) {
@@ -504,17 +574,27 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
     // Branch based on kind of Instruction
     if(isMemoryLoadOperation(CurrentInstruction)) {
       instrumentCallsForMemoryLoadOperation(CurrentInstruction,
-                                            &*NumInstrumentedInstructions);
+                                            NumInstrumentedInstructions);
+    }
+    else if(isIntegerToFloatCastOperation(CurrentInstruction)) {
+      instrumentCallsForCastOperation(CurrentInstruction,
+                                      NumInstrumentedInstructions);
+    }
+    // isNonACInstrinsicFunction checks whether the intrinsic function is one from
+    // the list that we do not calculate AC for. Only the CG Node.
+    else if(CurrentInstruction->getOpcode() == Instruction::Call &&
+             isNonACInstrinsicFunction(CurrentInstruction)) {
+      instrumentCallsForNonACIntrinsicFunction(CurrentInstruction,
+                                               NumInstrumentedInstructions);
     }
     else if(isUnaryOperation(CurrentInstruction)) {
       instrumentCallsForUnaryOperation(CurrentInstruction,
-                                       &*NumInstrumentedInstructions);
+                                       NumInstrumentedInstructions);
     }
     else if(isBinaryOperation(CurrentInstruction)) {
       instrumentCallsForBinaryOperation(CurrentInstruction,
-                                        &*NumInstrumentedInstructions);
+                                        NumInstrumentedInstructions);
     }
-
 
     // Instrument Amplification Factor Calculating Function
     if(CurrentInstruction->getOpcode() == Instruction::Call) {
@@ -527,7 +607,7 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
       if(FunctionName.find("markforresult") != std::string::npos) {
         instrumentCallsForAFAnalysis(static_cast<Instruction*>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get()),
                                      CurrentInstruction,
-                                     &*NumInstrumentedInstructions);
+                                     NumInstrumentedInstructions);
         *NumInstrumentedInstructions += 1;
       }
     }
@@ -664,6 +744,11 @@ bool ACInstrumentation::isMemoryLoadOperation(const Instruction *Inst) {
          Inst->getOpcode() == Instruction::Load;
 }
 
+bool ACInstrumentation::isIntegerToFloatCastOperation(const Instruction *Inst) {
+  return Inst->getOpcode() == Instruction::UIToFP ||
+         Inst->getOpcode() == Instruction::SIToFP;
+}
+
 bool ACInstrumentation::isUnaryOperation(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::FPTrunc ||
          Inst->getOpcode() == Instruction::Call;
@@ -675,6 +760,18 @@ bool ACInstrumentation::isBinaryOperation(const Instruction *Inst) {
          Inst->getOpcode() == Instruction::FSub ||
          Inst->getOpcode() == Instruction::FMul ||
          Inst->getOpcode() == Instruction::FDiv;
+}
+
+bool ACInstrumentation::isNonACInstrinsicFunction(const Instruction *Inst) {
+  assert(Inst->getOpcode() == Instruction::Call);
+  if(static_cast<const CallInst*>(Inst)->getCalledFunction() &&
+      static_cast<const CallInst*>(Inst)->getCalledFunction()->hasName())
+    return static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fmuladd") !=
+               std::string::npos ||
+           static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fma") !=
+               std::string::npos;
+
+  return false;
 }
 
 

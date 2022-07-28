@@ -43,16 +43,20 @@ private:
 public:
   ACInstrumentation(Function *F);
 
-  void instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
+  void instrumentCallRecordingBasicBlock(BasicBlock *CurrentBB,
                                          long int *NumInstrumentedInstructions);
-  void instrumentCallRecordingPHIInstructions(BasicBlock* CurrentBB,
+  void instrumentCallRecordingPHIInstructions(BasicBlock *CurrentBB,
                                               long int *NumInstrumentedInstructions);
-  void instrumentCallsForMemoryLoadOperation(Instruction* BaseInstruction,
+  void instrumentCallsForMemoryLoadOperation(Instruction *BaseInstruction,
                                              long int *NumInstrumentedInstructions);
-  void instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
+  void instrumentCallsForCastOperation(Instruction * BaseInstruction,
+                                       long int *NumInstrumentedInstructions);
+  void instrumentCallsForUnaryOperation(Instruction *BaseInstruction,
                                         long int *NumInstrumentedInstructions);
-  void instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
+  void instrumentCallsForBinaryOperation(Instruction *BaseInstruction,
                                          long int *NumInstrumentedInstructions);
+  void instrumentCallsForNonACIntrinsicFunction(Instruction *BaseInstruction,
+                                           long int *NumInstrumentedInstructions);
   void instrumentCallsForAFAnalysis(Instruction *BaseInstruction,
                                     Instruction *LocationToInstrument,
                                     long int *NumInstrumentedInstructions);
@@ -65,8 +69,10 @@ public:
   /// Instruction based functions
   // Categorized by operations
   static bool isMemoryLoadOperation(const Instruction *Inst);
+  static bool isIntegerToFloatCastOperation(const Instruction *Inst);
   static bool isUnaryOperation(const Instruction *Inst);
   static bool isBinaryOperation(const Instruction *Inst);
+  static bool isNonACInstrinsicFunction(const Instruction *Inst);
 
   // Categorized by Data Type
   static bool isFPOperation(const Instruction *Inst);

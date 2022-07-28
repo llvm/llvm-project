@@ -50,7 +50,7 @@ typedef struct AnalysisResult {
 /* Globals                                                                    */
 /*----------------------------------------------------------------------------*/
 AnalysisResult *AFResult;
-uint64_t Q_SIZE = 1000;
+uint64_t Q_SIZE = 1000000;
 
 /*----------------------------------------------------------------------------*/
 /* Utility Functions                                                          */
@@ -69,7 +69,7 @@ void fAFfp64markForResult(double res) {
 
 void fAFInitialize() {
   AFResult = NULL;
-  int64_t Size = 1000;
+  int64_t Size = 10000;
 
   // Allocating Memory to the analysis object itself
   if( (AFResult = (AnalysisResult *)malloc(sizeof(AnalysisResult))) == NULL) {

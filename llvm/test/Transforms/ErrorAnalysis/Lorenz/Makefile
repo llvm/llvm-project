@@ -16,7 +16,7 @@ run_pass:
 	$(LLI) lorenz_ode_ac.ll
 
 build_original:
-	gcc operations.c -lm
+	gcc lorenz_ode.c -lm
 
 clean:
-	rm -rf lorenz_ode.ll lorenz_ode_ac.ll .fAC_logs a.out
+	rm -rf lorenz_ode.ll lorenz_ode_ac.ll .fAC_logs a.out *.txt
