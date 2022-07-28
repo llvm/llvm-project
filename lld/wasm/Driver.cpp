@@ -570,6 +570,21 @@ static void handleLibcall(StringRef name) {
   }
 }
 
+// Equivalent of demote demoteSharedAndLazySymbols() in the ELF linker
+static void demoteLazySymbols() {
+  for (Symbol *sym : symtab->getSymbols()) {
+    if (auto* s = dyn_cast<LazySymbol>(sym)) {
+      if (s->signature) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "demoting lazy func: " << s->getName() << "\n");
+        replaceSymbol<UndefinedFunction>(s, s->getName(), None, None,
+                                         WASM_SYMBOL_BINDING_WEAK, s->getFile(),
+                                         s->signature);
+      }
+    }
+  }
+}
+
 static UndefinedGlobal *
 createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   auto *sym = cast<UndefinedGlobal>(symtab->addUndefinedGlobal(
@@ -1029,6 +1044,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Split WASM_SEG_FLAG_STRINGS sections into pieces in preparation for garbage
   // collection.
   splitSections();
+
+  // Any remaining lazy symbols should be demoted to Undefined
+  demoteLazySymbols();
 
   // Do size optimizations: garbage collection
   markLive();

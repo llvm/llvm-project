@@ -112,6 +112,7 @@ std::pair<Symbol *, bool> SymbolTable::insertName(StringRef name) {
   sym->canInline = true;
   sym->traced = trace;
   sym->forceExport = false;
+  sym->referenced = !config->gcSections;
   symVector.emplace_back(sym);
   return {sym, true};
 }
