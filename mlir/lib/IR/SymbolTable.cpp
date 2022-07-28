@@ -853,23 +853,30 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringAttr newSymbol, IRUnitT *limit) {
     SymbolRefAttr newAttr = generateNewRefAttr(scope.symbol, newLeafAttr);
 
     auto walkFn = [&](Operation *op) -> Optional<WalkResult> {
-      auto remapAttrFn = [&](Attribute attr) -> Attribute {
+      auto remapAttrFn =
+          [&](Attribute attr) -> std::pair<Attribute, WalkResult> {
+        // Regardless of the match, don't walk nested SymbolRefAttrs, we don't
+        // want to accidentally replace an inner reference.
         if (attr == oldAttr)
-          return newAttr;
+          return {newAttr, WalkResult::skip()};
         // Handle prefix matches.
         if (SymbolRefAttr symRef = attr.dyn_cast<SymbolRefAttr>()) {
           if (isReferencePrefixOf(oldAttr, symRef)) {
             auto oldNestedRefs = oldAttr.getNestedReferences();
             auto nestedRefs = symRef.getNestedReferences();
             if (oldNestedRefs.empty())
-              return SymbolRefAttr::get(newSymbol, nestedRefs);
+              return {SymbolRefAttr::get(newSymbol, nestedRefs),
+                      WalkResult::skip()};
 
             auto newNestedRefs = llvm::to_vector<4>(nestedRefs);
             newNestedRefs[oldNestedRefs.size() - 1] = newLeafAttr;
-            return SymbolRefAttr::get(symRef.getRootReference(), newNestedRefs);
+            return {
+                SymbolRefAttr::get(symRef.getRootReference(), newNestedRefs),
+                WalkResult::skip()};
           }
+          return {attr, WalkResult::skip()};
         }
-        return attr;
+        return {attr, WalkResult::advance()};
       };
       // Generate a new attribute dictionary by replacing references to the old
       // symbol.

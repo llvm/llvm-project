@@ -102,11 +102,10 @@ static bool isMutable(Type type) {
 }
 
 template <typename InterfaceT, typename T, typename ReplaceSubElementFnT>
-static void updateSubElementImpl(T element, function_ref<T(T)> walkFn,
-                                 DenseMap<T, T> &visited,
-                                 SmallVectorImpl<T> &newElements,
-                                 FailureOr<bool> &changed,
-                                 ReplaceSubElementFnT &&replaceSubElementFn) {
+static void updateSubElementImpl(
+    T element, function_ref<std::pair<T, WalkResult>(T)> walkFn,
+    DenseMap<T, T> &visited, SmallVectorImpl<T> &newElements,
+    FailureOr<bool> &changed, ReplaceSubElementFnT &&replaceSubElementFn) {
   // Bail early if we failed at any point.
   if (failed(changed))
     return;
@@ -120,17 +119,22 @@ static void updateSubElementImpl(T element, function_ref<T(T)> walkFn,
   // yet.
   T &mappedElement = visited[element];
   if (!mappedElement) {
+    WalkResult result = WalkResult::advance();
+    std::tie(mappedElement, result) = walkFn(element);
+
     // Try walking this element.
-    if (!(mappedElement = walkFn(element))) {
+    if (result.wasInterrupted() || !mappedElement) {
       changed = failure();
       return;
     }
 
     // Handle replacing sub-elements if this element is also a container.
-    if (auto interface = mappedElement.template dyn_cast<InterfaceT>()) {
-      if (!(mappedElement = replaceSubElementFn(interface))) {
-        changed = failure();
-        return;
+    if (!result.wasSkipped()) {
+      if (auto interface = mappedElement.template dyn_cast<InterfaceT>()) {
+        if (!(mappedElement = replaceSubElementFn(interface))) {
+          changed = failure();
+          return;
+        }
       }
     }
   }
@@ -145,8 +149,8 @@ static void updateSubElementImpl(T element, function_ref<T(T)> walkFn,
 template <typename InterfaceT>
 static typename InterfaceT::ValueType
 replaceSubElementsImpl(InterfaceT interface,
-                       function_ref<Attribute(Attribute)> walkAttrsFn,
-                       function_ref<Type(Type)> walkTypesFn,
+                       SubElementResultReplFn<Attribute> walkAttrsFn,
+                       SubElementResultReplFn<Type> walkTypesFn,
                        DenseMap<Attribute, Attribute> &visitedAttrs,
                        DenseMap<Type, Type> &visitedTypes) {
   // Walk the current sub-elements, replacing them as necessary.
@@ -186,8 +190,8 @@ replaceSubElementsImpl(InterfaceT interface,
 }
 
 Attribute SubElementAttrInterface::replaceSubElements(
-    function_ref<Attribute(Attribute)> replaceAttrFn,
-    function_ref<Type(Type)> replaceTypeFn) {
+    SubElementResultReplFn<Attribute> replaceAttrFn,
+    SubElementResultReplFn<Type> replaceTypeFn) {
   assert(replaceAttrFn && replaceTypeFn && "expected valid replace functions");
   DenseMap<Attribute, Attribute> visitedAttrs;
   DenseMap<Type, Type> visitedTypes;
@@ -196,8 +200,8 @@ Attribute SubElementAttrInterface::replaceSubElements(
 }
 
 Type SubElementTypeInterface::replaceSubElements(
-    function_ref<Attribute(Attribute)> replaceAttrFn,
-    function_ref<Type(Type)> replaceTypeFn) {
+    SubElementResultReplFn<Attribute> replaceAttrFn,
+    SubElementResultReplFn<Type> replaceTypeFn) {
   assert(replaceAttrFn && replaceTypeFn && "expected valid replace functions");
   DenseMap<Attribute, Attribute> visitedAttrs;
   DenseMap<Type, Type> visitedTypes;
