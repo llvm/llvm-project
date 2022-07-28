@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: define <vscale x 4 x i32> @f(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK: MemoryUse(1) MustAlias
+; CHECK: MemoryUse(1)
 define <vscale x 4 x i32> @f(<vscale x 4 x i32> %z) {
   %a = alloca <vscale x 4 x i32>
   store <vscale x 4 x i32> %z, <vscale x 4 x i32>* %a
@@ -12,7 +12,7 @@ define <vscale x 4 x i32> @f(<vscale x 4 x i32> %z) {
 
 ; CHECK-LABEL: define i32 @g(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK: MemoryUse(1) MayAlias
+; CHECK: MemoryUse(1)
 declare i32* @gg(<vscale x 4 x i32>* %a)
 define i32 @g(i32 %z, i32 *%bb) {
   %a = alloca <vscale x 4 x i32>

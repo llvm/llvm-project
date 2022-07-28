@@ -87,17 +87,14 @@ class GlobalsAAResult::FunctionInfo {
   /// The bit that flags that this function may read any global. This is
   /// chosen to mix together with ModRefInfo bits.
   /// FIXME: This assumes ModRefInfo lattice will remain 4 bits!
-  /// It overlaps with ModRefInfo::Must bit!
   /// FunctionInfo.getModRefInfo() masks out everything except ModRef so
-  /// this remains correct, but the Must info is lost.
+  /// this remains correct.
   enum { MayReadAnyGlobal = 4 };
 
   /// Checks to document the invariants of the bit packing here.
-  static_assert((MayReadAnyGlobal & static_cast<int>(ModRefInfo::MustModRef)) ==
-                    0,
+  static_assert((MayReadAnyGlobal & static_cast<int>(ModRefInfo::ModRef)) == 0,
                 "ModRef and the MayReadAnyGlobal flag bits overlap.");
-  static_assert(((MayReadAnyGlobal |
-                  static_cast<int>(ModRefInfo::MustModRef)) >>
+  static_assert(((MayReadAnyGlobal | static_cast<int>(ModRefInfo::ModRef)) >>
                  AlignedMapPointerTraits::NumLowBitsAvailable) == 0,
                 "Insufficient low bits to store our flag and ModRef info.");
 
@@ -133,11 +130,9 @@ public:
   }
 
   /// This method clears MayReadAnyGlobal bit added by GlobalsAAResult to return
-  /// the corresponding ModRefInfo. It must align in functionality with
-  /// clearMust().
+  /// the corresponding ModRefInfo.
   ModRefInfo globalClearMayReadAnyGlobal(int I) const {
-    return ModRefInfo((I & static_cast<int>(ModRefInfo::ModRef)) |
-                      static_cast<int>(ModRefInfo::NoModRef));
+    return ModRefInfo(I & static_cast<int>(ModRefInfo::ModRef));
   }
 
   /// Returns the \c ModRefInfo info for this function.
@@ -147,7 +142,7 @@ public:
 
   /// Adds new \c ModRefInfo for this function to its state.
   void addModRefInfo(ModRefInfo NewMRI) {
-    Info.setInt(Info.getInt() | static_cast<int>(setMust(NewMRI)));
+    Info.setInt(Info.getInt() | static_cast<int>(NewMRI));
   }
 
   /// Returns whether this function may read any global variable, and we don't
