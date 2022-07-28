@@ -13397,18 +13397,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
-  // See if we can simplify the input to this truncate through knowledge that
-  // only the low bits are being used.
-  // For example "trunc (or (shl x, 8), y)" // -> trunc y
-  // Currently we only perform this optimization on scalars because vectors
-  // may have different active low bits.
-  if (!VT.isVector()) {
-    APInt Mask =
-        APInt::getLowBitsSet(N0.getValueSizeInBits(), VT.getSizeInBits());
-    if (SDValue Shorter = DAG.GetDemandedBits(N0, Mask))
-      return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Shorter);
-  }
-
   // fold (truncate (extract_subvector(ext x))) ->
   //      (extract_subvector x)
   // TODO: This can be generalized to cover cases where the truncate and extract
