@@ -192,7 +192,7 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    and a0, a0, s0
-; RV64I-NEXT:    subw a0, a1, a0
+; RV64I-NEXT:    sub a0, a1, a0
 ; RV64I-NEXT:    and a2, a0, s1
 ; RV64I-NEXT:    srli a0, a0, 2
 ; RV64I-NEXT:    and a0, a0, s1

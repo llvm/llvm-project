@@ -92,8 +92,8 @@ define <4 x i32> @ssra_v4i32(<4 x i32> %0) {
 define <1 x i64> @ssra_v1i64(<2 x i32> %0) {
 ; CHECK-LABEL: ssra_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.2s, #64, lsl #24
 ; CHECK-NEXT:    ushr d1, d0, #63
+; CHECK-NEXT:    bic v0.2s, #64, lsl #24
 ; CHECK-NEXT:    ssra d1, d0, #62
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
@@ -108,8 +108,8 @@ define <1 x i64> @ssra_v1i64(<2 x i32> %0) {
 define <2 x i64> @ssra_v2i64(<4 x i32> %0) {
 ; CHECK-LABEL: ssra_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.4s, #64, lsl #24
 ; CHECK-NEXT:    ushr v1.2d, v0.2d, #63
+; CHECK-NEXT:    bic v0.4s, #64, lsl #24
 ; CHECK-NEXT:    ssra v1.2d, v0.2d, #62
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret

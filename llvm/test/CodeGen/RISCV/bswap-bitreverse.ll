@@ -85,7 +85,7 @@ define i32 @test_bswap_i32(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: test_bswap_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a1, a0, 8
+; RV64I-NEXT:    srli a1, a0, 8
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addiw a2, a2, -256
 ; RV64I-NEXT:    and a1, a1, a2
@@ -491,7 +491,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: test_bitreverse_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a1, a0, 8
+; RV64I-NEXT:    srli a1, a0, 8
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addiw a2, a2, -256
 ; RV64I-NEXT:    and a1, a1, a2
