@@ -111,6 +111,8 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
       MIB.addImm(CI->getZExtValue());
   } else if (auto *CFP = dyn_cast<ConstantFP>(NumericConstant)) {
     MIB.addFPImm(CFP);
+  } else if (isa<ConstantPointerNull>(NumericConstant)) {
+    MIB.addImm(0);
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(Register());
