@@ -35,7 +35,7 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
     dag dpp_srcs =
           (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
-               FP16InputMods:$src1_modifiers, VCSrc_f16:$src1,
+               FPVRegInputMods:$src1_modifiers, VGPRSrc_32:$src1,
                FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
 
            // FIXME: clampmod0 misbehaves with the non-default vdst_in
