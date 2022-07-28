@@ -22,6 +22,6 @@ DWOS: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c'{{$}}
 1DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' (from '{{.*}}ac.dwp') and 'c.c'{{$}}
 2DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c' (from '{{.*}}bc.dwp'){{$}}
 
-DWODWOS: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c'{{$}}
-DWO1DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' (from 'c.dwo' in '{{.*}}ac.dwp') and 'c.c'{{$}}
-DWO2DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c' (from 'c.dwo' in '{{.*}}bc.dwp'){{$}}
+DWODWOS: error: duplicate DWO ID ({{.*}}) in 'c.c' (from 'c.dwo') and 'c.c' (from 'c.dwo'){{$}}
+DWO1DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' (from 'c.dwo' in '{{.*}}ac.dwp') and 'c.c' (from 'c.dwo'){{$}}
+DWO2DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' (from 'c.dwo') and 'c.c' (from 'c.dwo' in '{{.*}}bc.dwp'){{$}}
