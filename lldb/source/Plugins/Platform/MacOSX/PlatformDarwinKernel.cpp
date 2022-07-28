@@ -615,7 +615,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   FileSpec dsym_fspec = kext_bundle_filepath;
   std::string filename = dsym_fspec.GetFilename().AsCString();
   filename += ".dSYM";
-  dsym_fspec.GetFilename() = ConstString(filename);
+  dsym_fspec.SetFilename(filename);
   if (FileSystem::Instance().IsDirectory(dsym_fspec)) {
     return true;
   }
@@ -652,7 +652,7 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
   FileSpec kernel_dsym = kernel_binary;
   std::string filename = kernel_binary.GetFilename().AsCString();
   filename += ".dSYM";
-  kernel_dsym.GetFilename() = ConstString(filename);
+  kernel_dsym.SetFilename(filename);
   return FileSystem::Instance().IsDirectory(kernel_dsym);
 }
 
@@ -670,8 +670,7 @@ bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
 
   FileSpec binary_filespec = kernel_dsym;
   // Chop off the '.dSYM' extension on the filename
-  binary_filespec.GetFilename() =
-      binary_filespec.GetFileNameStrippingExtension();
+  binary_filespec.SetFilename(binary_filespec.GetFileNameStrippingExtension());
 
   // Is there a binary next to this this?  Then return false.
   if (FileSystem::Instance().Exists(binary_filespec))

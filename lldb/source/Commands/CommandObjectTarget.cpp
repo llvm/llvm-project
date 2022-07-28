@@ -406,7 +406,7 @@ protected:
 
       if (core_file) {
         FileSpec core_file_dir;
-        core_file_dir.GetDirectory() = core_file.GetDirectory();
+        core_file_dir.SetDirectory(core_file.GetDirectory());
         target_sp->AppendExecutableSearchPaths(core_file_dir);
 
         ProcessSP process_sp(target_sp->CreateProcess(
@@ -4072,7 +4072,7 @@ protected:
 
     if (!module_spec.GetUUID().IsValid()) {
       if (!module_spec.GetFileSpec() && !module_spec.GetPlatformFileSpec())
-        module_spec.GetFileSpec().GetFilename() = symbol_fspec.GetFilename();
+        module_spec.GetFileSpec().SetFilename(symbol_fspec.GetFilename());
     }
 
     // Now module_spec represents a symbol file for a module that might exist
@@ -4136,7 +4136,7 @@ protected:
         break;
 
       // Replace basename with one fewer extension
-      module_spec.GetFileSpec().GetFilename() = filename_no_extension;
+      module_spec.GetFileSpec().SetFilename(filename_no_extension);
       target->GetImages().FindModules(module_spec, matching_modules);
     }
 
