@@ -143,6 +143,8 @@ namespace format {
   TYPE(VerilogDimensionedTypeName)                                             \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
+  /* Things inside the table in user-defined primitives. */                    \
+  TYPE(VerilogTableItem)                                                       \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a

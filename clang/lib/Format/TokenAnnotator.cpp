@@ -917,6 +917,10 @@ private:
   bool consumeToken() {
     FormatToken *Tok = CurrentToken;
     next();
+    // In Verilog primitives' state tables, `:`, `?`, and `-` aren't normal
+    // operators.
+    if (Tok->is(TT_VerilogTableItem))
+      return true;
     switch (Tok->Tok.getKind()) {
     case tok::plus:
     case tok::minus:
@@ -3996,8 +4000,16 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     }
   } else if (Style.isVerilog()) {
+    // Add space between things in a primitive's state table unless in a
+    // transition like `(0?)`.
+    if ((Left.is(TT_VerilogTableItem) &&
+         !Right.isOneOf(tok::r_paren, tok::semi)) ||
+        (Right.is(TT_VerilogTableItem) && Left.isNot(tok::l_paren))) {
+      const FormatToken *Next = Right.getNextNonComment();
+      return !(Next && Next->is(tok::r_paren));
+    }
     // Don't add space within a delay like `#0`.
-    if (!Left.is(TT_BinaryOperator) &&
+    if (Left.isNot(TT_BinaryOperator) &&
         Left.isOneOf(Keywords.kw_verilogHash, Keywords.kw_verilogHashHash)) {
       return false;
     }

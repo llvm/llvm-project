@@ -183,6 +183,7 @@ private:
   // Returns the number of levels of indentation in addition to the normal 1
   // level for a block, used for indenting case labels.
   unsigned parseVerilogHierarchyHeader();
+  void parseVerilogTable();
 
   // Used by addUnwrappedLine to denote whether to keep or remove a level
   // when resetting the line state.

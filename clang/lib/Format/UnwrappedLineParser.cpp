@@ -1913,6 +1913,10 @@ void UnwrappedLineParser::parseStructuralElement(
       }
 
       if (Style.isVerilog()) {
+        if (FormatTok->is(Keywords.kw_table)) {
+          parseVerilogTable();
+          return;
+        }
         if (Keywords.isVerilogBegin(*FormatTok) ||
             Keywords.isVerilogHierarchy(*FormatTok)) {
           parseBlock();
@@ -4039,7 +4043,8 @@ void UnwrappedLineParser::parseVerilogHierarchyIdentifier() {
 }
 
 void UnwrappedLineParser::parseVerilogSensitivityList() {
-  assert(FormatTok->is(tok::at));
+  if (!FormatTok->is(tok::at))
+    return;
   nextToken();
   // A block event expression has 2 at signs.
   if (FormatTok->is(tok::at))
@@ -4064,15 +4069,13 @@ unsigned UnwrappedLineParser::parseVerilogHierarchyHeader() {
     nextToken();
     if (Keywords.isVerilogIdentifier(*FormatTok))
       nextToken();
-    if (FormatTok->is(tok::at))
-      parseVerilogSensitivityList();
+    parseVerilogSensitivityList();
     if (FormatTok->is(tok::semi))
       nextToken();
   } else if (FormatTok->isOneOf(tok::kw_case, Keywords.kw_casex,
                                 Keywords.kw_casez, Keywords.kw_randcase,
                                 Keywords.kw_randsequence)) {
-    if (Style.IndentCaseLabels)
-      ++AddLevels;
+    AddLevels += Style.IndentCaseLabels;
     nextToken();
     if (FormatTok->is(tok::l_paren))
       parseParens();
@@ -4152,6 +4155,25 @@ unsigned UnwrappedLineParser::parseVerilogHierarchyHeader() {
   }
 
   return AddLevels;
+}
+
+void UnwrappedLineParser::parseVerilogTable() {
+  assert(FormatTok->is(Keywords.kw_table));
+  nextToken(/*LevelDifference=*/1);
+  addUnwrappedLine();
+
+  auto InitialLevel = Line->Level++;
+  while (!eof() && !Keywords.isVerilogEnd(*FormatTok)) {
+    FormatToken *Tok = FormatTok;
+    nextToken();
+    if (Tok->is(tok::semi))
+      addUnwrappedLine();
+    else if (Tok->isOneOf(tok::star, tok::colon, tok::question, tok::minus))
+      Tok->setFinalizedType(TT_VerilogTableItem);
+  }
+  Line->Level = InitialLevel;
+  nextToken(/*LevelDifference=*/-1);
+  addUnwrappedLine();
 }
 
 LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
