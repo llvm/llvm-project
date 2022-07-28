@@ -530,7 +530,7 @@ def VMOV_N   : WOpInst<"vmov_n", ".1",
 }
 let InstName = "" in
 def VDUP_LANE: WOpInst<"vdup_lane", ".qI",
-                       "UcUsUicsiPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUl",
+                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUl",
                        OP_DUP_LN>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -980,7 +980,7 @@ def COPYQ_LANEQ : IOpInst<"vcopy_laneq", "..I.I",
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set all lanes to same value
-def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "hdQhQdPlQPl", OP_DUP_LN>;
+def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "dQdPlQPl", OP_DUP_LN>;
 def VDUP_LANE2: WOpInst<"vdup_laneq", ".QI",
                   "csilUcUsUiUlPcPshfdQcQsQiQlQPcQPsQUcQUsQUiQUlQhQfQdPlQPl",
                         OP_DUP_LN> {
@@ -1644,7 +1644,8 @@ def SCALAR_VDUP_LANE : IInst<"vdup_lane", "1.I", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs
 def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "1QI", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs"> {
   let isLaneQ = 1;
 }
-}
+
+} // ArchGuard = "defined(__aarch64__)"
 
 // ARMv8.2-A FP16 vector intrinsics for A32/A64.
 let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
@@ -1762,15 +1763,6 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   def VZIPH    : WInst<"vzip", "2..", "hQh">;
   def VUZPH    : WInst<"vuzp", "2..", "hQh">;
   def VTRNH    : WInst<"vtrn", "2..", "hQh">;
-
-
-  let ArchGuard = "!defined(__aarch64__)" in {
-    // Set all lanes to same value.
-    // Already implemented prior to ARMv8.2-A.
-    def VMOV_NH  : WOpInst<"vmov_n", ".1", "hQh", OP_DUP>;
-    def VDUP_NH  : WOpInst<"vdup_n", ".1", "hQh", OP_DUP>;
-    def VDUP_LANE1H : WOpInst<"vdup_lane", ".qI", "hQh", OP_DUP_LN>;
-  }
 
   // Vector Extract
   def VEXTH      : WInst<"vext", "...I", "hQh">;
