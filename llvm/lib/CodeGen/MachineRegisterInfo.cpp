@@ -420,6 +420,12 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
+bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,
+                                              unsigned MaxUsers) const {
+  return hasNItemsOrLess(use_instr_nodbg_begin(Reg), use_instr_nodbg_end(),
+                         MaxUsers);
+}
+
 /// clearKillFlags - Iterate over all the uses of the given register and
 /// clear the kill flag from the MachineOperand. This function is used by
 /// optimization passes which extend register lifetimes and need only

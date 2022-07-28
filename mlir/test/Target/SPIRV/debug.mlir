@@ -33,7 +33,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     // CHECK: loc({{".*debug.mlir"}}:34:10)
     %0 = spv.CompositeInsert %arg1, %arg0[1 : i32, 0 : i32] : !spv.array<4xf32> into !spv.struct<(f32, !spv.struct<(!spv.array<4xf32>, f32)>)>
     // CHECK: loc({{".*debug.mlir"}}:36:10)
-    %1 = spv.CompositeConstruct %arg2, %arg3 : vector<2xf32>
+    %1 = spv.CompositeConstruct %arg2, %arg3 : (f32, f32) -> vector<2xf32>
     spv.Return
   }
 

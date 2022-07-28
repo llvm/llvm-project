@@ -1042,6 +1042,9 @@ public:
   /// \return True if prefetching should also be done for writes.
   bool enableWritePrefetching() const;
 
+  /// \return if target want to issue a prefetch in address space \p AS.
+  bool shouldPrefetchAddressSpace(unsigned AS) const;
+
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
   /// and the number of execution units in the CPU.
@@ -1705,6 +1708,9 @@ public:
   /// \return True if prefetching should also be done for writes.
   virtual bool enableWritePrefetching() const = 0;
 
+  /// \return if target want to issue a prefetch in address space \p AS.
+  virtual bool shouldPrefetchAddressSpace(unsigned AS) const = 0;
+
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -2229,6 +2235,11 @@ public:
   /// \return True if prefetching should also be done for writes.
   bool enableWritePrefetching() const override {
     return Impl.enableWritePrefetching();
+  }
+
+  /// \return if target want to issue a prefetch in address space \p AS.
+  bool shouldPrefetchAddressSpace(unsigned AS) const override {
+    return Impl.shouldPrefetchAddressSpace(AS);
   }
 
   unsigned getMaxInterleaveFactor(unsigned VF) override {

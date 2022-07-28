@@ -18,8 +18,8 @@ func.func @bitcast(%arg0 : vector<2xf32>, %arg1: vector<2xf16>) -> (vector<4xf16
 
 // CHECK-LABEL: @broadcast
 //  CHECK-SAME: %[[A:.*]]: f32
-//       CHECK:   spv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]] : vector<4xf32>
-//       CHECK:   spv.CompositeConstruct %[[A]], %[[A]] : vector<2xf32>
+//       CHECK:   spv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]]
+//       CHECK:   spv.CompositeConstruct %[[A]], %[[A]]
 func.func @broadcast(%arg0 : f32) -> (vector<4xf32>, vector<2xf32>) {
   %0 = vector.broadcast %arg0 : f32 to vector<4xf32>
   %1 = vector.broadcast %arg0 : f32 to vector<2xf32>
@@ -182,7 +182,7 @@ func.func @fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<1xf
 
 // CHECK-LABEL: func @splat
 //  CHECK-SAME: (%[[A:.+]]: f32)
-//       CHECK:   %[[VAL:.+]] = spv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]] : vector<4xf32>
+//       CHECK:   %[[VAL:.+]] = spv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]]
 //       CHECK:   return %[[VAL]]
 func.func @splat(%f : f32) -> vector<4xf32> {
   %splat = vector.splat %f : vector<4xf32>
@@ -206,7 +206,7 @@ func.func @splat_size1_vector(%f : f32) -> vector<1xf32> {
 //  CHECK-SAME:  %[[ARG0:.+]]: vector<1xf32>, %[[ARG1:.+]]: vector<1xf32>
 //       CHECK:    %[[V0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:    %[[V1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]]
-//       CHECK:    spv.CompositeConstruct %[[V0]], %[[V1]], %[[V1]], %[[V0]] : vector<4xf32>
+//       CHECK:    spv.CompositeConstruct %[[V0]], %[[V1]], %[[V1]], %[[V0]] : (f32, f32, f32, f32) -> vector<4xf32>
 func.func @shuffle(%v0 : vector<1xf32>, %v1: vector<1xf32>) -> vector<4xf32> {
   %shuffle = vector.shuffle %v0, %v1 [0, 1, 1, 0] : vector<1xf32>, vector<1xf32>
   return %shuffle : vector<4xf32>

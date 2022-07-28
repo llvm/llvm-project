@@ -381,7 +381,7 @@ private:
       }
     }
     assert(Map.size() == LDSVarsToTransform.size());
-    return {SGV, std::move(Map)};
+    return std::make_tuple(SGV, std::move(Map));
   }
 
   template <typename PredicateTy>

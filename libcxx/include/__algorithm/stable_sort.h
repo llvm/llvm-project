@@ -203,7 +203,7 @@ __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp
     }
     std::__stable_sort<_AlgPolicy, _Compare>(__first, __m, __comp, __l2, __buff, __buff_size);
     std::__stable_sort<_AlgPolicy, _Compare>(__m, __last, __comp, __len - __l2, __buff, __buff_size);
-    std::__inplace_merge<_AlgPolicy, _Compare>(__first, __m, __last, __comp, __l2, __len - __l2, __buff, __buff_size);
+    std::__inplace_merge<_AlgPolicy>(__first, __m, __last, __comp, __l2, __len - __l2, __buff, __buff_size);
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Compare>

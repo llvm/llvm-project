@@ -215,7 +215,7 @@ public:
 
 protected:
   ResponseValidatorCallback m_validator = nullptr;
-  void *m_validator_baton;
+  void *m_validator_baton = nullptr;
 };
 
 #endif // LLDB_UTILITY_STRINGEXTRACTORGDBREMOTE_H

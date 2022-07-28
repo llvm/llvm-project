@@ -167,7 +167,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   parsing.messages().Emit(llvm::errs(), parsing.allCooked());
   if (!parsing.consumedWholeFile()) {
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
-                        "parser FAIL (final position)");
+                        "parser FAIL (final position)",
+                        "error: ", llvm::raw_ostream::RED);
     return mlir::failure();
   }
   if ((!parsing.messages().empty() && (parsing.messages().AnyFatalError())) ||

@@ -14,6 +14,7 @@
 
 namespace lldb_private {
 
+class ExecutionContextScope;
 class RegisterValue;
 struct RegisterInfo;
 class Stream;
@@ -23,7 +24,8 @@ class Stream;
 bool DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
                        const RegisterInfo *reg_info, bool prefix_with_name,
                        bool prefix_with_alt_name, lldb::Format format,
-                       uint32_t reg_name_right_align_at = 0);
+                       uint32_t reg_name_right_align_at = 0,
+                       ExecutionContextScope *exe_scope = nullptr);
 
 } // namespace lldb_private
 

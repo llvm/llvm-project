@@ -41,6 +41,10 @@ public:
     return lineSection;
   }
 
+  llvm::DWARFSection const &getStrOffsetsSection() const override {
+    return strOffsSection;
+  }
+
   // Returns an instance of DwarfObject if the given object file has the
   // relevant DWARF debug sections.
   static std::unique_ptr<DwarfObject> create(ObjFile *);
@@ -48,6 +52,7 @@ public:
 private:
   llvm::DWARFSection infoSection;
   llvm::DWARFSection lineSection;
+  llvm::DWARFSection strOffsSection;
   llvm::StringRef abbrevSection;
   llvm::StringRef strSection;
 };

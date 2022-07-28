@@ -18,8 +18,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     {
         std::vector<int> v;
         v.reserve(10);
@@ -50,7 +49,7 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(v));
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
         std::vector<int> v;
         size_t sz = v.max_size() + 1;
 
@@ -62,7 +61,7 @@ int main(int, char**)
             assert(v.capacity() == 0);
         }
     }
-    {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
         std::vector<int> v(10, 42);
         int* previous_data = v.data();
         size_t previous_capacity = v.capacity();
@@ -102,7 +101,7 @@ int main(int, char**)
     }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
         std::vector<int, limited_allocator<int, 100> > v;
         v.reserve(50);
         assert(v.capacity() == 50);
@@ -116,6 +115,17 @@ int main(int, char**)
         assert(v.capacity() == 50);
         assert(is_contiguous_container_asan_correct(v));
     }
+#endif
+
+    return true;
+}
+
+int main(int, char**)
+{
+  tests();
+
+#if TEST_STD_VER > 17
+  static_assert(tests());
 #endif
 
   return 0;

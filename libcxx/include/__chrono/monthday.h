@@ -14,6 +14,7 @@
 #include <__chrono/day.h>
 #include <__chrono/month.h>
 #include <__config>
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -58,9 +59,11 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const month_day& __lhs, const month_day& __rhs) noexcept
 { return __lhs.month() == __rhs.month() && __lhs.day() == __rhs.day(); }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const month_day& __lhs, const month_day& __rhs) noexcept
-{ return !(__lhs == __rhs); }
+_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const month_day& __lhs, const month_day& __rhs) noexcept {
+    if (auto __c = __lhs.month() <=> __rhs.month(); __c != 0)
+        return __c;
+    return __lhs.day() <=> __rhs.day();
+}
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 month_day operator/(const month& __lhs, const day& __rhs) noexcept
@@ -82,25 +85,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr
 month_day operator/(const day& __lhs, int __rhs) noexcept
 { return month(__rhs) / __lhs; }
 
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator< (const month_day& __lhs, const month_day& __rhs) noexcept
-{ return __lhs.month() != __rhs.month() ? __lhs.month() < __rhs.month() : __lhs.day() < __rhs.day(); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator> (const month_day& __lhs, const month_day& __rhs) noexcept
-{ return __rhs < __lhs; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator<=(const month_day& __lhs, const month_day& __rhs) noexcept
-{ return !(__rhs < __lhs);}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator>=(const month_day& __lhs, const month_day& __rhs) noexcept
-{ return !(__lhs < __rhs); }
-
-
-
 class month_day_last {
 private:
     chrono::month __m;
@@ -115,25 +99,10 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const month_day_last& __lhs, const month_day_last& __rhs) noexcept
 { return __lhs.month() == __rhs.month(); }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const month_day_last& __lhs, const month_day_last& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator< (const month_day_last& __lhs, const month_day_last& __rhs) noexcept
-{ return __lhs.month() < __rhs.month(); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator> (const month_day_last& __lhs, const month_day_last& __rhs) noexcept
-{ return __rhs < __lhs; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator<=(const month_day_last& __lhs, const month_day_last& __rhs) noexcept
-{ return !(__rhs < __lhs);}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator>=(const month_day_last& __lhs, const month_day_last& __rhs) noexcept
-{ return !(__lhs < __rhs); }
+_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
+operator<=>(const month_day_last& __lhs, const month_day_last& __rhs) noexcept {
+    return __lhs.month() <=> __rhs.month();
+}
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 month_day_last operator/(const month& __lhs, last_spec) noexcept
