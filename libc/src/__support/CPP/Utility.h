@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_H
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc::cpp {
 
 template <typename T, T... Seq> struct IntegerSequence {
-  static_assert(IsIntegral<T>::Value);
+  static_assert(is_integral_v<T>);
   template <T Next> using append = IntegerSequence<T, Seq..., Next>;
 };
 

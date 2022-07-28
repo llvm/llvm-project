@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_CPP_ARRAYREF_H
 
 #include "Array.h"
-#include "TypeTraits.h" //RemoveCVType
+#include "type_traits.h" // RemoveCVType
 
 #include <stddef.h> // For size_t.
 
@@ -24,7 +24,7 @@ namespace cpp {
 namespace internal {
 template <typename QualifiedT> class ArrayRefBase {
 public:
-  using value_type = RemoveCVType<QualifiedT>;
+  using value_type = remove_cv_t<QualifiedT>;
   using pointer = value_type *;
   using const_pointer = const value_type *;
   using reference = value_type &;
@@ -109,7 +109,7 @@ private:
 
 template <typename T> struct ArrayRef : public internal::ArrayRefBase<const T> {
 private:
-  static_assert(IsSameV<T, RemoveCVType<T>>,
+  static_assert(is_same_v<T, remove_cv_t<T>>,
                 "ArrayRef must have a non-const, non-volatile value_type");
   using Impl = internal::ArrayRefBase<const T>;
   using Impl::Impl;
@@ -128,7 +128,7 @@ template <typename T>
 struct MutableArrayRef : public internal::ArrayRefBase<T> {
 private:
   static_assert(
-      IsSameV<T, RemoveCVType<T>>,
+      is_same_v<T, remove_cv_t<T>>,
       "MutableArrayRef must have a non-const, non-volatile value_type");
   using Impl = internal::ArrayRefBase<T>;
   using Impl::Impl;

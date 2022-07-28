@@ -22,7 +22,7 @@
 #else
 // FMA instructions are not available
 #include "generic/FMA.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
 namespace fputil {

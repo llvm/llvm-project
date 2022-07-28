@@ -50,7 +50,7 @@ private:
   // This is possible because the address type carries known compile-time
   // alignment informations.
   template <typename T, typename AddrT> static constexpr Aligned isAligned() {
-    static_assert(IsAddressType<AddrT>::Value);
+    static_assert(IsAddressType<AddrT>::value);
     return AddrT::ALIGNMENT > 1 && AddrT::ALIGNMENT >= sizeof(T) ? Aligned::YES
                                                                  : Aligned::NO;
   }
@@ -59,7 +59,7 @@ private:
   // This function is responsible for extracting Temporality and Alignment from
   // the Address type.
   template <typename SrcAddrT> static inline auto nativeLoad(SrcAddrT src) {
-    static_assert(IsAddressType<SrcAddrT>::Value && SrcAddrT::IS_READ);
+    static_assert(IsAddressType<SrcAddrT>::value && SrcAddrT::IS_READ);
     constexpr auto AS = isAligned<type, SrcAddrT>();
     constexpr auto TS = SrcAddrT::TEMPORALITY;
     return Backend::template load<type, TS, AS>(as<const type>(src));
@@ -70,7 +70,7 @@ private:
   // the Address type.
   template <typename DstAddrT>
   static inline void nativeStore(type value, DstAddrT dst) {
-    static_assert(IsAddressType<DstAddrT>::Value && DstAddrT::IS_WRITE);
+    static_assert(IsAddressType<DstAddrT>::value && DstAddrT::IS_WRITE);
     constexpr auto AS = isAligned<type, DstAddrT>();
     constexpr auto TS = DstAddrT::TEMPORALITY;
     return Backend::template store<type, TS, AS>(as<type>(dst), value);
@@ -85,8 +85,8 @@ private:
 public:
   template <typename DstAddrT, typename SrcAddrT>
   static inline void copy(DstAddrT dst, SrcAddrT src) {
-    static_assert(IsAddressType<DstAddrT>::Value && DstAddrT::IS_WRITE);
-    static_assert(IsAddressType<SrcAddrT>::Value && SrcAddrT::IS_READ);
+    static_assert(IsAddressType<DstAddrT>::value && DstAddrT::IS_WRITE);
+    static_assert(IsAddressType<SrcAddrT>::value && SrcAddrT::IS_READ);
     if constexpr (LLVM_LIBC_USE_BUILTIN_MEMCPY_INLINE &&
                   DstAddrT::TEMPORALITY == Temporality::TEMPORAL &&
                   SrcAddrT::TEMPORALITY == Temporality::TEMPORAL) {

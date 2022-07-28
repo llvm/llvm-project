@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
 
 #include "src/__support/CPP/Limits.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/builtin_wrappers.h"
@@ -119,7 +119,7 @@ namespace generic {
 //    https://www.open-std.org/JTC1/SC22/WG14/www/docs/n1011.htm
 template <typename T> struct FModExceptionalInputHandler {
 
-  static_assert(cpp::IsFloatingPointType<T>::Value,
+  static_assert(cpp::is_floating_point_v<T>,
                 "FModCStandardWrapper instantiated with invalid type.");
 
   static bool PreCheck(T x, T y, T &out) {
@@ -157,7 +157,7 @@ template <typename T> struct FModExceptionalInputHandler {
 
 template <typename T> struct FModFastMathWrapper {
 
-  static_assert(cpp::IsFloatingPointType<T>::Value,
+  static_assert(cpp::is_floating_point_v<T>,
                 "FModFastMathWrapper instantiated with invalid type.");
 
   static bool PreCheck(T, T, T &) { return false; }
@@ -216,7 +216,7 @@ public:
 template <typename T, class Wrapper = FModExceptionalInputHandler<T>,
           class DivisionHelper = FModDivisionSimpleHelper<T>>
 class FMod {
-  static_assert(cpp::IsFloatingPointType<T>::Value,
+  static_assert(cpp::is_floating_point_v<T>,
                 "FMod instantiated with invalid type.");
 
 private:
