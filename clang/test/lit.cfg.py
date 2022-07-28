@@ -70,7 +70,7 @@ tools = [
 if config.clang_examples:
     config.available_features.add('examples')
 
-def have_host_jit_support():
+def have_host_jit_feature_support(feature_name):
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
 
     if not clang_repl_exe:
@@ -79,7 +79,7 @@ def have_host_jit_support():
 
     try:
         clang_repl_cmd = subprocess.Popen(
-            [clang_repl_exe, '--host-supports-jit'], stdout=subprocess.PIPE)
+            [clang_repl_exe, '--host-supports-' + feature_name], stdout=subprocess.PIPE)
     except OSError:
         print('could not exec clang-repl')
         return False
@@ -89,8 +89,11 @@ def have_host_jit_support():
 
     return 'true' in clang_repl_out
 
-if have_host_jit_support():
+if have_host_jit_feature_support('jit'):
     config.available_features.add('host-supports-jit')
+
+if have_host_jit_feature_support('exception'):
+    config.available_features.add('host-supports-exception')
 
 if config.clang_staticanalyzer:
     config.available_features.add('staticanalyzer')
