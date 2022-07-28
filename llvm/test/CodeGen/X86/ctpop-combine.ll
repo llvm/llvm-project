@@ -88,16 +88,16 @@ define i8 @test4(i8 %x) nounwind readnone {
 ;
 ; NO-POPCOUNT-LABEL: test4:
 ; NO-POPCOUNT:       # %bb.0:
-; NO-POPCOUNT-NEXT:    andb $127, %dil
-; NO-POPCOUNT-NEXT:    movl %edi, %eax
-; NO-POPCOUNT-NEXT:    shrb %al
-; NO-POPCOUNT-NEXT:    andb $21, %al
-; NO-POPCOUNT-NEXT:    subb %al, %dil
 ; NO-POPCOUNT-NEXT:    movl %edi, %ecx
+; NO-POPCOUNT-NEXT:    andb $127, %cl
+; NO-POPCOUNT-NEXT:    shrb %dil
+; NO-POPCOUNT-NEXT:    andb $21, %dil
+; NO-POPCOUNT-NEXT:    subb %dil, %cl
+; NO-POPCOUNT-NEXT:    movl %ecx, %eax
+; NO-POPCOUNT-NEXT:    andb $51, %al
+; NO-POPCOUNT-NEXT:    shrb $2, %cl
 ; NO-POPCOUNT-NEXT:    andb $51, %cl
-; NO-POPCOUNT-NEXT:    shrb $2, %dil
-; NO-POPCOUNT-NEXT:    andb $51, %dil
-; NO-POPCOUNT-NEXT:    addb %dil, %cl
+; NO-POPCOUNT-NEXT:    addb %al, %cl
 ; NO-POPCOUNT-NEXT:    movl %ecx, %eax
 ; NO-POPCOUNT-NEXT:    shrb $4, %al
 ; NO-POPCOUNT-NEXT:    addb %cl, %al
