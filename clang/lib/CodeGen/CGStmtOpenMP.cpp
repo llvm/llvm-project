@@ -2646,7 +2646,9 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
           auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
           Simdlen = Val;
         }
-        OMPBuilder.applySimd(CLI, Simdlen);
+        // Add simd metadata to the collapsed loop. Do not generate
+        // another loop for if clause. Support for if clause is done earlier.
+        OMPBuilder.applySimd(CLI, /*IfCond*/ nullptr, Simdlen);
         return;
       }
     };

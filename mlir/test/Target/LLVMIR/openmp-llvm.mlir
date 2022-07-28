@@ -750,6 +750,34 @@ llvm.func @simdloop_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64
 
 // -----
 
+// CHECK-LABEL: @simdloop_if
+llvm.func @simdloop_if(%arg0: !llvm.ptr<i32> {fir.bindc_name = "n"}, %arg1: !llvm.ptr<i32> {fir.bindc_name = "threshold"}) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = dense<0> : vector<2xi32>} : (i64) -> !llvm.ptr<i32>
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = dense<0> : vector<2xi32>, uniq_name = "_QFtest_simdEi"} : (i64) -> !llvm.ptr<i32>
+  %4 = llvm.mlir.constant(0 : i32) : i32
+  %5 = llvm.load %arg0 : !llvm.ptr<i32>
+  %6 = llvm.mlir.constant(1 : i32) : i32
+  %7 = llvm.load %arg0 : !llvm.ptr<i32>
+  %8 = llvm.load %arg1 : !llvm.ptr<i32>
+  %9 = llvm.icmp "sge" %7, %8 : i32
+  omp.simdloop   if(%9) for  (%arg2) : i32 = (%4) to (%5) inclusive step (%6) {
+    // The form of the emitted IR is controlled by OpenMPIRBuilder and
+    // tested there. Just check that the right metadata is added.
+    // CHECK: llvm.access.group
+    llvm.store %arg2, %1 : !llvm.ptr<i32>
+    omp.yield
+  }
+  llvm.return
+}
+// Be sure that llvm.loop.vectorize.enable metadata appears twice
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+// CHECK: llvm.loop.vectorize.enable
+
+// -----
+
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
