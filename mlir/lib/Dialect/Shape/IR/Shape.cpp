@@ -137,6 +137,10 @@ void ShapeDialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/Shape/IR/ShapeOpsTypes.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Shape/IR/ShapeOpsAttributes.cpp.inc"
+      >();
   addInterfaces<ShapeInlinerInterface>();
   // Allow unknown operations during prototyping and testing. As the dialect is
   // still evolving it makes it simple to start with an unregistered ops and
@@ -1216,6 +1220,43 @@ void FunctionLibraryOp::print(OpAsmPrinter &p) {
 // FuncOp
 //===----------------------------------------------------------------------===//
 
+FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
+                      ArrayRef<NamedAttribute> attrs) {
+  OpBuilder builder(location->getContext());
+  OperationState state(location, getOperationName());
+  FuncOp::build(builder, state, name, type, attrs);
+  return cast<FuncOp>(Operation::create(state));
+}
+FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
+                      Operation::dialect_attr_range attrs) {
+  SmallVector<NamedAttribute, 8> attrRef(attrs);
+  return create(location, name, type, llvm::makeArrayRef(attrRef));
+}
+FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
+                      ArrayRef<NamedAttribute> attrs,
+                      ArrayRef<DictionaryAttr> argAttrs) {
+  FuncOp func = create(location, name, type, attrs);
+  func.setAllArgAttrs(argAttrs);
+  return func;
+}
+
+void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
+                   FunctionType type, ArrayRef<NamedAttribute> attrs,
+                   ArrayRef<DictionaryAttr> argAttrs) {
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder.getStringAttr(name));
+  state.addAttribute(FunctionOpInterface::getTypeAttrName(),
+                     TypeAttr::get(type));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
+
+  if (argAttrs.empty())
+    return;
+  assert(type.getNumInputs() == argAttrs.size());
+  function_interface_impl::addArgAndResultAttrs(builder, state, argAttrs,
+                                                /*resultAttrs=*/llvm::None);
+}
+
 ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
   auto buildFuncType =
       [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
@@ -1867,3 +1908,6 @@ void ReduceOp::print(OpAsmPrinter &p) {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOpsTypes.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Shape/IR/ShapeOpsAttributes.cpp.inc"

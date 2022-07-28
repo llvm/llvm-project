@@ -28,6 +28,9 @@
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOpsTypes.h.inc"
 
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Shape/IR/ShapeOpsAttributes.h.inc"
+
 namespace mlir {
 class PatternRewriter;
 

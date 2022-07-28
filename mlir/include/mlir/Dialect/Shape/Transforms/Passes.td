@@ -11,6 +11,22 @@
 
 include "mlir/Pass/PassBase.td"
 
+def InsertDimensionSymbols : Pass<"insert-dimension-symbols", "ModuleOp"> {
+  let summary = "Insert dimension symbols on the entry function.";
+  let constructor = "mlir::createInsertDimensionSymbolsPass()";
+  let options = [
+    Option<"entryFunc", "entry-func", "std::string",
+            /*default=*/"\"main\"",
+            "Used to specify the entry-function.">,
+  ];
+  let dependentDialects = ["shape::ShapeDialect"];
+}
+
+def OutlineShapeComputation : Pass<"outline-shape-computation", "ModuleOp"> {
+  let summary = "Outline shape computation";
+  let constructor = "mlir::createOutlineShapeComputationPass()";
+}
+
 def RemoveShapeConstraints : Pass<"remove-shape-constraints", "func::FuncOp"> {
   let summary = "Replace all cstr_ ops with a true witness";
   let constructor = "mlir::createRemoveShapeConstraintsPass()";

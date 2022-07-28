@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRShapeDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Shape
 
   DEPENDS
+  MLIRShapeOpsAttrIncGen
   MLIRShapeOpsIncGen
 
   LINK_LIBS PUBLIC

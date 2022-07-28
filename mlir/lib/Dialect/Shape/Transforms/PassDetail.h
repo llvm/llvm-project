@@ -10,6 +10,7 @@
 #define DIALECT_SHAPE_TRANSFORMS_PASSDETAIL_H_
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -21,6 +22,10 @@ class BufferizationDialect;
 namespace memref {
 class MemRefDialect;
 } // namespace memref
+
+namespace shape {
+class ShapeDialect;
+} // namespace shape
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"

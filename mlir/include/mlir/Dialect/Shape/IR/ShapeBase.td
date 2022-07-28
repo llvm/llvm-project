@@ -38,6 +38,7 @@ def ShapeDialect : Dialect {
   let cppNamespace = "::mlir::shape";
   let dependentDialects = ["arith::ArithmeticDialect", "tensor::TensorDialect"];
 
+  let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
@@ -137,5 +138,24 @@ def Shape_WitnessType : Shape_Type<"Witness", "witness"> {
     guarantees on the final ordering of the assertions or their related code.
   }];
 }
+
+def ExtShapeInfo : AttrDef<ShapeDialect, "ExtShapeInfo"> {
+  let mnemonic = "ext_info";
+
+  let parameters = (ins
+    ArrayRefParameter<"FlatSymbolRefAttr">:$symbols
+  );
+
+  let summary = "Add extended shape info to original RankedTensorType";
+
+  let description = [{
+    This attribute is used to extend tensor type with tensor specific
+    properties. These properties aren't modeled in the MLIR type. This
+    attribute is set in the `encoding` field of the tensor type.
+  }];
+
+  let assemblyFormat = "`<` `symbols` `=` `[` $symbols `]` `>`";
+}
+
 
 #endif // SHAPE_BASE_TD

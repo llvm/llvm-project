@@ -1059,7 +1059,21 @@ def Shape_FuncOp : Shape_Op<"func",
                        OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region AnyRegion:$body);
 
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
+  >];
+
   let extraClassDeclaration = [{
+    static FuncOp create(Location location, StringRef name, FunctionType type,
+                         ArrayRef<NamedAttribute> attrs = {});
+    static FuncOp create(Location location, StringRef name, FunctionType type,
+                         Operation::dialect_attr_range attrs);
+    static FuncOp create(Location location, StringRef name, FunctionType type,
+                         ArrayRef<NamedAttribute> attrs,
+                         ArrayRef<DictionaryAttr> argAttrs);
+    
     //===------------------------------------------------------------------===//
     // CallableOpInterface
     //===------------------------------------------------------------------===//
