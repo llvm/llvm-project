@@ -399,37 +399,36 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    andb $15, %al
+; X86-NEXT:    andb $8, %al
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    addb %cl, %dl
 ; X86-NEXT:    andb $4, %dl
-; X86-NEXT:    shlb $3, %cl
-; X86-NEXT:    andb $8, %cl
-; X86-NEXT:    orb %dl, %cl
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shrb %dl
-; X86-NEXT:    andb $2, %dl
-; X86-NEXT:    orb %cl, %dl
+; X86-NEXT:    movb %cl, %ah
+; X86-NEXT:    shlb $3, %ah
+; X86-NEXT:    andb $8, %ah
+; X86-NEXT:    orb %dl, %ah
+; X86-NEXT:    shrb %cl
+; X86-NEXT:    andb $2, %cl
+; X86-NEXT:    orb %ah, %cl
 ; X86-NEXT:    shrb $3, %al
-; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    orb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi), %ecx
-; X64-NEXT:    leal (,%rdi,8), %edx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $15, %al
+; X64-NEXT:    andb $8, %al
+; X64-NEXT:    leal (%rdi,%rdi), %ecx
 ; X64-NEXT:    andb $4, %cl
+; X64-NEXT:    leal (,%rdi,8), %edx
 ; X64-NEXT:    andb $8, %dl
 ; X64-NEXT:    orb %cl, %dl
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shrb %cl
-; X64-NEXT:    andb $2, %cl
-; X64-NEXT:    orb %dl, %cl
+; X64-NEXT:    shrb %dil
+; X64-NEXT:    andb $2, %dil
+; X64-NEXT:    orb %dil, %dl
 ; X64-NEXT:    shrb $3, %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    orb %dl, %al
 ; X64-NEXT:    retq
 ;
 ; X86XOP-LABEL: test_bitreverse_i4:

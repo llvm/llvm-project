@@ -535,7 +535,7 @@ define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(<2 x half> addrspace(1)*
 ; CI-NEXT:    flat_load_dword v0, v[0:1]
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_bfe_u32 v1, v0, 16, 15
-; CI-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
+; CI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; CI-NEXT:    flat_store_short v[0:1], v0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_store_short v[0:1], v1

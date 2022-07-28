@@ -90,16 +90,16 @@ define void @i56_or(i56* %a) {
 ;
 ; BE-LABEL: i56_or:
 ; BE:       @ %bb.0:
-; BE-NEXT:    ldr r1, [r0]
-; BE-NEXT:    strb r1, [r0, #3]
-; BE-NEXT:    ldrh r2, [r0, #4]!
-; BE-NEXT:    ldrb r3, [r0, #2]
+; BE-NEXT:    mov r1, r0
+; BE-NEXT:    ldr r0, [r0]
+; BE-NEXT:    ldrh r2, [r1, #4]!
+; BE-NEXT:    ldrb r3, [r1, #2]
 ; BE-NEXT:    orr r2, r3, r2, lsl #8
-; BE-NEXT:    orr r1, r2, r1, lsl #24
-; BE-NEXT:    orr r1, r1, #384
-; BE-NEXT:    strb r1, [r0, #2]
-; BE-NEXT:    lsr r1, r1, #8
-; BE-NEXT:    strh r1, [r0]
+; BE-NEXT:    orr r0, r2, r0, lsl #24
+; BE-NEXT:    orr r0, r0, #384
+; BE-NEXT:    strb r0, [r1, #2]
+; BE-NEXT:    lsr r0, r0, #8
+; BE-NEXT:    strh r0, [r1]
 ; BE-NEXT:    mov pc, lr
   %aa = load i56, i56* %a
   %b = or i56 %aa, 384
@@ -118,16 +118,10 @@ define void @i56_and_or(i56* %a) {
 ;
 ; BE-LABEL: i56_and_or:
 ; BE:       @ %bb.0:
-; BE-NEXT:    ldr r1, [r0]
+; BE-NEXT:    ldrh r1, [r0, #4]!
 ; BE-NEXT:    mov r2, #128
-; BE-NEXT:    strb r1, [r0, #3]
-; BE-NEXT:    ldrh r12, [r0, #4]!
-; BE-NEXT:    ldrb r3, [r0, #2]
+; BE-NEXT:    orr r1, r1, #1
 ; BE-NEXT:    strb r2, [r0, #2]
-; BE-NEXT:    orr r2, r3, r12, lsl #8
-; BE-NEXT:    orr r1, r2, r1, lsl #24
-; BE-NEXT:    orr r1, r1, #384
-; BE-NEXT:    lsr r1, r1, #8
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
 
@@ -149,13 +143,10 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ;
 ; BE-LABEL: i56_insert_bit:
 ; BE:       @ %bb.0:
-; BE-NEXT:    ldr r2, [r0]
-; BE-NEXT:    strb r2, [r0, #3]
-; BE-NEXT:    ldrh r12, [r0, #4]!
-; BE-NEXT:    ldrb r3, [r0, #2]
-; BE-NEXT:    orr r3, r3, r12, lsl #8
-; BE-NEXT:    orr r2, r3, r2, lsl #24
-; BE-NEXT:    bic r2, r2, #8192
+; BE-NEXT:    ldrh r2, [r0, #4]!
+; BE-NEXT:    mov r3, #57088
+; BE-NEXT:    orr r3, r3, #16711680
+; BE-NEXT:    and r2, r3, r2, lsl #8
 ; BE-NEXT:    orr r1, r2, r1, lsl #13
 ; BE-NEXT:    lsr r1, r1, #8
 ; BE-NEXT:    strh r1, [r0]
