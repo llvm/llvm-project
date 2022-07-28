@@ -5007,6 +5007,10 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   if (!AR->isAffine())
     return Result;
 
+  // This function can be expensive, only try to prove NUW once per AddRec.
+  if (!UnsignedWrapViaInductionTried.insert(AR).second)
+    return Result;
+
   const SCEV *Step = AR->getStepRecurrence(*this);
   unsigned BitWidth = getTypeSizeInBits(AR->getType());
   const Loop *L = AR->getLoop();
@@ -13579,6 +13583,9 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   SignedRanges.erase(S);
   HasRecMap.erase(S);
   MinTrailingZerosCache.erase(S);
+
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
+    UnsignedWrapViaInductionTried.erase(AR);
 
   auto ExprIt = ExprValueMap.find(S);
   if (ExprIt != ExprValueMap.end()) {
