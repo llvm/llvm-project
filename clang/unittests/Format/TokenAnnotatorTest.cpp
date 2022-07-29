@@ -747,6 +747,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() -> auto {}");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_LambdaArrow);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() -> auto & {}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_LambdaArrow);
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() -> auto * {}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_LambdaArrow);
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_LambdaLBrace);
 }
 
 } // namespace

@@ -214,6 +214,11 @@ public:
   // Sort the pieces by offset.
   // Remove any duplicate entries by dropping all but the first.
   void sortUniqueValues() {
+    // Values is either 1 item that does not have a fragment, or many items
+    // that all do. No need to sort if the former and also prevents operator<
+    // being called on a non fragment item when _GLIBCXX_DEBUG is defined.
+    if (Values.size() == 1)
+      return;
     llvm::sort(Values);
     Values.erase(std::unique(Values.begin(), Values.end(),
                              [](const DbgValueLoc &A, const DbgValueLoc &B) {

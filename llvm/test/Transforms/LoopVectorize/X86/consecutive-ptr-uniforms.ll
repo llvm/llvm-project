@@ -96,21 +96,15 @@ attributes #0 = { "target-cpu"="knl" }
 ; FORCE:       pred.load.if:
 ; FORCE-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; FORCE-NEXT:    store i32 [[TMP0]], i32* @b, align 1
-; FORCE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @a, i32 0, i32 [[TMP0]]
-; FORCE-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 1
 ; FORCE-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; FORCE:       pred.load.continue:
-; FORCE-NEXT:    [[TMP9:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_LOAD_IF]] ]
 ; FORCE-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; FORCE-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4]]
 ; FORCE:       pred.load.if1:
 ; FORCE-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; FORCE-NEXT:    store i32 [[TMP1]], i32* @b, align 1
-; FORCE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @a, i32 0, i32 [[TMP1]]
-; FORCE-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 1
 ; FORCE-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; FORCE:       pred.load.continue2:
-; FORCE-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, %pred.load.continue ], [ [[TMP12]], %pred.load.if1 ]
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4

@@ -30,6 +30,7 @@ std::unique_ptr<DwarfObject> DwarfObject::create(ObjFile *obj) {
             StringSwitch<StringRef *>(isec->getName())
                 .Case(section_names::debugInfo, &dObj->infoSection.Data)
                 .Case(section_names::debugLine, &dObj->lineSection.Data)
+                .Case(section_names::debugStrOffs, &dObj->strOffsSection.Data)
                 .Case(section_names::debugAbbrev, &dObj->abbrevSection)
                 .Case(section_names::debugStr, &dObj->strSection)
                 .Default(nullptr)) {

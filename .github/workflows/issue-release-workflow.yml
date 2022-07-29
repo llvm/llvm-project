@@ -72,6 +72,8 @@ jobs:
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - name: Setup Environment
         run: |

@@ -64,6 +64,10 @@ def SPV_CompositeConstructOp : SPV_Op<"CompositeConstruct", [NoSideEffect]> {
   let results = (outs
     SPV_Composite:$result
   );
+
+  let assemblyFormat = [{
+    $constituents attr-dict `:` `(` type(operands) `)` `->` type($result)
+  }];
 }
 
 // -----

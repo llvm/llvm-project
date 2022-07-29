@@ -3,12 +3,18 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-if(LLVM_USE_HOST_TOOLS)
-  build_native_tool(make-confusable-table make_confusable_table)
+set(CLANG_TIDY_CONFUSABLE_CHARS_GEN "clang-tidy-confusable-chars-gen" CACHE
+  STRING "Host clang-tidy-confusable-chars-gen executable. Saves building if cross-compiling.")
+
+if(NOT CLANG_TIDY_CONFUSABLE_CHARS_GEN STREQUAL "clang-tidy-confusable-chars-gen")
+  set(make_confusable_table ${CLANG_TIDY_CONFUSABLE_CHARS_GEN})
+  set(make_confusable_table_target ${CLANG_TIDY_CONFUSABLE_CHARS_GEN})
+elseif(LLVM_USE_HOST_TOOLS)
+  build_native_tool(clang-tidy-confusable-chars-gen make_confusable_table)
   set(make_confusable_table_target "${make_confusable_table}")
 else()
-  set(make_confusable_table $<TARGET_FILE:make-confusable-table>)
-  set(make_confusable_table_target make-confusable-table)
+  set(make_confusable_table $<TARGET_FILE:clang-tidy-confusable-chars-gen>)
+  set(make_confusable_table_target clang-tidy-confusable-chars-gen)
 endif()
 
 add_subdirectory(ConfusableTable)

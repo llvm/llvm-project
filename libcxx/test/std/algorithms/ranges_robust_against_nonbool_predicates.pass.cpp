@@ -35,36 +35,36 @@ static_assert(std::convertible_to<decltype(binary_pred(1, 2)), bool>);
 // Invokes both the (iterator, sentinel, ...) and the (range, ...) overloads of the given niebloid.
 
 // (in, ...)
-template <class Func, std::ranges::range Input, class ...Args>
-constexpr void test(Func&& func, Input& in, Args&& ...args) {
+template <class Func, std::ranges::range Input, class... Args>
+constexpr void test(Func&& func, Input& in, Args&&... args) {
   func(in.begin(), in.end(), std::forward<Args>(args)...);
   func(in, std::forward<Args>(args)...);
 }
 
 // (in1, in2, ...)
-template <class Func, std::ranges::range Input, class ...Args>
-constexpr void test(Func&& func, Input& in1, Input& in2, Args&& ...args) {
+template <class Func, std::ranges::range Input, class... Args>
+constexpr void test(Func&& func, Input& in1, Input& in2, Args&&... args) {
   func(in1.begin(), in1.end(), in2.begin(), in2.end(), std::forward<Args>(args)...);
   func(in1, in2, std::forward<Args>(args)...);
 }
 
 // (in, mid, ...)
-template <class Func, std::ranges::range Input, class ...Args>
-constexpr void test_mid(Func&& func, Input& in, std::ranges::iterator_t<Input> mid, Args&& ...args) {
+template <class Func, std::ranges::range Input, class... Args>
+constexpr void test_mid(Func&& func, Input& in, std::ranges::iterator_t<Input> mid, Args&&... args) {
   func(in.begin(), mid, in.end(), std::forward<Args>(args)...);
   func(in, mid, std::forward<Args>(args)...);
 }
 
 constexpr bool test_all() {
-  std::array in = {1, 2, 3};
+  std::array in  = {1, 2, 3};
   std::array in2 = {4, 5, 6};
-  auto mid = in.begin() + 1;
+  auto mid       = in.begin() + 1;
 
   std::array output = {7, 8, 9, 10, 11, 12};
-  auto out = output.begin();
-  auto out2 = output.begin() + 1;
+  auto out          = output.begin();
+  auto out2         = output.begin() + 1;
 
-  int x = 2;
+  int x     = 2;
   int count = 1;
 
   test(std::ranges::any_of, in, unary_pred);
@@ -133,7 +133,8 @@ constexpr bool test_all() {
     test(std::ranges::stable_sort, in, binary_pred);
   test_mid(std::ranges::partial_sort, in, mid, binary_pred);
   test_mid(std::ranges::nth_element, in, mid, binary_pred);
-  //test_mid(std::ranges::inplace_merge, in, mid, binary_pred);
+  if (!std::is_constant_evaluated())
+    test_mid(std::ranges::inplace_merge, in, mid, binary_pred);
   test(std::ranges::make_heap, in, binary_pred);
   test(std::ranges::push_heap, in, binary_pred);
   test(std::ranges::pop_heap, in, binary_pred);

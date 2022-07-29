@@ -13,6 +13,7 @@
 #include "TableGenBackends.h" // Declares all backends.
 #include "ASTTableGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
