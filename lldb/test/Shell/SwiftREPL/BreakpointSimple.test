@@ -1,4 +1,5 @@
 // Test that we can set breakpoints in the REPL.
+// XFAIL: *
 // REQUIRES: swift
 // RUN: %lldb --repl < %s | FileCheck %s
 
