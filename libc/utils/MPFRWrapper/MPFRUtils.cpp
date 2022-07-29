@@ -337,6 +337,12 @@ public:
     return result;
   }
 
+  MPFRNumber sinh() const {
+    MPFRNumber result(*this);
+    mpfr_sinh(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber sqrt() const {
     MPFRNumber result(*this);
     mpfr_sqrt(result.value, value, mpfr_rounding);
@@ -515,6 +521,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.round();
   case Operation::Sin:
     return mpfrInput.sin();
+  case Operation::Sinh:
+    return mpfrInput.sinh();
   case Operation::Sqrt:
     return mpfrInput.sqrt();
   case Operation::Tan:

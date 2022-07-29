@@ -472,6 +472,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"nextafterl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
 
           FunctionSpec<"coshf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"sinhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
 
