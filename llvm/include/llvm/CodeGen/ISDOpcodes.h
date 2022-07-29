@@ -1486,6 +1486,11 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// SetCC operation.
 CondCode getSetCCInverse(CondCode Operation, EVT Type);
 
+inline bool isExtOpcode(unsigned Opcode) {
+  return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
+         Opcode == ISD::SIGN_EXTEND;
+}
+
 namespace GlobalISel {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation. The U bit of the condition code has different meanings
