@@ -11,6 +11,7 @@
 ; TARGET_FEATURES-SAME: minsize
 ; TARGET_FEATURES-SAME: nounwind
 ; TARGET_FEATURES-SAME: optsize
+; TARGET_FEATURES-SAME: "target-cpu"="cyclone"
 ; TARGET_FEATURES-SAME: "target-features"="+sse"
 
 define linkonce_odr void @fish() #0 {
