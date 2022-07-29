@@ -955,11 +955,22 @@ private:
           break;
         }
       } else if (Style.isVerilog() && Tok->isNot(TT_BinaryOperator)) {
+        // The distribution weight operators are labeled
+        // TT_BinaryOperator by the lexer.
         if (Keywords.isVerilogEnd(*Tok->Previous) ||
             Keywords.isVerilogBegin(*Tok->Previous)) {
           Tok->setType(TT_VerilogBlockLabelColon);
         } else if (Contexts.back().ContextKind == tok::l_square) {
           Tok->setType(TT_BitFieldColon);
+        } else if (Contexts.back().ColonIsDictLiteral) {
+          Tok->setType(TT_DictLiteral);
+        } else if (Contexts.size() == 1) {
+          // In Verilog a case label doesn't have the case keyword. We
+          // assume a colon following an expression is a case label.
+          // Colons from ?: are annotated in parseConditional().
+          Tok->setType(TT_GotoLabelColon);
+          if (Line.Level > 1 || (!Line.InPPDirective && Line.Level > 0))
+            --Line.Level;
         }
         break;
       }
@@ -1229,6 +1240,13 @@ private:
       }
       if (Contexts.back().ContextType == Context::ForEachMacro)
         Contexts.back().IsExpression = true;
+      break;
+    case tok::kw_default:
+      // Unindent case labels.
+      if (Style.isVerilog() && Keywords.isVerilogEndOfLabel(*Tok) &&
+          (Line.Level > 1 || (!Line.InPPDirective && Line.Level > 0))) {
+        --Line.Level;
+      }
       break;
     case tok::identifier:
       if (Tok->isOneOf(Keywords.kw___has_include,
@@ -2609,6 +2627,10 @@ private:
                            Keywords.kw_throws)) {
         return 0;
       }
+      // In Verilog case labels are not on separate lines straight out of
+      // UnwrappedLineParser. The colon is not part of an expression.
+      if (Style.isVerilog() && Current->is(tok::colon))
+        return 0;
     }
     return -1;
   }
@@ -3614,7 +3636,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return true;
     if (Left.isOneOf(tok::pp_elif, tok::kw_for, tok::kw_while, tok::kw_switch,
                      tok::kw_case, TT_ForEachMacro, TT_ObjCForIn) ||
-        Left.isIf(Line.Type != LT_PreprocessorDirective)) {
+        Left.isIf(Line.Type != LT_PreprocessorDirective) ||
+        Right.is(TT_ConditionLParen)) {
       return Style.SpaceBeforeParensOptions.AfterControlStatements ||
              spaceRequiredBeforeParens(Right);
     }
@@ -4085,6 +4108,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
            Style.BitFieldColonSpacing == FormatStyle::BFCS_After;
   }
   if (Right.is(tok::colon)) {
+    if (Right.is(TT_GotoLabelColon) ||
+        (!Style.isVerilog() &&
+         Line.First->isOneOf(tok::kw_default, tok::kw_case))) {
+      return Style.SpaceBeforeCaseColon;
+    }
     if (Line.First->isOneOf(tok::kw_default, tok::kw_case))
       return Style.SpaceBeforeCaseColon;
     const FormatToken *Next = Right.getNextNonComment();
@@ -4347,6 +4375,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         Right.Next->is(tok::string_literal)) {
       return true;
     }
+  } else if (Style.isVerilog()) {
+    // Break after labels. In Verilog labels don't have the 'case' keyword, so
+    // it is hard to identify them in UnwrappedLineParser.
+    if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
+      return true;
   } else if (Style.Language == FormatStyle::LK_Cpp ||
              Style.Language == FormatStyle::LK_ObjC ||
              Style.Language == FormatStyle::LK_Proto ||
