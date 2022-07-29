@@ -673,7 +673,7 @@ void DWARFRewriter::updateUnitDebugInfo(
         AttrOffset = AttrVal->Offset;
         Value = AttrVal->V;
         const Optional<uint64_t> Result = Value.getAsAddress();
-        if (Result.hasValue()) {
+        if (Result) {
           const uint64_t Address = *Result;
           uint64_t NewAddress = 0;
           if (const BinaryFunction *Function =

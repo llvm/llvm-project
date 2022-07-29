@@ -2739,7 +2739,7 @@ void RewriteInstance::selectFunctionsToProcess() {
           Function.forEachName([&ForceFunctionsNR](StringRef Name) {
             return ForceFunctionsNR.count(Name.str());
           });
-      return Match.hasValue();
+      return Match.has_value();
     }
 
     for (std::string &Name : opts::SkipFunctionNames)
