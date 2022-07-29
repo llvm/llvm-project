@@ -1,3 +1,7 @@
+set(LLVM_TARGET_DEFINITIONS COFFOptions.td)
+tablegen(LLVM COFFOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(JITLinkTableGen)
+
 add_llvm_component_library(LLVMJITLink
   DWARFRecordSectionSplitter.cpp
   EHFrameSupport.cpp
@@ -23,6 +27,7 @@ add_llvm_component_library(LLVMJITLink
 
   # COFF
   COFF.cpp
+  COFFDirectiveParser.cpp
   COFFLinkGraphBuilder.cpp
   COFF_x86_64.cpp
 
@@ -36,10 +41,12 @@ add_llvm_component_library(LLVMJITLink
 
   DEPENDS
   intrinsics_gen
+  JITLinkTableGen
 
   LINK_COMPONENTS
   BinaryFormat
   Object
+  Option
   OrcTargetProcess
   Support
   )
