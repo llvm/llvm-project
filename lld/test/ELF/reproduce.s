@@ -74,9 +74,10 @@
 ## Check that directory path is stripped from -o <file-path>
 # RUN: mkdir -p %t.dir/build4/a/b/c
 # RUN: cd %t.dir
-# RUN: ld.lld build1/foo.o -o build4/a/b/c/bar -shared --as-needed --reproduce=repro4.tar
+# RUN: ld.lld build1/foo.o -o build4/a/b/c/bar -Map build4/a/b/c/map -shared --as-needed --reproduce=repro4.tar
 # RUN: tar xOf repro4.tar repro4/response.txt | FileCheck %s --check-prefix=RSP4
 # RSP4: -o bar
+# RSP4: -Map map
 
 .globl _start
 _start:
