@@ -587,6 +587,12 @@ class PatGprImm_32<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
     : Pat<(sext_inreg (OpNode GPR:$rj, ImmOpnd:$imm), i32),
           (Inst GPR:$rj, ImmOpnd:$imm)>;
 
+/// Predicates
+def AddLike: PatFrags<(ops node:$A, node:$B),
+                      [(add node:$A, node:$B), (or node:$A, node:$B)], [{
+    return N->getOpcode() == ISD::ADD || isOrEquivalentToAdd(N);
+}]>;
+
 /// Simple arithmetic operations
 
 // Match both a plain shift and one where the shift amount is masked (this is
@@ -653,6 +659,16 @@ def : PatGprGpr<or, OR>;
 def : PatGprImm<or, ORI, uimm12>;
 def : PatGprGpr<xor, XOR>;
 def : PatGprImm<xor, XORI, uimm12>;
+
+/// FrameIndex calculations
+let Predicates = [IsLA32] in {
+def : Pat<(AddLike (i32 BaseAddr:$rj), simm12:$imm12),
+          (ADDI_W (i32 BaseAddr:$rj), simm12:$imm12)>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(AddLike (i64 BaseAddr:$rj), simm12:$imm12),
+          (ADDI_D (i64 BaseAddr:$rj), simm12:$imm12)>;
+} // Predicates = [IsLA64]
 
 /// Shift
 
@@ -804,7 +820,7 @@ def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
 
 multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
   def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
-  def : Pat<(vt (LoadOp (add BaseAddr:$rj, simm12:$imm12))),
+  def : Pat<(vt (LoadOp (AddLike BaseAddr:$rj, simm12:$imm12))),
             (Inst BaseAddr:$rj, simm12:$imm12)>;
 }
 
@@ -828,7 +844,7 @@ multiclass StPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
                  ValueType vt> {
   def : Pat<(StoreOp (vt StTy:$rd), BaseAddr:$rj),
             (Inst StTy:$rd, BaseAddr:$rj, 0)>;
-  def : Pat<(StoreOp (vt StTy:$rd), (add BaseAddr:$rj, simm12:$imm12)),
+  def : Pat<(StoreOp (vt StTy:$rd), (AddLike BaseAddr:$rj, simm12:$imm12)),
             (Inst StTy:$rd, BaseAddr:$rj, simm12:$imm12)>;
 }
 

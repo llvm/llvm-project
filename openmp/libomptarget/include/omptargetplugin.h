@@ -26,6 +26,12 @@ extern "C" {
 // supported by the RTL. AMD calls these CUs.  Nvidia calls the SMs.
 int32_t __tgt_rtl_number_of_team_procs(int32_t device_num);
 
+// First method called on the plugin
+int32_t __tgt_rtl_init_plugin();
+
+// Last method called on the plugin
+int32_t __tgt_rtl_deinit_plugin();
+
 // Return the number of available devices of the type supported by the
 // target RTL.
 int32_t __tgt_rtl_number_of_devices(void);

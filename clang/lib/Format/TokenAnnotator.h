@@ -43,6 +43,7 @@ public:
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
+        IsContinuation(Line.IsContinuation),
         FirstStartColumn(Line.FirstStartColumn) {
     assert(!Line.Tokens.empty());
 
@@ -142,6 +143,10 @@ public:
 
   /// \c True if one of this line's children intersects with an input range.
   bool ChildrenAffected;
+
+  /// \c True if this line should be indented by ContinuationIndent in addition
+  /// to the normal indention level.
+  bool IsContinuation;
 
   unsigned FirstStartColumn;
 

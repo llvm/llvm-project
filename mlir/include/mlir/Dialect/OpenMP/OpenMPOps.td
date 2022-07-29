@@ -415,6 +415,9 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     When an if clause is present and evaluates to false, the preferred number of
     iterations to be executed concurrently is one, regardless of whether
     a simdlen clause is speciﬁed.
+
+    When a simdlen clause is present, the preferred number of iterations to be
+    executed concurrently is the value provided to the simdlen clause.
     ```
     omp.simdloop <clauses>
     for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
@@ -429,12 +432,14 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
              Variadic<IntLikeType>:$upperBound,
              Variadic<IntLikeType>:$step,
              Optional<I1>:$if_expr,
+             Confined<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
              UnitAttr:$inclusive
      );
  
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
+          |`simdlen` `(` $simdlen  `)`
     ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
                                   type($step), $inclusive) attr-dict
   }];

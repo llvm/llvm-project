@@ -10,7 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 
 #include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "utils/UnitTest/FPMatcher.h"

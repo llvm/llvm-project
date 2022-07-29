@@ -3,7 +3,7 @@
 Support, Getting Involved, and FAQ
 ==================================
 
-Please do not hesitate to reach out to us via openmp-dev@lists.llvm.org or join
+Please do not hesitate to reach out to us on the `Discourse forums (Runtimes - OpenMP) <https://discourse.llvm.org/c/runtimes/openmp/35>`_ or join
 one of our :ref:`regular calls <calls>`. Some common questions are answered in
 the :ref:`faq`.
 
@@ -39,7 +39,7 @@ FAQ
 .. note::
    The FAQ is a work in progress and most of the expected content is not
    yet available. While you can expect changes, we always welcome feedback and
-   additions. Please contact, e.g., through ``openmp-dev@lists.llvm.org``.
+   additions. Please post on the `Discourse forums (Runtimes - OpenMP) <https://discourse.llvm.org/c/runtimes/openmp/35>`__.
 
 
 Q: How to contribute a patch to the webpage or any other part?

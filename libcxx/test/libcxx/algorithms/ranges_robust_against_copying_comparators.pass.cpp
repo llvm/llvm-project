@@ -138,8 +138,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::is_sorted(a, Less(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted_until(first, last, Less(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted_until(a, Less(&copies)); assert(copies == 0);
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(first, mid, last, Less(&copies)); assert(copies == 0); }
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(a, mid, Less(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(first, mid, last, Less(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(a, mid, Less(&copies)); assert(copies == 0); }
     (void)std::ranges::lexicographical_compare(first, last, first2, last2, Less(&copies)); assert(copies == 0);
     (void)std::ranges::lexicographical_compare(a, b, Less(&copies)); assert(copies == 0);
     (void)std::ranges::lower_bound(first, last, value, Less(&copies)); assert(copies == 0);
@@ -222,10 +222,10 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::transform(a, first2, UnaryTransform(&copies)); assert(copies == 0);
     (void)std::ranges::transform(first, mid, mid, last, first2, BinaryTransform(&copies)); assert(copies == 0);
     (void)std::ranges::transform(a, b, first2, BinaryTransform(&copies)); assert(copies == 0);
-    //(void)std::ranges::unique(first, last, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::unique(a, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::unique_copy(first, last, first2, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::unique_copy(a, first2, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::unique(first, last, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::unique(a, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::unique_copy(first, last, first2, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::unique_copy(a, first2, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::upper_bound(first, last, value, Less(&copies)); assert(copies == 0);
     (void)std::ranges::upper_bound(a, value, Less(&copies)); assert(copies == 0);
 

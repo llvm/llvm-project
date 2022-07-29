@@ -1,5 +1,6 @@
 set(files
   __algorithm/adjacent_find.h
+  __algorithm/algorithm_family.h
   __algorithm/all_of.h
   __algorithm/any_of.h
   __algorithm/binary_search.h
@@ -180,6 +181,7 @@ set(files
   __algorithm/unique.h
   __algorithm/unique_copy.h
   __algorithm/unwrap_iter.h
+  __algorithm/unwrap_range.h
   __algorithm/upper_bound.h
   __assert
   __availability
@@ -635,6 +637,7 @@ set(files
   __utility/transaction.h
   __utility/unreachable.h
   __variant/monostate.h
+  __verbose_abort
   algorithm
   any
   array

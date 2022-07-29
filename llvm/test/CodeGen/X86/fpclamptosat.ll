@@ -417,16 +417,27 @@ entry:
 
 ; i64 saturate
 
+; FIXME: Failure to recognise the i128 is in i64 bounds.
 define i64 @stest_f64i64(double %x) {
 ; CHECK-LABEL: stest_f64i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttsd2si %xmm0, %rax
-; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    cmovbeq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ucomisd %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpq %rcx, %rax
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq __fixdfti@PLT
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmpq %rsi, %rax
+; CHECK-NEXT:    movq %rdx, %rdi
+; CHECK-NEXT:    sbbq $0, %rdi
+; CHECK-NEXT:    cmovlq %rdx, %rcx
+; CHECK-NEXT:    cmovgeq %rsi, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    movq $-1, %rsi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi double %x to i128
@@ -487,16 +498,27 @@ entry:
   ret i64 %conv6
 }
 
+; FIXME: Failure to recognise the i128 is in i64 bounds.
 define i64 @stest_f32i64(float %x) {
 ; CHECK-LABEL: stest_f32i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttss2si %xmm0, %rax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    cmovbeq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpq %rcx, %rax
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq __fixsfti@PLT
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmpq %rsi, %rax
+; CHECK-NEXT:    movq %rdx, %rdi
+; CHECK-NEXT:    sbbq $0, %rdi
+; CHECK-NEXT:    cmovlq %rdx, %rcx
+; CHECK-NEXT:    cmovgeq %rsi, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    movq $-1, %rsi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi float %x to i128
@@ -557,6 +579,7 @@ entry:
   ret i64 %conv6
 }
 
+; FIXME: Failure to recognise the i128 is in i64 bounds.
 define i64 @stest_f16i64(half %x) {
 ; CHECK-LABEL: stest_f16i64:
 ; CHECK:       # %bb.0: # %entry
@@ -564,13 +587,19 @@ define i64 @stest_f16i64(half %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movzwl %di, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %rax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    cmovbeq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpq %rcx, %rax
+; CHECK-NEXT:    callq __fixsfti@PLT
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmpq %rsi, %rax
+; CHECK-NEXT:    movq %rdx, %rdi
+; CHECK-NEXT:    sbbq $0, %rdi
+; CHECK-NEXT:    cmovlq %rdx, %rcx
+; CHECK-NEXT:    cmovgeq %rsi, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    movq $-1, %rsi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

@@ -6,7 +6,7 @@ LLVM Language Reference Manual
 
 .. contents::
    :local:
-   :depth: 4
+   :depth: 3
 
 Abstract
 ========

@@ -236,7 +236,7 @@ private:
   std::string stderr_from_child_;
 };
 
-void std::__libcpp_assertion_handler(char const* format, ...) {
+void std::__libcpp_verbose_abort(char const* format, ...) {
   assert(!GlobalMatcher().empty());
 
   // Extract information from the error message. This has to stay synchronized with

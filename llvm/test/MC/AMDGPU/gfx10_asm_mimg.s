@@ -469,6 +469,9 @@ image_gather4_c_b_cl_o v[64:67], [v32, v0, v4, v5, v6, v7, v8], s[4:11], s[100:1
 image_gather4_c_lz_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
 ; GFX10: image_gather4_c_lz_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D ; encoding: [0x12,0x01,0x7c,0xf1,0x20,0x40,0x21,0x03,0x00,0x04,0x05,0x06]
 
+image_gather4h v[64:67], [v32, v33, v34], s[4:11], s[4:7] dmask:0x2 dim:SQ_RSRC_IMG_CUBE
+; GFX10: image_gather4h v[64:67], [v32, v33, v34], s[4:11], s[4:7] dmask:0x2 dim:SQ_RSRC_IMG_CUBE ; encoding: [0x1a,0x02,0x84,0xf1,0x20,0x40,0x21,0x00,0x21,0x22,0x00,0x00]
+
 image_get_lod v64, v[32:33], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX10: image_get_lod v64, v[32:33], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_2D ; encoding: [0x08,0x01,0x80,0xf1,0x20,0x40,0x21,0x03]
 

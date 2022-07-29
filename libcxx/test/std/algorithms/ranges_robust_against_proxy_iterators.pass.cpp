@@ -136,7 +136,7 @@ constexpr void run_tests() {
   if constexpr (std::copyable<T>) {
     test(std::ranges::reverse_copy, in, out);
     test_mid(std::ranges::rotate_copy, in, mid, out);
-    //test(std::ranges::unique_copy, in, out);
+    test(std::ranges::unique_copy, in, out);
     test(std::ranges::partition_copy, in, out, out2, unary_pred);
     //test_mid(std::ranges::partial_sort_copy, in, in2);
     test(std::ranges::merge, in, in2, out);
@@ -153,7 +153,7 @@ constexpr void run_tests() {
     test(std::ranges::shuffle, in, rand_gen());
   //if (!std::is_constant_evaluated())
   //  test(std::ranges::sample, in, out, count, rand_gen());
-  //test(std::ranges::unique, in);
+  test(std::ranges::unique, in);
   test(std::ranges::partition, in, unary_pred);
   // TODO(ranges): `stable_partition` requires `ranges::rotate` to be implemented.
   //if (!std::is_constant_evaluated())
@@ -164,6 +164,7 @@ constexpr void run_tests() {
   //  test(std::ranges::stable_sort, in);
   test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
+  // TODO(ranges): `inplace_merge` requires `ranges::rotate` to be implemented.
   //if (!std::is_constant_evaluated())
   //  test_mid(std::ranges::inplace_merge, in, mid);
   test(std::ranges::make_heap, in);

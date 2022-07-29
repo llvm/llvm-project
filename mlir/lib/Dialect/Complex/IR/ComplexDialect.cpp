@@ -48,11 +48,16 @@ LogicalResult complex::NumberAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     ::llvm::APFloat real, ::llvm::APFloat imag, ::mlir::Type type) {
 
-  if (!type.isa<FloatType>())
-    return emitError()
-           << "element of the complex attribute must be float like type.";
+  if (!type.isa<ComplexType>())
+    return emitError() << "complex attribute must be a complex type.";
 
-  const auto &typeFloatSemantics = type.cast<FloatType>().getFloatSemantics();
+  Type elementType = type.cast<ComplexType>().getElementType();
+  if (!elementType.isa<FloatType>())
+    return emitError()
+           << "element type of the complex attribute must be float like type.";
+
+  const auto &typeFloatSemantics =
+      elementType.cast<FloatType>().getFloatSemantics();
   if (&real.getSemantics() != &typeFloatSemantics)
     return emitError()
            << "type doesn't match the type implied by its `real` value";
@@ -64,47 +69,17 @@ LogicalResult complex::NumberAttr::verify(
 }
 
 void complex::NumberAttr::print(AsmPrinter &printer) const {
-  printer << "<:";
-  printer.printType(getType());
-  printer << " ";
-  printer.printFloat(getReal());
-  printer << ", ";
-  printer.printFloat(getImag());
-  printer << ">";
+  printer << "<:" << getType().cast<ComplexType>().getElementType() << " "
+          << getReal() << ", " << getImag() << ">";
 }
 
 Attribute complex::NumberAttr::parse(AsmParser &parser, Type odsType) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  if (failed(parser.parseColon()))
-    return {};
-
   Type type;
-  if (failed(parser.parseType(type)))
+  double real, imag;
+  if (parser.parseLess() || parser.parseColon() || parser.parseType(type) ||
+      parser.parseFloat(real) || parser.parseComma() ||
+      parser.parseFloat(imag) || parser.parseGreater())
     return {};
 
-  double real;
-  if (failed(parser.parseFloat(real)))
-    return {};
-
-  if (failed(parser.parseComma()))
-    return {};
-
-  double imag;
-  if (failed(parser.parseFloat(imag)))
-    return {};
-
-  if (failed(parser.parseGreater()))
-    return {};
-
-  bool unused = false;
-  auto realFloat = APFloat(real);
-  realFloat.convert(type.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &unused);
-  auto imagFloat = APFloat(imag);
-  imagFloat.convert(type.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &unused);
-
-  return NumberAttr::get(parser.getContext(), realFloat, imagFloat, type);
+  return NumberAttr::get(ComplexType::get(type), real, imag);
 }

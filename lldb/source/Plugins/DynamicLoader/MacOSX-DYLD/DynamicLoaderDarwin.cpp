@@ -276,7 +276,7 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
-            } 
+            }
           }
         }
 
@@ -541,8 +541,8 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   const size_t image_infos_size = image_infos.size();
   for (size_t i = 0; i < image_infos_size; i++) {
     if (image_infos[i].header.filetype == llvm::MachO::MH_DYLINKER) {
-      // In a "simulator" process we will have two dyld modules -- 
-      // a "dyld" that we want to keep track of, and a "dyld_sim" which 
+      // In a "simulator" process we will have two dyld modules --
+      // a "dyld" that we want to keep track of, and a "dyld_sim" which
       // we don't need to keep track of here.  dyld_sim will have a non-macosx
       // OS.
       if (target_arch.GetTriple().getEnvironment() == llvm::Triple::Simulator &&
@@ -551,7 +551,7 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
       }
 
       dyld_idx = i;
-    } 
+    }
     if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
       exe_idx = i;
     }
@@ -652,7 +652,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               module_spec.SetObjectOffset(objfile->GetFileOffset() +
                                           commpage_section->GetFileOffset());
               module_spec.SetObjectSize(objfile->GetByteSize());
-              commpage_image_module_sp = target.GetOrCreateModule(module_spec, 
+              commpage_image_module_sp = target.GetOrCreateModule(module_spec,
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
@@ -1023,8 +1023,7 @@ lldb::ModuleSP DynamicLoaderDarwin::GetPThreadLibraryModule() {
   if (!module_sp) {
     SymbolContextList sc_list;
     ModuleSpec module_spec;
-    module_spec.GetFileSpec().GetFilename().SetCString(
-        "libsystem_pthread.dylib");
+    module_spec.GetFileSpec().SetFilename("libsystem_pthread.dylib");
     ModuleList module_list;
     m_process->GetTarget().GetImages().FindModules(module_spec, module_list);
     if (!module_list.IsEmpty()) {

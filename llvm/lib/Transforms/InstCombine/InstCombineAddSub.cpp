@@ -2238,7 +2238,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
 /// This eliminates floating-point negation in either 'fneg(X)' or
 /// 'fsub(-0.0, X)' form by combining into a constant operand.
-static Instruction *foldFNegIntoConstant(Instruction &I) {
+static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   // This is limited with one-use because fneg is assumed better for
   // reassociation and cheaper in codegen than fmul/fdiv.
   // TODO: Should the m_OneUse restriction be removed?
@@ -2252,28 +2252,31 @@ static Instruction *foldFNegIntoConstant(Instruction &I) {
   // Fold negation into constant operand.
   // -(X * C) --> X * (-C)
   if (match(FNegOp, m_FMul(m_Value(X), m_Constant(C))))
-    return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+      return BinaryOperator::CreateFMulFMF(X, NegC, &I);
   // -(X / C) --> X / (-C)
   if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C))))
-    return BinaryOperator::CreateFDivFMF(X, ConstantExpr::getFNeg(C), &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+      return BinaryOperator::CreateFDivFMF(X, NegC, &I);
   // -(C / X) --> (-C) / X
-  if (match(FNegOp, m_FDiv(m_Constant(C), m_Value(X)))) {
-    Instruction *FDiv =
-        BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
+  if (match(FNegOp, m_FDiv(m_Constant(C), m_Value(X))))
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
+      Instruction *FDiv = BinaryOperator::CreateFDivFMF(NegC, X, &I);
 
-    // Intersect 'nsz' and 'ninf' because those special value exceptions may not
-    // apply to the fdiv. Everything else propagates from the fneg.
-    // TODO: We could propagate nsz/ninf from fdiv alone?
-    FastMathFlags FMF = I.getFastMathFlags();
-    FastMathFlags OpFMF = FNegOp->getFastMathFlags();
-    FDiv->setHasNoSignedZeros(FMF.noSignedZeros() && OpFMF.noSignedZeros());
-    FDiv->setHasNoInfs(FMF.noInfs() && OpFMF.noInfs());
-    return FDiv;
-  }
+      // Intersect 'nsz' and 'ninf' because those special value exceptions may
+      // not apply to the fdiv. Everything else propagates from the fneg.
+      // TODO: We could propagate nsz/ninf from fdiv alone?
+      FastMathFlags FMF = I.getFastMathFlags();
+      FastMathFlags OpFMF = FNegOp->getFastMathFlags();
+      FDiv->setHasNoSignedZeros(FMF.noSignedZeros() && OpFMF.noSignedZeros());
+      FDiv->setHasNoInfs(FMF.noInfs() && OpFMF.noInfs());
+      return FDiv;
+    }
   // With NSZ [ counter-example with -0.0: -(-0.0 + 0.0) != 0.0 + -0.0 ]:
   // -(X + C) --> -X + -C --> -C - X
   if (I.hasNoSignedZeros() && match(FNegOp, m_FAdd(m_Value(X), m_Constant(C))))
-    return BinaryOperator::CreateFSubFMF(ConstantExpr::getFNeg(C), X, &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+      return BinaryOperator::CreateFSubFMF(NegC, X, &I);
 
   return nullptr;
 }
@@ -2301,7 +2304,7 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
                                   getSimplifyQuery().getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldFNegIntoConstant(I))
+  if (Instruction *X = foldFNegIntoConstant(I, DL))
     return X;
 
   Value *X, *Y;
@@ -2370,7 +2373,7 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   if (match(&I, m_FNeg(m_Value(Op))))
     return UnaryOperator::CreateFNegFMF(Op, &I);
 
-  if (Instruction *X = foldFNegIntoConstant(I))
+  if (Instruction *X = foldFNegIntoConstant(I, DL))
     return X;
 
   if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
@@ -2409,7 +2412,8 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   // But don't transform constant expressions because there's an inverse fold
   // for X + (-Y) --> X - Y.
   if (match(Op1, m_ImmConstant(C)))
-    return BinaryOperator::CreateFAddFMF(Op0, ConstantExpr::getFNeg(C), &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+      return BinaryOperator::CreateFAddFMF(Op0, NegC, &I);
 
   // X - (-Y) --> X + Y
   if (match(Op1, m_FNeg(m_Value(Y))))

@@ -252,16 +252,23 @@ static std::string buildDWODescription(StringRef Name, StringRef DWPName,
   std::string Text = "\'";
   Text += Name;
   Text += '\'';
-  if (!DWPName.empty()) {
+  bool HasDWO = !DWOName.empty();
+  bool HasDWP = !DWPName.empty();
+  if (HasDWO || HasDWP) {
     Text += " (from ";
-    if (!DWOName.empty()) {
+    if (HasDWO) {
       Text += '\'';
       Text += DWOName;
-      Text += "' in ";
+      Text += '\'';
     }
-    Text += '\'';
-    Text += DWPName;
-    Text += "')";
+    if (HasDWO && HasDWP)
+      Text += " in ";
+    if (!DWPName.empty()) {
+      Text += '\'';
+      Text += DWPName;
+      Text += '\'';
+    }
+    Text += ")";
   }
   return Text;
 }

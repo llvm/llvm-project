@@ -1342,13 +1342,29 @@ pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Putting accesses to DeviceInfo global behind a function call prior
 // to changing to use init_plugin/deinit_plugin calls
-static RTLDeviceInfoTy DeviceInfoState;
-static RTLDeviceInfoTy& DeviceInfo() { return DeviceInfoState; }
 
 /// Global function for enabling/disabling queue profiling, used for OMPT trace
 /// records.
+static RTLDeviceInfoTy *DeviceInfoState = nullptr;
+static RTLDeviceInfoTy &DeviceInfo() { return *DeviceInfoState; }
+
+int32_t __tgt_rtl_init_plugin() {
+  DeviceInfoState = new RTLDeviceInfoTy;
+  return (DeviceInfoState && DeviceInfoState->ConstructionSucceeded)
+             ? OFFLOAD_SUCCESS
+             : OFFLOAD_FAIL;
+}
+
 void ompt_enable_queue_profiling(int enable) {
   DeviceInfo().enableQueueProfiling(enable);
+}
+
+int32_t __tgt_rtl_deinit_plugin() {
+#if fixme
+  if (DeviceInfoState)
+    delete DeviceInfoState;
+#endif
+  return OFFLOAD_SUCCESS;
 }
 
 namespace {
@@ -2758,6 +2774,34 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
 
 int __tgt_rtl_number_of_team_procs(int DeviceId) {
   return DeviceInfo().ComputeUnits[DeviceId];
+}
+
+int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
+                                       __tgt_image_info *info) {
+  if (!__tgt_rtl_is_valid_binary(image))
+    return false;
+#if FIXME
+  // A subarchitecture was not specified. Assume it is compatible.
+  if (!info->Arch)
+    return true;
+
+  int32_t NumberOfDevices = __tgt_rtl_number_of_devices();
+
+  for (int32_t DeviceId = 0; DeviceId < NumberOfDevices; ++DeviceId) {
+    __tgt_rtl_init_device(DeviceId);
+    hsa_agent_t agent = DeviceInfo().HSAAgents[DeviceId];
+    hsa_status_t err = hsa_agent_iterate_isas(agent, GetIsaInfo, &DeviceId);
+    if (err != HSA_STATUS_SUCCESS) {
+      DP("Error iterating ISAs\n");
+      return false;
+    }
+    if (!IsImageCompatibleWithEnv(info->Arch, DeviceInfo().TargetID[DeviceId]))
+      return false;
+  }
+  DP("Image has Target ID compatible with the current environment: %s\n",
+     info->Arch);
+#endif
+  return true;
 }
 
 int __tgt_rtl_number_of_devices() {

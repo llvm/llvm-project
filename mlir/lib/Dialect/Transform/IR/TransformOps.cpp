@@ -281,18 +281,32 @@ DiagnosedSilenceableFailure
 transform::ForeachOp::apply(transform::TransformResults &results,
                             transform::TransformState &state) {
   ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  SmallVector<SmallVector<Operation *>> resultOps(getNumResults(), {});
+
   for (Operation *op : payloadOps) {
     auto scope = state.make_region_scope(getBody());
     if (failed(state.mapBlockArguments(getIterationVariable(), {op})))
       return DiagnosedSilenceableFailure::definiteFailure();
 
+    // Execute loop body.
     for (Operation &transform : getBody().front().without_terminator()) {
       DiagnosedSilenceableFailure result = state.applyTransform(
           cast<transform::TransformOpInterface>(transform));
       if (!result.succeeded())
         return result;
     }
+
+    // Append yielded payload ops to result list (if any).
+    for (unsigned i = 0; i < getNumResults(); ++i) {
+      ArrayRef<Operation *> yieldedOps =
+          state.getPayloadOps(getYieldOp().getOperand(i));
+      resultOps[i].append(yieldedOps.begin(), yieldedOps.end());
+    }
   }
+
+  for (unsigned i = 0; i < getNumResults(); ++i)
+    results.set(getResult(i).cast<OpResult>(), resultOps[i]);
+
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -306,6 +320,9 @@ void transform::ForeachOp::getEffects(
   } else {
     onlyReadsHandle(getTarget(), effects);
   }
+
+  for (Value result : getResults())
+    producesHandle(result, effects);
 }
 
 void transform::ForeachOp::getSuccessorRegions(
@@ -329,6 +346,21 @@ transform::ForeachOp::getSuccessorEntryOperands(Optional<unsigned> index) {
   // precise) of the payload ops of the ForeachOp operand.
   assert(index && *index == 0 && "unexpected region index");
   return getOperation()->getOperands();
+}
+
+transform::YieldOp transform::ForeachOp::getYieldOp() {
+  return cast<transform::YieldOp>(getBody().front().getTerminator());
+}
+
+LogicalResult transform::ForeachOp::verify() {
+  auto yieldOp = getYieldOp();
+  if (getNumResults() != yieldOp.getNumOperands())
+    return emitOpError() << "expects the same number of results as the "
+                            "terminator has operands";
+  for (Value v : yieldOp.getOperands())
+    if (!v.getType().isa<pdl::OperationType>())
+      return yieldOp->emitOpError("expects only PDL_Operation operands");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

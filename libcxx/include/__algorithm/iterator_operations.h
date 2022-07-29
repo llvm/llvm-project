@@ -17,6 +17,8 @@
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/readable_traits.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <type_traits>
@@ -34,6 +36,10 @@ struct _RangeAlgPolicy {};
 
 template <>
 struct _IterOps<_RangeAlgPolicy> {
+
+  template <class _Iter>
+  using __value_type = iter_value_t<_Iter>;
+
   static constexpr auto advance = ranges::advance;
   static constexpr auto distance = ranges::distance;
   static constexpr auto __iter_move = ranges::iter_move;
@@ -49,6 +55,9 @@ struct _ClassicAlgPolicy {};
 template <>
 struct _IterOps<_ClassicAlgPolicy> {
 
+  template <class _Iter>
+  using __value_type = typename iterator_traits<_Iter>::value_type;
+
   // advance
   template <class _Iter, class _Distance>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -63,24 +72,46 @@ struct _IterOps<_ClassicAlgPolicy> {
     return std::distance(__first, __last);
   }
 
-  // iter_move
+  template <class _Iter>
+  using __deref_t = decltype(*std::declval<_Iter&>());
+
+  template <class _Iter>
+  using __move_t = decltype(std::move(*std::declval<_Iter&>()));
+
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-      // Declaring the return type is necessary for C++03, so we basically mirror what `decltype(auto)` would deduce.
-      static __enable_if_t<
-          is_reference<typename iterator_traits<__uncvref_t<_Iter> >::reference>::value,
-          typename remove_reference< typename iterator_traits<__uncvref_t<_Iter> >::reference >::type&&>
-      __iter_move(_Iter&& __i) {
+  static void __validate_iter_reference() {
+    static_assert(is_same<__deref_t<_Iter>, typename iterator_traits<__uncvref_t<_Iter> >::reference>::value,
+        "It looks like your iterator's `iterator_traits<It>::reference` does not match the return type of "
+        "dereferencing the iterator, i.e., calling `*it`. This is undefined behavior according to [input.iterators] "
+        "and can lead to dangling reference issues at runtime, so we are flagging this.");
+  }
+
+  // iter_move
+  template <class _Iter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 static
+  // If the result of dereferencing `_Iter` is a reference type, deduce the result of calling `std::move` on it. Note
+  // that the C++03 mode doesn't support `decltype(auto)` as the return type.
+  __enable_if_t<
+      is_reference<__deref_t<_Iter> >::value,
+      __move_t<_Iter> >
+  __iter_move(_Iter&& __i) {
+    __validate_iter_reference<_Iter>();
+
     return std::move(*std::forward<_Iter>(__i));
   }
 
   template <class _Iter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-      // Declaring the return type is necessary for C++03, so we basically mirror what `decltype(auto)` would deduce.
-      static __enable_if_t<
-          !is_reference<typename iterator_traits<__uncvref_t<_Iter> >::reference>::value,
-          typename iterator_traits<__uncvref_t<_Iter> >::reference>
-      __iter_move(_Iter&& __i) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 static
+  // If the result of dereferencing `_Iter` is a value type, deduce the return value of this function to also be a
+  // value -- otherwise, after `operator*` returns a temporary, this function would return a dangling reference to that
+  // temporary. Note that the C++03 mode doesn't support `auto` as the return type.
+  __enable_if_t<
+      !is_reference<__deref_t<_Iter> >::value,
+      __deref_t<_Iter> >
+  __iter_move(_Iter&& __i) {
+    __validate_iter_reference<_Iter>();
+
     return *std::forward<_Iter>(__i);
   }
 
@@ -100,7 +131,7 @@ struct _IterOps<_ClassicAlgPolicy> {
 
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_AFTER_CXX11
-  __uncvref_t<_Iter> next(_Iter&& __it, 
+  __uncvref_t<_Iter> next(_Iter&& __it,
                           typename iterator_traits<__uncvref_t<_Iter> >::difference_type __n = 1){
     return std::next(std::forward<_Iter>(__it), __n);
   }

@@ -2447,7 +2447,7 @@ declare i32 @llvm.bswap.i32(i32)
 define signext i32 @bswap_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: bswap_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a1, a0, 8
+; RV64I-NEXT:    srli a1, a0, 8
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addiw a2, a2, -256
 ; RV64I-NEXT:    and a1, a1, a2
@@ -2473,7 +2473,7 @@ define signext i32 @bswap_i32(i32 signext %a) nounwind {
 define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: bswap_i32_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a2, a0, 8
+; RV64I-NEXT:    srli a2, a0, 8
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addiw a3, a3, -256
 ; RV64I-NEXT:    and a2, a2, a3
@@ -2614,7 +2614,7 @@ declare i32 @llvm.bitreverse.i32(i32)
 define signext i32 @bitreverse_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: bitreverse_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a1, a0, 8
+; RV64I-NEXT:    srli a1, a0, 8
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addiw a2, a2, -256
 ; RV64I-NEXT:    and a1, a1, a2
@@ -2661,7 +2661,7 @@ define signext i32 @bitreverse_i32(i32 signext %a) nounwind {
 define void @bitreverse_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: bitreverse_i32_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a2, a0, 8
+; RV64I-NEXT:    srli a2, a0, 8
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addiw a3, a3, -256
 ; RV64I-NEXT:    and a2, a2, a3
@@ -2780,7 +2780,7 @@ define i32 @bswap_rotr_i32(i32 %a) {
 ; RV64I-NEXT:    slli a2, a0, 24
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    srliw a2, a0, 24
-; RV64I-NEXT:    srliw a0, a0, 16
+; RV64I-NEXT:    srli a0, a0, 16
 ; RV64I-NEXT:    slli a0, a0, 8
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    slliw a0, a0, 16
@@ -2801,7 +2801,7 @@ define i32 @bswap_rotl_i32(i32 %a) {
 ; RV64I-LABEL: bswap_rotl_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a0, 24
-; RV64I-NEXT:    srliw a2, a0, 16
+; RV64I-NEXT:    srli a2, a0, 16
 ; RV64I-NEXT:    slli a2, a2, 8
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    slli a2, a0, 8

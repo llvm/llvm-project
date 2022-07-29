@@ -964,43 +964,44 @@ private:
     const Expr *LHSExpr = B->getLHS()->IgnoreParens();
     const Expr *RHSExpr = B->getRHS()->IgnoreParens();
 
-    const IntegerLiteral *IntLiteral = dyn_cast<IntegerLiteral>(LHSExpr);
-    const Expr *BoolExpr = RHSExpr;
+    const Expr *BoolExpr = nullptr; // To store the expression.
+    Expr::EvalResult IntExprResult; // If integer literal then will save value.
 
-    if (!IntLiteral) {
-      IntLiteral = dyn_cast<IntegerLiteral>(RHSExpr);
+    if (LHSExpr->EvaluateAsInt(IntExprResult, *Context))
+      BoolExpr = RHSExpr;
+    else if (RHSExpr->EvaluateAsInt(IntExprResult, *Context))
       BoolExpr = LHSExpr;
-    }
-
-    if (!IntLiteral)
+    else
       return TryResult();
 
+    llvm::APInt L1 = IntExprResult.Val.getInt();
+
     const BinaryOperator *BitOp = dyn_cast<BinaryOperator>(BoolExpr);
-    if (BitOp && (BitOp->getOpcode() == BO_And ||
-                  BitOp->getOpcode() == BO_Or)) {
-      const Expr *LHSExpr2 = BitOp->getLHS()->IgnoreParens();
-      const Expr *RHSExpr2 = BitOp->getRHS()->IgnoreParens();
+    if (BitOp &&
+        (BitOp->getOpcode() == BO_And || BitOp->getOpcode() == BO_Or)) {
 
-      const IntegerLiteral *IntLiteral2 = dyn_cast<IntegerLiteral>(LHSExpr2);
+      // If integer literal in expression identified then will save value.
+      Expr::EvalResult IntExprResult2;
 
-      if (!IntLiteral2)
-        IntLiteral2 = dyn_cast<IntegerLiteral>(RHSExpr2);
+      if (BitOp->getLHS()->EvaluateAsInt(IntExprResult2, *Context))
+        ; // LHS is a constant expression.
+      else if (BitOp->getRHS()->EvaluateAsInt(IntExprResult2, *Context))
+        ; // RHS is a constant expression.
+      else
+        return TryResult(); // Neither is a constant expression, bail out.
 
-      if (!IntLiteral2)
-        return TryResult();
+      llvm::APInt L2 = IntExprResult2.Val.getInt();
 
-      llvm::APInt L1 = IntLiteral->getValue();
-      llvm::APInt L2 = IntLiteral2->getValue();
       if ((BitOp->getOpcode() == BO_And && (L2 & L1) != L1) ||
-          (BitOp->getOpcode() == BO_Or  && (L2 | L1) != L1)) {
+          (BitOp->getOpcode() == BO_Or && (L2 | L1) != L1)) {
         if (BuildOpts.Observer)
           BuildOpts.Observer->compareBitwiseEquality(B,
                                                      B->getOpcode() != BO_EQ);
         TryResult(B->getOpcode() != BO_EQ);
       }
     } else if (BoolExpr->isKnownToHaveBooleanValue()) {
-      llvm::APInt IntValue = IntLiteral->getValue();
-      if ((IntValue == 1) || (IntValue == 0)) {
+      llvm::APInt IntValue = IntExprResult.Val.getInt(); // Getting the value.
+      if ((L1 == 1) || (L1 == 0)) {
         return TryResult();
       }
       return TryResult(B->getOpcode() != BO_EQ);

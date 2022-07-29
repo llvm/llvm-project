@@ -12,7 +12,7 @@
 #include "PlatformDefs.h"
 
 #include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/builtin_wrappers.h"
 #include "src/__support/common.h"
 
@@ -39,7 +39,7 @@ template <typename T> struct ExponentWidth {
 // an x87 floating point format. This format is an IEEE 754 extension format.
 // It is handled as an explicit specialization of this class.
 template <typename T> struct FPBits {
-  static_assert(cpp::IsFloatingPointType<T>::Value,
+  static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
@@ -103,13 +103,12 @@ template <typename T> struct FPBits {
 
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
-  template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<T, XType>::Value, int> = 0>
+  template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
   constexpr explicit FPBits(XType x)
       : bits(__llvm_libc::bit_cast<UIntType>(x)) {}
 
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
   constexpr explicit FPBits(XType x) : bits(x) {}
 
   FPBits() : bits(0) {}
@@ -154,8 +153,8 @@ template <typename T> struct FPBits {
 
   static constexpr FPBits<T> neg_zero() { return zero(true); }
 
-  static constexpr FPBits<T> inf() {
-    FPBits<T> bits;
+  static constexpr FPBits<T> inf(bool sign = false) {
+    FPBits<T> bits(sign ? FloatProp::SIGN_MASK : UIntType(0));
     bits.set_unbiased_exponent(MAX_EXPONENT);
     return bits;
   }

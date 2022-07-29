@@ -13,14 +13,68 @@
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/TilingInterface.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
 
-namespace {
+//===----------------------------------------------------------------------===//
+// Utility methods for implementation of Tiling Interface for Linalg ops
+//===----------------------------------------------------------------------===//
 
+/// Return the SSA values that represent the data point accessed using a given
+/// `indexingMap` for a given point in the iteration space represented by `ivs`.
+static SmallVector<Value> getIndicesForAccess(OpBuilder &b, Location loc,
+                                              AffineMap indexingMap,
+                                              ValueRange ivs) {
+  SmallVector<Value> indices;
+  indices.reserve(indexingMap.getNumResults());
+  for (auto result : indexingMap.getResults()) {
+    AffineMap m = AffineMap::get(indexingMap.getNumDims(),
+                                 indexingMap.getNumSymbols(), result);
+    Value v = b.create<AffineApplyOp>(loc, m, ivs);
+    indices.push_back(v);
+  }
+  return indices;
+}
+
+/// Method to inline the payload of a `linalgOp` given the iteration space
+/// point and values for the arguments of the payload.
+static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
+                                   ValueRange ivs, ValueRange argValues) {
+  Block *body = linalgOp.getBlock();
+  BlockAndValueMapping map;
+  map.map(body->getArguments(), argValues);
+  for (auto &op : body->without_terminator()) {
+    if (auto indexOp = dyn_cast<IndexOp>(&op)) {
+      map.map(indexOp.getResult(), ivs[indexOp.dim()]);
+      continue;
+    }
+    b.clone(op, map);
+  }
+
+  Operation *terminator = body->getTerminator();
+  Location loc = terminator->getLoc();
+  for (auto operand : llvm::enumerate(terminator->getOperands())) {
+    Value toStore = map.lookupOrDefault(operand.value());
+    OpOperand *storeInto = linalgOp.getOutputOperand(operand.index());
+    auto indices = getIndicesForAccess(
+        b, loc, linalgOp.getTiedIndexingMap(storeInto), ivs);
+    b.create<memref::StoreOp>(loc, toStore,
+                              linalgOp.getOutputOperand(operand.index())->get(),
+                              indices);
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// External Model for implementing `TilingInterface` for `LinalgOp`s.
+//===----------------------------------------------------------------------===//
+
+namespace {
 /// External model implementation of TilingInterface for LinalgOps. An external
 /// model implementation is used for now till the use of `TilingInterface` is
 /// on-par with the current Linalg tiling + fusion patterns. Once it is
@@ -54,11 +108,10 @@ struct LinalgOpTilingInterface
         linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
 
-    IRRewriter rewriter(b);
     return llvm::to_vector(
         llvm::map_range(map.getResults(), [&](AffineExpr loopExpr) {
-          OpFoldResult ofr = makeComposedFoldedAffineApply(
-              rewriter, loc, loopExpr, allShapesSizes);
+          OpFoldResult ofr =
+              makeComposedFoldedAffineApply(b, loc, loopExpr, allShapesSizes);
           return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
         }));
   }
@@ -102,10 +155,9 @@ struct LinalgOpTilingInterface
 
     AffineExpr d0;
     bindDims(b.getContext(), d0);
-    IRRewriter rewriter(b);
     SmallVector<OpFoldResult> subShapeSizes =
         llvm::to_vector(llvm::map_range(sizes, [&](OpFoldResult ofr) {
-          return makeComposedFoldedAffineApply(rewriter, loc, d0 - 1, ofr);
+          return makeComposedFoldedAffineApply(b, loc, d0 - 1, ofr);
         }));
 
     OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
@@ -166,6 +218,38 @@ struct LinalgOpTilingInterface
       return op->emitOpError("failed to generate tiled implementation");
 
     return tiledOp[0]->getResult(resultNumber);
+  }
+
+  LogicalResult generateScalarImplementation(Operation *op, OpBuilder &builder,
+                                             Location loc,
+                                             ValueRange ivs) const {
+    auto linalgOp = cast<LinalgOp>(op);
+    if (!linalgOp.hasBufferSemantics())
+      return op->emitOpError("expected operation to have buffer semantics");
+
+    SmallVector<Value> indexedValues;
+    indexedValues.reserve(linalgOp.getNumInputsAndOutputs());
+    Location linalgOpLoc = op->getLoc();
+    /// Load the data corresponding to the block arguments that
+    /// represent input operands.
+    for (OpOperand *operand : linalgOp.getInputAndOutputOperands()) {
+      if (!linalgOp.payloadUsesValueFromOperand(operand)) {
+        indexedValues.push_back(nullptr);
+        continue;
+      }
+      if (linalgOp.isScalar(operand)) {
+        indexedValues.push_back(operand->get());
+        continue;
+      }
+      SmallVector<Value> indices = getIndicesForAccess(
+          builder, linalgOpLoc, linalgOp.getTiedIndexingMap(operand), ivs);
+      Value load =
+          builder.create<memref::LoadOp>(linalgOpLoc, operand->get(), indices);
+      indexedValues.push_back(load);
+    }
+
+    /// Inline the op payload and store the result.
+    return inlinePayload(builder, linalgOp, ivs, indexedValues);
   }
 };
 

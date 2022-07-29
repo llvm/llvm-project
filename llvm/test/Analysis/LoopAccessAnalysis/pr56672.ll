@@ -20,7 +20,7 @@ loop.backedge:                                              ; preds = %loop.prog
   store i32 1, i32* %tmp7, align 4
   %tmp = add nuw i64 %tmp5, 1
   %tmp3 = icmp ult i64 %tmp, 1000
-  br i1 %tmp3, label %loop, label %loop.progress1
+  br i1 %tmp3, label %loop, label %exit
 
 loop:                                              ; preds = %loop.backedge, %entry
   %tmp5 = phi i64 [ %tmp, %loop.backedge ], [ 16, %entry ]
@@ -34,6 +34,6 @@ loop:                                              ; preds = %loop.backedge, %en
 never:                                             ; preds = %loop
   unreachable
 
-loop.progress1:                                             ; preds = %loop.backedge
+exit:                                             ; preds = %loop.backedge
   ret void
 }

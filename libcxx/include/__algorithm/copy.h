@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_COPY_H
 
 #include <__algorithm/unwrap_iter.h>
+#include <__algorithm/unwrap_range.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
@@ -88,10 +89,11 @@ template <class _InIter, class _Sent, class _OutIter,
                      && is_copy_constructible<_Sent>::value
                      && is_copy_constructible<_OutIter>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-pair<_InIter, _OutIter>
-__copy(_InIter __first, _Sent __last, _OutIter __result) {
-  auto __ret = std::__copy_impl(std::__unwrap_iter(__first), std::__unwrap_iter(__last), std::__unwrap_iter(__result));
-  return std::make_pair(std::__rewrap_iter(__first, __ret.first), std::__rewrap_iter(__result, __ret.second));
+pair<_InIter, _OutIter> __copy(_InIter __first, _Sent __last, _OutIter __result) {
+  auto __range = std::__unwrap_range(__first, __last);
+  auto __ret   = std::__copy_impl(std::move(__range.first), std::move(__range.second), std::__unwrap_iter(__result));
+  return std::make_pair(
+      std::__rewrap_range<_Sent>(__first, __ret.first), std::__rewrap_iter(__result, __ret.second));
 }
 
 template <class _InputIterator, class _OutputIterator>

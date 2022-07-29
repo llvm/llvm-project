@@ -1,5 +1,7 @@
 VERS1.0 {
   global:
+    __tgt_rtl_init_plugin;
+    __tgt_rtl_deinit_plugin;
     __tgt_rtl_is_valid_binary;
     __tgt_rtl_is_data_exchangable;
     __tgt_rtl_number_of_team_procs;

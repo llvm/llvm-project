@@ -492,7 +492,8 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   Value *X, *Y;
   Constant *C;
   if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_Constant(C)))
-    return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+      return BinaryOperator::CreateFMulFMF(X, NegC, &I);
 
   // (select A, B, C) * (select A, D, E) --> select A, (B*D), (C*E)
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
@@ -1007,8 +1008,7 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   }
 
   Constant *C;
-  if ((match(N, m_OneUse(m_ZExt(m_Value(X)))) && match(D, m_Constant(C))) ||
-      (match(D, m_OneUse(m_ZExt(m_Value(X)))) && match(N, m_Constant(C)))) {
+  if (match(N, m_OneUse(m_ZExt(m_Value(X)))) && match(D, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
     Constant *TruncC = ConstantExpr::getTrunc(C, X->getType());
     if (ConstantExpr::getZExt(TruncC, Ty) != C)
@@ -1016,11 +1016,17 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
 
     // udiv (zext X), C --> zext (udiv X, C')
     // urem (zext X), C --> zext (urem X, C')
+    return new ZExtInst(Builder.CreateBinOp(Opcode, X, TruncC), Ty);
+  }
+  if (match(D, m_OneUse(m_ZExt(m_Value(X)))) && match(N, m_Constant(C))) {
+    // If the constant is the same in the smaller type, use the narrow version.
+    Constant *TruncC = ConstantExpr::getTrunc(C, X->getType());
+    if (ConstantExpr::getZExt(TruncC, Ty) != C)
+      return nullptr;
+
     // udiv C, (zext X) --> zext (udiv C', X)
     // urem C, (zext X) --> zext (urem C', X)
-    Value *NarrowOp = isa<Constant>(D) ? Builder.CreateBinOp(Opcode, X, TruncC)
-                                       : Builder.CreateBinOp(Opcode, TruncC, X);
-    return new ZExtInst(NarrowOp, Ty);
+    return new ZExtInst(Builder.CreateBinOp(Opcode, TruncC, X), Ty);
   }
 
   return nullptr;
@@ -1226,8 +1232,10 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
 
   // -X / C --> X / -C
   Value *X;
+  const DataLayout &DL = I.getModule()->getDataLayout();
   if (match(I.getOperand(0), m_FNeg(m_Value(X))))
-    return BinaryOperator::CreateFDivFMF(X, ConstantExpr::getFNeg(C), &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+      return BinaryOperator::CreateFDivFMF(X, NegC, &I);
 
   // If the constant divisor has an exact inverse, this is always safe. If not,
   // then we can still create a reciprocal if fast-math-flags allow it and the
@@ -1239,7 +1247,6 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
   // on all targets.
   // TODO: Use Intrinsic::canonicalize or let function attributes tell us that
   // denorms are flushed?
-  const DataLayout &DL = I.getModule()->getDataLayout();
   auto *RecipC = ConstantFoldBinaryOpOperands(
       Instruction::FDiv, ConstantFP::get(I.getType(), 1.0), C, DL);
   if (!RecipC || !RecipC->isNormalFP())
@@ -1257,15 +1264,16 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 
   // C / -X --> -C / X
   Value *X;
+  const DataLayout &DL = I.getModule()->getDataLayout();
   if (match(I.getOperand(1), m_FNeg(m_Value(X))))
-    return BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+      return BinaryOperator::CreateFDivFMF(NegC, X, &I);
 
   if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
     return nullptr;
 
   // Try to reassociate C / X expressions where X includes another constant.
   Constant *C2, *NewC = nullptr;
-  const DataLayout &DL = I.getModule()->getDataLayout();
   if (match(I.getOperand(1), m_FMul(m_Value(X), m_Constant(C2)))) {
     // C / (X * C2) --> (C / C2) / X
     NewC = ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C2, DL);
