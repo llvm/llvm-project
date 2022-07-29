@@ -143,6 +143,10 @@ public:
   ///  Each argument of `Call` must already have a `StorageLocation`.
   Environment pushCall(const CallExpr *Call) const;
 
+  /// Moves gathered information back into `this` from a `CalleeEnv` created via
+  /// `pushCall`.
+  void popCall(const Environment &CalleeEnv);
+
   /// Returns true if and only if the environment is equivalent to `Other`, i.e
   /// the two environments:
   ///  - have the same mappings from declarations to storage locations,

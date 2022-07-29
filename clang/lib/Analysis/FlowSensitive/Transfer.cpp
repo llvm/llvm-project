@@ -512,6 +512,10 @@ public:
       if (!Options.ContextSensitive || F->getBody() == nullptr)
         return;
 
+      // FIXME: We don't support context-sensitive analysis of recursion, so
+      // we should return early here if `F` is the same as the `FunctionDecl`
+      // holding `S` itself.
+
       auto &ASTCtx = F->getASTContext();
 
       // FIXME: Cache these CFGs.
@@ -534,7 +538,7 @@ public:
       auto ExitState = (*BlockToOutputState)[ExitBlock];
       assert(ExitState);
 
-      Env = ExitState->Env;
+      Env.popCall(ExitState->Env);
     }
   }
 
