@@ -225,5 +225,36 @@ const double EXP_M2[128] = {
     0x1.4e9c56c731f5dp1, 0x1.513c2e6c731d7p1, 0x1.53e14b042f9cap1,
     0x1.568bb722dd593p1, 0x1.593b7d72305bbp1,
 };
+// Wolfram alpha: N[Table[2^x-1,{x,-16/32,15/32,1/32}],27]
+// printf("%.13a,\n", d[i]);
+const double EXP_2_POW[EXP_num_p] = {
+    -0x1.2bec333018867p-2, -0x1.1c1142e274118p-2, -0x1.0bdd71829fcf2p-2,
+    -0x1.f69d99accc7b6p-3, -0x1.d4c6af7557c93p-3, -0x1.b23213cc8e86cp-3,
+    -0x1.8edb9f5703dc0p-3, -0x1.6abf137076a8ep-3, -0x1.45d819a94b14bp-3,
+    -0x1.20224341286e4p-3, -0x1.f332113d56b1fp-4, -0x1.a46f918837cb7p-4,
+    -0x1.53f391822dbc7p-4, -0x1.01b466423250ap-4, -0x1.5b505d5b6f268p-5,
+    -0x1.5f134923757f3p-6, 0x0.0000000000000p+0,  0x1.66c34c5615d0fp-6,
+    0x1.6ab0d9f3121ecp-5,  0x1.1301d0125b50ap-4,  0x1.72b83c7d517aep-4,
+    0x1.d4873168b9aa8p-4,  0x1.1c3d373ab11c3p-3,  0x1.4f4efa8fef709p-3,
+    0x1.837f0518db8a9p-3,  0x1.b8d39b9d54e55p-3,  0x1.ef5326091a112p-3,
+    0x1.13821818624b4p-2,  0x1.2ff6b54d8a89cp-2,  0x1.4d0ad5a753e07p-2,
+    0x1.6ac1f752150a5p-2,  0x1.891fac0e95613p-2};
+
+// Lookup table for sin(k * pi / 16) with k = 0, ..., 31.
+// Table is generated with Sollya as follow:
+// > display = hexadecimal;
+// > for k from 0 to 31 do { D(sin(k * pi/16)); };
+const double SIN_K_PI_OVER_16[32] = {
+    0x0.0000000000000p+0,  0x1.8f8b83c69a60bp-3,  0x1.87de2a6aea963p-2,
+    0x1.1c73b39ae68c8p-1,  0x1.6a09e667f3bcdp-1,  0x1.a9b66290ea1a3p-1,
+    0x1.d906bcf328d46p-1,  0x1.f6297cff75cb0p-1,  0x1.0000000000000p+0,
+    0x1.f6297cff75cb0p-1,  0x1.d906bcf328d46p-1,  0x1.a9b66290ea1a3p-1,
+    0x1.6a09e667f3bcdp-1,  0x1.1c73b39ae68c8p-1,  0x1.87de2a6aea963p-2,
+    0x1.8f8b83c69a60bp-3,  0x0.0000000000000p+0,  -0x1.8f8b83c69a60bp-3,
+    -0x1.87de2a6aea963p-2, -0x1.1c73b39ae68c8p-1, -0x1.6a09e667f3bcdp-1,
+    -0x1.a9b66290ea1a3p-1, -0x1.d906bcf328d46p-1, -0x1.f6297cff75cb0p-1,
+    -0x1.0000000000000p+0, -0x1.f6297cff75cb0p-1, -0x1.d906bcf328d46p-1,
+    -0x1.a9b66290ea1a3p-1, -0x1.6a09e667f3bcdp-1, -0x1.1c73b39ae68c8p-1,
+    -0x1.87de2a6aea963p-2, -0x1.8f8b83c69a60bp-3};
 
 } // namespace __llvm_libc

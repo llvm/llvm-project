@@ -2925,9 +2925,9 @@ define i64 @sqdmlsl_d(i32 %A, i32 %B, i64 %C) nounwind {
 define <16 x i8> @test_pmull_64(i64 %l, i64 %r) nounwind {
 ; CHECK-LABEL: test_pmull_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    fmov d1, x1
-; CHECK-NEXT:    pmull.1q v0, v0, v1
+; CHECK-NEXT:    fmov d0, x1
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    pmull.1q v0, v1, v0
 ; CHECK-NEXT:    ret
   %val = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l, i64 %r)
   ret <16 x i8> %val

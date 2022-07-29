@@ -20,7 +20,7 @@
 
 #include "test_comparisons.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
     {
         const std::vector<int> c1, c2;
         assert(testComparisons(c1, c2, true, false));
@@ -115,6 +115,15 @@ int main(int, char**) {
         assert(!(std::vector<int>() > std::vector<int>()));
         assert((std::vector<int>() >= std::vector<int>()));
     }
+
+    return true;
+}
+
+int main(int, char**) {
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
 
     return 0;
 }

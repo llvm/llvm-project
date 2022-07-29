@@ -1,10 +1,16 @@
-Number,Name,Assignee,Patch,Status,First released version
-`P0645 <https://wg21.link/P0645>`_,"Text Formatting",Mark de Wever,,|Complete|,Clang 14
-`P1652 <https://wg21.link/P1652>`_,"Printf corner cases in std::format",Mark de Wever,"`D103433 <https://reviews.llvm.org/D103433>`__, `D114001 <https://reviews.llvm.org/D114001>`__",|Complete|,Clang 14
-`P1892 <https://wg21.link/P1892>`_,"Extended locale-specific presentation specifiers for std::format",Mark de Wever,`D103368 <https://reviews.llvm.org/D103368>`__,|Complete|,Clang 14
-`P1868 <https://wg21.link/P1868>`_,"width: clarifying units of width and precision in std::format (Implements the unicode support.)",Mark de Wever,"`D103413 <https://reviews.llvm.org/D103413>`__ `D103425 <https://reviews.llvm.org/D103425>`__ `D103670 <https://reviews.llvm.org/D103670>`__",|Complete|,Clang 14
-`P2216 <https://wg21.link/P2216>`_,"std::format improvements",Mark de Wever,,|Complete|,Clang 15
-`P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``",Mark de Wever,`D127570 <https://reviews.llvm.org/D127570>`__,|Complete|, Clang 15
+Number,Name,Standard,Assignee,Status,First released version
+`P0645 <https://wg21.link/P0645>`_,"Text Formatting","C++20",Mark de Wever,|Complete|,Clang 14
+`P1652 <https://wg21.link/P1652>`_,"Printf corner cases in std::format","C++20",Mark de Wever,|Complete|,Clang 14
+`P1892 <https://wg21.link/P1892>`_,"Extended locale-specific presentation specifiers for std::format","C++20",Mark de Wever,|Complete|,Clang 14
+`P1868 <https://wg21.link/P1868>`_,"width: clarifying units of width and precision in std::format (Implements the unicode support.)","C++20",Mark de Wever,|Complete|,Clang 14
+`P2216 <https://wg21.link/P2216>`_,"std::format improvements","C++20",Mark de Wever,|Complete|,Clang 15
+`P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``","C++20",Mark de Wever,|Complete|, Clang 15
+"`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output","C++23"
+"`P2286R8 <https://wg21.link/P2286R8>`__","Formatting Ranges","C++23","Mark de Wever","|In Progress|"
+"`P2508R1 <https://wg21.link/P2508R1>`__","Exposing ``std::basic-format-string``","C++23","Mark de Wever","|In Progress|"
+"`P2585R0 <https://wg21.link/P2585R0>`__","Improving default container formatting","C++23",
 
-`P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting",Mark de Wever,,|In Progress|,
-`P2372 <https://wg21.link/P2372>`__,"Fixing locale handling in chrono formatters",Mark de Wever,,|In Progress|,
+`P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting","C++20",Mark de Wever,|In Progress|,
+`P2372 <https://wg21.link/P2372>`__,"Fixing locale handling in chrono formatters","C++20",Mark de Wever,|In Progress|,
+"`P2419R2 <https://wg21.link/P2419R2>`__","Clarify handling of encodings in localized formatting of chrono types","C++23",
+

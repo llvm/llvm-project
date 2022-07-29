@@ -14,6 +14,7 @@
 #include <__chrono/month.h>
 #include <__chrono/year.h>
 #include <__config>
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -52,25 +53,11 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month& __lhs, const year_month& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month(); }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const year_month& __lhs, const year_month& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator< (const year_month& __lhs, const year_month& __rhs) noexcept
-{ return __lhs.year() != __rhs.year() ? __lhs.year() < __rhs.year() : __lhs.month() < __rhs.month(); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator> (const year_month& __lhs, const year_month& __rhs) noexcept
-{ return __rhs < __lhs; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator<=(const year_month& __lhs, const year_month& __rhs) noexcept
-{ return !(__rhs < __lhs);}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator>=(const year_month& __lhs, const year_month& __rhs) noexcept
-{ return !(__lhs < __rhs); }
+_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const year_month& __lhs, const year_month& __rhs) noexcept {
+    if (auto __c = __lhs.year() <=> __rhs.year(); __c != 0)
+      return __c;
+    return __lhs.month() <=> __rhs.month();
+}
 
 _LIBCPP_HIDE_FROM_ABI constexpr
 year_month operator+(const year_month& __lhs, const months& __rhs) noexcept

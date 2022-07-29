@@ -88,3 +88,21 @@ v_cmp_class_f16_e64_dpp s105, s2, v2 row_ror:15
 
 v_cmpx_class_f32_e64_dpp s1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fma_mix_f32_e64_dpp v5, s1, v3, v4 quad_perm:[3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fma_mix_f32_e64_dpp v5, v1, s3, v4 quad_perm:[3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fma_mix_f32_e64_dpp v5, s1, v3, v4 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fma_mix_f32_e64_dpp v5, v1, s3, v4 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fma_mixhi_f16_e64_dpp v5, v1, 0, v4 quad_perm:[3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fma_mixlo_f16_e64_dpp v5, v1, 1, v4 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

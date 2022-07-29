@@ -96,12 +96,20 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
   auto MIB = buildInstrNoInsert(TargetOpcode::DBG_VALUE);
-  if (auto *CI = dyn_cast<ConstantInt>(&C)) {
+
+  auto *NumericConstant = [&] {
+    if (const auto *CE = dyn_cast<ConstantExpr>(&C))
+      if (CE->getOpcode() == Instruction::IntToPtr)
+        return cast<const Constant>(CE->getOperand(0));
+    return &C;
+  }();
+
+  if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
     else
       MIB.addImm(CI->getZExtValue());
-  } else if (auto *CFP = dyn_cast<ConstantFP>(&C)) {
+  } else if (auto *CFP = dyn_cast<ConstantFP>(NumericConstant)) {
     MIB.addFPImm(CFP);
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.

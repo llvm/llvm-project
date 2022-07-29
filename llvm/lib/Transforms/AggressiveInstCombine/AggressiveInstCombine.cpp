@@ -446,21 +446,22 @@ foldSqrt(Instruction &I, TargetTransformInfo &TTI, TargetLibraryInfo &TLI) {
   if (Func != LibFunc_sqrt && Func != LibFunc_sqrtf && Func != LibFunc_sqrtl)
     return false;
 
-  // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created,
-  // and (3) we would not end up lowering to a libcall anyway (which could
-  // change the value of errno), then:
-  // (1) the operand arg must not be less than -0.0.
-  // (2) errno won't be set.
-  // (3) it is safe to convert this to an intrinsic call.
-  // TODO: Check if the arg is known non-negative.
+  // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
+  // (because NNAN or the operand arg must not be less than -0.0) and (2) we
+  // would not end up lowering to a libcall anyway (which could change the value
+  // of errno), then:
+  // (1) errno won't be set.
+  // (2) it is safe to convert this to an intrinsic call.
   Type *Ty = Call->getType();
-  if (TTI.haveFastSqrt(Ty) && Call->hasNoNaNs()) {
+  Value *Arg = Call->getArgOperand(0);
+  if (TTI.haveFastSqrt(Ty) &&
+      (Call->hasNoNaNs() || CannotBeOrderedLessThanZero(Arg, &TLI))) {
     IRBuilder<> Builder(&I);
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
 
     Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
-    Value *NewSqrt = Builder.CreateCall(Sqrt, Call->getArgOperand(0), "sqrt");
+    Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
     I.replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
