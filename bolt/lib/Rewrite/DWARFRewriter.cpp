@@ -516,8 +516,8 @@ void DWARFRewriter::updateUnitDebugInfo(
         if (Value.isFormClass(DWARFFormValue::FC_Constant) ||
             Value.isFormClass(DWARFFormValue::FC_SectionOffset)) {
           uint64_t Offset = Value.isFormClass(DWARFFormValue::FC_Constant)
-                                ? Value.getAsUnsignedConstant().getValue()
-                                : Value.getAsSectionOffset().getValue();
+                                ? Value.getAsUnsignedConstant().value()
+                                : Value.getAsSectionOffset().value();
           DebugLocationsVector InputLL;
 
           Optional<object::SectionedAddress> SectionAddress =
@@ -674,7 +674,7 @@ void DWARFRewriter::updateUnitDebugInfo(
         Value = AttrVal->V;
         const Optional<uint64_t> Result = Value.getAsAddress();
         if (Result.hasValue()) {
-          const uint64_t Address = Result.getValue();
+          const uint64_t Address = *Result;
           uint64_t NewAddress = 0;
           if (const BinaryFunction *Function =
                   BC.getBinaryFunctionContainingAddress(Address)) {
