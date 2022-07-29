@@ -100,7 +100,7 @@ cc_library(
 cc_library(
     name = "__support_cpp_type_traits",
     hdrs = [
-        "src/__support/CPP/TypeTraits.h",
+        "src/__support/CPP/type_traits.h",
     ],
     deps = [":libc_root","__support_cpp_uint"],
 )

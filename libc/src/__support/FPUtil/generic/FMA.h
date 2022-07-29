@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 
 #include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"

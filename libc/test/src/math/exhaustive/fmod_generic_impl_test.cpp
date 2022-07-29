@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/generic/FMod.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/FPMatcher.h"
@@ -19,7 +19,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 template <typename T, bool InverseMultiplication>
 class LlvmLibcFModTest : public __llvm_libc::testing::Test {
 
-  using DivisionHelper = __llvm_libc::cpp::ConditionalType<
+  using DivisionHelper = __llvm_libc::cpp::conditional_t<
       InverseMultiplication,
       __llvm_libc::fputil::generic::FModDivisionInvMultHelper<T>,
       __llvm_libc::fputil::generic::FModDivisionSimpleHelper<T>>;

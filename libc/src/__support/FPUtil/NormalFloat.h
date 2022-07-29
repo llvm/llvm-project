@@ -11,7 +11,7 @@
 
 #include "FPBits.h"
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 
 #include <stdint.h>
 
@@ -27,7 +27,7 @@ namespace fputil {
 // where <mantissa> is of the form 1.<...>.
 template <typename T> struct NormalFloat {
   static_assert(
-      cpp::IsFloatingPointType<T>::Value,
+      cpp::is_floating_point_v<T>,
       "NormalFloat template parameter has to be a floating point type.");
 
   using UIntType = typename FPBits<T>::UIntType;

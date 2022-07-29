@@ -4,10 +4,10 @@
 namespace __llvm_libc {
 
 TEST(LlvmLibcAddress, AliasAreAddresses) {
-  ASSERT_TRUE(IsAddressType<SrcAddr<1>>::Value);
-  ASSERT_TRUE(IsAddressType<DstAddr<1>>::Value);
-  ASSERT_TRUE(IsAddressType<NtSrcAddr<1>>::Value);
-  ASSERT_TRUE(IsAddressType<NtDstAddr<1>>::Value);
+  ASSERT_TRUE(IsAddressType<SrcAddr<1>>::value);
+  ASSERT_TRUE(IsAddressType<DstAddr<1>>::value);
+  ASSERT_TRUE(IsAddressType<NtSrcAddr<1>>::value);
+  ASSERT_TRUE(IsAddressType<NtDstAddr<1>>::value);
 }
 
 TEST(LlvmLibcAddress, AliasHaveRightPermissions) {

@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 
 #include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include <errno.h>
 #include <math.h>
@@ -72,11 +72,11 @@ template <typename T> static inline T opt_barrier(T x) {
 template <typename T> struct IsFloatOrDouble {
   static constexpr bool
       Value = // NOLINT so that this Value can match the ones for IsSame
-      cpp::IsSame<T, float>::Value || cpp::IsSame<T, double>::Value;
+      cpp::is_same_v<T, float> || cpp::is_same_v<T, double>;
 };
 
 template <typename T>
-using EnableIfFloatOrDouble = cpp::EnableIfType<IsFloatOrDouble<T>::Value, int>;
+using EnableIfFloatOrDouble = cpp::enable_if_t<IsFloatOrDouble<T>::Value, int>;
 
 template <typename T, EnableIfFloatOrDouble<T> = 0>
 T xflow(uint32_t sign, T y) {

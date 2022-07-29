@@ -22,7 +22,7 @@ struct Aarch64Backend : public Scalar64BitBackend {
   static constexpr bool IS_BACKEND_TYPE = true;
 
   template <typename T, Temporality TS, Aligned AS,
-            cpp::EnableIfType<Scalar64BitBackend::IsScalarType<T>, bool> = true>
+            cpp::enable_if_t<Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline T load(const T *src) {
     return Scalar64BitBackend::template load<T, TS, AS>(src);
   }

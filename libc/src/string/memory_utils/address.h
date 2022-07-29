@@ -12,7 +12,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_COMMON_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_COMMON_H
 
-#include "src/__support/CPP/TypeTraits.h"  // cpp::ConditionalType
+#include "src/__support/CPP/type_traits.h" // cpp::ConditionalType
 #include "src/string/memory_utils/utils.h" // is_power2
 #include <stddef.h>                        // size_t
 #include <stdint.h> // uint8_t, uint16_t, uint32_t, uint64_t
@@ -48,8 +48,8 @@ template <size_t Alignment, Permission P, Temporality TS> struct Address {
   static constexpr Temporality TEMPORALITY = TS;
   static constexpr bool IS_READ = P == Permission::Read;
   static constexpr bool IS_WRITE = P == Permission::Write;
-  using PointeeType = cpp::ConditionalType<!IS_WRITE, const ubyte, ubyte>;
-  using VoidType = cpp::ConditionalType<!IS_WRITE, const void, void>;
+  using PointeeType = cpp::conditional_t<!IS_WRITE, const ubyte, ubyte>;
+  using VoidType = cpp::conditional_t<!IS_WRITE, const void, void>;
 
   Address(VoidType *ptr) : ptr_(reinterpret_cast<PointeeType *>(ptr)) {}
 
@@ -79,15 +79,15 @@ private:
   }
 };
 
-template <typename T> struct IsAddressType : public cpp::FalseValue {};
+template <typename T> struct IsAddressType : public cpp::false_type {};
 template <size_t Alignment, Permission P, Temporality TS>
-struct IsAddressType<Address<Alignment, P, TS>> : public cpp::TrueValue {};
+struct IsAddressType<Address<Alignment, P, TS>> : public cpp::true_type {};
 
 // Reinterpret the address as a pointer to T.
 // This is not UB since the underlying pointer always refers to a `char` in a
 // buffer of raw data.
 template <typename T, typename AddrT> static T *as(AddrT addr) {
-  static_assert(IsAddressType<AddrT>::Value);
+  static_assert(IsAddressType<AddrT>::value);
   return reinterpret_cast<T *>(addr.ptr());
 }
 
@@ -95,7 +95,7 @@ template <typename T, typename AddrT> static T *as(AddrT addr) {
 // alignment whenever possible.
 template <size_t ByteOffset, typename AddrT>
 static auto offsetAddr(AddrT addr) {
-  static_assert(IsAddressType<AddrT>::Value);
+  static_assert(IsAddressType<AddrT>::value);
   return addr.template offset<ByteOffset>(ByteOffset);
 }
 
@@ -103,7 +103,7 @@ static auto offsetAddr(AddrT addr) {
 // address will be Alignment aligned.
 template <size_t Alignment, typename AddrT>
 static auto offsetAddrAssumeAligned(AddrT addr, size_t byte_offset) {
-  static_assert(IsAddressType<AddrT>::Value);
+  static_assert(IsAddressType<AddrT>::value);
   return Address<Alignment, AddrT::PERMISSION, AddrT::TEMPORALITY>(addr.ptr_ +
                                                                    byte_offset);
 }
@@ -112,7 +112,7 @@ static auto offsetAddrAssumeAligned(AddrT addr, size_t byte_offset) {
 // ByteOffset. This allows to propagate the address alignment whenever possible.
 template <size_t ByteOffset, typename AddrT>
 static auto offsetAddrMultiplesOf(AddrT addr, ptrdiff_t byte_offset) {
-  static_assert(IsAddressType<AddrT>::Value);
+  static_assert(IsAddressType<AddrT>::value);
   return addr.template offset<ByteOffset>(byte_offset);
 }
 

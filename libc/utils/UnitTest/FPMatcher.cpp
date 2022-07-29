@@ -20,7 +20,7 @@ namespace fputil {
 namespace testing {
 
 template <typename ValType, typename StreamType>
-cpp::EnableIfType<cpp::IsFloatingPointType<ValType>::Value, void>
+cpp::enable_if_t<cpp::is_floating_point_v<ValType>, void>
 describeValue(const char *label, ValType value, StreamType &stream) {
   stream << label;
 
