@@ -41,7 +41,7 @@ add_header_library(
 add_header_library(
   functional
   HDRS
-    Functional.h
+    functional.h
 )
 
 add_header_library(
