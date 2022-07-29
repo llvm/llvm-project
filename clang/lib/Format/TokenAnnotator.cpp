@@ -4067,6 +4067,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          Keywords.isWordLike(Left))) {
       return false;
     }
+    // Add space in attribute like `(* ASYNC_REG = "TRUE" *)`.
+    if (Left.endsSequence(tok::star, tok::l_paren) && Right.is(tok::identifier))
+      return true;
   }
   if (Left.is(TT_ImplicitStringLiteral))
     return Right.hasWhitespaceBefore();

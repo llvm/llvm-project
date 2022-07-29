@@ -295,6 +295,12 @@ TEST_F(FormatTestVerilog, Hierarchy) {
 TEST_F(FormatTestVerilog, If) {
   verifyFormat("if (x)\n"
                "  x = x;");
+  verifyFormat("unique if (x)\n"
+               "  x = x;");
+  verifyFormat("unique0 if (x)\n"
+               "  x = x;");
+  verifyFormat("priority if (x)\n"
+               "  x = x;");
   verifyFormat("if (x)\n"
                "  x = x;\n"
                "x = x;");
@@ -357,6 +363,14 @@ TEST_F(FormatTestVerilog, If) {
                "  x = {x};\n"
                "else\n"
                "  {x} = {x};");
+
+  // With attributes.
+  verifyFormat("(* x *) if (x)\n"
+               "  x = x;");
+  verifyFormat("(* x = \"x\" *) if (x)\n"
+               "  x = x;");
+  verifyFormat("(* x, x = \"x\" *) if (x)\n"
+               "  x = x;");
 }
 
 TEST_F(FormatTestVerilog, Operators) {
