@@ -17,7 +17,7 @@
 
 extern float __llvm_amdgcn_global_atomic_fadd_f32_p1f32_f32(__global float *, float) __asm("llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32");
 
-__attribute__((target("atomic-fadd-insts"))) static void
+__attribute__((target("atomic-fadd-no-rtn-insts"))) static void
 global_atomic_fadd(__global float *p, float v)
 {
     __llvm_amdgcn_global_atomic_fadd_f32_p1f32_f32(p, v);
