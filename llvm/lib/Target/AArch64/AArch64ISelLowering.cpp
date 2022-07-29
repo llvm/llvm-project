@@ -19510,7 +19510,7 @@ static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
 
   uint64_t IdxInsert = Insert.getConstantOperandVal(2);
   uint64_t IdxDupLane = N->getConstantOperandVal(1);
-  if (IdxInsert != IdxDupLane)
+  if (IdxInsert != 0 || IdxDupLane != 0)
     return SDValue();
 
   SDValue Bitcast = Insert.getOperand(1);
