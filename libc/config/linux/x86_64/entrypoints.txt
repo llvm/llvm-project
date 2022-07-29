@@ -251,8 +251,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal
+    libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_self
+    libc.src.pthread.pthread_setname_np
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock

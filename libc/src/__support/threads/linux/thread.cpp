@@ -8,8 +8,10 @@
 
 #include "src/__support/threads/thread.h"
 #include "config/linux/app.h"
+#include "src/__support/CPP/StringView.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/error.h"
+#include "src/__support/CPP/stringstream.h"
 #include "src/__support/OSUtil/syscall.h"           // For syscall functions.
 #include "src/__support/threads/linux/futex_word.h" // For FutexWordType
 
@@ -17,7 +19,10 @@
 #include <arm_acle.h>
 #endif
 
+#include <errno.h>
+#include <fcntl.h>
 #include <linux/futex.h>
+#include <linux/prctl.h> // For PR_SET_NAME
 #include <linux/sched.h> // For CLONE_* flags.
 #include <stdint.h>
 #include <sys/mman.h>    // For PROT_* and MAP_* definitions.
@@ -33,6 +38,7 @@ static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 #error "SYS_mmap or SYS_mmap2 not available on the target platform"
 #endif
 
+static constexpr size_t NAME_SIZE_MAX = 16; // Includes the null terminator
 static constexpr size_t DEFAULT_STACK_SIZE = (1 << 16); // 64KB
 static constexpr uint32_t CLEAR_TID_VALUE = 0xABCD1234;
 static constexpr unsigned CLONE_SYSCALL_FLAGS =
@@ -276,6 +282,97 @@ void Thread::wait() {
 
 bool Thread::operator==(const Thread &thread) const {
   return attrib->tid == thread.attrib->tid;
+}
+
+static constexpr cpp::StringView THREAD_NAME_PATH_PREFIX("/proc/self/task/");
+static constexpr size_t THREAD_NAME_PATH_SIZE =
+    THREAD_NAME_PATH_PREFIX.size() +
+    IntegerToString<int>::BUFSIZE + // Size of tid
+    1 +                             // For '/' character
+    5; // For the file name "comm" and the nullterminator.
+
+static void construct_thread_name_file_path(cpp::StringStream &stream,
+                                            int tid) {
+  stream << THREAD_NAME_PATH_PREFIX << tid << '/' << cpp::StringView("comm")
+         << cpp::StringStream::ENDS;
+}
+
+int Thread::set_name(const cpp::StringView &name) {
+  if (name.size() >= NAME_SIZE_MAX)
+    return ERANGE;
+
+  if (*this == self) {
+    // If we are setting the name of the current thread, then we can
+    // use the syscall to set the name.
+    int retval = __llvm_libc::syscall(SYS_prctl, PR_SET_NAME, name.data());
+    if (retval < 0)
+      return -retval;
+    else
+      return 0;
+  }
+
+  char path_name_buffer[THREAD_NAME_PATH_SIZE];
+  cpp::StringStream path_stream(path_name_buffer);
+  construct_thread_name_file_path(path_stream, attrib->tid);
+#ifdef SYS_open
+  int fd = __llvm_libc::syscall(SYS_open, path_name_buffer, O_RDWR);
+#else
+  int fd = __llvm_libc::syscall(SYS_openat, AT_FDCWD, path_name_buffer, O_RDWR);
+#endif
+  if (fd < 0)
+    return -fd;
+
+  int retval = __llvm_libc::syscall(SYS_write, fd, name.data(), name.size());
+  __llvm_libc::syscall(SYS_close, fd);
+
+  if (retval < 0)
+    return -retval;
+  else if (retval != int(name.size()))
+    return EIO;
+  else
+    return 0;
+}
+
+int Thread::get_name(cpp::StringStream &name) const {
+  if (name.bufsize() < NAME_SIZE_MAX)
+    return ERANGE;
+
+  char name_buffer[NAME_SIZE_MAX];
+
+  if (*this == self) {
+    // If we are getting the name of the current thread, then we can
+    // use the syscall to get the name.
+    int retval = __llvm_libc::syscall(SYS_prctl, PR_GET_NAME, name_buffer);
+    if (retval < 0)
+      return -retval;
+    name << name_buffer;
+    return 0;
+  }
+
+  char path_name_buffer[THREAD_NAME_PATH_SIZE];
+  cpp::StringStream path_stream(path_name_buffer);
+  construct_thread_name_file_path(path_stream, attrib->tid);
+#ifdef SYS_open
+  int fd = __llvm_libc::syscall(SYS_open, path_name_buffer, O_RDONLY);
+#else
+  int fd =
+      __llvm_libc::syscall(SYS_openat, AT_FDCWD, path_name_buffer, O_RDONLY);
+#endif
+  if (fd < 0)
+    return -fd;
+
+  int retval = __llvm_libc::syscall(SYS_read, fd, name_buffer, NAME_SIZE_MAX);
+  __llvm_libc::syscall(SYS_close, fd);
+  if (retval < 0)
+    return -retval;
+  if (retval == NAME_SIZE_MAX)
+    return ERANGE;
+  if (name_buffer[retval - 1] == '\n')
+    name_buffer[retval - 1] = '\0';
+  else
+    name_buffer[retval] = '\0';
+  name << name_buffer;
+  return 0;
 }
 
 } // namespace __llvm_libc
