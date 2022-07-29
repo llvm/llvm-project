@@ -10870,7 +10870,9 @@ void CGOpenMPRuntime::adjustTargetSpecificDataForLambdas(
 
 void CGOpenMPRuntime::processRequiresDirective(const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
-    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+    // default unified_address to the same semantics as unified_shared_memory
+    if (Clause->getClauseKind() == OMPC_unified_shared_memory ||
+        Clause->getClauseKind() == OMPC_unified_address) {
       HasRequiresUnifiedSharedMemory = true;
     } else if (const auto *AC =
                    dyn_cast<OMPAtomicDefaultMemOrderClause>(Clause)) {

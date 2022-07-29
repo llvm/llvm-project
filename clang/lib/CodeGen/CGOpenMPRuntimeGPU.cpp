@@ -4046,7 +4046,8 @@ static CudaArch getCudaArch(CodeGenModule &CGM) {
 void CGOpenMPRuntimeGPU::processRequiresDirective(
     const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
-    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+    if (Clause->getClauseKind() == OMPC_unified_shared_memory ||
+        Clause->getClauseKind() == OMPC_unified_address) {
       CudaArch Arch = getCudaArch(CGM);
       switch (Arch) {
       case CudaArch::SM_20:
