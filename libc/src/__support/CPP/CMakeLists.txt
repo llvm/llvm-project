@@ -47,7 +47,7 @@ add_header_library(
 add_header_library(
   limits
   HDRS
-    Limits.h
+    limits.h
   DEPENDS
     .uint
 )
