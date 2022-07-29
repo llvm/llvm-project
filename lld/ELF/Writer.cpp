@@ -1932,7 +1932,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // copy relocations, etc. Note that relocations for non-alloc sections are
       // directly processed by InputSection::relocateNonAlloc.
       for (InputSectionBase *sec : inputSections)
-        if (sec->isLive() && isa<InputSection>(sec) && (sec->flags & SHF_ALLOC))
+        if (sec->isLive() && (sec->flags & SHF_ALLOC))
           scanRelocations<ELFT>(*sec);
       for (Partition &part : partitions) {
         for (EhInputSection *sec : part.ehFrame->sections)
