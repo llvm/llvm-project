@@ -4958,6 +4958,10 @@ ScalarEvolution::proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   if (!AR->isAffine())
     return Result;
 
+  // This function can be expensive, only try to prove NSW once per AddRec.
+  if (!SignedWrapViaInductionTried.insert(AR).second)
+    return Result;
+
   const SCEV *Step = AR->getStepRecurrence(*this);
   const Loop *L = AR->getLoop();
 
@@ -13584,8 +13588,10 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   HasRecMap.erase(S);
   MinTrailingZerosCache.erase(S);
 
-  if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     UnsignedWrapViaInductionTried.erase(AR);
+    SignedWrapViaInductionTried.erase(AR);
+  }
 
   auto ExprIt = ExprValueMap.find(S);
   if (ExprIt != ExprValueMap.end()) {
