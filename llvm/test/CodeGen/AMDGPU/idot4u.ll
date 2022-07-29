@@ -1851,14 +1851,14 @@ define amdgpu_kernel void @udot4_acc16_vecMul(<4 x i8> addrspace(1)* %src1,
 ; GFX7-NEXT:    buffer_load_ushort v1, off, s[0:3], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(2)
 ; GFX7-NEXT:    v_and_b32_e32 v3, 0xff00, v2
-; GFX7-NEXT:    v_bfe_u32 v4, v2, 16, 8
+; GFX7-NEXT:    v_lshrrev_b32_e32 v4, 24, v2
 ; GFX7-NEXT:    s_waitcnt vmcnt(1)
 ; GFX7-NEXT:    v_and_b32_e32 v6, 0xff00, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v5, 24, v2
+; GFX7-NEXT:    v_bfe_u32 v5, v2, 16, 8
 ; GFX7-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
-; GFX7-NEXT:    v_bfe_u32 v7, v0, 16, 8
-; GFX7-NEXT:    v_lshrrev_b32_e32 v8, 24, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v7, 24, v0
+; GFX7-NEXT:    v_bfe_u32 v8, v0, 16, 8
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v6, 8, v6
 ; GFX7-NEXT:    v_alignbit_b32 v3, s10, v3, 16
@@ -1866,8 +1866,8 @@ define amdgpu_kernel void @udot4_acc16_vecMul(<4 x i8> addrspace(1)* %src1,
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v2, v0, v1
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v3, v6, v0
-; GFX7-NEXT:    v_mad_u32_u24 v0, v4, v7, v0
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v5, v8, v0
+; GFX7-NEXT:    v_mad_u32_u24 v0, v4, v7, v0
 ; GFX7-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;

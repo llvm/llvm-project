@@ -1204,19 +1204,14 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
   LLVM_DEBUG(dbgs() << "\nReplacing.2 "; TLO.Old.dump(&DAG);
              dbgs() << "\nWith: "; TLO.New.dump(&DAG); dbgs() << '\n');
 
-  // Replace all uses.  If any nodes become isomorphic to other nodes and
-  // are deleted, make sure to remove them from our worklist.
-  WorklistRemover DeadNodes(*this);
+  // Replace all uses.
   DAG.ReplaceAllUsesOfValueWith(TLO.Old, TLO.New);
 
   // Push the new node and any (possibly new) users onto the worklist.
   AddToWorklistWithUsers(TLO.New.getNode());
 
-  // Finally, if the node is now dead, remove it from the graph.  The node
-  // may not be dead if the replacement process recursively simplified to
-  // something else needing this node.
-  if (TLO.Old->use_empty())
-    deleteAndRecombine(TLO.Old.getNode());
+  // Finally, if the node is now dead, remove it from the graph.
+  recursivelyDeleteUnusedNodes(TLO.Old.getNode());
 }
 
 /// Check the specified integer node value to see if it can be simplified or if
