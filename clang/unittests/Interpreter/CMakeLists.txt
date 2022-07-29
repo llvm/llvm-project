@@ -1,6 +1,8 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Core
+  OrcJIT
+  Support
   )
 
 add_clang_unittest(ClangReplInterpreterTests
