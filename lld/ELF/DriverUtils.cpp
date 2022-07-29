@@ -169,11 +169,13 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_o:
-      // If -o path contains directories, "lld @response.txt" will likely
-      // fail because the archive we are creating doesn't contain empty
+    case OPT_Map:
+      // If an output path contains directories, "lld @response.txt" will
+      // likely fail because the archive we are creating doesn't contain empty
       // directories for the output path (-o doesn't create directories).
       // Strip directories to prevent the issue.
-      os << "-o " << quote(path::filename(arg->getValue())) << "\n";
+      os << arg->getSpelling() << ' ' << quote(path::filename(arg->getValue()))
+         << "\n";
       break;
     case OPT_lto_sample_profile:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
