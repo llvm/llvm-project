@@ -22,7 +22,7 @@ llvm::cl::list<std::string>
 } // anonymous namespace
 
 bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
-  OS << "#include \"TypeTraits.h\"\n";
+  OS << "#include \"type_traits.h\"\n";
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;
   for (const auto &entrypoint : EntrypointNamesOption) {
