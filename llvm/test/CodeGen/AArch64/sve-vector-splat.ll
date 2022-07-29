@@ -53,8 +53,8 @@ define <vscale x 16 x i8> @sve_splat_16xi8_imm() {
   ret <vscale x 16 x i8> %splat
 }
 
-define <vscale x 8 x i16> @sve_splat_8xi16_imm() {
-; CHECK-LABEL: sve_splat_8xi16_imm:
+define <vscale x 8 x i16> @sve_splat_8xi16_dup_imm() {
+; CHECK-LABEL: sve_splat_8xi16_dup_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #1 // =0x1
 ; CHECK-NEXT:    ret
@@ -63,12 +63,32 @@ define <vscale x 8 x i16> @sve_splat_8xi16_imm() {
   ret <vscale x 8 x i16> %splat
 }
 
-define <vscale x 4 x i32> @sve_splat_4xi32_imm() {
-; CHECK-LABEL: sve_splat_4xi32_imm:
+define <vscale x 8 x i16> @sve_splat_8xi16_dupm_imm() {
+; CHECK-LABEL: sve_splat_8xi16_dupm_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #16256 // =0x3f80
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 8 x i16> undef, i16 16256, i32 0 ; 0x3f80
+  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x i16> %splat
+}
+
+define <vscale x 4 x i32> @sve_splat_4xi32_dup_imm() {
+; CHECK-LABEL: sve_splat_4xi32_dup_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #1 // =0x1
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x i32> undef, i32 1, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x i32> %splat
+}
+
+define <vscale x 4 x i32> @sve_splat_4xi32_dupm_imm() {
+; CHECK-LABEL: sve_splat_4xi32_dupm_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0xff0000
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 4 x i32> undef, i32 16711680, i32 0 ; 0xff0000
   %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %splat
 }
@@ -129,8 +149,7 @@ define <vscale x 8 x i8> @sve_splat_8xi8(i8 %val) {
 define <vscale x 8 x i8> @sve_splat_8xi8_imm() {
 ; CHECK-LABEL: sve_splat_8xi8_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255
-; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    mov z0.h, #255 // =0xff
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 8 x i8> undef, i8 -1, i32 0
   %splat = shufflevector <vscale x 8 x i8> %ins, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
@@ -161,8 +180,7 @@ define <vscale x 4 x i16> @sve_splat_4xi16(i16 %val) {
 define <vscale x 4 x i16> @sve_splat_4xi16_imm() {
 ; CHECK-LABEL: sve_splat_4xi16_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
-; CHECK-NEXT:    mov z0.s, w8
+; CHECK-NEXT:    mov z0.s, #65535 // =0xffff
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x i16> undef, i16 -1, i32 0
   %splat = shufflevector <vscale x 4 x i16> %ins, <vscale x 4 x i16> undef, <vscale x 4 x i32> zeroinitializer
@@ -577,8 +595,8 @@ define <vscale x 4 x float> @splat_nxv4f32_imm_out_of_range() {
 define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI55_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI55_0
+; CHECK-NEXT:    adrp x8, .LCPI57_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI57_0
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
