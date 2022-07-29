@@ -979,7 +979,7 @@ define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
