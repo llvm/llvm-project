@@ -53,6 +53,12 @@ def Complex_NumberAttr : Complex_Attr<"Number", "number"> {
     }]>
   ];
 
+  let extraClassDeclaration = [{
+    std::complex<APFloat> getValue() {
+      return std::complex<APFloat>(getReal(), getImag());
+    }
+  }];
+
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
