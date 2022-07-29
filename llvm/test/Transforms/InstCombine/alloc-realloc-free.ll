@@ -13,7 +13,7 @@ define dso_local void @test() local_unnamed_addr #0 {
 
 declare dso_local noalias noundef i8* @malloc(i64 noundef) local_unnamed_addr #1
 declare dso_local noalias noundef i8* @realloc(i8* nocapture allocptr, i64 noundef) local_unnamed_addr #2
-declare dso_local void @free(i8* nocapture allocptr noundef) local_unnamed_addr #2
+declare dso_local void @free(i8* nocapture allocptr noundef) local_unnamed_addr #3
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 attributes #0 = { mustprogress nounwind uwtable willreturn }
