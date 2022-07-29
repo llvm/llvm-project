@@ -28,6 +28,12 @@
 
 using namespace clang;
 
+#if defined(_AIX) || defined(__hexagon__) ||                                   \
+    (defined(_WIN32) &&                                                        \
+     (defined(__aarch64__) || defined(_M_ARM64) || defined(__arm__)))
+#define CLANG_INTERPRETER_NO_SUPPORT_EXEC
+#endif
+
 namespace {
 using Args = std::vector<const char *>;
 static std::unique_ptr<Interpreter>
@@ -191,7 +197,7 @@ struct LLVMInitRAII {
   ~LLVMInitRAII() { llvm::llvm_shutdown(); }
 } LLVMInit;
 
-#ifdef _AIX
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
 TEST(IncrementalProcessing, DISABLED_FindMangledNameSymbol) {
 #else
 TEST(IncrementalProcessing, FindMangledNameSymbol) {
@@ -253,7 +259,7 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
   return R.getFoundDecl();
 }
 
-#ifdef _AIX
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
 TEST(IncrementalProcessing, DISABLED_InstantiateTemplate) {
 #else
 TEST(IncrementalProcessing, InstantiateTemplate) {
