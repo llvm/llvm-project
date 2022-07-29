@@ -141,27 +141,6 @@ void elf::copySectionsIntoPartitions() {
                        newSections.end());
 }
 
-void elf::combineEhSections() {
-  llvm::TimeTraceScope timeScope("Combine EH sections");
-  for (InputSectionBase *&s : inputSections) {
-    // Ignore dead sections and the partition end marker (.part.end),
-    // whose partition number is out of bounds.
-    if (!s->isLive() || s->partition == 255)
-      continue;
-
-    Partition &part = s->getPartition();
-    if (auto *es = dyn_cast<EhInputSection>(s)) {
-      part.ehFrame->addSection(es);
-    } else if (s->kind() == SectionBase::Regular && part.armExidx &&
-               part.armExidx->addSection(cast<InputSection>(s))) {
-      s = nullptr;
-    }
-  }
-
-  if (mainPart->armExidx)
-    llvm::erase_value(inputSections, nullptr);
-}
-
 static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
                                    uint64_t val, uint8_t stOther = STV_HIDDEN) {
   Symbol *s = symtab->find(name);
