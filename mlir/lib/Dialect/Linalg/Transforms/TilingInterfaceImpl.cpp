@@ -108,11 +108,10 @@ struct LinalgOpTilingInterface
         linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
 
-    IRRewriter rewriter(b);
     return llvm::to_vector(
         llvm::map_range(map.getResults(), [&](AffineExpr loopExpr) {
-          OpFoldResult ofr = makeComposedFoldedAffineApply(
-              rewriter, loc, loopExpr, allShapesSizes);
+          OpFoldResult ofr =
+              makeComposedFoldedAffineApply(b, loc, loopExpr, allShapesSizes);
           return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
         }));
   }
@@ -156,10 +155,9 @@ struct LinalgOpTilingInterface
 
     AffineExpr d0;
     bindDims(b.getContext(), d0);
-    IRRewriter rewriter(b);
     SmallVector<OpFoldResult> subShapeSizes =
         llvm::to_vector(llvm::map_range(sizes, [&](OpFoldResult ofr) {
-          return makeComposedFoldedAffineApply(rewriter, loc, d0 - 1, ofr);
+          return makeComposedFoldedAffineApply(b, loc, d0 - 1, ofr);
         }));
 
     OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
