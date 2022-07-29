@@ -229,10 +229,8 @@ define double @convert_u32_to_double(i32 %a) nounwind {
 ; LA32-LABEL: convert_u32_to_double:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    addi.w $a1, $sp, 8
-; LA32-NEXT:    ori $a1, $a1, 4
-; LA32-NEXT:    lu12i.w $a2, 275200
-; LA32-NEXT:    st.w $a2, $a1, 0
+; LA32-NEXT:    lu12i.w $a1, 275200
+; LA32-NEXT:    st.w $a1, $sp, 12
 ; LA32-NEXT:    st.w $a0, $sp, 8
 ; LA32-NEXT:    pcalau12i $a0, .LCPI12_0
 ; LA32-NEXT:    addi.w $a0, $a0, .LCPI12_0
@@ -292,9 +290,7 @@ define double @bitcast_i64_to_double(i64 %a, i64 %b) nounwind {
 ; LA32-LABEL: bitcast_i64_to_double:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    addi.w $a2, $sp, 8
-; LA32-NEXT:    ori $a2, $a2, 4
-; LA32-NEXT:    st.w $a1, $a2, 0
+; LA32-NEXT:    st.w $a1, $sp, 12
 ; LA32-NEXT:    st.w $a0, $sp, 8
 ; LA32-NEXT:    fld.d $fa0, $sp, 8
 ; LA32-NEXT:    addi.w $sp, $sp, 16
@@ -313,10 +309,8 @@ define i64 @bitcast_double_to_i64(double %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    fst.d $fa0, $sp, 8
-; LA32-NEXT:    addi.w $a0, $sp, 8
-; LA32-NEXT:    ori $a0, $a0, 4
-; LA32-NEXT:    ld.w $a1, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $sp, 8
+; LA32-NEXT:    ld.w $a1, $sp, 12
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    jirl $zero, $ra, 0
 ;
