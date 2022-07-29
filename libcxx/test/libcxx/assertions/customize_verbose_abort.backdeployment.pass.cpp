@@ -7,17 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 // Make sure that we can enable assertions when we back-deploy to older platforms
-// if we define _LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED.
+// if we define _LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED.
 //
 // Note that this test isn't really different from customize_handler.pass.cpp when
 // run outside of back-deployment scenarios, but we still run it all the time.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED
 
 #include <cassert>
 
 bool handler_called = false;
-void std::__libcpp_assertion_handler(char const*, ...) {
+void std::__libcpp_verbose_abort(char const*, ...) {
   handler_called = true;
 }
 
