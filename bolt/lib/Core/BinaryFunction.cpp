@@ -4426,7 +4426,7 @@ void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
 }
 
 bool BinaryFunction::isAArch64Veneer() const {
-  if (empty())
+  if (empty() || hasIslandsInfo())
     return false;
 
   BinaryBasicBlock &BB = **BasicBlocks.begin();
