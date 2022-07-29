@@ -2108,9 +2108,14 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
     auto *dylib = getSyntheticDylib(installName, newCurrentVersionForSymbol,
                                     newCompatibilityVersion);
 
-    // Just adding the symbol to the symtab works because dylibs contain their
-    // symbols in alphabetical order, guaranteeing $ld$ symbols to precede
-    // normal symbols.
+    // The tbd file usually contains the $ld$previous symbol for an old version,
+    // and then the symbol itself later, for newer deployment targets, like so:
+    //    symbols: [
+    //      '$ld$previous$/Another$$1$3.0$14.0$_zzz$',
+    //      _zzz,
+    //    ]
+    // Since the symbols are sorted, adding them to the symtab in the given
+    // order means the $ld$previous version of _zzz will prevail, as desired.
     dylib->symbols.push_back(symtab->addDylib(
         saver().save(symbolName), dylib, /*isWeakDef=*/false, /*isTlv=*/false));
     return;
