@@ -699,7 +699,7 @@ bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
 
   Address -= Func.getAddress();
   if (BAT)
-    Address = BAT->translate(Func, Address, /*IsBranchSrc=*/false);
+    Address = BAT->translate(Func.getAddress(), Address, /*IsBranchSrc=*/false);
 
   I->second.bumpCount(Address, Count);
   return true;
@@ -722,8 +722,8 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
                     << Func.getPrintName() << " @ " << Twine::utohexstr(To)
                     << '\n');
   if (BAT) {
-    From = BAT->translate(Func, From, /*IsBranchSrc=*/true);
-    To = BAT->translate(Func, To, /*IsBranchSrc=*/false);
+    From = BAT->translate(Func.getAddress(), From, /*IsBranchSrc=*/true);
+    To = BAT->translate(Func.getAddress(), To, /*IsBranchSrc=*/false);
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: BAT translation on bumpBranchCount: "
                       << Func.getPrintName() << " @ " << Twine::utohexstr(From)
                       << " -> " << Func.getPrintName() << " @ "
@@ -752,7 +752,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     }
     From -= FromFunc->getAddress();
     if (BAT)
-      From = BAT->translate(*FromFunc, From, /*IsBranchSrc=*/true);
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
 
     recordExit(*FromFunc, From, Mispreds, Count);
   }
@@ -766,7 +766,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     }
     To -= ToFunc->getAddress();
     if (BAT)
-      To = BAT->translate(*ToFunc, To, /*IsBranchSrc=*/false);
+      To = BAT->translate(ToFunc->getAddress(), To, /*IsBranchSrc=*/false);
 
     recordEntry(*ToFunc, To, Mispreds, Count);
   }
@@ -822,7 +822,8 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   }
 
   Optional<BoltAddressTranslation::FallthroughListTy> FTs =
-      BAT ? BAT->getFallthroughsInTrace(*FromFunc, First.To, Second.From)
+      BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
+                                        Second.From)
           : getFallthroughsInTrace(*FromFunc, First, Second, Count);
   if (!FTs) {
     LLVM_DEBUG(

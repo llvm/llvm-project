@@ -356,7 +356,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(createMCPlusBuilder(
       BC->TheTriple->getArch(), BC->MIA.get(), BC->MII.get(), BC->MRI.get())));
 
-  BAT = std::make_unique<BoltAddressTranslation>(*BC);
+  BAT = std::make_unique<BoltAddressTranslation>();
 
   if (opts::UpdateDebugSections)
     DebugInfoRewriter = std::make_unique<DWARFRewriter>(*BC);
@@ -4163,7 +4163,7 @@ void RewriteInstance::encodeBATSection() {
   std::string DescStr;
   raw_string_ostream DescOS(DescStr);
 
-  BAT->write(DescOS);
+  BAT->write(*BC, DescOS);
   DescOS.flush();
 
   const std::string BoltInfo =
