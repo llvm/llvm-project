@@ -1471,6 +1471,23 @@ void UnwrappedLineParser::parseStructuralElement(
     addUnwrappedLine();
     return;
   }
+
+  if (Style.isVerilog()) {
+    // Skip things that can exist before keywords like 'if' and 'case'.
+    while (true) {
+      if (FormatTok->isOneOf(Keywords.kw_priority, Keywords.kw_unique,
+                             Keywords.kw_unique0)) {
+        nextToken();
+      } else if (FormatTok->is(tok::l_paren) &&
+                 Tokens->peekNextToken()->is(tok::star)) {
+        parseParens();
+      } else {
+        break;
+      }
+    }
+  }
+
+  // Tokens that only make sense at the beginning of a line.
   switch (FormatTok->Tok.getKind()) {
   case tok::kw_asm:
     nextToken();
