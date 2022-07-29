@@ -146,6 +146,13 @@ func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr<f32>) {
 
 // -----
 
+func.func @gep_too_few_dynamic(%base : !llvm.ptr<f32>) {
+  // expected-error@+1 {{expected as many dynamic indices as specified in 'rawConstantIndices'}}
+  %1 = "llvm.getelementptr"(%base) {rawConstantIndices = [:i32 -2147483648]} : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+}
+
+// -----
+
 func.func @load_non_llvm_type(%foo : memref<f32>) {
   // expected-error@+1 {{expected LLVM pointer type}}
   llvm.load %foo : memref<f32>

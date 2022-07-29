@@ -1072,24 +1072,23 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Value basePtr = processValue(gep->getOperand(0));
     Type sourceElementType = processType(gep->getSourceElementType());
 
-    SmallVector<Value> indices;
-    for (llvm::Value *operand : llvm::drop_begin(gep->operand_values())) {
-      indices.push_back(processValue(operand));
-      if (!indices.back())
-        return failure();
-    }
     // Treat every indices as dynamic since GEPOp::build will refine those
     // indices into static attributes later. One small downside of this
     // approach is that many unused `llvm.mlir.constant` would be emitted
     // at first place.
-    SmallVector<int32_t> structIndices(indices.size(),
-                                       LLVM::GEPOp::kDynamicIndex);
+    SmallVector<GEPArg> indices;
+    for (llvm::Value *operand : llvm::drop_begin(gep->operand_values())) {
+      Value val = processValue(operand);
+      if (!val)
+        return failure();
+      indices.push_back(val);
+    }
 
     Type type = processType(inst->getType());
     if (!type)
       return failure();
-    instMap[inst] = b.create<GEPOp>(loc, type, sourceElementType, basePtr,
-                                    indices, structIndices);
+    instMap[inst] =
+        b.create<GEPOp>(loc, type, sourceElementType, basePtr, indices);
     return success();
   }
   case llvm::Instruction::InsertValue: {
