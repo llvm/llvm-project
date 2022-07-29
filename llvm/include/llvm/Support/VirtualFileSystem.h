@@ -514,9 +514,9 @@ class InMemoryFileSystem : public FileSystem {
                Optional<llvm::sys::fs::file_type> Type,
                Optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
 
-  /// Looks up the in-memory node for the path \param P.
-  /// If \param FollowFinalSymlink is true, the returned node is guaranteed to
-  /// not be a symlink and its path may differ from \param P.
+  /// Looks up the in-memory node for the path \p P.
+  /// If \p FollowFinalSymlink is true, the returned node is guaranteed to
+  /// not be a symlink and its path may differ from \p P.
   detail::NamedNodeOrError lookupNode(const Twine &P, bool FollowFinalSymlink,
                                       size_t SymlinkDepth = 0) const;
 
@@ -546,10 +546,10 @@ public:
   /// to distinguish between the link and the file after the link has been
   /// added.
   ///
-  /// The \param Target path must be an existing file or a hardlink. The
-  /// \param NewLink file must not have been added before. The \param Target
-  /// path must not be a directory. The \param NewLink node is added as a hard
-  /// link which points to the resolved file of \param Target node.
+  /// The \p Target path must be an existing file or a hardlink. The
+  /// \p NewLink file must not have been added before. The \p Target
+  /// path must not be a directory. The \p NewLink node is added as a hard
+  /// link which points to the resolved file of \p Target node.
   /// \return true if the above condition is satisfied and hardlink was
   /// successfully created, false otherwise.
   bool addHardLink(const Twine &NewLink, const Twine &Target);
@@ -558,9 +558,9 @@ public:
   /// if a link links to a link that links back to the link, for example.
   static constexpr size_t MaxSymlinkDepth = 16;
 
-  /// Add a symbolic link. Unlike a HardLink, because \param Target doesn't need
+  /// Add a symbolic link. Unlike a HardLink, because \p Target doesn't need
   /// to refer to a file (or refer to anything, as it happens). Also, an
-  /// in-memory directory for \param Target isn't automatically created.
+  /// in-memory directory for \p Target isn't automatically created.
   bool addSymbolicLink(const Twine &NewLink, const Twine &Target,
                        time_t ModificationTime, Optional<uint32_t> User = None,
                        Optional<uint32_t> Group = None,
