@@ -38,8 +38,6 @@ What's New in Libc++ 16.0.0?
 Implemented Papers
 ------------------
 
-- P1004R2 (Making ``std::vector`` constexpr)
-
 Improvements and New Features
 -----------------------------
 
