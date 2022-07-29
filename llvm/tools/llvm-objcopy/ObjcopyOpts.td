@@ -33,7 +33,7 @@ def compress_debug_sections
     : Joined<["--"], "compress-debug-sections=">,
       MetaVarName<"format">,
       HelpText<"Compress DWARF debug sections using specified format. Supported "
-               "formats: zlib, zstd. Select zlib if <format> is omitted">;
+               "formats: zlib">;
 def : Flag<["--"], "compress-debug-sections">, Alias<compress_debug_sections>,
       AliasArgs<["zlib"]>;
 def decompress_debug_sections : Flag<["--"], "decompress-debug-sections">,

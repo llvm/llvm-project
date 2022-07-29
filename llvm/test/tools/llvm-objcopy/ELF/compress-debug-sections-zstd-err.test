@@ -1,5 +1,0 @@
-# UNSUPPORTED: zstd
-# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t
-# RUN: not llvm-objcopy --compress-debug-sections=zstd %t /dev/null 2>&1 | FileCheck %s
-
-# CHECK: error: LLVM was not compiled with LLVM_ENABLE_ZSTD: cannot compress

@@ -438,32 +438,14 @@ template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
   ArrayRef<uint8_t> Compressed =
       Sec.OriginalData.slice(sizeof(Elf_Chdr_Impl<ELFT>));
-  SmallVector<uint8_t, 128> Decompressed;
-  auto Report = [&](Error Err) {
-    return createStringError(errc::invalid_argument,
-                             "failed to decompress section '" + Sec.Name +
-                                 "': " + toString(std::move(Err)));
-  };
-  switch (Sec.ChType) {
-  case ELFCOMPRESS_ZLIB:
-    if (Error E = compression::zlib::uncompress(Compressed, Decompressed,
+  SmallVector<uint8_t, 128> DecompressedContent;
+  if (Error Err = compression::zlib::uncompress(Compressed, DecompressedContent,
                                                 static_cast<size_t>(Sec.Size)))
-      return Report(std::move(E));
-    break;
-  case ELFCOMPRESS_ZSTD:
-    if (Error E = compression::zstd::uncompress(Compressed, Decompressed,
-                                                static_cast<size_t>(Sec.Size)))
-      return Report(std::move(E));
-    break;
-  default:
     return createStringError(errc::invalid_argument,
-                             "--decompress-debug-sections: ch_type (" +
-                                 Twine(Sec.ChType) + ") of section '" +
-                                 Sec.Name + "' is unsupported");
-  }
+                             "'" + Sec.Name + "': " + toString(std::move(Err)));
 
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  std::copy(Decompressed.begin(), Decompressed.end(), Buf);
+  std::copy(DecompressedContent.begin(), DecompressedContent.end(), Buf);
 
   return Error::success();
 }
@@ -516,9 +498,6 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   case DebugCompressionType::Z:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
     break;
-  case DebugCompressionType::Zstd:
-    Chdr.ch_type = ELF::ELFCOMPRESS_ZSTD;
-    break;
   }
   Chdr.ch_size = Sec.DecompressedSize;
   Chdr.ch_addralign = Sec.DecompressedAlign;
@@ -533,17 +512,9 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
                                      DebugCompressionType CompressionType)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-  switch (CompressionType) {
-  case DebugCompressionType::Z:
-    compression::zlib::compress(OriginalData, CompressedData);
-    break;
-  case DebugCompressionType::Zstd:
-    compression::zstd::compress(OriginalData, CompressedData);
-    break;
-  case DebugCompressionType::None:
-    llvm_unreachable("should not use CompressedSection");
-  }
+  compression::zlib::compress(OriginalData, CompressedData);
 
+  assert(CompressionType != DebugCompressionType::None);
   Flags |= ELF::SHF_COMPRESSED;
   size_t ChdrSize =
       std::max(std::max(sizeof(object::Elf_Chdr_Impl<object::ELF64LE>),
@@ -555,9 +526,9 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
 }
 
 CompressedSection::CompressedSection(ArrayRef<uint8_t> CompressedData,
-                                     uint32_t ChType, uint64_t DecompressedSize,
+                                     uint64_t DecompressedSize,
                                      uint64_t DecompressedAlign)
-    : ChType(ChType), CompressionType(DebugCompressionType::None),
+    : CompressionType(DebugCompressionType::None),
       DecompressedSize(DecompressedSize), DecompressedAlign(DecompressedAlign) {
   OriginalData = CompressedData;
 }
@@ -1735,8 +1706,8 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     if (!(Shdr.sh_flags & ELF::SHF_COMPRESSED))
       return Obj.addSection<Section>(*Data);
     auto *Chdr = reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data->data());
-    return Obj.addSection<CompressedSection>(CompressedSection(
-        *Data, Chdr->ch_type, Chdr->ch_size, Chdr->ch_addralign));
+    return Obj.addSection<CompressedSection>(
+        CompressedSection(*Data, Chdr->ch_size, Chdr->ch_addralign));
   }
   }
 }
