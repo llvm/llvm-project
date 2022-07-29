@@ -2023,13 +2023,6 @@ def NoEscape : Attr {
   let Documentation = [NoEscapeDocs];
 }
 
-def MaybeUndef : InheritableAttr {
-  let Spellings = [Clang<"maybe_undef">];
-  let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [MaybeUndefDocs];
-  let SimpleHandler = 1;
-}
-
 def AssumeAligned : InheritableAttr {
   let Spellings = [GCC<"assume_aligned">];
   let Subjects = SubjectList<[ObjCMethod, Function]>;
