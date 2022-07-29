@@ -46,7 +46,7 @@ foreach(arch ${BUILTIN_TEST_ARCH})
 
   if(APPLE)
     # TODO: Support the new ABI on Apple platforms.
-    if (${arch} MATCHES "arm|aarch64|arm64" AND COMPILER_RT_HAS_FLOAT16)
+    if (${arch} MATCHES "arm|aarch64|arm64|riscv32|riscv64" AND COMPILER_RT_HAS_FLOAT16)
       list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_HAS_FLOAT16)
       string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
     endif()
