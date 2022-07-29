@@ -1904,6 +1904,19 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
   }
 
+  // ((zext i1 X) & Y) == 0 --> !((trunc Y) & X)
+  // ((zext i1 X) & Y) != 0 -->  ((trunc Y) & X)
+  if (match(And, m_OneUse(m_c_And(m_OneUse(m_ZExt(m_Value(X))), m_Value(Y)))) &&
+      C.isZero() && X->getType()->isIntOrIntVectorTy(1)) {
+    Value *TruncY = Builder.CreateTrunc(Y, X->getType());
+    if (Pred == CmpInst::ICMP_EQ) {
+      Value *And = Builder.CreateAnd(TruncY, X);
+      return BinaryOperator::CreateNot(And);
+    }
+    assert(Pred == CmpInst::ICMP_NE && "Unexpected predicate");
+    return BinaryOperator::CreateAnd(TruncY, X);
+  }
+
   return nullptr;
 }
 
