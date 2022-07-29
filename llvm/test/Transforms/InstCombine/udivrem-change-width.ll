@@ -287,13 +287,13 @@ define i32 @udiv_constexpr(i8 %a) {
   ret i32 %d
 }
 
-; FIXME: This is a miscompile (minimal form of PR56810)
+; minimal form of PR56810
 
 @g1 = external global [1 x i8]
 
 define i32 @udiv_const_constexpr(i8 %a) {
 ; CHECK-LABEL: @udiv_const_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 ptrtoint ([1 x i8]* @g1 to i8), 42
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 42, ptrtoint ([1 x i8]* @g1 to i8)
 ; CHECK-NEXT:    [[D:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
@@ -301,13 +301,13 @@ define i32 @udiv_const_constexpr(i8 %a) {
   ret i32 %d
 }
 
-; FIXME: This is a miscompile (minimal form of PR56810)
+; minimal form of PR56810
 
 @g2 = external global [1 x i8]
 
 define i32 @urem_const_constexpr(i8 %a) {
 ; CHECK-LABEL: @urem_const_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 ptrtoint ([1 x i8]* @g2 to i8), 42
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 42, ptrtoint ([1 x i8]* @g2 to i8)
 ; CHECK-NEXT:    [[D:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
