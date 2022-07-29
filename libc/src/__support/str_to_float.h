@@ -9,8 +9,8 @@
 #ifndef LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
 #define LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
 
-#include "src/__support/CPP/Limits.h"
 #include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/builtin_wrappers.h"
 #include "src/__support/ctype_utils.h"
@@ -738,7 +738,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
 
   // The loop fills the mantissa with as many digits as it can hold
   const BitsType bitstype_max_div_by_base =
-      __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
+      cpp::numeric_limits<BitsType>::max() / BASE;
   while (true) {
     if (isdigit(*src)) {
       uint32_t digit = *src - '0';
@@ -828,7 +828,7 @@ static inline bool hexadecimal_string_to_float(
 
   // The loop fills the mantissa with as many digits as it can hold
   const BitsType bitstype_max_div_by_base =
-      __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
+      cpp::numeric_limits<BitsType>::max() / BASE;
   while (true) {
     if (isalnum(*src)) {
       uint32_t digit = b36_char_to_int(*src);

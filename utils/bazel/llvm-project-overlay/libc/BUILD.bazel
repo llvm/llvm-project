@@ -71,7 +71,7 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_limits",
-    hdrs = ["src/__support/CPP/Limits.h"],
+    hdrs = ["src/__support/CPP/limits.h"],
     deps = [":libc_root", "__support_cpp_uint"],
 )
 
