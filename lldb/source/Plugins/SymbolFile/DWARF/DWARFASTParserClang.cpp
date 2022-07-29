@@ -2731,7 +2731,7 @@ void DWARFASTParserClang::ParseSingleMember(
 
   uint64_t field_bit_offset = (attrs.member_byte_offset == UINT32_MAX
                                    ? 0
-                                   : (attrs.member_byte_offset * 8));
+                                   : (attrs.member_byte_offset * 8ULL));
 
   if (attrs.bit_size > 0) {
     FieldInfo this_field_info;

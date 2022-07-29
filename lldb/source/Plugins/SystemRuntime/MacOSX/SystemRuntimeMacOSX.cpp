@@ -787,14 +787,14 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
           //   }
 
           offset_t offset = 0;
-          int i = 0;
+          uint64_t i = 0;
           uint32_t version = extractor.GetU32(&offset);
           if (version == 1) {
             pending_item_refs.new_style = true;
             uint32_t item_size = extractor.GetU32(&offset);
             uint32_t start_of_array_offset = offset;
             while (offset < pending_items_pointer.items_buffer_size &&
-                   static_cast<size_t>(i) < pending_items_pointer.count) {
+                   i < pending_items_pointer.count) {
               offset = start_of_array_offset + (i * item_size);
               ItemRefAndCodeAddress item;
               item.item_ref = extractor.GetAddress(&offset);
@@ -806,7 +806,7 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
             offset = 0;
             pending_item_refs.new_style = false;
             while (offset < pending_items_pointer.items_buffer_size &&
-                   static_cast<size_t>(i) < pending_items_pointer.count) {
+                   i < pending_items_pointer.count) {
               ItemRefAndCodeAddress item;
               item.item_ref = extractor.GetAddress(&offset);
               item.code_address = LLDB_INVALID_ADDRESS;
