@@ -1228,6 +1228,10 @@ int __asan_update_allocation_context(void* addr) {
 #if SANITIZER_AMDGPU
 DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
   const hsa_agent_t *agents, const uint32_t *flags, const void *ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_allocate,
+  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags,
+  void **ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_free, void *ptr)
 
 namespace __asan {
 
@@ -1237,22 +1241,37 @@ static const size_t kPageSize_ = 4096;
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
   hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr,
   BufferedStackTrace *stack) {
-  AmdgpuAllocationInfo aa_info;
-  aa_info.alloc_func = reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
-  aa_info.memory_pool = memory_pool;
-  aa_info.size = size;
-  aa_info.flags = flags;
-  aa_info.ptr = nullptr;
-  SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack, FROM_MALLOC,
-                                          false, &aa_info));
-  return aa_info.status;
+  // Device memory manager will allocate 2MB slabs which have to be 2MB
+  // aligned. This is hard to achieve with added redzone but not wasting big
+  // chunks of device memory. The current workaround is to bypass the
+  // allocation call to HSA if the allocation size is 2MB
+  static const size_t kSlabSize_ = 2 * 1024 * 1024;
+  if (size != kSlabSize_) {
+    AmdgpuAllocationInfo aa_info;
+    aa_info.alloc_func =
+      reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
+    aa_info.memory_pool = memory_pool;
+    aa_info.size = size;
+    aa_info.flags = flags;
+    aa_info.ptr = nullptr;
+    SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack,
+                                            FROM_MALLOC, false, &aa_info));
+    return aa_info.status;
+  } else {
+    return REAL(hsa_amd_memory_pool_allocate)(memory_pool, size, flags, ptr);
+  }
 }
 
 hsa_status_t asan_hsa_amd_memory_pool_free(
   void *ptr,
   BufferedStackTrace *stack) {
-  instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
-  return HSA_STATUS_SUCCESS;
+  void *p = get_allocator().GetBlockBegin(ptr);
+  if (p) {
+    instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
+    return HSA_STATUS_SUCCESS;
+  } else {
+    return REAL(hsa_amd_memory_pool_free)(ptr);
+  }
 }
 
 hsa_status_t asan_hsa_amd_agents_allow_access(
@@ -1263,7 +1282,7 @@ hsa_status_t asan_hsa_amd_agents_allow_access(
   if (p) {
     return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags, p);
   } else {
-    return HSA_STATUS_ERROR_FATAL;
+    return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags, ptr);
   }
 }
 }  // namespace __asan
