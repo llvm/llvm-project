@@ -19,7 +19,6 @@ class InputFile;
 class OutputSection;
 void copySectionsIntoPartitions();
 template <class ELFT> void createSyntheticSections();
-void combineEhSections();
 template <class ELFT> void writeResult();
 
 // This describes a program header entry.
