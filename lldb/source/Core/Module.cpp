@@ -1367,9 +1367,9 @@ void Module::FindSymbolsWithNameAndType(ConstString name,
   }
 }
 
-void Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
-                                             SymbolType symbol_type,
-                                             SymbolContextList &sc_list) {
+void Module::FindSymbolsMatchingRegExAndType(
+    const RegularExpression &regex, SymbolType symbol_type,
+    SymbolContextList &sc_list, Mangled::NamePreference mangling_preference) {
   // No need to protect this call using m_mutex all other method calls are
   // already thread safe.
   LLDB_SCOPED_TIMERF(
@@ -1379,7 +1379,7 @@ void Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
     std::vector<uint32_t> symbol_indexes;
     symtab->FindAllSymbolsMatchingRexExAndType(
         regex, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny,
-        symbol_indexes);
+        symbol_indexes, mangling_preference);
     SymbolIndicesToSymbolContextList(symtab, symbol_indexes, sc_list);
   }
 }
