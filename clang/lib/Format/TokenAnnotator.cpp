@@ -238,11 +238,13 @@ private:
     }
 
     bool StartsObjCMethodExpr = false;
-    if (FormatToken *MaybeSel = OpeningParen.Previous) {
-      // @selector( starts a selector.
-      if (MaybeSel->isObjCAtKeyword(tok::objc_selector) && MaybeSel->Previous &&
-          MaybeSel->Previous->is(tok::at)) {
-        StartsObjCMethodExpr = true;
+    if (!Style.isVerilog()) {
+      if (FormatToken *MaybeSel = OpeningParen.Previous) {
+        // @selector( starts a selector.
+        if (MaybeSel->isObjCAtKeyword(tok::objc_selector) &&
+            MaybeSel->Previous && MaybeSel->Previous->is(tok::at)) {
+          StartsObjCMethodExpr = true;
+        }
       }
     }
 
@@ -761,7 +763,8 @@ private:
           // Remember that this is a [[using ns: foo]] C++ attribute, so we
           // don't add a space before the colon (unlike other colons).
           CurrentToken->setType(TT_AttributeColon);
-        } else if (Left->isOneOf(TT_ArraySubscriptLSquare,
+        } else if (!Style.isVerilog() &&
+                   Left->isOneOf(TT_ArraySubscriptLSquare,
                                  TT_DesignatedInitializerLSquare)) {
           Left->setType(TT_ObjCMethodExpr);
           StartsObjCMethodExpr = true;
@@ -951,6 +954,8 @@ private:
         if (Keywords.isVerilogEnd(*Tok->Previous) ||
             Keywords.isVerilogBegin(*Tok->Previous)) {
           Tok->setType(TT_VerilogBlockLabelColon);
+        } else if (Contexts.back().ContextKind == tok::l_square) {
+          Tok->setType(TT_BitFieldColon);
         }
         break;
       }
@@ -1230,6 +1235,8 @@ private:
           Tok->Next->isNot(tok::l_paren)) {
         Tok->setType(TT_CSharpGenericTypeConstraint);
         parseCSharpGenericTypeConstraint();
+        if (Tok->getPreviousNonComment() == nullptr)
+          Line.IsContinuation = true;
       }
       break;
     case tok::arrow:
@@ -1411,8 +1418,8 @@ public:
     IdentifierInfo *Info = CurrentToken->Tok.getIdentifierInfo();
     if ((Style.Language == FormatStyle::LK_Java &&
          CurrentToken->is(Keywords.kw_package)) ||
-        (Info && Info->getPPKeywordID() == tok::pp_import &&
-         CurrentToken->Next &&
+        (!Style.isVerilog() && Info &&
+         Info->getPPKeywordID() == tok::pp_import && CurrentToken->Next &&
          CurrentToken->Next->isOneOf(tok::string_literal, tok::identifier,
                                      tok::kw_static))) {
       next();
@@ -4009,6 +4016,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (Left.is(TT_VerilogNumberBase) && Right.is(tok::numeric_constant))) {
       return false;
     }
+    // Add space between the type name and dimension like `logic [1:0]`.
+    if (Right.is(tok::l_square) &&
+        Left.isOneOf(TT_VerilogDimensionedTypeName, Keywords.kw_function)) {
+      return true;
+    }
     // Don't add spaces between a casting type and the quote or repetition count
     // and the brace.
     if ((Right.is(Keywords.kw_apostrophe) ||
@@ -4990,7 +5002,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 }
 
 void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
-  llvm::errs() << "AnnotatedTokens(L=" << Line.Level << "):\n";
+  llvm::errs() << "AnnotatedTokens(L=" << Line.Level << ", T=" << Line.Type
+               << ", C=" << Line.IsContinuation << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
     llvm::errs() << " M=" << Tok->MustBreakBefore
