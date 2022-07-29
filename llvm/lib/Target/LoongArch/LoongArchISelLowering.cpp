@@ -738,32 +738,52 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
 }
 
 static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
-                                              MachineBasicBlock &MBB,
-                                              const TargetInstrInfo &TII) {
+                                              MachineBasicBlock *MBB) {
   if (!ZeroDivCheck)
-    return &MBB;
+    return MBB;
 
   // Build instructions:
+  // MBB:
   //   div(or mod)   $dst, $dividend, $divisor
-  //   bnez          $divisor, 8
-  //   break         7
+  //   bnez          $divisor, SinkMBB
+  // BreakMBB:
+  //   break         7 // BRK_DIVZERO
+  // SinkMBB:
   //   fallthrough
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator It = ++MBB->getIterator();
+  MachineFunction *MF = MBB->getParent();
+  auto BreakMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  auto SinkMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MF->insert(It, BreakMBB);
+  MF->insert(It, SinkMBB);
+
+  // Transfer the remainder of MBB and its successor edges to SinkMBB.
+  SinkMBB->splice(SinkMBB->end(), MBB, std::next(MI.getIterator()), MBB->end());
+  SinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
   MachineOperand &Divisor = MI.getOperand(2);
-  auto FallThrough = std::next(MI.getIterator());
+  Register DivisorReg = Divisor.getReg();
 
-  BuildMI(MBB, FallThrough, MI.getDebugLoc(), TII.get(LoongArch::BNEZ))
-      .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-      .addImm(8);
+  // MBB:
+  BuildMI(MBB, DL, TII.get(LoongArch::BNEZ))
+      .addReg(DivisorReg, getKillRegState(Divisor.isKill()))
+      .addMBB(SinkMBB);
+  MBB->addSuccessor(BreakMBB);
+  MBB->addSuccessor(SinkMBB);
 
+  // BreakMBB:
   // See linux header file arch/loongarch/include/uapi/asm/break.h for the
   // definition of BRK_DIVZERO.
-  BuildMI(MBB, FallThrough, MI.getDebugLoc(), TII.get(LoongArch::BREAK))
-      .addImm(7/*BRK_DIVZERO*/);
+  BuildMI(BreakMBB, DL, TII.get(LoongArch::BREAK)).addImm(7 /*BRK_DIVZERO*/);
+  BreakMBB->addSuccessor(SinkMBB);
 
   // Clear Divisor's kill flag.
   Divisor.setIsKill(false);
 
-  return &MBB;
+  return SinkMBB;
 }
 
 MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
@@ -780,7 +800,7 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::DIV_DU:
   case LoongArch::MOD_D:
   case LoongArch::MOD_DU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo());
+    return insertDivByZeroTrap(MI, BB);
     break;
   }
 }
