@@ -144,7 +144,7 @@ Error COFFLinkGraphBuilder::graphifySections() {
     // FIXME: Revisit crash when dropping IMAGE_SCN_MEM_DISCARDABLE sections
 
     // Get the section's memory protection flags.
-    MemProt Prot = MemProt::None;
+    MemProt Prot = MemProt::Read;
     if ((*Sec)->Characteristics & COFF::IMAGE_SCN_MEM_EXECUTE)
       Prot |= MemProt::Exec;
     if ((*Sec)->Characteristics & COFF::IMAGE_SCN_MEM_READ)
@@ -224,17 +224,30 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
                << " (index: " << SectionIndex << ") \n";
       });
     else if (Sym->isUndefined()) {
-      LLVM_DEBUG({
-        dbgs() << "    " << SymIndex
-               << ": Creating external graph symbol for COFF symbol \""
-               << SymbolName << "\" in "
-               << getCOFFSectionName(SectionIndex, Sec, *Sym)
-               << " (index: " << SectionIndex << ") \n";
-      });
-      if (!ExternalSymbols.count(SymbolName))
-        ExternalSymbols[SymbolName] =
-            &G->addExternalSymbol(SymbolName, Sym->getValue(), Linkage::Strong);
-      GSym = ExternalSymbols[SymbolName];
+      auto CreateExternalSymbol = [&](StringRef SymbolName) {
+        if (!ExternalSymbols.count(SymbolName))
+          ExternalSymbols[SymbolName] = &G->addExternalSymbol(
+              SymbolName, Sym->getValue(), Linkage::Strong);
+
+        LLVM_DEBUG({
+          dbgs() << "    " << SymIndex
+                 << ": Creating external graph symbol for COFF symbol \""
+                 << SymbolName << "\" in "
+                 << getCOFFSectionName(SectionIndex, Sec, *Sym)
+                 << " (index: " << SectionIndex << ") \n";
+        });
+        return ExternalSymbols[SymbolName];
+      };
+      if (SymbolName.startswith(getDLLImportStubPrefix())) {
+        if (Sym->getValue() != 0)
+          return make_error<JITLinkError>(
+              "DLL import symbol has non-zero offset");
+
+        auto ExternalSym = CreateExternalSymbol(
+            SymbolName.drop_front(getDLLImportStubPrefix().size()));
+        GSym = &createDLLImportEntry(SymbolName, *ExternalSym);
+      } else
+        GSym = CreateExternalSymbol(SymbolName);
     } else if (Sym->isWeakExternal()) {
       auto *WeakExternal = Sym->getAux<object::coff_aux_weak_external>();
       COFFSymbolIndex TagIndex = WeakExternal->TagIndex;
