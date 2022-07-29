@@ -52,7 +52,9 @@ Bug Fixes
 - ``-Wtautological-compare`` missed warnings for tautological comparisons
   involving a negative integer literal. This fixes
   `Issue 42918 <https://github.com/llvm/llvm-project/issues/42918>`_.
-
+- Fixes an accepts-invalid bug in C when using a ``_Noreturn`` function
+  specifier on something other than a function declaration. This fixes
+  `Issue 56800 <https://github.com/llvm/llvm-project/issues/56800>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
