@@ -928,6 +928,36 @@ struct FoldReshapeWithFromElements : OpRewritePattern<TensorReshapeOp> {
   }
 };
 
+// Fold CastOp into CollapseShapeOp when adding static information.
+struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
+  using OpRewritePattern<CollapseShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CollapseShapeOp collapseShapeOp,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = collapseShapeOp.getSrc().getDefiningOp<tensor::CastOp>();
+    if (!tensor::canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    RankedTensorType srcType =
+        castOp.getSource().getType().cast<RankedTensorType>();
+    RankedTensorType newResultType = computeTensorReshapeCollapsedType(
+        srcType, collapseShapeOp.getReassociationMaps());
+
+    if (newResultType == collapseShapeOp.getResultType()) {
+      rewriter.updateRootInPlace(collapseShapeOp, [&]() {
+        collapseShapeOp.getSrcMutable().assign(castOp.getSource());
+      });
+    } else {
+      auto newOp = rewriter.create<CollapseShapeOp>(
+          collapseShapeOp.getLoc(), newResultType, castOp.getSource(),
+          collapseShapeOp.getReassociation());
+      rewriter.replaceOpWithNewOp<tensor::CastOp>(
+          collapseShapeOp, collapseShapeOp.getResultType(), newOp);
+    }
+    return success();
+  }
+};
+
 } // namespace
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -940,10 +970,12 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
-              ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp>,
-              FoldReshapeWithConstant<CollapseShapeOp>,
-              FoldReshapeWithFromElements<CollapseShapeOp>>(context);
+  results
+      .add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
+           ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp>,
+           FoldReshapeWithConstant<CollapseShapeOp>,
+           FoldReshapeWithFromElements<CollapseShapeOp>, FoldCollapseOfCastOp>(
+          context);
 }
 
 OpFoldResult ExpandShapeOp::fold(ArrayRef<Attribute> operands) {

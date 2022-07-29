@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck -check-prefix=DEBUG %s
-# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass=machine-scheduler -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX908 %s
+# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass machine-scheduler -amdgpu-disable-unclustred-high-rp-reschedule %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck -check-prefix=DEBUG %s
+# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass=machine-scheduler -amdgpu-disable-unclustred-high-rp-reschedule -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX908 %s
 # REQUIRES: asserts
 
 ---

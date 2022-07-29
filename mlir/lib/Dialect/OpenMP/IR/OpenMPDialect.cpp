@@ -836,6 +836,34 @@ LogicalResult AtomicWriteOp::verify() {
 // Verifier for AtomicUpdateOp
 //===----------------------------------------------------------------------===//
 
+bool AtomicUpdateOp::isNoOp() {
+  YieldOp yieldOp = dyn_cast<omp::YieldOp>(getFirstOp());
+  return (yieldOp &&
+          yieldOp.results().front() == getRegion().front().getArgument(0));
+}
+
+Value AtomicUpdateOp::getWriteOpVal() {
+  YieldOp yieldOp = dyn_cast<omp::YieldOp>(getFirstOp());
+  if (yieldOp &&
+      yieldOp.results().front() != getRegion().front().getArgument(0))
+    return yieldOp.results().front();
+  return nullptr;
+}
+
+LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
+                                           PatternRewriter &rewriter) {
+  if (op.isNoOp()) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+  if (Value writeVal = op.getWriteOpVal()) {
+    rewriter.replaceOpWithNewOp<AtomicWriteOp>(
+        op, op.x(), writeVal, op.hint_valAttr(), op.memory_order_valAttr());
+    return success();
+  }
+  return failure();
+}
+
 LogicalResult AtomicUpdateOp::verify() {
   if (auto mo = memory_order_val()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
@@ -844,6 +872,9 @@ LogicalResult AtomicUpdateOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic updates");
     }
   }
+
+  if (region().getNumArguments() != 1)
+    return emitError("the region must accept exactly one argument");
 
   if (x().getType().cast<PointerLikeType>().getElementType() !=
       region().getArgument(0).getType()) {
@@ -855,12 +886,6 @@ LogicalResult AtomicUpdateOp::verify() {
 }
 
 LogicalResult AtomicUpdateOp::verifyRegions() {
-  if (region().getNumArguments() != 1)
-    return emitError("the region must accept exactly one argument");
-
-  if (region().front().getOperations().size() < 2)
-    return emitError() << "the update region must have at least two operations "
-                          "(binop and terminator)";
 
   YieldOp yieldOp = *region().getOps<YieldOp>().begin();
 

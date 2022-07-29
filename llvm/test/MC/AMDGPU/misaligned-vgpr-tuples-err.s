@@ -9,7 +9,7 @@ global_load_dwordx3 v[1:3], v[0:1], off
 global_load_dwordx4 v[1:4], v[0:1], off
 // GFX90A: error: invalid register class: vgpr tuples must be 64 bit aligned
 
-image_load v[1:5], v2, s[0:7] dmask:0xf unorm
+image_load v[1:4], v2, s[0:7] dmask:0xf unorm
 // GFX90A: error: invalid register class: vgpr tuples must be 64 bit aligned
 
 v_mfma_f32_32x32x8f16 a[0:15], a[1:2], v[0:1], a[0:15]

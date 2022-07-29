@@ -396,8 +396,8 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %r203 = sitofp <4 x i8> undef to <4 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %r204 = uitofp <4 x i16> undef to <4 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %r205 = sitofp <4 x i16> undef to <4 x double>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %r206 = uitofp <4 x i32> undef to <4 x double>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %r207 = sitofp <4 x i32> undef to <4 x double>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r206 = uitofp <4 x i32> undef to <4 x double>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r207 = sitofp <4 x i32> undef to <4 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r208 = uitofp <4 x i64> undef to <4 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r209 = sitofp <4 x i64> undef to <4 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r210 = uitofp <8 x i1> undef to <8 x float>

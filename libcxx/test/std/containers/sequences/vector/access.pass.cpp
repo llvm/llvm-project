@@ -29,9 +29,7 @@
 #include "test_macros.h"
 
 template <class C>
-C
-make(int size, int start)
-{
+TEST_CONSTEXPR_CXX20 C make(int size, int start) {
     C c;
     for (int i = 0; i < size; ++i)
         c.push_back(start + i);
@@ -39,7 +37,7 @@ make(int size, int start)
 }
 
 template <class Vector>
-void test_get_basic(Vector& c, int start_value) {
+TEST_CONSTEXPR_CXX20 void test_get_basic(Vector& c, int start_value) {
     const int n = static_cast<int>(c.size());
     for (int i = 0; i < n; ++i)
         assert(c[i] == start_value + i);
@@ -47,10 +45,12 @@ void test_get_basic(Vector& c, int start_value) {
         assert(c.at(i) == start_value + i);
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try {
-        TEST_IGNORE_NODISCARD c.at(n);
-        assert(false);
-    } catch (const std::out_of_range&) {}
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+        try {
+            TEST_IGNORE_NODISCARD c.at(n);
+            assert(false);
+        } catch (const std::out_of_range&) {}
+    }
 #endif
 
     assert(c.front() == start_value);
@@ -58,7 +58,7 @@ void test_get_basic(Vector& c, int start_value) {
 }
 
 template <class Vector>
-void test_get() {
+TEST_CONSTEXPR_CXX20 void test_get() {
     int start_value = 35;
     Vector c = make<Vector>(10, start_value);
     const Vector& cc = c;
@@ -67,7 +67,7 @@ void test_get() {
 }
 
 template <class Vector>
-void test_set() {
+TEST_CONSTEXPR_CXX20 void test_set() {
     int start_value = 35;
     const int n = 10;
     Vector c = make<Vector>(n, start_value);
@@ -93,7 +93,7 @@ void test_set() {
 }
 
 template <class Vector>
-void test() {
+TEST_CONSTEXPR_CXX20 void test() {
     test_get<Vector>();
     test_set<Vector>();
 
@@ -112,12 +112,18 @@ void test() {
     ASSERT_SAME_TYPE(typename Vector::const_reference, decltype(cc.back()));
 }
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     test<std::vector<int> >();
 #if TEST_STD_VER >= 11
     test<std::vector<int, min_allocator<int> > >();
 #endif
+    return true;
+}
 
-  return 0;
+int main(int, char**) {
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

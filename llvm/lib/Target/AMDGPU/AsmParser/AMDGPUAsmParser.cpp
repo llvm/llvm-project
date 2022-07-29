@@ -1478,6 +1478,8 @@ public:
     return AMDGPU::isGFX11Plus(getSTI());
   }
 
+  bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
+
   bool isGFX10_BEncoding() const {
     return AMDGPU::isGFX10_BEncoding(getSTI());
   }
@@ -1660,7 +1662,7 @@ private:
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
   bool validateMovrels(const MCInst &Inst, const OperandVector &Operands);
-  Optional<StringRef> validateMIMGDataSize(const MCInst &Inst);
+  bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGAddrSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst);
@@ -3603,13 +3605,14 @@ bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
   return true;
 }
 
-Optional<StringRef> AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
+                                           const SMLoc &IDLoc) {
 
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
   if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
-    return None;
+    return true;
 
   int VDataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
@@ -3617,8 +3620,8 @@ Optional<StringRef> AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
 
   assert(VDataIdx != -1);
 
-  if (DMaskIdx == -1 || TFEIdx == -1) // intersect_ray
-    return None;
+  if ((DMaskIdx == -1 || TFEIdx == -1) && isGFX10_AEncoding()) // intersect_ray
+    return true;
 
   unsigned VDataSize = AMDGPU::getRegOperandSize(getMRI(), Desc, VDataIdx);
   unsigned TFESize = (TFEIdx != -1 && Inst.getOperand(TFEIdx).getImm()) ? 1 : 0;
@@ -3626,22 +3629,27 @@ Optional<StringRef> AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if (DMask == 0)
     DMask = 1;
 
-  bool isPackedD16 = false;
+  bool IsPackedD16 = false;
   unsigned DataSize =
     (Desc.TSFlags & SIInstrFlags::Gather4) ? 4 : countPopulation(DMask);
   if (hasPackedD16()) {
     int D16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::d16);
-    isPackedD16 = D16Idx >= 0;
-    if (isPackedD16 && Inst.getOperand(D16Idx).getImm())
+    IsPackedD16 = D16Idx >= 0;
+    if (IsPackedD16 && Inst.getOperand(D16Idx).getImm())
       DataSize = (DataSize + 1) / 2;
   }
 
   if ((VDataSize / 4) == DataSize + TFESize)
-    return None;
+    return true;
 
-  return StringRef(isPackedD16
-                       ? "image data size does not match dmask, d16 and tfe"
-                       : "image data size does not match dmask and tfe");
+  StringRef Modifiers;
+  if (isGFX90A())
+    Modifiers = IsPackedD16 ? "dmask and d16" : "dmask";
+  else
+    Modifiers = IsPackedD16 ? "dmask, d16 and tfe" : "dmask and tfe";
+
+  Error(IDLoc, Twine("image data size does not match ") + Modifiers);
+  return false;
 }
 
 bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
@@ -3913,7 +3921,7 @@ bool AMDGPUAsmParser::validateMIMGDim(const MCInst &Inst) {
   if (DimIdx < 0)
     return true;
 
-  long Imm = Inst.getOperand(DimIdx).getImm();
+  int64_t Imm = Inst.getOperand(DimIdx).getImm();
   if (Imm < 0 || Imm >= 8)
     return false;
 
@@ -4625,8 +4633,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
           "invalid dim; must be MSAA type");
     return false;
   }
-  if (auto ErrMsg = validateMIMGDataSize(Inst)) {
-    Error(IDLoc, *ErrMsg);
+  if (!validateMIMGDataSize(Inst, IDLoc)) {
     return false;
   }
   if (!validateMIMGAddrSize(Inst)) {

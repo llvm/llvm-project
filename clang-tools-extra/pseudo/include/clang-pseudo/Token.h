@@ -90,6 +90,11 @@ struct Token {
     while (T->Kind == tok::comment);
     return *T;
   }
+  /// Returns the previous token in the stream. this may not be a sentinel.
+  const Token &prev() const {
+    assert(Kind != tok::eof);
+    return *(this - 1);
+  }
   /// Returns the bracket paired with this one, if any.
   const Token *pair() const { return Pair == 0 ? nullptr : this + Pair; }
 

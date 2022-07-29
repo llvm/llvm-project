@@ -11,16 +11,7 @@
 // class year_month_day;
 
 // constexpr bool operator==(const year_month_day& x, const year_month_day& y) noexcept;
-//   Returns: x.year() == y.year() && x.month() == y.month().
-//
-// constexpr bool operator< (const year_month_day& x, const year_month_day& y) noexcept;
-//   Returns:
-//      If x.year() < y.year() returns true.
-//      Otherwise, if x.year() > y.year() returns false.
-//      Otherwise, if x.month() < y.month() returns true.
-//      Otherwise, if x.month() > y.month() returns false.
-//      Otherwise, returns x.day() < y.day()
-
+// constexpr strong_ordering operator<=>(const year_month_day& x, const year_month_day& y) noexcept;
 
 #include <chrono>
 #include <type_traits>
@@ -29,91 +20,102 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main(int, char**)
-{
-    using day        = std::chrono::day;
-    using year       = std::chrono::year;
-    using month      = std::chrono::month;
-    using year_month_day = std::chrono::year_month_day;
+constexpr bool test() {
+  using day            = std::chrono::day;
+  using year           = std::chrono::year;
+  using month          = std::chrono::month;
+  using year_month_day = std::chrono::year_month_day;
 
-    AssertComparisonsAreNoexcept<year_month_day>();
-    AssertComparisonsReturnBool<year_month_day>();
+  constexpr month January  = std::chrono::January;
+  constexpr month February = std::chrono::February;
 
-    constexpr month January = std::chrono::January;
-    constexpr month February = std::chrono::February;
+  assert(testOrder(
+      year_month_day{year{1234}, January, day{1}},
+      year_month_day{year{1234}, January, day{1}},
+      std::strong_ordering::equal));
 
-    static_assert( testComparisons(
-        year_month_day{year{1234}, January, day{1}},
-        year_month_day{year{1234}, January, day{1}},
-        true, false), "");
+  // different day
+  assert(testOrder(
+      year_month_day{year{1234}, January, day{1}},
+      year_month_day{year{1234}, January, day{2}},
+      std::strong_ordering::less));
 
-    // different day
-    static_assert( testComparisons(
-        year_month_day{year{1234}, January, day{1}},
-        year_month_day{year{1234}, January, day{2}},
-        false, true), "");
+  // different month
+  assert(testOrder(
+      year_month_day{year{1234}, January, day{1}},
+      year_month_day{year{1234}, February, day{1}},
+      std::strong_ordering::less));
 
-    // different month
-    static_assert( testComparisons(
-        year_month_day{year{1234}, January, day{1}},
-        year_month_day{year{1234}, February, day{1}},
-        false, true), "");
+  // different year
+  assert(testOrder(
+      year_month_day{year{1234}, January, day{1}},
+      year_month_day{year{1235}, January, day{1}},
+      std::strong_ordering::less));
 
-    // different year
-    static_assert( testComparisons(
-        year_month_day{year{1234}, January, day{1}},
-        year_month_day{year{1235}, January, day{1}},
-        false, true), "");
+  // different month and day
+  assert(testOrder(
+      year_month_day{year{1234}, January, day{2}},
+      year_month_day{year{1234}, February, day{1}},
+      std::strong_ordering::less));
 
+  // different year and month
+  assert(testOrder(
+      year_month_day{year{1234}, February, day{1}},
+      year_month_day{year{1235}, January, day{1}},
+      std::strong_ordering::less));
 
-    // different month and day
-    static_assert( testComparisons(
-        year_month_day{year{1234}, January, day{2}},
-        year_month_day{year{1234}, February, day{1}},
-        false, true), "");
+  // different year and day
+  assert(testOrder(
+      year_month_day{year{1234}, January, day{2}},
+      year_month_day{year{1235}, January, day{1}},
+      std::strong_ordering::less));
 
-    // different year and month
-    static_assert( testComparisons(
-        year_month_day{year{1234}, February, day{1}},
-        year_month_day{year{1235}, January, day{1}},
-        false, true), "");
+  // different year, month and day
+  assert(testOrder(
+      year_month_day{year{1234}, February, day{2}},
+      year_month_day{year{1235}, January, day{1}},
+      std::strong_ordering::less));
 
-    // different year and day
-    static_assert( testComparisons(
-        year_month_day{year{1234}, January, day{2}},
-        year_month_day{year{1235}, January, day{1}},
-        false, true), "");
+  // same year, different days
+  for (unsigned i = 1; i < 28; ++i)
+    for (unsigned j = 1; j < 28; ++j)
+      assert((testOrder(
+          year_month_day{year{1234}, January, day{i}},
+          year_month_day{year{1234}, January, day{j}},
+          i == j  ? std::strong_ordering::equal
+          : i < j ? std::strong_ordering::less
+                  : std::strong_ordering::greater)));
 
-    // different year, month and day
-    static_assert( testComparisons(
-        year_month_day{year{1234}, February, day{2}},
-        year_month_day{year{1235}, January, day{1}},
-        false, true), "");
+  // same year, different months
+  for (unsigned i = 1; i < 12; ++i)
+    for (unsigned j = 1; j < 12; ++j)
+      assert((testOrder(
+          year_month_day{year{1234}, month{i}, day{12}},
+          year_month_day{year{1234}, month{j}, day{12}},
+          i == j  ? std::strong_ordering::equal
+          : i < j ? std::strong_ordering::less
+                  : std::strong_ordering::greater)));
 
+  // same month, different years
+  for (int i = -5; i < 5; ++i)
+    for (int j = -5; j < 5; ++j)
+      assert((testOrder(
+          year_month_day{year{i}, January, day{12}},
+          year_month_day{year{j}, January, day{12}},
+          i == j  ? std::strong_ordering::equal
+          : i < j ? std::strong_ordering::less
+                  : std::strong_ordering::greater)));
 
-    // same year, different days
-    for (unsigned i = 1; i < 28; ++i)
-        for (unsigned j = 1; j < 28; ++j)
-            assert((testComparisons(
-                year_month_day{year{1234}, January, day{i}},
-                year_month_day{year{1234}, January, day{j}},
-                i == j, i < j )));
+  return true;
+}
 
-    // same year, different months
-    for (unsigned i = 1; i < 12; ++i)
-        for (unsigned j = 1; j < 12; ++j)
-            assert((testComparisons(
-                year_month_day{year{1234}, month{i}, day{12}},
-                year_month_day{year{1234}, month{j}, day{12}},
-                i == j, i < j )));
+int main(int, char**) {
+  using year_month_day = std::chrono::year_month_day;
+  AssertOrderAreNoexcept<year_month_day>();
+  AssertOrderReturn<std::strong_ordering, year_month_day>();
 
-    // same month, different years
-    for (int i = 1000; i < 2000; ++i)
-        for (int j = 1000; j < 2000; ++j)
-        assert((testComparisons(
-            year_month_day{year{i}, January, day{12}},
-            year_month_day{year{j}, January, day{12}},
-            i == j, i < j )));
+  test();
+  static_assert(test());
 
-    return 0;
+  return 0;
 }

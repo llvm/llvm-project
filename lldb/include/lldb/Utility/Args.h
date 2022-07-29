@@ -39,7 +39,7 @@ public:
     friend struct llvm::yaml::MappingTraits<Args::ArgEntry>;
 
     std::unique_ptr<char[]> ptr;
-    char quote;
+    char quote = '\0';
 
     char *data() { return ptr.get(); }
 
@@ -395,7 +395,7 @@ template <> struct MappingTraits<lldb_private::Args::ArgEntry> {
       return lldb_private::Args::ArgEntry(value, quote);
     }
     StringRef value;
-    uint8_t quote;
+    uint8_t quote = '\0';
   };
   static void mapping(IO &io, lldb_private::Args::ArgEntry &v);
 };

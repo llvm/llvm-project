@@ -2507,9 +2507,9 @@ entry:
 define i128 @test_vmull_p64(i64 %a, i64 %b) #4 {
 ; CHECK-LABEL: test_vmull_p64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    fmov d1, x1
-; CHECK-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-NEXT:    fmov d0, x1
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
 ; CHECK-NEXT:    mov x1, v0.d[1]
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret

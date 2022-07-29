@@ -59,10 +59,6 @@ class TypeErasedDataflowAnalysis : public Environment::ValueModel {
 public:
   TypeErasedDataflowAnalysis() : Options({}) {}
 
-  /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
-  TypeErasedDataflowAnalysis(bool ApplyBuiltinTransfer)
-      : Options({ApplyBuiltinTransfer, TransferOptions{}}) {}
-
   TypeErasedDataflowAnalysis(DataflowAnalysisOptions Options)
       : Options(Options) {}
 

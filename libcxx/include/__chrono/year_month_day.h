@@ -20,6 +20,7 @@
 #include <__chrono/year.h>
 #include <__chrono/year_month.h>
 #include <__config>
+#include <compare>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -109,31 +110,14 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month_day& __lhs, const year_month_day& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month() && __lhs.day() == __rhs.day(); }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const year_month_day& __lhs, const year_month_day& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator< (const year_month_day& __lhs, const year_month_day& __rhs) noexcept
-{
-    if (__lhs.year() < __rhs.year()) return true;
-    if (__lhs.year() > __rhs.year()) return false;
-    if (__lhs.month() < __rhs.month()) return true;
-    if (__lhs.month() > __rhs.month()) return false;
-    return __lhs.day() < __rhs.day();
+_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
+operator<=>(const year_month_day& __lhs, const year_month_day& __rhs) noexcept {
+    if (auto __c = __lhs.year() <=> __rhs.year(); __c != 0)
+      return __c;
+    if (auto __c = __lhs.month() <=> __rhs.month(); __c != 0)
+      return __c;
+    return __lhs.day() <=> __rhs.day();
 }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator> (const year_month_day& __lhs, const year_month_day& __rhs) noexcept
-{ return __rhs < __lhs; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator<=(const year_month_day& __lhs, const year_month_day& __rhs) noexcept
-{ return !(__rhs < __lhs);}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator>=(const year_month_day& __lhs, const year_month_day& __rhs) noexcept
-{ return !(__lhs < __rhs); }
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month_day operator/(const year_month& __lhs, const day& __rhs) noexcept

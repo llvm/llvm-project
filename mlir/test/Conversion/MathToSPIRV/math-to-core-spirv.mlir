@@ -32,8 +32,8 @@ func.func @copy_sign_vector(%value: vector<3xf16>, %sign: vector<3xf16>) -> vect
 //  CHECK-SAME: (%[[VALUE:.+]]: vector<3xf16>, %[[SIGN:.+]]: vector<3xf16>)
 //       CHECK:   %[[SMASK:.+]] = spv.Constant -32768 : i16
 //       CHECK:   %[[VMASK:.+]] = spv.Constant 32767 : i16
-//       CHECK:   %[[SVMASK:.+]] = spv.CompositeConstruct %[[SMASK]], %[[SMASK]], %[[SMASK]] : vector<3xi16>
-//       CHECK:   %[[VVMASK:.+]] = spv.CompositeConstruct %[[VMASK]], %[[VMASK]], %[[VMASK]] : vector<3xi16>
+//       CHECK:   %[[SVMASK:.+]] = spv.CompositeConstruct %[[SMASK]], %[[SMASK]], %[[SMASK]]
+//       CHECK:   %[[VVMASK:.+]] = spv.CompositeConstruct %[[VMASK]], %[[VMASK]], %[[VMASK]]
 //       CHECK:   %[[VCAST:.+]] = spv.Bitcast %[[VALUE]] : vector<3xf16> to vector<3xi16>
 //       CHECK:   %[[SCAST:.+]] = spv.Bitcast %[[SIGN]] : vector<3xf16> to vector<3xi16>
 //       CHECK:   %[[VAND:.+]] = spv.BitwiseAnd %[[VCAST]], %[[VVMASK]] : vector<3xi16>
