@@ -51,8 +51,7 @@ define i64 @icmp_eq_constant_2048(i64 %a) nounwind {
 define i64 @icmp_eq_constant_neg_2048(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_eq_constant_neg_2048:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -2048
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    xori a0, a0, -2048
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp eq i64 %a, -2048
@@ -130,8 +129,7 @@ define i64 @icmp_ne_constant_2048(i64 %a) nounwind {
 define i64 @icmp_ne_constant_neg_2048(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_ne_constant_neg_2048:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -2048
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    xori a0, a0, -2048
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp ne i64 %a, -2048
