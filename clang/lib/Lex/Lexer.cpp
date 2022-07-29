@@ -1483,13 +1483,13 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts) {
 }
 
 static bool isAllowedInitiallyIDChar(uint32_t C, const LangOptions &LangOpts) {
+  assert(C > 0x7F && "isAllowedInitiallyIDChar called with an ASCII codepoint");
   if (LangOpts.AsmPreprocessor) {
     return false;
   }
   if (LangOpts.CPlusPlus || LangOpts.C2x) {
     static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
-    // '_' doesn't have the XID_Start property but is allowed in C++.
-    return C == '_' || XIDStartChars.contains(C);
+    return XIDStartChars.contains(C);
   }
   if (!isAllowedIDChar(C, LangOpts))
     return false;
