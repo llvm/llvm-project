@@ -152,14 +152,14 @@ void elf::combineEhSections() {
     Partition &part = s->getPartition();
     if (auto *es = dyn_cast<EhInputSection>(s)) {
       part.ehFrame->addSection(es);
-      s = nullptr;
     } else if (s->kind() == SectionBase::Regular && part.armExidx &&
                part.armExidx->addSection(cast<InputSection>(s))) {
       s = nullptr;
     }
   }
 
-  llvm::erase_value(inputSections, nullptr);
+  if (mainPart->armExidx)
+    llvm::erase_value(inputSections, nullptr);
 }
 
 static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
