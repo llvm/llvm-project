@@ -81,13 +81,5 @@ Attribute complex::NumberAttr::parse(AsmParser &parser, Type odsType) {
       parser.parseFloat(imag) || parser.parseGreater())
     return {};
 
-  bool unused = false;
-  APFloat realFloat(real);
-  realFloat.convert(type.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &unused);
-  APFloat imagFloat(imag);
-  imagFloat.convert(type.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &unused);
-  return NumberAttr::get(parser.getContext(), realFloat, imagFloat,
-                         ComplexType::get(type));
+  return NumberAttr::get(ComplexType::get(type), real, imag);
 }
