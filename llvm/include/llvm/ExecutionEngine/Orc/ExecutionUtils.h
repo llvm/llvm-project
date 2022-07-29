@@ -287,6 +287,13 @@ public:
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
+  /// Returns a list of filenames of dynamic libraries that this archive has
+  /// imported. This class does not load these libraries by itself. User is
+  /// responsible for making sure these libraries are avaliable to the JITDylib.
+  const std::set<std::string> &getImportedDynamicLibraries() const {
+    return ImportedDynamicLibraries;
+  }
+
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &Symbols) override;
@@ -297,10 +304,14 @@ private:
                                    GetObjectFileInterface GetObjFileInterface,
                                    Error &Err);
 
+  Error buildObjectFilesMap();
+
   ObjectLayer &L;
   GetObjectFileInterface GetObjFileInterface;
+  std::set<std::string> ImportedDynamicLibraries;
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
+  DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
 };
 
 } // end namespace orc
