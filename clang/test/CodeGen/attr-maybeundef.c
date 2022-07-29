@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -emit-llvm %s -o - | FileCheck %s
 
 #define __maybe_undef __attribute__((maybe_undef))
 

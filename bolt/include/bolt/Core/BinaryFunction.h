@@ -994,7 +994,7 @@ public:
   bool hasName(const std::string &FunctionName) const {
     auto Res =
         forEachName([&](StringRef Name) { return Name == FunctionName; });
-    return Res.hasValue();
+    return Res.has_value();
   }
 
   /// Check if any of function names matches the given regex.

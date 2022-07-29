@@ -115,7 +115,6 @@ config("cxx_config") {
 cxx_sources = [
   "algorithm.cpp",
   "any.cpp",
-  "assert.cpp",
   "atomic.cpp",
   "barrier.cpp",
   "bind.cpp",
@@ -182,6 +181,7 @@ cxx_sources = [
   "valarray.cpp",
   "variant.cpp",
   "vector.cpp",
+  "verbose_abort.cpp",
 ]
 if (target_os == "win") {
   cxx_sources += [

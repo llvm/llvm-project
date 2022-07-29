@@ -203,14 +203,6 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
 Environment Environment::pushCall(const CallExpr *Call) const {
   Environment Env(*this);
 
-  // FIXME: Currently this only works if the callee is never a method and the
-  // same callee is never analyzed from multiple separate callsites. To
-  // generalize this, we'll need to store a "context" field (probably a stack of
-  // `const CallExpr *`s) in the `Environment`, and then change the
-  // `DataflowAnalysisContext` class to hold a map from contexts to "frames",
-  // where each frame stores its own version of what are currently the
-  // `DeclToLoc`, `ExprToLoc`, and `ThisPointeeLoc` fields.
-
   const auto *FuncDecl = Call->getDirectCallee();
   assert(FuncDecl != nullptr);
   assert(FuncDecl->getBody() != nullptr);
@@ -226,14 +218,38 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   for (; ArgIt != ArgEnd; ++ParamIt, ++ArgIt) {
     assert(ParamIt != FuncDecl->param_end());
 
-    const VarDecl *Param = *ParamIt;
     const Expr *Arg = *ArgIt;
     auto *ArgLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
     assert(ArgLoc != nullptr);
-    Env.setStorageLocation(*Param, *ArgLoc);
+
+    const VarDecl *Param = *ParamIt;
+    auto &Loc = Env.createStorageLocation(*Param);
+    Env.setStorageLocation(*Param, Loc);
+
+    QualType ParamType = Param->getType();
+    if (ParamType->isReferenceType()) {
+      auto &Val = Env.takeOwnership(std::make_unique<ReferenceValue>(*ArgLoc));
+      Env.setValue(Loc, Val);
+    } else if (auto *ArgVal = Env.getValue(*ArgLoc)) {
+      Env.setValue(Loc, *ArgVal);
+    } else if (Value *Val = Env.createValue(ParamType)) {
+      Env.setValue(Loc, *Val);
+    }
   }
 
   return Env;
+}
+
+void Environment::popCall(const Environment &CalleeEnv) {
+  // We ignore `DACtx` because it's already the same in both. We don't bring
+  // back `DeclToLoc` and `ExprToLoc` because we want to be able to later
+  // analyze the same callee in a different context, and `setStorageLocation`
+  // requires there to not already be a storage location assigned. Conceptually,
+  // these maps capture information from the local scope, so when popping that
+  // scope, we do not propagate the maps.
+  this->LocToVal = std::move(CalleeEnv.LocToVal);
+  this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
+  this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
 }
 
 bool Environment::equivalentTo(const Environment &Other,
