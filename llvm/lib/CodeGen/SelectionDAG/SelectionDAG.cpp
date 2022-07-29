@@ -3293,13 +3293,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     assert((Op.getResNo() == 0 || Op.getResNo() == 1) && "Unknown result");
 
     // Collect lo/hi source values and concatenate.
-    // TODO: Would a KnownBits::concatBits helper be useful?
     unsigned LoBits = Op.getOperand(0).getScalarValueSizeInBits();
     unsigned HiBits = Op.getOperand(1).getScalarValueSizeInBits();
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = Known.anyext(LoBits + HiBits);
-    Known.insertBits(Known2, LoBits);
+    Known = Known2.concat(Known);
 
     // Collect shift amount.
     Known2 = computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
