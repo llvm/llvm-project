@@ -2500,43 +2500,66 @@ This can be done using the ``-fprofile-list`` option.
 
   .. code-block:: console
 
-    $ echo "fun:test" > fun.list
     $ clang++ -O2 -fprofile-instr-generate -fprofile-list=fun.list code.cc -o code
 
-The option can be specified multiple times to pass multiple files.
+  The option can be specified multiple times to pass multiple files.
 
-.. code-block:: console
+  .. code-block:: console
 
-    $ echo "!fun:*test*" > fun.list
-    $ echo "src:code.cc" > src.list
-    % clang++ -O2 -fprofile-instr-generate -fcoverage-mapping -fprofile-list=fun.list -fprofile-list=code.list code.cc -o code
+    $ clang++ -O2 -fprofile-instr-generate -fcoverage-mapping -fprofile-list=fun.list -fprofile-list=code.list code.cc -o code
 
-To filter individual functions or entire source files using ``fun:<name>`` or
-``src:<file>`` respectively. To exclude a function or a source file, use
-``!fun:<name>`` or ``!src:<file>`` respectively. The format also supports
-wildcard expansion. The compiler generated functions are assumed to be located
-in the main source file.  It is also possible to restrict the filter to a
-particular instrumentation type by using a named section.
+Supported sections are ``[clang]``, ``[llvm]``, and ``[csllvm]`` representing
+clang PGO, IRPGO, and CSIRPGO, respectively. Supported prefixes are ``function``
+and ``source``. Supported categories are ``allow``, ``skip``, and ``forbid``.
+``skip`` adds the ``skipprofile`` attribute while ``forbid`` adds the
+``noprofile`` attribute to the appropriate function. Use
+``default:<allow|skip|forbid>`` to specify the default category.
 
-.. code-block:: none
+  .. code-block:: console
 
-  # all functions whose name starts with foo will be instrumented.
-  fun:foo*
+    $ cat fun.list
+    # The following cases are for clang instrumentation.
+    [clang]
 
-  # except for foo1 which will be excluded from instrumentation.
-  !fun:foo1
+    # We might not want to profile functions that are inlined in many places.
+    function:inlinedLots=skip
 
-  # every function in path/to/foo.cc will be instrumented.
-  src:path/to/foo.cc
+    # We want to forbid profiling where it might be dangerous.
+    source:lib/unsafe/*.cc=forbid
 
-  # bar will be instrumented only when using backend instrumentation.
-  # Recognized section names are clang, llvm and csllvm.
-  [llvm]
-  fun:bar
+    # Otherwise we allow profiling.
+    default:allow
 
-When the file contains only excludes, all files and functions except for the
-excluded ones will be instrumented. Otherwise, only the files and functions
-specified will be instrumented.
+Older Prefixes
+""""""""""""""
+  An older format is also supported, but it is only able to add the
+  ``noprofile`` attribute.
+  To filter individual functions or entire source files use ``fun:<name>`` or
+  ``src:<file>`` respectively. To exclude a function or a source file, use
+  ``!fun:<name>`` or ``!src:<file>`` respectively. The format also supports
+  wildcard expansion. The compiler generated functions are assumed to be located
+  in the main source file.  It is also possible to restrict the filter to a
+  particular instrumentation type by using a named section.
+
+  .. code-block:: none
+
+    # all functions whose name starts with foo will be instrumented.
+    fun:foo*
+
+    # except for foo1 which will be excluded from instrumentation.
+    !fun:foo1
+
+    # every function in path/to/foo.cc will be instrumented.
+    src:path/to/foo.cc
+
+    # bar will be instrumented only when using backend instrumentation.
+    # Recognized section names are clang, llvm and csllvm.
+    [llvm]
+    fun:bar
+
+  When the file contains only excludes, all files and functions except for the
+  excluded ones will be instrumented. Otherwise, only the files and functions
+  specified will be instrumented.
 
 Instrument function groups
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
