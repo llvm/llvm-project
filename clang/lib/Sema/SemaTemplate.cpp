@@ -4751,9 +4751,12 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   bool AreArgsDependent =
       TemplateSpecializationType::anyDependentTemplateArguments(*TemplateArgs,
                                                                 Converted);
+  MultiLevelTemplateArgumentList MLTAL;
+  MLTAL.addOuterTemplateArguments(Converted);
+  LocalInstantiationScope Scope(*this);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
-          NamedConcept, {NamedConcept->getConstraintExpr()}, Converted,
+          NamedConcept, {NamedConcept->getConstraintExpr()}, MLTAL,
           SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                       TemplateArgs->getRAngleLoc()),
           Satisfaction))
@@ -5970,13 +5973,18 @@ bool Sema::CheckTemplateArgumentList(
   if (UpdateArgsWithConversions)
     TemplateArgs = std::move(NewArgs);
 
-  if (!PartialTemplateArgs &&
-      EnsureTemplateArgumentListConstraints(
-        Template, Converted, SourceRange(TemplateLoc,
-                                         TemplateArgs.getRAngleLoc()))) {
-    if (ConstraintsNotSatisfied)
-      *ConstraintsNotSatisfied = true;
-    return true;
+  if (!PartialTemplateArgs) {
+    // FIXME: This will be changed a bit once deferred concept instantiation is
+    // implemented.
+    MultiLevelTemplateArgumentList MLTAL;
+    MLTAL.addOuterTemplateArguments(Converted);
+    if (EnsureTemplateArgumentListConstraints(
+            Template, MLTAL,
+            SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
+      if (ConstraintsNotSatisfied)
+        *ConstraintsNotSatisfied = true;
+      return true;
+    }
   }
 
   return false;
