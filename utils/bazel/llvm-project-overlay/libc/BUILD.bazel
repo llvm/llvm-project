@@ -107,7 +107,7 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_utility",
-    hdrs = ["src/__support/CPP/Utility.h"],
+    hdrs = ["src/__support/CPP/utility.h"],
     deps = [
         ":__support_cpp_type_traits",
         ":libc_root",
