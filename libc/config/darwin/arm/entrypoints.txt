@@ -111,6 +111,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
+    libc.src.math.coshf
     libc.src.math.cosf
     libc.src.math.expf
     libc.src.math.exp2f

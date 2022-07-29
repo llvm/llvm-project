@@ -194,6 +194,12 @@ public:
     return result;
   }
 
+  MPFRNumber cosh() const {
+    MPFRNumber result(*this);
+    mpfr_cosh(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber exp() const {
     MPFRNumber result(*this);
     mpfr_exp(result.value, value, mpfr_rounding);
@@ -481,6 +487,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.ceil();
   case Operation::Cos:
     return mpfrInput.cos();
+  case Operation::Cosh:
+    return mpfrInput.cosh();
   case Operation::Exp:
     return mpfrInput.exp();
   case Operation::Exp2:
