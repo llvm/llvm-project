@@ -2103,6 +2103,7 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
       LLVM_DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
                         << ")\n");
       LIS->shrinkToUses(S, LI.reg());
+      ShrinkMainRange = true;
     }
     LI.removeEmptySubRanges();
   }
