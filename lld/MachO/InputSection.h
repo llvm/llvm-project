@@ -302,6 +302,7 @@ constexpr const char debugAbbrev[] = "__debug_abbrev";
 constexpr const char debugInfo[] = "__debug_info";
 constexpr const char debugLine[] = "__debug_line";
 constexpr const char debugStr[] = "__debug_str";
+constexpr const char debugStrOffs[] = "__debug_str_offs";
 constexpr const char ehFrame[] = "__eh_frame";
 constexpr const char gccExceptTab[] = "__gcc_except_tab";
 constexpr const char export_[] = "__export";

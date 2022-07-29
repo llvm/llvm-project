@@ -5,48 +5,41 @@
 //===----------------------------------------------------------------------===//
 
 func.func @composite_construct_vector(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xf32> {
-  // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : vector<3xf32>
-  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : vector<3xf32>
+  // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : (f32, f32, f32) -> vector<3xf32>
+  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : (f32, f32, f32) -> vector<3xf32>
   return %0: vector<3xf32>
 }
 
 // -----
 
 func.func @composite_construct_struct(%arg0: vector<3xf32>, %arg1: !spv.array<4xf32>, %arg2 : !spv.struct<(f32)>) -> !spv.struct<(vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>)> {
-  // CHECK: spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<(vector<3xf32>, !spv.array<4 x f32>, !spv.struct<(f32)>)>
-  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<(vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>)>
+  // CHECK: spv.CompositeConstruct
+  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : (vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>) -> !spv.struct<(vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>)>
   return %0: !spv.struct<(vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>)>
 }
 
 // -----
 
+// CHECK-LABEL: func @composite_construct_mixed_scalar_vector
+func.func @composite_construct_mixed_scalar_vector(%arg0: f32, %arg1: f32, %arg2 : vector<2xf32>) -> vector<4xf32> {
+  // CHECK: spv.CompositeConstruct %{{.+}}, %{{.+}}, %{{.+}} : (f32, vector<2xf32>, f32) -> vector<4xf32>
+  %0 = spv.CompositeConstruct %arg0, %arg2, %arg1 : (f32, vector<2xf32>, f32) -> vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// -----
+
 func.func @composite_construct_coopmatrix(%arg0 : f32) -> !spv.coopmatrix<8x16xf32, Subgroup> {
-  // CHECK: spv.CompositeConstruct {{%.*}} : !spv.coopmatrix<8x16xf32, Subgroup>
-  %0 = spv.CompositeConstruct %arg0 : !spv.coopmatrix<8x16xf32, Subgroup>
+  // CHECK: spv.CompositeConstruct {{%.*}} : (f32) -> !spv.coopmatrix<8x16xf32, Subgroup>
+  %0 = spv.CompositeConstruct %arg0 : (f32) -> !spv.coopmatrix<8x16xf32, Subgroup>
   return %0: !spv.coopmatrix<8x16xf32, Subgroup>
-}
-
-// -----
-
-func.func @composite_construct_empty_struct() -> !spv.struct<()> {
-  // CHECK: spv.CompositeConstruct : !spv.struct<()>
-  %0 = spv.CompositeConstruct : !spv.struct<()>
-  return %0: !spv.struct<()>
-}
-
-// -----
-
-func.func @composite_construct_invalid_num_of_elements(%arg0: f32) -> f32 {
-  // expected-error @+1 {{result type must be a composite type, but provided 'f32'}}
-  %0 = spv.CompositeConstruct %arg0 : f32
-  return %0: f32
 }
 
 // -----
 
 func.func @composite_construct_invalid_result_type(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xf32> {
   // expected-error @+1 {{has incorrect number of operands: expected 3, but provided 2}}
-  %0 = spv.CompositeConstruct %arg0, %arg2 : vector<3xf32>
+  %0 = spv.CompositeConstruct %arg0, %arg2 : (f32, f32) -> vector<3xf32>
   return %0: vector<3xf32>
 }
 
@@ -54,16 +47,48 @@ func.func @composite_construct_invalid_result_type(%arg0: f32, %arg1: f32, %arg2
 
 func.func @composite_construct_invalid_operand_type(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xi32> {
   // expected-error @+1 {{operand type mismatch: expected operand type 'i32', but provided 'f32'}}
-  %0 = "spv.CompositeConstruct" (%arg0, %arg1, %arg2) : (f32, f32, f32) -> vector<3xi32>
+  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : (f32, f32, f32) -> vector<3xi32>
   return %0: vector<3xi32>
 }
 
 // -----
 
-func.func @composite_construct_coopmatrix(%arg0 : f32, %arg1 : f32) -> !spv.coopmatrix<8x16xf32, Subgroup> {
+func.func @composite_construct_coopmatrix_incorrect_operand_count(%arg0 : f32, %arg1 : f32) -> !spv.coopmatrix<8x16xf32, Subgroup> {
   // expected-error @+1 {{has incorrect number of operands: expected 1, but provided 2}}
-  %0 = spv.CompositeConstruct %arg0, %arg1 : !spv.coopmatrix<8x16xf32, Subgroup>
+  %0 = spv.CompositeConstruct %arg0, %arg1 : (f32, f32) -> !spv.coopmatrix<8x16xf32, Subgroup>
   return %0: !spv.coopmatrix<8x16xf32, Subgroup>
+}
+
+// -----
+
+func.func @composite_construct_coopmatrix_incorrect_element_type(%arg0 : i32) -> !spv.coopmatrix<8x16xf32, Subgroup> {
+  // expected-error @+1 {{operand type mismatch: expected operand type 'f32', but provided 'i32'}}
+  %0 = spv.CompositeConstruct %arg0 : (i32) -> !spv.coopmatrix<8x16xf32, Subgroup>
+  return %0: !spv.coopmatrix<8x16xf32, Subgroup>
+}
+
+// -----
+
+func.func @composite_construct_array(%arg0: f32) -> !spv.array<4xf32> {
+  // expected-error @+1 {{expected to return a vector or cooperative matrix when the number of constituents is less than what the result needs}}
+  %0 = spv.CompositeConstruct %arg0 : (f32) -> !spv.array<4xf32>
+  return %0: !spv.array<4xf32>
+}
+
+// -----
+
+func.func @composite_construct_vector_wrong_element_type(%arg0: f32, %arg1: f32, %arg2 : vector<2xi32>) -> vector<4xf32> {
+  // expected-error @+1 {{operand element type mismatch: expected to be 'f32', but provided 'i32'}}
+  %0 = spv.CompositeConstruct %arg0, %arg2, %arg1 : (f32, vector<2xi32>, f32) -> vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// -----
+
+func.func @composite_construct_vector_wrong_count(%arg0: f32, %arg1: f32, %arg2 : vector<2xf32>) -> vector<4xf32> {
+  // expected-error @+1 {{op has incorrect number of operands: expected 4, but provided 3}}
+  %0 = spv.CompositeConstruct %arg0, %arg2 : (f32, vector<2xf32>) -> vector<4xf32>
+  return %0: vector<4xf32>
 }
 
 // -----

@@ -509,10 +509,11 @@ __allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
-  _LIBCPP_HIDE_FROM_ABI _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+  _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
       : __alloc_(__alloc), __first_(__first), __last_(__last) {}
 
-  _LIBCPP_CONSTEXPR_AFTER_CXX11 void operator()() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 void operator()() const {
     std::__allocator_destroy(__alloc_, std::reverse_iterator<_Iter>(__last_), std::reverse_iterator<_Iter>(__first_));
   }
 
@@ -621,7 +622,7 @@ template <
     class _Type = typename iterator_traits<_Iter1>::value_type,
     class = __enable_if_t<is_trivially_move_constructible<_Type>::value && is_trivially_move_assignable<_Type>::value &&
                           __allocator_has_trivial_move_construct<_Alloc, _Type>::value> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter1
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter2
 __uninitialized_allocator_move_if_noexcept(_Alloc&, _Iter1 __first1, _Iter1 __last1, _Iter2 __first2) {
   if (__libcpp_is_constant_evaluated()) {
     while (__first1 != __last1) {

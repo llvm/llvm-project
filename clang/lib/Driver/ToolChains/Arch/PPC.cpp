@@ -107,10 +107,6 @@ const char *ppc::getPPCAsmModeForCPU(StringRef Name) {
 void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args,
                                std::vector<StringRef> &Features) {
-  // TODO Handle -mtune=. Suppress -Wunused-command-line-argument as a
-  // longstanding behavior.
-  (void)Args.getLastArg(options::OPT_mtune_EQ);
-
   if (Triple.getSubArch() == llvm::Triple::PPCSubArch_spe)
     Features.push_back("+spe");
 

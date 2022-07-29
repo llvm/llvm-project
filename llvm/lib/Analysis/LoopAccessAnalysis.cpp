@@ -27,6 +27,7 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -2127,8 +2128,11 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       EnableMemAccessVersioning &&
       !TheLoop->getHeader()->getParent()->hasOptSize();
 
-  // For each block.
-  for (BasicBlock *BB : TheLoop->blocks()) {
+  // Traverse blocks in fixed RPOT order, regardless of their storage in the
+  // loop info, as it may be arbitrary.
+  LoopBlocksRPO RPOT(TheLoop);
+  RPOT.perform(LI);
+  for (BasicBlock *BB : RPOT) {
     // Scan the BB and collect legal loads and stores. Also detect any
     // convergent instructions.
     for (Instruction &I : *BB) {

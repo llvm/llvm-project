@@ -737,6 +737,9 @@ void SIFoldOperands::foldOperand(
       CopiesToReplace.push_back(UseMI);
       OpToFold.setIsKill(false);
 
+      // Remove kill flags as kills may now be out of order with uses.
+      MRI->clearKillFlags(OpToFold.getReg());
+
       // That is very tricky to store a value into an AGPR. v_accvgpr_write_b32
       // can only accept VGPR or inline immediate. Recreate a reg_sequence with
       // its initializers right here, so we will rematerialize immediates and

@@ -698,6 +698,17 @@ def skipIfTargetAndroid(bugnumber=None, api_levels=None, archs=None):
             archs),
         bugnumber)
 
+def skipUnlessAppleSilicon(func):
+    """Decorate the item to skip tests unless running on Apple Silicon."""
+    def not_apple_silicon(test):
+        if platform.system() != 'Darwin' or test.getArchitecture() not in [
+                'arm64', 'arm64e'
+        ]:
+            return "Test only runs on Apple Silicon"
+        return None
+
+    return skipTestIfFn(not_apple_silicon)(func)
+
 def skipUnlessSupportedTypeAttribute(attr):
     """Decorate the item to skip test unless Clang supports type __attribute__(attr)."""
     def compiler_doesnt_support_struct_attribute(self):
