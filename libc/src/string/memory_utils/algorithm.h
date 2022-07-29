@@ -71,7 +71,7 @@ template <ptrdiff_t Bytes> struct Skip {
 // Because of the runtime size, we loose the alignment information.
 template <size_t Size, typename AddrT>
 static auto tailAddr(AddrT addr, size_t runtime_size) {
-  static_assert(IsAddressType<AddrT>::Value);
+  static_assert(IsAddressType<AddrT>::value);
   return offsetAddrAssumeAligned<1>(addr, runtime_size - Size);
 }
 
@@ -440,8 +440,8 @@ private:
 
   template <typename Arg1AddrT, typename Arg2AddrT>
   static auto align(Arg1AddrT arg1, Arg2AddrT arg2, size_t runtime_size) {
-    static_assert(IsAddressType<Arg1AddrT>::Value);
-    static_assert(IsAddressType<Arg2AddrT>::Value);
+    static_assert(IsAddressType<Arg1AddrT>::value);
+    static_assert(IsAddressType<Arg2AddrT>::value);
     if constexpr (AlignOn == Arg::_1) {
       auto offset = offset_to_next_aligned<ALIGN_OP_SIZE>(arg1.ptr_);
       return makeAligned(offsetAddrAssumeAligned<ALIGN_OP_SIZE>(arg1, offset),

@@ -49,8 +49,10 @@ define i8 @sdiv_i8(i8 %a, i8 %b) {
 ; LA32-TRAP-NEXT:    ext.w.b $a1, $a1
 ; LA32-TRAP-NEXT:    ext.w.b $a0, $a0
 ; LA32-TRAP-NEXT:    div.w $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB1_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB1_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: sdiv_i8:
@@ -58,8 +60,10 @@ define i8 @sdiv_i8(i8 %a, i8 %b) {
 ; LA64-TRAP-NEXT:    ext.w.b $a1, $a1
 ; LA64-TRAP-NEXT:    ext.w.b $a0, $a0
 ; LA64-TRAP-NEXT:    div.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB1_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB1_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = sdiv i8 %a, %b
@@ -86,8 +90,10 @@ define i16 @sdiv_i16(i16 %a, i16 %b) {
 ; LA32-TRAP-NEXT:    ext.w.h $a1, $a1
 ; LA32-TRAP-NEXT:    ext.w.h $a0, $a0
 ; LA32-TRAP-NEXT:    div.w $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB2_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB2_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: sdiv_i16:
@@ -95,8 +101,10 @@ define i16 @sdiv_i16(i16 %a, i16 %b) {
 ; LA64-TRAP-NEXT:    ext.w.h $a1, $a1
 ; LA64-TRAP-NEXT:    ext.w.h $a0, $a0
 ; LA64-TRAP-NEXT:    div.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB2_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB2_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = sdiv i16 %a, %b
@@ -119,8 +127,10 @@ define i32 @sdiv_i32(i32 %a, i32 %b) {
 ; LA32-TRAP-LABEL: sdiv_i32:
 ; LA32-TRAP:       # %bb.0: # %entry
 ; LA32-TRAP-NEXT:    div.w $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB3_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB3_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: sdiv_i32:
@@ -128,8 +138,10 @@ define i32 @sdiv_i32(i32 %a, i32 %b) {
 ; LA64-TRAP-NEXT:    addi.w $a1, $a1, 0
 ; LA64-TRAP-NEXT:    addi.w $a0, $a0, 0
 ; LA64-TRAP-NEXT:    div.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB3_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB3_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = sdiv i32 %a, %b
@@ -167,8 +179,10 @@ define i64 @sdiv_i64(i64 %a, i64 %b) {
 ; LA64-TRAP-LABEL: sdiv_i64:
 ; LA64-TRAP:       # %bb.0: # %entry
 ; LA64-TRAP-NEXT:    div.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB4_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB4_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = sdiv i64 %a, %b
@@ -216,8 +230,10 @@ define i8 @udiv_i8(i8 %a, i8 %b) {
 ; LA32-TRAP-NEXT:    andi $a1, $a1, 255
 ; LA32-TRAP-NEXT:    andi $a0, $a0, 255
 ; LA32-TRAP-NEXT:    div.wu $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB6_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB6_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: udiv_i8:
@@ -225,8 +241,10 @@ define i8 @udiv_i8(i8 %a, i8 %b) {
 ; LA64-TRAP-NEXT:    andi $a1, $a1, 255
 ; LA64-TRAP-NEXT:    andi $a0, $a0, 255
 ; LA64-TRAP-NEXT:    div.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB6_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB6_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = udiv i8 %a, %b
@@ -253,8 +271,10 @@ define i16 @udiv_i16(i16 %a, i16 %b) {
 ; LA32-TRAP-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-TRAP-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-TRAP-NEXT:    div.wu $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB7_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB7_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: udiv_i16:
@@ -262,8 +282,10 @@ define i16 @udiv_i16(i16 %a, i16 %b) {
 ; LA64-TRAP-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-TRAP-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-TRAP-NEXT:    div.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB7_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB7_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = udiv i16 %a, %b
@@ -286,8 +308,10 @@ define i32 @udiv_i32(i32 %a, i32 %b) {
 ; LA32-TRAP-LABEL: udiv_i32:
 ; LA32-TRAP:       # %bb.0: # %entry
 ; LA32-TRAP-NEXT:    div.wu $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB8_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB8_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: udiv_i32:
@@ -295,8 +319,10 @@ define i32 @udiv_i32(i32 %a, i32 %b) {
 ; LA64-TRAP-NEXT:    bstrpick.d $a1, $a1, 31, 0
 ; LA64-TRAP-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-TRAP-NEXT:    div.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB8_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB8_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = udiv i32 %a, %b
@@ -334,8 +360,10 @@ define i64 @udiv_i64(i64 %a, i64 %b) {
 ; LA64-TRAP-LABEL: udiv_i64:
 ; LA64-TRAP:       # %bb.0: # %entry
 ; LA64-TRAP-NEXT:    div.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB9_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB9_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = udiv i64 %a, %b
@@ -387,8 +415,10 @@ define i8 @srem_i8(i8 %a, i8 %b) {
 ; LA32-TRAP-NEXT:    ext.w.b $a1, $a1
 ; LA32-TRAP-NEXT:    ext.w.b $a0, $a0
 ; LA32-TRAP-NEXT:    mod.w $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB11_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB11_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: srem_i8:
@@ -396,8 +426,10 @@ define i8 @srem_i8(i8 %a, i8 %b) {
 ; LA64-TRAP-NEXT:    ext.w.b $a1, $a1
 ; LA64-TRAP-NEXT:    ext.w.b $a0, $a0
 ; LA64-TRAP-NEXT:    mod.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB11_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB11_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = srem i8 %a, %b
@@ -424,8 +456,10 @@ define i16 @srem_i16(i16 %a, i16 %b) {
 ; LA32-TRAP-NEXT:    ext.w.h $a1, $a1
 ; LA32-TRAP-NEXT:    ext.w.h $a0, $a0
 ; LA32-TRAP-NEXT:    mod.w $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB12_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB12_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: srem_i16:
@@ -433,8 +467,10 @@ define i16 @srem_i16(i16 %a, i16 %b) {
 ; LA64-TRAP-NEXT:    ext.w.h $a1, $a1
 ; LA64-TRAP-NEXT:    ext.w.h $a0, $a0
 ; LA64-TRAP-NEXT:    mod.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB12_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB12_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = srem i16 %a, %b
@@ -457,8 +493,10 @@ define i32 @srem_i32(i32 %a, i32 %b) {
 ; LA32-TRAP-LABEL: srem_i32:
 ; LA32-TRAP:       # %bb.0: # %entry
 ; LA32-TRAP-NEXT:    mod.w $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB13_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB13_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: srem_i32:
@@ -466,8 +504,10 @@ define i32 @srem_i32(i32 %a, i32 %b) {
 ; LA64-TRAP-NEXT:    addi.w $a1, $a1, 0
 ; LA64-TRAP-NEXT:    addi.w $a0, $a0, 0
 ; LA64-TRAP-NEXT:    mod.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB13_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB13_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = srem i32 %a, %b
@@ -505,8 +545,10 @@ define i64 @srem_i64(i64 %a, i64 %b) {
 ; LA64-TRAP-LABEL: srem_i64:
 ; LA64-TRAP:       # %bb.0: # %entry
 ; LA64-TRAP-NEXT:    mod.d $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB14_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB14_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = srem i64 %a, %b
@@ -558,8 +600,10 @@ define i8 @urem_i8(i8 %a, i8 %b) {
 ; LA32-TRAP-NEXT:    andi $a1, $a1, 255
 ; LA32-TRAP-NEXT:    andi $a0, $a0, 255
 ; LA32-TRAP-NEXT:    mod.wu $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB16_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB16_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: urem_i8:
@@ -567,8 +611,10 @@ define i8 @urem_i8(i8 %a, i8 %b) {
 ; LA64-TRAP-NEXT:    andi $a1, $a1, 255
 ; LA64-TRAP-NEXT:    andi $a0, $a0, 255
 ; LA64-TRAP-NEXT:    mod.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB16_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB16_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = urem i8 %a, %b
@@ -595,8 +641,10 @@ define i16 @urem_i16(i16 %a, i16 %b) {
 ; LA32-TRAP-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-TRAP-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-TRAP-NEXT:    mod.wu $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB17_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB17_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: urem_i16:
@@ -604,8 +652,10 @@ define i16 @urem_i16(i16 %a, i16 %b) {
 ; LA64-TRAP-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-TRAP-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-TRAP-NEXT:    mod.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB17_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB17_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = urem i16 %a, %b
@@ -628,8 +678,10 @@ define i32 @urem_i32(i32 %a, i32 %b) {
 ; LA32-TRAP-LABEL: urem_i32:
 ; LA32-TRAP:       # %bb.0: # %entry
 ; LA32-TRAP-NEXT:    mod.wu $a0, $a0, $a1
-; LA32-TRAP-NEXT:    bnez $a1, 8
+; LA32-TRAP-NEXT:    bnez $a1, .LBB18_2
+; LA32-TRAP-NEXT:  # %bb.1: # %entry
 ; LA32-TRAP-NEXT:    break 7
+; LA32-TRAP-NEXT:  .LBB18_2: # %entry
 ; LA32-TRAP-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-TRAP-LABEL: urem_i32:
@@ -637,8 +689,10 @@ define i32 @urem_i32(i32 %a, i32 %b) {
 ; LA64-TRAP-NEXT:    bstrpick.d $a1, $a1, 31, 0
 ; LA64-TRAP-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-TRAP-NEXT:    mod.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB18_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB18_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = urem i32 %a, %b
@@ -676,8 +730,10 @@ define i64 @urem_i64(i64 %a, i64 %b) {
 ; LA64-TRAP-LABEL: urem_i64:
 ; LA64-TRAP:       # %bb.0: # %entry
 ; LA64-TRAP-NEXT:    mod.du $a0, $a0, $a1
-; LA64-TRAP-NEXT:    bnez $a1, 8
+; LA64-TRAP-NEXT:    bnez $a1, .LBB19_2
+; LA64-TRAP-NEXT:  # %bb.1: # %entry
 ; LA64-TRAP-NEXT:    break 7
+; LA64-TRAP-NEXT:  .LBB19_2: # %entry
 ; LA64-TRAP-NEXT:    jirl $zero, $ra, 0
 entry:
   %r = urem i64 %a, %b

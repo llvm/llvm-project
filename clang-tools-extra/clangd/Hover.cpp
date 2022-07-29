@@ -975,19 +975,16 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     return llvm::None;
 
   // Show full header file path if cursor is on include directive.
-  if (const auto MainFilePath =
-          getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM)) {
-    for (const auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
-      if (Inc.Resolved.empty() || Inc.HashLine != Pos.line)
-        continue;
-      HoverInfo HI;
-      HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
-      // FIXME: We don't have a fitting value for Kind.
-      HI.Definition =
-          URIForFile::canonicalize(Inc.Resolved, *MainFilePath).file().str();
-      HI.DefinitionLanguage = "";
-      return HI;
-    }
+  for (const auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
+    if (Inc.Resolved.empty() || Inc.HashLine != Pos.line)
+      continue;
+    HoverInfo HI;
+    HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
+    // FIXME: We don't have a fitting value for Kind.
+    HI.Definition =
+        URIForFile::canonicalize(Inc.Resolved, AST.tuPath()).file().str();
+    HI.DefinitionLanguage = "";
+    return HI;
   }
 
   // To be used as a backup for highlighting the selected token, we use back as

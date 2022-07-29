@@ -49,6 +49,10 @@ struct UnwrappedLine {
 
   bool MustBeDeclaration;
 
+  /// \c True if this line should be indented by ContinuationIndent in
+  /// addition to the normal indention level.
+  bool IsContinuation = false;
+
   /// If this \c UnwrappedLine closes a block in a sequence of lines,
   /// \c MatchingOpeningBlockLineIndex stores the index of the corresponding
   /// opening line. Otherwise, \c MatchingOpeningBlockLineIndex must be
@@ -174,6 +178,13 @@ private:
   bool tryToParsePropertyAccessor();
   void tryToParseJSFunction();
   bool tryToParseSimpleAttribute();
+  void parseVerilogHierarchyIdentifier();
+  void parseVerilogSensitivityList();
+  // Returns the number of levels of indentation in addition to the normal 1
+  // level for a block, used for indenting case labels.
+  unsigned parseVerilogHierarchyHeader();
+  void parseVerilogTable();
+  void parseVerilogCaseLabel();
 
   // Used by addUnwrappedLine to denote whether to keep or remove a level
   // when resetting the line state.

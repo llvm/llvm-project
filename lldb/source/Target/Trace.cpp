@@ -437,7 +437,7 @@ llvm::Error Trace::OnDataFileRead(FileSpec file,
   if (std::error_code err = trace_or_error.getError())
     return createStringError(
         inconvertibleErrorCode(), "Failed fetching trace-related file %s. %s",
-        file.GetCString(), toString(errorCodeToError(err)).c_str());
+        file.GetPath().c_str(), toString(errorCodeToError(err)).c_str());
 
   MemoryBuffer &data = **trace_or_error;
   ArrayRef<uint8_t> array_ref(

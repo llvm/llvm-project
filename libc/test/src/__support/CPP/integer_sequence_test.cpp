@@ -12,13 +12,13 @@
 using namespace __llvm_libc::cpp;
 
 TEST(LlvmLibcIntegerSequencetTest, Basic) {
-  EXPECT_TRUE((IsSameV<IntegerSequence<int>, MakeIntegerSequence<int, 0>>));
+  EXPECT_TRUE((is_same_v<IntegerSequence<int>, MakeIntegerSequence<int, 0>>));
   using ISeq = IntegerSequence<int, 0, 1, 2, 3>;
-  EXPECT_TRUE((IsSameV<ISeq, MakeIntegerSequence<int, 4>>));
+  EXPECT_TRUE((is_same_v<ISeq, MakeIntegerSequence<int, 4>>));
   using LSeq = IntegerSequence<long, 0, 1, 2, 3>;
-  EXPECT_TRUE((IsSameV<LSeq, MakeIntegerSequence<long, 4>>));
+  EXPECT_TRUE((is_same_v<LSeq, MakeIntegerSequence<long, 4>>));
   using ULLSeq = IntegerSequence<unsigned long long, 0ull, 1ull, 2ull, 3ull>;
-  EXPECT_TRUE((IsSameV<ULLSeq, MakeIntegerSequence<unsigned long long, 4>>));
+  EXPECT_TRUE((is_same_v<ULLSeq, MakeIntegerSequence<unsigned long long, 4>>));
 }
 
 template <typename T, T... Ts>

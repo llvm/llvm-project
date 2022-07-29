@@ -98,10 +98,9 @@ extern "C" int throw_exception() {
   // FIXME: Re-enable the excluded target triples.
   const clang::CompilerInstance *CI = Interp->getCompilerInstance();
   const llvm::Triple &Triple = CI->getASTContext().getTargetInfo().getTriple();
-  // FIXME: PPC fails due to `Symbols not found: [DW.ref.__gxx_personality_v0]`
-  // The current understanding is that the JIT should emit this symbol if it was
-  // not (eg. the way passing clang -fPIC does it).
-  if (Triple.isPPC())
+
+  // AIX is unsupported.
+  if (Triple.isOSAIX())
     return;
 
   // FIXME: ARM fails due to `Not implemented relocation type!`

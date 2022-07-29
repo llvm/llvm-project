@@ -500,10 +500,8 @@ define float @convert_u32_to_float(i32 %a) nounwind {
 ; LA32D-LABEL: convert_u32_to_float:
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    addi.w $a1, $sp, 8
-; LA32D-NEXT:    ori $a1, $a1, 4
-; LA32D-NEXT:    lu12i.w $a2, 275200
-; LA32D-NEXT:    st.w $a2, $a1, 0
+; LA32D-NEXT:    lu12i.w $a1, 275200
+; LA32D-NEXT:    st.w $a1, $sp, 12
 ; LA32D-NEXT:    st.w $a0, $sp, 8
 ; LA32D-NEXT:    pcalau12i $a0, .LCPI14_0
 ; LA32D-NEXT:    addi.w $a0, $a0, .LCPI14_0

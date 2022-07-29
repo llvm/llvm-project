@@ -223,7 +223,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:  [B0 (EXIT)]
 // CHECK-NEXT:    Preds (1): B1
-enum MyEnum { A, B, C };
+enum MyEnum : int { A, B, C };
 static const enum MyEnum D = (enum MyEnum) 32;
 
 int test_enum_with_extension(enum MyEnum value) {
