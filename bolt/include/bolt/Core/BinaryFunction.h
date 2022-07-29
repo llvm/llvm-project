@@ -2012,7 +2012,9 @@ public:
     return Size;
   }
 
-  bool hasIslandsInfo() const { return !!Islands; }
+  bool hasIslandsInfo() const {
+    return Islands && (hasConstantIsland() || !Islands->Dependency.empty());
+  }
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
