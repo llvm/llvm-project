@@ -585,6 +585,9 @@ public:
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
 
+  /// Indicates if the binary is stripped
+  bool IsStripped{false};
+
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
   /// will have HasFixedLoadAddress set to false.
