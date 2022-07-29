@@ -590,6 +590,7 @@ def ConjOp : ComplexUnaryOp<"conj", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
