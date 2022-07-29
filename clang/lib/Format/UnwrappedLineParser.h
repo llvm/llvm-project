@@ -184,6 +184,7 @@ private:
   // level for a block, used for indenting case labels.
   unsigned parseVerilogHierarchyHeader();
   void parseVerilogTable();
+  void parseVerilogCaseLabel();
 
   // Used by addUnwrappedLine to denote whether to keep or remove a level
   // when resetting the line state.

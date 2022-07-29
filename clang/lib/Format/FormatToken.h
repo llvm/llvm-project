@@ -39,7 +39,10 @@ namespace format {
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
+  /* ternary ?: expression */                                                  \
   TYPE(ConditionalExpr)                                                        \
+  /* the condition in an if statement */                                       \
+  TYPE(ConditionLParen)                                                        \
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
@@ -67,6 +70,9 @@ namespace format {
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
+  /* The colon at the end of a goto label or a case label. Currently only used \
+   * for Verilog. */                                                           \
+  TYPE(GotoLabelColon)                                                         \
   TYPE(IfMacro)                                                                \
   TYPE(ImplicitStringLiteral)                                                  \
   TYPE(InheritanceColon)                                                       \
@@ -1763,6 +1769,15 @@ struct AdditionalKeywords {
                        kw_clocking, kw_covergroup, kw_macromodule, kw_primitive,
                        kw_program, kw_property, kw_randcase, kw_randsequence,
                        kw_task);
+  }
+
+  bool isVerilogEndOfLabel(const FormatToken &Tok) const {
+    const FormatToken *Next = Tok.getNextNonComment();
+    // In Verilog the colon in a default label is optional.
+    return Tok.is(TT_GotoLabelColon) ||
+           (Tok.is(tok::kw_default) &&
+            !(Next && Next->isOneOf(tok::colon, tok::semi, kw_clocking, kw_iff,
+                                    kw_input, kw_output, kw_sequence)));
   }
 
   /// Whether the token begins a block.

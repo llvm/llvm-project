@@ -576,9 +576,12 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       LLVM_FALLTHROUGH;
     }
     case tok::kw_case:
-      if (Style.isJavaScript() && Line->MustBeDeclaration) {
-        // A 'case: string' style field declaration.
-        parseStructuralElement();
+      if (Style.isVerilog() ||
+          (Style.isJavaScript() && Line->MustBeDeclaration)) {
+        // Verilog: Case labels don't have this word. We handle case
+        // labels including default in TokenAnnotator.
+        // JavaScript: A 'case: string' style field declaration.
+        ParseDefault();
         break;
       }
       if (!SwitchLabelEncountered &&
@@ -1534,6 +1537,9 @@ void UnwrappedLineParser::parseStructuralElement(
     parseSwitch();
     return;
   case tok::kw_default:
+    // In Verilog default along with other labels are handled in the next loop.
+    if (Style.isVerilog())
+      break;
     if (Style.isJavaScript() && Line->MustBeDeclaration) {
       // 'default: string' field declaration.
       break;
@@ -1546,6 +1552,12 @@ void UnwrappedLineParser::parseStructuralElement(
     // e.g. "default void f() {}" in a Java interface.
     break;
   case tok::kw_case:
+    // In Verilog switch is called case.
+    if (Style.isVerilog()) {
+      parseBlock();
+      addUnwrappedLine();
+      return;
+    }
     if (Style.isJavaScript() && Line->MustBeDeclaration) {
       // 'case: string' field declaration.
       nextToken();
@@ -1956,7 +1968,9 @@ void UnwrappedLineParser::parseStructuralElement(
         return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {
-        if (FormatTok->is(tok::colon) && !Line->MustBeDeclaration) {
+        // In Verilog labels can be any expression, so we don't do them here.
+        if (!Style.isVerilog() && FormatTok->is(tok::colon) &&
+            !Line->MustBeDeclaration) {
           Line->Tokens.begin()->Tok->MustBreakBefore = true;
           parseLabel(!Style.IndentGotoLabels);
           if (HasLabel)
@@ -2013,12 +2027,42 @@ void UnwrappedLineParser::parseStructuralElement(
       parseNew();
       break;
     case tok::kw_case:
+      // In Verilog switch is called case.
+      if (Style.isVerilog()) {
+        parseBlock();
+        addUnwrappedLine();
+        return;
+      }
       if (Style.isJavaScript() && Line->MustBeDeclaration) {
         // 'case: string' field declaration.
         nextToken();
         break;
       }
       parseCaseLabel();
+      break;
+    case tok::kw_default:
+      nextToken();
+      if (Style.isVerilog()) {
+        if (FormatTok->is(tok::colon)) {
+          // The label will be handled in the next iteration.
+          break;
+        }
+        if (FormatTok->is(Keywords.kw_clocking)) {
+          // A default clocking block.
+          parseBlock();
+          addUnwrappedLine();
+          return;
+        }
+        parseVerilogCaseLabel();
+        return;
+      }
+      break;
+    case tok::colon:
+      nextToken();
+      if (Style.isVerilog()) {
+        parseVerilogCaseLabel();
+        return;
+      }
       break;
     default:
       nextToken();
@@ -4075,10 +4119,13 @@ unsigned UnwrappedLineParser::parseVerilogHierarchyHeader() {
   } else if (FormatTok->isOneOf(tok::kw_case, Keywords.kw_casex,
                                 Keywords.kw_casez, Keywords.kw_randcase,
                                 Keywords.kw_randsequence)) {
-    AddLevels += Style.IndentCaseLabels;
+    if (Style.IndentCaseLabels)
+      AddLevels++;
     nextToken();
-    if (FormatTok->is(tok::l_paren))
+    if (FormatTok->is(tok::l_paren)) {
+      FormatTok->setFinalizedType(TT_ConditionLParen);
       parseParens();
+    }
     if (FormatTok->isOneOf(Keywords.kw_inside, Keywords.kw_matches))
       nextToken();
     // The case header has no semicolon.
@@ -4174,6 +4221,26 @@ void UnwrappedLineParser::parseVerilogTable() {
   Line->Level = InitialLevel;
   nextToken(/*LevelDifference=*/-1);
   addUnwrappedLine();
+}
+
+void UnwrappedLineParser::parseVerilogCaseLabel() {
+  // The label will get unindented in AnnotatingParser. If there are no leading
+  // spaces, indent the rest here so that things inside the block will be
+  // indented relative to things outside. We don't use parseLabel because we
+  // don't know whether this colon is a label or a ternary expression at this
+  // point.
+  auto OrigLevel = Line->Level;
+  auto FirstLine = CurrentLines->size();
+  if (Line->Level == 0 || (Line->InPPDirective && Line->Level <= 1))
+    ++Line->Level;
+  else if (!Style.IndentCaseBlocks && Keywords.isVerilogBegin(*FormatTok))
+    --Line->Level;
+  parseStructuralElement();
+  // Restore the indentation in both the new line and the line that has the
+  // label.
+  if (CurrentLines->size() > FirstLine)
+    (*CurrentLines)[FirstLine].Level = OrigLevel;
+  Line->Level = OrigLevel;
 }
 
 LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
