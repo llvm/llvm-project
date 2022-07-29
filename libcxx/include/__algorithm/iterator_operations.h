@@ -17,6 +17,7 @@
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/readable_traits.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -35,6 +36,10 @@ struct _RangeAlgPolicy {};
 
 template <>
 struct _IterOps<_RangeAlgPolicy> {
+
+  template <class _Iter>
+  using __value_type = iter_value_t<_Iter>;
+
   static constexpr auto advance = ranges::advance;
   static constexpr auto distance = ranges::distance;
   static constexpr auto __iter_move = ranges::iter_move;
@@ -49,6 +54,9 @@ struct _ClassicAlgPolicy {};
 
 template <>
 struct _IterOps<_ClassicAlgPolicy> {
+
+  template <class _Iter>
+  using __value_type = typename iterator_traits<_Iter>::value_type;
 
   // advance
   template <class _Iter, class _Distance>

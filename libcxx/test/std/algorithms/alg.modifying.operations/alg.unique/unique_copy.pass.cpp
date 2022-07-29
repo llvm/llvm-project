@@ -19,8 +19,20 @@
 #include <algorithm>
 #include <cassert>
 
+#include "MoveOnly.h"
 #include "test_macros.h"
 #include "test_iterators.h"
+
+struct AssignableFromMoveOnly {
+  AssignableFromMoveOnly(int i) : data(i) {}
+  AssignableFromMoveOnly() : data(0) {}
+  int data;
+  AssignableFromMoveOnly& operator=(MoveOnly const& m) {
+    data = m.get();
+    return *this;
+  }
+  bool operator==(AssignableFromMoveOnly const& rhs) const { return data == rhs.data; }
+};
 
 #if TEST_STD_VER > 17
 TEST_CONSTEXPR bool test_constexpr() {
@@ -107,6 +119,7 @@ test()
 
 int main(int, char**)
 {
+    test<cpp17_input_iterator<const int*>, cpp17_input_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
@@ -136,6 +149,16 @@ int main(int, char**)
     test<const int*, bidirectional_iterator<int*> >();
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
+
+    // Move only inputs
+    {
+      MoveOnly in[5]                     = {1, 3, 3, 3, 1};
+      AssignableFromMoveOnly out[3]      = {};
+      auto result                        = std::unique_copy(in, in + 5, out);
+      AssignableFromMoveOnly expected[3] = {1, 3, 1};
+      assert(std::equal(out, out + 3, expected));
+      assert(result == out + 3);
+    }
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());

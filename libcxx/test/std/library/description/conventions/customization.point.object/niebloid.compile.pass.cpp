@@ -145,8 +145,8 @@ static_assert(test(std::ranges::stable_sort, a));
 //static_assert(test(std::ranges::starts_with, a, a));
 static_assert(test(std::ranges::swap_ranges, a, a));
 static_assert(test(std::ranges::transform, a, a, triple));
-//static_assert(test(std::ranges::unique, a));
-//static_assert(test(std::ranges::unique_copy, a, a));
+static_assert(test(std::ranges::unique, a));
+static_assert(test(std::ranges::unique_copy, a, a));
 static_assert(test(std::ranges::upper_bound, a, 42));
 
 // [memory.syn]
