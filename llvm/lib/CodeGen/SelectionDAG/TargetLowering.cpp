@@ -1745,7 +1745,7 @@ bool TargetLowering::SimplifyDemandedBits(
         // aren't demanded (as above) and that the shifted upper c1 bits of
         // x aren't demanded.
         // TODO - support non-uniform vector amounts.
-        if (Op0.hasOneUse() && InnerOp.getOpcode() == ISD::SRL &&
+        if (InnerOp.getOpcode() == ISD::SRL && Op0.hasOneUse() &&
             InnerOp.hasOneUse()) {
           if (const APInt *SA2 =
                   TLO.DAG.getValidShiftAmountConstant(InnerOp, DemandedElts)) {
@@ -2375,18 +2375,18 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If the input is only used by this truncate, see if we can shrink it based
     // on the known demanded bits.
-    if (Src.getNode()->hasOneUse()) {
-      switch (Src.getOpcode()) {
-      default:
+    switch (Src.getOpcode()) {
+    default:
+      break;
+    case ISD::SRL:
+      // Shrink SRL by a constant if none of the high bits shifted in are
+      // demanded.
+      if (TLO.LegalTypes() && !isTypeDesirableForOp(ISD::SRL, VT))
+        // Do not turn (vt1 truncate (vt2 srl)) into (vt1 srl) if vt1 is
+        // undesirable.
         break;
-      case ISD::SRL:
-        // Shrink SRL by a constant if none of the high bits shifted in are
-        // demanded.
-        if (TLO.LegalTypes() && !isTypeDesirableForOp(ISD::SRL, VT))
-          // Do not turn (vt1 truncate (vt2 srl)) into (vt1 srl) if vt1 is
-          // undesirable.
-          break;
 
+      if (Src.getNode()->hasOneUse()) {
         const APInt *ShAmtC =
             TLO.DAG.getValidShiftAmountConstant(Src, DemandedElts);
         if (!ShAmtC || ShAmtC->uge(BitWidth))
@@ -2408,8 +2408,8 @@ bool TargetLowering::SimplifyDemandedBits(
           return TLO.CombineTo(
               Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, NewShAmt));
         }
-        break;
       }
+      break;
     }
 
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
