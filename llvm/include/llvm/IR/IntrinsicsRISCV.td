@@ -50,19 +50,26 @@ let TargetPrefix = "riscv" in {
     def _i64 : MaskedAtomicRMWFiveArg<llvm_i64_ty>;
   }
 
-  // @llvm.riscv.masked.atomicrmw.*.{i32,i64}.<p>(...)
+  // These intrinsics are intended only for internal compiler use (i.e. as
+  // part of AtomicExpandpass via the emitMaskedAtomic*Intrinsic hooks). Their
+  // names and semantics could change in the future.
+
+  // @llvm.riscv.masked.atomicrmw.*.{i32,i64}.<p>(
+  //   ptr addr, ixlen oparg, ixlen mask, ixlenimm ordering)
   defm int_riscv_masked_atomicrmw_xchg : MaskedAtomicRMWFourArgIntrinsics;
   defm int_riscv_masked_atomicrmw_add : MaskedAtomicRMWFourArgIntrinsics;
   defm int_riscv_masked_atomicrmw_sub : MaskedAtomicRMWFourArgIntrinsics;
   defm int_riscv_masked_atomicrmw_nand : MaskedAtomicRMWFourArgIntrinsics;
-  // Signed min and max need an extra operand to do sign extension with.
-  defm int_riscv_masked_atomicrmw_max : MaskedAtomicRMWFiveArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_min : MaskedAtomicRMWFiveArgIntrinsics;
-  // Unsigned min and max don't need the extra operand.
   defm int_riscv_masked_atomicrmw_umax : MaskedAtomicRMWFourArgIntrinsics;
   defm int_riscv_masked_atomicrmw_umin : MaskedAtomicRMWFourArgIntrinsics;
+  // Signed min and max need an extra operand to do sign extension with.
+  // @llvm.riscv.masked.atomicrmw.{max,min}.{i32,i64}.<p>(
+  //   ptr addr, ixlen oparg, ixlen mask, ixlen shamt, ixlenimm ordering)
+  defm int_riscv_masked_atomicrmw_max : MaskedAtomicRMWFiveArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_min : MaskedAtomicRMWFiveArgIntrinsics;
 
-  // @llvm.riscv.masked.cmpxchg.{i32,i64}.<p>(...)
+  // @llvm.riscv.masked.cmpxchg.{i32,i64}.<p>(
+  //   ptr addr, ixlen cmpval, ixlen newval, ixlen mask, ixlenimm ordering)
   defm int_riscv_masked_cmpxchg : MaskedAtomicRMWFiveArgIntrinsics;
 
 } // TargetPrefix = "riscv"
