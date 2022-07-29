@@ -838,6 +838,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   Tokens = Annotate("extern function [1 : 0] x;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_BitFieldColon);
+  // Test case labels and ternary operators.
+  Tokens = Annotate("case (x)\n"
+                    "  x:\n"
+                    "    x;\n"
+                    "endcase\n");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_GotoLabelColon);
+  Tokens = Annotate("case (x)\n"
+                    "  x ? x : x:\n"
+                    "    x;\n"
+                    "endcase\n");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::question, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_GotoLabelColon);
 }
 
 } // namespace

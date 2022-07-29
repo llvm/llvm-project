@@ -116,6 +116,90 @@ TEST_F(FormatTestVerilog, Block) {
                "x = x;");
 }
 
+TEST_F(FormatTestVerilog, Case) {
+  verifyFormat("case (data)\n"
+               "endcase");
+  verifyFormat("casex (data)\n"
+               "endcase");
+  verifyFormat("casez (data)\n"
+               "endcase");
+  verifyFormat("case (data) inside\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result = 10'b0111111111;\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  xxxxxxxx:\n"
+               "    result = 10'b0111111111;\n"
+               "endcase");
+  // Test labels with multiple options.
+  verifyFormat("case (data)\n"
+               "  16'd0, 16'd1:\n"
+               "    result = 10'b0111111111;\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0, //\n"
+               "      16'd1:\n"
+               "    result = 10'b0111111111;\n"
+               "endcase");
+  // Test that blocks following labels are indented.
+  verifyFormat("case (data)\n"
+               "  16'd1: fork\n"
+               "    result = 10'b1011111111;\n"
+               "  join\n"
+               "endcase\n");
+  verifyFormat("case (data)\n"
+               "  16'd1: fork : x\n"
+               "    result = 10'b1011111111;\n"
+               "  join : x\n"
+               "endcase\n");
+  // Test default.
+  verifyFormat("case (data)\n"
+               "  default\n"
+               "    result = 10'b1011111111;\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  default:\n"
+               "    result = 10'b1011111111;\n"
+               "endcase");
+  // Test that question marks and colons don't get mistaken as labels.
+  verifyFormat("case (data)\n"
+               "  8'b1???????:\n"
+               "    instruction1(ir);\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  x ? 8'b1??????? : 1:\n"
+               "    instruction3(ir);\n"
+               "endcase");
+  // Test indention options.
+  auto Style = getLLVMStyle(FormatStyle::LK_Verilog);
+  Style.IndentCaseLabels = false;
+  verifyFormat("case (data)\n"
+               "16'd0:\n"
+               "  result = 10'b0111111111;\n"
+               "endcase",
+               Style);
+  verifyFormat("case (data)\n"
+               "16'd0: begin\n"
+               "  result = 10'b0111111111;\n"
+               "end\n"
+               "endcase",
+               Style);
+  Style.IndentCaseLabels = true;
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result = 10'b0111111111;\n"
+               "endcase",
+               Style);
+  verifyFormat("case (data)\n"
+               "  16'd0: begin\n"
+               "    result = 10'b0111111111;\n"
+               "  end\n"
+               "endcase",
+               Style);
+}
+
 TEST_F(FormatTestVerilog, Delay) {
   // Delay by the default unit.
   verifyFormat("#0;");
