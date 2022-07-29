@@ -353,6 +353,15 @@ public:
   /// is specified.
   unsigned CacheCompileJob : 1;
 
+  /// Output a PCM/PCH file that does not write out information about its output
+  /// path.
+  ///
+  /// FIXME: This only controls whether \p ORIGINAL_PCH_DIR record is written
+  /// out or not. Consider either removing that record entirely if it's no
+  /// longer relevant or switching the default to not write it unless an option
+  /// is set to true.
+  unsigned OutputPathIndependentPCM : 1;
+
   /// Output (and read) PCM files regardless of compiler errors.
   unsigned AllowPCMWithCompilerErrors : 1;
 
@@ -525,7 +534,8 @@ public:
         ASTDumpLookups(false), BuildingImplicitModule(false),
         BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
         IncludeTimestamps(true), UseTemporary(true), CacheCompileJob(false),
-        AllowPCMWithCompilerErrors(false), TimeTraceGranularity(500) {}
+        OutputPathIndependentPCM(false), AllowPCMWithCompilerErrors(false),
+        TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
