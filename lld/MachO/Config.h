@@ -131,6 +131,7 @@ struct Configuration {
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
   bool ignoreOptimizationHints = false;
+  bool forceExactCpuSubtypeMatch = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;

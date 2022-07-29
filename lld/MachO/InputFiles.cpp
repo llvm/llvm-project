@@ -1067,8 +1067,11 @@ template <class LP> void ObjFile::parse() {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
-  Architecture arch = getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-  if (arch != config->arch()) {
+  uint32_t cpuType;
+  std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
+  if (hdr->cputype != cpuType) {
+    Architecture arch =
+        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
     auto msg = config->errorForArchMismatch
                    ? static_cast<void (*)(const Twine &)>(error)
                    : warn;
@@ -1865,6 +1868,36 @@ static bool skipPlatformCheckForCatalyst(const InterfaceFile &interface,
                       MachO::Target(config->arch(), PLATFORM_MACOS));
 }
 
+static bool isArchABICompatible(ArchitectureSet archSet,
+                                Architecture targetArch) {
+  uint32_t cpuType;
+  uint32_t targetCpuType;
+  std::tie(targetCpuType, std::ignore) = getCPUTypeFromArchitecture(targetArch);
+
+  return llvm::any_of(archSet, [&](const auto &p) {
+    std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(p);
+    return cpuType == targetCpuType;
+  });
+}
+
+static bool isTargetPlatformArchCompatible(
+    InterfaceFile::const_target_range interfaceTargets, Target target) {
+  if (is_contained(interfaceTargets, target))
+    return true;
+
+  if (config->forceExactCpuSubtypeMatch)
+    return false;
+
+  ArchitectureSet archSet;
+  for (const auto &p : interfaceTargets)
+    if (p.Platform == target.Platform)
+      archSet.set(p.Arch);
+  if (archSet.empty())
+    return false;
+
+  return isArchABICompatible(archSet, target.Arch);
+}
+
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader, bool explicitlyLinked)
     : InputFile(DylibKind, interface), refState(RefState::Unreferenced),
@@ -1884,7 +1917,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   inputFiles.insert(this);
 
   if (!is_contained(skipPlatformChecks, installName) &&
-      !is_contained(interface.targets(), config->platformInfo.target) &&
+      !isTargetPlatformArchCompatible(interface.targets(),
+                                      config->platformInfo.target) &&
       !skipPlatformCheckForCatalyst(interface, explicitlyLinked)) {
     error(toString(this) + " is incompatible with " +
           std::string(config->platformInfo.target));
@@ -1907,7 +1941,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   std::vector<const llvm::MachO::Symbol *> normalSymbols;
   normalSymbols.reserve(interface.symbolsCount());
   for (const auto *symbol : interface.symbols()) {
-    if (!symbol->getArchitectures().has(config->arch()))
+    if (!isArchABICompatible(symbol->getArchitectures(), config->arch()))
       continue;
     if (handleLDSymbol(symbol->getName()))
       continue;
@@ -1950,7 +1984,7 @@ void DylibFile::parseReexports(const InterfaceFile &interface) {
   for (const InterfaceFileRef &intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
-        is_contained(targets, config->platformInfo.target))
+        isTargetPlatformArchCompatible(targets, config->platformInfo.target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }
 }
