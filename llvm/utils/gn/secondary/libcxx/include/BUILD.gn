@@ -707,6 +707,7 @@ if (current_toolchain == default_toolchain) {
       "__utility/transaction.h",
       "__utility/unreachable.h",
       "__variant/monostate.h",
+      "__verbose_abort",
       "algorithm",
       "any",
       "array",
