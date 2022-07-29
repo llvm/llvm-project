@@ -1067,8 +1067,11 @@ template <class LP> void ObjFile::parse() {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
-  Architecture arch = getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-  if (arch != config->arch()) {
+  uint32_t cpuType;
+  std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
+  if (hdr->cputype != cpuType) {
+    Architecture arch =
+        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
     auto msg = config->errorForArchMismatch
                    ? static_cast<void (*)(const Twine &)>(error)
                    : warn;
@@ -1865,6 +1868,36 @@ static bool skipPlatformCheckForCatalyst(const InterfaceFile &interface,
                       MachO::Target(config->arch(), PLATFORM_MACOS));
 }
 
+static bool isArchABICompatible(ArchitectureSet archSet,
+                                Architecture targetArch) {
+  uint32_t cpuType;
+  uint32_t targetCpuType;
+  std::tie(targetCpuType, std::ignore) = getCPUTypeFromArchitecture(targetArch);
+
+  return llvm::any_of(archSet, [&](const auto &p) {
+    std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(p);
+    return cpuType == targetCpuType;
+  });
+}
+
+static bool isTargetPlatformArchCompatible(
+    InterfaceFile::const_target_range interfaceTargets, Target target) {
+  if (is_contained(interfaceTargets, target))
+    return true;
+
+  if (config->forceExactCpuSubtypeMatch)
+    return false;
+
+  ArchitectureSet archSet;
+  for (const auto &p : interfaceTargets)
+    if (p.Platform == target.Platform)
+      archSet.set(p.Arch);
+  if (archSet.empty())
+    return false;
+
+  return isArchABICompatible(archSet, target.Arch);
+}
+
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader, bool explicitlyLinked)
     : InputFile(DylibKind, interface), refState(RefState::Unreferenced),
@@ -1884,7 +1917,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   inputFiles.insert(this);
 
   if (!is_contained(skipPlatformChecks, installName) &&
-      !is_contained(interface.targets(), config->platformInfo.target) &&
+      !isTargetPlatformArchCompatible(interface.targets(),
+                                      config->platformInfo.target) &&
       !skipPlatformCheckForCatalyst(interface, explicitlyLinked)) {
     error(toString(this) + " is incompatible with " +
           std::string(config->platformInfo.target));
@@ -1907,7 +1941,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   std::vector<const llvm::MachO::Symbol *> normalSymbols;
   normalSymbols.reserve(interface.symbolsCount());
   for (const auto *symbol : interface.symbols()) {
-    if (!symbol->getArchitectures().has(config->arch()))
+    if (!isArchABICompatible(symbol->getArchitectures(), config->arch()))
       continue;
     if (handleLDSymbol(symbol->getName()))
       continue;
@@ -1944,15 +1978,56 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   }
 }
 
+DylibFile::DylibFile(DylibFile *umbrella)
+    : InputFile(DylibKind, MemoryBufferRef{}), refState(RefState::Unreferenced),
+      explicitlyLinked(false), isBundleLoader(false) {
+  if (umbrella == nullptr)
+    umbrella = this;
+  this->umbrella = umbrella;
+}
+
 void DylibFile::parseReexports(const InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
   for (const InterfaceFileRef &intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
-        is_contained(targets, config->platformInfo.target))
+        isTargetPlatformArchCompatible(targets, config->platformInfo.target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }
+}
+
+bool DylibFile::isExplicitlyLinked() const {
+  if (!explicitlyLinked)
+    return false;
+
+  // If this dylib was explicitly linked, but at least one of the symbols
+  // of the synthetic dylibs it created via $ld$previous symbols is
+  // referenced, then that synthetic dylib fulfils the explicit linkedness
+  // and we can deadstrip this dylib if it's unreferenced.
+  for (const auto *dylib : extraDylibs)
+    if (dylib->isReferenced())
+      return false;
+
+  return true;
+}
+
+DylibFile *DylibFile::getSyntheticDylib(StringRef installName,
+                                        uint32_t currentVersion,
+                                        uint32_t compatVersion) {
+  for (DylibFile *dylib : extraDylibs)
+    if (dylib->installName == installName) {
+      // FIXME: Check what to do if different $ld$previous symbols
+      // request the same dylib, but with different versions.
+      return dylib;
+    }
+
+  auto *dylib = make<DylibFile>(umbrella == this ? nullptr : umbrella);
+  dylib->installName = saver().save(installName);
+  dylib->currentVersion = currentVersion;
+  dylib->compatibilityVersion = compatVersion;
+  extraDylibs.push_back(dylib);
+  return dylib;
 }
 
 // $ld$ symbols modify the properties/behavior of the library (e.g. its install
@@ -1990,10 +2065,9 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
   std::tie(platformStr, name) = name.split('$');
   std::tie(startVersion, name) = name.split('$');
   std::tie(endVersion, name) = name.split('$');
-  std::tie(symbolName, rest) = name.split('$');
-  // TODO: ld64 contains some logic for non-empty symbolName as well.
-  if (!symbolName.empty())
-    return;
+  std::tie(symbolName, rest) = name.rsplit('$');
+
+  // FIXME: Does this do the right thing for zippered files?
   unsigned platform;
   if (platformStr.getAsInteger(10, platform) ||
       platform != static_cast<unsigned>(config->platform()))
@@ -2014,8 +2088,9 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
       config->platformInfo.minimum >= end)
     return;
 
-  this->installName = saver().save(installName);
-
+  // Initialized to compatibilityVersion for the symbolName branch below.
+  uint32_t newCompatibilityVersion = compatibilityVersion;
+  uint32_t newCurrentVersionForSymbol = currentVersion;
   if (!compatVersion.empty()) {
     VersionTuple cVersion;
     if (cVersion.tryParse(compatVersion)) {
@@ -2023,8 +2098,32 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
            "' ignored");
       return;
     }
-    compatibilityVersion = encodeVersion(cVersion);
+    newCompatibilityVersion = encodeVersion(cVersion);
+    newCurrentVersionForSymbol = newCompatibilityVersion;
   }
+
+  if (!symbolName.empty()) {
+    // A $ld$previous$ symbol with symbol name adds a symbol with that name to
+    // a dylib with given name and version.
+    auto *dylib = getSyntheticDylib(installName, newCurrentVersionForSymbol,
+                                    newCompatibilityVersion);
+
+    // The tbd file usually contains the $ld$previous symbol for an old version,
+    // and then the symbol itself later, for newer deployment targets, like so:
+    //    symbols: [
+    //      '$ld$previous$/Another$$1$3.0$14.0$_zzz$',
+    //      _zzz,
+    //    ]
+    // Since the symbols are sorted, adding them to the symtab in the given
+    // order means the $ld$previous version of _zzz will prevail, as desired.
+    dylib->symbols.push_back(symtab->addDylib(
+        saver().save(symbolName), dylib, /*isWeakDef=*/false, /*isTlv=*/false));
+    return;
+  }
+
+  // A $ld$previous$ symbol without symbol name modifies the dylib it's in.
+  this->installName = saver().save(installName);
+  this->compatibilityVersion = newCompatibilityVersion;
 }
 
 void DylibFile::handleLDInstallNameSymbol(StringRef name,

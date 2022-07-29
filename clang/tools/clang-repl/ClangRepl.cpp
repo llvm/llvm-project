@@ -28,6 +28,8 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
+static llvm::cl::opt<bool> OptHostSupportsException("host-supports-exception",
+                                                    llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
@@ -65,10 +67,48 @@ static int checkDiagErrors(const clang::CompilerInstance *CI) {
   return Errs ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
+// Check if the host environment supports c++ exception handling
+// by querying the existence of symbol __cxa_throw.
+static bool checkExceptionSupport() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (!J) {
+    llvm::consumeError(J.takeError());
+    return false;
+  }
+
+  std::vector<const char *> Dummy;
+  auto CI = clang::IncrementalCompilerBuilder::create(Dummy);
+  if (!CI) {
+    llvm::consumeError(CI.takeError());
+    return false;
+  }
+
+  auto Interp = clang::Interpreter::create(std::move(*CI));
+  if (!Interp) {
+    llvm::consumeError(Interp.takeError());
+    return false;
+  }
+
+  if (auto Err = (*Interp)->ParseAndExecute("")) {
+    llvm::consumeError(std::move(Err));
+    return false;
+  }
+
+  auto Sym = (*Interp)->getSymbolAddress("__cxa_throw");
+  if (!Sym) {
+    llvm::consumeError(Sym.takeError());
+    return false;
+  }
+
+  return true;
+}
+
 llvm::ExitOnError ExitOnErr;
 int main(int argc, const char **argv) {
   ExitOnErr.setBanner("clang-repl: ");
   llvm::cl::ParseCommandLineOptions(argc, argv);
+
+  llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   std::vector<const char *> ClangArgv(ClangArgs.size());
   std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
@@ -84,6 +124,14 @@ int main(int argc, const char **argv) {
       llvm::consumeError(J.takeError());
       llvm::outs() << "false\n";
     }
+    return 0;
+  }
+
+  if (OptHostSupportsException) {
+    if (checkExceptionSupport())
+      llvm::outs() << "true\n";
+    else
+      llvm::outs() << "false\n";
     return 0;
   }
 
@@ -126,8 +174,6 @@ int main(int argc, const char **argv) {
   // potentially about to delete. Uninstall the handler now so that any
   // later errors use the default handling behavior instead.
   llvm::remove_fatal_error_handler();
-
-  llvm::llvm_shutdown();
 
   return checkDiagErrors(Interp->getCompilerInstance());
 }

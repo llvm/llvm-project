@@ -1202,6 +1202,7 @@ public:
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections();
+void combineEhSections();
 
 template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);
 template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);

@@ -156,42 +156,41 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
   SmallVector<Value> newInitValues;
   SmallVector<Type> newResultTypes;
 
-  /// The indexing map to use for the new results is obtained by
-  /// - Check if the result is yielded. If so use the same indexing map as the
-  /// corresponding output
-  /// - Identity indexing map if the result is not yielded.
-  Operation *yieldOp = body->getTerminator();
-  auto getResultIndexingMap = [&](OpResult scalarOpResult) -> AffineMap {
-    OpOperand *firstUseInYield = nullptr, *identityUseInYield = nullptr;
-    for (OpOperand &use : scalarOpResult.getUses()) {
-      if (use.getOwner() != yieldOp)
-        continue;
-      if (!firstUseInYield)
-        firstUseInYield = &use;
-      OpResult genericOpResult =
-          genericOp.getResult(use.getOperandNumber()).cast<OpResult>();
-      AffineMap indexingMap =
-          genericOp.getTiedIndexingMapForResult(genericOpResult);
-      if (indexingMap.isIdentity())
-        identityUseInYield = &use;
-    }
-    if (identityUseInYield || !firstUseInYield)
-      return rewriter.getMultiDimIdentityMap(domain.size());
-    OpResult genericOpResult =
-        genericOp.getResult(firstUseInYield->getOperandNumber())
-            .cast<OpResult>();
-    return genericOp.getTiedIndexingMapForResult(genericOpResult);
-  };
+  // Add as many new results as the number of results of the peeled scalar op.
+  for (auto scalarOpResult : peeledScalarOperation->getResults()) {
+    // If the result is yielded by the original op, use the operand, indexing
+    // map and result type that correspond to the yielded value.
 
-  for (auto scalarResult : peeledScalarOperation->getResults()) {
-    AffineMap resultIndexingMap = getResultIndexingMap(scalarResult);
-    SmallVector<OpFoldResult> initSize =
-        permuteValues(domain, resultIndexingMap);
+    Optional<unsigned> resultNumber;
+    for (auto user : scalarOpResult.getUsers()) {
+      if (auto yieldOp = dyn_cast<YieldOp>(user)) {
+        // Find the first use of the `scalarOpResult` in the yield op.
+        for (OpOperand &yieldOperand : yieldOp->getOpOperands()) {
+          if (yieldOperand.get() == scalarOpResult) {
+            resultNumber = yieldOperand.getOperandNumber();
+            break;
+          }
+        }
+        assert(resultNumber && "unable to find use of a value in its user");
+        break;
+      }
+    }
+    if (resultNumber) {
+      newInitValues.push_back(genericOp.getOutputOperand(*resultNumber)->get());
+      OpResult result = genericOp.getResult(*resultNumber).cast<OpResult>();
+      newResultTypes.push_back(result.getType());
+      peeledGenericOpIndexingMaps.push_back(
+          genericOp.getTiedIndexingMapForResult(result));
+      continue;
+    }
+
+    // Fall back path, use an `init_tensor` and identity indexing map.
+    AffineMap indexingMap = rewriter.getMultiDimIdentityMap(domain.size());
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, initSize, scalarResult.getType());
+        loc, domain, scalarOpResult.getType());
     newInitValues.push_back(initTensor);
     newResultTypes.push_back(initTensor.getType());
-    peeledGenericOpIndexingMaps.push_back(resultIndexingMap);
+    peeledGenericOpIndexingMaps.push_back(indexingMap);
   }
 
   /// Create the peeled generic op with an empty body.
@@ -261,17 +260,6 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
   if (!genericOp.hasTensorSemantics()) {
     return rewriter.notifyMatchFailure(
         genericOp, "only operations with tensor semantics are handled");
-  }
-
-  // TODO: For now only decompose operations where the `outs` operands values
-  // are not accessed within the payload. This might be relaxed in future, but
-  // needs a bit more reasoning to ensure that it is safe.
-  if (llvm::any_of(genericOp.getOutputOperands(), [&](OpOperand *outOperand) {
-        return genericOp.payloadUsesValueFromOperand(outOperand);
-      })) {
-    return rewriter.notifyMatchFailure(
-        genericOp, "unhandled decomposition of generic op with use of out "
-                   "operand value in payload");
   }
 
   if (llvm::any_of(genericOp.getOutputOperands(), [&](OpOperand *outOperand) {

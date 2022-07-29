@@ -48,7 +48,7 @@ OpFoldResult getAsOpFoldResult(Value val);
 
 /// Given an array of values, try to extract a constant Attribute from each
 /// value. If this fails, return the original value.
-SmallVector<OpFoldResult> getAsOpFoldResult(ArrayRef<Value> values);
+SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values);
 
 /// Convert `arrayAttr` to a vector of OpFoldResult.
 SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr);

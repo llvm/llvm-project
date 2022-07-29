@@ -649,7 +649,6 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
                               AssumeSingleUse);
 }
 
-// TODO: Can we merge SelectionDAG::GetDemandedBits into this?
 // TODO: Under what circumstances can we create nodes? Constant folding?
 SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
@@ -1746,7 +1745,7 @@ bool TargetLowering::SimplifyDemandedBits(
         // aren't demanded (as above) and that the shifted upper c1 bits of
         // x aren't demanded.
         // TODO - support non-uniform vector amounts.
-        if (Op0.hasOneUse() && InnerOp.getOpcode() == ISD::SRL &&
+        if (InnerOp.getOpcode() == ISD::SRL && Op0.hasOneUse() &&
             InnerOp.hasOneUse()) {
           if (const APInt *SA2 =
                   TLO.DAG.getValidShiftAmountConstant(InnerOp, DemandedElts)) {
@@ -1880,6 +1879,16 @@ bool TargetLowering::SimplifyDemandedBits(
       Known.One.lshrInPlace(ShAmt);
       // High bits known zero.
       Known.Zero.setHighBits(ShAmt);
+
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      if (!InDemandedMask.isAllOnesValue() || !DemandedElts.isAllOnesValue()) {
+        SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+            Op0, InDemandedMask, DemandedElts, TLO.DAG, Depth + 1);
+        if (DemandedOp0) {
+          SDValue NewOp = TLO.DAG.getNode(ISD::SRL, dl, VT, DemandedOp0, Op1);
+          return TLO.CombineTo(Op, NewOp);
+        }
+      }
     }
     break;
   }
@@ -2226,11 +2235,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op.getOperand(1), MaskHi, KnownHi, TLO, Depth + 1))
       return true;
 
-    Known.Zero = KnownLo.Zero.zext(BitWidth) |
-                 KnownHi.Zero.zext(BitWidth).shl(HalfBitWidth);
-
-    Known.One = KnownLo.One.zext(BitWidth) |
-                KnownHi.One.zext(BitWidth).shl(HalfBitWidth);
+    Known = KnownHi.concat(KnownLo);
     break;
   }
   case ISD::ZERO_EXTEND:
@@ -2370,18 +2375,18 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If the input is only used by this truncate, see if we can shrink it based
     // on the known demanded bits.
-    if (Src.getNode()->hasOneUse()) {
-      switch (Src.getOpcode()) {
-      default:
+    switch (Src.getOpcode()) {
+    default:
+      break;
+    case ISD::SRL:
+      // Shrink SRL by a constant if none of the high bits shifted in are
+      // demanded.
+      if (TLO.LegalTypes() && !isTypeDesirableForOp(ISD::SRL, VT))
+        // Do not turn (vt1 truncate (vt2 srl)) into (vt1 srl) if vt1 is
+        // undesirable.
         break;
-      case ISD::SRL:
-        // Shrink SRL by a constant if none of the high bits shifted in are
-        // demanded.
-        if (TLO.LegalTypes() && !isTypeDesirableForOp(ISD::SRL, VT))
-          // Do not turn (vt1 truncate (vt2 srl)) into (vt1 srl) if vt1 is
-          // undesirable.
-          break;
 
+      if (Src.getNode()->hasOneUse()) {
         const APInt *ShAmtC =
             TLO.DAG.getValidShiftAmountConstant(Src, DemandedElts);
         if (!ShAmtC || ShAmtC->uge(BitWidth))
@@ -2403,8 +2408,8 @@ bool TargetLowering::SimplifyDemandedBits(
           return TLO.CombineTo(
               Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, NewShAmt));
         }
-        break;
       }
+      break;
     }
 
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");

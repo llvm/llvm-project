@@ -622,6 +622,10 @@ bool BinaryContext::analyzeJumpTable(
 void BinaryContext::populateJumpTables() {
   LLVM_DEBUG(dbgs() << "DataPCRelocations: " << DataPCRelocations.size()
                     << '\n');
+
+  // Collect jump tables that pass the analyzeJumpTable's first check,
+  // but fail the analyzeJumpTable's second check
+  SmallVector<JumpTable *, 1> AbortedJTs;
   for (auto JTI = JumpTables.begin(), JTE = JumpTables.end(); JTI != JTE;
        ++JTI) {
     JumpTable *JT = JTI->second;
@@ -640,6 +644,13 @@ void BinaryContext::populateJumpTables() {
     const bool Success =
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress);
+    // !Success means a false positive from earlier analysis run due to
+    // different context. A possible culprit is instruction bounds check.
+    // Previous run happens during disassembly. If the target function
+    // is not disassembled, the check will be skipped, leading to a false
+    // positive
+    //
+    // Solution: Ignore fragments accessing JT that fails the check
     if (!Success) {
       LLVM_DEBUG(ListSeparator LS;
                  dbgs() << "failed to analyze jump table in function ";
@@ -659,7 +670,8 @@ void BinaryContext::populateJumpTables() {
                    dbgs() << "\n";);
         NextJTI->second->print(dbgs());
       }
-      llvm_unreachable("jump table heuristic failure");
+      AbortedJTs.push_back(JT);
+      continue;
     }
     for (BinaryFunction *Frag : JT->Parents) {
       for (uint64_t EntryAddress : JT->EntriesAsAddress)
@@ -687,6 +699,15 @@ void BinaryContext::populateJumpTables() {
     for (BinaryFunction *Frag : JT->Parents)
       if (Frag->hasIndirectTargetToSplitFragment())
         addFragmentsToSkip(Frag);
+  }
+
+  // Ignore fragments accessing JT that fails analyzeJumpTable check
+  for (JumpTable *JT : AbortedJTs) {
+    for (BinaryFunction *Frag : JT->Parents) {
+      Frag->setIgnored();
+      Frag->JumpTables.erase(Frag->JumpTables.find(JT->getAddress()));
+    }
+    JumpTables.erase(JumpTables.find(JT->getAddress()));
   }
 
   if (opts::StrictMode && DataPCRelocations.size()) {

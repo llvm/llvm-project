@@ -418,7 +418,159 @@ SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
 // Code for LLVM::GEPOp.
 //===----------------------------------------------------------------------===//
 
-constexpr int GEPOp::kDynamicIndex;
+constexpr int32_t GEPOp::kDynamicIndex;
+
+GEPIndicesAdaptor<ValueRange> GEPOp::getIndices() {
+  return GEPIndicesAdaptor<ValueRange>(getRawConstantIndicesAttr(),
+                                       getDynamicIndices());
+}
+
+/// Returns the elemental type of any LLVM-compatible vector type or self.
+static Type extractVectorElementType(Type type) {
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    return vectorType.getElementType();
+  if (auto scalableVectorType = type.dyn_cast<LLVMScalableVectorType>())
+    return scalableVectorType.getElementType();
+  if (auto fixedVectorType = type.dyn_cast<LLVMFixedVectorType>())
+    return fixedVectorType.getElementType();
+  return type;
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Value basePtr, ArrayRef<GEPArg> indices,
+                  ArrayRef<NamedAttribute> attributes) {
+  auto ptrType =
+      extractVectorElementType(basePtr.getType()).cast<LLVMPointerType>();
+  assert(!ptrType.isOpaque() &&
+         "expected non-opaque pointer, provide elementType explicitly when "
+         "opaque pointers are used");
+  build(builder, result, resultType, ptrType.getElementType(), basePtr, indices,
+        attributes);
+}
+
+/// Destructures the 'indices' parameter into 'rawConstantIndices' and
+/// 'dynamicIndices', encoding the former in the process. In the process,
+/// dynamic indices which are used to index into a structure type are converted
+/// to constant indices when possible. To do this, the GEPs element type should
+/// be passed as first parameter.
+static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
+                               SmallVectorImpl<int32_t> &rawConstantIndices,
+                               SmallVectorImpl<Value> &dynamicIndices) {
+  for (const GEPArg &iter : indices) {
+    // If the thing we are currently indexing into is a struct we must turn
+    // any integer constants into constant indices. If this is not possible
+    // we don't do anything here. The verifier will catch it and emit a proper
+    // error. All other canonicalization is done in the fold method.
+    bool requiresConst = !rawConstantIndices.empty() &&
+                         currType.isa_and_nonnull<LLVMStructType>();
+    if (Value val = iter.dyn_cast<Value>()) {
+      APInt intC;
+      if (requiresConst && matchPattern(val, m_ConstantInt(&intC)) &&
+          intC.isSignedIntN(kGEPConstantBitWidth)) {
+        rawConstantIndices.push_back(intC.getSExtValue());
+      } else {
+        rawConstantIndices.push_back(GEPOp::kDynamicIndex);
+        dynamicIndices.push_back(val);
+      }
+    } else {
+      rawConstantIndices.push_back(iter.get<GEPConstantIndex>());
+    }
+
+    // Skip for very first iteration of this loop. First index does not index
+    // within the aggregates, but is just a pointer offset.
+    if (rawConstantIndices.size() == 1 || !currType)
+      continue;
+
+    currType =
+        TypeSwitch<Type, Type>(currType)
+            .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
+                  LLVMArrayType>([](auto containerType) {
+              return containerType.getElementType();
+            })
+            .Case([&](LLVMStructType structType) -> Type {
+              int64_t memberIndex = rawConstantIndices.back();
+              if (memberIndex >= 0 && static_cast<size_t>(memberIndex) <
+                                          structType.getBody().size())
+                return structType.getBody()[memberIndex];
+              return nullptr;
+            })
+            .Default(Type(nullptr));
+  }
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Type elementType, Value basePtr, ArrayRef<GEPArg> indices,
+                  ArrayRef<NamedAttribute> attributes) {
+  SmallVector<int32_t> rawConstantIndices;
+  SmallVector<Value> dynamicIndices;
+  destructureIndices(elementType, indices, rawConstantIndices, dynamicIndices);
+
+  result.addTypes(resultType);
+  result.addAttributes(attributes);
+  result.addAttribute(getRawConstantIndicesAttrName(result.name),
+                      builder.getDenseI32ArrayAttr(rawConstantIndices));
+  if (extractVectorElementType(basePtr.getType())
+          .cast<LLVMPointerType>()
+          .isOpaque())
+    result.addAttribute(kElemTypeAttrName, TypeAttr::get(elementType));
+  result.addOperands(basePtr);
+  result.addOperands(dynamicIndices);
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Value basePtr, ValueRange indices,
+                  ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, resultType, basePtr, SmallVector<GEPArg>(indices),
+        attributes);
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Type elementType, Value basePtr, ValueRange indices,
+                  ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, resultType, elementType, basePtr,
+        SmallVector<GEPArg>(indices), attributes);
+}
+
+static ParseResult
+parseGEPIndices(OpAsmParser &parser,
+                SmallVectorImpl<OpAsmParser::UnresolvedOperand> &indices,
+                DenseI32ArrayAttr &rawConstantIndices) {
+  SmallVector<int32_t> constantIndices;
+
+  auto idxParser = [&]() -> ParseResult {
+    int32_t constantIndex;
+    OptionalParseResult parsedInteger =
+        parser.parseOptionalInteger(constantIndex);
+    if (parsedInteger.hasValue()) {
+      if (failed(parsedInteger.getValue()))
+        return failure();
+      constantIndices.push_back(constantIndex);
+      return success();
+    }
+
+    constantIndices.push_back(LLVM::GEPOp::kDynamicIndex);
+    return parser.parseOperand(indices.emplace_back());
+  };
+  if (parser.parseCommaSeparatedList(idxParser))
+    return failure();
+
+  rawConstantIndices =
+      DenseI32ArrayAttr::get(parser.getContext(), constantIndices);
+  return success();
+}
+
+static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
+                            OperandRange indices,
+                            DenseI32ArrayAttr rawConstantIndices) {
+  llvm::interleaveComma(
+      GEPIndicesAdaptor<OperandRange>(rawConstantIndices, indices), printer,
+      [&](PointerUnion<IntegerAttr, Value> cst) {
+        if (Value val = cst.dyn_cast<Value>())
+          printer.printOperand(val);
+        else
+          printer << cst.get<IntegerAttr>().getInt();
+      });
+}
 
 namespace {
 /// Base class for llvm::Error related to GEP index.
@@ -467,69 +619,33 @@ char GEPIndexOutOfBoundError::ID = 0;
 char GEPStaticIndexError::ID = 0;
 
 /// For the given `structIndices` and `indices`, check if they're complied
-/// with `baseGEPType`, especially check against LLVMStructTypes nested within,
-/// and refine/promote struct index from `indices` to `updatedStructIndices`
-/// if the latter argument is not null.
-static llvm::Error
-recordStructIndices(Type baseGEPType, unsigned indexPos,
-                    ArrayRef<int32_t> structIndices, ValueRange indices,
-                    SmallVectorImpl<int32_t> *updatedStructIndices,
-                    SmallVectorImpl<Value> *remainingIndices) {
-  if (indexPos >= structIndices.size())
+/// with `baseGEPType`, especially check against LLVMStructTypes nested within.
+static llvm::Error verifyStructIndices(Type baseGEPType, unsigned indexPos,
+                                       GEPIndicesAdaptor<ValueRange> indices) {
+  if (indexPos >= indices.size())
     // Stop searching
     return llvm::Error::success();
 
-  int32_t gepIndex = structIndices[indexPos];
-  bool isStaticIndex = gepIndex != GEPOp::kDynamicIndex;
-
-  unsigned dynamicIndexPos = indexPos;
-  if (!isStaticIndex)
-    dynamicIndexPos = llvm::count(structIndices.take_front(indexPos + 1),
-                                  LLVM::GEPOp::kDynamicIndex) -
-                      1;
-
   return llvm::TypeSwitch<Type, llvm::Error>(baseGEPType)
       .Case<LLVMStructType>([&](LLVMStructType structType) -> llvm::Error {
-        // We don't always want to refine the index (e.g. when performing
-        // verification), so we only refine when updatedStructIndices is not
-        // null.
-        if (!isStaticIndex && updatedStructIndices) {
-          // Try to refine.
-          APInt staticIndexValue;
-          isStaticIndex = matchPattern(indices[dynamicIndexPos],
-                                       m_ConstantInt(&staticIndexValue));
-          if (isStaticIndex) {
-            assert(staticIndexValue.getBitWidth() <= 64 &&
-                   llvm::isInt<32>(staticIndexValue.getLimitedValue()) &&
-                   "struct index can't fit within int32_t");
-            gepIndex = static_cast<int32_t>(staticIndexValue.getSExtValue());
-          }
-        }
-        if (!isStaticIndex)
+        if (!indices[indexPos].is<IntegerAttr>())
           return llvm::make_error<GEPStaticIndexError>(indexPos);
 
+        int32_t gepIndex = indices[indexPos].get<IntegerAttr>().getInt();
         ArrayRef<Type> elementTypes = structType.getBody();
         if (gepIndex < 0 ||
             static_cast<size_t>(gepIndex) >= elementTypes.size())
           return llvm::make_error<GEPIndexOutOfBoundError>(indexPos);
 
-        if (updatedStructIndices)
-          (*updatedStructIndices)[indexPos] = gepIndex;
-
-        // Instead of recusively going into every children types, we only
+        // Instead of recursively going into every children types, we only
         // dive into the one indexed by gepIndex.
-        return recordStructIndices(elementTypes[gepIndex], indexPos + 1,
-                                   structIndices, indices, updatedStructIndices,
-                                   remainingIndices);
+        return verifyStructIndices(elementTypes[gepIndex], indexPos + 1,
+                                   indices);
       })
       .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
             LLVMArrayType>([&](auto containerType) -> llvm::Error {
-        // Currently we don't refine non-struct index even if it's static.
-        if (remainingIndices)
-          remainingIndices->push_back(indices[dynamicIndexPos]);
-        return recordStructIndices(containerType.getElementType(), indexPos + 1,
-                                   structIndices, indices, updatedStructIndices,
-                                   remainingIndices);
+        return verifyStructIndices(containerType.getElementType(), indexPos + 1,
+                                   indices);
       })
       .Default(
           [](auto otherType) -> llvm::Error { return llvm::Error::success(); });
@@ -537,122 +653,9 @@ recordStructIndices(Type baseGEPType, unsigned indexPos,
 
 /// Driver function around `recordStructIndices`. Note that we always check
 /// from the second GEP index since the first one is always dynamic.
-static llvm::Error
-findStructIndices(Type baseGEPType, ArrayRef<int32_t> structIndices,
-                  ValueRange indices,
-                  SmallVectorImpl<int32_t> *updatedStructIndices = nullptr,
-                  SmallVectorImpl<Value> *remainingIndices = nullptr) {
-  if (remainingIndices)
-    // The first GEP index is always dynamic.
-    remainingIndices->push_back(indices[0]);
-  return recordStructIndices(baseGEPType, /*indexPos=*/1, structIndices,
-                             indices, updatedStructIndices, remainingIndices);
-}
-
-void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
-                  Value basePtr, ValueRange operands,
-                  ArrayRef<NamedAttribute> attributes) {
-  build(builder, result, resultType, basePtr, operands,
-        SmallVector<int32_t>(operands.size(), kDynamicIndex), attributes);
-}
-
-/// Returns the elemental type of any LLVM-compatible vector type or self.
-static Type extractVectorElementType(Type type) {
-  if (auto vectorType = type.dyn_cast<VectorType>())
-    return vectorType.getElementType();
-  if (auto scalableVectorType = type.dyn_cast<LLVMScalableVectorType>())
-    return scalableVectorType.getElementType();
-  if (auto fixedVectorType = type.dyn_cast<LLVMFixedVectorType>())
-    return fixedVectorType.getElementType();
-  return type;
-}
-
-void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
-                  Type elementType, Value basePtr, ValueRange indices,
-                  ArrayRef<NamedAttribute> attributes) {
-  build(builder, result, resultType, elementType, basePtr, indices,
-        SmallVector<int32_t>(indices.size(), kDynamicIndex), attributes);
-}
-
-void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
-                  Value basePtr, ValueRange indices,
-                  ArrayRef<int32_t> structIndices,
-                  ArrayRef<NamedAttribute> attributes) {
-  auto ptrType =
-      extractVectorElementType(basePtr.getType()).cast<LLVMPointerType>();
-  assert(!ptrType.isOpaque() &&
-         "expected non-opaque pointer, provide elementType explicitly when "
-         "opaque pointers are used");
-  build(builder, result, resultType, ptrType.getElementType(), basePtr, indices,
-        structIndices, attributes);
-}
-
-void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
-                  Type elementType, Value basePtr, ValueRange indices,
-                  ArrayRef<int32_t> structIndices,
-                  ArrayRef<NamedAttribute> attributes) {
-  SmallVector<Value> remainingIndices;
-  SmallVector<int32_t> updatedStructIndices(structIndices.begin(),
-                                            structIndices.end());
-  if (llvm::Error err =
-          findStructIndices(elementType, structIndices, indices,
-                            &updatedStructIndices, &remainingIndices))
-    llvm::report_fatal_error(StringRef(llvm::toString(std::move(err))));
-
-  assert(remainingIndices.size() == static_cast<size_t>(llvm::count(
-                                        updatedStructIndices, kDynamicIndex)) &&
-         "expected as many index operands as dynamic index attr elements");
-
-  result.addTypes(resultType);
-  result.addAttributes(attributes);
-  result.addAttribute("structIndices",
-                      builder.getI32TensorAttr(updatedStructIndices));
-  if (extractVectorElementType(basePtr.getType())
-          .cast<LLVMPointerType>()
-          .isOpaque())
-    result.addAttribute(kElemTypeAttrName, TypeAttr::get(elementType));
-  result.addOperands(basePtr);
-  result.addOperands(remainingIndices);
-}
-
-static ParseResult
-parseGEPIndices(OpAsmParser &parser,
-                SmallVectorImpl<OpAsmParser::UnresolvedOperand> &indices,
-                DenseIntElementsAttr &structIndices) {
-  SmallVector<int32_t> constantIndices;
-
-  auto idxParser = [&]() -> ParseResult {
-    int32_t constantIndex;
-    OptionalParseResult parsedInteger =
-        parser.parseOptionalInteger(constantIndex);
-    if (parsedInteger.hasValue()) {
-      if (failed(parsedInteger.getValue()))
-        return failure();
-      constantIndices.push_back(constantIndex);
-      return success();
-    }
-
-    constantIndices.push_back(LLVM::GEPOp::kDynamicIndex);
-    return parser.parseOperand(indices.emplace_back());
-  };
-  if (parser.parseCommaSeparatedList(idxParser))
-    return failure();
-
-  structIndices = parser.getBuilder().getI32TensorAttr(constantIndices);
-  return success();
-}
-
-static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
-                            OperandRange indices,
-                            DenseIntElementsAttr structIndices) {
-  unsigned operandIdx = 0;
-  llvm::interleaveComma(structIndices.getValues<int32_t>(), printer,
-                        [&](int32_t cst) {
-                          if (cst == LLVM::GEPOp::kDynamicIndex)
-                            printer.printOperand(indices[operandIdx++]);
-                          else
-                            printer << cst;
-                        });
+static llvm::Error verifyStructIndices(Type baseGEPType,
+                                       GEPIndicesAdaptor<ValueRange> indices) {
+  return verifyStructIndices(baseGEPType, /*indexPos=*/1, indices);
 }
 
 LogicalResult LLVM::GEPOp::verify() {
@@ -662,14 +665,14 @@ LogicalResult LLVM::GEPOp::verify() {
           getElemType())))
     return failure();
 
-  auto structIndexRange = getStructIndices().getValues<int32_t>();
-  // structIndexRange is a kind of iterator, which cannot be converted
-  // to ArrayRef directly.
-  SmallVector<int32_t> structIndices(structIndexRange.size());
-  for (unsigned i : llvm::seq<unsigned>(0, structIndexRange.size()))
-    structIndices[i] = structIndexRange[i];
-  if (llvm::Error err = findStructIndices(getSourceElementType(), structIndices,
-                                          getIndices()))
+  if (static_cast<size_t>(
+          llvm::count(getRawConstantIndices(), kDynamicIndex)) !=
+      getDynamicIndices().size())
+    return emitOpError("expected as many dynamic indices as specified in '")
+           << getRawConstantIndicesAttrName().getValue() << "'";
+
+  if (llvm::Error err =
+          verifyStructIndices(getSourceElementType(), getIndices()))
     return emitOpError() << llvm::toString(std::move(err));
 
   return success();
@@ -2697,10 +2700,49 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
+  GEPIndicesAdaptor<ArrayRef<Attribute>> indices(getRawConstantIndicesAttr(),
+                                                 operands.drop_front());
+
   // gep %x:T, 0 -> %x
-  if (getBase().getType() == getType() && getIndices().size() == 1 &&
-      getStructIndices().size() == 1 && matchPattern(getIndices()[0], m_Zero()))
-    return getBase();
+  if (getBase().getType() == getType() && indices.size() == 1)
+    if (auto integer = indices[0].dyn_cast_or_null<IntegerAttr>())
+      if (integer.getValue().isZero())
+        return getBase();
+
+  // Canonicalize any dynamic indices of constant value to constant indices.
+  bool changed = false;
+  SmallVector<GEPArg> gepArgs;
+  for (auto &iter : llvm::enumerate(indices)) {
+    auto integer = iter.value().dyn_cast_or_null<IntegerAttr>();
+    // Constant indices can only be int32_t, so if integer does not fit we
+    // are forced to keep it dynamic, despite being a constant.
+    if (!indices.isDynamicIndex(iter.index()) || !integer ||
+        !integer.getValue().isSignedIntN(kGEPConstantBitWidth)) {
+
+      PointerUnion<IntegerAttr, Value> existing = getIndices()[iter.index()];
+      if (Value val = existing.dyn_cast<Value>())
+        gepArgs.emplace_back(val);
+      else
+        gepArgs.emplace_back(existing.get<IntegerAttr>().getInt());
+
+      continue;
+    }
+
+    changed = true;
+    gepArgs.emplace_back(integer.getInt());
+  }
+  if (changed) {
+    SmallVector<int32_t> rawConstantIndices;
+    SmallVector<Value> dynamicIndices;
+    destructureIndices(getSourceElementType(), gepArgs, rawConstantIndices,
+                       dynamicIndices);
+
+    getDynamicIndicesMutable().assign(dynamicIndices);
+    setRawConstantIndicesAttr(
+        DenseI32ArrayAttr::get(getContext(), rawConstantIndices));
+    return Value{*this};
+  }
+
   return {};
 }
 

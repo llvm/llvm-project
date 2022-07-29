@@ -71,7 +71,7 @@ add_header_library(
 add_header_library(
   type_traits
   HDRS
-    TypeTraits.h
+    type_traits.h
   DEPENDS
     .uint
 )

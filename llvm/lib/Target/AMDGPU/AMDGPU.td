@@ -1291,6 +1291,10 @@ def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureUserSGPRInit16Bug])>;
 
+def FeatureISAVersion11_0_3 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [])>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {

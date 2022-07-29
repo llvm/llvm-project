@@ -12,6 +12,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
 
+; Does not apply to gfx1103
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1103 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1103 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+
 ; There aren't any stack objects, but we still enable the
 ; private_segment_wavefront_offset to get to 16, and the workgroup ID
 ; is in s14.

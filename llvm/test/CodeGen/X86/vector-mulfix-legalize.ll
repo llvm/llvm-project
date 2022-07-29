@@ -57,15 +57,15 @@ define <4 x i16> @smulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    movl $32768, %ecx # imm = 0x8000
 ; CHECK-NEXT:    cmovll %ecx, %edx
 ; CHECK-NEXT:    pextrw $1, %xmm0, %esi
-; CHECK-NEXT:    movswl %si, %edi
-; CHECK-NEXT:    leal (%rdi,%rdi), %eax
+; CHECK-NEXT:    leal (%rsi,%rsi), %edi
+; CHECK-NEXT:    movswl %si, %eax
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    shldw $1, %ax, %si
-; CHECK-NEXT:    sarl $15, %edi
-; CHECK-NEXT:    cmpl $16384, %edi # imm = 0x4000
+; CHECK-NEXT:    shldw $1, %di, %si
+; CHECK-NEXT:    sarl $16, %eax
+; CHECK-NEXT:    cmpl $16384, %eax # imm = 0x4000
 ; CHECK-NEXT:    cmovgel %r8d, %esi
-; CHECK-NEXT:    cmpl $-16384, %edi # imm = 0xC000
+; CHECK-NEXT:    cmpl $-16384, %eax # imm = 0xC000
 ; CHECK-NEXT:    cmovll %ecx, %esi
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    cwtl

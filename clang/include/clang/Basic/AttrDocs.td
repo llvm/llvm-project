@@ -257,6 +257,28 @@ applies to copies of the block. For example:
   }];
 }
 
+def MaybeUndefDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``maybe_undef`` attribute can be placed on a function parameter. It indicates
+that the parameter is allowed to use undef values. It informs the compiler
+to insert a freeze LLVM IR instruction on the function parameter.
+Please note that this is an attribute that is used as an internal
+implementation detail and not intended to be used by external users.
+
+In languages HIP, CUDA etc., some functions have multi-threaded semantics and
+it is enough for only one or some threads to provide defined arguments.
+Depending on semantics, undef arguments in some threads don't produce
+undefined results in the function call. Since, these functions accept undefined
+arguments, ``maybe_undef`` attribute can be placed.
+
+Sample usage:
+.. code-block:: c
+
+  void maybeundeffunc(int __attribute__((maybe_undef))param);
+  }];
+}
+
 def CarriesDependencyDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

@@ -11,7 +11,7 @@
 
 #include "ArrayRef.h"
 #include "StringView.h"
-#include "TypeTraits.h"
+#include "type_traits.h"
 
 #include "src/__support/integer_to_string.h"
 
@@ -56,17 +56,17 @@ public:
   }
 
   // Write the |val| as string.
-  template <typename T, EnableIfType<IsIntegral<T>::Value, int> = 0>
+  template <typename T, enable_if_t<is_integral_v<T>, int> = 0>
   StringStream &operator<<(T val) {
     const auto int_to_str = integer_to_string(val);
     return operator<<(int_to_str.str());
   }
 
-  template <typename T, EnableIfType<IsFloatingPointType<T>::Value, int> = 0>
+  template <typename T, enable_if_t<is_floating_point_v<T>, int> = 0>
   StringStream &operator<<(T val) {
     // If this specialization gets activated, then the static_assert will
     // trigger a compile error about missing floating point number support.
-    static_assert(!IsFloatingPointType<T>::Value,
+    static_assert(!is_floating_point_v<T>,
                   "Writing floating point numbers is not yet supported");
     return *this;
   }

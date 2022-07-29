@@ -155,7 +155,7 @@ inline bool characterWithDynamicLen(mlir::Type t) {
 /// Returns true iff `seqTy` has either an unknown shape or a non-constant shape
 /// (where rank > 0).
 inline bool sequenceWithNonConstantShape(fir::SequenceType seqTy) {
-  return seqTy.hasUnknownShape() || !seqTy.hasConstantShape();
+  return seqTy.hasUnknownShape() || seqTy.hasDynamicExtents();
 }
 
 /// Returns true iff the type `t` does not have a constant size.

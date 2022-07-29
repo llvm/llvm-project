@@ -1314,6 +1314,38 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+add_fp_unittest(
+  coshf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    coshf_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.include.errno
+    libc.src.math.coshf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sinhf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sinhf_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.include.errno
+    libc.src.math.sinhf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fputil
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
 add_subdirectory(differential_testing)
