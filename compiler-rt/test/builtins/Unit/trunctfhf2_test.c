@@ -4,7 +4,7 @@
 #include "int_lib.h"
 #include <stdio.h>
 
-#if __LDBL_MANT_DIG__ == 113 && defined(COMPILER_RT_HAS_FLOAT16)
+#if __LDBL_MANT_DIG__ == 113 && defined(CRT_HAS_FLOAT16)
 
 #include "fp_test.h"
 
@@ -27,7 +27,7 @@ char assumption_1[sizeof(TYPE_FP16) * CHAR_BIT == 16] = {0};
 #endif
 
 int main() {
-#if __LDBL_MANT_DIG__ == 113 && defined(COMPILER_RT_HAS_FLOAT16)
+#if __LDBL_MANT_DIG__ == 113 && defined(CRT_HAS_FLOAT16)
   // qNaN
   if (test__trunctfhf2(makeQNaN128(),
                        UINT16_C(0x7e00)))
