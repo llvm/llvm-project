@@ -81,7 +81,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
       if (i < size - 1)
         OS << ", ";
     }
-    OS << "), decltype(" << entrypoint << ")>::Value, ";
+    OS << "), decltype(" << entrypoint << ")>, ";
     OS << '"' << entrypoint
        << " prototype in TableGen does not match public header" << '"';
     OS << ");\n";
