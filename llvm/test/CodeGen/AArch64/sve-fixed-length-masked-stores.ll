@@ -17,10 +17,7 @@ define void @masked_store_v2f16(<2 x half>* %ap, <2 x half>* %bp) vscale_range(2
 ; CHECK-NEXT:    ldr s2, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    fcmeq v2.4h, v1.4h, v2.4h
-; CHECK-NEXT:    umov w8, v2.h[0]
-; CHECK-NEXT:    umov w9, v2.h[1]
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    mov v2.s[1], w9
+; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    shl v2.2s, v2.2s, #16
 ; CHECK-NEXT:    sshr v2.2s, v2.2s, #16
 ; CHECK-NEXT:    fmov w8, s2
