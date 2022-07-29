@@ -58,5 +58,5 @@ Flang's documentation is located in the `flang/docs/` directory in the
 LLVM monorepo.
 
 If you have any questions or comments about Flang, please feel free to
-contact us via the [mailing
-list](https://lists.llvm.org/mailman/listinfo/flang-dev).
+contact us on the [Discourse 
+forums](https://discourse.llvm.org/c/subprojects/flang/33).
