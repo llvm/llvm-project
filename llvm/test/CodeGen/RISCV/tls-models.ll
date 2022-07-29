@@ -23,10 +23,9 @@ define i32* @f1() nounwind {
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:    addi sp, sp, -16
 ; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-PIC-NEXT:  .LBB0_1: # %entry
-; RV32-PIC-NEXT:    # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi0:
 ; RV32-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(unspecified)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB0_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
 ; RV32-PIC-NEXT:    call __tls_get_addr@plt
 ; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-PIC-NEXT:    addi sp, sp, 16
@@ -36,10 +35,9 @@ define i32* @f1() nounwind {
 ; RV64-PIC:       # %bb.0: # %entry
 ; RV64-PIC-NEXT:    addi sp, sp, -16
 ; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-PIC-NEXT:  .LBB0_1: # %entry
-; RV64-PIC-NEXT:    # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi0:
 ; RV64-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(unspecified)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB0_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
 ; RV64-PIC-NEXT:    call __tls_get_addr@plt
 ; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-PIC-NEXT:    addi sp, sp, 16
@@ -47,19 +45,17 @@ define i32* @f1() nounwind {
 ;
 ; RV32-NOPIC-LABEL: f1:
 ; RV32-NOPIC:       # %bb.0: # %entry
-; RV32-NOPIC-NEXT:  .LBB0_1: # %entry
-; RV32-NOPIC-NEXT:    # Label of block must be emitted
+; RV32-NOPIC-NEXT:  .Lpcrel_hi0:
 ; RV32-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(unspecified)
-; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.LBB0_1)(a0)
+; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV32-NOPIC-NEXT:    add a0, a0, tp
 ; RV32-NOPIC-NEXT:    ret
 ;
 ; RV64-NOPIC-LABEL: f1:
 ; RV64-NOPIC:       # %bb.0: # %entry
-; RV64-NOPIC-NEXT:  .LBB0_1: # %entry
-; RV64-NOPIC-NEXT:    # Label of block must be emitted
+; RV64-NOPIC-NEXT:  .Lpcrel_hi0:
 ; RV64-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(unspecified)
-; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.LBB0_1)(a0)
+; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64-NOPIC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-NEXT:    ret
 entry:
@@ -74,10 +70,9 @@ define i32* @f2() nounwind {
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:    addi sp, sp, -16
 ; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-PIC-NEXT:  .LBB1_1: # %entry
-; RV32-PIC-NEXT:    # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi1:
 ; RV32-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(ld)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB1_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV32-PIC-NEXT:    call __tls_get_addr@plt
 ; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-PIC-NEXT:    addi sp, sp, 16
@@ -87,10 +82,9 @@ define i32* @f2() nounwind {
 ; RV64-PIC:       # %bb.0: # %entry
 ; RV64-PIC-NEXT:    addi sp, sp, -16
 ; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-PIC-NEXT:  .LBB1_1: # %entry
-; RV64-PIC-NEXT:    # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi1:
 ; RV64-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(ld)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB1_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV64-PIC-NEXT:    call __tls_get_addr@plt
 ; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-PIC-NEXT:    addi sp, sp, 16
@@ -98,19 +92,17 @@ define i32* @f2() nounwind {
 ;
 ; RV32-NOPIC-LABEL: f2:
 ; RV32-NOPIC:       # %bb.0: # %entry
-; RV32-NOPIC-NEXT:  .LBB1_1: # %entry
-; RV32-NOPIC-NEXT:    # Label of block must be emitted
+; RV32-NOPIC-NEXT:  .Lpcrel_hi1:
 ; RV32-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ld)
-; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.LBB1_1)(a0)
+; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV32-NOPIC-NEXT:    add a0, a0, tp
 ; RV32-NOPIC-NEXT:    ret
 ;
 ; RV64-NOPIC-LABEL: f2:
 ; RV64-NOPIC:       # %bb.0: # %entry
-; RV64-NOPIC-NEXT:  .LBB1_1: # %entry
-; RV64-NOPIC-NEXT:    # Label of block must be emitted
+; RV64-NOPIC-NEXT:  .Lpcrel_hi1:
 ; RV64-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ld)
-; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.LBB1_1)(a0)
+; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64-NOPIC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-NEXT:    ret
 entry:
@@ -123,37 +115,33 @@ entry:
 define i32* @f3() nounwind {
 ; RV32-PIC-LABEL: f3:
 ; RV32-PIC:       # %bb.0: # %entry
-; RV32-PIC-NEXT:  .LBB2_1: # %entry
-; RV32-PIC-NEXT:    # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi2:
 ; RV32-PIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
-; RV32-PIC-NEXT:    lw a0, %pcrel_lo(.LBB2_1)(a0)
+; RV32-PIC-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV32-PIC-NEXT:    add a0, a0, tp
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-PIC-LABEL: f3:
 ; RV64-PIC:       # %bb.0: # %entry
-; RV64-PIC-NEXT:  .LBB2_1: # %entry
-; RV64-PIC-NEXT:    # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi2:
 ; RV64-PIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
-; RV64-PIC-NEXT:    ld a0, %pcrel_lo(.LBB2_1)(a0)
+; RV64-PIC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64-PIC-NEXT:    add a0, a0, tp
 ; RV64-PIC-NEXT:    ret
 ;
 ; RV32-NOPIC-LABEL: f3:
 ; RV32-NOPIC:       # %bb.0: # %entry
-; RV32-NOPIC-NEXT:  .LBB2_1: # %entry
-; RV32-NOPIC-NEXT:    # Label of block must be emitted
+; RV32-NOPIC-NEXT:  .Lpcrel_hi2:
 ; RV32-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
-; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.LBB2_1)(a0)
+; RV32-NOPIC-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV32-NOPIC-NEXT:    add a0, a0, tp
 ; RV32-NOPIC-NEXT:    ret
 ;
 ; RV64-NOPIC-LABEL: f3:
 ; RV64-NOPIC:       # %bb.0: # %entry
-; RV64-NOPIC-NEXT:  .LBB2_1: # %entry
-; RV64-NOPIC-NEXT:    # Label of block must be emitted
+; RV64-NOPIC-NEXT:  .Lpcrel_hi2:
 ; RV64-NOPIC-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
-; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.LBB2_1)(a0)
+; RV64-NOPIC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64-NOPIC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-NEXT:    ret
 entry:
