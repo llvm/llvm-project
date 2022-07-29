@@ -86,7 +86,13 @@ def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository
         return None
 
     commit_sha = data[0]['fields']['identifier']
-    return repo.get_commit(commit_sha).committer.login
+    committer = repo.get_commit(commit_sha).committer
+    if not committer:
+        # This committer had an email address GitHub could not recognize, so
+        # it can't link the user to a GitHub account.
+        print(f"Warning: Can't find github account for {phab_login}")
+        return None
+    return committer.login
 
 def phab_get_commit_approvers(phab_token:str, repo:github.Repository.Repository, commit:github.Commit.Commit) -> list:
     args = { "corpus" : commit.commit.message }
