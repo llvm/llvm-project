@@ -34,7 +34,7 @@ cpp::enable_if_t<cpp::is_same_v<T, float>, T> fma(T x, T y, T z) {
 }
 
 template <typename T>
-cpp::enable_if_t<cpp::is_same_v<T, double> :, T> fma(T x, T y, T z) {
+cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
   double result;
   __asm__ __volatile__("fmadd %d0, %d1, %d2, %d3\n\t"
                        : "=w"(result)
