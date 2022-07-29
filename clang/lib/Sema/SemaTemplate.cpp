@@ -8724,7 +8724,7 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
   if (Previous.empty())
     return;
 
-  auto *OldConcept = dyn_cast<ConceptDecl>(Previous.getRepresentativeDecl());
+  auto *OldConcept = dyn_cast<ConceptDecl>(Previous.getRepresentativeDecl()->getUnderlyingDecl());
   if (!OldConcept) {
     auto *Old = Previous.getRepresentativeDecl();
     Diag(NewDecl->getLocation(), diag::err_redefinition_different_kind)
@@ -8742,7 +8742,8 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
     AddToScope = false;
     return;
   }
-  if (hasReachableDefinition(OldConcept)) {
+  if (hasReachableDefinition(OldConcept) &&
+      IsRedefinitionInModule(NewDecl, OldConcept)) {
     Diag(NewDecl->getLocation(), diag::err_redefinition)
         << NewDecl->getDeclName();
     notePreviousDefinition(OldConcept, NewDecl->getLocation());
