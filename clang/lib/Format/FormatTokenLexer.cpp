@@ -193,6 +193,78 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     if (tryMergeTokens(JavaRightLogicalShiftAssign, TT_BinaryOperator))
       return;
   }
+
+  if (Style.isVerilog()) {
+    // Merge the number following a base like `'h?a0`.
+    if (Tokens.size() >= 3 && Tokens.end()[-3]->is(TT_VerilogNumberBase) &&
+        Tokens.end()[-2]->is(tok::numeric_constant) &&
+        Tokens.back()->isOneOf(tok::numeric_constant, tok::identifier,
+                               tok::question) &&
+        tryMergeTokens(2, TT_Unknown)) {
+      return;
+    }
+    // Part select.
+    if (tryMergeTokensAny({{tok::minus, tok::colon}, {tok::plus, tok::colon}},
+                          TT_BitFieldColon)) {
+      return;
+    }
+    // Xnor. The combined token is treated as a caret which can also be either a
+    // unary or binary operator. The actual type is determined in
+    // TokenAnnotator. We also check the token length so we know it is not
+    // already a merged token.
+    if (Tokens.back()->TokenText.size() == 1 &&
+        tryMergeTokensAny({{tok::caret, tok::tilde}, {tok::tilde, tok::caret}},
+                          TT_BinaryOperator)) {
+      Tokens.back()->Tok.setKind(tok::caret);
+      return;
+    }
+    // Signed shift and distribution weight.
+    if (tryMergeTokens({tok::less, tok::less}, TT_BinaryOperator)) {
+      Tokens.back()->Tok.setKind(tok::lessless);
+      return;
+    }
+    if (tryMergeTokens({tok::greater, tok::greater}, TT_BinaryOperator)) {
+      Tokens.back()->Tok.setKind(tok::greatergreater);
+      return;
+    }
+    if (tryMergeTokensAny({{tok::lessless, tok::equal},
+                           {tok::lessless, tok::lessequal},
+                           {tok::greatergreater, tok::equal},
+                           {tok::greatergreater, tok::greaterequal},
+                           {tok::colon, tok::equal},
+                           {tok::colon, tok::slash}},
+                          TT_BinaryOperator)) {
+      Tokens.back()->ForcedPrecedence = prec::Assignment;
+      return;
+    }
+    // Exponentiation, signed shift, case equality, and wildcard equality.
+    if (tryMergeTokensAny({{tok::star, tok::star},
+                           {tok::lessless, tok::less},
+                           {tok::greatergreater, tok::greater},
+                           {tok::exclaimequal, tok::equal},
+                           {tok::exclaimequal, tok::question},
+                           {tok::equalequal, tok::equal},
+                           {tok::equalequal, tok::question}},
+                          TT_BinaryOperator)) {
+      return;
+    }
+    // Module paths in specify blocks and implications in properties.
+    if (tryMergeTokensAny({{tok::plusequal, tok::greater},
+                           {tok::plus, tok::star, tok::greater},
+                           {tok::minusequal, tok::greater},
+                           {tok::minus, tok::star, tok::greater},
+                           {tok::less, tok::arrow},
+                           {tok::equal, tok::greater},
+                           {tok::star, tok::greater},
+                           {tok::pipeequal, tok::greater},
+                           {tok::pipe, tok::arrow},
+                           {tok::hash, tok::minus, tok::hash},
+                           {tok::hash, tok::equal, tok::hash}},
+                          TT_BinaryOperator)) {
+      Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+  }
 }
 
 bool FormatTokenLexer::tryMergeNSStringLiteral() {
@@ -412,20 +484,41 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
 
   SmallVectorImpl<FormatToken *>::const_iterator First =
       Tokens.end() - Kinds.size();
-  if (!First[0]->is(Kinds[0]))
+  for (unsigned i = 0; i < Kinds.size(); ++i)
+    if (!First[i]->is(Kinds[i]))
+      return false;
+
+  return tryMergeTokens(Kinds.size(), NewType);
+}
+
+bool FormatTokenLexer::tryMergeTokens(size_t Count, TokenType NewType) {
+  if (Tokens.size() < Count)
     return false;
+
+  SmallVectorImpl<FormatToken *>::const_iterator First = Tokens.end() - Count;
   unsigned AddLength = 0;
-  for (unsigned i = 1; i < Kinds.size(); ++i) {
-    if (!First[i]->is(Kinds[i]) || First[i]->hasWhitespaceBefore())
+  for (size_t i = 1; i < Count; ++i) {
+    // If there is whitespace separating the token and the previous one,
+    // they should not be merged.
+    if (First[i]->hasWhitespaceBefore())
       return false;
     AddLength += First[i]->TokenText.size();
   }
-  Tokens.resize(Tokens.size() - Kinds.size() + 1);
+
+  Tokens.resize(Tokens.size() - Count + 1);
   First[0]->TokenText = StringRef(First[0]->TokenText.data(),
                                   First[0]->TokenText.size() + AddLength);
   First[0]->ColumnWidth += AddLength;
   First[0]->setType(NewType);
   return true;
+}
+
+bool FormatTokenLexer::tryMergeTokensAny(
+    ArrayRef<ArrayRef<tok::TokenKind>> Kinds, TokenType NewType) {
+  return std::any_of(Kinds.begin(), Kinds.end(),
+                     [this, NewType](ArrayRef<tok::TokenKind> Kinds) {
+                       return tryMergeTokens(Kinds, NewType);
+                     });
 }
 
 // Returns \c true if \p Tok can only be followed by an operand in JavaScript.
@@ -1004,12 +1097,19 @@ FormatToken *FormatTokenLexer::getNextToken() {
   }
 
   if (Style.isVerilog()) {
+    static const llvm::Regex NumberBase("^s?[bdho]", llvm::Regex::IgnoreCase);
+    SmallVector<StringRef, 1> Matches;
     // Verilog uses the backtick instead of the hash for preprocessor stuff.
     // And it uses the hash for delays and parameter lists. In order to continue
     // using `tok::hash` in other places, the backtick gets marked as the hash
     // here.  And in order to tell the backtick and hash apart for
     // Verilog-specific stuff, the hash becomes an identifier.
-    if (FormatTok->isOneOf(tok::hash, tok::hashhash)) {
+    if (FormatTok->is(tok::numeric_constant)) {
+      // In Verilog the quote is not part of a number.
+      auto Quote = FormatTok->TokenText.find('\'');
+      if (Quote != StringRef::npos)
+        truncateToken(Quote);
+    } else if (FormatTok->isOneOf(tok::hash, tok::hashhash)) {
       FormatTok->Tok.setKind(tok::raw_identifier);
     } else if (FormatTok->is(tok::raw_identifier)) {
       if (FormatTok->TokenText == "`") {
@@ -1018,6 +1118,15 @@ FormatToken *FormatTokenLexer::getNextToken() {
       } else if (FormatTok->TokenText == "``") {
         FormatTok->Tok.setIdentifierInfo(nullptr);
         FormatTok->Tok.setKind(tok::hashhash);
+      } else if (Tokens.size() > 0 &&
+                 Tokens.back()->is(Keywords.kw_apostrophe) &&
+                 NumberBase.match(FormatTok->TokenText, &Matches)) {
+        // In Verilog in a based number literal like `'b10`, there may be
+        // whitespace between `'b` and `10`. Therefore we handle the base and
+        // the rest of the number literal as two tokens. But if there is no
+        // space in the input code, we need to manually separate the two parts.
+        truncateToken(Matches[0].size());
+        FormatTok->setFinalizedType(TT_VerilogNumberBase);
       }
     }
   }
@@ -1058,6 +1167,13 @@ FormatToken *FormatTokenLexer::getNextToken() {
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
     ++Column;
     StateStack.push(LexerState::TOKEN_STASHED);
+  }
+
+  if (Style.isVerilog() && Tokens.size() > 0 &&
+      Tokens.back()->is(TT_VerilogNumberBase) &&
+      FormatTok->Tok.isOneOf(tok::identifier, tok::question)) {
+    // Mark the number following a base like `'h?a0` as a number.
+    FormatTok->Tok.setKind(tok::numeric_constant);
   }
 
   // Now FormatTok is the next non-whitespace token.
