@@ -167,6 +167,20 @@ OpFoldResult ExpOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// ConjOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConjOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary op takes 1 operand");
+
+  // complex.conj(complex.conj(a)) -> a
+  if (auto conjOp = getOperand().getDefiningOp<ConjOp>())
+    return conjOp.getOperand();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
