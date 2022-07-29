@@ -37,8 +37,25 @@ def Complex_NumberAttr : Complex_Attr<"Number", "number"> {
   let parameters = (ins APFloatParameter<"">:$real,
                         APFloatParameter<"">:$imag,
                         AttributeSelfTypeParameter<"">:$type);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::ComplexType":$type,
+                                        "double":$real,
+                                        "double":$imag), [{
+      auto elementType = type.getElementType().cast<FloatType>();
+      APFloat realFloat(real);
+      bool unused;
+      realFloat.convert(elementType.getFloatSemantics(),
+                        APFloat::rmNearestTiesToEven, &unused);
+      APFloat imagFloat(imag);
+      imagFloat.convert(elementType.getFloatSemantics(),
+                        APFloat::rmNearestTiesToEven, &unused);
+      return $_get(type.getContext(), realFloat, imagFloat, type);
+    }]>
+  ];
+
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
 }
 
 #endif // COMPLEX_ATTRIBUTE
