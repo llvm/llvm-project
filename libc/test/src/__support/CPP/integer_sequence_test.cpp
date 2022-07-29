@@ -6,23 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Utility.h"
+#include "src/__support/CPP/utility.h"
 #include "utils/UnitTest/Test.h"
 
 using namespace __llvm_libc::cpp;
 
 TEST(LlvmLibcIntegerSequencetTest, Basic) {
-  EXPECT_TRUE((is_same_v<IntegerSequence<int>, MakeIntegerSequence<int, 0>>));
-  using ISeq = IntegerSequence<int, 0, 1, 2, 3>;
-  EXPECT_TRUE((is_same_v<ISeq, MakeIntegerSequence<int, 4>>));
-  using LSeq = IntegerSequence<long, 0, 1, 2, 3>;
-  EXPECT_TRUE((is_same_v<LSeq, MakeIntegerSequence<long, 4>>));
-  using ULLSeq = IntegerSequence<unsigned long long, 0ull, 1ull, 2ull, 3ull>;
-  EXPECT_TRUE((is_same_v<ULLSeq, MakeIntegerSequence<unsigned long long, 4>>));
+  EXPECT_TRUE(
+      (is_same_v<integer_sequence<int>, make_integer_sequence<int, 0>>));
+  using ISeq = integer_sequence<int, 0, 1, 2, 3>;
+  EXPECT_TRUE((is_same_v<ISeq, make_integer_sequence<int, 4>>));
+  using LSeq = integer_sequence<long, 0, 1, 2, 3>;
+  EXPECT_TRUE((is_same_v<LSeq, make_integer_sequence<long, 4>>));
+  using ULLSeq = integer_sequence<unsigned long long, 0ull, 1ull, 2ull, 3ull>;
+  EXPECT_TRUE(
+      (is_same_v<ULLSeq, make_integer_sequence<unsigned long long, 4>>));
 }
 
-template <typename T, T... Ts>
-bool checkArray(IntegerSequence<T, Ts...> seq) {
+template <typename T, T... Ts> bool checkArray(integer_sequence<T, Ts...> seq) {
   T arr[sizeof...(Ts)]{Ts...};
 
   for (T i = 0; i < static_cast<T>(sizeof...(Ts)); i++)
@@ -33,5 +34,5 @@ bool checkArray(IntegerSequence<T, Ts...> seq) {
 }
 
 TEST(LlvmLibcIntegerSequencetTest, Many) {
-  EXPECT_TRUE(checkArray(MakeIntegerSequence<int, 100>{}));
+  EXPECT_TRUE(checkArray(make_integer_sequence<int, 100>{}));
 }

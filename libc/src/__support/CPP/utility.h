@@ -13,26 +13,27 @@
 
 namespace __llvm_libc::cpp {
 
-template <typename T, T... Seq> struct IntegerSequence {
+template <typename T, T... Ints> struct integer_sequence {
   static_assert(is_integral_v<T>);
-  template <T Next> using append = IntegerSequence<T, Seq..., Next>;
+  template <T Next> using append = integer_sequence<T, Ints..., Next>;
 };
 
 namespace internal {
 
-template <typename T, int N> struct MakeIntegerSequence {
-  using type = typename MakeIntegerSequence<T, N - 1>::type::template append<N>;
+template <typename T, int N> struct make_integer_sequence {
+  using type =
+      typename make_integer_sequence<T, N - 1>::type::template append<N>;
 };
 
-template <typename T> struct MakeIntegerSequence<T, -1> {
-  using type = IntegerSequence<T>;
+template <typename T> struct make_integer_sequence<T, -1> {
+  using type = integer_sequence<T>;
 };
 
 } // namespace internal
 
 template <typename T, int N>
-using MakeIntegerSequence =
-    typename internal::MakeIntegerSequence<T, N - 1>::type;
+using make_integer_sequence =
+    typename internal::make_integer_sequence<T, N - 1>::type;
 
 } // namespace __llvm_libc::cpp
 

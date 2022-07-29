@@ -79,7 +79,7 @@ add_header_library(
 add_header_library(
   utility
   HDRS
-    Utility.h
+    utility.h
 )
 
 add_header_library(
