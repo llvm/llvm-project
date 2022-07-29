@@ -10,6 +10,14 @@ define dso_local i32 @no_instr(i32 %a) noprofile !dbg !9 {
   ret i32 42, !dbg !27
 }
 
+; Test that the skipprofile attribute disables profiling.
+define dso_local i32 @skip_instr(i32 %a) skipprofile {
+; CHECK-LABEL: @skip_instr(
+; CHECK-NEXT:    ret i32 52
+;
+  ret i32 52
+}
+
 define dso_local i32 @instr(i32 %a) !dbg !28 {
 ; CHECK-LABEL: @instr(
 ; CHECK-NEXT:    [[GCOV_CTR:%.*]] = load i64, ptr @__llvm_gcov_ctr, align 4, !dbg [[DBG8:![0-9]+]]
