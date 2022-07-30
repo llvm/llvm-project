@@ -192,7 +192,7 @@ void multiple_waiters() {
   __llvm_libc::mtx_destroy(&counter_lock);
 }
 
-int main() {
+TEST_MAIN() {
   relay_counter();
   wait_and_step();
   multiple_waiters();

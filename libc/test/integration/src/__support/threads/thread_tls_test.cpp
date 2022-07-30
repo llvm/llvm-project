@@ -35,7 +35,7 @@ void thread_local_test() {
   ASSERT_EQ(retval, INIT_VAL);
 }
 
-int main() {
+TEST_MAIN() {
   // From the main thread, we will update the main thread's tlval.
   // This should not affect the child thread's tlval;
   ASSERT_EQ(tlval, INIT_VAL);

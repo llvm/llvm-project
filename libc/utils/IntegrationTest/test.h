@@ -58,4 +58,14 @@
 #define ASSERT_NE(val1, val2)                                                  \
   __CHECK_NE(__FILE__, __LINE__, (val1), (val2), true)
 
+// Integration tests are compiled with -ffreestanding which stops treating
+// the main function as a non-overloadable special function. Hence, we use a
+// convenience macro which declares it 'extern "C"'.
+//
+// When we are able to reuse the unit test infrastructure for integration
+// tests, then we should not need to explicitly declare/define the main
+// function in individual integration tests. We will not need this macro
+// then.
+#define TEST_MAIN extern "C" int main
+
 #endif // LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
