@@ -3189,6 +3189,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
     ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
 
     // Collect demanded elements from shuffle operands..
@@ -3208,11 +3210,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // See if we can simplify either shuffle operand.
     APInt UndefLHS, ZeroLHS;
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedLHS, UndefLHS,
-                                   ZeroLHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHS, UndefLHS, ZeroLHS, TLO,
+                                   Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedRHS, UndefRHS,
-                                   ZeroRHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHS, UndefRHS, ZeroRHS, TLO,
+                                   Depth + 1))
       return true;
 
     // Simplify mask using undef elements from LHS/RHS.
@@ -3236,8 +3238,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // to Identity which can cause premature removal of the shuffle mask.
     if (Updated && !IdentityLHS && !IdentityRHS && !TLO.LegalOps) {
       SDValue LegalShuffle =
-          buildLegalVectorShuffle(VT, DL, Op.getOperand(0), Op.getOperand(1),
-                                  NewMask, TLO.DAG);
+          buildLegalVectorShuffle(VT, DL, LHS, RHS, NewMask, TLO.DAG);
       if (LegalShuffle)
         return TLO.CombineTo(Op, LegalShuffle);
     }
