@@ -35,7 +35,9 @@ add_subdirectory(Frontend)
 add_subdirectory(Rewrite)
 add_subdirectory(Sema)
 add_subdirectory(CodeGen)
-add_subdirectory(Interpreter)
+if(HAVE_CLANG_REPL_SUPPORT)
+  add_subdirectory(Interpreter)
+endif()
 # FIXME: libclang unit tests are disabled on Windows due
 # to failures, mostly in libclang.VirtualFileOverlay_*.
 if(NOT WIN32 AND CLANG_TOOL_LIBCLANG_BUILD) 
