@@ -35,6 +35,7 @@ public:
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -212,6 +213,11 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
   write64(buf, in.plt->getVA());
+}
+
+void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+  if (config->writeAddends)
+    write64(buf, s.getVA());
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
