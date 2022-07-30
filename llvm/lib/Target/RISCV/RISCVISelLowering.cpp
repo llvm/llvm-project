@@ -1929,8 +1929,8 @@ static SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG,
                               DAG.getUNDEF(ContainerVT), SplatVal, VL);
 
   // Add the adjustment.
-  SDValue Adjust =
-      DAG.getNode(RISCVISD::FADD_VL, DL, ContainerVT, Abs, Splat, Mask, VL);
+  SDValue Adjust = DAG.getNode(RISCVISD::FADD_VL, DL, ContainerVT, Abs, Splat,
+                               DAG.getUNDEF(ContainerVT), Mask, VL);
 
   // Truncate to integer and convert back to fp.
   MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
@@ -1943,7 +1943,7 @@ static SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG,
   // Restore the original sign and merge the original source to masked off
   // lanes.
   Truncated = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Truncated,
-                          Src, Mask, Src, VL);
+                          Src, Src, Mask, VL);
 
   if (!VT.isFixedLengthVector())
     return Truncated;
@@ -2080,7 +2080,7 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, Vec,
-                               Idx, Mask, DAG.getUNDEF(ContainerVT), VL);
+                               Idx, DAG.getUNDEF(ContainerVT), Mask, VL);
 
   if (!VT.isFixedLengthVector())
     return Gather;
@@ -2705,7 +2705,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       assert(Lane < (int)NumElts && "Unexpected lane!");
       SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT,
                                    V1, DAG.getConstant(Lane, DL, XLenVT),
-                                   TrueMask, DAG.getUNDEF(ContainerVT), VL);
+                                   DAG.getUNDEF(ContainerVT), TrueMask, VL);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
   }
@@ -2798,19 +2798,21 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     TrueMask = getAllOnesMask(HalfContainerVT, VL, DL, DAG);
 
     // Widen V1 and V2 with 0s and add one copy of V2 to V1.
-    SDValue Add = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, V1,
-                              V2, TrueMask, VL);
+    SDValue Add =
+        DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, V1, V2,
+                    DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
     // Create 2^eltbits - 1 copies of V2 by multiplying by the largest integer.
     SDValue Multiplier = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntHalfVT,
                                      DAG.getUNDEF(IntHalfVT),
                                      DAG.getAllOnesConstant(DL, XLenVT));
-    SDValue WidenMul = DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT,
-                                   V2, Multiplier, TrueMask, VL);
+    SDValue WidenMul =
+        DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, V2, Multiplier,
+                    DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
     // Add the new copies to our previous addition giving us 2^eltbits copies of
     // V2. This is equivalent to shifting V2 left by eltbits. This should
     // combine with the vwmulu.vv above to form vwmaccu.vv.
     Add = DAG.getNode(RISCVISD::ADD_VL, DL, WideIntContainerVT, Add, WidenMul,
-                      TrueMask, VL);
+                      DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
     // Cast back to ContainerVT. We need to re-create a new ContainerVT in case
     // WideIntContainerVT is a larger fractional LMUL than implied by the fixed
     // vector VT.
@@ -2916,15 +2918,15 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (LHSIndexCounts.size() == 1) {
       int SplatIndex = LHSIndexCounts.begin()->getFirst();
       Gather = DAG.getNode(GatherVXOpc, DL, ContainerVT, V1,
-                           DAG.getConstant(SplatIndex, DL, XLenVT), TrueMask,
-                           DAG.getUNDEF(ContainerVT), VL);
+                           DAG.getConstant(SplatIndex, DL, XLenVT),
+                           DAG.getUNDEF(ContainerVT), TrueMask, VL);
     } else {
       SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
       LHSIndices =
           convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
 
       Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
-                           TrueMask, DAG.getUNDEF(ContainerVT), VL);
+                           DAG.getUNDEF(ContainerVT), TrueMask, VL);
     }
   }
 
@@ -2943,14 +2945,14 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (RHSIndexCounts.size() == 1) {
       int SplatIndex = RHSIndexCounts.begin()->getFirst();
       Gather = DAG.getNode(GatherVXOpc, DL, ContainerVT, V2,
-                           DAG.getConstant(SplatIndex, DL, XLenVT), SelectMask,
-                           Gather, VL);
+                           DAG.getConstant(SplatIndex, DL, XLenVT), Gather,
+                           SelectMask, VL);
     } else {
       SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
       RHSIndices =
           convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
-      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices,
-                           SelectMask, Gather, VL);
+      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices, Gather,
+                           SelectMask, VL);
     }
   }
 
@@ -3534,15 +3536,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SETCC:
     return lowerFixedLengthVectorSetccToRVV(Op, DAG);
   case ISD::ADD:
-    return lowerToScalableOp(Op, DAG, RISCVISD::ADD_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::ADD_VL, /*HasMergeOp*/ true);
   case ISD::SUB:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SUB_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::SUB_VL, /*HasMergeOp*/ true);
   case ISD::MUL:
-    return lowerToScalableOp(Op, DAG, RISCVISD::MUL_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::MUL_VL, /*HasMergeOp*/ true);
   case ISD::MULHS:
-    return lowerToScalableOp(Op, DAG, RISCVISD::MULHS_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::MULHS_VL, /*HasMergeOp*/ true);
   case ISD::MULHU:
-    return lowerToScalableOp(Op, DAG, RISCVISD::MULHU_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::MULHU_VL, /*HasMergeOp*/ true);
   case ISD::AND:
     return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMAND_VL,
                                               RISCVISD::AND_VL);
@@ -3553,13 +3555,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMXOR_VL,
                                               RISCVISD::XOR_VL);
   case ISD::SDIV:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SDIV_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::SDIV_VL, /*HasMergeOp*/ true);
   case ISD::SREM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SREM_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::SREM_VL, /*HasMergeOp*/ true);
   case ISD::UDIV:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UDIV_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::UDIV_VL, /*HasMergeOp*/ true);
   case ISD::UREM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UREM_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::UREM_VL, /*HasMergeOp*/ true);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
@@ -3570,21 +3572,25 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
            "Unexpected custom legalisation");
     return SDValue();
   case ISD::SADDSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SADDSAT_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::SADDSAT_VL,
+                             /*HasMergeOp*/ true);
   case ISD::UADDSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UADDSAT_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::UADDSAT_VL,
+                             /*HasMergeOp*/ true);
   case ISD::SSUBSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SSUBSAT_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::SSUBSAT_VL,
+                             /*HasMergeOp*/ true);
   case ISD::USUBSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::USUBSAT_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::USUBSAT_VL,
+                             /*HasMergeOp*/ true);
   case ISD::FADD:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FADD_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::FADD_VL, /*HasMergeOp*/ true);
   case ISD::FSUB:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FSUB_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::FSUB_VL, /*HasMergeOp*/ true);
   case ISD::FMUL:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FMUL_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::FMUL_VL, /*HasMergeOp*/ true);
   case ISD::FDIV:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FDIV_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::FDIV_VL, /*HasMergeOp*/ true);
   case ISD::FNEG:
     return lowerToScalableOp(Op, DAG, RISCVISD::FNEG_VL);
   case ISD::FABS:
@@ -3594,17 +3600,19 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMA:
     return lowerToScalableOp(Op, DAG, RISCVISD::VFMADD_VL);
   case ISD::SMIN:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SMIN_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::SMIN_VL, /*HasMergeOp*/ true);
   case ISD::SMAX:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SMAX_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::SMAX_VL, /*HasMergeOp*/ true);
   case ISD::UMIN:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UMIN_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::UMIN_VL, /*HasMergeOp*/ true);
   case ISD::UMAX:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UMAX_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::UMAX_VL, /*HasMergeOp*/ true);
   case ISD::FMINNUM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FMINNUM_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::FMINNUM_VL,
+                             /*HasMergeOp*/ true);
   case ISD::FMAXNUM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FMAXNUM_VL);
+    return lowerToScalableOp(Op, DAG, RISCVISD::FMAXNUM_VL,
+                             /*HasMergeOp*/ true);
   case ISD::ABS:
     return lowerABS(Op, DAG);
   case ISD::CTLZ_ZERO_UNDEF:
@@ -3631,19 +3639,19 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_MERGE:
     return lowerVPOp(Op, DAG, RISCVISD::VP_MERGE_VL);
   case ISD::VP_ADD:
-    return lowerVPOp(Op, DAG, RISCVISD::ADD_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::ADD_VL, /*HasMergeOp*/ true);
   case ISD::VP_SUB:
-    return lowerVPOp(Op, DAG, RISCVISD::SUB_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::SUB_VL, /*HasMergeOp*/ true);
   case ISD::VP_MUL:
-    return lowerVPOp(Op, DAG, RISCVISD::MUL_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::MUL_VL, /*HasMergeOp*/ true);
   case ISD::VP_SDIV:
-    return lowerVPOp(Op, DAG, RISCVISD::SDIV_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::SDIV_VL, /*HasMergeOp*/ true);
   case ISD::VP_UDIV:
-    return lowerVPOp(Op, DAG, RISCVISD::UDIV_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::UDIV_VL, /*HasMergeOp*/ true);
   case ISD::VP_SREM:
-    return lowerVPOp(Op, DAG, RISCVISD::SREM_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::SREM_VL, /*HasMergeOp*/ true);
   case ISD::VP_UREM:
-    return lowerVPOp(Op, DAG, RISCVISD::UREM_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::UREM_VL, /*HasMergeOp*/ true);
   case ISD::VP_AND:
     return lowerLogicVPOp(Op, DAG, RISCVISD::VMAND_VL, RISCVISD::AND_VL);
   case ISD::VP_OR:
@@ -3651,19 +3659,19 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_XOR:
     return lowerLogicVPOp(Op, DAG, RISCVISD::VMXOR_VL, RISCVISD::XOR_VL);
   case ISD::VP_ASHR:
-    return lowerVPOp(Op, DAG, RISCVISD::SRA_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::SRA_VL, /*HasMergeOp*/ true);
   case ISD::VP_LSHR:
-    return lowerVPOp(Op, DAG, RISCVISD::SRL_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::SRL_VL, /*HasMergeOp*/ true);
   case ISD::VP_SHL:
-    return lowerVPOp(Op, DAG, RISCVISD::SHL_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::SHL_VL, /*HasMergeOp*/ true);
   case ISD::VP_FADD:
-    return lowerVPOp(Op, DAG, RISCVISD::FADD_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::FADD_VL, /*HasMergeOp*/ true);
   case ISD::VP_FSUB:
-    return lowerVPOp(Op, DAG, RISCVISD::FSUB_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::FSUB_VL, /*HasMergeOp*/ true);
   case ISD::VP_FMUL:
-    return lowerVPOp(Op, DAG, RISCVISD::FMUL_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::FMUL_VL, /*HasMergeOp*/ true);
   case ISD::VP_FDIV:
-    return lowerVPOp(Op, DAG, RISCVISD::FDIV_VL);
+    return lowerVPOp(Op, DAG, RISCVISD::FDIV_VL, /*HasMergeOp*/ true);
   case ISD::VP_FNEG:
     return lowerVPOp(Op, DAG, RISCVISD::FNEG_VL);
   case ISD::VP_FMA:
@@ -4343,8 +4351,8 @@ SDValue RISCVTargetLowering::lowerVectorMaskTruncLike(SDValue Op,
                           DAG.getUNDEF(ContainerVT), SplatZero, VL);
 
   MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
-  SDValue Trunc =
-      DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, Src, SplatOne, Mask, VL);
+  SDValue Trunc = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, Src, SplatOne,
+                              DAG.getUNDEF(ContainerVT), Mask, VL);
   Trunc = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskContainerVT, Trunc, SplatZero,
                       DAG.getCondCode(ISD::SETNE), Mask, VL);
   if (MaskVT.isFixedLengthVector())
@@ -5807,11 +5815,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
                           VLMinus1, DAG.getRegister(RISCV::X0, XLenVT));
 
   SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, IntVT, Mask, VL);
-  SDValue Indices =
-      DAG.getNode(RISCVISD::SUB_VL, DL, IntVT, SplatVL, VID, Mask, VL);
+  SDValue Indices = DAG.getNode(RISCVISD::SUB_VL, DL, IntVT, SplatVL, VID,
+                                DAG.getUNDEF(IntVT), Mask, VL);
 
-  return DAG.getNode(GatherOpc, DL, VecVT, Op.getOperand(0), Indices, Mask,
-                     DAG.getUNDEF(VecVT), VL);
+  return DAG.getNode(GatherOpc, DL, VecVT, Op.getOperand(0), Indices,
+                     DAG.getUNDEF(VecVT), Mask, VL);
 }
 
 SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
@@ -6071,9 +6079,10 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorLogicOpToRVV(
   MVT VT = Op.getSimpleValueType();
 
   if (VT.getVectorElementType() == MVT::i1)
-    return lowerToScalableOp(Op, DAG, MaskOpc, /*HasMask*/ false);
+    return lowerToScalableOp(Op, DAG, MaskOpc, /*HasMergeOp*/ false,
+                             /*HasMask*/ false);
 
-  return lowerToScalableOp(Op, DAG, VecOpc, /*HasMask*/ true);
+  return lowerToScalableOp(Op, DAG, VecOpc, /*HasMergeOp*/ true);
 }
 
 SDValue
@@ -6087,7 +6096,7 @@ RISCVTargetLowering::lowerFixedLengthVectorShiftToRVV(SDValue Op,
   case ISD::SRL: Opc = RISCVISD::SRL_VL; break;
   }
 
-  return lowerToScalableOp(Op, DAG, Opc);
+  return lowerToScalableOp(Op, DAG, Opc, /*HasMergeOp*/ true);
 }
 
 // Lower vector ABS to smax(X, sub(0, X)).
@@ -6107,10 +6116,10 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   SDValue SplatZero = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
       DAG.getConstant(0, DL, Subtarget.getXLenVT()));
-  SDValue NegX =
-      DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X, Mask, VL);
-  SDValue Max =
-      DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX, Mask, VL);
+  SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
+                             DAG.getUNDEF(ContainerVT), Mask, VL);
+  SDValue Max = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
+                            DAG.getUNDEF(ContainerVT), Mask, VL);
 
   return convertFromScalableVector(VT, Max, DAG, Subtarget);
 }
@@ -6132,7 +6141,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue CopySign = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Mag,
-                                 Sign, Mask, DAG.getUNDEF(ContainerVT), VL);
+                                 Sign, DAG.getUNDEF(ContainerVT), Mask, VL);
 
   return convertFromScalableVector(VT, CopySign, DAG, Subtarget);
 }
@@ -6163,7 +6172,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
 }
 
 SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
-                                               unsigned NewOpc,
+                                               unsigned NewOpc, bool HasMergeOp,
                                                bool HasMask) const {
   MVT VT = Op.getSimpleValueType();
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
@@ -6188,6 +6197,8 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  if (HasMergeOp)
+    Ops.push_back(DAG.getUNDEF(ContainerVT));
   if (HasMask)
     Ops.push_back(Mask);
   Ops.push_back(VL);
@@ -6202,14 +6213,22 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
 // * Fixed-length vectors are converted to their scalable-vector container
 //   types.
 SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG,
-                                       unsigned RISCVISDOpc) const {
+                                       unsigned RISCVISDOpc,
+                                       bool HasMergeOp) const {
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SmallVector<SDValue, 4> Ops;
 
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(VT);
+
   for (const auto &OpIdx : enumerate(Op->ops())) {
     SDValue V = OpIdx.value();
     assert(!isa<VTSDNode>(V) && "Unexpected VTSDNode node!");
+    // Add dummy merge value before the mask.
+    if (HasMergeOp && *ISD::getVPMaskIdx(Op.getOpcode()) == OpIdx.index())
+      Ops.push_back(DAG.getUNDEF(ContainerVT));
     // Pass through operands which aren't fixed-length vectors.
     if (!V.getValueType().isFixedLengthVector()) {
       Ops.push_back(V);
@@ -6225,8 +6244,6 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG,
 
   if (!VT.isFixedLengthVector())
     return DAG.getNode(RISCVISDOpc, DL, VT, Ops, Op->getFlags());
-
-  MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   SDValue VPOp = DAG.getNode(RISCVISDOpc, DL, ContainerVT, Ops, Op->getFlags());
 
@@ -6483,7 +6500,7 @@ SDValue RISCVTargetLowering::lowerLogicVPOp(SDValue Op, SelectionDAG &DAG,
                                             unsigned VecOpc) const {
   MVT VT = Op.getSimpleValueType();
   if (VT.getVectorElementType() != MVT::i1)
-    return lowerVPOp(Op, DAG, VecOpc);
+    return lowerVPOp(Op, DAG, VecOpc, true);
 
   // It is safe to drop mask parameter as masked-off elements are undef.
   SDValue Op1 = Op->getOperand(0);
@@ -7281,8 +7298,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue ThirtyTwoV = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                                      DAG.getUNDEF(ContainerVT),
                                      DAG.getConstant(32, DL, XLenVT), VL);
-    SDValue LShr32 = DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, Vec,
-                                 ThirtyTwoV, Mask, VL);
+    SDValue LShr32 =
+        DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, Vec, ThirtyTwoV,
+                    DAG.getUNDEF(ContainerVT), Mask, VL);
 
     SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32);
 
@@ -7389,8 +7407,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue ThirtyTwoV =
           DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, DAG.getUNDEF(VecVT),
                       DAG.getConstant(32, DL, XLenVT), VL);
-      SDValue LShr32 =
-          DAG.getNode(RISCVISD::SRL_VL, DL, VecVT, Vec, ThirtyTwoV, Mask, VL);
+      SDValue LShr32 = DAG.getNode(RISCVISD::SRL_VL, DL, VecVT, Vec, ThirtyTwoV,
+                                   DAG.getUNDEF(VecVT), Mask, VL);
       SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32);
 
       Results.push_back(
@@ -8298,8 +8316,9 @@ static SDValue combineADDSUB_VLToVWADDSUB_VL(SDNode *N, SelectionDAG &DAG,
   MVT NarrowVT = MVT::getVectorVT(MVT::getIntegerVT(NarrowSize),
                                   VT.getVectorElementCount());
 
-  SDValue Mask = N->getOperand(2);
-  SDValue VL = N->getOperand(3);
+  SDValue Merge = N->getOperand(2);
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
 
   SDLoc DL(N);
 
@@ -8319,7 +8338,7 @@ static SDValue combineADDSUB_VLToVWADDSUB_VL(SDNode *N, SelectionDAG &DAG,
     else
       WOpc = IsAdd ? RISCVISD::VWADDU_W_VL : RISCVISD::VWSUBU_W_VL;
 
-    return DAG.getNode(WOpc, DL, VT, Op0, Op1, Mask, VL);
+    return DAG.getNode(WOpc, DL, VT, Op0, Op1, Merge, Mask, VL);
   }
 
   // FIXME: Is it useful to form a vwadd.wx or vwsub.wx if it removes a scalar
@@ -8333,8 +8352,9 @@ static SDValue combineADDSUB_VLToVWADDSUB_VL(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVWADD_W_VL_VWSUB_W_VL(SDNode *N, SelectionDAG &DAG) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
-  SDValue Mask = N->getOperand(2);
-  SDValue VL = N->getOperand(3);
+  SDValue Merge = N->getOperand(2);
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
 
   MVT VT = N->getSimpleValueType(0);
   MVT NarrowVT = Op1.getSimpleValueType();
@@ -8364,7 +8384,7 @@ static SDValue combineVWADD_W_VL_VWSUB_W_VL(SDNode *N, SelectionDAG &DAG) {
     // Re-introduce narrower extends if needed.
     if (Op0.getValueType() != NarrowVT)
       Op0 = DAG.getNode(ExtOpc, DL, NarrowVT, Op0, Mask, VL);
-    return DAG.getNode(VOpc, DL, VT, Op0, Op1, Mask, VL);
+    return DAG.getNode(VOpc, DL, VT, Op0, Op1, Merge, Mask, VL);
   }
 
   bool IsAdd = N->getOpcode() == RISCVISD::VWADD_W_VL ||
@@ -8396,7 +8416,7 @@ static SDValue combineVWADD_W_VL_VWSUB_W_VL(SDNode *N, SelectionDAG &DAG) {
 
     Op0 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, NarrowVT,
                       DAG.getUNDEF(NarrowVT), Op0, VL);
-    return DAG.getNode(VOpc, DL, VT, Op1, Op0, Mask, VL);
+    return DAG.getNode(VOpc, DL, VT, Op1, Op0, Merge, Mask, VL);
   }
 
   return SDValue();
@@ -8418,8 +8438,9 @@ static SDValue combineMUL_VLToVWMUL_VL(SDNode *N, SelectionDAG &DAG,
   if ((!IsSignExt && !IsZeroExt) || !Op0.hasOneUse())
     return SDValue();
 
-  SDValue Mask = N->getOperand(2);
-  SDValue VL = N->getOperand(3);
+  SDValue Merge = N->getOperand(2);
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
 
   // Make sure the mask and VL match.
   if (Op0.getOperand(1) != Mask || Op0.getOperand(2) != VL)
@@ -8497,7 +8518,7 @@ static SDValue combineMUL_VLToVWMUL_VL(SDNode *N, SelectionDAG &DAG,
   unsigned WMulOpc = RISCVISD::VWMULSU_VL;
   if (!IsVWMULSU)
     WMulOpc = IsSignExt ? RISCVISD::VWMUL_VL : RISCVISD::VWMULU_VL;
-  return DAG.getNode(WMulOpc, DL, VT, Op0, Op1, Mask, VL);
+  return DAG.getNode(WMulOpc, DL, VT, Op0, Op1, Merge, Mask, VL);
 }
 
 static RISCVFPRndMode::RoundingMode matchRoundingOp(SDValue Op) {
@@ -9230,7 +9251,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       ShAmt = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, DAG.getUNDEF(VT),
                           ShAmt.getOperand(1), VL);
       return DAG.getNode(N->getOpcode(), DL, VT, N->getOperand(0), ShAmt,
-                         N->getOperand(2), N->getOperand(3));
+                         N->getOperand(2), N->getOperand(3), N->getOperand(4));
     }
     break;
   }

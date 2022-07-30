@@ -1652,7 +1652,6 @@ public:
     }
     OffsetToCFI.emplace(Offset, FrameInstructions.size());
     FrameInstructions.emplace_back(std::forward<MCCFIInstruction>(Inst));
-    return;
   }
 
   BinaryBasicBlock::iterator addCFIInstruction(BinaryBasicBlock *BB,
