@@ -5054,7 +5054,7 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
 
   // Locate DYNAMIC by looking through program headers.
   uint64_t DynamicOffset = 0;
-  const Elf_Phdr *DynamicPhdr = 0;
+  const Elf_Phdr *DynamicPhdr = nullptr;
   for (const Elf_Phdr &Phdr : cantFail(Obj.program_headers())) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
       DynamicOffset = Phdr.p_offset;
@@ -5139,7 +5139,7 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
   using Elf_Dyn = typename ELFFile<ELFT>::Elf_Dyn;
 
   // Locate DYNAMIC by looking through program headers.
-  const Elf_Phdr *DynamicPhdr = 0;
+  const Elf_Phdr *DynamicPhdr = nullptr;
   for (const Elf_Phdr &Phdr : cantFail(Obj.program_headers())) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
       DynamicPhdr = &Phdr;

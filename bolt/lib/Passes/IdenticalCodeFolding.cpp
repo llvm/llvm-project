@@ -281,7 +281,7 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     // One of the identical blocks may have a trailing unconditional jump that
     // is ignored for CFG purposes.
     const MCInst *TrailingInstr =
-        (I != E ? &(*I) : (OtherI != OtherE ? &(*OtherI) : 0));
+        (I != E ? &(*I) : (OtherI != OtherE ? &(*OtherI) : nullptr));
     if (TrailingInstr && !BC.MIB->isUnconditionalBranch(*TrailingInstr))
       return false;
 
