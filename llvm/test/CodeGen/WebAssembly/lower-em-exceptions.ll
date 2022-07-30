@@ -37,7 +37,7 @@ lpad:                                             ; preds = %entry
   br label %catch.dispatch
 ; CHECK: lpad:
 ; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* null)
-; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
+; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } poison, i8* %[[FMC]], 0
 ; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = call i32 @getTempRet0()
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 0
@@ -107,7 +107,7 @@ ehspec.unexpected:                                ; preds = %filter.dispatch
   unreachable
 
 eh.resume:                                        ; preds = %filter.dispatch
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %1, 0
+  %lpad.val = insertvalue { i8*, i32 } poison, i8* %1, 0
   %lpad.val3 = insertvalue { i8*, i32 } %lpad.val, i32 %2, 1
   resume { i8*, i32 } %lpad.val3
 ; CHECK: eh.resume:
