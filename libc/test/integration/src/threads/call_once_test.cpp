@@ -114,7 +114,7 @@ void test_synchronization() {
   __llvm_libc::mtx_destroy(&once_func_blocker);
 }
 
-int main() {
+TEST_MAIN() {
   call_from_5_threads();
   test_synchronization();
   return 0;

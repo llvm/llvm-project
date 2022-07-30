@@ -6,4 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-int main(int argc, char **argv) { return 0; }
+#include "utils/IntegrationTest/test.h"
+
+TEST_MAIN(int argc, char **argv) { return 0; }
