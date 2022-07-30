@@ -322,9 +322,8 @@ static Block *getCommonBlock(const MemRefAccess &srcAccess,
 
   if (numCommonLoops == 0) {
     Block *block = srcAccess.opInst->getBlock();
-    while (!llvm::isa<func::FuncOp>(block->getParentOp())) {
+    while (!block->getParentOp()->hasTrait<OpTrait::AffineScope>())
       block = block->getParentOp()->getBlock();
-    }
     return block;
   }
   Value commonForIV = srcDomain.getValue(numCommonLoops - 1);
