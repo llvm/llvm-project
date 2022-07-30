@@ -1,6 +1,14 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("COFFOptions") {
+  visibility = [ ":JITLink" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("JITLink") {
   output_name = "LLVMJITLink"
   deps = [
+    ":COFFOptions",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/ExecutionEngine/Orc/Shared",
     "//llvm/lib/Object",
@@ -8,6 +16,7 @@ static_library("JITLink") {
   ]
   sources = [
     "COFF.cpp",
+    "COFFDirectiveParser.cpp",
     "COFFLinkGraphBuilder.cpp",
     "COFF_x86_64.cpp",
     "DWARFRecordSectionSplitter.cpp",
