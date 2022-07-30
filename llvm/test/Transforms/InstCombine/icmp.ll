@@ -4113,9 +4113,8 @@ define i1 @signbit_true_logic_uses_commute(i64 %x) {
 
 define i1 @redundant_sign_bit_count_ult_1_2(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_1_2(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 1
@@ -4126,9 +4125,8 @@ define i1 @redundant_sign_bit_count_ult_1_2(i32 %x) {
 
 define i1 @redundant_sign_bit_count_ult_1_30(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_1_30(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 1073741824
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 1
@@ -4139,9 +4137,8 @@ define i1 @redundant_sign_bit_count_ult_1_30(i32 %x) {
 
 define i1 @redundant_sign_bit_count_ult_31_2(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_31_2(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 31
@@ -4152,9 +4149,8 @@ define i1 @redundant_sign_bit_count_ult_31_2(i32 %x) {
 
 define i1 @redundant_sign_bit_count_ult_31_30(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 1073741824
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 31
@@ -4169,8 +4165,8 @@ define i1 @redundant_sign_bit_count_ult_31_30_extra_use_ashr(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_extra_use_ashr(
 ; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    call void @use_i32(i32 [[Y]])
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 1073741824
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 31
@@ -4224,9 +4220,8 @@ define i1 @wrong_shift_opcode_i8(i8 %x) {
 define i1 @redundant_sign_bit_count_ult_31_30_commute(i32 %xsrc) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_commute(
 ; CHECK-NEXT:    [[X:%.*]] = mul i32 [[XSRC:%.*]], 13
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X]], 31
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 1073741824
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %x = mul i32 %xsrc, 13 ; thwart complexity-based canonicalization
@@ -4238,9 +4233,8 @@ define i1 @redundant_sign_bit_count_ult_31_30_commute(i32 %xsrc) {
 
 define i1 @redundant_sign_bit_count_i8(i8 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_i8(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[Z]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[TMP1]], 4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i8 %x, 5
@@ -4252,9 +4246,8 @@ define i1 @redundant_sign_bit_count_i8(i8 %x) {
 define <2 x i1> @redundant_sign_bit_count_ult_31_30_vector(<2 x i32> %xsrc) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_vector(
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[XSRC:%.*]], <i32 13, i32 13>
-; CHECK-NEXT:    [[Y:%.*]] = ashr <2 x i32> [[X]], <i32 31, i32 31>
-; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> [[Z]], <i32 1073741824, i32 1073741824>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X]], <i32 1073741824, i32 1073741824>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> [[TMP1]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %x = mul <2 x i32> %xsrc, <i32 13, i32 13> ; thwart complexity-based canonicalization
@@ -4266,9 +4259,8 @@ define <2 x i1> @redundant_sign_bit_count_ult_31_30_vector(<2 x i32> %xsrc) {
 
 define i1 @redundant_sign_bit_count_ugt_1_2(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ugt_1_2(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[Z]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], -8
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 1
@@ -4279,9 +4271,8 @@ define i1 @redundant_sign_bit_count_ugt_1_2(i32 %x) {
 
 define i1 @redundant_sign_bit_count_ugt_1_30(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ugt_1_30(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[Z]], 1073741823
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 1
@@ -4292,9 +4283,8 @@ define i1 @redundant_sign_bit_count_ugt_1_30(i32 %x) {
 
 define i1 @redundant_sign_bit_count_ugt_31_2(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ugt_31_2(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[Z]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], -8
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 31
@@ -4305,9 +4295,8 @@ define i1 @redundant_sign_bit_count_ugt_31_2(i32 %x) {
 
 define i1 @redundant_sign_bit_count_ugt_31_30(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ugt_31_30(
-; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[Z]], 1073741823
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = ashr i32 %x, 31
