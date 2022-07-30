@@ -22,12 +22,25 @@ namespace llvm {
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class GCNSubtarget;
+class GCNSchedStage;
+
+enum class GCNSchedStageID : unsigned {
+  OccInitialSchedule = 0,
+  UnclusteredHighRPReschedule = 1,
+  ClusteredLowOccupancyReschedule = 2,
+  PreRARematerialize = 3,
+  ILPInitialSchedule = 4
+};
+
+#ifndef NDEBUG
+raw_ostream &operator<<(raw_ostream &OS, const GCNSchedStageID &StageID);
+#endif
 
 /// This is a minimal scheduler strategy.  The main difference between this
 /// and the GenericScheduler is that GCNSchedStrategy uses different
-/// heuristics to determine excess/critical pressure sets.  Its goal is to
-/// maximize kernel occupancy (i.e. maximum number of waves per simd).
-class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
+/// heuristics to determine excess/critical pressure sets.
+class GCNSchedStrategy : public GenericScheduler {
+protected:
   SUnit *pickNodeBidirectional(bool &IsTopNode);
 
   void pickNodeFromQueue(SchedBoundary &Zone, const CandPolicy &ZonePolicy,
@@ -51,6 +64,12 @@ class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
 
   MachineFunction *MF;
 
+  // Scheduling stages for this strategy.
+  SmallVector<GCNSchedStageID, 4> SchedStages;
+
+  // Pointer to the current SchedStageID.
+  SmallVectorImpl<GCNSchedStageID>::iterator CurrentStage = nullptr;
+
 public:
   // schedule() have seen register pressure over the critical limits and had to
   // track register pressure for actual scheduling heuristics.
@@ -69,7 +88,7 @@ public:
 
   unsigned VGPRCriticalLimit;
 
-  GCNMaxOccupancySchedStrategy(const MachineSchedContext *C);
+  GCNSchedStrategy(const MachineSchedContext *C);
 
   SUnit *pickNode(bool &IsTopNode) override;
 
@@ -78,40 +97,42 @@ public:
   unsigned getTargetOccupancy() { return TargetOccupancy; }
 
   void setTargetOccupancy(unsigned Occ) { TargetOccupancy = Occ; }
+
+  GCNSchedStageID getCurrentStage();
+
+  // Advances stage. Returns true if there are remaining stages.
+  bool advanceStage();
+
+  bool hasNextStage() const;
+
+  GCNSchedStageID getNextStage() const;
 };
 
-enum class GCNSchedStageID : unsigned {
-  InitialSchedule = 0,
-  UnclusteredHighRPReschedule = 1,
-  ClusteredLowOccupancyReschedule = 2,
-  PreRARematerialize = 3,
-  LastStage = PreRARematerialize
+/// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.
+/// maximum number of waves per simd).
+class GCNMaxOccupancySchedStrategy final : public GCNSchedStrategy {
+public:
+  GCNMaxOccupancySchedStrategy(const MachineSchedContext *C);
 };
 
-#ifndef NDEBUG
-raw_ostream &operator<<(raw_ostream &OS, const GCNSchedStageID &StageID);
-#endif
+/// The goal of this scheduling strategy is to maximize ILP for a single wave
+/// (i.e. latency hiding).
+class GCNMaxILPSchedStrategy final : public GCNSchedStrategy {
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
 
-inline GCNSchedStageID &operator++(GCNSchedStageID &Stage, int) {
-  assert(Stage != GCNSchedStageID::PreRARematerialize);
-  Stage = static_cast<GCNSchedStageID>(static_cast<unsigned>(Stage) + 1);
-  return Stage;
-}
-
-inline GCNSchedStageID nextStage(const GCNSchedStageID Stage) {
-  return static_cast<GCNSchedStageID>(static_cast<unsigned>(Stage) + 1);
-}
-
-inline bool operator>(GCNSchedStageID &LHS, GCNSchedStageID &RHS) {
-  return static_cast<unsigned>(LHS) > static_cast<unsigned>(RHS);
-}
+public:
+  GCNMaxILPSchedStrategy(const MachineSchedContext *C);
+};
 
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
-  friend class InitialScheduleStage;
+  friend class OccInitialScheduleStage;
   friend class UnclusteredHighRPStage;
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
+  friend class ILPInitialScheduleStage;
 
   const GCNSubtarget &ST;
 
@@ -169,6 +190,8 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 
   void runSchedStages();
 
+  std::unique_ptr<GCNSchedStage> createSchedStage(GCNSchedStageID SchedStageID);
+
 public:
   GCNScheduleDAGMILive(MachineSchedContext *C,
                        std::unique_ptr<MachineSchedStrategy> S);
@@ -183,7 +206,7 @@ class GCNSchedStage {
 protected:
   GCNScheduleDAGMILive &DAG;
 
-  GCNMaxOccupancySchedStrategy &S;
+  GCNSchedStrategy &S;
 
   MachineFunction &MF;
 
@@ -245,11 +268,11 @@ public:
   virtual ~GCNSchedStage() = default;
 };
 
-class InitialScheduleStage : public GCNSchedStage {
+class OccInitialScheduleStage : public GCNSchedStage {
 public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
-  InitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+  OccInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 
@@ -321,6 +344,14 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   PreRARematStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class ILPInitialScheduleStage : public GCNSchedStage {
+public:
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  ILPInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 
