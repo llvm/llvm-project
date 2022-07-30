@@ -211,10 +211,10 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
   const bool MaskAllLanes =
       RowMaskOpnd->getImm() == 0xF && BankMaskOpnd->getImm() == 0xF;
   (void)MaskAllLanes;
-  assert(MaskAllLanes ||
-         !(TII->isVOPC(DPPOp) ||
-           (TII->isVOP3(DPPOp) && OrigOpE32 != -1 && TII->isVOPC(OrigOpE32))) &&
-             "VOPC cannot form DPP unless mask is full");
+  assert((MaskAllLanes ||
+          !(TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&
+                                   TII->isVOPC(OrigOpE32)))) &&
+         "VOPC cannot form DPP unless mask is full");
 
   auto DPPInst = BuildMI(*OrigMI.getParent(), OrigMI,
                          OrigMI.getDebugLoc(), TII->get(DPPOp))
