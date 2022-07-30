@@ -574,7 +574,7 @@ public:
     }
   };
 
-  virtual std::unique_ptr<MCInstMatcher>
+  std::unique_ptr<MCInstMatcher>
   matchAdd(std::unique_ptr<MCInstMatcher> A,
            std::unique_ptr<MCInstMatcher> B) const override {
     return std::unique_ptr<MCInstMatcher>(
@@ -612,7 +612,7 @@ public:
     }
   };
 
-  virtual std::unique_ptr<MCInstMatcher>
+  std::unique_ptr<MCInstMatcher>
   matchLoadAddr(std::unique_ptr<MCInstMatcher> Target) const override {
     return std::unique_ptr<MCInstMatcher>(new LEAMatcher(std::move(Target)));
   }
