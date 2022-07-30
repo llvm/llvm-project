@@ -166,9 +166,8 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
   llvm::SmallVector<mlir::Value> elidedLenParams =
       elideLengthsAlreadyInType(ty, lenParams);
   auto idxTy = getIndexType();
-  llvm::for_each(elidedShape, [&](mlir::Value sh) {
+  for (mlir::Value sh : elidedShape)
     indices.push_back(createConvert(loc, idxTy, sh));
-  });
   // Add a target attribute, if needed.
   llvm::SmallVector<mlir::NamedAttribute> attrs;
   if (asTarget)

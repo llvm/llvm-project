@@ -64,10 +64,10 @@ public:
            UniqueAttributeValues.insert(KV.second);
       }
     }
-    llvm::for_each(UniqueNonterminals, [&T](llvm::StringRef Name) {
+    for (llvm::StringRef Name : UniqueNonterminals) {
       T->Nonterminals.emplace_back();
       T->Nonterminals.back().Name = Name.str();
-    });
+    }
     assert(T->Nonterminals.size() < (1 << (SymbolBits - 1)) &&
            "Too many nonterminals to fit in SymbolID bits!");
     llvm::sort(T->Nonterminals, [](const GrammarTable::Nonterminal &L,
@@ -77,10 +77,10 @@ public:
     // Add an empty string for the corresponding sentinel unset attribute.
     T->AttributeValues.push_back("");
     UniqueAttributeValues.erase("");
-    llvm::for_each(UniqueAttributeValues, [&T](llvm::StringRef Name) {
+    for (llvm::StringRef Name : UniqueAttributeValues) {
       T->AttributeValues.emplace_back();
       T->AttributeValues.back() = Name.str();
-    });
+    }
     llvm::sort(T->AttributeValues);
     assert(T->AttributeValues.front() == "");
 

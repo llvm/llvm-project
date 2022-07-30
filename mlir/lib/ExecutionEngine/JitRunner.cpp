@@ -229,7 +229,8 @@ static Error compileAndExecute(Options &options, ModuleOp module,
   (*fptr)(args);
 
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
-  llvm::for_each(destroyFns, [](MlirRunnerDestroyFn destroy) { destroy(); });
+  for (MlirRunnerDestroyFn destroy : destroyFns)
+    destroy();
 
   return Error::success();
 }
