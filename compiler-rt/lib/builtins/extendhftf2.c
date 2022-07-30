@@ -11,7 +11,7 @@
 #include "fp_lib.h"
 
 #if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT) &&                     \
-    defined(CRT_HAS_FLOAT16)
+    defined(COMPILER_RT_HAS_FLOAT16)
 #define SRC_HALF
 #define DST_QUAD
 #include "fp_extend_impl.inc"
