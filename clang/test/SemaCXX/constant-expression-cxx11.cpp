@@ -2414,35 +2414,41 @@ enum EFixed : int {efixed1=-4, efixed2=4};
 // Enum with fixed underlying type because it is scoped
 enum class EScoped {escoped1=-4, escoped2=4};
 
+enum EMaxInt {emaxint1=-1, emaxint2=__INT_MAX__};
+
 void testValueInRangeOfEnumerationValues() {
   constexpr E1 x1 = static_cast<E1>(-8);
   constexpr E1 x2 = static_cast<E1>(8); // expected-error {{must be initialized by a constant expression}}
-  // expected-note@-1 {{integer value 8 is outside the valid range of values [-8, 8) for this enumeration type}}
+  // expected-note@-1 {{integer value 8 is outside the valid range of values [-8, 7] for this enumeration type}}
 
   constexpr E2 x3 = static_cast<E2>(-8); // expected-error {{must be initialized by a constant expression}}
-  // expected-note@-1 {{integer value -8 is outside the valid range of values [0, 8) for this enumeration type}}
+  // expected-note@-1 {{integer value -8 is outside the valid range of values [0, 7] for this enumeration type}}
   constexpr E2 x4 = static_cast<E2>(0);
   constexpr E2 x5 = static_cast<E2>(8); // expected-error {{must be initialized by a constant expression}}
-  // expected-note@-1 {{integer value 8 is outside the valid range of values [0, 8) for this enumeration type}}
+  // expected-note@-1 {{integer value 8 is outside the valid range of values [0, 7] for this enumeration type}}
 
   constexpr E3 x6 = static_cast<E3>(-2048);
   constexpr E3 x7 = static_cast<E3>(-8);
   constexpr E3 x8 = static_cast<E3>(0);
   constexpr E3 x9 = static_cast<E3>(8);
   constexpr E3 x10 = static_cast<E3>(2048); // expected-error {{must be initialized by a constant expression}}
-  // expected-note@-1 {{integer value 2048 is outside the valid range of values [-2048, 2048) for this enumeration type}}
+  // expected-note@-1 {{integer value 2048 is outside the valid range of values [-2048, 2047] for this enumeration type}}
 
   constexpr E4 x11 = static_cast<E4>(0);
   constexpr E4 x12 = static_cast<E4>(1);
   constexpr E4 x13 = static_cast<E4>(2); // expected-error {{must be initialized by a constant expression}}
-  // expected-note@-1 {{integer value 2 is outside the valid range of values [0, 2) for this enumeration type}}
+  // expected-note@-1 {{integer value 2 is outside the valid range of values [0, 1] for this enumeration type}}
 
   constexpr EEmpty x14 = static_cast<EEmpty>(0);
   constexpr EEmpty x15 = static_cast<EEmpty>(1);
   constexpr EEmpty x16 = static_cast<EEmpty>(2); // expected-error {{must be initialized by a constant expression}}
-  // expected-note@-1 {{integer value 2 is outside the valid range of values [0, 2) for this enumeration type}}
+  // expected-note@-1 {{integer value 2 is outside the valid range of values [0, 1] for this enumeration type}}
 
   constexpr EFixed x17 = static_cast<EFixed>(100);
   constexpr EScoped x18 = static_cast<EScoped>(100);
+
+  constexpr EMaxInt x19 = static_cast<EMaxInt>(__INT_MAX__-1);
+  constexpr EMaxInt x20 = static_cast<EMaxInt>((long)__INT_MAX__+1); // expected-error {{must be initialized by a constant expression}}
+  // expected-note@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for this enumeration type}}
 }
 }
