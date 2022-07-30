@@ -591,7 +591,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
 
   // If we're not accessing anything in this constant, the result is undefined.
   if (Offset <= -1 * static_cast<int64_t>(BytesLoaded))
-    return UndefValue::get(IntType);
+    return PoisonValue::get(IntType);
 
   // TODO: We should be able to support scalable types.
   TypeSize InitializerSize = DL.getTypeAllocSize(C->getType());
@@ -600,7 +600,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
 
   // If we're not accessing anything in this constant, the result is undefined.
   if (Offset >= (int64_t)InitializerSize.getFixedValue())
-    return UndefValue::get(IntType);
+    return PoisonValue::get(IntType);
 
   unsigned char RawBytes[32] = {0};
   unsigned char *CurPtr = RawBytes;
@@ -702,11 +702,11 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
     if (Constant *Result = ConstantFoldLoadThroughBitcast(AtOffset, Ty, DL))
       return Result;
 
-  // Explicitly check for out-of-bounds access, so we return undef even if the
+  // Explicitly check for out-of-bounds access, so we return poison even if the
   // constant is a uniform value.
   TypeSize Size = DL.getTypeAllocSize(C->getType());
   if (!Size.isScalable() && Offset.sge(Size.getFixedSize()))
-    return UndefValue::get(Ty);
+    return PoisonValue::get(Ty);
 
   // Try an offset-independent fold of a uniform value.
   if (Constant *Result = ConstantFoldLoadFromUniformValue(C, Ty))

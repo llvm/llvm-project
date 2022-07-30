@@ -105,11 +105,11 @@ define void @fold_strncmp_past_end(i32* %pcmp) {
 }
 
 
-; Fold strrchr(a5 + 5, '\0') to null.
+; Fold strrchr(a5 + 5, '\0') to poison (it's UB).
 
 define i8* @fold_strrchr_past_end(i32 %c) {
 ; CHECK-LABEL: @fold_strrchr_past_end(
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret i8* poison
 ;
   %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
   %r = call i8* @strrchr(i8* %p5, i32 0)
