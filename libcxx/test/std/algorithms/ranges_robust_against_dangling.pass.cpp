@@ -76,7 +76,7 @@ constexpr bool test_all() {
   using std::ranges::mismatch_result;
   using std::ranges::move_result;
   //using std::ranges::move_backward_result;
-  //using std::ranges::partial_sort_copy_result;
+  using std::ranges::partial_sort_copy_result;
   using std::ranges::partition_copy_result;
   //using std::ranges::remove_copy_result;
   //using std::ranges::remove_copy_if_result;
@@ -159,9 +159,9 @@ constexpr bool test_all() {
   dangling_1st<rotate_copy_result<dangling, int*>>(std::ranges::rotate_copy, in, mid, out);
   dangling_1st<unique_copy_result<dangling, int*>>(std::ranges::unique_copy, in, out);
   dangling_1st<partition_copy_result<dangling, int*, int*>>(std::ranges::partition_copy, in, out, out2, unary_pred);
-  //dangling_1st<partial_sort_copy_result<dangling, int*>>(std::ranges::partial_sort_copy, in, in2);
-  //dangling_2nd<partial_sort_copy_result<int*, dangling>>(std::ranges::partial_sort_copy, in, in2);
-  //dangling_both<partial_sort_copy_result<dangling, dangling>>(std::ranges::partial_sort_copy, in, in2);
+  dangling_1st<partial_sort_copy_result<dangling, int*>>(std::ranges::partial_sort_copy, in, in2);
+  dangling_2nd<partial_sort_copy_result<int*, dangling>>(std::ranges::partial_sort_copy, in, in2);
+  dangling_both<partial_sort_copy_result<dangling, dangling>>(std::ranges::partial_sort_copy, in, in2);
   dangling_1st<merge_result<dangling, int*, int*>>(std::ranges::merge, in, in2, out);
   dangling_2nd<merge_result<int*, dangling, int*>>(std::ranges::merge, in, in2, out);
   dangling_both<merge_result<dangling, dangling, int*>>(std::ranges::merge, in, in2, out);

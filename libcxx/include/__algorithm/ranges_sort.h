@@ -44,7 +44,7 @@ struct __fn {
   _Iter __sort_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
     auto __last_iter = ranges::next(__first, __last);
 
-    auto&& __projected_comp = ranges::__make_projected_comp(__comp, __proj);
+    auto&& __projected_comp = std::__make_projected(__comp, __proj);
     std::__sort_impl<_RangeAlgPolicy>(std::move(__first), __last_iter, __projected_comp);
 
     return __last_iter;

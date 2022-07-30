@@ -14,50 +14,90 @@
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_member_pointer.h>
+#include <__type_traits/is_same.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Pred, class _Proj>
+struct _ProjectedPred {
+  _Pred& __pred; // Can be a unary or a binary predicate.
+  _Proj& __proj;
+
+  _LIBCPP_CONSTEXPR _ProjectedPred(_Pred& __pred_arg, _Proj& __proj_arg) : __pred(__pred_arg), __proj(__proj_arg) {}
+
+  template <class _Tp>
+  typename __invoke_of<_Pred&,
+                       decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_Tp>()))
+  >::type
+  _LIBCPP_CONSTEXPR operator()(_Tp&& __v) const {
+    return std::__invoke(__pred, std::__invoke(__proj, std::forward<_Tp>(__v)));
+  }
+
+  template <class _T1, class _T2>
+  typename __invoke_of<_Pred&,
+                       decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T1>())),
+                       decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T2>()))
+  >::type
+  _LIBCPP_CONSTEXPR operator()(_T1&& __lhs, _T2&& __rhs) const {
+    return std::__invoke(__pred,
+                      std::__invoke(__proj, std::forward<_T1>(__lhs)),
+                      std::__invoke(__proj, std::forward<_T2>(__rhs)));
+  }
+
+};
+
+template <class _Pred, class _Proj, class = void>
+struct __can_use_pristine_comp : false_type {};
+
+template <class _Pred, class _Proj>
+struct __can_use_pristine_comp<_Pred, _Proj, __enable_if_t<
+    !is_member_pointer<typename decay<_Pred>::type>::value && (
+#if _LIBCPP_STD_VER > 17
+      is_same<typename decay<_Proj>::type, identity>::value ||
+#endif
+      is_same<typename decay<_Proj>::type, __identity>::value
+    )
+> > : true_type {};
+
+template <class _Pred, class _Proj>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static
+__enable_if_t<
+    !__can_use_pristine_comp<_Pred, _Proj>::value,
+    _ProjectedPred<_Pred, _Proj>
+>
+__make_projected(_Pred& __pred, _Proj& __proj) {
+  return _ProjectedPred<_Pred, _Proj>(__pred, __proj);
+}
+
+// Avoid creating the functor and just use the pristine comparator -- for certain algorithms, this would enable
+// optimizations that rely on the type of the comparator. Additionally, this results in less layers of indirection in
+// the call stack when the comparator is invoked, even in an unoptimized build.
+template <class _Pred, class _Proj>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static
+__enable_if_t<
+    __can_use_pristine_comp<_Pred, _Proj>::value,
+    _Pred&
+>
+__make_projected(_Pred& __pred, _Proj&) {
+  return __pred;
+}
+
+_LIBCPP_END_NAMESPACE_STD
+
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-
-template <class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI constexpr static
-decltype(auto) __make_projected_pred(_Pred& __pred, _Proj& __proj) {
-  if constexpr (same_as<decay_t<_Proj>, identity> && !is_member_pointer_v<decay_t<_Pred>>) {
-    // Avoid creating the lambda and just use the pristine predicate -- for certain algorithms, this would enable
-    // optimizations that rely on the type of the predicate.
-    return __pred;
-
-  } else {
-    return [&](auto&& __x) {
-      return std::invoke(__pred, std::invoke(__proj, std::forward<decltype(__x)>(__x)));
-    };
-  }
-}
-
-template <class _Comp, class _Proj>
-_LIBCPP_HIDE_FROM_ABI constexpr static
-decltype(auto) __make_projected_comp(_Comp& __comp, _Proj& __proj) {
-  if constexpr (same_as<decay_t<_Proj>, identity> && !is_member_pointer_v<decay_t<_Comp>>) {
-    // Avoid creating the lambda and just use the pristine comparator -- for certain algorithms, this would enable
-    // optimizations that rely on the type of the comparator.
-    return __comp;
-
-  } else {
-    return [&](auto&& __lhs, auto&& __rhs) {
-      return std::invoke(__comp,
-                        std::invoke(__proj, std::forward<decltype(__lhs)>(__lhs)),
-                        std::invoke(__proj, std::forward<decltype(__rhs)>(__rhs)));
-    };
-  }
-}
 
 template <class _Comp, class _Proj1, class _Proj2>
 _LIBCPP_HIDE_FROM_ABI constexpr static

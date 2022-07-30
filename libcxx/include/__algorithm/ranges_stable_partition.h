@@ -49,7 +49,7 @@ struct __fn {
       _Iter&& __first, _Sent&& __last, _Pred&& __pred, _Proj&& __proj) {
     auto __last_iter = ranges::next(__first, __last);
 
-    auto&& __projected_pred = ranges::__make_projected_pred(__pred, __proj);
+    auto&& __projected_pred = std::__make_projected(__pred, __proj);
     auto __result = std::__stable_partition<_RangeAlgPolicy>(
         std::move(__first), __last_iter, __projected_pred, __iterator_concept<_Iter>());
 

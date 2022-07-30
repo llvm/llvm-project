@@ -64,7 +64,7 @@ constexpr bool test_all() {
   test(std::ranges::find_end, in, in2, eq, proj1, proj2);
   test(std::ranges::transform, in, in2, out, sum, proj1, proj2);
   test(std::ranges::transform, in, in2, out2, sum, proj1, proj2);
-  //test(std::ranges::partial_sort_copy, in, in2, output2.begin(), output2.end(), less, proj1, proj2);
+  test(std::ranges::partial_sort_copy, in, in2, less, proj1, proj2);
   test(std::ranges::merge, in, in2, out, less, proj1, proj2);
   test(std::ranges::merge, in, in2, out2, less, proj1, proj2);
   test(std::ranges::set_intersection, in, in2, out, less, proj1, proj2);
@@ -75,6 +75,8 @@ constexpr bool test_all() {
   test(std::ranges::set_symmetric_difference, in, in2, out2, less, proj1, proj2);
   test(std::ranges::set_union, in, in2, out, less, proj1, proj2);
   test(std::ranges::set_union, in, in2, out2, less, proj1, proj2);
+  //test(std::ranges::starts_with, in, in2, eq, proj1, proj2);
+  //test(std::ranges::ends_with, in, in2, eq, proj1, proj2);
 
   return true;
 }

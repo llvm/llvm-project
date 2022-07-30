@@ -46,7 +46,7 @@ struct __fn {
     auto __last_iter = ranges::next(__first, __last);
     auto __len = __last_iter - __first;
 
-    auto&& __projected_comp = ranges::__make_projected_comp(__comp, __proj);
+    auto&& __projected_comp = std::__make_projected(__comp, __proj);
     std::__pop_heap<_RangeAlgPolicy>(std::move(__first), __last_iter, __projected_comp, __len);
 
     return __last_iter;

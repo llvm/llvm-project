@@ -76,7 +76,7 @@ struct __fn {
         std::move(__first),
         std::move(__last),
         std::move(__result),
-        __make_projected_comp(__comp, __proj),
+        std::__make_projected(__comp, __proj),
         __algo_tag_t<_InIter, _OutIter>());
     return {std::move(__ret.first), std::move(__ret.second)};
   }
@@ -95,7 +95,7 @@ struct __fn {
         ranges::begin(__range),
         ranges::end(__range),
         std::move(__result),
-        __make_projected_comp(__comp, __proj),
+        std::__make_projected(__comp, __proj),
         __algo_tag_t<iterator_t<_Range>, _OutIter>());
     return {std::move(__ret.first), std::move(__ret.second)};
   }
