@@ -233,7 +233,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
             RVVType::computeTypes(BaseType, Log2LMUL, Record.NF, ProtoSeq);
 
         // Ignored to create new intrinsic if there are any illegal types.
-        if (!Types.hasValue())
+        if (!Types.has_value())
           continue;
 
         std::string SuffixStr =
