@@ -134,8 +134,7 @@ define float @uitofp_rint(i32 %arg) {
 define float @floor_trunc(float %x) {
 ; CHECK-LABEL: @floor_trunc(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.trunc.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.floor.f32(float %x)
   %r = call float @llvm.trunc.f32(float %a)
@@ -145,8 +144,7 @@ define float @floor_trunc(float %x) {
 define float @floor_ceil(float %x) {
 ; CHECK-LABEL: @floor_ceil(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ceil.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.floor.f32(float %x)
   %r = call float @llvm.ceil.f32(float %a)
@@ -156,8 +154,7 @@ define float @floor_ceil(float %x) {
 define float @floor_round(float %x) {
 ; CHECK-LABEL: @floor_round(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.round.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.floor.f32(float %x)
   %r = call float @llvm.round.f32(float %a)
@@ -167,8 +164,7 @@ define float @floor_round(float %x) {
 define float @floor_roundeven(float %x) {
 ; CHECK-LABEL: @floor_roundeven(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.roundeven.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.floor.f32(float %x)
   %r = call float @llvm.roundeven.f32(float %a)
@@ -178,8 +174,7 @@ define float @floor_roundeven(float %x) {
 define float @floor_nearbyint(float %x) {
 ; CHECK-LABEL: @floor_nearbyint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nearbyint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.floor.f32(float %x)
   %r = call float @llvm.nearbyint.f32(float %a)
@@ -189,8 +184,7 @@ define float @floor_nearbyint(float %x) {
 define float @floor_rint(float %x) {
 ; CHECK-LABEL: @floor_rint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.rint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.floor.f32(float %x)
   %r = call float @llvm.rint.f32(float %a)
@@ -200,8 +194,7 @@ define float @floor_rint(float %x) {
 define float @trunc_floor(float %x) {
 ; CHECK-LABEL: @trunc_floor(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.floor.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.trunc.f32(float %x)
   %r = call float @llvm.floor.f32(float %a)
@@ -211,8 +204,7 @@ define float @trunc_floor(float %x) {
 define float @trunc_ceil(float %x) {
 ; CHECK-LABEL: @trunc_ceil(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ceil.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.trunc.f32(float %x)
   %r = call float @llvm.ceil.f32(float %a)
@@ -222,8 +214,7 @@ define float @trunc_ceil(float %x) {
 define float @trunc_round(float %x) {
 ; CHECK-LABEL: @trunc_round(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.round.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.trunc.f32(float %x)
   %r = call float @llvm.round.f32(float %a)
@@ -233,8 +224,7 @@ define float @trunc_round(float %x) {
 define float @trunc_roundeven(float %x) {
 ; CHECK-LABEL: @trunc_roundeven(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.roundeven.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.trunc.f32(float %x)
   %r = call float @llvm.roundeven.f32(float %a)
@@ -244,8 +234,7 @@ define float @trunc_roundeven(float %x) {
 define float @trunc_nearbyint(float %x) {
 ; CHECK-LABEL: @trunc_nearbyint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nearbyint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.trunc.f32(float %x)
   %r = call float @llvm.nearbyint.f32(float %a)
@@ -255,8 +244,7 @@ define float @trunc_nearbyint(float %x) {
 define float @trunc_rint(float %x) {
 ; CHECK-LABEL: @trunc_rint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.rint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.trunc.f32(float %x)
   %r = call float @llvm.rint.f32(float %a)
@@ -266,8 +254,7 @@ define float @trunc_rint(float %x) {
 define float @ceil_floor(float %x) {
 ; CHECK-LABEL: @ceil_floor(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.floor.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.ceil.f32(float %x)
   %r = call float @llvm.floor.f32(float %a)
@@ -277,8 +264,7 @@ define float @ceil_floor(float %x) {
 define float @ceil_trunc(float %x) {
 ; CHECK-LABEL: @ceil_trunc(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.trunc.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.ceil.f32(float %x)
   %r = call float @llvm.trunc.f32(float %a)
@@ -288,8 +274,7 @@ define float @ceil_trunc(float %x) {
 define float @ceil_round(float %x) {
 ; CHECK-LABEL: @ceil_round(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.round.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.ceil.f32(float %x)
   %r = call float @llvm.round.f32(float %a)
@@ -299,8 +284,7 @@ define float @ceil_round(float %x) {
 define float @ceil_roundeven(float %x) {
 ; CHECK-LABEL: @ceil_roundeven(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.roundeven.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.ceil.f32(float %x)
   %r = call float @llvm.roundeven.f32(float %a)
@@ -310,8 +294,7 @@ define float @ceil_roundeven(float %x) {
 define float @ceil_nearbyint(float %x) {
 ; CHECK-LABEL: @ceil_nearbyint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nearbyint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.ceil.f32(float %x)
   %r = call float @llvm.nearbyint.f32(float %a)
@@ -321,8 +304,7 @@ define float @ceil_nearbyint(float %x) {
 define float @ceil_rint(float %x) {
 ; CHECK-LABEL: @ceil_rint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.rint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.ceil.f32(float %x)
   %r = call float @llvm.rint.f32(float %a)
@@ -332,8 +314,7 @@ define float @ceil_rint(float %x) {
 define float @round_floor(float %x) {
 ; CHECK-LABEL: @round_floor(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.floor.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.round.f32(float %x)
   %r = call float @llvm.floor.f32(float %a)
@@ -343,8 +324,7 @@ define float @round_floor(float %x) {
 define float @round_trunc(float %x) {
 ; CHECK-LABEL: @round_trunc(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.trunc.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.round.f32(float %x)
   %r = call float @llvm.trunc.f32(float %a)
@@ -354,8 +334,7 @@ define float @round_trunc(float %x) {
 define float @round_ceil(float %x) {
 ; CHECK-LABEL: @round_ceil(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ceil.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.round.f32(float %x)
   %r = call float @llvm.ceil.f32(float %a)
@@ -365,8 +344,7 @@ define float @round_ceil(float %x) {
 define float @round_roundeven(float %x) {
 ; CHECK-LABEL: @round_roundeven(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.roundeven.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.round.f32(float %x)
   %r = call float @llvm.roundeven.f32(float %a)
@@ -376,8 +354,7 @@ define float @round_roundeven(float %x) {
 define float @round_nearbyint(float %x) {
 ; CHECK-LABEL: @round_nearbyint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nearbyint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.round.f32(float %x)
   %r = call float @llvm.nearbyint.f32(float %a)
@@ -387,8 +364,7 @@ define float @round_nearbyint(float %x) {
 define float @round_rint(float %x) {
 ; CHECK-LABEL: @round_rint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.round.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.rint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.round.f32(float %x)
   %r = call float @llvm.rint.f32(float %a)
@@ -398,8 +374,7 @@ define float @round_rint(float %x) {
 define float @roundeven_floor(float %x) {
 ; CHECK-LABEL: @roundeven_floor(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.floor.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.roundeven.f32(float %x)
   %r = call float @llvm.floor.f32(float %a)
@@ -409,8 +384,7 @@ define float @roundeven_floor(float %x) {
 define float @roundeven_trunc(float %x) {
 ; CHECK-LABEL: @roundeven_trunc(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.trunc.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.roundeven.f32(float %x)
   %r = call float @llvm.trunc.f32(float %a)
@@ -420,8 +394,7 @@ define float @roundeven_trunc(float %x) {
 define float @roundeven_ceil(float %x) {
 ; CHECK-LABEL: @roundeven_ceil(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ceil.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.roundeven.f32(float %x)
   %r = call float @llvm.ceil.f32(float %a)
@@ -431,8 +404,7 @@ define float @roundeven_ceil(float %x) {
 define float @roundeven_round(float %x) {
 ; CHECK-LABEL: @roundeven_round(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.round.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.roundeven.f32(float %x)
   %r = call float @llvm.round.f32(float %a)
@@ -442,8 +414,7 @@ define float @roundeven_round(float %x) {
 define float @roundeven_nearbyint(float %x) {
 ; CHECK-LABEL: @roundeven_nearbyint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nearbyint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.roundeven.f32(float %x)
   %r = call float @llvm.nearbyint.f32(float %a)
@@ -453,8 +424,7 @@ define float @roundeven_nearbyint(float %x) {
 define float @roundeven_rint(float %x) {
 ; CHECK-LABEL: @roundeven_rint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.roundeven.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.rint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.roundeven.f32(float %x)
   %r = call float @llvm.rint.f32(float %a)
@@ -464,8 +434,7 @@ define float @roundeven_rint(float %x) {
 define float @nearbyint_floor(float %x) {
 ; CHECK-LABEL: @nearbyint_floor(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.nearbyint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.floor.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.nearbyint.f32(float %x)
   %r = call float @llvm.floor.f32(float %a)
@@ -475,8 +444,7 @@ define float @nearbyint_floor(float %x) {
 define float @nearbyint_trunc(float %x) {
 ; CHECK-LABEL: @nearbyint_trunc(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.nearbyint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.trunc.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.nearbyint.f32(float %x)
   %r = call float @llvm.trunc.f32(float %a)
@@ -486,8 +454,7 @@ define float @nearbyint_trunc(float %x) {
 define float @nearbyint_ceil(float %x) {
 ; CHECK-LABEL: @nearbyint_ceil(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.nearbyint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ceil.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.nearbyint.f32(float %x)
   %r = call float @llvm.ceil.f32(float %a)
@@ -497,8 +464,7 @@ define float @nearbyint_ceil(float %x) {
 define float @nearbyint_round(float %x) {
 ; CHECK-LABEL: @nearbyint_round(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.nearbyint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.round.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.nearbyint.f32(float %x)
   %r = call float @llvm.round.f32(float %a)
@@ -508,8 +474,7 @@ define float @nearbyint_round(float %x) {
 define float @nearbyint_roundeven(float %x) {
 ; CHECK-LABEL: @nearbyint_roundeven(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.nearbyint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.roundeven.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.nearbyint.f32(float %x)
   %r = call float @llvm.roundeven.f32(float %a)
@@ -519,8 +484,7 @@ define float @nearbyint_roundeven(float %x) {
 define float @nearbyint_rint(float %x) {
 ; CHECK-LABEL: @nearbyint_rint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.nearbyint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.rint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.nearbyint.f32(float %x)
   %r = call float @llvm.rint.f32(float %a)
@@ -530,8 +494,7 @@ define float @nearbyint_rint(float %x) {
 define float @rint_floor(float %x) {
 ; CHECK-LABEL: @rint_floor(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.rint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.floor.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.rint.f32(float %x)
   %r = call float @llvm.floor.f32(float %a)
@@ -541,8 +504,7 @@ define float @rint_floor(float %x) {
 define float @rint_trunc(float %x) {
 ; CHECK-LABEL: @rint_trunc(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.rint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.trunc.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.rint.f32(float %x)
   %r = call float @llvm.trunc.f32(float %a)
@@ -552,8 +514,7 @@ define float @rint_trunc(float %x) {
 define float @rint_ceil(float %x) {
 ; CHECK-LABEL: @rint_ceil(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.rint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ceil.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.rint.f32(float %x)
   %r = call float @llvm.ceil.f32(float %a)
@@ -563,8 +524,7 @@ define float @rint_ceil(float %x) {
 define float @rint_round(float %x) {
 ; CHECK-LABEL: @rint_round(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.rint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.round.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.rint.f32(float %x)
   %r = call float @llvm.round.f32(float %a)
@@ -574,8 +534,7 @@ define float @rint_round(float %x) {
 define float @rint_roundeven(float %x) {
 ; CHECK-LABEL: @rint_roundeven(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.rint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.roundeven.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.rint.f32(float %x)
   %r = call float @llvm.roundeven.f32(float %a)
@@ -585,8 +544,7 @@ define float @rint_roundeven(float %x) {
 define float @rint_nearbyint(float %x) {
 ; CHECK-LABEL: @rint_nearbyint(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.rint.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nearbyint.f32(float [[A]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %a = call float @llvm.rint.f32(float %x)
   %r = call float @llvm.nearbyint.f32(float %a)
