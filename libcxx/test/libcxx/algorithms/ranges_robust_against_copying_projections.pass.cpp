@@ -156,8 +156,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::nth_element(a, mid, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::partial_sort(first, mid, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::partial_sort(a, mid, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partial_sort_copy(first, last, first2, mid2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::partial_sort_copy(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partial_sort_copy(first, last, first2, mid2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::partial_sort_copy(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::partition(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::partition_copy(first, last, first2, last2, UnaryTrue(), Proj(&copies)); assert(copies == 0);

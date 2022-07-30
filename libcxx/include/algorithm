@@ -446,6 +446,25 @@ namespace ranges {
            indirect_unary_predicate<projected<iterator_t<R>, Proj>> Pred>
     constexpr bool ranges::none_of(R&& r, Pred pred, Proj proj = {});               // since C++20
 
+  template<input_iterator I1, sentinel_for<I1> S1,
+          random_access_iterator I2, sentinel_for<I2> S2,
+          class Comp = ranges::less, class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_copyable<I1, I2> && sortable<I2, Comp, Proj2> &&
+            indirect_strict_weak_order<Comp, projected<I1, Proj1>, projected<I2, Proj2>>
+    constexpr partial_sort_copy_result<I1, I2>
+      partial_sort_copy(I1 first, S1 last, I2 result_first, S2 result_last,
+                        Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});        // Since C++20
+
+  template<input_range R1, random_access_range R2, class Comp = ranges::less,
+          class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_copyable<iterator_t<R1>, iterator_t<R2>> &&
+            sortable<iterator_t<R2>, Comp, Proj2> &&
+            indirect_strict_weak_order<Comp, projected<iterator_t<R1>, Proj1>,
+                                        projected<iterator_t<R2>, Proj2>>
+    constexpr partial_sort_copy_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>>
+      partial_sort_copy(R1&& r, R2&& result_r, Comp comp = {},
+                        Proj1 proj1 = {}, Proj2 proj2 = {});                        // Since C++20
+
   template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
            indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>
     constexpr bool ranges::is_sorted(I first, S last, Comp comp = {}, Proj proj = {});      // since C++20
@@ -1668,6 +1687,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_none_of.h>
 #include <__algorithm/ranges_nth_element.h>
 #include <__algorithm/ranges_partial_sort.h>
+#include <__algorithm/ranges_partial_sort_copy.h>
 #include <__algorithm/ranges_partition.h>
 #include <__algorithm/ranges_partition_copy.h>
 #include <__algorithm/ranges_partition_point.h>

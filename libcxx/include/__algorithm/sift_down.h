@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_CONSTEXPR_AFTER_CXX11 void
-__sift_down(_RandomAccessIterator __first, _Compare __comp,
+__sift_down(_RandomAccessIterator __first, _Compare&& __comp,
             typename iterator_traits<_RandomAccessIterator>::difference_type __len,
             _RandomAccessIterator __start)
 {
@@ -79,7 +79,7 @@ __sift_down(_RandomAccessIterator __first, _Compare __comp,
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _RandomAccessIterator
-__floyd_sift_down(_RandomAccessIterator __first, _Compare __comp,
+__floyd_sift_down(_RandomAccessIterator __first, _Compare&& __comp,
                   typename iterator_traits<_RandomAccessIterator>::difference_type __len)
 {
     using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;

@@ -43,7 +43,7 @@ struct __fn {
   template <class _Iter, class _Sent, class _Comp, class _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr static
   _Iter __partial_sort_fn_impl(_Iter __first, _Iter __middle, _Sent __last, _Comp& __comp, _Proj& __proj) {
-    auto&& __projected_comp = ranges::__make_projected_comp(__comp, __proj);
+    auto&& __projected_comp = std::__make_projected(__comp, __proj);
     return std::__partial_sort<_RangeAlgPolicy>(std::move(__first), std::move(__middle), __last, __projected_comp);
   }
 

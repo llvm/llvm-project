@@ -26,13 +26,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-void __sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare& __comp) {
+void __sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare&& __comp) {
   using _CompRef = typename __comp_ref_type<_Compare>::type;
   _CompRef __comp_ref = __comp;
 
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
   for (difference_type __n = __last - __first; __n > 1; --__last, (void) --__n)
-    std::__pop_heap<_AlgPolicy, _CompRef>(__first, __last, __comp_ref, __n);
+    std::__pop_heap<_AlgPolicy>(__first, __last, __comp_ref, __n);
 }
 
 template <class _RandomAccessIterator, class _Compare>

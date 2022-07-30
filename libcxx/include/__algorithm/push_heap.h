@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-void __sift_up(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
+void __sift_up(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare&& __comp,
         typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
   using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
 
