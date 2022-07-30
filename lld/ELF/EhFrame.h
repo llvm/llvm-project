@@ -13,7 +13,6 @@
 
 namespace lld {
 namespace elf {
-class InputSectionBase;
 struct EhSectionPiece;
 
 uint8_t getFdeEncoding(EhSectionPiece *p);

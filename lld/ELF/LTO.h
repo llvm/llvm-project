@@ -38,7 +38,6 @@ namespace elf {
 
 class BitcodeFile;
 class InputFile;
-class LazyObjFile;
 
 class BitcodeCompiler {
 public:

@@ -19,7 +19,6 @@ namespace elf {
 class Defined;
 class InputSection;
 class InputSectionDescription;
-class OutputSection;
 class Patch843419Section;
 
 class AArch64Err843419Patcher {
