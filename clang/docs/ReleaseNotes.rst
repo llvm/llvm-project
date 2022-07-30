@@ -60,7 +60,7 @@ Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang will now correctly diagnose as ill-formed a constant expression where an
   enum without a fixed underlying type is set to a value outside the range of
-  of the enumerations values. Fixes
+  the enumeration's values. Fixes
   `Issue 50055: <https://github.com/llvm/llvm-project/issues/50055>`_.
 
 Non-comprehensive list of changes in this release
