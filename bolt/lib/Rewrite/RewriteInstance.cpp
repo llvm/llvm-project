@@ -301,11 +301,9 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 namespace {
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
-  auto Itr =
-      llvm::find_if(opts::ReorderData, [&](const std::string &SectionName) {
-        return (Section && Section->getName() == SectionName);
-      });
-  return Itr != opts::ReorderData.end();
+  return llvm::any_of(opts::ReorderData, [&](const std::string &SectionName) {
+    return Section && Section->getName() == SectionName;
+  });
 }
 
 } // anonymous namespace
