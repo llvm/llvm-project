@@ -44857,12 +44857,29 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (SDValue CondNot = IsNOT(Cond, DAG))
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
-    // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the signbit.
-    if (Cond.getOpcode() == X86ISD::PCMPGT && Cond.hasOneUse() &&
-        ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode())) {
-      Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
-                         DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
-      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+
+    if (Cond.getOpcode() == X86ISD::PCMPGT && Cond.hasOneUse()) {
+      // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
+      // signbit.
+      if (ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode())) {
+        Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
+                           DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
+        return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+      }
+
+      // smin(LHS, RHS) : select(pcmpgt(RHS, LHS), LHS, RHS)
+      //               -> select(pcmpgt(LHS, RHS), RHS, LHS)
+      // iff the commuted pcmpgt() already exists.
+      // TODO: Could DAGCombiner::combine cse search for SETCC nodes, like it
+      // does for commutative binops?
+      if (Cond.getOperand(0) == RHS && Cond.getOperand(1) == LHS) {
+        if (SDNode *FlipCond =
+                DAG.getNodeIfExists(X86ISD::PCMPGT, DAG.getVTList(CondVT),
+                                    {Cond.getOperand(1), Cond.getOperand(0)})) {
+          return DAG.getNode(N->getOpcode(), DL, VT, SDValue(FlipCond, 0), RHS,
+                             LHS);
+        }
+      }
     }
   }
 
