@@ -63,11 +63,10 @@ define <2 x half> @flat_atomic_fadd_v2f16_rtn(<2 x half>* %ptr, <2 x half> %data
 define amdgpu_kernel void @local_atomic_fadd_v2f16_noret(<2 x half> addrspace(3)* %ptr, <2 x half> %data) {
 ; GFX940-LABEL: local_atomic_fadd_v2f16_noret:
 ; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_load_dword s2, s[0:1], 0x24
-; GFX940-NEXT:    s_load_dword s3, s[0:1], 0x28
+; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    v_mov_b32_e32 v1, s3
+; GFX940-NEXT:    v_mov_b32_e32 v0, s0
+; GFX940-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX940-NEXT:    ds_pk_add_f16 v0, v1
 ; GFX940-NEXT:    s_endpgm
   %ret = call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(<2 x half> addrspace(3)* %ptr, <2 x half> %data, i32 0, i32 0, i1 0)

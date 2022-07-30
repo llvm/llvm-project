@@ -20,18 +20,17 @@ entry:
 define amdgpu_kernel void @test_sched_group_barrier_simple_pipeline(<32 x i32> addrspace(1)* noalias %in, <32 x i32> addrspace(1)* noalias %out) {
 ; GCN-LABEL: test_sched_group_barrier_simple_pipeline:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:48
-; GCN-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:64
-; GCN-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:80
-; GCN-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3] offset:96
-; GCN-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3] offset:112
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
+; GCN-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GCN-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
+; GCN-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(8) SyncID(0)
 ; GCN-NEXT:    s_waitcnt vmcnt(7)
 ; GCN-NEXT:    v_mul_lo_u32 v3, v3, v3
@@ -69,14 +68,14 @@ define amdgpu_kernel void @test_sched_group_barrier_simple_pipeline(<32 x i32> a
 ; GCN-NEXT:    v_mul_lo_u32 v25, v25, v25
 ; GCN-NEXT:    v_mul_lo_u32 v24, v24, v24
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000002) size(30) SyncID(0)
-; GCN-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
-; GCN-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
-; GCN-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
-; GCN-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:64
-; GCN-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:48
-; GCN-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:32
-; GCN-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:16
-; GCN-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1]
+; GCN-NEXT:    global_store_dwordx4 v32, v[28:31], s[2:3] offset:112
+; GCN-NEXT:    global_store_dwordx4 v32, v[24:27], s[2:3] offset:96
+; GCN-NEXT:    global_store_dwordx4 v32, v[20:23], s[2:3] offset:80
+; GCN-NEXT:    global_store_dwordx4 v32, v[16:19], s[2:3] offset:64
+; GCN-NEXT:    global_store_dwordx4 v32, v[12:15], s[2:3] offset:48
+; GCN-NEXT:    global_store_dwordx4 v32, v[8:11], s[2:3] offset:32
+; GCN-NEXT:    global_store_dwordx4 v32, v[4:7], s[2:3] offset:16
+; GCN-NEXT:    global_store_dwordx4 v32, v[0:3], s[2:3]
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000040) size(8) SyncID(0)
 ; GCN-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #2
