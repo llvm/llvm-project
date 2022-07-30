@@ -860,7 +860,9 @@ define i1 @splat_mul_known_lz(i32 %x) {
 
 define i1 @splat_mul_unknown_lz(i32 %x) {
 ; CHECK-LABEL: @splat_mul_unknown_lz(
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i128
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i128 [[Z]], 18446744078004518913
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[M]], 39614081257132168796771975168
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i32 %x to i128
