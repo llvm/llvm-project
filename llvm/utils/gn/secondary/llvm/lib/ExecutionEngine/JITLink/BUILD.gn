@@ -12,6 +12,7 @@ static_library("JITLink") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/ExecutionEngine/Orc/Shared",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [
