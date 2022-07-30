@@ -235,7 +235,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
           getConstantUpperBoundForIndex(materializedSize);
       size = failed(upperBound)
                  ? materializedSize
-                 : b.create<arith::ConstantIndexOp>(loc, upperBound.getValue());
+                 : b.create<arith::ConstantIndexOp>(loc, upperBound.value());
     }
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
