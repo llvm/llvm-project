@@ -36720,8 +36720,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VSRLI: {
     unsigned ShAmt = Op.getConstantOperandVal(1);
     if (ShAmt >= VT.getScalarSizeInBits()) {
-      Known.setAllZero();
-      break;
+      // Out of range logical bit shifts are guaranteed to be zero.
+      // Out of range arithmetic bit shifts splat the sign bit.
+      if (Opc != X86ISD::VSRAI) {
+        Known.setAllZero();
+        break;
+      }
+
+      ShAmt = VT.getScalarSizeInBits() - 1;
     }
 
     Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
