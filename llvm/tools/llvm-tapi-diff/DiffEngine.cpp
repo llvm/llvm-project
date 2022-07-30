@@ -236,9 +236,8 @@ void findAndAddDiff(const std::vector<InterfaceFileRef> &CollectedIRefVec,
   for (const auto &IRef : CollectedIRefVec)
     for (auto Targ : IRef.targets()) {
       auto FoundIRef = llvm::find_if(LookupIRefVec, [&](const auto LIRef) {
-        auto FoundTarg = llvm::find(LIRef.targets(), Targ);
-        return (FoundTarg != LIRef.targets().end() &&
-                IRef.getInstallName() == LIRef.getInstallName());
+        return llvm::is_contained(LIRef.targets(), Targ) &&
+               IRef.getInstallName() == LIRef.getInstallName();
       });
       if (FoundIRef == LookupIRefVec.end())
         addDiffForTargSlice<DiffStrVec,
@@ -268,11 +267,10 @@ void findAndAddDiff(InterfaceFile::const_symbol_range CollectedSyms,
   for (const auto *Sym : CollectedSyms)
     for (const auto Targ : Sym->targets()) {
       auto FoundSym = llvm::find_if(LookupSyms, [&](const auto LSym) {
-        auto FoundTarg = llvm::find(LSym->targets(), Targ);
-        return (Sym->getName() == LSym->getName() &&
-                Sym->getKind() == LSym->getKind() &&
-                Sym->getFlags() == LSym->getFlags() &&
-                FoundTarg != LSym->targets().end());
+        return Sym->getName() == LSym->getName() &&
+               Sym->getKind() == LSym->getKind() &&
+               Sym->getFlags() == LSym->getFlags() &&
+               llvm::is_contained(LSym->targets(), Targ);
       });
       if (FoundSym == LookupSyms.end())
         addDiffForTargSlice<DiffSymVec, SymScalar>(Sym, Targ, Result, Order);
