@@ -316,8 +316,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
   } else {
     outs() << "PERF2BOLT: matched build-id and file name\n";
   }
-
-  return;
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {

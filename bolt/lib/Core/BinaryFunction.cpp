@@ -2614,7 +2614,6 @@ bool BinaryFunction::replayCFIInstrs(int32_t FromState, int32_t ToState,
       // so we might as well fall-through here.
     }
     NewCFIs.push_back(CurState);
-    continue;
   }
 
   // Replay instructions while avoiding duplicates
