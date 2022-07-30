@@ -117,7 +117,7 @@ constexpr bool test_all() {
   //test(std::ranges::replace_copy_if, in, out, unary_pred, x);
   test(std::ranges::unique_copy, in, out, binary_pred);
   test(std::ranges::partition_copy, in, out, out2, unary_pred);
-  //test(std::ranges::partial_sort_copy, in, in2, binary_pred);
+  test(std::ranges::partial_sort_copy, in, in2, binary_pred);
   test(std::ranges::merge, in, in2, out, binary_pred);
   test(std::ranges::set_difference, in, in2, out, binary_pred);
   test(std::ranges::set_intersection, in, in2, out, binary_pred);
