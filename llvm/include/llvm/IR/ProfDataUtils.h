@@ -1,5 +1,5 @@
-#ifndef PROF_DATA_UTILS_H
-#define PROF_DATA_UTILS_H
+#ifndef LLVM_IR_PROFDATAUTILS_H
+#define LLVM_IR_PROFDATAUTILS_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
