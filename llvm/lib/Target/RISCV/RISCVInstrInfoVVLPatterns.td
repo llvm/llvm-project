@@ -43,9 +43,9 @@ def SDT_RISCVFPBinOp_VL : SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
 def SDT_RISCVCopySign_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisVec<0>, SDTCisFP<0>,
-                                                SDTCVecEltisVT<3, i1>,
-                                                SDTCisSameNumEltsAs<0, 3>,
-                                                SDTCisSameAs<0, 4>,
+                                                SDTCisSameAs<0, 3>,
+                                                SDTCVecEltisVT<4, i1>,
+                                                SDTCisSameNumEltsAs<0, 4>,
                                                 SDTCisVT<5, XLenVT>]>;
 
 def riscv_vmv_v_x_vl : SDNode<"RISCVISD::VMV_V_X_VL",
@@ -157,9 +157,9 @@ def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
                                   SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                        SDTCisSameAs<0, 1>,
                                                        SDTCisVT<2, XLenVT>,
-                                                       SDTCVecEltisVT<3, i1>,
-                                                       SDTCisSameNumEltsAs<0, 3>,
-                                                       SDTCisSameAs<0, 4>,
+                                                       SDTCisSameAs<0, 3>,
+                                                       SDTCVecEltisVT<4, i1>,
+                                                       SDTCisSameNumEltsAs<0, 4>,
                                                        SDTCisVT<5, XLenVT>]>>;
 def riscv_vrgather_vv_vl : SDNode<"RISCVISD::VRGATHER_VV_VL",
                                   SDTypeProfile<1, 5, [SDTCisVec<0>,
@@ -167,9 +167,9 @@ def riscv_vrgather_vv_vl : SDNode<"RISCVISD::VRGATHER_VV_VL",
                                                        SDTCisInt<2>,
                                                        SDTCisSameNumEltsAs<0, 2>,
                                                        SDTCisSameSizeAs<0, 2>,
-                                                       SDTCVecEltisVT<3, i1>,
-                                                       SDTCisSameNumEltsAs<0, 3>,
-                                                       SDTCisSameAs<0, 4>,
+                                                       SDTCisSameAs<0, 3>,
+                                                       SDTCVecEltisVT<4, i1>,
+                                                       SDTCisSameNumEltsAs<0, 4>,
                                                        SDTCisVT<5, XLenVT>]>>;
 def riscv_vrgatherei16_vv_vl : SDNode<"RISCVISD::VRGATHEREI16_VV_VL",
                                       SDTypeProfile<1, 5, [SDTCisVec<0>,
@@ -177,9 +177,9 @@ def riscv_vrgatherei16_vv_vl : SDNode<"RISCVISD::VRGATHEREI16_VV_VL",
                                                            SDTCisInt<2>,
                                                            SDTCVecEltisVT<2, i16>,
                                                            SDTCisSameNumEltsAs<0, 2>,
-                                                           SDTCVecEltisVT<3, i1>,
-                                                           SDTCisSameNumEltsAs<0, 3>,
-                                                           SDTCisSameAs<0, 4>,
+                                                           SDTCisSameAs<0, 3>,
+                                                           SDTCVecEltisVT<4, i1>,
+                                                           SDTCisSameNumEltsAs<0, 4>,
                                                            SDTCisVT<5, XLenVT>]>>;
 
 def SDT_RISCVSelect_VL  : SDTypeProfile<1, 4, [
@@ -1326,8 +1326,8 @@ foreach vti = AllFloatVectors in {
 
   def : Pat<(riscv_fcopysign_vl (vti.Vector vti.RegClass:$rs1),
                                 (vti.Vector vti.RegClass:$rs2),
-                                (vti.Mask V0),
                                 vti.RegClass:$merge,
+                                (vti.Mask V0),
                                 VLOpFrag),
             (!cast<Instruction>("PseudoVFSGNJ_VV_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs1,
@@ -1338,16 +1338,16 @@ foreach vti = AllFloatVectors in {
                                 (riscv_fneg_vl vti.RegClass:$rs2,
                                                (vti.Mask true_mask),
                                                VLOpFrag),
-                                (vti.Mask true_mask),
                                 srcvalue,
+                                (vti.Mask true_mask),
                                 VLOpFrag),
             (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
 
   def : Pat<(riscv_fcopysign_vl (vti.Vector vti.RegClass:$rs1),
                                 (SplatFPOp vti.ScalarRegClass:$rs2),
-                                (vti.Mask V0),
                                 vti.RegClass:$merge,
+                                (vti.Mask V0),
                                 VLOpFrag),
             (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs1,
@@ -1563,23 +1563,23 @@ foreach vti = AllIntegerVectors in {
 
   def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
                                               vti.RegClass:$rs1,
-                                              (vti.Mask V0),
                                               vti.RegClass:$merge,
+                                              (vti.Mask V0),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
-                                              (vti.Mask V0),
                                               vti.RegClass:$merge,
+                                              (vti.Mask V0),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VX_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, GPR:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2,
                                               uimm5:$imm,
-                                              (vti.Mask V0),
                                               vti.RegClass:$merge,
+                                              (vti.Mask V0),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$imm,
@@ -1597,8 +1597,8 @@ foreach vti = AllIntegerVectors in {
     def : Pat<(vti.Vector
                (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
                                          (ivti.Vector ivti.RegClass:$rs1),
-                                         (vti.Mask V0),
                                          vti.RegClass:$merge,
+                                         (vti.Mask V0),
                                          VLOpFrag)),
               (!cast<Instruction>(inst#"_MASK")
                    vti.RegClass:$merge, vti.RegClass:$rs2, ivti.RegClass:$rs1,
@@ -1628,15 +1628,15 @@ foreach vti = AllFloatVectors in {
   def : Pat<(vti.Vector
              (riscv_vrgather_vv_vl vti.RegClass:$rs2,
                                    (ivti.Vector vti.RegClass:$rs1),
-                                   (vti.Mask V0),
                                    vti.RegClass:$merge,
+                                   (vti.Mask V0),
                                    VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
-                                              (vti.Mask V0),
                                               vti.RegClass:$merge,
+                                              (vti.Mask V0),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VX_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, GPR:$rs1,
@@ -1644,8 +1644,8 @@ foreach vti = AllFloatVectors in {
   def : Pat<(vti.Vector
              (riscv_vrgather_vx_vl vti.RegClass:$rs2,
                                    uimm5:$imm,
-                                   (vti.Mask V0),
                                    vti.RegClass:$merge,
+                                   (vti.Mask V0),
                                    VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$imm,
@@ -1662,8 +1662,8 @@ foreach vti = AllFloatVectors in {
     def : Pat<(vti.Vector
                (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
                                          (ivti.Vector ivti.RegClass:$rs1),
-                                         (vti.Mask V0),
                                          vti.RegClass:$merge,
+                                         (vti.Mask V0),
                                          VLOpFrag)),
               (!cast<Instruction>(inst#"_MASK")
                    vti.RegClass:$merge, vti.RegClass:$rs2, ivti.RegClass:$rs1,
