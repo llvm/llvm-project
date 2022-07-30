@@ -13537,14 +13537,15 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
         llvm::APInt Max;
 
         ED->getValueRange(Max, Min);
+        --Max;
 
         if (ED->getNumNegativeBits() &&
-            (Max.sle(Result.getInt().getSExtValue()) ||
+            (Max.slt(Result.getInt().getSExtValue()) ||
              Min.sgt(Result.getInt().getSExtValue())))
           CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
               << Result.getInt() << Min.getSExtValue() << Max.getSExtValue();
         else if (!ED->getNumNegativeBits() &&
-                 Max.ule(Result.getInt().getZExtValue()))
+                 Max.ult(Result.getInt().getZExtValue()))
           CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
               << Result.getInt() << Min.getZExtValue() << Max.getZExtValue();
       }
