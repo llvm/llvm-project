@@ -41,6 +41,12 @@ def m88k_combines : GICombineGroup<[trivial_combines, combines_for_extload,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, bitfield_extract_from_and_ashr]>;
 
+// Like all_combines, but removed vector and fma combines.
+def m88k_required_combines : GICombineGroup<[trivial_combines,
+    shl_ashr_to_sext_inreg, sext_inreg_of_load,
+    funnel_shift_to_rotate, form_bitfield_extract,
+    and_or_disjoint_mask, bitfield_extract_from_and_ashr]>;
+
 def M88kPreLegalizerCombinerHelper: GICombinerHelper<
   "M88kGenPreLegalizerCombinerHelper", [m88k_combines]> {
   let DisableRuleOption = "m88kprelegalizercombiner-disable-rule";
@@ -71,11 +77,29 @@ def shiftand_to_mak : GICombineRule<
   (apply [{ applyShiftAndToMak(*${root}, MRI, ${matchinfo}); }])>;
 
 
+// Lower G_SDIV into G_UDIV on M88100.
+def sdiv_to_udiv : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SDIV):$root,
+         [{ return ReplaceSignedDiv; }]),
+  (apply [{ applySDivtoUDiv(Observer, *${root}, MRI, B, KB); }])>;
+
+def insert_div_by_zero_trap : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_UDIV, G_SDIV):$root,
+         [{ return AddZeroDivCheck
+                   && (!ReplaceSignedDiv || MIs[0]->getOpcode() == TargetOpcode::G_UDIV)
+                   && matchInsertDivByZeroTrap(*${root}, MRI, KB); }]),
+  (apply [{ applyInsertDivByZeroTrap(Observer, *${root}, MRI, B); }])>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def M88kPostLegalizerLoweringHelper
     : GICombinerHelper<"M88kGenPostLegalizerLoweringHelper",
-                       [shiftand_to_mak]> {
+                       [shiftand_to_mak, sdiv_to_udiv, insert_div_by_zero_trap]> {
   let DisableRuleOption = "m88kpostlegalizerlowering-disable-rule";
+  let AdditionalArguments = [GICombinerHelperArg<"GISelKnownBits *", "KB">,
+                             GICombinerHelperArg<"bool", "ReplaceSignedDiv">,
+                             GICombinerHelperArg<"bool", "AddZeroDivCheck">];
 }

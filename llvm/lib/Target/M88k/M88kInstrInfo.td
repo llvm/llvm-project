@@ -433,7 +433,7 @@ defm : BinaryOpPat<"MULU", mul>;
 defm : BinaryOpPat<"DIVU", udiv>;
 defm : BinaryOpPat<"DIVS", sdiv>;
 //def : Pat<(umullohi GPR:$rs1, GPR:$rs2), (MULUrrd GPR:$rs1, GPR:$rs2)>;
-
+def : Pat<(ineg GPR:$rs2), (SUBUrr (i32 R0), GPR:$rs2)>;
 
 multiclass SetCCPat<CondCode CC, bits<10> w5o5> {
   def : Pat<(setcc (i32 GPR:$lhs), (i32 GPR:$rhs), CC),

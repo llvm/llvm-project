@@ -35,7 +35,6 @@ add_llvm_target(M88kCodeGen
   GISel/M88kRegisterBankInfo.cpp
   M88kAsmPrinter.cpp
   M88kDelaySlotFiller.cpp
-  M88kDivInstr.cpp
   M88kFrameLowering.cpp
   M88kISelLowering.cpp
   M88kInstrInfo.cpp
