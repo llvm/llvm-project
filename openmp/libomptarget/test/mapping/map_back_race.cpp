@@ -2,9 +2,24 @@
 
 // Taken from https://github.com/llvm/llvm-project/issues/54216
 
+// UNSUPPORTED: aarch64-unknown-linux-gnu
+// UNSUPPORTED: aarch64-unknown-linux-gnu-oldDriver
+// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
+// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
+// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
+// UNSUPPORTED: powerpc64le-ibm-linux-gnu
+// UNSUPPORTED: powerpc64le-ibm-linux-gnu-oldDriver
+// UNSUPPORTED: powerpc64le-ibm-linux-gnu-LTO
+// UNSUPPORTED: powerpc64-ibm-linux-gnu
+// UNSUPPORTED: powerpc64-ibm-linux-gnu-oldDriver
+// UNSUPPORTED: powerpc64-ibm-linux-gnu-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-oldDriver
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 #include <algorithm>
 #include <cstdlib>
