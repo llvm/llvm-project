@@ -250,7 +250,6 @@ void PHGreedyClusterAlgorithm::initQueue(std::vector<EdgeTy> &Queue,
 void PHGreedyClusterAlgorithm::adjustQueue(std::vector<EdgeTy> &Queue,
                                            const BinaryFunction &BF) {
   // Nothing to do.
-  return;
 }
 
 bool PHGreedyClusterAlgorithm::areClustersCompatible(const ClusterTy &Front,

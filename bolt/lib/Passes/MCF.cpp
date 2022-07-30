@@ -86,7 +86,6 @@ void updateEdgeWeight<BinaryBasicBlock *>(EdgeWeightMap &EdgeWeights,
                                           const BinaryBasicBlock *B,
                                           double Weight) {
   EdgeWeights[std::make_pair(A, B)] = Weight;
-  return;
 }
 
 template <>
@@ -95,7 +94,6 @@ void updateEdgeWeight<Inverse<BinaryBasicBlock *>>(EdgeWeightMap &EdgeWeights,
                                                    const BinaryBasicBlock *B,
                                                    double Weight) {
   EdgeWeights[std::make_pair(B, A)] = Weight;
-  return;
 }
 
 template <class NodeT>
