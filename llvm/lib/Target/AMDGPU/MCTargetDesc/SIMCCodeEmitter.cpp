@@ -49,7 +49,6 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
-  /// \returns the encoding for an MCOperand.
   void getMachineOpValue(const MCInst &MI, const MCOperand &MO, APInt &Op,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
