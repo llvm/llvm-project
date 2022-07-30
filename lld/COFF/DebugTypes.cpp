@@ -647,7 +647,7 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
                                        TypeIndex beginIndex) {
   // Re-sort the list of unique types by index.
   if (kind == PDB)
-    assert(std::is_sorted(uniqueTypes.begin(), uniqueTypes.end()));
+    assert(llvm::is_sorted(uniqueTypes));
   else
     llvm::sort(uniqueTypes);
 

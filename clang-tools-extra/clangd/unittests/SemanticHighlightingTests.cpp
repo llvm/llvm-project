@@ -34,9 +34,8 @@ using testing::SizeIs;
 ///   };
 std::string annotate(llvm::StringRef Input,
                      llvm::ArrayRef<HighlightingToken> Tokens) {
-  assert(std::is_sorted(
-      Tokens.begin(), Tokens.end(),
-      [](const HighlightingToken &L, const HighlightingToken &R) {
+  assert(llvm::is_sorted(
+      Tokens, [](const HighlightingToken &L, const HighlightingToken &R) {
         return L.R.start < R.R.start;
       }));
 
