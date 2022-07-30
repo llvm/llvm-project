@@ -159,8 +159,12 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_RISCV_32:
   case R_RISCV_TLS_DTPMOD32:
   case R_RISCV_TLS_DTPREL32:
+  case R_RISCV_TLS_TPREL32:
     return SignExtend64<32>(read32le(buf));
   case R_RISCV_64:
+  case R_RISCV_TLS_DTPMOD64:
+  case R_RISCV_TLS_DTPREL64:
+  case R_RISCV_TLS_TPREL64:
     return read64le(buf);
   case R_RISCV_RELATIVE:
   case R_RISCV_IRELATIVE:
