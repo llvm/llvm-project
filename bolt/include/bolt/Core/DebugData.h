@@ -226,22 +226,22 @@ public:
   static void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Add ranges with caching.
-  virtual uint64_t addRanges(
+  uint64_t addRanges(
       DebugAddressRangesVector &&Ranges,
       std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) override;
 
   /// Add ranges and return offset into section.
-  virtual uint64_t addRanges(const DebugAddressRangesVector &Ranges) override;
+  uint64_t addRanges(const DebugAddressRangesVector &Ranges) override;
 
-  virtual std::unique_ptr<DebugBufferVector> releaseBuffer() override {
+  std::unique_ptr<DebugBufferVector> releaseBuffer() override {
     return std::move(RangesBuffer);
   }
 
   /// Needs to be invoked before each \p CU is processed.
-  void virtual initSection(DWARFUnit &CU) override;
+  void initSection(DWARFUnit &CU) override;
 
   /// Writes out range lists for a current CU being processed.
-  void virtual finalizeSection() override;
+  void finalizeSection() override;
 
   // Returns true if section is empty.
   bool empty() { return RangesBuffer->empty(); }
@@ -391,15 +391,15 @@ public:
   DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC) {}
 
   /// Creates consolidated .debug_addr section, and builds DWOID to offset map.
-  virtual AddressSectionBuffer finalize() override;
+  AddressSectionBuffer finalize() override;
   /// Given DWARFUnit \p Unit returns offset of this CU in to .debug_addr
   /// section.
-  virtual uint64_t getOffset(DWARFUnit &Unit) override;
+  uint64_t getOffset(DWARFUnit &Unit) override;
 
 protected:
   /// Given DWARFUnit \p Unit returns either DWO ID or it's offset within
   /// .debug_info.
-  virtual uint64_t getCUID(DWARFUnit &Unit) override {
+  uint64_t getCUID(DWARFUnit &Unit) override {
     if (Unit.isDWOUnit()) {
       DWARFUnit *SkeletonCU = Unit.getLinkedUnit();
       return SkeletonCU->getOffset();
@@ -561,9 +561,9 @@ public:
   static void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Stores location lists internally to be written out during finalize phase.
-  virtual void addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
-                       DebugInfoBinaryPatcher &DebugInfoPatcher,
-                       DebugAbbrevWriter &AbbrevWriter) override;
+  void addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
+               DebugInfoBinaryPatcher &DebugInfoPatcher,
+               DebugAbbrevWriter &AbbrevWriter) override;
 
   /// Writes out locations in to a local buffer and applies debug info patches.
   void finalize(DebugInfoBinaryPatcher &DebugInfoPatcher,
@@ -685,7 +685,7 @@ public:
 
   /// This function takes in \p BinaryContents, applies patches to it and
   /// returns an updated string.
-  virtual std::string patchBinary(StringRef BinaryContents) override;
+  std::string patchBinary(StringRef BinaryContents) override;
 };
 
 class DebugInfoBinaryPatcher : public SimpleBinaryPatcher {
@@ -843,7 +843,7 @@ public:
     std::string Value;
   };
 
-  virtual PatcherKind getKind() const override {
+  PatcherKind getKind() const override {
     return PatcherKind::DebugInfoBinaryPatcher;
   }
 
@@ -853,23 +853,23 @@ public:
 
   /// This function takes in \p BinaryContents, and re-writes it with new
   /// patches inserted into it. It returns an updated string.
-  virtual std::string patchBinary(StringRef BinaryContents) override;
+  std::string patchBinary(StringRef BinaryContents) override;
 
   /// Adds a patch to put the integer \p NewValue encoded as a 64-bit
   /// little-endian value at offset \p Offset.
-  virtual void addLE64Patch(uint64_t Offset, uint64_t NewValue) override;
+  void addLE64Patch(uint64_t Offset, uint64_t NewValue) override;
 
   /// Adds a patch to put the integer \p NewValue encoded as a 32-bit
   /// little-endian value at offset \p Offset.
   /// The \p OldValueSize is the size of the old value that will be replaced.
-  virtual void addLE32Patch(uint64_t Offset, uint32_t NewValue,
-                            uint32_t OldValueSize = 4) override;
+  void addLE32Patch(uint64_t Offset, uint32_t NewValue,
+                    uint32_t OldValueSize = 4) override;
 
   /// Add a patch at \p Offset with \p Value using unsigned LEB128 encoding with
   /// size \p OldValueSize.
   /// The \p OldValueSize is the size of the old value that will be replaced.
-  virtual void addUDataPatch(uint64_t Offset, uint64_t Value,
-                             uint32_t OldValueSize) override;
+  void addUDataPatch(uint64_t Offset, uint64_t Value,
+                     uint32_t OldValueSize) override;
 
   /// Adds a label \p Offset for DWARF UNit.
   /// Used to recompute relative references.
