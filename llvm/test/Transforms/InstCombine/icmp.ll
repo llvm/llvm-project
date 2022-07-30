@@ -4346,13 +4346,12 @@ define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
   ret i1 %r
 }
 
-; TODO: This should transform similarly to eq/ne 0.
-
 define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
 ; CHECK-LABEL: @zext_bool_and_ne1(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i1 [[X:%.*]] to i8
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[ZX]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[A]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP3]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i8
@@ -4363,9 +4362,8 @@ define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
 
 define <2 x i1> @zext_bool_and_eq1(<2 x i1> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @zext_bool_and_eq1(
-; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[ZX]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[A]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[Y:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %zx = zext <2 x i1> %x to <2 x i8>
