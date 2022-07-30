@@ -293,8 +293,7 @@ define i32 @udiv_constexpr(i8 %a) {
 
 define i32 @udiv_const_constexpr(i8 %a) {
 ; CHECK-LABEL: @udiv_const_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 42, ptrtoint ([1 x i8]* @g1 to i8)
-; CHECK-NEXT:    [[D:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[D:%.*]] = udiv i32 42, zext (i8 ptrtoint ([1 x i8]* @g1 to i8) to i32)
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %d = udiv i32 42, zext (i8 ptrtoint ([1 x i8]* @g1 to i8) to i32)
@@ -307,8 +306,7 @@ define i32 @udiv_const_constexpr(i8 %a) {
 
 define i32 @urem_const_constexpr(i8 %a) {
 ; CHECK-LABEL: @urem_const_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 42, ptrtoint ([1 x i8]* @g2 to i8)
-; CHECK-NEXT:    [[D:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[D:%.*]] = urem i32 42, zext (i8 ptrtoint ([1 x i8]* @g2 to i8) to i32)
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %d = urem i32 42, zext (i8 ptrtoint ([1 x i8]* @g2 to i8) to i32)
@@ -319,8 +317,7 @@ define i32 @urem_const_constexpr(i8 %a) {
 
 define i32 @udiv_constexpr_const(i8 %a) {
 ; CHECK-LABEL: @udiv_constexpr_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 ptrtoint ([1 x i8]* @g3 to i8), 42
-; CHECK-NEXT:    [[D:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[D:%.*]] = udiv i32 zext (i8 ptrtoint ([1 x i8]* @g3 to i8) to i32), 42
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %d = udiv i32 zext (i8 ptrtoint ([1 x i8]* @g3 to i8) to i32), 42
@@ -331,8 +328,7 @@ define i32 @udiv_constexpr_const(i8 %a) {
 
 define i32 @urem_constexpr_const(i8 %a) {
 ; CHECK-LABEL: @urem_constexpr_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 ptrtoint ([1 x i8]* @g4 to i8), 42
-; CHECK-NEXT:    [[D:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[D:%.*]] = urem i32 zext (i8 ptrtoint ([1 x i8]* @g4 to i8) to i32), 42
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %d = urem i32 zext (i8 ptrtoint ([1 x i8]* @g4 to i8) to i32), 42

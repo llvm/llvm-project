@@ -1008,7 +1008,8 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   }
 
   Constant *C;
-  if (match(N, m_OneUse(m_ZExt(m_Value(X)))) && match(D, m_Constant(C))) {
+  if (isa<Instruction>(N) && match(N, m_OneUse(m_ZExt(m_Value(X)))) &&
+      match(D, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
     Constant *TruncC = ConstantExpr::getTrunc(C, X->getType());
     if (ConstantExpr::getZExt(TruncC, Ty) != C)
@@ -1018,7 +1019,8 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
     // urem (zext X), C --> zext (urem X, C')
     return new ZExtInst(Builder.CreateBinOp(Opcode, X, TruncC), Ty);
   }
-  if (match(D, m_OneUse(m_ZExt(m_Value(X)))) && match(N, m_Constant(C))) {
+  if (isa<Instruction>(D) && match(D, m_OneUse(m_ZExt(m_Value(X)))) &&
+      match(N, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
     Constant *TruncC = ConstantExpr::getTrunc(C, X->getType());
     if (ConstantExpr::getZExt(TruncC, Ty) != C)
