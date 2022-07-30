@@ -2053,9 +2053,7 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
       NewC = ConstantInt::get(
           Mul->getType(),
           APIntOps::RoundingSDiv(C, *MulC, APInt::Rounding::DOWN));
-  }
-
-  if (Mul->hasNoUnsignedWrap()) {
+  } else if (Mul->hasNoUnsignedWrap()) {
     if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE)
       NewC = ConstantInt::get(
           Mul->getType(),
