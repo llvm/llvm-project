@@ -198,11 +198,16 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_TLSDESC:
     return read64(buf + 8);
   case R_AARCH64_NONE:
+  case R_AARCH64_GLOB_DAT:
+  case R_AARCH64_JUMP_SLOT:
     return 0;
   case R_AARCH64_PREL32:
     return SignExtend64<32>(read32(buf));
   case R_AARCH64_ABS64:
   case R_AARCH64_PREL64:
+  case R_AARCH64_RELATIVE:
+  case R_AARCH64_IRELATIVE:
+  case R_AARCH64_TLS_TPREL64:
     return read64(buf);
   default:
     internalLinkerError(getErrorLocation(buf),
