@@ -578,46 +578,46 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @ext_fpintrinsics_trunc_half(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: ext_fpintrinsics_trunc_half:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vcvtb.f32.f16 q2, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 q4, q1
-; CHECK-NEXT:    vabs.f32 q3, q2
-; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
+; CHECK-NEXT:    vrintm.f32 q3, q2
+; CHECK-NEXT:    vrintx.f32 q5, q4
+; CHECK-NEXT:    vabs.f32 q3, q3
+; CHECK-NEXT:    vrinta.f32 q4, q4
 ; CHECK-NEXT:    vminnm.f32 q3, q3, q2
+; CHECK-NEXT:    vrintp.f32 q2, q2
+; CHECK-NEXT:    vmaxnm.f32 q3, q3, q5
+; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
+; CHECK-NEXT:    vfma.f32 q2, q3, q4
+; CHECK-NEXT:    vrintm.f32 q3, q0
+; CHECK-NEXT:    vabs.f32 q3, q3
 ; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
-; CHECK-NEXT:    vmaxnm.f32 q3, q3, q4
-; CHECK-NEXT:    vfma.f32 q4, q3, q2
-; CHECK-NEXT:    vabs.f32 q3, q0
 ; CHECK-NEXT:    vminnm.f32 q3, q3, q0
-; CHECK-NEXT:    vrintp.f32 q2, q4
-; CHECK-NEXT:    vmaxnm.f32 q3, q3, q1
-; CHECK-NEXT:    vrintm.f32 q2, q2
-; CHECK-NEXT:    vfma.f32 q1, q3, q0
-; CHECK-NEXT:    vrintx.f32 q2, q2
-; CHECK-NEXT:    vrintp.f32 q0, q1
-; CHECK-NEXT:    vrinta.f32 q2, q2
-; CHECK-NEXT:    vrintm.f32 q0, q0
+; CHECK-NEXT:    vrintx.f32 q4, q1
+; CHECK-NEXT:    vmaxnm.f32 q3, q3, q4
+; CHECK-NEXT:    vrinta.f32 q1, q1
+; CHECK-NEXT:    vrintp.f32 q0, q0
 ; CHECK-NEXT:    vrintz.f32 q2, q2
-; CHECK-NEXT:    vrintx.f32 q0, q0
-; CHECK-NEXT:    vrinta.f32 q0, q0
+; CHECK-NEXT:    vfma.f32 q0, q3, q1
 ; CHECK-NEXT:    vrintz.f32 q1, q0
 ; CHECK-NEXT:    vcvtb.f16.f32 q0, q2
 ; CHECK-NEXT:    vcvtt.f16.f32 q0, q1
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:
   %sa = fpext <8 x half> %a to <8 x float>
   %sb = fpext <8 x half> %b to <8 x float>
-  %abs = call <8 x float> @llvm.fabs.v8f32(<8 x float> %sa)
+  %floor = call <8 x float> @llvm.floor.v8f32(<8 x float> %sa)
+  %rint = call <8 x float> @llvm.rint.v8f32(<8 x float> %sb)
+  %ceil = call <8 x float> @llvm.ceil.v8f32(<8 x float> %sa)
+  %round = call <8 x float> @llvm.round.v8f32(<8 x float> %sb)
+  %abs = call <8 x float> @llvm.fabs.v8f32(<8 x float> %floor)
   %min = call <8 x float> @llvm.minnum.v8f32(<8 x float> %abs, <8 x float> %sa)
-  %max = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %min, <8 x float> %sb)
-  %fma = call <8 x float> @llvm.fma.v8f32(<8 x float> %max, <8 x float> %sa, <8 x float> %sb)
-  %ceil = call <8 x float> @llvm.ceil.v8f32(<8 x float> %fma)
-  %floor = call <8 x float> @llvm.floor.v8f32(<8 x float> %ceil)
-  %rint = call <8 x float> @llvm.rint.v8f32(<8 x float> %floor)
-  %round = call <8 x float> @llvm.round.v8f32(<8 x float> %rint)
-  %trunc = call <8 x float> @llvm.trunc.v8f32(<8 x float> %round)
+  %max = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %min, <8 x float> %rint)
+  %fma = call <8 x float> @llvm.fma.v8f32(<8 x float> %max, <8 x float> %round, <8 x float> %ceil)
+  %trunc = call <8 x float> @llvm.trunc.v8f32(<8 x float> %fma)
   %t = fptrunc <8 x float> %trunc to <8 x half>
   ret <8 x half> %t
 }
