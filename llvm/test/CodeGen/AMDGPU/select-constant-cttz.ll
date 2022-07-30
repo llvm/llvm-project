@@ -6,12 +6,13 @@ declare i32 @llvm.amdgcn.sffbh.i32(i32) nounwind readnone speculatable
 define amdgpu_kernel void @select_constant_cttz(i32 addrspace(1)* noalias %out, i32 addrspace(1)* nocapture readonly %arrayidx) nounwind {
 ; GCN-LABEL: select_constant_cttz:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_mov_b32 s5, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshr_b32 s0, 1, s2
 ; GCN-NEXT:    s_ff1_i32_b32 s0, s0
