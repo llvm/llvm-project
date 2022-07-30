@@ -138,7 +138,7 @@ constexpr void run_tests() {
     test_mid(std::ranges::rotate_copy, in, mid, out);
     test(std::ranges::unique_copy, in, out);
     test(std::ranges::partition_copy, in, out, out2, unary_pred);
-    //test_mid(std::ranges::partial_sort_copy, in, in2);
+    test(std::ranges::partial_sort_copy, in, in2);
     test(std::ranges::merge, in, in2, out);
     test(std::ranges::set_difference, in, in2, out);
     test(std::ranges::set_intersection, in, in2, out);

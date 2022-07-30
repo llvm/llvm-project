@@ -142,7 +142,7 @@ constexpr bool test_all() {
   // `sample` has no requirement that the given generator be invoked via `std::invoke`.
   test(std::ranges::unique_copy, in, out, &Foo::binary_pred, &Bar::val);
   test(std::ranges::partition_copy, in, out, out2, &Foo::unary_pred, &Bar::val);
-  //test(std::ranges::partial_sort_copy, in, in2, &Foo::binary_pred, &Bar::val);
+  test(std::ranges::partial_sort_copy, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::merge, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::set_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::set_intersection, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);

@@ -1212,7 +1212,7 @@ public:
   }
 
   SmallVector(std::initializer_list<T> IL) : SmallVectorImpl<T>(N) {
-    this->assign(IL);
+    this->append(IL);
   }
 
   SmallVector(const SmallVector &RHS) : SmallVectorImpl<T>(N) {
