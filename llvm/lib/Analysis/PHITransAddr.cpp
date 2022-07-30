@@ -425,7 +425,8 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
     // PHI translate the LHS.
     Value *OpVal = InsertPHITranslatedSubExpr(Inst->getOperand(0),
                                               CurBB, PredBB, DT, NewInsts);
-    if (OpVal == 0) return 0;
+    if (OpVal == nullptr)
+      return nullptr;
 
     BinaryOperator *Res = BinaryOperator::CreateAdd(OpVal, Inst->getOperand(1),
                                            InVal->getName()+".phi.trans.insert",
