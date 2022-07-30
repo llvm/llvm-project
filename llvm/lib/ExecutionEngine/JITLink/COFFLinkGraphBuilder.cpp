@@ -141,8 +141,6 @@ Error COFFLinkGraphBuilder::graphifySections() {
              << "Creating section for \"" << SectionName << "\"\n";
     });
 
-    // FIXME: Revisit crash when dropping IMAGE_SCN_MEM_DISCARDABLE sections
-
     // Get the section's memory protection flags.
     MemProt Prot = MemProt::Read;
     if ((*Sec)->Characteristics & COFF::IMAGE_SCN_MEM_EXECUTE)
@@ -357,7 +355,6 @@ Error COFFLinkGraphBuilder::flushWeakAliasRequests() {
 }
 
 Error COFFLinkGraphBuilder::handleAlternateNames() {
-  // FIXME: Use proper alias
   for (auto &KeyValue : AlternateNames)
     if (DefinedSymbols.count(KeyValue.second) &&
         ExternalSymbols.count(KeyValue.first)) {
