@@ -427,6 +427,15 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
 }
 
 static ScheduleDAGInstrs *
+createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
+  ScheduleDAGMILive *DAG =
+      new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxILPSchedStrategy>(C));
+  DAG->addMutation(createIGroupLPDAGMutation());
+  DAG->addMutation(createSchedBarrierDAGMutation());
+  return DAG;
+}
+
+static ScheduleDAGInstrs *
 createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto DAG = new GCNIterativeScheduler(C,
@@ -464,19 +473,23 @@ GCNMaxOccupancySchedRegistry("gcn-max-occupancy",
                              createGCNMaxOccupancyMachineScheduler);
 
 static MachineSchedRegistry
-IterativeGCNMaxOccupancySchedRegistry("gcn-max-occupancy-experimental",
-  "Run GCN scheduler to maximize occupancy (experimental)",
-  createIterativeGCNMaxOccupancyMachineScheduler);
+    GCNMaxILPSchedRegistry("gcn-max-ilp", "Run GCN scheduler to maximize ilp",
+                           createGCNMaxILPMachineScheduler);
 
-static MachineSchedRegistry
-GCNMinRegSchedRegistry("gcn-minreg",
-  "Run GCN iterative scheduler for minimal register usage (experimental)",
-  createMinRegScheduler);
+static MachineSchedRegistry IterativeGCNMaxOccupancySchedRegistry(
+    "gcn-iterative-max-occupancy-experimental",
+    "Run GCN scheduler to maximize occupancy (experimental)",
+    createIterativeGCNMaxOccupancyMachineScheduler);
 
-static MachineSchedRegistry
-GCNILPSchedRegistry("gcn-ilp",
-  "Run GCN iterative scheduler for ILP scheduling (experimental)",
-  createIterativeILPMachineScheduler);
+static MachineSchedRegistry GCNMinRegSchedRegistry(
+    "gcn-iterative-minreg",
+    "Run GCN iterative scheduler for minimal register usage (experimental)",
+    createMinRegScheduler);
+
+static MachineSchedRegistry GCNILPSchedRegistry(
+    "gcn-iterative-ilp",
+    "Run GCN iterative scheduler for ILP scheduling (experimental)",
+    createIterativeILPMachineScheduler);
 
 static StringRef computeDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::r600) {

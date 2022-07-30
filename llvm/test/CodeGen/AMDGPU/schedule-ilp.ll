@@ -1,4 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-ilp -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-iterative-ilp -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-max-ilp -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK: NumVgprs: {{[0-9][0-9][0-9]$}}
 
