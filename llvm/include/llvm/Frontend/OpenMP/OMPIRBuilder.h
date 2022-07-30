@@ -840,7 +840,7 @@ public:
   /// \param NumThreads Number of threads via the 'thread_limit' clause.
   /// \param HostPtr Pointer to the host-side pointer of the target kernel.
   /// \param KernelArgs Array of arguments to the kernel.
-  /// \param NoWaitKernelArgs Optional array of arguments to the nowait kernel.
+  /// \param NoWaitArgs Optional array of arguments to the nowait kernel.
   InsertPointTy emitTargetKernel(const LocationDescription &Loc, Value *&Return,
                                  Value *Ident, Value *DeviceID, Value *NumTeams,
                                  Value *NumThreads, Value *HostPtr,
