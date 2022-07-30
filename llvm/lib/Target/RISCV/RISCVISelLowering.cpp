@@ -1815,59 +1815,94 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
 // correct.
 // TODO: Floor and ceil could be shorter by changing rounding mode, but we don't
 // have FRM dependencies modeled yet.
-static SDValue lowerFTRUNC_FCEIL_FFLOOR(SDValue Op, SelectionDAG &DAG) {
+static SDValue lowerFTRUNC_FCEIL_FFLOOR(SDValue Op, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   assert(VT.isVector() && "Unexpected type");
 
   SDLoc DL(Op);
 
+  SDValue Src = Op.getOperand(0);
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+    Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+  }
+
+  SDValue TrueMask, VL;
+  std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
   // Freeze the source since we are increasing the number of uses.
-  SDValue Src = DAG.getFreeze(Op.getOperand(0));
+  Src = DAG.getFreeze(Src);
+
+  // We do the conversion on the absolute value and fix the sign at the end.
+  SDValue Abs =
+      DAG.getNode(RISCVISD::FABS_VL, DL, ContainerVT, Src, TrueMask, VL);
+
+  // Determine the largest integer that can be represented exactly. This and
+  // values larger than it don't have any fractional bits so don't need to
+  // be converted.
+  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(ContainerVT);
+  unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  APFloat MaxVal = APFloat(FltSem);
+  MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
+                          /*IsSigned*/ false, APFloat::rmNearestTiesToEven);
+  SDValue MaxValNode =
+      DAG.getConstantFP(MaxVal, DL, ContainerVT.getVectorElementType());
+  SDValue MaxValSplat = DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, ContainerVT,
+                                    DAG.getUNDEF(ContainerVT), MaxValNode, VL);
+
+  // If abs(Src) was larger than MaxVal or nan, keep it.
+  MVT SetccVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+  SDValue Mask = DAG.getNode(RISCVISD::SETCC_VL, DL, SetccVT, Abs, MaxValSplat,
+                             DAG.getCondCode(ISD::SETOLT), TrueMask, VL);
 
   // Truncate to integer and convert back to FP.
-  MVT IntVT = VT.changeVectorElementTypeToInteger();
-  SDValue Truncated = DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, Src);
-  Truncated = DAG.getNode(ISD::SINT_TO_FP, DL, VT, Truncated);
-
-  MVT SetccVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
+  MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
+  SDValue Truncated =
+      DAG.getNode(RISCVISD::FP_TO_SINT_VL, DL, IntVT, Src, Mask, VL);
+  Truncated = DAG.getNode(RISCVISD::SINT_TO_FP_VL, DL, ContainerVT, Truncated,
+                          Mask, VL);
 
   if (Op.getOpcode() == ISD::FCEIL) {
     // If the truncated value is the greater than or equal to the original
     // value, we've computed the ceil. Otherwise, we went the wrong way and
     // need to increase by 1.
     // FIXME: This should use a masked operation. Handle here or in isel?
-    SDValue Adjust = DAG.getNode(ISD::FADD, DL, VT, Truncated,
-                                 DAG.getConstantFP(1.0, DL, VT));
-    SDValue NeedAdjust = DAG.getSetCC(DL, SetccVT, Truncated, Src, ISD::SETOLT);
-    Truncated = DAG.getSelect(DL, VT, NeedAdjust, Adjust, Truncated);
+    SDValue SplatVal =
+        DAG.getConstantFP(1.0, DL, ContainerVT.getVectorElementType());
+    SDValue Splat = DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, ContainerVT,
+                                DAG.getUNDEF(ContainerVT), SplatVal, VL);
+    SDValue NeedAdjust =
+        DAG.getNode(RISCVISD::SETCC_VL, DL, SetccVT, Truncated, Src,
+                    DAG.getCondCode(ISD::SETOLT), Mask, VL);
+    Truncated = DAG.getNode(RISCVISD::FADD_VL, DL, ContainerVT, Truncated,
+                            Splat, Truncated, NeedAdjust, VL);
   } else if (Op.getOpcode() == ISD::FFLOOR) {
     // If the truncated value is the less than or equal to the original value,
     // we've computed the floor. Otherwise, we went the wrong way and need to
     // decrease by 1.
     // FIXME: This should use a masked operation. Handle here or in isel?
-    SDValue Adjust = DAG.getNode(ISD::FSUB, DL, VT, Truncated,
-                                 DAG.getConstantFP(1.0, DL, VT));
-    SDValue NeedAdjust = DAG.getSetCC(DL, SetccVT, Truncated, Src, ISD::SETOGT);
-    Truncated = DAG.getSelect(DL, VT, NeedAdjust, Adjust, Truncated);
+    SDValue SplatVal =
+        DAG.getConstantFP(1.0, DL, ContainerVT.getVectorElementType());
+    SDValue Splat = DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, ContainerVT,
+                                DAG.getUNDEF(ContainerVT), SplatVal, VL);
+    SDValue NeedAdjust =
+        DAG.getNode(RISCVISD::SETCC_VL, DL, SetccVT, Src, Truncated,
+                    DAG.getCondCode(ISD::SETOLT), Mask, VL);
+    Truncated = DAG.getNode(RISCVISD::FSUB_VL, DL, ContainerVT, Truncated,
+                            Splat, Truncated, NeedAdjust, VL);
   }
 
   // Restore the original sign so that -0.0 is preserved.
-  Truncated = DAG.getNode(ISD::FCOPYSIGN, DL, VT, Truncated, Src);
+  Truncated = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Truncated,
+                          Src, Src, Mask, VL);
 
-  // Determine the largest integer that can be represented exactly. This and
-  // values larger than it don't have any fractional bits so don't need to
-  // be converted.
-  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
-  unsigned Precision = APFloat::semanticsPrecision(FltSem);
-  APFloat MaxVal = APFloat(FltSem);
-  MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
-                          /*IsSigned*/ false, APFloat::rmNearestTiesToEven);
-  SDValue MaxValNode = DAG.getConstantFP(MaxVal, DL, VT);
+  if (!VT.isFixedLengthVector())
+    return Truncated;
 
-  // If abs(Src) was larger than MaxVal or nan, keep it.
-  SDValue Abs = DAG.getNode(ISD::FABS, DL, VT, Src);
-  SDValue Setcc = DAG.getSetCC(DL, SetccVT, Abs, MaxValNode, ISD::SETOLT);
-  return DAG.getSelect(DL, VT, Setcc, Truncated, Src);
+  return convertFromScalableVector(VT, Truncated, DAG, Subtarget);
 }
 
 // ISD::FROUND is defined to round to nearest with ties rounding away from 0.
@@ -3443,7 +3478,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FTRUNC:
   case ISD::FCEIL:
   case ISD::FFLOOR:
-    return lowerFTRUNC_FCEIL_FFLOOR(Op, DAG);
+    return lowerFTRUNC_FCEIL_FFLOOR(Op, DAG, Subtarget);
   case ISD::FROUND:
     return lowerFROUND(Op, DAG, Subtarget);
   case ISD::VECREDUCE_ADD:
