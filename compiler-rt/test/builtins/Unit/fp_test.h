@@ -1,11 +1,10 @@
-#include "int_lib.h"
-#include <limits.h>
-#include <stdint.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
+#include <stdint.h>
 
-#ifdef CRT_HAS_FLOAT16
-#  define TYPE_FP16 _Float16
+#ifdef COMPILER_RT_HAS_FLOAT16
+#define TYPE_FP16 _Float16
 #else
 #define TYPE_FP16 uint16_t
 #endif
@@ -16,10 +15,10 @@ enum EXPECTED_RESULT {
 
 static inline TYPE_FP16 fromRep16(uint16_t x)
 {
-#ifdef CRT_HAS_FLOAT16
-  TYPE_FP16 ret;
-  memcpy(&ret, &x, sizeof(ret));
-  return ret;
+#ifdef COMPILER_RT_HAS_FLOAT16
+    TYPE_FP16 ret;
+    memcpy(&ret, &x, sizeof(ret));
+    return ret;
 #else
     return x;
 #endif
@@ -51,7 +50,7 @@ static inline long double fromRep128(uint64_t hi, uint64_t lo)
 
 static inline uint16_t toRep16(TYPE_FP16 x)
 {
-#ifdef CRT_HAS_FLOAT16
+#ifdef COMPILER_RT_HAS_FLOAT16
     uint16_t ret;
     memcpy(&ret, &x, sizeof(ret));
     return ret;
