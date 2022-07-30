@@ -165,10 +165,6 @@ typedef struct {
 #define HAS_80_BIT_LONG_DOUBLE 0
 #endif
 
-#ifdef __FLT16_MAX__
-#define CRT_HAS_FLOAT16
-#endif
-
 #if CRT_HAS_FLOATING_POINT
 typedef union {
   uqwords u;
