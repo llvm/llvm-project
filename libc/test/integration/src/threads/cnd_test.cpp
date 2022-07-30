@@ -145,7 +145,7 @@ void single_waiter_test() {
 
 } // namespace single_waiter_test
 
-int main() {
+TEST_MAIN() {
   wait_notify_broadcast_test::wait_notify_broadcast_test();
   single_waiter_test::single_waiter_test();
   return 0;
