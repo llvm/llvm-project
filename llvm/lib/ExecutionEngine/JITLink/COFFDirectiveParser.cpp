@@ -48,8 +48,7 @@ public:
 
 static COFFOptTable optTable;
 
-Expected<std::unique_ptr<opt::InputArgList>>
-COFFDirectiveParser::parse(StringRef Str) {
+Expected<opt::InputArgList> COFFDirectiveParser::parse(StringRef Str) {
   SmallVector<StringRef, 16> Tokens;
   SmallVector<const char *, 16> Buffer;
   cl::TokenizeWindowsCommandLineNoCopy(Str, saver, Tokens);
@@ -61,16 +60,15 @@ COFFDirectiveParser::parse(StringRef Str) {
   unsigned missingIndex;
   unsigned missingCount;
 
-  auto Result = std::make_unique<opt::InputArgList>(
-      optTable.ParseArgs(Buffer, missingIndex, missingCount));
+  auto Result = optTable.ParseArgs(Buffer, missingIndex, missingCount);
 
   if (missingCount)
     return make_error<JITLinkError>(Twine("COFF directive parsing failed: ") +
-                                    Result->getArgString(missingIndex) +
+                                    Result.getArgString(missingIndex) +
                                     " missing argument");
   LLVM_DEBUG({
-    for (auto *arg : Result->filtered(COFF_OPT_UNKNOWN))
-      dbgs() << "Unknown coff option argument: " << arg->getAsString(*Result)
+    for (auto *arg : Result.filtered(COFF_OPT_UNKNOWN))
+      dbgs() << "Unknown coff option argument: " << arg->getAsString(Result)
              << "\n";
   });
   return std::move(Result);

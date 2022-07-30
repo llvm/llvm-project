@@ -286,7 +286,7 @@ Error COFFLinkGraphBuilder::handleDirectiveSection(StringRef Str) {
   auto Parsed = DirectiveParser.parse(Str);
   if (!Parsed)
     return Parsed.takeError();
-  for (auto *Arg : **Parsed) {
+  for (auto *Arg : *Parsed) {
     StringRef S = Arg->getValue();
     switch (Arg->getOption().getID()) {
     case COFF_OPT_alternatename: {

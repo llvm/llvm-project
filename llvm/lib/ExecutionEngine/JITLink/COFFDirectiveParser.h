@@ -35,7 +35,7 @@ enum {
 /// https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-160
 class COFFDirectiveParser {
 public:
-  Expected<std::unique_ptr<opt::InputArgList>> parse(StringRef Str);
+  Expected<opt::InputArgList> parse(StringRef Str);
 
 private:
   llvm::BumpPtrAllocator bAlloc;
