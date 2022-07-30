@@ -1719,9 +1719,7 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
   }
 
   // Ensure the list has 'type' in it.
-  auto type = std::find(Style->QualifierOrder.begin(),
-                        Style->QualifierOrder.end(), "type");
-  if (type == Style->QualifierOrder.end())
+  if (!llvm::is_contained(Style->QualifierOrder, "type"))
     return ParseError::MissingQualifierType;
 
   return ParseError::Success;

@@ -1237,8 +1237,7 @@ void SimplexBase::undo(UndoLogEntry entry) {
            col++) {
         assert(colUnknown[col] != nullIndex &&
                "Column should not be a fixed column!");
-        if (std::find(basis.begin(), basis.end(), colUnknown[col]) !=
-            basis.end())
+        if (llvm::is_contained(basis, colUnknown[col]))
           continue;
         if (tableau(u.pos, col) == 0)
           continue;
