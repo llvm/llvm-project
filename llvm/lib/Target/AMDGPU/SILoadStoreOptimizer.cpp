@@ -74,6 +74,7 @@ enum InstClassEnum {
   DS_READ,
   DS_WRITE,
   S_BUFFER_LOAD_IMM,
+  S_LOAD_IMM,
   BUFFER_LOAD,
   BUFFER_STORE,
   MIMG,
@@ -232,8 +233,8 @@ private:
   mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
                  MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
-  mergeSBufferLoadImmPair(CombineInfo &CI, CombineInfo &Paired,
-                          MachineBasicBlock::iterator InsertBefore);
+  mergeSMemLoadImmPair(CombineInfo &CI, CombineInfo &Paired,
+                       MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeBufferLoadPair(CombineInfo &CI, CombineInfo &Paired,
                       MachineBasicBlock::iterator InsertBefore);
@@ -325,6 +326,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
 
   switch (Opc) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
+  case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORD:
@@ -333,6 +335,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::FLAT_STORE_DWORD:
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX2:
@@ -348,6 +351,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::FLAT_STORE_DWORDX3:
     return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4:
@@ -356,6 +360,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::FLAT_STORE_DWORDX4:
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
     return 8;
   case AMDGPU::DS_READ_B32:      LLVM_FALLTHROUGH;
   case AMDGPU::DS_READ_B32_gfx9: LLVM_FALLTHROUGH;
@@ -428,6 +433,11 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return S_BUFFER_LOAD_IMM;
+  case AMDGPU::S_LOAD_DWORD_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
+    return S_LOAD_IMM;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B32_gfx9:
   case AMDGPU::DS_READ_B64:
@@ -499,6 +509,11 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return AMDGPU::S_BUFFER_LOAD_DWORD_IMM;
+  case AMDGPU::S_LOAD_DWORD_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
+    return AMDGPU::S_LOAD_DWORD_IMM;
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
@@ -595,6 +610,10 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORD_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
     Result.SBase = true;
     return Result;
   case AMDGPU::DS_READ_B32:
@@ -661,6 +680,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
                                                                             : 4;
     break;
   case S_BUFFER_LOAD_IMM:
+  case S_LOAD_IMM:
     EltSize = AMDGPU::convertSMRDOffsetUnits(*LSO.STM, 4);
     break;
   default:
@@ -981,6 +1001,7 @@ bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
   default:
     return (Width <= 4) && (STM.hasDwordx3LoadStores() || (Width != 3));
   case S_BUFFER_LOAD_IMM:
+  case S_LOAD_IMM:
     switch (Width) {
     default:
       return false;
@@ -1293,7 +1314,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
   return New;
 }
 
-MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
+MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
@@ -1623,6 +1644,17 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     case 8:
       return AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM;
     }
+  case S_LOAD_IMM:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::S_LOAD_DWORDX2_IMM;
+    case 4:
+      return AMDGPU::S_LOAD_DWORDX4_IMM;
+    case 8:
+      return AMDGPU::S_LOAD_DWORDX8_IMM;
+    }
   case GLOBAL_LOAD:
     switch (Width) {
     default:
@@ -1731,7 +1763,7 @@ SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
 const TargetRegisterClass *
 SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
                                              const CombineInfo &Paired) {
-  if (CI.InstClass == S_BUFFER_LOAD_IMM) {
+  if (CI.InstClass == S_BUFFER_LOAD_IMM || CI.InstClass == S_LOAD_IMM) {
     switch (CI.Width + Paired.Width) {
     default:
       return nullptr;
@@ -2300,7 +2332,8 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
       NewMI = mergeWrite2Pair(CI, Paired, Where->I);
       break;
     case S_BUFFER_LOAD_IMM:
-      NewMI = mergeSBufferLoadImmPair(CI, Paired, Where->I);
+    case S_LOAD_IMM:
+      NewMI = mergeSMemLoadImmPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 8;
       break;
     case BUFFER_LOAD:

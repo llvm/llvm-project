@@ -40,7 +40,7 @@ static __inline int src_rep_t_clz(src_rep_t a) {
 }
 
 #elif defined SRC_HALF
-#ifdef CRT_HAS_FLOAT16
+#ifdef COMPILER_RT_HAS_FLOAT16
 typedef _Float16 src_t;
 #else
 typedef uint16_t src_t;
