@@ -4,7 +4,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 ; GCN-LABEL: readfirstlane_uniform
-; GCN: 	s_load_dwordx2 s[[[IN_ADDR:[0-9]+]]:1], s[4:5], 0x0
+; GCN: 	s_load_dwordx4 s[[[IN_ADDR:[0-9]+]]:3], s[4:5], 0x0
 ; GCN:  v_readfirstlane_b32 s[[SCALAR:[0-9]+]], v0
 ; GCN: 	s_add_u32 s[[LOAD_ADDR:[0-9]+]], s[[IN_ADDR]], s[[SCALAR]]
 ; GCN:	s_load_dword s{{[0-9]+}}, s[[[LOAD_ADDR]]

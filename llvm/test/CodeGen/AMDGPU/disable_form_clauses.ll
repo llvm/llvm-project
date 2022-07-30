@@ -1,8 +1,11 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -stop-after=si-form-memory-clauses < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}name:{{[ 	]*}}vector_clause
-; GCN: LOAD_DWORDX2
-; GCN-NEXT: LOAD_DWORDX2
+; GCN: S_LOAD_DWORDX4
+; GCN: GLOBAL_LOAD_DWORDX4_SADDR
+; GCN: GLOBAL_LOAD_DWORDX4_SADDR
+; GCN: GLOBAL_LOAD_DWORDX4_SADDR
+; GCN: GLOBAL_LOAD_DWORDX4_SADDR
 ; GCN-NEXT: KILL
 define amdgpu_kernel void @vector_clause(<4 x i32> addrspace(1)* noalias nocapture readonly %arg, <4 x i32> addrspace(1)* noalias nocapture %arg1) {
 bb:
@@ -23,8 +26,8 @@ bb:
   %tmp15 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %arg, i64 %tmp14
   %tmp16 = load <4 x i32>, <4 x i32> addrspace(1)* %tmp15, align 16
   %tmp17 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %arg1, i64 %tmp14
-  store <4 x i32> %tmp4, <4 x i32> addrspace(1)* %tmp5, align 16
   store <4 x i32> %tmp8, <4 x i32> addrspace(1)* %tmp9, align 16
+  store <4 x i32> %tmp4, <4 x i32> addrspace(1)* %tmp5, align 16
   store <4 x i32> %tmp12, <4 x i32> addrspace(1)* %tmp13, align 16
   store <4 x i32> %tmp16, <4 x i32> addrspace(1)* %tmp17, align 16
   ret void

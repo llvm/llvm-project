@@ -79,9 +79,7 @@ define amdgpu_kernel void @select_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a,
 }
 
 ; GCN-LABEL: {{^}}select_v2i16:
-; GFX89: s_load_dword
-; GFX89: s_load_dword
-; GFX89: s_load_dword
+; GFX89: s_load_dwordx4
 ; GFX89: s_cselect_b32
 ; GFX89-NOT: s_cselect_b32
 

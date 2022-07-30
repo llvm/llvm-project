@@ -650,37 +650,36 @@ bb:
 define amdgpu_kernel void @sub_zext_setcc_commute(i32 addrspace(1)* nocapture %arg, i32 %a, i32%b) {
 ; GCN-LABEL: sub_zext_setcc_commute:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GCN-NEXT:    buffer_load_dword v4, v[2:3], s[4:7], 0 addr64
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
+; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
 ; GCN-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: sub_zext_setcc_commute:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
+; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v0, v0, v3
-; GFX9-NEXT:    v_add_u32_e32 v0, s4, v0
-; GFX9-NEXT:    v_subrev_u32_e32 v0, s5, v0
-; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
+; GFX9-NEXT:    v_add_u32_e32 v0, s2, v0
+; GFX9-NEXT:    v_subrev_u32_e32 v0, s3, v0
+; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -700,37 +699,36 @@ bb:
 define amdgpu_kernel void @sub_sext_setcc_commute(i32 addrspace(1)* nocapture %arg, i32 %a, i32%b) {
 ; GCN-LABEL: sub_sext_setcc_commute:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GCN-NEXT:    buffer_load_dword v4, v[2:3], s[4:7], 0 addr64
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
+; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
 ; GCN-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: sub_sext_setcc_commute:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
+; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v0, v0, v3
-; GFX9-NEXT:    v_add_u32_e32 v0, s4, v0
-; GFX9-NEXT:    v_subrev_u32_e32 v0, s5, v0
-; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
+; GFX9-NEXT:    v_add_u32_e32 v0, s2, v0
+; GFX9-NEXT:    v_subrev_u32_e32 v0, s3, v0
+; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
