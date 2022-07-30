@@ -115,7 +115,7 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     llvm_unreachable("Unhandled type.");
   }
   if (Type->isVector())
-    QT = Context.getScalableVectorType(QT, Type->getScale().getValue());
+    QT = Context.getScalableVectorType(QT, Type->getScale().value());
 
   if (Type->isConstant())
     QT = Context.getConstType(QT);
