@@ -156,7 +156,7 @@ void Scope::updateNRVOCandidate(VarDecl *VD) {
 
 void Scope::applyNRVO() {
   // There is no NRVO candidate in the current scope.
-  if (!NRVO.hasValue())
+  if (!NRVO.has_value())
     return;
 
   if (*NRVO && isDeclScope(*NRVO))
