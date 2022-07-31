@@ -807,9 +807,8 @@ private:
     // Skip functions with less parameters, they can't be the target.
     if (Callee->parameters().size() < Parameters.size())
       return;
-    if (std::any_of(Args.begin(), Args.end(), [](const Expr *E) {
-          return dyn_cast<PackExpansionExpr>(E) != nullptr;
-        })) {
+    if (llvm::any_of(Args,
+                     [](const Expr *E) { return isa<PackExpansionExpr>(E); })) {
       return;
     }
     auto PackLocation = findPack(Args);
