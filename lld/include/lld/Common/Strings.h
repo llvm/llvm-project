@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/GlobPattern.h"
@@ -26,7 +27,7 @@ inline std::string demangle(llvm::StringRef symName, bool shouldDemangle) {
   return std::string(symName);
 }
 
-std::vector<uint8_t> parseHex(llvm::StringRef s);
+llvm::SmallVector<uint8_t, 0> parseHex(llvm::StringRef s);
 bool isValidCIdentifier(llvm::StringRef s);
 
 // Write the contents of the a buffer to a file
