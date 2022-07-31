@@ -866,7 +866,7 @@ ErrorOr<StringRef> DataReader::parseString(char EndChar, bool EndNl) {
       break;
 
     StringEnd += 2;
-  } while (1);
+  } while (true);
 
   StringRef Str = ParsingBuf.substr(0, StringEnd);
 
