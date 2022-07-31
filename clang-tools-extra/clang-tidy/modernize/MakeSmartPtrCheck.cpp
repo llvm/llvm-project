@@ -411,10 +411,10 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       // stop generating fixes -- as the C++ rule is complicated and we are less
       // certain about the correct fixes.
       if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl()) {
-        if (llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+        if (llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
               return Ctor->isCopyOrMoveConstructor() &&
                      (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
-            }) != RD->ctor_end()) {
+            })) {
           return false;
         }
       }
