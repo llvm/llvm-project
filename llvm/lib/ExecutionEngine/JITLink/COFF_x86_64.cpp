@@ -115,6 +115,30 @@ private:
       Addend -= 1;
       break;
     }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_2: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 2;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_3: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 3;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_4: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 4;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_5: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 5;
+      break;
+    }
     case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_ADDR64: {
       Kind = EdgeKind_coff_x86_64::Pointer64;
       Addend = *reinterpret_cast<const support::little64_t *>(FixupPtr);
