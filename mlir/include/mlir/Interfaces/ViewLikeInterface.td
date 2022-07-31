@@ -237,30 +237,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         return ::mlir::ShapedType::isDynamicStrideOrOffset(v.getSExtValue());
       }]
     >,
-    StaticInterfaceMethod<
-      /*desc=*/"Return constant that indicates the offset is dynamic",
-      /*retTy=*/"int64_t",
-      /*methodName=*/"getDynamicOffsetIndicator",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImpl=*/[{ return ::mlir::ShapedType::kDynamicStrideOrOffset; }]
-    >,
-    StaticInterfaceMethod<
-      /*desc=*/"Return constant that indicates the size is dynamic",
-      /*retTy=*/"int64_t",
-      /*methodName=*/"getDynamicSizeIndicator",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImpl=*/[{ return ::mlir::ShapedType::kDynamicSize; }]
-    >,
-    StaticInterfaceMethod<
-      /*desc=*/"Return constant that indicates the stride is dynamic",
-      /*retTy=*/"int64_t",
-      /*methodName=*/"getDynamicStrideIndicator",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImpl=*/[{ return ::mlir::ShapedType::kDynamicStrideOrOffset; }]
-    >,
+
     InterfaceMethod<
       /*desc=*/[{
         Assert the offset `idx` is a static constant and return its value.
