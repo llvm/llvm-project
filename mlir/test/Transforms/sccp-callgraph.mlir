@@ -1,5 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -sccp -split-input-file | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(sccp)" -split-input-file | FileCheck %s --check-prefix=NESTED
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="func.func(sccp)" -split-input-file | FileCheck %s --check-prefix=FUNC
 
 /// Check that a constant is properly propagated through the arguments and
 /// results of a private function.
@@ -269,4 +270,39 @@ func.func private @unreferenced_private_function() -> i32 {
   %cst1 = arith.constant 1 : i32
   %result = arith.select %true, %cst0, %cst1 : i32
   return %result : i32
+}
+
+// -----
+
+/// Check that callables outside the analysis scope are marked as external.
+
+func.func private @foo() -> index {
+  %0 = arith.constant 10 : index
+  return %0 : index
+}
+
+// CHECK-LABEL: func @bar
+// FUNC-LABEL: func @bar
+func.func @bar(%arg0: index) -> index {
+  // CHECK: %[[C10:.*]] = arith.constant 10
+  %c0 = arith.constant 0 : index
+  %1 = arith.constant 420 : index
+  %7 = arith.cmpi eq, %arg0, %c0 : index
+  cf.cond_br %7, ^bb1(%1 : index), ^bb2
+
+// CHECK: ^bb1(%[[ARG:.*]]: index):
+// FUNC: ^bb1(%[[ARG:.*]]: index):
+^bb1(%8: index):  // 2 preds: ^bb0, ^bb4
+  // CHECK-NEXT: return %[[ARG]]
+  // FUNC-NEXT: return %[[ARG]]
+  return %8 : index
+
+// CHECK: ^bb2
+// FUNC: ^bb2
+^bb2:
+  // FUNC-NEXT: %[[FOO:.*]] = call @foo
+  %13 = call @foo() : () -> index
+  // CHECK: cf.br ^bb1(%[[C10]]
+  // FUNC: cf.br ^bb1(%[[FOO]]
+  cf.br ^bb1(%13 : index)
 }
