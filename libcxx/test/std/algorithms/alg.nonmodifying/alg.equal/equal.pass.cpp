@@ -79,7 +79,7 @@ template <class UnderlyingType, class TypeList>
 struct TestIter2 {
   template <class Iter1>
   TEST_CONSTEXPR_CXX20 void operator()() {
-    meta::for_each(TypeList(), Test<UnderlyingType, Iter1>());
+    types::for_each(TypeList(), Test<UnderlyingType, Iter1>());
   }
 };
 
@@ -99,12 +99,12 @@ struct AddressCompare {
 };
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  meta::for_each(meta::cpp17_input_iterator_list<int*>(), TestIter2<int, meta::cpp17_input_iterator_list<int*> >());
-  meta::for_each(meta::cpp17_input_iterator_list<char*>(), TestIter2<char, meta::cpp17_input_iterator_list<char*> >());
-  meta::for_each(meta::cpp17_input_iterator_list<AddressCompare*>(),
-                 TestIter2<AddressCompare, meta::cpp17_input_iterator_list<AddressCompare*> >());
+  types::for_each(types::cpp17_input_iterator_list<int*>(), TestIter2<int, types::cpp17_input_iterator_list<int*> >());
+  types::for_each(types::cpp17_input_iterator_list<char*>(), TestIter2<char, types::cpp17_input_iterator_list<char*> >());
+  types::for_each(types::cpp17_input_iterator_list<AddressCompare*>(),
+                 TestIter2<AddressCompare, types::cpp17_input_iterator_list<AddressCompare*> >());
 
-  meta::for_each(meta::integral_types(), TestNarrowingEqualTo());
+  types::for_each(types::integral_types(), TestNarrowingEqualTo());
 
   return true;
 }
@@ -118,10 +118,10 @@ int main(int, char**) {
   static_assert(test());
 #endif
 
-  meta::for_each(meta::as_pointers<meta::cv_qualified_versions<int> >(),
-                 TestIter2<int, meta::as_pointers<meta::cv_qualified_versions<int> > >());
-  meta::for_each(meta::as_pointers<meta::cv_qualified_versions<char> >(),
-                 TestIter2<char, meta::as_pointers<meta::cv_qualified_versions<char> > >());
+  types::for_each(types::as_pointers<types::cv_qualified_versions<int> >(),
+                 TestIter2<int, types::as_pointers<types::cv_qualified_versions<int> > >());
+  types::for_each(types::as_pointers<types::cv_qualified_versions<char> >(),
+                 TestIter2<char, types::as_pointers<types::cv_qualified_versions<char> > >());
 
   {
     Derived d;
