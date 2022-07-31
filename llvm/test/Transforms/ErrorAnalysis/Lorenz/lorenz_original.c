@@ -44,7 +44,7 @@ int main ( )
   int i;
   int j;
   int m = 3;
-  int n = 200;
+  int n = 200000;
   double *t;
   double t_final;
   double *x;
@@ -59,16 +59,16 @@ int main ( )
   /*
     Data
   */
-  t_final = 1.0;
+  t_final = 40.0;
   dt = t_final / ( double ) ( n );
   /*
     Store the initial conditions in entry 0.
   */
   t = r8vec_linspace_new ( n + 1, 0.0, t_final );
   x = ( double * ) malloc ( m * ( n + 1 ) * sizeof ( double ) );
-  x[0+0*m] = 1.2;
-  x[0+1*m] = 1.3;
-  x[0+2*m] = 1.6;
+  x[0+0*m] = 8.0;
+  x[0+1*m] = 1.0;
+  x[0+2*m] = 1.0;
   /*
     Compute the approximate solution at equally spaced times.
   */
@@ -85,7 +85,7 @@ int main ( )
     Create the plot data file.
   */
   data_unit = fopen ( data_filename, "wt" );
-  for ( j = 0; j <= n; j = j + 1 )
+  for ( j = 0; j <= n; j = j + 50 )
   {
     fprintf ( data_unit, "  %14.6g  %14.6g  %14.6g  %14.6g\n",
             t[j], x[0+j*m], x[1+j*m], x[2+j*m] );
@@ -172,7 +172,7 @@ double *lorenz_rhs ( double t, int m, double x[] )
 {
   double beta = 8.0 / 3.0;
   double *dxdt;
-  double rho = 100.0;
+  double rho = 28.0;
   double sigma = 10.0;
 
   dxdt = ( double * ) malloc ( m * sizeof ( double ) );
@@ -343,9 +343,7 @@ double *rk4vec ( double t0, int m, double u0[], double dt,
   for ( i = 0; i < m; i++ )
   {
     u[i] = u0[i] + dt * ( f0[i] + 2.0 * f1[i] + 2.0 * f2[i] + f3[i] ) / 6.0;
-    fAFfp64markForResult(u[i]);
   }
-
   /*
     Free memory.
   */

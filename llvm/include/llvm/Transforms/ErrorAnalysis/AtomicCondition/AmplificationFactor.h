@@ -19,18 +19,14 @@ typedef struct NodeProcessingQ {
 } NodeProcessingQ;
 
 typedef struct FloatAFItem {
-//  char *ResultRegName;
-
   char *ResultInstructionString;
   int ResultNodeID;
-//  char *WRTRegName;
   char *WRTInstructionString;
   int WRTNodeID;
   float AF;
 } FloatAFItem;
 
 typedef struct DoubleAFItem {
-//  char *ResultRegName;
   char *ResultInstructionString;
   int ResultNodeID;
   char *WRTInstructionString;

@@ -31,7 +31,7 @@ typedef struct InstructionNodePair {
 } InstructionNodePair;
 
 typedef struct PhiNode {
-  char *ResultRegister;
+  char *PhiInstruction;
   char *ResidentInBB;
   int NumBranches;
   char **IncomingVals;
@@ -78,12 +78,12 @@ int fCGNamedRegister(char *Register) {
   return 0;
 }
 
-int fCGcheckPHIInstruction(char *Register) {
+int fCGcheckPHIInstruction(char *Instruction) {
   if(CG->PhiNodesListSize == 0)
     return 0;
 
   PhiNode *CurrNode = CG->PhiNodesListHead;
-  while(CurrNode != NULL && strcmp(CurrNode->ResultRegister, Register)!=0) {
+  while(CurrNode != NULL && strcmp(CurrNode->PhiInstruction, Instruction)!=0) {
     CurrNode = CurrNode->Next;
   }
   if(CurrNode != NULL)
@@ -177,7 +177,7 @@ void fCGInitialize() {
 }
 
 void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
-  char *ResultReg;
+  char *PhiInstruction;
   char **IncomingVals, **BasicBlocks;
   char *CharFindingPointer = InstructionString;
   int NumIncomingBranches;
@@ -185,16 +185,12 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
   // Counting number of incoming branches in PHI instruction
   for (NumIncomingBranches=0; CharFindingPointer[NumIncomingBranches];
        CharFindingPointer[NumIncomingBranches]=='[' ? NumIncomingBranches++ : *CharFindingPointer++);
-  const unsigned long ResultRegLen = strstr(InstructionString, " ") - InstructionString;
 
   // Allocating Memory
-  ResultReg = (char*)malloc ( (ResultRegLen) * sizeof (char));
   IncomingVals = (char**)malloc ( (NumIncomingBranches) * sizeof (char));
   BasicBlocks = (char**)malloc ( (NumIncomingBranches) * sizeof (char));
 
-  // Copying the Register Name
-  strncpy(ResultReg, InstructionString, ResultRegLen);
-  ResultReg[ResultRegLen]=0;
+  PhiInstruction=InstructionString;
 
 #if FAF_DEBUG>=2
   printf("Recording PHI Instruction\n");
@@ -226,7 +222,7 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
     *(BasicBlocks+CurrentBranchIndex)=BasicBlockString;
   }
 
-  if(fCGcheckPHIInstruction(ResultReg))
+  if(fCGcheckPHIInstruction(PhiInstruction))
     return ;
 
   PhiNode *Node = NULL;
@@ -238,7 +234,7 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
     exit(EXIT_FAILURE);
   }
 
-  Node->ResultRegister = ResultReg;
+  Node->PhiInstruction = PhiInstruction;
   Node->ResidentInBB = ResidentBBName;
   Node->NumBranches = NumIncomingBranches;
   Node->IncomingVals = IncomingVals;
@@ -260,7 +256,7 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
   CG->PhiNodesListSize++;
 
 #if FAF_DEBUG>=2
-  printf("\tRecorded for %s:\n", Node->ResultRegister);
+  printf("\tRecorded for %s:\n", Node->PhiInstruction);
   for(int CurrentBranchIndex=0;
        CurrentBranchIndex < NumIncomingBranches; CurrentBranchIndex++) {
     printf("\t\tBranch %d:\n", CurrentBranchIndex);
@@ -311,16 +307,16 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
 #endif
 
   PhiNode *CurrPhiNode = CG->PhiNodesListHead;
-  while(CurrPhiNode != NULL && strcmp(CurrPhiNode->ResultRegister, ResolvedValue) != 0) {
+  while(CurrPhiNode != NULL && strcmp(CurrPhiNode->PhiInstruction, ResolvedValue) != 0) {
 #if FAF_DEBUG>=2
-    printf("\t\tPHI Nodes List: Current PHI Instruction Register Name:%s\n", CurrPhiNode->ResultRegister);
+    printf("\t\tPHI Nodes List: Current PHI Instruction Register Name:%s\n", CurrPhiNode->PhiInstruction);
 #endif
     CurrPhiNode = CurrPhiNode->Next;
   }
   // The PHI Instruction is already recorded before it is invoked.
   assert(CurrPhiNode != NULL);
 #if FAF_DEBUG>=2
-  printf("\t\tRecord found! - %s\n", CurrPhiNode->ResultRegister);
+  printf("\t\tRecord found! - %s\n", CurrPhiNode->PhiInstruction);
 #endif
 
   // Loop to traverse the PHI Chain in reverse order of execution till a Non-PHI
@@ -372,9 +368,9 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
     printf("\t\tSearching for record of PHI Instruction in PHI Nodes List\n");
 #endif
     CurrPhiNode = CG->PhiNodesListHead;
-    while(CurrPhiNode != NULL && strcmp(CurrPhiNode->ResultRegister, ResolvedValue) != 0) {
+    while(CurrPhiNode != NULL && strcmp(CurrPhiNode->PhiInstruction, ResolvedValue) != 0) {
 #if FAF_DEBUG>=2
-      printf("\t\t\tPHI Nodes List: Current PHI Instruction Register Name:%s\n", CurrPhiNode->ResultRegister);
+      printf("\t\t\tPHI Nodes List: Current PHI Instruction Register Name:%s\n", CurrPhiNode->PhiInstruction);
 #endif
       CurrPhiNode = CurrPhiNode->Next;
     }
@@ -385,7 +381,7 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
     }
 
 #if FAF_DEBUG>=2
-    printf("\t\t\tRecord found! - %s\n", CurrPhiNode->ResultRegister);
+    printf("\t\t\tRecord found! - %s\n", CurrPhiNode->PhiInstruction);
 #endif
 
     // Jumping one or more Basic Blocks in the Basic Block Execution Chain to

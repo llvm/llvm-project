@@ -155,7 +155,6 @@ void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* Curre
           static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
           static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate")) {
     NextInst++;
-    errs() << *NextInst << "\n";
   }
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 

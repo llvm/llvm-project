@@ -1,4 +1,4 @@
-OP = 	-O1
+OP =  -O1
 CXX = /home/tanmay/Documents/Tools/llvm-project/build/bin/clang $(DEBUG_FLAG)
 OPT = /home/tanmay/Documents/Tools/llvm-project/build/bin/opt
 LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
