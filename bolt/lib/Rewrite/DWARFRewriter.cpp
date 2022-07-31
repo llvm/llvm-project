@@ -51,7 +51,7 @@ static void printDie(const DWARFDie &DIE) {
   DumpOpts.ShowForm = true;
   DumpOpts.Verbose = true;
   DumpOpts.ChildRecurseDepth = 0;
-  DumpOpts.ShowChildren = 0;
+  DumpOpts.ShowChildren = false;
   DIE.dump(dbgs(), 0, DumpOpts);
 }
 
