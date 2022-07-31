@@ -1666,6 +1666,13 @@ def : Pat<(trap), (UNIMP)>;
 // debugger if possible.
 def : Pat<(debugtrap), (EBREAK)>;
 
+let Predicates = [IsRV64], Uses = [X5],
+    Defs = [X1, X6, X7, X28, X29, X30, X31] in
+def HWASAN_CHECK_MEMACCESS_SHORTGRANULES 
+  : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$accessinfo),
+           [(int_hwasan_check_memaccess_shortgranules X5, GPRJALR:$ptr,
+                                                      (i32 timm:$accessinfo))]>;
+
 /// Simple optimization
 def : Pat<(add GPR:$rs1, (AddiPair:$rs2)),
           (ADDI (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
