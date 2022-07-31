@@ -1063,7 +1063,7 @@ struct __is_ostreamable : false_type { };
 
 template <class _Stream, class _Tp>
 struct __is_ostreamable<_Stream, _Tp, decltype(
-    declval<_Stream>() << declval<_Tp>(), void()
+    std::declval<_Stream>() << std::declval<_Tp>(), void()
 )> : true_type { };
 
 template <class _Stream, class _Tp, class = typename enable_if<
@@ -1113,7 +1113,7 @@ template<class _CharT, class _Traits, class _Yp, class _Dp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_same<void, __void_t<decltype((declval<basic_ostream<_CharT, _Traits>&>() << declval<typename unique_ptr<_Yp, _Dp>::pointer>()))> >::value,
+    is_same<void, __void_t<decltype((std::declval<basic_ostream<_CharT, _Traits>&>() << std::declval<typename unique_ptr<_Yp, _Dp>::pointer>()))> >::value,
     basic_ostream<_CharT, _Traits>&
 >::type
 operator<<(basic_ostream<_CharT, _Traits>& __os, unique_ptr<_Yp, _Dp> const& __p)
