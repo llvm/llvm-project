@@ -450,11 +450,11 @@ OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
 
 #define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(ArrayRef<Attribute> operands) {                        \
-    ShapedType inputTy = input().getType().cast<ShapedType>();                 \
+    ShapedType inputTy = getInput().getType().cast<ShapedType>();              \
     if (!inputTy.hasRank())                                                    \
       return {};                                                               \
-    if (inputTy.getDimSize(axis()) == 1)                                       \
-      return input();                                                          \
+    if (inputTy.getDimSize(getAxis()) == 1)                                    \
+      return getInput();                                                       \
     return {};                                                                 \
   }
 
