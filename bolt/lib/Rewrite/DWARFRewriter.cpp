@@ -235,7 +235,7 @@ void DWARFRewriter::updateDebugInfo() {
     (void)AttrInfoVal;
     assert(AttrInfoVal && "Skeleton CU doesn't have dwo_name.");
 
-    std::string ObjectName = "";
+    std::string ObjectName;
 
     {
       std::lock_guard<std::mutex> Lock(AccessMutex);
@@ -1436,7 +1436,7 @@ void DWARFRewriter::writeDWP(
     TUContributionVector TUContributionsToCU;
     for (const SectionRef &Section : DWOFile->sections()) {
       std::string DWOTUSection;
-      std::string Storage = "";
+      std::string Storage;
       std::unique_ptr<DebugBufferVector> OutputData;
       StringRef SectionName = getSectionName(Section);
       Expected<StringRef> ContentsExp = Section.getContents();
@@ -1593,7 +1593,7 @@ void DWARFRewriter::writeDWOFiles(
       // Handling .debug_rnglists.dwo seperatly. The original .o/.dwo might not
       // have .debug_rnglists so won't be part of the loop below.
       if (!RangeListssWriter->empty()) {
-        std::string Storage = "";
+        std::string Storage;
         std::unique_ptr<DebugBufferVector> OutputData;
         if (Optional<StringRef> OutData = updateDebugData(
                 (*DWOCU)->getContext(), Storage, "debug_rnglists.dwo", "",
@@ -1605,7 +1605,7 @@ void DWARFRewriter::writeDWOFiles(
 
     TUContributionVector TUContributionsToCU;
     for (const SectionRef &Section : File->sections()) {
-      std::string Storage = "";
+      std::string Storage;
       std::string DWOTUSection;
       std::unique_ptr<DebugBufferVector> OutputData;
       StringRef SectionName = getSectionName(Section);
