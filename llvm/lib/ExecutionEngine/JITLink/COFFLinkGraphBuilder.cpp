@@ -554,7 +554,6 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
 Expected<Symbol *> COFFLinkGraphBuilder::createCOMDATExportRequest(
     COFFSymbolIndex SymIndex, object::COFFSymbolRef Symbol,
     const object::coff_aux_section_definition *Definition) {
-  Block *B = getGraphBlock(Symbol.getSectionNumber());
   Linkage L = Linkage::Strong;
   switch (Definition->Selection) {
   case COFF::IMAGE_COMDAT_SELECT_NODUPLICATES: {
