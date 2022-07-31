@@ -461,16 +461,14 @@ public:
     // update PH to point to the newly added preheader.
     BasicBlock *TopPH = OrigPH;
     unsigned Index = getSize() - 1;
-    for (auto I = std::next(PartitionContainer.rbegin()),
-              E = PartitionContainer.rend();
-         I != E; ++I, --Index, TopPH = NewLoop->getLoopPreheader()) {
-      auto *Part = &*I;
+    for (auto &Part : llvm::drop_begin(llvm::reverse(PartitionContainer))) {
+      NewLoop = Part.cloneLoopWithPreheader(TopPH, Pred, Index, LI, DT);
 
-      NewLoop = Part->cloneLoopWithPreheader(TopPH, Pred, Index, LI, DT);
-
-      Part->getVMap()[ExitBlock] = TopPH;
-      Part->remapInstructions();
-      setNewLoopID(OrigLoopID, Part);
+      Part.getVMap()[ExitBlock] = TopPH;
+      Part.remapInstructions();
+      setNewLoopID(OrigLoopID, &Part);
+      --Index;
+      TopPH = NewLoop->getLoopPreheader();
     }
     Pred->getTerminator()->replaceUsesOfWith(OrigPH, TopPH);
 

@@ -1115,11 +1115,10 @@ void AArch64AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI) {
   if (DefRegister != (Register)0)
     MI.addOperand(MCOperand::createReg(DefRegister));
 
-  for (auto I = FaultingMI.operands_begin() + OperandsBeginIdx,
-            E = FaultingMI.operands_end();
-       I != E; ++I) {
+  for (const MachineOperand &MO :
+       llvm::drop_begin(FaultingMI.operands(), OperandsBeginIdx)) {
     MCOperand Dest;
-    lowerOperand(*I, Dest);
+    lowerOperand(MO, Dest);
     MI.addOperand(Dest);
   }
 
