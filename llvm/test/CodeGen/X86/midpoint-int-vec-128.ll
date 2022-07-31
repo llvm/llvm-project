@@ -956,8 +956,7 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; AVX1-FALLBACK:       # %bb.0:
 ; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm4
-; AVX1-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm0, %xmm1, %xmm4
+; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm4
 ; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vpsubq %xmm4, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm2
@@ -976,8 +975,7 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; AVX2-FALLBACK:       # %bb.0:
 ; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; AVX2-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm4
-; AVX2-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm0, %xmm1, %xmm4
+; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm4
 ; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX2-FALLBACK-NEXT:    vpsubq %xmm4, %xmm1, %xmm1
 ; AVX2-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm2
@@ -1401,8 +1399,7 @@ define <2 x i64> @vec128_i64_signed_mem_reg(<2 x i64>* %a1_addr, <2 x i64> %a2) 
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm4
-; AVX1-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm1, %xmm0, %xmm4
+; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm4
 ; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-FALLBACK-NEXT:    vpsubq %xmm4, %xmm0, %xmm0
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm0, %xmm2
@@ -1422,8 +1419,7 @@ define <2 x i64> @vec128_i64_signed_mem_reg(<2 x i64>* %a1_addr, <2 x i64> %a2) 
 ; AVX2-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; AVX2-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm4
-; AVX2-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm1, %xmm0, %xmm4
+; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm4
 ; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX2-FALLBACK-NEXT:    vpsubq %xmm4, %xmm0, %xmm0
 ; AVX2-FALLBACK-NEXT:    vpsrlq $1, %xmm0, %xmm2
@@ -1624,8 +1620,7 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, <2 x i64>* %a2_addr) 
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm4
-; AVX1-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm0, %xmm1, %xmm4
+; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm4
 ; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vpsubq %xmm4, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm2
@@ -1645,8 +1640,7 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, <2 x i64>* %a2_addr) 
 ; AVX2-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; AVX2-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm4
-; AVX2-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm0, %xmm1, %xmm4
+; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm4
 ; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX2-FALLBACK-NEXT:    vpsubq %xmm4, %xmm1, %xmm1
 ; AVX2-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm2
@@ -1850,8 +1844,7 @@ define <2 x i64> @vec128_i64_signed_mem_mem(<2 x i64>* %a1_addr, <2 x i64>* %a2_
 ; AVX1-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX1-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm4
-; AVX1-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm0, %xmm1, %xmm4
+; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm4
 ; AVX1-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vpsubq %xmm4, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm2
@@ -1872,8 +1865,7 @@ define <2 x i64> @vec128_i64_signed_mem_mem(<2 x i64>* %a1_addr, <2 x i64>* %a2_
 ; AVX2-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; AVX2-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX2-FALLBACK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm4
-; AVX2-FALLBACK-NEXT:    vblendvpd %xmm4, %xmm0, %xmm1, %xmm4
+; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm4
 ; AVX2-FALLBACK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX2-FALLBACK-NEXT:    vpsubq %xmm4, %xmm1, %xmm1
 ; AVX2-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm2

@@ -506,6 +506,13 @@ CMAKE_DEPENDENT_OPTION(CLANG_PLUGIN_SUPPORT
   "Build clang with plugin support" ON
   "HAVE_CLANG_PLUGIN_SUPPORT" OFF)
 
+# If libstdc++ is statically linked, clang-repl needs to statically link libstdc++
+# itself, which is not possible in many platforms because of current limitations in 
+# JIT stack. (more platforms need to be supported by JITLink)
+if(NOT LLVM_STATIC_LINK_CXX_STDLIB)
+  set(HAVE_CLANG_REPL_SUPPORT ON)
+endif()
+
 option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
 option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)

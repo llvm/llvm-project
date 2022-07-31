@@ -62,10 +62,17 @@ add_entrypoint_object(
     cosf.cpp
   HDRS
     ../cosf.h
+    range_reduction.h
+    range_reduction_fma.h
   DEPENDS
-    .sincosf_utils
+    .common_constants
     libc.include.math
     libc.src.errno.errno
+    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
   COMPILE_OPTIONS
     -O3
 )

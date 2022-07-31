@@ -140,9 +140,6 @@ public:
   // before SUnits in OtherGroup.
   void link(SchedGroup &OtherGroup);
 
-  // Returns true if no more instructions may be added to this group.
-  bool isFull() { return MaxSize && Collection.size() >= *MaxSize; }
-
   // Identify and add all relevant SUs from the DAG to this SchedGroup.
   void initSchedGroup();
 

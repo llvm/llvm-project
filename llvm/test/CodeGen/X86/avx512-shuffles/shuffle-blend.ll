@@ -248,3 +248,27 @@ define <4 x i32> @addd_selectq_4xi32(<4 x i32> %t0, <4 x i32> %t1) {
 
   ret <4 x i32> %t4
 }
+
+define <8 x i32> @shuffle_undef_8xi32(<8 x i32> %0, <8 x i32> %1) {
+; CHECK-LABEL: shuffle_undef_8xi32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %2 = add <8 x i32> %0, %1
+  %3 = shufflevector <8 x i32> %2, <8 x i32> <i32 undef,i32 undef,i32 undef,i32 undef,i32 undef,i32 undef,i32 undef,i32 undef>, <8 x i32> <i32 0,i32 1,i32 4,i32 5,i32 2,i32 3,i32 6,i32 7>
+  ret <8 x i32> %3
+}
+
+define <16 x i16> @shuffle_undef_16xi16(<16 x i16> %0, <16 x i16> %1) {
+; CHECK-LABEL: shuffle_undef_16xi16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,1,0,3]
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %2 = add <16 x i16> %0, %1
+  %3 = shufflevector <16 x i16> %2, <16 x i16> <i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef,i16 undef>, <16 x i32> <i32 8,i32 9,i32 10,i32 11,i32 4,i32 5,i32 6,i32 7,i32 0,i32 1,i32 2,i32 3,i32 12,i32 13,i32 14,i32 15>
+  ret <16 x i16> %3
+}

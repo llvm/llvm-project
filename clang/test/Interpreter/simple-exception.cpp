@@ -1,5 +1,4 @@
 // clang-format off
-// REQUIRES: host-supports-jit, host-supports-exception 
 // UNSUPPORTED: system-aix
 // XFAIL: arm, arm64-apple, windows-msvc, windows-gnu
 // RUN: cat %s | clang-repl | FileCheck %s

@@ -4111,6 +4111,200 @@ define i1 @signbit_true_logic_uses_commute(i64 %x) {
   ret i1 %r
 }
 
+define i1 @redundant_sign_bit_count_ult_1_2(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_1_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 1
+  %z = xor i32 %y, %x
+  %c = icmp ult i32 %z, 4
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ult_1_30(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_1_30(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 1
+  %z = xor i32 %y, %x
+  %c = icmp ult i32 %z, 1073741824
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ult_31_2(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_31_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 31
+  %z = xor i32 %y, %x
+  %c = icmp ult i32 %z, 4
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ult_31_30(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 31
+  %z = xor i32 %y, %x
+  %c = icmp ult i32 %z, 1073741824
+  ret i1 %c
+}
+
+declare void @use_i32(i32)
+
+define i1 @redundant_sign_bit_count_ult_31_30_extra_use_ashr(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_extra_use_ashr(
+; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    call void @use_i32(i32 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 31
+  call void @use_i32(i32 %y)
+  %z = xor i32 %y, %x
+  %c = icmp ult i32 %z, 1073741824
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ult_31_30_extra_use_xor(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_extra_use_xor(
+; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    call void @use_i32(i32 [[Z]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 1073741824
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 31
+  %z = xor i32 %y, %x
+  call void @use_i32(i32 %z)
+  %c = icmp ult i32 %z, 1073741824
+  ret i1 %c
+}
+
+define i1 @not_redundant_sign_bit_count_ult(i32 %w, i32 %x) {
+; CHECK-LABEL: @not_redundant_sign_bit_count_ult(
+; CHECK-NEXT:    [[Y:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[Y]], [[W:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Z]], 1073741824
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 31
+  %z = xor i32 %y, %w
+  %c = icmp ult i32 %z, 1073741824
+  ret i1 %c
+}
+
+define i1 @wrong_shift_opcode_i8(i8 %x) {
+; CHECK-LABEL: @wrong_shift_opcode_i8(
+; CHECK-NEXT:    [[Y:%.*]] = lshr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[Z]], 2
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = lshr i8 %x, 5
+  %z = xor i8 %y, %x
+  %c = icmp ult i8 %z, 2
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ult_31_30_commute(i32 %xsrc) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_commute(
+; CHECK-NEXT:    [[X:%.*]] = mul i32 [[XSRC:%.*]], 13
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %x = mul i32 %xsrc, 13 ; thwart complexity-based canonicalization
+  %y = ashr i32 %x, 31
+  %z = xor i32 %x, %y
+  %c = icmp ult i32 %z, 1073741824
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_i8(i8 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[TMP1]], 4
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i8 %x, 5
+  %z = xor i8 %y, %x
+  %c = icmp ult i8 %z, 2
+  ret i1 %c
+}
+
+define <2 x i1> @redundant_sign_bit_count_ult_31_30_vector(<2 x i32> %xsrc) {
+; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_vector(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[XSRC:%.*]], <i32 13, i32 13>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X]], <i32 1073741824, i32 1073741824>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %x = mul <2 x i32> %xsrc, <i32 13, i32 13> ; thwart complexity-based canonicalization
+  %y = ashr <2 x i32> %x, <i32 31, i32 31>
+  %z = xor <2 x i32> %x, %y
+  %c = icmp ult <2 x i32> %z, <i32 1073741824, i32 1073741824>
+  ret <2 x i1> %c
+}
+
+define i1 @redundant_sign_bit_count_ugt_1_2(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ugt_1_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], -8
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 1
+  %z = xor i32 %y, %x
+  %c = icmp ugt i32 %z, 3
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ugt_1_30(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ugt_1_30(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 1
+  %z = xor i32 %y, %x
+  %c = icmp ugt i32 %z, 1073741823
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ugt_31_2(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ugt_31_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], -8
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 31
+  %z = xor i32 %y, %x
+  %c = icmp ugt i32 %z, 3
+  ret i1 %c
+}
+
+define i1 @redundant_sign_bit_count_ugt_31_30(i32 %x) {
+; CHECK-LABEL: @redundant_sign_bit_count_ugt_31_30(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y = ashr i32 %x, 31
+  %z = xor i32 %y, %x
+  %c = icmp ugt i32 %z, 1073741823
+  ret i1 %c
+}
+
 define i1 @zext_bool_and_eq0(i1 %x, i8 %y) {
 ; CHECK-LABEL: @zext_bool_and_eq0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 1
@@ -4152,13 +4346,12 @@ define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
   ret i1 %r
 }
 
-; TODO: This should transform similarly to eq/ne 0.
-
 define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
 ; CHECK-LABEL: @zext_bool_and_ne1(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i1 [[X:%.*]] to i8
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[ZX]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[A]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP3]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i8
@@ -4169,9 +4362,8 @@ define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
 
 define <2 x i1> @zext_bool_and_eq1(<2 x i1> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @zext_bool_and_eq1(
-; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[ZX]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[A]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[Y:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %zx = zext <2 x i1> %x to <2 x i8>

@@ -486,6 +486,7 @@ function(add_integration_test test_name)
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )
+  target_compile_options(${fq_target_name} PRIVATE -ffreestanding)
   # We set a number of link options to prevent picking up system libc binaries.
   # Also, we restrict the integration tests to fully static executables. The
   # rtlib is set to compiler-rt to make the compiler drivers pick up the compiler

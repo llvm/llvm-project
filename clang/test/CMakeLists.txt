@@ -65,7 +65,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-import-test
   clang-rename
   clang-refactor
-  clang-repl
   clang-diff
   clang-scan-deps
   diagtool
@@ -144,6 +143,12 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
       CheckerOptionHandlingAnalyzerPlugin
       )
   endif()
+endif()
+
+if (HAVE_CLANG_REPL_SUPPORT)
+  list(APPEND CLANG_TEST_DEPS
+    clang-repl
+    )
 endif()
 
 # Copy gen_ast_dump_json_test.py to the clang build dir. This allows invoking

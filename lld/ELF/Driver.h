@@ -18,7 +18,6 @@
 namespace lld {
 namespace elf {
 class InputFile;
-class Symbol;
 
 extern std::unique_ptr<class LinkerDriver> driver;
 
