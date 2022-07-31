@@ -1305,6 +1305,9 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
       break;
     }
     uint64_t size = endian::read32<ELFT::TargetEndianness>(d.data());
+    if (size == 0) // ZERO terminator
+      break;
+    uint32_t id = endian::read32<ELFT::TargetEndianness>(d.data() + 4);
     // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,
     // but we do not support that format yet.
     if (size == UINT32_MAX) {
@@ -1318,7 +1321,7 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     }
 
     uint64_t off = d.data() - rawData.data();
-    pieces.emplace_back(off, this, size, getReloc(off, size, rels, relI));
+    (id == 0 ? cies : fdes).emplace_back(off, this, size, getReloc(off, size, rels, relI));
     d = d.slice(size);
   }
   if (msg)
@@ -1328,11 +1331,14 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
 
 // Return the offset in an output section for a given input offset.
 uint64_t EhInputSection::getParentOffset(uint64_t offset) const {
-  const EhSectionPiece &piece = partition_point(
-      pieces, [=](EhSectionPiece p) { return p.inputOff <= offset; })[-1];
-  if (piece.outputOff == -1) // invalid piece
-    return offset - piece.inputOff;
-  return piece.outputOff + (offset - piece.inputOff);
+  auto it = partition_point(
+      fdes, [=](EhSectionPiece p) { return p.inputOff <= offset; });
+  if (it == fdes.begin() || it[-1].inputOff + it[-1].size <= offset)
+    it = partition_point(
+        cies, [=](EhSectionPiece p) { return p.inputOff <= offset; });
+  if (it[-1].outputOff == -1) // invalid piece
+    return offset - it[-1].inputOff;
+  return it[-1].outputOff + (offset - it[-1].inputOff);
 }
 
 static size_t findNull(StringRef s, size_t entSize) {

@@ -405,27 +405,17 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
 template <class ELFT, class RelTy>
 void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
   offsetToCie.clear();
-  for (EhSectionPiece &piece : sec->pieces) {
-    // The empty record is the end marker.
-    if (piece.size == 4)
-      return;
-
-    size_t offset = piece.inputOff;
-    const uint32_t id =
-        endian::read32<ELFT::TargetEndianness>(piece.data().data() + 4);
-    if (id == 0) {
-      offsetToCie[offset] = addCie<ELFT>(piece, rels);
-      continue;
-    }
-
-    uint32_t cieOffset = offset + 4 - id;
-    CieRecord *rec = offsetToCie[cieOffset];
+  for (EhSectionPiece &cie : sec->cies)
+    offsetToCie[cie.inputOff] = addCie<ELFT>(cie, rels);
+  for (EhSectionPiece &fde : sec->fdes) {
+    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
       fatal(toString(sec) + ": invalid CIE reference");
 
-    if (!isFdeLive<ELFT>(piece, rels))
+    if (!isFdeLive<ELFT>(fde, rels))
       continue;
-    rec->fdes.push_back(&piece);
+    rec->fdes.push_back(&fde);
     numFdes++;
   }
 }
@@ -457,25 +447,16 @@ template <class ELFT, class RelTy>
 void EhFrameSection::iterateFDEWithLSDAAux(
     EhInputSection &sec, ArrayRef<RelTy> rels, DenseSet<size_t> &ciesWithLSDA,
     llvm::function_ref<void(InputSection &)> fn) {
-  for (EhSectionPiece &piece : sec.pieces) {
-    // Skip ZERO terminator.
-    if (piece.size == 4)
-      continue;
-
-    size_t offset = piece.inputOff;
-    uint32_t id =
-        endian::read32<ELFT::TargetEndianness>(piece.data().data() + 4);
-    if (id == 0) {
-      if (hasLSDA(piece))
-        ciesWithLSDA.insert(offset);
-      continue;
-    }
-    uint32_t cieOffset = offset + 4 - id;
-    if (ciesWithLSDA.count(cieOffset) == 0)
+  for (EhSectionPiece &cie : sec.cies)
+    if (hasLSDA(cie))
+      ciesWithLSDA.insert(cie.inputOff);
+  for (EhSectionPiece &fde : sec.fdes) {
+    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
       continue;
 
     // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive<ELFT>(piece, rels))
+    if (Defined *d = isFdeLive<ELFT>(fde, rels))
       if (auto *s = dyn_cast_or_null<InputSection>(d->section))
         fn(*s);
   }
