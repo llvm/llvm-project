@@ -60,7 +60,7 @@ concept __dereferenceable = requires(_Tp& __t) {
 
 // [iterator.traits]
 template<__dereferenceable _Tp>
-using iter_reference_t = decltype(*declval<_Tp&>());
+using iter_reference_t = decltype(*std::declval<_Tp&>());
 
 #endif // _LIBCPP_STD_VER > 17
 
@@ -273,7 +273,7 @@ struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> { using type = typ
 template<class _Ip>
   requires requires(_Ip& __i) { __i.operator->(); } && (!__has_member_pointer<_Ip>)
 struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> {
-  using type = decltype(declval<_Ip&>().operator->());
+  using type = decltype(std::declval<_Ip&>().operator->());
 };
 
 // Otherwise, `reference` names `iter-reference-t<I>`.

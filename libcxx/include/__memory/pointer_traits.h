@@ -179,7 +179,7 @@ struct _HasToAddress : false_type {};
 
 template <class _Pointer>
 struct _HasToAddress<_Pointer,
-    decltype((void)pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))
+    decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))
 > : true_type {};
 
 template <class _Pointer, class = void>
@@ -187,7 +187,7 @@ struct _HasArrow : false_type {};
 
 template <class _Pointer>
 struct _HasArrow<_Pointer,
-    decltype((void)declval<const _Pointer&>().operator->())
+    decltype((void)std::declval<const _Pointer&>().operator->())
 > : true_type {};
 
 template <class _Pointer>
@@ -200,7 +200,7 @@ template <class _Pointer, class = __enable_if_t<
     _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value
 > >
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename decay<decltype(__to_address_helper<_Pointer>::__call(declval<const _Pointer&>()))>::type
+typename decay<decltype(__to_address_helper<_Pointer>::__call(std::declval<const _Pointer&>()))>::type
 __to_address(const _Pointer& __p) _NOEXCEPT {
     return __to_address_helper<_Pointer>::__call(__p);
 }
@@ -208,16 +208,16 @@ __to_address(const _Pointer& __p) _NOEXCEPT {
 template <class _Pointer, class>
 struct __to_address_helper {
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-    static decltype(_VSTD::__to_address(declval<const _Pointer&>().operator->()))
+    static decltype(_VSTD::__to_address(std::declval<const _Pointer&>().operator->()))
     __call(const _Pointer& __p) _NOEXCEPT {
         return _VSTD::__to_address(__p.operator->());
     }
 };
 
 template <class _Pointer>
-struct __to_address_helper<_Pointer, decltype((void)pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))> {
+struct __to_address_helper<_Pointer, decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))> {
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-    static decltype(pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))
+    static decltype(pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))
     __call(const _Pointer& __p) _NOEXCEPT {
         return pointer_traits<_Pointer>::to_address(__p);
     }

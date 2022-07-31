@@ -363,7 +363,7 @@ protected:
 // __outermost
 
 template <class _Alloc>
-decltype(declval<_Alloc>().outer_allocator(), true_type())
+decltype(std::declval<_Alloc>().outer_allocator(), true_type())
 __has_outer_allocator_test(_Alloc&& __a);
 
 template <class _Alloc>
@@ -374,7 +374,7 @@ template <class _Alloc>
 struct __has_outer_allocator
     : public common_type
              <
-                 decltype(std::__has_outer_allocator_test(declval<_Alloc&>()))
+                 decltype(std::__has_outer_allocator_test(std::declval<_Alloc&>()))
              >::type
 {
 };
@@ -392,7 +392,7 @@ struct __outermost<_Alloc, true>
 {
     typedef __libcpp_remove_reference_t
                      <
-                        decltype(declval<_Alloc>().outer_allocator())
+                        decltype(std::declval<_Alloc>().outer_allocator())
                      >                                    _OuterAlloc;
     typedef typename __outermost<_OuterAlloc>::type             type;
     _LIBCPP_INLINE_VISIBILITY

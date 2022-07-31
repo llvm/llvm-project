@@ -38,9 +38,9 @@ private:
     static void __fun(_Tp&&) = delete;
 
 public:
-    template <class _Up, class = __enable_if_t<!__is_same_uncvref<_Up, reference_wrapper>::value, decltype(__fun(declval<_Up>())) > >
+    template <class _Up, class = __enable_if_t<!__is_same_uncvref<_Up, reference_wrapper>::value, decltype(__fun(std::declval<_Up>())) > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-    reference_wrapper(_Up&& __u) _NOEXCEPT_(noexcept(__fun(declval<_Up>()))) {
+    reference_wrapper(_Up&& __u) _NOEXCEPT_(noexcept(__fun(std::declval<_Up>()))) {
         type& __f = static_cast<_Up&&>(__u);
         __f_ = _VSTD::addressof(__f);
     }
