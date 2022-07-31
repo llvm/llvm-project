@@ -143,20 +143,14 @@ template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
                                         ArrayRef<RelTy> rels) {
-  for (size_t i = 0, end = eh.pieces.size(); i < end; ++i) {
-    EhSectionPiece &piece = eh.pieces[i];
-    size_t firstRelI = piece.firstRelocation;
+  for (const EhSectionPiece &cie : eh.cies)
+    if (cie.firstRelocation != unsigned(-1))
+      resolveReloc(eh, rels[cie.firstRelocation], false);
+  for (const EhSectionPiece &fde : eh.fdes) {
+    size_t firstRelI = fde.firstRelocation;
     if (firstRelI == (unsigned)-1)
       continue;
-
-    if (read32<ELFT::TargetEndianness>(piece.data().data() + 4) == 0) {
-      // This is a CIE, we only need to worry about the first relocation. It is
-      // known to point to the personality function.
-      resolveReloc(eh, rels[firstRelI], false);
-      continue;
-    }
-
-    uint64_t pieceEnd = piece.inputOff + piece.size;
+    uint64_t pieceEnd = fde.inputOff + fde.size;
     for (size_t j = firstRelI, end2 = rels.size();
          j < end2 && rels[j].r_offset < pieceEnd; ++j)
       resolveReloc(eh, rels[j], true);
