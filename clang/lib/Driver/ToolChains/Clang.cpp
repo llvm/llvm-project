@@ -3513,6 +3513,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                          options::OPT_I,
                                          options::OPT_S,
                                          options::OPT_emit_llvm,
+                                         options::OPT_emit_obj,
                                          options::OPT_disable_llvm_passes,
                                          options::OPT_fnative_half_type,
                                          options::OPT_hlsl_entrypoint};
