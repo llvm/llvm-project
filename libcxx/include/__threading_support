@@ -613,35 +613,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __thread_id() _NOEXCEPT : __id_(0) {}
 
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT
-        { // don't pass id==0 to underlying routines
-        if (__x.__id_ == 0) return __y.__id_ == 0;
-        if (__y.__id_ == 0) return false;
-        return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
-        }
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return !(__x == __y);}
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator< (__thread_id __x, __thread_id __y) _NOEXCEPT
-        { // id==0 is always less than any other thread_id
-        if (__x.__id_ == 0) return __y.__id_ != 0;
-        if (__y.__id_ == 0) return false;
-        return  __libcpp_thread_id_less(__x.__id_, __y.__id_);
-        }
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator<=(__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return !(__y < __x);}
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator> (__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return   __y < __x ;}
-    friend _LIBCPP_INLINE_VISIBILITY
-        bool operator>=(__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return !(__x < __y);}
-
     _LIBCPP_INLINE_VISIBILITY
     void __reset() { __id_ = 0; }
+
+    friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
+    friend _LIBCPP_HIDE_FROM_ABI bool operator< (__thread_id __x, __thread_id __y) _NOEXCEPT;
 
     template<class _CharT, class _Traits>
     friend
@@ -657,6 +633,35 @@ private:
     friend class _LIBCPP_TYPE_VIS thread;
     friend struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>;
 };
+
+inline _LIBCPP_HIDE_FROM_ABI
+bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT {
+  // Don't pass id==0 to underlying routines
+  if (__x.__id_ == 0)
+    return __y.__id_ == 0;
+  if (__y.__id_ == 0)
+    return false;
+  return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI
+bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT {
+    return !(__x == __y);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI
+bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT {
+  // id==0 is always less than any other thread_id
+  if (__x.__id_ == 0)
+    return __y.__id_ != 0;
+  if (__y.__id_ == 0)
+    return false;
+  return __libcpp_thread_id_less(__x.__id_, __y.__id_);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI bool operator<=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__y < __x); }
+inline _LIBCPP_HIDE_FROM_ABI bool operator>(__thread_id __x, __thread_id __y) _NOEXCEPT { return __y < __x; }
+inline _LIBCPP_HIDE_FROM_ABI bool operator>=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x < __y); }
 
 namespace this_thread
 {
