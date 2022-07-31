@@ -75,7 +75,7 @@ Section,Description,Dependencies,Assignee,Complete
 | chrono::leap_second
 | chrono::time_zone_link",A ``<chrono>`` implementation,Unassigned,|Not Started|
 | `[fs.filesystem.syn] <https://wg21.link/fs.filesystem.syn>`_,| `filesystem::space_info <https://reviews.llvm.org/D130861>`_,None,Adrian Vogelsgesang,|Complete|
-| `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_,| `filesystem::path <https://reviews.llvm.org/D130859>`_,None,Adrian Vogelsgesang,|In Progress|
+| `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_,| `filesystem::path <https://reviews.llvm.org/D130859>`_,None,Adrian Vogelsgesang,|Complete|
 | `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_,| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|In Progress|
 | `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| sub_match,None,Mark de Wever,|In Progress|
 | `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| `thread::id <https://reviews.llvm.org/D131362>`_,None,Adrian Vogelsgesang,|Complete|
