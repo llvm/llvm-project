@@ -2254,6 +2254,18 @@ cc_library(
     ],
 )
 
+gentbl(
+    name = "JITLinkTableGen",
+    strip_include_prefix = "lib/ExecutionEngine/JITLink",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "lib/ExecutionEngine/JITLink/COFFOptions.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/ExecutionEngine/JITLink/COFFOptions.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_library(
     name = "JITLink",
     srcs = glob([
@@ -2266,7 +2278,9 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":ExecutionEngine",
+        ":JITLinkTableGen",
         ":Object",
+        ":Option",
         ":OrcTargetProcess",
         ":Support",
         ":config",
