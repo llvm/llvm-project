@@ -244,22 +244,18 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   for (StringRef s : script->referencedSymbols)
     markSymbol(symtab->find(s));
 
+  // Mark .eh_frame sections as live because there are usually no relocations
+  // that point to .eh_frames. Otherwise, the garbage collector would drop
+  // all of them. We also want to preserve personality routines and LSDA
+  // referenced by .eh_frame sections, so we scan them for that here.
+  for (EhInputSection *eh : ehInputSections) {
+    const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+    if (rels.areRelocsRel())
+      scanEhFrameSection(*eh, rels.rels);
+    else if (rels.relas.size())
+      scanEhFrameSection(*eh, rels.relas);
+  }
   for (InputSectionBase *sec : inputSections) {
-    // Mark .eh_frame sections as live because there are usually no relocations
-    // that point to .eh_frames. Otherwise, the garbage collector would drop
-    // all of them. We also want to preserve personality routines and LSDA
-    // referenced by .eh_frame sections, so we scan them for that here.
-    if (auto *eh = dyn_cast<EhInputSection>(sec)) {
-      eh->markLive();
-
-      const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
-      if (rels.areRelocsRel())
-        scanEhFrameSection(*eh, rels.rels);
-      else if (rels.relas.size())
-        scanEhFrameSection(*eh, rels.relas);
-      continue;
-    }
-
     if (sec->flags & SHF_GNU_RETAIN) {
       enqueue(sec, 0);
       continue;
