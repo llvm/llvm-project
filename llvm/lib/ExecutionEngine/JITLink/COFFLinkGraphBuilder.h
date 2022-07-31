@@ -114,6 +114,7 @@ private:
   struct ComdatExportRequest {
     COFFSymbolIndex SymbolIndex;
     jitlink::Linkage Linkage;
+    orc::ExecutorAddrDiff Size;
   };
   std::vector<Optional<ComdatExportRequest>> PendingComdatExports;
 

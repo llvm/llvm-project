@@ -5,10 +5,8 @@
 # Check a COMDAT any symbol is exported as a weak symbol.
 #
 # CHECK: Creating graph symbols...
-# CHECK:      6: Creating defined graph symbol for COFF symbol ".text" in .text (index: 4)
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: strong, scope: local, dead  -   <anonymous symbol>
-# CHECK-NEXT: 8: Exporting COMDAT graph symbol for COFF symbol "func" in section 4
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: weak, scope: default, dead  -   func
+# CHECK: 8: Exporting COMDAT graph symbol for COFF symbol "func" in section 4
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000000, linkage: weak, scope: default, dead  -   func
 
 	.text
 
