@@ -18,9 +18,9 @@ define i32* @get_preemptable_var() nounwind {
 ;
 ; RV32-PIC-LABEL: get_preemptable_var:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB0_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi0:
 ; RV32-PIC-NEXT:    auipc a0, %got_pcrel_hi(preemptable_var)
-; RV32-PIC-NEXT:    lw a0, %pcrel_lo(.LBB0_1)(a0)
+; RV32-PIC-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: get_preemptable_var:
@@ -31,9 +31,9 @@ define i32* @get_preemptable_var() nounwind {
 ;
 ; RV64-PIC-LABEL: get_preemptable_var:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB0_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi0:
 ; RV64-PIC-NEXT:    auipc a0, %got_pcrel_hi(preemptable_var)
-; RV64-PIC-NEXT:    ld a0, %pcrel_lo(.LBB0_1)(a0)
+; RV64-PIC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64-PIC-NEXT:    ret
   ret i32* @preemptable_var
 }
@@ -48,9 +48,9 @@ define i32* @get_dsolocal_var() nounwind {
 ;
 ; RV32-PIC-LABEL: get_dsolocal_var:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB1_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi1:
 ; RV32-PIC-NEXT:    auipc a0, %pcrel_hi(.Ldsolocal_var$local)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB1_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: get_dsolocal_var:
@@ -61,9 +61,9 @@ define i32* @get_dsolocal_var() nounwind {
 ;
 ; RV64-PIC-LABEL: get_dsolocal_var:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB1_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi1:
 ; RV64-PIC-NEXT:    auipc a0, %pcrel_hi(.Ldsolocal_var$local)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB1_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV64-PIC-NEXT:    ret
   ret i32* @dsolocal_var
 }
@@ -78,9 +78,9 @@ define i32* @get_weak_dsolocal_var() nounwind {
 ;
 ; RV32-PIC-LABEL: get_weak_dsolocal_var:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB2_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi2:
 ; RV32-PIC-NEXT:    auipc a0, %pcrel_hi(weak_dsolocal_var)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB2_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: get_weak_dsolocal_var:
@@ -91,9 +91,9 @@ define i32* @get_weak_dsolocal_var() nounwind {
 ;
 ; RV64-PIC-LABEL: get_weak_dsolocal_var:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB2_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi2:
 ; RV64-PIC-NEXT:    auipc a0, %pcrel_hi(weak_dsolocal_var)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB2_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
 ; RV64-PIC-NEXT:    ret
   ret i32* @weak_dsolocal_var
 }
@@ -108,9 +108,9 @@ define i32* @get_hidden_var() nounwind {
 ;
 ; RV32-PIC-LABEL: get_hidden_var:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB3_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi3:
 ; RV32-PIC-NEXT:    auipc a0, %pcrel_hi(hidden_var)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB3_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi3)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: get_hidden_var:
@@ -121,9 +121,9 @@ define i32* @get_hidden_var() nounwind {
 ;
 ; RV64-PIC-LABEL: get_hidden_var:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB3_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi3:
 ; RV64-PIC-NEXT:    auipc a0, %pcrel_hi(hidden_var)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB3_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi3)
 ; RV64-PIC-NEXT:    ret
   ret i32* @hidden_var
 }
@@ -138,9 +138,9 @@ define i32* @get_protected_var() nounwind {
 ;
 ; RV32-PIC-LABEL: get_protected_var:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB4_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi4:
 ; RV32-PIC-NEXT:    auipc a0, %pcrel_hi(protected_var)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB4_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi4)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: get_protected_var:
@@ -151,9 +151,9 @@ define i32* @get_protected_var() nounwind {
 ;
 ; RV64-PIC-LABEL: get_protected_var:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB4_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi4:
 ; RV64-PIC-NEXT:    auipc a0, %pcrel_hi(protected_var)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB4_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi4)
 ; RV64-PIC-NEXT:    ret
   ret i32* @protected_var
 }
@@ -167,9 +167,9 @@ define dso_preemptable void()* @preemptable_func() nounwind {
 ;
 ; RV32-PIC-LABEL: preemptable_func:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB5_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi5:
 ; RV32-PIC-NEXT:    auipc a0, %got_pcrel_hi(preemptable_func)
-; RV32-PIC-NEXT:    lw a0, %pcrel_lo(.LBB5_1)(a0)
+; RV32-PIC-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: preemptable_func:
@@ -180,9 +180,9 @@ define dso_preemptable void()* @preemptable_func() nounwind {
 ;
 ; RV64-PIC-LABEL: preemptable_func:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB5_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi5:
 ; RV64-PIC-NEXT:    auipc a0, %got_pcrel_hi(preemptable_func)
-; RV64-PIC-NEXT:    ld a0, %pcrel_lo(.LBB5_1)(a0)
+; RV64-PIC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64-PIC-NEXT:    ret
   ret void()* bitcast(void()*()* @preemptable_func to void()*)
 }
@@ -196,9 +196,9 @@ define dso_local void()* @dsolocal_func() nounwind {
 ;
 ; RV32-PIC-LABEL: dsolocal_func:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB6_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi6:
 ; RV32-PIC-NEXT:    auipc a0, %pcrel_hi(.Ldsolocal_func$local)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB6_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi6)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: dsolocal_func:
@@ -209,9 +209,9 @@ define dso_local void()* @dsolocal_func() nounwind {
 ;
 ; RV64-PIC-LABEL: dsolocal_func:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB6_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi6:
 ; RV64-PIC-NEXT:    auipc a0, %pcrel_hi(.Ldsolocal_func$local)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB6_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi6)
 ; RV64-PIC-NEXT:    ret
   ret void()* bitcast(void()*()* @dsolocal_func to void()*)
 }
@@ -225,9 +225,9 @@ define weak dso_local void()* @weak_dsolocal_func() nounwind {
 ;
 ; RV32-PIC-LABEL: weak_dsolocal_func:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .LBB7_1: # Label of block must be emitted
+; RV32-PIC-NEXT:  .Lpcrel_hi7:
 ; RV32-PIC-NEXT:    auipc a0, %pcrel_hi(weak_dsolocal_func)
-; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB7_1)
+; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi7)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: weak_dsolocal_func:
@@ -238,9 +238,9 @@ define weak dso_local void()* @weak_dsolocal_func() nounwind {
 ;
 ; RV64-PIC-LABEL: weak_dsolocal_func:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .LBB7_1: # Label of block must be emitted
+; RV64-PIC-NEXT:  .Lpcrel_hi7:
 ; RV64-PIC-NEXT:    auipc a0, %pcrel_hi(weak_dsolocal_func)
-; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.LBB7_1)
+; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi7)
 ; RV64-PIC-NEXT:    ret
   ret void()* bitcast(void()*()* @weak_dsolocal_func to void()*)
 }

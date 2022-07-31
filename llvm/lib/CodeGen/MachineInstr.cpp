@@ -632,6 +632,11 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     if (getDebugLoc() && Other.getDebugLoc() &&
         getDebugLoc() != Other.getDebugLoc())
       return false;
+  // If pre- or post-instruction symbols do not match then the two instructions
+  // are not identical.
+  if (getPreInstrSymbol() != Other.getPreInstrSymbol() ||
+      getPostInstrSymbol() != Other.getPostInstrSymbol())
+    return false;
   return true;
 }
 
