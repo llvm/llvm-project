@@ -15,7 +15,6 @@
 #define LLVM_CLANG_SEMA_RISCVINTRINSICMANAGER_H
 
 namespace clang {
-class Sema;
 class LookupResult;
 class IdentifierInfo;
 class Preprocessor;
