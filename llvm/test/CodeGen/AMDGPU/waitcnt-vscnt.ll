@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx802  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9,GFX8_9_10 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9PLUS,GFX8_9,GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS,GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS,GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS,GFX8_9_10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS,GFX11 %s
 
 ; GCN-LABEL: barrier_vmcnt_global:
 ; GFX8:         flat_load_dword
@@ -43,7 +43,7 @@ bb:
   %tmp5 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp4
   store i32 0, i32 addrspace(1)* %tmp5, align 4
   fence syncscope("singlethread") release
-  tail call void @llvm.amdgcn.s.barrier() #3
+  tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp6 = add nuw nsw i64 %tmp2, 4294967296
   %tmp7 = lshr exact i64 %tmp6, 32
@@ -117,7 +117,7 @@ bb:
   %tmp5 = getelementptr inbounds i32, i32* %arg, i64 %tmp4
   store i32 0, i32* %tmp5, align 4
   fence syncscope("singlethread") release
-  tail call void @llvm.amdgcn.s.barrier() #3
+  tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp6 = add nuw nsw i64 %tmp2, 4294967296
   %tmp7 = lshr exact i64 %tmp6, 32
