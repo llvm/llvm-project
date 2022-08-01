@@ -564,7 +564,7 @@ def : PatSetCC<FPR32, any_fsetccs, SETOLT, FLT_S>;
 def : PatSetCC<FPR32, any_fsetccs, SETLE, FLE_S>;
 def : PatSetCC<FPR32, any_fsetccs, SETOLE, FLE_S>;
 
-def Select_FPR32_Using_CC_GPR : SelectCC_rrirr<FPR32, GPR>;
+defm Select_FPR32 : SelectCC_GPR_rrirr<FPR32>;
 
 /// Loads
 
