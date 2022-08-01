@@ -134,7 +134,7 @@ public:
   /// getBlockDataMap - Retrieves the internal map between CFGBlocks and
   /// dataflow values.  If the dataflow analysis operates in the forward
   /// direction, the values correspond to the dataflow values at the start
-  /// of the block.  Otherwise, for a backward analysis, the values correpsond
+  /// of the block.  Otherwise, for a backward analysis, the values correspond
   /// to the dataflow values at the end of the block.
   BlockDataMapTy& getBlockDataMap() { return BlockDataMap; }
   const BlockDataMapTy& getBlockDataMap() const { return BlockDataMap; }

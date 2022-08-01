@@ -720,11 +720,11 @@ public:
   /// returned, which is better than nothing but does not represent
   /// the actual behavior of the program. The Idx parameter is used if we
   /// construct an array of objects. In that case it points to the index
-  /// of the continous memory region.
+  /// of the continuous memory region.
   /// E.g.:
   /// For `int arr[4]` this index can be 0,1,2,3.
   /// For `int arr2[3][3]` this index can be 0,1,...,7,8.
-  /// A multi-dimensional array is also a continous memory location in a
+  /// A multi-dimensional array is also a continuous memory location in a
   /// row major order, so for arr[0][0] Idx is 0 and for arr[2][2] Idx is 8.
   SVal computeObjectUnderConstruction(const Expr *E, ProgramStateRef State,
                                       const LocationContext *LCtx,

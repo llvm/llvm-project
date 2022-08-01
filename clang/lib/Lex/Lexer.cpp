@@ -3368,7 +3368,7 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
     // recover after having emitted a diagnostic.
     if (!LooseMatch)
       return llvm::None;
-    // We do not offer missspelled character names suggestions here
+    // We do not offer misspelled character names suggestions here
     // as the set of what would be a valid suggestion depends on context,
     // and we should not make invalid suggestions.
   }

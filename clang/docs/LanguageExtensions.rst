@@ -3006,7 +3006,7 @@ stable numbering order in which they appear in their local declaration contexts.
 Once this builtin is evaluated in a constexpr context, it is erroneous to use
 it in an instantiation which changes its value.
 
-In order to produce the unique name, the current implementation of the bultin
+In order to produce the unique name, the current implementation of the builtin
 uses Itanium mangling even if the host compilation uses a different name
 mangling scheme at runtime. The mangler marks all the lambdas required to name
 the SYCL kernel and emits a stable local ordering of the respective lambdas.

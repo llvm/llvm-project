@@ -542,7 +542,7 @@ public:
 /// of being immediately copied by an elidable copy/move constructor.
 /// For example, T t = T(123); includes a temporary T(123) that is immediately
 /// copied to variable t. In such cases the elidable copy can (but not
-/// necessarily should) be omitted ("elided") accodring to the rules of the
+/// necessarily should) be omitted ("elided") according to the rules of the
 /// language; the constructor would then construct variable t directly.
 /// This construction context contains information of the elidable constructor
 /// and its respective construction context.

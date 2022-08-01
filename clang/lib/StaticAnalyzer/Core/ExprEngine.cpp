@@ -187,7 +187,7 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
 
 // This trait is responsible for storing the index of the element that is to be
 // constructed in the next iteration. As a result a CXXConstructExpr is only
-// stored if it is array type. Also the index is the index of the continous
+// stored if it is array type. Also the index is the index of the continuous
 // memory region, which is important for multi-dimensional arrays. E.g:: int
 // arr[2][2]; assume arr[1][1] will be the next element under construction, so
 // the index is 3.

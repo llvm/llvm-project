@@ -306,7 +306,7 @@ public:
   /// Computing a type for the function argument may require running
   /// overloading, so we postpone its computation until it is actually needed.
   ///
-  /// Clients should be very careful when using this funciton, as it stores a
+  /// Clients should be very careful when using this function, as it stores a
   /// function_ref, clients should make sure all calls to get() with the same
   /// location happen while function_ref is alive.
   ///
@@ -4018,13 +4018,10 @@ public:
                                               DeclAccessPair *Found = nullptr);
 
   bool ResolveAndFixSingleFunctionTemplateSpecialization(
-                      ExprResult &SrcExpr,
-                      bool DoFunctionPointerConverion = false,
-                      bool Complain = false,
-                      SourceRange OpRangeForComplaining = SourceRange(),
-                      QualType DestTypeForComplaining = QualType(),
-                      unsigned DiagIDForComplaining = 0);
-
+      ExprResult &SrcExpr, bool DoFunctionPointerConversion = false,
+      bool Complain = false, SourceRange OpRangeForComplaining = SourceRange(),
+      QualType DestTypeForComplaining = QualType(),
+      unsigned DiagIDForComplaining = 0);
 
   Expr *FixOverloadedFunctionReference(Expr *E,
                                        DeclAccessPair FoundDecl,

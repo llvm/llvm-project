@@ -186,7 +186,7 @@ TEST_F(StructuralEquivalenceTest, Char) {
 }
 
 // This test is disabled for now.
-// FIXME Whether this is equivalent is dependendant on the target.
+// FIXME Whether this is equivalent is dependent on the target.
 TEST_F(StructuralEquivalenceTest, DISABLED_CharVsSignedChar) {
   auto Decls = makeNamedDecls("char foo;", "signed char foo;", Lang_CXX03);
   EXPECT_FALSE(testStructuralMatch(Decls));

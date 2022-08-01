@@ -3754,7 +3754,7 @@ Sema::SelectorsForTypoCorrection(Selector Sel,
 
 /// DiagnoseDuplicateIvars -
 /// Check for duplicate ivars in the entire class at the start of
-/// \@implementation. This becomes necesssary because class extension can
+/// \@implementation. This becomes necessary because class extension can
 /// add ivars to a class in random order which will not be known until
 /// class's \@implementation is seen.
 void Sema::DiagnoseDuplicateIvars(ObjCInterfaceDecl *ID,

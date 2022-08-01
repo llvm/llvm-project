@@ -29,7 +29,7 @@ system is not necessarily the best solution:
 Supported Systems
 =================
 
-Clang has the ablity to generate compilation database fragments via
+Clang has the ability to generate compilation database fragments via
 the :option:`-MJ argument <clang -MJ\<arg>>`. You can concatenate those
 fragments together between ``[`` and ``]`` to create a compilation database.
 

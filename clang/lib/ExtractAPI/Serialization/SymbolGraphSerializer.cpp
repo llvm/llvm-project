@@ -146,19 +146,19 @@ Optional<Object> serializeAvailability(const AvailabilityInfo &Avail) {
   if (Avail.isDefault())
     return None;
 
-  Object Availbility;
-  serializeObject(Availbility, "introducedVersion",
+  Object Availability;
+  serializeObject(Availability, "introducedVersion",
                   serializeSemanticVersion(Avail.Introduced));
-  serializeObject(Availbility, "deprecatedVersion",
+  serializeObject(Availability, "deprecatedVersion",
                   serializeSemanticVersion(Avail.Deprecated));
-  serializeObject(Availbility, "obsoletedVersion",
+  serializeObject(Availability, "obsoletedVersion",
                   serializeSemanticVersion(Avail.Obsoleted));
   if (Avail.isUnavailable())
-    Availbility["isUnconditionallyUnavailable"] = true;
+    Availability["isUnconditionallyUnavailable"] = true;
   if (Avail.isUnconditionallyDeprecated())
-    Availbility["isUnconditionallyDeprecated"] = true;
+    Availability["isUnconditionallyDeprecated"] = true;
 
-  return Availbility;
+  return Availability;
 }
 
 /// Get the language name string for interface language references.

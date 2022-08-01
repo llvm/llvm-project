@@ -1168,7 +1168,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
-/// Enum for accesseing the reserved_2 field of the ident_t struct.
+/// Enum for accessing the reserved_2 field of the ident_t struct.
 enum ModeFlagsTy : unsigned {
   /// Bit set to 1 when in SPMD mode.
   KMP_IDENT_SPMD_MODE = 0x01,

@@ -1,5 +1,5 @@
 # This file sets up a CMakeCache for a simple build with multiple distributions.
-# Note that for a real distribution, you likely want to perform a boostrap
+# Note that for a real distribution, you likely want to perform a bootstrap
 # build; see clang/cmake/caches/DistributionExample.cmake and the
 # BuildingADistribution documentation for details. This cache file doesn't
 # demonstrate bootstrapping so it can focus on the configuration details

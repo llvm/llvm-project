@@ -301,7 +301,7 @@ private:
   // applied.
   Replacements getCanonicalReplacements() const;
 
-  // If `R` and all existing replacements are order-indepedent, then merge it
+  // If `R` and all existing replacements are order-independent, then merge it
   // with `Replaces` and returns the merged replacements; otherwise, returns an
   // error.
   llvm::Expected<Replacements>
