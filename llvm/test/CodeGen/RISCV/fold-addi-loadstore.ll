@@ -49,8 +49,7 @@ define dso_local i64 @load_g_0() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi0:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_0)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
-; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* @g_0
@@ -85,8 +84,7 @@ define dso_local i64 @load_g_1() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi1:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_1)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
-; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* @g_1
@@ -121,8 +119,7 @@ define dso_local i64 @load_g_2() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi2:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_2)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
-; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* @g_2
@@ -157,8 +154,7 @@ define dso_local i64 @load_g_4() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi3:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi3)
-; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* @g_4
@@ -192,8 +188,7 @@ define dso_local i64 @load_g_8() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi4:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_8)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi4)
-; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* @g_8
@@ -227,8 +222,7 @@ define dso_local i64 @load_g_16() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi5:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_16)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi5)
-; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* @g_16
@@ -263,8 +257,7 @@ define dso_local void @store_g_4() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi6:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi6)
-; RV64I-MEDIUM-NEXT:    sd zero, 0(a0)
+; RV64I-MEDIUM-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi6)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
    store i64 0, i64* @g_4
@@ -298,8 +291,7 @@ define dso_local void @store_g_8() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi7:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_8)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi7)
-; RV64I-MEDIUM-NEXT:    sd zero, 0(a0)
+; RV64I-MEDIUM-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi7)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
    store i64 0, i64* @g_8
@@ -324,10 +316,9 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV32I-MEDIUM:       # %bb.0: # %entry
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi8:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4_i32)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi8)
-; RV32I-MEDIUM-NEXT:    lw a1, 0(a0)
+; RV32I-MEDIUM-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV32I-MEDIUM-NEXT:    addi a1, a1, 1
-; RV32I-MEDIUM-NEXT:    sw a1, 0(a0)
+; RV32I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: inc_g_i32:
@@ -342,10 +333,9 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi8:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4_i32)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi8)
-; RV64I-MEDIUM-NEXT:    lw a1, 0(a0)
+; RV64I-MEDIUM-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV64I-MEDIUM-NEXT:    addiw a1, a1, 1
-; RV64I-MEDIUM-NEXT:    sw a1, 0(a0)
+; RV64I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i32, i32* @g_4_i32
@@ -371,9 +361,8 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 ; RV32I-MEDIUM-LABEL: load_ga:
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi9:
-; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi9)
-; RV32I-MEDIUM-NEXT:    lw a0, 4(a0)
+; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga+4)
+; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi9)(a0)
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: load_ga:
@@ -385,9 +374,8 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 ; RV64I-MEDIUM-LABEL: load_ga:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi9:
-; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi9)
-; RV64I-MEDIUM-NEXT:    lw a0, 4(a0)
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga+4)
+; RV64I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi9)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
   %1 = load i32, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @ga, i32 0, i32 1), align 4
   ret i32 %1
@@ -425,9 +413,8 @@ define dso_local i64 @load_ga_8() nounwind {
 ; RV64I-MEDIUM-LABEL: load_ga_8:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi10:
-; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga_8)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi10)
-; RV64I-MEDIUM-NEXT:    ld a0, 8(a0)
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga_8+8)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi10)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @ga_8, i32 0, i32 1)
@@ -460,9 +447,8 @@ define dso_local i64 @load_ga_16() nounwind {
 ; RV64I-MEDIUM-LABEL: load_ga_16:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi11:
-; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga_16)
-; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi11)
-; RV64I-MEDIUM-NEXT:    ld a0, 8(a0)
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga_16+8)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi11)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
   %0 = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @ga_16, i32 0, i32 1)
