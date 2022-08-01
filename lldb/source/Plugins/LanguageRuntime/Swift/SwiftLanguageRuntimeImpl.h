@@ -243,6 +243,8 @@ public:
     virtual swift::reflection::TypeRefBuilder &getBuilder() = 0;
     virtual llvm::Optional<bool> isValueInlinedInExistentialContainer(
         swift::remote::RemoteAddress existential_address) = 0;
+    virtual swift::remote::RemoteAbsolutePointer
+    stripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
   };
 
 protected:
