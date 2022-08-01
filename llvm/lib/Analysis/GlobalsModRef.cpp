@@ -941,9 +941,7 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
             Known = unionModRef(FI->getModRefInfoForGlobal(*GV),
                                 getModRefInfoForArgument(Call, GV, AAQI));
 
-  if (!isModOrRefSet(Known))
-    return ModRefInfo::NoModRef; // No need to query other mod/ref analyses
-  return intersectModRef(Known, AAResultBase::getModRefInfo(Call, Loc, AAQI));
+  return Known;
 }
 
 GlobalsAAResult::GlobalsAAResult(
