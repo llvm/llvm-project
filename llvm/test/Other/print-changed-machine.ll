@@ -24,8 +24,8 @@
 ; QUIET-NOT:     ***
 ; QUIET:         *** IR Dump After Legalizer (legalizer) on foo ***
 
-;; Other modes are unimplemented. Currently they behave like 'quiet'.
-; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=diff %s 2>&1 | FileCheck %s --check-prefix=QUIET
+;; dot-cfg/dot-cfg-quiet are unimplemented. Currently they behave like 'quiet'.
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=dot-cfg %s 2>&1 | FileCheck %s --check-prefix=QUIET
 
 @var = global i32 0
 
