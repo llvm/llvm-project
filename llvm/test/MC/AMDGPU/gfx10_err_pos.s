@@ -990,6 +990,19 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // CHECK-NEXT:{{^}}                                          ^
 
 //==============================================================================
+// missing dst operand or lds modifier
+
+buffer_load_dword off, s[8:11], s3
+// CHECK: error: missing dst operand or lds modifier
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3
+// CHECK-NEXT:{{^}}^
+
+buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK: error: missing dst operand or lds modifier
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK-NEXT:{{^}}^
+
+//==============================================================================
 // missing message operation
 
 s_sendmsg sendmsg(MSG_SYSMSG)

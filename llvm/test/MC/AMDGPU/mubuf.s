@@ -860,3 +860,9 @@ buffer_store_lds_dword s[4:7], s8 offset:4 lds tfe
 buffer_store_lds_dword s[4:7], s8 offset:4 tfe lds
 // NOSICI: error: instruction not supported on this GPU
 // NOVI:   error: invalid operand for instruction
+
+buffer_load_dword off, s[8:11], s3
+// NOSICIVI: error: missing dst operand or lds modifier
+
+buffer_load_dword off, s[8:11], s3 offset:1
+// NOSICIVI: error: missing dst operand or lds modifier
