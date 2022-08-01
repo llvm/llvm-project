@@ -19632,6 +19632,23 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       // Failed to find a match in the chain - bail.
       break;
     }
+
+    // See if we can fill in the missing constant elements as zeros.
+    // TODO: Should we do this for any constant?
+    APInt DemandedZeroElts = APInt::getZero(NumElts);
+    for (int I = 0; I != NumElts; ++I)
+      if (!Ops[I])
+        DemandedZeroElts.setBit(I);
+
+    if (DAG.MaskedVectorIsZero(InVec, DemandedZeroElts)) {
+      SDValue Zero = VT.isInteger() ? DAG.getConstant(0, DL, MaxEltVT)
+                                    : DAG.getConstantFP(0, DL, MaxEltVT);
+      for (int I = 0; I != NumElts; ++I)
+        if (!Ops[I])
+          Ops[I] = Zero;
+
+      return CanonicalizeBuildVector(Ops);
+    }
   }
 
   return SDValue();
