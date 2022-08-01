@@ -1265,13 +1265,21 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
-  /// getArithmeticReductionCost of an Add reduction with an extension and
-  /// optional multiply. This is the cost of as:
-  /// ResTy vecreduce.add(ext(Ty A)), or if IsMLA flag is set then:
-  /// ResTy vecreduce.add(mul(ext(Ty A), ext(Ty B)). The reduction happens
-  /// on a VectorType with ResTy elements and Ty lanes.
-  InstructionCost getExtendedAddReductionCost(
-      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+  /// getArithmeticReductionCost of an Add reduction with multiply and optional
+  /// extensions. This is the cost of as:
+  /// ResTy vecreduce.add(mul (A, B)).
+  /// ResTy vecreduce.add(mul(ext(Ty A), ext(Ty B)).
+  InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
+  /// Calculate the cost of an extended reduction pattern, similar to
+  /// getArithmeticReductionCost of a reduction with an extension.
+  /// This is the cost of as:
+  /// ResTy vecreduce(ext(Ty A)).
+  InstructionCost getExtendedReductionCost(
+      unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      Optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
@@ -1775,8 +1783,12 @@ public:
   virtual InstructionCost
   getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy, bool IsUnsigned,
                          TTI::TargetCostKind CostKind) = 0;
-  virtual InstructionCost getExtendedAddReductionCost(
-      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+  virtual InstructionCost getExtendedReductionCost(
+      unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      Optional<FastMathFlags> FMF,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
+  virtual InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
   virtual InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
@@ -2345,11 +2357,17 @@ public:
                          TTI::TargetCostKind CostKind) override {
     return Impl.getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
   }
-  InstructionCost getExtendedAddReductionCost(
-      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+  InstructionCost getExtendedReductionCost(
+      unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      Optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) override {
-    return Impl.getExtendedAddReductionCost(IsMLA, IsUnsigned, ResTy, Ty,
-                                            CostKind);
+    return Impl.getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
+                                         CostKind);
+  }
+  InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) override {
+    return Impl.getMulAccReductionCost(IsUnsigned, ResTy, Ty, CostKind);
   }
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind) override {
