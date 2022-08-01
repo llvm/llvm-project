@@ -61,9 +61,10 @@ getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
 }
 
 template <typename T>
-static void createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
-                                 const T *clause,
-                                 Block *lastPrivBlock = nullptr) {
+static void
+createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
+                     const T *clause,
+                     [[maybe_unused]] Block *lastPrivBlock = nullptr) {
   const Fortran::parser::OmpObjectList &ompObjectList = clause->v;
   for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
     Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
@@ -906,6 +907,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
   mlir::Attribute scheduleClauseOperand, noWaitClauseOperand,
       orderedClauseOperand, orderClauseOperand;
+  mlir::IntegerAttr simdlenClauseOperand;
   SmallVector<Attribute> reductionDeclSymbols;
   Fortran::lower::StatementContext stmtCtx;
   const auto &loopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
@@ -1017,6 +1019,13 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         TODO(currentLocation,
              "Reduction of intrinsic procedures is not supported");
       }
+    } else if (const auto &simdlenClause =
+                   std::get_if<Fortran::parser::OmpClause::Simdlen>(
+                       &clause.u)) {
+      const auto *expr = Fortran::semantics::GetExpr(simdlenClause->v);
+      const std::optional<std::int64_t> simdlenVal =
+          Fortran::evaluate::ToInt64(*expr);
+      simdlenClauseOperand = firOpBuilder.getI64IntegerAttr(*simdlenVal);
     }
   }
 
@@ -1038,7 +1047,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     TypeRange resultType;
     auto SimdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
         currentLocation, resultType, lowerBound, upperBound, step,
-        ifClauseOperand, /*inclusive=*/firOpBuilder.getUnitAttr());
+        ifClauseOperand, simdlenClauseOperand,
+        /*inclusive=*/firOpBuilder.getUnitAttr());
     createBodyOfOp<omp::SimdLoopOp>(SimdLoopOp, converter, currentLocation,
                                     eval, &loopOpClauseList, iv);
     return;

@@ -77,9 +77,9 @@ TEST_P(BinaryContextTester, BaseAddress) {
 
   Optional<uint64_t> BaseAddress =
       BC->getBaseAddressForMapping(0x7f13f5556000, 0x10e8c000);
-  ASSERT_TRUE(BaseAddress.hasValue());
+  ASSERT_TRUE(BaseAddress.has_value());
   ASSERT_EQ(*BaseAddress, 0x7f13e46c9000ULL);
 
   BaseAddress = BC->getBaseAddressForMapping(0x7f13f5556000, 0x137a000);
-  ASSERT_FALSE(BaseAddress.hasValue());
+  ASSERT_FALSE(BaseAddress.has_value());
 }

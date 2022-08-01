@@ -60,7 +60,14 @@ private:
   bool tryMergeForEach();
   bool tryTransformTryUsageForC();
 
+  // Merge the most recently lexed tokens into a single token if their kinds are
+  // correct.
   bool tryMergeTokens(ArrayRef<tok::TokenKind> Kinds, TokenType NewType);
+  // Merge without checking their kinds.
+  bool tryMergeTokens(size_t Count, TokenType NewType);
+  // Merge if their kinds match any one of Kinds.
+  bool tryMergeTokensAny(ArrayRef<ArrayRef<tok::TokenKind>> Kinds,
+                         TokenType NewType);
 
   // Returns \c true if \p Tok can only be followed by an operand in JavaScript.
   bool precedesOperand(FormatToken *Tok);

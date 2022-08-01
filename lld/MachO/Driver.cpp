@@ -526,7 +526,7 @@ static void initLLVM() {
   InitializeAllAsmParsers();
 }
 
-static void compileBitcodeFiles() {
+static bool compileBitcodeFiles() {
   TimeTraceScope timeScope("LTO");
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
@@ -534,8 +534,11 @@ static void compileBitcodeFiles() {
       if (!file->lazy)
         lto->add(*bitcodeFile);
 
-  for (ObjFile *file : lto->compile())
+  std::vector<ObjFile *> compiled = lto->compile();
+  for (ObjFile *file : compiled)
     inputFiles.insert(file);
+
+  return !compiled.empty();
 }
 
 // Replaces common symbols with defined symbols residing in __common sections.
@@ -1145,6 +1148,52 @@ static void referenceStubBinder() {
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
 }
 
+static void createAliases() {
+  for (const auto &pair : config->aliasedSymbols) {
+    if (const auto &sym = symtab->find(pair.first)) {
+      if (const auto &defined = dyn_cast<Defined>(sym)) {
+        symtab->aliasDefined(defined, pair.second);
+        continue;
+      }
+    }
+
+    warn("undefined base symbol '" + pair.first + "' for alias '" +
+         pair.second + "'\n");
+  }
+}
+
+static void handleExplicitExports() {
+  if (config->hasExplicitExports) {
+    parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
+      if (auto *defined = dyn_cast<Defined>(sym)) {
+        StringRef symbolName = defined->getName();
+        if (config->exportedSymbols.match(symbolName)) {
+          if (defined->privateExtern) {
+            if (defined->weakDefCanBeHidden) {
+              // weak_def_can_be_hidden symbols behave similarly to
+              // private_extern symbols in most cases, except for when
+              // it is explicitly exported.
+              // The former can be exported but the latter cannot.
+              defined->privateExtern = false;
+            } else {
+              warn("cannot export hidden symbol " + toString(*defined) +
+                   "\n>>> defined in " + toString(defined->getFile()));
+            }
+          }
+        } else {
+          defined->privateExtern = true;
+        }
+      }
+    });
+  } else if (!config->unexportedSymbols.empty()) {
+    parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
+      if (auto *defined = dyn_cast<Defined>(sym))
+        if (config->unexportedSymbols.match(defined->getName()))
+          defined->privateExtern = true;
+    });
+  }
+}
+
 bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                  llvm::raw_ostream &stderrOS, bool exitEarly,
                  bool disableOutput) {
@@ -1350,6 +1399,8 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->callGraphProfileSort = args.hasFlag(
       OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
+  config->forceExactCpuSubtypeMatch =
+      getenv("LD_DYLIB_CPU_SUBTYPES_MUST_MATCH");
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1593,7 +1644,20 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     for (const Arg *arg : args.filtered(OPT_mllvm))
       parseClangOption(arg->getValue(), arg->getSpelling());
 
-    compileBitcodeFiles();
+    createSyntheticSections();
+    createSyntheticSymbols();
+
+    createAliases();
+    // If we are in "explicit exports" mode, hide everything that isn't
+    // explicitly exported. Do this before running LTO so that LTO can better
+    // optimize.
+    handleExplicitExports();
+    // LTO may emit a non-hidden (extern) object file symbol even if the
+    // corresponding bitcode symbol is hidden. In particular, this happens for
+    // cross-module references to hidden symbols under ThinLTO. Thus, if we
+    // compiled any bitcode files, we must redo the symbol hiding.
+    if (compileBitcodeFiles())
+      handleExplicitExports();
     replaceCommonSymbols();
 
     StringRef orderFile = args.getLastArgValue(OPT_order_file);
@@ -1604,51 +1668,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     // FIXME: should terminate the link early based on errors encountered so
     // far?
-
-    createSyntheticSections();
-    createSyntheticSymbols();
-
-    for (const auto &pair : config->aliasedSymbols) {
-      if (const auto &sym = symtab->find(pair.first)) {
-        if (const auto &defined = dyn_cast<Defined>(sym)) {
-          symtab->aliasDefined(defined, pair.second);
-          continue;
-        }
-      }
-
-      warn("undefined base symbol '" + pair.first + "' for alias '" +
-           pair.second + "'\n");
-    }
-
-    if (config->hasExplicitExports) {
-      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
-        if (auto *defined = dyn_cast<Defined>(sym)) {
-          StringRef symbolName = defined->getName();
-          if (config->exportedSymbols.match(symbolName)) {
-            if (defined->privateExtern) {
-              if (defined->weakDefCanBeHidden) {
-                // weak_def_can_be_hidden symbols behave similarly to
-                // private_extern symbols in most cases, except for when
-                // it is explicitly exported.
-                // The former can be exported but the latter cannot.
-                defined->privateExtern = false;
-              } else {
-                warn("cannot export hidden symbol " + toString(*defined) +
-                     "\n>>> defined in " + toString(defined->getFile()));
-              }
-            }
-          } else {
-            defined->privateExtern = true;
-          }
-        }
-      });
-    } else if (!config->unexportedSymbols.empty()) {
-      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
-        if (auto *defined = dyn_cast<Defined>(sym))
-          if (config->unexportedSymbols.match(defined->getName()))
-            defined->privateExtern = true;
-      });
-    }
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
       StringRef segName = arg->getValue(0);

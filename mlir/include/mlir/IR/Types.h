@@ -98,6 +98,8 @@ public:
   bool isa() const;
   template <typename First, typename Second, typename... Rest>
   bool isa() const;
+  template <typename First, typename... Rest>
+  bool isa_and_nonnull() const;
   template <typename U>
   U dyn_cast() const;
   template <typename U>
@@ -257,6 +259,11 @@ bool Type::isa() const {
 template <typename First, typename Second, typename... Rest>
 bool Type::isa() const {
   return isa<First>() || isa<Second, Rest...>();
+}
+
+template <typename First, typename... Rest>
+bool Type::isa_and_nonnull() const {
+  return impl && isa<First, Rest...>();
 }
 
 template <typename U>

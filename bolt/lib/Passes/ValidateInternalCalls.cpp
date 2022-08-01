@@ -117,7 +117,6 @@ void ValidateInternalCalls::fixCFGForPIC(BinaryFunction &Function) const {
     if (!MovedInsts.empty()) {
       // Split this block at the call instruction.
       std::unique_ptr<BinaryBasicBlock> NewBB = Function.createBasicBlock();
-      NewBB->setOffset(0);
       NewBB->addInstructions(MovedInsts.begin(), MovedInsts.end());
       BB.moveAllSuccessorsTo(NewBB.get());
 

@@ -500,7 +500,7 @@ public:
   MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
-  // UndefinedFunction which which case we need to be able to preserve the
+  // UndefinedFunction in which case we need to be able to preserve the
   // signature.
   // TODO(sbc): This repetition of the signature field is inelegant.  Revisit
   // the use of class hierarchy to represent symbol taxonomy.
@@ -649,6 +649,7 @@ T *replaceSymbol(Symbol *s, ArgT &&... arg) {
   s2->forceExport = symCopy.forceExport;
   s2->canInline = symCopy.canInline;
   s2->traced = symCopy.traced;
+  s2->referenced = symCopy.referenced;
 
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.

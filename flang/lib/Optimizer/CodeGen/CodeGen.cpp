@@ -332,19 +332,25 @@ genAllocationScaleSize(OP op, mlir::Type ity,
                        mlir::ConversionPatternRewriter &rewriter) {
   mlir::Location loc = op.getLoc();
   mlir::Type dataTy = op.getInType();
-  mlir::Type scalarType = fir::unwrapSequenceType(dataTy);
   auto seqTy = dataTy.dyn_cast<fir::SequenceType>();
-  if ((op.hasShapeOperands() && seqTy && !seqTy.hasConstantInterior()) ||
-      (seqTy && fir::characterWithDynamicLen(scalarType))) {
-    fir::SequenceType::Extent constSize = 1;
-    for (auto extent : seqTy.getShape())
-      if (extent != fir::SequenceType::getUnknownExtent())
-        constSize *= extent;
-    if (constSize != 1) {
-      mlir::Value constVal{
-          genConstantIndex(loc, ity, rewriter, constSize).getResult()};
-      return constVal;
+  fir::SequenceType::Extent constSize = 1;
+  if (seqTy) {
+    int constRows = seqTy.getConstantRows();
+    const fir::SequenceType::ShapeRef &shape = seqTy.getShape();
+    if (constRows != static_cast<int>(shape.size())) {
+      for (auto extent : shape) {
+        if (constRows-- > 0)
+          continue;
+        if (extent != fir::SequenceType::getUnknownExtent())
+          constSize *= extent;
+      }
     }
+  }
+
+  if (constSize != 1) {
+    mlir::Value constVal{
+        genConstantIndex(loc, ity, rewriter, constSize).getResult()};
+    return constVal;
   }
   return nullptr;
 }

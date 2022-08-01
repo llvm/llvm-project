@@ -72,7 +72,7 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
                "DefaultComputeClangResourceDir: Setting ClangResourceDir "
                "to \"{0}\", verify = {1}",
                clang_dir.str(), verify ? "true" : "false");
-      file_spec.GetDirectory().SetString(clang_dir);
+      file_spec.SetDirectory(clang_dir);
       FileSystem::Instance().Resolve(file_spec);
       return true;
     }
@@ -119,7 +119,7 @@ bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
                             "Developer/Toolchains/XcodeDefault.xctoolchain",
                             swift_clang_resource_dir);
     if (!verify || VerifyClangPath(clang_path)) {
-      file_spec.GetDirectory().SetString(clang_path.c_str());
+      file_spec.SetDirectory(clang_path);
       FileSystem::Instance().Resolve(file_spec);
       return true;
     }
@@ -134,7 +134,7 @@ bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
       raw_path.resize(parent - r_end);
       llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
       if (!verify || VerifyClangPath(clang_path)) {
-        file_spec.GetDirectory().SetString(clang_path.c_str());
+        file_spec.SetDirectory(clang_path);
         FileSystem::Instance().Resolve(file_spec);
         return true;
       }
@@ -145,7 +145,7 @@ bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   raw_path = lldb_shlib_spec.GetPath();
   raw_path.resize(rev_it - r_end);
   raw_path.append("LLDB.framework/Resources/Clang");
-  file_spec.GetDirectory().SetString(raw_path.c_str());
+  file_spec.SetDirectory(raw_path);
   FileSystem::Instance().Resolve(file_spec);
   return true;
 #endif // __APPLE__

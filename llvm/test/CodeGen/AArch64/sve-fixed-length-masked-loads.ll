@@ -17,10 +17,7 @@ define <2 x half> @masked_load_v2f16(<2 x half>* %ap, <2 x half>* %bp) vscale_ra
 ; CHECK-NEXT:    ldr s2, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    fcmeq v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    umov w8, v1.h[0]
-; CHECK-NEXT:    umov w9, v1.h[1]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v1.s[1], w9
+; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    shl v1.2s, v1.2s, #16
 ; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
 ; CHECK-NEXT:    fmov w8, s1

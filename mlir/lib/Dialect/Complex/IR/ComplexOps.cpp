@@ -121,6 +121,15 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
     if (getLhs() == sub.getRhs())
       return sub.getLhs();
 
+  // complex.add(a, complex.constant<0.0, 0.0>) -> a
+  if (auto constantOp = getRhs().getDefiningOp<ConstantOp>()) {
+    auto arrayAttr = constantOp.getValue();
+    if (arrayAttr[0].cast<FloatAttr>().getValue().isZero() &&
+        arrayAttr[1].cast<FloatAttr>().getValue().isZero()) {
+      return getLhs();
+    }
+  }
+
   return {};
 }
 
@@ -162,6 +171,20 @@ OpFoldResult ExpOp::fold(ArrayRef<Attribute> operands) {
   // complex.exp(complex.log(a)) -> a
   if (auto logOp = getOperand().getDefiningOp<LogOp>())
     return logOp.getOperand();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// ConjOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConjOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary op takes 1 operand");
+
+  // complex.conj(complex.conj(a)) -> a
+  if (auto conjOp = getOperand().getDefiningOp<ConjOp>())
+    return conjOp.getOperand();
 
   return {};
 }

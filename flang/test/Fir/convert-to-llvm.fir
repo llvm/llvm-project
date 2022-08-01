@@ -1164,14 +1164,14 @@ func.func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.arra
 }
 
 // CHECK-LABEL: llvm.func @alloca_array_with_holes
-// CHECK-SAME: ([[A:%.*]]: i64, [[B:%.*]]: i64) -> !llvm.ptr<i32>
+// CHECK-SAME: ([[A:%.*]]: i64, [[B:%.*]]: i64) -> !llvm.ptr<array<4 x i32>>
 // CHECK-DAG: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK-DAG: [[FIXED:%.*]] = llvm.mlir.constant(60 : i64) : i64
+// CHECK-DAG: [[FIXED:%.*]] = llvm.mlir.constant(15 : i64) : i64
 // CHECK: [[PROD1:%.*]] = llvm.mul [[ONE]], [[FIXED]] : i64
 // CHECK: [[PROD2:%.*]] = llvm.mul [[PROD1]], [[A]] : i64
 // CHECK: [[PROD3:%.*]] = llvm.mul [[PROD2]], [[B]] : i64
-// CHECK: [[RES:%.*]] = llvm.alloca [[PROD3]] x i32 {in_type = !fir.array<4x?x3x?x5xi32>
-// CHECK: llvm.return [[RES]] : !llvm.ptr<i32>
+// CHECK: [[RES:%.*]] = llvm.alloca [[PROD3]] x !llvm.array<4 x i32> {in_type = !fir.array<4x?x3x?x5xi32>
+// CHECK: llvm.return [[RES]] : !llvm.ptr<array<4 x i32>>
 
 // -----
 

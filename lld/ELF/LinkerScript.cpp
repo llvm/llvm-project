@@ -846,7 +846,14 @@ void LinkerScript::addOrphanSections() {
   // to be created before we create relocation output section, so we want
   // to create target sections first. We do not want priority handling
   // for synthetic sections because them are special.
+  size_t n = 0;
   for (InputSectionBase *isec : inputSections) {
+    // Process InputSection and MergeInputSection. Discard EhInputSection.
+    if (LLVM_LIKELY(isa<InputSection>(isec)))
+      inputSections[n++] = isec;
+    else if (isa<EhInputSection>(isec))
+      continue;
+
     // In -r links, SHF_LINK_ORDER sections are added while adding their parent
     // sections because we need to know the parent's output section before we
     // can select an output section for the SHF_LINK_ORDER section.
@@ -863,6 +870,8 @@ void LinkerScript::addOrphanSections() {
         if (depSec->flags & SHF_LINK_ORDER)
           add(depSec);
   }
+  // Keep just InputSection.
+  inputSections.resize(n);
 
   // If no SECTIONS command was given, we should insert sections commands
   // before others, so that we can handle scripts which refers them,

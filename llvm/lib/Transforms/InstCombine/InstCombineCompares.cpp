@@ -1904,6 +1904,19 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
   }
 
+  // ((zext i1 X) & Y) == 0 --> !((trunc Y) & X)
+  // ((zext i1 X) & Y) != 0 -->  ((trunc Y) & X)
+  if (match(And, m_OneUse(m_c_And(m_OneUse(m_ZExt(m_Value(X))), m_Value(Y)))) &&
+      C.isZero() && X->getType()->isIntOrIntVectorTy(1)) {
+    Value *TruncY = Builder.CreateTrunc(Y, X->getType());
+    if (Pred == CmpInst::ICMP_EQ) {
+      Value *And = Builder.CreateAnd(TruncY, X);
+      return BinaryOperator::CreateNot(And);
+    }
+    assert(Pred == CmpInst::ICMP_NE && "Unexpected predicate");
+    return BinaryOperator::CreateAnd(TruncY, X);
+  }
+
   return nullptr;
 }
 
@@ -2040,9 +2053,7 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
       NewC = ConstantInt::get(
           Mul->getType(),
           APIntOps::RoundingSDiv(C, *MulC, APInt::Rounding::DOWN));
-  }
-
-  if (Mul->hasNoUnsignedWrap()) {
+  } else if (Mul->hasNoUnsignedWrap()) {
     if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE)
       NewC = ConstantInt::get(
           Mul->getType(),
@@ -6866,10 +6877,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (match(Op0, m_FNeg(m_Value(X)))) {
     // fcmp pred (fneg X), C --> fcmp swap(pred) X, -C
     Constant *C;
-    if (match(Op1, m_Constant(C))) {
-      Constant *NegC = ConstantExpr::getFNeg(C);
-      return new FCmpInst(I.getSwappedPredicate(), X, NegC, "", &I);
-    }
+    if (match(Op1, m_Constant(C)))
+      if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
+        return new FCmpInst(I.getSwappedPredicate(), X, NegC, "", &I);
   }
 
   if (match(Op0, m_FPExt(m_Value(X)))) {
