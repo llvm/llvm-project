@@ -1597,6 +1597,9 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
 Instruction *InstCombinerImpl::foldICmpXorConstant(ICmpInst &Cmp,
                                                    BinaryOperator *Xor,
                                                    const APInt &C) {
+  if (Instruction *I = foldICmpXorShiftConst(Cmp, Xor, C))
+    return I;
+
   Value *X = Xor->getOperand(0);
   Value *Y = Xor->getOperand(1);
   const APInt *XorC;
@@ -1658,6 +1661,37 @@ Instruction *InstCombinerImpl::foldICmpXorConstant(ICmpInst &Cmp,
                           ConstantInt::get(X->getType(), ~C));
   }
   return nullptr;
+}
+
+/// For power-of-2 C:
+/// ((X s>> ShiftC) ^ X) u< C --> (X + C) u< (C << 1)
+/// ((X s>> ShiftC) ^ X) u> (C - 1) --> (X + C) u> ((C << 1) - 1)
+Instruction *InstCombinerImpl::foldICmpXorShiftConst(ICmpInst &Cmp,
+                                                     BinaryOperator *Xor,
+                                                     const APInt &C) {
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  APInt PowerOf2;
+  if (Pred == ICmpInst::ICMP_ULT)
+    PowerOf2 = C;
+  else if (Pred == ICmpInst::ICMP_UGT && !C.isMaxValue())
+    PowerOf2 = C + 1;
+  else
+    return nullptr;
+  if (!PowerOf2.isPowerOf2())
+    return nullptr;
+  Value *X;
+  const APInt *ShiftC;
+  if (!match(Xor, m_OneUse(m_c_Xor(m_Value(X),
+                                   m_AShr(m_Deferred(X), m_APInt(ShiftC))))))
+    return nullptr;
+  uint64_t Shift = ShiftC->getLimitedValue();
+  Type *XType = X->getType();
+  if (Shift == 0 || PowerOf2.isMinSignedValue())
+    return nullptr;
+  Value *Add = Builder.CreateAdd(X, ConstantInt::get(XType, PowerOf2));
+  APInt Bound =
+      Pred == ICmpInst::ICMP_ULT ? PowerOf2 << 1 : ((PowerOf2 << 1) - 1);
+  return new ICmpInst(Pred, Add, ConstantInt::get(XType, Bound));
 }
 
 /// Fold icmp (and (sh X, Y), C2), C1.
@@ -1906,14 +1940,15 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
 
   // ((zext i1 X) & Y) == 0 --> !((trunc Y) & X)
   // ((zext i1 X) & Y) != 0 -->  ((trunc Y) & X)
+  // ((zext i1 X) & Y) == 1 -->  ((trunc Y) & X)
+  // ((zext i1 X) & Y) != 1 --> !((trunc Y) & X)
   if (match(And, m_OneUse(m_c_And(m_OneUse(m_ZExt(m_Value(X))), m_Value(Y)))) &&
-      C.isZero() && X->getType()->isIntOrIntVectorTy(1)) {
+      X->getType()->isIntOrIntVectorTy(1) && (C.isZero() || C.isOne())) {
     Value *TruncY = Builder.CreateTrunc(Y, X->getType());
-    if (Pred == CmpInst::ICMP_EQ) {
+    if (C.isZero() ^ (Pred == CmpInst::ICMP_NE)) {
       Value *And = Builder.CreateAnd(TruncY, X);
       return BinaryOperator::CreateNot(And);
     }
-    assert(Pred == CmpInst::ICMP_NE && "Unexpected predicate");
     return BinaryOperator::CreateAnd(TruncY, X);
   }
 

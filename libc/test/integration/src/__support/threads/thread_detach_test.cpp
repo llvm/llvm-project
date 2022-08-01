@@ -50,7 +50,7 @@ void detach_cleanup_test() {
   ASSERT_EQ(th.detach(), int(__llvm_libc::DetachType::CLEANUP));
 }
 
-int main() {
+TEST_MAIN() {
   detach_simple_test();
   detach_cleanup_test();
   return 0;

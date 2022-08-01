@@ -213,9 +213,8 @@ enum NodeType : unsigned {
   VECREDUCE_FMIN_VL,
   VECREDUCE_FMAX_VL,
 
-  // Vector binary and unary ops with a mask as a third operand, and VL as a
-  // fourth operand.
-  // FIXME: Can we replace these with ISD::VP_*?
+  // Vector binary ops with a merge as a third operand, a mask as a fourth
+  // operand, and VL as a fifth operand.
   ADD_VL,
   AND_VL,
   MUL_VL,
@@ -229,32 +228,30 @@ enum NodeType : unsigned {
   UDIV_VL,
   UREM_VL,
   XOR_VL,
+  SMIN_VL,
+  SMAX_VL,
+  UMIN_VL,
+  UMAX_VL,
 
   SADDSAT_VL,
   UADDSAT_VL,
   SSUBSAT_VL,
   USUBSAT_VL,
 
+  MULHS_VL,
+  MULHU_VL,
   FADD_VL,
   FSUB_VL,
   FMUL_VL,
   FDIV_VL,
+  FMINNUM_VL,
+  FMAXNUM_VL,
+
+  // Vector unary ops with a mask as a second operand and VL as a third operand.
   FNEG_VL,
   FABS_VL,
   FSQRT_VL,
-  VFMADD_VL,
-  VFNMADD_VL,
-  VFMSUB_VL,
-  VFNMSUB_VL,
-  FCOPYSIGN_VL,
-  SMIN_VL,
-  SMAX_VL,
-  UMIN_VL,
-  UMAX_VL,
-  FMINNUM_VL,
-  FMAXNUM_VL,
-  MULHS_VL,
-  MULHU_VL,
+  FCOPYSIGN_VL, // Has a merge operand
   FP_TO_SINT_VL,
   FP_TO_UINT_VL,
   SINT_TO_FP_VL,
@@ -262,7 +259,14 @@ enum NodeType : unsigned {
   FP_ROUND_VL,
   FP_EXTEND_VL,
 
-  // Widening instructions
+  // Vector FMA ops with a mask as a fourth operand and VL as a fifth operand.
+  VFMADD_VL,
+  VFNMADD_VL,
+  VFMSUB_VL,
+  VFNMSUB_VL,
+
+  // Widening instructions with a merge value a third operand, a mask as a
+  // fourth operand, and VL as a fifth operand.
   VWMUL_VL,
   VWMULU_VL,
   VWMULSU_VL,
@@ -679,8 +683,9 @@ private:
   SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
                                             SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG, unsigned NewOpc,
-                            bool HasMask = true) const;
-  SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG, unsigned RISCVISDOpc) const;
+                            bool HasMergeOp = false, bool HasMask = true) const;
+  SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG, unsigned RISCVISDOpc,
+                    bool HasMergeOp = false) const;
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG, unsigned MaskOpc,
                          unsigned VecOpc) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;

@@ -1343,10 +1343,6 @@ static size_t findNull(StringRef s, size_t entSize) {
   llvm_unreachable("");
 }
 
-SyntheticSection *MergeInputSection::getParent() const {
-  return cast_or_null<SyntheticSection>(parent);
-}
-
 // Split SHF_STRINGS section. Such section is a sequence of
 // null-terminated strings.
 void MergeInputSection::splitStrings(StringRef s, size_t entSize) {

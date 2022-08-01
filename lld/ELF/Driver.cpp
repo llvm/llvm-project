@@ -606,7 +606,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 }
 
 static std::string getRpath(opt::InputArgList &args) {
-  std::vector<StringRef> v = args::getStrings(args, OPT_rpath);
+  SmallVector<StringRef, 0> v = args::getStrings(args, OPT_rpath);
   return llvm::join(v.begin(), v.end(), ":");
 }
 
@@ -807,7 +807,7 @@ static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
 // Parse --build-id or --build-id=<style>. We handle "tree" as a
 // synonym for "sha1" because all our hash functions including
 // --build-id=sha1 are actually tree hashes for performance reasons.
-static std::pair<BuildIdKind, std::vector<uint8_t>>
+static std::pair<BuildIdKind, SmallVector<uint8_t, 0>>
 getBuildId(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_build_id);
   if (!arg)
@@ -982,8 +982,8 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
 }
 
 // Parse the symbol ordering file and warn for any duplicate entries.
-static std::vector<StringRef> getSymbolOrderingFile(MemoryBufferRef mb) {
-  SetVector<StringRef> names;
+static SmallVector<StringRef, 0> getSymbolOrderingFile(MemoryBufferRef mb) {
+  SetVector<StringRef, SmallVector<StringRef, 0>> names;
   for (StringRef s : args::getLines(mb))
     if (!names.insert(s) && config->warnSymbolOrdering)
       warn(mb.getBufferIdentifier() + ": duplicate ordered symbol: " + s);
@@ -1533,7 +1533,8 @@ static void setConfigs(opt::InputArgList &args) {
   // enable the debug checks for all targets, but currently not all targets
   // have support for reading Elf_Rel addends, so we only enable for a subset.
 #ifndef NDEBUG
-  bool checkDynamicRelocsDefault = m == EM_ARM || m == EM_386 || m == EM_MIPS ||
+  bool checkDynamicRelocsDefault = m == EM_AARCH64 || m == EM_ARM ||
+                                   m == EM_386 || m == EM_MIPS ||
                                    m == EM_X86_64 || m == EM_RISCV;
 #else
   bool checkDynamicRelocsDefault = false;

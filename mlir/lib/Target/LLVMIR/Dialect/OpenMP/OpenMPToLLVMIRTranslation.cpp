@@ -973,7 +973,7 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::ConstantInt *simdlen = nullptr;
   if (llvm::Optional<uint64_t> simdlenVar = loop.simdlen())
-    simdlen = builder.getInt64(simdlenVar.getValue());
+    simdlen = builder.getInt64(simdlenVar.value());
 
   ompBuilder->applySimd(loopInfo, simdlen);
 

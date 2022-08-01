@@ -59,7 +59,7 @@ Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,sample,Not assigned,n/a,Not started
 Write,unique_copy,Hui Xie,`D130404 <https://llvm.org/D130404>`,✅
 Write,partition_copy,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
-Write,partial_sort_copy,Konstantin Varlamov,n/a,In progress
+Write,partial_sort_copy,Konstantin Varlamov,`D130532 <https://llvm.org/D130532>`_,✅
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
 Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`_,✅
 Merge,set_intersection,Hui Xie,`D129233 <https://llvm.org/D129233>`_,✅
