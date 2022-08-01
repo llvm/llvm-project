@@ -24548,7 +24548,7 @@ zero-extended or truncated accordingly.
 .. _int_threadlocal_address:
 
 '``llvm.threadlocal.address``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
