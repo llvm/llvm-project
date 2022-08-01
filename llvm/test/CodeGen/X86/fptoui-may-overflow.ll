@@ -9,9 +9,7 @@ define <16 x i8> @fptoui_zext(<4 x float> %arg) {
 ; CHECK-LABEL: fptoui_zext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %f = fptoui <4 x float> %arg to <4 x i8>
   %z = zext <4 x i8> %f to <4 x i32>

@@ -1007,6 +1007,7 @@
 // CHECK-SPARCV8: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV8: "-m" "elf32_sparc"
 // CHECK-SPARCV8: "-dynamic-linker" "{{(/usr/sparc-unknown-linux-gnu)?}}/lib/ld-linux.so.2"
+// CHECK-SPARCV8: "--push-state" "--as-needed" "-latomic" "--pop-state"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=sparcel-unknown-linux-gnu \
@@ -1021,6 +1022,7 @@
 // CHECK-SPARCV9: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV9: "-m" "elf64_sparc"
 // CHECK-SPARCV9: "-dynamic-linker" "{{(/usr/sparcv9-unknown-linux-gnu)?}}/lib{{(64)?}}/ld-linux.so.2"
+// CHECK-SPARCV9-NOT: "-latomic"
 
 // Test linker invocation on Android.
 // RUN: %clang -### %s -no-pie 2>&1 \

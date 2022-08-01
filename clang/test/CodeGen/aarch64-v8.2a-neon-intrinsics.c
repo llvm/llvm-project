@@ -1754,15 +1754,15 @@ float16x8_t test_vmulq_n_f16(float16x8_t a, float16_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmulh_lane_f16
 // CHECK-SAME: (half noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[__REINT_851:%.*]] = alloca <4 x half>, align 8
-// CHECK-NEXT:    [[__REINT1_851:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[__REINT_847:%.*]] = alloca <4 x half>, align 8
+// CHECK-NEXT:    [[__REINT1_847:%.*]] = alloca i16, align 2
 // CHECK-NEXT:    [[CONV:%.*]] = fpext half [[A]] to float
-// CHECK-NEXT:    store <4 x half> [[B]], <4 x half>* [[__REINT_851]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half>* [[__REINT_851]] to <4 x i16>*
+// CHECK-NEXT:    store <4 x half> [[B]], <4 x half>* [[__REINT_847]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half>* [[__REINT_847]] to <4 x i16>*
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, <4 x i16>* [[TMP0]], align 8
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
-// CHECK-NEXT:    store i16 [[VGET_LANE]], i16* [[__REINT1_851]], align 2
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[__REINT1_851]] to half*
+// CHECK-NEXT:    store i16 [[VGET_LANE]], i16* [[__REINT1_847]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[__REINT1_847]] to half*
 // CHECK-NEXT:    [[TMP3:%.*]] = load half, half* [[TMP2]], align 2
 // CHECK-NEXT:    [[CONV2:%.*]] = fpext half [[TMP3]] to float
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[CONV2]]
@@ -1776,15 +1776,15 @@ float16_t test_vmulh_lane_f16(float16_t a, float16x4_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmulh_laneq_f16
 // CHECK-SAME: (half noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[__REINT_854:%.*]] = alloca <8 x half>, align 16
-// CHECK-NEXT:    [[__REINT1_854:%.*]] = alloca i16, align 2
+// CHECK-NEXT:    [[__REINT_850:%.*]] = alloca <8 x half>, align 16
+// CHECK-NEXT:    [[__REINT1_850:%.*]] = alloca i16, align 2
 // CHECK-NEXT:    [[CONV:%.*]] = fpext half [[A]] to float
-// CHECK-NEXT:    store <8 x half> [[B]], <8 x half>* [[__REINT_854]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half>* [[__REINT_854]] to <8 x i16>*
+// CHECK-NEXT:    store <8 x half> [[B]], <8 x half>* [[__REINT_850]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half>* [[__REINT_850]] to <8 x i16>*
 // CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
-// CHECK-NEXT:    store i16 [[VGETQ_LANE]], i16* [[__REINT1_854]], align 2
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[__REINT1_854]] to half*
+// CHECK-NEXT:    store i16 [[VGETQ_LANE]], i16* [[__REINT1_850]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[__REINT1_850]] to half*
 // CHECK-NEXT:    [[TMP3:%.*]] = load half, half* [[TMP2]], align 2
 // CHECK-NEXT:    [[CONV2:%.*]] = fpext half [[TMP3]] to float
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[CONV2]]
@@ -2279,6 +2279,30 @@ float16x4_t test_vdup_lane_f16(float16x4_t a) {
 //
 float16x8_t test_vdupq_lane_f16(float16x4_t a) {
   return vdupq_lane_f16(a, 3);
+}
+
+// CHECK-LABEL: define {{[^@]+}}@test_vdup_laneq_f16
+// CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> [[TMP1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+// CHECK-NEXT:    ret <4 x half> [[LANE]]
+//
+float16x4_t test_vdup_laneq_f16(float16x8_t a) {
+  return vdup_laneq_f16(a, 1);
+}
+
+// CHECK-LABEL: define {{[^@]+}}@test_vdupq_laneq_f16
+// CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> [[TMP1]], <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+// CHECK-NEXT:    ret <8 x half> [[LANE]]
+//
+float16x8_t test_vdupq_laneq_f16(float16x8_t a) {
+  return vdupq_laneq_f16(a, 7);
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_vext_f16

@@ -355,11 +355,11 @@ define i64 @roriw_bug(i64 %x) nounwind {
 ; CHECK-LABEL: roriw_bug:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a1, a0, 31
-; CHECK-NEXT:    andi a0, a0, -2
-; CHECK-NEXT:    srli a2, a0, 1
-; CHECK-NEXT:    or a1, a1, a2
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    andi a2, a0, -2
+; CHECK-NEXT:    srli a0, a0, 1
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    xor a0, a2, a0
 ; CHECK-NEXT:    ret
   %a = shl i64 %x, 31
   %b = and i64 %x, 18446744073709551614

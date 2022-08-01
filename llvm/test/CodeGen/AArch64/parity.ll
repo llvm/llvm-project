@@ -47,8 +47,8 @@ define i17 @parity_17(i17 %x) {
 ; CHECK-LABEL: parity_17:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0x1ffff
-; CHECK-NEXT:    eor w8, w8, w8, lsr #16
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    eor w9, w8, w8, lsr #16
+; CHECK-NEXT:    eor w8, w9, w8, lsr #8
 ; CHECK-NEXT:    eor w8, w8, w8, lsr #4
 ; CHECK-NEXT:    eor w8, w8, w8, lsr #2
 ; CHECK-NEXT:    eor w8, w8, w8, lsr #1

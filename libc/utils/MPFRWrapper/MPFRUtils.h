@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
 #define LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "utils/UnitTest/Test.h"
 #include "utils/testutils/RoundingModeUtils.h"
 
@@ -27,6 +27,7 @@ enum class Operation : int {
   Abs,
   Ceil,
   Cos,
+  Cosh,
   Exp,
   Exp2,
   Expm1,
@@ -40,6 +41,7 @@ enum class Operation : int {
   ModPIOver4,
   Round,
   Sin,
+  Sinh,
   Sqrt,
   Tan,
   Trunc,
@@ -81,7 +83,7 @@ using __llvm_libc::testutils::RoundingMode;
 
 template <typename T> struct BinaryInput {
   static_assert(
-      __llvm_libc::cpp::IsFloatingPointType<T>::Value,
+      __llvm_libc::cpp::is_floating_point_v<T>,
       "Template parameter of BinaryInput must be a floating point type.");
 
   using Type = T;
@@ -90,7 +92,7 @@ template <typename T> struct BinaryInput {
 
 template <typename T> struct TernaryInput {
   static_assert(
-      __llvm_libc::cpp::IsFloatingPointType<T>::Value,
+      __llvm_libc::cpp::is_floating_point_v<T>,
       "Template parameter of TernaryInput must be a floating point type.");
 
   using Type = T;
@@ -111,7 +113,7 @@ struct AreMatchingBinaryInputAndBinaryOutput {
 
 template <typename T>
 struct AreMatchingBinaryInputAndBinaryOutput<BinaryInput<T>, BinaryOutput<T>> {
-  static constexpr bool VALUE = cpp::IsFloatingPointType<T>::Value;
+  static constexpr bool VALUE = cpp::is_floating_point_v<T>;
 };
 
 template <typename T>
@@ -260,30 +262,30 @@ template <Operation op, typename InputType, typename OutputType>
 constexpr bool is_valid_operation() {
   return (Operation::BeginUnaryOperationsSingleOutput < op &&
           op < Operation::EndUnaryOperationsSingleOutput &&
-          cpp::IsSame<InputType, OutputType>::Value &&
-          cpp::IsFloatingPointType<InputType>::Value) ||
+          cpp::is_same_v<InputType, OutputType> &&
+          cpp::is_floating_point_v<InputType>) ||
          (Operation::BeginUnaryOperationsTwoOutputs < op &&
           op < Operation::EndUnaryOperationsTwoOutputs &&
-          cpp::IsFloatingPointType<InputType>::Value &&
-          cpp::IsSame<OutputType, BinaryOutput<InputType>>::Value) ||
+          cpp::is_floating_point_v<InputType> &&
+          cpp::is_same_v<OutputType, BinaryOutput<InputType>>) ||
          (Operation::BeginBinaryOperationsSingleOutput < op &&
           op < Operation::EndBinaryOperationsSingleOutput &&
-          cpp::IsFloatingPointType<OutputType>::Value &&
-          cpp::IsSame<InputType, BinaryInput<OutputType>>::Value) ||
+          cpp::is_floating_point_v<OutputType> &&
+          cpp::is_same_v<InputType, BinaryInput<OutputType>>) ||
          (Operation::BeginBinaryOperationsTwoOutputs < op &&
           op < Operation::EndBinaryOperationsTwoOutputs &&
           internal::AreMatchingBinaryInputAndBinaryOutput<InputType,
                                                           OutputType>::VALUE) ||
          (Operation::BeginTernaryOperationsSingleOuput < op &&
           op < Operation::EndTernaryOperationsSingleOutput &&
-          cpp::IsFloatingPointType<OutputType>::Value &&
-          cpp::IsSame<InputType, TernaryInput<OutputType>>::Value);
+          cpp::is_floating_point_v<OutputType> &&
+          cpp::is_same_v<InputType, TernaryInput<OutputType>>);
 }
 
 template <Operation op, typename InputType, typename OutputType>
 __attribute__((no_sanitize("address")))
-cpp::EnableIfType<is_valid_operation<op, InputType, OutputType>(),
-                  internal::MPFRMatcher<op, InputType, OutputType>>
+cpp::enable_if_t<is_valid_operation<op, InputType, OutputType>(),
+                 internal::MPFRMatcher<op, InputType, OutputType>>
 get_mpfr_matcher(InputType input, OutputType output_unused,
                  double ulp_tolerance, RoundingMode rounding) {
   return internal::MPFRMatcher<op, InputType, OutputType>(input, ulp_tolerance,

@@ -50,6 +50,7 @@
 #include "llvm/Support/Timer.h"
 
 #include <cstring>
+#include <deque>
 #include <list>
 #include <string>
 
@@ -92,6 +93,11 @@ static cl::list<std::string>
     LoadHidden("load_hidden",
                cl::desc("Link against library X with hidden visibility"),
                cl::cat(JITLinkCategory));
+
+static cl::opt<bool> SearchSystemLibrary(
+    "search-sys-lib",
+    cl::desc("Add system library paths to library search paths"),
+    cl::init(false), cl::cat(JITLinkCategory));
 
 static cl::opt<bool> NoExec("noexec", cl::desc("Do not execute loaded code"),
                             cl::init(false), cl::cat(JITLinkCategory));
@@ -1144,7 +1150,7 @@ void Session::modifyPassConfig(const Triple &TT,
       if (EPC.getTargetTriple().getObjectFormat() == Triple::MachO)
         return registerMachOGraphInfo(*this, G);
 
-      if (EPC.getTargetTriple().isOSWindows())
+      if (EPC.getTargetTriple().getObjectFormat() == Triple::COFF)
         return registerCOFFGraphInfo(*this, G);
 
       return make_error<StringError>("Unsupported object format for GOT/stub "
@@ -1263,8 +1269,11 @@ static Triple getFirstFileTriple() {
         auto Obj = ExitOnErr(
             object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
         Triple TT = Obj->makeTriple();
-        if (Magic == file_magic::coff_object)
+        if (Magic == file_magic::coff_object) {
+          // TODO: Move this to makeTriple() if possible.
+          TT.setObjectFormat(Triple::COFF);
           TT.setOS(Triple::OSType::Win32);
+        }
         return TT;
       }
       default:
@@ -1525,6 +1534,18 @@ getObjectFileInterfaceHidden(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
   return I;
 }
 
+static SmallVector<StringRef, 5> getSearchPathsFromEnvVar(Session &S) {
+  // FIXME: Handle EPC environment.
+  SmallVector<StringRef, 5> PathVec;
+  auto TT = S.ES.getExecutorProcessControl().getTargetTriple();
+  if (TT.isOSBinFormatCOFF())
+    StringRef(getenv("PATH")).split(PathVec, ";");
+  else if (TT.isOSBinFormatELF())
+    StringRef(getenv("LD_LIBRARY_PATH")).split(PathVec, ":");
+
+  return PathVec;
+}
+
 static Error addLibraries(Session &S,
                           const std::map<unsigned, JITDylib *> &IdxToJD) {
 
@@ -1562,13 +1583,15 @@ static Error addLibraries(Session &S,
 
   // 2. Collect library loads
   struct LibraryLoad {
-    StringRef LibName;
+    std::string LibName;
     bool IsPath = false;
     unsigned Position;
     StringRef *CandidateExtensions;
     enum { Standard, Hidden } Modifier;
   };
-  std::vector<LibraryLoad> LibraryLoads;
+
+  // Queue to load library as in the order as it appears in the argument list.
+  std::deque<LibraryLoad> LibraryLoadQueue;
   // Add archive files from the inputs to LibraryLoads.
   for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
        InputFileItr != InputFileEnd; ++InputFileItr) {
@@ -1576,12 +1599,12 @@ static Error addLibraries(Session &S,
     if (!InputFile.endswith(".a") && !InputFile.endswith(".lib"))
       continue;
     LibraryLoad LL;
-    LL.LibName = InputFile;
+    LL.LibName = InputFile.str();
     LL.IsPath = true;
     LL.Position = InputFiles.getPosition(InputFileItr - InputFiles.begin());
     LL.CandidateExtensions = nullptr;
     LL.Modifier = LibraryLoad::Standard;
-    LibraryLoads.push_back(std::move(LL));
+    LibraryLoadQueue.push_back(std::move(LL));
   }
 
   // Add -load_hidden arguments to LibraryLoads.
@@ -1593,9 +1616,10 @@ static Error addLibraries(Session &S,
     LL.Position = LoadHidden.getPosition(LibItr - LoadHidden.begin());
     LL.CandidateExtensions = nullptr;
     LL.Modifier = LibraryLoad::Hidden;
-    LibraryLoads.push_back(std::move(LL));
+    LibraryLoadQueue.push_back(std::move(LL));
   }
   StringRef StandardExtensions[] = {".so", ".dylib", ".dll", ".a", ".lib"};
+  StringRef DynLibExtensionsOnly[] = {".so", ".dylib", ".dll"};
   StringRef ArchiveExtensionsOnly[] = {".a", ".lib"};
 
   // Add -lx arguments to LibraryLoads.
@@ -1606,7 +1630,7 @@ static Error addLibraries(Session &S,
     LL.Position = Libraries.getPosition(LibItr - Libraries.begin());
     LL.CandidateExtensions = StandardExtensions;
     LL.Modifier = LibraryLoad::Standard;
-    LibraryLoads.push_back(std::move(LL));
+    LibraryLoadQueue.push_back(std::move(LL));
   }
 
   // Add -hidden-lx arguments to LibraryLoads.
@@ -1619,7 +1643,7 @@ static Error addLibraries(Session &S,
         LibrariesHidden.getPosition(LibHiddenItr - LibrariesHidden.begin());
     LL.CandidateExtensions = ArchiveExtensionsOnly;
     LL.Modifier = LibraryLoad::Hidden;
-    LibraryLoads.push_back(std::move(LL));
+    LibraryLoadQueue.push_back(std::move(LL));
   }
 
   // If there are any load-<modified> options then turn on flag overrides
@@ -1628,9 +1652,10 @@ static Error addLibraries(Session &S,
     S.ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
 
   // Sort library loads by position in the argument list.
-  llvm::sort(LibraryLoads, [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
-    return LHS.Position < RHS.Position;
-  });
+  llvm::sort(LibraryLoadQueue,
+             [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
+               return LHS.Position < RHS.Position;
+             });
 
   // 3. Process library loads.
   auto AddArchive = [&](const char *Path, const LibraryLoad &LL)
@@ -1646,13 +1671,37 @@ static Error addLibraries(Session &S,
       GetObjFileInterface = getObjectFileInterfaceHidden;
       break;
     }
-    return StaticLibraryDefinitionGenerator::Load(
+    auto G = StaticLibraryDefinitionGenerator::Load(
         S.ObjLayer, Path, S.ES.getExecutorProcessControl().getTargetTriple(),
         std::move(GetObjFileInterface));
+    if (!G)
+      return G.takeError();
+
+    // Push additional dynamic libraries to search.
+    // Note that this mechanism only happens in COFF.
+    for (auto FileName : (*G)->getImportedDynamicLibraries()) {
+      LibraryLoad NewLL;
+      auto FileNameRef = StringRef(FileName);
+      if (!FileNameRef.endswith_insensitive(".dll"))
+        return make_error<StringError>(
+            "COFF Imported library not ending with dll extension?",
+            inconvertibleErrorCode());
+      NewLL.LibName = FileNameRef.drop_back(strlen(".dll")).str();
+      NewLL.Position = LL.Position;
+      NewLL.CandidateExtensions = DynLibExtensionsOnly;
+      NewLL.Modifier = LibraryLoad::Standard;
+      LibraryLoadQueue.push_front(std::move(NewLL));
+    }
+    return G;
   };
 
-  for (auto &LL : LibraryLoads) {
+  SmallVector<StringRef, 5> SystemSearchPaths;
+  if (SearchSystemLibrary.getValue())
+    SystemSearchPaths = getSearchPathsFromEnvVar(S);
+  while (!LibraryLoadQueue.empty()) {
     bool LibFound = false;
+    auto LL = LibraryLoadQueue.front();
+    LibraryLoadQueue.pop_front();
     auto &JD = *std::prev(IdxToJD.lower_bound(LL.Position))->second;
 
     // If this is the name of a JITDylib then link against that.
@@ -1662,7 +1711,7 @@ static Error addLibraries(Session &S,
     }
 
     if (LL.IsPath) {
-      auto G = AddArchive(LL.LibName.str().c_str(), LL);
+      auto G = AddArchive(LL.LibName.c_str(), LL);
       if (!G)
         return createFileError(LL.LibName, G.takeError());
       JD.addGenerator(std::move(*G));
@@ -1674,86 +1723,84 @@ static Error addLibraries(Session &S,
     }
 
     // Otherwise look through the search paths.
-    auto JDSearchPathsItr = JDSearchPaths.find(&JD);
-    if (JDSearchPathsItr != JDSearchPaths.end()) {
-      for (StringRef SearchPath : JDSearchPathsItr->second) {
-        for (const char *LibExt : {".dylib", ".so", ".dll", ".a", ".lib"}) {
-          SmallVector<char, 256> LibPath;
-          LibPath.reserve(SearchPath.size() + strlen("lib") +
-                          LL.LibName.size() + strlen(LibExt) +
-                          2); // +2 for pathsep, null term.
-          llvm::copy(SearchPath, std::back_inserter(LibPath));
-          if (StringRef(LibExt) != ".lib" && StringRef(LibExt) != ".dll")
-            sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
-          else
-            sys::path::append(LibPath, LL.LibName + LibExt);
-          LibPath.push_back('\0');
+    auto CurJDSearchPaths = JDSearchPaths[&JD];
+    for (StringRef SearchPath :
+         concat<StringRef>(CurJDSearchPaths, SystemSearchPaths)) {
+      for (const char *LibExt : {".dylib", ".so", ".dll", ".a", ".lib"}) {
+        SmallVector<char, 256> LibPath;
+        LibPath.reserve(SearchPath.size() + strlen("lib") + LL.LibName.size() +
+                        strlen(LibExt) + 2); // +2 for pathsep, null term.
+        llvm::copy(SearchPath, std::back_inserter(LibPath));
+        if (StringRef(LibExt) != ".lib" && StringRef(LibExt) != ".dll")
+          sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
+        else
+          sys::path::append(LibPath, LL.LibName + LibExt);
+        LibPath.push_back('\0');
 
-          // Skip missing or non-regular paths.
-          if (sys::fs::get_file_type(LibPath.data()) !=
-              sys::fs::file_type::regular_file) {
-            continue;
-          }
+        // Skip missing or non-regular paths.
+        if (sys::fs::get_file_type(LibPath.data()) !=
+            sys::fs::file_type::regular_file) {
+          continue;
+        }
 
-          file_magic Magic;
-          if (auto EC = identify_magic(LibPath, Magic)) {
-            // If there was an error loading the file then skip it.
-            LLVM_DEBUG({
-              dbgs() << "Library search found \"" << LibPath
-                     << "\", but could not identify file type (" << EC.message()
-                     << "). Skipping.\n";
-            });
-            continue;
-          }
+        file_magic Magic;
+        if (auto EC = identify_magic(LibPath, Magic)) {
+          // If there was an error loading the file then skip it.
+          LLVM_DEBUG({
+            dbgs() << "Library search found \"" << LibPath
+                   << "\", but could not identify file type (" << EC.message()
+                   << "). Skipping.\n";
+          });
+          continue;
+        }
 
-          // We identified the magic. Assume that we can load it -- we'll reset
-          // in the default case.
-          LibFound = true;
-          switch (Magic) {
-          case file_magic::elf_shared_object:
-          case file_magic::macho_dynamically_linked_shared_lib: {
-            // TODO: On first reference to LibPath this should create a JITDylib
-            // with a generator and add it to JD's links-against list. Subsquent
-            // references should use the JITDylib created on the first
-            // reference.
-            auto G =
-                EPCDynamicLibrarySearchGenerator::Load(S.ES, LibPath.data());
-            if (!G)
-              return G.takeError();
-            LLVM_DEBUG({
-              dbgs() << "Adding generator for dynamic library "
-                     << LibPath.data() << " to " << JD.getName() << "\n";
-            });
-            JD.addGenerator(std::move(*G));
-            break;
-          }
-          case file_magic::archive:
-          case file_magic::macho_universal_binary: {
-            auto G = AddArchive(LibPath.data(), LL);
-            if (!G)
-              return G.takeError();
-            JD.addGenerator(std::move(*G));
-            LLVM_DEBUG({
-              dbgs() << "Adding generator for static library " << LibPath.data()
-                     << " to " << JD.getName() << "\n";
-            });
-            break;
-          }
-          default:
-            // This file isn't a recognized library kind.
-            LLVM_DEBUG({
-              dbgs() << "Library search found \"" << LibPath
-                     << "\", but file type is not supported. Skipping.\n";
-            });
-            LibFound = false;
-            break;
-          }
-          if (LibFound)
-            break;
+        // We identified the magic. Assume that we can load it -- we'll reset
+        // in the default case.
+        LibFound = true;
+        switch (Magic) {
+        case file_magic::pecoff_executable:
+        case file_magic::elf_shared_object:
+        case file_magic::macho_dynamically_linked_shared_lib: {
+          // TODO: On first reference to LibPath this should create a JITDylib
+          // with a generator and add it to JD's links-against list. Subsquent
+          // references should use the JITDylib created on the first
+          // reference.
+          auto G = EPCDynamicLibrarySearchGenerator::Load(S.ES, LibPath.data());
+          if (!G)
+            return G.takeError();
+          LLVM_DEBUG({
+            dbgs() << "Adding generator for dynamic library " << LibPath.data()
+                   << " to " << JD.getName() << "\n";
+          });
+          JD.addGenerator(std::move(*G));
+          break;
+        }
+        case file_magic::archive:
+        case file_magic::macho_universal_binary: {
+          auto G = AddArchive(LibPath.data(), LL);
+          if (!G)
+            return G.takeError();
+          JD.addGenerator(std::move(*G));
+          LLVM_DEBUG({
+            dbgs() << "Adding generator for static library " << LibPath.data()
+                   << " to " << JD.getName() << "\n";
+          });
+          break;
+        }
+        default:
+          // This file isn't a recognized library kind.
+          LLVM_DEBUG({
+            dbgs() << "Library search found \"" << LibPath
+                   << "\", but file type is not supported. Skipping.\n";
+          });
+          LibFound = false;
+          break;
         }
         if (LibFound)
           break;
       }
+      if (LibFound)
+        break;
     }
 
     if (!LibFound)

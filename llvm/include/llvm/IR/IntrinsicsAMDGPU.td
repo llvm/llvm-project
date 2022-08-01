@@ -241,6 +241,19 @@ def int_amdgcn_sched_barrier : ClangBuiltin<"__builtin_amdgcn_sched_barrier">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn]>;
 
+// The first parameter is a mask that determines the types of instructions that
+// you would like to synchronize around and add to a scheduling group. The
+// values of the mask are defined above for sched_barrier. These instructions
+// will be selected from the bottom up starting from the sched_group_barrier's
+// location during instruction scheduling. The second parameter is the number of
+// matching instructions that will be associated with this sched_group_barrier.
+// The third parameter is an identifier which is used to describe what other
+// sched_group_barriers should be synchronized with.
+def int_amdgcn_sched_group_barrier : ClangBuiltin<"__builtin_amdgcn_sched_group_barrier">,
+  Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+  [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects,
+   IntrConvergent, IntrWillReturn]>;
+
 def int_amdgcn_s_waitcnt : ClangBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 

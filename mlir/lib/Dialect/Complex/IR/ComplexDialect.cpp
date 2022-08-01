@@ -48,11 +48,16 @@ LogicalResult complex::NumberAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     ::llvm::APFloat real, ::llvm::APFloat imag, ::mlir::Type type) {
 
-  if (!type.isa<FloatType>())
-    return emitError()
-           << "element of the complex attribute must be float like type.";
+  if (!type.isa<ComplexType>())
+    return emitError() << "complex attribute must be a complex type.";
 
-  const auto &typeFloatSemantics = type.cast<FloatType>().getFloatSemantics();
+  Type elementType = type.cast<ComplexType>().getElementType();
+  if (!elementType.isa<FloatType>())
+    return emitError()
+           << "element type of the complex attribute must be float like type.";
+
+  const auto &typeFloatSemantics =
+      elementType.cast<FloatType>().getFloatSemantics();
   if (&real.getSemantics() != &typeFloatSemantics)
     return emitError()
            << "type doesn't match the type implied by its `real` value";
@@ -64,7 +69,8 @@ LogicalResult complex::NumberAttr::verify(
 }
 
 void complex::NumberAttr::print(AsmPrinter &printer) const {
-  printer << "<:" << getType() << " " << getReal() << ", " << getImag() << ">";
+  printer << "<:" << getType().cast<ComplexType>().getElementType() << " "
+          << getReal() << ", " << getImag() << ">";
 }
 
 Attribute complex::NumberAttr::parse(AsmParser &parser, Type odsType) {
@@ -75,12 +81,5 @@ Attribute complex::NumberAttr::parse(AsmParser &parser, Type odsType) {
       parser.parseFloat(imag) || parser.parseGreater())
     return {};
 
-  bool unused = false;
-  APFloat realFloat(real);
-  realFloat.convert(type.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &unused);
-  APFloat imagFloat(imag);
-  imagFloat.convert(type.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &unused);
-  return NumberAttr::get(parser.getContext(), realFloat, imagFloat, type);
+  return NumberAttr::get(ComplexType::get(type), real, imag);
 }

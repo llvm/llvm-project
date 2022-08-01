@@ -930,6 +930,14 @@ ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
           SpecializedTemplate, Args, PrevDecl);
   Result->setMayHaveOutOfDateDef(false);
 
+  // If the template decl is incomplete, copy the external lexical storage from
+  // the base template. This allows instantiations of incomplete types to
+  // complete using the external AST if the template's declaration came from an
+  // external AST.
+  if (!SpecializedTemplate->getTemplatedDecl()->isCompleteDefinition())
+    Result->setHasExternalLexicalStorage(
+      SpecializedTemplate->getTemplatedDecl()->hasExternalLexicalStorage());
+
   Context.getTypeDeclType(Result, PrevDecl);
   return Result;
 }

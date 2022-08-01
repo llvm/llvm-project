@@ -141,27 +141,6 @@ void elf::copySectionsIntoPartitions() {
                        newSections.end());
 }
 
-void elf::combineEhSections() {
-  llvm::TimeTraceScope timeScope("Combine EH sections");
-  for (InputSectionBase *&s : inputSections) {
-    // Ignore dead sections and the partition end marker (.part.end),
-    // whose partition number is out of bounds.
-    if (!s->isLive() || s->partition == 255)
-      continue;
-
-    Partition &part = s->getPartition();
-    if (auto *es = dyn_cast<EhInputSection>(s)) {
-      part.ehFrame->addSection(es);
-      s = nullptr;
-    } else if (s->kind() == SectionBase::Regular && part.armExidx &&
-               part.armExidx->addSection(cast<InputSection>(s))) {
-      s = nullptr;
-    }
-  }
-
-  llvm::erase_value(inputSections, nullptr);
-}
-
 static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
                                    uint64_t val, uint8_t stOther = STV_HIDDEN) {
   Symbol *s = symtab->find(name);
@@ -1121,14 +1100,10 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 // The more branches in getSectionRank that match, the more similar they are.
 // Since each branch corresponds to a bit flag, we can just use
 // countLeadingZeros.
-static int getRankProximityAux(const OutputSection &a, const OutputSection &b) {
-  return countLeadingZeros(a.sortRank ^ b.sortRank);
-}
-
 static int getRankProximity(OutputSection *a, SectionCommand *b) {
   auto *osd = dyn_cast<OutputDesc>(b);
   return (osd && osd->osec.hasInputSections)
-             ? getRankProximityAux(*a, osd->osec)
+             ? countLeadingZeros(a->sortRank ^ osd->osec.sortRank)
              : -1;
 }
 
@@ -1932,7 +1907,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // copy relocations, etc. Note that relocations for non-alloc sections are
       // directly processed by InputSection::relocateNonAlloc.
       for (InputSectionBase *sec : inputSections)
-        if (sec->isLive() && isa<InputSection>(sec) && (sec->flags & SHF_ALLOC))
+        if (sec->isLive() && (sec->flags & SHF_ALLOC))
           scanRelocations<ELFT>(*sec);
       for (Partition &part : partitions) {
         for (EhInputSection *sec : part.ehFrame->sections)

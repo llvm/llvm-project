@@ -36,7 +36,7 @@ namespace internal {
 
 // When the value is of integral type, just display it as normal.
 template <typename ValType>
-cpp::EnableIfType<cpp::IsIntegral<ValType>::Value, std::string>
+cpp::enable_if_t<cpp::is_integral_v<ValType>, std::string>
 describeValue(ValType Value) {
   return std::to_string(Value);
 }

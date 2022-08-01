@@ -971,7 +971,11 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::CanonicalLoopInfo *loopInfo =
       ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
 
-  ompBuilder->applySimd(loopInfo, nullptr);
+  llvm::ConstantInt *simdlen = nullptr;
+  if (llvm::Optional<uint64_t> simdlenVar = loop.simdlen())
+    simdlen = builder.getInt64(simdlenVar.value());
+
+  ompBuilder->applySimd(loopInfo, simdlen);
 
   builder.restoreIP(afterIP);
   return success();

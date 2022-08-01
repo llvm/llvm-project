@@ -108,6 +108,7 @@ void RTDyldObjectLinkingLayer::emit(
   // filter these later.
   auto InternalSymbols = std::make_shared<std::set<StringRef>>();
   {
+    SymbolFlagsMap ExtraSymbolsToClaim;
     for (auto &Sym : (*Obj)->symbols()) {
 
       // Skip file symbols.
@@ -128,6 +129,33 @@ void RTDyldObjectLinkingLayer::emit(
         return;
       }
 
+      // Try to claim responsibility of weak symbols
+      // if AutoClaimObjectSymbols flag is set.
+      if (AutoClaimObjectSymbols &&
+          (*SymFlagsOrErr & object::BasicSymbolRef::SF_Weak)) {
+        auto SymName = Sym.getName();
+        if (!SymName) {
+          ES.reportError(SymName.takeError());
+          R->failMaterialization();
+          return;
+        }
+
+        // Already included in responsibility set, skip it
+        SymbolStringPtr SymbolName = ES.intern(*SymName);
+        if (R->getSymbols().count(SymbolName))
+          continue;
+
+        auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+        if (!SymFlags) {
+          ES.reportError(SymFlags.takeError());
+          R->failMaterialization();
+          return;
+        }
+
+        ExtraSymbolsToClaim[SymbolName] = *SymFlags;
+        continue;
+      }
+
       // Don't include symbols that aren't global.
       if (!(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global)) {
         if (auto SymName = Sym.getName())
@@ -137,6 +165,13 @@ void RTDyldObjectLinkingLayer::emit(
           R->failMaterialization();
           return;
         }
+      }
+    }
+
+    if (!ExtraSymbolsToClaim.empty()) {
+      if (auto Err = R->defineMaterializing(ExtraSymbolsToClaim)) {
+        ES.reportError(std::move(Err));
+        R->failMaterialization();
       }
     }
   }

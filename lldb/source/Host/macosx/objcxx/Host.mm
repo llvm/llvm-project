@@ -211,7 +211,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
     return error;
   }
 
-  darwin_debug_file_spec.GetFilename().SetCString("darwin-debug");
+  darwin_debug_file_spec.SetFilename("darwin-debug");
 
   if (!FileSystem::Instance().Exists(darwin_debug_file_spec)) {
     error.SetErrorStringWithFormat(
@@ -236,7 +236,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
   FileSpec working_dir{launch_info.GetWorkingDirectory()};
   if (working_dir)
-    command.Printf(R"( --working-dir \"%s\")", working_dir.GetCString());
+    command.Printf(R"( --working-dir \"%s\")", working_dir.GetPath().c_str());
   else {
     char cwd[PATH_MAX];
     if (getcwd(cwd, PATH_MAX))
@@ -1200,13 +1200,14 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   FileSpec working_dir{launch_info.GetWorkingDirectory()};
   if (working_dir) {
     // Set the working directory on this thread only
-    if (__pthread_chdir(working_dir.GetCString()) < 0) {
+    std::string working_dir_path = working_dir.GetPath();
+    if (__pthread_chdir(working_dir_path.c_str()) < 0) {
       if (errno == ENOENT) {
         error.SetErrorStringWithFormat("No such file or directory: %s",
-                                       working_dir.GetCString());
+                                       working_dir_path.c_str());
       } else if (errno == ENOTDIR) {
         error.SetErrorStringWithFormat("Path doesn't name a directory: %s",
-                                       working_dir.GetCString());
+                                       working_dir_path.c_str());
       } else {
         error.SetErrorStringWithFormat("An unknown error occurred when "
                                        "changing directory for process "

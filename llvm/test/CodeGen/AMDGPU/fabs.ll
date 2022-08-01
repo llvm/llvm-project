@@ -45,8 +45,8 @@ define amdgpu_kernel void @s_fabs_f32(float addrspace(1)* %out, float %in) {
 ; R600: |{{(PV|T[0-9])\.[XYZW]}}|
 ; R600: |{{(PV|T[0-9])\.[XYZW]}}|
 
-; GCN: s_bitset0_b32
-; GCN: s_bitset0_b32
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
 define amdgpu_kernel void @fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) {
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %in)
   store <2 x float> %fabs, <2 x float> addrspace(1)* %out
@@ -70,11 +70,11 @@ define amdgpu_kernel void @fabs_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 }
 
 ; GCN-LABEL: {{^}}fabs_fn_fold:
-; SI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0xb
-; VI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0x2c
+; SI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], s[{{[0-9]+:[0-9]+}}], 0x9
+; VI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], s[{{[0-9]+:[0-9]+}}], 0x24
 ; GCN-NOT: and
-; GCN: v_mov_b32_e32 [[V_MUL_VI:v[0-9]+]], s[[MUL_VAL]]
-; GCN: v_mul_f32_e64 v{{[0-9]+}}, |s[[ABS_VALUE]]|, [[V_MUL_VI]]
+; GCN: v_mov_b32_e32 [[V_MUL_VI:v[0-9]+]], s[[#LOAD + 3]]
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, |s[[#LOAD + 2]]|, [[V_MUL_VI]]
 define amdgpu_kernel void @fabs_fn_fold(float addrspace(1)* %out, float %in0, float %in1) {
   %fabs = call float @fabs(float %in0)
   %fmul = fmul float %fabs, %in1
@@ -83,11 +83,11 @@ define amdgpu_kernel void @fabs_fn_fold(float addrspace(1)* %out, float %in0, fl
 }
 
 ; FUNC-LABEL: {{^}}fabs_fold:
-; SI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0xb
-; VI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0x2c
+; SI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], s[{{[0-9]+:[0-9]+}}], 0x9
+; VI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], s[{{[0-9]+:[0-9]+}}], 0x24
 ; GCN-NOT: and
-; GCN: v_mov_b32_e32 [[V_MUL_VI:v[0-9]+]], s[[MUL_VAL]]
-; GCN: v_mul_f32_e64 v{{[0-9]+}}, |s[[ABS_VALUE]]|, [[V_MUL_VI]]
+; GCN: v_mov_b32_e32 [[V_MUL_VI:v[0-9]+]], s[[#LOAD + 3]]
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, |s[[#LOAD + 2]]|, [[V_MUL_VI]]
 define amdgpu_kernel void @fabs_fold(float addrspace(1)* %out, float %in0, float %in1) {
   %fabs = call float @llvm.fabs.f32(float %in0)
   %fmul = fmul float %fabs, %in1

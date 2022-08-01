@@ -57,9 +57,9 @@ Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
 Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,sample,Not assigned,n/a,Not started
-Write,unique_copy,Not assigned,n/a,Not started
+Write,unique_copy,Hui Xie,`D130404 <https://llvm.org/D130404>`,✅
 Write,partition_copy,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
-Write,partial_sort_copy,Konstantin Varlamov,n/a,In progress
+Write,partial_sort_copy,Konstantin Varlamov,`D130532 <https://llvm.org/D130532>`_,✅
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
 Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`_,✅
 Merge,set_intersection,Hui Xie,`D129233 <https://llvm.org/D129233>`_,✅
@@ -70,7 +70,7 @@ Permutation,remove_if,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅
 Permutation,rotate,Nikolas Klauser,`D124122 <https://llvm.org/D124122>`_,Under review
 Permutation,shuffle,Konstantin Varlamov,`D130321 <https://llvm.org/D130321>`_,✅
-Permutation,unique,Not assigned,n/a,Not started
+Permutation,unique,Hui Xie,`D130404 <https://llvm.org/D130404>`,✅
 Permutation,partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
 Permutation,stable_partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
 Permutation,sort,Konstantin Varlamov,`D127557 <https://llvm.org/D127557>`_,✅

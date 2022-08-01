@@ -115,7 +115,7 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     llvm_unreachable("Unhandled type.");
   }
   if (Type->isVector())
-    QT = Context.getScalableVectorType(QT, Type->getScale().getValue());
+    QT = Context.getScalableVectorType(QT, Type->getScale().value());
 
   if (Type->isConstant())
     QT = Context.getConstType(QT);
@@ -233,7 +233,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
             RVVType::computeTypes(BaseType, Log2LMUL, Record.NF, ProtoSeq);
 
         // Ignored to create new intrinsic if there are any illegal types.
-        if (!Types.hasValue())
+        if (!Types.has_value())
           continue;
 
         std::string SuffixStr =

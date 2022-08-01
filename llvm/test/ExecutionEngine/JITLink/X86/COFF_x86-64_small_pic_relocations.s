@@ -40,6 +40,33 @@ test_rel32_func:
 test_rel32_data:
     leaq named_data(%rip), %rax
 
+# Check a dllimport stub for target out of reach is created as a GOT entry.
+# jitlink-check: decode_operand(test_call_dllimport, 3) = \
+# jitlink-check:     got_addr(coff_sm_reloc.o, extern_out_of_range32) - \
+# jitlink-check:        next_pc(test_call_dllimport)
+# jitlink-check: *{8}(got_addr(coff_sm_reloc.o, extern_out_of_range32)) = \
+# jitlink-check:     extern_out_of_range32
+	.def test_call_dllimport;
+	.scl 2;
+	.type 32;
+	.endef
+	.globl test_call_dllimport
+	.p2align 4, 0x90
+test_call_dllimport:
+	callq	*__imp_extern_out_of_range32(%rip)
+
+# Check IMAGE_REL_AMD64_ADDR64 sets address of symbol to the fixup position.
+# jitlink-check: *{8}(test_addr64) = named_data
+	.text
+	.def named_func;
+	.scl 2;
+	.type 32;
+	.endef
+	.globl test_addr64
+	.p2align 4, 0x90
+test_addr64:
+	.quad named_data
+
 # Local named data/func that is used in conjunction with other test cases
 	.text
 	.def named_func;

@@ -8,7 +8,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BACKEND_SCALAR_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BACKEND_SCALAR_H
 
-#include "src/__support/CPP/TypeTraits.h" // ConditionalType, EnableIfType
+#include "src/__support/CPP/type_traits.h" // ConditionalType, enable_if_t
 #include "src/__support/endian.h"
 
 namespace __llvm_libc {
@@ -18,8 +18,8 @@ struct Scalar64BitBackend {
 
   template <typename T>
   static constexpr bool IsScalarType =
-      cpp::IsSameV<T, uint8_t> || cpp::IsSameV<T, uint16_t> ||
-      cpp::IsSameV<T, uint32_t> || cpp::IsSameV<T, uint64_t>;
+      cpp::is_same_v<T, uint8_t> || cpp::is_same_v<T, uint16_t> ||
+      cpp::is_same_v<T, uint32_t> || cpp::is_same_v<T, uint64_t>;
 
   template <typename T, Temporality TS, Aligned AS>
   static inline T load(const T *src) {
@@ -53,10 +53,10 @@ struct Scalar64BitBackend {
 
   // Returns the type to use to consume Size bytes.
   template <size_t Size>
-  using getNextType = cpp::ConditionalType<
+  using getNextType = cpp::conditional_t<
       Size >= 8, uint64_t,
-      cpp::ConditionalType<Size >= 4, uint32_t,
-                           cpp::ConditionalType<Size >= 2, uint16_t, uint8_t>>>;
+      cpp::conditional_t<Size >= 4, uint32_t,
+                         cpp::conditional_t<Size >= 2, uint16_t, uint8_t>>>;
 };
 
 template <>
