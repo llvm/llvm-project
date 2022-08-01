@@ -41,7 +41,7 @@ struct DepscanPrefixMapping {
 
 Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
-    DiagnosticConsumer &DiagsConsumer, const char *Exec,
+    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping);
 

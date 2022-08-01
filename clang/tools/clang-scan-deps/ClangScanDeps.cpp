@@ -340,9 +340,9 @@ static bool emitCompilationDBWithCASTreeArguments(
                         FileManager *Files,
                         std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                         DiagnosticConsumer *DiagConsumer) override {
-            Expected<llvm::cas::CASID> Root =
-                scanAndUpdateCC1InlineWithTool(WorkerTool, DiagsConsumer, Exec,
-                                               *Invocation, CWD, PrefixMapping);
+            Expected<llvm::cas::CASID> Root = scanAndUpdateCC1InlineWithTool(
+                WorkerTool, DiagsConsumer, /*VerboseOS*/ nullptr, Exec,
+                *Invocation, CWD, PrefixMapping);
             if (!Root) {
               llvm::consumeError(Root.takeError());
               return false;

@@ -100,10 +100,15 @@ public:
   llvm::Expected<llvm::cas::ObjectProxy>
   getDependencyTree(const std::vector<std::string> &CommandLine, StringRef CWD);
 
+  /// If \p DiagGenerationAsCompilation is true it will generate error
+  /// diagnostics same way as the normal compilation, with "N errors generated"
+  /// message and the serialized diagnostics file emitted if the
+  /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
   llvm::Expected<llvm::cas::ObjectProxy>
   getDependencyTreeFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
-      DiagnosticConsumer &DiagsConsumer,
+      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+      bool DiagGenerationAsCompilation,
       llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>
           RemapPath = nullptr);
 
@@ -111,9 +116,14 @@ public:
   getIncludeTree(cas::CASDB &DB, const std::vector<std::string> &CommandLine,
                  StringRef CWD);
 
+  /// If \p DiagGenerationAsCompilation is true it will generate error
+  /// diagnostics same way as the normal compilation, with "N errors generated"
+  /// message and the serialized diagnostics file emitted if the
+  /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
   Expected<cas::IncludeTreeRoot> getIncludeTreeFromCompilerInvocation(
       cas::CASDB &DB, std::shared_ptr<CompilerInvocation> Invocation,
-      StringRef CWD, DiagnosticConsumer &DiagsConsumer);
+      StringRef CWD, DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+      bool DiagGenerationAsCompilation);
 
   /// Collect the full module dependency graph for the input, ignoring any
   /// modules which have already been seen. If \p ModuleName isn't empty, this

@@ -191,15 +191,17 @@ DependencyScanningTool::getDependencyTree(
 llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
-    DiagnosticConsumer &DiagsConsumer,
+    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+    bool DiagGenerationAsCompilation,
     llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>
         RemapPath) {
   llvm::cas::CachingOnDiskFileSystem &FS = Worker.getCASFS();
   FS.trackNewAccesses();
   FS.setCurrentWorkingDirectory(CWD);
   MakeDependencyTree DepsConsumer(FS);
-  Worker.computeDependenciesFromCompilerInvocation(std::move(Invocation), CWD,
-                                                   DepsConsumer, DiagsConsumer);
+  Worker.computeDependenciesFromCompilerInvocation(
+      std::move(Invocation), CWD, DepsConsumer, DiagsConsumer, VerboseOS,
+      DiagGenerationAsCompilation);
   // return DepsConsumer.makeTree();
   //
   // FIXME: See FIXME in getDepencyTree().
@@ -380,10 +382,12 @@ Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
 Expected<cas::IncludeTreeRoot>
 DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
     cas::CASDB &DB, std::shared_ptr<CompilerInvocation> Invocation,
-    StringRef CWD, DiagnosticConsumer &DiagsConsumer) {
+    StringRef CWD, DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+    bool DiagGenerationAsCompilation) {
   IncludeTreePPConsumer Consumer(DB);
-  Worker.computeDependenciesFromCompilerInvocation(std::move(Invocation), CWD,
-                                                   Consumer, DiagsConsumer);
+  Worker.computeDependenciesFromCompilerInvocation(
+      std::move(Invocation), CWD, Consumer, DiagsConsumer, VerboseOS,
+      DiagGenerationAsCompilation);
   return Consumer.getIncludeTree();
 }
 
