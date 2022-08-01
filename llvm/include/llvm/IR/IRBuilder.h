@@ -753,6 +753,9 @@ public:
   /// If the pointer isn't i8* it will be converted.
   CallInst *CreateInvariantStart(Value *Ptr, ConstantInt *Size = nullptr);
 
+  /// Create a call to llvm.threadlocal.address intrinsic.
+  CallInst *CreateThreadLocalAddress(Value *Ptr);
+
   /// Create a call to Masked Load intrinsic
   CallInst *CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");
