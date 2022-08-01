@@ -2078,6 +2078,12 @@ class MUBUF_Real_gfx11<bits<8> op, MUBUF_Pseudo ps,
   let Inst{55}    = ps.idxen;
 }
 
+class Base_MUBUF_Real_Atomic_gfx11<bits<8> op, MUBUF_Pseudo ps,
+                                   string real_name> :
+  MUBUF_Real_gfx11<op, ps, real_name> {
+  let Inst{13} = cpol{CPolBit.DLC};
+}
+
 class Base_MUBUF_Real_gfx6_gfx7_gfx10<bits<7> op, MUBUF_Pseudo ps, int ef> :
   Base_MUBUF_Real_gfx6_gfx7_gfx10_gfx11<ps, ef> {
   let Inst{12}    = ps.offen;
@@ -2104,62 +2110,66 @@ class MUBUF_Real_gfx6_gfx7<bits<8> op, MUBUF_Pseudo ps> :
 // MUBUF - GFX11.
 //===----------------------------------------------------------------------===//
 
+// Shortcut to default Mnemonic from MUBUF_Pseudo. Hides the cast to the
+// specific pseudo (bothen in this case) since any of them will work.
+class get_MUBUF_ps<string name> {
+  string Mnemonic = !cast<MUBUF_Pseudo>(name # "_BOTHEN").Mnemonic;
+}
+
+// gfx11 instruction that accept both old and new assembler name.
+class Pre_gfx11_MUBUF_Name <string mnemonic, string real_name> :
+  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX11Plus]>;
+
+class MUBUF_Real_gfx11_impl<bits<8> op, string ps_name, string real_name> :
+  MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
 let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
 multiclass MUBUF_Real_AllAddr_gfx11_Renamed_Impl<bits<8> op, string real_name> {
-  def _BOTHEN_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN"), real_name>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx11", 0>;
-  def _IDXEN_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN"), real_name>,
-    AtomicNoRet<NAME # "_IDXEN_gfx11", 0>;
-  def _OFFEN_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN"), real_name>,
-    AtomicNoRet<NAME # "_OFFEN_gfx11", 0>;
-  def _OFFSET_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET"), real_name>,
-    AtomicNoRet<NAME # "_OFFSET_gfx11", 0>;
+  def _BOTHEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_BOTHEN", real_name>;
+  def _IDXEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_IDXEN", real_name>;
+  def _OFFEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_OFFEN", real_name>;
+  def _OFFSET_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_OFFSET", real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx11_Impl<bits<8> op, MUBUF_Pseudo ps> :
-  MUBUF_Real_AllAddr_gfx11_Renamed_Impl<op, ps.Mnemonic>;
+// Non-renamed, non-atomic gfx11 mubuf instructions.
 multiclass MUBUF_Real_AllAddr_gfx11<bits<8> op> :
-  MUBUF_Real_AllAddr_gfx11_Impl<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>;
+  MUBUF_Real_AllAddr_gfx11_Renamed_Impl<op, get_MUBUF_ps<NAME>.Mnemonic>;
 
-class Pre_gfx11_MUBUF_Name <MUBUF_Pseudo ps, string real_name> :
-  MnemonicAlias<ps.Mnemonic, real_name>, Requires<[isGFX11Plus]>;
 multiclass MUBUF_Real_AllAddr_gfx11_Renamed<bits<8> op, string real_name> :
   MUBUF_Real_AllAddr_gfx11_Renamed_Impl<op, real_name> {
-  def : Pre_gfx11_MUBUF_Name<!cast<MUBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
+  def : Pre_gfx11_MUBUF_Name<get_MUBUF_ps<NAME>.Mnemonic, real_name>;
 }
 
+class MUBUF_Real_Atomic_gfx11_impl<bits<8> op, string ps_name,
+                                   string real_name> :
+  Base_MUBUF_Real_Atomic_gfx11<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
 let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
-multiclass MUBUF_Real_Atomics_RTN_gfx11_Renamed<bits<8> op, string real_name> {
-  def _BOTHEN_RTN_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN_RTN"), real_name>,
-    AtomicNoRet<NAME # "_BOTHEN_gfx11", 1>;
-  def _IDXEN_RTN_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN_RTN"), real_name>,
-    AtomicNoRet<NAME # "_IDXEN_gfx11", 1>;
-  def _OFFEN_RTN_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN_RTN"), real_name>,
-    AtomicNoRet<NAME # "_OFFEN_gfx11", 1>;
-  def _OFFSET_RTN_gfx11 :
-    MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET_RTN"), real_name>,
-    AtomicNoRet<NAME # "_OFFSET_gfx11", 1>;
+multiclass MUBUF_Real_Atomic_gfx11_Renamed_impl<bits<8> op, bit is_return,
+                                                string real_name> {
+  defvar Rtn = !if(!eq(is_return, 1), "_RTN", "");
+  def _BOTHEN#Rtn#_gfx11 :
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_BOTHEN" # Rtn, real_name>,
+    AtomicNoRet<NAME # "_BOTHEN_gfx11", is_return>;
+  def _IDXEN#Rtn#_gfx11 :
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_IDXEN" # Rtn, real_name>,
+    AtomicNoRet<NAME # "_IDXEN_gfx11", is_return>;
+  def _OFFEN#Rtn#_gfx11 :
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_OFFEN" # Rtn, real_name>,
+    AtomicNoRet<NAME # "_OFFEN_gfx11", is_return>;
+  def _OFFSET#Rtn#_gfx11 :
+    MUBUF_Real_Atomic_gfx11_impl<op, NAME # "_OFFSET" # Rtn, real_name>,
+    AtomicNoRet<NAME # "_OFFSET_gfx11", is_return>;
 }
 
-multiclass MUBUF_Real_Atomics_RTN_gfx11_impl<bits<8> op, MUBUF_Pseudo ps> :
-  MUBUF_Real_Atomics_RTN_gfx11_Renamed<op, ps.Mnemonic>;
-multiclass MUBUF_Real_Atomics_RTN_gfx11<bits<8> op> :
-  MUBUF_Real_Atomics_RTN_gfx11_impl<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>;
+// Non-renamed gfx11 mubuf atomic.
+multiclass MUBUF_Real_Atomic_gfx11<bits<8> op> :
+  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 0, get_MUBUF_ps<NAME>.Mnemonic>,
+  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 1, get_MUBUF_ps<NAME>.Mnemonic>;
 
-multiclass MUBUF_Real_Atomics_gfx11<bits<8> op> :
-  MUBUF_Real_AllAddr_gfx11<op>,
-  MUBUF_Real_Atomics_RTN_gfx11<op>;
-
-multiclass MUBUF_Real_Atomics_gfx11_Renamed<bits<8> op, string real_name> :
-  MUBUF_Real_AllAddr_gfx11_Renamed<op, real_name>,
-  MUBUF_Real_Atomics_RTN_gfx11_Renamed<op, real_name>;
+multiclass MUBUF_Real_Atomic_gfx11_Renamed<bits<8> op, string real_name> :
+  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 0, real_name>,
+  MUBUF_Real_Atomic_gfx11_Renamed_impl<op, 1, real_name>  {
+  def : Pre_gfx11_MUBUF_Name<get_MUBUF_ps<NAME>.Mnemonic, real_name>;
+}
 
 let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 def BUFFER_GL0_INV_gfx11          : MUBUF_Real_gfx11<0x02B, BUFFER_GL0_INV>;
@@ -2212,38 +2222,38 @@ defm BUFFER_STORE_FORMAT_X        : MUBUF_Real_AllAddr_gfx11<0x004>;
 defm BUFFER_STORE_FORMAT_XY       : MUBUF_Real_AllAddr_gfx11<0x005>;
 defm BUFFER_STORE_FORMAT_XYZ      : MUBUF_Real_AllAddr_gfx11<0x006>;
 defm BUFFER_STORE_FORMAT_XYZW     : MUBUF_Real_AllAddr_gfx11<0x007>;
-defm BUFFER_ATOMIC_ADD_F32        : MUBUF_Real_Atomics_gfx11<0x056>;
-defm BUFFER_ATOMIC_ADD            : MUBUF_Real_Atomics_gfx11_Renamed<0x035, "buffer_atomic_add_u32">;
-defm BUFFER_ATOMIC_ADD_X2         : MUBUF_Real_Atomics_gfx11_Renamed<0x043, "buffer_atomic_add_u64">;
-defm BUFFER_ATOMIC_AND            : MUBUF_Real_Atomics_gfx11_Renamed<0x03C, "buffer_atomic_and_b32">;
-defm BUFFER_ATOMIC_AND_X2         : MUBUF_Real_Atomics_gfx11_Renamed<0x049, "buffer_atomic_and_b64">;
-defm BUFFER_ATOMIC_CMPSWAP        : MUBUF_Real_Atomics_gfx11_Renamed<0x034, "buffer_atomic_cmpswap_b32">;
-defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomics_gfx11_Renamed<0x042, "buffer_atomic_cmpswap_b64">;
-defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomics_gfx11_Renamed<0x050, "buffer_atomic_cmpswap_f32">;
-defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomics_RTN_gfx11_Renamed<0x037, "buffer_atomic_csub_u32">;
-def : MnemonicAlias<"buffer_atomic_csub", "buffer_atomic_csub_u32">, Requires<[isGFX11Plus]>;
-defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomics_gfx11_Renamed<0x040, "buffer_atomic_dec_u32">;
-defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomics_gfx11_Renamed<0x04D, "buffer_atomic_dec_u64">;
-defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomics_gfx11_Renamed<0x03F, "buffer_atomic_inc_u32">;
-defm BUFFER_ATOMIC_INC_X2         : MUBUF_Real_Atomics_gfx11_Renamed<0x04C, "buffer_atomic_inc_u64">;
-defm BUFFER_ATOMIC_FMAX           : MUBUF_Real_Atomics_gfx11_Renamed<0x052, "buffer_atomic_max_f32">;
-defm BUFFER_ATOMIC_SMAX           : MUBUF_Real_Atomics_gfx11_Renamed<0x03A, "buffer_atomic_max_i32">;
-defm BUFFER_ATOMIC_SMAX_X2        : MUBUF_Real_Atomics_gfx11_Renamed<0x047, "buffer_atomic_max_i64">;
-defm BUFFER_ATOMIC_UMAX           : MUBUF_Real_Atomics_gfx11_Renamed<0x03B, "buffer_atomic_max_u32">;
-defm BUFFER_ATOMIC_UMAX_X2        : MUBUF_Real_Atomics_gfx11_Renamed<0x048, "buffer_atomic_max_u64">;
-defm BUFFER_ATOMIC_FMIN           : MUBUF_Real_Atomics_gfx11_Renamed<0x051, "buffer_atomic_min_f32">;
-defm BUFFER_ATOMIC_SMIN           : MUBUF_Real_Atomics_gfx11_Renamed<0x038, "buffer_atomic_min_i32">;
-defm BUFFER_ATOMIC_SMIN_X2        : MUBUF_Real_Atomics_gfx11_Renamed<0x045, "buffer_atomic_min_i64">;
-defm BUFFER_ATOMIC_UMIN           : MUBUF_Real_Atomics_gfx11_Renamed<0x039, "buffer_atomic_min_u32">;
-defm BUFFER_ATOMIC_UMIN_X2        : MUBUF_Real_Atomics_gfx11_Renamed<0x046, "buffer_atomic_min_u64">;
-defm BUFFER_ATOMIC_OR             : MUBUF_Real_Atomics_gfx11_Renamed<0x03D, "buffer_atomic_or_b32">;
-defm BUFFER_ATOMIC_OR_X2          : MUBUF_Real_Atomics_gfx11_Renamed<0x04A, "buffer_atomic_or_b64">;
-defm BUFFER_ATOMIC_SUB            : MUBUF_Real_Atomics_gfx11_Renamed<0x036, "buffer_atomic_sub_u32">;
-defm BUFFER_ATOMIC_SUB_X2         : MUBUF_Real_Atomics_gfx11_Renamed<0x044, "buffer_atomic_sub_u64">;
-defm BUFFER_ATOMIC_SWAP           : MUBUF_Real_Atomics_gfx11_Renamed<0x033, "buffer_atomic_swap_b32">;
-defm BUFFER_ATOMIC_SWAP_X2        : MUBUF_Real_Atomics_gfx11_Renamed<0x041, "buffer_atomic_swap_b64">;
-defm BUFFER_ATOMIC_XOR            : MUBUF_Real_Atomics_gfx11_Renamed<0x03E, "buffer_atomic_xor_b32">;
-defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomics_gfx11_Renamed<0x04B, "buffer_atomic_xor_b64">;
+defm BUFFER_ATOMIC_ADD_F32        : MUBUF_Real_Atomic_gfx11<0x056>;
+defm BUFFER_ATOMIC_ADD            : MUBUF_Real_Atomic_gfx11_Renamed<0x035, "buffer_atomic_add_u32">;
+defm BUFFER_ATOMIC_ADD_X2         : MUBUF_Real_Atomic_gfx11_Renamed<0x043, "buffer_atomic_add_u64">;
+defm BUFFER_ATOMIC_AND            : MUBUF_Real_Atomic_gfx11_Renamed<0x03C, "buffer_atomic_and_b32">;
+defm BUFFER_ATOMIC_AND_X2         : MUBUF_Real_Atomic_gfx11_Renamed<0x049, "buffer_atomic_and_b64">;
+defm BUFFER_ATOMIC_CMPSWAP        : MUBUF_Real_Atomic_gfx11_Renamed<0x034, "buffer_atomic_cmpswap_b32">;
+defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_Renamed<0x042, "buffer_atomic_cmpswap_b64">;
+defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11_Renamed<0x050, "buffer_atomic_cmpswap_f32">;
+defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_Renamed_impl<0x037, 1, "buffer_atomic_csub_u32">;
+def : Pre_gfx11_MUBUF_Name<"buffer_atomic_csub", "buffer_atomic_csub_u32">;
+defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_Renamed<0x040, "buffer_atomic_dec_u32">;
+defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomic_gfx11_Renamed<0x04D, "buffer_atomic_dec_u64">;
+defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomic_gfx11_Renamed<0x03F, "buffer_atomic_inc_u32">;
+defm BUFFER_ATOMIC_INC_X2         : MUBUF_Real_Atomic_gfx11_Renamed<0x04C, "buffer_atomic_inc_u64">;
+defm BUFFER_ATOMIC_FMAX           : MUBUF_Real_Atomic_gfx11_Renamed<0x052, "buffer_atomic_max_f32">;
+defm BUFFER_ATOMIC_SMAX           : MUBUF_Real_Atomic_gfx11_Renamed<0x03A, "buffer_atomic_max_i32">;
+defm BUFFER_ATOMIC_SMAX_X2        : MUBUF_Real_Atomic_gfx11_Renamed<0x047, "buffer_atomic_max_i64">;
+defm BUFFER_ATOMIC_UMAX           : MUBUF_Real_Atomic_gfx11_Renamed<0x03B, "buffer_atomic_max_u32">;
+defm BUFFER_ATOMIC_UMAX_X2        : MUBUF_Real_Atomic_gfx11_Renamed<0x048, "buffer_atomic_max_u64">;
+defm BUFFER_ATOMIC_FMIN           : MUBUF_Real_Atomic_gfx11_Renamed<0x051, "buffer_atomic_min_f32">;
+defm BUFFER_ATOMIC_SMIN           : MUBUF_Real_Atomic_gfx11_Renamed<0x038, "buffer_atomic_min_i32">;
+defm BUFFER_ATOMIC_SMIN_X2        : MUBUF_Real_Atomic_gfx11_Renamed<0x045, "buffer_atomic_min_i64">;
+defm BUFFER_ATOMIC_UMIN           : MUBUF_Real_Atomic_gfx11_Renamed<0x039, "buffer_atomic_min_u32">;
+defm BUFFER_ATOMIC_UMIN_X2        : MUBUF_Real_Atomic_gfx11_Renamed<0x046, "buffer_atomic_min_u64">;
+defm BUFFER_ATOMIC_OR             : MUBUF_Real_Atomic_gfx11_Renamed<0x03D, "buffer_atomic_or_b32">;
+defm BUFFER_ATOMIC_OR_X2          : MUBUF_Real_Atomic_gfx11_Renamed<0x04A, "buffer_atomic_or_b64">;
+defm BUFFER_ATOMIC_SUB            : MUBUF_Real_Atomic_gfx11_Renamed<0x036, "buffer_atomic_sub_u32">;
+defm BUFFER_ATOMIC_SUB_X2         : MUBUF_Real_Atomic_gfx11_Renamed<0x044, "buffer_atomic_sub_u64">;
+defm BUFFER_ATOMIC_SWAP           : MUBUF_Real_Atomic_gfx11_Renamed<0x033, "buffer_atomic_swap_b32">;
+defm BUFFER_ATOMIC_SWAP_X2        : MUBUF_Real_Atomic_gfx11_Renamed<0x041, "buffer_atomic_swap_b64">;
+defm BUFFER_ATOMIC_XOR            : MUBUF_Real_Atomic_gfx11_Renamed<0x03E, "buffer_atomic_xor_b32">;
+defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_Renamed<0x04B, "buffer_atomic_xor_b64">;
 
 //===----------------------------------------------------------------------===//
 // MUBUF - GFX10.
