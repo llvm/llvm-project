@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Array.h"
+#include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/utils.h"
 #include "utils/UnitTest/Test.h"
 
 namespace __llvm_libc {
 
 TEST(LlvmLibcUtilsTest, IsPowerOfTwoOrZero) {
-  static const cpp::Array<bool, 65> kExpectedValues{
+  static const cpp::array<bool, 65> kExpectedValues{
       1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
@@ -25,7 +25,7 @@ TEST(LlvmLibcUtilsTest, IsPowerOfTwoOrZero) {
 }
 
 TEST(LlvmLibcUtilsTest, IsPowerOfTwo) {
-  static const cpp::Array<bool, 65> kExpectedValues{
+  static const cpp::array<bool, 65> kExpectedValues{
       0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
@@ -37,7 +37,7 @@ TEST(LlvmLibcUtilsTest, IsPowerOfTwo) {
 }
 
 TEST(LlvmLibcUtilsTest, Log2) {
-  static const cpp::Array<size_t, 65> kExpectedValues{
+  static const cpp::array<size_t, 65> kExpectedValues{
       0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // 0-15
       4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 16-31
       5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 32-47
@@ -49,7 +49,7 @@ TEST(LlvmLibcUtilsTest, Log2) {
 }
 
 TEST(LlvmLibcUtilsTest, LEPowerOf2) {
-  static const cpp::Array<size_t, 65> kExpectedValues{
+  static const cpp::array<size_t, 65> kExpectedValues{
       0,  1,  2,  2,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,  8,  // 0-15
       16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, // 16-31
       32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 32-47
@@ -61,7 +61,7 @@ TEST(LlvmLibcUtilsTest, LEPowerOf2) {
 }
 
 TEST(LlvmLibcUtilsTest, GEPowerOf2) {
-  static const cpp::Array<size_t, 66> kExpectedValues{
+  static const cpp::array<size_t, 66> kExpectedValues{
       0,  1,  2,  4,  4,  8,  8,  8,  8,  16, 16, 16, 16, 16, 16, 16, // 0-15
       16, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 16-31
       32, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, // 32-47

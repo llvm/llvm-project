@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ARRAYREF_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_ARRAYREF_H
 
-#include "Array.h"
+#include "array.h"
 #include "type_traits.h" // RemoveCVType
 
 #include <stddef.h> // For size_t.
@@ -120,8 +120,8 @@ public:
   ArrayRef(const void *Data, size_t Length)
       : Impl(reinterpret_cast<const T *>(Data), Length / sizeof(T)) {}
 
-  // From Array.
-  template <size_t N> ArrayRef(const Array<T, N> &Arr) : Impl(Arr.Data, N) {}
+  // From array.
+  template <size_t N> ArrayRef(const array<T, N> &Arr) : Impl(Arr.Data, N) {}
 };
 
 template <typename T>
@@ -139,8 +139,8 @@ public:
   MutableArrayRef(void *Data, size_t Length)
       : Impl(reinterpret_cast<T *>(Data), Length / sizeof(T)) {}
 
-  // From Array.
-  template <size_t N> MutableArrayRef(Array<T, N> &Arr) : Impl(Arr.Data, N) {}
+  // From array.
+  template <size_t N> MutableArrayRef(array<T, N> &Arr) : Impl(Arr.Data, N) {}
 
   operator ArrayRef<T>() const {
     return ArrayRef<T>(this->data(), this->size());

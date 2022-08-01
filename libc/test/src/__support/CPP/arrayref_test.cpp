@@ -65,7 +65,7 @@ TYPED_TEST(LlvmLibcArrayRefTest, ConstructFromCArray, Types) {
 TYPED_TEST(LlvmLibcArrayRefTest, ConstructFromLibcArray, Types) {
   using value_type = typename ParamType::value_type;
   using const_pointer = typename ParamType::const_pointer;
-  Array<value_type, 2> values = {1, 2};
+  array<value_type, 2> values = {1, 2};
   ParamType arrayref(values);
   EXPECT_FALSE(arrayref.empty());
   EXPECT_EQ(arrayref.size(), size_t(2));
