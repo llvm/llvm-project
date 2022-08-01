@@ -900,9 +900,8 @@ void SIFoldOperands::foldOperand(
           TRI->getRegClassForReg(*MRI, OpToFold.getReg());
       if (TRI->hasVectorRegisters(RC) && OpToFold.getSubReg()) {
         unsigned SubReg = OpToFold.getSubReg();
-        const TargetRegisterClass *SubRC = TRI->getSubRegClass(RC, SubReg);
-        RC = TRI->getCompatibleSubRegClass(RC, SubRC, SubReg);
-        if (RC)
+        if (const TargetRegisterClass *SubRC =
+                TRI->getSubRegisterClass(RC, SubReg))
           RC = SubRC;
       }
 
