@@ -582,9 +582,6 @@ static bool LoadValueFromConsecutiveGPRRegisters(
       ++NGRN;
     }
 
-    if (reg_info == nullptr)
-      return false;
-
     const lldb::addr_t value_addr =
         reg_ctx->ReadRegisterAsUnsigned(reg_info, LLDB_INVALID_ADDRESS);
 

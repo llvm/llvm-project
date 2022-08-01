@@ -739,7 +739,7 @@ SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
     lldb::DynamicValueType use_dynamic =
         frame->CalculateTarget()->GetPreferDynamicValue();
     const bool include_runtime_support_values =
-        target ? target->GetDisplayRuntimeSupportValues() : false;
+        target->GetDisplayRuntimeSupportValues();
 
     SBVariablesOptions options;
     options.SetIncludeArguments(arguments);

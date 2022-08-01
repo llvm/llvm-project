@@ -1772,24 +1772,20 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
   error.Clear();
 
   if (!target) {
-    ArchSpec arch;
-    if (target && target->GetArchitecture().IsValid())
-      arch = target->GetArchitecture();
-    else
-      arch = Target::GetDefaultArchitecture();
+    ArchSpec arch = Target::GetDefaultArchitecture();
 
-    const char *triple = "";
-    if (arch.IsValid())
-      triple = arch.GetTriple().getTriple().c_str();
+    const char *triple =
+        arch.IsValid() ? arch.GetTriple().getTriple().c_str() : "";
 
     TargetSP new_target_sp;
     error = debugger.GetTargetList().CreateTarget(
         debugger, "", triple, eLoadDependentsNo, nullptr, new_target_sp);
-    target = new_target_sp.get();
-  }
 
-  if (!target || error.Fail())
-    return nullptr;
+    target = new_target_sp.get();
+    if (!target || error.Fail()) {
+      return nullptr;
+    }
+  }
 
   lldb::ProcessSP process_sp =
       target->CreateProcess(debugger.GetListener(), plugin_name, nullptr, true);
