@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Array.h"
 #include "src/__support/CPP/Utility.h"
+#include "src/__support/CPP/array.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "utils/UnitTest/Test.h"
@@ -40,7 +40,7 @@ TEST(LlvmLibcAtExit, AtExitCallsSysExit) {
 }
 
 static int size;
-static __llvm_libc::cpp::Array<int, 256> arr;
+static __llvm_libc::cpp::array<int, 256> arr;
 
 template <int... Ts>
 void register_atexit_handlers(__llvm_libc::cpp::IntegerSequence<int, Ts...>) {

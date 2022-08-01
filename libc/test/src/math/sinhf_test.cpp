@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Array.h"
+#include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sinhf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"

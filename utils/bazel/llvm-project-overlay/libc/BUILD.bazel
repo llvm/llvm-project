@@ -37,7 +37,7 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_array",
-    hdrs = ["src/__support/CPP/Array.h"],
+    hdrs = ["src/__support/CPP/array.h"],
     deps = [":libc_root"],
 )
 
