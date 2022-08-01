@@ -10,9 +10,9 @@
 #include "src/string/bzero.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::array;
+using __llvm_libc::cpp::Array;
 using __llvm_libc::cpp::ArrayRef;
-using Data = array<char, 2048>;
+using Data = Array<char, 2048>;
 
 static const ArrayRef<char> k_deadcode("DEADC0DE", 8);
 
