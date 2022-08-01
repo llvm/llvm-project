@@ -131,6 +131,9 @@ class ARMDisassembler : public MCDisassembler {
 public:
   ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx) :
     MCDisassembler(STI, Ctx) {
+    InstructionEndianness = STI.getFeatureBits()[ARM::ModeBigEndianInstructions]
+                                ? llvm::support::big
+                                : llvm::support::little;
   }
 
   ~ARMDisassembler() override = default;
@@ -156,6 +159,8 @@ private:
 
   DecodeStatus AddThumbPredicate(MCInst&) const;
   void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
+
+  llvm::support::endianness InstructionEndianness;
 };
 
 } // end anonymous namespace
@@ -765,7 +770,8 @@ uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
   if (Bytes.size() < 2)
     return 2;
 
-  uint16_t Insn16 = (Bytes[1] << 8) | Bytes[0];
+  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
+      Bytes.data(), InstructionEndianness);
   return Insn16 < 0xE800 ? 2 : 4;
 }
 
@@ -794,9 +800,9 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
     return MCDisassembler::Fail;
   }
 
-  // Encoded as a small-endian 32-bit word in the stream.
-  uint32_t Insn =
-      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | (Bytes[0] << 0);
+  // Encoded as a 32-bit word in the stream.
+  uint32_t Insn = llvm::support::endian::read<uint32_t>(Bytes.data(),
+                                                        InstructionEndianness);
 
   // Calling the auto-generated decoder function.
   DecodeStatus Result =
@@ -1084,7 +1090,8 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
     return MCDisassembler::Fail;
   }
 
-  uint16_t Insn16 = (Bytes[1] << 8) | Bytes[0];
+  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
+      Bytes.data(), InstructionEndianness);
   DecodeStatus Result =
       decodeInstruction(DecoderTableThumb16, MI, Insn16, Address, this, STI);
   if (Result != MCDisassembler::Fail) {
@@ -1138,7 +1145,8 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
   }
 
   uint32_t Insn32 =
-      (Bytes[3] << 8) | (Bytes[2] << 0) | (Bytes[1] << 24) | (Bytes[0] << 16);
+      (uint32_t(Insn16) << 16) | llvm::support::endian::read<uint16_t>(
+                                     Bytes.data() + 2, InstructionEndianness);
 
   Result =
       decodeInstruction(DecoderTableMVE32, MI, Insn32, Address, this, STI);

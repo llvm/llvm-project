@@ -730,6 +730,24 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
   "Generate thunk code for SLS mitigation in the normal text section">;
 
 //===----------------------------------------------------------------------===//
+// Endianness of instruction encodings in memory.
+//
+// In the current Arm architecture, this is usually little-endian regardless of
+// data endianness. But before Armv7 it was typical for instruction endianness
+// to match data endianness, so that a big-endian system was consistently big-
+// endian. And Armv7-R can be configured to use big-endian instructions.
+//
+// Additionally, even when targeting Armv7-A, big-endian instructions can be
+// found in relocatable object files, because the Arm ABI specifies that the
+// linker byte-reverses them depending on the target architecture.
+//
+// So we have a feature here to indicate that instructions are stored big-
+// endian, which you can set when instantiating an MCDisassembler.
+def ModeBigEndianInstructions : SubtargetFeature<"big-endian-instructions",
+    "BigEndianInstructions", "true",
+     "Expect instructions to be stored big-endian.">;
+
+//===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.
 //
 
