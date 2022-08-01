@@ -56,7 +56,7 @@ public:
 
   // Ctor for raw literal.
   template <size_t N>
-  StringView(const char (&Str)[N]) : StringView(Str, N - 1) {}
+  constexpr StringView(const char (&Str)[N]) : StringView(Str, N - 1) {}
 
   constexpr const char *data() const { return Data; }
 
