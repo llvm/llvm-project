@@ -13,8 +13,13 @@ int __tsan_get_report_thread(void *report, unsigned long idx, int *tid,
                              unsigned long trace_size);
 }
 
+// Required for dyld macOS 12.0+
+#if (__APPLE__)
+__attribute__((weak))
+#endif
 __attribute__((disable_sanitizer_instrumentation))
-void __tsan_on_report(void *report) {
+extern "C" void
+__tsan_on_report(void *report) {
   fprintf(stderr, "__tsan_on_report(%p)\n", report);
 
   int tid;
