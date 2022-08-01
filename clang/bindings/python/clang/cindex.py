@@ -1152,7 +1152,7 @@ CursorKind.OBJC_AT_THROW_STMT = CursorKind(219)
 # Objective-C's @synchronized statement.
 CursorKind.OBJC_AT_SYNCHRONIZED_STMT = CursorKind(220)
 
-# Objective-C's autorealease pool statement.
+# Objective-C's autorelease pool statement.
 CursorKind.OBJC_AUTORELEASE_POOL_STMT = CursorKind(221)
 
 # Objective-C's for collection statement.

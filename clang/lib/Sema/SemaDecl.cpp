@@ -3033,7 +3033,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       continue;
     } else if (isa<OMPDeclareVariantAttr>(NewAttribute)) {
       // We allow to add OMP[Begin]DeclareVariantAttr to be added to
-      // declarations after defintions.
+      // declarations after definitions.
       ++I;
       continue;
     }
@@ -10566,7 +10566,7 @@ static Attr *getImplicitCodeSegAttrFromClass(Sema &S, const FunctionDecl *FD) {
 /// (from the current #pragma code-seg value).
 ///
 /// \param FD Function being declared.
-/// \param IsDefinition Whether it is a definition or just a declarartion.
+/// \param IsDefinition Whether it is a definition or just a declaration.
 /// \returns A CodeSegAttr or SectionAttr to apply to the function or
 ///          nullptr if no attribute should be added.
 Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
@@ -15512,8 +15512,8 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   // Because typo correction is expensive, only do it if the implicit
   // function declaration is going to be treated as an error.
   //
-  // Perform the corection before issuing the main diagnostic, as some consumers
-  // use typo-correction callbacks to enhance the main diagnostic.
+  // Perform the correction before issuing the main diagnostic, as some
+  // consumers use typo-correction callbacks to enhance the main diagnostic.
   if (S && !ExternCPrev &&
       (Diags.getDiagnosticLevel(diag_id, Loc) >= DiagnosticsEngine::Error)) {
     DeclFilterCCC<FunctionDecl> CCC{};
@@ -19244,7 +19244,7 @@ void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
     else
       Diag(PrevDecl->getLocation(), diag::warn_redefine_extname_not_applied)
           << /*Variable*/(isa<FunctionDecl>(PrevDecl) ? 0 : 1) << PrevDecl;
-  // Otherwise, add a label atttibute to ExtnameUndeclaredIdentifiers.
+    // Otherwise, add a label attribute to ExtnameUndeclaredIdentifiers.
   } else
     (void)ExtnameUndeclaredIdentifiers.insert(std::make_pair(Name, Attr));
 }

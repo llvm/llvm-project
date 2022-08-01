@@ -441,7 +441,7 @@ public:
   /// Return the index that parameter PIndex will sit at
   /// in a generated function call. This is often just PIndex,
   /// but may not be as things such as multiple-vector operands
-  /// and sret parameters need to be taken into accont.
+  /// and sret parameters need to be taken into account.
   unsigned getGeneratedParamIdx(unsigned PIndex) {
     unsigned Idx = 0;
     if (getReturnType().getNumVectors() > 1)

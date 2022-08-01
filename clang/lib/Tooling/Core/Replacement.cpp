@@ -270,7 +270,7 @@ llvm::Error Replacements::add(const Replacement &R) {
     assert(R.getLength() == 0);
     // `I` is also an insertion, `R` and `I` conflict.
     if (I->getLength() == 0) {
-      // Check if two insertions are order-indepedent: if inserting them in
+      // Check if two insertions are order-independent: if inserting them in
       // either order produces the same text, they are order-independent.
       if ((R.getReplacementText() + I->getReplacementText()).str() !=
           (I->getReplacementText() + R.getReplacementText()).str())
@@ -319,7 +319,7 @@ llvm::Error Replacements::add(const Replacement &R) {
     Replaces.insert(R);
   } else {
     // `I` overlaps with `R`. We need to check `R` against all overlapping
-    // replacements to see if they are order-indepedent. If they are, merge `R`
+    // replacements to see if they are order-independent. If they are, merge `R`
     // with them and replace them with the merged replacements.
     auto MergeBegin = I;
     auto MergeEnd = std::next(I);

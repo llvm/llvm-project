@@ -317,7 +317,7 @@ output of a unified diff and reformats all contained lines with
     -v, --verbose         be more verbose, ineffective without -i
     -style STYLE          formatting style to apply (LLVM, GNU, Google, Chromium, Microsoft, Mozilla, WebKit)
     -fallback-style FALLBACK_STYLE
-                          The name of the predefined style used as afallback in case clang-format is invoked with-style=file, but can not
+                          The name of the predefined style used as a fallback in case clang-format is invoked with-style=file, but can not
                           find the .clang-formatfile to use.
     -binary BINARY        location of binary to use for clang-format
 

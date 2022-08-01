@@ -153,7 +153,7 @@ private:
   /// Serialize an Objective-C container record.
   void serializeObjCContainerRecord(const ObjCContainerRecord &Record);
 
-  /// Serialize a macro defintion record.
+  /// Serialize a macro definition record.
   void serializeMacroDefinitionRecord(const MacroDefinitionRecord &Record);
 
   /// Serialize a typedef record.

@@ -10,7 +10,7 @@
 // the size of typical serialized files. Storing them efficiently is important.
 //
 // We use integers optimized by VBR-encoding, because:
-//  - when abbrevations cannot be used, VBR6 encoding is our only choice
+//  - when abbreviations cannot be used, VBR6 encoding is our only choice
 //  - in the worst case a SourceLocation can be ~any 32-bit number, but in
 //    practice they are highly predictable
 //

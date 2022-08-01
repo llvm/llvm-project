@@ -751,7 +751,7 @@ private:
                SpelledTokens[NextSpelled].location() <= KnownEnd)
           ++NextSpelled;
         FlushMapping(); // Emits [NextSpelled, KnownEnd]
-        // Now the loop contitues and will emit (KnownEnd, Target).
+        // Now the loop continues and will emit (KnownEnd, Target).
       } else {
         ++NextSpelled;
       }

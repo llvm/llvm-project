@@ -277,7 +277,7 @@ __smulwt(int32_t __a, int32_t __b) {
 /*
  * 9.4 Saturating intrinsics
  *
- * FIXME: Change guard to their corrosponding __ARM_FEATURE flag when Q flag
+ * FIXME: Change guard to their corresponding __ARM_FEATURE flag when Q flag
  * intrinsics are implemented and the flag is enabled.
  */
 /* 9.4.1 Width-specified saturation intrinsics */
