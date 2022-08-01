@@ -61,6 +61,10 @@ class ConstantOp:
     return self.results[0].type
 
   @property
+  def value(self):
+    return Attribute(self.operation.attributes["value"])
+
+  @property
   def literal_value(self) -> Union[int, float]:
     if _is_integer_like_type(self.type):
       return IntegerAttr(self.value).value
