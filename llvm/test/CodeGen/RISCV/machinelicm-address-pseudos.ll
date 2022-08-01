@@ -14,10 +14,9 @@ define void @test_lla(i32 signext %n) {
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:  .Lpcrel_hi0:
 ; RV32I-NEXT:    auipc a2, %pcrel_hi(l)
-; RV32I-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
 ; RV32I-NEXT:  .LBB0_1: # %loop
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    lw a3, 0(a2)
+; RV32I-NEXT:    lw a3, %pcrel_lo(.Lpcrel_hi0)(a2)
 ; RV32I-NEXT:    addi a1, a1, 1
 ; RV32I-NEXT:    blt a1, a0, .LBB0_1
 ; RV32I-NEXT:  # %bb.2: # %ret
@@ -28,10 +27,9 @@ define void @test_lla(i32 signext %n) {
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:  .Lpcrel_hi0:
 ; RV64I-NEXT:    auipc a2, %pcrel_hi(l)
-; RV64I-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
 ; RV64I-NEXT:  .LBB0_1: # %loop
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    lw a3, 0(a2)
+; RV64I-NEXT:    lw a3, %pcrel_lo(.Lpcrel_hi0)(a2)
 ; RV64I-NEXT:    addiw a1, a1, 1
 ; RV64I-NEXT:    blt a1, a0, .LBB0_1
 ; RV64I-NEXT:  # %bb.2: # %ret
