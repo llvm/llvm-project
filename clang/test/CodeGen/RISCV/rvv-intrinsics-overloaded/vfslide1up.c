@@ -194,3 +194,57 @@ vfloat64m8_t test_vfslide1up_vf_f64m8_m(vbool8_t mask, vfloat64m8_t maskedoff,
                                         size_t vl) {
   return vfslide1up(mask, maskedoff, src, value, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfslide1up.nxv1f32.f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], float [[VALUE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfslide1up_vf_f32mf2_tu(vfloat32mf2_t merge, vfloat32mf2_t src, float value, size_t vl) {
+  return vfslide1up_tu(merge, src, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfslide1up.nxv1f32.f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> [[SRC:%.*]], float [[VALUE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfslide1up_vf_f32mf2_ta(vfloat32mf2_t src, float value, size_t vl) {
+  return vfslide1up_ta(src, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfslide1up.mask.nxv1f32.f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], float [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfslide1up_vf_f32mf2_tuma(vbool64_t mask, vfloat32mf2_t merge, vfloat32mf2_t src, float value, size_t vl) {
+  return vfslide1up_tuma(mask, merge, src, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfslide1up.mask.nxv1f32.f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], float [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfslide1up_vf_f32mf2_tumu(vbool64_t mask, vfloat32mf2_t merge, vfloat32mf2_t src, float value, size_t vl) {
+  return vfslide1up_tumu(mask, merge, src, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfslide1up.mask.nxv1f32.f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> [[SRC:%.*]], float [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfslide1up_vf_f32mf2_tama(vbool64_t mask, vfloat32mf2_t src, float value, size_t vl) {
+  return vfslide1up_tama(mask, src, value, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfslide1up.mask.nxv1f32.f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], float [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfslide1up_vf_f32mf2_tamu(vbool64_t mask, vfloat32mf2_t merge, vfloat32mf2_t src, float value, size_t vl) {
+  return vfslide1up_tamu(mask, merge, src, value, vl);
+}
