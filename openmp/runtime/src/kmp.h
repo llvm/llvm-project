@@ -823,27 +823,49 @@ enum affinity_top_method {
   affinity_top_method_default
 };
 
-#define affinity_respect_mask_default (-1)
+#define affinity_respect_mask_default (2)
 
-extern enum affinity_type __kmp_affinity_type; /* Affinity type */
-extern kmp_hw_t __kmp_affinity_gran; /* Affinity granularity */
-extern int __kmp_affinity_gran_levels; /* corresponding int value */
-extern int __kmp_affinity_dups; /* Affinity duplicate masks */
+typedef struct kmp_affinity_flags_t {
+  unsigned dups : 1;
+  unsigned verbose : 1;
+  unsigned warnings : 1;
+  unsigned respect : 2;
+  unsigned reset : 1;
+  unsigned initialized : 1;
+  unsigned reserved : 25;
+} kmp_affinity_flags_t;
+KMP_BUILD_ASSERT(sizeof(kmp_affinity_flags_t) == 4);
+
+typedef struct kmp_affinity_t {
+  char *proclist;
+  enum affinity_type type;
+  kmp_hw_t gran;
+  int gran_levels;
+  int compact;
+  int offset;
+  kmp_affinity_flags_t flags;
+  unsigned num_masks;
+  kmp_affin_mask_t *masks;
+  unsigned num_os_id_masks;
+  kmp_affin_mask_t *os_id_masks;
+  const char *env_var;
+} kmp_affinity_t;
+
+#define KMP_AFFINITY_INIT(env)                                                 \
+  {                                                                            \
+    nullptr, affinity_default, KMP_HW_UNKNOWN, -1, 0, 0,                       \
+        {TRUE, FALSE, TRUE, affinity_respect_mask_default, FALSE, FALSE}, 0,   \
+        nullptr, 0, nullptr, env                                               \
+  }
+
 extern enum affinity_top_method __kmp_affinity_top_method;
-extern int __kmp_affinity_compact; /* Affinity 'compact' value */
-extern int __kmp_affinity_offset; /* Affinity offset value  */
-extern int __kmp_affinity_verbose; /* Was verbose specified for KMP_AFFINITY? */
-extern int __kmp_affinity_warnings; /* KMP_AFFINITY warnings enabled ? */
-extern int __kmp_affinity_respect_mask; // Respect process' init affinity mask?
-extern char *__kmp_affinity_proclist; /* proc ID list */
-extern kmp_affin_mask_t *__kmp_affinity_masks;
-extern unsigned __kmp_affinity_num_masks;
+extern kmp_affinity_t __kmp_affinity;
+
 extern void __kmp_affinity_bind_thread(int which);
 
 extern kmp_affin_mask_t *__kmp_affin_fullMask;
 extern kmp_affin_mask_t *__kmp_affin_origMask;
 extern char *__kmp_cpuinfo_file;
-extern bool __kmp_affin_reset;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -882,7 +904,7 @@ extern char *__kmp_tool_libraries;
 #define KMP_AFFINITY_NON_PROC_BIND                                             \
   ((__kmp_nested_proc_bind.bind_types[0] == proc_bind_false ||                 \
     __kmp_nested_proc_bind.bind_types[0] == proc_bind_intel) &&                \
-   (__kmp_affinity_num_masks > 0 || __kmp_affinity_type == affinity_balanced))
+   (__kmp_affinity.num_masks > 0 || __kmp_affinity.type == affinity_balanced))
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 extern int __kmp_affinity_num_places;
@@ -3606,7 +3628,7 @@ extern char *__kmp_affinity_print_mask(char *buf, int buf_len,
                                        kmp_affin_mask_t *mask);
 extern kmp_str_buf_t *__kmp_affinity_str_buf_mask(kmp_str_buf_t *buf,
                                                   kmp_affin_mask_t *mask);
-extern void __kmp_affinity_initialize(void);
+extern void __kmp_affinity_initialize(kmp_affinity_t &affinity);
 extern void __kmp_affinity_uninitialize(void);
 extern void __kmp_affinity_set_init_mask(
     int gtid, int isa_root); /* set affinity according to KMP_AFFINITY */

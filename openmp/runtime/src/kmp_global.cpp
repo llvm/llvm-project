@@ -269,23 +269,13 @@ kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity = NULL;
 #endif /* KMP_OS_WINDOWS */
 
 size_t __kmp_affin_mask_size = 0;
-enum affinity_type __kmp_affinity_type = affinity_default;
-kmp_hw_t __kmp_affinity_gran = KMP_HW_UNKNOWN;
-int __kmp_affinity_gran_levels = -1;
-int __kmp_affinity_dups = TRUE;
 enum affinity_top_method __kmp_affinity_top_method =
     affinity_top_method_default;
-int __kmp_affinity_compact = 0;
-int __kmp_affinity_offset = 0;
-int __kmp_affinity_verbose = FALSE;
-int __kmp_affinity_warnings = TRUE;
-int __kmp_affinity_respect_mask = affinity_respect_mask_default;
-char *__kmp_affinity_proclist = NULL;
-kmp_affin_mask_t *__kmp_affinity_masks = NULL;
-unsigned __kmp_affinity_num_masks = 0;
+
+// Regular thread affinity settings from KMP_AFFINITY
+kmp_affinity_t __kmp_affinity = KMP_AFFINITY_INIT("KMP_AFFINITY");
 
 char *__kmp_cpuinfo_file = NULL;
-bool __kmp_affin_reset = 0;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
