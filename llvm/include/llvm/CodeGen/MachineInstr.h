@@ -937,6 +937,8 @@ public:
   /// For example, if the instruction has a unique labels attached
   /// to it, duplicating it would cause multiple definition errors.
   bool isNotDuplicable(QueryType Type = AnyInBundle) const {
+    if (getPreInstrSymbol() || getPostInstrSymbol())
+      return true;
     return hasProperty(MCID::NotDuplicable, Type);
   }
 

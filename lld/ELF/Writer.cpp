@@ -123,19 +123,20 @@ static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
 
 void elf::copySectionsIntoPartitions() {
   SmallVector<InputSectionBase *, 0> newSections;
+  const size_t ehSize = ehInputSections.size();
   for (unsigned part = 2; part != partitions.size() + 1; ++part) {
     for (InputSectionBase *s : inputSections) {
-      if (!(s->flags & SHF_ALLOC) || !s->isLive())
+      if (!(s->flags & SHF_ALLOC) || !s->isLive() || s->type != SHT_NOTE)
         continue;
-      InputSectionBase *copy;
-      if (s->type == SHT_NOTE)
-        copy = make<InputSection>(cast<InputSection>(*s));
-      else if (auto *es = dyn_cast<EhInputSection>(s))
-        copy = make<EhInputSection>(*es);
-      else
-        continue;
+      auto *copy = make<InputSection>(cast<InputSection>(*s));
       copy->partition = part;
       newSections.push_back(copy);
+    }
+    for (size_t i = 0; i != ehSize; ++i) {
+      assert(ehInputSections[i]->isLive());
+      auto *copy = make<EhInputSection>(*ehInputSections[i]);
+      copy->partition = part;
+      ehInputSections.push_back(copy);
     }
   }
 

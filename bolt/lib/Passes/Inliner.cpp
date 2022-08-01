@@ -288,12 +288,12 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
   // Copy basic blocks and maintain a map from their origin.
   std::unordered_map<const BinaryBasicBlock *, BinaryBasicBlock *> InlinedBBMap;
   InlinedBBMap[&Callee.front()] = FirstInlinedBB;
-  for (auto BBI = std::next(Callee.begin()); BBI != Callee.end(); ++BBI) {
+  for (const BinaryBasicBlock &BB : llvm::drop_begin(Callee)) {
     BinaryBasicBlock *InlinedBB = CallerFunction.addBasicBlock();
-    InlinedBBMap[&*BBI] = InlinedBB;
+    InlinedBBMap[&BB] = InlinedBB;
     InlinedBB->setCFIState(FirstInlinedBB->getCFIState());
     if (Callee.hasValidProfile())
-      InlinedBB->setExecutionCount(BBI->getKnownExecutionCount());
+      InlinedBB->setExecutionCount(BB.getKnownExecutionCount());
     else
       InlinedBB->setExecutionCount(FirstInlinedBBCount);
   }
