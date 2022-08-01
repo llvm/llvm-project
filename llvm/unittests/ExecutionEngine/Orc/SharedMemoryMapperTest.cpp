@@ -18,7 +18,7 @@ using namespace llvm::orc;
 using namespace llvm::orc::shared;
 using namespace llvm::orc::rt_bootstrap;
 
-#if defined(LLVM_ON_UNIX) || defined(_WIN32)
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
 // A basic function to be used as both initializer/deinitializer
 orc::shared::CWrapperFunctionResult incrementWrapper(const char *ArgData,
