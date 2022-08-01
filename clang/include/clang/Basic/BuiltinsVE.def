@@ -15,7 +15,7 @@
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
-// The format of this database is decribed in clang/Basic/Builtins.def.
+// The format of this database is described in clang/Basic/Builtins.def.
 
 BUILTIN(__builtin_ve_vl_pack_f32p, "ULifC*fC*", "n")
 BUILTIN(__builtin_ve_vl_pack_f32a, "ULifC*", "n")

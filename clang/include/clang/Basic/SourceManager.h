@@ -1918,11 +1918,11 @@ public:
   }
 };
 
-/// SourceManager and necessary depdencies (e.g. VFS, FileManager) for a single
-/// in-memorty file.
+/// SourceManager and necessary dependencies (e.g. VFS, FileManager) for a
+/// single in-memorty file.
 class SourceManagerForFile {
 public:
-  /// Creates SourceManager and necessary depdencies (e.g. VFS, FileManager).
+  /// Creates SourceManager and necessary dependencies (e.g. VFS, FileManager).
   /// The main file in the SourceManager will be \p FileName with \p Content.
   SourceManagerForFile(StringRef FileName, StringRef Content);
 
