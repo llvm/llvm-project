@@ -360,13 +360,15 @@ CGObjCRuntime::MessageSendInfo
 CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
                                   QualType resultType,
                                   CallArgList &callArgs) {
+  unsigned ProgramAS = CGM.getDataLayout().getProgramAddressSpace();
+
   // If there's a method, use information from that.
   if (method) {
     const CGFunctionInfo &signature =
       CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
 
     llvm::PointerType *signatureType =
-      CGM.getTypes().GetFunctionType(signature)->getPointerTo();
+      CGM.getTypes().GetFunctionType(signature)->getPointerTo(ProgramAS);
 
     const CGFunctionInfo &signatureForCall =
       CGM.getTypes().arrangeCall(signature, callArgs);
@@ -380,7 +382,7 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
 
   // Derive the signature to call from that.
   llvm::PointerType *signatureType =
-    CGM.getTypes().GetFunctionType(argsInfo)->getPointerTo();
+    CGM.getTypes().GetFunctionType(argsInfo)->getPointerTo(ProgramAS);
   return MessageSendInfo(argsInfo, signatureType);
 }
 
