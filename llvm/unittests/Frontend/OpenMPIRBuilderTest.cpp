@@ -1772,7 +1772,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimd) {
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
   // Simd-ize the loop.
-  OMPBuilder.applySimd(CLI, nullptr);
+  OMPBuilder.applySimd(CLI, /* IfCond */ nullptr, /* Simdlen */ nullptr);
 
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -1803,7 +1803,8 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
   // Simd-ize the loop.
-  OMPBuilder.applySimd(CLI, ConstantInt::get(Type::getInt32Ty(Ctx), 3));
+  OMPBuilder.applySimd(CLI, /*IfCond */ nullptr,
+                       ConstantInt::get(Type::getInt32Ty(Ctx), 3));
 
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -1821,6 +1822,54 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
   EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
   EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 3);
 
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the loop body.
+  BasicBlock *LoopBody = CLI->getBody();
+  EXPECT_TRUE(any_of(*LoopBody, [](Instruction &I) {
+    return I.getMetadata("llvm.access.group") != nullptr;
+  }));
+}
+
+TEST_F(OpenMPIRBuilderTest, ApplySimdLoopIf) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  IRBuilder<> Builder(BB);
+  AllocaInst *Alloc1 = Builder.CreateAlloca(Builder.getInt32Ty());
+  AllocaInst *Alloc2 = Builder.CreateAlloca(Builder.getInt32Ty());
+
+  // Generation of if condition
+  Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0U), Alloc1);
+  Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 1U), Alloc2);
+  LoadInst *Load1 = Builder.CreateLoad(Alloc1->getAllocatedType(), Alloc1);
+  LoadInst *Load2 = Builder.CreateLoad(Alloc2->getAllocatedType(), Alloc2);
+
+  Value *IfCmp = Builder.CreateICmpNE(Load1, Load2);
+
+  CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
+
+  // Simd-ize the loop with if condition
+  OMPBuilder.applySimd(CLI, IfCmp, ConstantInt::get(Type::getInt32Ty(Ctx), 3));
+
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  PassBuilder PB;
+  FunctionAnalysisManager FAM;
+  PB.registerFunctionAnalyses(FAM);
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
+
+  // Check if there are two loops (one with enabled vectorization)
+  const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
+  EXPECT_EQ(TopLvl.size(), 2u);
+
+  Loop *L = TopLvl[0];
+  EXPECT_TRUE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
+  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
+  EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 3);
+
+  // The second loop should have disabled vectorization
+  L = TopLvl[1];
+  EXPECT_FALSE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
+  EXPECT_FALSE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
   // Check for llvm.access.group metadata attached to the printf
   // function in the loop body.
   BasicBlock *LoopBody = CLI->getBody();

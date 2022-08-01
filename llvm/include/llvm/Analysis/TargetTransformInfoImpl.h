@@ -650,6 +650,7 @@ public:
     case Intrinsic::coro_align:
     case Intrinsic::coro_suspend:
     case Intrinsic::coro_subfn_addr:
+    case Intrinsic::threadlocal_address:
       // These intrinsics don't actually represent code after lowering.
       return 0;
     }

@@ -7222,6 +7222,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              DAG.getZExtOrTrunc(Const, sdl, PtrVT)));
     return;
   }
+  case Intrinsic::threadlocal_address: {
+    setValue(&I, getValue(I.getOperand(0)));
+    return;
+  }
   case Intrinsic::get_active_lane_mask: {
     EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Index = getValue(I.getOperand(0));

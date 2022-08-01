@@ -333,7 +333,7 @@ public:
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  SmallVector<EhSectionPiece, 0> pieces;
+  SmallVector<EhSectionPiece, 0> cies, fdes;
 
   SyntheticSection *getParent() const;
   uint64_t getParentOffset(uint64_t offset) const;

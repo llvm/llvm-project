@@ -58,17 +58,17 @@ uint32_t EhReader::readU32(size_t *off) const {
   return v;
 }
 
-uint64_t EhReader::readPointer(size_t *off) const {
-  if (*off + wordSize > data.size())
+uint64_t EhReader::readPointer(size_t *off, uint8_t size) const {
+  if (*off + size > data.size())
     failOn(*off, "unexpected end of CIE/FDE");
   uint64_t v;
-  if (wordSize == 8)
+  if (size == 8)
     v = read64le(data.data() + *off);
   else {
-    assert(wordSize == 4);
+    assert(size == 4);
     v = read32le(data.data() + *off);
   }
-  *off += wordSize;
+  *off += size;
   return v;
 }
 

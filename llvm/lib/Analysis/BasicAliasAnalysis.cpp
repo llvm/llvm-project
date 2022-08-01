@@ -912,7 +912,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
     ModRefInfo Result = ModRefInfo::NoModRef;
-    bool IsMustAlias = true;
 
     unsigned OperandNo = 0;
     for (auto CI = Call->data_operands_begin(), CE = Call->data_operands_end();
@@ -935,8 +934,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       AliasResult AR = getBestAAResults().alias(
           MemoryLocation::getBeforeOrAfter(*CI),
           MemoryLocation::getBeforeOrAfter(Object), AAQI);
-      if (AR != AliasResult::MustAlias)
-        IsMustAlias = false;
       // Operand doesn't alias 'Object', continue looking for other aliases
       if (AR == AliasResult::NoAlias)
         continue;
@@ -958,17 +955,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       break;
     }
 
-    // No operand aliases, reset Must bit. Add below if at least one aliases
-    // and all aliases found are MustAlias.
-    if (isNoModRef(Result))
-      IsMustAlias = false;
-
     // Early return if we improved mod ref information
-    if (!isModAndRefSet(Result)) {
-      if (isNoModRef(Result))
-        return ModRefInfo::NoModRef;
-      return IsMustAlias ? setMust(Result) : clearMust(Result);
-    }
+    if (!isModAndRefSet(Result))
+      return Result;
   }
 
   // If the call is malloc/calloc like, we can assume that it doesn't

@@ -1260,25 +1260,6 @@ SyntheticSection *EhInputSection::getParent() const {
   return cast_or_null<SyntheticSection>(parent);
 }
 
-// Returns the index of the first relocation that points to a region between
-// Begin and Begin+Size.
-template <class IntTy, class RelTy>
-static unsigned getReloc(IntTy begin, IntTy size, const ArrayRef<RelTy> &rels,
-                         unsigned &relocI) {
-  // Start search from RelocI for fast access. That works because the
-  // relocations are sorted in .eh_frame.
-  for (unsigned n = rels.size(); relocI < n; ++relocI) {
-    const RelTy &rel = rels[relocI];
-    if (rel.r_offset < begin)
-      continue;
-
-    if (rel.r_offset < begin + size)
-      return relocI;
-    return -1;
-  }
-  return -1;
-}
-
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
 template <class ELFT> void EhInputSection::split() {
@@ -1305,20 +1286,28 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
       break;
     }
     uint64_t size = endian::read32<ELFT::TargetEndianness>(d.data());
-    // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,
-    // but we do not support that format yet.
-    if (size == UINT32_MAX) {
-      msg = "CIE/FDE too large";
+    if (size == 0) // ZERO terminator
       break;
-    }
+    uint32_t id = endian::read32<ELFT::TargetEndianness>(d.data() + 4);
     size += 4;
-    if (size > d.size()) {
-      msg = "CIE/FDE ends past the end of the section";
+    if (LLVM_UNLIKELY(size > d.size())) {
+      // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,
+      // but we do not support that format yet.
+      msg = size == UINT32_MAX + uint64_t(4)
+                ? "CIE/FDE too large"
+                : "CIE/FDE ends past the end of the section";
       break;
     }
 
-    uint64_t off = d.data() - rawData.data();
-    pieces.emplace_back(off, this, size, getReloc(off, size, rels, relI));
+    // Find the first relocation that points to [off,off+size). Relocations
+    // have been sorted by r_offset.
+    const uint64_t off = d.data() - rawData.data();
+    while (relI != rels.size() && rels[relI].r_offset < off)
+      ++relI;
+    unsigned firstRel = -1;
+    if (relI != rels.size() && rels[relI].r_offset < off + size)
+      firstRel = relI;
+    (id == 0 ? cies : fdes).emplace_back(off, this, size, firstRel);
     d = d.slice(size);
   }
   if (msg)
@@ -1328,11 +1317,17 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
 
 // Return the offset in an output section for a given input offset.
 uint64_t EhInputSection::getParentOffset(uint64_t offset) const {
-  const EhSectionPiece &piece = partition_point(
-      pieces, [=](EhSectionPiece p) { return p.inputOff <= offset; })[-1];
-  if (piece.outputOff == -1) // invalid piece
-    return offset - piece.inputOff;
-  return piece.outputOff + (offset - piece.inputOff);
+  auto it = partition_point(
+      fdes, [=](EhSectionPiece p) { return p.inputOff <= offset; });
+  if (it == fdes.begin() || it[-1].inputOff + it[-1].size <= offset) {
+    it = partition_point(
+        cies, [=](EhSectionPiece p) { return p.inputOff <= offset; });
+    if (it == cies.begin()) // invalid piece
+      return offset;
+  }
+  if (it[-1].outputOff == -1) // invalid piece
+    return offset - it[-1].inputOff;
+  return it[-1].outputOff + (offset - it[-1].inputOff);
 }
 
 static size_t findNull(StringRef s, size_t entSize) {

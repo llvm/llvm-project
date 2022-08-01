@@ -503,23 +503,16 @@ define <16 x double> @uitofp_v16i8_double(<16 x i8> %a) {
 define <8 x double> @uitofp_i16_double(<8 x i16> %a) {
 ; CHECK-LABEL: uitofp_i16_double:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-NEXT:    ushll2 v2.4s, v0.8h, #0
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    and v3.8b, v2.8b, v1.8b
-; CHECK-NEXT:    and v4.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-NEXT:    ushll v4.2d, v4.2s, #0
-; CHECK-NEXT:    and v2.8b, v2.8b, v1.8b
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v5.2d, v2.2s, #0
-; CHECK-NEXT:    ucvtf v2.2d, v3.2d
-; CHECK-NEXT:    ushll v1.2d, v0.2s, #0
-; CHECK-NEXT:    ucvtf v0.2d, v4.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    ucvtf v3.2d, v5.2d
+; CHECK-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-NEXT:    ushll v4.2d, v1.2s, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ucvtf v1.2d, v3.2d
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf v3.2d, v2.2d
+; CHECK-NEXT:    ucvtf v2.2d, v4.2d
 ; CHECK-NEXT:    ret
   %1 = uitofp <8 x i16> %a to <8 x double>
   ret <8 x double> %1

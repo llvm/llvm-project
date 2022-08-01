@@ -578,7 +578,8 @@ static void populateSubstitutions(const OpOrAdaptorHelper &emitHelper,
   // Populate substitutions for attributes.
   auto &op = emitHelper.getOp();
   for (const auto &namedAttr : op.getAttributes())
-    ctx.addSubst(namedAttr.name, emitHelper.getAttr(namedAttr.name).str());
+    ctx.addSubst(namedAttr.name,
+                 emitHelper.getOp().getGetterName(namedAttr.name) + "()");
 
   // Populate substitutions for named operands.
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
@@ -1756,7 +1757,7 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
   if (namedAttr.attr.isTypeAttr()) {
     resultType = "attr.getValue().cast<::mlir::TypeAttr>().getValue()";
   } else {
-    resultType = "attr.getValue().getType()";
+    resultType = "attr.getValue().cast<::mlir::TypedAttr>().getType()";
   }
 
   // Operands
@@ -2416,7 +2417,8 @@ void OpEmitter::genTypeInterfaceMethods() {
     } else {
       auto *attr =
           op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
-      body << "attributes.get(\"" << attr->name << "\").getType()";
+      body << "attributes.get(\"" << attr->name
+           << "\").cast<::mlir::TypedAttr>().getType()";
     }
     body << ";\n";
   }
