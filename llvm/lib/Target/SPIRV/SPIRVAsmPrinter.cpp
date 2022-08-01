@@ -64,7 +64,7 @@ public:
   void outputOpFunctionEnd();
   void outputExtFuncDecls();
   void outputExecutionModeFromMDNode(Register Reg, MDNode *Node,
-                                     SPIRV::ExecutionMode EM);
+                                     SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -291,7 +291,8 @@ void SPIRVAsmPrinter::outputEntryPoints() {
   DenseSet<Register> InterfaceIDs;
   for (MachineInstr *MI : MAI->GlobalVarList) {
     assert(MI->getOpcode() == SPIRV::OpVariable);
-    auto SC = static_cast<SPIRV::StorageClass>(MI->getOperand(2).getImm());
+    auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
+        MI->getOperand(2).getImm());
     // Before version 1.4, the interface's storage classes are limited to
     // the Input and Output storage classes. Starting with version 1.4,
     // the interface's storage classes are all storage classes used in
@@ -375,8 +376,8 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
   }
 }
 
-void SPIRVAsmPrinter::outputExecutionModeFromMDNode(Register Reg, MDNode *Node,
-                                                    SPIRV::ExecutionMode EM) {
+void SPIRVAsmPrinter::outputExecutionModeFromMDNode(
+    Register Reg, MDNode *Node, SPIRV::ExecutionMode::ExecutionMode EM) {
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpExecutionMode);
   Inst.addOperand(MCOperand::createReg(Reg));

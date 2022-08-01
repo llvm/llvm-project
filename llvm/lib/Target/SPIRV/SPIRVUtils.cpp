@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
-using namespace llvm;
+namespace llvm {
 
 // The following functions are used to add these string literals as a series of
 // 32-bit integer operands with the correct format, and unpack them if necessary
@@ -114,7 +114,7 @@ static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
 }
 
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
-                     llvm::SPIRV::Decoration Dec,
+                     SPIRV::Decoration::Decoration Dec,
                      const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
@@ -123,7 +123,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 }
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
-                     llvm::SPIRV::Decoration Dec,
+                     SPIRV::Decoration::Decoration Dec,
                      const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
@@ -134,7 +134,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass SC) {
+unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::Function:
     return 0;
@@ -153,7 +153,8 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass SC) {
   }
 }
 
-SPIRV::StorageClass addressSpaceToStorageClass(unsigned AddrSpace) {
+SPIRV::StorageClass::StorageClass
+addressSpaceToStorageClass(unsigned AddrSpace) {
   switch (AddrSpace) {
   case 0:
     return SPIRV::StorageClass::Function;
@@ -172,7 +173,8 @@ SPIRV::StorageClass addressSpaceToStorageClass(unsigned AddrSpace) {
   }
 }
 
-SPIRV::MemorySemantics getMemSemanticsForStorageClass(SPIRV::StorageClass SC) {
+SPIRV::MemorySemantics::MemorySemantics
+getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::StorageBuffer:
   case SPIRV::StorageClass::Uniform:
@@ -190,7 +192,7 @@ SPIRV::MemorySemantics getMemSemanticsForStorageClass(SPIRV::StorageClass SC) {
   }
 }
 
-SPIRV::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
+SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   switch (Ord) {
   case AtomicOrdering::Acquire:
     return SPIRV::MemorySemantics::Acquire;
@@ -236,3 +238,4 @@ bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return cast<ValueAsMetadata>(N->getOperand(I))->getType();
 }
+} // namespace llvm

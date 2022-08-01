@@ -132,7 +132,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       if (VRegs[i].size() > 1)
         return false;
       Type *ArgTy = FTy->getParamType(i);
-      SPIRV::AccessQualifier AQ = SPIRV::AccessQualifier::ReadWrite;
+      SPIRV::AccessQualifier::AccessQualifier AQ =
+          SPIRV::AccessQualifier::ReadWrite;
       MDNode *Node = F.getMetadata("kernel_arg_access_qual");
       if (Node && i < Node->getNumOperands()) {
         StringRef AQString = cast<MDString>(Node->getOperand(i))->getString();
@@ -192,7 +193,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           assert(MD2 && "Metadata operand is expected");
           ConstantInt *Const = getConstInt(MD2, 0);
           assert(Const && "MDOperand should be ConstantInt");
-          auto Dec = static_cast<SPIRV::Decoration>(Const->getZExtValue());
+          auto Dec =
+              static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
           std::vector<uint32_t> DecVec;
           for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
             ConstantInt *Const = getConstInt(MD2, j);

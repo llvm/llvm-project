@@ -413,7 +413,7 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
                            Opcode);
 }
 
-static SPIRV::Scope getScope(SyncScope::ID Ord) {
+static SPIRV::Scope::Scope getScope(SyncScope::ID Ord) {
   switch (Ord) {
   case SyncScope::SingleThread:
     return SPIRV::Scope::Invocation;
@@ -616,7 +616,7 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
   return Result;
 }
 
-static bool isGenericCastablePtr(SPIRV::StorageClass SC) {
+static bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::Workgroup:
   case SPIRV::StorageClass::CrossWorkgroup:
@@ -658,8 +658,8 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   }
   Register SrcPtr = I.getOperand(1).getReg();
   SPIRVType *SrcPtrTy = GR.getSPIRVTypeForVReg(SrcPtr);
-  SPIRV::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtr);
-  SPIRV::StorageClass DstSC = GR.getPointerStorageClass(ResVReg);
+  SPIRV::StorageClass::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtr);
+  SPIRV::StorageClass::StorageClass DstSC = GR.getPointerStorageClass(ResVReg);
 
   // Casting from an eligable pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
@@ -1342,10 +1342,11 @@ bool SPIRVInstructionSelector::selectGlobalValue(
     return true;
 
   unsigned AddrSpace = GV->getAddressSpace();
-  SPIRV::StorageClass Storage = addressSpaceToStorageClass(AddrSpace);
+  SPIRV::StorageClass::StorageClass Storage =
+      addressSpaceToStorageClass(AddrSpace);
   bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage &&
                   Storage != SPIRV::StorageClass::Function;
-  SPIRV::LinkageType LnkType =
+  SPIRV::LinkageType::LinkageType LnkType =
       (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
           ? SPIRV::LinkageType::Import
           : SPIRV::LinkageType::Export;

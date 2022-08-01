@@ -24,6 +24,7 @@
 #include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
+using namespace llvm::SPIRV;
 
 #define DEBUG_TYPE "asm-printer"
 
@@ -89,7 +90,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         switch (OpCode) {
         case SPIRV::OpTypeImage:
           OS << ' ';
-          printAccessQualifier(MI, FirstVariableIndex, OS);
+          printSymbolicOperand<OperandCategory::AccessQualifierOperand>(
+              MI, FirstVariableIndex, OS);
           break;
         case SPIRV::OpVariable:
           OS << ' ';
@@ -109,7 +111,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           break;
         }
         default:
-          break; // printStringImm has already been handled
+          break; // printStringImm has already been handled.
         }
       } else {
         // For instructions with no fixed ops or a reg/immediate as the final
@@ -119,7 +121,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         case SPIRV::OpLoad:
         case SPIRV::OpStore:
           OS << ' ';
-          printMemoryOperand(MI, FirstVariableIndex, OS);
+          printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
+              MI, FirstVariableIndex, OS);
           printRemainingVariableOps(MI, FirstVariableIndex + 1, OS);
           break;
         case SPIRV::OpImageSampleImplicitLod:
@@ -141,7 +144,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         case SPIRV::OpImageSparseRead:
         case SPIRV::OpImageSampleFootprintNV:
           OS << ' ';
-          printImageOperand(MI, FirstVariableIndex, OS);
+          printSymbolicOperand<OperandCategory::ImageOperandOperand>(
+              MI, FirstVariableIndex, OS);
           printRemainingVariableOps(MI, NumFixedOps + 1, OS);
           break;
         case SPIRV::OpCopyMemory:
@@ -149,9 +153,9 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           const unsigned NumOps = MI->getNumOperands();
           for (unsigned i = NumFixedOps; i < NumOps; ++i) {
             OS << ' ';
-            printMemoryOperand(MI, i, OS);
-            if (MI->getOperand(i).getImm() &
-                static_cast<unsigned>(SPIRV::MemoryOperand::Aligned)) {
+            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(MI, i,
+                                                                        OS);
+            if (MI->getOperand(i).getImm() & MemoryOperand::Aligned) {
               assert(i + 1 < NumOps && "Missing alignment operand");
               OS << ' ';
               printOperand(MI, i + 1, OS);
@@ -198,28 +202,31 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
 
   if (NumFixedOps != MI->getNumOperands()) {
     auto DecOp = MI->getOperand(NumFixedOps - 1);
-    auto Dec = static_cast<SPIRV::Decoration>(DecOp.getImm());
+    auto Dec = static_cast<Decoration::Decoration>(DecOp.getImm());
 
     O << ' ';
 
     switch (Dec) {
-    case SPIRV::Decoration::BuiltIn:
-      printBuiltIn(MI, NumFixedOps, O);
+    case Decoration::BuiltIn:
+      printSymbolicOperand<OperandCategory::BuiltInOperand>(MI, NumFixedOps, O);
       break;
-    case SPIRV::Decoration::UniformId:
-      printScope(MI, NumFixedOps, O);
+    case Decoration::UniformId:
+      printSymbolicOperand<OperandCategory::ScopeOperand>(MI, NumFixedOps, O);
       break;
-    case SPIRV::Decoration::FuncParamAttr:
-      printFunctionParameterAttribute(MI, NumFixedOps, O);
+    case Decoration::FuncParamAttr:
+      printSymbolicOperand<OperandCategory::FunctionParameterAttributeOperand>(
+          MI, NumFixedOps, O);
       break;
-    case SPIRV::Decoration::FPRoundingMode:
-      printFPRoundingMode(MI, NumFixedOps, O);
+    case Decoration::FPRoundingMode:
+      printSymbolicOperand<OperandCategory::FPRoundingModeOperand>(
+          MI, NumFixedOps, O);
       break;
-    case SPIRV::Decoration::FPFastMathMode:
-      printFPFastMathMode(MI, NumFixedOps, O);
+    case Decoration::FPFastMathMode:
+      printSymbolicOperand<OperandCategory::FPFastMathModeOperand>(
+          MI, NumFixedOps, O);
       break;
-    case SPIRV::Decoration::LinkageAttributes:
-    case SPIRV::Decoration::UserSemantic:
+    case Decoration::LinkageAttributes:
+    case Decoration::UserSemantic:
       printStringImm(MI, NumFixedOps, O);
       break;
     default:
@@ -288,280 +295,24 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
     // Check for final Op of "OpDecorate %x %stringImm %linkageAttribute".
     if (MI->getOpcode() == SPIRV::OpDecorate &&
         MI->getOperand(1).getImm() ==
-            static_cast<unsigned>(SPIRV::Decoration::LinkageAttributes)) {
+            static_cast<unsigned>(Decoration::LinkageAttributes)) {
       O << ' ';
-      printLinkageType(MI, StrStartIndex, O);
+      printSymbolicOperand<OperandCategory::LinkageTypeOperand>(
+          MI, StrStartIndex, O);
       break;
     }
   }
 }
 
-void SPIRVInstPrinter::printExtInst(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O) {
-  llvm_unreachable("Unimplemented printExtInst");
+void SPIRVInstPrinter::printExtension(const MCInst *MI, unsigned OpNo,
+                                      raw_ostream &O) {
+  llvm_unreachable("Unimplemented printExtension");
 }
 
-void SPIRVInstPrinter::printCapability(const MCInst *MI, unsigned OpNo,
-                                       raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::Capability e =
-        static_cast<SPIRV::Capability>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getCapabilityName(e);
-  }
-}
-
-void SPIRVInstPrinter::printSourceLanguage(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::SourceLanguage e =
-        static_cast<SPIRV::SourceLanguage>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getSourceLanguageName(e);
-  }
-}
-
-void SPIRVInstPrinter::printExecutionModel(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::ExecutionModel e =
-        static_cast<SPIRV::ExecutionModel>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getExecutionModelName(e);
-  }
-}
-
-void SPIRVInstPrinter::printAddressingModel(const MCInst *MI, unsigned OpNo,
+template <OperandCategory::OperandCategory category>
+void SPIRVInstPrinter::printSymbolicOperand(const MCInst *MI, unsigned OpNo,
                                             raw_ostream &O) {
   if (OpNo < MI->getNumOperands()) {
-    SPIRV::AddressingModel e =
-        static_cast<SPIRV::AddressingModel>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getAddressingModelName(e);
-  }
-}
-
-void SPIRVInstPrinter::printMemoryModel(const MCInst *MI, unsigned OpNo,
-                                        raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::MemoryModel e =
-        static_cast<SPIRV::MemoryModel>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getMemoryModelName(e);
-  }
-}
-
-void SPIRVInstPrinter::printExecutionMode(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::ExecutionMode e =
-        static_cast<SPIRV::ExecutionMode>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getExecutionModeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printStorageClass(const MCInst *MI, unsigned OpNo,
-                                         raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::StorageClass e =
-        static_cast<SPIRV::StorageClass>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getStorageClassName(e);
-  }
-}
-
-void SPIRVInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
-                                raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::Dim e = static_cast<SPIRV::Dim>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getDimName(e);
-  }
-}
-
-void SPIRVInstPrinter::printSamplerAddressingMode(const MCInst *MI,
-                                                  unsigned OpNo,
-                                                  raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::SamplerAddressingMode e = static_cast<SPIRV::SamplerAddressingMode>(
-        MI->getOperand(OpNo).getImm());
-    O << SPIRV::getSamplerAddressingModeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printSamplerFilterMode(const MCInst *MI, unsigned OpNo,
-                                              raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::SamplerFilterMode e =
-        static_cast<SPIRV::SamplerFilterMode>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getSamplerFilterModeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printImageFormat(const MCInst *MI, unsigned OpNo,
-                                        raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::ImageFormat e =
-        static_cast<SPIRV::ImageFormat>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getImageFormatName(e);
-  }
-}
-
-void SPIRVInstPrinter::printImageChannelOrder(const MCInst *MI, unsigned OpNo,
-                                              raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::ImageChannelOrder e =
-        static_cast<SPIRV::ImageChannelOrder>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getImageChannelOrderName(e);
-  }
-}
-
-void SPIRVInstPrinter::printImageChannelDataType(const MCInst *MI,
-                                                 unsigned OpNo,
-                                                 raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::ImageChannelDataType e =
-        static_cast<SPIRV::ImageChannelDataType>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getImageChannelDataTypeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printImageOperand(const MCInst *MI, unsigned OpNo,
-                                         raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    unsigned e = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getImageOperandName(e);
-  }
-}
-
-void SPIRVInstPrinter::printFPFastMathMode(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    unsigned e = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getFPFastMathModeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printFPRoundingMode(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::FPRoundingMode e =
-        static_cast<SPIRV::FPRoundingMode>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getFPRoundingModeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printLinkageType(const MCInst *MI, unsigned OpNo,
-                                        raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::LinkageType e =
-        static_cast<SPIRV::LinkageType>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getLinkageTypeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printAccessQualifier(const MCInst *MI, unsigned OpNo,
-                                            raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::AccessQualifier e =
-        static_cast<SPIRV::AccessQualifier>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getAccessQualifierName(e);
-  }
-}
-
-void SPIRVInstPrinter::printFunctionParameterAttribute(const MCInst *MI,
-                                                       unsigned OpNo,
-                                                       raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::FunctionParameterAttribute e =
-        static_cast<SPIRV::FunctionParameterAttribute>(
-            MI->getOperand(OpNo).getImm());
-    O << SPIRV::getFunctionParameterAttributeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printDecoration(const MCInst *MI, unsigned OpNo,
-                                       raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::Decoration e =
-        static_cast<SPIRV::Decoration>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getDecorationName(e);
-  }
-}
-
-void SPIRVInstPrinter::printBuiltIn(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::BuiltIn e =
-        static_cast<SPIRV::BuiltIn>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getBuiltInName(e);
-  }
-}
-
-void SPIRVInstPrinter::printSelectionControl(const MCInst *MI, unsigned OpNo,
-                                             raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    unsigned e = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getSelectionControlName(e);
-  }
-}
-
-void SPIRVInstPrinter::printLoopControl(const MCInst *MI, unsigned OpNo,
-                                        raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    unsigned e = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getLoopControlName(e);
-  }
-}
-
-void SPIRVInstPrinter::printFunctionControl(const MCInst *MI, unsigned OpNo,
-                                            raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    unsigned e = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getFunctionControlName(e);
-  }
-}
-
-void SPIRVInstPrinter::printMemorySemantics(const MCInst *MI, unsigned OpNo,
-                                            raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    unsigned e = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getMemorySemanticsName(e);
-  }
-}
-
-void SPIRVInstPrinter::printMemoryOperand(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    unsigned e = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getMemoryOperandName(e);
-  }
-}
-
-void SPIRVInstPrinter::printScope(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::Scope e = static_cast<SPIRV::Scope>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getScopeName(e);
-  }
-}
-
-void SPIRVInstPrinter::printGroupOperation(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::GroupOperation e =
-        static_cast<SPIRV::GroupOperation>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getGroupOperationName(e);
-  }
-}
-
-void SPIRVInstPrinter::printKernelEnqueueFlags(const MCInst *MI, unsigned OpNo,
-                                               raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::KernelEnqueueFlags e =
-        static_cast<SPIRV::KernelEnqueueFlags>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getKernelEnqueueFlagsName(e);
-  }
-}
-
-void SPIRVInstPrinter::printKernelProfilingInfo(const MCInst *MI, unsigned OpNo,
-                                                raw_ostream &O) {
-  if (OpNo < MI->getNumOperands()) {
-    SPIRV::KernelProfilingInfo e =
-        static_cast<SPIRV::KernelProfilingInfo>(MI->getOperand(OpNo).getImm());
-    O << SPIRV::getKernelProfilingInfoName(e);
+    O << getSymbolicOperandMnemonic(category, MI->getOperand(OpNo).getImm());
   }
 }

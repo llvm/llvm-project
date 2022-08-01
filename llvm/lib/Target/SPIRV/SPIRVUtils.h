@@ -27,63 +27,61 @@ class MachineRegisterInfo;
 class Register;
 class StringRef;
 class SPIRVInstrInfo;
-} // namespace llvm
 
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
-void addStringImm(const llvm::StringRef &Str, llvm::MCInst &Inst);
-void addStringImm(const llvm::StringRef &Str, llvm::MachineInstrBuilder &MIB);
-void addStringImm(const llvm::StringRef &Str, llvm::IRBuilder<> &B,
-                  std::vector<llvm::Value *> &Args);
+void addStringImm(const StringRef &Str, MCInst &Inst);
+void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
+void addStringImm(const StringRef &Str, IRBuilder<> &B,
+                  std::vector<Value *> &Args);
 
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.
-std::string getStringImm(const llvm::MachineInstr &MI, unsigned StartIndex);
+std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
 
 // Add the given numerical immediate to MIB.
-void addNumImm(const llvm::APInt &Imm, llvm::MachineInstrBuilder &MIB);
+void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
 // Add an OpName instruction for the given target register.
-void buildOpName(llvm::Register Target, const llvm::StringRef &Name,
-                 llvm::MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, const StringRef &Name,
+                 MachineIRBuilder &MIRBuilder);
 
 // Add an OpDecorate instruction for the given Reg.
-void buildOpDecorate(llvm::Register Reg, llvm::MachineIRBuilder &MIRBuilder,
-                     llvm::SPIRV::Decoration Dec,
+void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                     SPIRV::Decoration::Decoration Dec,
                      const std::vector<uint32_t> &DecArgs,
-                     llvm::StringRef StrImm = "");
-void buildOpDecorate(llvm::Register Reg, llvm::MachineInstr &I,
-                     const llvm::SPIRVInstrInfo &TII,
-                     llvm::SPIRV::Decoration Dec,
+                     StringRef StrImm = "");
+void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
+                     SPIRV::Decoration::Decoration Dec,
                      const std::vector<uint32_t> &DecArgs,
-                     llvm::StringRef StrImm = "");
+                     StringRef StrImm = "");
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
-unsigned storageClassToAddressSpace(llvm::SPIRV::StorageClass SC);
+unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
 // Convert an LLVM IR address space to a SPIR-V storage class.
-llvm::SPIRV::StorageClass addressSpaceToStorageClass(unsigned AddrSpace);
+SPIRV::StorageClass::StorageClass
+addressSpaceToStorageClass(unsigned AddrSpace);
 
-llvm::SPIRV::MemorySemantics
-getMemSemanticsForStorageClass(llvm::SPIRV::StorageClass SC);
+SPIRV::MemorySemantics::MemorySemantics
+getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
-llvm::SPIRV::MemorySemantics getMemSemantics(llvm::AtomicOrdering Ord);
+SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def
 // of OpConstant instruction.
-llvm::MachineInstr *
-getDefInstrMaybeConstant(llvm::Register &ConstReg,
-                         const llvm::MachineRegisterInfo *MRI);
+MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
+                                       const MachineRegisterInfo *MRI);
 
 // Get constant integer value of the given ConstReg.
-uint64_t getIConstVal(llvm::Register ConstReg,
-                      const llvm::MachineRegisterInfo *MRI);
+uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
-bool isSpvIntrinsic(llvm::MachineInstr &MI, llvm::Intrinsic::ID IntrinsicID);
+bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID);
 
 // Get type of i-th operand of the metadata node.
-llvm::Type *getMDOperandAsType(const llvm::MDNode *N, unsigned I);
+Type *getMDOperandAsType(const MDNode *N, unsigned I);
+} // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
