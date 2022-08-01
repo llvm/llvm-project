@@ -20,6 +20,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRLinalgTestPasses
     MLIRMathTestPasses
     MLIRMemRefTestPasses
+    MLIRNVGPUTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
     MLIRSPIRVTestPasses
