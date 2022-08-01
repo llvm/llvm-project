@@ -96,6 +96,9 @@ Improvements to Clang's diagnostics
   missing when used, or vice versa. This makes sure that Clang picks the
   correct one, where it previously would consider multiple ones as potentially
   acceptable (and erroneously use whichever one is tried first).
+- Clang will now print more information about failed static assertions. In
+  particular, simple static assertion expressions are evaluated to their
+  compile-time value and printed out if the assertion fails.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

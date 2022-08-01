@@ -68,8 +68,10 @@ namespace PR46791 { // also PR45782
   struct D : B, C {};
 
   static_assert(trait<A>::specialization == 0);
-  static_assert(trait<B>::specialization == 1); // FIXME expected-error {{failed}}
-  static_assert(trait<C>::specialization == 2); // FIXME expected-error {{failed}}
+  static_assert(trait<B>::specialization == 1); // FIXME expected-error {{failed}} \
+                                                // expected-note {{evaluates to '0 == 1'}}
+  static_assert(trait<C>::specialization == 2); // FIXME expected-error {{failed}} \
+                                                // expected-note {{evaluates to '0 == 2'}}
   static_assert(trait<D>::specialization == 0); // FIXME-error {{ambiguous partial specialization}}
 }
 

@@ -1913,11 +1913,13 @@ namespace VirtualFromBase {
   // cxx11-error@-1    {{not an integral constant expression}}
   // cxx11-note@-2     {{call to virtual function}}
   // cxx20_2b-error@-3 {{static assertion failed}}
+  // cxx20_2b-note@-4 {{8 == 16}}
 
   // Non-virtual f(), OK.
   constexpr X<X<S2>> xxs2;
   constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
-  static_assert(q->f() == sizeof(S2), ""); // cxx20_2b-error {{static assertion failed}}
+  static_assert(q->f() == sizeof(S2), ""); // cxx20_2b-error {{static assertion failed}} \
+                                           // cxx20_2b-note {{16 == 8}}
 }
 
 namespace ConstexprConstructorRecovery {
