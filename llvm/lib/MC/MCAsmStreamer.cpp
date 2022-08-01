@@ -565,10 +565,8 @@ void MCAsmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
 void MCAsmStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
   assert(!Options.empty() && "At least one option is required!");
   OS << "\t.linker_option \"" << Options[0] << '"';
-  for (ArrayRef<std::string>::iterator it = Options.begin() + 1,
-         ie = Options.end(); it != ie; ++it) {
-    OS << ", " << '"' << *it << '"';
-  }
+  for (const std::string &Opt : llvm::drop_begin(Options))
+    OS << ", " << '"' << Opt << '"';
   EmitEOL();
 }
 

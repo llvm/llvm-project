@@ -59,10 +59,11 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   // The first block in loopinfo.Blocks is guaranteed to be the header.
   assert(Header == *CurLoop->getBlocks().begin() &&
          "First block must be header");
-  for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
-                            BBE = CurLoop->block_end();
-       (BB != BBE) && !MayThrow; ++BB)
-    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(*BB);
+  for (const BasicBlock *BB : llvm::drop_begin(CurLoop->blocks())) {
+    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(BB);
+    if (MayThrow)
+      break;
+  }
 
   computeBlockColors(CurLoop);
 }

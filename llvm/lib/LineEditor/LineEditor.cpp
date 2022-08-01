@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LineEditor/LineEditor.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Path.h"
@@ -37,13 +38,11 @@ std::string LineEditor::ListCompleterConcept::getCommonPrefix(
   assert(!Comps.empty());
 
   std::string CommonPrefix = Comps[0].TypedText;
-  for (std::vector<Completion>::const_iterator I = Comps.begin() + 1,
-                                               E = Comps.end();
-       I != E; ++I) {
-    size_t Len = std::min(CommonPrefix.size(), I->TypedText.size());
+  for (const Completion &C : llvm::drop_begin(Comps)) {
+    size_t Len = std::min(CommonPrefix.size(), C.TypedText.size());
     size_t CommonLen = 0;
     for (; CommonLen != Len; ++CommonLen) {
-      if (CommonPrefix[CommonLen] != I->TypedText[CommonLen])
+      if (CommonPrefix[CommonLen] != C.TypedText[CommonLen])
         break;
     }
     CommonPrefix.resize(CommonLen);
