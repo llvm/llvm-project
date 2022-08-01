@@ -18,8 +18,7 @@ define i32 @lower_global(i32 %a) nounwind {
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi0:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(G)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
-; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
+; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = load volatile i32, i32* @G
   ret i32 %1
@@ -41,9 +40,8 @@ define void @lower_blockaddress() nounwind {
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi1:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(addr)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV32I-MEDIUM-NEXT:    li a1, 1
-; RV32I-MEDIUM-NEXT:    sw a1, 0(a0)
+; RV32I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV32I-MEDIUM-NEXT:    ret
   store volatile i8* blockaddress(@lower_blockaddress, %block), i8** @addr
   ret void

@@ -7,20 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Merge the offset of address calculation into the offset field
-// of instructions in a global address lowering sequence. This pass transforms:
-//   lui  vreg1, %hi(s)
-//   addi vreg2, vreg1, %lo(s)
-//   addi vreg3, verg2, Offset
+// of instructions in a global address lowering sequence.
 //
-//   Into:
-//   lui  vreg1, %hi(s+Offset)
-//   addi vreg2, vreg1, %lo(s+Offset)
-//
-// The transformation is carried out under certain conditions:
-// 1) The offset field in the base of global address lowering sequence is zero.
-// 2) The lowered global address has only one use.
-//
-// The offset field can be in a different form. This pass handles all of them.
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
@@ -44,10 +32,10 @@ private:
 public:
   static char ID;
   bool runOnMachineFunction(MachineFunction &Fn) override;
-  bool detectLuiAddiGlobal(MachineInstr &LUI, MachineInstr *&ADDI);
+  bool detectFoldable(MachineInstr &Hi, MachineInstr *&Lo);
 
-  bool detectAndFoldOffset(MachineInstr &HiLUI, MachineInstr &LoADDI);
-  void foldOffset(MachineInstr &HiLUI, MachineInstr &LoADDI, MachineInstr &Tail,
+  bool detectAndFoldOffset(MachineInstr &Hi, MachineInstr &Lo);
+  void foldOffset(MachineInstr &Hi, MachineInstr &Lo, MachineInstr &Tail,
                   int64_t Offset);
   bool matchLargeOffset(MachineInstr &TailAdd, Register GSReg, int64_t &Offset);
   bool matchShiftedOffset(MachineInstr &TailShXAdd, Register GSReg,
@@ -79,50 +67,68 @@ char RISCVMergeBaseOffsetOpt::ID = 0;
 INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
                 RISCV_MERGE_BASE_OFFSET_NAME, false, false)
 
-// Detect the pattern:
+// Detect either of the patterns:
+//
+// 1. (medlow pattern):
 //   lui   vreg1, %hi(s)
 //   addi  vreg2, vreg1, %lo(s)
 //
-//   Pattern only accepted if:
-//     1) ADDI has only one use.
-//     2) LUI has only one use; which is the ADDI.
-//     3) Both ADDI and LUI have GlobalAddress type which indicates that these
-//        are generated from global address lowering.
-//     4) Offset value in the Global Address is 0.
-bool RISCVMergeBaseOffsetOpt::detectLuiAddiGlobal(MachineInstr &HiLUI,
-                                                  MachineInstr *&LoADDI) {
-  if (HiLUI.getOpcode() != RISCV::LUI ||
-      HiLUI.getOperand(1).getTargetFlags() != RISCVII::MO_HI ||
-      !HiLUI.getOperand(1).isGlobal() ||
-      HiLUI.getOperand(1).getOffset() != 0 ||
-      !MRI->hasOneUse(HiLUI.getOperand(0).getReg()))
+// 2. (medany pattern):
+// .Lpcrel_hi1:
+//   auipc vreg1, %pcrel_hi(s)
+//   addi  vreg2, vreg1, %pcrel_lo(.Lpcrel_hi1)
+//
+// The pattern is only accepted if:
+//    1) The first instruction has only one use, which is the ADDI.
+//    2) The address operands have the appropriate type, reflecting the
+//       lowering of a global address using medlow or medany.
+//    3) The offset value in the Global Address is 0.
+bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
+                                             MachineInstr *&Lo) {
+  if (Hi.getOpcode() == RISCV::LUI) {
+    if (Hi.getOperand(1).getTargetFlags() != RISCVII::MO_HI ||
+        !Hi.getOperand(1).isGlobal() || Hi.getOperand(1).getOffset() != 0 ||
+        !MRI->hasOneUse(Hi.getOperand(0).getReg()))
+      return false;
+    Register HiDestReg = Hi.getOperand(0).getReg();
+    Lo = &*MRI->use_instr_begin(HiDestReg);
+    if (Lo->getOpcode() != RISCV::ADDI ||
+        Lo->getOperand(2).getTargetFlags() != RISCVII::MO_LO ||
+        !Lo->getOperand(2).isGlobal() || Lo->getOperand(2).getOffset() != 0)
+      return false;
+    return true;
+  } else if (Hi.getOpcode() == RISCV::AUIPC) {
+    if (Hi.getOperand(1).getTargetFlags() != RISCVII::MO_PCREL_HI ||
+        !Hi.getOperand(1).isGlobal() || Hi.getOperand(1).getOffset() != 0 ||
+        !MRI->hasOneUse(Hi.getOperand(0).getReg()))
+      return false;
+    Register HiDestReg = Hi.getOperand(0).getReg();
+    Lo = &*MRI->use_instr_begin(HiDestReg);
+    if (Lo->getOpcode() != RISCV::ADDI ||
+        Lo->getOperand(2).getTargetFlags() != RISCVII::MO_PCREL_LO ||
+        Lo->getOperand(2).getType() != MachineOperand::MO_MCSymbol)
+      return false;
+    return true;
+  } else {
     return false;
-  Register HiLuiDestReg = HiLUI.getOperand(0).getReg();
-  LoADDI = &*MRI->use_instr_begin(HiLuiDestReg);
-  if (LoADDI->getOpcode() != RISCV::ADDI ||
-      LoADDI->getOperand(2).getTargetFlags() != RISCVII::MO_LO ||
-      !LoADDI->getOperand(2).isGlobal() ||
-      LoADDI->getOperand(2).getOffset() != 0)
-    return false;
-  return true;
+  }
 }
 
-// Update the offset in HiLUI and LoADDI instructions.
+// Update the offset in Hi and Lo instructions.
 // Delete the tail instruction and update all the uses to use the
-// output from LoADDI.
-void RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &HiLUI,
-                                         MachineInstr &LoADDI,
+// output from Lo.
+void RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
                                          MachineInstr &Tail, int64_t Offset) {
   assert(isInt<32>(Offset) && "Unexpected offset");
-  // Put the offset back in HiLUI and the LoADDI
-  HiLUI.getOperand(1).setOffset(Offset);
-  LoADDI.getOperand(2).setOffset(Offset);
+  // Put the offset back in Hi and the Lo
+  Hi.getOperand(1).setOffset(Offset);
+  if (Hi.getOpcode() != RISCV::AUIPC)
+    Lo.getOperand(2).setOffset(Offset);
   // Delete the tail instruction.
   DeadInstrs.insert(&Tail);
-  MRI->replaceRegWith(Tail.getOperand(0).getReg(),
-                      LoADDI.getOperand(0).getReg());
+  MRI->replaceRegWith(Tail.getOperand(0).getReg(), Lo.getOperand(0).getReg());
   LLVM_DEBUG(dbgs() << "  Merged offset " << Offset << " into base.\n"
-                    << "     " << HiLUI << "     " << LoADDI;);
+                    << "     " << Hi << "     " << Lo;);
 }
 
 // Detect patterns for large offsets that are passed into an ADD instruction.
@@ -154,7 +160,7 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
   // Can't fold if the register has more than one use.
   if (!MRI->hasOneUse(Reg))
     return false;
-  // This can point to an ADDI or a LUI:
+  // This can point to an ADDI(W) or a LUI:
   MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
   if (OffsetTail.getOpcode() == RISCV::ADDI ||
       OffsetTail.getOpcode() == RISCV::ADDIW) {
@@ -196,12 +202,12 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
 }
 
 // Detect patterns for offsets that are passed into a SHXADD instruction.
-// The offset has 1,2, or 3 trailing zeros and fits in simm13, simm14, simm15.
-// The constant is created with addi    voff, x0, C, and shXadd is used to
+// The offset has 1, 2, or 3 trailing zeros and fits in simm13, simm14, simm15.
+// The constant is created with addi voff, x0, C, and shXadd is used to
 // fill insert the trailing zeros and do the addition.
 //
-// HiLUI:      lui     vreg1, %hi(s)
-// LoADDI:     addi    vreg2, vreg1, %lo(s)
+// Hi:         lui     vreg1, %hi(s)
+// Lo:         addi    vreg2, vreg1, %lo(s)
 // OffsetTail: addi    voff, x0, C
 // TailAdd:    shXadd  vreg4, voff, vreg2
 bool RISCVMergeBaseOffsetOpt::matchShiftedOffset(MachineInstr &TailShXAdd,
@@ -248,15 +254,15 @@ bool RISCVMergeBaseOffsetOpt::matchShiftedOffset(MachineInstr &TailShXAdd,
   return true;
 }
 
-bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
-                                                  MachineInstr &LoADDI) {
-  Register DestReg = LoADDI.getOperand(0).getReg();
+bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
+                                                  MachineInstr &Lo) {
+  Register DestReg = Lo.getOperand(0).getReg();
 
   // First, look for arithmetic instructions we can get an offset from.
   // We might be able to remove the arithmetic instructions by folding the
   // offset into the LUI+ADDI.
   if (MRI->hasOneUse(DestReg)) {
-    // LoADDI has only one use.
+    // Lo has only one use.
     MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
     switch (Tail.getOpcode()) {
     default:
@@ -275,13 +281,13 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
           Offset += TailTail.getOperand(2).getImm();
           LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
           DeadInstrs.insert(&Tail);
-          foldOffset(HiLUI, LoADDI, TailTail, Offset);
+          foldOffset(Hi, Lo, TailTail, Offset);
           return true;
         }
       }
 
       LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
-      foldOffset(HiLUI, LoADDI, Tail, Offset);
+      foldOffset(Hi, Lo, Tail, Offset);
       return true;
     }
     case RISCV::ADD: {
@@ -296,7 +302,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
       int64_t Offset;
       if (!matchLargeOffset(Tail, DestReg, Offset))
         return false;
-      foldOffset(HiLUI, LoADDI, Tail, Offset);
+      foldOffset(Hi, Lo, Tail, Offset);
       return true;
     }
     case RISCV::SH1ADD:
@@ -308,17 +314,24 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
       int64_t Offset;
       if (!matchShiftedOffset(Tail, DestReg, Offset))
         return false;
-      foldOffset(HiLUI, LoADDI, Tail, Offset);
+      foldOffset(Hi, Lo, Tail, Offset);
       return true;
     }
     }
   }
 
   // We didn't find an arithmetic instruction. If all the uses are memory ops
-  // with the same offset, we can transform
-  // HiLUI:  lui vreg1, %hi(foo)          --->  lui vreg1, %hi(foo+8)
-  // LoADDI: addi vreg2, vreg1, %lo(foo)  --->  lw vreg3, lo(foo+8)(vreg1)
-  // Tail:   lw vreg3, 8(vreg2)
+  // with the same offset, we can transform:
+  //
+  // 1. (medlow pattern):
+  // Hi:   lui vreg1, %hi(foo)          --->  lui vreg1, %hi(foo+8)
+  // Lo:   addi vreg2, vreg1, %lo(foo)  --->  lw vreg3, lo(foo+8)(vreg1)
+  // Tail: lw vreg3, 8(vreg2)
+  //
+  // 2. (medany pattern):
+  // Hi: 1:auipc vreg1, %pcrel_hi(s)         ---> auipc vreg1, %pcrel_hi(foo+8)
+  // Lo:   addi  vreg2, vreg1, %pcrel_lo(1b) ---> lw vreg3, %pcrel_lo(1b)(vreg1)
+  // Tail: lw vreg3, 8(vreg2)
 
   Optional<int64_t> CommonOffset;
   for (const MachineInstr &UseMI : MRI->use_instructions(DestReg)) {
@@ -345,7 +358,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
     case RISCV::FSD: {
       if (UseMI.getOperand(1).isFI())
         return false;
-      // Register defined by LoADDI should not be the value register.
+      // Register defined by Lo should not be the value register.
       if (DestReg == UseMI.getOperand(0).getReg())
         return false;
       assert(DestReg == UseMI.getOperand(1).getReg() &&
@@ -361,9 +374,10 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
 
   // We found a common offset.
   // Update the offsets in global address lowering.
-  HiLUI.getOperand(1).setOffset(*CommonOffset);
-  MachineOperand &ImmOp = LoADDI.getOperand(2);
-  ImmOp.setOffset(*CommonOffset);
+  Hi.getOperand(1).setOffset(*CommonOffset);
+  MachineOperand &ImmOp = Lo.getOperand(2);
+  if (Hi.getOpcode() != RISCV::AUIPC)
+    ImmOp.setOffset(*CommonOffset);
 
   // Update the immediate in the load/store instructions to add the offset.
   for (MachineInstr &UseMI :
@@ -371,12 +385,11 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
     UseMI.removeOperand(2);
     UseMI.addOperand(ImmOp);
     // Update the base reg in the Tail instruction to feed from LUI.
-    // Output of HiLUI is only used in LoADDI, no need to use
-    // MRI->replaceRegWith().
-    UseMI.getOperand(1).setReg(HiLUI.getOperand(0).getReg());
+    // Output of Hi is only used in Lo, no need to use MRI->replaceRegWith().
+    UseMI.getOperand(1).setReg(Hi.getOperand(0).getReg());
   }
 
-  DeadInstrs.insert(&LoADDI);
+  DeadInstrs.insert(&Lo);
   return true;
 }
 
@@ -391,13 +404,13 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
   MRI = &Fn.getRegInfo();
   for (MachineBasicBlock &MBB : Fn) {
     LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
-    for (MachineInstr &HiLUI : MBB) {
-      MachineInstr *LoADDI = nullptr;
-      if (!detectLuiAddiGlobal(HiLUI, LoADDI))
+    for (MachineInstr &Hi : MBB) {
+      MachineInstr *Lo = nullptr;
+      if (!detectFoldable(Hi, Lo))
         continue;
       LLVM_DEBUG(dbgs() << "  Found lowered global address: "
-                        << *LoADDI->getOperand(2).getGlobal() << "\n");
-      MadeChange |= detectAndFoldOffset(HiLUI, *LoADDI);
+                        << *Hi.getOperand(2).getGlobal() << "\n");
+      MadeChange |= detectAndFoldOffset(Hi, *Lo);
     }
   }
   // Delete dead instructions.
