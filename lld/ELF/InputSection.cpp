@@ -1319,9 +1319,12 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
 uint64_t EhInputSection::getParentOffset(uint64_t offset) const {
   auto it = partition_point(
       fdes, [=](EhSectionPiece p) { return p.inputOff <= offset; });
-  if (it == fdes.begin() || it[-1].inputOff + it[-1].size <= offset)
+  if (it == fdes.begin() || it[-1].inputOff + it[-1].size <= offset) {
     it = partition_point(
         cies, [=](EhSectionPiece p) { return p.inputOff <= offset; });
+    if (it == cies.begin()) // invalid piece
+      return offset;
+  }
   if (it[-1].outputOff == -1) // invalid piece
     return offset - it[-1].inputOff;
   return it[-1].outputOff + (offset - it[-1].inputOff);
