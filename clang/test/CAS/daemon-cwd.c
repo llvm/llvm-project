@@ -13,8 +13,8 @@
 // RUN:    -MD -MF %t/test.d -Iinclude                                    \
 // RUN:    -fsyntax-only -x c %s)
 // RUN: %clang -cc1depscand -shutdown %{clang-daemon-dir}/daemon-cwd
-// RUN: %clang -target x86_64-apple-macos11 -MD -MF %t/test2.d            \
-// RUN:    -I %t/include -fsyntax-only -x c %s
+// RUN: (cd %t && %clang -target x86_64-apple-macos11 -MD -MF %t/test2.d  \
+// RUN:    -Iinclude -fsyntax-only -x c %s)
 // RUN: diff %t/test.d %t/test2.d
 
 #include "test.h"
