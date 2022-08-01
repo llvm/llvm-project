@@ -7224,7 +7224,7 @@ ExpectedStmt ASTNodeImporter::VisitBinaryOperator(BinaryOperator *E) {
   return BinaryOperator::Create(
       Importer.getToContext(), ToLHS, ToRHS, E->getOpcode(), ToType,
       E->getValueKind(), E->getObjectKind(), ToOperatorLoc,
-      E->getFPFeatures(Importer.getFromContext().getLangOpts()));
+      E->getFPFeatures());
 }
 
 ExpectedStmt ASTNodeImporter::VisitConditionalOperator(ConditionalOperator *E) {
@@ -7335,7 +7335,7 @@ ASTNodeImporter::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
   return CompoundAssignOperator::Create(
       Importer.getToContext(), ToLHS, ToRHS, E->getOpcode(), ToType,
       E->getValueKind(), E->getObjectKind(), ToOperatorLoc,
-      E->getFPFeatures(Importer.getFromContext().getLangOpts()),
+      E->getFPFeatures(),
       ToComputationLHSType, ToComputationResultType);
 }
 
