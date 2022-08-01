@@ -121,7 +121,7 @@ public:
   // conversions. Implicit conversions can potentially lead to loss of
   // precision.
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<float, XType>::Value, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<float, XType>, int> = 0>
   explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
@@ -131,7 +131,7 @@ public:
   }
 
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<double, XType>::Value, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<double, XType>, int> = 0>
   explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
@@ -141,7 +141,7 @@ public:
   }
 
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<long double, XType>::Value, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
   explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
@@ -151,7 +151,7 @@ public:
   }
 
   template <typename XType,
-            cpp::EnableIfType<cpp::IsIntegral<XType>::Value, int> = 0>
+            cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
   explicit MPFRNumber(XType x, int precision = ExtraPrecision<float>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
@@ -191,6 +191,12 @@ public:
   MPFRNumber cos() const {
     MPFRNumber result(*this);
     mpfr_cos(result.value, value, mpfr_rounding);
+    return result;
+  }
+
+  MPFRNumber cosh() const {
+    MPFRNumber result(*this);
+    mpfr_cosh(result.value, value, mpfr_rounding);
     return result;
   }
 
@@ -331,6 +337,12 @@ public:
     return result;
   }
 
+  MPFRNumber sinh() const {
+    MPFRNumber result(*this);
+    mpfr_sinh(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber sqrt() const {
     MPFRNumber result(*this);
     mpfr_sqrt(result.value, value, mpfr_rounding);
@@ -396,7 +408,7 @@ public:
   //    of N between this number and [input].
   // 4. A values of +0.0 and -0.0 are treated as equal.
   template <typename T>
-  cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, double> ulp(T input) {
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, double> ulp(T input) {
     T thisAsT = as<T>();
     if (thisAsT == input)
       return T(0.0);
@@ -470,7 +482,7 @@ template <> long double MPFRNumber::as<long double>() const {
 namespace internal {
 
 template <typename InputType>
-cpp::EnableIfType<cpp::IsFloatingPointType<InputType>::Value, MPFRNumber>
+cpp::enable_if_t<cpp::is_floating_point_v<InputType>, MPFRNumber>
 unary_operation(Operation op, InputType input, unsigned int precision,
                 RoundingMode rounding) {
   MPFRNumber mpfrInput(input, precision, rounding);
@@ -481,6 +493,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.ceil();
   case Operation::Cos:
     return mpfrInput.cos();
+  case Operation::Cosh:
+    return mpfrInput.cosh();
   case Operation::Exp:
     return mpfrInput.exp();
   case Operation::Exp2:
@@ -507,6 +521,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.round();
   case Operation::Sin:
     return mpfrInput.sin();
+  case Operation::Sinh:
+    return mpfrInput.sinh();
   case Operation::Sqrt:
     return mpfrInput.sqrt();
   case Operation::Tan:
@@ -519,7 +535,7 @@ unary_operation(Operation op, InputType input, unsigned int precision,
 }
 
 template <typename InputType>
-cpp::EnableIfType<cpp::IsFloatingPointType<InputType>::Value, MPFRNumber>
+cpp::enable_if_t<cpp::is_floating_point_v<InputType>, MPFRNumber>
 unary_operation_two_outputs(Operation op, InputType input, int &output,
                             unsigned int precision, RoundingMode rounding) {
   MPFRNumber mpfrInput(input, precision, rounding);
@@ -532,7 +548,7 @@ unary_operation_two_outputs(Operation op, InputType input, int &output,
 }
 
 template <typename InputType>
-cpp::EnableIfType<cpp::IsFloatingPointType<InputType>::Value, MPFRNumber>
+cpp::enable_if_t<cpp::is_floating_point_v<InputType>, MPFRNumber>
 binary_operation_one_output(Operation op, InputType x, InputType y,
                             unsigned int precision, RoundingMode rounding) {
   MPFRNumber inputX(x, precision, rounding);
@@ -548,7 +564,7 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
 }
 
 template <typename InputType>
-cpp::EnableIfType<cpp::IsFloatingPointType<InputType>::Value, MPFRNumber>
+cpp::enable_if_t<cpp::is_floating_point_v<InputType>, MPFRNumber>
 binary_operation_two_outputs(Operation op, InputType x, InputType y,
                              int &output, unsigned int precision,
                              RoundingMode rounding) {
@@ -563,7 +579,7 @@ binary_operation_two_outputs(Operation op, InputType x, InputType y,
 }
 
 template <typename InputType>
-cpp::EnableIfType<cpp::IsFloatingPointType<InputType>::Value, MPFRNumber>
+cpp::enable_if_t<cpp::is_floating_point_v<InputType>, MPFRNumber>
 ternary_operation_one_output(Operation op, InputType x, InputType y,
                              InputType z, unsigned int precision,
                              RoundingMode rounding) {

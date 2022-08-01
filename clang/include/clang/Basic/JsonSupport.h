@@ -104,9 +104,7 @@ inline void printSourceLocationAsJson(raw_ostream &Out, SourceLocation Loc,
       auto RemoveIt =
           std::remove_if(filename.begin(), filename.end(), [](auto Char) {
             static const char ForbiddenChars[] = "<>*?\"|";
-            return std::find(std::begin(ForbiddenChars),
-                             std::end(ForbiddenChars),
-                             Char) != std::end(ForbiddenChars);
+            return llvm::is_contained(ForbiddenChars, Char);
           });
       filename.erase(RemoveIt, filename.end());
       // Handle windows-specific path delimiters.

@@ -9,7 +9,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BACKEND_X86_H
 
 #if defined(LLVM_LIBC_ARCH_X86)
-#include "src/__support/CPP/TypeTraits.h" // ConditionalType, EnableIfType
+#include "src/__support/CPP/type_traits.h" // ConditionalType, enable_if_t
 #include "src/string/memory_utils/backend_scalar.h"
 
 #ifdef __SSE2__
@@ -40,63 +40,61 @@ struct X86Backend : public Scalar64BitBackend {
 
   // Scalar types use base class implementations.
   template <typename T, Temporality TS, Aligned AS,
-            cpp::EnableIfType<Scalar64BitBackend::IsScalarType<T>, bool> = true>
+            cpp::enable_if_t<Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline T load(const T *src) {
     return Scalar64BitBackend::template load<T, TS, AS>(src);
   }
 
   // Scalar types use base class implementations.
   template <typename T, Temporality TS, Aligned AS,
-            cpp::EnableIfType<Scalar64BitBackend::IsScalarType<T>, bool> = true>
+            cpp::enable_if_t<Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline void store(T *dst, T value) {
     Scalar64BitBackend::template store<T, TS, AS>(dst, value);
   }
 
   // Scalar types use base class implementations.
   template <typename T,
-            cpp::EnableIfType<Scalar64BitBackend::IsScalarType<T>, bool> = true>
+            cpp::enable_if_t<Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline uint64_t notEquals(T v1, T v2) {
     return Scalar64BitBackend::template notEquals<T>(v1, v2);
   }
 
   // Scalar types use base class implementations.
   template <typename T,
-            cpp::EnableIfType<Scalar64BitBackend::IsScalarType<T>, bool> = true>
+            cpp::enable_if_t<Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline T splat(ubyte value) {
     return Scalar64BitBackend::template splat<T>(value);
   }
 
   // Scalar types use base class implementations.
   template <typename T,
-            cpp::EnableIfType<Scalar64BitBackend::IsScalarType<T>, bool> = true>
+            cpp::enable_if_t<Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline int32_t threeWayCmp(T v1, T v2) {
     return Scalar64BitBackend::template threeWayCmp<T>(v1, v2);
   }
 
   // X86 types are specialized below.
-  template <
-      typename T, Temporality TS, Aligned AS,
-      cpp::EnableIfType<!Scalar64BitBackend::IsScalarType<T>, bool> = true>
+  template <typename T, Temporality TS, Aligned AS,
+            cpp::enable_if_t<!Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline T load(const T *src);
 
   // X86 types are specialized below.
-  template <
-      typename T, Temporality TS, Aligned AS,
-      cpp::EnableIfType<!Scalar64BitBackend::IsScalarType<T>, bool> = true>
+  template <typename T, Temporality TS, Aligned AS,
+            cpp::enable_if_t<!Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline void store(T *dst, T value);
 
   // X86 types are specialized below.
-  template <typename T, cpp::EnableIfType<!Scalar64BitBackend::IsScalarType<T>,
-                                          bool> = true>
+  template <typename T,
+            cpp::enable_if_t<!Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline T splat(ubyte value);
 
   // X86 types are specialized below.
-  template <typename T, cpp::EnableIfType<!Scalar64BitBackend::IsScalarType<T>,
-                                          bool> = true>
+  template <typename T,
+            cpp::enable_if_t<!Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline uint64_t notEquals(T v1, T v2);
 
-  template <typename T, cpp::EnableIfType<!Scalar64BitBackend::IsScalarType<T>,
-                                          bool> = true>
+  template <typename T,
+            cpp::enable_if_t<!Scalar64BitBackend::IsScalarType<T>, bool> = true>
   static inline int32_t threeWayCmp(T v1, T v2) {
     return char_diff(reinterpret_cast<char *>(&v1),
                      reinterpret_cast<char *>(&v2), notEquals(v1, v2));
@@ -104,12 +102,12 @@ struct X86Backend : public Scalar64BitBackend {
 
   // Returns the type to use to consume Size bytes.
   template <size_t Size>
-  using getNextType = cpp::ConditionalType<
+  using getNextType = cpp::conditional_t<
       (HAS_M512 && Size >= 64), __m512i,
-      cpp::ConditionalType<
+      cpp::conditional_t<
           (HAS_M256 && Size >= 32), __m256i,
-          cpp::ConditionalType<(HAS_M128 && Size >= 16), __m128i,
-                               Scalar64BitBackend::getNextType<Size>>>>;
+          cpp::conditional_t<(HAS_M128 && Size >= 16), __m128i,
+                             Scalar64BitBackend::getNextType<Size>>>>;
 
 private:
   static inline int32_t char_diff(const char *a, const char *b, uint64_t mask) {

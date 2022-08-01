@@ -4345,11 +4345,7 @@ define i32 @or_sext_sext_use1(i8 %x, i4 %y) {
 define i1 @PR56294(i8 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@PR56294
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i8 [[X]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[T2]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[T7:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    ret i1 [[T7]]
+; CHECK-NEXT:    ret i1 false
 ;
   %t2 = icmp eq i8 %x, 2
   %t3 = and i8 %x, 1

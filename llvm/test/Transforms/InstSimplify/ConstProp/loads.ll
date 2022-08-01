@@ -267,7 +267,7 @@ define i64 @test16.3() {
   ret i64 %v
 }
 
-@g7 = constant {[0 x i32], [0 x i8], ptr} { [0 x i32] undef, [0 x i8] undef, ptr null }
+@g7 = constant {[0 x i32], [0 x i8], ptr} { [0 x i32] poison, [0 x i8] poison, ptr null }
 
 define ptr @test_leading_zero_size_elems() {
 ; CHECK-LABEL: @test_leading_zero_size_elems(
@@ -277,7 +277,7 @@ define ptr @test_leading_zero_size_elems() {
   ret ptr %v
 }
 
-@g8 = constant {[4294967295 x [0 x i32]], i64} { [4294967295 x [0 x i32]] undef, i64 123 }
+@g8 = constant {[4294967295 x [0 x i32]], i64} { [4294967295 x [0 x i32]] poison, i64 123 }
 
 define i64 @test_leading_zero_size_elems_big() {
 ; CHECK-LABEL: @test_leading_zero_size_elems_big(
@@ -291,7 +291,7 @@ define i64 @test_leading_zero_size_elems_big() {
 
 define i64 @test_array_of_zero_size_array() {
 ; CHECK-LABEL: @test_array_of_zero_size_array(
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %v = load i64, ptr @g9
   ret i64 %v
@@ -317,7 +317,7 @@ define ptr @test_poison_aggregate() {
   ret ptr %v
 }
 
-@g11 = constant <{ [8 x i8], [8 x i8] }> <{ [8 x i8] undef, [8 x i8] zeroinitializer }>, align 4
+@g11 = constant <{ [8 x i8], [8 x i8] }> <{ [8 x i8] poison, [8 x i8] zeroinitializer }>, align 4
 
 define ptr @test_trailing_zero_gep_index() {
 ; CHECK-LABEL: @test_trailing_zero_gep_index(
@@ -360,24 +360,24 @@ define i8 @load_neg_one_at_unknown_offset() {
   ret i8 %v
 }
 
-@g_with_padding = constant { i32, [4 x i8] } { i32 0, [4 x i8] undef }
+@g_with_padding = constant { i32, [4 x i8] } { i32 0, [4 x i8] poison }
 
 define i32 @load_padding() {
 ; CHECK-LABEL: @load_padding(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = load i32, ptr getelementptr (i32, ptr @g_with_padding, i64 1)
   ret i32 %v
 }
 
-@g_all_undef = constant { i32, [4 x i8] } undef
+@g_all_poison = constant { i32, [4 x i8] } poison
 
-; Same as the previous case, but with an all-undef initializer.
-define i32 @load_all_undef() {
-; CHECK-LABEL: @load_all_undef(
-; CHECK-NEXT:    ret i32 undef
+; Same as the previous case, but with an all-poison initializer.
+define i32 @load_all_poison() {
+; CHECK-LABEL: @load_all_poison(
+; CHECK-NEXT:    ret i32 poison
 ;
-  %v = load i32, ptr getelementptr (i32, ptr @g_all_undef, i64 1)
+  %v = load i32, ptr getelementptr (i32, ptr @g_all_poison, i64 1)
   ret i32 %v
 }
 

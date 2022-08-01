@@ -7,6 +7,18 @@
 # RUN: %lld -o %t/test -lSystem -lc++ -framework CoreFoundation %t/libNested.tbd %t/test.o
 # RUN: llvm-objdump --bind --no-show-raw-insn -d -r %t/test | FileCheck %s
 
+## Targeting an arch not listed in the tbd should fallback to an ABI compatible arch
+# RUN: %lld -arch x86_64h -o %t/test-compat -lSystem -lc++ -framework CoreFoundation %t/libNested.tbd %t/test.o
+# RUN: llvm-objdump --bind --no-show-raw-insn -d -r %t/test-compat | FileCheck %s
+
+## Setting LD_DYLIB_CPU_SUBTYPES_MUST_MATCH forces exact target arch match.
+# RUN: env LD_DYLIB_CPU_SUBTYPES_MUST_MATCH=1 not %lld -arch x86_64h -o /dev/null -lSystem -lc++ -framework \
+# RUN:   CoreFoundation %t/libNested.tbd %t/test.o 2>&1 | FileCheck %s -check-prefix=INCOMPATIBLE
+
+# INCOMPATIBLE:      error: {{.*}}libSystem.tbd(/usr/lib/libSystem.dylib) is incompatible with x86_64h (macOS)
+# INCOMPATIBLE-NEXT: error: {{.*}}libc++.tbd(/usr/lib/libc++.dylib) is incompatible with x86_64h (macOS)
+# INCOMPATIBLE-NEXT: error: {{.*}}CoreFoundation.tbd(/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation) is incompatible with x86_64h (macOS)
+
 ## libReexportSystem.tbd tests that we can reference symbols from a 2nd-level
 ## tapi document, re-exported by a top-level tapi document, which itself is
 ## re-exported by another top-level tapi document.

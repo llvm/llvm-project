@@ -17,6 +17,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -709,11 +710,19 @@ void mlir::fullyComposeAffineMapAndOperands(AffineMap *map,
 /// Given a list of `OpFoldResult`, build the necessary operations to populate
 /// `actualValues` with values produced by operations. In particular, for any
 /// attribute-typed element in `values`, call the constant materializer
-/// associated with the Affine dialect to produce an operation.
+/// associated with the Affine dialect to produce an operation. Do NOT notify
+/// the builder listener about the constant ops being created as they are
+/// intended to be removed after being folded into affine constructs; this is
+/// not suitable for use beyond the Affine dialect.
 static void materializeConstants(OpBuilder &b, Location loc,
                                  ArrayRef<OpFoldResult> values,
                                  SmallVectorImpl<Operation *> &constants,
                                  SmallVectorImpl<Value> &actualValues) {
+  OpBuilder::Listener *listener = b.getListener();
+  b.setListener(nullptr);
+  auto listenerResetter =
+      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
+
   actualValues.reserve(values.size());
   auto *dialect = b.getContext()->getLoadedDialect<AffineDialect>();
   for (OpFoldResult ofr : values) {
@@ -742,7 +751,7 @@ static void materializeConstants(OpBuilder &b, Location loc,
 template <typename OpTy, typename... Args>
 static std::enable_if_t<OpTy::template hasTrait<OpTrait::OneResult>(),
                         OpFoldResult>
-createOrFold(RewriterBase &b, Location loc, ValueRange operands,
+createOrFold(OpBuilder &b, Location loc, ValueRange operands,
              Args &&...leadingArguments) {
   // Identify the constant operands and extract their values as attributes.
   // Note that we cannot use the original values directly because the list of
@@ -759,17 +768,30 @@ createOrFold(RewriterBase &b, Location loc, ValueRange operands,
 
   // Create the operation and immediately attempt to fold it. On success,
   // delete the operation and prepare the (unmaterialized) value for being
-  // returned. On failure, return the operation result value.
+  // returned. On failure, return the operation result value. Temporarily remove
+  // the listener to avoid notifying it when the op is created as it may be
+  // removed immediately and there is no way of notifying the caller about that
+  // without resorting to RewriterBase.
+  //
   // TODO: arguably, the main folder (createOrFold) API should support this use
   // case instead of indiscriminately materializing constants.
+  OpBuilder::Listener *listener = b.getListener();
+  b.setListener(nullptr);
+  auto listenerResetter =
+      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
   OpTy op =
       b.create<OpTy>(loc, std::forward<Args>(leadingArguments)..., operands);
   SmallVector<OpFoldResult, 1> foldResults;
   if (succeeded(op->fold(constantOperands, foldResults)) &&
       !foldResults.empty()) {
-    b.eraseOp(op);
+    op->erase();
     return foldResults.front();
   }
+
+  // Notify the listener now that we definitely know that the operation will
+  // persist. Use the original listener stored in the variable.
+  if (listener)
+    listener->notifyOperationInserted(op);
   return op->getResult(0);
 }
 
@@ -821,8 +843,7 @@ static void composeMultiResultAffineMap(AffineMap &map,
 }
 
 OpFoldResult
-mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
-                                    AffineMap map,
+mlir::makeComposedFoldedAffineApply(OpBuilder &b, Location loc, AffineMap map,
                                     ArrayRef<OpFoldResult> operands) {
   assert(map.getNumResults() == 1 && "building affine.apply with !=1 result");
 
@@ -835,13 +856,12 @@ mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
   // Constants are always folded into affine min/max because they can be
   // represented as constant expressions, so delete them.
   for (Operation *op : constants)
-    b.eraseOp(op);
+    op->erase();
   return result;
 }
 
 OpFoldResult
-mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
-                                    AffineExpr expr,
+mlir::makeComposedFoldedAffineApply(OpBuilder &b, Location loc, AffineExpr expr,
                                     ArrayRef<OpFoldResult> operands) {
   return makeComposedFoldedAffineApply(
       b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}).front(),
@@ -849,7 +869,7 @@ mlir::makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
 }
 
 SmallVector<OpFoldResult> mlir::makeComposedFoldedMultiResultAffineApply(
-    RewriterBase &b, Location loc, AffineMap map,
+    OpBuilder &b, Location loc, AffineMap map,
     ArrayRef<OpFoldResult> operands) {
   return llvm::to_vector(llvm::map_range(
       llvm::seq<unsigned>(0, map.getNumResults()), [&](unsigned i) {
@@ -866,7 +886,7 @@ Value mlir::makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
 }
 
 template <typename OpTy>
-static OpFoldResult makeComposedFoldedMinMax(RewriterBase &b, Location loc,
+static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
                                              AffineMap map,
                                              ArrayRef<OpFoldResult> operands) {
   SmallVector<Operation *> constants;
@@ -879,18 +899,18 @@ static OpFoldResult makeComposedFoldedMinMax(RewriterBase &b, Location loc,
   // Constants are always folded into affine min/max because they can be
   // represented as constant expressions, so delete them.
   for (Operation *op : constants)
-    b.eraseOp(op);
+    op->erase();
   return result;
 }
 
 OpFoldResult
-mlir::makeComposedFoldedAffineMin(RewriterBase &b, Location loc, AffineMap map,
+mlir::makeComposedFoldedAffineMin(OpBuilder &b, Location loc, AffineMap map,
                                   ArrayRef<OpFoldResult> operands) {
   return makeComposedFoldedMinMax<AffineMinOp>(b, loc, map, operands);
 }
 
 OpFoldResult
-mlir::makeComposedFoldedAffineMax(RewriterBase &b, Location loc, AffineMap map,
+mlir::makeComposedFoldedAffineMax(OpBuilder &b, Location loc, AffineMap map,
                                   ArrayRef<OpFoldResult> operands) {
   return makeComposedFoldedMinMax<AffineMaxOp>(b, loc, map, operands);
 }

@@ -76,7 +76,7 @@ constexpr bool test_all() {
   using std::ranges::mismatch_result;
   using std::ranges::move_result;
   //using std::ranges::move_backward_result;
-  //using std::ranges::partial_sort_copy_result;
+  using std::ranges::partial_sort_copy_result;
   using std::ranges::partition_copy_result;
   //using std::ranges::remove_copy_result;
   //using std::ranges::remove_copy_if_result;
@@ -88,7 +88,7 @@ constexpr bool test_all() {
   using std::ranges::set_union_result;
   using std::ranges::swap_ranges_result;
   using std::ranges::unary_transform_result;
-  //using std::ranges::unique_copy_result;
+  using std::ranges::unique_copy_result;
 
   auto unary_pred = [](int i) { return i > 0; };
   auto binary_pred = [](int i, int j) { return i < j; };
@@ -117,7 +117,7 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::partition_point, in, unary_pred);
   dangling_1st(std::ranges::lower_bound, in, x);
   dangling_1st(std::ranges::upper_bound, in, x);
-  //dangling_1st(std::ranges::equal_range, in, x);
+  dangling_1st(std::ranges::equal_range, in, x);
   dangling_1st(std::ranges::min_element, in);
   dangling_1st(std::ranges::max_element, in);
   dangling_1st<minmax_result<dangling>>(std::ranges::minmax_element, in);
@@ -157,11 +157,11 @@ constexpr bool test_all() {
   dangling_both<swap_ranges_result<dangling, dangling>>(std::ranges::swap_ranges, in, in2);
   dangling_1st<reverse_copy_result<dangling, int*>>(std::ranges::reverse_copy, in, out);
   dangling_1st<rotate_copy_result<dangling, int*>>(std::ranges::rotate_copy, in, mid, out);
-  //dangling_1st<unique_copy_result<dangling, int*>>(std::ranges::unique_copy, in, out);
+  dangling_1st<unique_copy_result<dangling, int*>>(std::ranges::unique_copy, in, out);
   dangling_1st<partition_copy_result<dangling, int*, int*>>(std::ranges::partition_copy, in, out, out2, unary_pred);
-  //dangling_1st<partial_sort_copy_result<dangling, int*>>(std::ranges::partial_sort_copy, in, in2);
-  //dangling_2nd<partial_sort_copy_result<int*, dangling>>(std::ranges::partial_sort_copy, in, in2);
-  //dangling_both<partial_sort_copy_result<dangling, dangling>>(std::ranges::partial_sort_copy, in, in2);
+  dangling_1st<partial_sort_copy_result<dangling, int*>>(std::ranges::partial_sort_copy, in, in2);
+  dangling_2nd<partial_sort_copy_result<int*, dangling>>(std::ranges::partial_sort_copy, in, in2);
+  dangling_both<partial_sort_copy_result<dangling, dangling>>(std::ranges::partial_sort_copy, in, in2);
   dangling_1st<merge_result<dangling, int*, int*>>(std::ranges::merge, in, in2, out);
   dangling_2nd<merge_result<int*, dangling, int*>>(std::ranges::merge, in, in2, out);
   dangling_both<merge_result<dangling, dangling, int*>>(std::ranges::merge, in, in2, out);
@@ -184,7 +184,7 @@ constexpr bool test_all() {
   //dangling_1st(std::ranges::rotate, in, mid);
   if (!std::is_constant_evaluated()) // `shuffle` isn't `constexpr`.
     dangling_1st(std::ranges::shuffle, in, rand_gen());
-  //dangling_1st(std::ranges::unique, in);
+  dangling_1st(std::ranges::unique, in);
   dangling_1st(std::ranges::partition, in, unary_pred);
   if (!std::is_constant_evaluated())
     dangling_1st(std::ranges::stable_partition, in, unary_pred);

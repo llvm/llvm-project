@@ -525,6 +525,11 @@ public:
     Parent->SubModules.push_back(this);
   }
 
+  /// Is this module have similar semantics as headers.
+  bool isHeaderLikeModule() const {
+    return isModuleMapModule() || isHeaderUnit();
+  }
+
   /// Is this a module partition.
   bool isModulePartition() const {
     return Kind == ModulePartitionInterface ||

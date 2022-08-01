@@ -29,6 +29,7 @@ namespace {
 enum EdgeKind_coff_x86_64 : Edge::Kind {
   PCRel32 = x86_64::FirstPlatformRelocation,
   Pointer32NB,
+  Pointer64,
 };
 
 class COFFJITLinker_x86_64 : public JITLinker<COFFJITLinker_x86_64> {
@@ -57,6 +58,12 @@ private:
         return Err;
 
     return Error::success();
+  }
+
+  Symbol &createDLLImportEntry(StringRef StubName, Symbol &Target) override {
+    auto &Sym = DLLImportTable.getEntryForTarget(getGraph(), Target);
+    Sym.setName(StubName);
+    return Sym;
   }
 
   Error addSingleRelocation(const object::RelocationRef &Rel,
@@ -108,6 +115,35 @@ private:
       Addend -= 1;
       break;
     }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_2: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 2;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_3: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 3;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_4: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 4;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_5: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 5;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_ADDR64: {
+      Kind = EdgeKind_coff_x86_64::Pointer64;
+      Addend = *reinterpret_cast<const support::little64_t *>(FixupPtr);
+      break;
+    }
     default: {
       return make_error<JITLinkError>("Unsupported x86_64 relocation:" +
                                       formatv("{0:d}", Rel.getType()));
@@ -125,6 +161,8 @@ private:
 
     return Error::success();
   }
+
+  x86_64::GOTTableManager DLLImportTable;
 
 public:
   COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj, const Triple T)
@@ -148,6 +186,10 @@ public:
         }
         case EdgeKind_coff_x86_64::PCRel32: {
           E.setKind(x86_64::PCRel32);
+          break;
+        }
+        case EdgeKind_coff_x86_64::Pointer64: {
+          E.setKind(x86_64::Pointer64);
           break;
         }
         default:
@@ -213,6 +255,8 @@ const char *getCOFFX86RelocationKindName(Edge::Kind R) {
     return "PCRel32";
   case Pointer32NB:
     return "Pointer32NB";
+  case Pointer64:
+    return "Pointer64";
   default:
     return x86_64::getEdgeKindName(R);
   }

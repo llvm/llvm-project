@@ -633,7 +633,7 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
     imm = imm12;
     break;
   case 1:
-    imm = imm12 << 12;
+    imm = static_cast<uint64_t>(imm12) << 12;
     break;
   default:
     return false; // UNDEFINED;

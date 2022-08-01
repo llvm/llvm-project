@@ -6,8 +6,10 @@
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=PDE-RELOC
 
 # RUN: ld.lld -pie --no-relax %t.o -o %t
+# RUN: ld.lld -pie --no-relax --apply-dynamic-relocs %t.o -o %t.apply
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PIE
-# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=PIE-RELOC
+# RUN: llvm-readobj -r -x .got.plt %t | FileCheck %s --check-prefixes=PIE-RELOC,NO-APPLY
+# RUN: llvm-readobj -r -x .got.plt %t.apply | FileCheck %s --check-prefixes=PIE-RELOC,APPLY
 
 ## When compiling with -fno-PIE or -fPIE, if the ifunc is in the same
 ## translation unit as the address taker, the compiler knows that ifunc is not
@@ -70,3 +72,7 @@ main:
 # PIE-RELOC:      .rela.dyn {
 # PIE-RELOC-NEXT:   0x30380 R_AARCH64_IRELATIVE - 0x10260
 # PIE-RELOC-NEXT: }
+# PIE-RELOC:      Hex dump of section '.got.plt':
+# NO-APPLY:       0x00030380 00000000 00000000
+# APPLY:          0x00030380 60020100 00000000
+# PIE-RELOC-EMPTY:

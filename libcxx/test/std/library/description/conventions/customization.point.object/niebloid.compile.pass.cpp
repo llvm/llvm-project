@@ -111,7 +111,7 @@ static_assert(test(std::ranges::move_backward, a, a));
 static_assert(test(std::ranges::none_of, a, odd));
 static_assert(test(std::ranges::nth_element, a, a+5));
 static_assert(test(std::ranges::partial_sort, a, a+5));
-//static_assert(test(std::ranges::partial_sort_copy, a, a));
+static_assert(test(std::ranges::partial_sort_copy, a, a));
 static_assert(test(std::ranges::partition, a, odd));
 static_assert(test(std::ranges::partition_copy, a, a, a, odd));
 static_assert(test(std::ranges::partition_point, a, odd));
@@ -145,8 +145,8 @@ static_assert(test(std::ranges::stable_sort, a));
 //static_assert(test(std::ranges::starts_with, a, a));
 static_assert(test(std::ranges::swap_ranges, a, a));
 static_assert(test(std::ranges::transform, a, a, triple));
-//static_assert(test(std::ranges::unique, a));
-//static_assert(test(std::ranges::unique_copy, a, a));
+static_assert(test(std::ranges::unique, a));
+static_assert(test(std::ranges::unique_copy, a, a));
 static_assert(test(std::ranges::upper_bound, a, 42));
 
 // [memory.syn]

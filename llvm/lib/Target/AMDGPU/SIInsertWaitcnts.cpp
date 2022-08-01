@@ -1183,12 +1183,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     }
   }
 
-  // Check to see if this is an S_BARRIER, and if an implicit S_WAITCNT 0
-  // occurs before the instruction. Doing it here prevents any additional
-  // S_WAITCNTs from being emitted if the instruction was marked as
-  // requiring a WAITCNT beforehand.
+  // The subtarget may have an implicit S_WAITCNT 0 before barriers. If it does
+  // not, we need to ensure the subtarget is capable of backing off barrier
+  // instructions in case there are any outstanding memory operations that may
+  // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
   if (MI.getOpcode() == AMDGPU::S_BARRIER &&
-      !ST->hasAutoWaitcntBeforeBarrier()) {
+      !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
     Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
   }
 

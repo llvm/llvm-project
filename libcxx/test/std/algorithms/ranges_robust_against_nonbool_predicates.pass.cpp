@@ -115,16 +115,16 @@ constexpr bool test_all() {
   //test(std::ranges::remove_copy_if, in, out, unary_pred);
   test(std::ranges::replace_if, in, unary_pred, x);
   //test(std::ranges::replace_copy_if, in, out, unary_pred, x);
-  //test(std::ranges::unique_copy, in, out, binary_pred);
+  test(std::ranges::unique_copy, in, out, binary_pred);
   test(std::ranges::partition_copy, in, out, out2, unary_pred);
-  //test(std::ranges::partial_sort_copy, in, in2, binary_pred);
+  test(std::ranges::partial_sort_copy, in, in2, binary_pred);
   test(std::ranges::merge, in, in2, out, binary_pred);
   test(std::ranges::set_difference, in, in2, out, binary_pred);
   test(std::ranges::set_intersection, in, in2, out, binary_pred);
   test(std::ranges::set_symmetric_difference, in, in2, out, binary_pred);
   test(std::ranges::set_union, in, in2, out, binary_pred);
   test(std::ranges::remove_if, in, unary_pred);
-  //test(std::ranges::unique, in, binary_pred);
+  test(std::ranges::unique, in, binary_pred);
   test(std::ranges::partition, in, unary_pred);
   if (!std::is_constant_evaluated())
     test(std::ranges::stable_partition, in, unary_pred);
