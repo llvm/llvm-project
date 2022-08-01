@@ -15,6 +15,7 @@
 #include "AArch64CallLowering.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -546,6 +547,88 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   return false;
 }
 
+void AArch64CallLowering::saveVarArgRegisters(
+    MachineIRBuilder &MIRBuilder, CallLowering::IncomingValueHandler &Handler,
+    CCState &CCInfo) const {
+  auto GPRArgRegs = AArch64::getGPRArgRegs();
+  auto FPRArgRegs = AArch64::getFPRArgRegs();
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  bool IsWin64CC =
+      Subtarget.isCallingConvWin64(CCInfo.getCallingConv());
+  const LLT p0 = LLT::pointer(0, 64);
+  const LLT s64 = LLT::scalar(64);
+
+  unsigned FirstVariadicGPR = CCInfo.getFirstUnallocated(GPRArgRegs);
+  unsigned NumVariadicGPRArgRegs = GPRArgRegs.size() - FirstVariadicGPR + 1;
+
+  unsigned GPRSaveSize = 8 * (GPRArgRegs.size() - FirstVariadicGPR);
+  int GPRIdx = 0;
+  if (GPRSaveSize != 0) {
+    if (IsWin64CC) {
+      GPRIdx = MFI.CreateFixedObject(GPRSaveSize,
+                                     -static_cast<int>(GPRSaveSize), false);
+    } else
+      GPRIdx = MFI.CreateStackObject(GPRSaveSize, Align(8), false);
+
+    auto FIN = MIRBuilder.buildFrameIndex(p0, GPRIdx);
+    auto Offset =
+        MIRBuilder.buildConstant(MRI.createGenericVirtualRegister(s64), 8);
+
+    for (unsigned i = FirstVariadicGPR; i < GPRArgRegs.size(); ++i) {
+      Register Val = MRI.createGenericVirtualRegister(s64);
+      Handler.assignValueToReg(
+          Val, GPRArgRegs[i],
+          CCValAssign::getReg(i + MF.getFunction().getNumOperands(), MVT::i64,
+                              GPRArgRegs[i], MVT::i64, CCValAssign::Full));
+      auto MPO = IsWin64CC ? MachinePointerInfo::getFixedStack(
+                               MF, GPRIdx, (i - FirstVariadicGPR) * 8)
+                         : MachinePointerInfo::getStack(MF, i * 8);
+      MIRBuilder.buildStore(Val, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+
+      FIN = MIRBuilder.buildPtrAdd(MRI.createGenericVirtualRegister(p0),
+                                   FIN.getReg(0), Offset);
+    }
+  }
+  FuncInfo->setVarArgsGPRIndex(GPRIdx);
+  FuncInfo->setVarArgsGPRSize(GPRSaveSize);
+
+  if (Subtarget.hasFPARMv8() && !IsWin64CC) {
+    unsigned FirstVariadicFPR = CCInfo.getFirstUnallocated(FPRArgRegs);
+
+    unsigned FPRSaveSize = 16 * (FPRArgRegs.size() - FirstVariadicFPR);
+    int FPRIdx = 0;
+    if (FPRSaveSize != 0) {
+      FPRIdx = MFI.CreateStackObject(FPRSaveSize, Align(16), false);
+
+      auto FIN = MIRBuilder.buildFrameIndex(p0, FPRIdx);
+      auto Offset =
+          MIRBuilder.buildConstant(MRI.createGenericVirtualRegister(s64), 16);
+
+      for (unsigned i = FirstVariadicFPR; i < FPRArgRegs.size(); ++i) {
+        Register Val = MRI.createGenericVirtualRegister(LLT::scalar(128));
+        Handler.assignValueToReg(
+            Val, FPRArgRegs[i],
+            CCValAssign::getReg(
+                i + MF.getFunction().getNumOperands() + NumVariadicGPRArgRegs,
+                MVT::f128, FPRArgRegs[i], MVT::f128, CCValAssign::Full));
+
+        auto MPO = MachinePointerInfo::getStack(MF, i * 16);
+        MIRBuilder.buildStore(Val, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+
+        FIN = MIRBuilder.buildPtrAdd(MRI.createGenericVirtualRegister(p0),
+                                     FIN.getReg(0), Offset);
+      }
+    }
+    FuncInfo->setVarArgsFPRIndex(FPRIdx);
+    FuncInfo->setVarArgsFPRSize(FPRSaveSize);
+  }
+}
+
 bool AArch64CallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs, FunctionLoweringInfo &FLI) const {
@@ -553,6 +636,9 @@ bool AArch64CallLowering::lowerFormalArguments(
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
+  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  // TODO: Support Arm64EC
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv()) && !Subtarget.isWindowsArm64EC();
 
   SmallVector<ArgInfo, 8> SplitArgs;
   SmallVector<std::pair<Register, Register>> BoolArgs;
@@ -598,13 +684,14 @@ bool AArch64CallLowering::lowerFormalArguments(
     MIRBuilder.setInstr(*MBB.begin());
 
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
-  CCAssignFn *AssignFn =
-      TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
+  CCAssignFn *AssignFn = TLI.CCAssignFnForCall(F.getCallingConv(), IsWin64 && F.isVarArg());
 
   AArch64IncomingValueAssigner Assigner(AssignFn, AssignFn);
   FormalArgHandler Handler(MIRBuilder, MRI);
-  if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
-                                     F.getCallingConv(), F.isVarArg()))
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
+  if (!determineAssignments(Assigner, SplitArgs, CCInfo) ||
+      !handleAssignments(Handler, SplitArgs, CCInfo, ArgLocs, MIRBuilder))
     return false;
 
   if (!BoolArgs.empty()) {
@@ -622,10 +709,14 @@ bool AArch64CallLowering::lowerFormalArguments(
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   uint64_t StackOffset = Assigner.StackOffset;
   if (F.isVarArg()) {
-    auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-    if (!Subtarget.isTargetDarwin()) {
-        // FIXME: we need to reimplement saveVarArgsRegisters from
-      // AArch64ISelLowering.
+    if ((!Subtarget.isTargetDarwin() && !Subtarget.isWindowsArm64EC()) || IsWin64) {
+      // The AAPCS variadic function ABI is identical to the non-variadic
+      // one. As a result there may be more arguments in registers and we should
+      // save them for future reference.
+      // Win64 variadic functions also pass arguments in registers, but all
+      // float arguments are passed in integer registers.
+      saveVarArgRegisters(MIRBuilder, Handler, CCInfo);
+    } else if (Subtarget.isWindowsArm64EC()) {
       return false;
     }
 
@@ -657,7 +748,6 @@ bool AArch64CallLowering::lowerFormalArguments(
   // in this function later.
   FuncInfo->setBytesInStackArgArea(StackOffset);
 
-  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   if (Subtarget.hasCustomCallingConv())
     Subtarget.getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
