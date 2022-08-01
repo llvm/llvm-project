@@ -143,7 +143,9 @@ protected:
                               unsigned boxValue) const {
     auto pty = mlir::LLVM::LLVMPointerType::get(resultTy);
     auto p = rewriter.create<mlir::LLVM::GEPOp>(
-        loc, pty, box, llvm::ArrayRef<mlir::LLVM::GEPArg>{0, boxValue});
+        loc, pty, box,
+        llvm::ArrayRef<mlir::LLVM::GEPArg>{
+            0, static_cast<std::int32_t>(boxValue)});
     return rewriter.create<mlir::LLVM::LoadOp>(loc, resultTy, p);
   }
 
@@ -185,7 +187,8 @@ protected:
   loadBaseAddrFromBox(mlir::Location loc, mlir::Type ty, mlir::Value box,
                       mlir::ConversionPatternRewriter &rewriter) const {
     auto pty = mlir::LLVM::LLVMPointerType::get(ty);
-    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0, kAddrPosInBox);
+    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
+                                 static_cast<std::int32_t>(kAddrPosInBox));
     return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
   }
 
@@ -193,7 +196,8 @@ protected:
   loadElementSizeFromBox(mlir::Location loc, mlir::Type ty, mlir::Value box,
                          mlir::ConversionPatternRewriter &rewriter) const {
     auto pty = mlir::LLVM::LLVMPointerType::get(ty);
-    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0, kElemLenPosInBox);
+    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
+                                 static_cast<std::int32_t>(kElemLenPosInBox));
     return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
   }
 
