@@ -189,6 +189,11 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   if (!readMetadataFromFileCacheEnabled())
     return process_pointer;
 
+  // Try to strip the pointer before checking if we have it mapped.
+  auto strippedPointer = signedPointerStripper(process_pointer);
+  if (strippedPointer.isResolved())
+    readValue = strippedPointer.getOffset();
+
   auto &target = m_process.GetTarget();
   Address addr;
   if (!target.ResolveLoadAddress(readValue, addr)) {
