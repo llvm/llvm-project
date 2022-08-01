@@ -73,11 +73,11 @@ def compactPropertyRanges(input: list[PropertyRange]) -> list[PropertyRange]:
     return result
 
 
-PROP_VALUE_ENUMERATOR_TEMPLATE = "__{}"
+PROP_VALUE_ENUMERATOR_TEMPLATE = "  __{}"
 PROP_VALUE_ENUM_TEMPLATE = """
 enum class __property : uint8_t {{
   // Values generated from the data files.
-  {enumerators},
+{enumerators},
 
   // The properies below aren't stored in the "database".
 
@@ -111,7 +111,8 @@ DATA_ARRAY_TEMPLATE = """
 /// this approach uses less space for the data and is about 4% faster in the
 /// following benchmark.
 /// libcxx/benchmarks/std_format_spec_string_unicode.bench.cpp
-inline constexpr uint32_t __entries[{size}] = {{{entries}}};
+inline constexpr uint32_t __entries[{size}] = {{
+{entries}}};
 
 /// Returns the extended grapheme cluster bondary property of a code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __property __get_property(const char32_t __code_point) noexcept {{
@@ -225,17 +226,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER > 17
 
 namespace __extended_grapheme_custer_property_boundary {{
-
 {content}
-
-}} // __extended_grapheme_custer_property_boundary
+}} // namespace __extended_grapheme_custer_property_boundary
 
 #endif //_LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
-"""
+#endif // _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H"""
 
 
 def property_ranges_to_table(
@@ -260,7 +258,7 @@ def property_ranges_to_table(
     return result
 
 
-cpp_entrytemplate = "0x{:08x}"
+cpp_entrytemplate = "    0x{:08x}"
 
 
 def generate_cpp_data(prop_name: str, ranges: list[PropertyRange]) -> str:
@@ -269,13 +267,13 @@ def generate_cpp_data(prop_name: str, ranges: list[PropertyRange]) -> str:
     table = property_ranges_to_table(ranges, prop_values)
     enumerator_values = [PROP_VALUE_ENUMERATOR_TEMPLATE.format(x) for x in prop_values]
     result.write(
-        PROP_VALUE_ENUM_TEMPLATE.format(enumerators=",".join(enumerator_values))
+        PROP_VALUE_ENUM_TEMPLATE.format(enumerators=",\n".join(enumerator_values))
     )
     result.write(
         DATA_ARRAY_TEMPLATE.format(
             prop_name=prop_name,
             size=len(table),
-            entries=",".join(
+            entries=",\n".join(
                 [
                     cpp_entrytemplate.format(x.lower << 11 | x.offset << 4 | x.prop)
                     for x in table
