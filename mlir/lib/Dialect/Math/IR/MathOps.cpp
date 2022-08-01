@@ -246,6 +246,24 @@ OpFoldResult math::Exp2Op::fold(ArrayRef<Attribute> operands) {
       });
 }
 
+//===----------------------------------------------------------------------===//
+// ExpM1Op folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::ExpM1Op::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(expm1(a.convertToDouble()));
+        case 32:
+          return APFloat(expm1f(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
 /// Materialize an integer or floating point constant.
 Operation *math::MathDialect::materializeConstant(OpBuilder &builder,
                                                   Attribute value, Type type,
