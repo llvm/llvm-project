@@ -1,6 +1,6 @@
 // clang-format off
 // UNSUPPORTED: system-aix
-// XFAIL: arm, arm64-apple, windows-msvc, windows-gnu
+// XFAIL: arm, arm64-apple, system-windows
 // RUN: cat %s | clang-repl | FileCheck %s
 extern "C" int printf(const char *, ...);
 
