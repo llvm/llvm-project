@@ -129,8 +129,6 @@ private:
   void insertCFIInstructionsAt(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator At) const;
 
-  void adjustForCalleeSavedRegsSpillCall(MachineFunction &MF) const;
-
   bool expandCopy(MachineBasicBlock &B, MachineBasicBlock::iterator It,
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
       SmallVectorImpl<unsigned> &NewRegs) const;
