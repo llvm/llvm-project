@@ -925,7 +925,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K) {
   switch (K) {
   case HighlightingModifier::Declaration:
-    return OS << "decl"; // abbrevation for common case
+    return OS << "decl"; // abbreviation for common case
   default:
     return OS << toSemanticTokenModifier(K);
   }

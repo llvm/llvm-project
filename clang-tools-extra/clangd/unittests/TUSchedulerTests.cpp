@@ -1035,7 +1035,7 @@ TEST_F(TUSchedulerTests, TUStatus) {
                   // Starts handling the update action and blocks until the
                   // first preamble is built.
                   ASTAction::RunningAction,
-                  // Afterwqards it builds an AST for that preamble to publish
+                  // Afterwards it builds an AST for that preamble to publish
                   // diagnostics.
                   ASTAction::Building,
                   // Then goes idle.
