@@ -1186,8 +1186,18 @@ def TestOpWithVariadicResultsAndFolder: TEST_Op<"op_with_variadic_results_and_fo
   let hasFolder = 1;
 }
 
+def TestAddIOp : TEST_Op<"addi"> {
+  let arguments = (ins I32:$op1, I32:$op2);
+  let results = (outs I32);
+}
+
 def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
   let arguments = (ins I32:$op1, I32:$op2, I32:$op3, I32:$op4);
+  let results = (outs I32);
+}
+
+def TestLargeCommutativeOp : TEST_Op<"op_large_commutative", [Commutative]> {
+  let arguments = (ins I32:$op1, I32:$op2, I32:$op3, I32:$op4, I32:$op5, I32:$op6, I32:$op7);
   let results = (outs I32);
 }
 

@@ -57,6 +57,7 @@ void registerTosaTestQuantUtilAPIPass();
 void registerVectorizerTestPass();
 
 namespace test {
+void registerCommutativityUtils();
 void registerConvertCallOpPass();
 void registerInliner();
 void registerMemRefBoundCheck();
@@ -149,6 +150,7 @@ void registerTestPasses() {
   registerVectorizerTestPass();
   registerTosaTestQuantUtilAPIPass();
 
+  mlir::test::registerCommutativityUtils();
   mlir::test::registerConvertCallOpPass();
   mlir::test::registerInliner();
   mlir::test::registerMemRefBoundCheck();
