@@ -71,7 +71,6 @@ exit:
   ret void
 }
 
-
 define void @test_cyclic_phis(ptr %ptr) {
 ; CHECK-LABEL: @test_cyclic_phis
 ; CHECK-NOT: vector.body:
@@ -232,7 +231,6 @@ exit:
   ret void
 }
 
-
 define void @test_chained_first_order_recurrence_sink_users_1(double* %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrence_sink_users_1
 ; CHECK-NOT: vector.body:
@@ -285,7 +283,6 @@ exit:
 define void @test_first_order_recurrences_and_induction(ptr %ptr) {
 ; CHECK-LABEL: @test_first_order_recurrences_and_induction(
 ; CHECK-NOT:   vector.body:
-
 ;
 entry:
   br label %loop
@@ -298,6 +295,76 @@ loop:
   %for.1.next = load i64, ptr %gep.ptr, align 2
   %add.1 = add i64 %for.1, 10
   store i64 %add.1, ptr %gep.ptr
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as @test_first_order_recurrences_and_induction but with order of phis
+; flipped.
+define void @test_first_order_recurrences_and_induction2(ptr %ptr) {
+; CHECK-LABEL: @test_first_order_recurrences_and_induction2(
+; CHECK-NOT:   vector.body:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %for.1 = phi i64 [ 22, %entry ], [ %iv, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds i64, ptr %ptr, i64 %iv
+  %for.1.next = load i64, ptr %gep.ptr, align 2
+  %add.1 = add i64 %for.1, 10
+  store i64 %add.1, ptr %gep.ptr
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_first_order_recurrences_and_pointer_induction1(ptr %ptr) {
+; CHECK-LABEL: @test_first_order_recurrences_and_pointer_induction1(
+; CHECK-NOT: vector.body
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %for.1 = phi ptr [ null, %entry ], [ %ptr.iv, %loop ]
+  %ptr.iv = phi ptr [ %ptr, %entry ], [ %ptr.iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds ptr, ptr %ptr, i64 %iv
+  store ptr %ptr.iv, ptr %gep.ptr
+  %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; same as @test_first_order_recurrences_and_pointer_induction1 but with order
+; of phis flipped.
+define void @test_first_order_recurrences_and_pointer_induction2(ptr %ptr) {
+; CHECK-LABEL: @test_first_order_recurrences_and_pointer_induction2(
+; CHECK-NOT: vector.body
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = phi ptr [ %ptr, %entry ], [ %ptr.iv.next, %loop ]
+  %for.1 = phi ptr [ null, %entry ], [ %ptr.iv, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds ptr, ptr %ptr, i64 %iv
+  store ptr %ptr.iv, ptr %gep.ptr
+  %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
   %exitcond.not = icmp eq i64 %iv.next, 1000
   br i1 %exitcond.not, label %exit, label %loop
 
