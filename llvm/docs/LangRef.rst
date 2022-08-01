@@ -24545,6 +24545,30 @@ information on the *based on* terminology see
 mask argument does not match the pointer size of the target, the mask is
 zero-extended or truncated accordingly.
 
+.. _int_threadlocal_address:
+
+'``llvm.threadlocal.address``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.threadlocal.address(ptr) nounwind readnone willreturn
+
+Arguments:
+""""""""""
+
+The first argument is a pointer, which refers to a thread local global.
+
+Semantics:
+""""""""""
+
+The address of a thread local global is not a constant, since it depends on
+the calling thread. The `llvm.threadlocal.address` intrinsic returns the
+address of the given thread local global in the calling thread.
+
 .. _int_vscale:
 
 '``llvm.vscale``' Intrinsic
