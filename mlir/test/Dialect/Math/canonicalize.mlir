@@ -282,3 +282,23 @@ func.func @expm1_fold_vec() -> (vector<4xf32>) {
   %0 = math.expm1 %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+
+// CHECK-LABEL: @tan_fold
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 1.55740774 : f32
+// CHECK-NEXT:   return %[[cst]]
+func.func @tan_fold() -> f32 {
+  %c = arith.constant 1.0 : f32
+  %r = math.tan %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @tan_fold_vec
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.55740774, 0.000000e+00, 1.55740774]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @tan_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
+  %0 = math.tan %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+

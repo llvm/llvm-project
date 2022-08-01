@@ -656,6 +656,7 @@ def Math_TanOp : Math_FloatUnaryOp<"tan"> {
     %a = math.tan %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
