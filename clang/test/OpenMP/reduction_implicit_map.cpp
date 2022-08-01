@@ -731,15 +731,16 @@ int main()
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to double**
 // CHECK1-NEXT:    [[TMP3:%.*]] = load double*, double** [[TMP2]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i64, i64* @{{reduction_size[.].+[.]}}, align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr double, double* [[TMP3]], i64 [[TMP4]]
-// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq double* [[TMP3]], [[TMP5]]
+// CHECK1-NEXT:    [[TMP4:%.*]] = call i64* @llvm.threadlocal.address.p0i64(i64* @{{reduction_size[.].+[.]}})
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i64, i64* [[TMP4]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr double, double* [[TMP3]], i64 [[TMP5]]
+// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq double* [[TMP3]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK1:       omp.arrayinit.body:
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi double* [ [[TMP3]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK1-NEXT:    store double 0.000000e+00, double* [[OMP_ARRAYCPY_DESTELEMENTPAST]], align 8
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr double, double* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq double* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP5]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq double* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK1:       omp.arrayinit.done:
 // CHECK1-NEXT:    ret void
@@ -752,24 +753,25 @@ int main()
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i64, i64* @{{reduction_size[.].+[.]}}, align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8** [[DOTADDR]] to double**
-// CHECK1-NEXT:    [[TMP4:%.*]] = load double*, double** [[TMP3]], align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i8** [[DOTADDR1]] to double**
-// CHECK1-NEXT:    [[TMP6:%.*]] = load double*, double** [[TMP5]], align 8
-// CHECK1-NEXT:    [[TMP7:%.*]] = getelementptr double, double* [[TMP4]], i64 [[TMP2]]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq double* [[TMP4]], [[TMP7]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = call i64* @llvm.threadlocal.address.p0i64(i64* @{{reduction_size[.].+[.]}})
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP2]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i8** [[DOTADDR]] to double**
+// CHECK1-NEXT:    [[TMP5:%.*]] = load double*, double** [[TMP4]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i8** [[DOTADDR1]] to double**
+// CHECK1-NEXT:    [[TMP7:%.*]] = load double*, double** [[TMP6]], align 8
+// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr double, double* [[TMP5]], i64 [[TMP3]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq double* [[TMP5]], [[TMP8]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE2:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK1:       omp.arraycpy.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi double* [ [[TMP6]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi double* [ [[TMP4]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[TMP8:%.*]] = load double, double* [[OMP_ARRAYCPY_DESTELEMENTPAST]], align 8
-// CHECK1-NEXT:    [[TMP9:%.*]] = load double, double* [[OMP_ARRAYCPY_SRCELEMENTPAST]], align 8
-// CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[TMP8]], [[TMP9]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi double* [ [[TMP7]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi double* [ [[TMP5]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[TMP9:%.*]] = load double, double* [[OMP_ARRAYCPY_DESTELEMENTPAST]], align 8
+// CHECK1-NEXT:    [[TMP10:%.*]] = load double, double* [[OMP_ARRAYCPY_SRCELEMENTPAST]], align 8
+// CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[TMP9]], [[TMP10]]
 // CHECK1-NEXT:    store double [[ADD]], double* [[OMP_ARRAYCPY_DESTELEMENTPAST]], align 8
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr double, double* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr double, double* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq double* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP7]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq double* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP8]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE2]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK1:       omp.arraycpy.done2:
 // CHECK1-NEXT:    ret void
@@ -825,7 +827,7 @@ int main()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@main
-// CHECK1-SAME: () #[[ATTR10:[0-9]+]] {
+// CHECK1-SAME: () #[[ATTR11:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -836,7 +838,7 @@ int main()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR11:[0-9]+]] {
+// CHECK1-SAME: () #[[ATTR12:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK1-NEXT:    ret void
