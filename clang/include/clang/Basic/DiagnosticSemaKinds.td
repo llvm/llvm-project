@@ -1532,6 +1532,8 @@ def err_constexpr_if_condition_expression_is_not_constant : Error<
 def err_static_assert_failed : Error<"static assertion failed%select{: %1|}0">;
 def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
+def note_expr_evaluates_to : Note<
+  "expression evaluates to '%0 %1 %2'">;
 
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
