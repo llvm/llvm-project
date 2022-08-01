@@ -696,15 +696,15 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
 
     EmitNoLoopKernel(D, D.getAssociatedStmt(),
                      CGM.getNoLoopStmts(D.getAssociatedStmt()), Loc);
-  } else if (D.hasAssociatedStmt() &&
-             CGM.isSpecRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
+  } else if (D.hasAssociatedStmt() && CGM.isXteamRedKernel(CGM.getSingleForStmt(
+                                          D.getAssociatedStmt()))) {
     OMPPrivateScope PrivateScope(*this);
     EmitOMPPrivateClause(D, PrivateScope);
     (void)PrivateScope.Privatize();
 
-    EmitSpecRedKernel(
+    EmitXteamRedKernel(
         D, D.getAssociatedStmt(),
-        CGM.getSpecRedStmts(CGM.getSingleForStmt(D.getAssociatedStmt())), Loc);
+        CGM.getXteamRedStmts(CGM.getSingleForStmt(D.getAssociatedStmt())), Loc);
   } else {
     CapturedStmtInfo->EmitBody(*this, CD->getBody());
   }

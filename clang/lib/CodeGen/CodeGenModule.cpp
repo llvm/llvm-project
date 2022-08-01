@@ -7131,7 +7131,7 @@ bool CodeGenModule::isForStmtNoLoopConforming(const Stmt *OMPStmt) {
   return true;
 }
 
-bool CodeGenModule::isForStmtSpecRedConforming(const Stmt *OMPStmt) {
+bool CodeGenModule::isForStmtXteamRedConforming(const Stmt *OMPStmt) {
   if (!isForStmtNoLoopConforming(OMPStmt))
     return false;
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
@@ -7180,7 +7180,7 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
   return true;
 }
 
-bool CodeGenModule::areCombinedClausesSpecRedCompatible(
+bool CodeGenModule::areCombinedClausesXteamRedCompatible(
     const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
       D.hasClausesOfKind<OMPDependClause>() ||
@@ -7328,8 +7328,7 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   }
 }
 
-bool CodeGenModule::checkAndSetSpecialRedKernel(
-    const OMPExecutableDirective &D) {
+bool CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
       !getLangOpts().OpenMPTargetNewRuntime)
     return false;
@@ -7347,21 +7346,21 @@ bool CodeGenModule::checkAndSetSpecialRedKernel(
 
   // For now, keep the reduction helpers separate. Revisit merging with noloop
   // later
-  if (!areCombinedClausesSpecRedCompatible(D))
+  if (!areCombinedClausesXteamRedCompatible(D))
     return false;
   if (!canHandleReductionClause(D))
     return false;
-  if (!isForStmtSpecRedConforming(AssocStmt))
+  if (!isForStmtXteamRedConforming(AssocStmt))
     return false;
 
   // We don't yet handle intermediate statements but will soon, so keep it ready
   NoLoopIntermediateStmts IntermediateStmts;
-  SpecRedKernelMetadata SpecRedKernelMD;
+  XteamRedKernelMetadata XteamRedKernelMD;
   // Create a map from the ForStmt, the corresponding info will be populated
   // later
   const ForStmt *FStmt = getSingleForStmt(AssocStmt);
   assert(FStmt && "For stmt cannot be null");
-  setSpecRedKernel(FStmt, std::make_pair(IntermediateStmts, SpecRedKernelMD));
+  setXteamRedKernel(FStmt, std::make_pair(IntermediateStmts, XteamRedKernelMD));
 
   // All checks passed
   return true;

@@ -1075,7 +1075,7 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
       isOpenMPParallelDirective(D.getDirectiveKind()) ||
       CmdLineWorkGroupSz != DefaultWorkGroupSz ||
-      CGM.isSpecRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
+      CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
     const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
     int compileTimeThreadLimit = 0;
@@ -1090,10 +1090,10 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       clang::Expr::EvalResult Result;
       if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext()))
         compileTimeThreadLimit = Result.Val.getInt().getExtValue();
-    } else if (CGM.isSpecRedKernel(
+    } else if (CGM.isXteamRedKernel(
                    CGM.getSingleForStmt(D.getAssociatedStmt()))) {
-      // Special reduction overrides the command-line option for now
-      // Special reduction blocksize hardcoded to 1024 for now
+      // Xteam reduction overrides the command-line option for now,
+      // blocksize hardcoded to 1024 for now
       compileTimeThreadLimit = 1024;
     } else if (CmdLineWorkGroupSz != DefaultWorkGroupSz) {
       compileTimeThreadLimit = CmdLineWorkGroupSz;
@@ -1282,11 +1282,11 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   const Stmt *DirectiveStmt = D.getAssociatedStmt();
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
   if (Mode) {
-    // For AMDGPU, check if a no-loop or a special reduction kernel should
+    // For AMDGPU, check if a no-loop or a Xteam reduction kernel should
     // be generated and if so, set metadata that can be used by codegen.
     if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN()) {
       if (!CGM.checkAndSetNoLoopKernel(D))
-        CGM.checkAndSetSpecialRedKernel(D);
+        CGM.checkAndSetXteamRedKernel(D);
     }
 
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
@@ -1299,21 +1299,21 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
       CGM, OutlinedFn->getName(),
       Mode ? (DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt)
                   ? OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
-                  : (DirectiveStmt && CGM.isSpecRedKernel(
+                  : (DirectiveStmt && CGM.isXteamRedKernel(
                                           CGM.getSingleForStmt(DirectiveStmt))
-                         ? OMP_TGT_EXEC_MODE_SPECIAL_RED
+                         ? OMP_TGT_EXEC_MODE_XTEAM_RED
                          : OMP_TGT_EXEC_MODE_SPMD))
            : OMP_TGT_EXEC_MODE_GENERIC);
-  // Reset no-loop or special reduction kernel metadata if it exists
+  // Reset no-loop or xteam reduction kernel metadata if it exists
   if (Mode && DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt))
     CGM.resetNoLoopKernel(DirectiveStmt);
   else if (Mode && DirectiveStmt &&
-           CGM.isSpecRedKernel(CGM.getSingleForStmt(DirectiveStmt)))
-    CGM.resetSpecRedKernel(CGM.getSingleForStmt(DirectiveStmt));
+           CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)))
+    CGM.resetXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt));
   assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
          "No-loop attribute not reset after emit");
-  assert(!CGM.isSpecRedKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
-         "Special reduction attribute not reset after emit");
+  assert(!CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
+         "Xteam reduction attribute not reset after emit");
 }
 
 namespace {
@@ -4213,7 +4213,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF) {
   return llvm::ConstantInt::get(CGF.Int32Ty, CmdLineWorkGroupSz);
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getSpecRedGUPBlockSize(CodeGenFunction &CGF) {
+llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF) {
   // For now, this is hardcoded to 1024
   return llvm::ConstantInt::get(CGF.Int32Ty, 1024);
 }
@@ -4226,7 +4226,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUNumBlocks(CodeGenFunction &CGF) {
       Args);
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getGPUXteamSum(CodeGenFunction &CGF,
+llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(CodeGenFunction &CGF,
                                                 llvm::Value *Val,
                                                 llvm::Value *SumPtr) {
   // TODO handle more types

@@ -78,7 +78,7 @@ Address CodeGenFunction::getAddressFromExpr(const ForStmt &FStmt) {
   return IvAddr;
 }
 
-Address CodeGenFunction::EmitSpecRedStartingIndex(const ForStmt &FStmt) {
+Address CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
   Address IvAddr = CGM.checkDeclStmt(FStmt) ? getAddressFromDeclStmt(FStmt)
                                             : getAddressFromExpr(FStmt);
 
@@ -89,7 +89,7 @@ Address CodeGenFunction::EmitSpecRedStartingIndex(const ForStmt &FStmt) {
   llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
   // workgroup_size
-  llvm::Value *WorkGroupSize = RT.getSpecRedGUPBlockSize(*this);
+  llvm::Value *WorkGroupSize = RT.getXteamRedBlockSize(*this);
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
@@ -107,9 +107,9 @@ Address CodeGenFunction::EmitSpecRedStartingIndex(const ForStmt &FStmt) {
   return IvAddr;
 }
 
-void CodeGenFunction::EmitSpecRedInc(const Address &NoLoopIvAddr) {
+void CodeGenFunction::EmitXteamRedInc(const Address &NoLoopIvAddr) {
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
-  llvm::Value *BlockSize = RT.getSpecRedGUPBlockSize(*this);
+  llvm::Value *BlockSize = RT.getXteamRedBlockSize(*this);
   llvm::Value *NumBlocks = RT.getGPUNumBlocks(*this);
   // prod = block_size * num_blocks
   llvm::Value *Prod = Builder.CreateMul(BlockSize, NumBlocks);
@@ -235,7 +235,7 @@ void CodeGenFunction::EmitNoLoopKernel(
   handleForStmt(*CapturedForStmt, this);
 }
 
-void CodeGenFunction::EmitSpecRedKernel(
+void CodeGenFunction::EmitXteamRedKernel(
     const OMPExecutableDirective &D, const Stmt *S,
     const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
     SourceLocation Loc) {
@@ -263,7 +263,7 @@ void CodeGenFunction::EmitSpecRedKernel(
 
   // Create a local aggregator variable and initialize it to 0
   const Expr *LHS = cast<BinaryOperator>(cast<Expr>(BodyStmt))->getLHS();
-  llvm::AllocaInst *SpecRedInst =
+  llvm::AllocaInst *XteamRedInst =
       Builder.CreateAlloca(ConvertTypeForMem(LHS->getType()));
   llvm::Value *InitVal;
 
@@ -272,15 +272,16 @@ void CodeGenFunction::EmitSpecRedKernel(
   assert((LHSType->isFloatTy() || LHSType->isDoubleTy()) && "Unhandled type");
   InitVal = llvm::ConstantFP::getZero(LHSType);
 
-  Address SpecRedAddr(SpecRedInst, LHSType,
-                      getContext().getTypeAlignInChars(LHS->getType()));
-  llvm::StoreInst *SpecRedInstInit = Builder.CreateStore(InitVal, SpecRedAddr);
+  Address XteamRedAddr(XteamRedInst, LHSType,
+                       getContext().getTypeAlignInChars(LHS->getType()));
+  llvm::StoreInst *XteamRedInstInit =
+      Builder.CreateStore(InitVal, XteamRedAddr);
   // Done local var init to 0
 
-  CodeGenModule::SpecRedKernelMetadata MD;
-  MD.SpecRedStmt = BodyStmt;
-  MD.SpecRedLocalAddr = SpecRedAddr;
-  CGM.setSpecRedKernelMetadata(CapturedForStmt, MD);
+  CodeGenModule::XteamRedKernelMetadata MD;
+  MD.XteamRedStmt = BodyStmt;
+  MD.XteamRedLocalAddr = XteamRedAddr;
+  CGM.setXteamRedKernelMetadata(CapturedForStmt, MD);
 
   EmitStmt(CapturedForStmt);
 
@@ -290,7 +291,7 @@ void CodeGenFunction::EmitSpecRedKernel(
   assert(LHSDecl);
   Address RedVarAddr = EmitLValue(LHSDecl).getAddress(*this);
   // Pass in RedVarAddr.getPointer to kmpc_xteam_sum
-  RT.getGPUXteamSum(*this, Builder.CreateLoad(SpecRedAddr),
+  RT.getXteamRedSum(*this, Builder.CreateLoad(XteamRedAddr),
                     RedVarAddr.getPointer());
 }
 
@@ -1262,9 +1263,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   LexicalScope ForScope(*this, S.getSourceRange());
 
-  Address SpecRedIvAddr = Address::invalid();
-  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isSpecRedKernel(&S)) {
-    SpecRedIvAddr = EmitSpecRedStartingIndex(S);
+  Address XteamRedIvAddr = Address::invalid();
+  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
+    XteamRedIvAddr = EmitXteamRedStartingIndex(S);
   } else {
     // Evaluate the first part before the loop.
     if (S.getInit())
@@ -1349,32 +1350,33 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   }
   incrementProfileCounter(&S);
 
-  const Stmt *SpecRedStmt = nullptr;
-  Address SpecRedLocalAddr = Address::invalid();
+  const Stmt *XteamRedStmt = nullptr;
+  Address XteamRedLocalAddr = Address::invalid();
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
     RunCleanupsScope BodyScope(*this);
-    if (CGM.getLangOpts().OpenMPIsDevice && CGM.isSpecRedKernel(&S)) {
-      const CodeGenModule::SpecRedKernelMetadata &SpecRedKernelMD =
-          CGM.getSpecRedKernelMetadata(&S);
-      SpecRedStmt = SpecRedKernelMD.SpecRedStmt;
-      SpecRedLocalAddr = SpecRedKernelMD.SpecRedLocalAddr;
-      const Expr *RHS = cast<BinaryOperator>(cast<Expr>(SpecRedStmt))->getRHS();
+    if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
+      const CodeGenModule::XteamRedKernelMetadata &XteamRedKernelMD =
+          CGM.getXteamRedKernelMetadata(&S);
+      XteamRedStmt = XteamRedKernelMD.XteamRedStmt;
+      XteamRedLocalAddr = XteamRedKernelMD.XteamRedLocalAddr;
+      const Expr *RHS =
+          cast<BinaryOperator>(cast<Expr>(XteamRedStmt))->getRHS();
       llvm::Value *RHSValue = EmitScalarExpr(RHS);
       // Compute *spec_red_local_addr + rhs_value
       llvm::Value *SpecRHS =
-          Builder.CreateFAdd(RHSValue, Builder.CreateLoad(SpecRedLocalAddr));
+          Builder.CreateFAdd(RHSValue, Builder.CreateLoad(XteamRedLocalAddr));
       // *spec_red_local_addr = *spec_red_local_addr + rhs_value
       llvm::StoreInst *NewBodyRedStmt =
-          Builder.CreateStore(SpecRHS, SpecRedLocalAddr);
+          Builder.CreateStore(SpecRHS, XteamRedLocalAddr);
     } else
       EmitStmt(S.getBody());
   }
 
-  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isSpecRedKernel(&S)) {
+  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
     EmitBlock(Continue.getBlock());
-    EmitSpecRedInc(SpecRedIvAddr); // *iv = *iv + num_teams * num_threads
+    EmitXteamRedInc(XteamRedIvAddr); // *iv = *iv + num_teams * num_threads
   } else {
     // If there is an increment, emit it next.
     if (S.getInc()) {

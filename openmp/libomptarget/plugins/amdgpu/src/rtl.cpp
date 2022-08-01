@@ -1889,7 +1889,7 @@ void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
       ExecutionMode ==
           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP ||
       ExecutionMode ==
-          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPECIAL_RED) {
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED) {
     // ConstWGSize is used for communicating any command-line value to
     // the plugin. ConstWGSize will either be the default workgroup
     // size or a value set by CodeGen. If the kernel is SPMD, it means
@@ -1914,9 +1914,7 @@ void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
   // For optimized reduction, we use as many teams as the number of CUs. This
   // must be kept in sync with CodeGen and DeviceRTL.
   if (ExecutionMode ==
-      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPECIAL_RED) {
-    assert(LoopTripcount &&
-           "No loop exec mode needs a non-zero loop tripcount");
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED) {
     NumGroups = DeviceNumCUs;
     return;
   }
@@ -3371,7 +3369,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
          ExecModeVal);
 
       if (ExecModeVal < llvm::omp::OMP_TGT_EXEC_MODE_GENERIC ||
-          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_SPECIAL_RED) {
+          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_XTEAM_RED) {
         DP("Error wrong exec_mode value specified in HSA code object file: "
            "%d\n",
            ExecModeVal);

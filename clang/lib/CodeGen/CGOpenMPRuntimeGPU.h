@@ -200,10 +200,10 @@ public:
   llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
 
   /// Get the number of blocks on the GPU for special reduction
-  llvm::Value *getSpecRedGUPBlockSize(CodeGenFunction &CGF);
+  llvm::Value *getXteamRedBlockSize(CodeGenFunction &CGF);
 
   /// Call cross-team sum
-  llvm::Value *getGPUXteamSum(CodeGenFunction &CGF, llvm::Value *Val,
+  llvm::Value *getXteamRedSum(CodeGenFunction &CGF, llvm::Value *Val,
                               llvm::Value *SumPtr);
 
   /// Returns whether the current architecture supports fast FP atomics

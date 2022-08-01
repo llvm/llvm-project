@@ -3230,15 +3230,15 @@ public:
                         const CodeGenModule::NoLoopIntermediateStmts &,
                         SourceLocation Loc);
 
-  /// EmitSpecRedKernel - For an OpenMP target reduction directive, emit the
+  /// EmitXteamRedKernel - For an OpenMP target reduction directive, emit the
   /// kernel code assuming that related runtime environment variables can be
   /// ignored.
   ///
   /// This function should be called after ensuring that legality
   /// conditions for an optimized reduction kernel are met.
-  void EmitSpecRedKernel(const OMPExecutableDirective &D, const Stmt *S,
-                         const CodeGenModule::NoLoopIntermediateStmts &,
-                         SourceLocation Loc);
+  void EmitXteamRedKernel(const OMPExecutableDirective &D, const Stmt *S,
+                          const CodeGenModule::NoLoopIntermediateStmts &,
+                          SourceLocation Loc);
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
@@ -4851,8 +4851,8 @@ private:
 
   Address getAddressFromDeclStmt(const ForStmt &FStmt);
   Address getAddressFromExpr(const ForStmt &FStmt);
-  Address EmitSpecRedStartingIndex(const ForStmt &FStmt);
-  void EmitSpecRedInc(const Address &NoLoopIvAddr);
+  Address EmitXteamRedStartingIndex(const ForStmt &FStmt);
+  void EmitXteamRedInc(const Address &NoLoopIvAddr);
 };
 
 
