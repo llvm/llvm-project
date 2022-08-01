@@ -28,8 +28,6 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
-static llvm::cl::opt<bool> OptHostSupportsException("host-supports-exception",
-                                                    llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
@@ -52,7 +50,7 @@ static void LLVMErrorHandler(void *UserData, const char *Message,
 
 // If we are running with -verify a reported has to be returned as unsuccess.
 // This is relevant especially for the test suite.
-static int checkDiagErrors(const clang::CompilerInstance *CI) {
+static int checkDiagErrors(const clang::CompilerInstance *CI, bool HasError) {
   unsigned Errs = CI->getDiagnostics().getClient()->getNumErrors();
   if (CI->getDiagnosticOpts().VerifyDiagnostics) {
     // If there was an error that came from the verifier we must return 1 as
@@ -64,43 +62,7 @@ static int checkDiagErrors(const clang::CompilerInstance *CI) {
     // The interpreter expects BeginSourceFile/EndSourceFiles to be balanced.
     Client->BeginSourceFile(CI->getLangOpts(), &CI->getPreprocessor());
   }
-  return Errs ? EXIT_FAILURE : EXIT_SUCCESS;
-}
-
-// Check if the host environment supports c++ exception handling
-// by querying the existence of symbol __cxa_throw.
-static bool checkExceptionSupport() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (!J) {
-    llvm::consumeError(J.takeError());
-    return false;
-  }
-
-  std::vector<const char *> Dummy;
-  auto CI = clang::IncrementalCompilerBuilder::create(Dummy);
-  if (!CI) {
-    llvm::consumeError(CI.takeError());
-    return false;
-  }
-
-  auto Interp = clang::Interpreter::create(std::move(*CI));
-  if (!Interp) {
-    llvm::consumeError(Interp.takeError());
-    return false;
-  }
-
-  if (auto Err = (*Interp)->ParseAndExecute("")) {
-    llvm::consumeError(std::move(Err));
-    return false;
-  }
-
-  auto Sym = (*Interp)->getSymbolAddress("__cxa_throw");
-  if (!Sym) {
-    llvm::consumeError(Sym.takeError());
-    return false;
-  }
-
-  return true;
+  return (Errs || HasError) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 llvm::ExitOnError ExitOnErr;
@@ -127,14 +89,6 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  if (OptHostSupportsException) {
-    if (checkExceptionSupport())
-      llvm::outs() << "true\n";
-    else
-      llvm::outs() << "false\n";
-    return 0;
-  }
-
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
   auto CI = ExitOnErr(clang::IncrementalCompilerBuilder::create(ClangArgv));
@@ -153,6 +107,8 @@ int main(int argc, const char **argv) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
   }
 
+  bool HasError = false;
+
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
     // FIXME: Add LE.setListCompleter
@@ -160,13 +116,17 @@ int main(int argc, const char **argv) {
       if (*Line == R"(%quit)")
         break;
       if (*Line == R"(%undo)") {
-        if (auto Err = Interp->Undo())
+        if (auto Err = Interp->Undo()) {
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+          HasError = true;
+        }
         continue;
       }
 
-      if (auto Err = Interp->ParseAndExecute(*Line))
+      if (auto Err = Interp->ParseAndExecute(*Line)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+        HasError = true;
+      }
     }
   }
 
@@ -175,5 +135,5 @@ int main(int argc, const char **argv) {
   // later errors use the default handling behavior instead.
   llvm::remove_fatal_error_handler();
 
-  return checkDiagErrors(Interp->getCompilerInstance());
+  return checkDiagErrors(Interp->getCompilerInstance(), HasError);
 }

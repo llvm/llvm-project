@@ -1064,11 +1064,18 @@ RelType PPC64::getDynRel(RelType type) const {
 int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_PPC64_NONE:
+  case R_PPC64_GLOB_DAT:
+  case R_PPC64_JMP_SLOT:
     return 0;
   case R_PPC64_REL32:
     return SignExtend64<32>(read32(buf));
   case R_PPC64_ADDR64:
   case R_PPC64_REL64:
+  case R_PPC64_RELATIVE:
+  case R_PPC64_IRELATIVE:
+  case R_PPC64_DTPMOD64:
+  case R_PPC64_DTPREL64:
+  case R_PPC64_TPREL64:
     return read64(buf);
   default:
     internalLinkerError(getErrorLocation(buf),

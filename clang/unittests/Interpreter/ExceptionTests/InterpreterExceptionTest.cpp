@@ -113,17 +113,6 @@ extern "C" int throw_exception() {
                               Triple.getArch() == llvm::Triple::aarch64_32))
     return;
 
-  // Check if platform does not support exceptions.
-  {
-    // Force the creation of an incremental executor to call getSymbolAddress.
-    llvm::cantFail(Interp->ParseAndExecute(""));
-    auto Sym = Interp->getSymbolAddress("__cxa_throw");
-    if (!Sym) {
-      LLVMConsumeError(llvm::wrap(Sym.takeError()));
-      return;
-    }
-  }
-
   llvm::cantFail(Interp->ParseAndExecute(ExceptionCode));
   testing::internal::CaptureStdout();
   auto ThrowException =

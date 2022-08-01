@@ -1100,14 +1100,10 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 // The more branches in getSectionRank that match, the more similar they are.
 // Since each branch corresponds to a bit flag, we can just use
 // countLeadingZeros.
-static int getRankProximityAux(const OutputSection &a, const OutputSection &b) {
-  return countLeadingZeros(a.sortRank ^ b.sortRank);
-}
-
 static int getRankProximity(OutputSection *a, SectionCommand *b) {
   auto *osd = dyn_cast<OutputDesc>(b);
   return (osd && osd->osec.hasInputSections)
-             ? getRankProximityAux(*a, osd->osec)
+             ? countLeadingZeros(a->sortRank ^ osd->osec.sortRank)
              : -1;
 }
 
