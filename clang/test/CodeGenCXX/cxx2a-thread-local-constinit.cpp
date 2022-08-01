@@ -31,7 +31,8 @@ int get_a() { return a; }
 
 // CHECK-LABEL: define{{.*}} i32 @_Z5get_bv()
 // CHECK-NOT: call
-// CHECK: load i32, i32* @b
+// CHECK: [[B_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @b)
+// CHECK: load i32, i32* [[B_ADDR]]
 // CHECK-NOT: call
 // CHECK: }
 int get_b() { return b; }
@@ -52,7 +53,8 @@ int get_c() { return c; }
 // LINUX-LABEL: define weak_odr {{.*}} @_ZTW1c()
 // CHECK-NOT: br i1
 // CHECK-NOT: call
-// CHECK: ret i32* @c
+// CHECK: [[C_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @c)
+// CHECK: ret i32* [[C_ADDR]]
 // CHECK: }
 
 thread_local int c = 0;
