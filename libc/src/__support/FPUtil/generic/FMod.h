@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
 
-#include "src/__support/CPP/Limits.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -190,7 +190,7 @@ public:
   inline constexpr static intU_t execute(int exp_diff, int sides_zeroes_count,
                                          intU_t m_x, intU_t m_y) {
     if (exp_diff > sides_zeroes_count) {
-      intU_t inv_hy = (cpp::NumericLimits<intU_t>::max() / m_y);
+      intU_t inv_hy = (cpp::numeric_limits<intU_t>::max() / m_y);
       while (exp_diff > sides_zeroes_count) {
         exp_diff -= sides_zeroes_count;
         intU_t hd =
