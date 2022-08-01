@@ -15,11 +15,7 @@
 namespace __llvm_libc {
 
 template <typename T> class IntegerToString {
-  static_assert(cpp::is_integral_v<T>,
-                "IntegerToString can only be used with integral types.");
-
-  using UnsignedType = cpp::make_unsigned_t<T>;
-
+public:
   // We size the string buffer using an approximation algorithm:
   //
   //   size = ceil(sizeof(T) * 5 / 2)
@@ -40,6 +36,13 @@ template <typename T> class IntegerToString {
   // integers.
   static constexpr size_t BUFSIZE =
       (sizeof(T) * 5 + 1) / 2 + (cpp::is_signed<T>() ? 1 : 0);
+
+private:
+  static_assert(cpp::is_integral_v<T>,
+                "IntegerToString can only be used with integral types.");
+
+  using UnsignedType = cpp::make_unsigned_t<T>;
+
   char strbuf[BUFSIZE] = {'\0'};
   size_t len = 0;
 
