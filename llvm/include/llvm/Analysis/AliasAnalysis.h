@@ -176,9 +176,6 @@ LLVM_NODISCARD inline ModRefInfo setMod(const ModRefInfo MRI) {
 LLVM_NODISCARD inline ModRefInfo setRef(const ModRefInfo MRI) {
   return ModRefInfo(static_cast<int>(MRI) | static_cast<int>(ModRefInfo::Ref));
 }
-LLVM_NODISCARD inline ModRefInfo setModAndRef(const ModRefInfo MRI) {
-  return ModRefInfo::ModRef;
-}
 LLVM_NODISCARD inline ModRefInfo clearMod(const ModRefInfo MRI) {
   return ModRefInfo(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref));
 }

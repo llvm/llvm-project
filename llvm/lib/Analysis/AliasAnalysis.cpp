@@ -210,7 +210,7 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
   const MemoryLocation DefLoc = MemoryLocation::get(I);
   ModRefInfo MR = getModRefInfo(Call2, DefLoc, AAQI);
   if (isModOrRefSet(MR))
-    return setModAndRef(MR);
+    return ModRefInfo::ModRef;
   return ModRefInfo::NoModRef;
 }
 
