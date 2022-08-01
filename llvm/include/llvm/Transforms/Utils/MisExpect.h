@@ -70,8 +70,8 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
 /// around the checkFrontendInstrumentation and checkBackendInstrumentation APIs
 ///
 /// \param I The Instruction being checked
-/// \param RealWeights A vector of profile weights for each target block
-/// \param IsBackend A boolean describing if this is Frontend instrumentation
+/// \param ExistingWeights A vector of profile weights for each target block
+/// \param IsFrontend A boolean describing if this is Frontend instrumentation
 void checkExpectAnnotations(Instruction &I,
                             const ArrayRef<uint32_t> ExistingWeights,
                             bool IsFrontend);

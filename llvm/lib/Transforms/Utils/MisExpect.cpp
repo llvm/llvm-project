@@ -236,8 +236,8 @@ void checkFrontendInstrumentation(Instruction &I,
 
 void checkExpectAnnotations(Instruction &I,
                             const ArrayRef<uint32_t> ExistingWeights,
-                            bool IsFrontendInstr) {
-  if (IsFrontendInstr) {
+                            bool IsFrontend) {
+  if (IsFrontend) {
     checkFrontendInstrumentation(I, ExistingWeights);
   } else {
     checkBackendInstrumentation(I, ExistingWeights);
