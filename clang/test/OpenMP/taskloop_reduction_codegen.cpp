@@ -186,12 +186,14 @@ sum = 0.0;
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 // CHECK: define internal void @[[RED_FINI2]](i8* noundef %0)
-// CHECK: load i64, i64* [[RED_SIZE1]]
+// CHECK: [[RED_SIZE1_ADDR:%.+]] = call i64* @llvm.threadlocal.address.p0i64(i64* [[RED_SIZE1]]
+// CHECK: load i64, i64* [[RED_SIZE1_ADDR]]
 // CHECK: call void @
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_COMB2]](i8* noundef %0, i8* noundef %1)
-// CHECK: load i64, i64* [[RED_SIZE1]]
+// CHECK: [[RED_SIZE1_ADDR2:%.+]] = call i64* @llvm.threadlocal.address.p0i64(i64* [[RED_SIZE1]]
+// CHECK: load i64, i64* [[RED_SIZE1_ADDR2]]
 // CHECK: call void [[OMP_COMB1]](
 // CHECK: ret void
 
@@ -205,12 +207,14 @@ sum = 0.0;
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_INIT4]](i8* noalias noundef %{{.+}}, i8* noalias noundef %{{.+}})
-// CHECK: load i64, i64* [[RED_SIZE2]]
+// CHECK: [[RED_SIZE2_ADDR:%.+]] = call i64* @llvm.threadlocal.address.p0i64(i64* [[RED_SIZE2]]
+// CHECK: load i64, i64* [[RED_SIZE2_ADDR]]
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_COMB4]](i8* noundef %0, i8* noundef %1)
-// CHECK: load i64, i64* [[RED_SIZE2]]
+// CHECK: [[RED_SIZE2_ADDR2:%.+]] = call i64* @llvm.threadlocal.address.p0i64(i64* [[RED_SIZE2]]
+// CHECK: load i64, i64* [[RED_SIZE2_ADDR2]]
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
