@@ -52,8 +52,6 @@ public:
     return SyntheticSection::classof(d) && d->name == ".eh_frame";
   }
 
-  void addSection(EhInputSection *sec);
-
   SmallVector<EhInputSection *, 0> sections;
   size_t numFdes = 0;
 
