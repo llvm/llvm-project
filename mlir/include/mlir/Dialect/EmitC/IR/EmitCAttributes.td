@@ -14,18 +14,19 @@
 #define MLIR_DIALECT_EMITC_IR_EMITCATTRIBUTES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Dialect/EmitC/IR/EmitCBase.td"
 
 //===----------------------------------------------------------------------===//
 // EmitC attribute definitions
 //===----------------------------------------------------------------------===//
 
-class EmitC_Attr<string name, string attrMnemonic>
-    : AttrDef<EmitC_Dialect, name> {
+class EmitC_Attr<string name, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<EmitC_Dialect, name, traits> {
   let mnemonic = attrMnemonic;
 }
 
-def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
+def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque", [TypedAttrInterface]> {
   let summary = "An opaque attribute";
 
   let description = [{
@@ -40,8 +41,9 @@ def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
     ```
   }];
 
-  let parameters = (ins StringRefParameter<"the opaque value">:$value);
-  
+  let parameters = (ins "Type":$type,
+                        StringRefParameter<"the opaque value">:$value);
+
   let hasCustomAssemblyFormat = 1;
 }
 

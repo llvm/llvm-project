@@ -5,7 +5,7 @@
 // CHECK-NEXT:   blob1: "0x08000000010000000000000002000000000000000300000000000000"
 // CHECK-NEXT: }
 
-module attributes { test.blob_ref = #test.e1di64_elements<blob1> } {}
+module attributes { test.blob_ref = #test.e1di64_elements<blob1> : tensor<*xi1>} {}
 
 {-#
   dialect_resources: {

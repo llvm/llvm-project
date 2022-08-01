@@ -79,7 +79,7 @@ func.func @const() -> () {
 // -----
 
 func.func @unaccepted_std_attr() -> () {
-  // expected-error @+1 {{cannot have value of type 'none'}}
+  // expected-error @+1 {{cannot have attribute: unit}}
   %0 = spv.Constant unit : none
   return
 }

@@ -530,7 +530,11 @@ transform::PadOp::applyToOne(linalg::LinalgOp target,
   SmallVector<Attribute> paddingValues;
   for (auto const &it :
        llvm::zip(getPaddingValues(), target->getOperandTypes())) {
-    Attribute attr = std::get<0>(it);
+    auto attr = std::get<0>(it).dyn_cast<TypedAttr>();
+    if (!attr) {
+      emitOpError("expects padding values to be typed attributes");
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
     Type elementType = getElementTypeOrSelf(std::get<1>(it));
     // Try to parse string attributes to obtain an attribute of element type.
     if (auto stringAttr = attr.dyn_cast<StringAttr>()) {

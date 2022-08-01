@@ -43,9 +43,10 @@ inline size_t getDenseElementBitWidth(Type eltType) {
 /// An attribute representing a reference to a dense vector or tensor object.
 struct DenseElementsAttributeStorage : public AttributeStorage {
 public:
-  DenseElementsAttributeStorage(ShapedType ty, bool isSplat)
-      : AttributeStorage(ty), isSplat(isSplat) {}
+  DenseElementsAttributeStorage(ShapedType type, bool isSplat)
+      : type(type), isSplat(isSplat) {}
 
+  ShapedType type;
   bool isSplat;
 };
 
@@ -75,7 +76,7 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
 
   /// Compare this storage instance with the provided key.
   bool operator==(const KeyTy &key) const {
-    if (key.type != getType())
+    if (key.type != type)
       return false;
 
     // For boolean splats we need to explicitly check that the first bit is the
@@ -228,7 +229,7 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
 
   /// Compare this storage instance with the provided key.
   bool operator==(const KeyTy &key) const {
-    if (key.type != getType())
+    if (key.type != type)
       return false;
 
     // Otherwise, we can default to just checking the data. StringRefs compare
@@ -324,12 +325,12 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
 
 struct StringAttrStorage : public AttributeStorage {
   StringAttrStorage(StringRef value, Type type)
-      : AttributeStorage(type), value(value), referencedDialect(nullptr) {}
+      : type(type), value(value), referencedDialect(nullptr) {}
 
   /// The hash key is a tuple of the parameter types.
   using KeyTy = std::pair<StringRef, Type>;
   bool operator==(const KeyTy &key) const {
-    return value == key.first && getType() == key.second;
+    return value == key.first && type == key.second;
   }
   static ::llvm::hash_code hashKey(const KeyTy &key) {
     return DenseMapInfo<KeyTy>::getHashValue(key);
@@ -346,6 +347,8 @@ struct StringAttrStorage : public AttributeStorage {
   /// Initialize the storage given an MLIRContext.
   void initialize(MLIRContext *context);
 
+  /// The type of the string.
+  Type type;
   /// The raw string value.
   StringRef value;
   /// If the string value contains a dialect namespace prefix (e.g.

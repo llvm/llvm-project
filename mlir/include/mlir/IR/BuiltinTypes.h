@@ -9,8 +9,9 @@
 #ifndef MLIR_IR_BUILTINTYPES_H
 #define MLIR_IR_BUILTINTYPES_H
 
-#include "BuiltinAttributeInterfaces.h"
-#include "SubElementInterfaces.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/SubElementInterfaces.h"
 
 namespace llvm {
 class BitVector;
@@ -20,8 +21,6 @@ struct fltSemantics;
 //===----------------------------------------------------------------------===//
 // Tablegen Interface Declarations
 //===----------------------------------------------------------------------===//
-
-#include "mlir/IR/BuiltinTypeInterfaces.h.inc"
 
 namespace mlir {
 class AffineExpr;

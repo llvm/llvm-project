@@ -753,7 +753,10 @@ MlirContext mlirAttributeGetContext(MlirAttribute attribute) {
 }
 
 MlirType mlirAttributeGetType(MlirAttribute attribute) {
-  return wrap(unwrap(attribute).getType());
+  Attribute attr = unwrap(attribute);
+  if (auto typedAttr = attr.dyn_cast<TypedAttr>())
+    return wrap(typedAttr.getType());
+  return wrap(NoneType::get(attr.getContext()));
 }
 
 MlirTypeID mlirAttributeGetTypeID(MlirAttribute attr) {

@@ -246,6 +246,39 @@ private:
 // ParserGen
 //===----------------------------------------------------------------------===//
 
+/// Generate a special-case "parser" for an attribute's self type parameter. The
+/// self type parameter has special handling in the assembly format in that it
+/// is derived from the optional trailing colon type after the attribute.
+static void genAttrSelfTypeParser(MethodBody &os, const FmtContext &ctx,
+                                  const AttributeSelfTypeParameter &param) {
+  // "Parser" for an attribute self type parameter that checks the
+  // optionally-parsed trailing colon type.
+  //
+  // $0: The C++ storage class of the type parameter.
+  // $1: The self type parameter name.
+  const char *const selfTypeParser = R"(
+if ($_type) {
+  if (auto reqType = $_type.dyn_cast<$0>()) {
+    _result_$1 = reqType;
+  } else {
+    $_parser.emitError($_loc, "invalid kind of type specified");
+    return {};
+  }
+})";
+
+  // If the attribute self type parameter is required, emit code that emits an
+  // error if the trailing type was not parsed.
+  const char *const selfTypeRequired = R"( else {
+  $_parser.emitError($_loc, "expected a trailing type");
+  return {};
+})";
+
+  os << tgfmt(selfTypeParser, &ctx, param.getCppStorageType(), param.getName());
+  if (!param.isOptional())
+    os << tgfmt(selfTypeRequired, &ctx);
+  os << "\n";
+}
+
 void DefFormat::genParser(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_parser", "odsParser");
@@ -262,8 +295,6 @@ void DefFormat::genParser(MethodBody &os) {
   // a loop (parsers return FailureOr anyways).
   ArrayRef<AttrOrTypeParameter> params = def.getParameters();
   for (const AttrOrTypeParameter &param : params) {
-    if (isa<AttributeSelfTypeParameter>(param))
-      continue;
     os << formatv("::mlir::FailureOr<{0}> _result_{1};\n",
                   param.getCppStorageType(), param.getName());
   }
@@ -281,7 +312,9 @@ void DefFormat::genParser(MethodBody &os) {
   // Emit an assert for each mandatory parameter. Triggering an assert means
   // the generated parser is incorrect (i.e. there is a bug in this code).
   for (const AttrOrTypeParameter &param : params) {
-    if (param.isOptional() || isa<AttributeSelfTypeParameter>(param))
+    if (auto *selfTypeParam = dyn_cast<AttributeSelfTypeParameter>(&param))
+      genAttrSelfTypeParser(os, ctx, *selfTypeParam);
+    if (param.isOptional())
       continue;
     os << formatv("assert(::mlir::succeeded(_result_{0}));\n", param.getName());
   }
@@ -306,11 +339,10 @@ void DefFormat::genParser(MethodBody &os) {
       else
         selfOs << param.getCppStorageType() << "()";
       selfOs << "))";
-    } else if (isa<AttributeSelfTypeParameter>(param)) {
-      selfOs << tgfmt("$_type", &ctx);
     } else {
       selfOs << formatv("(*_result_{0})", param.getName());
     }
+    ctx.addSubst(param.getName(), selfOs.str());
     os << param.getCppType() << "("
        << tgfmt(param.getConvertFromStorage(), &ctx.withSelf(selfOs.str()))
        << ")";

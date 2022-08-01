@@ -32,12 +32,12 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
   assert(operands.size() == 2 && "binary op takes two operands");
   if (!operands[0] || !operands[1])
     return {};
-  if (operands[0].getType() != operands[1].getType())
-    return {};
 
   if (operands[0].isa<AttrElementT>() && operands[1].isa<AttrElementT>()) {
     auto lhs = operands[0].cast<AttrElementT>();
     auto rhs = operands[1].cast<AttrElementT>();
+    if (lhs.getType() != rhs.getType())
+      return {};
 
     auto calRes = calculate(lhs.getValue(), rhs.getValue());
 
@@ -53,6 +53,8 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     // just fold based on the splat value.
     auto lhs = operands[0].cast<SplatElementsAttr>();
     auto rhs = operands[1].cast<SplatElementsAttr>();
+    if (lhs.getType() != rhs.getType())
+      return {};
 
     auto elementResult = calculate(lhs.getSplatValue<ElementValueT>(),
                                    rhs.getSplatValue<ElementValueT>());
@@ -66,6 +68,8 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     // expanding the values.
     auto lhs = operands[0].cast<ElementsAttr>();
     auto rhs = operands[1].cast<ElementsAttr>();
+    if (lhs.getType() != rhs.getType())
+      return {};
 
     auto lhsIt = lhs.value_begin<ElementValueT>();
     auto rhsIt = rhs.value_begin<ElementValueT>();

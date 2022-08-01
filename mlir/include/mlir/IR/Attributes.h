@@ -66,9 +66,6 @@ public:
   /// to support dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractAttribute().getTypeID(); }
 
-  /// Return the type of this attribute.
-  Type getType() const { return impl->getType(); }
-
   /// Return the context this attribute belongs to.
   MLIRContext *getContext() const;
 

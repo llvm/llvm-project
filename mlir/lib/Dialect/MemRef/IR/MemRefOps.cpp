@@ -1309,8 +1309,8 @@ LogicalResult GlobalOp::verify() {
 
     // Check that the type of the initial value is compatible with the type of
     // the global variable.
-    if (initValue.isa<ElementsAttr>()) {
-      Type initType = initValue.getType();
+    if (auto elementsAttr = initValue.dyn_cast<ElementsAttr>()) {
+      Type initType = elementsAttr.getType();
       Type tensorType = getTensorTypeFromMemRefType(memrefType);
       if (initType != tensorType)
         return emitOpError("initial value expected to be of type ")
