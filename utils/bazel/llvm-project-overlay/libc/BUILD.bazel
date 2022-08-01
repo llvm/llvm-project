@@ -449,16 +449,6 @@ cc_library(
 )
 
 cc_library(
-    name = "sincosf_utils",
-    srcs = ["src/math/generic/sincosf_data.cpp"],
-    hdrs = ["src/math/generic/sincosf_utils.h"],
-    deps = [
-        ":libc_root",
-        ":math_utils",
-    ],
-)
-
-cc_library(
     name = "common_constants",
     srcs = ["src/math/generic/common_constants.cpp"],
     hdrs = ["src/math/generic/common_constants.h"],
@@ -478,6 +468,18 @@ cc_library(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "sincosf_utils",
+    hdrs = ["src/math/generic/sincosf_utils.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+        ":__support_fputil_polyeval",
+        ":range_reduction",
         ":libc_root",
     ],
 )
@@ -644,16 +646,15 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":common_constants",
-        ":range_reduction",
+        ":sincosf_utils",
     ],
 )
 
 libc_math_function(
     name = "sincosf",
     additional_deps = [
-        ":math_utils",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
         ":sincosf_utils",
     ],
 )
@@ -664,8 +665,8 @@ libc_math_function(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":common_constants",
         ":range_reduction",
+        ":sincosf_utils",
     ],
 )
 

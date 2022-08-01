@@ -240,21 +240,4 @@ const double EXP_2_POW[EXP_num_p] = {
     0x1.13821818624b4p-2,  0x1.2ff6b54d8a89cp-2,  0x1.4d0ad5a753e07p-2,
     0x1.6ac1f752150a5p-2,  0x1.891fac0e95613p-2};
 
-// Lookup table for sin(k * pi / 16) with k = 0, ..., 31.
-// Table is generated with Sollya as follow:
-// > display = hexadecimal;
-// > for k from 0 to 31 do { D(sin(k * pi/16)); };
-const double SIN_K_PI_OVER_16[32] = {
-    0x0.0000000000000p+0,  0x1.8f8b83c69a60bp-3,  0x1.87de2a6aea963p-2,
-    0x1.1c73b39ae68c8p-1,  0x1.6a09e667f3bcdp-1,  0x1.a9b66290ea1a3p-1,
-    0x1.d906bcf328d46p-1,  0x1.f6297cff75cb0p-1,  0x1.0000000000000p+0,
-    0x1.f6297cff75cb0p-1,  0x1.d906bcf328d46p-1,  0x1.a9b66290ea1a3p-1,
-    0x1.6a09e667f3bcdp-1,  0x1.1c73b39ae68c8p-1,  0x1.87de2a6aea963p-2,
-    0x1.8f8b83c69a60bp-3,  0x0.0000000000000p+0,  -0x1.8f8b83c69a60bp-3,
-    -0x1.87de2a6aea963p-2, -0x1.1c73b39ae68c8p-1, -0x1.6a09e667f3bcdp-1,
-    -0x1.a9b66290ea1a3p-1, -0x1.d906bcf328d46p-1, -0x1.f6297cff75cb0p-1,
-    -0x1.0000000000000p+0, -0x1.f6297cff75cb0p-1, -0x1.d906bcf328d46p-1,
-    -0x1.a9b66290ea1a3p-1, -0x1.6a09e667f3bcdp-1, -0x1.1c73b39ae68c8p-1,
-    -0x1.87de2a6aea963p-2, -0x1.8f8b83c69a60bp-3};
-
 } // namespace __llvm_libc
