@@ -381,7 +381,7 @@ vfloat64m8_t test_vfnmadd_vf_f64m8_m(vbool8_t mask, vfloat64m8_t acc,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vfnmadd.nxv1f16.nxv1f16.i64(<vscale x 1 x half> [[VD:%.*]], <vscale x 1 x half> [[VS1:%.*]], <vscale x 1 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
-vfloat16mf4_t test_vfnmadd_vv_f16mf4 (vfloat16mf4_t vd, vfloat16mf4_t vs1, vfloat16mf4_t vs2, size_t vl) {
+vfloat16mf4_t test_vfnmadd_vv_f16mf4(vfloat16mf4_t vd, vfloat16mf4_t vs1, vfloat16mf4_t vs2, size_t vl) {
   return vfnmadd_vv_f16mf4(vd, vs1, vs2, vl);
 }
 
@@ -390,7 +390,7 @@ vfloat16mf4_t test_vfnmadd_vv_f16mf4 (vfloat16mf4_t vd, vfloat16mf4_t vs1, vfloa
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vfnmadd.nxv1f16.f16.i64(<vscale x 1 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 1 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
-vfloat16mf4_t test_vfnmadd_vf_f16mf4 (vfloat16mf4_t vd, _Float16 rs1, vfloat16mf4_t vs2, size_t vl) {
+vfloat16mf4_t test_vfnmadd_vf_f16mf4(vfloat16mf4_t vd, _Float16 rs1, vfloat16mf4_t vs2, size_t vl) {
   return vfnmadd_vf_f16mf4(vd, rs1, vs2, vl);
 }
 
@@ -399,7 +399,7 @@ vfloat16mf4_t test_vfnmadd_vf_f16mf4 (vfloat16mf4_t vd, _Float16 rs1, vfloat16mf
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vfnmadd.nxv2f16.nxv2f16.i64(<vscale x 2 x half> [[VD:%.*]], <vscale x 2 x half> [[VS1:%.*]], <vscale x 2 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
-vfloat16mf2_t test_vfnmadd_vv_f16mf2 (vfloat16mf2_t vd, vfloat16mf2_t vs1, vfloat16mf2_t vs2, size_t vl) {
+vfloat16mf2_t test_vfnmadd_vv_f16mf2(vfloat16mf2_t vd, vfloat16mf2_t vs1, vfloat16mf2_t vs2, size_t vl) {
   return vfnmadd_vv_f16mf2(vd, vs1, vs2, vl);
 }
 
@@ -408,7 +408,7 @@ vfloat16mf2_t test_vfnmadd_vv_f16mf2 (vfloat16mf2_t vd, vfloat16mf2_t vs1, vfloa
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vfnmadd.nxv2f16.f16.i64(<vscale x 2 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 2 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
-vfloat16mf2_t test_vfnmadd_vf_f16mf2 (vfloat16mf2_t vd, _Float16 rs1, vfloat16mf2_t vs2, size_t vl) {
+vfloat16mf2_t test_vfnmadd_vf_f16mf2(vfloat16mf2_t vd, _Float16 rs1, vfloat16mf2_t vs2, size_t vl) {
   return vfnmadd_vf_f16mf2(vd, rs1, vs2, vl);
 }
 
@@ -417,7 +417,7 @@ vfloat16mf2_t test_vfnmadd_vf_f16mf2 (vfloat16mf2_t vd, _Float16 rs1, vfloat16mf
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vfnmadd.nxv4f16.nxv4f16.i64(<vscale x 4 x half> [[VD:%.*]], <vscale x 4 x half> [[VS1:%.*]], <vscale x 4 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
-vfloat16m1_t test_vfnmadd_vv_f16m1 (vfloat16m1_t vd, vfloat16m1_t vs1, vfloat16m1_t vs2, size_t vl) {
+vfloat16m1_t test_vfnmadd_vv_f16m1(vfloat16m1_t vd, vfloat16m1_t vs1, vfloat16m1_t vs2, size_t vl) {
   return vfnmadd_vv_f16m1(vd, vs1, vs2, vl);
 }
 
@@ -426,7 +426,7 @@ vfloat16m1_t test_vfnmadd_vv_f16m1 (vfloat16m1_t vd, vfloat16m1_t vs1, vfloat16m
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vfnmadd.nxv4f16.f16.i64(<vscale x 4 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 4 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
-vfloat16m1_t test_vfnmadd_vf_f16m1 (vfloat16m1_t vd, _Float16 rs1, vfloat16m1_t vs2, size_t vl) {
+vfloat16m1_t test_vfnmadd_vf_f16m1(vfloat16m1_t vd, _Float16 rs1, vfloat16m1_t vs2, size_t vl) {
   return vfnmadd_vf_f16m1(vd, rs1, vs2, vl);
 }
 
@@ -435,7 +435,7 @@ vfloat16m1_t test_vfnmadd_vf_f16m1 (vfloat16m1_t vd, _Float16 rs1, vfloat16m1_t 
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vfnmadd.nxv8f16.nxv8f16.i64(<vscale x 8 x half> [[VD:%.*]], <vscale x 8 x half> [[VS1:%.*]], <vscale x 8 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-vfloat16m2_t test_vfnmadd_vv_f16m2 (vfloat16m2_t vd, vfloat16m2_t vs1, vfloat16m2_t vs2, size_t vl) {
+vfloat16m2_t test_vfnmadd_vv_f16m2(vfloat16m2_t vd, vfloat16m2_t vs1, vfloat16m2_t vs2, size_t vl) {
   return vfnmadd_vv_f16m2(vd, vs1, vs2, vl);
 }
 
@@ -444,7 +444,7 @@ vfloat16m2_t test_vfnmadd_vv_f16m2 (vfloat16m2_t vd, vfloat16m2_t vs1, vfloat16m
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vfnmadd.nxv8f16.f16.i64(<vscale x 8 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 8 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-vfloat16m2_t test_vfnmadd_vf_f16m2 (vfloat16m2_t vd, _Float16 rs1, vfloat16m2_t vs2, size_t vl) {
+vfloat16m2_t test_vfnmadd_vf_f16m2(vfloat16m2_t vd, _Float16 rs1, vfloat16m2_t vs2, size_t vl) {
   return vfnmadd_vf_f16m2(vd, rs1, vs2, vl);
 }
 
@@ -453,7 +453,7 @@ vfloat16m2_t test_vfnmadd_vf_f16m2 (vfloat16m2_t vd, _Float16 rs1, vfloat16m2_t 
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.vfnmadd.nxv16f16.nxv16f16.i64(<vscale x 16 x half> [[VD:%.*]], <vscale x 16 x half> [[VS1:%.*]], <vscale x 16 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
-vfloat16m4_t test_vfnmadd_vv_f16m4 (vfloat16m4_t vd, vfloat16m4_t vs1, vfloat16m4_t vs2, size_t vl) {
+vfloat16m4_t test_vfnmadd_vv_f16m4(vfloat16m4_t vd, vfloat16m4_t vs1, vfloat16m4_t vs2, size_t vl) {
   return vfnmadd_vv_f16m4(vd, vs1, vs2, vl);
 }
 
@@ -462,7 +462,7 @@ vfloat16m4_t test_vfnmadd_vv_f16m4 (vfloat16m4_t vd, vfloat16m4_t vs1, vfloat16m
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.vfnmadd.nxv16f16.f16.i64(<vscale x 16 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 16 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
-vfloat16m4_t test_vfnmadd_vf_f16m4 (vfloat16m4_t vd, _Float16 rs1, vfloat16m4_t vs2, size_t vl) {
+vfloat16m4_t test_vfnmadd_vf_f16m4(vfloat16m4_t vd, _Float16 rs1, vfloat16m4_t vs2, size_t vl) {
   return vfnmadd_vf_f16m4(vd, rs1, vs2, vl);
 }
 
@@ -471,7 +471,7 @@ vfloat16m4_t test_vfnmadd_vf_f16m4 (vfloat16m4_t vd, _Float16 rs1, vfloat16m4_t 
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x half> @llvm.riscv.vfnmadd.nxv32f16.nxv32f16.i64(<vscale x 32 x half> [[VD:%.*]], <vscale x 32 x half> [[VS1:%.*]], <vscale x 32 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
-vfloat16m8_t test_vfnmadd_vv_f16m8 (vfloat16m8_t vd, vfloat16m8_t vs1, vfloat16m8_t vs2, size_t vl) {
+vfloat16m8_t test_vfnmadd_vv_f16m8(vfloat16m8_t vd, vfloat16m8_t vs1, vfloat16m8_t vs2, size_t vl) {
   return vfnmadd_vv_f16m8(vd, vs1, vs2, vl);
 }
 
@@ -480,7 +480,7 @@ vfloat16m8_t test_vfnmadd_vv_f16m8 (vfloat16m8_t vd, vfloat16m8_t vs1, vfloat16m
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x half> @llvm.riscv.vfnmadd.nxv32f16.f16.i64(<vscale x 32 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 32 x half> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
-vfloat16m8_t test_vfnmadd_vf_f16m8 (vfloat16m8_t vd, _Float16 rs1, vfloat16m8_t vs2, size_t vl) {
+vfloat16m8_t test_vfnmadd_vf_f16m8(vfloat16m8_t vd, _Float16 rs1, vfloat16m8_t vs2, size_t vl) {
   return vfnmadd_vf_f16m8(vd, rs1, vs2, vl);
 }
 
@@ -489,7 +489,7 @@ vfloat16m8_t test_vfnmadd_vf_f16m8 (vfloat16m8_t vd, _Float16 rs1, vfloat16m8_t 
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vfnmadd.mask.nxv1f16.nxv1f16.i64(<vscale x 1 x half> [[VD:%.*]], <vscale x 1 x half> [[VS1:%.*]], <vscale x 1 x half> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
-vfloat16mf4_t test_vfnmadd_vv_f16mf4_m (vbool64_t mask, vfloat16mf4_t vd, vfloat16mf4_t vs1, vfloat16mf4_t vs2, size_t vl) {
+vfloat16mf4_t test_vfnmadd_vv_f16mf4_m(vbool64_t mask, vfloat16mf4_t vd, vfloat16mf4_t vs1, vfloat16mf4_t vs2, size_t vl) {
   return vfnmadd_vv_f16mf4_m(mask, vd, vs1, vs2, vl);
 }
 
@@ -498,7 +498,7 @@ vfloat16mf4_t test_vfnmadd_vv_f16mf4_m (vbool64_t mask, vfloat16mf4_t vd, vfloat
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x half> @llvm.riscv.vfnmadd.mask.nxv1f16.f16.i64(<vscale x 1 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 1 x half> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
-vfloat16mf4_t test_vfnmadd_vf_f16mf4_m (vbool64_t mask, vfloat16mf4_t vd, _Float16 rs1, vfloat16mf4_t vs2, size_t vl) {
+vfloat16mf4_t test_vfnmadd_vf_f16mf4_m(vbool64_t mask, vfloat16mf4_t vd, _Float16 rs1, vfloat16mf4_t vs2, size_t vl) {
   return vfnmadd_vf_f16mf4_m(mask, vd, rs1, vs2, vl);
 }
 
@@ -507,7 +507,7 @@ vfloat16mf4_t test_vfnmadd_vf_f16mf4_m (vbool64_t mask, vfloat16mf4_t vd, _Float
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vfnmadd.mask.nxv2f16.nxv2f16.i64(<vscale x 2 x half> [[VD:%.*]], <vscale x 2 x half> [[VS1:%.*]], <vscale x 2 x half> [[VS2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
-vfloat16mf2_t test_vfnmadd_vv_f16mf2_m (vbool32_t mask, vfloat16mf2_t vd, vfloat16mf2_t vs1, vfloat16mf2_t vs2, size_t vl) {
+vfloat16mf2_t test_vfnmadd_vv_f16mf2_m(vbool32_t mask, vfloat16mf2_t vd, vfloat16mf2_t vs1, vfloat16mf2_t vs2, size_t vl) {
   return vfnmadd_vv_f16mf2_m(mask, vd, vs1, vs2, vl);
 }
 
@@ -516,7 +516,7 @@ vfloat16mf2_t test_vfnmadd_vv_f16mf2_m (vbool32_t mask, vfloat16mf2_t vd, vfloat
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x half> @llvm.riscv.vfnmadd.mask.nxv2f16.f16.i64(<vscale x 2 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 2 x half> [[VS2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
-vfloat16mf2_t test_vfnmadd_vf_f16mf2_m (vbool32_t mask, vfloat16mf2_t vd, _Float16 rs1, vfloat16mf2_t vs2, size_t vl) {
+vfloat16mf2_t test_vfnmadd_vf_f16mf2_m(vbool32_t mask, vfloat16mf2_t vd, _Float16 rs1, vfloat16mf2_t vs2, size_t vl) {
   return vfnmadd_vf_f16mf2_m(mask, vd, rs1, vs2, vl);
 }
 
@@ -525,7 +525,7 @@ vfloat16mf2_t test_vfnmadd_vf_f16mf2_m (vbool32_t mask, vfloat16mf2_t vd, _Float
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vfnmadd.mask.nxv4f16.nxv4f16.i64(<vscale x 4 x half> [[VD:%.*]], <vscale x 4 x half> [[VS1:%.*]], <vscale x 4 x half> [[VS2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
-vfloat16m1_t test_vfnmadd_vv_f16m1_m (vbool16_t mask, vfloat16m1_t vd, vfloat16m1_t vs1, vfloat16m1_t vs2, size_t vl) {
+vfloat16m1_t test_vfnmadd_vv_f16m1_m(vbool16_t mask, vfloat16m1_t vd, vfloat16m1_t vs1, vfloat16m1_t vs2, size_t vl) {
   return vfnmadd_vv_f16m1_m(mask, vd, vs1, vs2, vl);
 }
 
@@ -534,7 +534,7 @@ vfloat16m1_t test_vfnmadd_vv_f16m1_m (vbool16_t mask, vfloat16m1_t vd, vfloat16m
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x half> @llvm.riscv.vfnmadd.mask.nxv4f16.f16.i64(<vscale x 4 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 4 x half> [[VS2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
-vfloat16m1_t test_vfnmadd_vf_f16m1_m (vbool16_t mask, vfloat16m1_t vd, _Float16 rs1, vfloat16m1_t vs2, size_t vl) {
+vfloat16m1_t test_vfnmadd_vf_f16m1_m(vbool16_t mask, vfloat16m1_t vd, _Float16 rs1, vfloat16m1_t vs2, size_t vl) {
   return vfnmadd_vf_f16m1_m(mask, vd, rs1, vs2, vl);
 }
 
@@ -543,7 +543,7 @@ vfloat16m1_t test_vfnmadd_vf_f16m1_m (vbool16_t mask, vfloat16m1_t vd, _Float16 
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vfnmadd.mask.nxv8f16.nxv8f16.i64(<vscale x 8 x half> [[VD:%.*]], <vscale x 8 x half> [[VS1:%.*]], <vscale x 8 x half> [[VS2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-vfloat16m2_t test_vfnmadd_vv_f16m2_m (vbool8_t mask, vfloat16m2_t vd, vfloat16m2_t vs1, vfloat16m2_t vs2, size_t vl) {
+vfloat16m2_t test_vfnmadd_vv_f16m2_m(vbool8_t mask, vfloat16m2_t vd, vfloat16m2_t vs1, vfloat16m2_t vs2, size_t vl) {
   return vfnmadd_vv_f16m2_m(mask, vd, vs1, vs2, vl);
 }
 
@@ -552,7 +552,7 @@ vfloat16m2_t test_vfnmadd_vv_f16m2_m (vbool8_t mask, vfloat16m2_t vd, vfloat16m2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.riscv.vfnmadd.mask.nxv8f16.f16.i64(<vscale x 8 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 8 x half> [[VS2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-vfloat16m2_t test_vfnmadd_vf_f16m2_m (vbool8_t mask, vfloat16m2_t vd, _Float16 rs1, vfloat16m2_t vs2, size_t vl) {
+vfloat16m2_t test_vfnmadd_vf_f16m2_m(vbool8_t mask, vfloat16m2_t vd, _Float16 rs1, vfloat16m2_t vs2, size_t vl) {
   return vfnmadd_vf_f16m2_m(mask, vd, rs1, vs2, vl);
 }
 
@@ -561,7 +561,7 @@ vfloat16m2_t test_vfnmadd_vf_f16m2_m (vbool8_t mask, vfloat16m2_t vd, _Float16 r
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.vfnmadd.mask.nxv16f16.nxv16f16.i64(<vscale x 16 x half> [[VD:%.*]], <vscale x 16 x half> [[VS1:%.*]], <vscale x 16 x half> [[VS2:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
-vfloat16m4_t test_vfnmadd_vv_f16m4_m (vbool4_t mask, vfloat16m4_t vd, vfloat16m4_t vs1, vfloat16m4_t vs2, size_t vl) {
+vfloat16m4_t test_vfnmadd_vv_f16m4_m(vbool4_t mask, vfloat16m4_t vd, vfloat16m4_t vs1, vfloat16m4_t vs2, size_t vl) {
   return vfnmadd_vv_f16m4_m(mask, vd, vs1, vs2, vl);
 }
 
@@ -570,7 +570,7 @@ vfloat16m4_t test_vfnmadd_vv_f16m4_m (vbool4_t mask, vfloat16m4_t vd, vfloat16m4
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x half> @llvm.riscv.vfnmadd.mask.nxv16f16.f16.i64(<vscale x 16 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 16 x half> [[VS2:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
-vfloat16m4_t test_vfnmadd_vf_f16m4_m (vbool4_t mask, vfloat16m4_t vd, _Float16 rs1, vfloat16m4_t vs2, size_t vl) {
+vfloat16m4_t test_vfnmadd_vf_f16m4_m(vbool4_t mask, vfloat16m4_t vd, _Float16 rs1, vfloat16m4_t vs2, size_t vl) {
   return vfnmadd_vf_f16m4_m(mask, vd, rs1, vs2, vl);
 }
 
@@ -579,7 +579,7 @@ vfloat16m4_t test_vfnmadd_vf_f16m4_m (vbool4_t mask, vfloat16m4_t vd, _Float16 r
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x half> @llvm.riscv.vfnmadd.mask.nxv32f16.nxv32f16.i64(<vscale x 32 x half> [[VD:%.*]], <vscale x 32 x half> [[VS1:%.*]], <vscale x 32 x half> [[VS2:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
-vfloat16m8_t test_vfnmadd_vv_f16m8_m (vbool2_t mask, vfloat16m8_t vd, vfloat16m8_t vs1, vfloat16m8_t vs2, size_t vl) {
+vfloat16m8_t test_vfnmadd_vv_f16m8_m(vbool2_t mask, vfloat16m8_t vd, vfloat16m8_t vs1, vfloat16m8_t vs2, size_t vl) {
   return vfnmadd_vv_f16m8_m(mask, vd, vs1, vs2, vl);
 }
 
@@ -588,6 +588,114 @@ vfloat16m8_t test_vfnmadd_vv_f16m8_m (vbool2_t mask, vfloat16m8_t vd, vfloat16m8
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x half> @llvm.riscv.vfnmadd.mask.nxv32f16.f16.i64(<vscale x 32 x half> [[VD:%.*]], half [[RS1:%.*]], <vscale x 32 x half> [[VS2:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
-vfloat16m8_t test_vfnmadd_vf_f16m8_m (vbool2_t mask, vfloat16m8_t vd, _Float16 rs1, vfloat16m8_t vs2, size_t vl) {
+vfloat16m8_t test_vfnmadd_vf_f16m8_m(vbool2_t mask, vfloat16m8_t vd, _Float16 rs1, vfloat16m8_t vs2, size_t vl) {
   return vfnmadd_vf_f16m8_m(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vv_f32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.nxv1f32.nxv1f32.i64(<vscale x 1 x float> [[VD:%.*]], <vscale x 1 x float> [[VS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vv_f32mf2_tu(vfloat32mf2_t vd, vfloat32mf2_t vs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vv_f32mf2_tu(vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vf_f32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.nxv1f32.f32.i64(<vscale x 1 x float> [[VD:%.*]], float [[RS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vf_f32mf2_tu(vfloat32mf2_t vd, float rs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vf_f32mf2_tu(vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vv_f32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.nxv1f32.nxv1f32.i64(<vscale x 1 x float> [[VD:%.*]], <vscale x 1 x float> [[VS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vv_f32mf2_ta(vfloat32mf2_t vd, vfloat32mf2_t vs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vv_f32mf2_ta(vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vf_f32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.nxv1f32.f32.i64(<vscale x 1 x float> [[VD:%.*]], float [[RS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vf_f32mf2_ta(vfloat32mf2_t vd, float rs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vf_f32mf2_ta(vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vv_f32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.nxv1f32.i64(<vscale x 1 x float> [[VD:%.*]], <vscale x 1 x float> [[VS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vv_f32mf2_tuma(vbool64_t mask, vfloat32mf2_t vd, vfloat32mf2_t vs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vv_f32mf2_tuma(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vf_f32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.f32.i64(<vscale x 1 x float> [[VD:%.*]], float [[RS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vf_f32mf2_tuma(vbool64_t mask, vfloat32mf2_t vd, float rs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vf_f32mf2_tuma(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vv_f32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.nxv1f32.i64(<vscale x 1 x float> [[VD:%.*]], <vscale x 1 x float> [[VS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vv_f32mf2_tumu(vbool64_t mask, vfloat32mf2_t vd, vfloat32mf2_t vs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vv_f32mf2_tumu(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vf_f32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.f32.i64(<vscale x 1 x float> [[VD:%.*]], float [[RS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vf_f32mf2_tumu(vbool64_t mask, vfloat32mf2_t vd, float rs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vf_f32mf2_tumu(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vv_f32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.nxv1f32.i64(<vscale x 1 x float> [[VD:%.*]], <vscale x 1 x float> [[VS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vv_f32mf2_tama(vbool64_t mask, vfloat32mf2_t vd, vfloat32mf2_t vs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vv_f32mf2_tama(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vf_f32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.f32.i64(<vscale x 1 x float> [[VD:%.*]], float [[RS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vf_f32mf2_tama(vbool64_t mask, vfloat32mf2_t vd, float rs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vf_f32mf2_tama(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vv_f32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.nxv1f32.i64(<vscale x 1 x float> [[VD:%.*]], <vscale x 1 x float> [[VS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vv_f32mf2_tamu(vbool64_t mask, vfloat32mf2_t vd, vfloat32mf2_t vs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vv_f32mf2_tamu(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfnmadd_vf_f32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfnmadd.mask.nxv1f32.f32.i64(<vscale x 1 x float> [[VD:%.*]], float [[RS1:%.*]], <vscale x 1 x float> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfnmadd_vf_f32mf2_tamu(vbool64_t mask, vfloat32mf2_t vd, float rs1, vfloat32mf2_t vs2, size_t vl) {
+  return vfnmadd_vf_f32mf2_tamu(mask, vd, rs1, vs2, vl);
 }

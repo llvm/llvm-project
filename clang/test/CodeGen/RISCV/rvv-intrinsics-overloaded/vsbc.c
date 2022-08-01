@@ -883,3 +883,75 @@ vuint64m8_t test_vsbc_vxm_u64m8(vuint64m8_t op1, uint64_t op2,
                                 vbool8_t borrowin, size_t vl) {
   return vsbc(op1, op2, borrowin, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vsbc_vvm_i32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vsbc_vvm_i32mf2_tu(vint32mf2_t merge, vint32mf2_t op1, vint32mf2_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_tu(merge, op1, op2, borrowin, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsbc_vxm_i32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vsbc_vxm_i32mf2_tu(vint32mf2_t merge, vint32mf2_t op1, int32_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_tu(merge, op1, op2, borrowin, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsbc_vvm_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vsbc_vvm_u32mf2_tu(vuint32mf2_t merge, vuint32mf2_t op1, vuint32mf2_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_tu(merge, op1, op2, borrowin, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsbc_vxm_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vsbc_vxm_u32mf2_tu(vuint32mf2_t merge, vuint32mf2_t op1, uint32_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_tu(merge, op1, op2, borrowin, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsbc_vvm_i32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vsbc_vvm_i32mf2_ta(vint32mf2_t op1, vint32mf2_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_ta(op1, op2, borrowin, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsbc_vxm_i32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vsbc_vxm_i32mf2_ta(vint32mf2_t op1, int32_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_ta(op1, op2, borrowin, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsbc_vvm_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vsbc_vvm_u32mf2_ta(vuint32mf2_t op1, vuint32mf2_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_ta(op1, op2, borrowin, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vsbc_vxm_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vsbc.nxv1i32.i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[BORROWIN:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vsbc_vxm_u32mf2_ta(vuint32mf2_t op1, uint32_t op2, vbool64_t borrowin, size_t vl) {
+  return vsbc_ta(op1, op2, borrowin, vl);
+}
