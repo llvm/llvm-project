@@ -503,6 +503,11 @@ enum Rounding {
 
 // Bit position of rounding mode bits in FPCR.
 const unsigned RoundingBitsPos = 22;
+
+// Registers used to pass function arguments.
+const ArrayRef<MCPhysReg> getGPRArgRegs();
+const ArrayRef<MCPhysReg> getFPRArgRegs();
+
 } // namespace AArch64
 
 class AArch64Subtarget;
