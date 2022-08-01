@@ -75,7 +75,6 @@ def have_host_jit_feature_support(feature_name):
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
 
     if not clang_repl_exe:
-        print('clang-repl not found')
         return False
 
     try:
@@ -92,9 +91,6 @@ def have_host_jit_feature_support(feature_name):
 
 if have_host_jit_feature_support('jit'):
     config.available_features.add('host-supports-jit')
-
-if have_host_jit_feature_support('exception'):
-    config.available_features.add('host-supports-exception')
 
 if config.clang_staticanalyzer:
     config.available_features.add('staticanalyzer')
