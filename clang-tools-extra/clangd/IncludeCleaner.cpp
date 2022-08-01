@@ -286,7 +286,7 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
     return false;
   }
   for (auto &Filter : Cfg.Diagnostics.Includes.IgnoreHeader) {
-    // Convert the path to Unix slashes and try to match aginast the fiilter.
+    // Convert the path to Unix slashes and try to match against the filter.
     llvm::SmallString<64> Path(Inc.Resolved);
     llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
     if (Filter(Inc.Resolved)) {

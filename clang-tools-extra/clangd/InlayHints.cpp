@@ -383,7 +383,7 @@ private:
     if (!Cfg.InlayHints.Parameters || Args.size() == 0 || !Callee)
       return;
 
-    // If the anchor location comes from a macro defintion, there's nowhere to
+    // If the anchor location comes from a macro definition, there's nowhere to
     // put hints.
     if (!AST.getSourceManager().getTopMacroCallerLoc(Anchor).isFileID())
       return;

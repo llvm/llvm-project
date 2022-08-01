@@ -1801,7 +1801,7 @@ TEST(FindImplementations, Inheritance) {
   }
 }
 
-TEST(FindImplementations, CaptureDefintion) {
+TEST(FindImplementations, CaptureDefinition) {
   llvm::StringRef Test = R"cpp(
     struct Base {
       virtual void F^oo();
