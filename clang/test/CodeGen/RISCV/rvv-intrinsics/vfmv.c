@@ -410,3 +410,39 @@ _Float16 test_vfmv_f_s_f16m8_f16 (vfloat16m8_t src) {
 vfloat16m8_t test_vfmv_s_f_f16m8 (vfloat16m8_t dest, _Float16 src, size_t vl) {
   return vfmv_s_f_f16m8(dest, src, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vfmv_v_f_f32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfmv.v.f.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], float [[SRC:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfmv_v_f_f32mf2_tu (vfloat32mf2_t merge, float src, size_t vl) {
+  return vfmv_v_f_f32mf2_tu(merge, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfmv_v_f_f32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfmv.v.f.nxv1f32.i64(<vscale x 1 x float> undef, float [[SRC:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfmv_v_f_f32mf2_ta (float src, size_t vl) {
+  return vfmv_v_f_f32mf2_ta(src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfmv_s_f_f32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfmv.s.f.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], float [[SRC:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfmv_s_f_f32mf2_tu (vfloat32mf2_t merge, float src, size_t vl) {
+  return vfmv_s_f_f32mf2_tu(merge, src, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfmv_s_f_f32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfmv.s.f.nxv1f32.i64(<vscale x 1 x float> undef, float [[SRC:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vfmv_s_f_f32mf2_ta (float src, size_t vl) {
+  return vfmv_s_f_f32mf2_ta(src, vl);
+}

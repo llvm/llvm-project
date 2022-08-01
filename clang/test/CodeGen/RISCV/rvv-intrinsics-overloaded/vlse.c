@@ -700,3 +700,123 @@ vfloat16m4_t test_vlse16_v_f16m4_m(vbool4_t mask, vfloat16m4_t maskedoff, const 
 vfloat16m8_t test_vlse16_v_f16m8_m(vbool2_t mask, vfloat16m8_t maskedoff, const _Float16 *base, ptrdiff_t bstride, size_t vl) {
   return vlse16(mask, maskedoff, base, bstride, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vlse32_v_i32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vint32mf2_t test_vlse32_v_i32mf2_tu(vint32mf2_t merge, const int32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tu(merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vuint32mf2_t test_vlse32_v_u32mf2_tu(vuint32mf2_t merge, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tu(merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_f32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vlse.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
+//
+vfloat32mf2_t test_vlse32_v_f32mf2_tu(vfloat32mf2_t merge, const float *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tu(merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_i32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vint32mf2_t test_vlse32_v_i32mf2_tuma(vbool64_t mask, vint32mf2_t merge, const int32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tuma(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_u32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vuint32mf2_t test_vlse32_v_u32mf2_tuma(vbool64_t mask, vuint32mf2_t merge, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tuma(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_f32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vlse.mask.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
+//
+vfloat32mf2_t test_vlse32_v_f32mf2_tuma(vbool64_t mask, vfloat32mf2_t merge, const float *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tuma(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_i32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vint32mf2_t test_vlse32_v_i32mf2_tumu(vbool64_t mask, vint32mf2_t merge, const int32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tumu(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_u32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vuint32mf2_t test_vlse32_v_u32mf2_tumu(vbool64_t mask, vuint32mf2_t merge, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tumu(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_f32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vlse.mask.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
+//
+vfloat32mf2_t test_vlse32_v_f32mf2_tumu(vbool64_t mask, vfloat32mf2_t merge, const float *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tumu(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_i32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vint32mf2_t test_vlse32_v_i32mf2_tamu(vbool64_t mask, vint32mf2_t merge, const int32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tamu(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_u32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vlse.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
+//
+vuint32mf2_t test_vlse32_v_u32mf2_tamu(vbool64_t mask, vuint32mf2_t merge, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tamu(mask, merge, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlse32_v_f32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vlse.mask.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float>* [[TMP0]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
+//
+vfloat32mf2_t test_vlse32_v_f32mf2_tamu(vbool64_t mask, vfloat32mf2_t merge, const float *base, ptrdiff_t bstride, size_t vl) {
+  return vlse32_tamu(mask, merge, base, bstride, vl);
+}
