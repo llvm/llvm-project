@@ -65,8 +65,10 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   // TODO: determine memory model and source language from the configuratoin.
   if (auto MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
     auto MemMD = MemModel->getOperand(0);
-    MAI.Addr = static_cast<SPIRV::AddressingModel>(getMetadataUInt(MemMD, 0));
-    MAI.Mem = static_cast<SPIRV::MemoryModel>(getMetadataUInt(MemMD, 1));
+    MAI.Addr = static_cast<SPIRV::AddressingModel::AddressingModel>(
+        getMetadataUInt(MemMD, 0));
+    MAI.Mem =
+        static_cast<SPIRV::MemoryModel::MemoryModel>(getMetadataUInt(MemMD, 1));
   } else {
     MAI.Mem = SPIRV::MemoryModel::OpenCL;
     unsigned PtrSize = ST->getPointerSize();
