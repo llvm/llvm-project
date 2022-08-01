@@ -3364,23 +3364,20 @@ template <class ELFT> void elf::splitSections() {
 
 void elf::combineEhSections() {
   llvm::TimeTraceScope timeScope("Combine EH sections");
-  for (InputSectionBase *&s : inputSections) {
+  for (EhInputSection *sec : ehInputSections)
+    sec->getPartition().ehFrame->addSection(sec);
+
+  if (!mainPart->armExidx)
+    return;
+  llvm::erase_if(inputSections, [](InputSectionBase *s) {
     // Ignore dead sections and the partition end marker (.part.end),
     // whose partition number is out of bounds.
     if (!s->isLive() || s->partition == 255)
-      continue;
-
+      return false;
     Partition &part = s->getPartition();
-    if (auto *es = dyn_cast<EhInputSection>(s)) {
-      part.ehFrame->addSection(es);
-    } else if (s->kind() == SectionBase::Regular && part.armExidx &&
-               part.armExidx->addSection(cast<InputSection>(s))) {
-      s = nullptr;
-    }
-  }
-
-  if (mainPart->armExidx)
-    llvm::erase_value(inputSections, nullptr);
+    return s->kind() == SectionBase::Regular && part.armExidx &&
+           part.armExidx->addSection(cast<InputSection>(s));
+  });
 }
 
 MipsRldMapSection::MipsRldMapSection()

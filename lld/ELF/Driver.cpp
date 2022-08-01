@@ -96,6 +96,7 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
   ctx->e.cleanupCallback = []() {
     inputSections.clear();
+    ehInputSections.clear();
     outputSections.clear();
     symAux.clear();
 
@@ -2655,10 +2656,16 @@ void LinkerDriver::link(opt::InputArgList &args) {
     // Now that we have a complete list of input files.
     // Beyond this point, no new files are added.
     // Aggregate all input sections into one place.
-    for (InputFile *f : ctx->objectFiles)
-      for (InputSectionBase *s : f->getSections())
-        if (s && s != &InputSection::discarded)
+    for (InputFile *f : ctx->objectFiles) {
+      for (InputSectionBase *s : f->getSections()) {
+        if (!s || s == &InputSection::discarded)
+          continue;
+        if (LLVM_UNLIKELY(isa<EhInputSection>(s)))
+          ehInputSections.push_back(cast<EhInputSection>(s));
+        else
           inputSections.push_back(s);
+      }
+    }
     for (BinaryFile *f : ctx->binaryFiles)
       for (InputSectionBase *s : f->getSections())
         inputSections.push_back(cast<InputSection>(s));

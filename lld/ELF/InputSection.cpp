@@ -34,6 +34,7 @@ using namespace lld;
 using namespace lld::elf;
 
 SmallVector<InputSectionBase *, 0> elf::inputSections;
+SmallVector<EhInputSection *, 0> elf::ehInputSections;
 DenseSet<std::pair<const Symbol *, uint64_t>> elf::ppc64noTocRelax;
 
 // Returns a string to construct an error message.
