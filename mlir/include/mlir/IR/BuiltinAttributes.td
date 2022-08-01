@@ -180,7 +180,7 @@ def Builtin_DenseArrayBase : Builtin_Attr<
                         ArrayRefParameter<"char">:$elements);
   let extraClassDeclaration = [{
     // All possible supported element type.
-    enum class EltType { I8, I16, I32, I64, F32, F64 };
+    enum class EltType { I1, I8, I16, I32, I64, F32, F64 };
 
     /// Allow implicit conversion to ElementsAttr.
     operator ElementsAttr() const {
@@ -189,7 +189,8 @@ def Builtin_DenseArrayBase : Builtin_Attr<
 
     /// ElementsAttr implementation.
     using ContiguousIterableTypesT =
-        std::tuple<int8_t, int16_t, int32_t, int64_t, float, double>;
+        std::tuple<bool, int8_t, int16_t, int32_t, int64_t, float, double>;
+    const bool *value_begin_impl(OverloadToken<bool>) const;
     const int8_t *value_begin_impl(OverloadToken<int8_t>) const;
     const int16_t *value_begin_impl(OverloadToken<int16_t>) const;
     const int32_t *value_begin_impl(OverloadToken<int32_t>) const;
