@@ -11,7 +11,7 @@
 #include "utils/UnitTest/MemoryMatcher.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::array;
+using __llvm_libc::cpp::Array;
 using __llvm_libc::cpp::ArrayRef;
 using __llvm_libc::cpp::MutableArrayRef;
 
@@ -92,7 +92,7 @@ void Randomize(MutableArrayRef<char> Buffer) {
 }
 
 TEST(LlvmLibcMemmoveTest, Thorough) {
-  using LargeBuffer = array<char, 3 * kMaxSize>;
+  using LargeBuffer = Array<char, 3 * kMaxSize>;
   LargeBuffer GroundTruth;
   Randomize(GroundTruth);
   for (int Size = 0; Size < kMaxSize; ++Size) {

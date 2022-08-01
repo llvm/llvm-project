@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/Array.h"
 #include "src/__support/CPP/ArrayRef.h"
-#include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/elements.h"
 #include "utils/UnitTest/Test.h"
 
@@ -56,7 +56,7 @@ void Randomize(cpp::MutableArrayRef<char> buffer) {
     current = GetRandomChar();
 }
 
-template <typename Element> using Buffer = cpp::array<char, Element::SIZE>;
+template <typename Element> using Buffer = cpp::Array<char, Element::SIZE>;
 
 template <typename Element> Buffer<Element> GetRandomBuffer() {
   Buffer<Element> buffer;
@@ -81,7 +81,7 @@ template <typename T> T copy(const T &Input) {
 
 TYPED_TEST(LlvmLibcMemoryElements, Move, FixedSizeTypes) {
   constexpr size_t SIZE = ParamType::SIZE;
-  using LargeBuffer = cpp::array<char, SIZE * 2>;
+  using LargeBuffer = cpp::Array<char, SIZE * 2>;
   LargeBuffer GroundTruth;
   Randomize(GroundTruth);
   // Forward, we move the SIZE first bytes from offset 0 to SIZE.
@@ -126,7 +126,7 @@ TYPED_TEST(LlvmLibcMemoryElements, three_way_compare, FixedSizeTypes) {
 
 TYPED_TEST(LlvmLibcMemoryElements, Splat, FixedSizeTypes) {
   Buffer<ParamType> Dst;
-  const cpp::array<char, 3> values = {char(0x00), char(0x7F), char(0xFF)};
+  const cpp::Array<char, 3> values = {char(0x00), char(0x7F), char(0xFF)};
   for (char value : values) {
     splat_set<ParamType>(Dst.data(), value);
     for (size_t i = 0; i < ParamType::SIZE; ++i)
