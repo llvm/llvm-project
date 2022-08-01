@@ -526,6 +526,13 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
   return CreateCall(TheFn, Ops);
 }
 
+CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
+  assert(isa<GlobalValue>(Ptr) && cast<GlobalValue>(Ptr)->isThreadLocal() &&
+         "threadlocal_address only applies to thread local variables.");
+  return CreateIntrinsic(llvm::Intrinsic::threadlocal_address, {Ptr->getType()},
+                         {Ptr});
+}
+
 CallInst *
 IRBuilderBase::CreateAssumption(Value *Cond,
                                 ArrayRef<OperandBundleDef> OpBundles) {
