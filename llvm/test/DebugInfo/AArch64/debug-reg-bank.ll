@@ -6,10 +6,11 @@ define void @foo(i32 %n) !dbg !7 {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   DBG_VALUE %0:_, $noreg, !12, !DIExpression(), debug-location !19
+  ; CHECK-NEXT:   DBG_VALUE %{{[0-9]+}}:_, $noreg, !12, !DIExpression(), debug-location !19
   ; CHECK-NEXT:   RET_ReallyLR debug-location !20
 entry:
-  call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !12, metadata !19), !dbg !20
+  %m = mul i32 %n, 13
+  call void @llvm.dbg.value(metadata i32 %m, i64 0, metadata !12, metadata !19), !dbg !20
   ret void, !dbg !21
 }
 
