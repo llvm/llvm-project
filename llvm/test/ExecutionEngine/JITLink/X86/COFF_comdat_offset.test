@@ -2,11 +2,11 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-jitlink -noexec --debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
 # 
-# Check a weak symbol is created for a COMDAT symbol with IMAGE_COMDAT_SELECT_ANY selection type.
+# Check a COMDAT symbol with an offset is handled correctly.
 #
 # CHECK: Creating graph symbols...
 # CHECK: 4: Exporting COMDAT graph symbol for COFF symbol "func" in section 2
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000000, linkage: weak, scope: default, dead  -   func
+# CHECK-NEXT:   0x1 (block + 0x00000001): size: 0x00000000, linkage: weak, scope: default, dead  -   func
 
 --- !COFF
 header:
@@ -48,7 +48,7 @@ symbols:
       Number:          2
       Selection:       IMAGE_COMDAT_SELECT_ANY
   - Name:            func
-    Value:           0
+    Value:           1
     SectionNumber:   2
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_FUNCTION

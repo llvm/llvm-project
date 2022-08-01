@@ -579,7 +579,8 @@ Expected<Symbol *> COFFLinkGraphBuilder::createCOMDATExportRequest(
       dbgs() << "    " << SymIndex
              << ": Partially supported IMAGE_COMDAT_SELECT_LARGEST was used"
                 " in section "
-             << Symbol.getSectionNumber() << "\n";
+             << Symbol.getSectionNumber() << " (size: " << Definition->Length
+             << ")\n";
     });
     L = Linkage::Weak;
     break;
@@ -594,9 +595,9 @@ Expected<Symbol *> COFFLinkGraphBuilder::createCOMDATExportRequest(
                                     formatv("{0:d}", Definition->Selection));
   }
   }
-  PendingComdatExports[Symbol.getSectionNumber()] = {SymIndex, L};
-  return &G->addAnonymousSymbol(*B, Symbol.getValue(), Definition->Length,
-                                false, false);
+  PendingComdatExports[Symbol.getSectionNumber()] = {SymIndex, L,
+                                                     Definition->Length};
+  return nullptr;
 }
 
 // Process the second symbol of COMDAT sequence.
@@ -604,30 +605,26 @@ Expected<Symbol *>
 COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
                                          StringRef SymbolName,
                                          object::COFFSymbolRef Symbol) {
+  Block *B = getGraphBlock(Symbol.getSectionNumber());
   auto &PendingComdatExport = PendingComdatExports[Symbol.getSectionNumber()];
-  COFFSymbolIndex TargetIndex = PendingComdatExport->SymbolIndex;
-  Linkage L = PendingComdatExport->Linkage;
-  jitlink::Symbol *Target = getGraphSymbol(TargetIndex);
-  assert(Target && "COMDAT leaader is invalid.");
-  assert((llvm::count_if(G->defined_symbols(),
-                         [&](const jitlink::Symbol *Sym) {
-                           return Sym->getName() == SymbolName;
-                         }) == 0) &&
-         "Duplicate defined symbol");
-  Target->setName(SymbolName);
-  Target->setLinkage(L);
-  Target->setCallable(Symbol.getComplexType() ==
-                      COFF::IMAGE_SYM_DTYPE_FUNCTION);
-  Target->setScope(Scope::Default);
+  // NOTE: ComdatDef->Legnth is the size of "section" not size of symbol.
+  // We use zero symbol size to not reach out of bound of block when symbol
+  // offset is non-zero.
+  auto GSym = &G->addDefinedSymbol(
+      *B, Symbol.getValue(), SymbolName, 0, PendingComdatExport->Linkage,
+      Scope::Default, Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION,
+      false);
   LLVM_DEBUG({
     dbgs() << "    " << SymIndex
            << ": Exporting COMDAT graph symbol for COFF symbol \"" << SymbolName
            << "\" in section " << Symbol.getSectionNumber() << "\n";
-    dbgs() << "      " << *Target << "\n";
+    dbgs() << "      " << *GSym << "\n";
   });
+  setGraphSymbol(Symbol.getSectionNumber(), PendingComdatExport->SymbolIndex,
+                 *GSym);
+  DefinedSymbols[SymbolName] = GSym;
   PendingComdatExport = None;
-  DefinedSymbols[SymbolName] = Target;
-  return Target;
+  return GSym;
 }
 
 } // namespace jitlink
