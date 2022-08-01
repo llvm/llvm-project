@@ -150,3 +150,55 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
         self.assertEqual(output.count(b"PID: "), 2)
         self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
         self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
+
+    @add_test_categories(["fork"])
+    def test_vCont_both_nonstop(self):
+        lock1 = self.getBuildArtifact("lock1")
+        lock2 = self.getBuildArtifact("lock2")
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
+                                  "process:sync:" + lock2, "stop"],
+                                 nonstop=True))
+
+        self.test_sequence.add_log_lines([
+            "read packet: $vCont;c:p{}.{};c:p{}.{}#00".format(
+                parent_pid, parent_tid, child_pid, child_tid),
+            "send packet: $OK#00",
+            {"direction": "send", "regex": "%Stop:T.*"},
+            ], True)
+        self.expect_gdbremote_sequence()
+
+        output = self.get_all_output_via_vStdio(
+            lambda output: output.count(b"PID: ") >= 2)
+        self.assertEqual(output.count(b"PID: "), 2)
+        self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
+        self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
+
+    def vCont_both_nonstop_test(self, vCont_packet):
+        lock1 = self.getBuildArtifact("lock1")
+        lock2 = self.getBuildArtifact("lock2")
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
+                                  "process:sync:" + lock2, "stop"],
+                                 nonstop=True))
+
+        self.test_sequence.add_log_lines([
+            "read packet: ${}#00".format(vCont_packet),
+            "send packet: $OK#00",
+            {"direction": "send", "regex": "%Stop:T.*"},
+            ], True)
+        self.expect_gdbremote_sequence()
+
+        output = self.get_all_output_via_vStdio(
+            lambda output: output.count(b"PID: ") >= 2)
+        self.assertEqual(output.count(b"PID: "), 2)
+        self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
+        self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
+
+    @add_test_categories(["fork"])
+    def test_vCont_both_implicit_nonstop(self):
+        self.vCont_both_nonstop_test("vCont;c")
+
+    @add_test_categories(["fork"])
+    def test_vCont_both_minus_one_nonstop(self):
+        self.vCont_both_nonstop_test("vCont;c:p-1.-1")
