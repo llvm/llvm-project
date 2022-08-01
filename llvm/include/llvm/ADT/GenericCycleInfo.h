@@ -235,7 +235,7 @@ private:
   /// Map basic blocks to their inner-most containing loop.
   DenseMap<BlockT *, CycleT *> BlockMap;
 
-  /// Outermost cycles discovered by any DFS.
+  /// Top-level cycles discovered by any DFS.
   ///
   /// Note: The implementation treats the nullptr as the parent of
   /// every top-level cycle. See \ref contains for an example.

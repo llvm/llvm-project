@@ -13,29 +13,27 @@ Cycles
 Cycles are a generalization of LLVM :ref:`loops <loop-terminology>`,
 defined recursively as follows [HavlakCycles]_:
 
-1. In a directed graph G, an *outermost cycle* is a maximal strongly
-   connected region with at least one internal edge. (Informational
-   note --- The requirement for at least one internal edge ensures
-   that a single basic block is a cycle only if there is an edge that
-   goes back to the same basic block.)
-2. A basic block in the cycle that can be reached from the entry of
+1. In a directed graph G that is a function CFG or a subgraph of it, a *cycle*
+   is a maximal strongly connected region with at least one internal edge.
+   (Informational note --- The requirement for at least one internal edge
+   ensures that a single basic block is a cycle only if there is an edge
+   that goes back to the same basic block.)
+2. A basic block in a cycle that can be reached from the entry of
    the function along a path that does not visit any other basic block
-   in the cycle is called an *entry* of the cycle. A cycle can have
-   multiple entries.
-3. In any depth-first search starting from the entry of the function,
-   the first node of a cycle to be visited will be one of the entries.
-   This entry is called the *header* of the cycle. (Informational note
-   --- Thus, the header of the cycle is implementation-defined.)
-4. In any depth-first search starting from the entry, set of outermost
-   cycles found in the CFG is the same. These are the *top-level
-   cycles* that do not themselves have a parent.
-5. The cycles nested inside a cycle C with header H are the outermost
-   cycles in the subgraph induced on the set of nodes (C - H). C is
-   said to be the *parent* of these cycles, and each of these cycles
-   is a *child* of C.
+   in the cycle is called an *entry* of the cycle.
+   A cycle can have multiple entries.
+3. For a given depth-first search starting from the entry of the function, the
+   first node of a cycle to be visited is called the *header* of this cycle
+   with respect to this particular DFS. The header is always an entry node.
+4. In any depth-first search starting from the entry, the set of cycles
+   found in the CFG is the same. These are the *top-level cycles*
+   that do not themselves have a parent.
+5. The *child cycles* (or simply cycles) nested inside a cycle C with
+   header H are the cycles in the subgraph induced on the set of nodes (C - H).
+   C is said to be the *parent* of these cycles.
 
 Thus, cycles form an implementation-defined forest where each cycle C is
-the parent of any outermost cycles nested inside C. The tree closely
+the parent of any child cycles nested inside C. The tree closely
 follows the nesting of loops in the same function. The unique entry of
 a reducible cycle (an LLVM loop) L dominates all its other nodes, and
 is always chosen as the header of some cycle C regardless of the DFS
@@ -193,7 +191,8 @@ Closed Paths and Cycles
 =======================
 
 A *closed path* in a CFG is a connected sequence of nodes and edges in
-the CFG whose start and end points are the same.
+the CFG whose start and end nodes are the same, and whose remaining
+(inner) nodes are distinct.
 
 1. If a node D dominates one or more nodes in a closed path P and P
    does not contain D, then D dominates every node in P.
