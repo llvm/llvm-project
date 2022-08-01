@@ -23,6 +23,7 @@ using namespace clang;
 using ::testing::Contains;
 using ::testing::HasSubstr;
 using ::testing::StrEq;
+using ::testing::StartsWith;
 
 namespace {
 class CommandLineTest : public ::testing::Test {
@@ -143,6 +144,26 @@ TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagPresent) {
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
+}
+
+TEST_F(CommandLineTest, CC1FlagPresentWhenDoingRoundTrip) {
+  const char *Args[] = {"-cc1", "-round-trip-args"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+
+  ASSERT_THAT(std::string(Invocation.getCodeGenOpts().CmdArgs.begin(),
+                          Invocation.getCodeGenOpts().CmdArgs.end()),
+              StartsWith("-cc1"));
+}
+
+TEST_F(CommandLineTest, CC1FlagPresentWhenNotDoingRoundTrip) {
+  const char *Args[] = {"-cc1", "-no-round-trip-args"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+
+  ASSERT_THAT(std::string(Invocation.getCodeGenOpts().CmdArgs.begin(),
+                          Invocation.getCodeGenOpts().CmdArgs.end()),
+              StartsWith("-cc1"));
 }
 
 TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagUnknownPresent) {

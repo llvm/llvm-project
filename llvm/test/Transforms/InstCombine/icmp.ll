@@ -4167,6 +4167,19 @@ define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
   ret i1 %r
 }
 
+define <2 x i1> @zext_bool_and_eq1(<2 x i1> %x, <2 x i8> %y) {
+; CHECK-LABEL: @zext_bool_and_eq1(
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[A]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %zx = zext <2 x i1> %x to <2 x i8>
+  %a = and <2 x i8> %zx, %y
+  %r = icmp eq <2 x i8> %a, <i8 1, i8 1>
+  ret <2 x i1> %r
+}
+
 ; negative test - wrong logic op
 
 define i1 @zext_bool_or_eq0(i1 %x, i8 %y) {

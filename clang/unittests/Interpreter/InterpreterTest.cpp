@@ -20,6 +20,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -28,9 +29,7 @@
 
 using namespace clang;
 
-#if defined(_AIX) || defined(__hexagon__) ||                                   \
-    (defined(_WIN32) &&                                                        \
-     (defined(__aarch64__) || defined(_M_ARM64) || defined(__arm__)))
+#if defined(_AIX)
 #define CLANG_INTERPRETER_NO_SUPPORT_EXEC
 #endif
 
@@ -189,6 +188,14 @@ static std::string MangleName(NamedDecl *ND) {
   return RawStr.str();
 }
 
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
 struct LLVMInitRAII {
   LLVMInitRAII() {
     llvm::InitializeNativeTarget();
@@ -208,6 +215,11 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
   auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
   EXPECT_EQ(1U, DeclsSize(PTU.TUPart));
   auto R1DeclRange = PTU.TUPart->decls();
+
+  // We cannot execute on the platform.
+  if (!HostSupportsJit()) {
+    return;
+  }
 
   NamedDecl *FD = cast<FunctionDecl>(*R1DeclRange.begin());
   // Lower the PTU
@@ -280,6 +292,11 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
   auto PTUDeclRange = PTU.TUPart->decls();
   EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
+
+  // We cannot execute on the platform.
+  if (!HostSupportsJit()) {
+    return;
+  }
 
   // Lower the PTU
   if (llvm::Error Err = Interp->Execute(PTU)) {

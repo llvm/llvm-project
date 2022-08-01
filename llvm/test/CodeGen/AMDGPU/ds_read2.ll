@@ -301,9 +301,8 @@ define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* 
 define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
 ; CI-LABEL: read2_ptr_is_subreg_arg_f32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v1, s2
@@ -320,9 +319,8 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out,
 ;
 ; GFX9-LABEL: read2_ptr_is_subreg_arg_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3
@@ -354,9 +352,8 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out,
 define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
 ; CI-LABEL: read2_ptr_is_subreg_arg_offset_f32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v1, s2
@@ -373,9 +370,8 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)
 ;
 ; GFX9-LABEL: read2_ptr_is_subreg_arg_offset_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x8
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3

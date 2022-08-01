@@ -80,6 +80,7 @@ tools = [
     ToolSubst('llvm-bolt', unresolved='fatal'),
     ToolSubst('llvm-boltdiff', unresolved='fatal'),
     ToolSubst('llvm-bolt-heatmap', unresolved='fatal'),
+    ToolSubst('llvm-bat-dump', unresolved='fatal'),
     ToolSubst('perf2bolt', unresolved='fatal'),
     ToolSubst('yaml2obj', unresolved='fatal'),
     ToolSubst('llvm-mc', unresolved='fatal'),
