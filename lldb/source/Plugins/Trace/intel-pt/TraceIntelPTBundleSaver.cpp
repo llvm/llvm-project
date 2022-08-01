@@ -103,7 +103,7 @@ BuildThreadsSection(Process &process, FileSpec directory) {
 
   FileSpec threads_dir = directory;
   threads_dir.AppendPathComponent("threads");
-  sys::fs::create_directories(threads_dir.GetCString());
+  sys::fs::create_directories(threads_dir.GetPath().c_str());
 
   for (ThreadSP thread_sp : process.Threads()) {
     lldb::tid_t tid = thread_sp->GetID();
@@ -200,7 +200,7 @@ BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory, bool compact) {
   std::vector<JSONCpu> json_cpus;
   FileSpec cpus_dir = directory;
   cpus_dir.AppendPathComponent("cpus");
-  sys::fs::create_directories(cpus_dir.GetCString());
+  sys::fs::create_directories(cpus_dir.GetPath().c_str());
 
   for (lldb::cpu_id_t cpu_id : trace_ipt.GetTracedCpus()) {
     JSONCpu json_cpu;
