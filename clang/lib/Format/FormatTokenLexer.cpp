@@ -515,10 +515,9 @@ bool FormatTokenLexer::tryMergeTokens(size_t Count, TokenType NewType) {
 
 bool FormatTokenLexer::tryMergeTokensAny(
     ArrayRef<ArrayRef<tok::TokenKind>> Kinds, TokenType NewType) {
-  return std::any_of(Kinds.begin(), Kinds.end(),
-                     [this, NewType](ArrayRef<tok::TokenKind> Kinds) {
-                       return tryMergeTokens(Kinds, NewType);
-                     });
+  return llvm::any_of(Kinds, [this, NewType](ArrayRef<tok::TokenKind> Kinds) {
+    return tryMergeTokens(Kinds, NewType);
+  });
 }
 
 // Returns \c true if \p Tok can only be followed by an operand in JavaScript.
