@@ -1,7 +1,7 @@
 add_header_library(
   array
   HDRS
-    array.h
+    Array.h
 )
 
 add_header_library(

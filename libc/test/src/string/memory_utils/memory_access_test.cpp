@@ -8,8 +8,8 @@
 
 #define LLVM_LIBC_UNITTEST_OBSERVE 1
 
+#include "src/__support/CPP/Array.h"
 #include "src/__support/CPP/ArrayRef.h"
-#include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/elements.h"
 #include "utils/UnitTest/Test.h"
 
@@ -20,7 +20,7 @@ namespace __llvm_libc {
 
 static constexpr const size_t kMaxBuffer = 32;
 
-struct BufferAccess : cpp::array<char, kMaxBuffer + 1> {
+struct BufferAccess : cpp::Array<char, kMaxBuffer + 1> {
   BufferAccess() { Reset(); }
   void Reset() {
     for (auto &value : *this)
@@ -45,7 +45,7 @@ struct Buffer {
     reads.Reset();
     writes.Reset();
   }
-  cpp::array<char, kMaxBuffer> data;
+  cpp::Array<char, kMaxBuffer> data;
   BufferAccess __attribute__((aligned(64))) reads;
   BufferAccess __attribute__((aligned(64))) writes;
 };

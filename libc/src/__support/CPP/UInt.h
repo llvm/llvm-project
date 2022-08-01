@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_CPP_UINT_H
 #define LLVM_LIBC_UTILS_CPP_UINT_H
 
-#include "array.h"
+#include "Array.h"
 
 #include <stddef.h> // For size_t
 #include <stdint.h>
@@ -44,7 +44,7 @@ public:
       val[i] = 0;
     }
   }
-  constexpr explicit UInt(const cpp::array<uint64_t, WordCount> &words) {
+  constexpr explicit UInt(const cpp::Array<uint64_t, WordCount> &words) {
     for (size_t i = 0; i < WordCount; ++i)
       val[i] = words[i];
   }
@@ -104,7 +104,7 @@ public:
     uint64_t x_lo = low(x);
     uint64_t x_hi = high(x);
 
-    cpp::array<uint64_t, WordCount + 1> row1;
+    cpp::Array<uint64_t, WordCount + 1> row1;
     uint64_t carry = 0;
     for (size_t i = 0; i < WordCount; ++i) {
       uint64_t l = low(val[i]);
@@ -123,7 +123,7 @@ public:
     }
     row1[WordCount] = carry;
 
-    cpp::array<uint64_t, WordCount + 1> row2;
+    cpp::Array<uint64_t, WordCount + 1> row2;
     row2[0] = 0;
     carry = 0;
     for (size_t i = 0; i < WordCount; ++i) {

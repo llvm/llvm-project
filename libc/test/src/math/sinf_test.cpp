@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/Array.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sinf.h"
 #include "test/src/math/sdcomp26094.h"
