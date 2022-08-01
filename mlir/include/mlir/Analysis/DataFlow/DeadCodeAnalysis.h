@@ -234,6 +234,11 @@ private:
   /// any of the operand lattices are uninitialized.
   Optional<SmallVector<Attribute>> getOperandValues(Operation *op);
 
+  /// The top-level operation the analysis is running on. This is used to detect
+  /// if a callable is outside the scope of the analysis and thus must be
+  /// considered an external callable.
+  Operation *analysisScope;
+
   /// A symbol table used for O(1) symbol lookups during simplification.
   SymbolTableCollection symbolTable;
 };
