@@ -8138,7 +8138,8 @@ static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
 }
 
 // Forward declaration (for getFauxShuffleMask recursive check).
-static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
+static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
+                                   SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    const SelectionDAG &DAG, unsigned Depth,
                                    bool ResolveKnownElts);
@@ -8209,12 +8210,15 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SDValue N1 = peekThroughBitcasts(N.getOperand(1));
     if (!N0.getValueType().isVector() || !N1.getValueType().isVector())
       return false;
+
     SmallVector<int, 64> SrcMask0, SrcMask1;
     SmallVector<SDValue, 2> SrcInputs0, SrcInputs1;
-    if (!getTargetShuffleInputs(N0, SrcInputs0, SrcMask0, DAG, Depth + 1,
-                                true) ||
-        !getTargetShuffleInputs(N1, SrcInputs1, SrcMask1, DAG, Depth + 1,
-                                true))
+    APInt Demand0 = APInt::getAllOnes(N0.getValueType().getVectorNumElements());
+    APInt Demand1 = APInt::getAllOnes(N1.getValueType().getVectorNumElements());
+    if (!getTargetShuffleInputs(N0, Demand0, SrcInputs0, SrcMask0, DAG,
+                                Depth + 1, true) ||
+        !getTargetShuffleInputs(N1, Demand1, SrcInputs1, SrcMask1, DAG,
+                                Depth + 1, true))
       return false;
 
     size_t MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
@@ -8262,8 +8266,14 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
     SmallVector<int, 64> SubMask;
     SmallVector<SDValue, 2> SubInputs;
-    if (!getTargetShuffleInputs(peekThroughOneUseBitcasts(Sub), SubInputs,
-                                SubMask, DAG, Depth + 1, ResolveKnownElts))
+    SDValue SubSrc = peekThroughOneUseBitcasts(Sub);
+    EVT SubSrcVT = SubSrc.getValueType();
+    if (!SubSrcVT.isVector())
+      return false;
+
+    APInt SubDemand = APInt::getAllOnes(SubSrcVT.getVectorNumElements());
+    if (!getTargetShuffleInputs(SubSrc, SubDemand, SubInputs, SubMask, DAG,
+                                Depth + 1, ResolveKnownElts))
       return false;
 
     // Subvector shuffle inputs must not be larger than the subvector.
@@ -8625,6 +8635,16 @@ static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
   return false;
 }
 
+static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
+                                   SmallVectorImpl<SDValue> &Inputs,
+                                   SmallVectorImpl<int> &Mask,
+                                   const SelectionDAG &DAG, unsigned Depth,
+                                   bool ResolveKnownElts) {
+  APInt KnownUndef, KnownZero;
+  return getTargetShuffleInputs(Op, DemandedElts, Inputs, Mask, KnownUndef,
+                                KnownZero, DAG, Depth, ResolveKnownElts);
+}
+
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    const SelectionDAG &DAG, unsigned Depth = 0,
@@ -8633,11 +8653,10 @@ static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
   if (!VT.isSimple() || !VT.isVector())
     return false;
 
-  APInt KnownUndef, KnownZero;
   unsigned NumElts = Op.getValueType().getVectorNumElements();
   APInt DemandedElts = APInt::getAllOnes(NumElts);
-  return getTargetShuffleInputs(Op, DemandedElts, Inputs, Mask, KnownUndef,
-                                KnownZero, DAG, Depth, ResolveKnownElts);
+  return getTargetShuffleInputs(Op, DemandedElts, Inputs, Mask, DAG, Depth,
+                                ResolveKnownElts);
 }
 
 // Attempt to create a scalar/subvector broadcast from the base MemSDNode.
