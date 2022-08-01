@@ -2723,26 +2723,6 @@ SIRegisterInfo::getEquivalentSGPRClass(const TargetRegisterClass *VRC) const {
   return SRC;
 }
 
-const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
-                         const TargetRegisterClass *RC, unsigned SubIdx) const {
-  if (SubIdx == AMDGPU::NoSubRegister)
-    return RC;
-
-  // We can assume that each lane corresponds to one 32-bit register.
-  unsigned Size = getNumChannelsFromSubReg(SubIdx) * 32;
-  if (isAGPRClass(RC)) {
-    RC = getAGPRClassForBitWidth(Size);
-  } else if (isVGPRClass(RC)) {
-    RC = getVGPRClassForBitWidth(Size);
-  } else if (isVectorSuperClass(RC)) {
-    RC = getVectorSuperClassForBitWidth(Size);
-  } else {
-    RC = getSGPRClassForBitWidth(Size);
-  }
-  assert(RC && "Invalid sub-register class size");
-  return RC;
-}
-
 const TargetRegisterClass *
 SIRegisterInfo::getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
                                          const TargetRegisterClass *SubRC,
@@ -2831,6 +2811,13 @@ const TargetRegisterClass*
 SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
                                   Register Reg) const {
   return Reg.isVirtual() ? MRI.getRegClass(Reg) : getPhysRegClass(Reg);
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getRegClassForOperandReg(const MachineRegisterInfo &MRI,
+                                         const MachineOperand &MO) const {
+  const TargetRegisterClass *SrcRC = getRegClassForReg(MRI, MO.getReg());
+  return getSubRegisterClass(SrcRC, MO.getSubReg());
 }
 
 bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
