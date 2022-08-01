@@ -44,16 +44,16 @@ private:
       }
     }
 
-    if (!StatPath)
-      StatPath = Path;
-
     auto fileType = IsFile ?
       llvm::sys::fs::file_type::regular_file :
       llvm::sys::fs::file_type::directory_file;
-    llvm::vfs::Status Status(StatPath, llvm::sys::fs::UniqueID(1, INode),
+    llvm::vfs::Status Status(StatPath ? StatPath : Path,
+                             llvm::sys::fs::UniqueID(1, INode),
                              /*MTime*/{}, /*User*/0, /*Group*/0,
                              /*Size*/0, fileType,
                              llvm::sys::fs::perms::all_all);
+    if (StatPath)
+      Status.ExposesExternalVFSPath = true;
     StatCalls[Path] = Status;
   }
 
