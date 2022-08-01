@@ -22,8 +22,13 @@ void f() {
   h++;
 }
 
+// Required for dyld macOS 12.0+
+#if (__APPLE__)
+__attribute__((weak))
+#endif
 __attribute__((disable_sanitizer_instrumentation))
-void __tsan_on_report() {
+extern void
+__tsan_on_report() {
   fprintf(stderr, "Report.\n");
 
   // Without these annotations this test deadlocks for COMPILER_RT_DEBUG=ON
