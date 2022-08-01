@@ -7,7 +7,7 @@ int g() {
   i++;
   return i;
 }
-// CHECK: @i = thread_local global i32 0
+// CHECK: @i = {{.*}}thread_local global i32 0
 // CHECK: @_ZZ1fvE1j = internal thread_local global i32 0
 //
 // CHECK: @_Z1gv()
