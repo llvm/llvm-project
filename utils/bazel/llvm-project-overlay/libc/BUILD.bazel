@@ -65,7 +65,7 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_functional",
-    hdrs = ["src/__support/CPP/Functional.h"],
+    hdrs = ["src/__support/CPP/functional.h"],
     deps = [":libc_root"],
 )
 
