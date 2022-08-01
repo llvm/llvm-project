@@ -161,18 +161,18 @@ define i64 @sll_redundant_mask_zeros_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: sll_redundant_mask_zeros_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a2, a2, 2
-; RV32I-NEXT:    andi a3, a2, 60
-; RV32I-NEXT:    addi a4, a3, -32
-; RV32I-NEXT:    bltz a4, .LBB9_2
+; RV32I-NEXT:    andi a4, a2, 60
+; RV32I-NEXT:    addi a3, a4, -32
+; RV32I-NEXT:    bltz a3, .LBB9_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sll a1, a0, a4
+; RV32I-NEXT:    sll a1, a0, a3
 ; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB9_2:
 ; RV32I-NEXT:    sll a1, a1, a2
-; RV32I-NEXT:    srli a4, a0, 1
-; RV32I-NEXT:    xori a3, a3, 31
-; RV32I-NEXT:    srl a3, a4, a3
+; RV32I-NEXT:    srli a3, a0, 1
+; RV32I-NEXT:    xori a4, a4, 31
+; RV32I-NEXT:    srl a3, a3, a4
 ; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    sll a0, a0, a2
 ; RV32I-NEXT:    ret
@@ -192,18 +192,18 @@ define i64 @srl_redundant_mask_zeros_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: srl_redundant_mask_zeros_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a2, a2, 3
-; RV32I-NEXT:    andi a3, a2, 56
-; RV32I-NEXT:    addi a4, a3, -32
-; RV32I-NEXT:    bltz a4, .LBB10_2
+; RV32I-NEXT:    andi a4, a2, 56
+; RV32I-NEXT:    addi a3, a4, -32
+; RV32I-NEXT:    bltz a3, .LBB10_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    srl a0, a1, a4
+; RV32I-NEXT:    srl a0, a1, a3
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB10_2:
 ; RV32I-NEXT:    srl a0, a0, a2
-; RV32I-NEXT:    slli a4, a1, 1
-; RV32I-NEXT:    xori a3, a3, 31
-; RV32I-NEXT:    sll a3, a4, a3
+; RV32I-NEXT:    slli a3, a1, 1
+; RV32I-NEXT:    xori a4, a4, 31
+; RV32I-NEXT:    sll a3, a3, a4
 ; RV32I-NEXT:    or a0, a0, a3
 ; RV32I-NEXT:    srl a1, a1, a2
 ; RV32I-NEXT:    ret
