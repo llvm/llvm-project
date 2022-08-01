@@ -11496,17 +11496,12 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       CXXRecordDecl *Record = Destructor->getParent();
       QualType ClassType = Context.getTypeDeclType(Record);
 
-      // FIXME: Shouldn't we be able to perform this check even when the class
-      // type is dependent? Both gcc and edg can handle that.
-      if (!ClassType->isDependentType()) {
-        DeclarationName Name
-          = Context.DeclarationNames.getCXXDestructorName(
-                                        Context.getCanonicalType(ClassType));
-        if (NewFD->getDeclName() != Name) {
-          Diag(NewFD->getLocation(), diag::err_destructor_name);
-          NewFD->setInvalidDecl();
-          return Redeclaration;
-        }
+      DeclarationName Name = Context.DeclarationNames.getCXXDestructorName(
+          Context.getCanonicalType(ClassType));
+      if (NewFD->getDeclName() != Name) {
+        Diag(NewFD->getLocation(), diag::err_destructor_name);
+        NewFD->setInvalidDecl();
+        return Redeclaration;
       }
     } else if (auto *Guide = dyn_cast<CXXDeductionGuideDecl>(NewFD)) {
       if (auto *TD = Guide->getDescribedFunctionTemplate())
