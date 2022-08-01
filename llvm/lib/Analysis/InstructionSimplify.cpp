@@ -5573,6 +5573,24 @@ static bool isIdempotent(Intrinsic::ID ID) {
   }
 }
 
+/// Return true if the intrinsic rounds a floating-point value to an integral
+/// floating-point value (not an integer type).
+static bool removesFPFraction(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    return false;
+
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::roundeven:
+    return true;
+  }
+}
+
 static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
                                    const DataLayout &DL) {
   GlobalValue *PtrSym;
@@ -5638,6 +5656,18 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       if (II->getIntrinsicID() == IID)
         return II;
 
+  if (removesFPFraction(IID)) {
+    // Converting from int or calling a rounding function always results in a
+    // finite integral number or infinity. For those inputs, rounding functions
+    // always return the same value, so the (2nd) rounding is eliminated. Ex:
+    // floor (sitofp x) -> sitofp x
+    // round (ceil x) -> ceil x
+    auto *II = dyn_cast<IntrinsicInst>(Op0);
+    if ((II && removesFPFraction(II->getIntrinsicID())) ||
+        match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+      return Op0;
+  }
+
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
@@ -5695,23 +5725,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
         match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X))))
       return X;
     break;
-  case Intrinsic::floor:
-  case Intrinsic::trunc:
-  case Intrinsic::ceil:
-  case Intrinsic::round:
-  case Intrinsic::roundeven:
-  case Intrinsic::nearbyint:
-  case Intrinsic::rint: {
-    // floor (sitofp x) -> sitofp x
-    // floor (uitofp x) -> uitofp x
-    //
-    // Converting from int always results in a finite integral number or
-    // infinity. For either of those inputs, these rounding functions always
-    // return the same value, so the rounding can be eliminated.
-    if (match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
-      return Op0;
-    break;
-  }
   case Intrinsic::experimental_vector_reverse:
     // experimental.vector.reverse(experimental.vector.reverse(x)) -> x
     if (match(Op0,
