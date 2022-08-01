@@ -3,7 +3,7 @@
 // CHECK-LABEL: define void @_QPtest_proc_dummy()
 // CHECK:         %[[VAL_0:.*]] = alloca i32, i64 1, align 4
 // CHECK:         %[[VAL_1:.*]] = alloca { ptr }, i64 1, align 8
-// CHECK:         %[[VAL_2:.*]] = getelementptr { ptr }, ptr %[[VAL_1]], i64 0, i32 0
+// CHECK:         %[[VAL_2:.*]] = getelementptr { ptr }, ptr %[[VAL_1]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_0]], ptr %[[VAL_2]], align 8
 // CHECK:         store i32 1, ptr %[[VAL_0]], align 4
 // CHECK:         %[[VAL_3:.*]] = alloca [32 x i8], i64 1, align 1
@@ -64,7 +64,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_0:.*]] = alloca [40 x i8], i64 1, align 1
 // CHECK:         %[[VAL_1:.*]] = alloca [10 x i8], i64 1, align 1
 // CHECK:         %[[VAL_2:.*]] = alloca { { ptr, i64 } }, i64 1, align 8
-// CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i64 0, i32 0
+// CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i32 0, i32 0
 // CHECK:         %[[VAL_5:.*]] = insertvalue { ptr, i64 } undef, ptr %[[VAL_1]], 0
 // CHECK:         %[[VAL_6:.*]] = insertvalue { ptr, i64 } %[[VAL_5]], i64 10, 1
 // CHECK:         store { ptr, i64 } %[[VAL_6]], ptr %[[VAL_3]], align 8
@@ -73,7 +73,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_11:.*]] = phi 
 // CHECK:         %[[VAL_13:.*]] = phi 
 // CHECK:         %[[VAL_15:.*]] = icmp sgt i64 %[[VAL_13]], 0
-// CHECK:         %[[VAL_18:.*]] = getelementptr [10 x [1 x i8]], ptr %[[VAL_1]], i64 0, i64 %[[VAL_11]]
+// CHECK:         %[[VAL_18:.*]] = getelementptr [10 x [1 x i8]], ptr %[[VAL_1]], i32 0, i64 %[[VAL_11]]
 // CHECK:         store [1 x i8] c" ", ptr %[[VAL_18]], align 1
 // CHECK:         %[[VAL_20:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK:         call void @llvm.init.trampoline(ptr %[[VAL_20]], ptr @_QFtest_proc_dummy_charPgen_message, ptr %[[VAL_2]])
@@ -89,7 +89,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 
 // CHECK-LABEL: define { ptr, i64 } @_QFtest_proc_dummy_charPgen_message(ptr
 // CHECK-SAME:                %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest %[[VAL_2:.*]])
-// CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i64 0, i32 0
+// CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i32 0, i32 0
 // CHECK:         %[[VAL_4:.*]] = load { ptr, i64 }, ptr %[[VAL_3]], align 8
 // CHECK:         %[[VAL_5:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 0
 // CHECK:         %[[VAL_6:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 1

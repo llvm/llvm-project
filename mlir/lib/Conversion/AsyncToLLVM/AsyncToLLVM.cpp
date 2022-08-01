@@ -567,10 +567,8 @@ public:
         // %Size = getelementptr %T* null, int 1
         // %SizeI = ptrtoint %T* %Size to i64
         auto nullPtr = rewriter.create<LLVM::NullOp>(loc, storagePtrType);
-        auto one = rewriter.create<LLVM::ConstantOp>(
-            loc, i64, rewriter.getI64IntegerAttr(1));
         auto gep = rewriter.create<LLVM::GEPOp>(loc, storagePtrType, nullPtr,
-                                                one.getResult());
+                                                ArrayRef<LLVM::GEPArg>{1});
         return rewriter.create<LLVM::PtrToIntOp>(loc, i64, gep);
       };
 

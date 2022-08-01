@@ -163,8 +163,8 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
   // Buffer size in bytes.
   Type elementPtrType = getElementPtrType(memRefType);
   Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr,
-                                              ArrayRef<Value>{runningStride});
+  Value gepPtr =
+      rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr, runningStride);
   sizeBytes = rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 }
 
@@ -178,9 +178,8 @@ Value ConvertToLLVMPattern::getSizeInBytes(
   auto convertedPtrType =
       LLVM::LLVMPointerType::get(typeConverter->convertType(type));
   auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
-  auto gep = rewriter.create<LLVM::GEPOp>(
-      loc, convertedPtrType, nullPtr,
-      ArrayRef<Value>{createIndexConstant(rewriter, loc, 1)});
+  auto gep = rewriter.create<LLVM::GEPOp>(loc, convertedPtrType, nullPtr,
+                                          ArrayRef<LLVM::GEPArg>{1});
   return rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
 }
 

@@ -48,14 +48,14 @@ func.func @alloca_scalar_char_kind() -> !fir.ref<!fir.char<2,10>> {
 }
 
 // CHECK-LABEL: define ptr @allocmem_scalar_char(
-// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([10 x i8], ptr null, i64 1) to i64))
+// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([10 x i8], ptr null, i32 1) to i64))
 func.func @allocmem_scalar_char() -> !fir.heap<!fir.char<1,10>> {
   %1 = fir.allocmem !fir.char<1,10>
   return %1 : !fir.heap<!fir.char<1,10>>
 }
 
 // CHECK-LABEL: define ptr @allocmem_scalar_char_kind(
-// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([10 x i16], ptr null, i64 1) to i64))
+// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([10 x i16], ptr null, i32 1) to i64))
 func.func @allocmem_scalar_char_kind() -> !fir.heap<!fir.char<2,10>> {
   %1 = fir.allocmem !fir.char<2,10>
   return %1 : !fir.heap<!fir.char<2,10>>
@@ -131,14 +131,14 @@ func.func @alloca_array_of_dynchar(%l: i32) -> !fir.ref<!fir.array<3x3x!fir.char
 }
 
 // CHECK-LABEL: define ptr @allocmem_array_of_nonchar(
-// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([3 x [3 x i32]], ptr null, i64 1) to i64))
+// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([3 x [3 x i32]], ptr null, i32 1) to i64))
 func.func @allocmem_array_of_nonchar() -> !fir.heap<!fir.array<3x3xi32>> {
   %1 = fir.allocmem !fir.array<3x3xi32>
   return %1 : !fir.heap<!fir.array<3x3xi32>>
 }
 
 // CHECK-LABEL: define ptr @allocmem_array_of_char(
-// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([3 x [3 x [10 x i8]]], ptr null, i64 1) to i64))
+// CHECK: call ptr @malloc(i64 ptrtoint (ptr getelementptr ([3 x [3 x [10 x i8]]], ptr null, i32 1) to i64))
 func.func @allocmem_array_of_char() -> !fir.heap<!fir.array<3x3x!fir.char<1,10>>> {
   %1 = fir.allocmem !fir.array<3x3x!fir.char<1,10>>
   return %1 : !fir.heap<!fir.array<3x3x!fir.char<1,10>>>
@@ -175,7 +175,7 @@ func.func @alloca_dynarray_of_nonchar2(%e: index) -> !fir.ref<!fir.array<?x?xi32
 
 // CHECK-LABEL: define ptr @allocmem_dynarray_of_nonchar(
 // CHECK-SAME: i64 %[[extent:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 ptrtoint (ptr getelementptr ([3 x i32], ptr null, i64 1) to i64), %[[extent]]
+// CHECK: %[[prod1:.*]] = mul i64 ptrtoint (ptr getelementptr ([3 x i32], ptr null, i32 1) to i64), %[[extent]]
 // CHECK: call ptr @malloc(i64 %[[prod1]])
 func.func @allocmem_dynarray_of_nonchar(%e: index) -> !fir.heap<!fir.array<3x?xi32>> {
   %1 = fir.allocmem !fir.array<3x?xi32>, %e
@@ -213,7 +213,7 @@ func.func @alloca_dynarray_of_char2(%e : index) -> !fir.ref<!fir.array<?x?x!fir.
 
 // CHECK-LABEL: define ptr @allocmem_dynarray_of_char(
 // CHECK-SAME: i64 %[[extent:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 ptrtoint (ptr getelementptr ([3 x [10 x i16]], ptr null, i64 1) to i64), %[[extent]]
+// CHECK: %[[prod1:.*]] = mul i64 ptrtoint (ptr getelementptr ([3 x [10 x i16]], ptr null, i32 1) to i64), %[[extent]]
 // CHECK: call ptr @malloc(i64 %[[prod1]])
 func.func @allocmem_dynarray_of_char(%e : index) -> !fir.heap<!fir.array<3x?x!fir.char<2,10>>> {
   %1 = fir.allocmem !fir.array<3x?x!fir.char<2,10>>, %e
@@ -222,7 +222,7 @@ func.func @allocmem_dynarray_of_char(%e : index) -> !fir.heap<!fir.array<3x?x!fi
 
 // CHECK-LABEL: define ptr @allocmem_dynarray_of_char2(
 // CHECK-SAME: i64 %[[extent:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 ptrtoint (ptr getelementptr ([10 x i16], ptr null, i64 1) to i64), %[[extent]]
+// CHECK: %[[prod1:.*]] = mul i64 ptrtoint (ptr getelementptr ([10 x i16], ptr null, i32 1) to i64), %[[extent]]
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
 // CHECK: call ptr @malloc(i64 %[[prod2]])
 func.func @allocmem_dynarray_of_char2(%e : index) -> !fir.heap<!fir.array<?x?x!fir.char<2,10>>> {
@@ -316,7 +316,7 @@ func.func @allocmem_array_with_holes_nonchar(%0 : index, %1 : index) -> !fir.hea
 
 // CHECK-LABEL: define ptr @allocmem_array_with_holes_char(
 // CHECK-SAME: i64 %[[e:.*]])
-// CHECK: %[[mul:.*]] = mul i64 mul (i64 ptrtoint (ptr getelementptr ([3 x [10 x i16]], ptr null, i64 1) to i64), i64 4), %[[e]]
+// CHECK: %[[mul:.*]] = mul i64 mul (i64 ptrtoint (ptr getelementptr ([3 x [10 x i16]], ptr null, i32 1) to i64), i64 4), %[[e]]
 // CHECK: call ptr @malloc(i64 %[[mul]])
 func.func @allocmem_array_with_holes_char(%e: index) -> !fir.heap<!fir.array<3x?x4x!fir.char<2,10>>> {
   %1 = fir.allocmem !fir.array<3x?x4x!fir.char<2,10>>, %e
