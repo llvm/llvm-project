@@ -537,6 +537,8 @@ module {
     // Release the resources.
     bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>
     bufferization.dealloc_tensor %sv2 : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %sv1_si : tensor<?xi32, #SparseVector>
+    bufferization.dealloc_tensor %sv2_si : tensor<?xi32, #SparseVector>
     bufferization.dealloc_tensor %sm1 : tensor<?x?xf64, #DCSR>
     bufferization.dealloc_tensor %sm2 : tensor<?x?xf64, #DCSR>
     bufferization.dealloc_tensor %sm3 : tensor<4x4xf64, #DCSR>
