@@ -240,8 +240,7 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // We do not want #line markers to affect dependency generation!
   if (Optional<StringRef> Filename =
           SM.getNonBuiltinFilenameForID(SM.getFileID(SM.getExpansionLoc(Loc))))
-    MDC.FileDeps.push_back(
-        std::string(llvm::sys::path::remove_leading_dotslash(*Filename)));
+    MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
 }
 
 void ModuleDepCollectorPP::InclusionDirective(
@@ -252,7 +251,7 @@ void ModuleDepCollectorPP::InclusionDirective(
   if (!File && !Imported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
     // here as `FileChanged` will never see it.
-    MDC.FileDeps.push_back(std::string(FileName));
+    MDC.addFileDep(FileName);
   }
   handleImport(Imported);
 }
@@ -282,8 +281,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
                                  ->getName());
 
   if (!MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
-    MDC.FileDeps.push_back(
-        MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
+    MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
 
   for (const Module *M : DirectModularDeps) {
     // A top-level module might not be actually imported as a module when
@@ -346,10 +344,10 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
         if (IF.getFile()->getName().endswith("__inferred_module.map")) {
-          MD.FileDeps.insert(ModuleMap->getName());
+          MDC.addFileDep(MD, ModuleMap->getName());
           return;
         }
-        MD.FileDeps.insert(IF.getFile()->getName());
+        MDC.addFileDep(MD, IF.getFile()->getName());
       });
 
   // We usually don't need to list the module map files of our dependencies when
@@ -493,4 +491,25 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   assert("Prebuilt module came from the expected AST file" &&
          PrebuiltModuleFileIt->second == M->getASTFile()->getName());
   return true;
+}
+
+static StringRef makeAbsolute(CompilerInstance &CI, StringRef Path,
+                              SmallVectorImpl<char> &Storage) {
+  if (llvm::sys::path::is_absolute(Path))
+    return Path;
+  Storage.assign(Path.begin(), Path.end());
+  CI.getFileManager().makeAbsolutePath(Storage);
+  return StringRef(Storage.data(), Storage.size());
+}
+
+void ModuleDepCollector::addFileDep(StringRef Path) {
+  llvm::SmallString<256> Storage;
+  Path = makeAbsolute(ScanInstance, Path, Storage);
+  FileDeps.push_back(std::string(Path));
+}
+
+void ModuleDepCollector::addFileDep(ModuleDeps &MD, StringRef Path) {
+  llvm::SmallString<256> Storage;
+  Path = makeAbsolute(ScanInstance, Path, Storage);
+  MD.FileDeps.insert(Path);
 }

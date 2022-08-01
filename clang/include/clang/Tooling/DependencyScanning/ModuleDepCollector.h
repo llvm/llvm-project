@@ -233,6 +233,11 @@ private:
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);
 
+  /// Adds \p Path to \c FileDeps, making it absolute if necessary.
+  void addFileDep(StringRef Path);
+  /// Adds \p Path to \c MD.FileDeps, making it absolute if necessary.
+  void addFileDep(ModuleDeps &MD, StringRef Path);
+
   /// Constructs a CompilerInvocation that can be used to build the given
   /// module, excluding paths to discovered modular dependencies that are yet to
   /// be built.

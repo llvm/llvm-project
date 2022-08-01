@@ -28,8 +28,9 @@ namespace {
 class DependencyConsumerForwarder : public DependencyFileGenerator {
 public:
   DependencyConsumerForwarder(std::unique_ptr<DependencyOutputOptions> Opts,
-                              DependencyConsumer &C)
-      : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C) {}
+                              StringRef WorkingDirectory, DependencyConsumer &C)
+      : DependencyFileGenerator(*Opts), WorkingDirectory(WorkingDirectory),
+        Opts(std::move(Opts)), C(C) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
     C.handleDependencyOutputOpts(*Opts);
@@ -37,11 +38,13 @@ public:
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
+      llvm::sys::fs::make_absolute(WorkingDirectory, CanonPath);
       C.handleFileDependency(CanonPath);
     }
   }
 
 private:
+  StringRef WorkingDirectory;
   std::unique_ptr<DependencyOutputOptions> Opts;
   DependencyConsumer &C;
 };
@@ -221,8 +224,8 @@ public:
     switch (Format) {
     case ScanningOutputFormat::Make:
       ScanInstance.addDependencyCollector(
-          std::make_shared<DependencyConsumerForwarder>(std::move(Opts),
-                                                        Consumer));
+          std::make_shared<DependencyConsumerForwarder>(
+              std::move(Opts), WorkingDirectory, Consumer));
       break;
     case ScanningOutputFormat::Full:
       ScanInstance.addDependencyCollector(std::make_shared<ModuleDepCollector>(

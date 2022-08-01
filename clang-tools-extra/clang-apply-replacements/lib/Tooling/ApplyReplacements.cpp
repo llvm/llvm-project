@@ -156,11 +156,15 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
                         const tooling::TranslationUnitDiagnostics *SourceTU,
                         const llvm::Optional<std::string> BuildDir) {
     // Use the file manager to deduplicate paths. FileEntries are
-    // automatically canonicalized.
-    auto PrevWorkingDir = SM.getFileManager().getFileSystemOpts().WorkingDir;
+    // automatically canonicalized. Since relative paths can come from different
+    // build directories, make them absolute immediately.
+    SmallString<128> Path = R.getFilePath();
     if (BuildDir)
-      SM.getFileManager().getFileSystemOpts().WorkingDir = std::move(*BuildDir);
-    if (auto Entry = SM.getFileManager().getFile(R.getFilePath())) {
+      llvm::sys::fs::make_absolute(*BuildDir, Path);
+    else
+      SM.getFileManager().makeAbsolutePath(Path);
+
+    if (auto Entry = SM.getFileManager().getFile(Path)) {
       if (SourceTU) {
         auto &Replaces = DiagReplacements[*Entry];
         auto It = Replaces.find(R);
@@ -171,11 +175,10 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
           return;
       }
       GroupedReplacements[*Entry].push_back(R);
-    } else if (Warned.insert(R.getFilePath()).second) {
+    } else if (Warned.insert(Path).second) {
       errs() << "Described file '" << R.getFilePath()
              << "' doesn't exist. Ignoring...\n";
     }
-    SM.getFileManager().getFileSystemOpts().WorkingDir = PrevWorkingDir;
   };
 
   for (const auto &TU : TUs)
