@@ -176,9 +176,8 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
           : Info.AI->getAllocatedType();
   Type *PaddingType = ArrayType::get(Type::getInt8Ty(Ctx), AlignedSize - Size);
   Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
-  auto *NewAI =
-      new AllocaInst(TypeWithPadding, Info.AI->getType()->getAddressSpace(),
-                     nullptr, "", Info.AI);
+  auto *NewAI = new AllocaInst(TypeWithPadding, Info.AI->getAddressSpace(),
+                               nullptr, "", Info.AI);
   NewAI->takeName(Info.AI);
   NewAI->setAlignment(Info.AI->getAlign());
   NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());

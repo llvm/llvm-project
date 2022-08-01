@@ -415,7 +415,7 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
       LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
       unsigned SrcAddrSpace = TheSrc->getType()->getPointerAddressSpace();
       auto *DestTy = PointerType::get(AI.getAllocatedType(), SrcAddrSpace);
-      if (AI.getType()->getAddressSpace() == SrcAddrSpace) {
+      if (AI.getAddressSpace() == SrcAddrSpace) {
         for (Instruction *Delete : ToDelete)
           eraseInstFromFunction(*Delete);
 
