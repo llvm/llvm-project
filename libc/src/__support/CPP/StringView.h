@@ -38,11 +38,11 @@ public:
   // size_type.
   static constexpr size_t npos = -1;
 
-  StringView() : Data(nullptr), Len(0) {}
+  constexpr StringView() : Data(nullptr), Len(0) {}
 
   // Assumes Str is a null-terminated string. The length of the string does
   // not include the terminating null character.
-  explicit StringView(const char *Str) : Data(Str), Len(0) {
+  explicit constexpr StringView(const char *Str) : Data(Str), Len(0) {
     if (Str == nullptr)
       return;
     for (const char *D = Data; *D != '\0'; ++D, ++Len)
@@ -51,20 +51,20 @@ public:
       Data = nullptr;
   }
 
-  explicit StringView(const char *Str, size_t N)
+  explicit constexpr StringView(const char *Str, size_t N)
       : Data(N ? Str : nullptr), Len(Str == nullptr ? 0 : N) {}
 
   // Ctor for raw literal.
   template <size_t N>
   StringView(const char (&Str)[N]) : StringView(Str, N - 1) {}
 
-  const char *data() const { return Data; }
+  constexpr const char *data() const { return Data; }
 
   // Returns the size of the StringView.
-  size_t size() const { return Len; }
+  constexpr size_t size() const { return Len; }
 
   // Returns whether the StringView is empty.
-  bool empty() const { return Len == 0; }
+  constexpr bool empty() const { return Len == 0; }
 
   // Returns an iterator to the first character of the view.
   const char *begin() const { return Data; }
@@ -76,7 +76,7 @@ public:
   // Returns a const reference to the character at specified location pos.
   // No bounds checking is performed: the behavior is undefined if pos >=
   // size().
-  const char &operator[](size_t Index) const { return Data[Index]; }
+  constexpr const char &operator[](size_t Index) const { return Data[Index]; }
 
   /// compare - Compare two strings; the result is -1, 0, or 1 if this string
   /// is lexicographically less than, equal to, or greater than the \p Other.
