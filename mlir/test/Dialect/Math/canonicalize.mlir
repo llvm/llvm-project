@@ -275,7 +275,7 @@ func.func @expm1_fold() -> f32 {
 }
 
 // CHECK-LABEL: @expm1_fold_vec
-// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.71828175, 0.000000e+00, 1.71828175]> : vector<4xf32>
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.71828{{[0-9]*}}, 0.000000e+00, 1.71828{{[0-9]*}}]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
 func.func @expm1_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
