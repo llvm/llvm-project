@@ -10,6 +10,7 @@ declare void @llvm.experimental.guard(i1, ...)
 ; CHECK: Running pass: LoopPredicationPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
+; CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-NEXT: Running pass: LoopPredicationPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
 ; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
