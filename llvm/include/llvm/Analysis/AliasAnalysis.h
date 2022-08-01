@@ -152,6 +152,7 @@ enum class ModRefInfo : uint8_t {
   Mod = 2,
   /// The access may reference and may modify the value stored in memory.
   ModRef = Ref | Mod,
+  LLVM_MARK_AS_BITMASK_ENUM(ModRef),
 };
 
 LLVM_NODISCARD inline bool isNoModRef(const ModRefInfo MRI) {
@@ -170,25 +171,31 @@ LLVM_NODISCARD inline bool isRefSet(const ModRefInfo MRI) {
   return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref);
 }
 
+[[deprecated("Use operator | instead")]]
 LLVM_NODISCARD inline ModRefInfo setMod(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) | static_cast<int>(ModRefInfo::Mod));
+  return MRI | ModRefInfo::Mod;
 }
+[[deprecated("Use operator | instead")]]
 LLVM_NODISCARD inline ModRefInfo setRef(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) | static_cast<int>(ModRefInfo::Ref));
+  return MRI | ModRefInfo::Ref;
 }
+[[deprecated("Use operator & instead")]]
 LLVM_NODISCARD inline ModRefInfo clearMod(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref));
+  return MRI & ModRefInfo::Ref;
 }
+[[deprecated("Use operator & instead")]]
 LLVM_NODISCARD inline ModRefInfo clearRef(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Mod));
+  return MRI & ModRefInfo::Mod;
 }
+[[deprecated("Use operator | instead")]]
 LLVM_NODISCARD inline ModRefInfo unionModRef(const ModRefInfo MRI1,
                                              const ModRefInfo MRI2) {
-  return ModRefInfo(static_cast<int>(MRI1) | static_cast<int>(MRI2));
+  return MRI1 | MRI2;
 }
+[[deprecated("Use operator & instead")]]
 LLVM_NODISCARD inline ModRefInfo intersectModRef(const ModRefInfo MRI1,
                                                  const ModRefInfo MRI2) {
-  return ModRefInfo(static_cast<int>(MRI1) & static_cast<int>(MRI2));
+  return MRI1 & MRI2;
 }
 
 /// The locations at which a function might access memory.

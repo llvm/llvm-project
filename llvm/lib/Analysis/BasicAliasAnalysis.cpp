@@ -940,12 +940,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       // Operand aliases 'Object', but call doesn't modify it. Strengthen
       // initial assumption and keep looking in case if there are more aliases.
       if (Call->onlyReadsMemory(OperandNo)) {
-        Result = setRef(Result);
+        Result |= ModRefInfo::Ref;
         continue;
       }
       // Operand aliases 'Object' but call only writes into it.
       if (Call->onlyWritesMemory(OperandNo)) {
-        Result = setMod(Result);
+        Result |= ModRefInfo::Mod;
         continue;
       }
       // This operand aliases 'Object' and call reads and writes into it.
@@ -988,9 +988,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     // It's also possible for Loc to alias both src and dest, or neither.
     ModRefInfo rv = ModRefInfo::NoModRef;
     if (SrcAA != AliasResult::NoAlias || Call->hasReadingOperandBundles())
-      rv = setRef(rv);
+      rv |= ModRefInfo::Ref;
     if (DestAA != AliasResult::NoAlias || Call->hasClobberingOperandBundles())
-      rv = setMod(rv);
+      rv |= ModRefInfo::Mod;
     return rv;
   }
 

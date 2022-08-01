@@ -160,7 +160,7 @@ public:
     if (AlignedMap *P = Info.getPointer()) {
       auto I = P->Map.find(&GV);
       if (I != P->Map.end())
-        GlobalMRI = unionModRef(GlobalMRI, I->second);
+        GlobalMRI |= I->second;
     }
     return GlobalMRI;
   }
@@ -185,7 +185,7 @@ public:
       Info.setPointer(P);
     }
     auto &GlobalMRI = P->Map[&GV];
-    GlobalMRI = unionModRef(GlobalMRI, NewMRI);
+    GlobalMRI |= NewMRI;
   }
 
   /// Clear a global's ModRef info. Should be used when a global is being
@@ -938,8 +938,8 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
       if (const Function *F = Call->getCalledFunction())
         if (NonAddressTakenGlobals.count(GV))
           if (const FunctionInfo *FI = getFunctionInfo(F))
-            Known = unionModRef(FI->getModRefInfoForGlobal(*GV),
-                                getModRefInfoForArgument(Call, GV, AAQI));
+            Known = FI->getModRefInfoForGlobal(*GV) |
+                    getModRefInfoForArgument(Call, GV, AAQI);
 
   return Known;
 }
