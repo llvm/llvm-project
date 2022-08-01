@@ -52,6 +52,8 @@ Bug Fixes
 - Fixes an accepts-invalid bug in C when using a ``_Noreturn`` function
   specifier on something other than a function declaration. This fixes
   `Issue 56800 <https://github.com/llvm/llvm-project/issues/56800>`_.
+- Fix `#56772 <https://github.com/llvm/llvm-project/issues/56772>`_ - invalid
+  destructor names were incorrectly accepted on template classes.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
