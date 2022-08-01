@@ -7,9 +7,9 @@
 // CHECK: error: undefined symbol: a
 
 // CHECK: Preprocessed source(s) and associated run script(s) are located at:
-// CHECK-NEXT: note: diagnostic msg: {{.*}}/lld-repro-{{.*}}.c
-// CHECK-NEXT: note: diagnostic msg: {{.*}}/linker-crash-{{.*}}.tar
-// CHECK-NEXT: note: diagnostic msg: {{.*}}/lld-repro-{{.*}}.sh
+// CHECK-NEXT: note: diagnostic msg: {{.*}}lld-repro-{{.*}}.c
+// CHECK-NEXT: note: diagnostic msg: {{.*}}linker-crash-{{.*}}.tar
+// CHECK-NEXT: note: diagnostic msg: {{.*}}lld-repro-{{.*}}.sh
 // CHECK-NEXT: note: diagnostic msg:
 // CHECK: ********************
 
