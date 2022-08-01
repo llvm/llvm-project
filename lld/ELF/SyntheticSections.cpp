@@ -468,13 +468,8 @@ void EhFrameSection::iterateFDEWithLSDA(
 
 static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
   memcpy(buf, d.data(), d.size());
-
-  size_t aligned = alignToPowerOf2(d.size(), config->wordsize);
-  assert(std::all_of(buf + d.size(), buf + aligned,
-                     [](uint8_t c) { return c == 0; }));
-
   // Fix the size field. -4 since size does not include the size field itself.
-  write32(buf, aligned - 4);
+  write32(buf, d.size() - 4);
 }
 
 void EhFrameSection::finalizeContents() {
@@ -504,11 +499,11 @@ void EhFrameSection::finalizeContents() {
   size_t off = 0;
   for (CieRecord *rec : cieRecords) {
     rec->cie->outputOff = off;
-    off += alignToPowerOf2(rec->cie->size, config->wordsize);
+    off += rec->cie->size;
 
     for (EhSectionPiece *fde : rec->fdes) {
       fde->outputOff = off;
-      off += alignToPowerOf2(fde->size, config->wordsize);
+      off += fde->size;
     }
   }
 

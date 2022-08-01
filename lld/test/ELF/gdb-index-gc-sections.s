@@ -4,7 +4,7 @@
 # RUN: llvm-dwarfdump -gdb-index %t2 | FileCheck %s
 
 # CHECK: Address area offset = 0x28, has 1 entries:
-# CHECK-NEXT:    Low/High address = [0x201154, 0x201155) (Size: 0x1), CU id = 0
+# CHECK-NEXT:    Low/High address = [0x201150, 0x201151) (Size: 0x1), CU id = 0
 
 # Generated with: (clang r302976)
 # echo "void _start() {} void dead() {}" | \
