@@ -115,12 +115,6 @@ static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
 
-static cl::opt<unsigned>
-    HoistCommonSkipLimit("simplifycfg-hoist-common-skip-limit", cl::Hidden,
-                         cl::init(20),
-                         cl::desc("Allow reordering across at most this many "
-                                  "instructions when hoisting"));
-
 static cl::opt<bool>
     SinkCommon("simplifycfg-sink-common", cl::Hidden, cl::init(true),
                cl::desc("Sink common instructions down to the end block"));
@@ -1436,32 +1430,6 @@ static bool isSafeToHoistInvoke(BasicBlock *BB1, BasicBlock *BB2,
   return true;
 }
 
-// Returns true if it is safe to reorder an instruction across preceding
-// instructions in a basic block.
-static bool isSafeToHoistInstr(Instruction *I, bool ForceNoSideEffects,
-                               bool ForceNoSpeculation) {
-  // If we have seen an instruction with side effects, it's unsafe to reorder an
-  // instruction which reads memory or itself has side effects.
-  if (ForceNoSideEffects && (I->mayReadFromMemory() || I->mayHaveSideEffects()))
-    return false;
-
-  // Reordering across an instruction which does not necessarily transfer
-  // control to the next instruction is speculation.
-  if (ForceNoSpeculation && !isSafeToSpeculativelyExecute(I))
-    return false;
-
-  // It's also unsafe/illegal to hoist an instruction above its instruction
-  // operands
-  BasicBlock *BB = I->getParent();
-  for (Value *Op : I->operands()) {
-    if (auto *J = dyn_cast<Instruction>(Op))
-      if (J->getParent() == BB)
-        return false;
-  }
-
-  return true;
-}
-
 static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified = false);
 
 /// Given a conditional branch that goes to BB1 and BB2, hoist any common code
@@ -1476,8 +1444,7 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
   // instructions in the two blocks.  In particular, we don't want to get into
   // O(M*N) situations here where M and N are the sizes of BB1 and BB2.  As
   // such, we currently just scan for obviously identical instructions in an
-  // identical order, possibly separated by the same number of non-identical
-  // instructions.
+  // identical order.
   BasicBlock *BB1 = BI->getSuccessor(0); // The true destination.
   BasicBlock *BB2 = BI->getSuccessor(1); // The false destination
 
@@ -1500,7 +1467,7 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
     while (isa<DbgInfoIntrinsic>(I2))
       I2 = &*BB2_Itr++;
   }
-  if (isa<PHINode>(I1))
+  if (isa<PHINode>(I1) || !I1->isIdenticalToWhenDefined(I2))
     return false;
 
   BasicBlock *BIParent = BI->getParent();
@@ -1526,122 +1493,75 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
     // terminator. Let the loop below handle those 2 cases.
   }
 
-  // Count how many instructions were not hoisted so far. There's a limit on how
-  // many instructions we skip, serving as a compilation time control as well as
-  // preventing excessive increase of life ranges.
-  unsigned NumSkipped = 0;
-  
-  // Record if any non-hoisted instruction contains side-effects, as it could
-  // make it illegal to reorder some instructions across.
-  bool ForceNoReadMemOrSideEffectsBB1 = false;
-  bool ForceNoReadMemOrSideEffectsBB2 = false;
-
-  // Record if any non-hoisted instructions does not necessarily transfer
-  // control to the next instruction. Then we can hoist only instrucions which
-  // are safe to speculate.
-  bool ForceNoSpeculationBB1 = false;
-  bool ForceNoSpeculationBB2 = false;
-
-  for (;;) {
+  do {
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
-    if (I1->isTerminator() || I2->isTerminator()) {
-      // If any instructions remain in the block, we cannot hoist terminators.
-      if (NumSkipped || !I1->isIdenticalToWhenDefined(I2))
-        return Changed;
+    if (I1->isTerminator())
       goto HoistTerminator;
-    }
 
-    if (I1->isIdenticalToWhenDefined(I2)) {
-      // Hoisting token-returning instructions would obscure the origin.
-      if (I1->getType()->isTokenTy())
+    // If we're going to hoist a call, make sure that the two instructions we're
+    // commoning/hoisting are both marked with musttail, or neither of them is
+    // marked as such. Otherwise, we might end up in a situation where we hoist
+    // from a block where the terminator is a `ret` to a block where the terminator
+    // is a `br`, and `musttail` calls expect to be followed by a return.
+    auto *C1 = dyn_cast<CallInst>(I1);
+    auto *C2 = dyn_cast<CallInst>(I2);
+    if (C1 && C2)
+      if (C1->isMustTailCall() != C2->isMustTailCall())
         return Changed;
 
-      // Even if the instructions are identical, it may not be safe to hoist
-      // them if we have skipped over instructions with side effects or their
-      // operands weren't hoisted.
-      if (!isSafeToHoistInstr(I1, ForceNoReadMemOrSideEffectsBB1, ForceNoSpeculationBB1) ||
-          !isSafeToHoistInstr(I2, ForceNoReadMemOrSideEffectsBB2, ForceNoSpeculationBB2))
+    if (!TTI.isProfitableToHoist(I1) || !TTI.isProfitableToHoist(I2))
+      return Changed;
+
+    // If any of the two call sites has nomerge attribute, stop hoisting.
+    if (const auto *CB1 = dyn_cast<CallBase>(I1))
+      if (CB1->cannotMerge())
+        return Changed;
+    if (const auto *CB2 = dyn_cast<CallBase>(I2))
+      if (CB2->cannotMerge())
         return Changed;
 
-      // If we're going to hoist a call, make sure that the two instructions
-      // we're commoning/hoisting are both marked with musttail, or neither of
-      // them is marked as such. Otherwise, we might end up in a situation where
-      // we hoist from a block where the terminator is a `ret` to a block where
-      // the terminator is a `br`, and `musttail` calls expect to be followed by
-      // a return.
-      auto *C1 = dyn_cast<CallInst>(I1);
-      auto *C2 = dyn_cast<CallInst>(I2);
-      if (C1 && C2)
-        if (C1->isMustTailCall() != C2->isMustTailCall())
-          return Changed;
-
-      if (!TTI.isProfitableToHoist(I1) || !TTI.isProfitableToHoist(I2))
-        return Changed;
-
-      // If any of the two call sites has nomerge attribute, stop hoisting.
-      if (const auto *CB1 = dyn_cast<CallBase>(I1))
-        if (CB1->cannotMerge())
-          return Changed;
-      if (const auto *CB2 = dyn_cast<CallBase>(I2))
-        if (CB2->cannotMerge())
-          return Changed;
-
-      if (isa<DbgInfoIntrinsic>(I1) || isa<DbgInfoIntrinsic>(I2)) {
-        assert(isa<DbgInfoIntrinsic>(I1) && isa<DbgInfoIntrinsic>(I2));
-        // The debug location is an integral part of a debug info intrinsic
-        // and can't be separated from it or replaced.  Instead of attempting
-        // to merge locations, simply hoist both copies of the intrinsic.
-        BIParent->getInstList().splice(BI->getIterator(), BB1->getInstList(),
-                                       I1);
-        BIParent->getInstList().splice(BI->getIterator(), BB2->getInstList(),
-                                       I2);
-      } else {
-        // For a normal instruction, we just move one to right before the
-        // branch, then replace all uses of the other with the first.  Finally,
-        // we remove the now redundant second instruction.
-        BIParent->getInstList().splice(BI->getIterator(), BB1->getInstList(),
-                                       I1);
-        if (!I2->use_empty())
-          I2->replaceAllUsesWith(I1);
-        I1->andIRFlags(I2);
-        unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
-                               LLVMContext::MD_range,
-                               LLVMContext::MD_fpmath,
-                               LLVMContext::MD_invariant_load,
-                               LLVMContext::MD_nonnull,
-                               LLVMContext::MD_invariant_group,
-                               LLVMContext::MD_align,
-                               LLVMContext::MD_dereferenceable,
-                               LLVMContext::MD_dereferenceable_or_null,
-                               LLVMContext::MD_mem_parallel_loop_access,
-                               LLVMContext::MD_access_group,
-                               LLVMContext::MD_preserve_access_index};
-        combineMetadata(I1, I2, KnownIDs, true);
-
-        // I1 and I2 are being combined into a single instruction.  Its debug
-        // location is the merged locations of the original instructions.
-        I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
-
-        I2->eraseFromParent();
-      }
+    if (isa<DbgInfoIntrinsic>(I1) || isa<DbgInfoIntrinsic>(I2)) {
+      assert (isa<DbgInfoIntrinsic>(I1) && isa<DbgInfoIntrinsic>(I2));
+      // The debug location is an integral part of a debug info intrinsic
+      // and can't be separated from it or replaced.  Instead of attempting
+      // to merge locations, simply hoist both copies of the intrinsic.
+      BIParent->getInstList().splice(BI->getIterator(),
+                                     BB1->getInstList(), I1);
+      BIParent->getInstList().splice(BI->getIterator(),
+                                     BB2->getInstList(), I2);
       Changed = true;
-      ++NumHoistCommonInstrs;
     } else {
-      if (NumSkipped >= HoistCommonSkipLimit)
-        return Changed;
-      // We are about to skip over a pair of non-identical instructions. Record
-      // if any of them has side effects.
-      if (I1->mayHaveSideEffects())
-        ForceNoReadMemOrSideEffectsBB1 = true;
-      if (I2->mayHaveSideEffects())
-        ForceNoReadMemOrSideEffectsBB2 = true;
-      if (!isGuaranteedToTransferExecutionToSuccessor(I1))
-        ForceNoSpeculationBB1 = true;
-      if (!isGuaranteedToTransferExecutionToSuccessor(I2))
-        ForceNoSpeculationBB2 = true;
-      ++NumSkipped;
+      // For a normal instruction, we just move one to right before the branch,
+      // then replace all uses of the other with the first.  Finally, we remove
+      // the now redundant second instruction.
+      BIParent->getInstList().splice(BI->getIterator(),
+                                     BB1->getInstList(), I1);
+      if (!I2->use_empty())
+        I2->replaceAllUsesWith(I1);
+      I1->andIRFlags(I2);
+      unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
+                             LLVMContext::MD_range,
+                             LLVMContext::MD_fpmath,
+                             LLVMContext::MD_invariant_load,
+                             LLVMContext::MD_nonnull,
+                             LLVMContext::MD_invariant_group,
+                             LLVMContext::MD_align,
+                             LLVMContext::MD_dereferenceable,
+                             LLVMContext::MD_dereferenceable_or_null,
+                             LLVMContext::MD_mem_parallel_loop_access,
+                             LLVMContext::MD_access_group,
+                             LLVMContext::MD_preserve_access_index};
+      combineMetadata(I1, I2, KnownIDs, true);
+
+      // I1 and I2 are being combined into a single instruction.  Its debug
+      // location is the merged locations of the original instructions.
+      I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
+
+      I2->eraseFromParent();
+      Changed = true;
     }
+    ++NumHoistCommonInstrs;
 
     I1 = &*BB1_Itr++;
     I2 = &*BB2_Itr++;
@@ -1654,9 +1574,9 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
       while (isa<DbgInfoIntrinsic>(I2))
         I2 = &*BB2_Itr++;
     }
-  }
+  } while (I1->isIdenticalToWhenDefined(I2));
 
-  return Changed;
+  return true;
 
 HoistTerminator:
   // It may not be possible to hoist an invoke.
