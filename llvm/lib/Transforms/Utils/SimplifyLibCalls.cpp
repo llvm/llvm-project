@@ -773,40 +773,62 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
   return ConstantInt::get(CI->getType(), SrcLen);
 }
 
-// Optimize a call to strncpy.
-
-Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
+// Optimize a call CI to either stpncpy when RetEnd is true, or to strncpy
+// otherwise.
+Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
+                                             IRBuilderBase &B) {
   Function *Callee = CI->getCalledFunction();
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
-  annotateNonNullNoUndefBasedOnAccess(CI, 0);
-  if (isKnownNonZero(Size, DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, 1);
 
-  uint64_t Len;
-  if (ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size))
-    Len = LengthArg->getZExtValue();
+  if (isKnownNonZero(Size, DL)) {
+    // Both st{p,r}ncpy(D, S, N) access the source and destination arrays
+    // only when N is nonzero.
+    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+    annotateNonNullNoUndefBasedOnAccess(CI, 1);
+  }
+
+  // If the "bound" argument is known set N to it.  Otherwise set it to
+  // UINT64_MAX and handle it later.
+  uint64_t N = UINT64_MAX;
+  if (ConstantInt *SizeC = dyn_cast<ConstantInt>(Size))
+    N = SizeC->getZExtValue();
+
+  if (N == 0)
+    // Fold st{p,r}ncpy(D, S, 0) to D.
+    return Dst;
+
+  if (N == 1) {
+    Type *CharTy = B.getInt8Ty();
+    Value *CharVal = B.CreateLoad(CharTy, Src, "stxncpy.char0");
+    B.CreateStore(CharVal, Dst);
+    if (!RetEnd)
+      // Transform strncpy(D, S, 1) to return (*D = *S), D.
+      return Dst;
+
+    // Transform stpncpy(D, S, 1) to return (*D = *S) ? D + 1 : D.
+    Value *ZeroChar = ConstantInt::get(CharTy, 0);
+    Value *Cmp = B.CreateICmpEQ(CharVal, ZeroChar, "stpncpy.char0cmp");
+
+    Value *Off1 = B.getInt32(1);
+    Value *EndPtr = B.CreateInBoundsGEP(CharTy, Dst, Off1, "stpncpy.end");
+    return B.CreateSelect(Cmp, Dst, EndPtr, "stpncpy.sel");
+  }
+
+  // If the length of the input string is known set SrcLen to it.
+  uint64_t SrcLen = GetStringLength(Src);
+  if (SrcLen)
+    annotateDereferenceableBytes(CI, 1, SrcLen);
   else
     return nullptr;
 
-  // strncpy(x, y, 0) -> x
-  if (Len == 0)
-    return Dst;
-
-  // See if we can get the length of the input string.
-  uint64_t SrcLen = GetStringLength(Src);
-  if (SrcLen) {
-    annotateDereferenceableBytes(CI, 1, SrcLen);
-    --SrcLen; // Unbias length.
-  } else {
-    return nullptr;
-  }
+  --SrcLen; // Unbias length.
 
   if (SrcLen == 0) {
-    // strncpy(x, "", y) -> memset(x, '\0', y)
+    // Transform st{p,r}ncpy(D, "", N) to memset(D, '\0', N) for any N.
     Align MemSetAlign =
-        CI->getAttributes().getParamAttrs(0).getAlignment().valueOrOne();
+      CI->getAttributes().getParamAttrs(0).getAlignment().valueOrOne();
     CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, MemSetAlign);
     AttrBuilder ArgAttrs(CI->getContext(), CI->getAttributes().getParamAttrs(0));
     NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
@@ -815,28 +837,37 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
     return Dst;
   }
 
-  // strncpy(a, "a", 4) - > memcpy(a, "a\0\0\0", 4)
-  if (Len > SrcLen + 1) {
-    if (Len <= 128) {
-      StringRef Str;
-      if (!getConstantStringInfo(Src, Str))
-        return nullptr;
-      std::string SrcStr = Str.str();
-      SrcStr.resize(Len, '\0');
-      Src = B.CreateGlobalString(SrcStr, "str");
-    } else {
+  if (N > SrcLen + 1) {
+    if (N > 128)
+      // Bail if N is large or unknown.
       return nullptr;
-    }
+
+    // st{p,r}ncpy(D, "a", N) -> memcpy(D, "a\0\0\0", N) for N <= 128.
+    StringRef Str;
+    if (!getConstantStringInfo(Src, Str))
+      return nullptr;
+    std::string SrcStr = Str.str();
+    // Create a bigger, nul-padded array with the same length, SrcLen,
+    // as the original string.
+    SrcStr.resize(N, '\0');
+    Src = B.CreateGlobalString(SrcStr, "str");
   }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
-  // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
+  // st{p,r}ncpy(D, S, N) -> memcpy(align 1 D, align 1 S, N) when both
+  // S and N are constant.
   CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                                   ConstantInt::get(DL.getIntPtrType(PT), Len));
+                                   ConstantInt::get(DL.getIntPtrType(PT), N));
   NewCI->setAttributes(CI->getAttributes());
   NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(NewCI->getType()));
   copyFlags(*CI, NewCI);
-  return Dst;
+  if (!RetEnd)
+    return Dst;
+
+  // stpncpy(D, S, N) returns the address of the first null in D if it writes
+  // one, otherwise D + N.
+  Value *Off = B.getInt64(std::min(SrcLen, N));
+  return B.CreateInBoundsGEP(B.getInt8Ty(), Dst, Off, "endptr");
 }
 
 Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
@@ -3349,8 +3380,10 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeStpCpy(CI, Builder);
     case LibFunc_strlcpy:
       return optimizeStrLCpy(CI, Builder);
+    case LibFunc_stpncpy:
+      return optimizeStringNCpy(CI, /*RetEnd=*/true, Builder);
     case LibFunc_strncpy:
-      return optimizeStrNCpy(CI, Builder);
+      return optimizeStringNCpy(CI, /*RetEnd=*/false, Builder);
     case LibFunc_strlen:
       return optimizeStrLen(CI, Builder);
     case LibFunc_strnlen:

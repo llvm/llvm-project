@@ -107,8 +107,14 @@ define void @test_simplify6(i8* %dst) {
 
 define void @test_simplify7(i8* %dst, i32 %n) {
 ; CHECK-LABEL: @test_simplify7(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @strncpy(i8* noundef nonnull dereferenceable(80) [[DST:%.*]], i8* getelementptr inbounds ([1 x i8], [1 x i8]* @null, i32 0, i32 0), i32 [[N:%.*]])
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 dereferenceable(80) [[DST:%.*]], i8 0, i32 [[N:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
+;
+; Unless N is known to be nonzero, strncpy(D, "", N) need not access any
+; bytes in D.
+; TODO: The argument, already annotated dereferenceable, should be
+; annotated noundef and nonnull by the transformation.  See
+; https://reviews.llvm.org/D124633.
 ;
   %src = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
   call i8* @strncpy(i8* dereferenceable(80) %dst, i8* %src, i32 %n)
@@ -117,8 +123,14 @@ define void @test_simplify7(i8* %dst, i32 %n) {
 
 define i8* @test1(i8* %dst, i8* %src, i32 %n) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strncpy(i8* noundef nonnull [[DST:%.*]], i8* nonnull [[SRC:%.*]], i32 [[N:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strncpy(i8* nonnull [[DST:%.*]], i8* nonnull [[SRC:%.*]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
+;
+; Unless N is known to be nonzero, strncpy(D, S, N) need not access any
+; bytes in either D or S.  Verify that the call isn't annotated with
+; the dereferenceable attribute.
+; TODO: Both arguments should be annotated noundef in addition to nonnull.
+; See https://reviews.llvm.org/D124633.
 ;
   %ret = call i8* @strncpy(i8* nonnull %dst, i8* nonnull %src, i32 %n)
   ret i8* %ret
@@ -182,8 +194,8 @@ define void @test_no_simplify2() {
 
 define i8* @test_no_simplify3(i8* %dst, i8* %src, i32 %count) {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 32)
-; CHECK-NEXT:    ret i8* %ret
+; CHECK-NEXT:    [[RET:%.*]] = musttail call i8* @strncpy(i8* [[DST:%.*]], i8* [[SRC:%.*]], i32 32)
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 32)
   ret i8* %ret
@@ -191,8 +203,8 @@ define i8* @test_no_simplify3(i8* %dst, i8* %src, i32 %count) {
 
 define i8* @test_no_simplify4(i8* %dst, i8* %src, i32 %count) {
 ; CHECK-LABEL: @test_no_simplify4(
-; CHECK-NEXT:    %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 6)
-; CHECK-NEXT:    ret i8* %ret
+; CHECK-NEXT:    [[RET:%.*]] = musttail call i8* @strncpy(i8* [[DST:%.*]], i8* [[SRC:%.*]], i32 6)
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 6)
   ret i8* %ret
