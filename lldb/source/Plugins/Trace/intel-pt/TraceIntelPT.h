@@ -71,7 +71,7 @@ public:
 
   llvm::StringRef GetSchema() override;
 
-  llvm::Expected<lldb::TraceCursorUP> CreateNewCursor(Thread &thread) override;
+  llvm::Expected<lldb::TraceCursorSP> CreateNewCursor(Thread &thread) override;
 
   void DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
                      bool json) override;
