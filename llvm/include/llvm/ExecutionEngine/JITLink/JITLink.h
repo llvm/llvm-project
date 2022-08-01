@@ -303,7 +303,8 @@ public:
   /// Add an edge to this block.
   void addEdge(Edge::Kind K, Edge::OffsetT Offset, Symbol &Target,
                Edge::AddendT Addend) {
-    assert(!isZeroFill() && "Adding edge to zero-fill block?");
+    assert((K == Edge::KeepAlive || !isZeroFill()) &&
+           "Adding edge to zero-fill block?");
     Edges.push_back(Edge(K, Offset, Target, Addend));
   }
 
