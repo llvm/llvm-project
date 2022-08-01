@@ -12,7 +12,7 @@ RUN: FileCheck %s --check-prefix=ERR --input-file=%t.err --match-full-lines
 CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "a.o"; BuildID=abcdef [0x0-0x4](r),[0x10-0x11](r)[[END:\]{3}]]
 CHECK: long long byte
 CHECK: long byte
-CHECK: [[BEGIN]]data:0x05[[END]]
+CHECK: [[BEGIN]]data:0x5[[END]]
 
 ERR: error: expected 1 field(s); found 0
 ERR: error: no mmap covers address

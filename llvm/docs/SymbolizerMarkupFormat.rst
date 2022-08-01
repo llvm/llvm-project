@@ -184,7 +184,7 @@ human-readable symbolic form.
     {{{symbol:_ZN7Mangled4NameEv}}}
     {{{symbol:foobar}}}
 
-``{{{pc:%p}}}``, ``{{{pc:%p:ra}}}``, ``{{{pc:%p:pc}}}`` [#not_yet_implemented]_
+``{{{pc:%p}}}``, ``{{{pc:%p:ra}}}``, ``{{{pc:%p:pc}}}``
 
   Here ``%p`` is the memory address of a code location. It might be presented as a
   function name and source location. The second two forms distinguish the kind of
