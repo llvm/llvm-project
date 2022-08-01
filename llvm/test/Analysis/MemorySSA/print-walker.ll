@@ -5,17 +5,17 @@
 ; CHECK: store i8 42, i8* %a1
 ; CHECK: 2 = MemoryDef(1)->liveOnEntry - clobbered by liveOnEntry
 ; CHECK: store i8 42, i8* %a2
-; CHECK: MemoryUse(1) MustAlias - clobbered by 1 = MemoryDef(liveOnEntry)->liveOnEntry
+; CHECK: MemoryUse(1) - clobbered by 1 = MemoryDef(liveOnEntry)->liveOnEntry
 ; CHECK: %l1 = load i8, i8* %a1
-; CHECK: MemoryUse(2) MustAlias - clobbered by 2 = MemoryDef(1)->liveOnEntry
+; CHECK: MemoryUse(2) - clobbered by 2 = MemoryDef(1)->liveOnEntry
 ; CHECK: %l2 = load i8, i8* %a2
 ; CHECK: 3 = MemoryDef(2)->liveOnEntry - clobbered by liveOnEntry
 ; CHECK: store i8 42, i8* %p
-; CHECK: 4 = MemoryDef(3)->3 MustAlias - clobbered by 3 = MemoryDef(2)->liveOnEntry
+; CHECK: 4 = MemoryDef(3)->3 - clobbered by 3 = MemoryDef(2)->liveOnEntry
 ; CHECK: store i8 42, i8* %p
-; CHECK: MemoryUse(4) MustAlias - clobbered by 4 = MemoryDef(3)->3 MustAlias
+; CHECK: MemoryUse(4) - clobbered by 4 = MemoryDef(3)->3
 ; CHECK: %p1 = load i8, i8* %p
-; CHECK: MemoryUse(4) MustAlias - clobbered by 4 = MemoryDef(3)->3 MustAlias
+; CHECK: MemoryUse(4) - clobbered by 4 = MemoryDef(3)->3
 ; CHECK: %p2 = load i8, i8* %p
 
 define void @test(i8* %p) {

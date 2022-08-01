@@ -272,12 +272,6 @@ public:
   /// Sets the optimized use for a MemoryDef.
   inline void setOptimized(MemoryAccess *);
 
-  // Retrieve AliasResult type of the optimized access. Ideally this would be
-  // returned by the caching walker and may go away in the future.
-  Optional<AliasResult> getOptimizedAccessType() const {
-    return isOptimized() ? OptimizedAccessAlias : None;
-  }
-
   /// Reset the ID of what this MemoryUse was optimized to, causing it to
   /// be rewalked by the walker if necessary.
   /// This really should only be called by tests.
@@ -291,31 +285,23 @@ protected:
                  DeleteValueTy DeleteValue, Instruction *MI, BasicBlock *BB,
                  unsigned NumOperands)
       : MemoryAccess(C, Vty, DeleteValue, BB, NumOperands),
-        MemoryInstruction(MI), OptimizedAccessAlias(AliasResult::MayAlias) {
+        MemoryInstruction(MI) {
     setDefiningAccess(DMA);
   }
 
   // Use deleteValue() to delete a generic MemoryUseOrDef.
   ~MemoryUseOrDef() = default;
 
-  void setOptimizedAccessType(Optional<AliasResult> AR) {
-    OptimizedAccessAlias = AR;
-  }
-
-  void setDefiningAccess(
-      MemoryAccess *DMA, bool Optimized = false,
-      Optional<AliasResult> AR = AliasResult(AliasResult::MayAlias)) {
+  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
     if (!Optimized) {
       setOperand(0, DMA);
       return;
     }
     setOptimized(DMA);
-    setOptimizedAccessType(AR);
   }
 
 private:
   Instruction *MemoryInstruction;
-  Optional<AliasResult> OptimizedAccessAlias;
 };
 
 /// Represents read-only accesses to memory
