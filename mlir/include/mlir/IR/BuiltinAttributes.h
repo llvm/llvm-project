@@ -17,8 +17,12 @@
 
 namespace mlir {
 class AffineMap;
+class AsmResourceBlob;
 class BoolAttr;
+class BuiltinDialect;
 class DenseIntElementsAttr;
+template <typename T>
+struct DialectResourceBlobHandle;
 class FlatSymbolRefAttr;
 class FunctionType;
 class IntegerSet;
@@ -729,6 +733,13 @@ public:
     return denseAttr && denseAttr.isSplat();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// DenseResourceElementsAttr
+//===----------------------------------------------------------------------===//
+
+using DenseResourceElementsHandle = DialectResourceBlobHandle<BuiltinDialect>;
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -743,6 +754,9 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+//===----------------------------------------------------------------------===//
+// DenseArrayAttr
+
 namespace detail {
 /// Base class for DenseArrayAttr that is instantiated and specialized for each
 /// supported element type below.
@@ -794,6 +808,71 @@ using DenseI32ArrayAttr = detail::DenseArrayAttr<int32_t>;
 using DenseI64ArrayAttr = detail::DenseArrayAttr<int64_t>;
 using DenseF32ArrayAttr = detail::DenseArrayAttr<float>;
 using DenseF64ArrayAttr = detail::DenseArrayAttr<double>;
+
+//===----------------------------------------------------------------------===//
+// DenseResourceElementsAttr
+
+namespace detail {
+/// Base class for DenseResourceElementsAttr that is instantiated and
+/// specialized for each supported element type below.
+template <typename T>
+class DenseResourceElementsAttrBase : public DenseResourceElementsAttr {
+public:
+  using DenseResourceElementsAttr::DenseResourceElementsAttr;
+
+  /// A builder that inserts a new resource using the provided blob. The handle
+  /// of the inserted blob is used when building the attribute. The provided
+  /// `blobName` is used as a hint for the key of the new handle for the `blob`
+  /// resource, but may be changed if necessary to ensure uniqueness during
+  /// insertion.
+  static DenseResourceElementsAttrBase<T>
+  get(ShapedType type, StringRef blobName, AsmResourceBlob blob);
+
+  /// Return the data of this attribute as an ArrayRef<T> if it is present,
+  /// returns None otherwise.
+  Optional<ArrayRef<T>> tryGetAsArrayRef() const;
+
+  /// Support for isa<>/cast<>.
+  static bool classof(Attribute attr);
+};
+
+extern template class DenseResourceElementsAttrBase<bool>;
+extern template class DenseResourceElementsAttrBase<int8_t>;
+extern template class DenseResourceElementsAttrBase<int16_t>;
+extern template class DenseResourceElementsAttrBase<int32_t>;
+extern template class DenseResourceElementsAttrBase<int64_t>;
+extern template class DenseResourceElementsAttrBase<uint8_t>;
+extern template class DenseResourceElementsAttrBase<uint16_t>;
+extern template class DenseResourceElementsAttrBase<uint32_t>;
+extern template class DenseResourceElementsAttrBase<uint64_t>;
+extern template class DenseResourceElementsAttrBase<float>;
+extern template class DenseResourceElementsAttrBase<double>;
+} // namespace detail
+
+// Public names for all the supported DenseResourceElementsAttr.
+
+using DenseBoolResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<bool>;
+using DenseI8ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<int8_t>;
+using DenseI16ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<int16_t>;
+using DenseI32ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<int32_t>;
+using DenseI64ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<int64_t>;
+using DenseUI8ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<uint8_t>;
+using DenseUI16ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<uint16_t>;
+using DenseUI32ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<uint32_t>;
+using DenseUI64ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<uint64_t>;
+using DenseF32ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<float>;
+using DenseF64ResourceElementsAttr =
+    detail::DenseResourceElementsAttrBase<double>;
 
 //===----------------------------------------------------------------------===//
 // BoolAttr

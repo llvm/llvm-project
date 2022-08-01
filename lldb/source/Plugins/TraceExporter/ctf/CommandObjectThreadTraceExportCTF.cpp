@@ -81,7 +81,7 @@ bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
     return false;
   } else {
     auto do_work = [&]() -> Error {
-      Expected<TraceCursorUP> cursor = trace_sp->CreateNewCursor(*thread);
+      Expected<TraceCursorSP> cursor = trace_sp->CreateNewCursor(*thread);
       if (!cursor)
         return cursor.takeError();
       TraceHTR htr(*thread, **cursor);

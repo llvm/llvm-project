@@ -667,6 +667,14 @@ a crash. These files should be attached to a bug report to ease
 reproducibility of the failure. Below are the command line options to
 control the crash diagnostics.
 
+.. option:: -fcrash-diagnostics=<val>
+
+  Valid values are:
+
+  * ``off`` (Disable auto-generation of preprocessed source files during a clang crash.)
+  * ``compiler`` (Generate diagnostics for compiler crashes (default))
+  * ``all`` (Generate diagnostics for all tools which support it)
+
 .. option:: -fno-crash-diagnostics
 
   Disable auto-generation of preprocessed source files during a clang crash.

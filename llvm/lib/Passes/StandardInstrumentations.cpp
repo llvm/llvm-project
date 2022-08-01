@@ -69,11 +69,6 @@ static cl::opt<bool>
                        cl::desc("Print before passes that change them"),
                        cl::init(false), cl::Hidden);
 
-// An option for specifying the diff used by print-changed=[diff | diff-quiet]
-static cl::opt<std::string>
-    DiffBinary("print-changed-diff-path", cl::Hidden, cl::init("diff"),
-               cl::desc("system diff used by change reporters"));
-
 // An option for specifying the dot used by
 // print-changed=[dot-cfg | dot-cfg-quiet]
 static cl::opt<std::string>
@@ -115,73 +110,6 @@ static cl::opt<bool>
                  cl::init(false), cl::Hidden);
 
 namespace {
-
-// Perform a system based diff between \p Before and \p After, using
-// \p OldLineFormat, \p NewLineFormat, and \p UnchangedLineFormat
-// to control the formatting of the output.  Return an error message
-// for any failures instead of the diff.
-std::string doSystemDiff(StringRef Before, StringRef After,
-                         StringRef OldLineFormat, StringRef NewLineFormat,
-                         StringRef UnchangedLineFormat) {
-  StringRef SR[2]{Before, After};
-  // Store the 2 bodies into temporary files and call diff on them
-  // to get the body of the node.
-  const unsigned NumFiles = 3;
-  static std::string FileName[NumFiles];
-  static int FD[NumFiles]{-1, -1, -1};
-  for (unsigned I = 0; I < NumFiles; ++I) {
-    if (FD[I] == -1) {
-      SmallVector<char, 200> SV;
-      std::error_code EC =
-          sys::fs::createTemporaryFile("tmpdiff", "txt", FD[I], SV);
-      if (EC)
-        return "Unable to create temporary file.";
-      FileName[I] = Twine(SV).str();
-    }
-    // The third file is used as the result of the diff.
-    if (I == NumFiles - 1)
-      break;
-
-    std::error_code EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
-    if (EC)
-      return "Unable to open temporary file for writing.";
-
-    raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
-    if (FD[I] == -1)
-      return "Error opening file for writing.";
-    OutStream << SR[I];
-  }
-
-  static ErrorOr<std::string> DiffExe = sys::findProgramByName(DiffBinary);
-  if (!DiffExe)
-    return "Unable to find diff executable.";
-
-  SmallString<128> OLF = formatv("--old-line-format={0}", OldLineFormat);
-  SmallString<128> NLF = formatv("--new-line-format={0}", NewLineFormat);
-  SmallString<128> ULF =
-      formatv("--unchanged-line-format={0}", UnchangedLineFormat);
-
-  StringRef Args[] = {DiffBinary, "-w", "-d",        OLF,
-                      NLF,        ULF,  FileName[0], FileName[1]};
-  Optional<StringRef> Redirects[] = {None, StringRef(FileName[2]), None};
-  int Result = sys::ExecuteAndWait(*DiffExe, Args, None, Redirects);
-  if (Result < 0)
-    return "Error executing system diff.";
-  std::string Diff;
-  auto B = MemoryBuffer::getFile(FileName[2]);
-  if (B && *B)
-    Diff = (*B)->getBuffer().str();
-  else
-    return "Unable to read result.";
-
-  // Clean up.
-  for (const std::string &I : FileName) {
-    std::error_code EC = sys::fs::remove(I);
-    if (EC)
-      return "Unable to remove temporary file.";
-  }
-  return Diff;
-}
 
 /// Extract Module out of \p IR unit. May return nullptr if \p IR does not match
 /// certain global filters. Will never return nullptr if \p Force is true.

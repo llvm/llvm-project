@@ -519,3 +519,23 @@ func.func @duplicate_dictionary_attr_key() {
 "J// -----
 
 "       // expected-error {{expected}}
+
+// -----
+
+// expected-error@+1 {{expected '<' after 'dense_resource'}}
+#attr = dense_resource>
+
+// -----
+
+// expected-error@+1 {{expected '>'}}
+#attr = dense_resource<resource
+
+// -----
+
+// expected-error@+1 {{expected ':'}}
+#attr = dense_resource<resource>
+
+// -----
+
+// expected-error@+1 {{`dense_resource` expected a shaped type}}
+#attr = dense_resource<resource> : i32
