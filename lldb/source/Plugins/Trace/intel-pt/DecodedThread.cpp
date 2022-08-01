@@ -151,12 +151,9 @@ void DecodedThread::NotifyCPU(lldb::cpu_id_t cpu_id) {
   }
 }
 
-Optional<lldb::cpu_id_t>
-DecodedThread::GetCPUByIndex(uint64_t item_index) const {
+lldb::cpu_id_t DecodedThread::GetCPUByIndex(uint64_t item_index) const {
   auto it = m_cpus.upper_bound(item_index);
-  if (it == m_cpus.begin())
-    return None;
-  return prev(it)->second;
+  return it == m_cpus.begin() ? LLDB_INVALID_CPU_ID : prev(it)->second;
 }
 
 Optional<DecodedThread::TSCRange>

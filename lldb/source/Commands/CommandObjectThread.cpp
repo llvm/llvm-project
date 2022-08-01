@@ -2295,7 +2295,7 @@ protected:
       // We need to stop processing data when we already ran out of instructions
       // in a previous command. We can fake this by setting the cursor past the
       // end of the trace.
-      cursor_sp->Seek(1, TraceCursor::SeekType::End);
+      cursor_sp->Seek(1, lldb::eTraceCursorSeekTypeEnd);
     }
 
     TraceDumper dumper(std::move(cursor_sp),
