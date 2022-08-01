@@ -5,7 +5,7 @@ cert-err33-c
 
 Warns on unused function return values. Many of the standard library functions
 return a value that indicates if the call was successful. Ignoring the returned
-value can cause unexpected behavior if an error has occured. The following
+value can cause unexpected behavior if an error has occurred. The following
 functions are checked:
 
 * aligned_alloc()

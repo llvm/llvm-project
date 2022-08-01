@@ -47,7 +47,7 @@ A good example from the CERT description when a ``char`` variable is used to
 read from a file that might contain non-ASCII characters. The problem comes
 up when the code uses the ``-1`` integer value as EOF, while the 255 character
 code is also stored as ``-1`` in two's complement form of char type.
-See a simple example of this bellow. This code stops not only when it reaches
+See a simple example of this below. This code stops not only when it reaches
 the end of the file, but also when it gets a character with the 255 code.
 
 .. code-block:: c++
