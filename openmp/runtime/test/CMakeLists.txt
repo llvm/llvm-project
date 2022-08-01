@@ -31,6 +31,7 @@ pythonize_bool(LIBOMP_HAVE_LIBM)
 pythonize_bool(LIBOMP_HAVE_LIBATOMIC)
 pythonize_bool(OPENMP_STANDALONE_BUILD)
 pythonize_bool(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS)
+pythonize_bool(OPENMP_TEST_COMPILER_HAS_OMP_H)
 
 add_library(ompt-print-callback INTERFACE)
 target_include_directories(ompt-print-callback INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/ompt)

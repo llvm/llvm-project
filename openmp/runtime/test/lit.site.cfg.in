@@ -3,6 +3,7 @@
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
 config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
+config.test_compiler_has_omp_h = @OPENMP_TEST_COMPILER_HAS_OMP_H@
 config.test_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
 config.test_not = "@OPENMP_NOT_EXECUTABLE@"
 config.test_openmp_flags = "@OPENMP_TEST_OPENMP_FLAGS@"
