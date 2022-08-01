@@ -39002,12 +39002,31 @@ static SDValue combineX86ShufflesRecursively(
   assert((RootSizeInBits % VT.getSizeInBits()) == 0 &&
          "Can only combine shuffles upto size of the root op.");
 
+  // Create a demanded elts mask from the referenced elements of Op.
+  APInt OpDemandedElts = APInt::getZero(RootMask.size());
+  for (int M : RootMask) {
+    int BaseIdx = RootMask.size() * SrcOpIndex;
+    if (isInRange(M, BaseIdx, BaseIdx + RootMask.size()))
+      OpDemandedElts.setBit(M - BaseIdx);
+  }
+  if (RootSizeInBits != VT.getSizeInBits()) {
+    // Op is smaller than Root - extract the demanded elts for the subvector.
+    unsigned Scale = RootSizeInBits / VT.getSizeInBits();
+    unsigned NumOpMaskElts = RootMask.size() / Scale;
+    assert((RootMask.size() % Scale) == 0 && "Root mask size mismatch");
+    assert(OpDemandedElts
+               .extractBits(RootMask.size() - NumOpMaskElts, NumOpMaskElts)
+               .isZero() &&
+           "Out of range elements referenced in root mask");
+    OpDemandedElts = OpDemandedElts.extractBits(NumOpMaskElts, 0);
+  }
+  OpDemandedElts =
+      APIntOps::ScaleBitMask(OpDemandedElts, VT.getVectorNumElements());
+
   // Extract target shuffle mask and resolve sentinels and inputs.
-  // TODO - determine Op's demanded elts from RootMask.
   SmallVector<int, 64> OpMask;
   SmallVector<SDValue, 2> OpInputs;
   APInt OpUndef, OpZero;
-  APInt OpDemandedElts = APInt::getAllOnes(VT.getVectorNumElements());
   bool IsOpVariableMask = isTargetShuffleVariableMask(Op.getOpcode());
   if (getTargetShuffleInputs(Op, OpDemandedElts, OpInputs, OpMask, OpUndef,
                              OpZero, DAG, Depth, false)) {
