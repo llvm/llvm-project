@@ -7,21 +7,21 @@
 # CHECK:        Augmentation:
 # CHECK-SAME:                "zR"
 
-# CHECK:      00000018 00000014 0000001c FDE cie=00000000 {{.*}}
+# CHECK:      00000018 00000010 0000001c FDE cie=00000000 {{.*}}
 
-# CHECK:      00000030 0000001c 00000000 CIE
+# CHECK:      0000002c 00000018 00000000 CIE
 # CHECK:        Augmentation:
 # CHECK-SAME:                "zPR"
 # CHECK:        Personality Address:
 
-# CHECK:      00000050 00000014 00000024 FDE cie=00000030 {{.*}}
+# CHECK:      00000048 00000010 00000020 FDE cie=0000002c {{.*}}
 
-# CHECK:      00000068 0000001c 00000000 CIE
+# CHECK:      0000005c 00000018 00000000 CIE
 # CHECK:        Augmentation:
 # CHECK-SAME:                "zPR"
 # CHECK:        Personality Address:
 
-# CHECK:      00000088 00000014 00000024 FDE cie=00000068 {{.*}}
+# CHECK:      00000078 00000014 00000020 FDE cie=0000005c {{.*}}
 
 foo0:
 .cfi_startproc
