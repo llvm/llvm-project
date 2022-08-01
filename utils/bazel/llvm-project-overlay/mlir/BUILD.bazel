@@ -1191,6 +1191,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -4388,6 +4389,7 @@ td_library(
     srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
@@ -8086,6 +8088,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -8261,6 +8264,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
         ":InferIntRangeInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
@@ -8710,6 +8714,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
