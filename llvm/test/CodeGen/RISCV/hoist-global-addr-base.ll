@@ -335,10 +335,9 @@ define void @self_store() {
 define void @store_addi_addi() {
 ; CHECK-LABEL: store_addi_addi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(bar+2047)
-; CHECK-NEXT:    addi a0, a0, %lo(bar+2047)
+; CHECK-NEXT:    lui a0, %hi(bar+3211)
 ; CHECK-NEXT:    li a1, 10
-; CHECK-NEXT:    sb a1, 1164(a0)
+; CHECK-NEXT:    sb a1, %lo(bar+3211)(a0)
 ; CHECK-NEXT:    ret
   store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
   ret void
@@ -347,10 +346,9 @@ define void @store_addi_addi() {
 define void @store_addi_addi_neg() {
 ; CHECK-LABEL: store_addi_addi_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(bar-2048)
-; CHECK-NEXT:    addi a0, a0, %lo(bar-2048)
+; CHECK-NEXT:    lui a0, %hi(bar-4000)
 ; CHECK-NEXT:    li a1, 10
-; CHECK-NEXT:    sb a1, -1952(a0)
+; CHECK-NEXT:    sb a1, %lo(bar-4000)(a0)
 ; CHECK-NEXT:    ret
   store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -4000)
   ret void
@@ -360,10 +358,9 @@ define void @store_addi_addi_neg() {
 define void @store_sh2add() {
 ; CHECK-LABEL: store_sh2add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(bar+8192)
-; CHECK-NEXT:    addi a0, a0, %lo(bar+8192)
+; CHECK-NEXT:    lui a0, %hi(bar+6424)
 ; CHECK-NEXT:    li a1, 10
-; CHECK-NEXT:    sb a1, -1768(a0)
+; CHECK-NEXT:    sb a1, %lo(bar+6424)(a0)
 ; CHECK-NEXT:    ret
   store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 6424)
   ret void
@@ -373,12 +370,35 @@ define void @store_sh2add() {
 define void @store_sh3add() {
 ; CHECK-LABEL: store_sh3add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(bar+12288)
-; CHECK-NEXT:    addi a0, a0, %lo(bar+12288)
+; CHECK-NEXT:    lui a0, %hi(bar+12848)
 ; CHECK-NEXT:    li a1, 10
-; CHECK-NEXT:    sb a1, 560(a0)
+; CHECK-NEXT:    sb a1, %lo(bar+12848)(a0)
 ; CHECK-NEXT:    ret
   store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 12848)
+  ret void
+}
+
+define dso_local void @rmw_addi_addi() nounwind {
+; CHECK-LABEL: rmw_addi_addi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %hi(bar+3211)
+; CHECK-NEXT:    lb a1, %lo(bar+3211)(a0)
+; CHECK-NEXT:    blez a1, .LBB23_2
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    sb a1, %lo(bar+3211)(a0)
+; CHECK-NEXT:  .LBB23_2: # %if.end
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+  %cmp = icmp sgt i8 %0, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
