@@ -73,5 +73,5 @@ COFFDirectiveParser::parse(StringRef Str) {
       dbgs() << "Unknown coff option argument: " << arg->getAsString(*Result)
              << "\n";
   });
-  return Result;
+  return std::move(Result);
 }
