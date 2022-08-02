@@ -46,6 +46,8 @@ void DXILAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Skip the LLVM metadata
   if (GV->getSection() == "llvm.metadata")
     return;
+  if (!GV->hasSection())
+    return;
   SectionKind GVKind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
   MCSection *TheSection = getObjFileLowering().SectionForGlobal(GV, GVKind, TM);
   OutStreamer->switchSection(TheSection);
