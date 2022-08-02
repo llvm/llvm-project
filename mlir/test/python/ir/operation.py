@@ -580,7 +580,7 @@ def testOperationPrint():
   module.operation.print(enable_debug_info=True, use_local_scope=True)
 
   # Test get_asm with options.
-  # CHECK: value = opaque<"elided_large_const", "0xDEADBEEF"> : tensor<4xi32>
+  # CHECK: value = dense_resource<__elided__> : tensor<4xi32>
   # CHECK: "func.return"(%arg0) : (i32) -> () -:4:7
   module.operation.print(
       large_elements_limit=2,

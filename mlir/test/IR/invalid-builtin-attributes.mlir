@@ -84,24 +84,6 @@ func.func @elementsattr_toolarge2() -> () {
 
 // -----
 
-func.func @elementsattr_malformed_opaque() -> () {
-  "foo"(){bar = opaque<10, "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected dialect namespace}}
-}
-
-// -----
-
-func.func @elementsattr_malformed_opaque1() -> () {
-  "foo"(){bar = opaque<"_", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
-}
-
-// -----
-
-func.func @elementsattr_malformed_opaque2() -> () {
-  "foo"(){bar = opaque<"_", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
-}
-
-// -----
-
 func.func @mi() {
   // expected-error @+1 {{expected element literal of primitive type}}
   "fooi64"(){bar = sparse<vector<1xi64>,[,[,1]
