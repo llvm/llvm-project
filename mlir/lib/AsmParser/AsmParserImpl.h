@@ -460,7 +460,7 @@ public:
   /// Parse a handle to a resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(Dialect *dialect) override {
-    const auto *interface = dyn_cast_or_null<OpAsmDialectInterface>(dialect);
+    const auto *interface = dyn_cast<OpAsmDialectInterface>(dialect);
     if (!interface) {
       return parser.emitError() << "dialect '" << dialect->getNamespace()
                                 << "' does not expect resource handles";

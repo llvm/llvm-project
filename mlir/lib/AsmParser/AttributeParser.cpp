@@ -15,9 +15,10 @@
 #include "AsmParserImpl.h"
 #include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
@@ -96,6 +97,10 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse a dense elements attribute.
   case Token::kw_dense:
     return parseDenseElementsAttr(type);
+
+  // Parse a dense resource elements attribute.
+  case Token::kw_dense_resource:
+    return parseDenseResourceElementsAttr(type);
 
   // Parse a dictionary attribute.
   case Token::l_brace: {
@@ -241,6 +246,7 @@ OptionalParseResult Parser::parseOptionalAttribute(Attribute &attribute,
   case Token::kw_affine_map:
   case Token::kw_affine_set:
   case Token::kw_dense:
+  case Token::kw_dense_resource:
   case Token::kw_false:
   case Token::kw_loc:
   case Token::kw_opaque:
@@ -926,6 +932,39 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
   if (!type)
     return nullptr;
   return literalParser.getAttr(loc, type);
+}
+
+Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
+  auto loc = getToken().getLoc();
+  consumeToken(Token::kw_dense_resource);
+  if (parseToken(Token::less, "expected '<' after 'dense_resource'"))
+    return nullptr;
+
+  // Parse the resource handle.
+  FailureOr<AsmDialectResourceHandle> rawHandle =
+      parseResourceHandle(getContext()->getLoadedDialect<BuiltinDialect>());
+  if (failed(rawHandle) || parseToken(Token::greater, "expected '>'"))
+    return nullptr;
+
+  auto *handle = dyn_cast<DenseResourceElementsHandle>(&*rawHandle);
+  if (!handle)
+    return emitError(loc, "invalid `dense_resource` handle type"), nullptr;
+
+  // Parse the type of the attribute if the user didn't provide one.
+  SMLoc typeLoc = loc;
+  if (!attrType) {
+    typeLoc = getToken().getLoc();
+    if (parseToken(Token::colon, "expected ':'") || !(attrType = parseType()))
+      return nullptr;
+  }
+
+  ShapedType shapedType = attrType.dyn_cast<ShapedType>();
+  if (!shapedType) {
+    emitError(typeLoc, "`dense_resource` expected a shaped type");
+    return nullptr;
+  }
+
+  return DenseResourceElementsAttr::get(shapedType, *handle);
 }
 
 /// Parse an opaque elements attribute.
