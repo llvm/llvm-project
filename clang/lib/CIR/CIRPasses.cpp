@@ -17,13 +17,15 @@
 #include "mlir/Pass/PassManager.h"
 
 namespace cir {
-void runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx) {
+void runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
+                       bool enableVerifier) {
   mlir::PassManager pm(mlirCtx);
   pm.addPass(mlir::createMergeCleanupsPass());
+  pm.enableVerifier(enableVerifier);
 
   auto result = !mlir::failed(pm.run(theModule));
   if (!result)
     llvm::report_fatal_error(
-        "The pass manager failed to lower CIR to llvm IR!");
+        "CIR codegen: MLIR pass manager fails when running CIR passes!");
 }
 } // namespace cir

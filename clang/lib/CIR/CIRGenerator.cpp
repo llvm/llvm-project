@@ -48,7 +48,7 @@ void CIRGenerator::Initialize(ASTContext &astCtx) {
                                        Diags);
 }
 
-void CIRGenerator::verifyModule() { CGM->verifyModule(); }
+bool CIRGenerator::verifyModule() { return CGM->verifyModule(); }
 
 bool CIRGenerator::EmitFunction(const FunctionDecl *FD) {
   llvm_unreachable("NYI");
