@@ -6032,6 +6032,9 @@ def fallow_pch_with_different_modules_cache_path :
   Flag<["-"], "fallow-pch-with-different-modules-cache-path">,
   HelpText<"Accept a PCH file that was created with a different modules cache path">,
   MarshallingInfoFlag<PreprocessorOpts<"AllowPCHWithDifferentModulesCachePath">>;
+def fno_modules_share_filemanager : Flag<["-"], "fno-modules-share-filemanager">,
+  HelpText<"Disable sharing the FileManager when building a module implicitly">,
+  MarshallingInfoNegativeFlag<FrontendOpts<"ModulesShareFileManager">>;
 def dump_deserialized_pch_decls : Flag<["-"], "dump-deserialized-decls">,
   HelpText<"Dump declarations that are deserialized from PCH, for testing">,
   MarshallingInfoFlag<PreprocessorOpts<"DumpDeserializedPCHDecls">>;
