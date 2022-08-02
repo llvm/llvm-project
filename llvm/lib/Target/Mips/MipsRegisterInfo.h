@@ -69,6 +69,8 @@ public:
   /// Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
 
+  bool isConstantPhysReg(MCRegister PhysReg) const override;
+
   /// Return GPR register class.
   virtual const TargetRegisterClass *intRegClass(unsigned Size) const = 0;
 
