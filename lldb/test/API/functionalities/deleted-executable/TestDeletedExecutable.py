@@ -14,9 +14,6 @@ class TestDeletedExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows # cannot delete a running executable
-    @expectedFailureAll(oslist=["linux"],
-        triple=no_match('aarch64-.*-android'))
-        # determining the architecture of the process fails
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
