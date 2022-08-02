@@ -29,10 +29,10 @@ namespace {
 class DependencyConsumerForwarder : public DependencyFileGenerator {
 public:
   DependencyConsumerForwarder(std::unique_ptr<DependencyOutputOptions> Opts,
-                              DependencyConsumer &C,
+                              StringRef WorkingDirectory, DependencyConsumer &C,
                               bool EmitDependencyFile)
-      : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C),
-        EmitDependencyFile(EmitDependencyFile) {}
+      : DependencyFileGenerator(*Opts), WorkingDirectory(WorkingDirectory),
+        Opts(std::move(Opts)), C(C), EmitDependencyFile(EmitDependencyFile) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
     C.handleDependencyOutputOpts(*Opts);
@@ -40,6 +40,7 @@ public:
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
+      llvm::sys::fs::make_absolute(WorkingDirectory, CanonPath);
       C.handleFileDependency(CanonPath);
     }
     if (EmitDependencyFile)
@@ -47,6 +48,7 @@ public:
   }
 
 private:
+  StringRef WorkingDirectory;
   std::unique_ptr<DependencyOutputOptions> Opts;
   DependencyConsumer &C;
   bool EmitDependencyFile = false;
@@ -250,9 +252,8 @@ public:
     case ScanningOutputFormat::Make:
     case ScanningOutputFormat::Tree:
       ScanInstance.addDependencyCollector(
-          std::make_shared<DependencyConsumerForwarder>(std::move(Opts),
-                                                        Consumer,
-                                                        EmitDependencyFile));
+          std::make_shared<DependencyConsumerForwarder>(
+              std::move(Opts), WorkingDirectory, Consumer, EmitDependencyFile));
       break;
     case ScanningOutputFormat::Full:
     case ScanningOutputFormat::FullTree:
