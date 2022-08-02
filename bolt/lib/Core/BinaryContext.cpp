@@ -778,9 +778,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     // Prevent associating a jump table to a specific fragment twice.
     // This simple check arises from the assumption: no more than 2 fragments.
     if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
-      bool SameFunction = isFragmentOf(JT->Parents[0], &Function) ||
-                          isFragmentOf(&Function, JT->Parents[0]);
-      assert(SameFunction &&
+      assert((isFragmentOf(JT->Parents[0], &Function) ||
+              isFragmentOf(&Function, JT->Parents[0])) &&
              "cannot re-use jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);

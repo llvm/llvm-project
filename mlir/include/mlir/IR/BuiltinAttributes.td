@@ -17,6 +17,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the attributes defined in this file are prefixed with
@@ -425,6 +426,65 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
 }
 
 //===----------------------------------------------------------------------===//
+// DenseResourceElementsAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements", [
+    ElementsAttrInterface, TypedAttrInterface
+  ]> {
+  let summary = "An Attribute containing a dense multi-dimensional array "
+                "backed by a resource";
+  let description = [{
+    Syntax:
+
+    ```
+    dense-resource-elements-attribute ::=
+      `dense_resource` `<` resource-handle `>` `:` shaped-type
+    ```
+
+    A dense resource elements attribute is an elements attribute backed by a
+    handle to a builtin dialect resource containing a densely packed array of
+    values. This class provides the low-level attribute, which should only be
+    interacted with in very generic terms, actual access to the underlying
+    resource data is intended to be managed through one of the subclasses, such
+    as; `DenseBoolResourceElementsAttr`, `DenseUI64ResourceElementsAttr`,
+    `DenseI32ResourceElementsAttr`, `DenseF32ResourceElementsAttr`,
+    `DenseF64ResourceElementsAttr`, etc.
+
+    Examples:
+
+    ```mlir
+    // A tensor referencing a builtin dialect resource, `resource_1`, with two
+    // unsigned i32 elements.
+    dense_resource<resource_1> : tensor<2xui32>
+    ```
+  }];
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "ShapedType">:$type,
+    ResourceHandleParameter<"DenseResourceElementsHandle">:$rawHandle
+  );
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "ShapedType":$type, "DenseResourceElementsHandle":$handle
+    )>
+  ];
+  let extraClassDeclaration = [{
+  protected:
+    /// A builder that inserts a new resource into the builtin dialect's blob
+    /// manager using the provided blob. The handle of the inserted blob is used
+    /// when building the attribute. The provided `blobName` is used as a hint
+    /// for the key of the new handle for the `blob` resource, but may be
+    /// changed if necessary to ensure uniqueness during insertion.
+    static DenseResourceElementsAttr get(
+      ShapedType type, StringRef blobName, AsmResourceBlob blob
+    );
+
+  public:
+  }];
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
@@ -737,68 +797,6 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque", [TypedAttrInterface]> {
       return $_get(dialect.getContext(), dialect, attrData, type);
     }]>
   ];
-  let genVerifyDecl = 1;
-  let skipDefaultBuilders = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// OpaqueElementsAttr
-//===----------------------------------------------------------------------===//
-
-def Builtin_OpaqueElementsAttr : Builtin_Attr<
-    "OpaqueElements", [ElementsAttrInterface, TypedAttrInterface]
-  > {
-  let summary = "An opaque representation of a multi-dimensional array";
-  let description = [{
-    Syntax:
-
-    ```
-    opaque-elements-attribute ::= `opaque` `<` dialect-namespace  `,`
-                                  hex-string-literal `>` `:`
-                                  ( tensor-type | vector-type )
-    ```
-
-    An opaque elements attribute is an elements attribute where the content of
-    the value is opaque. The representation of the constant stored by this
-    elements attribute is only understood, and thus decodable, by the dialect
-    that created it.
-
-    Note: The parsed string literal must be in hexadecimal form.
-
-    Examples:
-
-    ```mlir
-    opaque<"foo_dialect", "0xDEADBEEF"> : tensor<10xi32>
-    ```
-  }];
-
-  // TODO: Provide a way to avoid copying content of large opaque
-  // tensors This will likely require a new reference attribute kind.
-  let parameters = (ins "StringAttr":$dialect,
-                        StringRefParameter<"">:$value,
-                        AttributeSelfTypeParameter<"", "ShapedType">:$type);
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "StringAttr":$dialect,
-                                        "ShapedType":$type,
-                                        "StringRef":$value), [{
-      return $_get(dialect.getContext(), dialect, value, type);
-    }]>,
-    AttrBuilderWithInferredContext<(ins "Dialect *":$dialect,
-                                        "ShapedType":$type,
-                                        "StringRef":$value), [{
-      MLIRContext *ctxt = dialect->getContext();
-      StringAttr dialectName = StringAttr::get(ctxt, dialect->getNamespace());
-      return $_get(ctxt, dialectName, value, type);
-    }]>
-  ];
-  let extraClassDeclaration = [{
-    using ValueType = StringRef;
-
-    /// Decodes the attribute value using dialect-specific decoding hook.
-    /// Returns false if decoding is successful. If not, returns true and leaves
-    /// 'result' argument unspecified.
-    bool decode(ElementsAttr &result);
-  }];
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
 }

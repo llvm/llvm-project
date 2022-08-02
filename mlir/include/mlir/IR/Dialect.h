@@ -157,13 +157,13 @@ public:
 
   /// Lookup an interface for the given ID if one is registered, otherwise
   /// nullptr.
-  const DialectInterface *getRegisteredInterface(TypeID interfaceID) {
+  DialectInterface *getRegisteredInterface(TypeID interfaceID) {
     auto it = registeredInterfaces.find(interfaceID);
     return it != registeredInterfaces.end() ? it->getSecond().get() : nullptr;
   }
   template <typename InterfaceT>
-  const InterfaceT *getRegisteredInterface() {
-    return static_cast<const InterfaceT *>(
+  InterfaceT *getRegisteredInterface() {
+    return static_cast<InterfaceT *>(
         getRegisteredInterface(InterfaceT::getInterfaceID()));
   }
 
@@ -188,6 +188,12 @@ public:
   void addInterfaces() {
     (void)std::initializer_list<int>{
         0, (addInterface(std::make_unique<Args>(this)), 0)...};
+  }
+  template <typename InterfaceT, typename... Args>
+  InterfaceT &addInterface(Args &&...args) {
+    InterfaceT *interface = new InterfaceT(this, std::forward<Args>(args)...);
+    addInterface(std::unique_ptr<DialectInterface>(interface));
+    return *interface;
   }
 
 protected:
@@ -305,15 +311,11 @@ struct isa_impl<
 };
 template <typename T>
 struct cast_retty_impl<T, ::mlir::Dialect *> {
-  using ret_type =
-      std::conditional_t<std::is_base_of<::mlir::Dialect, T>::value, T *,
-                         const T *>;
+  using ret_type = T *;
 };
 template <typename T>
 struct cast_retty_impl<T, ::mlir::Dialect> {
-  using ret_type =
-      std::conditional_t<std::is_base_of<::mlir::Dialect, T>::value, T &,
-                         const T &>;
+  using ret_type = T &;
 };
 
 template <typename T>
@@ -325,7 +327,7 @@ struct cast_convert_val<T, ::mlir::Dialect, ::mlir::Dialect> {
   }
   template <typename To>
   static std::enable_if_t<std::is_base_of<::mlir::DialectInterface, To>::value,
-                          const To &>
+                          To &>
   doitImpl(::mlir::Dialect &dialect) {
     return *dialect.getRegisteredInterface<To>();
   }

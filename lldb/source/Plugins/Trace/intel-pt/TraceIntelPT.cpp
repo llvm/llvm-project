@@ -176,12 +176,12 @@ Expected<Optional<uint64_t>> TraceIntelPT::FindBeginningOfTimeNanos() {
   return storage.beginning_of_time_nanos;
 }
 
-llvm::Expected<lldb::TraceCursorUP>
+llvm::Expected<lldb::TraceCursorSP>
 TraceIntelPT::CreateNewCursor(Thread &thread) {
   if (Expected<DecodedThreadSP> decoded_thread = Decode(thread)) {
     if (Expected<Optional<uint64_t>> beginning_of_time =
             FindBeginningOfTimeNanos())
-      return std::make_unique<TraceCursorIntelPT>(
+      return std::make_shared<TraceCursorIntelPT>(
           thread.shared_from_this(), *decoded_thread, m_storage.tsc_conversion,
           *beginning_of_time);
     else

@@ -59,10 +59,10 @@
 
 // -----
 
-// expected-error@+4 {{unknown 'resource' key 'unknown_entry' for dialect 'builtin'}}
+// expected-error@+4 {{unknown 'resource' key 'unknown_entry' for dialect 'ml_program'}}
 {-#
   dialect_resources: {
-    builtin: {
+    ml_program: {
       unknown_entry: "foo"
     }
   }

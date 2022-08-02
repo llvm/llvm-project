@@ -87,7 +87,7 @@ enum DirectiveKind : uint8_t {
 
 /// Represents a directive that's lexed as part of the dependency directives
 /// scanning. It's used to track various preprocessor directives that could
-/// potentially have an effect on the depedencies.
+/// potentially have an effect on the dependencies.
 struct Directive {
   ArrayRef<Token> Tokens;
 

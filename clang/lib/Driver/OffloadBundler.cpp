@@ -1149,8 +1149,8 @@ bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
 
 /// @brief Computes a list of targets among all given targets which are
 /// compatible with this code object
-/// @param [in] Code Object \p CodeObject
-/// @param [out] List of all compatible targets \p CompatibleTargets among all
+/// @param [in] CodeObjectInfo Code Object
+/// @param [out] CompatibleTargets List of all compatible targets among all
 /// given targets
 /// @return false, if no compatible target is found.
 static bool

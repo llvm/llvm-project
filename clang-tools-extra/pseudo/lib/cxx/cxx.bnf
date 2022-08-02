@@ -1,7 +1,7 @@
 # This is a C++ grammar from the C++ standard [1].
 #
 # The grammar is a superset of the true grammar requring semantic constraints to
-# resolve ambiguties. The grammar is context-free and ambiguous (beyond the
+# resolve ambiguities. The grammar is context-free and ambiguous (beyond the
 # limit of LR(k)). We use general parsing algorithm (e.g GLR) to handle the
 # grammar and generate a transition table which is used to drive the parsing.
 #

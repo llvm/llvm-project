@@ -1921,7 +1921,7 @@ public:
   ExplicitSpecifier getExplicitSpecifier() { return ExplicitSpec; }
   const ExplicitSpecifier getExplicitSpecifier() const { return ExplicitSpec; }
 
-  /// Return true if the declartion is already resolved to be explicit.
+  /// Return true if the declaration is already resolved to be explicit.
   bool isExplicit() const { return ExplicitSpec.isExplicit(); }
 
   /// Get the template for which this guide performs deduction.
@@ -2517,7 +2517,7 @@ public:
     return getCanonicalDecl()->getExplicitSpecifierInternal();
   }
 
-  /// Return true if the declartion is already resolved to be explicit.
+  /// Return true if the declaration is already resolved to be explicit.
   bool isExplicit() const { return getExplicitSpecifier().isExplicit(); }
 
   /// Iterates through the member/base initializer list.
@@ -2801,7 +2801,7 @@ public:
     return getCanonicalDecl()->ExplicitSpec;
   }
 
-  /// Return true if the declartion is already resolved to be explicit.
+  /// Return true if the declaration is already resolved to be explicit.
   bool isExplicit() const { return getExplicitSpecifier().isExplicit(); }
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
