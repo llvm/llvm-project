@@ -521,6 +521,27 @@ cc_library(
 )
 
 cc_library(
+  name = "TestNVGPU",
+  srcs = glob(["lib/Dialect/NVGPU/*.cpp"]),
+  defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+  includes = ["lib/Dialect/Test"],
+  deps = [
+      "//mlir:AffineDialect",
+      "//mlir:Analysis",
+      "//mlir:FuncDialect",
+      "//mlir:GPUDialect",
+      "//mlir:IR",
+      "//mlir:LLVMDialect",
+      "//mlir:MemRefDialect",
+      "//mlir:NVGPUDialect",
+      "//mlir:NVGPUTransforms",
+      "//mlir:Pass",
+      "//mlir:SCFDialect",
+      "//mlir:TransformUtils",
+  ],
+)
+
+cc_library(
     name = "TestSCF",
     srcs = glob(["lib/Dialect/SCF/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
