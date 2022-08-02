@@ -628,14 +628,19 @@ void DWARFRewriter::updateUnitDebugInfo(
                 Unit.getContext().isLittleEndian(), 0);
             DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
                                     Unit.getFormParams().Format);
-            uint32_t PrevOffset = 0;
-            constexpr uint32_t SizeOfOpcode = 1;
-            constexpr uint32_t SizeOfForm = 1;
+            uint32_t PrevEndOffset = 0;
+            uint32_t CurrEndOffset = 0;
+            constexpr uint32_t SizeOfOP = 1;
+            constexpr uint32_t SizeOfSizeField = 1;
+            int32_t SizeDiff = 0;
+
+            // Encoding [size of expression] [opcode] [value] [opcode] [value]
             for (auto &Expr : LocExpr) {
+              PrevEndOffset = CurrEndOffset;
+              CurrEndOffset = Expr.getEndOffset();
               if (!(Expr.getCode() == dwarf::DW_OP_GNU_addr_index ||
                     Expr.getCode() == dwarf::DW_OP_addrx))
                 continue;
-
               const uint64_t Index = Expr.getRawOperand(0);
               Optional<object::SectionedAddress> EntryAddress =
                   Unit.getAddrOffsetSectionItem(Index);
@@ -643,29 +648,27 @@ void DWARFRewriter::updateUnitDebugInfo(
               assert(Index <= std::numeric_limits<uint32_t>::max() &&
                      "Invalid Operand Index.");
               if (Expr.getCode() == dwarf::DW_OP_addrx) {
-                const uint32_t EncodingSize =
-                    Expr.getOperandEndOffset(0) - PrevOffset - SizeOfOpcode;
+                const uint32_t EncodingSize = CurrEndOffset - PrevEndOffset - 1;
                 const uint32_t Index = AddrWriter->getIndexFromAddress(
                     EntryAddress->Address, Unit);
                 // Encoding new size.
                 SmallString<8> Tmp;
                 raw_svector_ostream OSE(Tmp);
                 encodeULEB128(Index, OSE);
-                DebugInfoPatcher.addUDataPatch(AttrOffset, Tmp.size() + 1, 1);
-                DebugInfoPatcher.addUDataPatch(AttrOffset + PrevOffset +
-                                                   SizeOfOpcode + SizeOfForm,
+                SizeDiff += Tmp.size() - EncodingSize;
+                DebugInfoPatcher.addUDataPatch(AttrOffset + PrevEndOffset +
+                                                   SizeOfOP + SizeOfSizeField,
                                                Index, EncodingSize);
               } else {
                 // TODO: Re-do this as DWARF5.
                 AddrWriter->addIndexAddress(EntryAddress->Address,
                                             static_cast<uint32_t>(Index), Unit);
               }
-              if (Expr.getDescription().Op[1] ==
-                  DWARFExpression::Operation::SizeNA)
-                PrevOffset = Expr.getOperandEndOffset(0);
-              else
-                PrevOffset = Expr.getOperandEndOffset(1);
             }
+            // Update the size of the experssion.
+            if (SizeDiff)
+              DebugInfoPatcher.addUDataPatch(AttrOffset,
+                                             SizeDiff + CurrEndOffset, 1);
           }
         }
       } else if (Optional<AttrInfo> AttrVal =
