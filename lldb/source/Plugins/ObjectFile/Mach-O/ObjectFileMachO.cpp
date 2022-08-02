@@ -5600,8 +5600,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
             }
 
             if (m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
-              if (!uuid_is_null(raw_uuid))
-                uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
+              uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
               // convert the "main bin spec" type into our
               // ObjectFile::BinaryType enum
               switch (binspec_type) {
@@ -6902,8 +6901,7 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
           MachOCorefileImageEntry image_entry;
           image_entry.filename = (const char *)m_data.GetCStr(&filepath_offset);
-          if (!uuid_is_null(uuid))
-            image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
+          image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
           image_entry.load_address = load_address;
           image_entry.currently_executing = currently_executing;
 
@@ -6934,11 +6932,9 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
           MachOCorefileImageEntry image_entry;
           image_entry.filename = filename;
-          if (!uuid_is_null(uuid))
-            image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
+          image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
           image_entry.load_address = load_address;
           image_entry.slide = slide;
-          image_entry.currently_executing = true;
           image_infos.all_image_infos.push_back(image_entry);
         }
       }
@@ -6955,41 +6951,42 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
 
   ModuleList added_modules;
   for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {
-    ModuleSP module_sp;
-
-    if (!image.filename.empty()) {
-      Status error;
-      ModuleSpec module_spec;
-      module_spec.GetUUID() = image.uuid;
-      module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
-      if (image.currently_executing) {
-        Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
-        if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-          process.GetTarget().GetOrCreateModule(module_spec, false);
-        }
-      }
-      module_sp =
-          process.GetTarget().GetOrCreateModule(module_spec, false, &error);
-      process.GetTarget().GetImages().AppendIfNeeded(module_sp,
-                                                     false /* notify */);
+    ModuleSpec module_spec;
+    module_spec.GetUUID() = image.uuid;
+    if (image.filename.empty()) {
+      char namebuf[80];
+      if (image.load_address != LLDB_INVALID_ADDRESS)
+        snprintf(namebuf, sizeof(namebuf), "mem-image-0x%" PRIx64,
+                 image.load_address);
+      else
+        snprintf(namebuf, sizeof(namebuf), "mem-image+0x%" PRIx64, image.slide);
+      module_spec.GetFileSpec() = FileSpec(namebuf);
     } else {
-      if (image.load_address != LLDB_INVALID_ADDRESS) {
-        module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-            &process, image.uuid, image.load_address,
-            false /* value_is_offset */, image.currently_executing,
-            false /* notify */);
-      } else if (image.slide != LLDB_INVALID_ADDRESS) {
-        module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-            &process, image.uuid, image.slide, true /* value_is_offset */,
-            image.currently_executing, false /* notify */);
+      module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
+    }
+    if (image.currently_executing) {
+      Status error;
+      Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
+      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+        process.GetTarget().GetOrCreateModule(module_spec, false);
       }
     }
-
+    Status error;
+    ModuleSP module_sp =
+        process.GetTarget().GetOrCreateModule(module_spec, false, &error);
+    if (!module_sp.get() || !module_sp->GetObjectFile()) {
+      if (image.load_address != LLDB_INVALID_ADDRESS) {
+        module_sp = process.ReadModuleFromMemory(module_spec.GetFileSpec(),
+                                                 image.load_address);
+      }
+    }
     if (module_sp.get()) {
       // Will call ModulesDidLoad with all modules once they've all
       // been added to the Target with load addresses.  Don't notify
       // here, before the load address is set.
-      added_modules.Append(module_sp, false /* notify */);
+      const bool notify = false;
+      process.GetTarget().GetImages().AppendIfNeeded(module_sp, notify);
+      added_modules.Append(module_sp, notify);
       if (image.segment_load_addresses.size() > 0) {
         if (log) {
           std::string uuidstr = image.uuid.GetAsString();
