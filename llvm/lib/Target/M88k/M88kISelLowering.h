@@ -47,8 +47,6 @@ enum NodeType : unsigned {
   EXTU,
   MAK,
   ROT,
-  FF1,
-  FF0,
 };
 } // end namespace M88kISD
 
@@ -62,6 +60,8 @@ public:
   bool isSelectSupported(SelectSupportKind /*kind*/) const override;
   bool isIndexingLegal(MachineInstr &MI, Register Base, Register Offset,
                        bool IsPre, MachineRegisterInfo &MRI) const override;
+  bool isCheapToSpeculateCtlz(Type *Ty) const override;
+  bool isCtlzFast() const override;
   Register getRegisterByName(const char *RegName, LLT Ty,
                              const MachineFunction &MF) const override;
   bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,

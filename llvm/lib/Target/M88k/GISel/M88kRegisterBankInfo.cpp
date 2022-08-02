@@ -154,6 +154,8 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
     // Shift ops.
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:

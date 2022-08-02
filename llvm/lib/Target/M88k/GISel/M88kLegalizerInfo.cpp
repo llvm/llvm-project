@@ -103,6 +103,8 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .clampScalar(1, S32, S32);
   getActionDefinitionsBuilder(G_ROTR).legalFor({{S32}, {S32}});
   getActionDefinitionsBuilder({G_ROTL, G_FSHL, G_FSHR}).lower();
+  getActionDefinitionsBuilder({G_CTLZ, G_CTLZ_ZERO_UNDEF})
+      .legalFor({{S32}, {S32}});
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({S1}, {S32, P0})

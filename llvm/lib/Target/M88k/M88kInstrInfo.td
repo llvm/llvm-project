@@ -45,8 +45,6 @@ def m88k_ext : SDNode<"M88kISD::EXT", SDTIntBinOp>;
 def m88k_extu : SDNode<"M88kISD::EXTU", SDTIntBinOp>;
 def m88k_mak : SDNode<"M88kISD::MAK", SDTIntBinOp>;
 def m88k_rot : SDNode<"M88kISD::ROT", SDTIntBinOp>;
-def m88k_ff1 : SDNode<"M88kISD::FF1", SDTIntBitCountUnaryOp>;
-def m88k_ff0 : SDNode<"M88kISD::FF0", SDTIntBitCountUnaryOp>;
 
 // Hi16 and Lo16 nodes are used to handle global addresses.
 def m88k_hi : SDNode<"M88kISD::Hi16", SDTIntUnaryOp>;
@@ -380,16 +378,21 @@ def : Pat<(srl GPR:$rs1, imm32zx5O:$o5), (EXTUrwo GPR:$rs1, imm32zx5O:$o5)>;
 def : Pat<(shl GPR:$rs1, imm32zx5O:$o5), (MAKrwo GPR:$rs1, imm32zx5O:$o5)>;
 def : Pat<(rotr GPR:$rs1, bfoffset:$o5), (ROTrwo GPR:$rs1, bfoffset:$o5)>;
 
-class FindBF<bits<6> Func, string OpcStr, SDNode OpNode> :
-  F_BF<Func, (outs GPR:$rd), (ins GPR:$rs2),
-             OpcStr,
-             [(set GPR:$rd, (OpNode GPR:$rs2))]>;
+class FindBF<bits<6> Func, string OpcStr> :
+  F_BF<Func, (outs GPR:$rd), (ins GPR:$rs2), OpcStr>;
 
-def FF1rr : FindBF<0b111010, "ff1", m88k_ff1>;
-def FF0rr : FindBF<0b111011, "ff0", m88k_ff0>;
+def FF1r : FindBF<0b111010, "ff1">;
+def FF0r : FindBF<0b111011, "ff0">;
 
-// ctlz = 32 - ff1
-//def : Pat<(ctlz GPR:$rs1, GPR:$rs2), (SUBri (i32 32), (FF1rr GPR:$rs1, GPR:$rs2))>;
+// ctlz = ff1 ^ 0x1f
+// This inverts the lower 5 bits, returning the required range.
+def : Pat<(ctlz GPR:$rs), (XORri (FF1r GPR:$rs), 31)>;
+
+// ctlz_zero_undef is similar.
+// But since 0 is poison some simple patterns allow for better code.
+def : Pat<(sub 31, (ctlz_zero_undef GPR:$rs)), (FF1r GPR:$rs)>;
+def : Pat<(xor (ctlz_zero_undef GPR:$rs), 31), (FF1r GPR:$rs)>;
+def : Pat<(ctlz_zero_undef GPR:$rs), (XORri (FF1r GPR:$rs), 31)>;
 
 // ---------------------------------------------------------------------------//
 // Integer arithmetic instructions.

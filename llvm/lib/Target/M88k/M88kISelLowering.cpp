@@ -40,6 +40,10 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(Align(4));
 }
 
+bool M88kTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const { return true; }
+
+bool M88kTargetLowering::isCtlzFast() const { return true; }
+
 bool M88kTargetLowering::isSelectSupported(SelectSupportKind /*kind*/) const {
   // No kind of select is supported.
   return false;
