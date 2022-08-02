@@ -9,6 +9,8 @@
 #include "config/linux/app.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/thread.h"
+#include "src/stdlib/atexit.h"
+#include "src/stdlib/exit.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 
 #include <arm_acle.h>
@@ -116,8 +118,8 @@ static void call_init_array_callbacks(int argc, char **argv, char **env) {
 
 static void call_fini_array_callbacks() {
   size_t fini_array_size = __fini_array_end - __fini_array_start;
-  for (size_t i = 0; i < fini_array_size; ++i)
-    reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
+  for (size_t i = fini_array_size; i > 0; --i)
+    reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
 } // namespace __llvm_libc
@@ -185,6 +187,12 @@ __attribute__((noinline)) static void do_start() {
 
   __llvm_libc::self.attrib = &__llvm_libc::main_thread_attrib;
 
+  // We want the fini array callbacks to be run after other atexit
+  // callbacks are run. So, we register them before running the init
+  // array callbacks as they can potentially register their own atexit
+  // callbacks.
+  __llvm_libc::atexit(&__llvm_libc::call_fini_array_callbacks);
+
   __llvm_libc::call_init_array_callbacks(
       app.args->argc, reinterpret_cast<char **>(app.args->argv),
       reinterpret_cast<char **>(env_ptr));
@@ -192,10 +200,11 @@ __attribute__((noinline)) static void do_start() {
   int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
                     reinterpret_cast<char **>(env_ptr));
 
-  __llvm_libc::call_fini_array_callbacks();
-
+  // TODO: TLS cleanup should be done after all other atexit callbacks
+  // are run. So, register a cleanup callback for it with atexit before
+  // everything else.
   __llvm_libc::cleanup_tls(tls.addr, tls.size);
-  __llvm_libc::syscall(SYS_exit, retval);
+  __llvm_libc::exit(retval);
 }
 
 extern "C" void _start() {
