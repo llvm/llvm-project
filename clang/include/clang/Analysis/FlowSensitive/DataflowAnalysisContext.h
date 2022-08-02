@@ -90,12 +90,12 @@ public:
     return *cast<T>(Vals.back().get());
   }
 
-  /// Returns a stable storage location appropriate for `Type`.
+  /// Returns a new storage location appropriate for `Type`.
   ///
   /// Requirements:
   ///
   ///  `Type` must not be null.
-  StorageLocation &getStableStorageLocation(QualType Type);
+  StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
   StorageLocation &getStableStorageLocation(const VarDecl &D);
