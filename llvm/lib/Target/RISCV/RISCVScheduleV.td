@@ -9,6 +9,9 @@
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with def operands.
 
+// 3.6 Vector Byte Length vlenb
+def WriteRdVLENB      : SchedWrite;
+
 // 7. Vector Loads and Stores
 // 7.4. Vector Unit-Stride Instructions
 def WriteVLDE8        : SchedWrite;
@@ -492,6 +495,9 @@ def ReadVMask         : SchedRead;
 
 multiclass UnsupportedSchedV {
 let Unsupported = true in {
+
+// 3.6 Vector Byte Length vlenb
+def : WriteRes<WriteRdVLENB, []>;
 
 // 7. Vector Loads and Stores
 def : WriteRes<WriteVLDE8, []>;
