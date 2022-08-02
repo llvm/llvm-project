@@ -210,6 +210,52 @@ public:
                                              lldb::addr_t base_addr,
                                              bool base_addr_is_offset);
 
+  /// Find/load a binary into lldb given a UUID and the address where it is
+  /// loaded in memory, or a slide to be applied to the file address.
+  /// May force an expensive search on the computer to find the binary by
+  /// UUID, should not be used for a large number of binaries - intended for
+  /// an environment where there may be one, or a few, binaries resident in
+  /// memory.
+  ///
+  /// Given a UUID, search for a binary and load it at the address provided,
+  /// or with the slide applied, or at the file address unslid.
+  ///
+  /// Given an address, try to read the binary out of memory, get the UUID,
+  /// find the file if possible and load it unslid, or add the memory module.
+  ///
+  /// \param[in] process
+  ///     The process to add this binary to.
+  ///
+  /// \param[in] uuid
+  ///     UUID of the binary to be loaded.  UUID may be empty, and if a
+  ///     load address is supplied, will read the binary from memory, get
+  ///     a UUID and try to find a local binary.  There is a performance
+  ///     cost to doing this, it is not preferable.
+  ///
+  /// \param[in] value
+  ///     Address where the binary should be loaded, or read out of memory.
+  ///     Or a slide value, to be applied to the file addresses of the binary.
+  ///
+  /// \param[in] value_is_offset
+  ///     A flag indicating that \p value is an address, or an offset to
+  ///     be applied to the file addresses.
+  ///
+  /// \param[in] force_symbol_search
+  ///     Allow the search to do a possibly expensive external search for
+  ///     the ObjectFile and/or SymbolFile.
+  ///
+  /// \param[in] notify
+  ///     Whether ModulesDidLoad should be called when a binary has been added
+  ///     to the Target.  The caller may prefer to batch up these when loading
+  ///     multiple binaries.
+  ///
+  /// \return
+  ///     Returns a shared pointer for the Module that has been added.
+  static lldb::ModuleSP
+  LoadBinaryWithUUIDAndAddress(Process *process, UUID uuid, lldb::addr_t value,
+                               bool value_is_offset, bool force_symbol_search,
+                               bool notify);
+
   /// Get information about the shared cache for a process, if possible.
   ///
   /// On some systems (e.g. Darwin based systems), a set of libraries that are

@@ -13,11 +13,15 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-interfaces.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -169,6 +173,100 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
   }
 
   return nullptr;
+}
+
+static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr) {
+  char namebuf[80];
+  snprintf(namebuf, sizeof(namebuf), "memory-image-0x%" PRIx64, addr);
+  return process->ReadModuleFromMemory(FileSpec(namebuf), addr);
+}
+
+ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(Process *process,
+                                                     UUID uuid, addr_t value,
+                                                     bool value_is_offset,
+                                                     bool force_symbol_search,
+                                                     bool notify) {
+  ModuleSP memory_module_sp;
+  ModuleSP module_sp;
+  PlatformSP platform_sp = process->GetTarget().GetPlatform();
+  Target &target = process->GetTarget();
+  Status error;
+  ModuleSpec module_spec;
+  module_spec.GetUUID() = uuid;
+
+  if (!uuid.IsValid() && !value_is_offset) {
+    memory_module_sp = ReadUnnamedMemoryModule(process, value);
+
+    if (memory_module_sp)
+      uuid = memory_module_sp->GetUUID();
+  }
+
+  if (uuid.IsValid()) {
+    ModuleSpec module_spec;
+    module_spec.GetUUID() = uuid;
+
+    if (!module_sp)
+      module_sp = target.GetOrCreateModule(module_spec, false, &error);
+
+    // If we haven't found a binary, or we don't have a SymbolFile, see
+    // if there is an external search tool that can find it.
+    if (force_symbol_search &&
+        (!module_sp || !module_sp->GetSymbolFileFileSpec())) {
+      Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
+      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+        module_sp = std::make_shared<Module>(module_spec);
+      }
+    }
+  }
+
+  // If we couldn't find the binary anywhere else, as a last resort,
+  // read it out of memory.
+  if (!module_sp.get() && value != LLDB_INVALID_ADDRESS && !value_is_offset) {
+    if (!memory_module_sp)
+      memory_module_sp = ReadUnnamedMemoryModule(process, value);
+    if (memory_module_sp)
+      module_sp = memory_module_sp;
+  }
+
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  if (module_sp.get()) {
+    target.GetImages().AppendIfNeeded(module_sp, false);
+
+    bool changed = false;
+    if (module_sp->GetObjectFile()) {
+      if (value != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log, "Loading binary UUID %s at %s 0x%" PRIx64,
+                  uuid.GetAsString().c_str(),
+                  value_is_offset ? "offset" : "address", value);
+        module_sp->SetLoadAddress(target, value, value_is_offset, changed);
+      } else {
+        // No address/offset/slide, load the binary at file address,
+        // offset 0.
+        LLDB_LOGF(log, "Loading binary UUID %s at file address",
+                  uuid.GetAsString().c_str());
+        module_sp->SetLoadAddress(target, 0, true /* value_is_slide */,
+                                  changed);
+      }
+    } else {
+      // In-memory image, load at its true address, offset 0.
+      LLDB_LOGF(log, "Loading binary UUID %s from memory at address 0x%" PRIx64,
+                uuid.GetAsString().c_str(), value);
+      module_sp->SetLoadAddress(target, 0, true /* value_is_slide */, changed);
+    }
+
+    if (notify) {
+      ModuleList added_module;
+      added_module.Append(module_sp, false);
+      target.ModulesDidLoad(added_module);
+    }
+  } else {
+    LLDB_LOGF(log, "Unable to find binary with UUID %s and load it at "
+                  "%s 0x%" PRIx64,
+                  uuid.GetAsString().c_str(),
+                  value_is_offset ? "offset" : "address", value);
+  }
+
+  return module_sp;
 }
 
 int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,
