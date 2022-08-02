@@ -99,6 +99,9 @@ def phab_get_commit_approvers(phab_token:str, repo:github.Repository.Repository,
     # API documentation: https://reviews.llvm.org/conduit/method/differential.parsecommitmessage/
     r = phab_api_call(phab_token, "https://reviews.llvm.org/api/differential.parsecommitmessage", args)
     review_id = r['result']['revisionIDFieldInfo']['value']
+    if not review_id:
+        # No Phabricator revision for this commit
+        return []
 
     args = {
         'constraints[ids][0]' : review_id,
