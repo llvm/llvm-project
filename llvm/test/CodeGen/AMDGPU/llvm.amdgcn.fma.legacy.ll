@@ -34,17 +34,14 @@ define float @v_fma_imm(float %a, float %c)  {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_legacy_f32_e32 v1, 0x41200000, v0
-; GFX10-NEXT:    v_mov_b32_e32 v0, v1
+; GFX10-NEXT:    v_fma_legacy_f32 v0, 0x41200000, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_fma_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_fmac_dx9_zero_f32_e32 v1, 0x41200000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, 0x41200000, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float 10.0, float %c)
   ret float %fma
