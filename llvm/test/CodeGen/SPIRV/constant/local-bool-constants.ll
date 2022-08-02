@@ -8,10 +8,10 @@ define i1 @getConstantFalse() {
   ret i1 false
 }
 
-; CHECK: [[BOOL:%.+]] = OpTypeBool
+; CHECK:     [[BOOL:%.+]] = OpTypeBool
 ; CHECK-DAG: [[FN:%.+]] = OpTypeFunction [[BOOL]]
 ; CHECK-DAG: [[TRUE:%.+]] = OpConstantTrue
 ; CHECK-DAG: [[FALSE:%.+]] = OpConstantFalse
 
-; CHECK: OpFunction [[BOOL]] None [[FN]]
-; CHECK: OpFunction [[BOOL]] None [[FN]]
+; CHECK:     OpFunction [[BOOL]] None [[FN]]
+; CHECK:     OpFunction [[BOOL]] None [[FN]]
