@@ -533,6 +533,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:LLVMDialect",
         "//mlir:LinalgDialect",
+        "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
         "//mlir:NVGPUDialect",
         "//mlir:NVGPUTransforms",
