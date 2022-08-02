@@ -921,7 +921,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     // at runtime, the notion of PC-relative doesn't make sense here. So,
     // this is a usage error. However, GNU linkers historically accept such
     // relocations without any errors and relocate them as if they were at
-    // address 0. For bug-compatibilty, we accept them with warnings. We
+    // address 0. For bug-compatibility, we accept them with warnings. We
     // know Steel Bank Common Lisp as of 2018 have this bug.
     warn(msg);
     target.relocateNoSym(

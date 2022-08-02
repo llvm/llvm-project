@@ -2334,7 +2334,7 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
   }
 }
 
-// To enable CET (x86's hardware-assited control flow enforcement), each
+// To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
 // with CET. We enable the feature only when all object files are compatible
