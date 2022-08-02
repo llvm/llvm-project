@@ -90,6 +90,35 @@ static bool set_thread_ptr(uintptr_t val) {
                                                                       : true;
 }
 
+using InitCallback = void(int, char **, char **);
+using FiniCallback = void(void);
+
+extern "C" {
+// These arrays are present in the .init_array and .fini_array sections.
+// The symbols are inserted by linker when it sees references to them.
+extern uintptr_t __preinit_array_start[];
+extern uintptr_t __preinit_array_end[];
+extern uintptr_t __init_array_start[];
+extern uintptr_t __init_array_end[];
+extern uintptr_t __fini_array_start[];
+extern uintptr_t __fini_array_end[];
+}
+
+static void call_init_array_callbacks(int argc, char **argv, char **env) {
+  size_t preinit_array_size = __preinit_array_end - __preinit_array_start;
+  for (size_t i = 0; i < preinit_array_size; ++i)
+    reinterpret_cast<InitCallback *>(__preinit_array_start[i])(argc, argv, env);
+  size_t init_array_size = __init_array_end - __init_array_start;
+  for (size_t i = 0; i < init_array_size; ++i)
+    reinterpret_cast<InitCallback *>(__init_array_start[i])(argc, argv, env);
+}
+
+static void call_fini_array_callbacks() {
+  size_t fini_array_size = __fini_array_end - __fini_array_start;
+  for (size_t i = 0; i < fini_array_size; ++i)
+    reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
+}
+
 } // namespace __llvm_libc
 
 using __llvm_libc::app;
@@ -175,8 +204,15 @@ extern "C" void _start() {
 
   __llvm_libc::self.attrib = &__llvm_libc::main_thread_attrib;
 
+  __llvm_libc::call_init_array_callbacks(
+      app.args->argc, reinterpret_cast<char **>(app.args->argv),
+      reinterpret_cast<char **>(env_ptr));
+
   int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
                     reinterpret_cast<char **>(env_ptr));
+
+  __llvm_libc::call_fini_array_callbacks();
+
   __llvm_libc::cleanup_tls(tls.addr, tls.size);
   __llvm_libc::syscall(SYS_exit, retval);
 }
