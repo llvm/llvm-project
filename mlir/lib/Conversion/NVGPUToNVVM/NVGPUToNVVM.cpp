@@ -275,10 +275,14 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     NVVM::MMATypes ptxTypeB;
     Optional<NVVM::MMATypes> ptxTypeC = NVVM::MmaOp::inferOperandMMAType(
         cType.getElementType(), /*isAccumulator=*/true);
-    if (!ptxTypeC) {
+    if (!ptxTypeC)
       return op->emitError(
           "could not infer the PTX type for the accumulator/result");
-    }
+
+    // Tensor Cores (mma.sync) on F32 works only with TensorFloat32 (TF32).
+    bool tf32Enabled = op->hasAttr(op.getTf32EnabledAttrName());
+    if (aType.getElementType().isF32() && !tf32Enabled)
+      return failure();
 
     Optional<NVVM::MMAIntOverflow> overflow(llvm::None);
     if (aType.getElementType().isInteger(8)) {
