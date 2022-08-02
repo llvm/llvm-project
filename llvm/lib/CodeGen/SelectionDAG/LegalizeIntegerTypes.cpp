@@ -137,8 +137,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND:  Res = PromoteIntRes_INT_EXTEND(N); break;
 
-  case ISD::VP_FPTOSI:
-  case ISD::VP_FPTOUI:
+  case ISD::VP_FP_TO_SINT:
+  case ISD::VP_FP_TO_UINT:
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
@@ -673,10 +673,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
       TLI.isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, NVT))
     NewOpc = ISD::STRICT_FP_TO_SINT;
 
-  if (N->getOpcode() == ISD::VP_FPTOUI &&
-      !TLI.isOperationLegal(ISD::VP_FPTOUI, NVT) &&
-      TLI.isOperationLegalOrCustom(ISD::VP_FPTOSI, NVT))
-    NewOpc = ISD::VP_FPTOSI;
+  if (N->getOpcode() == ISD::VP_FP_TO_UINT &&
+      !TLI.isOperationLegal(ISD::VP_FP_TO_UINT, NVT) &&
+      TLI.isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, NVT))
+    NewOpc = ISD::VP_FP_TO_SINT;
 
   SDValue Res;
   if (N->isStrictFPOpcode()) {
@@ -685,7 +685,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
-  } else if (NewOpc == ISD::VP_FPTOSI || NewOpc == ISD::VP_FPTOUI) {
+  } else if (NewOpc == ISD::VP_FP_TO_SINT || NewOpc == ISD::VP_FP_TO_UINT) {
     Res = DAG.getNode(NewOpc, dl, NVT, {N->getOperand(0), N->getOperand(1),
                       N->getOperand(2)});
   } else {
@@ -701,7 +701,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
   //   after legalization: fp-to-sint32, 65534. -> 0x0000fffe
   return DAG.getNode((N->getOpcode() == ISD::FP_TO_UINT ||
                       N->getOpcode() == ISD::STRICT_FP_TO_UINT ||
-                      N->getOpcode() == ISD::VP_FPTOUI)
+                      N->getOpcode() == ISD::VP_FP_TO_UINT)
                          ? ISD::AssertZext
                          : ISD::AssertSext,
                      dl, NVT, Res,
@@ -1648,7 +1648,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_SETCC:
   case ISD::SETCC:        Res = PromoteIntOp_SETCC(N, OpNo); break;
   case ISD::SIGN_EXTEND:  Res = PromoteIntOp_SIGN_EXTEND(N); break;
-  case ISD::VP_SITOFP:
+  case ISD::VP_SINT_TO_FP:
   case ISD::SINT_TO_FP:   Res = PromoteIntOp_SINT_TO_FP(N); break;
   case ISD::STRICT_SINT_TO_FP: Res = PromoteIntOp_STRICT_SINT_TO_FP(N); break;
   case ISD::STORE:        Res = PromoteIntOp_STORE(cast<StoreSDNode>(N),
@@ -1664,7 +1664,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::FP16_TO_FP:
-  case ISD::VP_UITOFP:
+  case ISD::VP_UINT_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
@@ -1998,7 +1998,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SIGN_EXTEND(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SINT_TO_FP(SDNode *N) {
-  if (N->getOpcode() == ISD::VP_SITOFP)
+  if (N->getOpcode() == ISD::VP_SINT_TO_FP)
     return SDValue(DAG.UpdateNodeOperands(N,
                                           SExtPromotedInteger(N->getOperand(0)),
                                           N->getOperand(1), N->getOperand(2)),
@@ -2127,7 +2127,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_UINT_TO_FP(SDNode *N) {
-  if (N->getOpcode() == ISD::VP_UITOFP)
+  if (N->getOpcode() == ISD::VP_UINT_TO_FP)
     return SDValue(DAG.UpdateNodeOperands(N,
                                           ZExtPromotedInteger(N->getOperand(0)),
                                           N->getOperand(1), N->getOperand(2)),
