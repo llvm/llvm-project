@@ -42,6 +42,8 @@ public:
   bool foldShiftedOffset(MachineInstr &Hi, MachineInstr &Lo,
                          MachineInstr &TailShXAdd, Register GSReg);
 
+  bool foldIntoMemoryOps(MachineInstr &Hi, MachineInstr &Lo);
+
   RISCVMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -267,62 +269,67 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
                                                   MachineInstr &Lo) {
   Register DestReg = Lo.getOperand(0).getReg();
 
-  // First, look for arithmetic instructions we can get an offset from.
+  // Look for arithmetic instructions we can get an offset from.
   // We might be able to remove the arithmetic instructions by folding the
   // offset into the LUI+ADDI.
-  if (MRI->hasOneUse(DestReg)) {
-    // Lo has only one use.
-    MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
-    switch (Tail.getOpcode()) {
-    default:
-      LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
-                        << Tail);
-      break;
-    case RISCV::ADDI: {
-      // Offset is simply an immediate operand.
-      int64_t Offset = Tail.getOperand(2).getImm();
+  if (!MRI->hasOneUse(DestReg))
+    return false;
 
-      // We might have two ADDIs in a row.
-      Register TailDestReg = Tail.getOperand(0).getReg();
-      if (MRI->hasOneUse(TailDestReg)) {
-        MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
-        if (TailTail.getOpcode() == RISCV::ADDI) {
-          Offset += TailTail.getOperand(2).getImm();
-          LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
-          foldOffset(Hi, Lo, TailTail, Offset);
-          Tail.eraseFromParent();
-          return true;
-        }
+  // Lo has only one use.
+  MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
+  switch (Tail.getOpcode()) {
+  default:
+    LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
+                      << Tail);
+    break;
+  case RISCV::ADDI: {
+    // Offset is simply an immediate operand.
+    int64_t Offset = Tail.getOperand(2).getImm();
+
+    // We might have two ADDIs in a row.
+    Register TailDestReg = Tail.getOperand(0).getReg();
+    if (MRI->hasOneUse(TailDestReg)) {
+      MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
+      if (TailTail.getOpcode() == RISCV::ADDI) {
+        Offset += TailTail.getOperand(2).getImm();
+        LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
+        foldOffset(Hi, Lo, TailTail, Offset);
+        Tail.eraseFromParent();
+        return true;
       }
+    }
 
-      LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
-      foldOffset(Hi, Lo, Tail, Offset);
-      return true;
-    }
-    case RISCV::ADD: {
-      // The offset is too large to fit in the immediate field of ADDI.
-      // This can be in two forms:
-      // 1) LUI hi_Offset followed by:
-      //    ADDI lo_offset
-      //    This happens in case the offset has non zero bits in
-      //    both hi 20 and lo 12 bits.
-      // 2) LUI (offset20)
-      //    This happens in case the lower 12 bits of the offset are zeros.
-      return foldLargeOffset(Hi, Lo, Tail, DestReg);
-    }
-    case RISCV::SH1ADD:
-    case RISCV::SH2ADD:
-    case RISCV::SH3ADD: {
-      // The offset is too large to fit in the immediate field of ADDI.
-      // It may be encoded as (SH2ADD (ADDI X0, C), DestReg) or
-      // (SH3ADD (ADDI X0, C), DestReg).
-      return foldShiftedOffset(Hi, Lo, Tail, DestReg);
-    }
-    }
+    LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
+    foldOffset(Hi, Lo, Tail, Offset);
+    return true;
+  }
+  case RISCV::ADD:
+    // The offset is too large to fit in the immediate field of ADDI.
+    // This can be in two forms:
+    // 1) LUI hi_Offset followed by:
+    //    ADDI lo_offset
+    //    This happens in case the offset has non zero bits in
+    //    both hi 20 and lo 12 bits.
+    // 2) LUI (offset20)
+    //    This happens in case the lower 12 bits of the offset are zeros.
+    return foldLargeOffset(Hi, Lo, Tail, DestReg);
+  case RISCV::SH1ADD:
+  case RISCV::SH2ADD:
+  case RISCV::SH3ADD:
+    // The offset is too large to fit in the immediate field of ADDI.
+    // It may be encoded as (SH2ADD (ADDI X0, C), DestReg) or
+    // (SH3ADD (ADDI X0, C), DestReg).
+    return foldShiftedOffset(Hi, Lo, Tail, DestReg);
   }
 
-  // We didn't find an arithmetic instruction. If all the uses are memory ops
-  // with the same offset, we can transform:
+  return false;
+}
+
+bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
+                                                MachineInstr &Lo) {
+  Register DestReg = Lo.getOperand(0).getReg();
+
+  // If all the uses are memory ops with the same offset, we can transform:
   //
   // 1. (medlow pattern):
   // Hi:   lui vreg1, %hi(foo)          --->  lui vreg1, %hi(foo+8)
@@ -375,10 +382,20 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
 
   // We found a common offset.
   // Update the offsets in global address lowering.
-  Hi.getOperand(1).setOffset(*CommonOffset);
+  // We may have already folded some arithmetic so we need to add to any
+  // existing offset.
+  int64_t NewOffset = Hi.getOperand(1).getOffset() + *CommonOffset;
+  // RV32 ignores the upper 32 bits.
+  if (!ST->is64Bit())
+    NewOffset = SignExtend64<32>(NewOffset);
+  // We can only fold simm32 offsets.
+  if (!isInt<32>(NewOffset))
+    return false;
+
+  Hi.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp = Lo.getOperand(2);
   if (Hi.getOpcode() != RISCV::AUIPC)
-    ImmOp.setOffset(*CommonOffset);
+    ImmOp.setOffset(NewOffset);
 
   // Update the immediate in the load/store instructions to add the offset.
   for (MachineInstr &UseMI :
@@ -411,6 +428,7 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       LLVM_DEBUG(dbgs() << "  Found lowered global address: "
                         << *Hi.getOperand(2).getGlobal() << "\n");
       MadeChange |= detectAndFoldOffset(Hi, *Lo);
+      MadeChange |= foldIntoMemoryOps(Hi, *Lo);
     }
   }
 
