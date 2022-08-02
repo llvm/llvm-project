@@ -7317,12 +7317,14 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
   unsigned MaskLoBits = 0;
   if (IsRotate && isPowerOf2_64(EltSize)) {
     unsigned Bits = Log2_64(EltSize);
-    APInt DemandedBits =
-        APInt::getLowBitsSet(Neg.getScalarValueSizeInBits(), Bits);
-    if (SDValue Inner =
-            TLI.SimplifyMultipleUseDemandedBits(Neg, DemandedBits, DAG)) {
-      Neg = Inner;
-      MaskLoBits = Bits;
+    unsigned NegBits = Neg.getScalarValueSizeInBits();
+    if (NegBits >= Bits) {
+      APInt DemandedBits = APInt::getLowBitsSet(NegBits, Bits);
+      if (SDValue Inner =
+              TLI.SimplifyMultipleUseDemandedBits(Neg, DemandedBits, DAG)) {
+        Neg = Inner;
+        MaskLoBits = Bits;
+      }
     }
   }
 
@@ -7338,11 +7340,13 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
   // affect Mask's demanded bits, just replace Pos with Pos'. These operations
   // are redundant for the purpose of the equality.
   if (MaskLoBits) {
-    APInt DemandedBits =
-        APInt::getLowBitsSet(Pos.getScalarValueSizeInBits(), MaskLoBits);
-    if (SDValue Inner =
-            TLI.SimplifyMultipleUseDemandedBits(Pos, DemandedBits, DAG)) {
-      Pos = Inner;
+    unsigned PosBits = Pos.getScalarValueSizeInBits();
+    if (PosBits >= MaskLoBits) {
+      APInt DemandedBits = APInt::getLowBitsSet(PosBits, MaskLoBits);
+      if (SDValue Inner =
+              TLI.SimplifyMultipleUseDemandedBits(Pos, DemandedBits, DAG)) {
+        Pos = Inner;
+      }
     }
   }
 
