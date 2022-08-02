@@ -36,7 +36,6 @@ public:
   static char ID;
 
   RISCVCFGOptimizer() : MachineFunctionPass(ID) {
-    std::cout << "RISCVCFGOptimizer in" << std::endl;
     initializeRISCVCFGOptimizerPass(*PassRegistry::getPassRegistry());
   }
 
