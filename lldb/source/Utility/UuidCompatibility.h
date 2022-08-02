@@ -15,7 +15,7 @@
 typedef unsigned char uuid_t[16];
 
 // Return 1 if uuid is null, that is, all zeroes.
-int uuid_is_null(uuid_t uuid) {
+inline __attribute__((always_inline)) int uuid_is_null(uuid_t uuid) {
   for (int i = 0; i < 16; i++)
     if (uuid[i])
       return 0;
