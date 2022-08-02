@@ -539,6 +539,7 @@ cc_library(
         "//mlir:NVGPUTransforms",
         "//mlir:Pass",
         "//mlir:SCFDialect",
+        "//mlir:Support",
         "//mlir:TransformUtils",
     ],
 )
