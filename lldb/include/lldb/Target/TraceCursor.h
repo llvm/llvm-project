@@ -52,7 +52,7 @@ namespace lldb_private {
 ///
 /// Sample usage:
 ///
-///  TraceCursorUP cursor = trace.GetTrace(thread);
+///  TraceCursorSP cursor = trace.GetTrace(thread);
 ///
 ///  for (; cursor->HasValue(); cursor->Next()) {
 ///     TraceItemKind kind = cursor->GetItemKind();

@@ -93,7 +93,7 @@ public:
   ///
   /// \param[in] options
   ///     Additional options for configuring the dumping.
-  TraceDumper(lldb::TraceCursorUP &&cursor_up, Stream &s,
+  TraceDumper(lldb::TraceCursorSP cursor_sp, Stream &s,
               const TraceDumperOptions &options);
 
   /// Dump \a count instructions of the thread trace starting at the current
@@ -114,7 +114,7 @@ private:
   /// Create a trace item for the current position without symbol information.
   TraceItem CreatRawTraceItem();
 
-  lldb::TraceCursorUP m_cursor_up;
+  lldb::TraceCursorSP m_cursor_sp;
   TraceDumperOptions m_options;
   std::unique_ptr<OutputWriter> m_writer_up;
 };
