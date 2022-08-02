@@ -1,11 +1,3 @@
-if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
-  # The arpa/inet.h header used in the files here is providing a miscompiled
-  # htonl function on macOS <= 10.15 when local submodule visibility is active.
-  # Disabling modules in this directory until this is is fixed.
-  # See rdar://problem/62886385
-  remove_module_flags()
-endif()
-
 macro(add_host_subdirectory group)
   list(APPEND HOST_SOURCES ${ARGN})
   source_group(${group} FILES ${ARGN})
