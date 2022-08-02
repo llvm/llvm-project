@@ -71,8 +71,6 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
           dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Dense);
         } else if (strVal == "compressed") {
           dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Compressed);
-        } else if (strVal == "singleton") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Singleton);
         } else {
           parser.emitError(parser.getNameLoc(),
                            "unexpected dimension level type: ")
@@ -125,9 +123,6 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
       break;
     case DimLevelType::Compressed:
       printer << "\"compressed\"";
-      break;
-    case DimLevelType::Singleton:
-      printer << "\"singleton\"";
       break;
     }
     if (i != e - 1)

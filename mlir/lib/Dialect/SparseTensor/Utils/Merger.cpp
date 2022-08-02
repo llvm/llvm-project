@@ -591,9 +591,6 @@ void Merger::dumpBits(const BitVector &bits) const {
       case kDense:
         llvm::dbgs() << "D";
         break;
-      case kSingle:
-        llvm::dbgs() << "T";
-        break;
       case kUndef:
         llvm::dbgs() << "U";
         break;
