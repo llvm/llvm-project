@@ -8,7 +8,7 @@ module m
   type, extends(t1) :: t2(e)
     integer, len :: e
   end type
-  type, extends(t2), bind(c) :: t3
+  type, extends(t2) :: t3
   end type
 end
 
@@ -23,6 +23,6 @@ end
 !  type,extends(t1)::t2(e)
 !    integer(4),len::e
 !  end type
-!  type,bind(c),extends(t2)::t3
+!  type,extends(t2)::t3
 !  end type
 !end
