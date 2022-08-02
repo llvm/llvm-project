@@ -937,6 +937,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
   default:
     break;
   }
+  bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
     // If HasMaskedOffOperand, insert result type as first input operand if
     // need.
@@ -954,6 +955,10 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
           NewPrototype.insert(NewPrototype.begin() + NF + 1, MaskoffType);
       }
     }
+    // Erase passthru operand for TAM
+    if (NF == 1 && IsPrototypeDefaultTU && DefaultPolicy == Policy::TAMA &&
+        HasPassthruOp && !HasMaskedOffOperand)
+      NewPrototype.erase(NewPrototype.begin() + 1);
     if (HasMaskedOffOperand && NF > 1) {
       // Convert
       // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
@@ -967,7 +972,6 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       NewPrototype.insert(NewPrototype.begin() + 1, PrototypeDescriptor::Mask);
     }
   } else if (NF == 1) {
-    bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
     if (DefaultPolicy == Policy::TU && HasPassthruOp && !IsPrototypeDefaultTU)
       NewPrototype.insert(NewPrototype.begin(), NewPrototype[0]);
     else if (DefaultPolicy == Policy::TA && HasPassthruOp &&
