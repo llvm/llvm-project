@@ -677,6 +677,7 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
     %a = math.tanh %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

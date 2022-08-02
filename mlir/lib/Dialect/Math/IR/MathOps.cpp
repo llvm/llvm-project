@@ -282,6 +282,24 @@ OpFoldResult math::TanOp::fold(ArrayRef<Attribute> operands) {
       });
 }
 
+//===----------------------------------------------------------------------===//
+// TanhOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::TanhOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(tanh(a.convertToDouble()));
+        case 32:
+          return APFloat(tanhf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
 /// Materialize an integer or floating point constant.
 Operation *math::MathDialect::materializeConstant(OpBuilder &builder,
                                                   Attribute value, Type type,
