@@ -49,7 +49,6 @@ define void @f() {
 ; CHECK-NEXT:    store i32 0, i32* @f.e, align 1, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    store i32 0, i32* @f.e, align 1, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    store i8 10, i8* [[TMP0]], align 1
-; CHECK-NEXT:    store i8 10, i8* [[TMP0]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 500
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
