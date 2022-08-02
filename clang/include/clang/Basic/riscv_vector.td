@@ -137,6 +137,8 @@ class PolicyScheme<int val>{
 def NonePolicy : PolicyScheme<0>;
 def HasPassthruOperand : PolicyScheme<1>;
 def HasPolicyOperand : PolicyScheme<2>;
+// Specail case for passthru operand which is not a first opeand.
+def HasPassthruOperandAtIdx1 : PolicyScheme<3>;
 
 class RVVBuiltin<string suffix, string prototype, string type_range,
                  string overloaded_suffix = ""> {
@@ -1819,13 +1821,16 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 }
 
 // 12.15. Vector Integer Merge Instructions
-// C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (op1, op2, mask, vl)
-let HasMasked = false, MaskedPolicyScheme = NonePolicy,
+// C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (passthru, op1, op2, mask, vl)
+let HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
-      IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       // insert undef passthru
-      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      if (DefaultPolicy == TAIL_AGNOSTIC)
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "csil",
                                     [["vvm", "v", "vmvv"],
@@ -1960,12 +1965,15 @@ let Name = "vfclass_v", UnMaskedPolicyScheme = HasPassthruOperand in
 
 // 14.15. Vector Floating-Point Merge Instructio
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
-let HasMasked = false, MaskedPolicyScheme = NonePolicy,
+let HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
-      IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       // insert undef passthru
-      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      if (DefaultPolicy == TAIL_AGNOSTIC)
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
                                     [["vvm", "v", "vmvv"]]>;
@@ -2152,10 +2160,16 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
 }
 
 // 17.5. Vector Compress Instruction
-let HasMasked = false, MaskedPolicyScheme = NonePolicy,
+let IsPrototypeDefaultTU = true,
+    HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
-      IntrinsicTypes = {ResultType, Ops[3]->getType()};
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+      // insert undef passthru
+      if (DefaultPolicy == TAIL_AGNOSTIC)
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
     }] in {
   // signed and floating type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csilxfd",
