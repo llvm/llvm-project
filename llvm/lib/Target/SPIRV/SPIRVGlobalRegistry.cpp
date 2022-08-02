@@ -44,7 +44,7 @@ SPIRVType *SPIRVGlobalRegistry::assignVectTypeToVReg(
 
 SPIRVType *SPIRVGlobalRegistry::assignTypeToVReg(
     const Type *Type, Register VReg, MachineIRBuilder &MIRBuilder,
-    SPIRV::AccessQualifier AccessQual, bool EmitIR) {
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
 
   SPIRVType *SpirvType =
       getOrCreateSPIRVType(Type, MIRBuilder, AccessQual, EmitIR);
@@ -296,9 +296,9 @@ SPIRVGlobalRegistry::getOrCreateConsIntVector(uint64_t Val, MachineInstr &I,
 
 Register SPIRVGlobalRegistry::buildGlobalVariable(
     Register ResVReg, SPIRVType *BaseType, StringRef Name,
-    const GlobalValue *GV, SPIRV::StorageClass Storage,
+    const GlobalValue *GV, SPIRV::StorageClass::StorageClass Storage,
     const MachineInstr *Init, bool IsConst, bool HasLinkageTy,
-    SPIRV::LinkageType LinkageType, MachineIRBuilder &MIRBuilder,
+    SPIRV::LinkageType::LinkageType LinkageType, MachineIRBuilder &MIRBuilder,
     bool IsInstSelector) {
   const GlobalVariable *GVar = nullptr;
   if (GV)
@@ -439,10 +439,9 @@ static bool isSpecialType(const Type *Ty) {
   return false;
 }
 
-SPIRVType *SPIRVGlobalRegistry::getOpTypePointer(SPIRV::StorageClass SC,
-                                                 SPIRVType *ElemType,
-                                                 MachineIRBuilder &MIRBuilder,
-                                                 Register Reg) {
+SPIRVType *SPIRVGlobalRegistry::getOpTypePointer(
+    SPIRV::StorageClass::StorageClass SC, SPIRVType *ElemType,
+    MachineIRBuilder &MIRBuilder, Register Reg) {
   if (!Reg.isValid())
     Reg = createTypeVReg(MIRBuilder);
   return MIRBuilder.buildInstr(SPIRV::OpTypePointer)
@@ -451,9 +450,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypePointer(SPIRV::StorageClass SC,
       .addUse(getSPIRVTypeID(ElemType));
 }
 
-SPIRVType *
-SPIRVGlobalRegistry::getOpTypeForwardPointer(SPIRV::StorageClass SC,
-                                             MachineIRBuilder &MIRBuilder) {
+SPIRVType *SPIRVGlobalRegistry::getOpTypeForwardPointer(
+    SPIRV::StorageClass::StorageClass SC, MachineIRBuilder &MIRBuilder) {
   return MIRBuilder.buildInstr(SPIRV::OpTypeForwardPointer)
       .addUse(createTypeVReg(MIRBuilder))
       .addImm(static_cast<uint32_t>(SC));
@@ -481,10 +479,9 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeFunctionWithArgs(
   return finishCreatingSPIRVType(Ty, SpirvType);
 }
 
-SPIRVType *SPIRVGlobalRegistry::findSPIRVType(const Type *Ty,
-                                              MachineIRBuilder &MIRBuilder,
-                                              SPIRV::AccessQualifier AccQual,
-                                              bool EmitIR) {
+SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
+    const Type *Ty, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccQual, bool EmitIR) {
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
@@ -500,10 +497,9 @@ Register SPIRVGlobalRegistry::getSPIRVTypeID(const SPIRVType *SpirvType) const {
   return SpirvType->defs().begin()->getReg();
 }
 
-SPIRVType *SPIRVGlobalRegistry::createSPIRVType(const Type *Ty,
-                                                MachineIRBuilder &MIRBuilder,
-                                                SPIRV::AccessQualifier AccQual,
-                                                bool EmitIR) {
+SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
+    const Type *Ty, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccQual, bool EmitIR) {
   assert(!isSpecialType(Ty));
   auto &TypeToSPIRVTypeMap = DT.getTypes()->getAllUses();
   auto t = TypeToSPIRVTypeMap.find(Ty);
@@ -577,7 +573,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(const Type *Ty,
 
 SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
-    SPIRV::AccessQualifier AccessQual, bool EmitIR) {
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   if (TypesInProcessing.count(Ty) && !Ty->isPointerTy())
     return nullptr;
   TypesInProcessing.insert(Ty);
@@ -607,7 +603,7 @@ SPIRVType *SPIRVGlobalRegistry::getSPIRVTypeForVReg(Register VReg) const {
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
-    SPIRV::AccessQualifier AccessQual, bool EmitIR) {
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
@@ -675,12 +671,13 @@ bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
   llvm_unreachable("Attempting to get sign of non-integer type.");
 }
 
-SPIRV::StorageClass
+SPIRV::StorageClass::StorageClass
 SPIRVGlobalRegistry::getPointerStorageClass(Register VReg) const {
   SPIRVType *Type = getSPIRVTypeForVReg(VReg);
   assert(Type && Type->getOpcode() == SPIRV::OpTypePointer &&
          Type->getOperand(1).isImm() && "Pointer type is expected");
-  return static_cast<SPIRV::StorageClass>(Type->getOperand(1).getImm());
+  return static_cast<SPIRV::StorageClass::StorageClass>(
+      Type->getOperand(1).getImm());
 }
 
 SPIRVType *
@@ -758,10 +755,9 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
   return finishCreatingSPIRVType(LLVMTy, MIB);
 }
 
-SPIRVType *
-SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(SPIRVType *BaseType,
-                                                 MachineIRBuilder &MIRBuilder,
-                                                 SPIRV::StorageClass SClass) {
+SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
+    SPIRVType *BaseType, MachineIRBuilder &MIRBuilder,
+    SPIRV::StorageClass::StorageClass SClass) {
   return getOrCreateSPIRVType(
       PointerType::get(const_cast<Type *>(getTypeForSPIRVType(BaseType)),
                        storageClassToAddressSpace(SClass)),
@@ -770,7 +766,7 @@ SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(SPIRVType *BaseType,
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
-    SPIRV::StorageClass SC) {
+    SPIRV::StorageClass::StorageClass SC) {
   Type *LLVMTy =
       PointerType::get(const_cast<Type *>(getTypeForSPIRVType(BaseType)),
                        storageClassToAddressSpace(SC));

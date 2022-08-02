@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 include "SPIRVInstrFormats.td"
-include "SPIRVEnums.td"
+include "SPIRVSymbolicOperands.td"
 
 // Codegen only metadata instructions
 let isCodeGenOnly=1 in {
@@ -131,7 +131,7 @@ def OpMemberDecorateString: Op<5633, (outs),
 def OpExtension: Op<10, (outs), (ins StringImm:$name, variable_ops), "OpExtension $name">;
 def OpExtInstImport: Op<11, (outs ID:$res), (ins StringImm:$extInstsName, variable_ops),
                   "$res = OpExtInstImport $extInstsName">;
-def OpExtInst: Op<12, (outs ID:$res), (ins TYPE:$ty, ID:$set, ExtInst:$inst, variable_ops),
+def OpExtInst: Op<12, (outs ID:$res), (ins TYPE:$ty, ID:$set, Extension:$inst, variable_ops),
                   "$res = OpExtInst $ty $set $inst">;
 
 // 3.42.5 Mode-Setting Instructions
