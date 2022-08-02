@@ -295,7 +295,7 @@ public:
   /// which may later be explicitly instantiated.
   bool MayBeEmittedEagerly(const clang::ValueDecl *D);
 
-  void verifyModule();
+  bool verifyModule();
 
   /// Return the address of the given function. If Ty is non-null, then this
   /// function will use the specified type if it has to create it.

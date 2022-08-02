@@ -89,7 +89,7 @@ public:
     return std::move(mlirCtx);
   };
 
-  void verifyModule();
+  bool verifyModule();
 
   void buildDeferredDecls();
 };

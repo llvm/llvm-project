@@ -417,6 +417,9 @@ public:
   /// Disable Clang IR specific (CIR) passes
   unsigned DisableCIRPasses : 1;
 
+  /// Disable Clang IR (CIR) verifier
+  unsigned DisableCIRVerifier : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -600,7 +603,7 @@ public:
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), DisableCIRPasses(false),
-        TimeTraceGranularity(500) {}
+        DisableCIRVerifier(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

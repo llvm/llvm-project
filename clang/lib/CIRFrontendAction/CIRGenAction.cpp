@@ -125,9 +125,17 @@ public:
   }
 
   void HandleTranslationUnit(ASTContext &C) override {
-    gen->HandleTranslationUnit(C);
+    // Note that this method is called after `HandleTopLevelDecl` has already
+    // ran all over the top level decls. Here clang mostly wraps defered and
+    // global codegen, followed by running CIR passes.
 
-    gen->verifyModule();
+    gen->HandleTranslationUnit(C);
+    if (!feOptions.DisableCIRVerifier)
+      if (!gen->verifyModule()) {
+        llvm::report_fatal_error(
+            "CIR codegen: module verification error before running CIR passes");
+        return;
+      }
 
     auto mlirMod = gen->getModule();
     auto mlirCtx = gen->takeContext();
@@ -135,8 +143,10 @@ public:
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (outputStream && mlirMod) {
-        if (!feOptions.DisableCIRPasses)
-          runCIRToCIRPasses(mlirMod, mlirCtx.get());
+        if (!feOptions.DisableCIRPasses) {
+          runCIRToCIRPasses(mlirMod, mlirCtx.get(),
+                            !feOptions.DisableCIRVerifier);
+        }
         mlir::OpPrintingFlags flags;
         // FIXME: we cannot roundtrip prettyForm=true right now.
         flags.enableDebugInfo(/*prettyForm=*/false);

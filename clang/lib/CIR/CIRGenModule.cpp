@@ -1289,12 +1289,11 @@ mlir::Type CIRGenModule::getCIRType(const QualType &type) {
   return genTypes.ConvertType(type);
 }
 
-void CIRGenModule::verifyModule() {
+bool CIRGenModule::verifyModule() {
   // Verify the module after we have finished constructing it, this will
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
-  if (failed(mlir::verify(theModule)))
-    theModule.emitError("module verification error");
+  return mlir::verify(theModule).succeeded();
 }
 
 std::pair<mlir::FunctionType, mlir::FuncOp>
