@@ -429,9 +429,9 @@ let isCompare = 1 in
   defm CMP : ArithTri<0b011111, "cmp">;
 
 let Predicates = [IsMC88110] in {
-  def DIVUrrd : F_IRCD<0b011010, "divu.d">;
+  def DIVUrrd : F_IRCD<0b011010, GPR, "divu.d">;
   let isCommutable = 1 in
-    def MULUrrd : F_IRCD<0b011011, "mulu.d">;
+    def MULUrrd : F_IRCD<0b011011, GPR64, "mulu.d">;
 }
 
 // TODO Aliases div -> divs, mul -> mulu. Renames from 88100

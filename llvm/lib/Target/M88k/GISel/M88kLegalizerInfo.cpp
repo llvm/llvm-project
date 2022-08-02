@@ -77,29 +77,15 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .clampScalar(1, S32, S32);
   getActionDefinitionsBuilder(G_ADD).legalFor({S32});
   getActionDefinitionsBuilder(G_SUB).legalFor({S32});
-  getActionDefinitionsBuilder(G_MUL)
+  getActionDefinitionsBuilder({G_MUL, G_UDIV})
       .legalFor({S32})
       .customIf(all(typeInSet(0, {S64}), LegalityPredicate(IsMC88110)))
       .libcallFor({S64})
       .clampScalar(0, S32, S64);
-  getActionDefinitionsBuilder(G_UDIV).legalFor({S32}).libcallFor({S64});
   getActionDefinitionsBuilder(G_SDIV)
-#if 0
-      // The only problem with these 2 rules is that the custom code requires
-      // inserting new basic blocks. This is currently not supported by the
-      // Legalizer.
-      .legalIf(all(typeInSet(0, {S32}),
-                   LegalityPredicate(([=, &ST](const LegalityQuery &Query) {
-                     return ST.useDivInstr() || ST.isMC88110();
-                   }))))
-      .customIf(all(typeInSet(0, {S32}),
-                    LegalityPredicate(([=, &ST](const LegalityQuery &Query) {
-                      return !ST.useDivInstr();
-                    }))))
-#else
       .legalFor({S32})
-#endif
-      .libcallFor({S64});
+      .libcallFor({S64})
+      .clampScalar(0, S32, S64);
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({S32})
       .clampScalar(0, S32, S32);
@@ -212,6 +198,35 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     auto Mult2 = MIRBuilder.buildMerge(
         S64, {Zero.getReg(0), Src2I->getOperand(1).getReg()});
     MIRBuilder.buildMul(DstReg, Mult1, Mult2, MI.getFlags());
+    MI.eraseFromParent();
+    break;
+  }
+  case G_UDIV: {
+    // MC88110 only: 64bit division with 32bit divisor.
+    Register DstReg = MI.getOperand(0).getReg();
+    Register Src1Reg = MI.getOperand(1).getReg();
+    if (MRI.getType(DstReg) != S64 || MRI.getType(Src1Reg) != S64)
+      return false;
+    MachineInstr *Src2I = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+    unsigned Opc2 = Src2I->getOpcode();
+    // Check if the divisor is a blown-up 32 bit value. If yes then the division
+    // is legal.
+    if (Opc2 == G_MERGE_VALUES) {
+      auto Cst = getIConstantVRegValWithLookThrough(
+          Src2I->getOperand(1).getReg(), MRI);
+      return Cst && Cst->Value.isZero();
+    }
+
+    // Try to legalize the instruction.
+    if (Opc2 != G_ZEXT)
+      return false;
+    if (MRI.getType(Src2I->getOperand(1).getReg()) != S32)
+      return false;
+    auto Zero = MIRBuilder.buildConstant(S32, 0);
+    auto Div = MIRBuilder.buildMerge(
+        S64, {Zero.getReg(0), Src2I->getOperand(1).getReg()});
+    MIRBuilder.buildInstr(G_UDIV, {DstReg}, {Src1Reg, Div.getReg(0)},
+                          MI.getFlags());
     MI.eraseFromParent();
     break;
   }

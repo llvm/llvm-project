@@ -84,6 +84,8 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectMul(MachineInstr &I, MachineBasicBlock &MBB,
                  MachineRegisterInfo &MRI) const;
+  bool selectUDiv(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
   bool selectExt(MachineInstr &I, MachineBasicBlock &MBB,
                  MachineRegisterInfo &MRI) const;
   bool selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
@@ -628,6 +630,34 @@ bool M88kInstructionSelector::selectMul(MachineInstr &I, MachineBasicBlock &MBB,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool M88kInstructionSelector::selectUDiv(MachineInstr &I,
+                                         MachineBasicBlock &MBB,
+                                         MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_UDIV && "Unexpected G code");
+
+  // Only selects special divu.d instruction, the other div instructions are
+  // matched by the patterns from the target description.
+  if (!isMC88110())
+    return false;
+
+  MachineInstr *MI = nullptr;
+  Register DstReg = I.getOperand(0).getReg();
+  Register Src1Reg = I.getOperand(1).getReg();
+  Register Src2Reg = I.getOperand(2).getReg();
+
+  MachineInstr *MergeMI =
+      getOpcodeDef(TargetOpcode::G_MERGE_VALUES, Src2Reg, MRI);
+  if (MergeMI && mi_match(MergeMI->getOperand(1).getReg(), MRI, m_ZeroInt())) {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::DIVUrrd), DstReg)
+             .addReg(Src1Reg)
+             .addReg(MergeMI->getOperand(2).getReg());
+  } else
+    return false;
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
                                         MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_ZEXT ||
@@ -1100,6 +1130,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectBrIndirect(I, MBB, MRI);
   case TargetOpcode::G_MUL:
     return selectMul(I, MBB, MRI);
+  case TargetOpcode::G_UDIV:
+    return selectUDiv(I, MBB, MRI);
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ANYEXT: // TODO Can G_ANYEXT end up here?
