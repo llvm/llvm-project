@@ -985,26 +985,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the range of position in the result of the affine map
-        computed by getLoopsToShapesMap() which correspond to the
-        AffineExprs used to access the outputs of the operation.
-      }],
-      /*retTy=*/"std::pair<int64_t, int64_t>",
-      /*methodName=*/"getResultsPositionInLoopsToShapeMap",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        int64_t inputRankSum = 0;
-        int64_t outputRankSum = 0;
-        for(OpOperand *input : getInputOperands())
-          inputRankSum += getRank(input);
-        for(OpOperand *output : getOutputOperands())
-          outputRankSum += getRank(output);
-        return {inputRankSum, inputRankSum + outputRankSum};
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
         Like `getShape`, but only returns statically-known information, without
         generating any new IR. For each shape dimension, returns >=0 if that
         dimension is statically known, or ShapeType::kDynamicSize otherwise.
