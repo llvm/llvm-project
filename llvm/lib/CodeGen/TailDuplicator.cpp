@@ -716,8 +716,7 @@ bool TailDuplicator::canCompletelyDuplicateBB(MachineBasicBlock &BB) {
 
 bool TailDuplicator::duplicateSimpleBB(
     MachineBasicBlock *TailBB, SmallVectorImpl<MachineBasicBlock *> &TDBBs,
-    const DenseSet<Register> &UsedByPhi,
-    SmallVectorImpl<MachineInstr *> &Copies) {
+    const DenseSet<Register> &UsedByPhi) {
   SmallPtrSet<MachineBasicBlock *, 8> Succs(TailBB->succ_begin(),
                                             TailBB->succ_end());
   SmallVector<MachineBasicBlock *, 8> Preds(TailBB->predecessors());
@@ -826,7 +825,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
   getRegsUsedByPHIs(*TailBB, &UsedByPhi);
 
   if (IsSimple)
-    return duplicateSimpleBB(TailBB, TDBBs, UsedByPhi, Copies);
+    return duplicateSimpleBB(TailBB, TDBBs, UsedByPhi);
 
   // Iterate through all the unique predecessors and tail-duplicate this
   // block into them, if possible. Copying the list ahead of time also
