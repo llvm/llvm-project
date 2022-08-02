@@ -441,6 +441,8 @@ struct IntrinsicLibrary {
   getRuntimeCallGenerator(llvm::StringRef name,
                           mlir::FunctionType soughtFuncType);
 
+  void genAbort(llvm::ArrayRef<fir::ExtendedValue>);
+
   /// Lowering for the ABS intrinsic. The ABS intrinsic expects one argument in
   /// the llvm::ArrayRef. The ABS intrinsic is lowered into MLIR/FIR operation
   /// if the argument is an integer, into llvm intrinsics if the argument is
@@ -685,6 +687,7 @@ static constexpr bool handleDynamicOptional = true;
 /// argument must not be lowered by value. In which case, the lowering rules
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
+    {"abort", &I::genAbort},
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
     {"adjustl",
@@ -2103,6 +2106,12 @@ mlir::Value IntrinsicLibrary::genConversion(mlir::Type resultType,
   // There can be an optional kind in second argument.
   assert(args.size() >= 1);
   return builder.convertWithSemantics(loc, resultType, args[0]);
+}
+
+// ABORT
+void IntrinsicLibrary::genAbort(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  fir::runtime::genAbort(builder, loc);
 }
 
 // ABS
