@@ -16,6 +16,8 @@ for the latter.
 In addition to detailing each mechanism, this manual also tries to capture best
 practices. They are rendered as quoted bullet points.
 
+[TOC]
+
 ## Motivation
 
 MLIR allows pluggable dialects, and dialects contain, among others, a list of

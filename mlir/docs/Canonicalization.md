@@ -15,6 +15,8 @@ reuse it across many different IRs that it represents. This document describes
 the general approach, global canonicalizations performed, and provides sections
 to capture IR-specific rules for reference.
 
+[TOC]
+
 ## General Design
 
 MLIR has a single canonicalization pass, which iteratively applies
