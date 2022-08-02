@@ -45,7 +45,7 @@
 #define LLDB_WATCH_TYPE_READ (1u << 0)
 #define LLDB_WATCH_TYPE_WRITE (1u << 1)
 #define LLDB_WATCH_TYPE_IS_VALID(type)                                         \
-  ((type | LLDB_WATCH_TYPE_READ) || (type | LLDB_WATCH_TYPE_WRITE))
+  ((type & LLDB_WATCH_TYPE_READ) || (type & LLDB_WATCH_TYPE_WRITE))
 
 // Generic Register Numbers
 #define LLDB_REGNUM_GENERIC_PC 0    // Program Counter
