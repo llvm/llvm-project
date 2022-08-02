@@ -1,6 +1,6 @@
 // REQUIRES: lld
 
-// RUN: not %clang %s -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t -fcrash-diagnostics=all 2>&1 \
+// RUN: not %clang %s -target x86_64-linux -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t -fcrash-diagnostics=all 2>&1 \
 // RUN:   | FileCheck %s
 
 // check that we still get lld's output
@@ -13,9 +13,9 @@
 // CHECK-NEXT: note: diagnostic msg:
 // CHECK: ********************
 
-// RUN: not %clang %s -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t -fcrash-diagnostics=compiler 2>&1 \
+// RUN: not %clang %s -target x86_64-linux -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t -fcrash-diagnostics=compiler 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-LINKER
-// RUN: not %clang %s -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t 2>&1 \
+// RUN: not %clang %s -target x86_64-linux -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-LINKER
 
 // NO-LINKER-NOT: Preprocessed source(s) and associated run script(s) are located at:
