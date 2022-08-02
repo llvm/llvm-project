@@ -612,6 +612,14 @@ static unsigned getOptimizationLevelSize(ArgList &Args) {
   return 0;
 }
 
+/// Assume no thread state at -Ofast
+static bool shouldAssumeNoThreadState(const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
+    if (A->getOption().matches(options::OPT_Ofast))
+      return true;
+  return false;
+}
+
 static void GenerateArg(SmallVectorImpl<const char *> &Args,
                         llvm::opt::OptSpecifier OptSpecifier,
                         CompilerInvocation::StringAllocator SA) {
@@ -3469,6 +3477,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPTeamSubscription)
     GenerateArg(Args, OPT_fopenmp_assume_teams_oversubscription, SA);
 
+  if (Opts.OpenMPNoThreadState)
+    GenerateArg(Args, OPT_fopenmp_assume_no_thread_state, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_assume_no_thread_state, SA);
+
   if (Opts.OpenMPTargetDebug != 0)
     GenerateArg(Args, OPT_fopenmp_target_debug_EQ,
                 Twine(Opts.OpenMPTargetDebug), SA);
@@ -3924,6 +3937,12 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     if (Args.hasArg(OPT_fopenmp_assume_threads_oversubscription))
       Opts.OpenMPThreadSubscription = true;
   }
+
+  // Turn ON at -Ofast
+  Opts.OpenMPNoThreadState =
+      Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
+                   options::OPT_fno_openmp_assume_no_thread_state,
+                   shouldAssumeNoThreadState(Args));
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
