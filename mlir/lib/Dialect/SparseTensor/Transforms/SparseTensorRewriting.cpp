@@ -41,12 +41,17 @@ static bool isSparseTensor(OpOperand *op) {
   return false;
 }
 
-// Helper method to find zero or empty initialization.
-static bool isEmptyInit(OpOperand *op) {
+// Helper method to find zero/uninitialized allocation.
+static bool isAlloc(OpOperand *op, bool isZero) {
   Value val = op->get();
-  return matchPattern(val, m_Zero()) || matchPattern(val, m_AnyZeroFloat()) ||
-         val.getDefiningOp<InitTensorOp>() ||
-         val.getDefiningOp<AllocTensorOp>();
+  if (auto alloc = val.getDefiningOp<AllocTensorOp>()) {
+    Value copy = alloc.getCopy();
+    if (isZero)
+      return copy && (matchPattern(copy, m_Zero()) ||
+                      matchPattern(copy, m_AnyZeroFloat()));
+    return !copy;
+  }
+  return false;
 }
 
 // Helper to detect sampling operation.
@@ -140,9 +145,9 @@ public:
         !prod.getResult(0).hasOneUse())
       return failure();
     // Sampling consumer and sum of multiplication chain producer.
-    if (!isEmptyInit(op.getOutputOperand(0)) ||
-        !isEmptyInit(prod.getOutputOperand(0)) || !isSampling(op) ||
-        !isSumOfMul(prod))
+    if (!isAlloc(op.getOutputOperand(0), /*isZero=*/false) ||
+        !isAlloc(prod.getOutputOperand(0), /*isZero=*/true) ||
+        !isSampling(op) || !isSumOfMul(prod))
       return failure();
     // Modify operand structure of producer and consumer.
     Location loc = prod.getLoc();
@@ -180,6 +185,14 @@ public:
     mapper.map(last, rewriter.clone(*sampler, mapper)->getResult(0));
     last = rewriter.clone(*acc, mapper)->getResult(0);
     rewriter.create<linalg::YieldOp>(loc, last);
+    // Force initial value on merged allocation for dense outputs.
+    if (!getSparseTensorEncoding(op.getResult(0).getType())) {
+      AllocTensorOp a1 =
+          prod.getOutputOperand(0)->get().getDefiningOp<AllocTensorOp>();
+      AllocTensorOp a2 =
+          op.getOutputOperand(0)->get().getDefiningOp<AllocTensorOp>();
+      a2.getCopyMutable().assign(a1.getCopy());
+    }
     // Replace consumer with fused operation. Old producer
     // and consumer ops will be removed by DCE.
     rewriter.replaceOp(op, fusedOp->getResults());
@@ -240,7 +253,7 @@ public:
 //===---------------------------------------------------------------------===//
 
 void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns) {
-  // TODO(springerm): enable FuseSparseMultiplyOverAdd
-  patterns.add<ReshapeRewriter<tensor::ExpandShapeOp>,
-               ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
+  patterns
+      .add<FuseSparseMultiplyOverAdd, ReshapeRewriter<tensor::ExpandShapeOp>,
+           ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
 }
