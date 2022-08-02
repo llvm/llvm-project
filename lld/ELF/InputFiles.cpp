@@ -972,7 +972,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       return &InputSection::discarded;
     }
 
-    // An object file cmpiled for split stack, but where some of the
+    // An object file compiled for split stack, but where some of the
     // functions were compiled with the no_split_stack_attribute will
     // include a .note.GNU-no-split-stack section.
     if (name == ".note.GNU-no-split-stack") {
