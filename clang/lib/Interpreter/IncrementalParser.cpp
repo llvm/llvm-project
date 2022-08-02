@@ -69,7 +69,11 @@ public:
             LLVM_FALLTHROUGH;
           case frontend::EmitAssembly:
             LLVM_FALLTHROUGH;
+          case frontend::EmitBC:
+            LLVM_FALLTHROUGH;
           case frontend::EmitObj:
+            LLVM_FALLTHROUGH;
+          case frontend::PrintPreprocessedInput:
             LLVM_FALLTHROUGH;
           case frontend::EmitLLVMOnly:
             Act.reset(new EmitLLVMOnlyAction(&LLVMCtx));
