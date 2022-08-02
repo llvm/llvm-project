@@ -173,8 +173,8 @@ EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
   DP("__kmpc_push_target_tripcount(%" PRId64 ", %" PRIu64 ")\n", DeviceId,
      LoopTripcount);
   PM->TblMapMtx.lock();
-  PM->Devices[DeviceId]->LoopTripCnt.emplace(__kmpc_global_thread_num(NULL),
-                                             LoopTripcount);
+  PM->Devices[DeviceId]->LoopTripCnt[__kmpc_global_thread_num(NULL)] =
+      LoopTripcount;
   PM->TblMapMtx.unlock();
 }
 
