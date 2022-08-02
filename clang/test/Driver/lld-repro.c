@@ -1,4 +1,5 @@
 // REQUIRES: lld
+// XFAIL: *
 
 // RUN: not %clang %s -target x86_64-linux -c -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t -fcrash-diagnostics=all 2>&1 \
 // RUN:   | FileCheck %s
