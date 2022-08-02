@@ -1,29 +1,29 @@
 // RUN: mlir-opt %s -convert-math-to-libm -canonicalize | FileCheck %s
 
-// CHECK-DAG: @atan(f64) -> f64
-// CHECK-DAG: @atanf(f32) -> f32
-// CHECK-DAG: @erf(f64) -> f64
-// CHECK-DAG: @erff(f32) -> f32
-// CHECK-DAG: @expm1(f64) -> f64
-// CHECK-DAG: @expm1f(f32) -> f32
-// CHECK-DAG: @atan2(f64, f64) -> f64
-// CHECK-DAG: @atan2f(f32, f32) -> f32
-// CHECK-DAG: @tan(f64) -> f64
-// CHECK-DAG: @tanf(f32) -> f32
-// CHECK-DAG: @tanh(f64) -> f64
-// CHECK-DAG: @tanhf(f32) -> f32
-// CHECK-DAG: @round(f64) -> f64
-// CHECK-DAG: @roundf(f32) -> f32
-// CHECK-DAG: @roundeven(f64) -> f64
-// CHECK-DAG: @roundevenf(f32) -> f32
-// CHECK-DAG: @cos(f64) -> f64
-// CHECK-DAG: @cosf(f32) -> f32
-// CHECK-DAG: @sin(f64) -> f64
-// CHECK-DAG: @sinf(f32) -> f32
-// CHECK-DAG: @floor(f64) -> f64
-// CHECK-DAG: @floorf(f32) -> f32
-// CHECK-DAG: @ceil(f64) -> f64
-// CHECK-DAG: @ceilf(f32) -> f32
+// CHECK-DAG: @atan(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @atanf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @erf(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @erff(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @expm1(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @expm1f(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @atan2(f64, f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @atan2f(f32, f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @tan(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @tanf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @tanh(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @tanhf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @round(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @roundf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @roundeven(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @roundevenf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @cos(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @cosf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @sin(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @sinf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @floor(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @floorf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @ceil(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @ceilf(f32) -> f32 attributes {llvm.readnone}
 
 // CHECK-LABEL: func @atan_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
