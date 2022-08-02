@@ -117,31 +117,39 @@ static void updateSubElementImpl(
 
   // Check for an existing mapping for this element, and walk it if we haven't
   // yet.
-  T &mappedElement = visited[element];
-  if (!mappedElement) {
+  T *mappedElement = &visited[element];
+  if (!*mappedElement) {
     WalkResult result = WalkResult::advance();
-    std::tie(mappedElement, result) = walkFn(element);
+    std::tie(*mappedElement, result) = walkFn(element);
 
     // Try walking this element.
-    if (result.wasInterrupted() || !mappedElement) {
+    if (result.wasInterrupted() || !*mappedElement) {
       changed = failure();
       return;
     }
 
     // Handle replacing sub-elements if this element is also a container.
     if (!result.wasSkipped()) {
-      if (auto interface = mappedElement.template dyn_cast<InterfaceT>()) {
-        if (!(mappedElement = replaceSubElementFn(interface))) {
+      if (auto interface = mappedElement->template dyn_cast<InterfaceT>()) {
+        // Cache the size of the `visited` map since it may grow when calling
+        // `replaceSubElementFn` and we would need to fetch again the (now
+        // invalidated) reference to `mappedElement`.
+        size_t visitedSize = visited.size();
+        auto replacedElement = replaceSubElementFn(interface);
+        if (!replacedElement) {
           changed = failure();
           return;
         }
+        if (visitedSize != visited.size())
+          mappedElement = &visited[element];
+        *mappedElement = replacedElement;
       }
     }
   }
 
   // Update to the mapped element.
-  if (mappedElement != element) {
-    newElements.back() = mappedElement;
+  if (*mappedElement != element) {
+    newElements.back() = *mappedElement;
     changed = true;
   }
 }
