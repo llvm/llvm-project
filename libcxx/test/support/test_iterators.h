@@ -53,7 +53,7 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
-#if _LIBCPP_STD_VER > 17
+#if TEST_STD_VER > 17
    static_assert(std::output_iterator<cpp17_output_iterator<int*>, int>);
 #endif
 
@@ -94,7 +94,7 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
-#if _LIBCPP_STD_VER > 17
+#if TEST_STD_VER > 17
    static_assert(std::input_iterator<cpp17_input_iterator<int*>>);
 #endif
 
