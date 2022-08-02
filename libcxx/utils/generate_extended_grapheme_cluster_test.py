@@ -170,49 +170,51 @@ struct data {{
 }};
 
 /// The data for UTF-8.
-std::array<data<char>, {0}> data_utf8 = {{{{ {1} }}}};
+std::array<data<char>, {0}> data_utf8 = {{{{
+{1}}}}};
 
 /// The data for UTF-16.
 ///
 /// Note that most of the data for the UTF-16 and UTF-32 are identical. However
 /// since the size of the code units differ the breaks can contain different
 /// values.
-std::array<data<wchar_t>, {0}> data_utf16 = {{{{ {2} }}}};
+std::array<data<wchar_t>, {0}> data_utf16 = {{{{
+{2}}}}};
 
 /// The data for UTF-8.
 ///
 /// Note that most of the data for the UTF-16 and UTF-32 are identical. However
 /// since the size of the code units differ the breaks can contain different
 /// values.
-std::array<data<wchar_t>, {0}> data_utf32 = {{{{ {3} }}}};
+std::array<data<wchar_t>, {0}> data_utf32 = {{{{
+{3}}}}};
 
-#endif // LIBCXX_TEST_STD_UTILITIES_FORMAT_FORMAT_STRING_FORMAT_STRING_STD_EXTENDED_GRAPHEME_CLUSTER_H
-"""
+#endif // LIBCXX_TEST_STD_UTILITIES_FORMAT_FORMAT_STRING_FORMAT_STRING_STD_EXTENDED_GRAPHEME_CLUSTER_H"""
 
-cpp_test_data_line_template = "{{ {}, {{ {} }}, {{ {} }} }}"
+cpp_test_data_line_template = "     {{{}, {{{}}}, {{{}}}}}"
 
 
 def lineToCppDataLineUtf8(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
         f'"{line.encoded}"',
-        ",".join([str(x) for x in line.code_points]),
-        ",".join([str(x) for x in line.breaks_utf8]),
+        ", ".join([str(x) for x in line.code_points]),
+        ", ".join([str(x) for x in line.breaks_utf8]),
     )
 
 
 def lineToCppDataLineUtf16(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
         f'L"{line.encoded}"',
-        ",".join([str(x) for x in line.code_points]),
-        ",".join([str(x) for x in line.breaks_utf16]),
+        ", ".join([str(x) for x in line.code_points]),
+        ", ".join([str(x) for x in line.breaks_utf16]),
     )
 
 
 def lineToCppDataLineUtf32(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
         f'L"{line.encoded}"',
-        ",".join([str(x) for x in line.code_points]),
-        ",".join([str(x) for x in line.breaks_utf32]),
+        ", ".join([str(x) for x in line.code_points]),
+        ", ".join([str(x) for x in line.breaks_utf32]),
     )
 
 
@@ -235,9 +237,9 @@ def generate_all() -> str:
                 lines.append(line)
     return cpp_template.format(
         len(lines),
-        ",".join(map(lineToCppDataLineUtf8, lines)),
-        ",".join(map(lineToCppDataLineUtf16, lines)),
-        ",".join(map(lineToCppDataLineUtf32, lines)),
+        ",\n".join(map(lineToCppDataLineUtf8, lines)),
+        ",\n".join(map(lineToCppDataLineUtf16, lines)),
+        ",\n".join(map(lineToCppDataLineUtf32, lines)),
     )
 
 
