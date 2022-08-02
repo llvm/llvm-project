@@ -24,7 +24,8 @@ public:
   explicit RISCVFrameLowering(const RISCVSubtarget &STI)
       : TargetFrameLowering(StackGrowsDown,
                             /*StackAlignment=*/Align(16),
-                            /*LocalAreaOffset=*/0),
+                            /*LocalAreaOffset=*/0,
+                            /*TransientStackAlignment=*/Align(16)),
         STI(STI) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
