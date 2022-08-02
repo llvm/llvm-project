@@ -1,7 +1,5 @@
 # Debug Actions
 
-[TOC]
-
 This file documents the infrastructure for `Debug Actions`. This is a DEBUG only
 API that allows for external entities to control various aspects of compiler
 execution. This is conceptually similar to something like `DebugCounters` in
@@ -22,6 +20,8 @@ surrounding debug actions is shown below:
 The exact definition of an `external entity` is left opaque, to allow for more
 interesting handlers. The set of possible action queries is detailed in the
 [`action manager`](#debug-action-manager) section below.
+
+[TOC]
 
 ## Debug Action
 
