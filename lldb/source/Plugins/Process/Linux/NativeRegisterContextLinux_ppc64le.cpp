@@ -13,6 +13,7 @@
 
 #include "NativeRegisterContextLinux_ppc64le.h"
 
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
@@ -121,6 +122,11 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   default:
     llvm_unreachable("have no register context for architecture");
   }
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return HostInfo::GetArchitecture();
 }
 
 NativeRegisterContextLinux_ppc64le::NativeRegisterContextLinux_ppc64le(
