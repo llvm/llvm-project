@@ -99,7 +99,7 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   static const char ValueString[] = "Integer";
 
   StringMap<cl::Option *> &Map =
-      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
+      cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   ASSERT_EQ(Map.count("test-option"), 1u) << "Could not find option in map.";
 
@@ -420,7 +420,7 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
       << "Hid extra option that should be visable.";
 
   StringMap<cl::Option *> &Map =
-      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
+      cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
@@ -446,7 +446,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
       << "Hid extra option that should be visable.";
 
   StringMap<cl::Option *> &Map =
-      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
+      cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
@@ -529,7 +529,7 @@ TEST(CommandLineTest, AddToAllSubCommands) {
   cl::ResetCommandLineParser();
 
   StackSubCommand SC1("sc1", "First subcommand");
-  StackOption<bool> AllOpt("everywhere", cl::sub(*cl::AllSubCommands),
+  StackOption<bool> AllOpt("everywhere", cl::sub(cl::SubCommand::getAll()),
                            cl::init(false));
   StackSubCommand SC2("sc2", "Second subcommand");
 
@@ -566,8 +566,8 @@ TEST(CommandLineTest, AddToAllSubCommands) {
 TEST(CommandLineTest, ReparseCommandLineOptions) {
   cl::ResetCommandLineParser();
 
-  StackOption<bool> TopLevelOpt("top-level", cl::sub(*cl::TopLevelSubCommand),
-                                cl::init(false));
+  StackOption<bool> TopLevelOpt(
+      "top-level", cl::sub(cl::SubCommand::getTopLevel()), cl::init(false));
 
   const char *args[] = {"prog", "-top-level"};
 
@@ -614,10 +614,12 @@ TEST(CommandLineTest, RemoveFromRegularSubCommand) {
 TEST(CommandLineTest, RemoveFromTopLevelSubCommand) {
   cl::ResetCommandLineParser();
 
-  StackOption<bool> TopLevelRemove(
-      "top-level-remove", cl::sub(*cl::TopLevelSubCommand), cl::init(false));
-  StackOption<bool> TopLevelKeep(
-      "top-level-keep", cl::sub(*cl::TopLevelSubCommand), cl::init(false));
+  StackOption<bool> TopLevelRemove("top-level-remove",
+                                   cl::sub(cl::SubCommand::getTopLevel()),
+                                   cl::init(false));
+  StackOption<bool> TopLevelKeep("top-level-keep",
+                                 cl::sub(cl::SubCommand::getTopLevel()),
+                                 cl::init(false));
 
   const char *args[] = {"prog", "-top-level-remove"};
 
@@ -638,9 +640,9 @@ TEST(CommandLineTest, RemoveFromAllSubCommands) {
 
   StackSubCommand SC1("sc1", "First Subcommand");
   StackSubCommand SC2("sc2", "Second Subcommand");
-  StackOption<bool> RemoveOption("remove-option", cl::sub(*cl::AllSubCommands),
-                                 cl::init(false));
-  StackOption<bool> KeepOption("keep-option", cl::sub(*cl::AllSubCommands),
+  StackOption<bool> RemoveOption(
+      "remove-option", cl::sub(cl::SubCommand::getAll()), cl::init(false));
+  StackOption<bool> KeepOption("keep-option", cl::sub(cl::SubCommand::getAll()),
                                cl::init(false));
 
   const char *args0[] = {"prog", "-remove-option"};
@@ -719,13 +721,13 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
 TEST(CommandLineTest, DefaultOptions) {
   cl::ResetCommandLineParser();
 
-  StackOption<std::string> Bar("bar", cl::sub(*cl::AllSubCommands),
+  StackOption<std::string> Bar("bar", cl::sub(cl::SubCommand::getAll()),
                                cl::DefaultOption);
   StackOption<std::string, cl::alias> Bar_Alias(
       "b", cl::desc("Alias for -bar"), cl::aliasopt(Bar), cl::DefaultOption);
 
-  StackOption<bool> Foo("foo", cl::init(false), cl::sub(*cl::AllSubCommands),
-                        cl::DefaultOption);
+  StackOption<bool> Foo("foo", cl::init(false),
+                        cl::sub(cl::SubCommand::getAll()), cl::DefaultOption);
   StackOption<bool, cl::alias> Foo_Alias("f", cl::desc("Alias for -foo"),
                                          cl::aliasopt(Foo), cl::DefaultOption);
 
@@ -1062,7 +1064,7 @@ TEST(CommandLineTest, SetDefautValue) {
 
   cl::ResetAllOptionOccurrences();
 
-  for (auto &OM : cl::getRegisteredOptions(*cl::TopLevelSubCommand)) {
+  for (auto &OM : cl::getRegisteredOptions(cl::SubCommand::getTopLevel())) {
     cl::Option *O = OM.second;
     if (O->ArgStr == "opt2") {
       continue;
