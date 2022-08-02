@@ -9712,7 +9712,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
     Function *F, Loop *L, LoopVectorizeHints &Hints, ProfileSummaryInfo *PSI,
     BlockFrequencyInfo *BFI, TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
     AssumptionCache *AC, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-    LoopVectorizationLegality &LVL) {
+    LoopVectorizationLegality &LVL, InterleavedAccessInfo *IAI) {
   // 1) OptSize takes precedence over all other options, i.e. if this is set,
   // don't look at hints or options, and don't request a scalar epilogue.
   // (For PGSO, as shouldOptimizeForSize isn't currently accessible from
@@ -9747,7 +9747,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
   };
 
   // 4) if the TTI hook indicates this is profitable, request predication.
-  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, &LVL))
+  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, &LVL, IAI))
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
   return CM_ScalarEpilogueAllowed;
@@ -9842,7 +9842,7 @@ static bool processLoopInVPlanNativePath(
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
 
   ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
-      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, *LVL);
+      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, *LVL, &IAI);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
                                 &Hints, IAI);
@@ -10086,11 +10086,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  // Check the function attributes and profiles to find out if this function
-  // should be optimized for size.
-  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
-      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, LVL);
-
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
   // even evaluating whether vectorization is profitable. Since we cannot modify
@@ -10101,6 +10096,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                         ORE, BFI, PSI, Hints, Requirements);
 
   assert(L->isInnermost() && "Inner loop expected.");
+
+  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
+  bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
+
+  // If an override option has been passed in for interleaved accesses, use it.
+  if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
+    UseInterleaved = EnableInterleavedMemAccesses;
+
+  // Analyze interleaved memory accesses.
+  if (UseInterleaved)
+    IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
+
+  // Check the function attributes and profiles to find out if this function
+  // should be optimized for size.
+  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
+      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, LVL, &IAI);
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
@@ -10163,18 +10174,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                          "reorder floating-point operations\n");
     Hints.emitRemarkWithHints();
     return false;
-  }
-
-  bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
-  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
-
-  // If an override option has been passed in for interleaved accesses, use it.
-  if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
-    UseInterleaved = EnableInterleavedMemAccesses;
-
-  // Analyze interleaved memory accesses.
-  if (UseInterleaved) {
-    IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
   }
 
   // Use the cost model.
