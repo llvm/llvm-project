@@ -1880,7 +1880,7 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
       os << "[:f64";
       break;
     }
-    if (denseArrayAttr.getType().getRank())
+    if (denseArrayAttr.size())
       os << " ";
     denseArrayAttr.printWithoutBraces(os);
     os << "]";
