@@ -1,4 +1,4 @@
-// REQUIRES: lld
+// REQUIRES: lld, x86-registered-target
 
 // RUN: not %clang %s -target x86_64-linux -nostartfiles -nostdlib -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t -fcrash-diagnostics=all 2>&1 \
 // RUN:   | FileCheck %s
