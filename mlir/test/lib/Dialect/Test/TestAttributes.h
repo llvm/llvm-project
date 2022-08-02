@@ -24,9 +24,14 @@
 
 #include "TestAttrInterfaces.h.inc"
 #include "TestOpEnums.h.inc"
+#include "mlir/IR/DialectResourceBlobManager.h"
 
 namespace test {
-struct TestExternalElementsDataHandle;
+class TestDialect;
+
+/// A handle used to reference external elements instances.
+using TestDialectResourceBlobHandle =
+    mlir::DialectResourceBlobHandle<TestDialect>;
 } // namespace test
 
 #define GET_ATTRDEF_CLASSES

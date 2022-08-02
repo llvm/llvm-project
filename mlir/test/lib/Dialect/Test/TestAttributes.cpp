@@ -170,7 +170,9 @@ Attribute TestSubElementsAccessAttr::replaceImmediateSubElements(
 //===----------------------------------------------------------------------===//
 
 ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
-  return getHandle().getData()->getData();
+  if (auto *blob = getHandle().getBlob())
+    return blob->getDataAs<uint64_t>();
+  return llvm::None;
 }
 
 //===----------------------------------------------------------------------===//
