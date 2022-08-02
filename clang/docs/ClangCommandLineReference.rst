@@ -1007,11 +1007,11 @@ Enable control flow integrity (CFI) checks for cross-DSO calls.
 
 Generalize pointers in CFI indirect call type signature checks
 
-.. option:: -fsanitize-coverage-allowlist=<arg>, -fsanitize-coverage-whitelist=<arg>
+.. option:: -fsanitize-coverage-allowlist=<arg>
 
 Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones
 
-.. option:: -fsanitize-coverage-ignorelist=<arg>, -fsanitize-coverage-blacklist=<arg>
+.. option:: -fsanitize-coverage-ignorelist=<arg>
 
 Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones
 
