@@ -1121,9 +1121,8 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return true;
+
+  return error.Success();
 }
 
 template <typename D32, typename D64>
@@ -1284,9 +1283,8 @@ lldb_private::formatters::Foundation1100::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(DataDescriptor_64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return false;
+
+  return error.Success();
 }
 
 bool
