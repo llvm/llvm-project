@@ -6,15 +6,14 @@
 ;--- metadata-opencl12.ll
 !opencl.ocl.version = !{!0}
 !0 = !{i32 1, i32 2}
-
 ; CHECK: OpSource OpenCL_C 102000
+
 ;--- metadata-opencl20.ll
 !opencl.ocl.version = !{!0}
 !0 = !{i32 2, i32 0}
-
 ; CHECK: OpSource OpenCL_C 200000
+
 ;--- metadata-opencl22.ll
 !opencl.ocl.version = !{!0}
 !0 = !{i32 2, i32 2}
-
 ; CHECK: OpSource OpenCL_C 202000

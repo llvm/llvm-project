@@ -2,15 +2,15 @@
 
 %struct.ST = type { i32, i32, i32 }
 
-; CHECK-SPIRV: OpName %[[#struct:]] "struct.ST"
-; CHECK-SPIRV: %[[#int:]] = OpTypeInt 32 0
+; CHECK-SPIRV:     OpName %[[#struct:]] "struct.ST"
+; CHECK-SPIRV:     %[[#int:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#struct]] = OpTypeStruct %[[#int]] %[[#int]] %[[#int]]
 ; CHECK-SPIRV-DAG: %[[#structP:]] = OpTypePointer Function %[[#struct]]
 ; CHECK-SPIRV-DAG: %[[#intP:]] = OpTypePointer Function %[[#int]]
-; CHECK-SPIRV: %[[#zero:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV: %[[#one:]] = OpConstant %[[#int]] 1
-; CHECK-SPIRV: %[[#two:]] = OpConstant %[[#int]] 2
-; CHECK-SPIRV: %[[#three:]] = OpConstant %[[#int]] 3
+; CHECK-SPIRV:     %[[#zero:]] = OpConstant %[[#int]] 0
+; CHECK-SPIRV:     %[[#one:]] = OpConstant %[[#int]] 1
+; CHECK-SPIRV:     %[[#two:]] = OpConstant %[[#int]] 2
+; CHECK-SPIRV:     %[[#three:]] = OpConstant %[[#int]] 3
 
 define dso_local spir_func i32 @func() {
 entry:

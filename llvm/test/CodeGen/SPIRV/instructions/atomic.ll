@@ -1,6 +1,4 @@
-; RUN: llc %s -o - | FileCheck %s
-
-target triple = "spirv32-unknown-unknown"
+; RUN: llc -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName [[ADD:%.*]] "test_add"
 ; CHECK-DAG: OpName [[SUB:%.*]] "test_sub"
@@ -13,12 +11,12 @@ target triple = "spirv32-unknown-unknown"
 ; CHECK-DAG: OpName [[XOR:%.*]] "test_xor"
 
 ; CHECK-DAG: [[I32Ty:%.*]] = OpTypeInt 32 0
-; Device scope is encoded with constant 1
+;; Device scope is encoded with constant 1
 ; CHECK-DAG: [[SCOPE:%.*]] = OpConstant [[I32Ty]] 1
-; "monotonic" maps to the relaxed memory semantics, encoded with constant 0
+;; "monotonic" maps to the relaxed memory semantics, encoded with constant 0
 ; CHECK-DAG: [[RELAXED:%.*]] = OpConstantNull [[I32Ty]]
 
-; CHECK: [[ADD]] = OpFunction [[I32Ty]]
+; CHECK:      [[ADD]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -30,7 +28,7 @@ define i32 @test_add(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[SUB]] = OpFunction [[I32Ty]]
+; CHECK:      [[SUB]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -42,7 +40,7 @@ define i32 @test_sub(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[MIN]] = OpFunction [[I32Ty]]
+; CHECK:      [[MIN]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -54,7 +52,7 @@ define i32 @test_min(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[MAX]] = OpFunction [[I32Ty]]
+; CHECK:      [[MAX]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -66,7 +64,7 @@ define i32 @test_max(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[UMIN]] = OpFunction [[I32Ty]]
+; CHECK:      [[UMIN]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -78,7 +76,7 @@ define i32 @test_umin(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[UMAX]] = OpFunction [[I32Ty]]
+; CHECK:      [[UMAX]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -90,7 +88,7 @@ define i32 @test_umax(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[AND]] = OpFunction [[I32Ty]]
+; CHECK:      [[AND]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -102,7 +100,7 @@ define i32 @test_and(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[OR]] = OpFunction [[I32Ty]]
+; CHECK:      [[OR]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -114,7 +112,7 @@ define i32 @test_or(i32* %ptr, i32 %val) {
   ret i32 %r
 }
 
-; CHECK: [[XOR]] = OpFunction [[I32Ty]]
+; CHECK:      [[XOR]] = OpFunction [[I32Ty]]
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel

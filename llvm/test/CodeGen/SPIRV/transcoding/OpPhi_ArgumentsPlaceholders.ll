@@ -24,8 +24,8 @@ entry:
 for.cond:                                         ; preds = %for.inc, %entry
   %pNode.0 = phi %struct.Node addrspace(1)* [ %pNodes, %entry ], [ %1, %for.inc ]
   %j.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-;CHECK-SPIRV: %[[#]] = OpPhi %[[#]] %[[#]] %[[#]] %[[#BitcastResultId:]] %[[#]]
-;CHECK-SPIRV-NEXT: OpPhi
+; CHECK-SPIRV:      %[[#]] = OpPhi %[[#]] %[[#]] %[[#]] %[[#BitcastResultId:]] %[[#]]
+; CHECK-SPIRV-NEXT: OpPhi
 
   %cmp = icmp slt i32 %j.0, 10
   br i1 %cmp, label %for.body, label %for.end
@@ -35,8 +35,8 @@ for.body:                                         ; preds = %for.cond
 
   %0 = load %struct.Node.0 addrspace(1)*, %struct.Node.0 addrspace(1)* addrspace(1)* %pNext, align 4
   %1 = bitcast %struct.Node.0 addrspace(1)* %0 to %struct.Node addrspace(1)*
-;CHECK-SPIRV: %[[#LoadResultId:]] = OpLoad %[[#]]
-;CHECK-SPIRV: %[[#BitcastResultId]] = OpBitcast %[[#]] %[[#LoadResultId]]
+; CHECK-SPIRV: %[[#LoadResultId:]] = OpLoad %[[#]]
+; CHECK-SPIRV: %[[#BitcastResultId]] = OpBitcast %[[#]] %[[#LoadResultId]]
 
   br label %for.inc
 
