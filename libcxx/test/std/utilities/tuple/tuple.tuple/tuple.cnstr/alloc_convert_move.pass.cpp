@@ -51,7 +51,7 @@ struct Implicit {
   Implicit(int x) : value(x) {}
 };
 
-#if _LIBCPP_STD_VER > 17
+#if TEST_STD_VER > 17
 constexpr bool alloc_move_constructor_is_constexpr() {
   std::tuple<int> t1 = 1;
   std::tuple<int> t2 = {std::allocator_arg, test_allocator<int>{}, std::move(t1)};
@@ -119,7 +119,7 @@ int main(int, char**)
         std::tuple<long long> t0(derived, A1<int>(), std::move(from));
     }
 
-#if _LIBCPP_STD_VER > 17
+#if TEST_STD_VER > 17
     static_assert(alloc_move_constructor_is_constexpr());
 #endif
 
