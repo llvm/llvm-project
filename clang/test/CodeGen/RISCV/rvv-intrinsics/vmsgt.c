@@ -1588,3 +1588,75 @@ vbool8_t test_vmsgtu_vx_u64m8_b8_m (vbool8_t mask, vbool8_t maskedoff, vuint64m8
   return vmsgtu_vx_u64m8_b8_m(mask, maskedoff, op1, op2, vl);
 }
 
+
+// CHECK-RV64-LABEL: @test_vmsgt_vv_i32mf2_b64_ma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgt.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i1> undef, <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgt_vv_i32mf2_b64_ma (vbool64_t mask, vint32mf2_t op1, vint32mf2_t op2, size_t vl) {
+  return vmsgt_vv_i32mf2_b64_ma(mask, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsgt_vx_i32mf2_b64_ma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgt.mask.nxv1i32.i32.i64(<vscale x 1 x i1> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgt_vx_i32mf2_b64_ma (vbool64_t mask, vint32mf2_t op1, int32_t op2, size_t vl) {
+  return vmsgt_vx_i32mf2_b64_ma(mask, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsgtu_vv_u32mf2_b64_ma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgtu.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i1> undef, <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgtu_vv_u32mf2_b64_ma (vbool64_t mask, vuint32mf2_t op1, vuint32mf2_t op2, size_t vl) {
+  return vmsgtu_vv_u32mf2_b64_ma(mask, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsgtu_vx_u32mf2_b64_ma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgtu.mask.nxv1i32.i32.i64(<vscale x 1 x i1> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgtu_vx_u32mf2_b64_ma (vbool64_t mask, vuint32mf2_t op1, uint32_t op2, size_t vl) {
+  return vmsgtu_vx_u32mf2_b64_ma(mask, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsgt_vv_i32mf2_b64_mu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgt.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i1> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgt_vv_i32mf2_b64_mu (vbool64_t mask, vbool64_t merge, vint32mf2_t op1, vint32mf2_t op2, size_t vl) {
+  return vmsgt_vv_i32mf2_b64_mu(mask, merge, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsgt_vx_i32mf2_b64_mu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgt.mask.nxv1i32.i32.i64(<vscale x 1 x i1> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgt_vx_i32mf2_b64_mu (vbool64_t mask, vbool64_t merge, vint32mf2_t op1, int32_t op2, size_t vl) {
+  return vmsgt_vx_i32mf2_b64_mu(mask, merge, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsgtu_vv_u32mf2_b64_mu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgtu.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i1> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], <vscale x 1 x i32> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgtu_vv_u32mf2_b64_mu (vbool64_t mask, vbool64_t merge, vuint32mf2_t op1, vuint32mf2_t op2, size_t vl) {
+  return vmsgtu_vv_u32mf2_b64_mu(mask, merge, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsgtu_vx_u32mf2_b64_mu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmsgtu.mask.nxv1i32.i32.i64(<vscale x 1 x i1> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmsgtu_vx_u32mf2_b64_mu (vbool64_t mask, vbool64_t merge, vuint32mf2_t op1, uint32_t op2, size_t vl) {
+  return vmsgtu_vx_u32mf2_b64_mu(mask, merge, op1, op2, vl);
+}

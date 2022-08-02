@@ -578,3 +578,39 @@ vbool2_t test_vmfle_vv_f16m8_b2_m (vbool2_t mask, vbool2_t maskedoff, vfloat16m8
 vbool2_t test_vmfle_vf_f16m8_b2_m (vbool2_t mask, vbool2_t maskedoff, vfloat16m8_t op1, _Float16 op2, size_t vl) {
   return vmfle_vf_f16m8_b2_m(mask, maskedoff, op1, op2, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vmfle_vv_f32mf2_b64_ma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmfle.mask.nxv1f32.nxv1f32.i64(<vscale x 1 x i1> undef, <vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x float> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmfle_vv_f32mf2_b64_ma (vbool64_t mask, vfloat32mf2_t op1, vfloat32mf2_t op2, size_t vl) {
+  return vmfle_vv_f32mf2_b64_ma(mask, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmfle_vf_f32mf2_b64_ma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmfle.mask.nxv1f32.f32.i64(<vscale x 1 x i1> undef, <vscale x 1 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmfle_vf_f32mf2_b64_ma (vbool64_t mask, vfloat32mf2_t op1, float op2, size_t vl) {
+  return vmfle_vf_f32mf2_b64_ma(mask, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmfle_vv_f32mf2_b64_mu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmfle.mask.nxv1f32.nxv1f32.i64(<vscale x 1 x i1> [[MERGE:%.*]], <vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x float> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmfle_vv_f32mf2_b64_mu (vbool64_t mask, vbool64_t merge, vfloat32mf2_t op1, vfloat32mf2_t op2, size_t vl) {
+  return vmfle_vv_f32mf2_b64_mu(mask, merge, op1, op2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmfle_vf_f32mf2_b64_mu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i1> @llvm.riscv.vmfle.mask.nxv1f32.f32.i64(<vscale x 1 x i1> [[MERGE:%.*]], <vscale x 1 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP0]]
+//
+vbool64_t test_vmfle_vf_f32mf2_b64_mu (vbool64_t mask, vbool64_t merge, vfloat32mf2_t op1, float op2, size_t vl) {
+  return vmfle_vf_f32mf2_b64_mu(mask, merge, op1, op2, vl);
+}
