@@ -124,12 +124,10 @@ jobs:
     - name: Dump ABI
       run: |
         parallel abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o {}-${{ matrix.ref }}.abi ./build/lib/{} ::: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
-        # Remove symbol versioning from dumps, so we can compare across major
-        # versions.  We don't need to do this for libclang.so since its ABI
-        # is stable across major releases and the symbol versions don't change.
-        if [ -e libclang-cpp.so-${{ matrix.ref }}.abi ]; then
-          sed -i 's/LLVM_[0-9]\+/LLVM_NOVERSION/' libclang-cpp.so-${{ matrix.ref }}.abi
-        fi
+        for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
+          # Remove symbol versioning from dumps, so we can compare across major versions.
+          sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' $lib-${{ matrix.ref }}.abi
+        done
     - name: Upload ABI file
       uses: actions/upload-artifact@v2
       with:
