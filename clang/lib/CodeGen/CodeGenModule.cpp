@@ -521,7 +521,7 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
 
 void CodeGenModule::Release() {
   Module *Primary = getContext().getModuleForCodeGen();
-  if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
+  if (CXX20ModuleInits && Primary && !Primary->isModuleMapModule())
     EmitModuleInitializers(Primary);
   EmitDeferred();
   DeferredDecls.insert(EmittedDeferredDecls.begin(),
@@ -2521,23 +2521,21 @@ void CodeGenModule::EmitModuleInitializers(clang::Module *Primary) {
   // source, first Global Module Fragments, if present.
   if (auto GMF = Primary->getGlobalModuleFragment()) {
     for (Decl *D : getContext().getModuleInitializers(GMF)) {
-      if (isa<ImportDecl>(D))
-        continue;
-      assert(isa<VarDecl>(D) && "GMF initializer decl is not a var?");
+      assert(D->getKind() == Decl::Var && "GMF initializer decl is not a var?");
       EmitTopLevelDecl(D);
     }
   }
   // Second any associated with the module, itself.
   for (Decl *D : getContext().getModuleInitializers(Primary)) {
     // Skip import decls, the inits for those are called explicitly.
-    if (isa<ImportDecl>(D))
+    if (D->getKind() == Decl::Import)
       continue;
     EmitTopLevelDecl(D);
   }
   // Third any associated with the Privat eMOdule Fragment, if present.
   if (auto PMF = Primary->getPrivateModuleFragment()) {
     for (Decl *D : getContext().getModuleInitializers(PMF)) {
-      assert(isa<VarDecl>(D) && "PMF initializer decl is not a var?");
+      assert(D->getKind() == Decl::Var && "PMF initializer decl is not a var?");
       EmitTopLevelDecl(D);
     }
   }

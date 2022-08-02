@@ -650,8 +650,8 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
 
   SmallVector<llvm::Function *, 8> ModuleInits;
   for (Module *M : AllImports) {
-    // No Itanium initializer in header like modules.
-    if (M->isHeaderLikeModule())
+    // No Itanium initializer in module map modules.
+    if (M->isModuleMapModule())
       continue; // TODO: warn of mixed use of module map modules and C++20?
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
     SmallString<256> FnName;
@@ -779,8 +779,8 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   SmallVector<llvm::Function *, 8> ModuleInits;
   if (CXX20ModuleInits)
     for (Module *M : ImportedModules) {
-      // No Itanium initializer in header like modules.
-      if (M->isHeaderLikeModule())
+      // No Itanium initializer in module map modules.
+      if (M->isModuleMapModule())
         continue;
       llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
       SmallString<256> FnName;
