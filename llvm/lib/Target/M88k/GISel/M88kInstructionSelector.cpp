@@ -82,6 +82,8 @@ private:
                         MachineRegisterInfo &MRI) const;
   bool selectPtrAdd(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
+  bool selectMul(MachineInstr &I, MachineBasicBlock &MBB,
+                 MachineRegisterInfo &MRI) const;
   bool selectExt(MachineInstr &I, MachineBasicBlock &MBB,
                  MachineRegisterInfo &MRI) const;
   bool selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
@@ -594,6 +596,38 @@ bool M88kInstructionSelector::selectPtrAdd(MachineInstr &I,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool M88kInstructionSelector::selectMul(MachineInstr &I, MachineBasicBlock &MBB,
+                                        MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_MUL && "Unexpected G code");
+
+  // Only selects special mulu.d instruction, the other mul instructions are
+  // matched by the patterns from the target description.
+  if (!isMC88110())
+    return false;
+
+  MachineInstr *MI = nullptr;
+  Register DstReg = I.getOperand(0).getReg();
+  Register Src1Reg = I.getOperand(1).getReg();
+  Register Src2Reg = I.getOperand(2).getReg();
+
+  MachineInstr *Merge1MI =
+      getOpcodeDef(TargetOpcode::G_MERGE_VALUES, Src1Reg, MRI);
+  MachineInstr *Merge2MI =
+      getOpcodeDef(TargetOpcode::G_MERGE_VALUES, Src2Reg, MRI);
+  if (Merge1MI &&
+      mi_match(Merge1MI->getOperand(1).getReg(), MRI, m_ZeroInt()) &&
+      Merge2MI &&
+      mi_match(Merge2MI->getOperand(1).getReg(), MRI, m_ZeroInt())) {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::MULUrrd), DstReg)
+             .addReg(Merge1MI->getOperand(2).getReg())
+             .addReg(Merge2MI->getOperand(2).getReg());
+  } else
+    return false;
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
                                         MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_ZEXT ||
@@ -832,14 +866,14 @@ bool M88kInstructionSelector::selectMergeUnmerge(
     // Copy to dst.
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
                  I.getOperand(0).getReg())
-             .addReg(SrcReg, 0, M88k::sub_hi);
+             .addReg(SrcReg, 0, M88k::sub_lo);
     RBI.constrainGenericRegister(I.getOperand(0).getReg(), M88k::GPRRCRegClass,
                                  MRI);
     constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
                  I.getOperand(1).getReg())
-             .addReg(SrcReg, 0, M88k::sub_lo);
+             .addReg(SrcReg, 0, M88k::sub_hi);
     RBI.constrainGenericRegister(I.getOperand(1).getReg(), M88k::GPRRCRegClass,
                                  MRI);
   }
@@ -1064,6 +1098,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectBrJT(I, MBB, MRI);
   case TargetOpcode::G_BRINDIRECT:
     return selectBrIndirect(I, MBB, MRI);
+  case TargetOpcode::G_MUL:
+    return selectMul(I, MBB, MRI);
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ANYEXT: // TODO Can G_ANYEXT end up here?

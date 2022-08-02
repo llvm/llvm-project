@@ -35,6 +35,11 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   const LLT S64 = LLT::scalar(64);
   const LLT S80 = LLT::scalar(80);
   const LLT P0 = LLT::pointer(0, 32);
+
+  auto IsMC88110 = [=, &ST](const LegalityQuery &Query) {
+    return ST.isMC88110();
+  };
+
   getActionDefinitionsBuilder(G_PHI).legalFor({S32, P0});
   getActionDefinitionsBuilder(G_SELECT)
       .customForCartesianProduct({S32, S64, P0}, {S1});
@@ -72,7 +77,11 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .clampScalar(1, S32, S32);
   getActionDefinitionsBuilder(G_ADD).legalFor({S32});
   getActionDefinitionsBuilder(G_SUB).legalFor({S32});
-  getActionDefinitionsBuilder(G_MUL).legalFor({S32});
+  getActionDefinitionsBuilder(G_MUL)
+      .legalFor({S32})
+      .customIf(all(typeInSet(0, {S64}), LegalityPredicate(IsMC88110)))
+      .libcallFor({S64})
+      .clampScalar(0, S32, S64);
   getActionDefinitionsBuilder(G_UDIV).legalFor({S32}).libcallFor({S64});
   getActionDefinitionsBuilder(G_SDIV)
 #if 0
@@ -168,6 +177,41 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
         MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
     MIRBuilder.buildConstant(MI.getOperand(0),
                              *ConstantInt::get(Ctx, AsInteger));
+    MI.eraseFromParent();
+    break;
+  }
+  case G_MUL: {
+    // MC88110 only: 32bit multiplication with 64bit result.
+    Register DstReg = MI.getOperand(0).getReg();
+    if (MRI.getType(DstReg) != S64)
+      return false;
+    MachineInstr *Src1I = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+    MachineInstr *Src2I = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+    unsigned Opc1 = Src1I->getOpcode();
+    unsigned Opc2 = Src2I->getOpcode();
+    // Check if the multiplicants are blown-up 32 bit values. If yes then the
+    // multiplication is legal.
+    if (Opc1 == G_MERGE_VALUES && Opc2 == G_MERGE_VALUES) {
+      auto C1 = getIConstantVRegValWithLookThrough(
+          Src1I->getOperand(1).getReg(), MRI);
+      auto C2 = getIConstantVRegValWithLookThrough(
+          Src1I->getOperand(1).getReg(), MRI);
+      return C1 && C1->Value.isZero() && C2 && C2->Value.isZero();
+    }
+
+    // Try to legalize the instruction.
+    if (!((Opc1 == G_ZEXT || Opc1 == G_SEXT) &&
+          (Opc2 == G_ZEXT || Opc2 == G_SEXT)))
+      return false;
+    if (MRI.getType(Src1I->getOperand(1).getReg()) != S32 ||
+        MRI.getType(Src2I->getOperand(1).getReg()) != S32)
+      return false;
+    auto Zero = MIRBuilder.buildConstant(S32, 0);
+    auto Mult1 = MIRBuilder.buildMerge(
+        S64, {Zero.getReg(0), Src1I->getOperand(1).getReg()});
+    auto Mult2 = MIRBuilder.buildMerge(
+        S64, {Zero.getReg(0), Src2I->getOperand(1).getReg()});
+    MIRBuilder.buildMul(DstReg, Mult1, Mult2, MI.getFlags());
     MI.eraseFromParent();
     break;
   }

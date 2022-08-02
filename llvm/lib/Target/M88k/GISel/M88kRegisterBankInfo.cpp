@@ -147,9 +147,7 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_PTR_ADD:
-  case TargetOpcode::G_MUL:
   case TargetOpcode::G_SDIV:
-  case TargetOpcode::G_UDIV:
     // Bitwise ops.
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
@@ -162,6 +160,15 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_LSHR:
     OperandsMapping = getValueMapping(PMI_GR32);
     break;
+  case TargetOpcode::G_MUL:
+  case TargetOpcode::G_UDIV: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 32)
+      return getInvalidInstructionMapping();
+    PartialMappingIdx RBIdx = (Ty.getSizeInBits() == 64) ? PMI_GR64 : PMI_GR32;
+    OperandsMapping = getValueMapping(RBIdx);
+    break;
+  }
     // Floating point ops.
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
