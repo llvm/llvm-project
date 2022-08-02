@@ -460,3 +460,11 @@ As an extension these types can be used in the following headers:
 
 * ``<format>``
 * ``<random>``
+
+Extensions to ``<format>``
+--------------------------
+
+The exposition only type ``basic-format-string`` and its typedefs
+``format-string`` and ``wformat-string`` became ``basic_format_string``,
+``format_string``, and ``wformat_string`` in C++23. Libc++ makes these types
+available in C++20 as an extension.

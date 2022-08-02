@@ -7,7 +7,7 @@ Number,Name,Standard,Assignee,Status,First released version
 `P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``","C++20",Mark de Wever,|Complete|, Clang 15
 "`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output","C++23"
 "`P2286R8 <https://wg21.link/P2286R8>`__","Formatting Ranges","C++23","Mark de Wever","|In Progress|"
-"`P2508R1 <https://wg21.link/P2508R1>`__","Exposing ``std::basic-format-string``","C++23","Mark de Wever","|In Progress|"
+"`P2508R1 <https://wg21.link/P2508R1>`__","Exposing ``std::basic-format-string``","C++23","Mark de Wever","|Complete|", Clang 15
 "`P2585R0 <https://wg21.link/P2585R0>`__","Improving default container formatting","C++23",
 
 `P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting","C++20",Mark de Wever,|In Progress|,
