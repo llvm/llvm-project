@@ -445,7 +445,7 @@ void OptimizationHintContext::applyAdrpLdr(const OptimizationHint &hint) {
   Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
   if (!rel1 || !rel2)
     return;
-  if (ldr.offset != (rel1->referentVA & 0xfff))
+  if (ldr.offset != static_cast<int64_t>(rel1->referentVA & 0xfff))
     return;
   ldr.offset = rel1->referentVA - rel2->rel.offset - isec->getVA();
   if (!isLiteralLdrEligible(ldr))
