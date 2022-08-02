@@ -50,7 +50,6 @@ def POSIX : StandardSpec<"POSIX"> {
   ConstType ConstPThreadMutexTPtr = ConstType<PThreadMutexTPtr>;
   ConstType ConstRestrictedPThreadMutexTPtr = ConstType<RestrictedPThreadMutexTPtr>;
 
-  NamedType PThreadTType = NamedType<"pthread_t">;
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 

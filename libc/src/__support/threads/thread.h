@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
 #define LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
 
+#include "src/__support/CPP/StringView.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/stringstream.h"
 #include "src/__support/architectures.h"
 
 #include <stddef.h> // For size_t
@@ -165,6 +167,12 @@ struct Thread {
 
   // Return true if this thread is equal to the other thread.
   bool operator==(const Thread &other) const;
+
+  // Set the name of the thread. Return the error number on error.
+  int set_name(const cpp::StringView &name);
+
+  // Return the name of the thread in |name|. Return the error number of error.
+  int get_name(cpp::StringStream &name) const;
 };
 
 extern thread_local Thread self;
