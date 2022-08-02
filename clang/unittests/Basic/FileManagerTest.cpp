@@ -356,9 +356,13 @@ TEST_F(FileManagerTest, getFileRefEquality) {
   EXPECT_EQ("dir/f1.cpp", F1Redirect->getName());
   EXPECT_EQ("dir/f2.cpp", F2->getName());
 
+  EXPECT_EQ("dir/f1.cpp", F1->getNameAsRequested());
+  EXPECT_EQ("dir/f1-redirect.cpp", F1Redirect->getNameAsRequested());
+
   // Compare against FileEntry*.
   EXPECT_EQ(&F1->getFileEntry(), *F1);
   EXPECT_EQ(*F1, &F1->getFileEntry());
+  EXPECT_EQ(&F1->getFileEntry(), &F1Redirect->getFileEntry());
   EXPECT_NE(&F2->getFileEntry(), *F1);
   EXPECT_NE(*F1, &F2->getFileEntry());
 
@@ -374,7 +378,7 @@ TEST_F(FileManagerTest, getFileRefEquality) {
 
   // Compare using isSameRef.
   EXPECT_TRUE(F1->isSameRef(*F1Again));
-  EXPECT_TRUE(F1->isSameRef(*F1Redirect));
+  EXPECT_FALSE(F1->isSameRef(*F1Redirect));
   EXPECT_FALSE(F1->isSameRef(*F1Also));
   EXPECT_FALSE(F1->isSameRef(*F2));
 }

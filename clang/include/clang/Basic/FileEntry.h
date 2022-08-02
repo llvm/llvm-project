@@ -59,11 +59,21 @@ class FileEntry;
 /// accessed by the FileManager's client.
 class FileEntryRef {
 public:
-  StringRef getName() const { return ME->first(); }
+  /// The name of this FileEntry. If a VFS uses 'use-external-name', this is
+  /// the redirected name. See getRequestedName().
+  StringRef getName() const { return getBaseMapEntry().first(); }
+
+  /// The name of this FileEntry, as originally requested without applying any
+  /// remappings for VFS 'use-external-name'.
+  ///
+  /// FIXME: this should be the semantics of getName(). See comment in
+  /// FileManager::getFileRef().
+  StringRef getNameAsRequested() const { return ME->first(); }
+
   const FileEntry &getFileEntry() const {
-    return *ME->second->V.get<FileEntry *>();
+    return *getBaseMapEntry().second->V.get<FileEntry *>();
   }
-  DirectoryEntryRef getDir() const { return *ME->second->Dir; }
+  DirectoryEntryRef getDir() const { return *getBaseMapEntry().second->Dir; }
 
   inline off_t getSize() const;
   inline unsigned getUID() const;
@@ -150,12 +160,19 @@ public:
   explicit FileEntryRef(const MapEntry &ME) : ME(&ME) {
     assert(ME.second && "Expected payload");
     assert(ME.second->V && "Expected non-null");
-    assert(ME.second->V.is<FileEntry *>() && "Expected FileEntry");
   }
 
   /// Expose the underlying MapEntry to simplify packing in a PointerIntPair or
   /// PointerUnion and allow construction in Optional.
   const clang::FileEntryRef::MapEntry &getMapEntry() const { return *ME; }
+
+  /// Retrieve the base MapEntry after redirects.
+  const MapEntry &getBaseMapEntry() const {
+    const MapEntry *ME = this->ME;
+    while (const void *Next = ME->second->V.dyn_cast<const void *>())
+      ME = static_cast<const MapEntry *>(Next);
+    return *ME;
+  }
 
 private:
   friend class FileMgr::MapEntryOptionalStorage<FileEntryRef>;
