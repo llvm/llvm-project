@@ -194,3 +194,39 @@ vfloat64m1_t test_vfredmax_vs_f64m8_f64m1_m(vbool8_t mask, vfloat64m1_t dst,
                                             vfloat64m1_t scalar, size_t vl) {
   return vfredmax(mask, dst, vector, scalar, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vfredmax_vs_f32mf2_f32m1_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmax.nxv2f32.nxv1f32.i64(<vscale x 2 x float> [[MERGE:%.*]], <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmax_vs_f32mf2_f32m1_tu(vfloat32m1_t merge, vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmax_tu(merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfredmax_vs_f32mf2_f32m1_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmax.nxv2f32.nxv1f32.i64(<vscale x 2 x float> undef, <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmax_vs_f32mf2_f32m1_ta(vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmax_ta(vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfredmax_vs_f32mf2_f32m1_tum(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmax.mask.nxv2f32.nxv1f32.i64(<vscale x 2 x float> [[MERGE:%.*]], <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmax_vs_f32mf2_f32m1_tum(vbool64_t mask, vfloat32m1_t merge, vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmax_tum(mask, merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfredmax_vs_f32mf2_f32m1_tam(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmax.mask.nxv2f32.nxv1f32.i64(<vscale x 2 x float> undef, <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmax_vs_f32mf2_f32m1_tam(vbool64_t mask, vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmax_tam(mask, vector, scalar, vl);
+}

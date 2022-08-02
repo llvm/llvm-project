@@ -2027,7 +2027,8 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 
 // 15. Vector Reduction Operations
 // 15.1. Vector Single-Width Integer Reduction Instructions
-let MaskedPolicyScheme = NonePolicy,
+let UnMaskedPolicyScheme = HasPassthruOperand,
+    MaskedPolicyScheme = HasPassthruOperand,
     IsPrototypeDefaultTU = true,
     HasMaskPolicy = false in {
 defm vredsum : RVVIntReductionBuiltinSet;
