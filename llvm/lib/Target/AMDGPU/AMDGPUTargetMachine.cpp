@@ -985,7 +985,6 @@ void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
 void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
   addPass(createLICMPass());
   addPass(createSeparateConstOffsetFromGEPPass());
-  addPass(createSpeculativeExecutionPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
   addPass(createStraightLineStrengthReducePass());
