@@ -13,7 +13,7 @@
 // This test asserts the triviality of special member functions of optional<T>
 // whenever T has these special member functions trivial. The goal of this test
 // is to make sure that we do not change the triviality of those, since that
-// constitues an ABI break (small enough optionals would be passed by registers).
+// constitutes an ABI break (small enough optionals would be passed by registers).
 //
 // constexpr optional(const optional& rhs);
 // constexpr optional(optional&& rhs) noexcept(see below);

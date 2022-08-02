@@ -524,7 +524,7 @@ function(cxx_add_basic_build_flags target)
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
-  # because they are provided by the dylib itself with the excepton of z/OS.
+  # because they are provided by the dylib itself with the exception of z/OS.
   if (ZOS)
     target_add_compile_flags_if_supported(${target} PRIVATE -fno-aligned-allocation)
   else()
