@@ -239,7 +239,6 @@ Clang-Tidy Checks
    `llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace.html>`_,
    `llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers.html>`_, "Yes"
    `misc-confusable-identifiers <misc/confusable-identifiers.html>`_,
-   `misc-const-correctness <misc/const-correctness.html>`_, "Yes"
    `misc-definitions-in-headers <misc/definitions-in-headers.html>`_, "Yes"
    `misc-misleading-bidirectional <misc/misleading-bidirectional.html>`_,
    `misc-misleading-identifier <misc/misleading-identifier.html>`_,
@@ -295,6 +294,7 @@ Clang-Tidy Checks
    `objc-dealloc-in-category <objc/dealloc-in-category.html>`_,
    `objc-forbidden-subclassing <objc/forbidden-subclassing.html>`_,
    `objc-missing-hash <objc/missing-hash.html>`_,
+   `objc-nsdate-formatter <objc/nsdate-formatter.html>`_,
    `objc-nsinvocation-argument-lifetime <objc/nsinvocation-argument-lifetime.html>`_, "Yes"
    `objc-property-declaration <objc/property-declaration.html>`_, "Yes"
    `objc-super-self <objc/super-self.html>`_, "Yes"
