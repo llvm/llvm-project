@@ -44,7 +44,7 @@ const int OptMinSizeThreshold = 5;
 const int OptAggressiveThreshold = 250;
 
 // Various magic constants used to adjust heuristics.
-const int InstrCost = 5;
+int getInstrCost();
 const int IndirectCallThreshold = 100;
 const int LoopPenalty = 25;
 const int LastCallToStaticBonus = 15000;

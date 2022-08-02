@@ -122,6 +122,10 @@ static cl::opt<int> HotCallSiteRelFreq(
              "entry frequency, for a callsite to be hot in the absence of "
              "profile information."));
 
+static cl::opt<int>
+    InstrCost("inline-instr-cost", cl::Hidden, cl::init(5),
+              cl::desc("Cost of a single instruction when inlining"));
+
 static cl::opt<int> CallPenalty(
     "inline-call-penalty", cl::Hidden, cl::init(25),
     cl::desc("Call penalty that is applied per callsite when inlining"));
@@ -160,6 +164,12 @@ Optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind) {
     return None;
   return AttrValue;
 }
+
+namespace InlineConstants {
+int getInstrCost() { return InstrCost; }
+
+} // namespace InlineConstants
+
 } // namespace llvm
 
 namespace {
@@ -618,16 +628,16 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   void onCallArgumentSetup(const CallBase &Call) override {
     // Pay the price of the argument setup. We account for the average 1
     // instruction per call argument setup here.
-    addCost(Call.arg_size() * InlineConstants::InstrCost);
+    addCost(Call.arg_size() * InstrCost);
   }
   void onLoadRelativeIntrinsic() override {
     // This is normally lowered to 4 LLVM instructions.
-    addCost(3 * InlineConstants::InstrCost);
+    addCost(3 * InstrCost);
   }
   void onLoweredCall(Function *F, CallBase &Call,
                      bool IsIndirectCall) override {
     // We account for the average 1 instruction per call argument setup here.
-    addCost(Call.arg_size() * InlineConstants::InstrCost);
+    addCost(Call.arg_size() * InstrCost);
 
     // If we have a constant that we are calling as a function, we can peer
     // through it and see the function target. This happens not infrequently
@@ -659,8 +669,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
       int64_t JTCost =
-          static_cast<int64_t>(JumpTableSize) * InlineConstants::InstrCost +
-          4 * InlineConstants::InstrCost;
+          static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
 
       addCost(JTCost);
       return;
@@ -668,20 +677,17 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     if (NumCaseCluster <= 3) {
       // Suppose a comparison includes one compare and one conditional branch.
-      addCost(NumCaseCluster * 2 * InlineConstants::InstrCost);
+      addCost(NumCaseCluster * 2 * InstrCost);
       return;
     }
 
     int64_t ExpectedNumberOfCompare =
         getExpectedNumberOfCompare(NumCaseCluster);
-    int64_t SwitchCost =
-        ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
+    int64_t SwitchCost = ExpectedNumberOfCompare * 2 * InstrCost;
 
     addCost(SwitchCost);
   }
-  void onMissedSimplification() override {
-    addCost(InlineConstants::InstrCost);
-  }
+  void onMissedSimplification() override { addCost(InstrCost); }
 
   void onInitializeSROAArg(AllocaInst *Arg) override {
     assert(Arg != nullptr &&
@@ -693,8 +699,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     auto CostIt = SROAArgCosts.find(SROAArg);
     assert(CostIt != SROAArgCosts.end() &&
            "expected this argument to have a cost");
-    CostIt->second += InlineConstants::InstrCost;
-    SROACostSavings += InlineConstants::InstrCost;
+    CostIt->second += InstrCost;
+    SROACostSavings += InstrCost;
   }
 
   void onBlockStart(const BasicBlock *BB) override { CostAtBBStart = Cost; }
@@ -801,7 +807,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     BlockFrequencyInfo *CalleeBFI = &(GetBFI(F));
     assert(CalleeBFI);
 
-    // The cycle savings expressed as the sum of InlineConstants::InstrCost
+    // The cycle savings expressed as the sum of InstrCost
     // multiplied by the estimated dynamic count of each instruction we can
     // avoid.  Savings come from the call site cost, such as argument setup and
     // the call instruction, as well as the instructions that are folded.
@@ -821,12 +827,12 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
           if (BI->isConditional() &&
               isa_and_nonnull<ConstantInt>(
                   SimplifiedValues.lookup(BI->getCondition()))) {
-            CurrentSavings += InlineConstants::InstrCost;
+            CurrentSavings += InstrCost;
           }
         } else if (Value *V = dyn_cast<Value>(&I)) {
           // Count an instruction as savings if we can fold it.
           if (SimplifiedValues.count(V)) {
-            CurrentSavings += InlineConstants::InstrCost;
+            CurrentSavings += InstrCost;
           }
         }
       }
@@ -945,7 +951,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   }
 
   void onLoadEliminationOpportunity() override {
-    LoadEliminationCost += InlineConstants::InstrCost;
+    LoadEliminationCost += InstrCost;
   }
 
   InlineResult onAnalysisStart() override {
@@ -1086,18 +1092,17 @@ private:
 
   void onCallArgumentSetup(const CallBase &Call) override {
     increment(InlineCostFeatureIndex::CallArgumentSetup,
-              Call.arg_size() * InlineConstants::InstrCost);
+              Call.arg_size() * InstrCost);
   }
 
   void onLoadRelativeIntrinsic() override {
-    increment(InlineCostFeatureIndex::LoadRelativeIntrinsic,
-              3 * InlineConstants::InstrCost);
+    increment(InlineCostFeatureIndex::LoadRelativeIntrinsic, 3 * InstrCost);
   }
 
   void onLoweredCall(Function *F, CallBase &Call,
                      bool IsIndirectCall) override {
     increment(InlineCostFeatureIndex::LoweredCallArgSetup,
-              Call.arg_size() * InlineConstants::InstrCost);
+              Call.arg_size() * InstrCost);
 
     if (IsIndirectCall) {
       InlineParams IndirectCallParams = {/* DefaultThreshold*/ 0,
@@ -1130,37 +1135,35 @@ private:
                         unsigned NumCaseCluster) override {
 
     if (JumpTableSize) {
-      int64_t JTCost =
-          static_cast<int64_t>(JumpTableSize) * InlineConstants::InstrCost +
-          JTCostMultiplier * InlineConstants::InstrCost;
+      int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
+                       JTCostMultiplier * InstrCost;
       increment(InlineCostFeatureIndex::JumpTablePenalty, JTCost);
       return;
     }
 
     if (NumCaseCluster <= 3) {
       increment(InlineCostFeatureIndex::CaseClusterPenalty,
-                NumCaseCluster * CaseClusterCostMultiplier *
-                    InlineConstants::InstrCost);
+                NumCaseCluster * CaseClusterCostMultiplier * InstrCost);
       return;
     }
 
     int64_t ExpectedNumberOfCompare =
         getExpectedNumberOfCompare(NumCaseCluster);
 
-    int64_t SwitchCost = ExpectedNumberOfCompare * SwitchCostMultiplier *
-                         InlineConstants::InstrCost;
+    int64_t SwitchCost =
+        ExpectedNumberOfCompare * SwitchCostMultiplier * InstrCost;
     increment(InlineCostFeatureIndex::SwitchPenalty, SwitchCost);
   }
 
   void onMissedSimplification() override {
     increment(InlineCostFeatureIndex::UnsimplifiedCommonInstructions,
-              InlineConstants::InstrCost);
+              InstrCost);
   }
 
   void onInitializeSROAArg(AllocaInst *Arg) override { SROACosts[Arg] = 0; }
   void onAggregateSROAUse(AllocaInst *Arg) override {
-    SROACosts.find(Arg)->second += InlineConstants::InstrCost;
-    SROACostSavingOpportunities += InlineConstants::InstrCost;
+    SROACosts.find(Arg)->second += InstrCost;
+    SROACostSavingOpportunities += InstrCost;
   }
 
   void onBlockAnalyzed(const BasicBlock *BB) override {
@@ -2746,7 +2749,7 @@ static bool functionsHaveCompatibleAttributes(
 }
 
 int llvm::getCallsiteCost(const CallBase &Call, const DataLayout &DL) {
-  int Cost = 0;
+  int64_t Cost = 0;
   for (unsigned I = 0, E = Call.arg_size(); I != E; ++I) {
     if (Call.isByValArgument(I)) {
       // We approximate the number of loads and stores needed by dividing the
@@ -2766,16 +2769,17 @@ int llvm::getCallsiteCost(const CallBase &Call, const DataLayout &DL) {
       // DataLayout.
       NumStores = std::min(NumStores, 8U);
 
-      Cost += 2 * NumStores * InlineConstants::InstrCost;
+      Cost += 2 * NumStores * InstrCost;
     } else {
       // For non-byval arguments subtract off one instruction per call
       // argument.
-      Cost += InlineConstants::InstrCost;
+      Cost += InstrCost;
     }
   }
   // The call instruction also disappears after inlining.
-  Cost += InlineConstants::InstrCost + CallPenalty;
-  return Cost;
+  Cost += InstrCost;
+  Cost += CallPenalty;
+  return std::min<int64_t>(Cost, INT_MAX);
 }
 
 InlineCost llvm::getInlineCost(
