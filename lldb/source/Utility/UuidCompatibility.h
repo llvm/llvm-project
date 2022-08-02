@@ -14,4 +14,12 @@
 // uuid_t is guaranteed to always be a 16-byte array
 typedef unsigned char uuid_t[16];
 
+// Return 1 if uuid is null, that is, all zeroes.
+int uuid_is_null(uuid_t uuid) {
+  for (int i = 0; i < 16; i++)
+    if (uuid[i])
+      return 0;
+  return 1;
+}
+
 #endif // utility_UUID_COMPATIBILITY_H
