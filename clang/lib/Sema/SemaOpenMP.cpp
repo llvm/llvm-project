@@ -2270,6 +2270,9 @@ bool Sema::isInOpenMPTargetExecutionDirective() const {
 }
 
 bool Sema::isOpenMPRebuildMemberExpr(ValueDecl *D) {
+  // Only rebuild for Field.
+  if (!dyn_cast<FieldDecl>(D))
+    return false;
   DSAStackTy::DSAVarData DVarPrivate = DSAStack->hasDSA(
       D,
       [](OpenMPClauseKind C, bool AppliedToPointee,
