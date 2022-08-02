@@ -302,3 +302,21 @@ func.func @tan_fold_vec() -> (vector<4xf32>) {
   return %0 : vector<4xf32>
 }
 
+// CHECK-LABEL: @tanh_fold
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.761594176 : f32
+// CHECK-NEXT:   return %[[cst]]
+func.func @tanh_fold() -> f32 {
+  %c = arith.constant 1.0 : f32
+  %r = math.tanh %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @tanh_fold_vec
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.761594176, 0.000000e+00, 0.761594176]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @tanh_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
+  %0 = math.tanh %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
