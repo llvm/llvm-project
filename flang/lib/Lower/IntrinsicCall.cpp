@@ -478,6 +478,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
@@ -645,13 +646,15 @@ struct IntrinsicDummyArgument {
   bool handleDynamicOptional = false;
 };
 
+/// This is shared by intrinsics and intrinsic module procedures.
 struct Fortran::lower::IntrinsicArgumentLoweringRules {
   /// There is no more than 7 non repeated arguments in Fortran intrinsics.
   IntrinsicDummyArgument args[7];
   constexpr bool hasDefaultRules() const { return args[0].name == nullptr; }
 };
 
-/// Structure describing what needs to be done to lower intrinsic "name".
+/// Structure describing what needs to be done to lower intrinsic or intrinsic
+/// module procedure "name".
 struct IntrinsicHandler {
   const char *name;
   IntrinsicLibrary::Generator generator;
@@ -674,8 +677,8 @@ using I = IntrinsicLibrary;
 /// argument is an optional variable in the current scope).
 static constexpr bool handleDynamicOptional = true;
 
-/// Table that drives the fir generation depending on the intrinsic.
-/// one to one mapping with Fortran arguments. If no mapping is
+/// Table that drives the fir generation depending on the intrinsic or intrinsic
+/// module procedure one to one mapping with Fortran arguments. If no mapping is
 /// defined here for a generic intrinsic, genRuntimeCall will be called
 /// to look for a match in the runtime a emit a call. Note that the argument
 /// lowering rules for an intrinsic need to be provided only if at least one
@@ -716,6 +719,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ble", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ule>},
     {"blt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ult>},
     {"btest", &I::genBtest},
+    {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
     {"cmplx",
@@ -2379,6 +2383,30 @@ mlir::Value IntrinsicLibrary::genBtest(mlir::Type resultType,
   mlir::Value one = builder.createIntegerConstant(loc, argType, 1);
   auto res = builder.create<mlir::arith::AndIOp>(loc, shift, one);
   return builder.createConvert(loc, resultType, res);
+}
+
+// C_LOC
+fir::ExtendedValue
+IntrinsicLibrary::genCLoc(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && resultType.isa<fir::RecordType>());
+  auto resTy = resultType.dyn_cast<fir::RecordType>();
+  assert(resTy.getTypeList().size() == 1);
+  auto fieldName = resTy.getTypeList()[0].first;
+  auto fieldTy = resTy.getTypeList()[0].second;
+  mlir::Value res = builder.create<fir::AllocaOp>(loc, resultType);
+  const auto *box = args[0].getBoxOf<fir::BoxValue>();
+  assert(box && "c_loc argument must have been lowered to a fix.box");
+  mlir::Value argAddr =
+      builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), fir::getBase(*box));
+  mlir::Value argAddrVal = builder.createConvert(loc, fieldTy, argAddr);
+  auto fieldIndexType = fir::FieldType::get(resultType.getContext());
+  mlir::Value field = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, fieldName, resTy, /*typeParams=*/mlir::ValueRange{});
+  mlir::Value resAddr = builder.create<fir::CoordinateOp>(
+      loc, builder.getRefType(fieldTy), res, field);
+  builder.create<fir::StoreOp>(loc, argAddrVal, resAddr);
+  return res;
 }
 
 // CEILING
@@ -4450,12 +4478,14 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
 }
 
 //===----------------------------------------------------------------------===//
-// Argument lowering rules interface
+// Argument lowering rules interface for intrinsic or intrinsic module
+// procedure.
 //===----------------------------------------------------------------------===//
 
 const Fortran::lower::IntrinsicArgumentLoweringRules *
-Fortran::lower::getIntrinsicArgumentLowering(llvm::StringRef intrinsicName) {
-  if (const IntrinsicHandler *handler = findIntrinsicHandler(intrinsicName))
+Fortran::lower::getIntrinsicArgumentLowering(llvm::StringRef specificName) {
+  llvm::StringRef name = genericName(specificName);
+  if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
     if (!handler->argLoweringRules.hasDefaultRules())
       return &handler->argLoweringRules;
   return nullptr;
