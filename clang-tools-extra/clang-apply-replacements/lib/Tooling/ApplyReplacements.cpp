@@ -24,6 +24,7 @@
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -140,7 +141,7 @@ std::error_code collectReplacementsFromDirectory(
 static llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
 groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
                   const clang::SourceManager &SM) {
-  std::set<StringRef> Warned;
+  llvm::StringSet<> Warned;
   llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
       GroupedReplacements;
 
