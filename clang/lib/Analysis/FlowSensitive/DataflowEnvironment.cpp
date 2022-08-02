@@ -337,7 +337,7 @@ LatticeJoinEffect Environment::join(const Environment &Other,
 }
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {
-  return DACtx->getStableStorageLocation(Type);
+  return DACtx->createStorageLocation(Type);
 }
 
 StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
