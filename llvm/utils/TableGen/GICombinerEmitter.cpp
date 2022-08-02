@@ -842,7 +842,7 @@ static void emitAdditionalHelperMethodArguments(raw_ostream &OS,
                                                 Record *Combiner) {
   for (Record *Arg : Combiner->getValueAsListOfDefs("AdditionalArguments"))
     OS << ",\n    " << Arg->getValueAsString("Type")
-       << Arg->getValueAsString("Name");
+       << " " << Arg->getValueAsString("Name");
 }
 
 void GICombinerEmitter::run(raw_ostream &OS) {
