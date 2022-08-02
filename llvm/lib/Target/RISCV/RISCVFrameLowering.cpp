@@ -996,6 +996,25 @@ static unsigned getScavSlotsNumForRVV(MachineFunction &MF) {
   return MaxScavSlotsNum;
 }
 
+static bool hasRVVFrameObject(const MachineFunction &MF) {
+  // Originally, the function will scan all the stack objects to check whether
+  // if there is any scalable vector object on the stack or not. However, it
+  // causes errors in the register allocator. In issue 53016, it returns false
+  // before RA because there is no RVV stack objects. After RA, it returns true
+  // because there are spilling slots for RVV values during RA. It will not
+  // reserve BP during register allocation and generate BP access in the PEI
+  // pass due to the inconsistent behavior of the function.
+  //
+  // The function is changed to use hasVInstructions() as the return value. It
+  // is not precise, but it can make the register allocation correct.
+  //
+  // FIXME: Find a better way to make the decision or revisit the solution in
+  // D103622.
+  //
+  // Refer to https://github.com/llvm/llvm-project/issues/53016.
+  return MF.getSubtarget<RISCVSubtarget>().hasVInstructions();
+}
+
 void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   const RISCVRegisterInfo *RegInfo =
@@ -1011,10 +1030,12 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   RVFI->setRVVStackSize(RVVStackSize);
   RVFI->setRVVStackAlign(RVVStackAlign);
 
-  // Ensure the entire stack is aligned to at least the RVV requirement: some
-  // scalable-vector object alignments are not considered by the
-  // target-independent code.
-  MFI.ensureMaxAlignment(RVVStackAlign);
+  if (hasRVVFrameObject(MF)) {
+    // Ensure the entire stack is aligned to at least the RVV requirement: some
+    // scalable-vector object alignments are not considered by the
+    // target-independent code.
+    MFI.ensureMaxAlignment(RVVStackAlign);
+  }
 
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
@@ -1049,25 +1070,6 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     Size += MFI.getObjectSize(FrameIdx);
   }
   RVFI->setCalleeSavedStackSize(Size);
-}
-
-static bool hasRVVFrameObject(const MachineFunction &MF) {
-  // Originally, the function will scan all the stack objects to check whether
-  // if there is any scalable vector object on the stack or not. However, it
-  // causes errors in the register allocator. In issue 53016, it returns false
-  // before RA because there is no RVV stack objects. After RA, it returns true
-  // because there are spilling slots for RVV values during RA. It will not
-  // reserve BP during register allocation and generate BP access in the PEI
-  // pass due to the inconsistent behavior of the function.
-  //
-  // The function is changed to use hasVInstructions() as the return value. It
-  // is not precise, but it can make the register allocation correct.
-  //
-  // FIXME: Find a better way to make the decision or revisit the solution in
-  // D103622.
-  //
-  // Refer to https://github.com/llvm/llvm-project/issues/53016.
-  return MF.getSubtarget<RISCVSubtarget>().hasVInstructions();
 }
 
 // Not preserve stack space within prologue for outgoing variables when the
