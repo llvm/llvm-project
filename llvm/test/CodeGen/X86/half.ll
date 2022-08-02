@@ -1297,4 +1297,30 @@ define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
   ret <8 x half> %s
 }
 
+define <8 x half> @shuffle(ptr %p) {
+; CHECK-LIBCALL-LABEL: shuffle:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    movdqu (%rdi), %xmm0
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,4,4]
+; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; CHECK-LIBCALL-NEXT:    retq
+;
+; BWON-F16C-LABEL: shuffle:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    vpshufhw {{.*#+}} xmm0 = mem[0,1,2,3,4,4,4,4]
+; BWON-F16C-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: shuffle:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movdqu (%eax), %xmm0
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,4,4]
+; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; CHECK-I686-NEXT:    retl
+  %1 = load <8 x half>, ptr %p, align 8
+  %2 = shufflevector <8 x half> %1, <8 x half> poison, <8 x i32> <i32 4, i32 4, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x half> %2
+}
+
 attributes #0 = { nounwind }
