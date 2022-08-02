@@ -331,7 +331,7 @@ public:
          typename remove_reference_t<_Range>::traits_type;
         } || is_same_v<typename remove_reference_t<_Range>::traits_type, _Traits>)
       )
-    constexpr _LIBCPP_HIDE_FROM_ABI
+    constexpr explicit _LIBCPP_HIDE_FROM_ABI
     basic_string_view(_Range&& __r) : __data(ranges::data(__r)), __size(ranges::size(__r)) {}
 #endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
