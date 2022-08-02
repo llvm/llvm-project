@@ -54,10 +54,10 @@ static cl::opt<std::string>
 
 #define DELTA_PASSES                                                           \
   do {                                                                         \
+    DELTA_PASS("functions", reduceFunctionsDeltaPass)                          \
+    DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
     DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)               \
     DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
-    DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
-    DELTA_PASS("functions", reduceFunctionsDeltaPass)                          \
     DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                     \
     DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                   \
     DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                 \
