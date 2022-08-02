@@ -460,6 +460,8 @@ GCNScheduleDAGMILive::createSchedStage(GCNSchedStageID SchedStageID) {
   case GCNSchedStageID::ILPInitialSchedule:
     return std::make_unique<ILPInitialScheduleStage>(SchedStageID, *this);
   }
+
+  llvm_unreachable("Unknown SchedStageID.");
 }
 
 void GCNScheduleDAGMILive::schedule() {
