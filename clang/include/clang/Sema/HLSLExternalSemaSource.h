@@ -45,6 +45,7 @@ public:
   /// Inform the semantic consumer that Sema is no longer available.
   void ForgetSema() override { SemaPtr = nullptr; }
 
+  using ExternalASTSource::CompleteType;
   /// Complete an incomplete HLSL builtin type
   void CompleteType(TagDecl *Tag) override;
 };
