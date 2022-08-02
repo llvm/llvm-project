@@ -146,6 +146,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   const DataLayout &DL = F.getParent()->getDataLayout();
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
+  EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
   ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
