@@ -333,7 +333,8 @@ llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
-    std::function<void(const Stmt *, const TypeErasedDataflowAnalysisState &)>
+    std::function<void(const CFGStmt &,
+                       const TypeErasedDataflowAnalysisState &)>
         PostVisitStmt) {
   PostOrderCFGView POV(&CFCtx.getCFG());
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
@@ -398,12 +399,9 @@ runTypeErasedDataflowAnalysis(
       // Skip blocks that were not evaluated.
       if (!BlockStates[Block->getBlockID()])
         continue;
-      transferBlock(
-          CFCtx, BlockStates, *Block, InitEnv, Analysis,
-          [&PostVisitStmt](const clang::CFGStmt &Stmt,
-                           const TypeErasedDataflowAnalysisState &State) {
-            PostVisitStmt(Stmt.getStmt(), State);
-          });
+
+      transferBlock(CFCtx, BlockStates, *Block, InitEnv, Analysis,
+                    PostVisitStmt);
     }
   }
 

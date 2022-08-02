@@ -1245,9 +1245,10 @@ private:
           return UncheckedOptionalAccessModel(Ctx, Options);
         },
         [&Diagnostics, Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
-            ASTContext &Ctx, const Stmt *Stmt,
+            ASTContext &Ctx, const CFGStmt &Stmt,
             const TypeErasedDataflowAnalysisState &State) mutable {
-          auto StmtDiagnostics = Diagnoser.diagnose(Ctx, Stmt, State.Env);
+          auto StmtDiagnostics =
+              Diagnoser.diagnose(Ctx, Stmt.getStmt(), State.Env);
           llvm::move(StmtDiagnostics, std::back_inserter(Diagnostics));
         },
         [&Diagnostics](AnalysisData AnalysisData) {
