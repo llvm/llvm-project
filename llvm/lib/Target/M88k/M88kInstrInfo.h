@@ -104,6 +104,12 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                     Register DestReg, unsigned SubIdx,
+                     const MachineInstr &Orig,
+                     const TargetRegisterInfo &TRI) const override;
+
   // Return the M88kRegisterInfo, which this class owns.
   const M88kRegisterInfo &getRegisterInfo() const { return RI; }
 };

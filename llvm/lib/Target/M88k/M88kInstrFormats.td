@@ -86,6 +86,7 @@ class F_LI<bits<2> func, bits<1> upper, dag outs, dag ins, string asm,
   let Inst{28-27} = func;
   let Inst{26}    = upper;
   let Inst{15-0}  = imm16;
+  let isReMaterializable = 1;
 }
 
 // Format: Logical with triadic register.

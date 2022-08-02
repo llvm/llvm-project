@@ -593,3 +593,41 @@ bool M88kInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return false;
   }
 }
+
+bool M88kInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    // This function should only be called for opcodes with the ReMaterializable
+    // flag set.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    MI.dump();
+#endif
+    llvm_unreachable("Unknown rematerializable operation!");
+    break;
+  case M88k::ADDri:
+  case M88k::ADDUri:
+  case M88k::SUBri:
+  case M88k::SUBUri:
+  case M88k::ANDri:
+  case M88k::ANDriu:
+  case M88k::ORri:
+  case M88k::ORriu:
+  case M88k::XORri:
+  case M88k::XORriu:
+  case M88k::MASKri:
+  case M88k::MASKriu:
+    return MI.getOperand(1).getReg() == M88k::R0;
+  }
+  return false;
+}
+
+void M88kInstrInfo::reMaterialize(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator I,
+                                  Register DestReg, unsigned SubIdx,
+                                  const MachineInstr &Orig,
+                                  const TargetRegisterInfo &TRI) const {
+  MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
+  MBB.insert(I, MI);
+  MI->substituteRegister(Orig.getOperand(0).getReg(), DestReg, SubIdx, TRI);
+}

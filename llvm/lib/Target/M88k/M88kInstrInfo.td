@@ -413,15 +413,20 @@ multiclass ArithTriCarry<bits<6> Func, string OpcStr>
 }
 
 let isCommutable = 1 in {
-  defm ADDU : ArithTriCarry<0b011000, "addu">;
+  let isAdd = 1, isReMaterializable = 1 in {
+    defm ADDU : ArithTriCarry<0b011000, "addu">;
+    defm ADD : ArithTriCarry<0b011100, "add">;
+  }
   defm MULU : ArithTri<0b011011, "mulu">;
-  defm ADD : ArithTriCarry<0b011100, "add">;
 }
-defm SUBU : ArithTriCarry<0b011001, "subu">;
+let isReMaterializable = 1 in {
+  defm SUBU : ArithTriCarry<0b011001, "subu">;
+  defm SUB : ArithTriCarry<0b011101, "sub">;
+}
 defm DIVU : ArithTri<0b011010, "divu">;
-defm SUB : ArithTriCarry<0b011101, "sub">;
 defm DIVS : ArithTri<0b011110, "divs">;
-defm CMP : ArithTri<0b011111, "cmp">;
+let isCompare = 1 in
+  defm CMP : ArithTri<0b011111, "cmp">;
 
 let Predicates = [IsMC88110] in {
   def DIVUrrd : F_IRCD<0b011010, "divu.d">;
@@ -871,7 +876,7 @@ let isBranch = 1, isTerminator = 1 in {
   }
 }
 
-let isTrap = 1 in {
+let isTrap = 1, isBarrier = 1 in {
   def TB0 : F_TB<0b1101000, (outs), (ins imm32zx5:$b5, GPR:$rs1, Vec9:$vec9),
                  "tb0">;
   def TB1 : F_TB<0b1101100, (outs), (ins imm32zx5:$b5, GPR:$rs1, Vec9:$vec9),
