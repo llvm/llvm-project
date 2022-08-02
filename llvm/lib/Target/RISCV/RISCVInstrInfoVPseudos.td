@@ -4332,7 +4332,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
   def PseudoReadVLENB : Pseudo<(outs GPR:$rd), (ins),
-                               [(set GPR:$rd, (riscv_read_vlenb))]>;
+                               [(set GPR:$rd, (riscv_read_vlenb))]>,
+                        Sched<[WriteRdVLENB]>;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1,
