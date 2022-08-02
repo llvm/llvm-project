@@ -378,11 +378,6 @@ static bool canUseDirectConversion(
       if (alreadyCompressed)
         return false; // Dense after Compressed not yet supported.
       break;
-    case SparseTensorEncodingAttr::DimLevelType::Singleton:
-      // Although Singleton isn't generally supported yet, the direct
-      // conversion method doesn't have any particular problems with
-      // singleton after compressed.
-      break;
     }
   }
   return true;

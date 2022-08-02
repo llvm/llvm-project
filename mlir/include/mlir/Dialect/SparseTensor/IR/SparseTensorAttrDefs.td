@@ -84,11 +84,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
   let extraClassDeclaration = [{
     // Dimension level types that define sparse tensors:
-    //   Dense      - dimension is dense, every entry is stored
-    //   Compressed - dimension is sparse, only nonzeros are stored
-    //   Singleton  - dimension contains single coordinate, no siblings
+    //   Dense               - dimension is dense, every entry is stored
+    //   Compressed (unique) - dimension is sparse, only nonzeros are stored (no duplicates)
     enum class DimLevelType {
-      Dense, Compressed, Singleton
+      Dense, Compressed
     };
   }];
 }

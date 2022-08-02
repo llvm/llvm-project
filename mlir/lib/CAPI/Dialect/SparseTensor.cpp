@@ -25,9 +25,7 @@ static_assert(
             static_cast<int>(SparseTensorEncodingAttr::DimLevelType::Dense) &&
         static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED) ==
             static_cast<int>(
-                SparseTensorEncodingAttr::DimLevelType::Compressed) &&
-        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON) ==
-            static_cast<int>(SparseTensorEncodingAttr::DimLevelType::Singleton),
+                SparseTensorEncodingAttr::DimLevelType::Compressed),
     "MlirSparseTensorDimLevelType (C-API) and DimLevelType (C++) mismatch");
 
 bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
