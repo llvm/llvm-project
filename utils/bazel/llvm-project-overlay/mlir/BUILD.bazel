@@ -2187,7 +2187,7 @@ cc_library(
 cc_library(
     name = "NVGPUTransforms",
     srcs = [
-        "lib/Dialect/NVGPU/Transforms/MmaSyncTF32Transforms.cpp",
+        "lib/Dialect/NVGPU/Transforms/MmaSyncTF32Transform.cpp",
         "lib/Dialect/NVGPU/Transforms/OptimizeSharedMemory.cpp",
         "lib/Dialect/NVGPU/Transforms/PassDetail.h",
     ],
