@@ -199,10 +199,8 @@ void func(int sel) {
   global_int8_ptr -= 1;              // expected-error {{arithmetic on a pointer to sizeless type}}
   global_int8_ptr - global_int8_ptr; // expected-error {{arithmetic on a pointer to sizeless type}}
 
-  +init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   ++init_int8;      // expected-error {{cannot increment value of type 'svint8_t'}}
   init_int8++;      // expected-error {{cannot increment value of type 'svint8_t'}}
-  -init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   --init_int8;      // expected-error {{cannot decrement value of type 'svint8_t'}}
   init_int8--;      // expected-error {{cannot decrement value of type 'svint8_t'}}
   !init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
