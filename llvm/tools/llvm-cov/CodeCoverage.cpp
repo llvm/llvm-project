@@ -671,13 +671,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                "file"),
       cl::cat(FilteringCategory));
 
-  // Allow for accepting previous option name.
-  cl::list<std::string> NameFilterFilesDeprecated(
-      "name-whitelist", cl::Optional, cl::Hidden,
-      cl::desc("Show code coverage only for functions listed in the given "
-               "file. Deprecated, use -name-allowlist instead"),
-      cl::cat(FilteringCategory));
-
   cl::list<std::string> NameRegexFilters(
       "name-regex", cl::Optional,
       cl::desc("Show code coverage only for functions that match the given "
@@ -815,16 +808,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     }
 
     // Read in -name-allowlist files.
-    if (!NameFilterFiles.empty() || !NameFilterFilesDeprecated.empty()) {
+    if (!NameFilterFiles.empty()) {
       std::string SpecialCaseListErr;
-      if (!NameFilterFiles.empty())
-        NameAllowlist = SpecialCaseList::create(
-            NameFilterFiles, *vfs::getRealFileSystem(), SpecialCaseListErr);
-      if (!NameFilterFilesDeprecated.empty())
-        NameAllowlist = SpecialCaseList::create(NameFilterFilesDeprecated,
-                                                *vfs::getRealFileSystem(),
-                                                SpecialCaseListErr);
-
+      NameAllowlist = SpecialCaseList::create(
+          NameFilterFiles, *vfs::getRealFileSystem(), SpecialCaseListErr);
       if (!NameAllowlist)
         error(SpecialCaseListErr);
     }
@@ -834,14 +821,9 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       auto NameFilterer = std::make_unique<CoverageFilters>();
       for (const auto &Name : NameFilters)
         NameFilterer->push_back(std::make_unique<NameCoverageFilter>(Name));
-      if (NameAllowlist) {
-        if (!NameFilterFiles.empty())
-          NameFilterer->push_back(
-              std::make_unique<NameAllowlistCoverageFilter>(*NameAllowlist));
-        if (!NameFilterFilesDeprecated.empty())
-          NameFilterer->push_back(
-              std::make_unique<NameWhitelistCoverageFilter>(*NameAllowlist));
-      }
+      if (NameAllowlist && !NameFilterFiles.empty())
+        NameFilterer->push_back(
+            std::make_unique<NameAllowlistCoverageFilter>(*NameAllowlist));
       for (const auto &Regex : NameRegexFilters)
         NameFilterer->push_back(
             std::make_unique<NameRegexCoverageFilter>(Regex));
