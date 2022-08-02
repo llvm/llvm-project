@@ -581,80 +581,31 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
         ModuleSP module_sp;
 
         if (standalone_uuid.IsValid()) {
-          ModuleSpec module_spec;
-          module_spec.GetUUID() = standalone_uuid;
+          const bool force_symbol_search = true;
+          const bool notify = true;
+          DynamicLoader::LoadBinaryWithUUIDAndAddress(
+              this, standalone_uuid, standalone_value,
+              standalone_value_is_offset, force_symbol_search, notify);
+        }
+      }
 
-          // Look up UUID in global module cache before attempting
-          // a more expensive search.
-          Status error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                                     nullptr, nullptr, nullptr);
+      // The remote stub may know about a list of binaries to
+      // force load into the process -- a firmware type situation
+      // where multiple binaries are present in virtual memory,
+      // and we are only given the addresses of the binaries.
+      // Not intended for use with userland debugging when we
+      // a DynamicLoader plugin that knows how to find the loaded
+      // binaries and will track updates as binaries are added.
 
-          if (!module_sp) {
-            // Force a an external lookup, if that tool is available.
-            if (!module_spec.GetSymbolFileSpec()) {
-              Status error;
-              Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
-            }
-
-            if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-              module_sp = std::make_shared<Module>(module_spec);
-            }
-          }
-
-          // If we couldn't find the binary anywhere else, as a last resort,
-          // read it out of memory.
-          if (!module_sp.get() && standalone_value != LLDB_INVALID_ADDRESS &&
-              !standalone_value_is_offset) {
-            char namebuf[80];
-            snprintf(namebuf, sizeof(namebuf), "mem-image-0x%" PRIx64,
-                     standalone_value);
-            module_sp =
-                ReadModuleFromMemory(FileSpec(namebuf), standalone_value);
-          }
-
-          Log *log = GetLog(LLDBLog::DynamicLoader);
-          if (module_sp.get()) {
-            target.GetImages().AppendIfNeeded(module_sp, false);
-
-            bool changed = false;
-            if (module_sp->GetObjectFile()) {
-              if (standalone_value != LLDB_INVALID_ADDRESS) {
-                if (log)
-                  log->Printf("Loading binary UUID %s at %s 0x%" PRIx64,
-                              standalone_uuid.GetAsString().c_str(),
-                              standalone_value_is_offset ? "offset" : "address",
-                              standalone_value);
-                module_sp->SetLoadAddress(target, standalone_value,
-                                          standalone_value_is_offset, changed);
-              } else {
-                // No address/offset/slide, load the binary at file address,
-                // offset 0.
-                if (log)
-                  log->Printf("Loading binary UUID %s at file address",
-                              standalone_uuid.GetAsString().c_str());
-                const bool value_is_slide = true;
-                module_sp->SetLoadAddress(target, 0, value_is_slide, changed);
-              }
-            } else {
-              // In-memory image, load at its true address, offset 0.
-              if (log)
-                log->Printf("Loading binary UUID %s from memory",
-                            standalone_uuid.GetAsString().c_str());
-              const bool value_is_slide = true;
-              module_sp->SetLoadAddress(target, 0, value_is_slide, changed);
-            }
-
-            ModuleList added_module;
-            added_module.Append(module_sp, false);
-            target.ModulesDidLoad(added_module);
-          } else {
-            if (log)
-              log->Printf("Unable to find binary with UUID %s and load it at "
-                          "%s 0x%" PRIx64,
-                          standalone_uuid.GetAsString().c_str(),
-                          standalone_value_is_offset ? "offset" : "address",
-                          standalone_value);
-          }
+      std::vector<addr_t> bin_addrs = m_gdb_comm.GetProcessStandaloneBinaries();
+      if (bin_addrs.size()) {
+        UUID uuid;
+        const bool value_is_slide = false;
+        for (addr_t addr : bin_addrs) {
+          const bool force_symbol_search = true;
+          const bool notify = true;
+          DynamicLoader::LoadBinaryWithUUIDAndAddress(
+              this, uuid, addr, value_is_slide, force_symbol_search, notify);
         }
       }
 
