@@ -40,6 +40,9 @@ cl::list<std::string>
                "definition. The syntax is <macro>=<definition>"),
       cl::cat(Cat));
 
+cl::opt<bool> PreprocessOnly("E", cl::desc("Just print the preprocessed file"),
+                             cl::cat(Cat));
+
 cl::opt<unsigned>
     DocNum("docnum", cl::init(1),
            cl::desc("Read specified document from input (default = 1)"),
@@ -133,11 +136,16 @@ int main(int argc, char **argv) {
   Optional<std::string> Buffer = preprocess(Buf.get()->getBuffer(), ErrHandler);
   if (!Buffer)
     return 1;
-  yaml::Input YIn(*Buffer);
 
-  if (!convertYAML(YIn, Out->os(), ErrHandler, DocNum,
-                   MaxSize == 0 ? UINT64_MAX : MaxSize))
-    return 1;
+  if (PreprocessOnly) {
+    Out->os() << Buffer;
+  } else {
+    yaml::Input YIn(*Buffer);
+
+    if (!convertYAML(YIn, Out->os(), ErrHandler, DocNum,
+                     MaxSize == 0 ? UINT64_MAX : MaxSize))
+      return 1;
+  }
 
   Out->keep();
   Out->os().flush();
