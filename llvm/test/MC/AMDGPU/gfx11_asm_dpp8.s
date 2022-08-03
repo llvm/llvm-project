@@ -526,11 +526,20 @@ v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
 v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 op_sel:[1,1,0,0] dpp8:[0,1,2,3,4,4,4,4]
 // GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
 
+v_dot2_f16_f16_e64_dpp v0, s1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_dot2_f16_f16_e64_dpp v0, v1, s2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
 v_dot2_f16_f16_e64_dpp v0, v1, v2, v3 op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
 // GFX11: encoding: [0x00,0x60,0x66,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x88,0x46,0x92]
 
-v_dot2_f16_f16_e64_dpp v0, |v1|, -v2, -|v3| op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
-// GFX11: encoding: [0x00,0x65,0x66,0xd6,0xe9,0x04,0x0e,0xc4,0x01,0x88,0x46,0x92]
+v_dot2_f16_f16_e64_dpp v0, |v1|, -v2, -|s3| op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x65,0x66,0xd6,0xe9,0x04,0x0e,0xc0,0x01,0x88,0x46,0x92]
+
+v_dot2_f16_f16_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: encoding: [0x05,0x00,0x66,0xd6,0xe9,0x04,0xc2,0x03,0x01,0x77,0x39,0x05]
 
 v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
 // GFX11: encoding: [0x00,0x00,0x67,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x88,0x46,0x92]
@@ -538,9 +547,17 @@ v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
 v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 op_sel:[1,1,0,0] dpp8:[0,1,2,3,4,4,4,4]
 // GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
 
+v_dot2_bf16_bf16_e64_dpp v0, s1, v2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_dot2_bf16_bf16_e64_dpp v0, v1, s2, v3 dpp8:[0,1,2,3,4,4,4,4]
+// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
 v_dot2_bf16_bf16_e64_dpp v0, v1, v2, v3 op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
 // GFX11: encoding: [0x00,0x60,0x67,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x88,0x46,0x92]
 
-v_dot2_bf16_bf16_e64_dpp v0, |v1|, -v2, -|v3| op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
-// GFX11: encoding: [0x00,0x65,0x67,0xd6,0xe9,0x04,0x0e,0xc4,0x01,0x88,0x46,0x92]
+v_dot2_bf16_bf16_e64_dpp v0, |v1|, -v2, -|s3| op_sel:[0,0,1,1] dpp8:[0,1,2,3,4,4,4,4]
+// GFX11: encoding: [0x00,0x65,0x67,0xd6,0xe9,0x04,0x0e,0xc0,0x01,0x88,0x46,0x92]
 
+v_dot2_bf16_bf16_e64_dpp v5, v1, v2, 0 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: encoding: [0x05,0x00,0x67,0xd6,0xe9,0x04,0x02,0x02,0x01,0x77,0x39,0x05]
