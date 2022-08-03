@@ -443,8 +443,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SHL,         ISD::VP_REDUCE_ADD,  ISD::VP_REDUCE_AND,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
-        ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_FPTOSI,
-        ISD::VP_FPTOUI,      ISD::VP_SETCC,       ISD::VP_SIGN_EXTEND,
+        ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_FP_TO_SINT,
+        ISD::VP_FP_TO_UINT,  ISD::VP_SETCC,       ISD::VP_SIGN_EXTEND,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE};
 
     static const unsigned FloatingPointVPOps[] = {
@@ -454,7 +454,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX,
         ISD::VP_MERGE,       ISD::VP_SELECT,
-        ISD::VP_SITOFP,      ISD::VP_UITOFP,
+        ISD::VP_SINT_TO_FP,  ISD::VP_UINT_TO_FP,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,
         ISD::VP_FP_EXTEND};
 
@@ -527,9 +527,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Expand);
       }
 
-      setOperationAction(
-          {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_TRUNCATE, ISD::VP_SETCC}, VT,
-          Custom);
+      setOperationAction({ISD::VP_FP_TO_SINT, ISD::VP_FP_TO_UINT,
+                          ISD::VP_TRUNCATE, ISD::VP_SETCC},
+                         VT, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
       setOperationPromotedToType(
@@ -792,9 +792,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::OR, ISD::XOR},
                              VT, Custom);
 
-          setOperationAction(
-              {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_SETCC, ISD::VP_TRUNCATE},
-              VT, Custom);
+          setOperationAction({ISD::VP_FP_TO_SINT, ISD::VP_FP_TO_UINT,
+                              ISD::VP_SETCC, ISD::VP_TRUNCATE},
+                             VT, Custom);
           continue;
         }
 
@@ -3730,13 +3730,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FP_EXTEND:
   case ISD::VP_FP_ROUND:
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
-  case ISD::VP_FPTOSI:
+  case ISD::VP_FP_TO_SINT:
     return lowerVPFPIntConvOp(Op, DAG, RISCVISD::FP_TO_SINT_VL);
-  case ISD::VP_FPTOUI:
+  case ISD::VP_FP_TO_UINT:
     return lowerVPFPIntConvOp(Op, DAG, RISCVISD::FP_TO_UINT_VL);
-  case ISD::VP_SITOFP:
+  case ISD::VP_SINT_TO_FP:
     return lowerVPFPIntConvOp(Op, DAG, RISCVISD::SINT_TO_FP_VL);
-  case ISD::VP_UITOFP:
+  case ISD::VP_UINT_TO_FP:
     return lowerVPFPIntConvOp(Op, DAG, RISCVISD::UINT_TO_FP_VL);
   case ISD::VP_SETCC:
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)

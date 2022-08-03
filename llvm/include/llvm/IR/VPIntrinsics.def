@@ -257,16 +257,16 @@ END_REGISTER_VP(vp_fma, VP_FMA)
   END_REGISTER_VP(vp_##OPSUFFIX, VPSD)
 
 // llvm.vp.fptoui(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(fptoui, VP_FPTOUI, FPToUI, 0)
+HELPER_REGISTER_FP_CAST_VP(fptoui, VP_FP_TO_UINT, FPToUI, 0)
 
 // llvm.vp.fptosi(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(fptosi, VP_FPTOSI, FPToSI, 0)
+HELPER_REGISTER_FP_CAST_VP(fptosi, VP_FP_TO_SINT, FPToSI, 0)
 
 // llvm.vp.uitofp(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(uitofp, VP_UITOFP, UIToFP, 1)
+HELPER_REGISTER_FP_CAST_VP(uitofp, VP_UINT_TO_FP, UIToFP, 1)
 
 // llvm.vp.sitofp(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(sitofp, VP_SITOFP, SIToFP, 1)
+HELPER_REGISTER_FP_CAST_VP(sitofp, VP_SINT_TO_FP, SIToFP, 1)
 
 // llvm.vp.fptrunc(x,mask,vlen)
 HELPER_REGISTER_FP_CAST_VP(fptrunc, VP_FP_ROUND, FPTrunc, 1)
