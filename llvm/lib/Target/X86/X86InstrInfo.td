@@ -463,23 +463,17 @@ def ptr_rc_tailcall : PointerLikeRegClass<4>;
 // Special i32mem for addresses of load folding tail calls. These are not
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
-def i32mem_TC : Operand<i32> {
-  let PrintMethod = "printdwordmem";
+def i32mem_TC : X86MemOperand<"printdwordmem", X86Mem32AsmOperand, 32> {
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm, ptr_rc_tailcall,
                        i32imm, SEGMENT_REG);
-  let ParserMatchClass = X86Mem32AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
 }
 
 // Special i64mem for addresses of load folding tail calls. These are not
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
-def i64mem_TC : Operand<i64> {
-  let PrintMethod = "printqwordmem";
+def i64mem_TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm,
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
-  let ParserMatchClass = X86Mem64AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
 }
 
 // Special parser to detect 16-bit mode to select 16-bit displacement.
