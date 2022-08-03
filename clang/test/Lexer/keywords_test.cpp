@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++03 -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++11 -DCXX11 -fsyntax-only %s
-// RUN: %clang_cc1 -std=c++2a -DCXX11 -DCXX2A -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++20 -DCXX11 -DCXX20 -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fdeclspec -DDECLSPEC -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fms-extensions -DDECLSPEC -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fborland-extensions -DDECLSPEC -fsyntax-only %s
@@ -19,10 +19,10 @@
 #define NOT_KEYWORD(NAME) _Static_assert(__is_identifier(NAME), #NAME)
 #define IS_TYPE(NAME) void is_##NAME##_type() { int f(NAME); }
 
-#if defined(CXX2A)
-#define CONCEPTS_KEYWORD(NAME)  IS_KEYWORD(NAME)
+#if defined(CXX20)
+#define CXX20_KEYWORD(NAME)  IS_KEYWORD(NAME)
 #else
-#define CONCEPTS_KEYWORD(NAME)  NOT_KEYWORD(NAME)
+#define CXX20_KEYWORD(NAME)  NOT_KEYWORD(NAME)
 #endif
 
 #ifdef DECLSPEC
@@ -59,8 +59,8 @@ IS_KEYWORD(static_assert);
 CXX11_KEYWORD(thread_local);
 
 // Concepts keywords
-CONCEPTS_KEYWORD(concept);
-CONCEPTS_KEYWORD(requires);
+CXX20_KEYWORD(concept);
+CXX20_KEYWORD(requires);
 
 // __declspec extension
 DECLSPEC_KEYWORD(__declspec);
