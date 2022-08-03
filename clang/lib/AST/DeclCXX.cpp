@@ -1597,8 +1597,8 @@ CXXMethodDecl *CXXRecordDecl::getLambdaStaticInvoker(CallingConv CC) const {
 }
 
 void CXXRecordDecl::getCaptureFields(
-       llvm::DenseMap<const VarDecl *, FieldDecl *> &Captures,
-       FieldDecl *&ThisCapture) const {
+    llvm::DenseMap<const ValueDecl *, FieldDecl *> &Captures,
+    FieldDecl *&ThisCapture) const {
   Captures.clear();
   ThisCapture = nullptr;
 
