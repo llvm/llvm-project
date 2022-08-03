@@ -11,8 +11,8 @@
 
 #include "TaskTimer.h"
 #include "ThreadDecoder.h"
-#include "TraceIntelPTMultiCpuDecoder.h"
 #include "TraceIntelPTBundleLoader.h"
+#include "TraceIntelPTMultiCpuDecoder.h"
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
@@ -52,10 +52,9 @@ public:
   ///
   /// \return
   ///     A trace instance or an error in case of failures.
-  static llvm::Expected<lldb::TraceSP>
-  CreateInstanceForTraceBundle(const llvm::json::Value &trace_bundle_description,
-                               llvm::StringRef bundle_dir,
-                               Debugger &debugger);
+  static llvm::Expected<lldb::TraceSP> CreateInstanceForTraceBundle(
+      const llvm::json::Value &trace_bundle_description,
+      llvm::StringRef bundle_dir, Debugger &debugger);
 
   static llvm::Expected<lldb::TraceSP>
   CreateInstanceForLiveProcess(Process &process);

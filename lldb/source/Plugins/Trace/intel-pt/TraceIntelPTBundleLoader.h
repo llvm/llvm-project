@@ -29,13 +29,14 @@ public:
   ///   The debugger that will own the targets to create.
   ///
   /// \param[in] bundle_description
-  ///   The JSON description of a trace bundle that follows the schema of the intel pt trace plug-in.
+  ///   The JSON description of a trace bundle that follows the schema of the
+  ///   intel pt trace plug-in.
   ///
   /// \param[in] bundle_dir
   ///   The folder where the trace bundle is located.
   TraceIntelPTBundleLoader(Debugger &debugger,
-                                const llvm::json::Value &bundle_description,
-                                llvm::StringRef bundle_dir)
+                           const llvm::json::Value &bundle_description,
+                           llvm::StringRef bundle_dir)
       : m_debugger(debugger), m_bundle_description(bundle_description),
         m_bundle_dir(bundle_dir) {}
 
@@ -47,8 +48,8 @@ public:
   /// Target objects. In case of an error, no targets are created.
   ///
   /// \return
-  ///   A \a lldb::TraceSP instance created according to the trace bundle information. In case of
-  ///   errors, return a null pointer.
+  ///   A \a lldb::TraceSP instance created according to the trace bundle
+  ///   information. In case of errors, return a null pointer.
   llvm::Expected<lldb::TraceSP> Load();
 
 private:
@@ -73,7 +74,8 @@ private:
   ///   The JSON process definition
   llvm::Expected<ParsedProcess> ParseProcess(const JSONProcess &process);
 
-  /// Create a module associated with the given \p target using the definition from \p module.
+  /// Create a module associated with the given \p target using the definition
+  /// from \p module.
   llvm::Error ParseModule(Target &target, const JSONModule &module);
 
   /// Create a user-friendly error message upon a JSON-parsing failure using the
@@ -102,10 +104,11 @@ private:
   /// \return
   ///   An \a llvm::Error in case if failures, or \a llvm::Error::success
   ///   otherwise.
-  llvm::Error AugmentThreadsFromContextSwitches(JSONTraceBundleDescription &bundle_description);
+  llvm::Error AugmentThreadsFromContextSwitches(
+      JSONTraceBundleDescription &bundle_description);
 
-  /// Modifiy the bundle description by normalizing all the paths relative to the
-  /// session file directory.
+  /// Modifiy the bundle description by normalizing all the paths relative to
+  /// the session file directory.
   void NormalizeAllPaths(JSONTraceBundleDescription &bundle_description);
 
   Debugger &m_debugger;
@@ -115,6 +118,5 @@ private:
 
 } // namespace trace_intel_pt
 } // namespace lldb_private
-
 
 #endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLELOADER_H

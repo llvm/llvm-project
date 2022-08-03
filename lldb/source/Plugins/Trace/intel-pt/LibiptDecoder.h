@@ -18,10 +18,12 @@
 namespace lldb_private {
 namespace trace_intel_pt {
 
-/// This struct represents a point in the intel pt trace that the decoder can start decoding from without errors.
+/// This struct represents a point in the intel pt trace that the decoder can
+/// start decoding from without errors.
 struct IntelPTThreadSubtrace {
-  /// The memory offset of a PSB packet that is a synchronization point for the decoder. A decoder normally looks first
-  /// for a PSB packet and then it starts decoding.
+  /// The memory offset of a PSB packet that is a synchronization point for the
+  /// decoder. A decoder normally looks first for a PSB packet and then it
+  /// starts decoding.
   uint64_t psb_offset;
   /// The timestamp associated with the PSB packet above.
   uint64_t tsc;
@@ -79,17 +81,20 @@ llvm::Error DecodeSystemWideTraceForThread(
     const llvm::DenseMap<lldb::cpu_id_t, llvm::ArrayRef<uint8_t>> &buffers,
     const std::vector<IntelPTThreadContinousExecution> &executions);
 
-/// Given an intel pt trace, split it in chunks delimited by PSB packets. Each of these chunks
-/// is guaranteed to have been executed continuously.
+/// Given an intel pt trace, split it in chunks delimited by PSB packets. Each
+/// of these chunks is guaranteed to have been executed continuously.
 ///
 /// \param[in] trace_intel_pt
-///   The main Trace object that contains all the information related to the trace session.
+///   The main Trace object that contains all the information related to the
+///   trace session.
 ///
 /// \param[in] buffer
-///   The intel pt buffer that belongs to a single thread or to a single cpu core.
+///   The intel pt buffer that belongs to a single thread or to a single cpu
+///   core.
 ///
 /// \return
-///   A list of continuous executions sorted by time, or an \a llvm::Error in case of failures.
+///   A list of continuous executions sorted by time, or an \a llvm::Error in
+///   case of failures.
 llvm::Expected<std::vector<IntelPTThreadSubtrace>>
 SplitTraceInContinuousExecutions(TraceIntelPT &trace_intel_pt,
                                  llvm::ArrayRef<uint8_t> buffer);

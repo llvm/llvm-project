@@ -30,7 +30,7 @@ FileSpec TraceIntelPTBundleLoader::NormalizePath(const std::string &path) {
 }
 
 Error TraceIntelPTBundleLoader::ParseModule(Target &target,
-                                                 const JSONModule &module) {
+                                            const JSONModule &module) {
   auto do_parse = [&]() -> Error {
     FileSpec system_file_spec(module.system_path);
 
@@ -64,7 +64,7 @@ Error TraceIntelPTBundleLoader::ParseModule(Target &target,
 }
 
 Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
-                                                     const json::Value &value) {
+                                                const json::Value &value) {
   std::string err;
   raw_string_ostream os(err);
   root.printErrorContext(value, os);
@@ -75,7 +75,7 @@ Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
 
 ThreadPostMortemTraceSP
 TraceIntelPTBundleLoader::ParseThread(Process &process,
-                                           const JSONThread &thread) {
+                                      const JSONThread &thread) {
   lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
 
   Optional<FileSpec> trace_file;
@@ -260,8 +260,8 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
         FileSpec(cpu.context_switch_trace),
         [&](ArrayRef<uint8_t> data) -> Error {
           Expected<std::vector<ThreadContinuousExecution>> executions =
-              DecodePerfContextSwitchTrace(data, cpu.id,
-                                           *bundle_description.tsc_perf_zero_conversion);
+              DecodePerfContextSwitchTrace(
+                  data, cpu.id, *bundle_description.tsc_perf_zero_conversion);
           if (!executions)
             return executions.takeError();
           for (const ThreadContinuousExecution &execution : *executions)
@@ -275,7 +275,8 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
 }
 
 Expected<TraceSP> TraceIntelPTBundleLoader::CreateTraceIntelPTInstance(
-    JSONTraceBundleDescription &bundle_description, std::vector<ParsedProcess> &parsed_processes) {
+    JSONTraceBundleDescription &bundle_description,
+    std::vector<ParsedProcess> &parsed_processes) {
   std::vector<ThreadPostMortemTraceSP> threads;
   std::vector<ProcessSP> processes;
   for (const ParsedProcess &parsed_process : parsed_processes) {
